@@ -18,8 +18,8 @@ void usage()
     std::cerr << "usage: udp-client <port> [<options>]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "<options>" << std::endl;
-    std::cerr << "    --ascii: output timestamp as ascii; default: 32-bit binary" << std::endl;
-    std::cerr << "    --binary: output timestamp as 32-bit binary; default" << std::endl;
+    std::cerr << "    --ascii: output timestamp as ascii; default: 64-bit binary" << std::endl;
+    std::cerr << "    --binary: output timestamp as 64-bit binary; default" << std::endl;
     std::cerr << "    --delimiter=<delimiter>: if ascii and --timestamp, use this delimiter; default: ','" << std::endl;
     std::cerr << "    --size=<size>: hint of maximum buffer size; default 16384" << std::endl;
     std::cerr << "    --reuse-addr,--reuseaddr: reuse udp address/port" << std::endl;
