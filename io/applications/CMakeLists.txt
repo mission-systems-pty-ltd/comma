@@ -8,7 +8,7 @@ TARGET_LINK_LIBRARIES ( io-publish ${comma_EXTERNAL_ALL_LIBRARIES} comma_base co
 
 IF( NOT WIN32 )
 ADD_EXECUTABLE( udp-client ${dir}/udp-client.cpp )
-TARGET_LINK_LIBRARIES ( udp-client comma_application comma_io comma_base ${comma_EXTERNAL_ALL_LIBRARIES} ) # profiler )
+TARGET_LINK_LIBRARIES ( udp-client comma_application comma_io comma_csv comma_base ${comma_EXTERNAL_ALL_LIBRARIES} ) # profiler )
 ENDIF( NOT WIN32 )
 
 IF( comma_BUILD_ZEROMQ )

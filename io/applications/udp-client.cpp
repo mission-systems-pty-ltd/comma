@@ -6,8 +6,11 @@
 #include <boost/asio/ip/udp.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/noncopyable.hpp>
+#include <boost/static_assert.hpp>
 #include <comma/application/command_line_options.h>
 #include <comma/application/signal_flag.h>
+#include <comma/base/types.h>
+#include <comma/csv/format.h>
 
 void usage()
 {
@@ -59,10 +62,19 @@ int main( int argc, char** argv )
         std::size_t size = socket.receive( boost::asio::buffer( packet ), 0, error );
         if( error || size == 0 ) { break; }
         if( timestamped )
-        { 
+        {
             boost::posix_time::ptime timestamp = boost::posix_time::microsec_clock::universal_time();
-            if( binary ) { std::cout.write( reinterpret_cast< const char* >( &timestamp ), sizeof( boost::posix_time::ptime ) ); }
-            else { std::cout << boost::posix_time::to_iso_string( timestamp ) << delimiter; }
+            BOOST_STATIC_ASSERT( sizeof( boost::posix_time::ptime ) == sizeof( comma::uint64 ) );
+            if( binary )
+            { 
+                static char buf[ sizeof( comma::int64 ) ];
+                comma::csv::format::traits< boost::posix_time::ptime, comma::csv::format::time >::to_bin( timestamp, buf );
+                std::cout.write( buf, sizeof( comma::int64 ) );
+            }
+            else
+            {
+                std::cout << boost::posix_time::to_iso_string( timestamp ) << delimiter;
+            }
         }
         std::cout.write( &packet[0], size );
         std::cout.flush();
