@@ -31,7 +31,7 @@ namespace comma {
 int last_error::value()
 {
     #if defined(WIN32)
-    return get_last_error();
+    return GetLastError();
     #else
     return errno;
     #endif

@@ -24,7 +24,7 @@ ADD_EXECUTABLE( csv-thin ${dir}/csv-thin.cpp )
 
 TARGET_LINK_LIBRARIES ( csv-size ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
 TARGET_LINK_LIBRARIES ( csv-bin-cut ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv comma_xpath )
-TARGET_LINK_LIBRARIES ( csv-split ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv comma_xpath boost_program_options )
+TARGET_LINK_LIBRARIES ( csv-split ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv comma_xpath )
 TARGET_LINK_LIBRARIES ( csv-join ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_io comma_xpath comma_string )
 TARGET_LINK_LIBRARIES ( csv-paste ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv comma_io )
 #TARGET_LINK_LIBRARIES ( csv-make-blocks ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_xpath comma_string )
