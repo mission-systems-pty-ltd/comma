@@ -1,5 +1,8 @@
 comma, a generic c++ library
 
+Documentation:
+http://acfr.github.com/comma/
+
 Installation:
 
 Let's call this directory 'source_dir' (where this INSTALL file is).
