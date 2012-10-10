@@ -32,31 +32,37 @@
 
 namespace comma {
 
+/// visitor: ptree to a class
+class from_ptree;
+
+/// visitor: ptree from a class
+class to_ptree;    
+    
 struct property_tree // quick and dirty
 {
-    /// convert boost parameter tree into name=value-style string
-    static std::string to_name_value_string( const boost::property_tree::ptree& ptree, bool indented = true, char equalSign = '=', char delimiter = ',' );
+    /// read as name-value from input stream
+    /// @todo currently only line-based input supported
+    static void from_name_value( std::istream& is, boost::property_tree::ptree& ptree, char equalSign = '=', char delimiter = ',' );
     
-    /// convert boost parameter tree into path=value-style string (equal sign and delimiter have to be escaped)
-    static std::string to_path_value_string( const boost::property_tree::ptree& ptree, char equalSign = '=', char delimiter = ',' );
-
+    /// write as name-value to output stream
+    static void to_name_value( std::ostream& os, const boost::property_tree::ptree& ptree, bool indented = true, char equalSign = '=', char delimiter = ',' );
+    
     /// convert name=value-style string into boost parameter tree
     static boost::property_tree::ptree from_name_value_string( const std::string& s, char equalSign = '=', char delimiter = ',' );
     
-    /// read as path-value from string
-    static boost::property_tree::ptree from_path_value_string( const std::string& s, char equalSign = '=', char delimiter = ',' );
-
-    /// write as name-value to output stream
-    static void to_name_value( std::ostream& os, const boost::property_tree::ptree& ptree, bool indented = true, char equalSign = '=', char delimiter = ',' );
+    /// convert boost parameter tree into name=value-style string
+    static std::string to_name_value_string( const boost::property_tree::ptree& ptree, bool indented = true, char equalSign = '=', char delimiter = ',' );    
     
     /// write as path-value to output stream
     static void to_path_value( std::ostream& os, const boost::property_tree::ptree& ptree, char equalSign = '=', char delimiter = ',', const comma::xpath& root = comma::xpath() );
     
-    /// read as name-value from input stream
-    /// @todo currently only line-based input supported
-    static void from_name_value( std::istream& is, boost::property_tree::ptree& ptree, char equalSign = '=', char delimiter = ',' );
-};
+    /// read as path-value from string
+    static boost::property_tree::ptree from_path_value_string( const std::string& s, char equalSign = '=', char delimiter = ',' );
     
+    /// convert boost parameter tree into path=value-style string (equal sign and delimiter have to be escaped)
+    static std::string to_path_value_string( const boost::property_tree::ptree& ptree, char equalSign = '=', char delimiter = ',' );
+};
+
 class from_ptree
 {
     public:

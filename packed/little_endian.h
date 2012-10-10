@@ -33,8 +33,10 @@ template <> struct little_endian_traits< 3, true > { typedef comma::int32 type; 
 template <> struct little_endian_traits< 3, false > { typedef comma::uint32 type; };
 template <> struct little_endian_traits< 4, true > { typedef comma::int32 type; };
 template <> struct little_endian_traits< 4, false > { typedef comma::uint32 type; };
+template <> struct little_endian_traits< 8, true > { typedef comma::int64 type; };
+template <> struct little_endian_traits< 8, false > { typedef comma::uint64 type; };
     
-template < unsigned int Size, bool Signed >
+template < unsigned int Size, bool Signed, bool Floating = false >
 struct little_endian_int : public packed::field< little_endian_int< Size, Signed >, typename little_endian_traits< Size, Signed >::type, Size >
 {
     static const unsigned int size = Size;
@@ -75,18 +77,21 @@ struct little_endian_int : public packed::field< little_endian_int< Size, Signed
 
 } // namespace detail {
 
-/// packed little endian 16-bit integer
-typedef detail::little_endian_int< 2, true > int16;
-/// packed little endian 24-bit integer (strangely, there are protocols using it)
-typedef detail::little_endian_int< 3, true > int24;
-/// packed little endian 32-bit integer
-typedef detail::little_endian_int< 4, true > int32;
-/// packed little endian 16-bit unsigned integer
-typedef detail::little_endian_int< 2, false > uint16;
-/// packed little endian 24-bit unsigned integer (strangely, there are protocols using it)
-typedef detail::little_endian_int< 3, false > uint24;
-/// packed little endian 32-bit unsigned integer
-typedef detail::little_endian_int< 4, false > uint32;
+/// packed little endian 16-bit integers
+typedef detail::little_endian_int< 2, true > little_endian_int16;
+typedef detail::little_endian_int< 2, false > little_endian_uint16;
+typedef little_endian_int16 int16;
+typedef little_endian_uint16 uint16;
+/// packed little endian 24-bit integers (strangely, there are protocols using it)
+typedef detail::little_endian_int< 3, true > little_endian_int24;
+typedef detail::little_endian_int< 3, false > little_endian_uint24;
+typedef little_endian_int24 int24;
+typedef little_endian_uint24 uint24;
+/// packed little endian 32-bit integers
+typedef detail::little_endian_int< 4, true > little_endian_int32;
+typedef detail::little_endian_int< 4, false > little_endian_uint32;
+typedef little_endian_int32 int32;
+typedef little_endian_uint32 uint32;
 
 } } // namespace comma { namespace packed {
 
