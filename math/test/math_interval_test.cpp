@@ -23,28 +23,32 @@ namespace comma { namespace math {
 
 TEST( interval, basics )
 {
+    EXPECT_TRUE( math::equal( 1, 1 ) );
     EXPECT_TRUE( interval< int >( 1, 5 ).contains( 1 ) );
     EXPECT_TRUE( interval< int >( 1, 5 ).contains( 2 ) );
     EXPECT_TRUE( interval< int >( 1, 5 ).contains( 3 ) );
     EXPECT_TRUE( interval< int >( 1, 5 ).contains( 4 ) );
     EXPECT_TRUE( !interval< int >( 1, 5 ).contains( 0 ) );
-    EXPECT_TRUE( !interval< int >( 1, 5 ).contains( 5 ) );
+    EXPECT_FALSE( interval< int >( 1, 5 ).contains( 5 ) );
     EXPECT_TRUE( interval< int >( -1, 2 ).contains( -1 ) );
     EXPECT_TRUE( interval< int >( -1, 2 ).contains( 0 ) );
     EXPECT_TRUE( interval< int >( -1, 2 ).contains( 1 ) );
-    EXPECT_TRUE( !interval< int >( -1, 2 ).contains( -2 ) );
-    EXPECT_TRUE( !interval< int >( -1, 2 ).contains( 2 ) );
+    EXPECT_FALSE( interval< int >( -1, 2 ).contains( -2 ) );
+    EXPECT_FALSE( interval< int >( -1, 2 ).contains( 2 ) );
     EXPECT_TRUE( interval< int >( -1, 0 ).contains( -1 ) );
-    EXPECT_TRUE( !interval< int >( -1, 0 ).contains( -2 ) );
-    EXPECT_TRUE( !interval< int >( -1, 0 ).contains( 0 ) );
+    EXPECT_FALSE( interval< int >( -1, 0 ).contains( -2 ) );
+    EXPECT_FALSE( interval< int >( -1, 0 ).contains( 0 ) );
     EXPECT_TRUE( interval< int >( 1, 5 ).contains( interval< int >( 1, 5 ) ) );
     EXPECT_TRUE( interval< int >( 1, 5 ).contains( interval< int >( 1, 4 ) ) );
     EXPECT_TRUE( interval< int >( 1, 5 ).contains( interval< int >( 2, 5 ) ) );
     EXPECT_TRUE( interval< int >( 1, 5 ).contains( interval< int >( 2, 4 ) ) );
-    EXPECT_TRUE( !interval< int >( 1, 5 ).contains( interval< int >( 0, 5 ) ) );
-    EXPECT_TRUE( !interval< int >( 1, 5 ).contains( interval< int >( 1, 6 ) ) );
+    EXPECT_FALSE( interval< int >( 1, 5 ).contains( interval< int >( 0, 5 ) ) );
+    EXPECT_FALSE( interval< int >( 1, 5 ).contains( interval< int >( 1, 6 ) ) );
     EXPECT_EQ( interval< int >( 1, 5 ), interval< int >( 1, 5 ) );
     EXPECT_TRUE( interval< int >( 1, 5 ) != interval< int >( 1, 6 ) );
+
+    EXPECT_EQ( interval< int >( 1, 5 ).hull( 6 ) , interval< int >( 1, 6 ) );
+    EXPECT_EQ( interval< int >( 1, 5 ).hull( interval< int >( 12, 16 ) ) , interval< int >( 1, 16 ) );
 }
 
 template < typename T >

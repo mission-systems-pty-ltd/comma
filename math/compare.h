@@ -20,6 +20,7 @@
 
 #include <cmath>
 #include <limits>
+#include <algorithm>
 
 namespace comma { namespace math {
 
@@ -37,6 +38,10 @@ template < typename T, typename S > inline bool less( const T& lhs, const S& rhs
 
 template < typename T, typename S, typename Diff > inline bool less( const T& lhs, const S& rhs, const Diff& epsilon ) { return less( lhs + epsilon, rhs ); }
 template < typename T, typename S, typename Diff > inline bool equal( const T& lhs, const S& rhs, const Diff& epsilon ) { return !less( lhs, rhs, epsilon ) && !less( static_cast< T >( rhs ), lhs, epsilon ); }
+
+template < typename T, typename S > inline T min( const T& rhs, const S& lhs ) { return std::min( rhs, lhs ); }
+template < typename T, typename S > inline T max( const T& rhs, const S& lhs ) { return std::max( rhs, lhs ); }
+
 
 } } // namespace comma { namespace math {
 
