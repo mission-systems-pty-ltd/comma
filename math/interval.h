@@ -34,10 +34,7 @@ class interval
         interval( const interval& rhs ) { this->operator=( rhs ); } 
         
         /// constructor
-        interval( const T& min, const T& max ) : interval_( math::min( min, max ), math::max( min, max ) ) { if( math::less( max, min ) ) { COMMA_THROW( comma::exception, "invalid interval" ); } }
-
-        /// constructor
-        interval( const T& min ) : interval_( min, min ) { }
+        interval( const T& min, const T& max ) : interval_( min, max ) { if( !math::less( min, max ) ) { COMMA_THROW( comma::exception, "invalid interval" ); } }
         
         /// return value
         const std::pair< T, T >& operator()() const { return interval_; }
@@ -52,16 +49,16 @@ class interval
         T size() const { return interval_.second - interval_.first; }
         
         /// return true, if variable belongs to the interval
-        bool contains( const T& t ) const { return ( ( math::equal( interval_.first, t ) || math::less( interval_.first, t ) ) && math::less( t, interval_.second ) ); }
+        bool contains( const T& t ) const { return !math::less( t, interval_.first ) && math::less( t, interval_.second ); }
         
         /// return true, if variable belongs to the interval
         bool contains( const interval& rhs ) const { return !( math::less( rhs().first, interval_.first ) || math::less( interval_.second, rhs().second ) ); }
 
         /// compute the hull of the interval and [x]
-        interval< T > hull( const T& x ) { return interval( math::min( interval_.first, x ), math::max( interval_.second, x ) ); }
+        interval< T > hull( const T& x ) { return interval( std::min( interval_.first, x ), std::max( interval_.second, x ) ); }
 
         /// compute the hull of 2 intervals
-        interval< T > hull( const interval& rhs ) { return interval( math::min( interval_.first, rhs.min() ), math::max( interval_.second, rhs.max() ) ); }
+        interval< T > hull( const interval& rhs ) { return interval( std::min( interval_.first, rhs.min() ), std::max( interval_.second, rhs.max() ) ); }
         
         /// equality
         bool operator==( const interval& rhs ) const { return math::equal( interval_.first, rhs().first ) && math::equal( interval_.second, rhs().second ); }
