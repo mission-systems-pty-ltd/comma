@@ -152,7 +152,6 @@ int main( int ac, char** av )
         if( sources.back().binary() )
         {
             #ifdef WIN32
-                _setmode( _fileno( stdin ), _O_BINARY );
                 _setmode( _fileno( stdout ), _O_BINARY );
             #endif
             std::size_t size = 0;

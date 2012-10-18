@@ -190,6 +190,13 @@ int main( int ac, char** av )
         filter_stream.reset( new comma::csv::input_stream< input >( **filter_transport, filter_csv ) );
         std::size_t discarded = 0;
         read_filter_block_();
+
+		#ifdef WIN32
+		if( stdin_stream->is_binary() )
+        {
+            _setmode( _fileno( stdout ), _O_BINARY );
+		}
+        #endif
         while( !is_shutdown && std::cin.good() && !std::cin.eof() )
         {
             const input* p = stdin_stream->read();

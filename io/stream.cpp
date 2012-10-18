@@ -63,7 +63,10 @@ struct traits < std::istream >
     {
         #ifdef WIN32
         ( void )( mode );
-        //if( mode == comma::io::mode::binary ) { _setmode( _fileno( stdin ), _O_BINARY ); }
+        if( mode == comma::io::mode::binary ) 
+		{
+			_setmode( _fileno( stdin ), _O_BINARY ); 
+		}
         #endif
         return &std::cin;
     }
@@ -91,7 +94,10 @@ struct traits < std::ostream >
     {
         #ifdef WIN32
         ( void )( mode );
-        //if( mode == comma::io::mode::binary ) { _setmode( _fileno( stdout ), _O_BINARY ); }
+        if( mode == comma::io::mode::binary ) 
+		{
+			_setmode( _fileno( stdout ), _O_BINARY ); 
+		}
         #endif
         return &std::cout;
     }
@@ -300,9 +306,6 @@ stream< S >::stream( const std::string& name, mode::value m, mode::blocking_valu
         ::fcntl( fd_, F_SETFL, flags );
         #endif // #ifdef WIN32
     }
-#ifdef WIN32
-    //if( m == comma::io::mode::binary ) { _setmode( fd_, _O_BINARY ); }
-#endif
 }
 
 template class stream< std::istream >;
