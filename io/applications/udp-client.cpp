@@ -56,6 +56,14 @@ int main( int argc, char** argv )
     socket.bind( boost::asio::ip::udp::endpoint( boost::asio::ip::udp::v4(), port ), error );
     if( error ) { std::cerr << "udp-client: failed to bind port " << port << std::endl; return 1; }
     comma::signal_flag is_shutdown;
+
+    #ifdef WIN32
+    if( binary )
+    {
+        _setmode( _fileno( stdout ), _O_BINARY );        
+    }
+    #endif
+    
     while( !is_shutdown && std::cout.good() )
     {
         boost::system::error_code error;

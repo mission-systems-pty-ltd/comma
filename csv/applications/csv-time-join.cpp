@@ -119,6 +119,14 @@ int main( int ac, char** av )
         std::pair< std::string, std::string > last;
         std::pair< boost::posix_time::ptime, boost::posix_time::ptime > last_timestamp;
         comma::signal_flag is_shutdown;
+
+#ifdef WIN32
+        if( stdin_csv.binary() )
+        {
+            _setmode( _fileno( stdout ), _O_BINARY );
+        }
+#endif
+        
         while( !is_shutdown && std::cin.good() && !std::cin.eof() && is->good() && !is->eof() )
         {
             const Point* p = stdin_stream.read();

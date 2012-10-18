@@ -57,6 +57,9 @@ int main( int argc, char** argv )
         }
         else
         {
+#ifdef WIN32
+            _setmode( _fileno( stdin ), _O_BINARY );
+#endif            
             std::vector< char > packet( size );
             while( std::cin.good() && !std::cin.eof() )
             {

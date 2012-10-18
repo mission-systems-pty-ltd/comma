@@ -191,11 +191,11 @@ int main( int ac, char** av )
         std::size_t discarded = 0;
         read_filter_block_();
 
-		#ifdef WIN32
-		if( stdin_stream->is_binary() )
+        #ifdef WIN32
+        if( stdin_stream->is_binary() )
         {
             _setmode( _fileno( stdout ), _O_BINARY );
-		}
+        }
         #endif
         while( !is_shutdown && std::cin.good() && !std::cin.eof() )
         {
