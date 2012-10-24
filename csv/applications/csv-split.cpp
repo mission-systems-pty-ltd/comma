@@ -1,3 +1,9 @@
+#ifdef WIN32
+#include <stdio.h>
+#include <fcntl.h>
+#include <io.h>
+#endif
+
 #include <boost/optional.hpp>
 #include <boost/program_options.hpp>
 #include <comma/csv/impl/program_options.h>
