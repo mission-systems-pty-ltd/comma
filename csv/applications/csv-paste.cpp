@@ -44,7 +44,7 @@ static void usage()
     std::cerr << "are expected to be exactly in the same order;" << std::endl;
     std::cerr << std::endl;
     std::cerr << "something like:" << std::endl;
-    std::cerr << "    csv-paste \"file1.csv\" \"file2.csv\" \"value=<value>\"" << std::endl;
+    std::cerr << "    csv-paste \"file1.csv\" \"file2.csv\" \"value=<value>\" \"line-number\"" << std::endl;
     std::cerr << std::endl;
     std::cerr << "usage: csv-paste [<options>] <file> <file>..." << std::endl;
     std::cerr << std::endl;
@@ -56,6 +56,7 @@ static void usage()
     std::cerr << "    --delimiter,-d <delimiter> : default ','" << std::endl;
     std::cerr << "    <file> : <filename>[;size=<size>|binary=<format>]: file name or \"-\" for stdin; specify size or format, if binary" << std::endl;
     std::cerr << "    <value> : <csv values>[;binary=<format>]; specify size or format, if binary" << std::endl;
+    std::cerr << "    line-number : add the line number; as ui, if binary (quick and dirty, will override the file named \"line-number\")" << std::endl;
     std::cerr << comma::csv::format::usage() << std::endl;
     std::cerr << std::endl;
     exit( -1 );
@@ -86,10 +87,10 @@ class source
         std::string properties_;
 };
 
-class Stream : public source
+class stream : public source
 {
     public:
-        Stream( const std::string& properties )
+        stream( const std::string& properties )
             : source( properties )
             , stream_( comma::split( properties, ';' )[0], binary() ? comma::io::mode::binary : comma::io::mode::ascii )
         {
@@ -129,6 +130,28 @@ struct value : public source
     const char* read( char* buf ) { ::memcpy( buf, &value_[0], value_.size() ); return buf; } // quick and dirty
 };
 
+class line_number : public source
+{
+    public:
+        line_number( bool is_binary ) : source( is_binary ? "binary=ui" : "" ), value_( 0 ) {}
+        
+        const std::string* read()
+        { 
+            serialized_ = boost::lexical_cast< std::string >( value_++ );
+            return &serialized_;
+        }
+        
+        const char* read( char* buf ) // quick and dirty
+        {
+            comma::csv::format::traits< comma::uint32 >::to_bin( value_++, buf );
+            return buf;
+        }
+        
+    private:
+        comma::uint32 value_;
+        std::string serialized_;
+};
+
 int main( int ac, char** av )
 {
     bool show_usage = true;
@@ -139,17 +162,44 @@ int main( int ac, char** av )
         char delimiter = options.value( "--delimiter,-d", ',' );
         std::vector< std::string > unnamed = options.unnamed( "", "--delimiter,-d" );
         boost::ptr_vector< source > sources;
-        source* source;
+        bool is_binary = false;
+        for( unsigned int i = 0; i < unnamed.size(); ++i ) // quick and dirty
+        {
+            if( unnamed[i].substr( 0, 6 ) == "value=" )
+            { 
+                if( value( unnamed[i] ).binary() ) { is_binary = true; }
+            }
+            else if( unnamed[i] == "line-number" )
+            { 
+                continue;
+            }
+            else
+            { 
+                if( stream( unnamed[i] ).binary() ) { is_binary = true; }
+            }            
+        }
         for( unsigned int i = 0; i < unnamed.size(); ++i )
         {
-            if( unnamed[i].substr( 0, 6 ) == "value=" ) { source = new value( unnamed[i] ); }
-            else { source = new Stream( unnamed[i] ); }
-            if( i > 0 && sources.back().binary() != source->binary() ) { std::cerr << "csv-paste: one input is ascii, the other binary: " << sources.back().properties() << " vs " << source->properties() << std::endl; usage(); }
-            sources.push_back( source );
+            source* s;
+            if( unnamed[i].substr( 0, 6 ) == "value=" )
+            { 
+                s = new value( unnamed[i] );
+                if( is_binary != s->binary() ) { std::cerr << "csv-paste: one input is ascii, the other binary: " << sources.back().properties() << " vs " << s->properties() << std::endl; return 1; }
+            }
+            else if( unnamed[i] == "line-number" )
+            { 
+                s = new line_number( is_binary );
+            }
+            else
+            { 
+                s = new stream( unnamed[i] );
+                if( is_binary != s->binary() ) { std::cerr << "csv-paste: one input is ascii, the other binary: " << sources.back().properties() << " vs " << s->properties() << std::endl; return 1; }
+            }
+            sources.push_back( s );
         }
         if( sources.empty() ) { usage(); }
         show_usage = false;
-        if( sources.back().binary() )
+        if( is_binary )
         {
             #ifdef WIN32
                 _setmode( _fileno( stdout ), _O_BINARY );
