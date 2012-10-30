@@ -1,7 +1,6 @@
 // This file is part of comma library
 //
-// Copyright (c) Matthew Herrmann 2007
-// Copyright (c) Vsevolod Vlaskine 2010-2011
+// Copyright (C) 2011 The University of Sydney
 //
 // comma is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public

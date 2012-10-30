@@ -1,7 +1,6 @@
 // This file is part of comma library
 //
-// Copyright (c) Matthew Herrmann 2007
-// Copyright (c) Vsevolod Vlaskine 2010-2011
+// Copyright (C) 2011 The University of Sydney
 //
 // comma is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -15,6 +14,9 @@
 //
 // You should have received a copy of the GNU Lesser General Public
 // License along with comma. If not, see <http://www.gnu.org/licenses/>.
+
+/// @author Matthew Herrmann 2007
+/// @author Vsevolod Vlaskine 2010-2011
 
 #ifndef COMMA_PACKED_LITTLEENDIAN_H_
 #define COMMA_PACKED_LITTLEENDIAN_H_
