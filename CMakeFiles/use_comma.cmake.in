@@ -1,5 +1,5 @@
 #
-# This module is provided as comma USE_FILE by comma_config.cmake.  It can
+# This module is provided as comma USE_FILE by comma-config.cmake.  It can
 # be INCLUDEd in a project to load the needed compiler and linker
 # settings to use Utility Functions.
 #

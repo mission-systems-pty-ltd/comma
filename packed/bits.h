@@ -16,6 +16,9 @@
 // You should have received a copy of the GNU Lesser General Public
 // License along with comma. If not, see <http://www.gnu.org/licenses/>.
 
+/// @author Matthew Herrmann 2007
+/// @author Vsevolod Vlaskine 2010-2011
+
 #ifndef COMMA_PACKED_BITS_HEADER_H_
 #define COMMA_PACKED_BITS_HEADER_H_
 

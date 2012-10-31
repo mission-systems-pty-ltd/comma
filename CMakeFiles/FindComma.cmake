@@ -63,12 +63,12 @@ ENDIF ( NOT comma_DIR )
 # If comma was found, load the configuration file to get the rest of the
 # settings.
 IF(comma_DIR)
-  # Make sure the comma_config.cmake file exists in the directory provided.
-  IF(EXISTS ${comma_DIR}/comma_config.cmake)
+  # Make sure the comma-config.cmake file exists in the directory provided.
+  IF(EXISTS ${comma_DIR}/comma-config.cmake)
     # We found comma.  Load the settings.
     SET(comma_FOUND 1)
-    INCLUDE(${comma_DIR}/comma_config.cmake)
-  ENDIF(EXISTS ${comma_DIR}/comma_config.cmake)
+    INCLUDE(${comma_DIR}/comma-config.cmake)
+  ENDIF(EXISTS ${comma_DIR}/comma-config.cmake)
 ELSE(comma_DIR)
   # We did not find comma_.
   SET(comma_FOUND 0)

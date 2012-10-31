@@ -1,4 +1,5 @@
-// This file is part of comma library
+// This file is part of comma, a generic and flexible library 
+// for robotics research.
 //
 // Copyright (C) 2011 The University of Sydney
 //
@@ -15,13 +16,11 @@
 // You should have received a copy of the GNU Lesser General Public
 // License along with comma. If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef COMMA_PACKED_PACKED_HEADER_H_
-#define COMMA_PACKED_PACKED_HEADER_H_
+#ifndef COMMA_NAME_VALUE_NAME_VALUE_H_
+#define COMMA_NAME_VALUE_NAME_VALUE_H_
 
-#include <comma/packed/byte.h>
-#include <comma/packed/little_endian.h>
-#include <comma/packed/big_endian.h>
-#include <comma/packed/string.h>
-#include <comma/packed/struct.h>
+#include <comma/name_value/map.h>
+#include <comma/name_value/parser.h>
+#include <comma/name_value/ptree.h>
 
-#endif // COMMA_PACKED_PACKED_HEADER_H_
+#endif // #ifndef COMMA_NAME_VALUE_NAME_VALUE_H_
