@@ -39,8 +39,9 @@ static void usage()
     std::cerr << std::endl;
     std::cerr << "todo: for now only for offline processing" << std::endl;
     std::cerr << "      realtime will work, but not necessarily correctly" << std::endl;
+    std::cerr << "      if the bounding stream is delayed more than bounded" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "usage: cat a.csv | csv-time-join <how> [<options>] b.csv" << std::endl;
+    std::cerr << "usage: cat a.csv | csv-time-join <how> [<options>] bounding.csv [-] > joined.csv" << std::endl;
     std::cerr << std::endl;
     std::cerr << "<how>" << std::endl;
     std::cerr << "    --by-lower: join by lower timestamp" << std::endl;
@@ -52,6 +53,9 @@ static void usage()
     //std::cerr << "               if 'block' given in --fields, output the whole block" << std::endl;
     std::cerr << std::endl;
     std::cerr << "<input/output options>" << std::endl;
+    std::cerr << "    -: if csv-time-join - b.csv, concatenate output as: <stdin><b.csv>" << std::endl;
+    std::cerr << "       if csv-time-join b.csv -, concatenate output as: <b.csv><stdin>" << std::endl;
+    std::cerr << "       default: csv-time-join - b.csv" << std::endl;
     std::cerr << "    --binary,-b <format>: binary format" << std::endl;
     std::cerr << "    --delimiter,-d <delimiter>: ascii only; default ','" << std::endl;
     std::cerr << "    --fields,-f <fields>: input fields; default: t" << std::endl;
@@ -110,7 +114,26 @@ int main( int ac, char** av )
         comma::csv::options stdin_csv( options, "t" );
         //bool has_block = stdin_csv.has_field( "block" );
         comma::csv::input_stream< Point > stdin_stream( std::cin, stdin_csv );
-        std::string properties = options.unnamed( "--by-lower,--by-upper,--nearest,--timestamp-only,--time-only,--no-discard", "--binary,-b,--delimiter,-d,--fields,-f,--bound" )[0];
+        std::vector< std::string > unnamed = options.unnamed( "--by-lower,--by-upper,--nearest,--timestamp-only,--time-only,--no-discard", "--binary,-b,--delimiter,-d,--fields,-f,--bound" );
+        std::string properties;
+        bool bounded_first = true;
+        switch( unnamed.size() )
+        {
+            case 0:
+                std::cerr << "csv-time-join: please specify bounding source" << std::endl;
+                return 1;
+            case 1:
+                properties = unnamed[0];
+                break;
+            case 2:
+                if( unnamed[0] == "-" ) { properties = unnamed[1]; }
+                else if( unnamed[1] == "-" ) { properties = unnamed[0]; bounded_first = false; }
+                else { std::cerr << "csv-time-join: expected either '- <bounding>' or '<bounding> -'; got : " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
+                break;
+            default:
+                std::cerr << "csv-time-join: expected either '- <bounding>' or '<bounding> -'; got : " << comma::join( unnamed, ' ' ) << std::endl;
+                return 1;
+        }
         comma::io::istream is( comma::split( properties, ';' )[0] );
         comma::name_value::parser parser( "filename" );
         comma::csv::options csv = parser.get< comma::csv::options >( properties );
@@ -120,12 +143,9 @@ int main( int ac, char** av )
         std::pair< boost::posix_time::ptime, boost::posix_time::ptime > last_timestamp;
         comma::signal_flag is_shutdown;
 
-#ifdef WIN32
-        if( stdin_csv.binary() )
-        {
-            _setmode( _fileno( stdout ), _O_BINARY );
-        }
-#endif
+        #ifdef WIN32
+        if( stdin_csv.binary() ) { _setmode( _fileno( stdout ), _O_BINARY ); }
+        #endif
         
         while( !is_shutdown && std::cin.good() && !std::cin.eof() && is->good() && !is->eof() )
         {
@@ -153,7 +173,7 @@ int main( int ac, char** av )
             const std::string& s = is_first ? last.first : last.second;
             if( stdin_csv.binary() )
             {
-                std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() );
+                if( bounded_first ) { std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() ); }
                 if( timestamp_only )
                 {
                     static comma::csv::binary< Point > b;
@@ -165,14 +185,16 @@ int main( int ac, char** av )
                 {
                     std::cout.write( &s[0], s.size() );
                 }
+                if( !bounded_first ) { std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() ); }
                 std::cout.flush();
             }
             else
             {
-                std::cout << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter );
-                std::cout << stdin_csv.delimiter;
-                if( timestamp_only ) { std::cout << boost::posix_time::to_iso_string( t ) << std::endl; }
-                else { std::cout << s << std::endl; }
+                if( bounded_first ) { std::cout << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << stdin_csv.delimiter; }
+                if( timestamp_only ) { std::cout << boost::posix_time::to_iso_string( t ); }
+                else { std::cout << s; }
+                if( !bounded_first ) { std::cout << stdin_csv.delimiter << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ); }
+                std::cout << std::endl;
             }
         }
         if( is_shutdown ) { std::cerr << "csv-time-join: interrupted by signal" << std::endl; }
