@@ -55,5 +55,5 @@ INSTALL( TARGETS csv-bin-cut
                  csv-play
                  csv-crc
                  csv-thin
-         RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/${comma_INSTALL_BIN_DIR}
+         RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR}
          COMPONENT Runtime )

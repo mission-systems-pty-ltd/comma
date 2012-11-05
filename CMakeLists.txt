@@ -153,7 +153,7 @@ CONFIGURE_FILE( ${PROJECT_SOURCE_DIR}/CMakeFiles/use_${PROJECT_NAME}.cmake.in
 
 SET( comma_PACKAGE_CMAKEFILES ${comma_PACKAGE_CMAKEFILES} ${PROJECT_BINARY_DIR}/CMakeFiles/use_${PROJECT_NAME}.cmake )
 INSTALL( FILES ${comma_PACKAGE_CMAKEFILES}
-         DESTINATION ${CMAKE_INSTALL_PREFIX}/${comma_INSTALL_PACKAGE_DIR} )
+         DESTINATION ${comma_INSTALL_PACKAGE_DIR} )
 
 #-----------------------------------------------------------------------------
 # add sources

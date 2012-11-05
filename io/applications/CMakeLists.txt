@@ -15,21 +15,21 @@ IF( comma_BUILD_ZEROMQ )
 ADD_EXECUTABLE( zero-cat ${dir}/zero-cat.cpp )
 TARGET_LINK_LIBRARIES ( zero-cat ${ZeroMQ_LIBRARY} comma_io comma_application boost_program_options )
 INSTALL( TARGETS zero-cat
-         RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/${comma_INSTALL_BIN_DIR}
+         RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR}
          COMPONENT Runtime )
 ENDIF( comma_BUILD_ZEROMQ )
 
 IF( NOT WIN32 )
 INSTALL( TARGETS udp-client
-         RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/${comma_INSTALL_BIN_DIR}
+         RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR}
          COMPONENT Runtime )
 ENDIF( NOT WIN32 )
 
 IF(NOT WIN32) # io-publish uses select on stdin and would throw on windows
 INSTALL( TARGETS io-publish
-         RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/${comma_INSTALL_BIN_DIR}
+         RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR}
          COMPONENT Runtime )
 ENDIF(NOT WIN32)
 
-INSTALL ( PROGRAMS zero-publish DESTINATION ${CMAKE_INSTALL_PREFIX}/${comma_INSTALL_BIN_DIR})
+INSTALL ( PROGRAMS zero-publish DESTINATION ${comma_INSTALL_BIN_DIR})
 

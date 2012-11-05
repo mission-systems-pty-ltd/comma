@@ -38,8 +38,8 @@ fi
 
 SOCKET="/tmp/zero-publish-$TCP_PORT"
 echo " size $SIZE socket $SOCKET"
-cat | zero-cat -s $SIZE --publish ipc://$SOCKET &
-socat -U tcp4-listen:$TCP_PORT,reuseaddr,fork exec:"zero-cat 'ipc://$SOCKET' --size $SIZE" 2>/dev/null &
+cat | zero-cat -b 16 -s $SIZE --publish ipc://$SOCKET &
+socat -U tcp4-listen:$TCP_PORT,reuseaddr,fork exec:"zero-cat -b 16 'ipc://$SOCKET' --size $SIZE" 2>/dev/null &
 
 while [[ -z $is_shutdown ]] ; do
     sleep 0.5
