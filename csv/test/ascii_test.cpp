@@ -53,6 +53,11 @@ struct containers
     boost::array< int, 4 > array;
 };
 
+struct vector_container
+{
+    std::vector< int > vector;
+};
+
 } } } // namespace comma { namespace csv { namespace ascii_test {
 
 namespace comma { namespace visiting {
@@ -122,6 +127,19 @@ template <> struct traits< comma::csv::ascii_test::containers >
     template < typename Key, class Visitor > static void visit( const Key&, comma::csv::ascii_test::containers& p, Visitor& v )
     {
         v.apply( "array", p.array );
+    }
+};
+
+template <> struct traits< comma::csv::ascii_test::vector_container >
+{
+    template < typename Key, class Visitor > static void visit( const Key&, const comma::csv::ascii_test::vector_container& p, Visitor& v )
+    {
+        v.apply( "vector", p.vector );
+    }
+
+    template < typename Key, class Visitor > static void visit( const Key&, comma::csv::ascii_test::vector_container& p, Visitor& v )
+    {
+        v.apply( "vector", p.vector );
     }
 };
 
@@ -257,6 +275,60 @@ TEST( csv, ascii_containers )
             EXPECT_EQ( c.array[1], 7 );
             EXPECT_EQ( c.array[2], 8 );
             EXPECT_EQ( c.array[3], 9 );
+        }
+    }
+    {
+        comma::csv::ascii_test::vector_container v;
+        v.vector.resize( 3 );
+        for( unsigned int i = 0; i < v.vector.size(); ++i ) { v.vector[i] = i; }
+        comma::csv::ascii< comma::csv::ascii_test::vector_container > ascii( "", ',', false, v );
+        {
+            std::string s;
+            ascii.put( v, s );
+            EXPECT_EQ( s, "0,1,2" );
+        }        
+        {
+            std::string s = "5,6,7";
+            ascii.get( v, s );
+            EXPECT_EQ( v.vector[0], 5 );
+            EXPECT_EQ( v.vector[1], 6 );
+            EXPECT_EQ( v.vector[2], 7 );
+        }
+    }
+    {
+        comma::csv::ascii_test::vector_container v;
+        v.vector.resize( 3 );
+        for( unsigned int i = 0; i < v.vector.size(); ++i ) { v.vector[i] = i; }
+        comma::csv::ascii< comma::csv::ascii_test::vector_container > ascii( "vector[0],vector[1],vector[2]", ',', false, v );
+        {
+            std::string s;
+            ascii.put( v, s );
+            EXPECT_EQ( s, "0,1,2" );
+        }        
+        {
+            std::string s = "5,6,7";
+            ascii.get( v, s );
+            EXPECT_EQ( v.vector[0], 5 );
+            EXPECT_EQ( v.vector[1], 6 );
+            EXPECT_EQ( v.vector[2], 7 );
+        }
+    }    
+    {
+        comma::csv::ascii_test::vector_container v;
+        v.vector.resize( 3 );
+        for( unsigned int i = 0; i < v.vector.size(); ++i ) { v.vector[i] = i; }
+        comma::csv::ascii< comma::csv::ascii_test::vector_container > ascii( "vector[0],vector[2]", ',', false, v );
+        {
+            std::string s;
+            ascii.put( v, s );
+            EXPECT_EQ( s, "0,2" );
+        }        
+        {
+            std::string s = "5,6";
+            ascii.get( v, s );
+            EXPECT_EQ( v.vector[0], 5 );
+            EXPECT_EQ( v.vector[1], 1 );
+            EXPECT_EQ( v.vector[2], 6 );
         }
     }
     // todo: more tests

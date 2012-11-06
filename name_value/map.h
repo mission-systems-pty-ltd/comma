@@ -18,8 +18,10 @@
 #ifndef COMMA_APPLICATION_NAME_VALUE_MAP_H
 #define COMMA_APPLICATION_NAME_VALUE_MAP_H
 
-#include <comma/name_value/impl/options.h>
 #include <boost/lexical_cast.hpp>
+#include <boost/date_time/posix_time/ptime.hpp>
+#include <boost/date_time/posix_time/time_parsers.hpp>
+#include <comma/name_value/impl/options.h>
 
 namespace comma
 {
@@ -118,6 +120,12 @@ inline bool lexical_cast< bool >( const std::string& s )
     if( s == "" || s == "true" ) { return true; }
     if( s == "false" ) { return false; }
     return boost::lexical_cast< bool >( s );
+}
+
+template <>
+inline boost::posix_time::ptime lexical_cast< boost::posix_time::ptime >( const std::string& s )
+{
+    return boost::posix_time::from_iso_string( s );
 }
 
 } // namespace detail {

@@ -93,9 +93,9 @@ struct constraints
     
     bool is_a_match( const T& t ) const
     {
-        if( equals ) { std::cerr << "==> is_a_match: t: " << t << " equals: " << *equals << std::endl; }
-        if( from ) { std::cerr << "==> is_a_match: t: " << t << " from: " << *from << std::endl; }
-        if( to ) { std::cerr << "==> is_a_match: t: " << t << " to: " << *to << std::endl; }
+//         if( equals ) { std::cerr << "==> is_a_match: t: " << t << " equals: " << *equals << std::endl; }
+//         if( from ) { std::cerr << "==> is_a_match: t: " << t << " from: " << *from << std::endl; }
+//         if( to ) { std::cerr << "==> is_a_match: t: " << t << " to: " << *to << std::endl; }
         
         return    ( !equals || comma::math::equal( *equals, t ) )
                && ( !from || !comma::math::less( t, *from ) )
@@ -123,11 +123,14 @@ struct input_t
     
     bool is_a_match() const
     {
-        std::cerr << "==> is_a_match: doubles.size(): " << doubles.size() << std::endl;
+//         std::cerr << "==> is_a_match: doubles: ";
+//         for( unsigned int i = 0; i < doubles.size(); ++i ) { std::cerr << doubles[i].value << " "; }
+//         std::cerr << std::endl;
+        
         for( unsigned int i = 0; i < time.size(); ++i ) { if( !time[i].is_a_match() ) { return false; } }
         for( unsigned int i = 0; i < doubles.size(); ++i ) { if( !doubles[i].is_a_match() ) { return false; } }
         for( unsigned int i = 0; i < strings.size(); ++i ) { if( !strings[i].is_a_match() ) { return false; } }
-        std::cerr << "==> is_a_match: done" << std::endl;
+//        std::cerr << "==> is_a_match: done" << std::endl << std::endl;
         return true;
     }
     
@@ -200,19 +203,20 @@ static void init_input( const comma::csv::format& format, const comma::command_l
             case comma::csv::format::time:
             case comma::csv::format::long_time:
                 input.time.push_back( make_value< boost::posix_time::ptime >( constraints_map[ fields[i] ], options ) );
-                fields[i] = "t[" + boost::lexical_cast< std::string >( input.time.size() - 1 ) + "]";
+                fields[i] = "t[" + boost::lexical_cast< std::string >( input.time.size() - 1 ) + "]/value";
                 break;
             case comma::csv::format::fixed_string:
                 input.strings.push_back( make_value< std::string >( constraints_map[ fields[i] ], options ) );
-                fields[i] = "strings[" + boost::lexical_cast< std::string >( input.strings.size() - 1 ) + "]";
+                fields[i] = "strings[" + boost::lexical_cast< std::string >( input.strings.size() - 1 ) + "]/value";
                 break;
             default:
                 input.doubles.push_back( make_value< double >( constraints_map[ fields[i] ], options ) );
-                fields[i] = "doubles[" + boost::lexical_cast< std::string >( input.doubles.size() - 1 ) + "]";
+                fields[i] = "doubles[" + boost::lexical_cast< std::string >( input.doubles.size() - 1 ) + "]/value";
                 break;
         }
     }
-    csv.fields = comma::join( fields, ',' );    
+    csv.fields = comma::join( fields, ',' );
+    csv.full_xpath = true;
 }
 
 static comma::csv::format guess_format( const std::string& line )
@@ -223,7 +227,7 @@ static comma::csv::format guess_format( const std::string& line )
     {
         try
         {
-            boost::lexical_cast< boost::posix_time::ptime >( v[i] );
+            boost::posix_time::from_iso_string( v[i] );
             format += "t";
         }
         catch( ... )
@@ -245,68 +249,76 @@ static comma::csv::format guess_format( const std::string& line )
 
 int main( int ac, char** av )
 {
-    comma::command_line_options options( ac, av );
-    if( options.exists( "--help,-h" ) ) { usage(); }
-    verbose = options.exists( "--verbose,-v" );
-    csv = comma::csv::options( options );
-    csv.full_xpath = false;
-    fields = comma::split( csv.fields, ',' );
-    if( fields.size() == 1 && fields[0].empty() ) { fields.clear(); }
-    std::vector< std::string > unnamed = options.unnamed( "--sorted,--verbose,-v", "-b,--binary,-f,--fields,-d,--delimiter,--precision,--equals,--from,--to" );
-    for( unsigned int i = 0; i < unnamed.size(); constraints_map.insert( std::make_pair( comma::split( unnamed[i], ';' )[0], unnamed[i] ) ), ++i );
-    comma::signal_flag is_shutdown;
-    if( csv.binary() )
+    try
     {
-        #ifdef WIN32
-        _setmode( _fileno( stdout ), _O_BINARY );
-        #endif
-        init_input( csv.format(), options );
-        csv.fields = comma::join( fields, ',' );
-        comma::csv::binary_input_stream< input_t > istream( std::cin, csv, input );
-        while( !is_shutdown && std::cin.good() && !std::cin.eof() )
+        comma::command_line_options options( ac, av );
+        if( options.exists( "--help,-h" ) ) { usage(); }
+        verbose = options.exists( "--verbose,-v" );
+        csv = comma::csv::options( options );
+        fields = comma::split( csv.fields, ',' );
+        if( fields.size() == 1 && fields[0].empty() ) { fields.clear(); }
+        std::vector< std::string > unnamed = options.unnamed( "--sorted,--verbose,-v", "-b,--binary,-f,--fields,-d,--delimiter,--precision,--equals,--from,--to" );
+        for( unsigned int i = 0; i < unnamed.size(); constraints_map.insert( std::make_pair( comma::split( unnamed[i], ';' )[0], unnamed[i] ) ), ++i );
+        comma::signal_flag is_shutdown;
+        if( csv.binary() )
         {
-            const input_t* p = istream.read();
-            if( !p || p->done() ) { break; }
-            if( p->is_a_match() ) { std::cout.write( istream.last(), csv.format().size() ); std::cout.flush(); }
+            #ifdef WIN32
+            _setmode( _fileno( stdout ), _O_BINARY );
+            #endif
+            init_input( csv.format(), options );
+            comma::csv::binary_input_stream< input_t > istream( std::cin, csv, input );
+            while( !is_shutdown && std::cin.good() && !std::cin.eof() )
+            {
+                const input_t* p = istream.read();
+                if( !p || p->done() ) { break; }
+                if( p->is_a_match() ) { std::cout.write( istream.last(), csv.format().size() ); std::cout.flush(); }
+            }
+        }
+        else
+        {
+            boost::scoped_ptr< comma::csv::ascii_input_stream< input_t > > istream;
+            while( !is_shutdown && std::cin.good() && !std::cin.eof() )
+            {
+                if( !istream )
+                {
+                    std::string line;
+                    while( !is_shutdown && std::cin.good() && !std::cin.eof() )
+                    {
+                        std::getline( std::cin, line );
+                        line = comma::strip( line, '\r' );
+                        if( !line.empty() ) { break; }
+                    }
+                    if( line.empty() ) { break; }
+                    comma::csv::format format = guess_format( line );
+                    init_input( format, options );
+                    istream.reset( new comma::csv::ascii_input_stream< input_t >( std::cin, csv, input ) );
+                    
+                    // todo: quick and dirty: no time to debug why the commented section does not work (but that's the right way)
+                    std::istringstream iss( line );
+                    comma::csv::ascii_input_stream< input_t > isstream( iss, csv, input );
+                    const input_t* p = isstream.read();
+                    if( p->done() ) { break; }
+                    if( p->is_a_match() ) { std::cout << line << std::endl; }
+
+    //                 input = comma::csv::ascii< input_t >( csv.fields, csv.delimiter, csv.full_xpath, input ).get( comma::split( line, csv.delimiter ) );
+    //                 if( input.done() ) { break; }
+    //                 if( input.is_a_match() ) { std::cout << line << std::endl; }
+                }
+                else
+                {
+                    const input_t* p = istream->read();
+                    if( !p || p->done() ) { break; }
+                    if( p->is_a_match() ) { std::cout << comma::join( istream->last(), csv.delimiter ) << std::endl; }
+                }
+            }
         }
     }
-    else
+    catch( std::exception& ex )
     {
-        csv.fields = comma::join( fields, ',' );
-        boost::scoped_ptr< comma::csv::ascii_input_stream< input_t > > istream;
-        while( !is_shutdown && std::cin.good() && !std::cin.eof() )
-        {
-            if( !istream )
-            {
-                std::string line;
-                while( !is_shutdown && std::cin.good() && !std::cin.eof() )
-                {
-                    std::getline( std::cin, line );
-                    line = comma::strip( line, '\r' );
-                    if( !line.empty() ) { break; }
-                }
-                if( line.empty() ) { break; }
-                comma::csv::format format = guess_format( line );
-                init_input( format, options );
-                istream.reset( new comma::csv::ascii_input_stream< input_t >( std::cin, csv, input ) );
-                
-                // todo: quick and dirty: no time to debug why the commented section does not work (but that's the right way)
-                std::istringstream iss( line );
-                comma::csv::ascii_input_stream< input_t > isstream( iss, csv, input );
-                const input_t* p = isstream.read();
-                if( p->done() ) { break; }
-                if( p->is_a_match() ) { std::cout << line << std::endl; }
-
-//                 input = comma::csv::ascii< input_t >( csv.fields, csv.delimiter, csv.full_xpath, input ).get( comma::split( line, csv.delimiter ) );
-//                 if( input.done() ) { break; }
-//                 if( input.is_a_match() ) { std::cout << line << std::endl; }
-            }
-            else
-            {
-                const input_t* p = istream->read();
-                if( !p || p->done() ) { break; }
-                if( p->is_a_match() ) { std::cout << comma::join( istream->last(), csv.delimiter ) << std::endl; }
-            }
-        }
+        std::cerr << "csv-select: caught: " << ex.what() << std::endl;
+    }
+    catch( ... )
+    {
+        std::cerr << "csv-select: unknown exception" << std::endl;
     }
 }
