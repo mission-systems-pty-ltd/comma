@@ -9,5 +9,5 @@ TARGET_LINK_LIBRARIES( name-value-convert ${comma_EXTERNAL_ALL_LIBRARIES} comma_
 TARGET_LINK_LIBRARIES( name-value-get ${comma_EXTERNAL_ALL_LIBRARIES} comma_application comma_string comma_xpath )
 
 INSTALL( TARGETS name-value-convert name-value-get
-         RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/${comma_INSTALL_BIN_DIR}
+         RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR}
          COMPONENT Runtime )
