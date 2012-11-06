@@ -173,21 +173,22 @@ ADD_SUBDIRECTORY( sync )
 ADD_SUBDIRECTORY( visiting )
 ADD_SUBDIRECTORY( xpath )
 
-#need to add third party dlls somehow, assuming they are linked as dlls
-#if we set them up to install to bin they 
-#install(FILES "${Boost_LIBRARY_DIRS}/*.dll" DESTINATION bin )
+IF( WIN32 )
+    #in future, may need to add third party dlls somehow, if they are linked as dlls. Not needed for statically linking to boost.
+    #if we set them up to install to bin they might be packaged through, e.g. roughly (using GLOB):
+    #install(FILES "${Boost_LIBRARY_DIRS}/*.dll" DESTINATION bin )
 
+    #the following set up optional parameters for cpack
+    SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "This is a description of comma. It's great!")
+    SET(CPACK_PACKAGE_VENDOR "ACFR")
+    SET(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/COPYING")
+    SET(CPACK_PACKAGE_VERSION_MAJOR "1")
+    SET(CPACK_PACKAGE_VERSION_MINOR "0")
+    SET(CPACK_PACKAGE_VERSION_PATCH "0")
 
-#the following set up optional parameters for cpack
-SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "This is a description of comma. It's great!")
-SET(CPACK_PACKAGE_VENDOR "ACFR")
-SET(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/COPYING")
-SET(CPACK_PACKAGE_VERSION_MAJOR "1")
-SET(CPACK_PACKAGE_VERSION_MINOR "0")
-SET(CPACK_PACKAGE_VERSION_PATCH "0")
+    #this line finds the appropriate Visual Studio DLLS in windows. Maybe it would find other dlls if a different build tool were used. Probably should be windows only.
+    INCLUDE( InstallRequiredSystemLibraries )
 
-#this line finds the appropriate Visual Studio DLLS. Maybe it would find other dlls if a different build tool were used. Probably should be windows only.
-INCLUDE( InstallRequiredSystemLibraries )
-
-#this line does all the work. Actually, even if this is the only line, you get all but the dlls...
-INCLUDE( CPACK )
+    #this line does all the work. Actually, even if this is the only line, you get all but the dlls...
+    INCLUDE( CPACK )
+ENDIF( WIN32 )
