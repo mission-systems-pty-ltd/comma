@@ -16,6 +16,8 @@
 // You should have received a copy of the GNU Lesser General Public
 // License along with comma. If not, see <http://www.gnu.org/licenses/>.
 
+/// @author vsevolod vlaskine
+
 #include <sstream>
 #include <string.h>
 #include <time.h>
@@ -168,7 +170,7 @@ std::string format::usage()
     return oss.str();
 }
 
-std::size_t format::sizeOf( types_enum type ) // todo: returns 0 for fixed size string, which is lame
+std::size_t format::size_of( types_enum type ) // todo: returns 0 for fixed size string, which is lame
 {
     static boost::array< unsigned int, 12 > sizes = Sizesimpl();
     return sizes[ static_cast< std::size_t >( type ) ];

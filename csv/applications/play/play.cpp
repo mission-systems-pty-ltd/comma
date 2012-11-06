@@ -16,10 +16,11 @@
 // You should have received a copy of the GNU Lesser General Public
 // License along with Ark. If not, see <http://www.gnu.org/licenses/>.
 
+/// @author cedric wohlleber
+
 #include <boost/thread/thread.hpp>
 #include <boost/thread/thread_time.hpp>
 #include "./play.h"
-
 
 namespace comma { namespace csv { namespace impl {
     

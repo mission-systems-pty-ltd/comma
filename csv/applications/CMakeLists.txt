@@ -6,6 +6,7 @@ FILE( GLOB play_includes ${dir}/play/*.h)
 SOURCE_GROUP( ${TARGET_NAME} FILES ${play_source} ${play_includes} ${source} ${includes} )
 
 ADD_EXECUTABLE( csv-size ${dir}/csv-size.cpp )
+ADD_EXECUTABLE( csv-select ${dir}/csv-select.cpp )
 ADD_EXECUTABLE( csv-bin-cut ${dir}/csv-bin-cut.cpp )
 ADD_EXECUTABLE( csv-join ${dir}/csv-join.cpp )
 ADD_EXECUTABLE( csv-paste ${dir}/csv-paste.cpp )
@@ -26,6 +27,7 @@ TARGET_LINK_LIBRARIES ( csv-size ${comma_ALL_EXTERNAL_LIBRARIES} comma_applicati
 TARGET_LINK_LIBRARIES ( csv-bin-cut ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv comma_xpath )
 TARGET_LINK_LIBRARIES ( csv-split ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv comma_xpath )
 TARGET_LINK_LIBRARIES ( csv-join ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_io comma_xpath comma_string )
+TARGET_LINK_LIBRARIES ( csv-select ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_xpath comma_string )
 TARGET_LINK_LIBRARIES ( csv-paste ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv comma_io )
 #TARGET_LINK_LIBRARIES ( csv-make-blocks ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_xpath comma_string )
 TARGET_LINK_LIBRARIES ( csv-time ${comma_ALL_EXTERNAL_LIBRARIES} comma_application )
@@ -54,6 +56,7 @@ INSTALL( TARGETS csv-bin-cut
                  csv-calc
                  csv-play
                  csv-crc
+                 csv-select
                  csv-thin
          RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/${comma_INSTALL_BIN_DIR}
          COMPONENT Runtime )

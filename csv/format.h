@@ -16,6 +16,8 @@
 // You should have received a copy of the GNU Lesser General Public
 // License along with comma. If not, see <http://www.gnu.org/licenses/>.
 
+/// @author vsevolod vlaskine
+
 #ifndef COMMA_CSV_APPLICATIONS_FORMAT_HEADER_GUARD_
 #define COMMA_CSV_APPLICATIONS_FORMAT_HEADER_GUARD_
 
@@ -101,7 +103,7 @@ class format
         const format& operator+=( const format& rhs );
         
         /// return size of binary field
-        static std::size_t sizeOf( types_enum type );
+        static std::size_t size_of( types_enum type );
         
         /// take csv string, write to the given stream
         void csv_to_bin( std::ostream& os, const std::string& csv, char delimiter = ',' ) const;
