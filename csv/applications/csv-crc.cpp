@@ -16,6 +16,9 @@
 // You should have received a copy of the GNU Lesser General Public
 // License along with comma. If not, see <http://www.gnu.org/licenses/>.
 
+/// @author vsevolod vlaskine
+/// @author james underwood
+
 #ifdef WIN32
 #include <fcntl.h>
 #include <io.h>
@@ -30,8 +33,6 @@
 #include <comma/application/contact_info.h>
 #include <comma/application/signal_flag.h>
 #include <comma/base/types.h>
-
-/// @author vsevolod vlaskine
 
 static void usage()
 {
