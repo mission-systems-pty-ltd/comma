@@ -27,6 +27,7 @@
 #include <boost/crc.hpp>
 #include <boost/optional.hpp>
 #include <comma/application/command_line_options.h>
+#include <comma/application/contact_info.h>
 #include <comma/application/signal_flag.h>
 #include <comma/base/types.h>
 
@@ -71,6 +72,8 @@ static void usage()
     std::cerr << "                         make sure that at least <n> subsequent lines (ascii) or" << std::endl;
     std::cerr << "                         packets (binary) are valid, before output; default 0, i.e. recover on the next valid" << std::endl;
     std::cerr << "    --discard-on-recovery,--discard: discard those <n> packets accumulated during the recovery check" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 1 );
 }

@@ -26,6 +26,7 @@
 
 #include <boost/optional.hpp>
 #include <boost/program_options.hpp>
+#include <comma/application/contact_info.h>
 #include <comma/csv/impl/program_options.h>
 #include <comma/csv/applications/split/split.h>
 
@@ -60,6 +61,8 @@ int main( int argc, char** argv )
             std::cerr << "    t: if present, use timestamp from the packet; if absent, use system time" << std::endl;
             std::cerr << "    block: split on the block number change" << std::endl;
             std::cerr << "    id: split by id (same as block, except does not have to be contiguous by the price of worse performance)" << std::endl;
+            std::cerr << std::endl;
+            std::cerr << comma::contact_info << std::endl;
             std::cerr << std::endl;
             return 1;
         }

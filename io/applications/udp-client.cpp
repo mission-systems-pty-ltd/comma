@@ -27,6 +27,7 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/static_assert.hpp>
+#include <comma/application/contact_info.h>
 #include <comma/application/command_line_options.h>
 #include <comma/application/signal_flag.h>
 #include <comma/base/types.h>
@@ -47,6 +48,8 @@ void usage()
     std::cerr << "    --size=<size>: hint of maximum buffer size; default 16384" << std::endl;
     std::cerr << "    --reuse-addr,--reuseaddr: reuse udp address/port" << std::endl;
     std::cerr << "    --timestamp: output packet timestamp (currently just system time)" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 1 );
 }

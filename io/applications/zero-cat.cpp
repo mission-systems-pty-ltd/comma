@@ -23,6 +23,7 @@
 #include <boost/program_options.hpp>
 #include <boost/array.hpp>
 #include <comma/io/publisher.h>
+#include <comma/application/contact_info.h>
 #include <comma/application/signal_flag.h>
 
 int main(int argc, char* argv[])
@@ -54,7 +55,9 @@ int main(int argc, char* argv[])
         std::cerr << "usage: zero-cat <options> [endpoints]" << std::endl;
         std::cerr << "publisher example: yes hello | zero-cat --publish --size 6 ipc:///tmp/socket tcp://*:5555 -" << std::endl;
         std::cerr << "subscriber example: zero-cat ipc:///tmp/socket tcp://*:5555 " << std::endl;
-        std::cerr << description << "\n";
+        std::cerr << description << std::endl;
+        std::cerr << comma::contact_info << std::endl;
+        std::cerr << std::endl;
         return 1;
     }
 

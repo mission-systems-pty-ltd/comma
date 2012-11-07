@@ -20,6 +20,7 @@
 
 #include <iostream>
 #include <comma/application/command_line_options.h>
+#include <comma/application/contact_info.h>
 #include <comma/csv/format.h>
 
 using namespace comma;
@@ -38,6 +39,8 @@ static void usage()
     std::cerr << "      csv-size t will output 8" << std::endl;
     std::cerr << "      csv-size 2d will output 16" << std::endl;
     std::cerr << "      csv-size 2d --count will output 2" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( -1 );
 }

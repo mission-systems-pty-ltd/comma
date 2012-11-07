@@ -1,7 +1,10 @@
 comma, a generic c++ library
 
-Documentation:
+Doxygen documentation:
 http://acfr.github.com/comma/
+
+Wiki:
+http://github.com/acfr/comma/wiki
 
 Installation:
 

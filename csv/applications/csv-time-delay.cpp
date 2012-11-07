@@ -21,6 +21,7 @@
 #include <iostream>
 #include <string>
 #include <comma/application/command_line_options.h>
+#include <comma/application/contact_info.h>
 #include <comma/application/signal_flag.h>
 #include <comma/base/types.h>
 #include <comma/csv/stream.h>
@@ -39,6 +40,8 @@ static void usage()
     std::cerr << "    --binary,-b <format>: binary format" << std::endl;
     std::cerr << "    --delimiter,-d <delimiter>: ascii only; default ','" << std::endl;
     std::cerr << "    --fields,-f <fields>: input fields; default: t" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( -1 );
 }

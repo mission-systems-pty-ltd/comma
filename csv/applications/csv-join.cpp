@@ -29,6 +29,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/unordered_map.hpp>
 #include <comma/application/command_line_options.h>
+#include <comma/application/contact_info.h>
 #include <comma/application/signal_flag.h>
 #include <comma/base/types.h>
 #include <comma/csv/stream.h>
@@ -56,6 +57,8 @@ static void usage( bool long_help = false )
     std::cerr << std::endl;
     std::cerr << "examples:" << std::endl;
     std::cerr << "    todo" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( -1 );
 }

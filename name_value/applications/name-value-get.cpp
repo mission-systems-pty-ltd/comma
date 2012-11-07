@@ -27,6 +27,7 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/regex.hpp>
 #include <comma/base/exception.h>
+#include <comma/application/contact_info.h>
 #include <comma/application/command_line_options.h>
 #include <comma/application/signal_flag.h>
 #include <comma/name_value/ptree.h>
@@ -61,6 +62,8 @@ static void usage()
     std::cerr << "data flow options:" << std::endl;
     std::cerr << "    --linewise,-l: if present, treat each input line as a record" << std::endl;
     std::cerr << "                   if absent, treat all of the input as one record" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 1 );
 }

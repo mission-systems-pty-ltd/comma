@@ -31,6 +31,7 @@
 #include <boost/scoped_ptr.hpp>
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
+#include <comma/application/contact_info.h>
 #include <comma/application/command_line_options.h>
 #include <comma/application/signal_flag.h>
 #include <comma/base/last_error.h>
@@ -63,6 +64,8 @@ static void usage()
     std::cerr << "    local:<name>: linux/unix local server socket e.g. local:./tmp/my_socket" << std::endl;
     std::cerr << "    <named pipe name>: named pipe, which will be re-opened, if client reconnects" << std::endl;
     std::cerr << "    <filename>: a regular file" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( -1 );
 }

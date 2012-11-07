@@ -29,6 +29,7 @@
 #include <deque>
 #include <iostream>
 #include <boost/lexical_cast.hpp>
+#include <comma/application/contact_info.h>
 #include <comma/application/command_line_options.h>
 #include <comma/application/signal_flag.h>
 #include <comma/base/exception.h>
@@ -47,6 +48,8 @@ static void usage()
     std::cerr << "              consistent with the standard cut utility)" << std::endl;
     std::cerr << std::endl;
     std::cerr << csv::format::usage() << std::endl;
+    std::cerr << std::endl;
+    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( -1 );
 }

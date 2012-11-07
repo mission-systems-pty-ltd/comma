@@ -25,6 +25,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <comma/application/command_line_options.h>
+#include <comma/application/contact_info.h>
 #include <comma/base/exception.h>
 #include <comma/csv/format.h>
 #include <comma/io/stream.h>
@@ -60,6 +61,8 @@ static void usage()
     std::cerr << "    <value> : <csv values>[;binary=<format>]; specify size or format, if binary" << std::endl;
     std::cerr << "    line-number : add the line number; as ui, if binary (quick and dirty, will override the file named \"line-number\")" << std::endl;
     std::cerr << comma::csv::format::usage() << std::endl;
+    std::cerr << std::endl;
+    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( -1 );
 }

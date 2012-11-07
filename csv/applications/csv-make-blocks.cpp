@@ -21,6 +21,7 @@
 #include <deque>
 #include <queue>
 #include <comma/application/command_line_options.h>
+#include <comma/application/contact_info.h>
 #include <comma/application/signal_flag.h>
 #include <comma/base/types.h>
 #include <comma/csv/Stream.h>
@@ -69,6 +70,8 @@ static void usage()
     std::cerr << "    1,1,3" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    todo: more examples" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( -1 );
 }

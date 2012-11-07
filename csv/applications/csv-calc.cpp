@@ -32,6 +32,7 @@
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/unordered_map.hpp>
+#include <comma/application/contact_info.h>
 #include <comma/application/signal_flag.h>
 #include <comma/base/exception.h>
 #include <comma/csv/format.h>
@@ -71,6 +72,8 @@ static void usage()
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << "    todo" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( -1 );
 }

@@ -28,6 +28,7 @@
 #include <string>
 #include <boost/optional.hpp>
 #include <comma/application/command_line_options.h>
+#include <comma/application/contact_info.h>
 #include <comma/application/signal_flag.h>
 #include <comma/base/types.h>
 #include <comma/csv/format.h>
@@ -44,6 +45,8 @@ static void usage()
     std::cerr << "    --size=<size>: binary input of size" << std::endl;
     std::cerr << "    --delimiter,-d <delimiter>: ascii only; default ','" << std::endl;
     std::cerr << "    --local: if present, local time; default: utc" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( -1 );
 }

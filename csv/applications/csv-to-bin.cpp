@@ -26,6 +26,7 @@
 
 #include <stdlib.h>
 #include <iostream>
+#include <comma/application/contact_info.h>
 #include <comma/application/command_line_options.h>
 #include <comma/application/signal_flag.h>
 #include <comma/csv/format.h>
@@ -39,6 +40,8 @@ static void usage()
     std::cerr << "Usage: cat blah.csv | csv-to-bin <format> [--delimiter=<delimiter>] > blah.bin" << std::endl;
     std::cerr << std::endl;
     std::cerr << csv::format::usage() << std::endl;
+    std::cerr << std::endl;
+    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( -1 );
 }

@@ -26,6 +26,7 @@
 #include <iostream>
 
 #include <comma/application/command_line_options.h>
+#include <comma/application/contact_info.h>
 #include <comma/application/signal_flag.h>
 #include <comma/csv/options.h>
 #include <comma/csv/stream.h>
@@ -79,6 +80,8 @@ static void usage()
     std::cerr << std::endl;
     std::cerr << "    output multiple inputs of the same format to stdout:" << std::endl;
     std::cerr << "        csv-play \"file1.csv;-\" \"file2.csv;-\" &" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( -1 );
 }

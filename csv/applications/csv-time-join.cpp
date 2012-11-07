@@ -22,6 +22,7 @@
 #include <string>
 #include <boost/scoped_ptr.hpp>
 #include <comma/application/command_line_options.h>
+#include <comma/application/contact_info.h>
 #include <comma/application/signal_flag.h>
 #include <comma/base/types.h>
 #include <comma/csv/stream.h>
@@ -67,6 +68,8 @@ static void usage()
     std::cerr << "                         consistently timestamped, especially head or tail" << std::endl;
     std::cerr << "    --timestamp-only,--time-only: join only timestamp from the second input" << std::endl;
     std::cerr << "                                  otherwise join the whole line" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( -1 );
 }

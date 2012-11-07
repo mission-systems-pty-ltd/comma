@@ -29,6 +29,7 @@
 #include <boost/random/uniform_real.hpp>
 #include <boost/random/variate_generator.hpp>
 #include <comma/application/command_line_options.h>
+#include <comma/application/contact_info.h>
 #include <comma/application/signal_flag.h>
 #include <comma/base/exception.h>
 #include <comma/base/types.h>
@@ -54,6 +55,8 @@ static void usage()
     std::cerr << "    --deterministic,-d: if given, input is downsampled by a factor of int(1 / <rate>)." << std::endl;
     std::cerr << "                     That is, if <rate> is 0.33, output every third packet." << std::endl;
     std::cerr << "                     Default is to output each packet with a probability of <rate>." << std::endl;
+    std::cerr << std::endl;
+    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 1 );
 }

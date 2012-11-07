@@ -23,6 +23,7 @@
 #include <string>
 #include <vector>
 #include <boost/lexical_cast.hpp>
+#include <comma/application/contact_info.h>
 #include <comma/application/command_line_options.h>
 #include <comma/base/exception.h>
 #include <comma/base/types.h>
@@ -40,6 +41,8 @@ static void usage()
     std::cerr << "    --delimiter,-d <delimiter> : default: ','" << std::endl;
     std::cerr << "    --fields <fields> : time field numbers as in \"cut\"" << std::endl;
     std::cerr << "                        e.g. \"1,5,7\"; default: 1" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( -1 );
 }
