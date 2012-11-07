@@ -1,6 +1,6 @@
 // This file is part of comma, a generic and flexible library
 //
-// Copyright (C) 2011 Vsevolod Vlaskine and Cedric Wohlleber
+// Copyright (C) 2011 The University of Sydney
 //
 // comma is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -14,6 +14,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public
 // License along with comma. If not, see <http://www.gnu.org/licenses/>.
+
+/// @author vsevolod vlaskine
 
 #ifndef COMMA_MATH_COMPARE_H_
 #define COMMA_MATH_COMPARE_H_

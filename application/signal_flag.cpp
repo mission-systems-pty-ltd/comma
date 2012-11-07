@@ -16,6 +16,8 @@
 // You should have received a copy of the GNU Lesser General Public
 // License along with Ark. If not, see <http://www.gnu.org/licenses/>.
 
+/// @author vsevolod vlaskine
+
 #include <comma/application/signal_flag.h>
 
 namespace comma {

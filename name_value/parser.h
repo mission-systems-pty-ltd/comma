@@ -1,6 +1,6 @@
 // This file is part of comma, a generic and flexible library
 //
-// Copyright (C) 2011 Vsevolod Vlaskine and Cedric Wohlleber
+// Copyright (C) 2011 The University of Sydney
 //
 // comma is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public

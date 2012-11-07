@@ -16,6 +16,9 @@
 // You should have received a copy of the GNU Lesser General Public
 // License along with comma. If not, see <http://www.gnu.org/licenses/>.
 
+/// @author cedric wohlleber
+/// @author vsevolod vlaskine
+
 #ifndef COMMA_NAME_VALUE_PTREE_H_
 #define COMMA_NAME_VALUE_PTREE_H_
 

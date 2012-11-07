@@ -16,6 +16,8 @@
 // You should have received a copy of the GNU Lesser General Public
 // License along with comma. If not, see <http://www.gnu.org/licenses/>.
 
+/// @author vsevolod vlaskine
+
 #include <iostream>
 #include <boost/bind.hpp>
 #include <boost/function.hpp>

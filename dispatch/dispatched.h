@@ -16,6 +16,8 @@
 // You should have received a copy of the GNU Lesser General Public
 // License along with Ark. If not, see <http://www.gnu.org/licenses/>.
 
+/// @author vsevolod vlaskine
+
 #ifndef COMMA_DISPATCH_DISPATCHED_H_
 #define COMMA_DISPATCH_DISPATCHED_H_
 
