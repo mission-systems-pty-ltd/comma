@@ -109,7 +109,7 @@ struct constraints
 };
 
 template < typename T >
-struct value
+struct value_t
 {
     T value;
     ::constraints< T > constraints;
@@ -120,9 +120,9 @@ struct value
 
 struct input_t
 {
-    std::vector< value< boost::posix_time::ptime > > time;
-    std::vector< value< double > > doubles;
-    std::vector< value< std::string > > strings;
+    std::vector< value_t< boost::posix_time::ptime > > time;
+    std::vector< value_t< double > > doubles;
+    std::vector< value_t< std::string > > strings;
     
     bool is_a_match() const
     {
@@ -148,14 +148,14 @@ struct input_t
 
 namespace comma { namespace visiting {
 
-template < typename T > struct traits< value< T > >
+template < typename T > struct traits< value_t< T > >
 {
-    template < typename K, typename V > static void visit( const K&, const value< T >& p, V& v )
+    template < typename K, typename V > static void visit( const K&, const value_t< T >& p, V& v )
     { 
         v.apply( "value", p.value );
     }
     
-    template < typename K, typename V > static void visit( const K&, value< T >& p, V& v )
+    template < typename K, typename V > static void visit( const K&, value_t< T >& p, V& v )
     { 
         v.apply( "value", p.value );
     }
@@ -181,10 +181,10 @@ template <> struct traits< input_t >
 } } // namespace comma { namespace visiting {
 
 template < typename T >
-static value< T > make_value( const std::string& constraints_string, const comma::command_line_options& options )
+static value_t< T > make_value( const std::string& constraints_string, const comma::command_line_options& options )
 {
     static constraints< T > default_constraints( options );
-    value< T > v;
+    value_t< T > v;
     v.constraints = constraints< T >( constraints_string, default_constraints );
     return v;
 }
