@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU Lesser General Public
 // License along with comma. If not, see <http://www.gnu.org/licenses/>.
 
+/// @author cedric wohlleber
+
 #ifndef COMMA_APPLICATION_NAME_VALUE_PARSER_H
 #define COMMA_APPLICATION_NAME_VALUE_PARSER_H
 
