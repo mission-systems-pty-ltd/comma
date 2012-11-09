@@ -135,10 +135,11 @@ static comma::uint32 block;
 void read_filter_block_()
 {
     static const input* last = filter_stream->read();
+    if( !last ) { return; }
     block = last->block;
     filter_map.clear();
     comma::uint64 count = 0;
-    while( last->block == block && !is_shutdown && ( *filter_transport )->good() && !( *filter_transport )->eof() )
+    while( last->block == block && !is_shutdown )
     {
         if( filter_stream->is_binary() )
         {
@@ -150,9 +151,9 @@ void read_filter_block_()
         else
         {
             filter_map[ *last ].push_back( comma::join( filter_stream->ascii().last(), stdin_csv.delimiter ) );
-        }
-        
+        }        
         if( verbose ) { ++count; if( count % 10000 == 0 ) { std::cerr << "csv-join: reading block " << block << "; loaded " << count << " point[s]; hash map size: " << filter_map.size() << std::endl; } }
+        //if( ( *filter_transport )->good() && !( *filter_transport )->eof() ) { break; }
         last = filter_stream->read();
         if( !last ) { break; }
     }
