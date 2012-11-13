@@ -173,7 +173,7 @@ ADD_SUBDIRECTORY( sync )
 ADD_SUBDIRECTORY( visiting )
 ADD_SUBDIRECTORY( xpath )
 
-IF( WIN32 )
+#IF( WIN32 )
     #in future, may need to add third party dlls somehow, if they are linked as dlls. Not needed for statically linking to boost.
     #if we set them up to install to bin they might be packaged through, e.g. roughly (using GLOB):
     #install(FILES "${Boost_LIBRARY_DIRS}/*.dll" DESTINATION bin )
@@ -190,5 +190,5 @@ IF( WIN32 )
     INCLUDE( InstallRequiredSystemLibraries )
 
     #this line does all the work. Actually, even if this is the only line, you get all but the dlls...
-    INCLUDE( CPACK )
-ENDIF( WIN32 )
+    INCLUDE( CPack )
+#ENDIF( WIN32 )
