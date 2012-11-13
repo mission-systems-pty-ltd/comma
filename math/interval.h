@@ -101,6 +101,12 @@ class closed_interval
         /// return true, if variable belongs to the interval
         bool contains( const closed_interval& rhs ) const { return !( math::less( rhs.first, interval_.first ) || math::less( interval_.second, rhs.second ) ); }
         
+        /// compute the hull of the interval and [x]
+        closed_interval< T > hull( const T& x ) { return closed_interval( std::min( interval_.first, x ), std::max( interval_.second, x ) ); }
+
+        /// compute the hull of 2 intervals
+        closed_interval< T > hull( const closed_interval& rhs ) { return closed_interval( std::min( interval_.first, rhs.min() ), std::max( interval_.second, rhs.max() ) ); }
+        
         /// operators
         /// @todo more operators
         bool operator==( const closed_interval& rhs ) const { return math::equal( interval_.first, rhs().first ) && math::equal( interval_.second, rhs().second ); }
