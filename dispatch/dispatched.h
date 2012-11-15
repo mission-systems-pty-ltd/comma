@@ -48,6 +48,12 @@ struct dispatched_base
     
     /// dispatch this to a handler of const
     virtual void dispatch_to( handler& d ) const = 0;
+    
+    /// dispatch this to a handler
+    virtual void dispatch_to( handler* d ) = 0;
+    
+    /// dispatch this to a handler of const
+    virtual void dispatch_to( handler* d ) const = 0;    
 };
 
 /// handler of a type
@@ -94,6 +100,18 @@ template < typename T >
 struct dispatched : public dispatched_base
 {
     /// dispatch this to a handler
+    void dispatch_to( handler* d )
+    {
+        dynamic_cast< handler_of< T >* >( d )->handle( dynamic_cast< T& >( *this ) );
+    }
+    
+    /// dispatch this to a handler of const
+    void dispatch_to( handler* d ) const
+    {
+        dynamic_cast< handler_of_const< T >* >( d )->handle( dynamic_cast< const T& >( *this ) );
+    }
+    
+    /// dispatch this to a handler
     void dispatch_to( handler& d )
     {
         dynamic_cast< handler_of< T >& >( d ).handle( dynamic_cast< T& >( *this ) );
@@ -103,7 +121,7 @@ struct dispatched : public dispatched_base
     void dispatch_to( handler& d ) const
     {
         dynamic_cast< handler_of_const< T >& >( d ).handle( dynamic_cast< const T& >( *this ) );
-    }    
+    }
 };
 
 } } // namespace comma { namespace dispatch {

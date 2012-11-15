@@ -71,6 +71,82 @@ TEST( dispatch, test_basics )
     EXPECT_EQ( d.value(), "d: got const b" );
 }
 
+struct human {};
+struct wolf {};
+struct star {};
+
+template < typename T > struct dispatched : public comma::dispatch::dispatched< dispatched< T > >
+                                          , public T
+{
+};
+
+struct hunter : public dispatch::handler_of< dispatched< human > >
+              , public dispatch::handler_of< dispatched< wolf > >
+              , public dispatch::handler_of< dispatched< star > >
+{
+    void handle( dispatched< human >& h ) { std::cerr << "    said hi to a human" << std::endl; }
+    void handle( dispatched< wolf >& w ) { std::cerr << "    shot a wolf" << std::endl; }
+    void handle( dispatched< star >& s ) { std::cerr << "    saw a star" << std::endl; }
+};
+
+struct soldier : public dispatch::handler_of< dispatched< human > >
+               , public dispatch::handler_of< dispatched< wolf > >
+               , public dispatch::handler_of< dispatched< star > >
+{
+    void handle( dispatched< human >& h ) { std::cerr << "    shot a human" << std::endl; }
+    void handle( dispatched< wolf >& w ) { std::cerr << "    said hi to a wolf" << std::endl; }
+    void handle( dispatched< star >& s ) { std::cerr << "    saw aliens landing" << std::endl; }
+};
+
+TEST( dispatch, non_invasive_example )
+{
+    comma::dispatch::handler* h = new hunter;
+    comma::dispatch::handler* s = new soldier;
+    comma::dispatch::dispatched_base* dh = new dispatched< human >;
+    comma::dispatch::dispatched_base* dw = new dispatched< wolf >;
+    comma::dispatch::dispatched_base* ds = new dispatched< star >;
+    std::cerr  << std::endl << "hunter:" << std::endl;
+    dh->dispatch_to( h );
+    dw->dispatch_to( h );
+    ds->dispatch_to( h );
+    std::cerr  << std::endl << "soldier:" << std::endl;
+    dh->dispatch_to( s );
+    dw->dispatch_to( s );
+    ds->dispatch_to( s );
+}
+
+struct fish : public comma::dispatch::dispatched< fish > {};
+
+struct butterfly : public comma::dispatch::dispatched< butterfly > {};
+
+struct fisherman : public dispatch::handler_of< fish >
+                 , public dispatch::handler_of< butterfly >
+{
+    void handle( fish& f ) { std::cerr << "    caught a fish" << std::endl; }
+    void handle( butterfly& f ) { std::cerr << "    used butterfly as a bait" << std::endl; }
+};
+
+struct scientist : public dispatch::handler_of< fish >
+                 , public dispatch::handler_of< butterfly >
+{
+    void handle( fish& f ) { std::cerr << "    does not care about fish" << std::endl; }
+    void handle( butterfly& f ) { std::cerr << "    pinned butterfly in his collection" << std::endl; }
+};
+
+TEST( dispatch, invasive_example )
+{
+    comma::dispatch::handler* f = new fisherman;
+    comma::dispatch::handler* s = new scientist;
+    comma::dispatch::dispatched_base* df = new fish;
+    comma::dispatch::dispatched_base* db = new butterfly;
+    std::cerr  << std::endl << "fisherman:" << std::endl;
+    df->dispatch_to( f );
+    db->dispatch_to( f );
+    std::cerr  << std::endl << "scientist:" << std::endl;
+    df->dispatch_to( s );
+    db->dispatch_to( s );
+}
+
 } } // namespace comma { namespace test {
 
 int main( int argc, char* argv[] )
