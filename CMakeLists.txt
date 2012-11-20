@@ -73,16 +73,12 @@ ENDIF( APPLE )
 OPTION( BUILD_TESTS "build unit tests" OFF )
 SET( comma_BUILD_TESTS ${BUILD_TESTS} )
 
-OPTION( BUILD_APPLICATIONS "build applications" OFF )
+OPTION( BUILD_APPLICATIONS "build applications" ON )
 SET( comma_BUILD_APPLICATIONS ${BUILD_APPLICATIONS} )
 
 OPTION( comma_BUILD_ZEROMQ "build io with zeromq support" OFF )
 
-IF( WIN32 )
 OPTION(BUILD_SHARED_LIBS "build with shared libraries" OFF)
-ELSE( WIN32 )
-OPTION(BUILD_SHARED_LIBS "build with shared libraries" ON)
-ENDIF( WIN32 )
 SET(comma_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 
 IF( NOT BUILD_SHARED_LIBS )
