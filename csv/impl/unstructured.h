@@ -23,46 +23,60 @@
 
 #include <string>
 #include <vector>
+#include <boost/static_assert.hpp>
 #include <boost/date_time/posix_time/ptime.hpp>
 #include <boost/functional/hash.hpp>
+#include <boost/lexical_cast.hpp>
 #include <comma/csv/options.h>
 #include <comma/string/string.h>
 #include <comma/visiting/traits.h>
 
 namespace comma { namespace csv { namespace impl {
 
-/// flat unstructured csv representation (see csv-join and alike for usage)
+/// flat unstructured csv representation
+/// todo: use in csv-calc, csv-join, etc
 template < typename T >
-struct unstructured_values : public std::vector< T >
+class unstructured_values : public std::vector< T >
 {
-    struct hash : public std::unary_function< input, std::size_t >
-    {
-        std::size_t operator()( unstructured_values const& p ) const
+    public:
+        struct hash : public std::unary_function< unstructured_values, std::size_t >
         {
-            static std::size_t seed = 0;
-            for( std::size_t i = 0; i < p.size(); ++i ) { boost::hash_combine( seed, p[i] ); }
-            return seed;
+            std::size_t operator()( unstructured_values const& p ) const
+            {
+                static std::size_t seed = 0;
+                for( std::size_t i = 0; i < p.size(); ++i ) { hash_combine_impl_( seed, p[i] ); }
+                return seed;
+            }
+        };
+        
+        bool operator==( const unstructured_values& rhs ) const
+        {
+            for( std::size_t i = 0; i < this->size(); ++i ) { if( this->operator[](i) != rhs[i] ) { return false; } }
+            return true;
         }
-    };
-    
-    bool operator==( const unstructured_values& rhs ) const
-    {
-        for( std::size_t i = 0; i < this->size(); ++i ) { if( this->operator[](i) != rhs[i] ) { return false; } }
-        return true;
-    }
-    
-    bool operator<( const unstructured_values& rhs ) const
-    {
-        for( std::size_t i = 0; i < this->size(); ++i ) { if( !( this->operator[](i) < rhs[i] ) ) { return false; } }
-        return true;
-    }
+        
+        bool operator<( const unstructured_values& rhs ) const
+        {
+            for( std::size_t i = 0; i < this->size(); ++i ) { if( !( this->operator[](i) < rhs[i] ) ) { return false; } }
+            return true;
+        }
+        
+    private:
+        static void hash_combine_impl_( std::size_t& s, const boost::posix_time::ptime& t )
+        {
+            BOOST_STATIC_ASSERT( sizeof( boost::posix_time::ptime ) == 8 ); // quick and dirty
+            boost::hash_combine( s, reinterpret_cast< const comma::uint64& >( t ) );
+        }
+        
+        template < typename S >
+        static void hash_combine_impl_( std::size_t& s, const S& t ) { boost::hash_combine( s, t ); }
 };
 
 /// flat unstructured csv representation for all possible values (quick and dirty)
-/// (see csv-join and alike for usage)
+/// todo: use in csv-calc, csv-join, etc
 struct unstructured
 {
-    unstructured_values< comma::uint64 > integers;
+    //unstructured_values< comma::uint64 > integers;
     unstructured_values< double > doubles;
     unstructured_values< boost::posix_time::ptime > timestamps;
     unstructured_values< std::string > strings;
@@ -70,13 +84,14 @@ struct unstructured
     static std::pair< unstructured, comma::csv::options > make( const comma::csv::options& csv, const std::string& sample = "" )
     {
         std::pair< unstructured, comma::csv::options > p;
+        p.second = csv;
         p.second.full_xpath = false;
-        p.second.format( guess_format( csv, sample ).string() );
+        const comma::csv::format& format = csv.binary() ? csv.format() : guess_format( sample );
         std::vector< std::string > v = comma::split( p.second.fields );
         for( std::size_t i = 0; i < v.size(); ++i )
         {
             if( v[i].empty() ) { continue; }
-            switch( o.format().offset( i ).type )
+            switch( format.offset( i ).type )
             {
                 case comma::csv::format::char_t:
                 case comma::csv::format::int8:
@@ -87,56 +102,77 @@ struct unstructured
                 case comma::csv::format::uint32:
                 case comma::csv::format::int64:
                 case comma::csv::format::uint64:
-                    // todo: set v[i]
-                    // todo: reserve
-                    break;
+                    //v[i] = "i[" + boost::lexical_cast< std::string >( integers.size() ) + "]";
+                    //p.first.integers.resize( integers.size() + 1 );
+                    //break;
                 case comma::csv::format::float_t:
                 case comma::csv::format::double_t:
-                    // todo: set v[i]
-                    // todo: reserve
+                    v[i] = "d[" + boost::lexical_cast< std::string >( p.first.doubles.size() ) + "]";
+                    p.first.doubles.resize( p.first.doubles.size() + 1 );
                     break;
                 case comma::csv::format::time:
                 case comma::csv::format::long_time:
-                    // todo: set v[i]
-                    // todo: reserve
+                    v[i] = "t[" + boost::lexical_cast< std::string >( p.first.timestamps.size() ) + "]";
+                    p.first.timestamps.resize( p.first.timestamps.size() + 1 );
                     break;
                 case comma::csv::format::fixed_string:
-                    // todo: set v[i]
-                    // todo: reserve
+                    v[i] = "s[" + boost::lexical_cast< std::string >( p.first.strings.size() ) + "]";
+                    p.first.strings.resize( p.first.strings.size() + 1 );
                     break;
             }
         } 
-        p.second.fields = comma::join( v[i], ',' );
+        p.second.fields = comma::join( v, ',' );
+        return p;
     }
         
-    static comma::csv::format guess_format( const comma::csv::options& options, const std::string& sample )
+    static comma::csv::format guess_format( const std::string& sample )
     {
-        if( csv.binary() ) { return csv.format(); }
-        
-        // todo
-        
-        return comma::csv::format();
+        comma::csv::format f;
+        std::vector< std::string > v = comma::split( sample );
+        for( std::size_t i = 0; i < v.size(); ++i )
+        {
+            try
+            { 
+                boost::posix_time::from_iso_string( v[i] );
+                f += "t";
+            }
+            catch( ... )
+            { 
+                try
+                {
+                    boost::lexical_cast< double >( v[i] );
+                    f += "d";
+                }
+                catch ( ... ) // way quick and dirty
+                {
+                    f += "s[1024]";
+                }
+            }
+        }
+        return f;
     }
     
     bool operator==( const unstructured& rhs ) const
     {
-        return integers == rhs.integers && doubles == rhs.doubles && timestamps == rhs.timestamps && strings == rhs.strings;        
+        //return integers == rhs.integers && doubles == rhs.doubles && timestamps == rhs.timestamps && strings == rhs.strings;
+        return doubles == rhs.doubles && timestamps == rhs.timestamps && strings == rhs.strings;        
     }
     
     bool operator<( const unstructured& rhs ) const
     {
-        return integers < rhs.integers && doubles < rhs.doubles && timestamps < rhs.timestamps && strings < rhs.strings;        
+        //return integers < rhs.integers && doubles < rhs.doubles && timestamps < rhs.timestamps && strings < rhs.strings;
+        return doubles < rhs.doubles && timestamps < rhs.timestamps && strings < rhs.strings;        
     }
     
-    struct hash : public std::unary_function< input, std::size_t >
+    struct hash : public std::unary_function< unstructured, std::size_t >
     {
         std::size_t operator()( unstructured const& p ) const
         {
             static std::size_t seed = 0;
-            boost::hash_combine( seed, unstructured_values< comma::uint64 >::hash( p.integers ) );
-            boost::hash_combine( seed, unstructured_values< double >::hash( p.doubles ) );
-            boost::hash_combine( seed, unstructured_values< boost::posix_time::ptime >::hash( p.timestamps ) );
-            boost::hash_combine( seed, unstructured_values< string >::hash( p.strings ) );
+            //boost::hash_combine( seed, unstructured_values< comma::uint64 >::hash( p.integers ) );
+            boost::hash_combine( seed, unstructured_values< double >::hash()( p.doubles ) );
+            boost::hash_combine( seed, unstructured_values< boost::posix_time::ptime >::hash()( p.timestamps ) );
+            boost::hash_combine( seed, unstructured_values< std::string >::hash()( p.strings ) );
             return seed;
         }
     };    
@@ -150,7 +186,7 @@ template <> struct traits< comma::csv::impl::unstructured >
 {
     template < typename K, typename V > static void visit( const K&, const comma::csv::impl::unstructured& p, V& v )
     { 
-        v.apply( "i", static_cast< const std::vector< comma::uint64 >& >( p.integers ) );
+        //v.apply( "i", static_cast< const std::vector< comma::uint64 >& >( p.integers ) );
         v.apply( "d", static_cast< const std::vector< double >& >( p.doubles ) );
         v.apply( "t", static_cast< const std::vector< boost::posix_time::ptime >& >( p.timestamps ) );
         v.apply( "s", static_cast< const std::vector< std::string >& >( p.strings ) );
@@ -158,7 +194,7 @@ template <> struct traits< comma::csv::impl::unstructured >
 
     template < typename K, typename V > static void visit( const K&, comma::csv::impl::unstructured& p, V& v )
     { 
-        v.apply( "i", static_cast< std::vector< comma::uint64 >& >( p.integers ) );
+        //v.apply( "i", static_cast< std::vector< comma::uint64 >& >( p.integers ) );
         v.apply( "d", static_cast< std::vector< double >& >( p.doubles ) );
         v.apply( "t", static_cast< std::vector< boost::posix_time::ptime >& >( p.timestamps ) );
         v.apply( "s", static_cast< std::vector< std::string >& >( p.strings ) );
