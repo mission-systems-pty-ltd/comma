@@ -36,7 +36,7 @@ static void usage()
 {
     std::cerr << std::endl;
     std::cerr << "take a stream of name-value style input on stdin," << std::endl;
-    std::cerr << "output value at given path on stdout" << std::cerr;
+    std::cerr << "output value at given path on stdout" << std::endl;
     std::cerr << std::endl;
     std::cerr << "usage: cat data.xml | name-value-convert <from> [<options>]" << std::endl;
     std::cerr << std::endl;
