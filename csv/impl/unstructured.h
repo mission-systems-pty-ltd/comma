@@ -86,8 +86,8 @@ struct unstructured
         std::pair< unstructured, comma::csv::options > p;
         p.second = csv;
         p.second.full_xpath = false;
-        const comma::csv::format& format = csv.binary() ? csv.format() : guess_format( sample );
-        std::vector< std::string > v = comma::split( p.second.fields );
+        const comma::csv::format& format = csv.binary() ? csv.format() : guess_format( sample, csv.delimiter );
+        std::vector< std::string > v = comma::split( p.second.fields, csv.delimiter );
         for( std::size_t i = 0; i < v.size(); ++i )
         {
             if( v[i].empty() ) { continue; }
@@ -125,10 +125,10 @@ struct unstructured
         return p;
     }
         
-    static comma::csv::format guess_format( const std::string& sample )
+    static comma::csv::format guess_format( const std::string& sample, char delimiter = ',' )
     {
         comma::csv::format f;
-        std::vector< std::string > v = comma::split( sample );
+        std::vector< std::string > v = comma::split( sample, delimiter );
         for( std::size_t i = 0; i < v.size(); ++i )
         {
             try

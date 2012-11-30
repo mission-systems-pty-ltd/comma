@@ -20,6 +20,8 @@
 #include <limits>
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include <comma/csv/format.h>
+#include <comma/csv/options.h>
+#include <comma/csv/impl/unstructured.h>
 
 TEST( csv, format )
 {
@@ -242,4 +244,19 @@ TEST( csv, format_with_fields )
     EXPECT_EQ( comma::csv::format::value< simple_struct >( "a,b,c", false ), "i,d,b" );
     EXPECT_EQ( comma::csv::format::value< simple_struct >( "a,s,t", false ), "i,s,t" );
     EXPECT_EQ( comma::csv::format::value< simple_struct >( "x,y", false ), "i,i" );
+}
+
+TEST( csv, unstructured )
+{
+    EXPECT_EQ( "d,d,d,d", comma::csv::impl::unstructured::guess_format( "1,2,3,4" ).string() );
+    EXPECT_EQ( "d,d,t,s[1024]", comma::csv::impl::unstructured::guess_format( "1,2.1,20121212T000000,blah" ).string() );
+    comma::csv::options csv;
+    csv.fields = "a,,,b,,,c";
+    csv.delimiter = ',';
+    EXPECT_EQ( "d,s[1024],s[1024],s[1024],s[1024],s[1024],t", comma::csv::impl::unstructured::guess_format( "1,,,blah,,,20121212T000000" ).string() );
+    EXPECT_EQ( 1, comma::csv::impl::unstructured::make( csv, "1,,,blah,,,20121212T000000" ).first.doubles.size() );
+    EXPECT_EQ( 1, comma::csv::impl::unstructured::make( csv, "1,,,blah,,,20121212T000000" ).first.strings.size() );
+    EXPECT_EQ( 1, comma::csv::impl::unstructured::make( csv, "1,,,blah,,,20121212T000000" ).first.timestamps.size() );
+    EXPECT_EQ( "d[0],,,s[0],,,t[0]", comma::csv::impl::unstructured::make( csv, "1,,,blah,,,20121212T000000" ).second.fields );
+    // todo: certainly more tests
 }
