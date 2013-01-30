@@ -64,6 +64,9 @@ class options
 
         /// return format
         const csv::format& format() const { return *format_; }
+        
+        /// return format
+        csv::format& format() { return *format_; }
 
         /// set format
         void format( const std::string& s ) { format_ = csv::format( s ); }

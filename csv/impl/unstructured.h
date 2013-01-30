@@ -28,6 +28,7 @@
 #include <boost/functional/hash.hpp>
 #include <boost/lexical_cast.hpp>
 #include <comma/csv/options.h>
+#include <comma/math/compare.h>
 #include <comma/string/string.h>
 #include <comma/visiting/traits.h>
 
@@ -39,6 +40,18 @@ template < typename T >
 class unstructured_values : public std::vector< T >
 {
     public:
+        bool operator==( const unstructured_values& rhs ) const
+        {
+            for( std::size_t i = 0; i < this->size(); ++i ) { if( !math::equal( this->operator[](i), rhs[i] ) ) { return false; } }
+            return true;
+        }
+        
+        bool operator<( const unstructured_values& rhs ) const
+        {
+            for( std::size_t i = 0; i < this->size(); ++i ) { if( !math::less( this->operator[](i), rhs[i] ) ) { return false; } }
+            return true;
+        }
+        
         struct hash : public std::unary_function< unstructured_values, std::size_t >
         {
             std::size_t operator()( unstructured_values const& p ) const
@@ -48,18 +61,6 @@ class unstructured_values : public std::vector< T >
                 return seed;
             }
         };
-        
-        bool operator==( const unstructured_values& rhs ) const
-        {
-            for( std::size_t i = 0; i < this->size(); ++i ) { if( this->operator[](i) != rhs[i] ) { return false; } }
-            return true;
-        }
-        
-        bool operator<( const unstructured_values& rhs ) const
-        {
-            for( std::size_t i = 0; i < this->size(); ++i ) { if( !( this->operator[](i) < rhs[i] ) ) { return false; } }
-            return true;
-        }
         
     private:
         static void hash_combine_impl_( std::size_t& s, const boost::posix_time::ptime& t )
@@ -109,6 +110,7 @@ struct unstructured
                 case comma::csv::format::double_t:
                     v[i] = "d[" + boost::lexical_cast< std::string >( p.first.doubles.size() ) + "]";
                     p.first.doubles.resize( p.first.doubles.size() + 1 );
+                    p.first.doubles.back() = 0;
                     break;
                 case comma::csv::format::time:
                 case comma::csv::format::long_time:
@@ -163,7 +165,7 @@ struct unstructured
         //return integers < rhs.integers && doubles < rhs.doubles && timestamps < rhs.timestamps && strings < rhs.strings;
         return doubles < rhs.doubles && timestamps < rhs.timestamps && strings < rhs.strings;        
     }
-    
+        
     struct hash : public std::unary_function< unstructured, std::size_t >
     {
         std::size_t operator()( unstructured const& p ) const
