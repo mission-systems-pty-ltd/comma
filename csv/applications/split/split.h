@@ -39,6 +39,8 @@ namespace comma { namespace csv { namespace applications {
 struct input
 {
     boost::posix_time::ptime timestamp;
+    unsigned int block;
+    unsigned int id;
 }; 
 
 } } } // namespace comma { namespace csv { namespace applications {
@@ -50,11 +52,15 @@ template <> struct traits< comma::csv::applications::input >
     template < typename K, typename V > static void visit( const K&, const comma::csv::applications::input& p, V& v )
     { 
         v.apply( "t", p.timestamp );
+        v.apply( "block", p.block );
+        v.apply( "id", p.id );
     }
     
     template < typename K, typename V > static void visit( const K&, comma::csv::applications::input& p, V& v )
     { 
         v.apply( "t", p.timestamp );
+        v.apply( "block", p.block );
+        v.apply( "id", p.id );
     }
 };
 
@@ -67,7 +73,7 @@ namespace comma { namespace csv { namespace applications {
 class split
 {
     public:
-        split( boost::posix_time::time_duration period
+        split( boost::optional< boost::posix_time::time_duration > period
              , const std::string& suffix
              , const comma::csv::options& csv );
         void write( const char* data, unsigned int size );
@@ -75,6 +81,8 @@ class split
 
     private:
         std::ofstream& ofstream_by_time_();
+        std::ofstream& ofstream_by_block_();
+        std::ofstream& ofstream_by_id_();
         void update_( const char* data, unsigned int size );
         void update_( const std::string& line );
         

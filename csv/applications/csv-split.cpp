@@ -32,7 +32,6 @@
 
 int main( int argc, char** argv )
 {
-    
     try
     {
         double period = 0;
@@ -58,8 +57,9 @@ int main( int argc, char** argv )
             std::cerr << description << std::endl;
             std::cerr << std::endl;
             std::cerr << "fields" << std::endl;
-            std::cerr << "    if empty, assume the first field is the timestamp" << std::endl;
             std::cerr << "    t: if present, use timestamp from the packet; if absent, use system time" << std::endl;
+            std::cerr << "    block: split on the block number change" << std::endl;
+            std::cerr << "    id: split by id (same as block, except does not have to be contiguous by the price of worse performance)" << std::endl;
             std::cerr << std::endl;
             std::cerr << comma::contact_info << std::endl;
             std::cerr << std::endl;
@@ -67,44 +67,8 @@ int main( int argc, char** argv )
         }
         comma::csv::options csv = comma::csv::program_options::get( vm );
         if( csv.binary() ) { size = csv.format().size(); }
-
-        if( size != 0 )
-        {
-            if( csv.binary() )
-            {
-                std::vector< std::string > v = comma::split( csv.format().string(), ',' );
-                unsigned int i = 0;
-                bool found = false;
-                while( ( i < v.size() ) && !found )
-                {
-                    found = ( v[i] == "t" || v[i] == "lt" );
-                    if( found )
-                    {
-                        csv.fields += "t";
-                    }
-                    i++;
-                    if( ( i < v.size() ) && !found )
-                    {
-                        csv.fields += ",";
-                    }
-                }
-            }
-            else
-            {
-                csv.fields = "t";
-                csv.format( "t" );
-            }
-        }
-        else if( csv.fields.empty() )
-        {
-            csv.fields = "t";
-        }
-        if( vm.count( "period" ) == 0 )
-        {
-            std::cerr << "please specify period" << std::endl;
-            return 1;
-        }
-        boost::posix_time::time_duration duration = boost::posix_time::microseconds( period * 1e6 );
+        boost::optional< boost::posix_time::time_duration > duration;
+        if( period > 0 ) { duration = boost::posix_time::microseconds( period * 1e6 ); }
         std::string suffix;
         if( extension.empty() ) { suffix = csv.binary() || size > 0 ? ".bin" : ".csv"; }
         else { suffix += "."; suffix += extension; }
@@ -123,8 +87,7 @@ int main( int argc, char** argv )
         {
 #ifdef WIN32
             _setmode( _fileno( stdin ), _O_BINARY );
-#endif
-            std::cerr << " size " << size << std::endl;
+#endif            
             std::vector< char > packet( size );
             while( std::cin.good() && !std::cin.eof() )
             {

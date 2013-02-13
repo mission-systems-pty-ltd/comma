@@ -165,6 +165,10 @@ struct unstructured
         //return integers < rhs.integers && doubles < rhs.doubles && timestamps < rhs.timestamps && strings < rhs.strings;
         return doubles < rhs.doubles && timestamps < rhs.timestamps && strings < rhs.strings;        
     }
+    
+    template < typename T > unstructured_values< T >& get();
+    
+    template < typename T > const unstructured_values< T >& get() const;
         
     struct hash : public std::unary_function< unstructured, std::size_t >
     {
@@ -179,6 +183,13 @@ struct unstructured
         }
     };    
 };
+
+template <> inline unstructured_values< double >& unstructured::get< double >() { return doubles; }
+template <> inline const unstructured_values< double >& unstructured::get< double >() const { return doubles; }
+template <> inline unstructured_values< std::string >& unstructured::get< std::string >() { return strings; }
+template <> inline const unstructured_values< std::string >& unstructured::get< std::string >() const { return strings; }
+template <> inline unstructured_values< boost::posix_time::ptime >& unstructured::get< boost::posix_time::ptime >() { return timestamps; }
+template <> inline const unstructured_values< boost::posix_time::ptime >& unstructured::get< boost::posix_time::ptime >() const { return timestamps; }
 
 } } } // namespace comma { namespace csv { namespace impl {
     

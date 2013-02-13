@@ -76,49 +76,25 @@ static void usage()
     exit( 1 );
 }
 
-struct input_t
+struct entry_t
 {
     comma::csv::impl::unstructured values;
     comma::csv::impl::unstructured block;
     comma::csv::impl::unstructured id;
 };
 
-struct output_t
-{
-    std::vector< comma::csv::impl::unstructured > values;
-    comma::csv::impl::unstructured block;
-    comma::csv::impl::unstructured id;
-};
-
 namespace comma { namespace visiting {
 
-template <> struct traits< input_t >
+template <> struct traits< entry_t >
 {
-    template < typename K, typename V > static void visit( const K&, const input_t& p, V& v )
+    template < typename K, typename V > static void visit( const K&, const entry_t& p, V& v )
     { 
         v.apply( "values", p.values );
         v.apply( "block", p.block );
         v.apply( "id", p.id );
     }
 
-    template < typename K, typename V > static void visit( const K&, input_t& p, V& v )
-    { 
-        v.apply( "values", p.values );
-        v.apply( "block", p.block );
-        v.apply( "id", p.id );
-    }
-};
-
-template <> struct traits< output_t >
-{
-    template < typename K, typename V > static void visit( const K&, const output_t& p, V& v )
-    { 
-        v.apply( "values", p.values );
-        v.apply( "block", p.block );
-        v.apply( "id", p.id );
-    }
-
-    template < typename K, typename V > static void visit( const K&, output_t& p, V& v )
+    template < typename K, typename V > static void visit( const K&, entry_t& p, V& v )
     { 
         v.apply( "values", p.values );
         v.apply( "block", p.block );
@@ -127,6 +103,31 @@ template <> struct traits< output_t >
 };
 
 } } // namespace comma { namespace visiting {
+
+struct operation
+{
+    virtual ~operation() {}
+    virtual void reset() {}
+    virtual void update( const comma::csv::impl::unstructured& v ) = 0;
+    virtual void finalize( comma::csv::impl::unstructured& r ) {}
+};
+
+template < typename Derived >
+class tied_operation : public operation
+{
+    public:
+        tied_operation() : i_( 0 ), j_( 0 ) {}
+        tied_operation( std::size_t i, comma::csv::impl::unstructured& r )
+            : i_( i )
+            , j_( r.get< typename Derived::result_type >().size() )
+        {
+            r.get< typename Derived::result_type >().push_back( typename Derived::result_type() );
+        }
+        
+    protected:
+        std::size_t i_;
+        std::size_t j_;
+};
 
 static std::vector< std::string > reset_all_( const std::string& field, const std::vector< std::string >& fields )
 {
@@ -142,7 +143,7 @@ static std::vector< std::string > reset_all_but_( const std::string& field, cons
     return f;
 }
 
-static std::pair< input_t, comma::csv::options > make_( const comma::csv::options& csv, const std::string& sample = "" )
+static std::pair< entry_t, comma::csv::options > make_input_( const comma::csv::options& csv, const std::string& sample = "" )
 {
     std::vector< std::string > f = comma::split( csv.fields, "," );
     comma::csv::options values_csv = csv;
@@ -154,7 +155,7 @@ static std::pair< input_t, comma::csv::options > make_( const comma::csv::option
     comma::csv::options id_csv = csv;
     id_csv.fields = comma::join( reset_all_but_( "id", f ), ',' );
     std::pair< comma::csv::impl::unstructured, comma::csv::options > i = comma::csv::impl::unstructured::make( id_csv, sample );
-    std::pair< input_t, comma::csv::options > p;
+    std::pair< entry_t, comma::csv::options > p;
     p.first.values = v.first;
     p.first.block = b.first;
     p.first.id = i.first;
@@ -174,20 +175,11 @@ static std::pair< input_t, comma::csv::options > make_( const comma::csv::option
     return p;
 }
 
-class value_base
-{
-};
-
-
-
-template < typename T > comma::csv::impl::unstructured_values< T >& get_( comma::csv::impl::unstructured& u );
-template < typename T > const comma::csv::impl::unstructured_values< T >& get_( comma::csv::impl::unstructured& u );
-template <> comma::csv::impl::unstructured_values< double >& get_< double >( comma::csv::impl::unstructured& u ) { return u.doubles; }
-template <> const comma::csv::impl::unstructured_values< double >& get_< double >( comma::csv::impl::unstructured& u ) { return u.doubles; }
-template <> comma::csv::impl::unstructured_values< std::string >& get_< std::string >( comma::csv::impl::unstructured& u ) { return u.strings; }
-template <> const comma::csv::impl::unstructured_values< std::string >& get_< std::string >( comma::csv::impl::unstructured& u ) { return u.strings; }
-template <> comma::csv::impl::unstructured_values< boost::posix_time::ptime >& get_< boost::posix_time::ptime >( comma::csv::impl::unstructured& u ) { return u.timestamps; }
-template <> const comma::csv::impl::unstructured_values< boost::posix_time::ptime >& get_< boost::posix_time::ptime >( comma::csv::impl::unstructured& u ) { return u.timestamps; }
+// static std::pair< entry_t, comma::csv::options > make_output_( const std::vector< std::string >& operations, const comma::csv::options& csv, const std::string& sample = "" )
+// {
+//     // todo
+//     return std::pair< entry_t, comma::csv::options >();
+// }
 
 template < typename T > struct bound_result_traits
 { 
@@ -213,148 +205,167 @@ template <> struct bound_result_traits< boost::posix_time::ptime >
     static std::string format() { return "t"; }
 };
 
-class bound_result // real quick and dirty
-{
-    public:
-        template < typename T, typename R >
-        struct functors
-        {
-            boost::function< void( R& ) > reset;
-            boost::function< void( R&, const T& ) > update;
-            boost::function< void( R& ) > finalize;
-            
-            functors() {}
-            functors( boost::function< void( R& ) > reset
-                    , boost::function< void( R&, const T& ) > update
-                    , boost::function< void( R& ) > finalize )
-                : reset( reset )
-                , update( update )
-                , finalize( finalize )
-            {
-            }
-        };
-        
-        template < typename T >
-        struct bound_functors
-        {
-            boost::function< void() > reset;
-            boost::function< void( const T& ) > update;
-            boost::function< void() > finalize;
-            
-            bound_functors() {}
-            bound_functors( boost::function< void() > reset
-                          , boost::function< void( const T& ) > update
-                          , boost::function< void() > finalize )
-                : reset( reset )
-                , update( update )
-                , finalize( finalize )
-            {
-            }
-        };
-        
-        bound_result() : result_( NULL ) {}
-        
-        template < typename D, typename S, typename T >
-        bound_result( comma::csv::impl::unstructured& result
-                    , functors< D, double > df
-                    , functors< S, std::string > sf
-                    , functors< T, boost::posix_time::ptime > tf
-                    , const comma::csv::impl::unstructured& sample )
-            : result_( &result )
-        {
-            init_( df, sample.doubles.size() );
-            init_( sf, sample.strings.size() );
-            init_( tf, sample.timestamps.size() );
-        }
-        
-        template < typename Traits >
-        static comma::csv::options options( const comma::csv::options input_csv ) // quick and dirty
-        {
-            comma::csv::options csv;
-            std::vector< std::string > f = comma::split( input_csv.fields, ',' );
-            std::vector< std::string > fields;
-            std::vector< std::string > format;
-            std::string comma;
-            std::size_t double_fields_count = 0;
-            std::size_t string_fields_count = 0;
-            std::size_t time_fields_count = 0;
-            for( std::size_t i = 0; i < f.size(); ++i )
-            {
-                if( f[i].empty() ) { continue; }
-                std::vector< std::string > v = comma::split( f[i], '/' );
-                if( v[0] == "block" || v[0] == "id" ) { continue; } // way quick and dirty
-                
-                switch( csv.format().offset( i ).type )
-                {
-                    case comma::csv::format::time:
-                    case comma::csv::format::long_time:
-                        fields.push_back( bound_result_traits< typename Traits::template result_t< boost::posix_time::ptime > >::name() + "[" + boost::lexical_cast< std::string >( time_fields_count++ ) + "]" );
-                        format.push_back( bound_result_traits< typename Traits::template result_t< boost::posix_time::ptime > >::format() );
-                        break;
-                    case comma::csv::format::fixed_string:
-                        fields.push_back( bound_result_traits< typename Traits::template result_t< std::string > >::name() + "[" + boost::lexical_cast< std::string >( string_fields_count++ ) + "]" );
-                        format.push_back( bound_result_traits< typename Traits::template result_t< std::string > >::format() );
-                        break;
-                    default:
-                        fields.push_back( bound_result_traits< typename Traits::template result_t< double > >::name() + "[" + boost::lexical_cast< std::string >( double_fields_count++ ) + "]" );
-                        format.push_back( bound_result_traits< typename Traits::template result_t< double > >::format() );
-                        break;
-                }
-            }
-            csv.fields = comma::join( fields, ',' );
-            csv.format( comma::join( format, ',' ) );
-            return csv;
-        }
-        
-        void reset()
-        {
-            for( std::size_t i = 0; i < df_.size(); ++i ) { df_[i].reset(); }
-            for( std::size_t i = 0; i < sf_.size(); ++i ) { sf_[i].reset(); }
-            for( std::size_t i = 0; i < tf_.size(); ++i ) { tf_[i].reset(); }
-        }
-        
-        void update( const comma::csv::impl::unstructured& v )
-        {
-            for( std::size_t i = 0; i < v.doubles.size(); ++i ) { df_[i].update( v.doubles[i] ); }
-            for( std::size_t i = 0; i < v.strings.size(); ++i ) { sf_[i].update( v.strings[i] ); }
-            for( std::size_t i = 0; i < v.timestamps.size(); ++i ) { tf_[i].update( v.timestamps[i] ); }
-        }
-        
-        const comma::csv::impl::unstructured& finalize()
-        {
-            for( std::size_t i = 0; i < df_.size(); ++i ) { df_[i].finalize(); }
-            for( std::size_t i = 0; i < sf_.size(); ++i ) { sf_[i].finalize(); }
-            for( std::size_t i = 0; i < tf_.size(); ++i ) { tf_[i].finalize(); }
-            return *result_;
-        }
-        
-        const comma::csv::impl::unstructured& result() const { return *result_; };
-        
-    private:
-        template < typename T, typename R >
-        void init_( const functors< T, R >& f, std::size_t size )
-        {
-            for( std::size_t i = 0; i < size; ++i )
-            {
-                get_< R >( *result_ ).push_back( R() );
-                bound_functors< T > b( boost::bind( f.reset, boost::ref( get_< R >( *result_ ).back() ) )
-                                     , boost::bind( f.update, boost::ref( get_< R >( *result_ ).back(), _1 ) )
-                                     , boost::bind( f.finalize, boost::ref( get_< R >( *result_ ).back() ) ) );
-                get_< T >().push_back( b );
-            }
-        }
-        
-        template < typename T > std::vector< bound_functors< T > >& get_();
-        
-        std::vector< bound_functors< double > > df_;
-        std::vector< bound_functors< std::string > > sf_;
-        std::vector< bound_functors< boost::posix_time::ptime > > tf_;
-        comma::csv::impl::unstructured* result_;
-};
 
-template <> std::vector< bound_result::bound_functors< double > >& bound_result::get_< double >() { return df_; }
-template <> std::vector< bound_result::bound_functors< std::string > >& bound_result::get_< std::string >() { return sf_; }
-template <> std::vector< bound_result::bound_functors< boost::posix_time::ptime > >& bound_result::get_< boost::posix_time::ptime >() { return tf_; }
+// class bound_result
+// {
+//     public:
+//         template < typename D, typename S, typename T >
+//         bound_result( const comma::csv::impl::unstructured& sample
+//                     , const operation< double, D >& dop
+//                     , const operation< std::string, S >& sop
+//                     , const operation< boost::posix_time::ptime, T >& top
+//                     , comma::csv::impl::unstructured& result )
+//             : result_( result )
+//         {
+//             
+//         }
+//         
+//     private:
+//         comma::csv::impl::unstructured& result_;
+// };
+// 
+// 
+// class bound_result // real quick and dirty
+// {
+//     public:
+//         template < typename T, typename R >
+//         struct functors
+//         {
+//             boost::function< void( const T& ) > update;
+//             boost::function< R() > result;
+//             
+//             functors() {}
+//             functors( boost::function< void( R& ) > reset
+//                     , boost::function< void( R&, const T& ) > update
+//                     , boost::function< void( R& ) > finalize )
+//                 : reset( reset )
+//                 , update( update )
+//                 , finalize( finalize )
+//             {
+//             }
+//         };
+//         
+//         template < typename T >
+//         struct bound_functors
+//         {
+//             boost::function< void() > reset;
+//             boost::function< void( const T& ) > update;
+//             boost::function< void() > finalize;
+//             
+//             bound_functors() {}
+//             bound_functors( boost::function< void() > reset
+//                           , boost::function< void( const T& ) > update
+//                           , boost::function< void() > finalize )
+//                 : reset( reset )
+//                 , update( update )
+//                 , finalize( finalize )
+//             {
+//             }
+//         };
+//         
+//         bound_result() : result_( NULL ) {}
+//         
+//         template < typename D, typename S, typename T >
+//         bound_result( comma::csv::impl::unstructured& result
+//                     , functors< D, double > df
+//                     , functors< S, std::string > sf
+//                     , functors< T, boost::posix_time::ptime > tf
+//                     , const comma::csv::impl::unstructured& sample )
+//             : result_( &result )
+//         {
+//             init_( df, sample.doubles.size() );
+//             init_( sf, sample.strings.size() );
+//             init_( tf, sample.timestamps.size() );
+//         }
+//         
+//         template < typename Traits >
+//         static comma::csv::options options( const comma::csv::options input_csv ) // quick and dirty
+//         {
+//             comma::csv::options csv;
+//             std::vector< std::string > f = comma::split( input_csv.fields, ',' );
+//             std::vector< std::string > fields;
+//             std::vector< std::string > format;
+//             std::string comma;
+//             std::size_t double_fields_count = 0;
+//             std::size_t string_fields_count = 0;
+//             std::size_t time_fields_count = 0;
+//             for( std::size_t i = 0; i < f.size(); ++i )
+//             {
+//                 if( f[i].empty() ) { continue; }
+//                 std::vector< std::string > v = comma::split( f[i], '/' );
+//                 if( v[0] == "block" || v[0] == "id" ) { continue; } // way quick and dirty
+//                 
+//                 switch( csv.format().offset( i ).type )
+//                 {
+//                     case comma::csv::format::time:
+//                     case comma::csv::format::long_time:
+//                         fields.push_back( bound_result_traits< typename Traits::template result_t< boost::posix_time::ptime > >::name() + "[" + boost::lexical_cast< std::string >( time_fields_count++ ) + "]" );
+//                         format.push_back( bound_result_traits< typename Traits::template result_t< boost::posix_time::ptime > >::format() );
+//                         break;
+//                     case comma::csv::format::fixed_string:
+//                         fields.push_back( bound_result_traits< typename Traits::template result_t< std::string > >::name() + "[" + boost::lexical_cast< std::string >( string_fields_count++ ) + "]" );
+//                         format.push_back( bound_result_traits< typename Traits::template result_t< std::string > >::format() );
+//                         break;
+//                     default:
+//                         fields.push_back( bound_result_traits< typename Traits::template result_t< double > >::name() + "[" + boost::lexical_cast< std::string >( double_fields_count++ ) + "]" );
+//                         format.push_back( bound_result_traits< typename Traits::template result_t< double > >::format() );
+//                         break;
+//                 }
+//             }
+//             csv.fields = comma::join( fields, ',' );
+//             csv.format( comma::join( format, ',' ) );
+//             return csv;
+//         }
+//         
+//         void reset()
+//         {
+//             for( std::size_t i = 0; i < df_.size(); ++i ) { df_[i].reset(); }
+//             for( std::size_t i = 0; i < sf_.size(); ++i ) { sf_[i].reset(); }
+//             for( std::size_t i = 0; i < tf_.size(); ++i ) { tf_[i].reset(); }
+//         }
+//         
+//         void update( const comma::csv::impl::unstructured& v )
+//         {
+//             for( std::size_t i = 0; i < v.doubles.size(); ++i ) { df_[i].update( v.doubles[i] ); }
+//             for( std::size_t i = 0; i < v.strings.size(); ++i ) { sf_[i].update( v.strings[i] ); }
+//             for( std::size_t i = 0; i < v.timestamps.size(); ++i ) { tf_[i].update( v.timestamps[i] ); }
+//         }
+//         
+//         const comma::csv::impl::unstructured& finalize()
+//         {
+//             for( std::size_t i = 0; i < df_.size(); ++i ) { df_[i].finalize(); }
+//             for( std::size_t i = 0; i < sf_.size(); ++i ) { sf_[i].finalize(); }
+//             for( std::size_t i = 0; i < tf_.size(); ++i ) { tf_[i].finalize(); }
+//             return *result_;
+//         }
+//         
+//         const comma::csv::impl::unstructured& result() const { return *result_; };
+//         
+//     private:
+//         template < typename T, typename R >
+//         void init_( const functors< T, R >& f, std::size_t size )
+//         {
+//             for( std::size_t i = 0; i < size; ++i )
+//             {
+//                 get_< R >( *result_ ).push_back( R() );
+//                 bound_functors< T > b( boost::bind( f.reset, boost::ref( get_< R >( *result_ ).back() ) )
+//                                      , boost::bind( f.update, boost::ref( get_< R >( *result_ ).back(), _1 ) )
+//                                      , boost::bind( f.finalize, boost::ref( get_< R >( *result_ ).back() ) ) );
+//                 get_< T >().push_back( b );
+//             }
+//         }
+//         
+//         template < typename T > std::vector< bound_functors< T > >& get_();
+//         
+//         std::vector< bound_functors< double > > df_;
+//         std::vector< bound_functors< std::string > > sf_;
+//         std::vector< bound_functors< boost::posix_time::ptime > > tf_;
+//         comma::csv::impl::unstructured* result_;
+// };
+// 
+// template <> std::vector< bound_result::bound_functors< double > >& bound_result::get_< double >() { return df_; }
+// template <> std::vector< bound_result::bound_functors< std::string > >& bound_result::get_< std::string >() { return sf_; }
+// template <> std::vector< bound_result::bound_functors< boost::posix_time::ptime > >& bound_result::get_< boost::posix_time::ptime >() { return tf_; }
 
 // namespace operations {
 // 
@@ -443,14 +454,12 @@ template <> std::vector< bound_result::bound_functors< boost::posix_time::ptime 
 static bool verbose;
 static comma::signal_flag is_shutdown;
 static comma::csv::impl::unstructured block;
-static input_t input;
-static output_t output;
+static entry_t input;
+static entry_t output;
 static comma::csv::options stdin_csv;
 static comma::csv::options stdout_csv;
-static boost::scoped_ptr< comma::csv::input_stream< input_t > > istream;
-static boost::scoped_ptr< comma::csv::output_stream< output_t > > ostream;
-
-
+static boost::scoped_ptr< comma::csv::input_stream< entry_t > > istream;
+static boost::scoped_ptr< comma::csv::output_stream< entry_t > > ostream;
 
 int main( int ac, char** av )
 {
@@ -462,10 +471,10 @@ int main( int ac, char** av )
         stdin_csv = comma::csv::options( options );
         if( stdin_csv.binary() )
         {
-            std::pair< input_t, comma::csv::options > p = make_( stdin_csv );
+            std::pair< entry_t, comma::csv::options > p = make_input_( stdin_csv );
             input = p.first;
             stdin_csv = p.second;
-            istream.reset( new comma::csv::input_stream< input_t >( std::cin, stdin_csv ) );            
+            istream.reset( new comma::csv::input_stream< entry_t >( std::cin, stdin_csv, input ) );
             if( verbose ) { std::cerr << "csv-calc: input fields: " << stdin_csv.fields << std::endl; } // todo: remove
         }
         std::vector< std::string > unnamed = options.unnamed( "--verbose,-v", "--binary,-b,--delimiter,-d,--fields,-f" );
