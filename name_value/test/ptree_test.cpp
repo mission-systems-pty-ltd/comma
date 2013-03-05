@@ -148,14 +148,14 @@ TEST( ptree, basics )
         EXPECT_EQ( *t1.world, "value" );
         EXPECT_TRUE( !t.nested );
         EXPECT_TRUE( !t1.nested );
-        
+
         boost::property_tree::ptree tree1;
         to_ptree to1( tree1, "test_type" );
-        from_ptree from1( tree1, "test_type" );
         t.world.reset();
         t.nested = nested_type();
         t1.world.reset();
         visiting::apply( to1, t );
+        from_ptree from1( tree1, "test_type" );
         visiting::apply( from1, t1 );
         EXPECT_EQ( t.hello, t1.hello );
         EXPECT_TRUE( !t.world );
@@ -217,6 +217,7 @@ TEST( ptree, basics )
         EXPECT_EQ( m[1], "hello" );
         EXPECT_EQ( m[3], "world" );
         m.clear();
+        //from_ptree from_ptree( ptree, "map" );
         visiting::apply( from_ptree, m );
         EXPECT_EQ( m.size(), 2u );
         EXPECT_EQ( m[1], "hello" );
@@ -228,7 +229,7 @@ TEST( ptree, basics )
         std::string s = "a={ b={ 1=hello 3=world } }";
         std::istringstream iss( s );
         property_tree::from_name_value( iss, ptree );
-        //property_tree::to_path_value( std::cerr, ptree, '=', '\n' );
+        property_tree::to_path_value( std::cerr, ptree, '=', '\n' );
         from_ptree from_ptree( ptree, "a/b" );
         std::map< unsigned int, std::string > m;
         visiting::apply( from_ptree, m );

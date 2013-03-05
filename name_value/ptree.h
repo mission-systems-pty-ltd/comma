@@ -22,6 +22,7 @@
 #ifndef COMMA_NAME_VALUE_PTREE_H_
 #define COMMA_NAME_VALUE_PTREE_H_
 
+#include <exception>
 #include <iostream>
 #include <sstream>
 #include <boost/lexical_cast.hpp>
@@ -35,12 +36,6 @@
 
 namespace comma {
 
-/// visitor: ptree to a class
-class from_ptree;
-
-/// visitor: ptree from a class
-class to_ptree;    
-    
 struct property_tree // quick and dirty
 {
     /// read as name-value from input stream
@@ -64,113 +59,156 @@ struct property_tree // quick and dirty
     
     /// convert boost parameter tree into path=value-style string (equal sign and delimiter have to be escaped)
     static std::string to_path_value_string( const boost::property_tree::ptree& ptree, char equalSign = '=', char delimiter = ',' );
-};
 
-class from_ptree
-{
-    public:
-        /// constructor
-        /// @param ptree: property tree for the structure to fill
-        /// @param root: path to the root of the subtree to visit
-        /// @param branch: path to the subtree to visit (i.e. other branches will be pruned)
-        from_ptree( const boost::property_tree::ptree& ptree ) : ptree_( ptree ), permissive_( false ) {}
-        from_ptree( const boost::property_tree::ptree& ptree, bool permissive ) : ptree_( ptree ), permissive_( permissive ) {}
-        from_ptree( const boost::property_tree::ptree& ptree, const char* root, bool permissive = false ) : ptree_( ptree ), path_( root ), permissive_( permissive ) {}
-        from_ptree( const boost::property_tree::ptree& ptree, const xpath& root, bool permissive = false ) : ptree_( ptree ), path_( root ), permissive_( permissive ) {}
-        from_ptree( const boost::property_tree::ptree& ptree, const xpath& root, const xpath& branch, bool permissive = false ) : ptree_( ptree ), path_( root ), branch_( branch ), permissive_( permissive ) {}
-
-        /// apply on boost optional
-        template < typename K, typename T >
-        void apply_next( const K& name, boost::optional< T >& value )
-        {
-            boost::optional< std::string > s = ptree_.get_optional< std::string >( path_.to_string( '.' ) );
-            if( !s ) { return; }
-            if( !value ) { value = T(); }
-            visiting::do_while<    !boost::is_fundamental< T >::value
-                                && !boost::is_same< T, std::string >::value >::visit( name, *value, *this );
-        }
-
-        /// apply to vector
-        template < typename K, typename T, typename A >
-        void apply( const K& key, std::vector< T, A >& value )
-        {
-            if( !( path_ <= branch_ ) ) { return; } // visit, only if on the branch
-            append_( key );
-            boost::optional< const boost::property_tree::ptree& > t = ptree_.get_child_optional( path_.to_string( '.' ) );
-            if( !permissive_ || t )
+    template < template < typename > class Traits = comma::visiting::traits >
+    class from
+    {
+        public:
+            /// constructor
+            /// @param ptree: property tree for the structure to fill
+            /// @param root: path to the root of the subtree to visit
+            /// @param branch: path to the subtree to visit (i.e. other branches will be pruned)
+            from( const boost::property_tree::ptree& ptree )
+                : ptree_( ptree )
+                , cur_( ptree )
+                , permissive_( false )
             {
-                if( !t ) { COMMA_THROW( comma::exception, "path " << path_.to_string( '.' ) << " not found" ); }
-                value.resize( t->size() );
-                for( std::size_t i = 0; i < value.size(); ++i ) // quick and dirty
+            }
+            from( const boost::property_tree::ptree& ptree, bool permissive )
+                : ptree_( ptree )
+                , cur_( ptree )
+                , permissive_( permissive )
+            {
+            }
+            from( const boost::property_tree::ptree& ptree, const char* root, bool permissive = false )
+                : ptree_( ptree )
+                , cur_( ptree_.get_child_optional( xpath( root ).to_string( '.' ) ) )
+                , permissive_( permissive )
+            {
+            }
+            from( const boost::property_tree::ptree& ptree, const xpath& root, bool permissive = false )
+                : ptree_( ptree )
+                , cur_( ptree_.get_child_optional( root.to_string( '.' ) ) )
+                , permissive_( permissive )
+            {
+            }
+            
+            //ptree_visitor( const boost::property_tree::ptree& ptree, const xpath& root, const xpath& branch, bool permissive = false ) : ptree_( ptree ), cur_( &ptree ), path_( root ), branch_( branch ), permissive_( permissive ) {}
+
+            /// apply
+            template < typename K, typename T >
+            void apply( const K& key, T& value )
+            {
+                visiting::do_while<    !boost::is_fundamental< T >::value
+                                    && !boost::is_same< T, std::string >::value >::visit( key, value, *this );
+            }
+            
+            /// apply on boost optional
+            template < typename K, typename T >
+            void apply_next( const K& name, boost::optional< T >& value )
+            {
+                if( !cur_ || cur_->find( name ) == cur_->not_found() ) { return; }
+                if( !value ) { value = T(); }
+                apply( name, *value );
+            }
+
+            /// apply to vector
+            template < typename K, typename T, typename A >
+            void apply_next( const K& key, std::vector< T, A >& value )
+            {
+                std::string name = boost::lexical_cast< std::string >( key );
+                boost::optional< const boost::property_tree::ptree& > t = cur_ && !name.empty() ? cur_->get_child_optional( name ) : cur_;
+                if( t )
                 {
-                    append_( boost::lexical_cast< std::string >( i ).c_str() );
-                    visiting::do_while<    !boost::is_fundamental< T >::value
-                                        && !boost::is_same< T, std::string >::value >::visit( i, value[i], *this );
-                    trim_();
+                    const boost::property_tree::ptree& parent = *cur_;
+                    value.resize( t->size() );
+                    std::size_t i = 0;
+                    for( boost::property_tree::ptree::const_assoc_iterator j = t->ordered_begin(); j != t->not_found(); ++j, ++i )
+                    {
+                        cur_ = j->second;
+                        //visiting::do_while<    !boost::is_fundamental< T >::value
+                        //                    && !boost::is_same< T, std::string >::value >::visit( &j->first[0], value[i], *this );
+                        visiting::do_while<    !boost::is_fundamental< T >::value
+                                            && !boost::is_same< T, std::string >::value >::visit( "", value[i], *this );
+                    }
+                    cur_ = parent;
+                }
+                else if( !permissive_ )
+                {
+                    COMMA_THROW( comma::exception, "key " << key << " not found" );
                 }
             }
-            trim_( key );
-        }
-        
-        /// apply to map
-        template < typename K, typename L, typename T, typename A >
-        void apply( const K& key, std::map< L, T, A >& value )
-        {
-            if( !( path_ <= branch_ ) ) { return; } // visit, only if on the branch
-            append_( key );
-            boost::optional< const boost::property_tree::ptree& > t = ptree_.get_child_optional( path_.to_string( '.' ) );
-            if( !permissive_ || t )
+            
+            /// apply to map
+            template < typename K, typename L, typename T, typename A >
+            void apply_next( const K& key, std::map< L, T, A >& value )
             {
-                if( !t ) { COMMA_THROW( comma::exception, "path " << path_.to_string( '.' ) << " not found" ); }
-                for( boost::property_tree::ptree::const_assoc_iterator j = t->ordered_begin(); j != t->not_found(); ++j )
+                std::string name = boost::lexical_cast< std::string >( key );
+                boost::optional< const boost::property_tree::ptree& > t = cur_ && !name.empty() ? cur_->get_child_optional( name ) : cur_;
+                if( t )
                 {
-                    append_( j->first.c_str() );
-                    visiting::do_while<    !boost::is_fundamental< T >::value
-                                        && !boost::is_same< T, std::string >::value >::visit( j->first.c_str(), value[ boost::lexical_cast< L >( j->first ) ], *this );
-                    trim_( j->first.c_str() );
+                    const boost::property_tree::ptree& parent = *cur_;
+                    for( boost::property_tree::ptree::const_assoc_iterator j = t->ordered_begin(); j != t->not_found(); ++j )
+                    {
+                        cur_ = j->second;
+                        visiting::do_while<    !boost::is_fundamental< T >::value
+                                            && !boost::is_same< T, std::string >::value >::visit( "", value[ boost::lexical_cast< L >( j->first ) ], *this );
+                    }
+                    cur_ = parent;
+                }
+                else if( !permissive_ )
+                {
+                    COMMA_THROW( comma::exception, "key not found: " << key );
                 }
             }
-            trim_( key );
-        }        
+            
+            /// apply to non-leaf elements
+            template < typename K, typename T >
+            void apply_next( const K& key, T& value )
+            {
+                if( !cur_ )
+                {
+                    if( permissive_ ) { return; }
+                    COMMA_THROW( comma::exception, "key " << key << " not found" );
+                }
+                const boost::property_tree::ptree& parent = *cur_;
+                cur_ = cur_->get_child_optional( boost::lexical_cast< std::string >( key ) );
+                Traits< T >::visit( key, value, *this );
+                cur_ = parent;
+            }
+                    
+            /// apply to leaf elements
+            template < typename K, typename T >
+            void apply_final( const K& key, T& value )
+            {
+                const std::string& name = boost::lexical_cast< std::string >( key );
+                boost::optional< T > v;
+                if( cur_ )
+                {
+                    if( boost::lexical_cast< std::string >( key ).empty() )
+                    {
+                        v = cur_->get_value_optional< T >();
+                    }
+                    else
+                    {
+                        v = cur_->get_optional< T >( name );
+                        if( !v ) { v = cur_->get_optional< T >( "<xmlattr>." + name ); }
+                    }
+                }
+                if( v ) { value = *v; }
+                else if( !permissive_ ) { COMMA_THROW( comma::exception, "key not found: " << key ); }
+            }
         
-        /// apply
-        template < typename K, typename T >
-        void apply( const K& key, T& value )
-        {
-            if( !( path_ <= branch_ ) ) { return; } // visit, only if on the branch
-            append_( key );
-            visiting::do_while<    !boost::is_fundamental< T >::value
-                                && !boost::is_same< T, std::string >::value >::visit( key, value, *this );
-            trim_( key );
-        }
-        
-        /// apply to non-leaf elements
-        template < typename K, typename T >
-        void apply_next( const K& name, T& value ) { comma::visiting::visit( name, value, *this ); }
-                
-        /// apply to leaf elements
-        template < typename K, typename T >
-        void apply_final( const K&, T& value )
-        {
-            value = permissive_ ? ptree_.get( path_.to_string( '.' ), value )
-                                : ptree_.get< T >( path_.to_string( '.' ) );
-        }
-    
-    private:
-        const boost::property_tree::ptree& ptree_;
-        xpath path_;
-        xpath branch_;
-        bool permissive_;
-        // quick and dirty
-        //const xpath& append_( std::size_t index ) { path_.elements.back().index = index; return path_; }
-        const xpath& append_( std::size_t index ) { path_ /= xpath::element( boost::lexical_cast< std::string >( index ) ); return path_; }
-        const xpath& append_( const char* name ) { path_ /= xpath::element( name ); return path_; }
-        //const xpath& trim_( std::size_t size ) { (void) size; path_.elements.back().index = boost::optional< std::size_t >(); return path_; }
-        const xpath& trim_( std::size_t size ) { ( void )( size ); trim_(); return path_; }
-        const xpath& trim_( const char* name ) { if( *name ) { path_ = path_.head(); } return path_; }
-        void trim_() { path_ = path_.head(); }
+        private:
+            const boost::property_tree::ptree& ptree_;
+            boost::optional< const boost::property_tree::ptree& > cur_;
+            const bool permissive_;
+    };
 };
 
+typedef property_tree::from<> from_ptree;    
+
+/// @todo redesign like from_ptree
 class to_ptree
 {
     public:
