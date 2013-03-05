@@ -19,6 +19,7 @@
 #include <gtest/gtest.h>
 #include <boost/function.hpp>
 #include <boost/optional.hpp>
+#include <boost/property_tree/xml_parser.hpp>
 #include <comma/base/types.h>
 #include <comma/name_value/ptree.h>
 #include <comma/visiting/apply.h>
@@ -229,7 +230,7 @@ TEST( ptree, basics )
         std::string s = "a={ b={ 1=hello 3=world } }";
         std::istringstream iss( s );
         property_tree::from_name_value( iss, ptree );
-        property_tree::to_path_value( std::cerr, ptree, '=', '\n' );
+        //property_tree::to_path_value( std::cerr, ptree, '=', '\n' );
         from_ptree from_ptree( ptree, "a/b" );
         std::map< unsigned int, std::string > m;
         visiting::apply( from_ptree, m );
@@ -490,6 +491,96 @@ TEST( ptree, path_value_string )
         EXPECT_EQ( property_tree::to_path_value_string( ptree ), "x/a/b=\"1\",x/a/c=\"2\",y=\"3\"" );
     }
     // todo: more tests
+}
+
+struct a_t
+{
+    std::string a;
+    std::string b;
+};
+
+struct b_t
+{
+    std::string c;
+    a_t d;
+};
+
+struct c_t
+{
+    b_t e;
+    std::vector< b_t > f;
+};
+    
+template < typename T > struct test_xml_traits {};
+
+template <> struct test_xml_traits< a_t >
+{
+    template < typename K, typename V >
+    static void visit( const K&, a_t& t, V& v )
+    {
+        v.apply( "a", t.a );
+        v.apply( "b", t.b );
+    }
+};
+
+template <> struct test_xml_traits< b_t >
+{
+    template < typename K, typename V >
+    static void visit( const K&, b_t& t, V& v )
+    {
+        v.apply( "c", t.c );
+        v.apply( "d", t.d );
+    }
+};
+
+template <> struct test_xml_traits< c_t >
+{
+    template < typename K, typename V >
+    static void visit( const K&, c_t& t, V& v )
+    {
+        v.apply( "e", t.e );
+        v.apply( "f", t.f );
+    }
+};
+
+TEST( ptree, xmlattr )
+{
+    std::string s = "<root>"
+                    "    <e c=\"C\">"
+                    "        <d a=\"A\" b=\"B\"/>"
+                    "    </e>"
+                    "    <f>"
+                    "        <e c=\"C0\">"
+                    "            <d a=\"A0\" b=\"B0\"/>"
+                    "        </e>"
+                    "        <e c=\"C1\">"
+                    "            <d a=\"A1\" b=\"B1\"/>"
+                    "        </e>"
+                    "    </f>"
+                    "</root>";
+    std::istringstream iss( s );
+    boost::property_tree::ptree t;
+    boost::property_tree::read_xml( iss, t );
+    //comma::property_tree::to_path_value( std::cerr, t, '=', '\n' ); std::cerr << std::endl;
+    comma::property_tree::from< test_xml_traits > v( t, "root" );
+    c_t c;
+    comma::visiting::apply( v, c );
+    
+    EXPECT_EQ( "A", c.e.d.a );
+    EXPECT_EQ( "B", c.e.d.b );
+    EXPECT_EQ( "C", c.e.c );
+    
+    ASSERT_EQ( 2, c.f.size() );
+    
+    EXPECT_EQ( "A0", c.f[0].d.a );
+    EXPECT_EQ( "B0", c.f[0].d.b );
+    EXPECT_EQ( "C0", c.f[0].c );
+    
+    EXPECT_EQ( "A1", c.f[1].d.a );
+    EXPECT_EQ( "B1", c.f[1].d.b );
+    EXPECT_EQ( "C1", c.f[1].c );
+    
+    // todo: more testing
 }
 
 } } // namespace comma { namespace test {

@@ -126,8 +126,6 @@ struct property_tree // quick and dirty
                     for( boost::property_tree::ptree::const_assoc_iterator j = t->ordered_begin(); j != t->not_found(); ++j, ++i )
                     {
                         cur_ = j->second;
-                        //visiting::do_while<    !boost::is_fundamental< T >::value
-                        //                    && !boost::is_same< T, std::string >::value >::visit( &j->first[0], value[i], *this );
                         visiting::do_while<    !boost::is_fundamental< T >::value
                                             && !boost::is_same< T, std::string >::value >::visit( "", value[i], *this );
                     }
@@ -172,7 +170,8 @@ struct property_tree // quick and dirty
                     COMMA_THROW( comma::exception, "key " << key << " not found" );
                 }
                 const boost::property_tree::ptree& parent = *cur_;
-                cur_ = cur_->get_child_optional( boost::lexical_cast< std::string >( key ) );
+                std::string name = boost::lexical_cast< std::string >( key );
+                if( !name.empty() ) { cur_ = cur_->get_child_optional( name ); }
                 Traits< T >::visit( key, value, *this );
                 cur_ = parent;
             }
@@ -185,15 +184,10 @@ struct property_tree // quick and dirty
                 boost::optional< T > v;
                 if( cur_ )
                 {
-                    if( boost::lexical_cast< std::string >( key ).empty() )
-                    {
-                        v = cur_->get_value_optional< T >();
-                    }
-                    else
-                    {
-                        v = cur_->get_optional< T >( name );
-                        if( !v ) { v = cur_->get_optional< T >( "<xmlattr>." + name ); }
-                    }
+                    v = name.empty()
+                      ? cur_->get_value_optional< T >()
+                      : v = cur_->get_optional< T >( name );
+                    if( !v ) { v = cur_->get_optional< T >( "<xmlattr>." + name ); }
                 }
                 if( v ) { value = *v; }
                 else if( !permissive_ ) { COMMA_THROW( comma::exception, "key not found: " << key ); }
