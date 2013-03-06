@@ -24,6 +24,7 @@
 #include <string.h>
 #include <deque>
 #include <vector>
+#include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
@@ -38,11 +39,11 @@ namespace comma { namespace csv { namespace impl {
     
 /// visitor loading a struct from a csv file
 /// see unit test for usage
-class frobinary_
+class from_binary_
 {
     public:
         /// constructor
-        frobinary_( const std::vector< boost::optional< format::element > >& offsets
+        from_binary_( const std::vector< boost::optional< format::element > >& offsets
                   , const std::deque< bool >& optional
                   , const char* buf );
         
@@ -86,7 +87,7 @@ class frobinary_
 //         static void copy( T& v, const char* buf, std::size_t size ) { ::memcpy( &v, buf, size ); }
 };
 
-inline frobinary_::frobinary_( const std::vector< boost::optional< format::element > >& offsets
+inline from_binary_::from_binary_( const std::vector< boost::optional< format::element > >& offsets
                                , const std::deque< bool >& optional
                                , const char* buf )
     : offsets_( offsets )
@@ -98,7 +99,7 @@ inline frobinary_::frobinary_( const std::vector< boost::optional< format::eleme
 }
 
 template < typename K, typename T >
-inline void frobinary_::apply( const K& name, boost::optional< T >& value ) // todo: watch performance
+inline void from_binary_::apply( const K& name, boost::optional< T >& value ) // todo: watch performance
 {
     if( !value && optional_[optional_index++] ) { value = T(); }
     if( value ) { this->apply( name, *value ); }
@@ -106,7 +107,7 @@ inline void frobinary_::apply( const K& name, boost::optional< T >& value ) // t
 }
 
 template < typename K, typename T >
-inline void frobinary_::apply( const K& name, boost::scoped_ptr< T >& value ) // todo: watch performance
+inline void from_binary_::apply( const K& name, boost::scoped_ptr< T >& value ) // todo: watch performance
 {
     if( !value && optional_[optional_index++] ) { value = T(); }
     if( value ) { this->apply( name, *value ); }
@@ -114,7 +115,7 @@ inline void frobinary_::apply( const K& name, boost::scoped_ptr< T >& value ) //
 }
 
 template < typename K, typename T >
-inline void frobinary_::apply( const K& name, boost::shared_ptr< T >& value ) // todo: watch performance
+inline void from_binary_::apply( const K& name, boost::shared_ptr< T >& value ) // todo: watch performance
 {
     if( !value && optional_[optional_index++] ) { value = T(); }
     if( value ) { this->apply( name, *value ); }
@@ -122,7 +123,7 @@ inline void frobinary_::apply( const K& name, boost::shared_ptr< T >& value ) //
 }
                              
 template < typename K, typename T >
-inline void frobinary_::apply( const K& name, T& value )
+inline void from_binary_::apply( const K& name, T& value )
 {
     visiting::do_while<    !boost::is_fundamental< T >::value
                         && !boost::is_same< T, std::string >::value
@@ -130,10 +131,10 @@ inline void frobinary_::apply( const K& name, T& value )
 }
 
 template < typename K, typename T >
-inline void frobinary_::apply_next( const K& name, T& value ) { comma::visiting::visit( name, value, *this ); }
+inline void from_binary_::apply_next( const K& name, T& value ) { comma::visiting::visit( name, value, *this ); }
 
 template < typename K, typename T >
-inline void frobinary_::apply_final( const K&, T& value )
+inline void from_binary_::apply_final( const K&, T& value )
 {
     //if( offsets_[ index_ ] ) { copy( value, buf_ + offsets_[ index_ ]->offset, offsets_[ index_ ]->size ); }
     if( offsets_[ index_ ] )
@@ -162,7 +163,9 @@ inline void frobinary_::apply_final( const K&, T& value )
                 case format::double_t: value = static_cast_impl< T >::value( format::traits< double >::from_bin( buf ) ); break;
                 case format::time: value = static_cast_impl< T >::value( format::traits< boost::posix_time::ptime, format::time >::from_bin( buf ) ); break;
                 case format::long_time: value = static_cast_impl< T >::value( format::traits< boost::posix_time::ptime, format::long_time >::from_bin( buf ) ); break;
-                case format::fixed_string: value = static_cast_impl< T >::value( format::traits< std::string >::from_bin( buf, size ) ); break;
+                // quick and dirty: relax casting and see if it works...
+                //case format::fixed_string: value = static_cast_impl< T >::value( format::traits< std::string >::from_bin( buf, size ) ); break;
+                case format::fixed_string: value = boost::lexical_cast< T >( format::traits< std::string >::from_bin( buf, size ) ); break;
             };
         }
     }

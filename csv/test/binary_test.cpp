@@ -286,30 +286,30 @@ template <> struct test_traits< double >
 {
     template < typename S > static void expect_equal( double v, S w ) { EXPECT_NEAR( v, w, 0.0001 ); }
 };
-    
+
+template <> struct test_traits< std::string >
+{
+    template < typename T, typename S > static void expect_equal( T v, S w ) { EXPECT_EQ( v, w ); }
+};
+
+template < typename T, typename S >
+static void test_binary_cast( const char* format, T t, S expected )
+{
+    comma::csv::binary< test_cast< T > > bt( format );
+    comma::csv::binary< test_cast< S > > bs( format );
+    char buf[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 }; // just to trash it
+    test_cast< T > vt( t );
+    test_cast< S > vs;
+    bt.put( vt, buf );
+    bs.get( vs, buf );
+    test_traits< T >::expect_equal( vs.value, expected );
+}
+
 template < typename T, typename S >
 static void test_binary_cast( const char* format, T t, S s, T ti )
 {
-    {
-        comma::csv::binary< test_cast< T > > bt( format );
-        comma::csv::binary< test_cast< S > > bs( format );
-        {
-            char buf[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 }; // just to trash it
-            test_cast< T > vt( t );
-            test_cast< S > vs;
-            bt.put( vt, buf );
-            bs.get( vs, buf );
-            test_traits< T >::expect_equal( vs.value, s );
-        }
-        {
-            char buf[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 }; // just to trash it
-            test_cast< S > vs( s );
-            test_cast< T > vt;
-            bs.put( vs, buf );
-            bt.get( vt, buf );
-            test_traits< T >::expect_equal( vt.value, ti );
-        }
-    }
+    test_binary_cast( format, t, s );
+    test_binary_cast( format, s, ti );
 }
 
 template < typename T >
@@ -359,8 +359,9 @@ TEST( csv, binary_binary_cast )
     test_binary_cast< double, comma::uint32 >( "%d", 111.1, 111, 111 );
     //test_binary_cast< double, float >( "%d", 111.1, 111.1, 111.1 ); // todo
     test_binary_cast< double, double >( "%d", 111.1, 111.1, 111.1 );
-
+    
     test_binary_cast< std::string, std::string >( "%s[8]", "hello", "hello", "hello" );
+    test_binary_cast< std::string, comma::int32 >( "%s[4]", "1234", 1234 ); // only one-way cast is possible!
     boost::posix_time::ptime t = boost::posix_time::from_iso_string( "20110123T123456" );
     test_binary_cast< boost::posix_time::ptime, boost::posix_time::ptime >( "%t", t, t, t );
 }

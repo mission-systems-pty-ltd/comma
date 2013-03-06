@@ -78,7 +78,7 @@ inline const S& binary< S >::get( S& s, const char* buf ) const
 {
     if( binary_ )
     {
-        impl::frobinary_ f( binary_->offsets(), binary_->optional(), buf );
+        impl::from_binary_ f( binary_->offsets(), binary_->optional(), buf );
         visiting::apply( f, s );
     }
     else // quick and dirty for better performance
