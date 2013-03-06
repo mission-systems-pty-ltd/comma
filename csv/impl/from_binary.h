@@ -31,6 +31,7 @@
 #include <boost/type_traits.hpp>
 #include <comma/base/types.h>
 #include <comma/csv/format.h>
+#include <comma/string/string.h>
 #include <comma/visiting/visit.h>
 #include <comma/visiting/while.h>
 #include "./static_cast.h"
@@ -133,6 +134,14 @@ inline void from_binary_::apply( const K& name, T& value )
 template < typename K, typename T >
 inline void from_binary_::apply_next( const K& name, T& value ) { comma::visiting::visit( name, value, *this ); }
 
+inline void cast_( std::string& v, const std::string& s ) { v = s; }
+
+template < typename T > inline void cast_( T& v, const std::string& s ) // quick and dirty, watch performance
+{
+    const std::string& stripped = comma::strip( s, ' ' );
+    if( !stripped.empty() ) { v = boost::lexical_cast< T >( stripped ); }
+}
+
 template < typename K, typename T >
 inline void from_binary_::apply_final( const K&, T& value )
 {
@@ -165,7 +174,7 @@ inline void from_binary_::apply_final( const K&, T& value )
                 case format::long_time: value = static_cast_impl< T >::value( format::traits< boost::posix_time::ptime, format::long_time >::from_bin( buf ) ); break;
                 // quick and dirty: relax casting and see if it works...
                 //case format::fixed_string: value = static_cast_impl< T >::value( format::traits< std::string >::from_bin( buf, size ) ); break;
-                case format::fixed_string: value = boost::lexical_cast< T >( format::traits< std::string >::from_bin( buf, size ) ); break;
+                case format::fixed_string: cast_( value, format::traits< std::string >::from_bin( buf, size ) ); break;
             };
         }
     }

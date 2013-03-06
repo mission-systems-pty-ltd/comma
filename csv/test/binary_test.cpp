@@ -362,6 +362,9 @@ TEST( csv, binary_binary_cast )
     
     test_binary_cast< std::string, std::string >( "%s[8]", "hello", "hello", "hello" );
     test_binary_cast< std::string, comma::int32 >( "%s[4]", "1234", 1234 ); // only one-way cast is possible!
+    test_binary_cast< std::string, comma::int32 >( "%s[4]", " 123", 123 ); // only one-way cast is possible!
+    test_binary_cast< std::string, comma::int32 >( "%s[4]", "123 ", 123 ); // only one-way cast is possible!
+    test_binary_cast< std::string, comma::int32 >( "%s[4]", " 12 ", 12 ); // only one-way cast is possible!
     boost::posix_time::ptime t = boost::posix_time::from_iso_string( "20110123T123456" );
     test_binary_cast< boost::posix_time::ptime, boost::posix_time::ptime >( "%t", t, t, t );
 }
