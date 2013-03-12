@@ -21,14 +21,17 @@
 #ifndef COMMA_PACKED_STRING_H_
 #define COMMA_PACKED_STRING_H_
 
+#include <cmath>
 #include <string>
+#include <boost/lexical_cast.hpp>
 #include <comma/base/exception.h>
 #include <comma/packed/field.h>
+#include <comma/string/string.h>
 
 namespace comma { namespace packed {
 
 /// packed fixed-length string
-template < size_t S, char Padding = ' ' >
+template < std::size_t S, char Padding = ' ' >
 class string : public packed::field< string< S, Padding >, std::string, S >
 {
     public:
@@ -47,7 +50,7 @@ class string : public packed::field< string< S, Padding >, std::string, S >
         static void pack( char* storage, const std::string& value )
         {
             if( value.length() != size ) { COMMA_THROW_STREAM( comma::exception, "expected " << size << " bytes, got " << value.length() << " (\"" << value << "\")" ); }
-            ::memcpy( storage, value.c_str(), size );
+            ::memcpy( storage, &value[0], size );
         }
 
         static std::string unpack( const char* storage )
@@ -58,6 +61,39 @@ class string : public packed::field< string< S, Padding >, std::string, S >
         const string& operator=( const std::string& rhs ) { return base_type::operator=( rhs ); }
 
         const string& operator=( const char* rhs ) { return base_type::operator=( std::string( rhs, size ) ); }
+        
+        /// a convenience method, if string represents numeric values
+        template < typename T > T as() const { return boost::lexical_cast< T >( this->operator()() ); }
+};
+
+/// packed fixed-length string containing a numeric value, e.g. "1234"
+/// @note serialized value will be left-aligned and padded
+/// @note serialized value will be trunkated to the field size
+template < typename T, std::size_t S, char Padding = ' ' >
+class casted : public packed::field< casted< T, S, Padding >, T, S >
+{
+    public:
+        enum { size = S };
+
+        typedef T Type;
+
+        typedef packed::field< casted< T, S, Padding >, T, S > base_type;
+
+        static T default_value() { return 0; }
+
+        static void pack( char* storage, const T& value )
+        {
+            std::string v = boost::lexical_cast< std::string >( value );
+            ::memset( storage, Padding, size );
+            ::memcpy( storage, &v[0], std::min( size, v.size() ) );
+        }
+
+        static T unpack( const char* storage )
+        {
+            return boost::lexical_cast< T >( comma::strip( std::string( storage, size ), Padding ) );
+        }
+
+        const casted& operator=( const T& rhs ) { return base_type::operator=( rhs ); }
 };
 
 } } // namespace comma { namespace packed {

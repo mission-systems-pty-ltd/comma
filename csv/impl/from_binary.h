@@ -136,6 +136,8 @@ inline void from_binary_::apply_next( const K& name, T& value ) { comma::visitin
 
 inline void cast_( std::string& v, const std::string& s ) { v = s; }
 
+inline void cast_( char& v, const std::string& s ) { if( !s.empty() ) { v = s[0]; } }
+
 template < typename T > inline void cast_( T& v, const std::string& s ) // quick and dirty, watch performance
 {
     const std::string& stripped = comma::strip( s, ' ' );
