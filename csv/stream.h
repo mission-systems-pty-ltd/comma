@@ -1,4 +1,4 @@
-// This file is part of comma, a generic and flexible library 
+// This file is part of comma, a generic and flexible library
 // for robotics research.
 //
 // Copyright (C) 2011 The University of Sydney
@@ -10,7 +10,7 @@
 //
 // comma is distributed in the hope that it will be useful, but WITHOUT ANY
 // WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-// FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License 
+// FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
 // for more details.
 //
 // You should have received a copy of the GNU Lesser General Public
@@ -38,27 +38,27 @@
 
 namespace comma { namespace csv {
 
-/// ascii csv input stream 
+/// ascii csv input stream
 template < typename S >
 class ascii_input_stream : public boost::noncopyable
 {
     public:
         /// constructor
         ascii_input_stream( std::istream& is, const std::string& column_names = "", char delimiter = ',', bool full_path_as_name = false, const S& sample = S() );
-    
+
         /// constructor from csv options
         ascii_input_stream( std::istream& is, const options& o, const S& sample = S() );
-    
+
         /// read; return NULL, if end of stream or alike
         const S* read();
-    
+
         /// read with timeout; return NULL, if insufficient data (e.g. end of stream)
         /// @todo implement
         const S* read( const boost::posix_time::ptime& timeout );
-    
+
         /// return the last line read
         const std::vector< std::string >& last() const { return line_; }
-    
+
         /// a helper: return the engine
         const csv::ascii< S > ascii() const { return ascii_; }
 
@@ -67,7 +67,7 @@ class ascii_input_stream : public boost::noncopyable
 
         /// return true, if read will not block
         bool ready() const { return false; }
-    
+
     private:
         std::istream& is_;
         csv::ascii< S > ascii_;
@@ -77,69 +77,69 @@ class ascii_input_stream : public boost::noncopyable
         std::vector< std::string > fields_;
 };
 
-/// ascii csv output stream 
+/// ascii csv output stream
 template < typename S >
 class ascii_output_stream : public boost::noncopyable
 {
     public:
         /// constructor
         ascii_output_stream( std::ostream& os, const std::string& column_names = "", char delimiter = ',', bool full_path_as_name = false, const S& sample = S() );
-    
+
         /// constructor from csv options
         ascii_output_stream( std::ostream& os, const options& o, const S& sample = S() );
-    
+
         /// write
         void write( const S& s );
-    
+
         /// substitute corresponding fields in the line and write
         void write( const S& s, const std::string& line );
-    
+
         /// substitute corresponding fields and write
         void write( const S& s, const std::vector< std::string >& line );
-    
+
         /// substitute corresponding fields and write
         void write( const S& s, std::vector< std::string >& line );
-    
+
         /// flush
         /// @todo: to implement
         void flush() {}
-    
+
         /// set precision
         void precision( unsigned int p ) { ascii_.precision( p ); }
-        
+
         /// a helper: return the engine
         const csv::ascii< S > ascii() const { return ascii_; }
 
         /// return fields
         const std::vector< std::string >& fields() const { return fields_; }
-    
+
     private:
         std::ostream& m_os;
         csv::ascii< S > ascii_;
         std::vector< std::string > fields_;
 };
 
-/// binary csv input stream 
+/// binary csv input stream
 template < typename S >
 class binary_input_stream : public boost::noncopyable
 {
     public:
         /// constructor
         binary_input_stream( std::istream& is, const std::string& format = "", const std::string& column_names = "", bool full_path_as_name = false, const S& sample = S() );
-    
+
         /// constructor from options
         binary_input_stream( std::istream& is, const options& o, const S& sample = S() );
-    
+
         /// read; return NULL, if insufficient data (e.g. end of stream)
         const S* read();
-    
+
         /// read with timeout; return NULL, if insufficient data (e.g. end of stream)
         /// @todo implement
         const S* read( const boost::posix_time::ptime& timeout );
-    
+
         /// return the last line read
         const char* last() const { return last_; }
-    
+
         /// a helper: return the engine
         const csv::binary< S > binary() const { return binary_; }
 
@@ -151,7 +151,7 @@ class binary_input_stream : public boost::noncopyable
 
         /// return true, if read will not block
         bool ready() const;
-    
+
     private:
         std::istream& is_;
         csv::binary< S > binary_;
@@ -167,35 +167,35 @@ class binary_input_stream : public boost::noncopyable
         std::vector< std::string > fields_;
 };
 
-/// binary csv output stream 
+/// binary csv output stream
 template < typename S >
 class binary_output_stream : public boost::noncopyable
 {
     public:
         /// constructor
         binary_output_stream( std::ostream& os, const std::string& format = "", const std::string& column_names = "", bool full_path_as_name = false, const S& sample = S() );
-    
+
         /// constructor from options
         binary_output_stream( std::ostream& os, const options& o, const S& sample = S() );
-    
+
         /// destructor
         ~binary_output_stream() { flush(); }
-    
+
         /// write
         void write( const S& s );
-    
+
         /// substitute corresponding fields in the buffer and write
         void write( const S& s, const char* buf );
-    
+
         /// flush
         void flush();
-    
+
         /// a helper: return the engine
         const csv::binary< S > binary() const { return binary_; }
 
         /// return fields
         const std::vector< std::string >& fields() const { return fields_; }
-    
+
     private:
         std::ostream& m_os;
         csv::binary< S > binary_;
@@ -207,76 +207,82 @@ class binary_output_stream : public boost::noncopyable
         std::vector< std::string > fields_;
 };
 
-/// trivial generic csv input stream wrapper, less optimized, but more convenient 
+/// trivial generic csv input stream wrapper, less optimized, but more convenient
 template < typename S >
 class input_stream : public boost::noncopyable
 {
     public:
         /// construct from ascii stream
         input_stream( ascii_input_stream< S >* is ) : ascii_( is ) {}
-    
+
         /// construct from binary stream
         input_stream( binary_input_stream< S >* is ) : binary_( is ) {}
-    
-        /// construct from csv option
+
+        /// construct from csv options
         input_stream( std::istream& is, const csv::options& o, const S& sample = S() );
-    
+
+        /// construct ascii stream from default csv options
+        input_stream( std::istream& is, const S& sample = S() );
+
         /// read; return NULL, if insufficient data (e.g. end of stream)
         const S* read() { return ascii_ ? ascii_->read() : binary_->read(); }
-    
+
         /// read with timeout; return NULL, if insufficient data (e.g. end of stream)
         const S* read( const boost::posix_time::ptime& timeout ) { return ascii_ ? ascii_->read( timeout ) : binary_->read( timeout ); }
-    
+
         /// get last as string: an evil function, don't use it!
         //std::string last() const;
-    
+
         const ascii_input_stream< S >& ascii() const { return *ascii_; }
         const binary_input_stream< S >& binary() const { return *binary_; }
         ascii_input_stream< S >& ascii() { return *ascii_; }
         binary_input_stream< S >& binary() { return *binary_; }
         bool is_binary() const { return binary_; }
         bool ready() const { return binary_ ? binary_->ready() : ascii_->ready(); }
-    
+
     private:
         boost::scoped_ptr< ascii_input_stream< S > > ascii_;
         boost::scoped_ptr< binary_input_stream< S > > binary_;
 };
 
-/// trivial generic csv output stream wrapper, less optimized, but more convenient 
+/// trivial generic csv output stream wrapper, less optimized, but more convenient
 template < typename S >
 class output_stream : public boost::noncopyable
 {
     public:
         /// construct from ascii stream
         output_stream( ascii_output_stream< S >* os ) : ascii_( os ) {}
-    
+
         /// construct from binary stream
         output_stream( binary_output_stream< S >* os ) : binary_( os ) {}
-    
-        /// construct from csv option
+
+        /// construct ascii stream from default csv options
+        output_stream( std::ostream& os, const S& sample = S() );
+
+        /// construct from csv options
         output_stream( std::ostream& os, const csv::options& o, const S& sample = S() );
-    
+
         /// write
         void write( const S& s ) { if( ascii_ ) { ascii_->write( s ); } else { binary_->write( s ); } }
-    
+
         /// write, substituting corresponding fields in given line
         void write( const S& s, const char* line ) { if( ascii_ ) { ascii_->write( s, line ); } else { binary_->write( s, line ); } }
-    
+
         /// write, substituting corresponding fields in given line
         void write( const S& s, const std::string& line ) { if( ascii_ ) { ascii_->write( s, line ); } else { binary_->write( s, &line[0] ); } }
-    
+
         /// write, substituting corresponding fields in given line
         void write( const S& s, const std::vector< std::string >& line ) { ascii_->write( s, line ); }
-    
+
         /// flush
         void flush() { if( ascii_ ) { ascii_->flush(); } else { binary_->flush(); } }
-    
+
         const ascii_output_stream< S >& ascii() const { return *ascii_; }
         const binary_output_stream< S >& binary() const { return *binary_; }
         ascii_output_stream< S >& ascii() { return *ascii_; }
         binary_output_stream< S >& binary() { return *binary_; }
         bool is_binary() const { return binary_; }
-    
+
     private:
         boost::scoped_ptr< ascii_output_stream< S > > ascii_;
         boost::scoped_ptr< binary_output_stream< S > > binary_;
@@ -412,7 +418,7 @@ inline binary_input_stream< S >::binary_input_stream( std::istream& is, const op
     , offset_( 0 )
     , fields_( split( o.fields, ',' ) )
 {
-    
+
     #ifdef WIN32
     if( &is == &std::cin ) { _setmode( _fileno( stdin ), _O_BINARY ); }
     #endif
@@ -426,7 +432,7 @@ inline bool binary_input_stream< S >::ready() const
 
 template < typename S >
 inline const S* binary_input_stream< S >::read()
-{ 
+{
     while( true ) // reading a big chunk for better performance
     {
         if( ready() )
@@ -533,7 +539,7 @@ template < typename S >
 inline void binary_output_stream< S >::write( const S& s, const char* buf )
 {
     ::memcpy( &buf_[0], buf, binary_.format().size() );
-    write( s );    
+    write( s );
 //     ::memcpy( cur_, buf, binary_.format().size() );
 //     write( s );
 }
@@ -545,13 +551,19 @@ inline input_stream< S >::input_stream( std::istream& is, const csv::options& o,
     else { ascii_.reset( new ascii_input_stream< S >( is, o, sample ) ); }
 }
 
+template < typename S >
+inline input_stream< S >::input_stream( std::istream& is, const S& sample )
+    : ascii_( new ascii_input_stream< S >( is, csv::options(), sample ) )
+{
+}
+
 //template < typename S >
 //std::string inline input_stream< S >::last() const
 //{
 //    // quick and dirty, otherwise string construction takes forever; profile!
 //    //if( binary_ ) { return std::string( binary_->last(), binary_->size() ); }
 //    //else { return comma::join( ascii_->last(), ascii_->ascii().delimiter() ); }
-//    
+//
 //    if( binary_ )
 //    {
 //        std::string s( binary_->size(), 0 );
@@ -562,7 +574,7 @@ inline input_stream< S >::input_stream( std::istream& is, const csv::options& o,
 //    {
 //        return comma::join( ascii_->last(), ascii_->ascii().delimiter() );
 //    }
-//    
+//
 ////    if( binary_ )
 ////    {
 ////        last_ = std::string( binary_->last(), binary_->size() );
@@ -579,6 +591,12 @@ inline output_stream< S >::output_stream( std::ostream& os, const csv::options& 
 {
     if( o.binary() ) { binary_.reset( new binary_output_stream< S >( os, o, sample ) ); }
     else { ascii_.reset( new ascii_output_stream< S >( os, o, sample ) ); }
+}
+
+template < typename S >
+inline output_stream< S >::output_stream( std::ostream& os, const S& sample )
+    : ascii_( new ascii_output_stream< S >( os, csv::options(), sample ) )
+{
 }
 
 } } // namespace comma { namespace csv {
