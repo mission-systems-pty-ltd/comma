@@ -75,9 +75,8 @@ class asciiVisitor
 
         /// apply to leaf elements
         template < typename K, typename T >
-        void apply_final( const K& key, const T& )
+        void apply_final( const K&, const T& )
         {
-            ( void )key;
             std::map< std::string, std::size_t >::const_iterator it = map_.find( full_path_as_name_ ? xpath_.to_string() : xpath_.elements.back().to_string() );
             boost::optional< std::size_t > index;
             if( map_.empty() || it != map_.end() )

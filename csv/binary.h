@@ -1,4 +1,4 @@
-// This file is part of comma, a generic and flexible library 
+// This file is part of comma, a generic and flexible library
 // for robotics research.
 //
 // Copyright (C) 2011 The University of Sydney
@@ -10,7 +10,7 @@
 //
 // comma is distributed in the hope that it will be useful, but WITHOUT ANY
 // WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-// FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License 
+// FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
 // for more details.
 //
 // You should have received a copy of the GNU Lesser General Public
@@ -22,6 +22,7 @@
 #define COMMA_CSV_BINARY_HEADER_GUARD_
 
 #include <boost/optional.hpp>
+//#include <comma/base/exception.h>
 #include <comma/csv/names.h>
 #include <comma/csv/options.h>
 #include <comma/csv/impl/binary_visitor.h>
@@ -37,19 +38,19 @@ class binary
     public:
         /// constructor
         binary( const std::string& f = "", const std::string& column_names = "", bool full_path_as_name = true, const S& sample = S() );
-        
+
         /// constructor from options
         binary( const options& o, const S& sample = S() );
-        
-        /// get value (returns reference pointing to the parameter) 
+
+        /// get value (returns reference pointing to the parameter)
         const S& get( S& s, const char* buf ) const;
-        
+
         /// put value at the right place in the vector
         char* put( const S& s, char* buf ) const;
-        
+
         /// return format
         const csv::format& format() const { return format_; }
-        
+
     private:
         const csv::format format_;
         boost::optional< impl::binary_visitor > binary_;
@@ -62,6 +63,7 @@ inline binary< S >::binary( const std::string& f, const std::string& column_name
     if( format_.size() == sizeof( S ) && format_.string() == csv::format::value( sample ) && join( csv::names( column_names, full_path_as_name, sample ), ',' ) == join( csv::names( full_path_as_name ), ',' ) ) { return; }
     binary_ = impl::binary_visitor( format_, join( csv::names( column_names, full_path_as_name, sample ), ',' ), full_path_as_name );
     visiting::apply( *binary_, sample );
+    //if( binary_ && binary_->offsets().size() == 0 ) { COMMA_THROW( comma::exception, "expected at least one field of \"" << comma::join( csv::names< S >( full_path_as_name ), ',' ) << "\"; got \"" << column_names << "\"" ); }
 }
 
 template < typename S >
@@ -71,6 +73,7 @@ inline binary< S >::binary( const options& o, const S& sample )
     if( format_.size() == sizeof( S ) && format_.string() == csv::format::value( sample ) && join( csv::names( o.fields, o.full_xpath, sample ), ',' ) == join( csv::names( o.full_xpath ), ',' ) ) { return; }
     binary_ = impl::binary_visitor( format_, join( csv::names( o.fields, o.full_xpath, sample ), ',' ), o.full_xpath );
     visiting::apply( *binary_, sample );
+    //if( binary_ && binary_->offsets().size() == 0 ) { COMMA_THROW( comma::exception, "expected at least one field of \"" << comma::join( csv::names< S >( o.full_xpath ), ',' ) << "\"; got \"" << o.fields << "\"" ); }
 }
 
 template < typename S >

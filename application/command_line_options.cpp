@@ -1,4 +1,4 @@
-// This file is part of comma, a generic and flexible library 
+// This file is part of comma, a generic and flexible library
 // for robotics research.
 //
 // Copyright (C) 2011 The University of Sydney
@@ -10,7 +10,7 @@
 //
 // comma is distributed in the hope that it will be useful, but WITHOUT ANY
 // WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-// FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License 
+// FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
 // for more details.
 //
 // You should have received a copy of the GNU Lesser General Public
@@ -22,7 +22,7 @@
 #include <boost/optional.hpp>
 #include <comma/application/command_line_options.h>
 #include <comma/base/exception.h>
-#include <comma/string/split.cpp>
+#include <comma/string/split.h>
 
 namespace comma {
 
@@ -120,7 +120,7 @@ void command_line_options::fill_map_( const std::vector< std::string >& v )
 //         {
 //             name = v[i];
 //             if( i + 1 < v.size() ) { value = v[ i + 1 ]; }
-//         }        
+//         }
         std::vector< std::string >& values = map_[name];
         if( value ) { values.push_back( *value ); }
         if( name.size() != 0u )
@@ -139,7 +139,7 @@ void command_line_options::assert_mutually_exclusive( const std::string& names )
         count += exists( v[i] );
         if( count > 1 ) { COMMA_THROW( comma::exception, "options " << names << " are mutually exclusive" ); }
     }
-    
+
 }
 
 } // namespace comma {

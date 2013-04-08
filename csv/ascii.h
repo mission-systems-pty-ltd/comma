@@ -21,6 +21,7 @@
 #ifndef COMMA_CSV_ASCII_HEADER_GUARD_
 #define COMMA_CSV_ASCII_HEADER_GUARD_
 
+//#include <comma/base/exception.h>
 #include <comma/csv/names.h>
 #include <comma/csv/options.h>
 #include <comma/csv/impl/ascii_visitor.h>
@@ -35,10 +36,13 @@ class ascii
 {
     public:
         /// constructor
-        ascii( const std::string& column_names = "", char d = ',', bool full_path_as_name = true, const S& sample = S() );
+        ascii( const std::string& column_names, char d = ',', bool full_path_as_name = true, const S& sample = S() );
 
         /// constructor from options
         ascii( const options& o, const S& sample = S() );
+
+        /// constructor from default options
+        ascii( const S& sample = S() );
 
         /// get value (returns reference pointing to the parameter)
         const S& get( S& s, const std::vector< std::string >& v ) const;
@@ -77,6 +81,7 @@ inline ascii< S >::ascii( const std::string& column_names, char d, bool full_pat
     , ascii_( join( csv::names( column_names, full_path_as_name, sample ), ',' ), full_path_as_name )
 {
     visiting::apply( ascii_, sample );
+    //if( ascii_.size() == 0 ) { COMMA_THROW( comma::exception, "expected at least one field of \"" << comma::join( csv::names< S >( full_path_as_name ), ',' ) << "\"; got \"" << column_names << "\"" ); }
 }
 
 template < typename S >
@@ -84,6 +89,16 @@ inline ascii< S >::ascii( const options& o, const S& sample )
     : delimiter_( o.delimiter )
     , precision_( o.precision )
     , ascii_( join( csv::names( o.fields, o.full_xpath, sample ), ',' ), o.full_xpath )
+{
+    visiting::apply( ascii_, sample );
+    //if( ascii_.size() == 0 ) { COMMA_THROW( comma::exception, "expected at least one field of \"" << comma::join( csv::names< S >( o.full_xpath ), ',' ) << "\"; got \"" << o.fields << "\"" ); }
+}
+
+template < typename S >
+inline ascii< S >::ascii( const S& sample )
+    : delimiter_( options().delimiter )
+    , precision_( options().precision )
+    , ascii_( join( csv::names( options().fields, options().full_xpath, sample ), ',' ), options().full_xpath )
 {
     visiting::apply( ascii_, sample );
 }
