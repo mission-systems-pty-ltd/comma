@@ -43,25 +43,26 @@ class string : public packed::field< string< S, Padding >, std::string, S >
 
         static const std::string& default_value()
         {
-            static const std::string s( S, Padding );
+            static const std::string s;// static const std::string s( S, Padding );
             return s;
         }
 
         static void pack( char* storage, const std::string& value )
         {
-            if( value.length() != size ) { COMMA_THROW_STREAM( comma::exception, "expected " << size << " bytes, got " << value.length() << " (\"" << value << "\")" ); }
-            ::memcpy( storage, &value[0], size );
+            ::memset( storage, Padding, size );
+            if( value.length() > size ) { COMMA_THROW_STREAM( comma::exception, "expected not more than " << size << " bytes, got " << value.length() << " (\"" << value << "\")" ); }
+            ::memcpy( storage, &value[0], value.size() );
         }
 
         static std::string unpack( const char* storage )
         {
-            return std::string( storage, size );
+            return comma::strip( std::string( storage, size ), Padding );
         }
 
         const string& operator=( const std::string& rhs ) { return base_type::operator=( rhs ); }
 
         const string& operator=( const char* rhs ) { return base_type::operator=( std::string( rhs, size ) ); }
-        
+
         /// a convenience method, if string represents numeric values
         template < typename T > T as() const { return boost::lexical_cast< T >( this->operator()() ); }
 };

@@ -5,6 +5,7 @@ FILE( GLOB source ${SOURCE_CODE_BASE_DIR}/${PROJECT}/*.cpp )
 FILE( GLOB includes ${SOURCE_CODE_BASE_DIR}/${PROJECT}/*.h )
 SOURCE_GROUP( ${PROJECT} FILES ${source} ${includes} )
 ADD_CUSTOM_TARGET( ${TARGET_NAME} ${source} ${includes} )
+target_link_libraries( ${TARGET_NAME} comma_string )
 
 INSTALL( FILES ${includes} DESTINATION ${comma_INSTALL_INCLUDE_DIR}/${PROJECT} )
 
