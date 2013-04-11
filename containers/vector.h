@@ -49,9 +49,9 @@ struct regular_vector : public std::vector< T >
 
     regular_vector( const index_type& index, std::size_t size = 0 ) : std::vector< T >( size ), index( index ) {}
 
-    T& operator()( const Key& key ) { return this->operator[]( index() ); }
+    T& operator()( const Key& key ) { return this->operator[]( index( key ) ); }
 
-    const T& operator()( const Key& key ) const { return this->operator[]( index() ); }
+    const T& operator()( const Key& key ) const { return this->operator[]( index( key ) ); }
 
     index_type index;
 };

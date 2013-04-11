@@ -18,9 +18,17 @@
 
 #include <gtest/gtest.h>
 #include <boost/date_time/posix_time/ptime.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <comma/containers/vector.h>
 
 namespace comma {
+
+TEST( regular_vector, usage )
+{
+    comma::regular_vector< double, int > v( 1.2, 0.5, 10 );
+    v( 2.1 ) = 5;
+    EXPECT_EQ( 5, v[ v.index( 2.1 ) ] );
+}
 
 TEST( regular_vector, index )
 {
