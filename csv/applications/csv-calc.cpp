@@ -1,4 +1,4 @@
-// This file is part of comma, a generic and flexible library 
+// This file is part of comma, a generic and flexible library
 // for robotics research.
 //
 // Copyright (C) 2011 The University of Sydney
@@ -10,7 +10,7 @@
 //
 // comma is distributed in the hope that it will be useful, but WITHOUT ANY
 // WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-// FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License 
+// FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
 // for more details.
 //
 // You should have received a copy of the GNU Lesser General Public
@@ -90,7 +90,7 @@ class Values
             init_indices_();
             init_format_();
         }
-        
+
         Values( const comma::csv::options& csv, const std::string& hint )
             : csv_( csv )
             , block_( 0 )
@@ -107,7 +107,7 @@ class Values
             std::cerr << "csv-calc: guessed format: " << input_format_.string() << std::endl;
             init_format_();
         }
-        
+
         void set( const char* buf )
         {
             for( unsigned int i = 0; i < indices_.size(); ++i )
@@ -117,7 +117,7 @@ class Values
             if( block_index_ ) { block_ = block_from_bin_( buf + block_element_.offset ); }
             if( id_index_ ) { id_ = id_from_bin_( buf + id_element_.offset ); }
         }
-        
+
         void set( const std::string& line ) // quick and dirty, probably very slow
         {
             std::vector< std::string > v = comma::split( line, csv_.delimiter );
@@ -128,12 +128,12 @@ class Values
             if( block_index_ ) { block_ = boost::lexical_cast< unsigned int >( v[ *block_index_ ] ); }
             if( id_index_ ) { id_ = boost::lexical_cast< unsigned int >( v[ *id_index_ ] ); }
         }
-        
+
         const comma::csv::format& format() const { return format_; }
         unsigned int block() const { return block_; }
         unsigned int id() const { return id_; }
         const char* buffer() const { return &buffer_[0]; }
-        
+
     private:
         comma::csv::options csv_;
         comma::csv::format input_format_;
@@ -151,7 +151,7 @@ class Values
         boost::function< comma::uint32( const char* ) > block_from_bin_;
         boost::function< comma::uint32( const char* ) > id_from_bin_;
         template < typename T > static comma::uint32 from_bin_( const char* buf ) { return comma::csv::format::traits< T >::from_bin( buf ); }
-        
+
         void init_indices_()
         {
             std::vector< std::string > v = comma::split( csv_.fields, ',' );
@@ -227,7 +227,7 @@ class asciiInput
         {
             if( format ) { values_.reset( new Values( csv, *format ) ); }
         }
-        
+
         const Values* read()
         {
             std::string line;
@@ -237,7 +237,7 @@ class asciiInput
             values_->set( line );
             return values_.get();
         }
-        
+
     private:
         comma::csv::options csv_;
         boost::scoped_ptr< Values > values_;
@@ -255,7 +255,7 @@ class binaryInput
             , offset_( 0 )
         {
         }
-        
+
         const Values* read()
         {
             while( true )
@@ -273,7 +273,7 @@ class binaryInput
                 offset_ += count;
             }
         }
-        
+
     private:
         comma::csv::options csv_;
         Values values_;
@@ -340,14 +340,14 @@ namespace Operations
             void push( const char* buf )
             {
                 T t = comma::csv::format::traits< T, F >::from_bin( buf );
-                sum_ = sum_ ? *sum_ + t : t; 
+                sum_ = sum_ ? *sum_ + t : t;
             }
             void calculate( char* buf ) { if( sum_ ) { comma::csv::format::traits< T, F >::to_bin( *sum_, buf ); } }
             base* clone() const { return new Sum< T, F >( *this ); }
         private:
             boost::optional< T > sum_;
     };
-    
+
     template < comma::csv::format::types_enum F >
     class Sum< boost::posix_time::ptime, F > : public base
     {
@@ -368,6 +368,9 @@ namespace Operations
             Max< T, F > max_;
     };
 
+    template < typename T > struct result_traits { typedef double type; }; // quick and dirty fix for integer T
+    template <> struct result_traits< boost::posix_time::ptime > { typedef boost::posix_time::ptime type; }; // quick and dirty fix for integer T
+
     template < typename T, comma::csv::format::types_enum F = comma::csv::format::type_to_enum< T >::value >
     class Mean : public base
     {
@@ -379,15 +382,15 @@ namespace Operations
                 ++count_;
                 mean_ = mean_ ? *mean_ + ( t - *mean_ ) / count_ : t ;
             }
-            void calculate( char* buf ) { if( count_ > 0 ) { comma::csv::format::traits< T, F >::to_bin( *mean_, buf ); } }
+            void calculate( char* buf ) { if( count_ > 0 ) { comma::csv::format::traits< T, F >::to_bin( static_cast< T >( *mean_ ), buf ); } }
             base* clone() const { return new Mean< T, F >( *this ); }
         private:
-            boost::optional< T > mean_;
+            boost::optional< typename result_traits< T >::type > mean_;
             std::size_t count_;
     };
-    
+
     template < typename T, comma::csv::format::types_enum F > class Stddev;
-    
+
     template < typename T, comma::csv::format::types_enum F = comma::csv::format::type_to_enum< T >::value >
     class Variance : public base // todo: generalise for kth moment
     {
@@ -400,15 +403,15 @@ namespace Operations
                 mean_ = mean_ ? *mean_ + ( t - *mean_ ) / count_ : t;
                 squares_ = squares_ ? *squares_ + ( t * t - *squares_ ) / count_ : t * t;
             }
-            void calculate( char* buf ) { if( count_ > 0 ) { comma::csv::format::traits< T, F >::to_bin( *squares_ - *mean_ * *mean_, buf ); } }
+            void calculate( char* buf ) { if( count_ > 0 ) { comma::csv::format::traits< T, F >::to_bin( static_cast< T >( *squares_ - *mean_ * *mean_ ), buf ); } }
             base* clone() const { return new Variance< T, F >( *this ); }
         private:
             friend class Stddev< T, F >;
-            boost::optional< T > mean_;
-            boost::optional< T > squares_;
+            boost::optional< typename result_traits< T >::type > mean_;
+            boost::optional< typename result_traits< T >::type > squares_;
             std::size_t count_;
     };
-    
+
     template < comma::csv::format::types_enum F >
     class Variance< boost::posix_time::ptime, F > : public base
     {
@@ -416,7 +419,7 @@ namespace Operations
         void calculate( char* ) { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
         base* clone() const { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
     };
-    
+
     template < typename T, comma::csv::format::types_enum F = comma::csv::format::type_to_enum< T >::value >
     class Stddev : public base
     {
@@ -427,7 +430,7 @@ namespace Operations
         private:
             Variance< T, F > variance_;
     };
-    
+
     template < comma::csv::format::types_enum F >
     class Stddev< boost::posix_time::ptime, F > : public base
     {
@@ -435,9 +438,9 @@ namespace Operations
         void calculate( char* ) { COMMA_THROW( comma::exception, "standard deviation not implemented for time, todo" ); }
         base* clone() const { COMMA_THROW( comma::exception, "standard deviation not implemented for time, todo" ); }
     };
-    
+
     template < typename T > struct Diff
-    { 
+    {
         typedef T Type;
         static Type subtract( T lhs, T rhs ) { return lhs - rhs; }
     };
@@ -483,9 +486,9 @@ namespace Operations
         private:
             std::size_t count_;
     };
-    
+
     struct Enum { enum Values { min, max, centre, mean, sum, size, radius, diameter, variance, stddev }; };
-    
+
     static Enum::Values from_name( const std::string& name )
     {
         if( name == "min" ) { return Enum::min; }
@@ -500,7 +503,7 @@ namespace Operations
         else if( name == "size" ) { return Enum::size; }
         else { COMMA_THROW( comma::exception, "expected operation name, got " << name ); }
     }
-    
+
     template < Enum::Values E > struct traits {};
     template <> struct traits< Enum::min > { template < typename T, comma::csv::format::types_enum F > struct FromEnum { typedef Min< T, F > Type; }; };
     template <> struct traits< Enum::max > { template < typename T, comma::csv::format::types_enum F > struct FromEnum { typedef Max< T, F > Type; }; };
@@ -523,7 +526,7 @@ class Operationbase
         virtual Operationbase* clone() const = 0;
         const comma::csv::format& output_format() const { return output_format_; }
         const char* buffer() const { return &buffer_[0]; }
-        
+
     protected:
         boost::ptr_vector< Operations::base > operations_;
         comma::csv::format input_format_;
@@ -531,7 +534,7 @@ class Operationbase
         comma::csv::format output_format_;
         std::vector< comma::csv::format::element > output_elements_;
         std::vector< char > buffer_;
-        
+
         Operationbase* deep_copy_to_( Operationbase* lhs ) const
         {
             lhs->input_format_ = input_format_;
@@ -591,17 +594,17 @@ struct Operation : public Operationbase
         for( std::size_t i = 0; i < input_elements_.size(); ++i ) { output_elements_.push_back( output_format_.offset( i ) ); }
         buffer_.resize( output_format_.size() );
     }
-    
+
     void push( const char* buf )
     {
         for( std::size_t i = 0; i < operations_.size(); ++i ) { operations_[i].push( buf + input_elements_[i].offset ); }
     }
-    
+
     void calculate()
     {
         for( std::size_t i = 0; i < operations_.size(); ++i ) { operations_[i].calculate( &buffer_[0] + output_elements_[i].offset ); }
     }
-    
+
     Operationbase* clone() const { Operation< E >* op = new Operation< E >; return deep_copy_to_( op ); }
 };
 
@@ -616,7 +619,7 @@ static void init_operations( boost::ptr_vector< Operationbase >& operations
     {
         sample.reserve( operation_ids.size() );
         for( std::size_t i = 0; i < operation_ids.size(); ++i )
-        { 
+        {
             switch( operation_ids[i] )
             {
                 case Operations::Enum::min: sample.push_back( new Operation< Operations::Enum::min >( format ) ); break;
@@ -649,7 +652,7 @@ static void calculate_and_output( const comma::csv::options& csv, OperationsMap&
         if( csv.binary() )
         {
             if( has_id )  { std::cout.write( reinterpret_cast< const char* >( &it->first ), sizeof( comma::uint32 ) ); } // quick and dirty
-            if( has_block ) { std::cout.write( reinterpret_cast< const char* >( &( *block ) ), sizeof( comma::uint32 ) ); } // quick and dirty        
+            if( has_block ) { std::cout.write( reinterpret_cast< const char* >( &( *block ) ), sizeof( comma::uint32 ) ); } // quick and dirty
             std::cout.flush();
         }
         else
@@ -691,7 +694,7 @@ int main( int ac, char** av )
         bool has_id = csv.has_field( "id" );
         comma::signal_flag is_shutdown;
         while( !is_shutdown && std::cin.good() && !std::cin.eof() )
-        { 
+        {
             const Values* v = csv.binary() ? binary->read() : ascii->read();
             if( v == NULL ) { break; }
             if( has_block )
