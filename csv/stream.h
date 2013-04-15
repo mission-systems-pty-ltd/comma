@@ -64,6 +64,9 @@ class ascii_input_stream : public boost::noncopyable
         /// constructor from csv options
         ascii_input_stream( std::istream& is, const options& o, const S& sample = S() );
 
+        /// constructor from csv options
+        ascii_input_stream( std::istream& is, const S& sample = S() );
+
         /// read; return NULL, if end of stream or alike
         const S* read();
 
@@ -102,6 +105,9 @@ class ascii_output_stream : public boost::noncopyable
 
         /// constructor from csv options
         ascii_output_stream( std::ostream& os, const options& o, const S& sample = S() );
+
+        /// constructor from csv options
+        ascii_output_stream( std::ostream& os, const S& sample = S() );
 
         /// write
         void write( const S& s );
@@ -322,9 +328,17 @@ inline ascii_input_stream< S >::ascii_input_stream(std::istream& is, const optio
     , result_( sample )
     , fields_( split( o.fields, o.delimiter ) )
 {
-
 }
 
+template < typename S >
+inline ascii_input_stream< S >::ascii_input_stream(std::istream& is, const S& sample )
+    : is_( is )
+    , ascii_( options().fields, options().delimiter, true, sample ) // , ascii_( options().fields, options().delimiter, o.full_xpath, sample )
+    , default_( sample )
+    , result_( sample )
+    , fields_( split( options().fields, options().delimiter ) )
+{
+}
 
 template < typename S >
 inline const S* ascii_input_stream< S >::read()
@@ -337,8 +351,7 @@ inline const S* ascii_input_stream< S >::read()
         if( !s.empty() && *s.rbegin() == '\r' ) { s = s.substr( 0, s.length() - 1 ); } // windows... sigh...
         if( s.empty() ) { continue; }
         result_ = default_;
-        line_ = split
-( s, ascii_.delimiter() );
+        line_ = split( s, ascii_.delimiter() );
         ascii_.get( result_, line_ );
         return &result_;
     }
@@ -361,9 +374,15 @@ inline ascii_output_stream< S >::ascii_output_stream( std::ostream& os, const co
     , fields_( split
 ( o.fields, o.delimiter ) )
 {
-
 }
 
+template < typename S >
+inline ascii_output_stream< S >::ascii_output_stream( std::ostream& os, const S& sample )
+    : m_os( os )
+    , ascii_( options().fields, options().delimiter, true, sample ) // , ascii_( options().fields, options().delimiter, o.full_xpath, sample )
+    , fields_( split( options().fields, options().delimiter ) )
+{
+}
 
 template < typename S >
 inline void ascii_output_stream< S >::write( const S& s )
@@ -568,7 +587,7 @@ inline input_stream< S >::input_stream( std::istream& is, const csv::options& o,
 
 template < typename S >
 inline input_stream< S >::input_stream( std::istream& is, const S& sample )
-    : ascii_( new ascii_input_stream< S >( is, csv::options(), sample ) )
+    : ascii_( new ascii_input_stream< S >( is, sample ) )
 {
 }
 
@@ -610,7 +629,7 @@ inline output_stream< S >::output_stream( std::ostream& os, const csv::options& 
 
 template < typename S >
 inline output_stream< S >::output_stream( std::ostream& os, const S& sample )
-    : ascii_( new ascii_output_stream< S >( os, csv::options(), sample ) )
+    : ascii_( new ascii_output_stream< S >( os, sample ) )
 {
 }
 

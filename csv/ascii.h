@@ -113,7 +113,7 @@ template < typename S >
 inline ascii< S >::ascii( const S& sample )
     : delimiter_( options().delimiter )
     , precision_( options().precision )
-    , ascii_( join( csv::names( options().fields, options().full_xpath, sample ), ',' ), options().full_xpath )
+    , ascii_( join( csv::names( options().fields, true, sample ), ',' ), true ) //, ascii_( join( csv::names( options().fields, options().full_xpath, sample ), ',' ), options().full_xpath )
 {
     visiting::apply( ascii_, sample );
 }

@@ -86,7 +86,9 @@ std::string options::usage()
     oss << "    --binary,-b <format> : use binary format" << std::endl;
     oss << "    --delimiter,-d <delimiter> : default: ','" << std::endl;
     oss << "    --fields,-f <names> : field names, e.g. t,,x,y,z" << std::endl;
-    oss << "    --full-xpath : expect full xpaths as field names" << std::endl;
+    oss << "    --full-xpath : expect full xpaths as field names; default: false" << std::endl;
+    oss << "                   default false was a wrong choice, but changing it" << std::endl;
+    oss << "                   to true now may break too many things" << std::endl;
     oss << "    --precision <precision> : floating point precision; default: 6" << std::endl;
     oss << format::usage();
     return oss.str();
