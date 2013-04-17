@@ -258,21 +258,14 @@ stream< S >::stream( const std::string& name, mode::value m, mode::blocking_valu
     }
 #endif
 #ifdef USE_ZEROMQ
-    else if( v[0].substr( 0, 4 ) == "zero" )
+    else if( v[0] == "zero-local" )
     {
-        std::string transport = v[0].substr( 5, v[0].size() );
-        std::string endpoint;
-        if( transport == "local" )
-        {
-            endpoint = "ipc://" + v[1];
-        }
-        else if( transport == "tcp" )
-        {
-            if( v.size() != 3 ) { COMMA_THROW( comma::exception, "expected zero-tcp:<address>:<port>, got \"" << name << "\"" ); }
-            endpoint = "tcp://" + v[1] + ":" + v[2];
-        }
-        assert( !endpoint.empty() );
-        stream_ = zeromq::stream< S >::create( endpoint, fd_ );
+        stream_ = zeromq::stream< S >::create( "ipc://" + v[1], fd_ );
+    }
+    else if( v[0] == "zero-tcp" )
+    {
+        if( v.size() != 3 ) { COMMA_THROW( comma::exception, "expected zero-tcp:<address>:<port>, got \"" << name << "\"" ); }
+        stream_ = zeromq::stream< S >::create( "tcp://" + v[1] + ":" + v[2], fd_ );
     }
 #endif
     else if( name == "-" )
