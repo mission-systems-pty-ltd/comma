@@ -258,11 +258,11 @@ stream< S >::stream( const std::string& name, mode::value m, mode::blocking_valu
     }
 #endif
 #ifdef USE_ZEROMQ
-    else if( v[0] == "zero-local" )
+    else if( v[0] == "zero-local" || v[0] == "zmq-local" )
     {
         stream_ = zeromq::stream< S >::create( "ipc://" + v[1], fd_ );
     }
-    else if( v[0] == "zero-tcp" )
+    else if( v[0] == "zero-tcp" || v[0] == "zmq-tcp" )
     {
         if( v.size() != 3 ) { COMMA_THROW( comma::exception, "expected zero-tcp:<address>:<port>, got \"" << name << "\"" ); }
         stream_ = zeromq::stream< S >::create( "tcp://" + v[1] + ":" + v[2], fd_ );
@@ -278,7 +278,7 @@ stream< S >::stream( const std::string& name, mode::value m, mode::blocking_valu
 #ifdef WIN32
         typename impl::traits< S >::file_stream* s = 
             m == comma::io::mode::binary ? new typename impl::traits< S >::file_stream( name.c_str(), std::ios::binary )
-                                       : new typename impl::traits< S >::file_stream( name.c_str() );
+                                         : new typename impl::traits< S >::file_stream( name.c_str() );
         if( s->bad() ) { COMMA_THROW( comma::exception, "failed to open " << name_ ); }
         stream_ = s;
         close_ = boost::bind( &impl::close_file_stream< S >, s, fd_ );

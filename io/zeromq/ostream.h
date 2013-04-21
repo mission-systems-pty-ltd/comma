@@ -54,7 +54,7 @@ public:
     std::streamsize write( const char* s, std::streamsize n );
 
     zmq::socket_t& socket() { return *m_socket; }
-    
+
 private:
     boost::shared_ptr< zmq::context_t > m_context;
     boost::shared_ptr< zmq::socket_t > m_socket;

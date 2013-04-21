@@ -35,10 +35,8 @@
 
 #include <comma/io/zeromq/ostream.h>
 
-namespace comma {
-namespace io {
-namespace zeromq {
-    
+namespace comma { namespace io { namespace zeromq {
+
 ostream::ostream( const std::string& endpoint ):
     m_context( new zmq::context_t( 1 ) ),
     m_socket( new zmq::socket_t( *m_context, ZMQ_PUB ) )
@@ -46,21 +44,11 @@ ostream::ostream( const std::string& endpoint ):
     m_socket->bind( endpoint.c_str() );
 }
 
-
 std::streamsize ostream::write( const char* s, std::streamsize n )
 {
     zmq::message_t message( n );
-    ::memcpy( (void *) message.data (), s, n );
-    if( m_socket->send( message ) )
-    {
-        return n;
-    }
-    else
-    {
-        return -1; // eof
-    }
+    ::memcpy( ( void * )message.data(), s, n );
+    return m_socket->send( message ) ? n : -1;
 }
 
-
-} } }
-
+} } } // namespace comma { namespace io { namespace zeromq {
