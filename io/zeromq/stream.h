@@ -35,6 +35,7 @@
 
 #include <comma/io/zeromq/istream.h>
 #include <comma/io/zeromq/ostream.h>
+#include <iostream>
 
 namespace comma { namespace io { namespace zeromq {
 
@@ -47,18 +48,21 @@ inline static S* make_stream( const std::string& endpoint, comma::io::file_descr
 {
     typedef typename traits< S >::stream stream_t;
     boost::iostreams::stream< stream_t >* stream = new boost::iostreams::stream< stream_t >( endpoint.c_str() );
-    std::size_t size;
     bool have_fd = false;
     while( !have_fd ) // TODO ugly, have timeout instead.
     {
         try
         {
+            std::size_t size = sizeof( comma::io::file_descriptor );
             ( *stream )->socket().getsockopt( ZMQ_FD, &fd, &size );
             have_fd = true;
+            assert( size == sizeof( fd ) );
         }
-        catch( std::exception& e ) { ::usleep( 10 ); }
+        catch( std::exception& e )
+        {
+            ::usleep( 20 );
+        }
     }
-    assert( size == sizeof( fd ) );
     return stream;
 }
 
