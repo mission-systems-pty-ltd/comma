@@ -30,25 +30,24 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author cedric wohlleber
 
 #include <comma/io/zeromq/ostream.h>
 
 namespace comma { namespace io { namespace zeromq {
 
-ostream::ostream( const std::string& endpoint ):
-    m_context( new zmq::context_t( 1 ) ),
-    m_socket( new zmq::socket_t( *m_context, ZMQ_PUB ) )
+ostream::ostream( const std::string& endpoint )
+    : context_( new zmq::context_t( 1 ) )
+    , socket_( new zmq::socket_t( *context_, ZMQ_PUB ) )
 {
-    m_socket->bind( endpoint.c_str() );
+    socket_->bind( endpoint.c_str() );
 }
 
 std::streamsize ostream::write( const char* s, std::streamsize n )
 {
     zmq::message_t message( n );
     ::memcpy( ( void * )message.data(), s, n );
-    return m_socket->send( message ) ? n : -1;
+    return socket_->send( message ) ? n : -1;
 }
 
 } } } // namespace comma { namespace io { namespace zeromq {

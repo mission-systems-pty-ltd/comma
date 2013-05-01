@@ -33,7 +33,7 @@
 
 /// @author vsevolod vlaskine
 
-#include <sys/stat.h> 
+#include <sys/stat.h>
 #ifndef WIN32
 #include <signal.h>
 #else
@@ -80,15 +80,15 @@ struct traits < std::istream >
     {
         #ifdef WIN32
         ( void )( mode );
-        if( mode == comma::io::mode::binary ) 
+        if( mode == comma::io::mode::binary )
 		{
-			_setmode( _fileno( stdin ), _O_BINARY ); 
+			_setmode( _fileno( stdin ), _O_BINARY );
 		}
         #endif
         return &std::cin;
     }
-    static comma::io::file_descriptor standard_fd() 
-    { 
+    static comma::io::file_descriptor standard_fd()
+    {
         #ifndef WIN32
         return 0;
         #else
@@ -111,14 +111,14 @@ struct traits < std::ostream >
     {
         #ifdef WIN32
         ( void )( mode );
-        if( mode == comma::io::mode::binary ) 
+        if( mode == comma::io::mode::binary )
 		{
-			_setmode( _fileno( stdout ), _O_BINARY ); 
+			_setmode( _fileno( stdout ), _O_BINARY );
 		}
         #endif
         return &std::cout;
     }
-    static comma::io::file_descriptor standard_fd() 
+    static comma::io::file_descriptor standard_fd()
     {
         #ifndef WIN32
         return 1;
@@ -132,7 +132,7 @@ struct traits < std::ostream >
         #else
             static io::file_descriptor open( const std::string name ) { return _open( name.c_str(), O_WRONLY | O_CREAT, _S_IWRITE ); }
         #endif
-    #else    
+    #else
         #ifdef O_LARGEFILE
             static io::file_descriptor open( const std::string name ) { return ::open( name.c_str(), O_WRONLY | O_CREAT | O_NONBLOCK, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH | O_LARGEFILE ); }
         #else
@@ -230,7 +230,7 @@ stream< S >::stream( const std::string& name, mode::value m, mode::blocking_valu
         boost::asio::io_service service;
         boost::asio::ip::tcp::resolver resolver( service );
         boost::asio::ip::tcp::resolver::query query( v[1], v[2] );
-        boost::asio::ip::tcp::resolver::iterator it = resolver.resolve( query );        
+        boost::asio::ip::tcp::resolver::iterator it = resolver.resolve( query );
         boost::asio::ip::tcp::iostream* s = new boost::asio::ip::tcp::iostream( it->endpoint() );
         if( !*s ) { delete s; COMMA_THROW( comma::exception, "failed to connect to " << name << ( blocking_ ? " (todo: implement blocking mode)" : "" ) ); }
         close_ = boost::bind( &boost::asio::ip::tcp::iostream::close, s );
@@ -260,12 +260,12 @@ stream< S >::stream( const std::string& name, mode::value m, mode::blocking_valu
 #ifdef USE_ZEROMQ
     else if( v[0] == "zero-local" || v[0] == "zmq-local" )
     {
-        stream_ = zeromq::stream< S >::create( "ipc://" + v[1], fd_ );
+        stream_ = zeromq::make_stream< S >( "ipc://" + v[1], fd_ );
     }
     else if( v[0] == "zero-tcp" || v[0] == "zmq-tcp" )
     {
         if( v.size() != 3 ) { COMMA_THROW( comma::exception, "expected zero-tcp:<address>:<port>, got \"" << name << "\"" ); }
-        stream_ = zeromq::stream< S >::create( "tcp://" + v[1] + ":" + v[2], fd_ );
+        stream_ = zeromq::make_stream< S >( "tcp://" + v[1] + ":" + v[2], fd_ );
     }
 #endif
     else if( name == "-" )
@@ -276,7 +276,7 @@ stream< S >::stream( const std::string& name, mode::value m, mode::blocking_valu
     else
     {
 #ifdef WIN32
-        typename impl::traits< S >::file_stream* s = 
+        typename impl::traits< S >::file_stream* s =
             m == comma::io::mode::binary ? new typename impl::traits< S >::file_stream( name.c_str(), std::ios::binary )
                                          : new typename impl::traits< S >::file_stream( name.c_str() );
         if( s->bad() ) { COMMA_THROW( comma::exception, "failed to open " << name_ ); }

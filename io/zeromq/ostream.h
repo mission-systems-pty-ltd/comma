@@ -36,9 +36,9 @@
 #ifndef COMMA_IO_ZEROMQ_OSTREAM_H_
 #define COMMA_IO_ZEROMQ_OSTREAM_H_
 
-#include <boost/shared_ptr.hpp>
 #include <boost/iostreams/concepts.hpp>
 #include <boost/iostreams/stream.hpp>
+#include <boost/shared_ptr.hpp>
 #include <zmq.hpp>
 
 namespace comma {
@@ -53,13 +53,12 @@ public:
 
     std::streamsize write( const char* s, std::streamsize n );
 
-    zmq::socket_t& socket() { return *m_socket; }
+    zmq::socket_t& socket() { return *socket_; }
 
 private:
-    boost::shared_ptr< zmq::context_t > m_context;
-    boost::shared_ptr< zmq::socket_t > m_socket;
+    boost::shared_ptr< zmq::context_t > context_; // super-ugly, just to make boost happy for now
+    boost::shared_ptr< zmq::socket_t > socket_; // super-ugly, just to make boost happy for now
 };
-
 
 } } }
 

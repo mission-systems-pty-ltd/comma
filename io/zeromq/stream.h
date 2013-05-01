@@ -36,48 +36,30 @@
 #include <comma/io/zeromq/istream.h>
 #include <comma/io/zeromq/ostream.h>
 
-namespace comma { namespace io {
+namespace comma { namespace io { namespace zeromq {
 
-namespace zeromq {
+template< typename S > struct traits {};
+template<> struct traits< std::istream > { typedef comma::io::zeromq::istream stream; };
+template<> struct traits< std::ostream > { typedef comma::io::zeromq::ostream stream; };
 
 template< typename S >
-struct traits
-{    
-};
-
-template<>
-struct traits< std::istream >
+inline static S* make_stream( const std::string& endpoint, comma::io::file_descriptor& fd )
 {
-    typedef comma::io::zeromq::istream stream;
-};
-
-template<>
-struct traits< std::ostream >
-{
-    typedef comma::io::zeromq::ostream stream;
-};
-
-/// get zeromq stream and file descriptor from endpoint
-template< typename S >
-struct stream
-{
-    static S* create( const std::string& endpoint, comma::io::file_descriptor& fd )
+    typedef typename traits< S >::stream stream_t;
+    boost::iostreams::stream< stream_t >* stream = new boost::iostreams::stream< stream_t >( endpoint.c_str() );
+    std::size_t size;
+    bool have_fd = false;
+    while( !have_fd ) // TODO ugly, have timeout instead.
     {
-        boost::iostreams::stream< typename traits< S >::stream >* stream = new boost::iostreams::stream< typename traits< S >::stream >( endpoint.c_str() );
-        std::size_t size;
-        bool haveFd = false;
-        while( !haveFd ) // TODO ugly, have timeout instead.
+        try
         {
-            try
-            {
-                (*stream)->socket().getsockopt( ZMQ_FD, &fd, &size );
-                haveFd = true;
-            }
-            catch( std::exception& e ) { ::usleep( 10 ); }
+            ( *stream )->socket().getsockopt( ZMQ_FD, &fd, &size );
+            have_fd = true;
         }
-        assert( size == sizeof( fd ) );
-        return stream;
+        catch( std::exception& e ) { ::usleep( 10 ); }
     }
-};
+    assert( size == sizeof( fd ) );
+    return stream;
+}
 
-} } }
+} } } // namespace comma { namespace io { namespace zeromq {

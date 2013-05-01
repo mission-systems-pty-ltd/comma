@@ -36,51 +36,38 @@
 #include <comma/io/zeromq/istream.h>
 #include "istream.h"
 
-namespace comma {
-namespace io {
-namespace zeromq {
+namespace comma { namespace io { namespace zeromq {
 
-istream::istream( const std::string& endpoint ):
-    m_context( new zmq::context_t( 1 ) ),
-    m_socket( new zmq::socket_t( *m_context, ZMQ_SUB ) ),
-    m_index( m_buffer.size() )
+istream::istream( const std::string& endpoint )
+    : context_( new zmq::context_t( 1 ) )
+    , socket_( new zmq::socket_t( *context_, ZMQ_SUB ) )
+    , index_( buffer_.size() )
 {
-    m_socket->connect( endpoint.c_str() );
-    m_socket->setsockopt( ZMQ_SUBSCRIBE, "", 0 );
+    socket_->connect( endpoint.c_str() );
+    socket_->setsockopt( ZMQ_SUBSCRIBE, "", 0 );
 }
-
 
 std::streamsize istream::read( char* s, std::streamsize n )
 {
     zmq::message_t message;
-    if( m_socket->recv( &message ) )
+    if( !socket_->recv( &message ) ) { return -1; } // eof
+    if( index_ != buffer_.size() )
     {
-        if( m_index != m_buffer.size() )
-        {
-            unsigned int size = std::min( m_buffer.size() - m_index, static_cast< std::size_t >( n ) );
-            ::memcpy( s, &m_buffer[ m_index ], size );
-            m_index += size;
-            return size;
-        }
-        else if ( message.size() < static_cast< unsigned int >( n ) )
-        {            
-            ::memcpy( s, ( const char* )message.data(), message.size() );
-            return message.size();
-        }
-        else
-        {
-            ::memcpy( s, ( const char* )message.data(), n );
-            m_buffer.resize( message.size() - n ); // TODO do not resize if smaller ( for performance )
-            ::memcpy( &m_buffer[0], ( const char* )message.data(), m_buffer.size() );
-            m_index = 0;
-            return n;
-        }
+        unsigned int size = std::min( buffer_.size() - index_, static_cast< std::size_t >( n ) );
+        ::memcpy( s, &buffer_[ index_ ], size );
+        index_ += size;
+        return size;
     }
-    else
+    if ( message.size() < static_cast< unsigned int >( n ) )
     {
-        return -1; // eof
+        ::memcpy( s, ( const char* )message.data(), message.size() );
+        return message.size();
     }
+    ::memcpy( s, ( const char* )message.data(), n );
+    buffer_.resize( message.size() - n );
+    ::memcpy( &buffer_[0], ( const char* )message.data(), buffer_.size() );
+    index_ = 0;
+    return n;
 }
 
-} } }
-
+} } } // namespace comma { namespace io { namespace zeromq {

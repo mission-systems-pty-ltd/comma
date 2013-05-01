@@ -42,28 +42,25 @@
 #include <boost/iostreams/stream.hpp>
 #include <zmq.hpp>
 
-namespace comma {
-namespace io {
-namespace zeromq {
+namespace comma { namespace io { namespace zeromq {
 
-/// istream wrapper for zeromq    
+/// istream wrapper for zeromq
 class istream : public boost::iostreams::source
 {
 public:
     istream( const std::string& endpoint );
-    
+
     std::streamsize read( char* s, std::streamsize n );
 
-    zmq::socket_t& socket() { return *m_socket; }
-    
+    zmq::socket_t& socket() { return *socket_; }
+
 private:
-    boost::shared_ptr< zmq::context_t > m_context;
-    boost::shared_ptr< zmq::socket_t > m_socket;
-    std::vector< char > m_buffer;
-    unsigned int m_index;
+    boost::shared_ptr< zmq::context_t > context_; // super-ugly, just to make boost happy for now
+    boost::shared_ptr< zmq::socket_t > socket_; // super-ugly, just to make boost happy for now
+    std::vector< char > buffer_;
+    unsigned int index_;
 };
 
-    
-} } }
+} } } // namespace comma { namespace io { namespace zeromq {
 
 #endif // COMMA_IO_ZEROMQ_ISTREAM_H_
