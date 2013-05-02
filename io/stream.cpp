@@ -229,7 +229,7 @@ stream< S >::stream( const std::string& name, mode::value m, mode::blocking_valu
         if( v.size() != 3 ) { COMMA_THROW( comma::exception, "expected tcp:<address>:<port>, got \"" << name << "\"" ); }
         boost::asio::io_service service;
         boost::asio::ip::tcp::resolver resolver( service );
-        boost::asio::ip::tcp::resolver::query query( v[1], v[2] );
+        boost::asio::ip::tcp::resolver::query query( v[1] == "localhost" ? "127.0.0.1" : v[1], v[2] );
         boost::asio::ip::tcp::resolver::iterator it = resolver.resolve( query );
         boost::asio::ip::tcp::iostream* s = new boost::asio::ip::tcp::iostream( it->endpoint() );
         if( !*s ) { delete s; COMMA_THROW( comma::exception, "failed to connect to " << name << ( blocking_ ? " (todo: implement blocking mode)" : "" ) ); }
