@@ -56,6 +56,7 @@ static void usage()
     std::cerr << "    --delimiter,-d <delimiter> : default: ','" << std::endl;
     std::cerr << "    --fields <fields> : time field numbers as in \"cut\"" << std::endl;
     std::cerr << "                        e.g. \"1,5,7\"; default: 1" << std::endl;
+    std::cerr << "    --verbose,-v: more output" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -68,6 +69,7 @@ int main( int ac, char** av )
     {
         comma::command_line_options options( ac, av );
         if( options.exists( "--help" ) || options.exists( "-h" ) || ac == 1 ) { usage(); }
+        bool verbose = options.exists( "--verbose,-v" );
         bool from = options.exists( "--to-iso-string" ) || options.exists( "--iso" ) || options.exists( "-i" );
         bool to = options.exists( "--to-seconds" ) || options.exists( "--sec" ) || options.exists( "-s" );
         if( to && from ) { COMMA_THROW( comma::exception, "cannot have both --to-seconds and --to-iso-string" ); }
@@ -105,9 +107,9 @@ int main( int ac, char** av )
                         }
                         case 2:
                         {
-                            if( w[1].length() > 9 ) { COMMA_THROW( comma::exception, "invalid nanoseconds in [" << v[ indices[i] ] << "]" ); }
+                            if( w[1].length() > 9 && verbose ) { std::cerr << "csv-time: warning: nanoseconds trunkated at: " << v[ indices[i] ] << std::endl; }
                             std::string n = "000000000";
-                            ::memcpy( &n[0], &w[1][0], w[1].length() ); 
+                            ::memcpy( &n[0], &w[1][0], w[1].length() < 9 ? w[1].length() : 9 );
                             comma::uint32 nanoseconds = boost::lexical_cast< comma::uint32 >( n );
                             t = boost::posix_time::ptime(comma::csv::impl::epoch, boost::posix_time::seconds( boost::lexical_cast< long >( w[0] ) ) + boost::posix_time::microseconds(nanoseconds/1000));
                             break;
@@ -137,13 +139,13 @@ int main( int ac, char** av )
                         oss << nanoseconds;
                     }
                     v[ indices[i] ] = oss.str();
-                }                
+                }
             }
             std::cout << v[0];
             for( unsigned int i = 1; i < v.size(); ++i ) { std::cout << delimiter << v[i]; }
             std::cout << std::endl;
         }
-        return 0;     
+        return 0;
     }
     catch( std::exception& ex ) { std::cerr << "csv-time: " << ex.what() << std::endl; }
     catch( ... ) { std::cerr << "csv-time: unknown exception" << std::endl; }
