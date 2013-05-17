@@ -35,6 +35,7 @@
 
 #include <comma/io/zeromq/istream.h>
 #include <comma/io/zeromq/ostream.h>
+#include <boost/thread/thread.hpp>
 #include <iostream>
 
 namespace comma { namespace io { namespace zeromq {
@@ -60,7 +61,7 @@ inline static S* make_stream( const std::string& endpoint, comma::io::file_descr
         }
         catch( std::exception& e )
         {
-            ::usleep( 20 );
+            boost::this_thread::sleep( boost::posix_time::microseconds( 20 ) );
         }
     }
     return stream;
