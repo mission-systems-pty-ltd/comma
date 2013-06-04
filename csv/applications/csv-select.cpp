@@ -58,9 +58,14 @@ void usage()
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --equals=<value>: equals to <value>" << std::endl;
-    std::cerr << "    --from=<value>: from <value> (inclusive, i.e. greater or equals)" << std::endl;
-    std::cerr << "    --to=<value>: to <value> (inclusive, i.e. less or equals)" << std::endl;
+    std::cerr << "    --not-equal=<value>: not equal to <value>" << std::endl;
+    std::cerr << "    --greater=<value>: greater than <value>" << std::endl;
+    std::cerr << "    --less=<value>: less than <value>" << std::endl;
+    std::cerr << "    --from,--greater-or-equal,--ge=<value>: from <value> (inclusive, i.e. greater or equals)" << std::endl;
+    std::cerr << "    --to,--less-or-equal,--le=<value>: to <value> (inclusive, i.e. less or equals)" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "      todo: implement a simple boolean expression grammar" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "    --sorted: a hint that the key column is sorted in ascending order" << std::endl;
     std::cerr << "              todo: support descending order" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
@@ -85,41 +90,53 @@ template < typename T >
 struct constraints
 {
     boost::optional< T > equals;
+    boost::optional< T > not_equal;
+    boost::optional< T > less;
+    boost::optional< T > greater;
     boost::optional< T > from;
     boost::optional< T > to;
     bool sorted;
-    
+
     constraints() : sorted( false ) {}
-    
+
     constraints( const comma::command_line_options& options ) // quick and dirty
     {
         equals = options.optional< T >( "--equals" );
-        from = options.optional< T >( "--from" );
-        to = options.optional< T >( "--to" );
+        not_equal = options.optional< T >( "--not-equal" );
+        from = options.optional< T >( "--from,--greater-or-equal,--ge" );
+        to = options.optional< T >( "--to,--less-or-equal,--le" );
+        less = options.optional< T >( "--less" );
+        greater = options.optional< T >( "--greater" );
         sorted = options.exists( "--sorted" );
     }
-    
+
     constraints( const std::string& options, const constraints& defaults )
     {
         *this = defaults;
-        comma::name_value::map m( options, ';', '=' ); // quick and dirty, since optional is not well-supported in comma::name_value::parser
+        comma::name_value::map m( options, ';', '=' ); // quick and dirty, since optional is not well-supported (euphymism for 'buggy') in comma::name_value::parser
         if( m.exists( "equals" ) ) { equals = m.value< T >( "equals" ); }
+        if( m.exists( "not-equal" ) ) { not_equal = m.value< T >( "not-equal" ); }
+        if( m.exists( "less" ) ) { less = m.value< T >( "less" ); }
+        if( m.exists( "greater" ) ) { equals = m.value< T >( "greater" ); }
         if( m.exists( "from" ) ) { from = m.value< T >( "from" ); }
+        if( m.exists( "greater-or-equal" ) ) { from = m.value< T >( "greater-or-equal" ); }
+        if( m.exists( "ge" ) ) { from = m.value< T >( "ge" ); }
         if( m.exists( "to" ) ) { to = m.value< T >( "to" ); }
+        if( m.exists( "less-or-equal" ) ) { to = m.value< T >( "less-or-equal" ); }
+        if( m.exists( "le" ) ) { to = m.value< T >( "le" ); }
         sorted = m.exists( "sorted" );
     }
-    
-    bool is_a_match( const T& t ) const
+
+    bool is_a_match( const T& t ) const // quick and dirty, implement a proper expression parser
     {
-//         if( equals ) { std::cerr << "==> is_a_match: t: " << t << " equals: " << *equals << std::endl; }
-//         if( from ) { std::cerr << "==> is_a_match: t: " << t << " from: " << *from << std::endl; }
-//         if( to ) { std::cerr << "==> is_a_match: t: " << t << " to: " << *to << std::endl; }
-        
         return    ( !equals || comma::math::equal( *equals, t ) )
+               && ( !not_equal || !comma::math::equal( *not_equal, t ) )
                && ( !from || !comma::math::less( t, *from ) )
-               && ( !to || !comma::math::less( *to, t ) );
+               && ( !to || !comma::math::less( *to, t ) )
+               && ( !less || comma::math::less( t, *less ) )
+               && ( !greater || comma::math::less( *greater, t ) );
     }
-    
+
     bool done( const T& t ) const { return sorted && to && comma::math::less( *to, t ); } // quick and dirty
 };
 
@@ -128,7 +145,7 @@ struct value_t
 {
     T value;
     ::constraints< T > constraints;
-    
+
     bool is_a_match() const { return this->constraints.is_a_match( value ); }
     bool done() const { return this->constraints.done( value ); }
 };
@@ -138,20 +155,20 @@ struct input_t
     std::vector< value_t< boost::posix_time::ptime > > time;
     std::vector< value_t< double > > doubles;
     std::vector< value_t< std::string > > strings;
-    
+
     bool is_a_match() const
     {
 //         std::cerr << "==> is_a_match: doubles: ";
 //         for( unsigned int i = 0; i < doubles.size(); ++i ) { std::cerr << doubles[i].value << " "; }
 //         std::cerr << std::endl;
-        
+
         for( unsigned int i = 0; i < time.size(); ++i ) { if( !time[i].is_a_match() ) { return false; } }
         for( unsigned int i = 0; i < doubles.size(); ++i ) { if( !doubles[i].is_a_match() ) { return false; } }
         for( unsigned int i = 0; i < strings.size(); ++i ) { if( !strings[i].is_a_match() ) { return false; } }
 //        std::cerr << "==> is_a_match: done" << std::endl << std::endl;
         return true;
     }
-    
+
     bool done() const
     {
         for( unsigned int i = 0; i < time.size(); ++i ) { if( time[i].done() ) { return true; } }
@@ -166,32 +183,32 @@ namespace comma { namespace visiting {
 template < typename T > struct traits< value_t< T > >
 {
     template < typename K, typename V > static void visit( const K&, const value_t< T >& p, V& v )
-    { 
+    {
         v.apply( "value", p.value );
     }
-    
+
     template < typename K, typename V > static void visit( const K&, value_t< T >& p, V& v )
-    { 
+    {
         v.apply( "value", p.value );
     }
 };
-    
+
 template <> struct traits< input_t >
 {
     template < typename K, typename V > static void visit( const K&, const input_t& p, V& v )
-    { 
+    {
         v.apply( "t", p.time );
         v.apply( "doubles", p.doubles );
         v.apply( "strings", p.strings );
     }
-    
+
     template < typename K, typename V > static void visit( const K&, input_t& p, V& v )
-    { 
+    {
         v.apply( "t", p.time );
         v.apply( "doubles", p.doubles );
         v.apply( "strings", p.strings );
     }
-};    
+};
 
 } } // namespace comma { namespace visiting {
 
@@ -275,7 +292,7 @@ int main( int ac, char** av )
         csv = comma::csv::options( options );
         fields = comma::split( csv.fields, ',' );
         if( fields.size() == 1 && fields[0].empty() ) { fields.clear(); }
-        std::vector< std::string > unnamed = options.unnamed( "--sorted,--verbose,-v", "-b,--binary,-f,--fields,-d,--delimiter,--precision,--equals,--from,--to" );
+        std::vector< std::string > unnamed = options.unnamed( "--sorted,--verbose,-v", "-b,--binary,-f,--fields,-d,--delimiter,--precision,--equals,--not-equal,--less-or-equal,--le,--greater-or-equal,--ge,--less,--greater,--from,--to" );
         for( unsigned int i = 0; i < unnamed.size(); constraints_map.insert( std::make_pair( comma::split( unnamed[i], ';' )[0], unnamed[i] ) ), ++i );
         comma::signal_flag is_shutdown;
         if( csv.binary() )
@@ -310,7 +327,7 @@ int main( int ac, char** av )
                     comma::csv::format format = guess_format( line );
                     init_input( format, options );
                     istream.reset( new comma::csv::ascii_input_stream< input_t >( std::cin, csv, input ) );
-                    
+
                     // todo: quick and dirty: no time to debug why the commented section does not work (but that's the right way)
                     std::istringstream iss( line );
                     comma::csv::ascii_input_stream< input_t > isstream( iss, csv, input );
