@@ -96,13 +96,13 @@ int main(int argc, char* argv[])
     socket.setsockopt( ZMQ_HWM, &hwm, sizeof( hwm ) );
     if ( vm.count("publish") )
     {
-        bool stdout = false;
+        bool std_out = false;
         for( unsigned int i = 0; i < endpoints.size(); i++ )
         {
             if( endpoints[i] == "-" )
             {
                 std::cerr << " stdout " << std::endl;
-                stdout = true;
+                std_out = true;
             }
             else if( vm.count("connect") )
             {
@@ -125,7 +125,7 @@ int main(int argc, char* argv[])
                 zmq::message_t message( buffer.size() );
                 ::memcpy( (void *) message.data (), &buffer[0], buffer.size() );
                 socket.send( message );
-                if( stdout )
+                if( std_out )
                 {
                     std::cout.write( &buffer[0], buffer.size() );
                     std::cout.flush();
