@@ -41,6 +41,7 @@
 #include <iostream>
 #include <sstream>
 #include <boost/lexical_cast.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/info_parser.hpp>
 #include <comma/base/exception.h>
@@ -115,6 +116,7 @@ struct property_tree // quick and dirty
             void apply( const K& key, T& value )
             {
                 visiting::do_while<    !boost::is_fundamental< T >::value
+                                    && !boost::is_same< T, boost::posix_time::ptime >::value
                                     && !boost::is_same< T, std::string >::value >::visit( key, value, *this );
             }
 
@@ -142,6 +144,7 @@ struct property_tree // quick and dirty
                     {
                         cur_ = j->second;
                         visiting::do_while<    !boost::is_fundamental< T >::value
+                                            && !boost::is_same< T, boost::posix_time::ptime >::value
                                             && !boost::is_same< T, std::string >::value >::visit( "", value[i], *this );
                     }
                     cur_ = parent;
@@ -195,15 +198,8 @@ struct property_tree // quick and dirty
             template < typename K, typename T >
             void apply_final( const K& key, T& value )
             {
-                const std::string& name = boost::lexical_cast< std::string >( key );
                 boost::optional< T > v;
-                if( cur_ )
-                {
-                    v = name.empty()
-                      ? cur_->get_value_optional< T >()
-                      : v = cur_->get_optional< T >( name );
-                    if( !v ) { v = cur_->get_optional< T >( "<xmlattr>." + name ); }
-                }
+                value_( boost::lexical_cast< std::string >( key ), v );
                 if( v ) { value = *v; }
                 else if( !permissive_ ) { COMMA_THROW( comma::exception, "key not found: " << key ); }
             }
@@ -212,6 +208,19 @@ struct property_tree // quick and dirty
             const boost::property_tree::ptree& ptree_;
             boost::optional< const boost::property_tree::ptree& > cur_;
             const bool permissive_;
+            void value_( const std::string& name, boost::optional< boost::posix_time::ptime >& v ) // quick and dirty, imlement traits instead
+            {
+                if( !cur_ ) { return; }
+                boost::optional< std::string > s = name.empty() ? cur_->get_value_optional< std::string >() : cur_->get_optional< std::string >( name );
+                if( !s ) { s = cur_->get_optional< std::string >( "<xmlattr>." + name ); }
+                if( s ) { v = boost::posix_time::from_iso_string( *s ); }
+            }
+            template < typename T > void value_( const std::string& name, boost::optional< T >& v )
+            {
+                if( !cur_ ) { return; }
+                v = name.empty() ? cur_->get_value_optional< T >() : cur_->get_optional< T >( name );
+                if( !v ) { v = cur_->get_optional< T >( "<xmlattr>." + name ); }
+            }
     };
 };
 
@@ -237,6 +246,7 @@ class to_ptree
             if( value )
             {
                 visiting::do_while<    !boost::is_fundamental< T >::value
+                                    && !boost::is_same< T, boost::posix_time::ptime >::value
                                     && !boost::is_same< T, std::string >::value >::visit( name, *value, *this );
             }
         }
@@ -265,6 +275,7 @@ class to_ptree
             std::string s = boost::lexical_cast< std::string >( name );
             append_( s.c_str() );
             visiting::do_while<    !boost::is_fundamental< T >::value
+                                && !boost::is_same< T, boost::posix_time::ptime >::value
                                 && !boost::is_same< T, std::string >::value >::visit( name, value, *this );
             trim_( s.c_str() );
         }
@@ -278,8 +289,8 @@ class to_ptree
 
         /// apply to leaf elements
         template < typename K, typename T >
-        void apply_final( const K&, const T& value ) { ptree_.put( path_.to_string( '.' ), value ); }
-
+        void apply_final( const K&, const T& value ) { ptree_.put( path_.to_string( '.' ), value_( value ) ); }
+        
     private:
         boost::property_tree::ptree& ptree_;
         xpath path_;
@@ -292,6 +303,8 @@ class to_ptree
         const xpath& trim_( std::size_t size ) { ( void )( size ); trim_(); return path_; }
         const xpath& trim_( const char* name ) { if( *name ) { path_ = path_.head(); } return path_; }
         void trim_() { path_ = path_.head(); }
+        static std::string value_( const boost::posix_time::ptime& t ) { return boost::posix_time::to_iso_string( t ); }
+        template < typename T > static T value_( T v ) { return v; }
 };
 
 namespace Impl {
