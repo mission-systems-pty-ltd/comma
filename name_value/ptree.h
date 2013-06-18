@@ -261,6 +261,7 @@ class to_ptree
             {
                 append_( boost::lexical_cast< std::string >( i ).c_str() );
                 visiting::do_while<    !boost::is_fundamental< T >::value
+                                    && !boost::is_same< T, boost::posix_time::ptime >::value
                                     && !boost::is_same< T, std::string >::value >::visit( i, value[i], *this );
                 trim_();
             }
@@ -290,7 +291,7 @@ class to_ptree
         /// apply to leaf elements
         template < typename K, typename T >
         void apply_final( const K&, const T& value ) { ptree_.put( path_.to_string( '.' ), value_( value ) ); }
-        
+
     private:
         boost::property_tree::ptree& ptree_;
         xpath path_;
