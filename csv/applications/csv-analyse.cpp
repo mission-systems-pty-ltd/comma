@@ -1,0 +1,179 @@
+// This file is part of comma, a generic and flexible library
+// Copyright (c) 2011 The University of Sydney
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+// 3. All advertising materials mentioning features or use of this software
+//    must display the following acknowledgement:
+//    This product includes software developed by the The University of Sydney.
+// 4. Neither the name of the The University of Sydney nor the
+//    names of its contributors may be used to endorse or promote products
+//    derived from this software without specific prior written permission.
+//
+// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
+// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+/// @author james underwood
+
+#include <iostream>
+#include <comma/application/command_line_options.h>
+#include <comma/application/contact_info.h>
+#include <comma/application/signal_flag.h>
+#ifdef WIN32
+#include <fcntl.h>
+#include <io.h>
+#endif
+
+using namespace comma;
+
+class sorted_histogram
+{
+private:
+    class element
+    {
+    public:
+        element() : value_(0), count_(0), probability_(0.0) {}
+        element(std::size_t v, std::size_t c, double p) : value_(v), count_(c), probability_(p) {}
+        bool operator<( const element & right ) const { return count_ < right.count_; }
+        std::size_t value_;
+        std::size_t count_;
+        double probability_;
+    };
+
+public:
+    sorted_histogram( const std::vector<size_t> & counts ) : sum_(0)
+    {
+        for( std::size_t i=0; i<counts.size(); ++i)
+        {
+            sum_+=counts[i];
+        }
+        for( std::size_t i=0; i<counts.size(); ++i)
+        {
+            if( counts[i] > 0 )
+                histogram_.push_back( element(i,counts[i],(sum_==0 ? 0.0 : static_cast<double>(counts[i])/static_cast<double>(sum_)) ) );
+        }
+        std::sort( histogram_.rbegin(), histogram_.rend() );
+    }
+
+    std::ostream& print(std::ostream& os) const
+    {
+        std::vector< element >::const_iterator it=histogram_.begin(), end=histogram_.end();
+        for( ; it!=end; ++it )
+        {
+            os << it->value_ << "," << it->count_ << "," << it->probability_ << std::endl;
+        }
+        return os;
+    }
+
+    std::vector< element > histogram_;
+    std::size_t sum_;
+};
+
+std::ostream& operator<<(std::ostream& os, const sorted_histogram & h)
+{
+    return h.print(os);
+}
+
+static void usage()
+{
+    std::cerr << std::endl;
+    std::cerr << "Analyse binary data to guess message lengths in unknown binary stream: output candidate lengths, repeat counts and normalised probabilities" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "Usage: cat file.bin | csv-analyse" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "e.g. use the entire file.bin for calculation and display the five most likely binary message lengths" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "     cat file.bin | csv-analyse | head -n 5 " << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "e.g  use the first 100 bytes of file.bin for calculation and display all message length candidates" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "     cat file.bin | head --bytes=100 | csv-analyse" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "note: algorithm is most efficient for relatively small message size (<<1MB), because large messages tend to contain all byte values within each message" << std::endl;
+    std::cerr << "      to tease large message sizes, provide alot of data and filter results" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "e.g.  use 20MB of file.bin (hopefully that contains multiple messages) and filter only the top ten candidates with message length > 100K" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "      cat large.bin | head --bytes=20000000 | csv-analyse | csv-select --fields=length,, \"length;from=100000\" | head -n 10" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "To test a length hypothesis, perhaps there is a timestamp (8 bytes) in first position?" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "e.g. for a message length candidate of 1234567890, subtracting 8 for time leaves 123456782 bytes of unknown data, so try:" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "       cat file.bin | csv-bin-cut t,123456782ub --fields=1 | csv-from-bin t | head -n 5" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "       if the formatting is correct, then all 5 timestamps should appear valid and in succession" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "See also: \"csv-size\", \"csv-bin-cut\"" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << comma::contact_info << std::endl;
+    std::cerr << std::endl;
+    exit( -1 );
+}
+
+int main( int ac, char** av )
+{
+    try
+    {
+        #ifdef WIN32
+            _setmode( _fileno( stdin ), _O_BINARY );
+        #endif
+
+        command_line_options options( ac, av );
+        if( ac > 1 || options.exists( "--help" ) || options.exists( "-h" ) ) { usage(); } //could just say ac > 1... but leave for future args
+
+        comma::signal_flag is_shutdown;
+
+        const std::size_t read_size=65535; //todo: better way?
+        std::size_t bytes_read = 0;
+        std::vector< unsigned char > data( read_size );
+
+        //read as many bytes as available on stdin
+        while( !is_shutdown && std::cin.good() && !std::cin.eof() )
+        {
+            data.resize( bytes_read + read_size );
+            int r = ::read( 0, &data[bytes_read], read_size );
+            if( r <= 0 ) { break; }
+            bytes_read += r;
+        }
+        
+        std::vector< std::size_t > last_seen_index( std::numeric_limits<unsigned char>::max()+1, 0 );
+        std::vector< bool > seen( std::numeric_limits<unsigned char>::max()+1, false );
+        std::vector< std::size_t > counts( bytes_read ); //todo: allocate only bytes_read/2 or limit by CL option.
+        
+        for( std::size_t i=0; i<bytes_read; ++i )
+        {
+            if( seen[data[i]] )
+            {
+                assert( (i-last_seen_index[data[i]]) > 0 && (i-last_seen_index[data[i]]) < bytes_read );
+                ++counts[ i-last_seen_index[data[i]] ];
+            }
+            last_seen_index[data[i]] = i;
+            seen[data[i]] = true;
+        }
+        
+        std::cout << sorted_histogram( counts );
+        return 0;
+    }
+    catch( std::exception& ex ) { std::cerr << "csv-analyse: " << ex.what() << std::endl; }
+    catch( ... ) { std::cerr << "csv-analyse: unknown exception" << std::endl; }
+    usage();
+}
