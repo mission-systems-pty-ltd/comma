@@ -34,6 +34,7 @@
 /// @author james underwood
 
 #include <iostream>
+#include <map>
 #include <comma/application/command_line_options.h>
 #include <comma/application/contact_info.h>
 #include <comma/application/signal_flag.h>
@@ -44,52 +45,52 @@
 
 using namespace comma;
 
-class sorted_histogram
+class histogram
 {
-private:
-    class element
-    {
-    public:
-        element() : value_(0), count_(0), probability_(0.0) {}
-        element(std::size_t v, std::size_t c, double p) : value_(v), count_(c), probability_(p) {}
-        bool operator<( const element & right ) const { return count_ < right.count_; }
-        std::size_t value_;
-        std::size_t count_;
-        double probability_;
-    };
-
 public:
-    sorted_histogram( const std::vector<size_t> & counts ) : sum_(0)
+    histogram() : last_seen_index_(256,0), seen_(256,false) {}
+
+    void observe( unsigned char value, std::size_t location )
     {
-        for( std::size_t i=0; i<counts.size(); ++i)
+        if( seen_[value] )
         {
-            sum_+=counts[i];
+            //assert( (i-last_seen_index[data[i]]) > 0 && (i-last_seen_index[data[i]]) < bytes_read );
+            assert( location > last_seen_index_[value] );
+            ++histogram_[ location - last_seen_index_[value] ];
         }
-        for( std::size_t i=0; i<counts.size(); ++i)
-        {
-            if( counts[i] > 0 )
-                histogram_.push_back( element(i,counts[i],(sum_==0 ? 0.0 : static_cast<double>(counts[i])/static_cast<double>(sum_)) ) );
-        }
-        std::sort( histogram_.rbegin(), histogram_.rend() );
+        last_seen_index_[value] = location;
+        seen_[value] = true;
     }
 
-    std::ostream& print(std::ostream& os) const
+    std::ostream& print_sorted(std::ostream& os) const
     {
-        std::vector< element >::const_iterator it=histogram_.begin(), end=histogram_.end();
-        for( ; it!=end; ++it )
+        //sort, ugly
+        std::multimap< std::size_t, std::size_t > sorted;
+        std::size_t sum=0;
+        
+        for(std::map< std::size_t, std::size_t >::const_iterator it=histogram_.begin(), end=histogram_.end(); it!=end; ++it )
         {
-            os << it->value_ << "," << it->count_ << "," << it->probability_ << std::endl;
+            sorted.insert( std::make_pair(it->second,it->first) );
+            sum += it->second;
         }
+        
+        for(std::multimap< std::size_t, std::size_t >::const_reverse_iterator it=sorted.rbegin(), end=sorted.rend(); it!=end; ++it )
+        {
+            os << it->second << "," << it->first << "," << (double)((double)(it->first)/(double)sum) << std::endl;
+        }
+    
         return os;
     }
 
-    std::vector< element > histogram_;
-    std::size_t sum_;
+private:
+    std::vector< std::size_t > last_seen_index_;
+    std::vector< bool > seen_;
+    std::map< std::size_t, std::size_t > histogram_; //length, count
 };
 
-std::ostream& operator<<(std::ostream& os, const sorted_histogram & h)
+std::ostream& operator<<(std::ostream& os, const histogram & h)
 {
-    return h.print(os);
+    return h.print_sorted(os);
 }
 
 static void usage()
@@ -141,36 +142,26 @@ int main( int ac, char** av )
         if( ac > 1 || options.exists( "--help" ) || options.exists( "-h" ) ) { usage(); } //could just say ac > 1... but leave for future args
 
         comma::signal_flag is_shutdown;
+        histogram h;
 
         const std::size_t read_size=65535; //todo: better way?
-        std::size_t bytes_read = 0;
         std::vector< unsigned char > data( read_size );
+        std::size_t offset=0;
 
         //read as many bytes as available on stdin
         while( !is_shutdown && std::cin.good() && !std::cin.eof() )
         {
-            data.resize( bytes_read + read_size );
-            int r = ::read( 0, &data[bytes_read], read_size );
-            if( r <= 0 ) { break; }
-            bytes_read += r;
-        }
-        
-        std::vector< std::size_t > last_seen_index( std::numeric_limits<unsigned char>::max()+1, 0 );
-        std::vector< bool > seen( std::numeric_limits<unsigned char>::max()+1, false );
-        std::vector< std::size_t > counts( bytes_read ); //todo: allocate only bytes_read/2 or limit by CL option.
-        
-        for( std::size_t i=0; i<bytes_read; ++i )
-        {
-            if( seen[data[i]] )
+            int bytes_read = ::read( 0, &data[0], read_size );
+            if( bytes_read <= 0 ) { break; }
+                        
+            for( int i=0; i<bytes_read; ++i )
             {
-                assert( (i-last_seen_index[data[i]]) > 0 && (i-last_seen_index[data[i]]) < bytes_read );
-                ++counts[ i-last_seen_index[data[i]] ];
+                h.observe(data[i],offset+i);
             }
-            last_seen_index[data[i]] = i;
-            seen[data[i]] = true;
+            offset+=bytes_read;
         }
-        
-        std::cout << sorted_histogram( counts );
+       
+        std::cout << h;
         return 0;
     }
     catch( std::exception& ex ) { std::cerr << "csv-analyse: " << ex.what() << std::endl; }
