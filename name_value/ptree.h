@@ -143,9 +143,11 @@ struct property_tree // quick and dirty
                     for( boost::property_tree::ptree::const_assoc_iterator j = t->ordered_begin(); j != t->not_found(); ++j, ++i )
                     {
                         cur_ = j->second;
+                        std::size_t index = boost::lexical_cast< std::size_t >( j->first );
+                        if( index >= t->size() ) { COMMA_THROW( comma::exception, "expected index less than " << t->size() << "; got: " << index ); }
                         visiting::do_while<    !boost::is_fundamental< T >::value
                                             && !boost::is_same< T, boost::posix_time::ptime >::value
-                                            && !boost::is_same< T, std::string >::value >::visit( "", value[i], *this );
+                                            && !boost::is_same< T, std::string >::value >::visit( "", value[index], *this );
                     }
                     cur_ = parent;
                 }
