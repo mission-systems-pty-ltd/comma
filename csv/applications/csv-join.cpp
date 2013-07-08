@@ -53,7 +53,7 @@
 #include <comma/string/string.h>
 #include <comma/visiting/traits.h>
 
-static void usage( bool long_help = false )
+static void usage( bool more )
 {
     std::cerr << std::endl;
     std::cerr << "join two csv files or streams by one or several keys (integer only for now)" << std::endl;
@@ -65,10 +65,17 @@ static void usage( bool long_help = false )
     std::cerr << "        any other field names: keys" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options:" << std::endl;
-    //std::cerr << "    --long-help: more help" << std::endl;
+    std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
     std::cerr << "    --first-matching: output only the first matching record (a bit of hack for now, but we needed it)" << std::endl;
+    std::cerr << "    --string,-s: keys are strings; a quick and dirty option to support strings" << std::endl;
+    std::cerr << "                 default: integers" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
-    std::cerr << comma::csv::options::usage() << std::endl;
+    if( more )
+    {
+        std::cerr << std::endl;
+        std::cerr << "csv options:" << std::endl;
+        std::cerr << comma::csv::options::usage() << std::endl;
+    }
     std::cerr << std::endl;
     std::cerr << "examples:" << std::endl;
     std::cerr << "    todo" << std::endl;
@@ -78,44 +85,51 @@ static void usage( bool long_help = false )
     exit( -1 );
 }
 
+template < typename K >
 struct input
 {
-    enum { size = 16 }; // quick and dirty: up to 16 keys
-    boost::array< comma::uint64, size > keys;
+    std::vector< K > keys;
+
     comma::uint32 block;
- 
-    static unsigned int keys_size;
-    
-    struct Hash;
-    
+
     input() : block( 0 ) {}
-    
+
     bool operator==( const input& rhs ) const
     {
-        for( std::size_t i = 0; i < keys_size; ++i ) { if( keys[i] != rhs.keys[i] ) { return false; } }
+        for( std::size_t i = 0; i < keys.size(); ++i ) { if( keys[i] != rhs.keys[i] ) { return false; } }
         return true;
     }
-    
+
     bool operator<( const input& rhs ) const
     {
-        for( std::size_t i = 0; i < keys_size; ++i ) { if( keys[i] < rhs.keys[i] ) { return true; } }
+        for( std::size_t i = 0; i < keys.size(); ++i ) { if( keys[i] < rhs.keys[i] ) { return true; } }
         return false;
     }
-};
 
-unsigned int input::keys_size = 0;
+    struct hash : public std::unary_function< input, std::size_t >
+    {
+        std::size_t operator()( input const& p ) const
+        {
+            std::size_t seed = 0;
+            for( std::size_t i = 0; i < p.keys.size(); ++i ) { boost::hash_combine( seed, p.keys[i] ); }
+            return seed;
+        }
+    };
+
+    typedef boost::unordered_map< input, std::vector< std::string >, input::hash > filter_map;
+};
 
 namespace comma { namespace visiting {
 
-template <> struct traits< input >
+template < typename T > struct traits< input< T > >
 {
-    template < typename K, typename V > static void visit( const K&, const input& p, V& v )
-    { 
+    template < typename K, typename V > static void visit( const K&, const input< T >& p, V& v )
+    {
         v.apply( "keys", p.keys );
         v.apply( "block", p.block );
     }
-    template < typename K, typename V > static void visit( const K&, input& p, V& v )
-    { 
+    template < typename K, typename V > static void visit( const K&, input< T >& p, V& v )
+    {
         v.apply( "keys", p.keys );
         v.apply( "block", p.block );
     }
@@ -124,113 +138,85 @@ template <> struct traits< input >
 } } // namespace comma { namespace visiting {
 
 static bool verbose;
-static comma::signal_flag is_shutdown;
-static boost::scoped_ptr< comma::io::istream > filter_transport;
-static boost::scoped_ptr< comma::csv::input_stream< input > > stdin_stream;
-static boost::scoped_ptr< comma::csv::input_stream< input > > filter_stream;
+static bool first_matching;
 static comma::csv::options stdin_csv;
 static comma::csv::options filter_csv;
-static bool first_matching;
+boost::scoped_ptr< comma::io::istream > filter_transport;
+comma::signal_flag is_shutdown;
+static comma::uint32 block = 0;
 
-struct input::Hash : public std::unary_function< input, std::size_t >
+template < typename K > struct join_impl_ // quick and dirty
 {
-    std::size_t operator()( input const& p ) const
-    {
-        std::size_t seed = 0;
-        for( std::size_t i = 0; i < input::keys_size; ++i ) { boost::hash_combine( seed, p.keys[i] ); }
-        return seed;
-    }
-};
+    static typename input< K >::filter_map filter_map;
+    static input< K > default_input;
 
-//typedef boost::unordered_map< input, std::deque< std::string >, input::Hash > FilterMap;
-typedef boost::unordered_map< input, std::vector< std::string >, input::Hash > FilterMap;
-FilterMap filter_map;
-static comma::uint32 block;
-
-void read_filter_block_()
-{
-    static const input* last = filter_stream->read();
-    if( !last ) { return; }
-    block = last->block;
-    filter_map.clear();
-    comma::uint64 count = 0;
-    while( last->block == block && !is_shutdown )
+    static void read_filter_block()
     {
-        if( filter_stream->is_binary() )
+        static comma::csv::input_stream< input< K > > filter_stream( **filter_transport, filter_csv, default_input );
+        static const input< K >* last = filter_stream.read();
+        if( !last ) { return; }
+        block = last->block;
+        filter_map.clear();
+        comma::uint64 count = 0;
+        while( last->block == block && !is_shutdown )
         {
-            FilterMap::mapped_type& d = filter_map[ *last ];
-            d.push_back( std::string() );
-            d.back().resize( filter_csv.format().size() );
-            ::memcpy( &d.back()[0], filter_stream->binary().last(), filter_csv.format().size() );
+            if( filter_stream.is_binary() )
+            {
+                typename input< K >::filter_map::mapped_type& d = filter_map[ *last ];
+                d.push_back( std::string() );
+                d.back().resize( filter_csv.format().size() );
+                ::memcpy( &d.back()[0], filter_stream.binary().last(), filter_csv.format().size() );
+            }
+            else
+            {
+                filter_map[ *last ].push_back( comma::join( filter_stream.ascii().last(), stdin_csv.delimiter ) );
+            }
+            if( verbose ) { ++count; if( count % 10000 == 0 ) { std::cerr << "csv-join: reading block " << block << "; loaded " << count << " point[s]; hash map size: " << filter_map.size() << std::endl; } }
+            //if( ( *filter_transport )->good() && !( *filter_transport )->eof() ) { break; }
+            last = filter_stream.read();
+            if( !last ) { break; }
         }
-        else
-        {
-            filter_map[ *last ].push_back( comma::join( filter_stream->ascii().last(), stdin_csv.delimiter ) );
-        }        
-        if( verbose ) { ++count; if( count % 10000 == 0 ) { std::cerr << "csv-join: reading block " << block << "; loaded " << count << " point[s]; hash map size: " << filter_map.size() << std::endl; } }
-        //if( ( *filter_transport )->good() && !( *filter_transport )->eof() ) { break; }
-        last = filter_stream->read();
-        if( !last ) { break; }
+        if( verbose ) { std::cerr << "csv-join: read block " << block << " of " << count << " point[s]; hash map size: " << filter_map.size() << std::endl; }
     }
-    if( verbose ) { std::cerr << "csv-join: read block " << block << " of " << count << " point[s]; hash map size: " << filter_map.size() << std::endl; }
-}
 
-int main( int ac, char** av )
-{
-    try
+    static int run( const comma::command_line_options& options )
     {
-        comma::command_line_options options( ac, av );
-        if( options.exists( "--help,-h,--long-help" ) ) { usage( options.exists( "--long-help" ) ); }
-        verbose = options.exists( "--verbose,-v" );
-        first_matching = options.exists( "--first-matching" );
-        stdin_csv = comma::csv::options( options );
-        std::vector< std::string > unnamed = options.unnamed( "--verbose,-v,--first-matching", "--binary,-b,--delimiter,-d,--fields,-f" );
-        if( unnamed.empty() ) { std::cerr << "csv-join: please specify the second source" << std::endl; return 1; }
-        if( unnamed.size() > 1 ) { std::cerr << "csv-join: expected one file or stream to join, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
-        comma::name_value::parser parser( "filename", ';', '=', false );
-        filter_csv = parser.get< comma::csv::options >( unnamed[0] );
-        if( stdin_csv.binary() != filter_csv.binary() ) { std::cerr << "csv-join: expected both streams ascii or both streams binary" << std::endl; return 1; }
         std::vector< std::string > v = comma::split( stdin_csv.fields, ',' );
         std::vector< std::string > w = comma::split( filter_csv.fields, ',' );
         for( std::size_t i = 0; i < v.size(); ++i ) // quick and dirty, wasteful, but who cares
-        { 
+        {
             if( v[i].empty() || v[i] == "block" ) { continue; }
             for( std::size_t k = 0; k < w.size(); ++k )
             {
                 if( v[i] != w[k] ) { continue; }
-                v[i] = "keys[" + boost::lexical_cast< std::string >( input::keys_size ) + "]";
-                w[k] = "keys[" + boost::lexical_cast< std::string >( input::keys_size ) + "]";
-                ++input::keys_size;
+                v[i] = "keys[" + boost::lexical_cast< std::string >( default_input.keys.size() ) + "]";
+                w[k] = "keys[" + boost::lexical_cast< std::string >( default_input.keys.size() ) + "]";
+                default_input.keys.resize( default_input.keys.size() + 1 ); // quick and dirty
             }
         }
-        if( input::keys_size == 0 ) { std::cerr << "csv-join: please specify at least one common key" << std::endl; return 1; }
+        if( default_input.keys.empty() ) { std::cerr << "csv-join: please specify at least one common key" << std::endl; return 1; }
         stdin_csv.fields = comma::join( v, ',' );
         filter_csv.fields = comma::join( w, ',' );
-        stdin_stream.reset( new comma::csv::input_stream< input >( std::cin, stdin_csv ) );
+        comma::csv::input_stream< input< K > > stdin_stream( std::cin, stdin_csv, default_input );
         filter_transport.reset( new comma::io::istream( filter_csv.filename, filter_csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii ) );
-        filter_stream.reset( new comma::csv::input_stream< input >( **filter_transport, filter_csv ) );
         std::size_t discarded = 0;
-        read_filter_block_();
-
+        read_filter_block();
         #ifdef WIN32
-        if( stdin_stream->is_binary() )
-        {
-            _setmode( _fileno( stdout ), _O_BINARY );
-        }
+        if( stdin_stream.is_binary() ) { _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
         while( !is_shutdown && std::cin.good() && !std::cin.eof() )
         {
-            const input* p = stdin_stream->read();
+            const input< K >* p = stdin_stream.read();
             if( !p ) { break; }
-            if( block != p->block ) { read_filter_block_(); }
+            if( block != p->block ) { read_filter_block(); }
             if( filter_map.empty() ) { break; }
-            FilterMap::const_iterator it = filter_map.find( *p );
+            typename input< K >::filter_map::const_iterator it = filter_map.find( *p );
             if( it == filter_map.end() || it->second.empty() ) { ++discarded; continue; }
-            if( stdin_stream->is_binary() )
+            if( stdin_stream.is_binary() )
             {
                 for( std::size_t i = 0; i < ( first_matching ? 1 : it->second.size() ); ++i )
                 {
-                    std::cout.write( stdin_stream->binary().last(), stdin_csv.format().size() );
+                    std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() );
                     std::cout.write( &( it->second[i][0] ), filter_csv.format().size() );
                     std::cout.flush();
                 }
@@ -240,13 +226,35 @@ int main( int ac, char** av )
             {
                 for( std::size_t i = 0; i < ( first_matching ? 1 : it->second.size() ); ++i )
                 {
-                    std::cout << comma::join( stdin_stream->ascii().last(), stdin_csv.delimiter ) << stdin_csv.delimiter << it->second[i] << std::endl;
+                    std::cout << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << stdin_csv.delimiter << it->second[i] << std::endl;
                 }
             }
             if( first_matching ) { filter_map.erase( it->first ); } // quick and dirty for now
         }
         if( verbose ) { std::cerr << "csv-join: discarded " << discarded << " entrie[s] with no matches" << std::endl; }
         return 0;
+    }
+};
+
+template < typename K > typename input< K >::filter_map join_impl_< K >::filter_map;
+template < typename K > input< K > join_impl_< K >::default_input;
+
+int main( int ac, char** av )
+{
+    try
+    {
+        comma::command_line_options options( ac, av );
+        verbose = options.exists( "--verbose,-v" );
+        if( options.exists( "--help,-h" ) ) { usage( verbose ); }
+        first_matching = options.exists( "--first-matching" );
+        stdin_csv = comma::csv::options( options );
+        std::vector< std::string > unnamed = options.unnamed( "--verbose,-v,--first-matching,--string,-s", "--binary,-b,--delimiter,-d,--fields,-f" );
+        if( unnamed.empty() ) { std::cerr << "csv-join: please specify the second source" << std::endl; return 1; }
+        if( unnamed.size() > 1 ) { std::cerr << "csv-join: expected one file or stream to join, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
+        comma::name_value::parser parser( "filename", ';', '=', false );
+        filter_csv = parser.get< comma::csv::options >( unnamed[0] );
+        if( stdin_csv.binary() != filter_csv.binary() ) { std::cerr << "csv-join: expected both streams ascii or both streams binary" << std::endl; return 1; }
+        return options.exists( "--string,-s" ) ? join_impl_< std::string >::run( options ) : join_impl_< comma::int64 >::run( options );
     }
     catch( std::exception& ex )
     {
