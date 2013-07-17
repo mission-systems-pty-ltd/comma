@@ -30,8 +30,8 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author vsevolod vlaskine
+/// @author cedric wohlleber
 
 #ifndef COMMA_CSV_SPLIT_H
 #define COMMA_CSV_SPLIT_H
@@ -42,6 +42,7 @@
 #include <boost/optional.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/static_assert.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
 #include <comma/base/types.h>
@@ -51,43 +52,69 @@
 
 namespace comma { namespace csv { namespace applications {
 
-struct input
+template < typename T > struct input // quick and dirty
 {
     boost::posix_time::ptime timestamp;
-    unsigned int block;
-    unsigned int id;
-}; 
+    comma::uint32 block;
+    T id;
+};
 
 } } } // namespace comma { namespace csv { namespace applications {
 
 namespace comma { namespace visiting {
 
-template <> struct traits< comma::csv::applications::input >
+template < typename T > struct traits< comma::csv::applications::input< T > >
 {
-    template < typename K, typename V > static void visit( const K&, const comma::csv::applications::input& p, V& v )
-    { 
+    template < typename K, typename V > static void visit( const K&, const comma::csv::applications::input< T >& p, V& v )
+    {
         v.apply( "t", p.timestamp );
         v.apply( "block", p.block );
         v.apply( "id", p.id );
     }
-    
-    template < typename K, typename V > static void visit( const K&, comma::csv::applications::input& p, V& v )
-    { 
+
+    template < typename K, typename V > static void visit( const K&, comma::csv::applications::input< T >& p, V& v )
+    {
         v.apply( "t", p.timestamp );
         v.apply( "block", p.block );
         v.apply( "id", p.id );
     }
 };
 
-} } // namespace comma { namespace visiting {    
+} } // namespace comma { namespace visiting {
 
 namespace comma { namespace csv { namespace applications {
-    
+
+template < typename T > struct traits
+{
+    typedef boost::unordered_map< T, boost::shared_ptr< std::ofstream > > map;
+    typedef boost::unordered_set< T > set;
+};
+
+template <> struct traits< boost::posix_time::ptime >
+{
+    struct hash : public std::unary_function< boost::posix_time::ptime, std::size_t >
+    {
+        std::size_t operator()( const boost::posix_time::ptime& t ) const
+        {
+            BOOST_STATIC_ASSERT( sizeof( t ) == sizeof( comma::uint64 ) );
+            std::size_t seed = 0;
+            boost::hash_combine( seed, reinterpret_cast< const comma::uint64& >( t ) ); // quick and dirty
+            return seed;
+        }
+    };
+
+    typedef boost::unordered_map< boost::posix_time::ptime, boost::shared_ptr< std::ofstream >, hash > map;
+    typedef boost::unordered_set< boost::posix_time::ptime, hash > set;
+};
+
 /// split data to files by time
 /// files are named by timestamp, cut down to seconds
+template < typename T >
 class split
 {
     public:
+        typedef applications::input< T > input;
+
         split( boost::optional< boost::posix_time::time_duration > period
              , const std::string& suffix
              , const comma::csv::options& csv );
@@ -100,7 +127,7 @@ class split
         std::ofstream& ofstream_by_id_();
         void update_( const char* data, unsigned int size );
         void update_( const std::string& line );
-        
+
         boost::function< std::ofstream&() > ofstream_;
         boost::scoped_ptr< comma::csv::ascii< input > > ascii_;
         boost::scoped_ptr< comma::csv::binary< input > > binary_;
@@ -110,12 +137,12 @@ class split
         boost::optional< input > last_;
         std::ios_base::openmode mode_;
         std::ofstream file_;
-        typedef boost::unordered_map< comma::uint32, boost::shared_ptr< std::ofstream > > Files;
-        typedef boost::unordered_set< comma::uint32 > ids_type_;
+        typedef typename traits< T >::map Files;
+        typedef typename traits< T >::set ids_type_;
         Files files_;
         ids_type_ seen_ids_;
 };
 
 } } } // namespace comma { namespace csv { namespace applications {
-    
+
 #endif // COMMA_CSV_SPLIT_H

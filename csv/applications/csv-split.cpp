@@ -41,23 +41,59 @@
 
 #include <boost/optional.hpp>
 #include <boost/program_options.hpp>
+#include <comma/application/signal_flag.h>
 #include <comma/application/contact_info.h>
 #include <comma/csv/impl/program_options.h>
-#include <comma/csv/applications/split/split.h>
+#include "./split/split.h"
+
+comma::csv::options csv;
+boost::optional< boost::posix_time::time_duration > duration;
+std::string suffix;
+unsigned int size = 0;
+
+template < typename T >
+void run()
+{
+    comma::csv::applications::split< T > split( duration, suffix, csv );
+    if( size == 0 )
+    {
+        std::string line;
+        while( std::cin.good() && !std::cin.eof() )
+        {
+            std::getline( std::cin, line );
+            if( line.empty() ) { break; }
+            split.write( line );
+        }
+    }
+    else
+    {
+        #ifdef WIN32
+            _setmode( _fileno( stdin ), _O_BINARY );
+        #endif
+        std::vector< char > packet( size );
+        comma::signal_flag is_shutdown;
+        while( !is_shutdown && std::cin.good() && !std::cin.eof() )
+        {
+            std::cin.read( &packet[0], size );
+            if( std::cin.gcount() > 0 ) { split.write( &packet[0], size ); }
+        }
+    }
+}
 
 int main( int argc, char** argv )
 {
     try
     {
         double period = 0;
-        unsigned int size = 0;
         std::string extension;
         boost::program_options::options_description description( "options" );
         description.add_options()
             ( "help,h", "display help message" )
             ( "size,c", boost::program_options::value< unsigned int >( &size ), "packet size, only full packets will be written" )
             ( "period,t", boost::program_options::value< double >( &period ), "period in seconds after which a new file is created" )
-            ( "suffix,s", boost::program_options::value< std::string >( &extension ), "filename extension; default will be csv or bin, depending whether it is ascii or binary" );
+            ( "suffix,s", boost::program_options::value< std::string >( &extension ), "filename extension; default will be csv or bin, depending whether it is ascii or binary" )
+            ( "string", "id is string; default: 32-bit integer" )
+            ( "time", "id is time; default: 32-bit integer" );
         description.add( comma::csv::program_options::description() );
         boost::program_options::variables_map vm;
         boost::program_options::store( boost::program_options::parse_command_line( argc, argv, description), vm );
@@ -80,36 +116,17 @@ int main( int argc, char** argv )
             std::cerr << std::endl;
             return 1;
         }
-        comma::csv::options csv = comma::csv::program_options::get( vm );
+        csv = comma::csv::program_options::get( vm );
         if( csv.binary() ) { size = csv.format().size(); }
-        boost::optional< boost::posix_time::time_duration > duration;
+        bool id_is_string = vm.count( "string" );
+        bool id_is_time = vm.count( "time" );
+        if( id_is_string && id_is_time ) { std::cerr << "csv-split: either --string or --time" << std::endl; }
         if( period > 0 ) { duration = boost::posix_time::microseconds( period * 1e6 ); }
-        std::string suffix;
         if( extension.empty() ) { suffix = csv.binary() || size > 0 ? ".bin" : ".csv"; }
         else { suffix += "."; suffix += extension; }
-        comma::csv::applications::split split( duration, suffix, csv );
-        if( size == 0 )
-        {
-            std::string line;
-            while( std::cin.good() && !std::cin.eof() )
-            {
-                std::getline( std::cin, line );
-                if( line.empty() ) { break; }
-                split.write( line );
-            }
-        }
-        else
-        {
-#ifdef WIN32
-            _setmode( _fileno( stdin ), _O_BINARY );
-#endif            
-            std::vector< char > packet( size );
-            while( std::cin.good() && !std::cin.eof() )
-            {
-                std::cin.read( &packet[0], size );
-                if( std::cin.gcount() > 0 ) { split.write( &packet[0], size ); }
-            }
-        }
+        if( id_is_string ) { run< std::string >(); }
+        else if( id_is_time ) { run< boost::posix_time::ptime >(); }
+        else { run< comma::uint32 >(); }
         return 0;
     }
     catch( std::exception& ex )
