@@ -59,7 +59,7 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av );
         if( options.exists( "--help,-h" ) ) { usage(); }
         char delimiter = options.value( "--delimiter,-d", ',' );
-        std::vector< std::string > unnamed = options.unnamed();
+        std::vector< std::string > unnamed = options.unnamed( "", "--delimiter,-d" );
         if( unnamed.empty() ) { std::cerr << "csv-from-columns: expected column sizes, got none" << std::endl; return 1; }
         std::vector< unsigned int > sizes;
         std::vector< std::string > v = comma::split( unnamed[0], ',' );
