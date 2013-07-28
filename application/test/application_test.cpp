@@ -101,14 +101,26 @@ TEST( application, unnamed )
         argv.push_back( "free4" );
         argv.push_back( "free5" );
         comma::command_line_options options( argv );
-        std::vector< std::string > free = options.unnamed( "-a,-b,-c", "--x,--y,--z" );
-        EXPECT_EQ( free.size(), 6u );
-        EXPECT_EQ( free[0], "free0" );
-        EXPECT_EQ( free[1], "free1" );
-        EXPECT_EQ( free[2], "free2" );
-        EXPECT_EQ( free[3], "free3" );
-        EXPECT_EQ( free[4], "free4" );
-        EXPECT_EQ( free[5], "free5" );
+        {
+            std::vector< std::string > free = options.unnamed( "-a,-b,-c", "--x,--y,--z" );
+            EXPECT_EQ( free.size(), 6u );
+            EXPECT_EQ( free[0], "free0" );
+            EXPECT_EQ( free[1], "free1" );
+            EXPECT_EQ( free[2], "free2" );
+            EXPECT_EQ( free[3], "free3" );
+            EXPECT_EQ( free[4], "free4" );
+            EXPECT_EQ( free[5], "free5" );
+        }
+        {
+            std::vector< std::string > free = options.unnamed( "-a,-b,-c", "--.*" );
+            EXPECT_EQ( free.size(), 6u );
+            EXPECT_EQ( free[0], "free0" );
+            EXPECT_EQ( free[1], "free1" );
+            EXPECT_EQ( free[2], "free2" );
+            EXPECT_EQ( free[3], "free3" );
+            EXPECT_EQ( free[4], "free4" );
+            EXPECT_EQ( free[5], "free5" );
+        }
     }
     // TODO: definitely more tests!
 }

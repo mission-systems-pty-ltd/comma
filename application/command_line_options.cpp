@@ -35,6 +35,7 @@
 
 #include <set>
 #include <boost/optional.hpp>
+#include <boost/regex.hpp>
 #include <comma/application/command_line_options.h>
 #include <comma/base/exception.h>
 #include <comma/string/split.h>
@@ -70,24 +71,22 @@ bool command_line_options::exists( const std::string& name ) const
 
 std::vector< std::string > command_line_options::unnamed( const std::string& valueless_options, const std::string& options_with_values ) const
 {
-    std::vector< std::string > v = split( valueless_options, ',' );
-    std::set< std::string > valueless;
-    for( unsigned int i = 0; i < v.size(); ++i ) { valueless.insert( v[i] ); }
+    std::vector< std::string > valueless = split( valueless_options, ',' );
     std::vector< std::string > valued = split( options_with_values, ',' );
     std::vector< std::string > w;
     for( unsigned int i = 1; i < argv_.size(); ++i )
     {
-        bool isValueless( valueless.find( argv_[i] ) != valueless.end() );
-        bool isValued = false;
+        bool is_valueless = false;
+        for( unsigned int k = 0; !is_valueless && k < valueless.size(); ++k ) { is_valueless = boost::regex_match( argv_[i], boost::regex( valueless[k] ) ); }
+        if( is_valueless ) { continue; }
+        bool is_valued = false;
         bool has_equal_sign = false;
-        for( unsigned int j = 0; !isValued && j < valued.size(); ++j )
+        for( unsigned int j = 0; !is_valued && j < valued.size(); ++j )
         {
-            has_equal_sign = argv_[i].find( valued[j] + "=" ) == 0;
-            isValued = argv_[i] == valued[j] || has_equal_sign;
+            has_equal_sign = boost::regex_match( argv_[i], boost::regex( valued[j] + "=.*" ) );
+            is_valued = boost::regex_match( argv_[i], boost::regex( valued[j] ) ) || has_equal_sign;
         }
-        if( isValueless && isValued ) { COMMA_THROW( comma::exception, "option " << argv_[i] << " is among options with (" << options_with_values << ") and without (" << valueless_options << ") values at the same time" ); }
-        if( isValueless ) { continue; }
-        if( isValued ) { if( !has_equal_sign ) { ++i; } continue; }
+        if( is_valued ) { if( !has_equal_sign ) { ++i; } continue; }
         w.push_back( argv_[i] );
     }
     return w;

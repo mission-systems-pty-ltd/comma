@@ -79,26 +79,22 @@ struct traits < std::istream >
     static std::istream* standard( comma::io::mode::value mode )
     {
         #ifdef WIN32
-        ( void )( mode );
-        if( mode == comma::io::mode::binary )
-		{
-			_setmode( _fileno( stdin ), _O_BINARY );
-		}
+        if( mode == comma::io::mode::binary ) { _setmode( _fileno( stdin ), _O_BINARY ); }
         #endif
         return &std::cin;
     }
     static comma::io::file_descriptor standard_fd()
     {
-        #ifndef WIN32
-        return 0;
-        #else
+        #ifdef WIN32
         return io::invalid_file_descriptor;
+        #else
+        return 0;
         #endif
     }
     #ifdef WIN32
-    static io::file_descriptor open( const std::string name ) { return io::invalid_file_descriptor; }
+    static io::file_descriptor open( const std::string& name ) { return io::invalid_file_descriptor; }
     #else
-    static io::file_descriptor open( const std::string name ) { return ::open( name.c_str(), O_RDONLY | O_NONBLOCK ); }
+    static io::file_descriptor open( const std::string& name ) { return ::open( &name[0], O_RDONLY | O_NONBLOCK ); }
     #endif
 };
 
@@ -110,33 +106,29 @@ struct traits < std::ostream >
     static std::ostream* standard( comma::io::mode::value mode )
     {
         #ifdef WIN32
-        ( void )( mode );
-        if( mode == comma::io::mode::binary )
-		{
-			_setmode( _fileno( stdout ), _O_BINARY );
-		}
+        if( mode == comma::io::mode::binary ) { ( _fileno( stdout ), _O_BINARY ); }
         #endif
         return &std::cout;
     }
     static comma::io::file_descriptor standard_fd()
     {
-        #ifndef WIN32
-        return 1;
-        #else
+        #ifdef WIN32
         return io::invalid_file_descriptor;
+        #else
+        return 1;
         #endif
     }
     #ifdef WIN32
         #ifdef O_LARGEFILE
-            static io::file_descriptor open( const std::string name ) { return _open( name.c_str(), O_WRONLY | O_CREAT | O_LARGEFILE, _S_IWRITE ); }
+            static io::file_descriptor open( const std::string& name ) { return _open( &name[0], O_WRONLY | O_CREAT | O_LARGEFILE, _S_IWRITE ); }
         #else
-            static io::file_descriptor open( const std::string name ) { return _open( name.c_str(), O_WRONLY | O_CREAT, _S_IWRITE ); }
+            static io::file_descriptor open( const std::string& name ) { return _open( &name[0], O_WRONLY | O_CREAT, _S_IWRITE ); }
         #endif
     #else
         #ifdef O_LARGEFILE
-            static io::file_descriptor open( const std::string name ) { return ::open( name.c_str(), O_WRONLY | O_CREAT | O_NONBLOCK, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH | O_LARGEFILE ); }
+            static io::file_descriptor open( const std::string& name ) { return ::open( &name[0], O_WRONLY | O_CREAT | O_NONBLOCK, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH | O_LARGEFILE ); }
         #else
-            static io::file_descriptor open( const std::string name ) { return ::open( name.c_str(), O_WRONLY | O_CREAT | O_NONBLOCK, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH ); }
+            static io::file_descriptor open( const std::string& name ) { return ::open( &name[0], O_WRONLY | O_CREAT | O_NONBLOCK, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH ); }
         #endif
     #endif
 };
@@ -149,12 +141,12 @@ struct traits < std::iostream >
     static std::iostream* standard( comma::io::mode::value mode ) { (void) mode; return NULL; }
     static comma::io::file_descriptor standard_fd() { return comma::io::invalid_file_descriptor; }
     #ifdef WIN32
-        static io::file_descriptor open( const std::string name ) { return io::invalid_file_descriptor; }
+        static io::file_descriptor open( const std::string& name ) { return io::invalid_file_descriptor; }
     #else
         #ifdef O_LARGEFILE
-            static io::file_descriptor open( const std::string name ) { return ::open( name.c_str(), O_RDWR | O_NONBLOCK | O_LARGEFILE ); }
+            static io::file_descriptor open( const std::string& name ) { return ::open( &name[0], O_RDWR | O_NONBLOCK | O_LARGEFILE ); }
         #else
-            static io::file_descriptor open( const std::string name ) { return ::open( name.c_str(), O_RDWR | O_NONBLOCK ); }
+            static io::file_descriptor open( const std::string& name ) { return ::open( &name[0], O_RDWR | O_NONBLOCK ); }
         #endif
     #endif
 };
@@ -209,7 +201,19 @@ S* stream< S >::operator->()
 }
 
 template < typename S >
-comma::io::file_descriptor stream< S >::fd() const { return fd_; }
+comma::io::file_descriptor stream< S >::fd() const
+{
+    #ifdef WIN32
+    if( fd_ == io::invalid_file_descriptor )
+    {
+        COMMA_THROW( comma::exception, "an attempt to use invalid file descriptor of: " << name_ << std::endl
+                                    << "you probably are trying to use file descriptor of" << std::endl
+                                    << "a regular file for select on Windows, which is not" << std::endl
+                                    << "supported on Windows" << std::endl );
+    }
+    #endif // #ifdef WIN32
+    return fd_;
+}
 
 template < typename S >
 const std::string& stream< S >::name() const { return name_; }
@@ -277,12 +281,12 @@ stream< S >::stream( const std::string& name, mode::value m, mode::blocking_valu
     {
 #ifdef WIN32
         typename impl::traits< S >::file_stream* s =
-            m == comma::io::mode::binary ? new typename impl::traits< S >::file_stream( name.c_str(), std::ios::binary )
-                                         : new typename impl::traits< S >::file_stream( name.c_str() );
+            m == comma::io::mode::binary ? new typename impl::traits< S >::file_stream( &name[0], std::ios::binary )
+                                         : new typename impl::traits< S >::file_stream( &name[0] );
         if( s->bad() ) { COMMA_THROW( comma::exception, "failed to open " << name_ ); }
         stream_ = s;
         close_ = boost::bind( &impl::close_file_stream< S >, s, fd_ );
-        fd_ = invalid_file_descriptor; // as select does not work on regular files on windows
+        fd_ = io::invalid_file_descriptor; // as select does not work on regular files on windows
 #else // #ifdef WIN32
         // this is a very quick and dirty fix, since STL omits file descriptors
         // as an implementation detail, but does not provide any explicit concept

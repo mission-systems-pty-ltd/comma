@@ -52,56 +52,65 @@ class command_line_options
     public:
         /// constructor
         command_line_options( int argc, char ** argv );
-        
+
         /// constructor
         command_line_options( const std::vector< std::string >& argv );
-        
+
         /// constructor
         command_line_options( const command_line_options& rhs );
-        
+
         /// return argv
         const std::vector< std::string >& argv() const;
-        
+
         /// return true, if option exists (list, e.g.: "--binary,-b" is allowed)
         bool exists( const std::string& name ) const;
-        
+
         /// return option value; throw, if it does not exist (list, e.g.: "--binary,-b" is allowed)
         template < typename T >
         T value( const std::string& name ) const;
-        
+
         /// return optional option value (convenience method)
         template < typename T >
         boost::optional< T > optional( const std::string& name ) const;
-        
+
         /// return option value; default, if option not specified (list, e.g.: "--binary,-b" is allowed)
         template < typename T >
         T value( const std::string& name, T default_value ) const;
-        
+
         /// return option values
         template < typename T >
         std::vector< T > values( const std::string& name ) const;
-        
-        /// return option values; one default value, if option not specified 
+
+        /// return option values; one default value, if option not specified
         template < typename T >
         std::vector< T > values( const std::string& name, T default_value ) const;
 
         /// return option names
         std::vector< std::string > names() const;
-        
+
         /// return free-standing values; arguments are comma-separated lists of options
-        /// @todo make the interface semantics prettier
-        std::vector< std::string > unnamed( const std::string& valueless_options = "", const std::string& options_with_values = "" ) const;
-        
+        /// @param valueless_options options that do not take any value
+        /// @param options_with_values options that take a value
+        /// both parameters can be posix regular expressions
+        /// in this case, if command line parameter is found amoung valueless options
+        /// it will not be considered as having no value
+        /// example:
+        ///    options.unnamed( "--verbose,--quiet", "-.*,--.*" );
+        ///    here:
+        ///        --verbose and --quiet
+        ///        any other command line parameters starting with - or -- are considered options with values
+        std::vector< std::string > unnamed( const std::string& valueless_options, const std::string& options_with_values ) const;
+
         /// throw, if more than one of given options exists (freaking ugly name)
         void assert_mutually_exclusive( const std::string& names ) const;
-    
+
     private:
         typedef std::map< std::string, std::vector< std::string > > map_type_;
 
         void fill_map_( const std::vector< std::string >& v );
         template < typename T >
         static T lexical_cast_( const std::string& s );
-        
+
         std::vector< std::string > argv_;
         map_type_ map_;
         std::vector< std::string > names_;
@@ -132,7 +141,7 @@ inline std::vector< T > command_line_options::values( const std::string& name ) 
         if( it == map_.end() ) { continue; }
         for( std::size_t j = 0; j < it->second.size(); ++j ) { v.push_back( lexical_cast_< T >( it->second[j] ) ); }
     }
-    return v;    
+    return v;
 }
 
 template < typename T >

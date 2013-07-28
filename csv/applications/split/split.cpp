@@ -50,10 +50,11 @@
 
 namespace comma { namespace csv { namespace applications {
 
-split::split( boost::optional< boost::posix_time::time_duration > period
+template < typename T >
+split< T >::split( boost::optional< boost::posix_time::time_duration > period
             , const std::string& suffix
             , const comma::csv::options& csv )
-    : ofstream_( boost::bind( &split::ofstream_by_time_, this ) )
+    : ofstream_( boost::bind( &split< T >::ofstream_by_time_, this ) )
     , period_( period )
     , suffix_( suffix )
 {
@@ -61,11 +62,12 @@ split::split( boost::optional< boost::posix_time::time_duration > period
     if( csv.fields.empty() ) { return; }
     if( csv.binary() ) { binary_.reset( new comma::csv::binary< input >( csv ) ); }
     else { ascii_.reset( new comma::csv::ascii< input >( csv ) ); }
-    if( csv.has_field( "block" ) ) { ofstream_ = boost::bind( &split::ofstream_by_block_, this ); }
-    else if( csv.has_field( "id" ) ) { ofstream_ = boost::bind( &split::ofstream_by_id_, this ); }
+    if( csv.has_field( "block" ) ) { ofstream_ = boost::bind( &split< T >::ofstream_by_block_, this ); }
+    else if( csv.has_field( "id" ) ) { ofstream_ = boost::bind( &split< T >::ofstream_by_id_, this ); }
 }
 
-void split::write( const char* data, unsigned int size )
+template < typename T >
+void split< T >::write( const char* data, unsigned int size )
 {
     mode_ = std::ofstream::out | std::ofstream::binary;
     if( binary_ ) { binary_->get( current_, data ); }
@@ -73,7 +75,8 @@ void split::write( const char* data, unsigned int size )
     ofstream_().write( data, size );
 }
 
-void split::write ( const std::string& line )
+template < typename T >
+void split< T >::write ( const std::string& line )
 {
     mode_ = std::ofstream::out; // quick and dirty
     if( ascii_ ) { ascii_->get( current_, line ); }
@@ -83,7 +86,8 @@ void split::write ( const std::string& line )
     ofs.put( '\n' );
 }
 
-std::ofstream& split::ofstream_by_time_()
+template < typename T >
+std::ofstream& split< T >::ofstream_by_time_()
 {
     if( !last_ || current_.timestamp > ( last_->timestamp + *period_ ) )
     {
@@ -96,7 +100,8 @@ std::ofstream& split::ofstream_by_time_()
     return file_;
 }
 
-std::ofstream& split::ofstream_by_block_()
+template < typename T >
+std::ofstream& split< T >::ofstream_by_block_()
 {
     if( !last_ || last_->block != current_.block )
     {
@@ -105,17 +110,18 @@ std::ofstream& split::ofstream_by_block_()
         file_.open( name.c_str(), mode_ );
         last_ = current_;
     }
-    return file_;    
+    return file_;
 }
 
-std::ofstream& split::ofstream_by_id_()
+template < typename T >
+std::ofstream& split< T >::ofstream_by_id_()
 {
-    Files::iterator it = files_.find( current_.id );
+    typename Files::iterator it = files_.find( current_.id );
     if( it == files_.end() )
     {
         #ifdef WIN32
         static unsigned int max_number_of_open_files = 128;
-        #else 
+        #else
         static struct rlimit r;
         static int q = getrlimit( RLIMIT_NOFILE, &r );
         if( q != 0 ) { COMMA_THROW( comma::exception, "getrlimit() failed" ); }
@@ -130,5 +136,9 @@ std::ofstream& split::ofstream_by_id_()
     }
     return *it->second;
 }
+
+template class split< comma::uint32 >;
+template class split< std::string >;
+template class split< boost::posix_time::ptime >;
 
 } } } // namespace comma { namespace csv { namespace applications {
