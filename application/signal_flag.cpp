@@ -33,10 +33,34 @@
 
 /// @author vsevolod vlaskine
 
-#include <comma/application/signal_flag.h>
+#include "comma/application/signal_flag.h"
 
 namespace comma {
 
 bool signal_flag::is_set_ = false;
+signal_flag::sigtype signal_flag::sigtype_ = signal_flag::soft;
+
+signal_flag::signal_flag(signal_flag::sigtype stype)
+{
+    sigtype_ = stype;
+#ifdef WIN32
+    boost::array< signals, 2 > signals = { { sigint, sigterm } };
+#else
+    boost::array< signals, 3 > signals = { { sigint, sigterm, sigpipe } };
+#endif 
+    init_( signals );
+}
+
+void signal_flag::handle(int sig)
+{
+    is_set_ = true; 
+    // rethrow a signal caught by this handler
+    //todo:  test nothing is broken and remove the checks then.  Do something similar for windows
+#ifndef WIN32
+    if(sigtype_ == hard){ ::raise(sig); }
+#endif
+}
+
+
 
 } // namespace comma {
