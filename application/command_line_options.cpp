@@ -101,7 +101,7 @@ void command_line_options::fill_map_( const std::vector< std::string >& v )
 {
     for( std::size_t i = 1; i < v.size(); ++i )
     {
-        if( v[i].at( 0 ) != '-' || v[i].length() < 2 ) { continue; }
+        if( v[i].length() < 2 || v[i].at( 0 ) != '-') { continue; }
         std::string name;
         boost::optional< std::string > value;
         std::size_t equal = v[i].find_first_of( '=' );
