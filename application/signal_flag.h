@@ -53,21 +53,15 @@ struct signal_flag : public boost::noncopyable
         #else
             enum signals { sigint = SIGINT, sigterm = SIGTERM, sigpipe = SIGPIPE /* etc */ };
         #endif
+
+        enum sigtype { soft = 0, hard = 1 };
         
         /// constructor
-        signal_flag()
-        {
-            #ifdef WIN32
-            boost::array< signals, 2 > signals = { { sigint, sigterm } };
-            #else
-            boost::array< signals, 3 > signals = { { sigint, sigterm, sigpipe } };
-            #endif 
-            init_( signals );
-        }
+        signal_flag(sigtype stype = soft);
 
         /// constructor
         template < typename T >
-        signal_flag( const T& signals ) { init_( signals ); }
+        signal_flag( const T& signals, sigtype stype=soft ) { sigtype_ = stype; init_( signals ); }
 
         /// return true, if set
         bool is_set() const { return is_set_; }
@@ -80,9 +74,12 @@ struct signal_flag : public boost::noncopyable
 
     private:
         static bool is_set_;
-        static void handle( int ) { is_set_ = true; }
+        static void handle( int sig);
+        static sigtype sigtype_;
+        
         template < typename T >
         static bool init_( const T& signals ) { static bool r = register_once_< T >( signals ); return r; }
+        
         template < typename T >
         static bool register_once_( const T& signals )
         {
@@ -90,7 +87,7 @@ struct signal_flag : public boost::noncopyable
                 struct sigaction sa;
                 sa.sa_handler = handle;
                 sigemptyset( &sa.sa_mask );
-                sa.sa_flags = 0;
+                sa.sa_flags = (sigtype_ == hard)? SA_RESETHAND : 0;
             #endif
             for( unsigned int i = 0; i < T::static_size; ++i )
             {
