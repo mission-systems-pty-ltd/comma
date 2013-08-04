@@ -117,7 +117,7 @@ struct input
         }
     };
 
-    typedef boost::unordered_map< input, std::vector< std::string >, input::hash > filter_map;
+    typedef boost::unordered_map< input, std::vector< std::string >, hash > filter_map;
 };
 
 namespace comma { namespace visiting {
