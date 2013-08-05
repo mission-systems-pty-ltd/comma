@@ -62,12 +62,12 @@ int main( int ac, char** av )
         {
             for( unsigned int j = 0; j < fields.size(); ++j )
             {
-                if( fields[j].name == input_fields[i] ) { fields[i].input_index = j; }
+                if( fields[j].name == input_fields[i] ) { fields[j].input_index = i; }
             }
         }
-        for( unsigned int i = 0; i < output_fields.size(); ++i )
+        for( unsigned int i = 0; i < fields.size(); ++i )
         {
-            if( !fields[i].input_index ) { std::cerr << "csv-shuffle: \"" << fields[i].name << "\" not found in input fields" << std::endl; return 1; }
+            if( !fields[i].input_index ) { std::cerr << "csv-shuffle: \"" << fields[i].name << "\" not found in input fields " << csv.fields << std::endl; return 1; }
         }
         if( csv.binary() )
         {
@@ -77,6 +77,18 @@ int main( int ac, char** av )
             #endif
 
             std::cerr << "csv-shuffle: binary: todo" << std::endl; return 1;
+
+//             // quick and dirty; if performance is an issue, you could read more than
+//             // one record every time, but absolutely don't make this read blocking!
+//             // see comma::csv::binary_input_stream::read() for reference - if you know
+//             // how to do it better, please tell everyone!
+//             std::cin.read( &buf[0], format.size() );
+//             if( std::cin.gcount() == 0 ) { continue; }
+//             if( std::cin.gcount() < int( format.size() ) ) { std::cerr << "csv-bin-cut: expected " << format.size() << " bytes, got only " << std::cin.gcount() << std::endl; return 1; }
+//             for( unsigned int i = 0; i < offsets.size(); ++i )
+//             {
+//                 std::cout.write( &buf[0] + offsets[i].offset, offsets[i].size );
+//             }
         }
         else
         {
@@ -91,12 +103,13 @@ int main( int ac, char** av )
                 unsigned int previous_index = 0;
                 for( unsigned int i = 0; i < fields.size(); ++i ) // quick and dirty
                 {
-                    for( unsigned int k = previous_index; k < fields[i].index && k < v.size(); ++k )
+                    for( unsigned int k = previous_index + 1; k < fields[i].index && k < v.size(); ++k )
                     {
-                        std::cout << csv.delimiter << v[k];
+                        std::cout << delimiter << v[k];
                         delimiter = csv.delimiter;
                     }
-                    std::cout << csv.delimiter << v[ *fields[i].input_index ];
+                    previous_index = fields[i].index;
+                    std::cout << delimiter << v[ *fields[i].input_index ];
                     delimiter = csv.delimiter;
                 }
                 std::cout << std::endl;
