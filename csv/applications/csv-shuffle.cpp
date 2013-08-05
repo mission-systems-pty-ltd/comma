@@ -36,9 +36,11 @@ struct field
 {
     std::string name;
     unsigned int index;
+    unsigned int offset;
     boost::optional< unsigned int > input_index;
+    unsigned int input_offset;
     unsigned int size;
-    field( const std::string& name, unsigned int index, unsigned int size ) : name( name ), index( index ), size( size ) {}
+    field( const std::string& name, unsigned int index ) : name( name ), index( index ) {}
 };
 
 int main( int ac, char** av )
@@ -55,14 +57,20 @@ int main( int ac, char** av )
         for( unsigned int i = 0; i < output_fields.size(); ++i )
         {
             if( output_fields[i].empty() ) { continue; }
-            fields.push_back( field( output_fields[i], i, csv.binary() ? csv.format().offset( i ).size : 0 ) );
+            fields.push_back( field( output_fields[i], i ) );
         }
         if( fields.empty() ) { std::cerr << "csv-shuffle: please define at least one output field" << std::endl; return 1; }
         for( unsigned int i = 0; i < input_fields.size(); ++i )
         {
             for( unsigned int j = 0; j < fields.size(); ++j )
             {
-                if( fields[j].name == input_fields[i] ) { fields[j].input_index = i; }
+                if( fields[j].name != input_fields[i] ) { continue; }
+                fields[j].input_index = i;
+                if( csv.binary() )
+                {
+                    fields[j].input_offset = csv.format().offset( i ).offset;
+                    fields[j].size = csv.format().offset( i ).size;
+                }
             }
         }
         for( unsigned int i = 0; i < fields.size(); ++i )
@@ -75,20 +83,34 @@ int main( int ac, char** av )
             _setmode( _fileno( stdin ), _O_BINARY );
             _setmode( _fileno( stdout ), _O_BINARY );
             #endif
-
-            std::cerr << "csv-shuffle: binary: todo" << std::endl; return 1;
-
-//             // quick and dirty; if performance is an issue, you could read more than
-//             // one record every time, but absolutely don't make this read blocking!
-//             // see comma::csv::binary_input_stream::read() for reference - if you know
-//             // how to do it better, please tell everyone!
-//             std::cin.read( &buf[0], format.size() );
-//             if( std::cin.gcount() == 0 ) { continue; }
-//             if( std::cin.gcount() < int( format.size() ) ) { std::cerr << "csv-bin-cut: expected " << format.size() << " bytes, got only " << std::cin.gcount() << std::endl; return 1; }
-//             for( unsigned int i = 0; i < offsets.size(); ++i )
-//             {
-//                 std::cout.write( &buf[0] + offsets[i].offset, offsets[i].size );
-//             }
+            std::vector< char > buf( csv.format().size() );
+            std::vector< comma::csv::format::element > elements;
+            elements.reserve( csv.format().count() ); // quick and dirty, can be really wasteful on large things like images
+            for( unsigned int i = 0; i < elements.capacity(); ++i ) { elements.push_back( csv.format().offset( i ) ); }
+            while( std::cin.good() && !std::cin.eof() )
+            {
+                // todo: quick and dirty; if performance is an issue, you could read more than
+                // one record every time see comma::csv::binary_input_stream::read() for reference
+                std::cin.read( &buf[0], csv.format().size() );
+                if( std::cin.gcount() == 0 ) { continue; }
+                if( std::cin.gcount() < int( csv.format().size() ) ) { std::cerr << "csv-shuffle: expected " << csv.format().size() << " bytes, got only " << std::cin.gcount() << std::endl; return 1; }
+                unsigned int previous_index = 0;
+                for( unsigned int i = 0; i < fields.size(); ++i ) // quick and dirty
+                {
+                    for( unsigned int k = previous_index; k < fields[i].index && k < elements.size(); ++k )
+                    {
+                        std::cout.write( &buf[ elements[k].offset ], elements[k].size );
+                    }
+                    std::cout.write( &buf[ fields[i].input_offset ], fields[i].size );
+                    previous_index = fields[i].index + 1;
+                }
+                //std::cerr << "--> previous_index: " << previous_index << " elements.size(): " << elements.size() << std::endl;
+                for( unsigned int k = previous_index; k < elements.size(); ++k )
+                {
+                    std::cout.write( &buf[ elements[k].offset ], elements[k].size );
+                }
+                std::cout.flush(); // todo: flushing too often?
+            }
         }
         else
         {
@@ -103,13 +125,18 @@ int main( int ac, char** av )
                 unsigned int previous_index = 0;
                 for( unsigned int i = 0; i < fields.size(); ++i ) // quick and dirty
                 {
-                    for( unsigned int k = previous_index + 1; k < fields[i].index && k < v.size(); ++k )
+                    for( unsigned int k = previous_index; k < fields[i].index && k < v.size(); ++k )
                     {
                         std::cout << delimiter << v[k];
                         delimiter = csv.delimiter;
                     }
-                    previous_index = fields[i].index;
+                    previous_index = fields[i].index + 1;
                     std::cout << delimiter << v[ *fields[i].input_index ];
+                    delimiter = csv.delimiter;
+                }
+                for( unsigned int k = previous_index; k < v.size(); ++k )
+                {
+                    std::cout << delimiter << v[k];
                     delimiter = csv.delimiter;
                 }
                 std::cout << std::endl;
