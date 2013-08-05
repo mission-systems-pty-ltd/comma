@@ -23,6 +23,7 @@ ADD_EXECUTABLE( csv-calc ${dir}/csv-calc.cpp )
 ADD_EXECUTABLE( csv-calc-new ${dir}/csv-calc.new.cpp )
 ADD_EXECUTABLE( csv-crc ${dir}/csv-crc.cpp )
 ADD_EXECUTABLE( csv-play ${dir}/csv-play.cpp ${dir}/play/multiplay.cpp ${dir}/play/play.cpp )
+ADD_EXECUTABLE( csv-shuffle ${dir}/csv-shuffle.cpp )
 ADD_EXECUTABLE( csv-thin ${dir}/csv-thin.cpp )
 ADD_EXECUTABLE( csv-analyse ${dir}/csv-analyse.cpp )
 
@@ -44,10 +45,11 @@ TARGET_LINK_LIBRARIES ( csv-calc ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma
 TARGET_LINK_LIBRARIES ( csv-calc-new ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application comma_string )
 TARGET_LINK_LIBRARIES ( csv-crc ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application comma_string )
 TARGET_LINK_LIBRARIES ( csv-play ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application comma_io )
+TARGET_LINK_LIBRARIES ( csv-shuffle ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
 TARGET_LINK_LIBRARIES ( csv-thin ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io )
 TARGET_LINK_LIBRARIES ( csv-analyse ${comma_ALL_EXTERNAL_LIBRARIES} comma_application )
-                  
-INSTALL( TARGETS csv-bin-cut 
+
+INSTALL( TARGETS csv-bin-cut
                  csv-join
                  csv-from-columns
                  csv-paste
@@ -62,6 +64,7 @@ INSTALL( TARGETS csv-bin-cut
                  csv-size
                  csv-calc
                  csv-play
+                 csv-shuffle
                  csv-crc
                  csv-select
                  csv-thin
