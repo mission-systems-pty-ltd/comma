@@ -1,3 +1,8 @@
+#ifdef WIN32
+#include <fcntl.h>
+#include <io.h>
+#endif
+
 #include <iostream>
 #include <vector>
 #include <comma/application/command_line_options.h>
