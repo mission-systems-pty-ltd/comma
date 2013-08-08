@@ -14,6 +14,10 @@ static void usage( bool verbose )
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
     std::cerr << "    --fields,-f <fields>: input fields" << std::endl;
     std::cerr << "    --output-fields,--output,-o <fields>: output fields" << std::endl;
+    std::cerr << "        semantics of outputting trailing fields:" << std::endl;
+    std::cerr << "            \"--output-fields=x,y\": do not output trailing fields" << std::endl;
+    std::cerr << "            \"--output-fields=x,y...\": output trailing fields" << std::endl;
+    std::cerr << "            see example below" << std::endl;
     std::cerr << "    --verbose,-v: more output" << std::endl;
     if( verbose ) { std::cerr << std::endl << comma::csv::options::usage() << std::endl; }
     std::cerr << std::endl;
@@ -28,6 +32,10 @@ static void usage( bool verbose )
     std::cerr << "            cat xyz.csv | csv-shuffle --fields=x,y,z --output-fields=y,z,x" << std::endl;
     std::cerr << "        remove x, swap y,z, append z two times:" << std::endl;
     std::cerr << "            cat xyz.csv | csv-shuffle --fields=x,y,z --output-fields=z,y,z,z" << std::endl;
+    std::cerr << "        do not output trailing fields: swap x and y, do not output z" << std::endl;
+    std::cerr << "            cat xyz.csv | csv-shuffle --fields=x,y --output-fields=y,x" << std::endl;
+    std::cerr << "        output trailing fields: swap x and y, output z" << std::endl;
+    std::cerr << "            cat xyz.csv | csv-shuffle --fields=x,y --output-fields=y,x,..." << std::endl;
     std::cerr << std::endl;
     exit( 1 );
 }
@@ -53,6 +61,8 @@ int main( int ac, char** av )
         comma::csv::options csv( options );
         std::vector< std::string > input_fields = comma::split( csv.fields, ',' );
         std::vector< std::string > output_fields = comma::split( options.value< std::string >( "--output-fields,--output,-o" ), ',' );
+        bool output_trailing_fields = output_fields.back() == "...";
+        if( output_fields.back() == "..." ) { output_fields.erase( output_fields.end() - 1 ); }
         std::vector< field > fields;
         for( unsigned int i = 0; i < output_fields.size(); ++i )
         {
@@ -105,7 +115,7 @@ int main( int ac, char** av )
                     previous_index = fields[i].index + 1;
                 }
                 //std::cerr << "--> previous_index: " << previous_index << " elements.size(): " << elements.size() << std::endl;
-                for( unsigned int k = previous_index; k < elements.size(); ++k )
+                for( unsigned int k = previous_index; output_trailing_fields && k < elements.size(); ++k )
                 {
                     std::cout.write( &buf[ elements[k].offset ], elements[k].size );
                 }
@@ -134,7 +144,7 @@ int main( int ac, char** av )
                     std::cout << delimiter << v[ *fields[i].input_index ];
                     delimiter = csv.delimiter;
                 }
-                for( unsigned int k = previous_index; k < v.size(); ++k )
+                for( unsigned int k = previous_index; output_trailing_fields && k < v.size(); ++k )
                 {
                     std::cout << delimiter << v[k];
                     delimiter = csv.delimiter;
