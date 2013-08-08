@@ -1,0 +1,92 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+usage()
+{ 
+    cat >&2 <<EOF
+Usage: $name [-h|--help] <directory> <file_prefix> <fields>
+
+Extract the named fields from a "binary csv" file, given the schema (i.e. list of fields and
+binary format) in a .json file.
+
+Arguments:
+
+  <directory>     Directory containing .bin files described by .json files (see below for format),
+                  e.g. /mnt/q-storage/navigation/bin424/20130201T000000
+
+  <file_prefix>   The prefix of the .bin file and its corresponding .json file (containing the
+                  schema: "fields" and "format" -- see example below). For example, if the
+                  directory contains airports.bin and airports.json, the prefix is just "airports".
+
+  <fields>        Fields to extract and output in csv format (may be separated by spaces or commas).
+                  For the example below, fields might be: "icao_code,latitude,longitude"
+
+Example .json file:
+
+  {
+      "fields" : "latitude,longitude,route_specifier,id,icao_code,name,name,elevation,recommended_navaid,recommended_navaid_icao_code,ata_iata_designator",
+      "format" : "d,d,s[2],s[9],s[4],s[1],s[50],uw,s[8],s[4],s[5]"
+  }
+
+Example usage:
+
+csv-from-bin-schema /mnt/q-storage/navigation/424/bin/20130201T000000 airports latitude longitude id
+
+EOF
+    exit $1
+}
+
+dir=
+prefix=
+fields=
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    -h|--help)
+        usage 0
+        ;;
+    -*)
+        echo "$name: unrecognized option '$1'" >&2
+        exit 1
+        ;;
+    *)  if [[ -z "$dir" ]]; then
+            dir="$1"
+        elif [[ -z "$prefix" ]]; then
+            prefix="$1"
+        else
+            fields="$fields $1"
+        fi
+        ;;
+    esac
+    shift
+done
+
+if [[ -z "$fields" ]]; then
+    usage 1
+fi
+
+if [[ ! ( -d "$dir" ) ]]; then
+    echo "$name: no such directory: '$dir'" >&2
+    exit 1
+fi
+
+data_file="$dir/$prefix.bin"
+schema_file="$dir/$prefix.json"
+
+if [[ ! ( -f "$data_file" ) ]]; then
+    echo "$name: binary file not found: '$data_file'" >&2
+    exit 1
+fi
+
+if [[ ! ( -f "$schema_file" ) ]]; then
+    echo "$name: schema file not found: '$schema_file'" >&2
+    exit 1
+fi
+
+fields=$( echo $fields | sed 's/ /,/g' )
+field_list=$( cat "$schema_file" | name-value-get fields --from json )
+format=$( cat "$schema_file" | name-value-get format --from json )
+out_format=$( echo $format | csv-shuffle --fields="$field_list" --output-fields="$fields" )
+
+csv-shuffle --fields="$field_list" --binary="$format" --output-fields="$fields" < "$data_file" | csv-from-bin "$out_format"
