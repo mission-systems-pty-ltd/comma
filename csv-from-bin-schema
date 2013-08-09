@@ -62,8 +62,19 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
+if [[ -z "$dir" ]]; then
+    echo "$name: <directory> argument missing" >&2
+    exit 1
+fi
+
+if [[ -z "$prefix" ]]; then
+    echo "$name: <file_prefix> argument missing" >&2
+    exit 1
+fi
+
 if [[ -z "$fields" ]]; then
-    usage 1
+    echo "$name: <fields> argument missing" >&2
+    exit 1
 fi
 
 if [[ ! ( -d "$dir" ) ]]; then
