@@ -5,7 +5,7 @@ name=$( basename $0 )
 usage()
 { 
     cat >&2 <<EOF
-Usage: $name [-h|--help] <directory> <file_prefix> <fields>
+Usage: $name [-h|--help] <directory> <file_prefix> <fields> [-b|--binary]
 
 Extract the named fields from a "binary csv" file, given the schema (i.e. list of fields and
 binary format) in a .json file.
@@ -21,6 +21,9 @@ Arguments:
 
   <fields>        Fields to extract and output in csv format (may be separated by spaces or commas).
                   For the example below, fields might be: "icao_code,latitude,longitude"
+
+Options:
+  -b|--binary     Output in "binary csv" format.
 
 Example .json file:
 
@@ -40,11 +43,15 @@ EOF
 dir=
 prefix=
 fields=
+binary=0
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
     -h|--help)
         usage 0
+        ;;
+    -b|--binary)
+        binary=1
         ;;
     -*)
         echo "$name: unrecognized option '$1'" >&2
@@ -100,4 +107,10 @@ field_list=$( cat "$schema_file" | name-value-get fields --from json )
 format=$( cat "$schema_file" | name-value-get format --from json )
 out_format=$( echo $format | csv-shuffle --fields="$field_list" --output-fields="$fields" )
 
-csv-shuffle --fields="$field_list" --binary="$format" --output-fields="$fields" < "$data_file" | csv-from-bin "$out_format"
+if [[ $binary == 1 ]]; then
+    output_cmd="tee"   # tee without arguments just copies input to stdout
+else
+    output_cmd="csv-from-bin $out_format"
+fi
+
+csv-shuffle --fields="$field_list" --binary="$format" --output-fields="$fields" < "$data_file" | $output_cmd
