@@ -94,7 +94,7 @@ format::format( const std::string& f )
         size_ += size;
     }
 }
- 
+
 const std::string& format::string() const { return string_; }
 
 std::string format::to_format( types_enum type, unsigned int size )
@@ -265,10 +265,18 @@ static std::size_t csv_to_bin( char* buf, const std::string& s, format::types_en
                 format::traits< boost::posix_time::ptime, format::long_time >::to_bin( boost::posix_time::from_iso_string( s ), buf );
                 return format::traits< boost::posix_time::ptime, format::long_time >::size;
             case format::fixed_string:
+            {
                 if( s.length() > size ) { COMMA_THROW( comma::exception, "expected string not longer than " << size << "; got \"" << s << "\"" ); }
                 ::memset( buf, 0, size );
-                if( !s.empty() ) { ::memcpy( buf, &s[0], s.length() ); }
+                if( !s.empty() )
+                {
+                    unsigned int length = s.length();
+                    unsigned int begin = 0;
+                    if( length > 1 && s[0] == '\"' && s[ s.length() - 1 ] == '\"' ) { length -= 2; ++begin; } // todo quick and dirty; implement proper character escaping and consistent semantics
+                    ::memcpy( buf, &s[begin], length );
+                }
                 return size;
+            }
             default: COMMA_THROW( comma::exception, "todo: not implemented" );
         }
     }
@@ -321,7 +329,7 @@ void format::csv_to_bin( std::ostream& os, const std::string& csv, char delimite
     const std::vector< std::string >& v = comma::split( csv, delimiter );
     csv_to_bin( os, v );
 }
-    
+
 void format::csv_to_bin( std::ostream& os, const std::vector< std::string >& v ) const
 {
     if( v.size() != count_ ) { COMMA_THROW( comma::exception, "expected csv string with " << count_ << " elements, got [" << comma::join( v, ',' ) << "]" ); }
@@ -438,7 +446,7 @@ void format::traits< boost::posix_time::ptime, format::time >::to_bin( const boo
     comma::int64 microseconds = static_cast< comma::int64 >( seconds ) * 1000000l;
     microseconds += ( duration - boost::posix_time::seconds( seconds ) ).total_microseconds();
     *reinterpret_cast< comma::int64* >( buf ) = microseconds; // ::memcpy( buf, &microseconds, sizeof( comma::int64 ) );
-    
+
 }
 
 std::string format::traits< std::string, format::fixed_string >::from_bin( const char* buf, std::size_t size )
