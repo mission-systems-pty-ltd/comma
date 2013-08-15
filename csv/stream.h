@@ -295,6 +295,9 @@ class output_stream : public boost::noncopyable
         /// write, substituting corresponding fields in given line
         void write( const S& s, const std::vector< std::string >& line ) { ascii_->write( s, line ); }
 
+        /// write, substituting corresponding fields in the last record read from the input
+        void write( const S& s, const input_stream< S >& istream ) { if( binary_ ) { binary_->write( s, istream.binary().last() ); } else { ascii_->write( s, istream.ascii().last() ); } }
+
         /// flush
         void flush() { if( ascii_ ) { ascii_->flush(); } else { binary_->flush(); } }
 
