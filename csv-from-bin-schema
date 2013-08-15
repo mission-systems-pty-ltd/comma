@@ -13,7 +13,7 @@ binary format) in a .json file.
 Arguments:
 
   <directory>     Directory containing .bin files described by .json files (see below for format),
-                  e.g. /mnt/q-storage/navigation/bin424/20130201T000000
+                  e.g. /mnt/q-storage/navigation/424/20130401T000000/bin
 
   <file_prefix>   The prefix of the .bin file and its corresponding .json file (containing the
                   schema: "fields" and "format" -- see example below). For example, if the
