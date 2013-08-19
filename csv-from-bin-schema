@@ -2,10 +2,15 @@
 
 name=$( basename $0 )
 
+simple_usage()
+{
+    echo "Usage: $name [-h|--help] (<directory> <file_prefix>) | (-s|--schema=<schema> -d|--data=<data>)) (<fields> | -a|--all) [-b|--binary]" >&2
+}
+
 usage()
 { 
+    simple_usage
     cat >&2 <<EOF
-Usage: $name [-h|--help] <directory> <file_prefix> <fields> [-b|--binary]
 
 Extract the named fields from a "binary csv" file, given the schema (i.e. list of fields and
 binary format) in a .json file.
@@ -19,11 +24,18 @@ Arguments:
                   schema: "fields" and "format" -- see example below). For example, if the
                   directory contains airports.bin and airports.json, the prefix is just "airports".
 
+  <schema>        Name of the schema (.json) file
+
+  <data>          Name of the data (.bin) file
+
   <fields>        Fields to extract and output in csv format (may be separated by spaces or commas).
                   For the example below, fields might be: "icao_code,latitude,longitude"
 
 Options:
+
   -b|--binary     Output in "binary csv" format.
+
+  -a|--all        Output all fields.
 
 Example .json file:
 
@@ -36,14 +48,19 @@ Example usage:
 
 csv-from-bin-schema /mnt/q-storage/navigation/424/bin/20130201T000000 airports latitude longitude id
 
+csv-from-bin-schema test_dir --schema=ff.json --data=ff_poly_1.bin latitude,longitude,is_gate,waypoint_id
+
 EOF
     exit $1
 }
 
 dir=
 prefix=
+schema_file=
+data_file=
 fields=
 binary=0
+print_all=0
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -53,11 +70,22 @@ while [[ $# -gt 0 ]]; do
     -b|--binary)
         binary=1
         ;;
+    -s=*|--schema=*)
+        schema_file=${1#*=}
+        ;;
+    -d=*|--data=*)
+        data_file=${1#*=}
+        ;;
+    -a|--all)
+        print_all=1
+        ;;
     -*)
         echo "$name: unrecognized option '$1'" >&2
         exit 1
         ;;
     *)  if [[ -z "$dir" ]]; then
+            # if -s/-d arguments are used, dir and prefix will not be present -- these arguments
+            # will just be the first two fields (which will be taken care of below)
             dir="$1"
         elif [[ -z "$prefix" ]]; then
             prefix="$1"
@@ -69,28 +97,34 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
-if [[ -z "$dir" ]]; then
-    echo "$name: <directory> argument missing" >&2
-    exit 1
+if [[ -z "$schema_file" && -z "$data_file" ]]; then
+    if [[ -z "$dir" || -z "$prefix" ]]; then
+        simple_usage
+        exit 1
+    fi
+
+    if [[ ! ( -d "$dir" ) ]]; then
+        echo "$name: no such directory: '$dir'" >&2
+        exit 1
+    fi
+
+    data_file="$dir/$prefix.bin"
+    schema_file="$dir/$prefix.json"
+else
+    if [[ -z "$schema_file" || -z "$data_file" ]]; then
+        echo "$name: \"--schema\" and \"--data\" must both be specified together" >&2
+        exit 1
+    fi
+
+    # the values assigned to $dir and $prefix were really just the first two fields
+    # (the echo is to strip extra spaces)
+    fields=$( echo $dir $prefix $fields )
 fi
 
-if [[ -z "$prefix" ]]; then
-    echo "$name: <file_prefix> argument missing" >&2
+if [[ -z "$fields" && $print_all == 0 ]]; then
+    echo "$name: <fields> or \"--all\" argument missing" >&2
     exit 1
 fi
-
-if [[ -z "$fields" ]]; then
-    echo "$name: <fields> argument missing" >&2
-    exit 1
-fi
-
-if [[ ! ( -d "$dir" ) ]]; then
-    echo "$name: no such directory: '$dir'" >&2
-    exit 1
-fi
-
-data_file="$dir/$prefix.bin"
-schema_file="$dir/$prefix.json"
 
 if [[ ! ( -f "$data_file" ) ]]; then
     echo "$name: binary file not found: '$data_file'" >&2
@@ -102,10 +136,17 @@ if [[ ! ( -f "$schema_file" ) ]]; then
     exit 1
 fi
 
-fields=$( echo $fields | sed 's/ /,/g' )
 field_list=$( cat "$schema_file" | name-value-get fields --from json )
 format=$( cat "$schema_file" | name-value-get format --from json )
-out_format=$( echo $format | csv-shuffle --fields="$field_list" --output-fields="$fields" )
+
+if [[ $print_all == 1 ]];
+then
+    fields="$field_list"
+    out_format="$format"
+else
+    fields=$( echo $fields | sed 's/ /,/g' )
+    out_format=$( echo $format | csv-shuffle --fields="$field_list" --output-fields="$fields" )
+fi
 
 if [[ $binary == 1 ]]; then
     output_cmd="tee"   # tee without arguments just copies input to stdout
