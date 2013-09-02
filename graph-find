@@ -215,7 +215,9 @@ END \
     while (q_front >= q_back)
     {
         val = queue[q_back];
-        p = path[q_back++];
+        p = path[q_back];
+        delete queue[q_back];
+        delete path[q_back++];
 
         if (val == dest) { print p; exit; }
 
