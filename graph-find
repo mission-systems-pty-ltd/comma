@@ -1,0 +1,279 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+simple_usage()
+{
+    echo "Usage: $name [-h|--help] <edge-file> <from> <to> [-f|--fields=<fields>] [-b|--bidirectional] [--dfs|--bfs|--shortest] [--reachable|-r]" >&2
+}
+
+usage()
+{
+    simple_usage
+    cat >&2 <<EOF
+
+Performs a graph operation such as finding the shortest path between two vertices.
+
+Arguments:
+
+  <edge-file>          Graph file with lines in the form: <from-id>,<to-id> (ids may be any string)
+                       plus an optional ,<weight> for option --bfs|--shortest.
+                       Use "-" for standard input.
+
+  <from>               Start vertex id.
+
+  <to>                 End vertex id (optional with --reachable option).
+
+  -f=<fields>          Specify comma separated fields, using the names "from", "to" and (optional)
+                       "weight". For example: --fields=to,from,,,weight.
+
+  -b|--bidirectional   Implicitly add edges in the reverse direction.
+
+  --dfs (default)      Depth first search: output the first path found between <from> and <to>.
+
+  --bfs|               Breadth first search: output the shortest path found. If no <weight>
+  --shortest           field is specified, all edges are assigned the same weight.
+
+  -r|--reachable       Output all of the vertices which can be reached by <from>. The <to> field
+                       is not required, but if more than one vertex is specified, all of the
+                       vertices that can be reached by any of them are output.
+
+Output:
+
+    If a path is found, all of the vertices are output on a single line, and the exit code is 0.
+    If no path is found, a message is printed to stderr and the exit code is 2.
+    If there is any other error (e.g. file not found), the exit code is 1.
+
+Examples:
+
+    $name mesh.csv 12 100
+    
+        Find a path from vertex 12 to vertex 100 in mesh.csv
+
+    $name mesh.csv --fields=from,to 100 12
+    
+        As above, but in reverse.
+
+    $name - --fields=,,to,from,,weight --shortest YSSY KLAX
+
+        Reading from standard input, and using the 3rd and 4th fields as ids and the 6th field
+        as an edge weight, find the shortest path from vertex "YSSY" to vertex "KLAX".
+
+    $name data.csv --reachable 10 12 37
+
+        Output all vertices reachable from vertices 10, 12 or 37.
+
+EOF
+}
+
+if [[ $# == 0 ]]; then
+    simple_usage
+    exit 1
+fi
+
+file=
+vlist=()
+fields=
+bidir=0
+bfs=0
+reachable=0
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    -h|--help)
+        usage
+        exit 0
+        ;;
+    -f=*|--fields=*)
+        fields=${1#*=}
+        ;;
+    -b|--bidirectional)
+        bidir=1
+        ;;
+    --dfs)
+        bfs=0
+        ;;
+    --bfs|--shortest)
+        bfs=1
+        ;;
+    -r|--reachable)
+        reachable=1
+        ;;
+    -*)
+        echo "$name: unrecognized option '$1'" >&2
+        exit 1
+        ;;
+    *)  if [[ -z "$file" ]]; then
+            file="$1"
+        else
+            vlist+=( "$1" )
+        fi
+    esac
+    shift
+done
+
+if [[ -z "$file" ]]; then
+    echo "$name: filename required (use \"-\" for standard input)" >&2
+    exit 1
+fi
+
+if [[ "$file" == "-" ]]; then
+    file=
+fi
+
+if [[ $bidir == 1 ]]; then
+    echo "$name: --bidirectional not implemented yet" >&2
+    exit 1
+fi
+
+if [[ "$reachable" == 1 ]]; then
+    if [[ ${#vlist[@]} == 0 ]]; then
+        echo "$name: at least one vertex id must be specified with --reachable" >&2
+        exit 1
+    fi
+    reachable_list=$( echo ${vlist[@]} )
+else
+    if [[ ${#vlist[@]} != 2 ]]; then
+        echo "$name: \"from\" and \"to\" vertex ids must be specified" >&2
+        exit 1
+    else
+        from_id=${vlist[0]}
+        to_id=${vlist[1]}
+    fi
+fi
+
+get_graph()
+{
+    if [[ -n "$fields" ]]; then
+        if [[ "$fields" = *weight* ]]; then
+            out_fields=from,to,weight
+        else
+            out_fields=from,to
+        fi
+        cat $file | csv-shuffle --fields="$fields" --output-fields="$out_fields"
+    else
+        cat $file
+    fi
+}
+
+if [[ "$reachable" == 1 ]]; then
+    get_graph | awk -F, '
+{
+    edge[$1,++num_from[$1]] = $2;
+}
+
+END \
+{
+    num = split("'"$reachable_list"'", vlist, " ");
+    for (f = 1;f <= num;f++) { stack[f - 1] = vlist[f]; vis[stack[f - 1]] = 1; }
+
+    while (num > 0)
+    {
+        val = stack[--num];
+        printf sep val;
+        sep = " ";
+
+        for (e = 1;e <= num_from[val];e++)
+        {
+            val2 = edge[val,e];
+            if (vis[val2] != 1)
+            {
+                stack[num] = val2;
+                vis[val2] = 1;
+                num++;
+            }
+        }
+    }
+
+    printf "\n";
+}
+'
+    exit 0
+fi
+
+if [[ "$bfs" == 1 ]]; then
+    if [[ "$fields" = *weight* ]]; then
+        echo "$name: breadth first search with variable weights is not implemented yet" >&2
+        exit 1
+    else
+        # breadth first search, constant weight
+        result=$( get_graph | awk -F, '
+{
+    edge[$1,++num_from[$1]] = $2;
+}
+
+END \
+{
+    dest = '"$to_id"';
+    queue[0] = '"$from_id"';
+    vis[queue[0]] = 1;
+    path[0] = queue[0];
+    q_front = 0;
+    q_back = 0;
+
+    while (q_front >= q_back)
+    {
+        val = queue[q_back];
+        p = path[q_back++];
+
+        if (val == dest) { print p; exit; }
+
+        for (e = 1;e <= num_from[val];e++)
+        {
+            val2 = edge[val,e];
+            if (vis[val2] != 1)
+            {
+                queue[++q_front] = val2;
+                path[q_front] = p " " val2;
+                vis[val2] = 1;
+            }
+        }
+    }
+}
+' )
+    fi
+else
+    # depth first search
+    result=$( get_graph | awk -F, '
+{
+    edge[$1,++num_from[$1]] = $2;
+}
+
+END \
+{
+    dest = '"$to_id"';
+    stack[0] = '"$from_id"';
+    vis[stack[0]] = 1;
+    path[0] = stack[0];
+    num = 1;
+
+    while (num > 0)
+    {
+        val = stack[--num];
+        p = path[num];
+
+        if (val == dest) { print p; exit; }
+
+        for (e = 1;e <= num_from[val];e++)
+        {
+            val2 = edge[val,e];
+            if (vis[val2] != 1)
+            {
+                stack[num] = val2;
+                path[num] = p " " val2;
+                vis[val2] = 1;
+                num++;
+            }
+        }
+    }
+}
+' )
+fi
+
+if [[ -z "$result" ]]; then
+    echo "No path found" >&2
+    exit 2
+else
+    echo $result
+fi
+
