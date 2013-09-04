@@ -4,7 +4,7 @@ name=$( basename $0 )
 
 simple_usage()
 {
-    echo "Usage: $name [-h|--help] <edge-file> <from> <to> [-f|--fields=<fields>] [--rev] [-b|--bidirectional] [--dfs|--bfs|--shortest] [--reachable|-r]" >&2
+    echo "Usage: $name [-h|--help] <edge-file> <from> <to> [-v|--vertices=<vertex-file>] [-vf|--vfields=<vfields>] [-f|--fields=<fields>] [--rev] [-b|--bidirectional] [--dfs|--bfs|--shortest] [--reachable|-r]" >&2
 }
 
 usage()
@@ -24,8 +24,14 @@ Arguments:
 
   <to>                 End vertex id (optional with --reachable option).
 
-  -f=<fields>          Specify comma separated fields, using the names "from", "to" and (optional)
-                       "weight". For example: --fields=to,from,,,weight.
+  -v|--vertices        (Optional) vertex file; if present, output includes vertex lat,lon as well
+                       as vertex id. Default fields are: latitude,longitude,,id.
+
+  -vf|--vfields        Specify comma separated fields in vertex file, using the names "id",
+                       "latitude" and "longitude". For example: --vfields=latitude,longitude,,id
+
+  -f=<fields>          Specify comma separated fields in edge file, using the names "from",
+                       "to" and (optional) "weight". For example: --fields=to,from,,,weight.
 
   --rev[erse]          Short for "--fields=from,to".
 
@@ -76,6 +82,8 @@ fi
 file=
 vlist=()
 fields=
+vertices=
+vfields=
 bidir=0
 bfs=0
 reachable=0
@@ -87,7 +95,7 @@ while [[ $# -gt 0 ]]; do
         exit 0
         ;;
     -f=*|--fields=*)
-        fields=${1#*=}
+        fields="${1#*=}"
         ;;
     -b|--bidirectional)
         bidir=1
@@ -100,6 +108,12 @@ while [[ $# -gt 0 ]]; do
         ;;
     -r|--reachable)
         reachable=1
+        ;;
+    -v=*|--vertices=*)
+        vertices="${1#*=}"
+        ;;
+    -vf=*|--vfields=*|--vertex-fields=*|--vertices-fields=*)
+        vfields="${1#*=}"
         ;;
     --rev|--reverse|--reversed)
         fields=to,from
@@ -168,7 +182,7 @@ get_graph()
 }
 
 if [[ "$reachable" == 1 ]]; then
-    get_graph | awk -F, '
+    result=$( get_graph | awk -F, '
 {
     edge[$1,++num_from[$1]] = $2;
 }
@@ -198,11 +212,8 @@ END \
 
     printf "\n";
 }
-'
-    exit 0
-fi
-
-if [[ "$bfs" == 1 ]]; then
+' )
+elif [[ "$bfs" == 1 ]]; then
     if [[ "$fields" = *weight* ]]; then
         echo "$name: breadth first search with variable weights is not implemented yet" >&2
         exit 1
@@ -287,6 +298,19 @@ if [[ -z "$result" ]]; then
     echo "No path found" >&2
     exit 2
 else
-    echo $result
+    if [[ -z "$vertices" ]]; then
+        echo $result
+    else
+        if [[ -z "$vfields" ]]; then
+            cmd=( cat )
+        else
+            cmd=( csv-shuffle --fields="$vfields" --output-fields="latitude,longitude,,id" )
+        fi
+
+        ( cat "$vertices" | "${cmd[@]}"; echo "---"; echo $result | fmt -1 ) | awk -F, '
+        /^---$/ { z = 1; next; }
+        z != 1 { pos[$4] = $1 "," $2 "," $4; next; }
+        z == 1 { if ($1 in pos) { print pos[$1]; } else { print "Vertex " $1 " not found" | "cat 1>&2"; } }'
+    fi
 fi
 
