@@ -4,7 +4,7 @@ name=$( basename $0 )
 
 simple_usage()
 {
-    echo "Usage: $name [-h|--help] <edge-file> <from> <to> [-f|--fields=<fields>] [-b|--bidirectional] [--dfs|--bfs|--shortest] [--reachable|-r]" >&2
+    echo "Usage: $name [-h|--help] <edge-file> <from> <to> [-f|--fields=<fields>] [--rev] [-b|--bidirectional] [--dfs|--bfs|--shortest] [--reachable|-r]" >&2
 }
 
 usage()
@@ -26,6 +26,8 @@ Arguments:
 
   -f=<fields>          Specify comma separated fields, using the names "from", "to" and (optional)
                        "weight". For example: --fields=to,from,,,weight.
+
+  --rev[erse]          Short for "--fields=from,to".
 
   -b|--bidirectional   Implicitly add edges in the reverse direction.
 
@@ -99,6 +101,9 @@ while [[ $# -gt 0 ]]; do
     -r|--reachable)
         reachable=1
         ;;
+    --rev|--reverse|--reversed)
+        fields=to,from
+        ;;
     -*)
         echo "$name: unrecognized option '$1'" >&2
         exit 1
@@ -119,6 +124,11 @@ fi
 
 if [[ "$file" == "-" ]]; then
     file=
+else
+    if [[ ! -f "$file" ]]; then
+        echo "$name: cannot open '$file'" >&2
+        exit 1
+    fi
 fi
 
 if [[ "$reachable" == 1 ]]; then
