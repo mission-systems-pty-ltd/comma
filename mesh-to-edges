@@ -1,0 +1,90 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+simple_usage()
+{
+    echo "Usage: $name [-h|--help] <vertices> <mesh> [-f|--fields=<vertex-fields>]" >&2
+}
+
+usage()
+{
+    simple_usage
+    cat >&2 <<EOF
+
+Extracts edges from a vertex file and a mesh file.
+
+Vertex file format: lat,lon,,id (change using --fields option)
+Mesh file format:   id,id
+Output format:      lat1,lon1,lat2,lon2,id1,id2
+
+Options:
+
+    --help      Print help message.
+
+    --fields    Specify vertex file fields ("latitude", "longitude" and "id")
+
+Example:
+
+    $name vertices.csv mesh.csv --fields=latitude,longitude,,id
+
+EOF
+}
+
+if [[ $# == 0 ]]; then
+    simple_usage
+    exit 1
+fi
+
+vert=
+mesh=
+fields=
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    -h|--help)
+        usage
+        exit 0
+        ;;
+    -f=*|--fields=*)
+        fields=${1#*=}
+        ;;
+    -*)
+        echo "$name: unrecognized option '$1'" >&2
+        exit 1
+        ;;
+    *)  if [[ -z "$vert" ]]; then
+            vert="$1"
+        elif [[ -z "$mesh" ]]; then
+            mesh="$1"
+        else
+            usage
+            exit 1
+        fi
+    esac
+    shift
+done
+
+if [[ -z "$mesh" ]]; then
+    simple_usage
+    exit 1
+fi
+
+if [[ -z "$fields" ]]; then
+    cmd=( cat )
+else
+    cmd=( csv-shuffle --fields="$fields" --output-fields="latitude,longitude,,id" )
+fi
+
+( cat "$vert" | "${cmd[@]}" ; echo "---"; grep '^[0-9][0-9]*,[0-9][0-9]*$' "$mesh" ) | awk -F, '
+BEGIN { m = n = 0; }
+/^---$/ { m = 1; next; }
+
+m == 0 { lat[$4] = $1; lon[$4] = $2; next; }
+m == 1 \
+{
+    if (!($1 in lat)) { print "Error: id " $1 " not found" | "cat >&2"; exit; }
+    if (!($2 in lat)) { print "Error: id " $2 " not found" | "cat >&2"; exit; }
+    print lat[$1] "," lon[$1] "," lat[$2] "," lon[$2] "," $1 "," $2;
+}
+'
