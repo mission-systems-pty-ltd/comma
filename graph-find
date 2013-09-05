@@ -38,7 +38,7 @@ Arguments:
                        For "reachable" search (-r), outputs all reachable edges instead of vertices.
                        With a vertices file (-f), outputs lat1,lon1,lat2,lon2,id1,id2 for each edge.
 
-  --rev[erse]          Short for "--fields=from,to".
+  --rev[erse]          Short for "--fields=from,to" (but edges are output in to,from order).
 
   -b|--bidirectional   Implicitly add edges in the reverse direction.
 
@@ -93,6 +93,7 @@ bidir=0
 bfs=0
 reachable=0
 output_edges=0
+reverse_edges=0
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -123,6 +124,7 @@ while [[ $# -gt 0 ]]; do
         ;;
     --rev|--reverse|--reversed)
         fields=to,from
+        reverse_edges=1
         ;;
     -e|--edges)
         output_edges=1
@@ -332,6 +334,10 @@ if [[ -z "$result" ]]; then
     fi
     exit 2
 else
+    if [[ $output_edges == 1 && $reverse_edges == 1 ]]; then
+        result=$( echo $result | fmt -1 | awk -F, '{ print $2 "," $1; }' )
+    fi
+
     if [[ -z "$vertices" ]]; then
         echo $result
     else
