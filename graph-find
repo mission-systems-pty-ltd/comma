@@ -4,7 +4,7 @@ name=$( basename $0 )
 
 simple_usage()
 {
-    echo "Usage: $name [-h|--help] <edge-file> <from> <to> [-v|--vertices=<vertex-file>] [-vf|--vfields=<vfields>] [-f|--fields=<fields>] [--rev] [-b|--bidirectional] [--dfs|--bfs|--shortest] [--reachable|-r]" >&2
+    echo "Usage: $name [-h|--help] <edge-file> <from> <to> [-v|--vertices=<vertex-file>] [-vf|--vfields=<vfields>] [-f|--fields=<fields>] [-e|--edges] [--rev] [-b|--bidirectional] [--dfs|--bfs|--shortest] [--reachable|-r]" >&2
 }
 
 usage()
@@ -32,6 +32,11 @@ Arguments:
 
   -f=<fields>          Specify comma separated fields in edge file, using the names "from",
                        "to" and (optional) "weight". For example: --fields=to,from,,,weight.
+
+  -e|--edges           Output pairs of ids (id1,id2) instead of individual ids.
+                       For "path" search (--bfs, --dfs), outputs each edge on the path.
+                       For "reachable" search (-r), outputs all reachable edges instead of vertices.
+                       With a vertices file (-f), outputs lat1,lon1,lat2,lon2,id1,id2 for each edge.
 
   --rev[erse]          Short for "--fields=from,to".
 
@@ -87,6 +92,7 @@ vfields=
 bidir=0
 bfs=0
 reachable=0
+output_edges=0
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -117,6 +123,9 @@ while [[ $# -gt 0 ]]; do
         ;;
     --rev|--reverse|--reversed)
         fields=to,from
+        ;;
+    -e|--edges)
+        output_edges=1
         ;;
     -*)
         echo "$name: unrecognized option '$1'" >&2
@@ -185,22 +194,35 @@ if [[ "$reachable" == 1 ]]; then
     result=$( get_graph | awk -F, '
 {
     edge[$1,++num_from[$1]] = $2;
+    is_vertex[$1] = 1;
+    is_vertex[$2] = 1;
 }
 
 END \
 {
+    output_edges = '"$output_edges"';
     num = split("'"$reachable_list"'", vlist, " ");
-    for (f = 1;f <= num;f++) { stack[f - 1] = vlist[f]; vis[stack[f - 1]] = 1; }
+    for (f = 1;f <= num;f++)
+    {
+        if (is_vertex[vlist[f]] != 1)
+        {
+            print "Vertex \"" vlist[f] "\" does not appear in any edges of the graph" | "cat 1>&2";
+            err = 1;
+        }
+        stack[f - 1] = vlist[f]; vis[stack[f - 1]] = 1;
+    }
+    if (err) exit;
 
     while (num > 0)
     {
         val = stack[--num];
-        printf sep val;
-        sep = " ";
+        if (!output_edges) { printf sep val; sep = " "; }
 
         for (e = 1;e <= num_from[val];e++)
         {
             val2 = edge[val,e];
+            if (output_edges) { print sep val "," val2; sep = " "; }
+
             if (vis[val2] != 1)
             {
                 stack[num] = val2;
@@ -226,10 +248,11 @@ elif [[ "$bfs" == 1 ]]; then
 
 END \
 {
+    output_edges = '"$output_edges"';
     dest = '"$to_id"';
     queue[0] = '"$from_id"';
     vis[queue[0]] = 1;
-    path[0] = queue[0];
+    if (!output_edges) { path[0] = queue[0]; }
     q_front = 0;
     q_back = 0;
 
@@ -248,7 +271,8 @@ END \
             if (vis[val2] != 1)
             {
                 queue[++q_front] = val2;
-                path[q_front] = p " " val2;
+                if (output_edges) { path[q_front] = p sep val "," val2; sep = " "; } \
+                else { path[q_front] = p " " val2; }
                 vis[val2] = 1;
             }
         }
@@ -265,10 +289,11 @@ else
 
 END \
 {
+    output_edges = '"$output_edges"';
     dest = '"$to_id"';
     stack[0] = '"$from_id"';
     vis[stack[0]] = 1;
-    path[0] = stack[0];
+    if (!output_edges) { path[0] = stack[0]; }
     num = 1;
 
     while (num > 0)
@@ -284,7 +309,8 @@ END \
             if (vis[val2] != 1)
             {
                 stack[num] = val2;
-                path[num] = p " " val2;
+                if (output_edges) { path[num] = p sep val "," val2; sep = " "; } \
+                else { path[num] = p " " val2; }
                 vis[val2] = 1;
                 num++;
             }
@@ -295,7 +321,15 @@ END \
 fi
 
 if [[ -z "$result" ]]; then
-    echo "No path found" >&2
+    if [[ $reachable == 1 ]]; then
+        if [[ $output_edges == 1 ]]; then
+            echo "No reachable edges" >&2
+        else
+            echo "No reachable vertices" >&2
+        fi
+    else
+        echo "No path found" >&2
+    fi
     exit 2
 else
     if [[ -z "$vertices" ]]; then
@@ -309,8 +343,20 @@ else
 
         ( cat "$vertices" | "${cmd[@]}"; echo "---"; echo $result | fmt -1 ) | awk -F, '
         /^---$/ { z = 1; next; }
-        z != 1 { pos[$4] = $1 "," $2 "," $4; next; }
-        z == 1 { if ($1 in pos) { print pos[$1]; } else { print "Vertex " $1 " not found" | "cat 1>&2"; } }'
+        z != 1 { pos[$4] = $1 "," $2; next; }
+        {
+            ignore = 0;
+            if (!($1 in pos)) { print "Vertex " $1 " not found" | "cat 1>&2"; ignore = 1; }
+            if (NF == 2 && !($2 in pos)) { print "Vertex " $2 " not found" | "cat 1>&2"; ignore = 1; }
+            if (!ignore)
+            {
+                printf pos[$1];
+                if (NF == 2) { printf "," pos[$2]; }
+                printf "," $1;
+                if (NF == 2) { printf "," $2; }
+                printf "\n";
+            }
+        }'
     fi
 fi
 
