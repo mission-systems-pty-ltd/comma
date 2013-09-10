@@ -2,10 +2,15 @@
 
 name=$( basename $0 )
 inc_events=1
+icon="http://www.iconbazaar.com/dots/2dot1a.gif"
+colour="FF0000"
+width=1.5
+dash=0
+tmp_vert=tmp_vertices.$$
 
 simple_usage()
 {
-    echo "Usage: $name [-h|--help] [--events|--noevents] { -v=<vertex-file> } { -l=<line-file> } { -p=<polygon-file> } { -e=<edge-file> } { -i=<icon> } { -c=<colour> } {--pos=<lat,lon>}" >&2
+    echo "Usage: $name [-h|--help] [--events|--noevents] { -v=<vertex-file> } { -l=<line-file> } { -p=<polygon-file> } { -e=<edge-file> } {--pos=<lat,lon>} { -i=<icon> } { -c=<colour> } { -w=<width> } { -d|--dash } { -s|--solid }" >&2
 }
 
 usage()
@@ -15,6 +20,8 @@ usage()
 
 Outputs an HTML page that uses the Google Maps Javascript API to display points, lines and polygons.
 Note that Google Maps does not draw great circle arcs, just straight lines.
+
+The "=" in all arguments is optional, so "-c=<colour>" and "-c colour" both work.
 
 NOTE: This script was designed for testing and debugging purposes only, not for production
 (there are size limits, and it includes hard coded references to David Fisher's Google Maps key).
@@ -33,17 +40,26 @@ Arguments:
     edge-file       Text file containing points to be displayed as edges (one edge per line)
                     (format: <latitude 1>,<longitude 1>,<latitude 2>,<longitude 2>)
 
+    lat,lon         Vertex position.
+
     icon            Following vertices use the specified image
-                    e.g. http://www.iconbazaar.com/dots/2dot5a.gif
+                    e.g. http://www.iconbazaar.com/dots/2dot5a.gif (blue dot).
+                    Predefined icons include (red|blue|green|yellow|pink)-(dot|square|triangle|diamond|cube)
+                    as well as big-<colour>-diamond, x, x2, red-x.
 
     colour          Following polygons, lines and edges use the specified colour
                     e.g. "FF0000" (red)
+                    Certain predefined colours are available (red, blue, black, etc.)
 
-    lat,lon         Vertex position.
+    width           Following lines, polygons or edges, width of the line to draw (default $width).
 
 Options:
 
     --[no]events    Exclude/include mouse events for following objects.
+
+    -d|--dash       Following lines, edges and polygons drawn in dashed style.
+
+    -s|--solid      Following lines, edges and polygons drawn in solid (non-dashed) style.
 
 The -v, -e and -p arguments may appear multiple times on the command line.
 
@@ -93,11 +109,7 @@ google.maps.event.addListener(map, 'click', function(e) {
     displayPos(e, map, infowindow)
 });
 
-var dashedLineSym = {
-  path: 'M 0,-1 0,1',
-  strokeOpacity: 1,
-  scale: 2.5
-};
+var ic = 'http://www.iconbazaar.com/dots/2dot1a.gif';
 
 EOF
     fi
@@ -169,7 +181,6 @@ current=0
 output_vertices()
 {
     current=$(( $current + 1 ))
-    icon=${2:-http://www.iconbazaar.com/dots/2dot1a.gif}
     cat "$1" | awk -F, '
         NF >= 2 \
         {
@@ -177,7 +188,7 @@ output_vertices()
             name = "m'"$current"'_" ind;
             print "var " name " = new google.maps.Marker({\n" \
                 "position: new google.maps.LatLng(" $1 "," $2 "),\n" \
-                "icon: '"'"''"$icon"''"'"' });\n" \
+                "icon: ic });\n" \
                 name ".setMap(map);\n";
             if ('"$inc_events"' == 1)
             {
@@ -200,12 +211,32 @@ output_edges()
             print "new google.maps.LatLng(" $3 "," $4 ")";
             print "];\n"
 
+            if ('"$dash"') \
+            {
+                print "var dash'"$current"' = {";
+                print "path: '"'"'M 0,-1 0,1'"'"',";
+                print "strokeOpacity: 1,";
+                print "strokeColor: '"'"'#'"$colour"''"'"',";
+                print "scale: '$width'";
+                print "};"
+            }
+
             obj_name = "obj'"$current"'_" NR;
             print "var " obj_name " = new google.maps.Polyline({";
             print "path: " coords_name ",";
-            print "strokeColor: '"'"'#'"$colour"''"'"',";
-            print "strokeWeight: 1.5,";
-            print "strokeOpacity: 1.0";
+
+            if ('"$dash"') \
+            {
+                print "strokeOpacity: 0.0,";
+                rep = int('"$width"' * 5.2);
+                print "icons: [{ icon: dash'"$current"', offset: '"'"'0'"'"', repeat: '"'"'" rep "px'"'"' }]";
+            } \
+            else
+            {
+                print "strokeColor: '"'"'#'"$colour"''"'"',";
+                print "strokeWeight: '"$width"',";
+                print "strokeOpacity: 1.0";
+            }
             print "});\n";
 
             print obj_name ".setMap(map);\n";
@@ -237,17 +268,38 @@ output_line()
     join_endpoints=$2
     current=$(( $current + 1 ))
     output_point_array "$1" $join_endpoints
-    cat <<EOF
-var obj$current = new google.maps.Polyline({
-path: coords$current,
-strokeColor: '#$colour',
-strokeWeight: 2.0,
-strokeOpacity: 1.0
-});
 
-obj$current.setMap(map);
+    echo | awk '
+    {
+        if ('"$dash"') \
+        {
+            print "var dash'"$current"' = {";
+            print "path: '"'"'M 0,-1 0,1'"'"',";
+            print "strokeOpacity: 1,";
+            print "strokeColor: '"'"'#'"$colour"''"'"',";
+            print "scale: '$width'";
+            print "};"
+        }
 
-EOF
+        print "var obj'"$current"' = new google.maps.Polyline({";
+        print "path: coords'"$current"',";
+
+        if ('"$dash"') \
+        {
+            print "strokeOpacity: 0.0,";
+            rep = int('"$width"' * 5.2);
+            print "icons: [{ icon: dash'"$current"', offset: '"'"'0'"'"', repeat: '"'"'" rep "px'"'"' }]";
+        } \
+        else
+        {
+            print "strokeColor: '"'"'#'"$colour"''"'"',";
+            print "strokeWeight: '"$width"',";
+            print "strokeOpacity: 1.0";
+        }
+        print "});\n";
+
+        print "obj'"$current"'.setMap(map);\n";
+    }'
 
 if [[ $inc_events == 1 ]]; then
 cat <<EOF
@@ -292,12 +344,93 @@ check_file_exists()
     fi
 }
 
-# arguments: filename icon
+set_icon()
+{
+    output_header_once
+    local icon="$1"
+    case "$icon" in
+        red|red-dot|dot)    icon="http://www.iconbazaar.com/dots/2dot1a.gif";;
+        yellow|yellow-dot)  icon="http://www.iconbazaar.com/dots/2dot2a.gif";;
+        green|green-dot)    icon="http://www.iconbazaar.com/dots/2dot4a.gif";;
+        blue|blue-dot)      icon="http://www.iconbazaar.com/dots/2dot5a.gif";;
+        pink|pink-dot)      icon="http://www.iconbazaar.com/dots/2dot6a.gif";;
+
+        red-cube|cube)      icon="http://www.iconbazaar.com/dots/4dot1a.gif";;
+        yellow-cube)        icon="http://www.iconbazaar.com/dots/4dot2a.gif";;
+        green-cube)         icon="http://www.iconbazaar.com/dots/4dot4a.gif";;
+        blue-cube)          icon="http://www.iconbazaar.com/dots/4dot5a.gif";;
+        pink-cube)          icon="http://www.iconbazaar.com/dots/4dot6a.gif";;
+
+        red-triangle|triangle) icon="http://www.iconbazaar.com/dots/6dot1a.gif";;
+        yellow-triangle)    icon="http://www.iconbazaar.com/dots/6dot2a.gif";;
+        green-triangle)     icon="http://www.iconbazaar.com/dots/6dot4a.gif";;
+        blue-triangle)      icon="http://www.iconbazaar.com/dots/6dot5a.gif";;
+        pink-triangle)      icon="http://www.iconbazaar.com/dots/6dot6a.gif";;
+
+        red-square|square)  icon="http://www.iconbazaar.com/dots/8dot1a.gif";;
+        yellow-square)      icon="http://www.iconbazaar.com/dots/8dot2a.gif";;
+        green-square)       icon="http://www.iconbazaar.com/dots/8dot4a.gif";;
+        blue-square)        icon="http://www.iconbazaar.com/dots/8dot5a.gif";;
+        pink-square)        icon="http://www.iconbazaar.com/dots/8dot6a.gif";;
+
+        red-diamond|diamond) icon="http://www.iconbazaar.com/dots/10dot1a.gif";;
+        yellow-diamond)     icon="http://www.iconbazaar.com/dots/10dot2a.gif";;
+        green-diamond)      icon="http://www.iconbazaar.com/dots/10dot4a.gif";;
+        blue-diamond)       icon="http://www.iconbazaar.com/dots/10dot5a.gif";;
+        pink-diamond)       icon="http://www.iconbazaar.com/dots/10dot6a.gif";;
+
+        big-red-diamond|big-diamond) icon="http://www.iconbazaar.com/dots/17dot1a.gif";;
+        big-yellow-diamond) icon="http://www.iconbazaar.com/dots/17dot2a.gif";;
+        big-green-diamond)  icon="http://www.iconbazaar.com/dots/17dot4a.gif";;
+        big-blue-diamond)   icon="http://www.iconbazaar.com/dots/17dot5a.gif";;
+        big-pink-diamond)   icon="http://www.iconbazaar.com/dots/17dot6a.gif";;
+
+        red-arrow|arrow)    icon="http://www.iconbazaar.com/arrows/arrw01_31a.gif";;
+        yellow-arrow)       icon="http://www.iconbazaar.com/arrows/arrw01_32a.gif";;
+        green-arrow)        icon="http://www.iconbazaar.com/arrows/arrw01_34a.gif";;
+        blue-arrow)         icon="http://www.iconbazaar.com/arrows/arrw01_35a.gif";;
+        pink-arrow)         icon="http://www.iconbazaar.com/arrows/arrw01_36a.gif";;
+
+        x|black-x)          icon="https://cdn1.iconfinder.com/data/icons/iconic/raster/32/x_alt.png";;
+        x2|black-circle-x)  icon="https://cdn1.iconfinder.com/data/icons/iconic/raster/32/x_alt.png";;
+        red-x)              icon="https://cdn1.iconfinder.com/data/icons/lynx/16x16/actions/dialog-close.png";;
+
+        http*|file*) ;;
+        *) echo "$name: unknown icon '$icon'" >&2
+           exit 1 ;;
+    esac
+    echo "ic = '$icon';";
+}
+
+set_colour()
+{
+    colour="$1"
+
+    case "$colour" in
+        [0-9][0-9][0-9][0-9][0-9][0-9]) ;;
+        black)  colour=000000;;
+        white)  colour=FFFFFF;;
+        red)    colour=FF0000;;
+        blue)   colour=0000E0;;
+        green)  colour=00A000;;
+        yellow) colour=E8E800;;
+        orange) colour=FFA000;;
+        purple) colour=A000FF;;
+        pink)   colour=FF60FF;;
+        brown)  colour=805030;;
+        grey|gray) colour=808080;;
+        *)     echo "$name: unknown colour '$colour'" >&2
+               exit 1 ;;
+    esac
+}
+
+
+# arguments: filename
 process_vertices()
 {
     check_file_exists "$1" || exit 1
     output_header_once
-    output_vertices "$1" "$2"
+    output_vertices "$1"
 }
 
 process_lines()
@@ -322,9 +455,12 @@ process_edges()
     output_edges "$1"
 }
 
-icon="http://www.iconbazaar.com/dots/2dot1a.gif"
-colour="FF0000"
-tmp_vert=tmp_vertices.$$
+single_vertex()
+{
+    echo "$1" > "$tmp_vert"
+    process_vertices "$tmp_vert"
+    rm -f "$tmp_vert"
+}
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -332,28 +468,51 @@ while [[ $# -gt 0 ]]; do
                exit 0
                ;;
 
-    -i=*) icon="${1#*=}"
+    -i) shift; set_icon "$1"
+          ;;
+    -i=*) set_icon "${1#*=}"
           ;;
 
-    -c=*) colour="${1#*=}"
+    -c) shift; set_colour "$1"
+          ;;
+    -c=*) set_colour "${1#*=}"
           ;;
 
-    -v=*) process_vertices "${1#*=}" "$icon"
+    -w) shift; width="$1"
+          ;;
+    -w=*) width="${1#*=}"
           ;;
 
+    -v) shift; process_vertices "$1"
+          ;;
+    -v=*) process_vertices "${1#*=}"
+          ;;
+
+    -l) shift; process_lines "$1"
+          ;;
     -l=*) process_lines "${1#*=}"
           ;;
 
+    -p) shift; process_polygons "$1"
+          ;;
     -p=*) process_polygons "${1#*=}"
           ;;
 
+    -e) shift; process_edges "$1"
+          ;;
     -e=*) process_edges "${1#*=}"
           ;;
 
-    --pos=*) echo "${1#*=}" > "$tmp_vert"
-            process_vertices "$tmp_vert" "$icon"
-            rm -f "$tmp_vert"
-          ;;
+    --pos) shift; single_vertex "$1"
+           ;;
+    --pos=*) single_vertex "${1#*=}"
+           ;;
+
+    -d|--dash*) dash=1
+           ;;
+
+    -s|--solid) dash=0
+           ;;
 
     --events) inc_events=1
           ;;
