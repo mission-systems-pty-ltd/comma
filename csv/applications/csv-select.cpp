@@ -117,7 +117,7 @@ struct constraints
         if( m.exists( "equals" ) ) { equals = m.value< T >( "equals" ); }
         if( m.exists( "not-equal" ) ) { not_equal = m.value< T >( "not-equal" ); }
         if( m.exists( "less" ) ) { less = m.value< T >( "less" ); }
-        if( m.exists( "greater" ) ) { equals = m.value< T >( "greater" ); }
+        if( m.exists( "greater" ) ) { greater = m.value< T >( "greater" ); } // it was: { equal = m.value< T >( "greater" ); }
         if( m.exists( "from" ) ) { from = m.value< T >( "from" ); }
         if( m.exists( "greater-or-equal" ) ) { from = m.value< T >( "greater-or-equal" ); }
         if( m.exists( "ge" ) ) { from = m.value< T >( "ge" ); }
