@@ -102,7 +102,7 @@ int main( int argc, char** argv )
         if ( vm.count( "help" ) || vm.count( "long-help" ) )
         {
             std::cerr << std::endl;
-            std::cerr << "read from stdin by packet or by line and split the data into files, named by time" << std::endl;
+            std::cerr << "read from stdin by packet or by line and split the data into files, named by field value or time (if split by time)" << std::endl;
             std::cerr << "usage: csv-split [options]" << std::endl;
             std::cerr << std::endl;
             std::cerr << description << std::endl;
