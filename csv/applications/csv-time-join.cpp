@@ -38,7 +38,6 @@
 #include <boost/scoped_ptr.hpp>
 #include <comma/application/command_line_options.h>
 #include <comma/application/contact_info.h>
-#include <comma/application/signal_flag.h>
 #include <comma/base/types.h>
 #include <comma/csv/stream.h>
 #include <comma/io/stream.h>
@@ -83,6 +82,16 @@ static void usage()
     std::cerr << "                         consistently timestamped, especially head or tail" << std::endl;
     std::cerr << "    --timestamp-only,--time-only: join only timestamp from the second input" << std::endl;
     std::cerr << "                                  otherwise join the whole line" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "examples" << std::endl;
+    std::cerr << "    first field on stdin is timestamp, the first field of filter is timestamp" << std::endl;
+    std::cerr << "        - default:" << std::endl;
+    std::cerr << "            cat a.csv | csv-time-join b.csv" << std::endl;
+    std::cerr << "        - explicit:" << std::endl;
+    std::cerr << "            cat a.csv | csv-time-join --fields=t \"b.csv;fields=t\"" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    3rd field on stdin is timestamp, the 2nd field of filter is timestamp" << std::endl;
+    std::cerr << "        cat a.csv | csv-time-join --fields=,,t \"b.csv;fields=,t\"" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -161,18 +170,17 @@ int main( int ac, char** av )
         comma::csv::input_stream< Point > istream( *is, csv );
         std::pair< std::string, std::string > last;
         std::pair< boost::posix_time::ptime, boost::posix_time::ptime > last_timestamp;
-        comma::signal_flag is_shutdown;
 
         #ifdef WIN32
         if( stdin_csv.binary() ) { _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
         
-        while( !is_shutdown && std::cin.good() && !std::cin.eof() && is->good() && !is->eof() )
+        while( stdin_stream.ready() || istream.ready() || ( std::cin.good() && !std::cin.eof() && is->good() && !is->eof() ) )
         {
             const Point* p = stdin_stream.read();
             if( !p ) { break; }
             bool eof = false;
-            while( last_timestamp.first.is_not_a_date_time() || p->timestamp >= last_timestamp.second )
+            while( last_timestamp.first.is_not_a_date_time() || p->timestamp >= last_timestamp.second ) // todo: still buggy; check if --lower still works on the last filter point
             {
                 last_timestamp.first = last_timestamp.second;
                 last.first = last.second;
@@ -185,7 +193,7 @@ int main( int ac, char** av )
                     else { last.second = comma::join( istream.ascii().last(), stdin_csv.delimiter ); }
                 }
             }
-            if( eof ) { break; }
+            if( eof && p->timestamp != last_timestamp.first ) { break; }
             if( discard && p->timestamp < last_timestamp.first ) { continue; }
             bool is_first = by_lower || ( nearest && ( p->timestamp - last_timestamp.first ) < ( last_timestamp.second - p->timestamp ) );
             const boost::posix_time::ptime& t = is_first ? last_timestamp.first : last_timestamp.second;
@@ -217,7 +225,6 @@ int main( int ac, char** av )
                 std::cout << std::endl;
             }
         }
-        if( is_shutdown ) { std::cerr << "csv-time-join: interrupted by signal" << std::endl; }
         return 0;     
     }
     catch( std::exception& ex ) { std::cerr << "csv-time-join: " << ex.what() << std::endl; }
