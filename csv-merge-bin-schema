@@ -13,17 +13,17 @@ usage()
     simple_usage
     cat >&2 <<EOF
 
-Merges the fields listed in two .json files. If there is a corresponding .bin file for either input file,
-an output .bin file is created with the same prefix containing the merged data. Fields not present in one
-of the input files are set to zero (or the empty string).
+Merges two .json files containing 'fields' and 'format' values (which describe a .bin file with the same prefix).
+If the .bin file for either input file exists, an output .bin file is created with the same prefix containing the
+merged data. Fields not present in one of the input files are set to zero (or the empty string).
 
 If a field with the same name exists both input files, it must have the same binary format in both.
 
 Arguments:
 
-    -h|--help       Show this help
-    file*.json      Input files in .json format (see below for an example)
-    -o|--out        Output .json file
+    -h|--help               Show this help
+    file*.json              Input files in .json format (see below for an example)
+    -o|--out=<out.json>     Output .json file
 
 Example .json file:
 
