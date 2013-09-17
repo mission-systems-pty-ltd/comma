@@ -1,0 +1,224 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+simple_usage()
+{
+    echo "Usage: $name [-h|--help] file1.json file2.json -o|--out[=]<out.json>" >&2
+    if [[ -n "$1" ]]; then exit $1; fi
+}
+
+usage()
+{ 
+    simple_usage
+    cat >&2 <<EOF
+
+Merges the fields listed in two .json files. If there is a corresponding .bin file for either input file,
+an output .bin file is created with the same prefix containing the merged data. Fields not present in one
+of the input files are set to zero (or the empty string).
+
+If a field with the same name exists both input files, it must have the same binary format in both.
+
+Arguments:
+
+    -h|--help       Show this help
+    file*.json      Input files in .json format (see below for an example)
+    -o|--out        Output .json file
+
+Example .json file:
+
+  {
+      "fields" : "latitude,longitude,route_specifier,id,icao_code,name,name,elevation",
+      "format" : "d,d,s[2],s[9],s[4],s[1],s[50],uw"
+  }
+
+EOF
+    exit $1
+}
+
+# get the default value for a particular binary format
+# arguments: <format>
+default_field_value()
+{
+    if [[ "$1" = s* ]]; then
+        echo 
+    else
+        echo 0    # 
+    fi
+}
+
+json_file1=
+json_file2=
+out=
+
+# parse command line
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    -h|--help) usage 0;;
+
+    -o=*|--out=*) out=${1#*=};;
+
+    -o|--out) shift; out="$1";;
+
+    -*) echo "$name: unrecognized option '$1'" >&2; exit 1;;
+
+    *)  if   [[ -z "$json_file1" ]]; then json_file1="$1"
+        elif [[ -z "$json_file2" ]]; then json_file2="$1"
+        else simple_usage 1
+        fi;;
+    esac
+    shift
+done
+
+# validate arguments
+
+if [[ -z "$json_file2" ]]; then simple_usage 1; fi
+if [[ -z "$out" ]]; then echo "$name: missing required argument --out" >&2; exit 1; fi
+
+if [[ "$json_file1" != *.json || "$json_file2" != *.json ]]; then
+    echo "$name: input filenames must end with '.json'" >&2
+    exit 1
+fi
+
+if [[ "$out" != *.json ]]; then
+    echo "$name: output filename should end with '.json'" >&2
+    exit 1
+fi
+
+if [[ ! -f "$json_file1" ]]; then echo "$name: cannot open $json_file1" >&2; exit 1; fi
+if [[ ! -f "$json_file2" ]]; then echo "$name: cannot open $json_file2" >&2; exit 1; fi
+if [[ ! -d $( dirname "$out" ) ]]; then echo "$name: invalid output file $out" >&2; exit 1; fi
+if [[ "$out" == "$json_file1" || "$out" == "$json_file2" ]]; then echo "$name: output file $out cannot be the same as input file" >&2; exit 1; fi
+
+# extract fields from .json files
+
+fields1_str=$( cat "$json_file1" | name-value-get fields --from json 2> /dev/null )
+format1_str=$( cat "$json_file1" | name-value-get format --from json 2> /dev/null )
+fields2_str=$( cat "$json_file2" | name-value-get fields --from json 2> /dev/null )
+format2_str=$( cat "$json_file2" | name-value-get format --from json 2> /dev/null )
+
+if [[ -z "$fields1_str" || -z "$format1_str" ]]; then
+    echo "$name: expected $json_file1 to be a .json file with entries 'fields' and 'format'" >&2
+    exit 1
+fi
+
+if [[ -z "$fields2_str" || -z "$format2_str" ]]; then
+    echo "$name: expected $json_file2 to be a .json file with entries 'fields' and 'format'" >&2
+    exit 1
+fi
+
+# convert to an array
+
+IFS=, read -a fields1 <<< "$fields1_str"
+IFS=, read -a format1 <<< "$format1_str"
+IFS=, read -a fields2 <<< "$fields2_str"
+IFS=, read -a format2 <<< "$format2_str"
+num1=${#fields1[@]}
+num2=${#fields2[@]}
+
+if [[ $num1 != ${#format1[@]} ]]; then
+    echo "$name: 'fields' length $num1 does not match 'format' length ${#format1[@]} in $json_file1" >&2; exit 1
+fi
+
+if [[ $num2 != ${#format2[@]} ]]; then
+    echo "$name: 'fields' length $num2 does not match 'format' length ${#format2[@]} in $json_file2" >&2; exit 1
+fi
+
+out_fields="$fields1_str"
+out_format="$format1_str"
+out2_fields="$fields2_str"
+out2_format="$format2_str"
+paste_val1=
+paste_val2=
+paste_fmt1=
+paste_fmt2=
+
+# iterate over indexes in file 2
+
+for i in "${!fields2[@]}"; do
+    f=${fields2[$i]}
+    fmt=${format2[$i]}
+    index=
+
+    # check if the same field exists in file 1
+    for j in "${!fields1[@]}"; do
+        if [[ ${fields1[$j]} == $f ]]; then index=$j; break; fi
+    done
+
+    if [[ -z "$index" ]]; then
+        out_fields+=",$f"
+        out_format+=",$fmt"
+        paste_val1+=",$( default_field_value $fmt )"
+        paste_fmt1+=",$fmt"
+    else
+        if [[ "${format1[$index]}" != "$fmt" ]]; then
+            echo "$name: incompatible format for field '$f': '${format1[$index]}' and '$fmt' in files $json_file1 and $json_file2" >&2
+            exit 1
+        fi
+    fi
+done
+
+# iterate over indexes in file 1
+
+for i in "${!fields1[@]}"; do
+    f=${fields1[$i]}
+    fmt=${format1[$i]}
+    index=
+
+    # check if the same field exists in file 2
+    for j in "${!fields2[@]}"; do
+        if [[ ${fields2[$j]} == $f ]]; then index=$j; break; fi
+    done
+
+    if [[ -z "$index" ]]; then
+        out2_fields+=",$f"
+        out2_format+=",$fmt"
+        paste_val2+=",$( default_field_value $fmt )"
+        paste_fmt2+=",$fmt"
+    fi
+done
+
+cat <<EOF > "$out"
+{
+    "fields" : "$out_fields",
+    "format" : "$out_format"
+}
+EOF
+
+# remove initial ","
+paste_val1=${paste_val1#,}
+paste_val2=${paste_val2#,}
+paste_fmt1=${paste_fmt1#,}
+paste_fmt2=${paste_fmt2#,}
+
+bin1=${json_file1%.json}".bin"
+bin2=${json_file2%.json}".bin"
+outbin=${out%.json}".bin"
+
+# copy binary file 1 to output, adding new fields if needed
+
+if [[ -f "$bin1" ]]; then
+    if [[ -z "$paste_val1" ]]; then
+        # there no fields in file 2 that are not in file 1
+        cp "$bin1" "$outbin"
+    else
+        csv-paste "$bin1;binary=$format1_str" "value=$paste_val1;binary=$paste_fmt1" > "$outbin"
+    fi
+elif [[ -f "$bin2" ]]; then
+    > "$outbin"   # create an empty file (which will be appended below)
+fi
+
+# append binary file 2 to output, adding new fields if needed
+
+if [[ -f "$bin2" ]]; then
+    if [[ -z "$paste_val2" ]]; then
+        # there no fields in file 1 that are not in file 2
+        cat "$bin2" |
+            csv-shuffle --binary="$format2_str" --fields="$fields2_str" --output-fields="$out_fields" >> "$outbin"
+    else
+        csv-paste "$bin2;binary=$format2_str" "value=$paste_val2;binary=$paste_fmt2" |
+            csv-shuffle --binary="$out2_format" --fields="$out2_fields" --output-fields="$out_fields" >> "$outbin"
+    fi
+fi
+
