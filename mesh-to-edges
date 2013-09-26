@@ -2,9 +2,12 @@
 
 name=$( basename $0 )
 
+default_vertex_fields="latitude,longitude,,id"
+default_out_fields="first/latitude,first/longitude,second/latitude,second/longitude,first/id,second/id"
+
 simple_usage()
 {
-    echo "Usage: $name [-h|--help] <vertices> <mesh> [-f|--fields=<vertex-fields>]" >&2
+    echo "Usage: $name [-h|--help] <vertices> <mesh> [-f|--fields=<vertex-fields>] [--of|--output-fields=<output-fields>" >&2
 }
 
 usage()
@@ -12,21 +15,19 @@ usage()
     simple_usage
     cat >&2 <<EOF
 
-Extracts edges from a vertex file and a mesh file.
-
-Vertex file format: lat,lon,,id (change using --fields option)
-Mesh file format:   id,id
-Output format:      lat1,lon1,lat2,lon2,id1,id2
+Extracts edges from a vertex file and a mesh file. Mesh files have the format: id1,id2.
 
 Options:
 
-    --help      Print help message.
+    --help              Print help message.
 
-    --fields    Specify vertex file fields ("latitude", "longitude" and "id")
+    --fields            Specify vertex file fields (default: $default_vertex_fields)
+
+    --output-fields     Specify output fields (default: $default_out_fields)
 
 Example:
 
-    $name vertices.csv mesh.csv --fields=latitude,longitude,,id
+    $name vertices.csv mesh.csv --fields=latitude,longitude,id --output-fields=first/latitude,first/longitude,first/id,second/latitude,second/longitude,second/id
 
 EOF
 }
@@ -39,6 +40,7 @@ fi
 vert=
 mesh=
 fields=
+out_fields="$default_out_fields"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -48,6 +50,9 @@ while [[ $# -gt 0 ]]; do
         ;;
     -f=*|--fields=*)
         fields=${1#*=}
+        ;;
+    --of=*|--output-fields=*)
+        out_fields=${1#*=}
         ;;
     -*)
         echo "$name: unrecognized option '$1'" >&2
@@ -73,7 +78,7 @@ fi
 if [[ -z "$fields" ]]; then
     cmd=( cat )
 else
-    cmd=( csv-shuffle --fields="$fields" --output-fields="latitude,longitude,,id" )
+    cmd=( csv-shuffle --fields="$fields" --output-fields="$default_vertex_fields" )
 fi
 
 ( cat "$vert" | "${cmd[@]}" ; echo "---"; grep '^[0-9][0-9]*,[0-9][0-9]*$' "$mesh" ) | awk -F, '
@@ -87,4 +92,4 @@ m == 1 \
     if (!($2 in lat)) { print "Error: id " $2 " not found" | "cat >&2"; exit; }
     print lat[$1] "," lon[$1] "," lat[$2] "," lon[$2] "," $1 "," $2;
 }
-'
+' | csv-shuffle --fields="$default_out_fields" --output-fields="$out_fields"
