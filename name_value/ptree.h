@@ -37,7 +37,6 @@
 #ifndef COMMA_NAME_VALUE_PTREE_H_
 #define COMMA_NAME_VALUE_PTREE_H_
 
-#include <exception>
 #include <iostream>
 #include <sstream>
 #include <boost/lexical_cast.hpp>
@@ -470,9 +469,9 @@ inline boost::property_tree::ptree property_tree::from_path_value_string( const 
     for( std::size_t i = 0; i < v.size(); ++i )
     {
         if( v[i].empty() ) { continue; }
-        std::vector< std::string > pair = comma::split( v[i], equal_sign );
-        if( pair.size() != 2 ) { COMMA_THROW( comma::exception, "expected '" << delimiter << "'-separated xpath" << equal_sign << "value pairs; got \"" << v[i] << "\"" ); }
-        ptree.put( boost::property_tree::ptree::path_type( comma::strip( pair[0], '"' ), '/' ), comma::strip( pair[1], '"' ) );
+        std::string::size_type p = v[i].find_first_of( equal_sign );
+        if( p == std::string::npos ) { COMMA_THROW( comma::exception, "expected '" << delimiter << "'-separated xpath" << equal_sign << "value pairs; got \"" << v[i] << "\"" ); }
+        ptree.put( boost::property_tree::ptree::path_type( comma::strip( v[i].substr( 0, p ), '"' ), '/' ), comma::strip( v[i].substr( p + 1, std::string::npos ), '"' ) );
     }
     return ptree;
 }
