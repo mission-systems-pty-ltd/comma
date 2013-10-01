@@ -1,0 +1,67 @@
+#!/bin/bash
+
+function usage_()
+{
+    echo >&2
+    echo "run all the scripts in subdirectories called 'tests' of the current directory" >&2
+    echo "return 0, if all tests succeed; non-zero, if failure" >&2
+    echo >&2
+    echo "usage: aero-test-run [<options>]" >&2
+    echo >&2
+    echo "options" >&2
+    echo "    --debug: much more debug output" >&2
+    echo "    --quiet,-q: output only failures" >&2
+    echo "    --path=<qstorage path>: q-storage directory; default: /mnt/q-storage" >&2
+    echo "    --until-first-failure,-f: exit after the first failure" >&2
+    echo >&2
+    exit 1
+}
+
+path="/mnt/q-storage"
+for arg in $@ ; do
+    if [[ "$arg" == "--help" || "$arg" == "-h" ]] ; then usage_ ; fi
+    if [[ "$arg" == "--debug" ]] ; then debug="--debug" ; fi
+    if [[ "$arg" == "--quiet" || "$arg" == "-q" ]] ; then quiet="true" ; fi
+    if [[ "$arg" == "--until-first-failure" || "$arg" == "-f" ]] ; then until_first_failure="true" ; fi
+    if [[ "$arg" != "${arg#--path=}" ]] ; then path="$arg" ; fi
+done
+
+if [[ "$quiet" != "true" ]] ; then grep_failed_=cat ; else grep_failed_="grep failed" ; fi
+
+function error_()
+{
+    tput bold
+    high="\033[1;31m"
+    normal="\033[0m"
+    echo -e "$high$1$normal" >&2
+    tput sgr0
+}
+
+function message_()
+{
+    if [[ "$quiet" != "true" ]] ; then tput bold ; echo $1 >&2 ; tput sgr0 ; fi
+}
+
+basedir=$( pwd )
+dirs=$( find . -name "tests" )
+dir_count=$( find . -name "tests" | wc -l )
+result=0
+message_ "$0: tests in $dir_count directories: running..."
+for dir in $dirs ; do
+    tests=$( find $dir -name "*" -executable -type f )
+    tests_count=$( find $dir -name "*" -executable -type f | wc -l )
+    message_ "$0: $tests_count test(s) in $dir: running..."
+    cd $dir
+    for t in $tests ; do
+        message_ "$0: $t: running..."
+        ./$( basename $t ) $path $debug 2> >( $grep_failed_ >&2 )
+        result=$?
+        if [[ "$result" == 0 ]] ; then message_ "$0: $t: succeeded" ; else error_ "$0: $t: failed" ; fi
+        if [[ "$result" != 0 && "$until_first_failure" == true ]] ; then break ; fi
+    done
+    cd $basedir
+    if [[ "$result" != 0 && "$until_first_failure" == true ]] ; then break ; fi
+    if [[ "$result" == 0 ]] ; then message_ "$0: $tests_count test(s) in $dir: succeeded" ; else error_ "$0: tests in $tests_count test(s) in $dir...: some tests failed" ; fi
+done
+if [[ "$result" == 0 ]] ; then message_ "$0: tests in $dir_count directories: succeeded" ; else error_ "$0: tests in $dir_count directories: some tests failed" ; fi
+exit $result
