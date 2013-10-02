@@ -315,7 +315,6 @@ int main( int ac, char** av )
         if( fields.size() == 1 && fields[0].empty() ) { fields.clear(); }
         std::vector< std::string > unnamed = options.unnamed( "--or,--sorted,--verbose,-v", "-b,--binary,-f,--fields,-d,--delimiter,--precision,--equals,--not-equal,--less-or-equal,--le,--greater-or-equal,--ge,--less,--greater,--from,--to" );
         for( unsigned int i = 0; i < unnamed.size(); constraints_map.insert( std::make_pair( comma::split( unnamed[i], ';' )[0], unnamed[i] ) ), ++i );
-        comma::signal_flag is_shutdown;
         if( csv.binary() )
         {
             #ifdef WIN32
@@ -323,7 +322,7 @@ int main( int ac, char** av )
             #endif
             init_input( csv.format(), options );
             comma::csv::binary_input_stream< input_t > istream( std::cin, csv, input );
-            while( istream->ready() || ( std::cin.good() && !std::cin.eof() ) )
+            while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
             {
                 const input_t* p = istream.read();
                 if( !p || p->done(is_or) ) { break; }
@@ -333,12 +332,12 @@ int main( int ac, char** av )
         else
         {
             boost::scoped_ptr< comma::csv::ascii_input_stream< input_t > > istream;
-            while( istream->ready() || ( std::cin.good() && !std::cin.eof() ) )
+            while( !istream || istream->ready() || ( std::cin.good() && !std::cin.eof() ) )
             {
                 if( !istream )
                 {
                     std::string line;
-                    while( istream->ready() || ( std::cin.good() && !std::cin.eof() ) )
+                    while( !istream || istream->ready() || ( std::cin.good() && !std::cin.eof() ) )
                     {
                         std::getline( std::cin, line );
                         line = comma::strip( line, '\r' );
