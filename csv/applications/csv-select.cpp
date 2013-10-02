@@ -42,7 +42,6 @@
 #include <boost/scoped_ptr.hpp>
 #include <comma/application/command_line_options.h>
 #include <comma/application/contact_info.h>
-#include <comma/application/signal_flag.h>
 #include <comma/csv/stream.h>
 #include <comma/math/compare.h>
 #include <comma/name_value/parser.h>
@@ -69,6 +68,7 @@ void usage()
     std::cerr << "    --sorted: a hint that the key column is sorted in ascending order" << std::endl;
     std::cerr << "              todo: support descending order" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
+    std::cerr << "    --or: uses 'or' expression instead of 'and' (default is 'and')" << std::endl;
     std::cerr << std::endl;
     std::cerr << "fields: any non-empty fields will be treated as keys" << std::endl;
     std::cerr << std::endl;
@@ -156,25 +156,45 @@ struct input_t
     std::vector< value_t< double > > doubles;
     std::vector< value_t< std::string > > strings;
 
-    bool is_a_match() const
+    bool is_a_match(bool is_or) const
     {
 //         std::cerr << "==> is_a_match: doubles: ";
 //         for( unsigned int i = 0; i < doubles.size(); ++i ) { std::cerr << doubles[i].value << " "; }
 //         std::cerr << std::endl;
-
-        for( unsigned int i = 0; i < time.size(); ++i ) { if( !time[i].is_a_match() ) { return false; } }
-        for( unsigned int i = 0; i < doubles.size(); ++i ) { if( !doubles[i].is_a_match() ) { return false; } }
-        for( unsigned int i = 0; i < strings.size(); ++i ) { if( !strings[i].is_a_match() ) { return false; } }
-//        std::cerr << "==> is_a_match: done" << std::endl << std::endl;
-        return true;
+        if (is_or)
+        {
+            for( unsigned int i = 0; i < time.size(); ++i ) { if( time[i].is_a_match() ) { return true; } }
+            for( unsigned int i = 0; i < doubles.size(); ++i ) { if( doubles[i].is_a_match() ) { return true; } }
+            for( unsigned int i = 0; i < strings.size(); ++i ) { if( strings[i].is_a_match() ) { return true; } }
+    //        std::cerr << "==> is_a_match: done" << std::endl << std::endl;
+            return false;
+        }
+        else
+        {
+            for( unsigned int i = 0; i < time.size(); ++i ) { if( !time[i].is_a_match() ) { return false; } }
+            for( unsigned int i = 0; i < doubles.size(); ++i ) { if( !doubles[i].is_a_match() ) { return false; } }
+            for( unsigned int i = 0; i < strings.size(); ++i ) { if( !strings[i].is_a_match() ) { return false; } }
+    //        std::cerr << "==> is_a_match: done" << std::endl << std::endl;
+            return true;
+        }
     }
 
-    bool done() const
+    bool done(bool is_or) const
     {
-        for( unsigned int i = 0; i < time.size(); ++i ) { if( time[i].done() ) { return true; } }
-        for( unsigned int i = 0; i < doubles.size(); ++i ) { if( doubles[i].done() ) { return true; } }
-        for( unsigned int i = 0; i < strings.size(); ++i ) { if( strings[i].done() ) { return true; } }
-        return false;
+        if (is_or)
+        {
+            for( unsigned int i = 0; i < time.size(); ++i ) { if( !time[i].done() ) { return false; } }
+            for( unsigned int i = 0; i < doubles.size(); ++i ) { if( !doubles[i].done() ) { return false; } }
+            for( unsigned int i = 0; i < strings.size(); ++i ) { if( !strings[i].done() ) { return false; } }
+            return true;
+        }
+        else
+        {
+            for( unsigned int i = 0; i < time.size(); ++i ) { if( time[i].done() ) { return true; } }
+            for( unsigned int i = 0; i < doubles.size(); ++i ) { if( doubles[i].done() ) { return true; } }
+            for( unsigned int i = 0; i < strings.size(); ++i ) { if( strings[i].done() ) { return true; } }
+            return false;
+        }
     }
 };
 
@@ -289,10 +309,11 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av );
         if( options.exists( "--help,-h" ) ) { usage(); }
         verbose = options.exists( "--verbose,-v" );
+        bool is_or = options.exists( "--or" );
         csv = comma::csv::options( options );
         fields = comma::split( csv.fields, ',' );
         if( fields.size() == 1 && fields[0].empty() ) { fields.clear(); }
-        std::vector< std::string > unnamed = options.unnamed( "--sorted,--verbose,-v", "-b,--binary,-f,--fields,-d,--delimiter,--precision,--equals,--not-equal,--less-or-equal,--le,--greater-or-equal,--ge,--less,--greater,--from,--to" );
+        std::vector< std::string > unnamed = options.unnamed( "--or,--sorted,--verbose,-v", "-b,--binary,-f,--fields,-d,--delimiter,--precision,--equals,--not-equal,--less-or-equal,--le,--greater-or-equal,--ge,--less,--greater,--from,--to" );
         for( unsigned int i = 0; i < unnamed.size(); constraints_map.insert( std::make_pair( comma::split( unnamed[i], ';' )[0], unnamed[i] ) ), ++i );
         comma::signal_flag is_shutdown;
         if( csv.binary() )
@@ -302,22 +323,22 @@ int main( int ac, char** av )
             #endif
             init_input( csv.format(), options );
             comma::csv::binary_input_stream< input_t > istream( std::cin, csv, input );
-            while( !is_shutdown && std::cin.good() && !std::cin.eof() )
+            while( istream->ready() || ( std::cin.good() && !std::cin.eof() ) )
             {
                 const input_t* p = istream.read();
-                if( !p || p->done() ) { break; }
-                if( p->is_a_match() ) { std::cout.write( istream.last(), csv.format().size() ); std::cout.flush(); }
+                if( !p || p->done(is_or) ) { break; }
+                if( p->is_a_match(is_or) ) { std::cout.write( istream.last(), csv.format().size() ); std::cout.flush(); }
             }
         }
         else
         {
             boost::scoped_ptr< comma::csv::ascii_input_stream< input_t > > istream;
-            while( !is_shutdown && std::cin.good() && !std::cin.eof() )
+            while( istream->ready() || ( std::cin.good() && !std::cin.eof() ) )
             {
                 if( !istream )
                 {
                     std::string line;
-                    while( !is_shutdown && std::cin.good() && !std::cin.eof() )
+                    while( istream->ready() || ( std::cin.good() && !std::cin.eof() ) )
                     {
                         std::getline( std::cin, line );
                         line = comma::strip( line, '\r' );
@@ -332,18 +353,18 @@ int main( int ac, char** av )
                     std::istringstream iss( line );
                     comma::csv::ascii_input_stream< input_t > isstream( iss, csv, input );
                     const input_t* p = isstream.read();
-                    if( p->done() ) { break; }
-                    if( p->is_a_match() ) { std::cout << line << std::endl; }
+                    if( !p || p->done(is_or) ) { break; }
+                    if( p->is_a_match(is_or) ) { std::cout << line << std::endl; }
 
     //                 input = comma::csv::ascii< input_t >( csv.fields, csv.delimiter, csv.full_xpath, input ).get( comma::split( line, csv.delimiter ) );
-    //                 if( input.done() ) { break; }
-    //                 if( input.is_a_match() ) { std::cout << line << std::endl; }
+    //                 if( input.done(is_or) ) { break; }
+    //                 if( input.is_a_match(is_or) ) { std::cout << line << std::endl; }
                 }
                 else
                 {
                     const input_t* p = istream->read();
-                    if( !p || p->done() ) { break; }
-                    if( p->is_a_match() ) { std::cout << comma::join( istream->last(), csv.delimiter ) << std::endl; }
+                    if( !p || p->done(is_or) ) { break; }
+                    if( p->is_a_match(is_or) ) { std::cout << comma::join( istream->last(), csv.delimiter ) << std::endl; }
                 }
             }
         }
