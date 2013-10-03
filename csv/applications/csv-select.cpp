@@ -41,6 +41,7 @@
 #include <boost/optional.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <comma/application/command_line_options.h>
+#include <comma/application/signal_flag.h>
 #include <comma/application/contact_info.h>
 #include <comma/csv/stream.h>
 #include <comma/math/compare.h>
@@ -315,6 +316,7 @@ int main( int ac, char** av )
         if( fields.size() == 1 && fields[0].empty() ) { fields.clear(); }
         std::vector< std::string > unnamed = options.unnamed( "--or,--sorted,--verbose,-v", "-b,--binary,-f,--fields,-d,--delimiter,--precision,--equals,--not-equal,--less-or-equal,--le,--greater-or-equal,--ge,--less,--greater,--from,--to" );
         for( unsigned int i = 0; i < unnamed.size(); constraints_map.insert( std::make_pair( comma::split( unnamed[i], ';' )[0], unnamed[i] ) ), ++i );
+        comma::signal_flag is_shutdown;
         if( csv.binary() )
         {
             #ifdef WIN32
@@ -322,7 +324,7 @@ int main( int ac, char** av )
             #endif
             init_input( csv.format(), options );
             comma::csv::binary_input_stream< input_t > istream( std::cin, csv, input );
-            while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
+            while( !is_shutdown && ( istream.ready() || ( std::cin.good() && !std::cin.eof() ) ) )
             {
                 const input_t* p = istream.read();
                 if( !p || p->done(is_or) ) { break; }
@@ -331,42 +333,31 @@ int main( int ac, char** av )
         }
         else
         {
-            boost::scoped_ptr< comma::csv::ascii_input_stream< input_t > > istream;
-            while( !istream || istream->ready() || ( std::cin.good() && !std::cin.eof() ) )
+            std::string line;
+            while( !is_shutdown && std::cin.good() && !std::cin.eof() )
             {
-                if( !istream )
-                {
-                    std::string line;
-                    while( !istream || istream->ready() || ( std::cin.good() && !std::cin.eof() ) )
-                    {
-                        std::getline( std::cin, line );
-                        line = comma::strip( line, '\r' );
-                        if( !line.empty() ) { break; }
-                    }
-                    if( line.empty() ) { break; }
-                    comma::csv::format format = guess_format( line );
-                    init_input( format, options );
-                    istream.reset( new comma::csv::ascii_input_stream< input_t >( std::cin, csv, input ) );
-
-                    // todo: quick and dirty: no time to debug why the commented section does not work (but that's the right way)
-                    std::istringstream iss( line );
-                    comma::csv::ascii_input_stream< input_t > isstream( iss, csv, input );
-                    const input_t* p = isstream.read();
-                    if( !p || p->done(is_or) ) { break; }
-                    if( p->is_a_match(is_or) ) { std::cout << line << std::endl; }
-
-    //                 input = comma::csv::ascii< input_t >( csv.fields, csv.delimiter, csv.full_xpath, input ).get( comma::split( line, csv.delimiter ) );
-    //                 if( input.done(is_or) ) { break; }
-    //                 if( input.is_a_match(is_or) ) { std::cout << line << std::endl; }
-                }
-                else
-                {
-                    const input_t* p = istream->read();
-                    if( !p || p->done(is_or) ) { break; }
-                    if( p->is_a_match(is_or) ) { std::cout << comma::join( istream->last(), csv.delimiter ) << std::endl; }
-                }
+                std::getline( std::cin, line );
+                line = comma::strip( line, '\r' );
+                if( !line.empty() ) { break; }
+            }
+            if( line.empty() ) { return 0; }
+            comma::csv::format format = guess_format( line );
+            init_input( format, options );
+            comma::csv::ascii_input_stream< input_t > istream( std::cin, csv, input );
+            // todo: quick and dirty: no time to debug why the commented section does not work (but that's the right way)
+            std::istringstream iss( line );
+            comma::csv::ascii_input_stream< input_t > isstream( iss, csv, input );
+            const input_t* p = isstream.read();
+            if( !p || p->done( is_or ) ) { return 0; }
+            if( p->is_a_match( is_or ) ) { std::cout << line << std::endl; }
+            while( !is_shutdown && ( istream.ready() || ( std::cin.good() && !std::cin.eof() ) ) )
+            {
+                const input_t* p = istream.read();
+                if( !p || p->done( is_or ) ) { break; }
+                if( p->is_a_match( is_or ) ) { std::cout << comma::join( istream.last(), csv.delimiter ) << std::endl; }
             }
         }
+        return 0;
     }
     catch( std::exception& ex )
     {
@@ -376,4 +367,5 @@ int main( int ac, char** av )
     {
         std::cerr << "csv-select: unknown exception" << std::endl;
     }
+    return 1;
 }
