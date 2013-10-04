@@ -138,7 +138,17 @@ struct constraints
                && ( !greater || comma::math::less( *greater, t ) );
     }
 
-    bool done( const T& t ) const { return sorted && to && comma::math::less( *to, t ); } // quick and dirty
+    bool done( const T& t ) const 
+    { 
+        if (sorted)
+        {
+            if (to)
+                return comma::math::less( *to, t ); 
+            else if (less)
+                return !comma::math::less( t, *less ); 
+        }
+        return false;
+    } // quick and dirty
 };
 
 template < typename T >
