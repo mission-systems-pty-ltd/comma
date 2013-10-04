@@ -1,0 +1,15 @@
+#!/bin/bash
+
+function usage()
+{
+    echo >&2
+    echo "match input with expected values" >&2
+    echo >&2
+    echo "usage: cat some-test-output | aero-test-match expected [<options>]" >&2
+    echo >&2
+    echo "todo" >&2
+    echo >&2
+    exit 1
+}
+
+usage
