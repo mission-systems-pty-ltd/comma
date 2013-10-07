@@ -83,8 +83,6 @@ if (( $test_scripts_count > 0 )) ; then
         message_ "$0: $t: running..."
         basedir=$( pwd )
         cd $( dirname $t )
-        rm -rf ./output
-        mkdir ./output
         cat ./input | ./$( basename $t ) $verbose 2> >( $grep_failed_ >&2 ) | aero-test-match ./expected
         if status_ok ; then message_ "$0: $t: succeeded" ; else result=1 ; error_ "$0: $t: failed" ; fi
         cd $basedir
