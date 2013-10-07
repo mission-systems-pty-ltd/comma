@@ -8,6 +8,10 @@
 #
 #   Names are chosen to be short so that they could be used without any overhead (to be discussed, though)
 
+status_ok()
+{
+    [[ ! "${PIPESTATUS[@]}" =~ [1-9] ]]
+}
 
 #gets the absolute number
 function abs()
