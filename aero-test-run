@@ -19,6 +19,7 @@ function usage_()
 
 . /usr/local/bin/aero-test-util
 
+name=$( basename $0 )
 path="/mnt/q-storage"
 for arg in $@ ; do
     if [[ "$arg" == "--help" || "$arg" == "-h" ]] ; then usage_ ; fi
@@ -54,41 +55,44 @@ dirs=$( find . -name "tests" )
 dir_count=$( find . -name "tests" | wc -l )
 result=0
 if (( $dir_count > 0 )) ; then
-    message_ "$0: tests in $dir_count subdirectories of $pwd: running..."
+    message_ "$name: tests in $dir_count subdirectories of $pwd: running..."
     for dir in $dirs ; do
         tests=$( find $dir -name "*" -executable -type f )
         tests_count=$( find $dir -name "*" -executable -type f | wc -l )
-        message_ "$0: $tests_count test(s) in $dir: running..."
+        message_ "$name: $tests_count test(s) in $dir: running..."
         cd $dir
         intermediate_result=0
         for t in $tests ; do
-            message_ "$0: $t: running..."
+            message_ "$name: $t: running..."
             ./$( basename $t ) $path $debug 2> >( $grep_failed_ >&2 )
-            if status_ok ; then message_ "$0: $t: succeeded" ; else intermediate_result=1; result=1 ; error_ "$0: $t: failed" ; fi
+            if status_ok ; then message_ "$name: $t: succeeded" ; else intermediate_result=1; result=1 ; error_ "$name: $t: failed" ; fi
             if [[ "$result" != 0 && "$until_first_failure" == true ]] ; then break ; fi
         done
         cd $basedir
         if [[ "$result" != 0 && "$until_first_failure" == true ]] ; then break ; fi
-        if [[ "$intermediate_result" == 0 ]] ; then message_ "$0: $tests_count test(s) in $dir: succeeded" ; else error_ "$0: tests in $tests_count test(s) in $dir...: some tests failed" ; fi
+        if [[ "$intermediate_result" == 0 ]] ; then message_ "$name: $tests_count test(s) in $dir: succeeded" ; else error_ "$name: tests in $tests_count test(s) in $dir...: some tests failed" ; fi
     done
-    if [[ "$result" == 0 ]] ; then message_ "$0: tests in $dir_count subdirectories of $pwd: succeeded" ; else error_ "$0: tests in $dir_count directories: some tests failed" ; fi
+    if [[ "$result" == 0 ]] ; then message_ "$name: tests in $dir_count subdirectories of $pwd: succeeded" ; else error_ "$name: tests in $dir_count directories: some tests failed" ; fi
 fi
 
 test_scripts=$( find . -name "test" )
 test_scripts_count=$( find . -name "test" | wc -l )
+failed_count=0
 if [[ "$debug" != "" ]] ; then verbose="--verbose" ; fi # quick and dirty
 if (( $test_scripts_count > 0 )) ; then
-    message_ "$0: $test_scripts_count test[s] in subdirectories of $( pwd ): running..."
+    message_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): running..."
     for t in $test_scripts ; do
-        message_ "$0: $t: running..."
+        message_ "$name: $t: running..."
         basedir=$( pwd )
         cd $( dirname $t )
-        cat ./input | ./$( basename $t ) $verbose 2> >( $grep_failed_ >&2 ) | aero-test-match ./expected
-        if status_ok ; then message_ "$0: $t: succeeded" ; else result=1 ; error_ "$0: $t: failed" ; fi
+        if [ -f ./input ] ; then cat ./input ; fi \
+            | ./$( basename $t ) $verbose 2> >( $grep_failed_ >&2 ) \
+            | if [ -f ./output ] ; then aero-test-match ./expected ; fi
+        if status_ok ; then message_ "$name: $t: succeeded" ; else result=1 ; (( ++failed_count )) ; error_ "$name: $t: failed" ; fi
         cd $basedir
         if [[ "$result" != 0 && "$until_first_failure" == true ]] ; then break ; fi
     done
-    if [[ "$result" == 0 ]] ; then message_ "$0: $test_scripts_count test[s] in subdirectories of $( pwd ): succeeded" ; else error_ "$0: $test_scripts_count test[s] in subdirectories of $( pwd ): some tests failed" ; fi
+    if [[ "$result" == 0 ]] ; then message_ "$name: in subdirectories of $( pwd ): succeeded" ; else error_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): $failed_count test[s] out of $test_scripts_count failed" ; fi
 fi
-if (( $test_scripts_count == 0 && $dir_count == 0 )) ; then echo -e "${brown}$0: warning: no tests or test directories found in $( pwd )${none}" >&2 ; fi
+if (( $test_scripts_count == 0 && $dir_count == 0 )) ; then echo -e "${brown}$name: warning: no tests or test directories found in $( pwd )${none}" >&2 ; fi
 exit $result
