@@ -8,6 +8,11 @@
 #
 #   Names are chosen to be short so that they could be used without any overhead (to be discussed, though)
 
+red="\033[0;31m"
+green="\033[0;32m"
+brown="\033[0;33m"
+none="\033[m"
+
 status_ok()
 {
     [[ ! "${PIPESTATUS[@]}" =~ [1-9] ]]
