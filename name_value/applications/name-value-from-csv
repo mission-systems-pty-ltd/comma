@@ -8,7 +8,7 @@ function usage()
     echo "usage: data.csv | name-value-from-csv <fields> [<options>]" >&2
     echo >&2
     echo "options" >&2
-    echo "    --output-line-numbers,--line-numbers,-n: output line numbers (see examples)" >&2
+    echo "    --output-line-number,--line-number,-n: output line numbers (see examples)" >&2
     echo "    --delimiter,-d <delimiter>: default: ," >&2
     echo "    --end-of-line,--eol <delimiter>: end of line output delimiter; default: end of line" >&2
     echo >&2
