@@ -11,3 +11,5 @@ TARGET_LINK_LIBRARIES( name-value-get ${comma_EXTERNAL_ALL_LIBRARIES} comma_appl
 INSTALL( TARGETS name-value-convert name-value-get
          RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR}
          COMPONENT Runtime )
+
+install( PROGRAMS name-value-from-csv DESTINATION ${comma_INSTALL_BIN_DIR} )

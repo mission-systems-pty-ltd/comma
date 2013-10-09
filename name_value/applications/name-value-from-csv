@@ -1,0 +1,52 @@
+#!/bin/bash
+
+function usage()
+{
+    echo >&2
+    echo "take csv from stdin, output path-value pairs to stdout" >&2
+    echo >&2
+    echo "usage: data.csv | name-value-from-csv <fields> [<options>]" >&2
+    echo >&2
+    echo "options" >&2
+    echo "    --output-line-numbers,--line-numbers,-n: output line numbers (see examples)" >&2
+    echo "    --delimiter,-d <delimiter>: default: ," >&2
+    echo "    --end-of-line,--eol <delimiter>: end of line output delimiter; default: end of line" >&2
+    echo >&2
+    echo "examples" >&2
+    echo "    echo 1,2,3 | name-value-from-csv a,b,c/d -d ," >&2
+    echo "    a=1,b=2,c/d=3" >&2
+    echo >&2
+    echo "    echo -e \"1,2,3\n4,5,6\" | name-value-from-csv a,b,c/d -d , --line-numbers" >&2
+    echo "    [0]/a=1,[0]/b=2,[0]/c/d=3" >&2
+    echo "    [1]/a=4,[1]/b=5,[1]/c/d=6" >&2
+    echo >&2
+    exit 1
+}
+
+delimiter=","
+end_of_line=$'\n'
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help) usage ;;
+        --delimiter|-d) shift ; delimiter=$1 ;;
+        --end-of-line|--eol) shift ; end_of_line=$1 ;;
+        --fields|-f) shift ; fields=$1 ;;
+        --output-line-numbers|--line-numbers|-n) output_line_numbers="true" ;;
+        -*) echo "$name: unrecognized option '$1'" >&2 ; exit 1 ;;
+        *) fields=$1 ;;
+    esac
+    shift
+done
+
+if [[ "$fields" == "" ]] ; then echo "name-value-from-csv: expected fields, got none" >&2 ; exit 1 ; fi
+paths=$( echo "$fields" | sed 's/,/ /g' )
+
+count=0
+while read line ; do
+    if [[ "$line" == "" ]] ; then continue ; fi
+    if [[ "$output_line_numbers" != "" ]] ; then prefix="[$count]/" ; fi
+    values=( $( echo $line | sed "s/$delimiter/\n/g" ) )
+    i=0
+    for path in $paths ; do echo $prefix$path=${values[$i]}$end_of_line ; (( ++i )) ; done
+    (( ++count ))
+done
