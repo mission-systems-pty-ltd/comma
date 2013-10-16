@@ -146,7 +146,8 @@ int main( int ac, char** av )
                         delimiter = csv.delimiter;
                     }
                     previous_index = fields[i].index + 1;
-                    std::cout << delimiter << v[ *fields[i].input_index ];
+                    std::cout << delimiter;
+                    if ( *fields[i].input_index < v.size() ) { std::cout << v[ *fields[i].input_index ]; }
                     delimiter = csv.delimiter;
                 }
                 for( unsigned int k = previous_index; output_trailing_fields && k < v.size(); ++k )
