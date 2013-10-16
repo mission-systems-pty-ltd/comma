@@ -45,7 +45,7 @@ count=0
 while read line ; do
     if [[ "$line" == "" ]] ; then continue ; fi
     if [[ "$output_line_numbers" != "" ]] ; then prefix="[$count]/" ; fi
-    values=( $( echo $line | sed "s/$delimiter/\n/g" ) )
+    values=( $( echo $line | sed "s/$delimiter/\n/g" | sed 's/^/"/g' | sed 's/$/"/g' ) )
     i=0
     for path in $paths ; do echo $prefix$path=${values[$i]}$end_of_line ; (( ++i )) ; done
     (( ++count ))
