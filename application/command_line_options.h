@@ -39,6 +39,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <iostream>
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
 #include <comma/base/exception.h>
@@ -61,6 +62,10 @@ class command_line_options
 
         /// return argv
         const std::vector< std::string >& argv() const;
+
+        /// print all command line arguments, quoting any arguments that include special
+        /// charaters such as ";", white space or quotes (in which case " is replaced with \")
+        void dump( std::ostream &out = std::cout ) const;
 
         /// return true, if option exists (list, e.g.: "--binary,-b" is allowed)
         bool exists( const std::string& name ) const;

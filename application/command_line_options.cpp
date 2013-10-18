@@ -55,6 +55,38 @@ command_line_options::command_line_options( const std::vector< std::string >& ar
     fill_map_( argv_ );
 }
 
+void command_line_options::dump( std::ostream &out ) const
+{
+    for ( size_t arg = 0; arg < argv_.size(); ++arg )
+    {
+        if ( arg > 0 ) { out << ' '; }
+
+        // check if string needs to be quoted
+        if ( argv_[arg].find_first_of( "; \t\n&<>|$#*?()[]{}\'\"" ) != std::string::npos )
+        {
+            std::string a = argv_[arg];
+
+            // check for double quotes inside the string
+            size_t pos = 0;
+            while ( true )
+            {
+                pos = a.find( '"', pos );
+                if ( pos == std::string::npos ) { break; }
+                a.replace( pos, 1, "\\\"" );
+                pos += 2;
+            }
+
+            out << '"' << a << '"';
+        }
+        else
+        {
+            out << argv_[arg];
+        }
+    }
+
+    out << '\n';
+}
+
 command_line_options::command_line_options( const command_line_options& rhs ) { operator=( rhs ); }
 
 const std::vector< std::string >& command_line_options::argv() const { return argv_; }
