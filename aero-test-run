@@ -17,7 +17,8 @@ function usage_()
     exit 1
 }
 
-. /usr/local/bin/aero-test-util
+# aero-test-util is in the same folder as this script aero-test-run
+source "${0%run}util"
 
 name=$( basename $0 )
 path="/mnt/q-storage"
