@@ -30,48 +30,48 @@ pi=$(echo "4*a(1)"|bc -l)
 #Converts Kelvins to Celsius
 function k2c()
 {
-   echo $1-273.15|bc
+   echo $1-273.15|bc -l
 }
 
 #converts meters to feet
 function m2ft()
 {
-   echo $1/0.3048|bc
+   echo $1/0.3048|bc -l
 }
 
 #converts feet to meters
 function ft2m()
 {
-   echo $1*0.3048|bc
+   echo $1*0.3048|bc -l
 }
 
 function hypot()
 {
-   echo "sqrt($1*$1 + $2*$2)"|bc
+   echo "sqrt($1*$1 + $2*$2)"|bc -l
 }
 
 #converts meters per second to knots
 function ms2kts()
 {
-   echo "1.94384449 * $1" | bc
+   echo "1.94384449 * $1" | bc -l
 }
 
 #converts knots to meters per second
 function kts2ms()
 {
-   echo "0.514444444 * $1" | bc
+   echo "0.514444444 * $1" | bc -l
 }
 
 #converts radians to degrees
 function rad2deg()
 {
-   echo "$1*180/$pi" | bc
+   echo "$1*180/$pi" | bc -l
 }
 
 #convert degrees to radians
 function deg2rad()
 {
-   echo "$1 * $pi / 180" | bc
+   echo "$1 * $pi / 180" | bc -l
 }
 
 #gets the time in format like: 20130625T090000  and splits it into csv format
