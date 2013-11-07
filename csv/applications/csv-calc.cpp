@@ -60,7 +60,7 @@ static void usage()
     std::cerr << std::endl;
     std::cerr << "column-wise calculation, optionally by id and block" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "usage: cat data.csv | csv-extents <what> [<options>] > extents.csv" << std::endl;
+    std::cerr << "usage: cat data.csv | csv-calc <what> [<options>] > calc.csv" << std::endl;
     std::cerr << std::endl;
     std::cerr << "<what>: comma-separated list of operations" << std::endl;
     std::cerr << "        results will be output in the same order" << std::endl;
@@ -68,6 +68,7 @@ static void usage()
     std::cerr << "    min: minimum" << std::endl;
     std::cerr << "    max: maximum" << std::endl;
     std::cerr << "    mean: mean value" << std::endl;
+    std::cerr << "    sum: sum" << std::endl;
     std::cerr << "    centre: ( min + max ) / 2" << std::endl;
     std::cerr << "    diameter: max - min" << std::endl;
     std::cerr << "    radius: size / 2" << std::endl;
