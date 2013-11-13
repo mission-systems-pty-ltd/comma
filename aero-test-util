@@ -74,6 +74,22 @@ function deg2rad()
    echo "$1 * $pi / 180" | bc -l
 }
 
+
+#compares two numbers, given the epsilon
+#returns 1 if their abs difference is less than an epsilon, 0 otherwise
+function is_equal()
+{
+ local  v1=$1
+ local  v2=$2
+ local  epsilon=$3
+
+ local diff=$(echo $v1 - $v2 | bc -l)
+
+ echo "$(abs $diff) < $epsilon" | bc -l
+}
+
+
+
 #gets the time in format like: 20130625T090000  and splits it into csv format
 function parse_time()
 {
