@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# take path-value pairs, assign the values to corresponding bash variables
+# in the variable name slashes will be replaced with double underscores
+# $1: variable name prefix
+# examples (try them):
+#     echo hello=world | aero_path_value_eval
+#     echo $hello
+#
+#     echo hello/world=bye | aero_path_value_eval
+#     echo $hello__world
+#
+#     echo hello/world=bye | aero_path_value_eval blah
+#     echo $blah__hello__world
+function aero_path_value_eval()
+{
+    local prefix=$1
+    local path
+    local value
+    local name
+    local delimiter="__"
+    if [ ! -z $1 ] ; then prefix="$1$delimiter" ; fi
+    while IFS='=' read path value ; do
+        if [[ "$path" == "" ]] ; then continue ; fi
+        if [[ "$path" =~ "#" ]] ; then continue ; fi
+        name=$prefix$( echo $path | sed "s/\//$delimiter/g" )
+        eval $name=$value
+    done
+}
+
+# a coarse elapsed time estimate of <command> execution appended to <file>
+# the rationale of writing to a file is to have no side effects for <command>
+# usage: aero_elapsed <file> <command> <args>
+function aero_elapsed()
+{
+    local output_file=$1
+    local name=$( basename $2 )
+    local start=$( date +%s.%N )
+    ${@:2}
+    local end=$( date +%s.%N )
+    local elapsed=$( echo "$end - $start" | bc )
+    echo "$name/seconds=$elapsed" >> $output_file
+}

@@ -1,4 +1,10 @@
-INSTALL( PROGRAMS csv-from-bin-schema csv-merge-bin-schema csv-replace graph-find google-map-create mesh-to-edges
+INSTALL( PROGRAMS aero-bash-util
+                  csv-from-bin-schema
+                  csv-merge-bin-schema
+                  csv-replace
+                  google-map-create
+                  graph-find
+                  mesh-to-edges
          DESTINATION ${aero_INSTALL_BIN_DIR} )
 
 add_executable(qadrax-mesh-to-csv qadrax-mesh-to-csv.cpp )
