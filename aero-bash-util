@@ -1,5 +1,7 @@
 #!/bin/bash
 
+[ -n "$aero_bash_util_include_guard_" ] && return || readonly aero_bash_util_include_guard_=1
+
 # take path-value pairs, assign the values to corresponding bash variables
 # in the variable name slashes will be replaced with double underscores
 # $1: variable name prefix
