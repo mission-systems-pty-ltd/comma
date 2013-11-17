@@ -84,6 +84,8 @@ if [[ $# == 0 ]]; then
     exit 1
 fi
 
+echo "$name: called $name $*" >&2
+
 file=
 vlist=()
 fields=
