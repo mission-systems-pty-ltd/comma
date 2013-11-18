@@ -5,6 +5,7 @@
 # take path-value pairs, assign the values to corresponding bash variables
 # in the variable name slashes will be replaced with double underscores
 # $1: variable name prefix
+# $2: slash replacement; default: _
 # examples (try them):
 #     echo hello=world | aero_path_value_eval
 #     echo $hello
@@ -20,7 +21,8 @@ function aero_path_value_eval()
     local path
     local value
     local name
-    local delimiter="__"
+    local delimiter="_"
+    if [ ! -z $2 ] ; then delimiter="$2" ; fi
     if [ ! -z $1 ] ; then prefix="$1$delimiter" ; fi
     while IFS='=' read path value ; do
         if [[ "$path" == "" ]] ; then continue ; fi
