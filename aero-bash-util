@@ -7,13 +7,13 @@
 # $1: variable name prefix
 # $2: slash replacement; default: _
 # examples (try them):
-#     echo hello=world | aero_path_value_eval
+#     aero_path_value_eval < <( echo hello=world )
 #     echo $hello
 #
-#     echo hello/world=bye | aero_path_value_eval
+#     aero_path_value_eval < <( echo hello/world=bye )
 #     echo $hello__world
 #
-#     echo hello/world=bye | aero_path_value_eval blah
+#     aero_path_value_eval blah < <( echo hello/world=bye )
 #     echo $blah__hello__world
 function aero_path_value_eval()
 {
