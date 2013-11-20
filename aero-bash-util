@@ -3,9 +3,16 @@
 [ -n "$aero_bash_util_include_guard_" ] && return || readonly aero_bash_util_include_guard_=1
 
 # take path-value pairs, assign the values to corresponding bash variables
-# in the variable name slashes will be replaced with double underscores
+# in the variable name slashes will be replaced with given delimiter
+#
+# delimiter: default '_'
+# dash '-': replaced with '_'
+# lines starting with '#' ignored
+# empty lines ignored
+#
 # $1: variable name prefix
 # $2: slash replacement; default: _
+#
 # examples (try them):
 #     aero_path_value_eval < <( echo hello=world )
 #     echo $hello
@@ -27,8 +34,8 @@ function aero_path_value_eval()
     while IFS='=' read path value ; do
         if [[ "$path" == "" ]] ; then continue ; fi
         if [[ "$path" =~ "#" ]] ; then continue ; fi
-        name=$prefix$( echo $path | sed "s/\//$delimiter/g" )
-        eval $name=$value
+        name=$prefix$( echo $path | sed "s/\//$delimiter/g" | sed "s/-/_/g" )
+        eval $name=\"$value\"
     done
 }
 
