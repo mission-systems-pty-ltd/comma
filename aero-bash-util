@@ -22,7 +22,7 @@
 #
 #     aero_path_value_eval blah < <( echo hello/world=bye )
 #     echo $blah__hello__world
-function aero_path_value_eval()
+function aero_path_value_to_var()
 {
     local prefix=$1
     local path
@@ -36,6 +36,41 @@ function aero_path_value_eval()
         if [[ "$path" =~ "#" ]] ; then continue ; fi
         name=$prefix$( echo $path | sed "s/\//$delimiter/g" | sed "s/-/_/g" )
         eval $name=\"$value\"
+    done
+}
+
+# todo: debug...
+#
+# take path-value pairs, output the values of corresponding bash variables
+# in the variable name slashes will be replaced with given delimiter
+#
+# delimiter: default '_'
+# dash '-': replaced with '_'
+# lines starting with '#' ignored
+# empty lines ignored
+#
+# $1: variable name prefix
+# $2: slash replacement; default: _
+#
+# examples (try them):
+#     todo
+function aero_path_value_from_var()
+{
+    local prefix=$1
+    local path
+    local value
+    local default_value
+    local name
+    local delimiter="_"
+    if [ ! -z $2 ] ; then delimiter="$2" ; fi
+    if [ ! -z $1 ] ; then prefix="$1$delimiter" ; fi
+    while IFS='=' read path default_value ; do
+        if [[ "$path" == "" ]] ; then continue ; fi
+        if [[ "$path" =~ "#" ]] ; then continue ; fi
+        name=$prefix$( echo $path | sed "s/\//$delimiter/g" | sed "s/-/_/g" )
+        eval value=\$$name
+        [[ "$value" == "" && "$default_value" != "" ]] && value=$default_value
+        [[ "$value" != "" ]] && echo "$path=$value"
     done
 }
 
