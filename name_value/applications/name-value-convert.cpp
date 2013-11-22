@@ -143,7 +143,7 @@ template <> struct traits< path_value > // quick and dirty
         }
         ptree = comma::property_tree::from_path_value_string( s, equal_sign, delimiter );
     }
-    static void output( std::ostream& os, boost::property_tree::ptree& ptree ) { comma::property_tree::to_path_value( os, ptree, equal_sign, delimiter ); }
+    static void output( std::ostream& os, boost::property_tree::ptree& ptree ) { comma::property_tree::to_path_value( os, ptree, equal_sign, delimiter ); if( delimiter == '\n' ) { os << std::endl; } }
 };
 
 int main( int ac, char** av )
