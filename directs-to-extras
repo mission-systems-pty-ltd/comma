@@ -1,0 +1,179 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+simple_usage()
+{
+    echo "Usage: $name [-h|--help] [--tmp-dir=<dir>] [--output-dir=<dir>] [--dpa-output-dir=<dir>] [--debug] <directs-file>" >&2
+    if [[ $# != 0 ]]; then exit $1; fi
+}
+
+usage()
+{
+    simple_usage
+    cat >&2 <<EOF
+
+Create the various "extras" files from the output of directs-from-dpacn (argument <directs-file>).
+
+Note: this script takes about ten minutes to run.
+
+Options:
+
+    -h|--help           Show this help
+    --tmp-dir=          Temporary directory (assumed to exist)
+    --output-dir=       Location of output files
+    --dpa-output-dir=   Location of output files for DPA (should be a different directory to --output-dir)
+                        If not specified, DPA-only legs (airway id "DCT") are excluded
+    --debug             Turn on debugging
+
+EOF
+    if [[ $# != 0 ]]; then exit $1; fi
+}
+
+if [[ $# == 0 ]]; then simple_usage 1; fi
+
+function bye()
+{
+    if [[ -n "$legs" ]]; then rm -f "$legs"; fi
+    if [[ -n "$tmplegs" ]]; then rm -f "$tmplegs"; fi
+    rm -f "$tmpdir/directs_A_to_A.csv"
+    rm -f "$tmpdir/directs_from_A.csv"
+    rm -f "$tmpdir/directs_to_A.csv"
+    rm -f "$tmpdir/directs_other.csv"
+    rm -f "$tmpdir/directs_tmp.csv"
+    rm -f "$tmpdir/directs_tmp2.csv"
+    if [[ -z $1 ]] ; then exit 1 ; else exit $1; fi
+}
+
+# arguments are an error message to print
+function die()
+{
+    echo "$name: $*" >&2
+    bye 1
+}
+
+trap 'bye 1' SIGHUP SIGINT SIGTERM SIGPIPE
+
+tmpdir="."
+output_dir="."
+dpa_output_dir=     # undefined by default
+directs=
+debug=0
+dir424=/mnt/q-storage/navigation/424/20130401T000000/bin
+
+while [[ $# -gt 0 ]]; do
+    arg="${1#*=}"
+    case "$1" in
+        -h|--help)          usage 0;;
+        --tmp-dir=*)        tmpdir="$arg";;
+        --output-dir=*)     output_dir="$arg";;
+        --dpa-output-dir=*) dpa_output_dir="$arg";;
+        --debug)            debug=1;;
+        -*)                 echo "$name: unrecognized option '$1'" >&2; exit 1;;
+        *)                  if [[ -z "$directs" ]]; then directs=$1
+                            else echo "$name: unexpected argument '$1'" >&2; exit 1; fi;;
+    esac
+    shift
+done
+
+if [[ -z "$directs" ]]; then simple_usage 1; fi
+
+if [[ ! ( -d "$output_dir" && -x "$output_dir" ) ]]; then
+    echo "$name: cannot access output directory '$output_dir'" >&2; exit 1;
+fi
+
+if [[ -n "$dpa_output_dir" ]]; then
+    if [[ ! ( -d "$dpa_output_dir" && -x "$dpa_output_dir" ) ]]; then
+        echo "$name: cannot access output DPA directory '$dpa_output_dir'" >&2; exit 1;
+    fi
+    if [[ "$dpa_output_dir" == "$output_dir" ]]; then
+        echo "$name: --dpa-output-dir should not be the same as --output-dir (since the same filenames are used)" >&2
+        exit 1
+    fi
+fi
+
+legs="$tmpdir/legs.csv"
+> "$legs"
+for prefix in airways-waypoints.both airways-waypoints.high
+do
+    echo "Extracting leg directions from $prefix" >&2
+    csv-from-bin-schema $dir424 $prefix first/leg/direction,first/point/id,second/point/id | awk -F, '
+BEGIN { OFS = ","; }
+/^0/ { print $2,$3; print $3,$2; next; }    # bidirectional
+/^1/ { print $2,$3; next; }                 # forward
+/^2/ { print $3,$2; next; }                 # reversed
+' >> "$legs"
+done
+
+tmplegs="$tmpdir/legs_tmp.csv"
+sort -u "$legs" > "$tmplegs"
+mv "$tmplegs" "$legs"
+
+echo Created "$legs" >&2
+
+tmpdirects="$tmpdir/directs_tmp.csv"
+cat "$directs" | while read line; do
+    p1=$( echo $line | cut -d, -f2 )
+    p2=$( echo $line | cut -d, -f4 )
+
+    if grep -q "^$p1,$p2$" "$legs"; then
+        if (( debug )); then echo "$name: Ignoring leg already in 424 data: $line" >&2; fi
+    elif grep -q "^$p2,$p1$" "$legs"; then
+        if (( debug )); then echo "$name: Ignoring leg in opposite direction to 424 data: $line" >&2; fi
+    else
+        if (( debug )); then echo "$name: Accept leg: $line" >&2; fi
+        echo $line | sed 's///g'   # control M is appearing from somewhere -?
+    fi
+done > "$tmpdirects"
+
+cat "$tmpdirects" | awk -F, '$1 == "A" && $3 == "A"' > "$tmpdir/directs_A_to_A.csv"
+cat "$tmpdirects" | awk -F, '$1 == "A" && $3 != "A"' > "$tmpdir/directs_from_A.csv"
+cat "$tmpdirects" | awk -F, '$1 != "A" && $3 == "A"' > "$tmpdir/directs_to_A.csv"
+cat "$tmpdirects" | awk -F, '$1 != "A" && $3 != "A"' > "$tmpdir/directs_other.csv"
+
+echo "Created directs_*.csv" >&2
+
+fields="first/leg/route_id,first/leg/direction,first/point/latitude,first/point/longitude,first/point/id,second/leg/direction,second/point/latitude,second/point/longitude,second/point/id"
+format="s[15],ub,d,d,s[10],ub,d,d,s[10]"
+tmpdirects2="$tmpdir/directs_tmp2.csv"
+
+for prefix in directs_A_to_A directs_from_A directs_to_A directs_other; do
+    cat "$tmpdir/$prefix.csv" | awk -F, '
+    BEGIN { OFS = ","; }
+
+    {
+        id1 = $2;
+        id2 = $4;
+        lat1 = $5;
+        lon1 = $6;
+        lat2 = $7;
+        lon2 = $8;
+        num_airways = split($9, airways, ";");
+    
+        for (a = 1;a <= num_airways;a++) { print airways[a], "1", lat1, lon1, id1, "1," lat2, lon2, id2; }
+    }' > "$tmpdirects2"
+    
+    cat "$tmpdirects2" | grep -v '^DCT,' | csv-to-bin $format > "$output_dir/$prefix.bin"
+    echo "Created $output_dir/$prefix.bin" >&2
+
+    if [[ -n "$dpa_output_dir" ]]; then
+        cat "$tmpdirects2" | csv-to-bin $format > "$dpa_output_dir/$prefix.bin"
+        echo "Created $dpa_output_dir/$prefix.bin" >&2
+    fi
+done
+
+cat <<EOF > "$output_dir/directs.json"
+{
+    "fields" : "$fields",
+    "format" : "$format"
+}
+EOF
+echo Created "$output_dir/directs.json" >&2
+
+if [[ -n "$dpa_output_dir" ]]; then
+    cp "$output_dir/directs.json" "$dpa_output_dir"
+    echo Created "$dpa_output_dir/directs.json" >&2
+fi
+
+bye 0
+

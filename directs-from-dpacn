@@ -1,0 +1,334 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+simple_usage()
+{
+    echo "Usage: $name [-h|--help] [--qstorage=<dir>] [--tmp-dir=<dir>] [--debug] <dpacn-file>" >&2
+    if [[ $# != 0 ]]; then exit $1; fi
+}
+
+usage()
+{
+    simple_usage
+    cat >&2 <<EOF
+
+Processes the Qantas "directs" file (dpacn.csv), filtering out invalid data and transforming it
+into a more useable format. The output of this script is intended as the input to directs-to-extras.
+
+The output format is as follows:
+
+<type 1>,<name 1>,<type 2>,<name 2>,<lat 1>,<lon 1>,<lat 2>,<lon 2>,<airway(s)>
+
+The "type" values are a single character: W = waypoint, N = navaid, A = airport.
+The "airway(s)" value may be "DCT" for Qantas directs (intended to be used for DPA only).
+Multiple airways are separated with a semicolon, e.g. "DCT;M864".
+
+Note: this script takes over an hour to run.
+
+Options:
+
+    -h|--help       Show this help
+    --qstorage=     Qstorage directory
+    --tmp-dir=      Temporary directory (assumed to exist)
+    --debug=        Turn on debugging
+
+EOF
+    if [[ $# != 0 ]]; then exit $1; fi
+}
+
+if [[ $# == 0 ]]; then simple_usage 1; fi
+
+function bye()
+{
+    if [[ -f "$known_airways" ]]; then rm "$known_airways"; fi
+    rm -f $tmpdir/1302_airports*
+    rm -f $tmpdir/1302_waypoints*
+    rm -f $tmpdir/1302_navaids*
+    rm -f $tmpdir/extra_?_id_lat_lon
+    rm -f $tmpdir/map_airport_iata_id
+    if [[ -z $1 ]] ; then exit 1 ; else exit $1; fi
+}
+
+# arguments are an error message to print
+function die()
+{
+    echo "$name: $*" >&2
+    bye 1
+}
+
+trap 'bye 1' SIGHUP SIGINT SIGTERM SIGPIPE
+
+dpacn=
+qstorage=/mnt/q-storage
+tmpdir="."
+debug=0
+
+while [[ $# -gt 0 ]]; do
+    arg="${1#*=}"
+    case "$1" in
+        -h|--help)      usage 0;;
+        --qstorage=*)   qstorage=$arg;;
+        --tmp-dir=*)    tmpdir=$arg;;
+        --debug)        debug=1;;
+        -*)             echo "$name: unrecognized option '$1'" >&2; exit 1;;
+        *)              if [[ -z "$dpacn" ]]; then dpacn=$1
+                        else echo "$name: unexpected argument '$1'" >&2; exit 1; fi;;
+    esac
+    shift
+done
+
+if [[ ! ( -d "$qstorage" && -x "$qstorage" ) ]]; then echo "$name: cannot access qstorage directory $qstorage" >&2; exit 1; fi
+if [[ ! ( -d "$tmpdir" && -x "$tmpdir" ) ]]; then echo "$name: cannot access temp directory $tmpdir" >&2; exit 1; fi
+
+pc_1302="$qstorage/navigation/1302.pc"
+
+if [[ ! -f "$pc_1302" ]]; then echo "$name: cannot open $pc_1302" >&2; exit 1; fi
+
+map_iata_id=$tmpdir/map_airport_iata_id
+airports_id_iata=$tmpdir/1302_airports_id_iata
+airport_tolerance=0.1
+waypoint_tolerance=0.1
+
+# arguments (floating point): x y
+# returns success if x < y
+less_float()
+{
+    # Note: returning 1 means failure, 0 means success
+    return $( echo $1 $2 | awk '{ print ($1 > $2); }' )
+}
+
+# arguments (floating point): x y
+# returns success if x > y
+greater_float()
+{
+    # Note: returning 1 means failure, 0 means success
+    return $( echo $1 $2 | awk '{ print ($1 < $2); }' )
+}
+
+known_airways="$tmpdir/known_airways"
+arinc424-to-csv airways,waypoints < $pc_1302 | cut -d, -f1 | sed 's/"//g; s/:.*//g' | sort -u > "$known_airways"
+echo "Created list of known airways" >&2
+
+if [[ ! -f $airports_id_iata ]]; then
+    for type in airports waypoints navaids
+    do
+        arinc424-to-csv $type < $pc_1302 > $tmpdir/1302_$type
+        cat $tmpdir/1302_$type | awk -F, '{ print $4","$1","$2; }' | sed 's/"//g' | sort -u > $tmpdir/1302_${type}_id_lat_lon
+        echo "Created 1302_$type and 1302_${type}_id_lat_lon" >&2
+    done
+
+    cat $tmpdir/1302_airports | cut -d, -f4,11 | sed 's/"//g' | sort -u > $airports_id_iata
+    echo "Created 1302_airports_id_iata" >&2
+
+    for type in A W N
+    do
+        name=$tmpdir/extra_${type}_id_lat_lon
+        cat $dpacn | sed 's///g' | awk -F, 'BEGIN { OFS=","; } { print $4,$1,$2,$3; print $8,$5,$6,$7; }' | grep "^$type" | cut -d, -f2,3,4 | awk -F, '
+    BEGIN { OFS=","; }
+
+    function get_pos(s) \
+    {
+        split(s, val, ".");
+        deg = val[1];
+        min = val[2];
+        nsew = substr(min, length(min), 1);
+        min = substr(min, 1, length(min) - 1);
+        sign = 1;
+        if (nsew == "W" || nsew == "S") { sign = -1; }
+        return sprintf("%.15g", (deg + min / 600.0) * sign);
+    }
+
+    { print $1,get_pos($2),get_pos($3); }
+    ' | sort -u > $name
+        echo Created $name >&2
+    done
+
+    # create mapping from iata to 424 airport ids (and check if positions are correct)
+
+    > $map_iata_id
+
+    cat $airports_id_iata |
+    while read line; do
+        id=$( echo $line | cut -d, -f1 )
+        iata=$( echo $line | cut -d, -f2 )
+
+        if [[ -n $id && -n $iata ]]; then
+            real=$( grep "^$id," $tmpdir/1302_airports_id_lat_lon )
+            real_lat=$( echo $real | cut -d, -f2 )
+            real_lon=$( echo $real | cut -d, -f3 )
+
+            dp=$( grep "^$iata," $tmpdir/extra_A_id_lat_lon )
+
+            if [[ -n "$dp" ]]; then
+                dplat=$( echo $dp | cut -d, -f2 )
+                dplon=$( echo $dp | cut -d, -f3 )
+
+                dist=$( echo $real_lat,$real_lon,$dplat,$dplon | sphere-calc distance | cut -d, -f5 )
+
+                if less_float $dist $airport_tolerance; then
+                    echo "$iata,$id" >> $map_iata_id
+                else
+                    if (( debug )); then
+                        echo "Airport too far away: id $id ($real_lat,$real_lon) & iata $iata ($dplat,$dplon)" >&2
+                    fi
+                fi
+            else
+                if (( debug )); then echo "Airport not present in $dpacn: iata $iata, id $id" >&2; fi
+            fi
+        fi
+    done
+
+    echo Created $map_iata_id >&2
+fi
+
+# arguments: type (A/W/N), dpacn id, latitude, longitude
+lookup()
+{
+    local type="$1"
+    local dpid="$2"
+    local dplat="$3"
+    local dplon="$4"
+
+    if (( debug )); then echo "LOOKUP $type $dpid $dplat $dplon" >&2; fi
+
+    case $type in
+
+    A)      result=$( grep "^$dpid," $map_iata_id | cut -d, -f2 )
+            if [[ -n "$result" ]]; then
+                if (( debug )); then echo "OK: airport iata $dpid -> $result" >&2; fi
+                echo $result
+            else
+                if (( debug )); then echo "Unknown airport iata $dpid" >&2; fi
+            fi
+            ;;
+
+    W|N)    # echo "-> type W|N" >&2
+            if [[ $type == W ]]; then
+                file=$tmpdir/1302_waypoints_id_lat_lon
+            else
+                file=$tmpdir/1302_navaids_id_lat_lon
+            fi
+
+            # echo "GREP: grep \"^$dpid\\>\" $file" >&2
+
+            vals=$( grep "^$dpid\>" $file )
+
+            if [[ -n "$vals" ]]; then
+                # echo "CHECKING $type $dpid $dplat $dplon vs $( echo $vals | wc -w ) candidates:" >&2
+                local best_id=
+                local best_lat=
+                local best_lon=
+                local best_dist=
+
+                for val in $vals; do
+                    # echo "... candidate $val" >&2
+                    real_id=$( echo $val | cut -d, -f1 )
+                    real_lat=$( echo $val | cut -d, -f2 )
+                    real_lon=$( echo $val | cut -d, -f3 )
+
+                    dist=$( echo $dplat,$dplon,$real_lat,$real_lon | sphere-calc distance | cut -d, -f5 )
+
+                    if less_float $dist $waypoint_tolerance; then
+                        if [[ -n "$best_id" ]]; then
+                            if greater_float $dist $best_dist; then
+                                if (( debug )); then echo "GREATER DISTANCE: $dist > $best_dist" >&2; fi
+                                continue
+                            elif (( debug )); then
+                                echo "LOWER DISTANCE: $dist <= $best_dist" >&2
+                            fi
+                        fi
+
+                        best_id=$real_id
+                        best_lat=$real_lat
+                        best_lon=$real_lon
+                        best_dist=$dist
+
+                        # echo "BEST SO FAR: $best_id $best_lat $best_lon dist $best_dist" >&2
+                    elif (( debug )); then
+                            echo "TOO FAR: dist $dist from $real_id ($real_lat, $real_lon) to ($dplat, $dplon)" >&2
+                    fi
+                done
+
+                if [[ -n "$best_id" ]]; then
+                    echo $best_id
+                    if (( debug )); then
+                        echo "OK: dist $dist from $real_id ($real_lat, $real_lon) to ($dplat, $dplon)" >&2
+                    fi
+                fi
+            else
+                if (( debug )); then echo "Unknown $type id $dpid" >&2; fi
+            fi
+    esac
+}
+
+# find all directs
+
+cat $dpacn | sed 's///g; s/"//g' |
+while read line; do
+    if ((debug )); then echo "LINE: $line" >&2; fi
+    values=$( echo $line | awk -F, '
+    function get_pos(s) \
+    {
+        split(s, val, ".");
+        deg = val[1];
+        min = val[2];
+        nsew = substr(min, length(min), 1);
+        min = substr(min, 1, length(min) - 1);
+        sign = 1;
+        if (nsew == "W" || nsew == "S") { sign = -1; }
+        return sprintf("%.15g", (deg + min / 600.0) * sign);
+    }
+
+    {
+        printf $4","$1","get_pos($2)","get_pos($3)","$8","$5","get_pos($6)","get_pos($7)","$15;
+        for (f = 16;f <= NF;f++) { printf ";" $f; }
+        printf "\n";
+    }' )
+
+    if (( debug )); then echo "VALUES = $values" >&2; fi
+
+    type1=$( echo $values | cut -d, -f1 )
+    dpid1=$( echo $values | cut -d, -f2 )
+    lat1=$(  echo $values | cut -d, -f3 )
+    lon1=$(  echo $values | cut -d, -f4 )
+
+    type2=$( echo $values | cut -d, -f5 )
+    dpid2=$( echo $values | cut -d, -f6 )
+    lat2=$(  echo $values | cut -d, -f7 )
+    lon2=$(  echo $values | cut -d, -f8 )
+
+    airways=$( echo $values | cut -d, -f9 )
+
+    id1=$( lookup $type1 $dpid1 $lat1 $lon1 )
+
+    if [[ -n "$id1" ]]; then
+        id2=$( lookup $type2 $dpid2 $lat2 $lon2 )
+        
+        if [[ -n "$id2" ]]; then
+
+            # check for unknown airways
+            if [[ -n "$airways" ]]; then
+                corrected_airways=
+                for a in $( echo $airways | tr ';' ' ' ); do
+                    if [[ $a != "DCT" ]]; then
+                        if ! grep -q "$a" "$known_airways"; then
+                            echo "Ignoring unknown airway $a in: $values" >&2
+                            continue
+                        fi
+                    fi
+                    if [[ -z "$corrected_airways" ]]; then corrected_airways=$a; else corrected_airways+=";$a"; fi
+                done
+                if [[ -z "$corrected_airways" ]]; then
+                    if (( debug )); then echo "Ignoring entry with no known airways: $values" >&2; fi
+                    continue
+                fi
+                airways=$corrected_airways
+            fi
+
+            echo "$type1,$id1,$type2,$id2,$lat1,$lon1,$lat2,$lon2,$airways"
+        fi
+    fi
+done
+
+bye 0
