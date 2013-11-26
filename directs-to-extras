@@ -14,7 +14,6 @@ usage()
     cat >&2 <<EOF
 
 Create the various "extras" files from the output of directs-from-dpacn (argument <directs-file>).
-
 Note: this script takes about ten minutes to run.
 
 Options:
@@ -149,10 +148,11 @@ for prefix in directs_A_to_A directs_from_A directs_to_A directs_other; do
         lat2 = $7;
         lon2 = $8;
         num_airways = split($9, airways, ";");
+        if (num_airways == 0) { num_airways = 1; airways[1] = ""; }
     
         for (a = 1;a <= num_airways;a++) { print airways[a], "1", lat1, lon1, id1, "1," lat2, lon2, id2; }
     }' > "$tmpdirects2"
-    
+
     cat "$tmpdirects2" | grep -v '^DCT,' | csv-to-bin $format > "$output_dir/$prefix.bin"
     echo "Created $output_dir/$prefix.bin" >&2
 
