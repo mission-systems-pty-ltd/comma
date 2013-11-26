@@ -2,9 +2,6 @@ INSTALL( PROGRAMS aero-bash-util
                   csv-from-bin-schema
                   csv-merge-bin-schema
                   csv-replace
-                  directs-airport-navaids
-                  directs-from-dpacn
-                  directs-to-extras
                   google-map-create
                   graph-find
                   mesh-to-edges
