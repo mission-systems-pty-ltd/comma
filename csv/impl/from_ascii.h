@@ -59,25 +59,25 @@ class from_ascii_
         from_ascii_( const std::vector< boost::optional< std::size_t > >& indices
                   , const std::deque< bool >& optional
                   , const std::vector< std::string >& line );
-        
+
         /// apply
         template < typename K, typename T > void apply( const K& name, boost::optional< T >& value );
-        
+
         /// apply
         template < typename K, typename T > void apply( const K& name, boost::scoped_ptr< T >& value );
-        
+
         /// apply
         template < typename K, typename T > void apply( const K& name, boost::shared_ptr< T >& value );
-        
+
         /// apply
         template < typename K, typename T > void apply( const K& name, T& value );
-        
+
         /// apply to non-leaf elements
         template < typename K, typename T > void apply_next( const K& name, T& value );
-        
+
         /// apply to leaf elements
         template < typename K, typename T > void apply_final( const K& name, T& value );
-        
+
     private:
         const std::vector< boost::optional< std::size_t > >& indices_;
         const std::deque< bool >& optional_;
@@ -86,11 +86,11 @@ class from_ascii_
         std::size_t optional_index;
         static void lexical_cast_( char& v, const std::string& s ) { v = s.at( 0 ) == '\'' && s.at( 2 ) == '\'' && s.length() == 3 ? s.at( 1 ) : static_cast< char >( boost::lexical_cast< int >( s ) ); }
         static void lexical_cast_( unsigned char& v, const std::string& s ) { v = s.at( 0 ) == '\'' && s.at( 2 ) == '\'' && s.length() == 3 ? s.at( 1 ) : static_cast< unsigned char >( boost::lexical_cast< unsigned int >( s ) ); }
-        static void lexical_cast_( boost::posix_time::ptime& v, const std::string& s ) { v = boost::posix_time::from_iso_string( s ); }
+        static void lexical_cast_( boost::posix_time::ptime& v, const std::string& s ) { try { v = boost::posix_time::from_iso_string( s ); } catch( ... ) { v = boost::posix_time::not_a_date_time; } }
         static void lexical_cast_( std::string& v, const std::string& s ) { v = comma::strip( s, "\"" ); }
         static void lexical_cast_( bool& v, const std::string& s ) { v = static_cast< bool >( boost::lexical_cast< unsigned int >( s ) ); }
         template < typename T >
-        static void lexical_cast_( T& v, const std::string& s ) { v = boost::lexical_cast< T >( s ); }        
+        static void lexical_cast_( T& v, const std::string& s ) { v = boost::lexical_cast< T >( s ); }
 };
 
 inline from_ascii_::from_ascii_( const std::vector< boost::optional< std::size_t > >& indices
@@ -141,7 +141,7 @@ inline void from_ascii_::apply_next( const K& name, T& value ) { comma::visiting
 
 template < typename K, typename T >
 inline void from_ascii_::apply_final( const K& key, T& value )
-{ 
+{
 	(void)key;
     if( indices_[ index_ ] )
     {
