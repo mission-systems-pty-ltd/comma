@@ -1,0 +1,286 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+simple_usage()
+{
+    echo "Usage: $name [-h|--help] [-a|--assign] [-t|--test] [--no-fix-equals] [<input_file>]" >&2
+    if [[ $# != 0 ]]; then exit $1; fi
+}
+
+usage()
+{
+    simple_usage
+    cat >&2 <<EOF
+
+Transform expressions containing fixm variables (i.e. with names like "a/b[10/c") to make them suitable for
+input to Python.
+
+If no input file is specified, standard input is used.
+
+Use the --assign option if the input consists of assignments like <name>=<value>: this determines whether
+or not <value> should be quoted (numbers are not quoted), and allows an unquoted <value> to contain spaces,
+e.g. "route=Sydney to Perth".
+
+Without the --assign option, "=" is transformed to "==" (comparison instead of assignment).
+
+Options:
+
+    -h|--help           Show this help
+    -a|--assign         Expect input of the form <name>=<value> (<value> becomes quoted or not as appropriate)
+    -t|--test           Expect input to be boolean expressions; output will be like "if not (<expr>): print ..."
+                        (i.e. prints a message if the expression is not true)
+    --no-fix-equals     Do not replace "=" with "==" in expressions (not needed with --assign)
+
+EOF
+    if [[ $# != 0 ]]; then exit $1; fi
+}
+
+if [[ $# == 0 ]]; then simple_usage 1; fi
+
+assign_option=0
+test_option=0
+print_what=
+input=
+no_fix_equals=0
+
+while [[ $# -gt 0 ]]; do
+    arg="${1#*=}"
+    case "$1" in
+        -h|--help)          usage 0;;
+        -a|--assign)        assign_option=1;;
+        -t|--test)          test_option=1;;
+        --no-fix-equals)    no_fix_equals=1;;
+        -*)                 echo "$name: unrecognized option '$1'" >&2; exit 1;;
+
+        *)                  if [[ -z "$input" ]]; then input=$arg
+                            else echo "$name: unexpected argument '$1'" >&2; exit 1; fi;;
+    esac
+    shift
+done
+
+# validate arguments
+
+if (( assign_option && test_option )); then echo "$name: cannot have --assign and --test" >&2; exit 1; fi
+if (( !(assign_option || test_option) )); then echo "$name: must specify either --assign or --test" >&2; exit 1; fi
+
+if (( assign_option )); then
+    if [[ -n "$print_what" ]]; then echo "$name: cannot have --assign and --print" >&2; exit 1; fi
+    if (( no_fix_equals )); then echo "$name: cannot have --assign and --no-fix-equals" >&2; exit 1; fi
+fi
+
+if (( assign_option )); then
+    # ignore comments and empty lines
+    cat $input | expand | sed 's/^ *#.*//g; s/^ *$//g' | awk '
+    BEGIN { input_name = "'"$input"'"; if (input_name == "") input_name = "input"; }
+
+    function strip_spaces(s)
+    {
+        for (n = 1;substr(s, n, 1) == " ";++n) { }
+        if (n > length(s)) { return ""; }
+        for (m = length(s);substr(s, m, 1) == " ";--m) { }
+        return substr(s, n, m - n + 1);
+    }
+
+    function is_alpha(ch) { return (ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z"); }
+    function is_digit(ch) { return (ch >= "0" && ch <= "9"); }
+    function is_start_id(ch) { return is_alpha(ch) || ch == "_"; }
+    function is_id(ch) { return is_start_id(ch) || is_digit(ch) || ch == "/" || ch == "[" || ch == "]"; }
+
+    function is_number(s)
+    {
+        any_digits = 0;
+        n = 1;
+        if (substr(s, 1, 1) == "-") { ++n; }
+        for ( ;is_digit(substr(s, n, 1));++n) { any_digits = 1; }
+        if (substr(s, n, 1) == ".") { for (++n;is_digit(substr(s, n, 1));++n) { any_digits = 1; } }
+        return (any_digits && n > length(s));
+    }
+
+    function validate_name(s)
+    {
+        if (!is_start_id(substr(s, 1, 1))) { return 0; }
+        for (n = 2;n <= length(s);n++) { if (!is_id(substr(s, n, 1))) return 0; }
+        return 1;
+    }
+
+    function transform_name(s)
+    {
+        result = "";
+        for (n = 1;(ch = substr(s, n, 1)) != "";++n)
+        {
+            if (ch == "/")      { result = result "_S"; }
+            else if (ch == "[") { result = result "_L"; }
+            else if (ch == "]") { result = result "_R"; }
+            else if (ch == "_") { result = result "__"; }
+            else { result = result ch; }
+        }
+        return result;
+    }
+
+    $0 != "" \
+    {
+        eq_pos = index($0, "=");
+        if (eq_pos != 0) { name = strip_spaces(substr($0, 1, eq_pos - 1)); }
+
+        if (eq_pos == 0 || name == "")
+        { print "Error (line " NR " of " input_name "): expected \"name=value\"; got: " $0 | "cat 1>&2"; }
+        else
+        if (!validate_name(name))
+        { print "Error (line " NR " of " input_name "): illegal name \"" name "\"" | "cat 1>&2"; }
+        else
+        {
+            name = transform_name(name);
+            value = strip_spaces(substr($0, eq_pos + 1));
+
+            # remove quotes from value
+            if (substr(value, 1, 1) == "\"") { value = substr(value, 2); }
+            if (substr(value, length(value), 1) == "\"") { value = substr(value, 1, length(value) - 1); }
+
+            if (is_number(value)) { print name "=" value; }
+            else { print name "=\"" value "\""; }
+        }
+    }
+    '
+elif (( test_option )); then
+    cat $input | awk '
+    # variables:
+    # input -- current input line
+    # upto -- position in current input line
+    # transformed_name[] -- associative array from variable names -> transformed names
+
+    BEGIN \
+    {
+        num_tokens = 0;
+        dquote = "\"";
+        squote = "'"'"'";   # single quote
+    }
+
+    function is_alpha(ch) { return (ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z"); }
+    function is_digit(ch) { return (ch >= "0" && ch <= "9"); }
+    function is_start_id(ch) { return is_alpha(ch) || ch == "_"; }
+    function is_id(ch) { return is_start_id(ch) || is_digit(ch) || ch == "/" || ch == "[" || ch == "]"; }
+
+    function is_keyword(s)
+    {
+        return s == "and" || s == "break" || s == "continue" || s == "def" || s == "elif" || s == "else" ||
+               s == "except" || s == "exec" || s == "finally" || s == "for" || s == "from" || s == "global" ||
+               s == "if" || s == "is" || s == "lambda" || s == "not" || s == "or" || s == "pass" ||
+               s == "print" || s == "raise" || s == "try" || s == "while";
+    }
+
+    function prepare_for_quoting(s)
+    {
+        # check if the string is already quoted
+        if (substr(s, 1, 1) == dquote && substr(s, length(s), 1) == dquote) { return substr(s, 2, length(s) - 2); }
+
+        res = "";
+        for (n = 1;n <= length(s);n++)
+        {
+            ch = substr(s, n, 1);
+            if (ch == dquote) { res = res "\\\\" dquote; }
+            else { res = res ch; }
+        }
+        return res;
+    }
+
+    function strip_spaces(s)
+    {
+        for (n = 1;substr(s, n, 1) == " ";++n) { }
+        if (n > length(s)) { return ""; }
+        for (m = length(s);substr(s, m, 1) == " ";--m) { }
+        return substr(s, n, m - n + 1);
+    }
+
+    function transform_name(s)
+    {
+        result = "";
+        for (n = 1;(ch = substr(s, n, 1)) != "";++n)
+        {
+            if (ch == "/")      { result = result "_S"; }
+            else if (ch == "[") { result = result "_L"; }
+            else if (ch == "]") { result = result "_R"; }
+            else if (ch == "_") { result = result "__"; }
+            else { result = result ch; }
+        }
+        return result;
+    }
+
+    # get the next token from the current input line
+    # Returns "" if there are no more tokens
+    function next_token()
+    {
+        while ((ch = substr(input, upto, 1)) == " ") { ++upto; }
+        if (ch == "" || ch == "#") { return ""; }
+
+        tok_start = upto;
+        if (is_start_id(ch))
+        {
+            for (++upto;is_id(substr(input, upto, 1));++upto) { }
+            t = substr(input, tok_start, upto - tok_start);
+
+            # treat as a variable name unless it is a Python keyword or it looks like a function call
+            if (is_keyword(t) || substr(input, upto, 1) == "(") { return t; }
+            else { return (transformed_name[t] = transform_name(t)); }
+        }
+        else
+        if (is_digit(ch) || ch == "." || (ch == "-" && is_digit(substr(input, upto + 1, 1))))
+        {
+            for (++upto;is_digit(substr(input, upto, 1));++upto) { }
+            if (ch != "." && substr(input, upto, 1) == ".") { for (++upto;is_digit(substr(input, upto, 1));++upto); }
+            #TODO: exponentiation: [eE][+-](digits...)
+            return substr(input, tok_start, upto - tok_start);
+        }
+        else
+        if (ch == dquote || ch == squote)
+        {
+            for (++upto;(ch2 = substr(input, upto, 1)) != ch && ch2 != "";++upto) { if (ch2 == "\\") ++upto; }
+            if (ch2 == ch) { ++upto; } else { t = t ch; }
+            t = substr(input, tok_start, upto - tok_start);
+            return t;
+        }
+        else
+        {
+            #t = substr(input, upto, 3);
+            #if (t == "+/-") { upto += 3; return t; }
+
+            t = substr(input, upto, 2);
+            if (t == "<=" || t == ">=" || t == "==" || t == "!=" || t == "<>" || t == "+=" || t == "-=" || t == "*=" ||
+                t == "/=" || t == "%=" || t == ">>" || t == "<<" || t == "**" || t == "//")
+            { upto += 2; return t; }
+
+            t = substr(input, upto++, 1);
+            if (t == "=" && '"$no_fix_equals"' == 0) { return "=="; }
+            return t;
+        }
+    }
+
+    {
+        input = $0;
+        if (orig_input != "") { orig_input = orig_input ";"; }
+        orig_input = orig_input input;
+        upto = 1;
+        while ((tok = next_token()) != "") { output = output " " tok; }
+    }
+
+    END \
+    {
+        print "if not (" output "):";
+
+        for (name in transformed_name)
+        {
+            expr_str = orig_input;
+            if (substr(orig_input, 1, length(name)) == name)
+            {
+                expr_str = strip_spaces(substr(expr_str, length(name) + 1));
+                if (substr(expr_str, 1, 2) == "==") { expr_str = substr(expr_str, 3); }
+                else if (substr(expr_str, 1, 1) == "=") { expr_str = substr(expr_str, 2); }
+                expr_str = strip_spaces(expr_str);
+            }
+            print "    print " squote name "/expected=" dquote prepare_for_quoting(expr_str) dquote squote;
+            print "    print " squote name "/actual=" dquote squote "+str(" transformed_name[name] ")+" squote dquote squote;
+        }
+    }
+    '
+fi
+
