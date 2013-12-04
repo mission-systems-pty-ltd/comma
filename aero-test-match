@@ -2,11 +2,9 @@
 
 name=$( basename $0 )
 
-. /usr/local/bin/aero-test-util
-
 function simple_usage()
 {
-    echo "Usage: $name [-h|--help] [-i|--input=<file>] <expected-values-file>" >&2
+    echo "Usage: $name [-h|--help] [-v|--variables=<file>] [--tmp-dir=<dir>] <expected-values-file>" >&2
     if [[ $# != 0 ]]; then exit $1; fi
 }
 
@@ -17,7 +15,7 @@ function usage()
 
 Verify input against expected values.
 
-By default, input is read from stdin. Input consists of lines in the form "path=value".
+By default, variable values are read from stdin. Input consists of lines in the form "path=value".
 Paths may contain array indexes, e.g. abc/def[10]/xyz.
 
 The <expected-values-file> contains one boolean expression per line, referring to the path values.
@@ -25,9 +23,8 @@ The <expected-values-file> contains one boolean expression per line, referring t
 Examples:
 
 some_value = 5.23
-flight/weight = 28000+/-150
+flight/weight > 28000
 abc/def[10]/xyz != "YSSY"
-(flight/weight > 3 and last/time matches "2013.*")
 
 EOF
     if [[ $# != 0 ]]; then exit $1; fi
@@ -35,18 +32,15 @@ EOF
 
 if [[ $# == 0 ]]; then simple_usage 1; fi
 
-input=
+variables=
 expr_file=
 
 while [[ $# -gt 0 ]]; do
     arg="${1#*=}"
     case "$1" in
         -h|--help)          usage 0;;
-
-        -i=*|--input=*)     input=$arg;;
-
+        -v=*|--variables=*) variables=$arg;;
         -*)                 echo "$name: unrecognized option '$1'" >&2; exit 1;;
-
         *)                  if [[ -z "$expr_file" ]]; then expr_file=$arg
                             else echo "$name: unexpected argument '$1'" >&2; exit 1; fi;;
     esac
@@ -55,12 +49,7 @@ done
 
 if [[ -z "$expr_file" ]]; then echo "$name: missing required argument <expected-values-file>" >&2; exit 1; fi
 
-tmp_vars="vars.$$"
-cat $input | fixm-to-python --assign > "$tmp_vars"
-
-# read one line at a time, since python exits for some kinds of errors
-
-cat "$expr_file" | while read line; do
-    ( cat "$tmp_vars"; echo $line | fixm-to-python --test ) | python
-done
+# if the variables file name is known, pass it to aero-rules, since it can appear in some error messages
+if [[ -z "variables" ]]; then cat $variables | aero-rules --test "$expr_file"
+else aero-rules --test --variables="$variables" "$expr_file"; fi
 
