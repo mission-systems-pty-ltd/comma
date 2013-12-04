@@ -87,3 +87,56 @@ function aero_elapsed()
     local elapsed=$( echo "$end - $start" | bc )
     echo "$name/seconds=$elapsed" >> $output_file
 }
+
+
+function replace_value_in_name_value()
+{
+    local input_string=$1
+    local config_replace_list=$2
+    local input_kay
+    local input_value_old
+    local input_value_new
+    local pair
+    local from_value
+    local to_value
+    local assignment="="
+    for pair in "${config_replace_list[@]}" ; do
+        from_value=${pair%%$assignment*}
+        to_value=${pair##*$assignment}
+        
+        input_key=${input_string%%$assignment*}
+        input_value_old=${input_string##*$assignment}
+        input_value_new=${input_value_old/$from_value/$to_value}
+        if [[ "$input_value_new" != "$input_value_old" ]]; then
+            echo "$input_key""$assignment""$input_value_new" 
+            return
+        fi    
+    done
+    echo "$1"
+}
+
+function extract_config_replace_list()
+{
+    local result=""
+    local lines=()
+    local line
+    local keyword="@"
+    local keyword_length=${#keyword[@]}
+    
+    while read -r line
+    do
+        if [[ "${line:0:$keyword_length}" == "$keyword" ]]; then
+            #s1=${line%%$keyword*}
+            s2=${line##*$keyword}
+            config_replace_list+=( "$s2" )
+        else    
+            lines+=( "$line" )
+        fi    
+    done
+
+    for line in "${lines[@]}" ; do
+        result+=$( replace_value_in_name_value "$line" $config_replace_list )$'\n'
+    done
+    
+    echo "$result" 
+}
