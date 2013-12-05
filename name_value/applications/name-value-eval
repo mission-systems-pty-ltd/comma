@@ -1,0 +1,138 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+simple_usage()
+{
+    echo "Usage: $name [-h|--help] [-v|--variables=<file>] [-t|--test] [-c|--commands] [--tmp-dir=<dir>] [<input-file>]" >&2
+    if [[ $# != 0 ]]; then exit $1; fi
+}
+
+usage()
+{
+    simple_usage
+    cat >&2 <<EOF
+
+This script evaluates expressions and/or commands involving variables in "path" format, e.g. a/b/c[10]/d.
+
+With the --test option, the input is expected to be one boolean expression per line. If the expression
+evaluates to false, the expected and actual values of all variables used in the expression are printed.
+Any "=" operators in the input are treated as "==" when --test is used.
+
+Without the --test option, the input is expected to be a series of Python commands. The output is a list of
+all variables that are the target of an assignment statement (in "path=value" format, one per line).
+
+Variable values may either come from a file (using --variables) or from standard input, and are treated
+specially: the "value" part of "name=value" does not need to be quoted if it is a string, and may contain spaces
+(so 'airport=YSSY' and 'route=Sydney to Perth' are both OK). Numeric values may be quoted or not ('x=3' or 'x="3"').
+
+Either the variables or the commands/expressions may be read from standard input, but not both.
+
+Options:
+
+    -h|--help       Show this help
+    -v|--variables  Variable values file, in the form <path>=<value> (one per line)
+    -t|--test       Input consists of boolean expressions (one per line); print nothing if the expression is true,
+                    otherwise print expected and actual variable values
+    -c|--commands   Just print the Python commands instead of executing them
+    --tmp-dir=      Temporary directory (default = current directory)
+
+EOF
+    if [[ $# != 0 ]]; then exit $1; fi
+}
+
+# transform a path from its "mangled" form (with no "/" "[" or "]" characters) to its original form
+# (also removes any surrounding quotes)
+function demangle_name()
+{
+    echo $1 | sed "s/['\"]//g" | name-value-eval-preparse --demangle
+}
+
+# argument: <error_file> [ optional <original_line> ]
+function process_python_errors()
+{
+  if [[ -n "$2" ]]; then extra_info=": '$2'"; else extra_info=""; fi
+  ( desc=$( echo $( egrep 'Error|Exception|Warning|KeyboardInterrupt' $1 ) )
+    if [[ -z "$desc" ]]; then cat "$1" | egrep -v 'Traceback|"<stdin>"'
+    elif [[ $desc = NameError* ]]; then
+        local var_name=$( echo $desc | cut -d' ' -f3 )
+        echo "NameError: \""$( demangle_name "$var_name" )"\" undefined$extra_info"
+    else echo "$desc$extra_info"; fi ) |
+    awk 'NR > 1 { printf "... "; } { print $0; }'   # (if multiple lines, indicate continuation)
+}
+
+function bye()
+{
+    if [[ -n "$tmp_vars" ]]; then rm -f "$tmp_vars" ; fi
+    if [[ -n "$err" ]]; then rm -f "$err" ; fi
+    if [[ -z $1 ]] ; then exit 1 ; else exit $1; fi
+}
+
+trap 'bye 1' SIGHUP SIGINT SIGTERM SIGPIPE
+
+test_option=0
+variables=
+input=
+tmpdir="."
+python_cmd="python"
+
+while [[ $# -gt 0 ]]; do
+    arg="${1#*=}"
+    case "$1" in
+        -h|--help)          usage 0;;
+        -t|--test)          test_option=1;;
+        -c|--commands)      python_cmd="cat";;
+        -v=*|--variables=*) variables=$arg;;
+        --tmp-dir=*)        tmpdir=$arg;;
+        -*)                 echo "$name: unrecognized option '$1'" >&2; exit 1;;
+        *)                  if [[ -z "$input" ]]; then input=$arg
+                            else echo "$name: unexpected argument '$1'" >&2; exit 1; fi;;
+    esac
+    shift
+done
+
+if [[ -z "$variables" && -z "$input" ]]; then
+    echo "$name: must specify an input file or option --variables" >&2; exit 1
+fi
+
+if [[ ! ( -d "$tmpdir" && -x "$tmpdir" ) ]]; then
+    echo "$name: cannot access temporary directory '$tmpdir'" >&2; exit 1
+fi
+
+err="$tmpdir/nv_eval_err.$$"
+tmp_vars="$tmpdir/nv_eval_vars.$$"
+
+variables_filename=$variables; if [[ -z "$variables_filename" ]]; then variables_filename="input"; fi
+input_filename=$input; if [[ -z "$input_filename" ]]; then input_filename="input"; fi
+
+# use file name rather than standard input if the name is known, since error messages mention it
+if [[ -n "$variables" ]]; then name-value-eval-preparse --assign "$variables" > $tmp_vars
+else name-value-eval-preparse --assign > $tmp_vars; fi
+
+if (( test_option )); then
+    # process one line at a time, since Python exits for most errors
+    linenum=0
+    cat $input | while read line; do
+        (( linenum++ ))
+        ( cat "$tmp_vars"; echo "$line" | name-value-eval-preparse --test ) | $python_cmd 2> $err
+
+        if [[ -s "$err" ]]; then
+            ( echo -n "$name: line $linenum of $input_filename: "; process_python_errors "$err" "$line" ) >&2
+        fi
+    done
+else
+  # process all at once rather than one line at a time, since one command may span multiple lines
+  ( cat "$tmp_vars";
+    # use file name rather than standard input if the name is known, since error messages mention it
+    if [[ -n "$input" ]]; then name-value-eval-preparse "$input"
+    else name-value-eval-preparse; fi ) | $python_cmd 2> $err
+
+    if [[ -s "$err" ]]; then
+        ( echo -n "$name: "
+          if [[ -n "$input" ]]; then echo -n "source file '$input': "; fi
+          process_python_errors "$err" ) >&2
+    fi
+fi
+
+bye 0
+
