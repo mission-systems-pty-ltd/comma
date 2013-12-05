@@ -476,6 +476,7 @@ void process_assign(const std::vector<Token> &tokens, const std::string &input_l
 
 void process_test(const std::vector<Token> &tokens, const std::string &original_line)
 {
+    if (tokens.empty()) { return; }
     std::string input_line = trim_spaces(original_line);
 
     // create a set of all variables in the expression (so we can print each one just once)
