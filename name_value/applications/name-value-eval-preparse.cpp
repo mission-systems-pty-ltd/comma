@@ -3,6 +3,7 @@
 #include <fstream>
 #include <map>
 #include <vector>
+#include <algorithm>
 #include <string>
 #include <cctype>
 #include <comma/application/command_line_options.h>
@@ -30,7 +31,11 @@ void usage()
 "\n"
 "Without option --assign or --test, the input is expected to be Python code. The output is the same as the input\n"
 "(with variable names transformed), along with code to print any variables that are assigned a value (printed as\n"
-"<name>=<value>).\n"
+"<name>=<value>). Option --demangle may be used to return variable names to their original form (in which case\n"
+"assigned variables are not printed).\n"
+"\n"
+"Note that Python uses indentation to indicate blocks; indentation must match exactly. Python normally requires \":\"\n"
+"at the end of an \"if\", \"while\" etc., but this app makes it optional (added if missing).\n"
 "\n"
 "Options:\n"
 "\n"
@@ -50,20 +55,24 @@ void usage()
 "\n";
 }
 
+// command line options
 struct Options
 {
     bool assign;
     bool test;
+    bool command;   // set to !(assign || test)
     bool demangle;
 
-    Options() : assign(false), test(false), demangle(false) { }
+    Options() : assign(false), test(false), command(false), demangle(false) { }
 };
 
+// token types
 enum token_type
 {
-    t_id, t_number, t_string, t_operator, t_undefined
+    t_id, t_function, t_keyword, t_number, t_string, t_operator, t_undefined
 };
 
+// a single input token
 struct Token
 {
     token_type type;        // type
@@ -74,11 +83,12 @@ struct Token
         : type(t_undefined), spaces_before(0)
     { }
 
-    Token(token_type t, const std::string &s, size_t num_spaces_before)
+    Token(token_type t, const std::string &s, size_t num_spaces_before = 0)
         : type(t), str(s), spaces_before(num_spaces_before)
     { }
 };
 
+// map from demangled to mangled variable names (for storing things like the set of assigned variables)
 typedef std::map<std::string, std::string> Varmap;
 
 // return a string with n spaces
@@ -113,6 +123,8 @@ void debug_tokens(const std::vector<Token> &tokens)
         switch (tokens[n].type)
         {
             case t_id:          std::cout << "id"; break;
+            case t_keyword:     std::cout << "keyword"; break;
+            case t_function:    std::cout << "function"; break;
             case t_number:      std::cout << "number"; break;
             case t_string:      std::cout << "string"; break;
             case t_operator:    std::cout << "operator"; break;
@@ -151,6 +163,8 @@ bool starts_with(const std::string &str, const std::string &other)
 // get the length of the operator starting at pos (e.g. returns 2 for ">=" or 1 for "+")
 size_t operator_length(const std::string &str, size_t pos)
 {
+    if (str.substr(pos, 3) == "+/-") { return 3; }
+
     const char *two_char_op[] =
     { "<=", ">=", "==", "!=", "<>", "+=", "-=", "*=", "/=", "%=", ">>", "<<", "**", "//", 0 };
 
@@ -209,6 +223,12 @@ std::string quote(const std::string &str, char quote_char)
     return result;
 }
 
+char next_nonblank_char(const std::string &line, size_t pos)
+{
+    while (pos < line.length() && isspace(line[pos])) { ++pos; }
+    return (pos < line.length() ? line[pos] : '\0');
+}
+
 // check if a string looks like a number (with no trailing characters)
 bool is_number(const std::string &str)
 {
@@ -224,6 +244,20 @@ bool is_number(const std::string &str)
     }
 
     return (any_digits && pos >= str.length());
+}
+
+// check if a string is a Python keyword
+bool is_keyword(const std::string &str)
+{
+    const char *python_keyword[] =
+    {
+        "and", "assert", "break", "class", "continue", "def", "del", "elif", "else", "except", "exec",
+        "finally", "for", "from", "global", "if", "import", "in", "is", "lambda", "not", "or", "pass",
+        "print", "raise", "return", "try", "while", "yield", 0
+    };
+
+    for (size_t n = 0;python_keyword[n];++n) { if (str == python_keyword[n]) return true; }
+    return false;
 }
 
 // transform an id so that it has no special characters ("/" "[" or "]")
@@ -266,6 +300,38 @@ std::string demangle_id(const std::string &id)
     return result;
 }
 
+// check for special token sequences such as "a == b +/- c" and replace them with the required Python code
+void transform_special_tokens(/*out*/ std::vector<Token> &tokens)
+{
+    for (size_t n = 0;n < tokens.size();++n)
+    {
+        if (tokens[n].type == t_operator && tokens[n].str == "+/-" && n >= 3 && n < tokens.size() - 1 &&
+            tokens[n - 2].type == t_operator)
+        {
+            std::string op = tokens[n - 2].str;
+            if (op == "==" || op == "!=")
+            {
+                Token lhs = tokens[n - 3];
+                // (tokens[n-2] is op)
+                Token rhs = tokens[n - 1];
+                // (tokens[n] is "+/-")
+                Token eps = tokens[n + 1];
+                std::vector<Token> rest(tokens.begin() + n + 2, tokens.end()); // the rest of the tokens
+                tokens.erase(tokens.begin() + n - 3, tokens.end());
+                tokens.push_back(Token(t_function, "near"));
+                tokens.push_back(Token(t_operator, "("));
+                tokens.push_back(lhs);
+                tokens.push_back(Token(t_operator, ","));
+                tokens.push_back(rhs);
+                tokens.push_back(Token(t_operator, ","));
+                tokens.push_back(eps);
+                tokens.push_back(Token(t_operator, ")"));
+                tokens.insert(tokens.end(), rest.begin(), rest.end());  // append rest of tokens
+            }
+        }
+    }
+}
+
 // split a string into individual tokens
 void tokenise(const std::string &line, const Options &opt,
     /*out*/ std::vector<Token> &tokens)
@@ -303,8 +369,9 @@ void tokenise(const std::string &line, const Options &opt,
         {
             while (is_id(char_at(line, pos))) { ++pos; }
             std::string id = line.substr(tok_start, pos - tok_start);
-            tok_str = (opt.demangle ? demangle_id(id) : mangle_id(id));
-            type = t_id;
+            if (is_keyword(id)) { tok_str = id; type = t_keyword; }
+            else if (next_nonblank_char(line, pos) == '(') { tok_str = id; type = t_function; }
+            else { tok_str = (opt.demangle ? demangle_id(id) : mangle_id(id)); type = t_id; }
         }
         else
         if (std::isdigit(ch) || ch == '.' || (ch == '-' && (std::isdigit(next_ch) || next_ch == '.')))
@@ -347,18 +414,43 @@ void tokenise(const std::string &line, const Options &opt,
 
         tokens.push_back(Token(type, tok_str, num_spaces));
 
-        if ((opt.assign || opt.test) && tokens.size() == 1)
+        if (!opt.command && tokens.size() == 1)
         {
             // Python will complain if the line is indented
             tokens[0].spaces_before = 0;
         }
     }
 
+    transform_special_tokens(tokens);
+
     if (opt.assign)
     {
         // transform var= into var=''
         if (tokens.size() == 2 && tokens[1].str == "=") { tokens.push_back(Token(t_string, "''", 0)); }
     }
+
+    if (opt.command)
+    {
+        // add any missing ":" at the end of the line
+        if (tokens.size() > 0 && tokens[0].type == t_keyword)
+        {
+            size_t last = tokens.size() - 1;
+            if (!(tokens[last].type == t_operator && tokens[last].str == ":"))
+            {
+                if (tokens[0].str == "if" || tokens[0].str == "else" || tokens[0].str == "elif" ||
+                    tokens[0].str == "while" || tokens[0].str == "for" || tokens[0].str == "try" ||
+                    tokens[0].str == "except" || tokens[0].str == "finally")
+                { tokens.push_back(Token(t_operator, ":", 0)); }
+            }
+        }
+    }
+}
+
+void print_error_prefix(const std::string &filename, int line_num)
+{
+    std::cerr << exec_name << ": line " << line_num;
+    if (!filename.empty()) { std::cerr << " of " << filename; }
+    std::cerr << ": ";
 }
 
 void process_assign(const std::vector<Token> &tokens, const std::string &input_line,
@@ -368,19 +460,23 @@ void process_assign(const std::vector<Token> &tokens, const std::string &input_l
     {
         if (tokens.size() != 3 || tokens[1].str != "=" || tokens[0].type != t_id)
         {
-            std::cerr << exec_name << ": line " << line_num;
-            if (!filename.empty()) { std::cerr << " of " << filename; }
-            std::cerr << ": expected \"name=value\"; got: \"" << input_line << "\"\n";
+            print_error_prefix(filename, line_num);
+            std::cerr << "expected \"name=value\"; got: \"" << input_line << "\"\n";
         }
-        else { std::cout << tokens << '\n'; }
+        else
+        if (tokens[0].type == t_keyword)
+        {
+            print_error_prefix(filename, line_num);
+            std::cerr << "illegal name \"" << tokens[0].str << "\" (Python keyword)\n";
+        }
+        else
+        { std::cout << tokens << '\n'; }
     }
 }
 
 void process_test(const std::vector<Token> &tokens, const std::string &original_line)
 {
     std::string input_line = trim_spaces(original_line);
-    std::cout << "# " << input_line << '\n';
-    std::cout << "if not(" << tokens << "):\n";
 
     // create a set of all variables in the expression (so we can print each one just once)
     Varmap vars;
@@ -392,6 +488,9 @@ void process_test(const std::vector<Token> &tokens, const std::string &original_
             vars[demangle_id(id)] = id;
         }
     }
+
+    std::cout << "# " << input_line << '\n';
+    std::cout << "if not(" << tokens << "):\n";
 
     if (vars.size() != 0)
     {
@@ -440,6 +539,13 @@ void process_command(const std::vector<Token> &tokens, Varmap &assigned_vars, bo
     }
 }
 
+void print_function_defs()
+{
+    std::cout
+        << "def near(x, y, eps):\n"
+        << "    return abs(x - y) <= eps\n";
+}
+
 void print_assigned_variables(const Varmap &assigned_vars)
 {
     Varmap::const_iterator i = assigned_vars.begin();
@@ -484,7 +590,7 @@ void process(const std::string &filename, const Options &opt)
         else { process_command(tokens, assigned_vars, opt.demangle); }
     }
 
-    if (!(opt.assign || opt.test)) { print_assigned_variables(assigned_vars); }
+    if (opt.command) { print_assigned_variables(assigned_vars); }
 }
 
 int main(int argc, char* argv[])
@@ -497,6 +603,7 @@ int main(int argc, char* argv[])
     Options opt;
     opt.assign = options.exists("-a,--assign");
     opt.test = options.exists("-t,--test");
+    opt.command = !(opt.assign || opt.test);
     opt.demangle = options.exists("-d,--demangle");
 
     if (opt.assign && opt.test)
@@ -518,6 +625,7 @@ int main(int argc, char* argv[])
         else { std::cerr << exec_name << ": unexpected argument \"" << unnamed[i] << "\"\n"; exit(1); }
     }
 
+    if (!opt.assign) { print_function_defs(); }
     process(filename, opt);
     return 0;
 }
