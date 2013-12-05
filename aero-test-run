@@ -46,6 +46,12 @@ function message_()
     if [[ "$quiet" != "true" ]] ; then tput bold ; echo $1 >&2 ; tput sgr0 ; fi
 }
 
+# copy input to output, and return failure (1) if there was any output
+function fail_on_output()
+{
+    if grep "."; then return 1; else return 0; fi
+}
+
 basedir=$( pwd )
 dirs=$( find . -name "tests" )
 dir_count=$( find . -name "tests" | wc -l )
@@ -83,7 +89,7 @@ if (( $test_scripts_count > 0 )) ; then
         cd $( dirname $t )
         if [ -f ./input ] ; then cat ./input ; fi \
             | ./$( basename $t ) $verbose 2> >( $grep_failed_ >&2 ) \
-            | if [ -f ./expected ] ; then aero-test-match ./expected ; else cat > /dev/null ; fi
+            | if [ -f ./expected ] ; then aero-test-match ./expected | fail_on_output ; else cat > /dev/null ; fi
         if status_ok ; then message_ "$name: $t: succeeded" ; else result=1 ; (( ++failed_count )) ; error_ "$name: $t: failed" ; fi
         cd $basedir
         if [[ "$result" != 0 && "$until_first_failure" == true ]] ; then break ; fi
