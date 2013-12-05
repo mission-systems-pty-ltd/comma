@@ -625,7 +625,7 @@ int main(int argc, char* argv[])
         else { std::cerr << exec_name << ": unexpected argument \"" << unnamed[i] << "\"\n"; exit(1); }
     }
 
-    if (!opt.assign) { print_function_defs(); }
+    if (!opt.assign && !opt.demangle) { print_function_defs(); }
     process(filename, opt);
     return 0;
 }
