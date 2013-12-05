@@ -16,14 +16,15 @@ function usage()
 Verify input against expected values.
 
 By default, variable values are read from stdin. Input consists of lines in the form "path=value".
-Paths may contain array indexes, e.g. abc/def[10]/xyz.
+Paths may contain array indexes, e.g. abc/def[10]/xyz. Quotes around values are optional (even if
+the value contains spaces).
 
 The <expected-values-file> contains one boolean expression per line, referring to the path values.
 
 Examples:
 
 some_value = 5.23
-flight/weight > 28000
+flight/weight > some/other/weight + 28000
 abc/def[10]/xyz != "YSSY"
 
 EOF
@@ -49,7 +50,7 @@ done
 
 if [[ -z "$expr_file" ]]; then echo "$name: missing required argument <expected-values-file>" >&2; exit 1; fi
 
-# if the variables file name is known, pass it to aero-rules, since it can appear in some error messages
-if [[ -z "variables" ]]; then cat $variables | aero-rules --test "$expr_file"
-else aero-rules --test --variables="$variables" "$expr_file"; fi
+# if the variables file name is known, pass it to name-value-eval, since it can appear in some error messages
+if [[ -z "variables" ]]; then cat $variables | name-value-eval --test "$expr_file"
+else name-value-eval --test "$expr_file" --variables="$variables"; fi
 
