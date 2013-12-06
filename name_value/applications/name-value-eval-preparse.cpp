@@ -332,6 +332,14 @@ void transform_special_tokens(/*out*/ std::vector<Token> &tokens)
     }
 }
 
+// get the index of the first token with a particular type and value
+// Returns -1 if the token is not in the vector
+int find_token(const std::vector<Token> &tokens, token_type type, const std::string &val)
+{
+    for (size_t n = 0;n < tokens.size();++n) { if (tokens[n].type == type && tokens[n].str == val) return n; }
+    return -1;
+}
+
 // split a string into individual tokens
 void tokenise(const std::string &line, const Options &opt,
     /*out*/ std::vector<Token> &tokens)
@@ -434,8 +442,8 @@ void tokenise(const std::string &line, const Options &opt,
         // add any missing ":" at the end of the line
         if (tokens.size() > 0 && tokens[0].type == t_keyword)
         {
-            size_t last = tokens.size() - 1;
-            if (!(tokens[last].type == t_operator && tokens[last].str == ":"))
+            // check if there is a ":" anywhere in the line
+            if (find_token(tokens, t_operator, ":") == -1)
             {
                 if (tokens[0].str == "if" || tokens[0].str == "else" || tokens[0].str == "elif" ||
                     tokens[0].str == "while" || tokens[0].str == "for" || tokens[0].str == "try" ||
