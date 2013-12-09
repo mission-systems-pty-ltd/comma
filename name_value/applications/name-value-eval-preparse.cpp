@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <map>
+#include <set>
 #include <vector>
 #include <algorithm>
 #include <string>
@@ -13,7 +14,7 @@ static const char *exec_name = "";
 
 void usage()
 {
-    std::cerr << "Usage: " << exec_name << " [-h|--help] [-a|--assign] [-t|--test] [-d|--demangle] [<input_file>]\n"
+    std::cerr << "Usage: " << exec_name << " [-h|--help] [-a|--assign] [-t|--test] [-o|--output-variables=<file>] [-d|--demangle] [<input_file>]\n"
 "\n"
 "Transform expressions containing path variables (i.e. with names like \"a/b[10/c\") to make them suitable for\n"
 "input to Python.\n"
@@ -39,12 +40,13 @@ void usage()
 "\n"
 "Options:\n"
 "\n"
-"    -h|--help      Show this help\n"
-"    -a|--assign    Expect input of the form <name>=<value> (<value> becomes quoted or not as appropriate)\n"
-"    -t|--test      Expect input to be boolean expressions; output will be like \"if not (<expr>): print ...\"\n"
-"                   (i.e. prints a message if the expression is not true)\n"
-"    -d|--demangle  Transform variable names from \"mangled\" form (no slashes or square brackets) back to\n"
-"                   their original form\n"
+"    -h|--help              Show this help\n"
+"    -a|--assign            Expect input of the form <name>=<value> (<value> becomes quoted or not as appropriate)\n"
+"    -t|--test              Expect input to be boolean expressions; output will be like \"if not (<expr>): print ...\"\n"
+"                           (i.e. prints a message if the expression is not true)\n"
+"    -o|--output-variables= Restrict output variables to just the ones in this file (not compatible with --test)\n"
+"    -d|--demangle          Transform variable names from \"mangled\" form (no slashes or square brackets) back to\n"
+"                           their original form\n"
 "\n"
 "Example:\n"
 "\n"
@@ -60,10 +62,12 @@ struct Options
 {
     bool assign;
     bool test;
-    bool command;   // set to !(assign || test)
+    bool command;           // set to !(assign || test)
+    bool restrict_vars;     // whether to restrict the output variables to just the ones in the output_vars set
     bool demangle;
+    std::set<std::string> output_vars;
 
-    Options() : assign(false), test(false), command(false), demangle(false) { }
+    Options() : assign(false), test(false), command(false), restrict_vars(false), demangle(false) { }
 };
 
 // token types
@@ -530,11 +534,12 @@ void process_test(const std::vector<Token> &tokens, const std::string &original_
     }
 }
 
-void process_command(const std::vector<Token> &tokens, Varmap &assigned_vars, bool option_demangle)
+void process_command(const std::vector<Token> &tokens, Varmap &assigned_vars, const Options &opt,   
+    const std::set<std::string> &restrict_vars)
 {
     std::cout << tokens << '\n';
 
-    if (!option_demangle)
+    if (!opt.demangle)
     {
         // add any assigned variables to the Varmap
         for (size_t n = 0;n < tokens.size();++n)
@@ -542,7 +547,8 @@ void process_command(const std::vector<Token> &tokens, Varmap &assigned_vars, bo
             if (tokens[n].type == t_operator && tokens[n].str == "=" && n > 0 && tokens[n - 1].type == t_id)
             {
                 std::string id = tokens[n - 1].str;
-                assigned_vars[demangle_id(id)] = id;
+                if (!(opt.restrict_vars && restrict_vars.find(id) == restrict_vars.end()))
+                { assigned_vars[demangle_id(id)] = id; }
             }
         }
     }
@@ -569,7 +575,7 @@ void print_assigned_variables(const Varmap &assigned_vars)
 }
 
 // tokenise the input file (or stdin if filename is empty), outputing the appropriate Python code
-void process(const std::string &filename, const Options &opt)
+void process(const std::string &filename, const Options &opt, const std::set<std::string> &restrict_vars)
 {
     std::ifstream file_stream;
     
@@ -596,10 +602,34 @@ void process(const std::string &filename, const Options &opt)
 
         if (opt.assign) { process_assign(tokens, line, filename, line_num); }
         else if (opt.test) { process_test(tokens, line); }
-        else { process_command(tokens, assigned_vars, opt.demangle); }
+        else { process_command(tokens, assigned_vars, opt, restrict_vars); }
     }
 
     if (opt.command) { print_assigned_variables(assigned_vars); }
+}
+
+void read_restrict_vars(const std::string &filename, std::set<std::string> &restrict_vars)
+{
+    std::ifstream file(filename.c_str());
+
+    if (!file)
+    {
+        std::cerr << exec_name << ": cannot open " << filename << '\n';
+        exit(1);
+    }
+
+    std::string line;
+    while (std::getline(file, line))
+    {
+        std::string var_name = trim_spaces(line);
+        if (!var_name.empty()) { restrict_vars.insert(mangle_id(var_name)); }
+    }
+
+    if (restrict_vars.size() == 0)
+    {
+        std::cerr << exec_name << ": empty --output-variables file: " << filename << '\n';
+        exit(1);
+    }
 }
 
 int main(int argc, char* argv[])
@@ -612,19 +642,24 @@ int main(int argc, char* argv[])
     Options opt;
     opt.assign = options.exists("-a,--assign");
     opt.test = options.exists("-t,--test");
+    opt.restrict_vars = options.exists("-o,--output-variables");
     opt.command = !(opt.assign || opt.test);
     opt.demangle = options.exists("-d,--demangle");
 
-    if (opt.assign && opt.test)
-    { std::cerr << exec_name << ": cannot have --assign and --test\n"; exit(1); }
+    if (opt.test)
+    {
+        if (opt.assign) { std::cerr << exec_name << ": cannot have --assign and --test\n"; exit(1); }
+        if (opt.restrict_vars) { std::cerr << exec_name << ": cannot have --output-variables and --test\n"; exit(1); }
+    }
 
     if (opt.demangle && (opt.assign || opt.test))
     { std::cerr << exec_name << ": cannot use --demangle with --assign or --test\n"; exit(1); }
 
     // get unnamed options
     const char *valueless_options = "-a,--assign,-t,--test,-d,--demangle";
-    const char *options_with_values = "";
+    const char *options_with_values = "-o,--output-variables";
     std::vector<std::string> unnamed = options.unnamed(valueless_options, options_with_values);
+    std::set<std::string> restrict_vars;
     std::string filename;
 
     for (size_t i = 0;i < unnamed.size();++i)
@@ -634,8 +669,15 @@ int main(int argc, char* argv[])
         else { std::cerr << exec_name << ": unexpected argument \"" << unnamed[i] << "\"\n"; exit(1); }
     }
 
+    if (opt.restrict_vars)
+    {
+        std::string restrict_filename = options.value<std::string> ("-o,--output-variables");
+        if (restrict_filename.empty()) { std::cerr << exec_name << ": expected filename for --output-variables\n"; exit(1); }
+        read_restrict_vars(restrict_filename, restrict_vars);
+    }
+
     if (!opt.assign && !opt.demangle) { print_function_defs(); }
-    process(filename, opt);
+    process(filename, opt, restrict_vars);
     return 0;
 }
 

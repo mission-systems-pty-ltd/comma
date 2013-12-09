@@ -4,7 +4,7 @@ name=$( basename $0 )
 
 simple_usage()
 {
-    echo "Usage: $name [-h|--help] [-v|--variables=<file>] [-t|--test] [-c|--commands] [--tmp-dir=<dir>] [<input-file>]" >&2
+    echo "Usage: $name [-h|--help] [-v|--variables=<file>] [-t|--test] [-o|--output-variables=<file>] [-c|--commands] [--tmp-dir=<dir>] [<input-file>]" >&2
     if [[ $# != 0 ]]; then exit $1; fi
 }
 
@@ -24,18 +24,31 @@ all variables that are the target of an assignment statement (in "path=value" fo
 
 Variable values may either come from a file (using --variables) or from standard input, and are treated
 specially: the "value" part of "name=value" does not need to be quoted if it is a string, and may contain spaces
-(so 'airport=YSSY' and 'route=Sydney to Perth' are both OK). Numeric values may be quoted or not ('x=3' or 'x="3"').
+(so 'str=ABC' and 'str=A B C' are both OK). Numeric values may be quoted or not ('x=3' or 'x="3"').
 
 Either the variables or the commands/expressions may be read from standard input, but not both.
 
 Options:
 
-    -h|--help       Show this help
-    -v|--variables  Variable values file, in the form <path>=<value> (one per line)
-    -t|--test       Input consists of boolean expressions (one per line); print nothing if the expression is true,
-                    otherwise print expected and actual variable values
-    -c|--commands   Just print the Python commands instead of executing them
-    --tmp-dir=      Temporary directory (default = current directory)
+    -h|--help               Show this help
+    -v|--variables          Variable values file, in the form <path>=<value> (one per line)
+    -t|--test               Input consists of boolean expressions (one per line); print nothing if the
+                            expression is true, otherwise print expected and actual variable values
+    -o|--output-variables   Restrict output variables to just the ones in this file (not compatible with --test)
+    -c|--commands           Just print the Python commands instead of executing them
+    --tmp-dir=              Temporary directory (default = current directory)
+
+Examples:
+
+    $name --variables=vars.pv commands.py
+    
+    cat commands.py | $name --variables=vars.pv
+
+    cat vars.pv | $name commands.py
+
+    cat vars.pv | $name commands.py --output-variables=varnames.txt
+
+    cat vars.pv | $name expressions.txt --test
 
 EOF
     if [[ $# != 0 ]]; then exit $1; fi
@@ -51,7 +64,7 @@ function demangle_name()
 # argument: <error_file> [ optional <original_line> ]
 function process_python_errors()
 {
-  if [[ -n "$2" ]]; then extra_info=": '$2'"; else extra_info=""; fi
+  if [[ -n "$2" ]]; then extra_info=" in: '$2'"; else extra_info=""; fi
   ( desc=$( echo $( egrep 'Error|Exception|Warning|KeyboardInterrupt' $1 ) )
     if [[ -z "$desc" ]]; then cat "$1" | egrep -v 'Traceback|"<stdin>"'
     elif [[ $desc = NameError* ]]; then
@@ -72,6 +85,7 @@ trap 'bye 1' SIGHUP SIGINT SIGTERM SIGPIPE
 
 test_option=0
 variables=
+output_vars_option=
 input=
 tmpdir="."
 python_cmd="python"
@@ -79,20 +93,25 @@ python_cmd="python"
 while [[ $# -gt 0 ]]; do
     arg="${1#*=}"
     case "$1" in
-        -h|--help)          usage 0;;
-        -t|--test)          test_option=1;;
-        -c|--commands)      python_cmd="cat";;
-        -v=*|--variables=*) variables=$arg;;
-        --tmp-dir=*)        tmpdir=$arg;;
-        -*)                 echo "$name: unrecognized option '$1'" >&2; exit 1;;
-        *)                  if [[ -z "$input" ]]; then input=$arg
-                            else echo "$name: unexpected argument '$1'" >&2; exit 1; fi;;
+        -h|--help)                  usage 0;;
+        -t|--test)                  test_option=1;;
+        -c|--commands)              python_cmd="cat";;
+        -v=*|--variables=*)         variables=$arg;;
+        -o=*|--output-variables=*)  output_vars_option=$1;;
+        --tmp-dir=*)                tmpdir=$arg;;
+        -*)                         echo "$name: unrecognized option '$1'" >&2; exit 1;;
+        *)                          if [[ -z "$input" ]]; then input=$arg
+                                    else echo "$name: unexpected argument '$1'" >&2; exit 1; fi;;
     esac
     shift
 done
 
 if [[ -z "$variables" && -z "$input" ]]; then
     echo "$name: must specify an input file or option --variables" >&2; exit 1
+fi
+
+if [[ $test_option == 1 && -n "$output_vars_option" ]]; then
+    echo "$name: cannot have --test and --output-variables" >&2; exit 1
 fi
 
 if [[ ! ( -d "$tmpdir" && -x "$tmpdir" ) ]]; then
@@ -124,8 +143,8 @@ else
   # process all at once rather than one line at a time, since one command may span multiple lines
   ( cat "$tmp_vars";
     # use file name rather than standard input if the name is known, since error messages mention it
-    if [[ -n "$input" ]]; then name-value-eval-preparse "$input"
-    else name-value-eval-preparse; fi ) | $python_cmd 2> $err
+    if [[ -n "$input" ]]; then name-value-eval-preparse "$input" $output_vars_option
+    else name-value-eval-preparse $output_vars_option; fi ) | $python_cmd 2> $err
 
     if [[ -s "$err" ]]; then
         ( echo -n "$name: "
