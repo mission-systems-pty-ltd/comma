@@ -2,7 +2,7 @@
 
 name=$( basename $0 )
 inc_events=1
-icon="http://www.iconbazaar.com/dots/2dot1a.gif"
+icon="http://web.archive.org/web/20130526145338/http://www.iconbazaar.com/dots/2dot1a.gif"
 colour="FF0000"
 width=1.5
 dash=0
@@ -109,7 +109,7 @@ google.maps.event.addListener(map, 'click', function(e) {
     displayPos(e, map, infowindow)
 });
 
-var ic = 'http://www.iconbazaar.com/dots/2dot1a.gif';
+var ic = '$icon';
 
 EOF
     fi
@@ -348,48 +348,49 @@ set_icon()
 {
     output_header_once
     local icon="$1"
+    wayback="http://web.archive.org/web/20130526145338"
     case "$icon" in
-        red|red-dot|dot)    icon="http://www.iconbazaar.com/dots/2dot1a.gif";;
-        yellow|yellow-dot)  icon="http://www.iconbazaar.com/dots/2dot2a.gif";;
-        green|green-dot)    icon="http://www.iconbazaar.com/dots/2dot4a.gif";;
-        blue|blue-dot)      icon="http://www.iconbazaar.com/dots/2dot5a.gif";;
-        pink|pink-dot)      icon="http://www.iconbazaar.com/dots/2dot6a.gif";;
+        red|red-dot|dot)    icon="$wayback/http://www.iconbazaar.com/dots/2dot1a.gif";;
+        yellow|yellow-dot)  icon="$wayback/http://www.iconbazaar.com/dots/2dot2a.gif";;
+        green|green-dot)    icon="$wayback/http://www.iconbazaar.com/dots/2dot4a.gif";;
+        blue|blue-dot)      icon="$wayback/http://www.iconbazaar.com/dots/2dot5a.gif";;
+        pink|pink-dot)      icon="$wayback/http://www.iconbazaar.com/dots/2dot6a.gif";;
 
-        red-cube|cube)      icon="http://www.iconbazaar.com/dots/4dot1a.gif";;
-        yellow-cube)        icon="http://www.iconbazaar.com/dots/4dot2a.gif";;
-        green-cube)         icon="http://www.iconbazaar.com/dots/4dot4a.gif";;
-        blue-cube)          icon="http://www.iconbazaar.com/dots/4dot5a.gif";;
-        pink-cube)          icon="http://www.iconbazaar.com/dots/4dot6a.gif";;
+        red-cube|cube)      icon="$wayback/http://www.iconbazaar.com/dots/4dot1a.gif";;
+        yellow-cube)        icon="$wayback/http://www.iconbazaar.com/dots/4dot2a.gif";;
+        green-cube)         icon="$wayback/http://www.iconbazaar.com/dots/4dot4a.gif";;
+        blue-cube)          icon="$wayback/http://www.iconbazaar.com/dots/4dot5a.gif";;
+        pink-cube)          icon="$wayback/http://www.iconbazaar.com/dots/4dot6a.gif";;
 
-        red-triangle|triangle) icon="http://www.iconbazaar.com/dots/6dot1a.gif";;
-        yellow-triangle)    icon="http://www.iconbazaar.com/dots/6dot2a.gif";;
-        green-triangle)     icon="http://www.iconbazaar.com/dots/6dot4a.gif";;
-        blue-triangle)      icon="http://www.iconbazaar.com/dots/6dot5a.gif";;
-        pink-triangle)      icon="http://www.iconbazaar.com/dots/6dot6a.gif";;
+        red-triangle|triangle) icon="$wayback/http://www.iconbazaar.com/dots/6dot1a.gif";;
+        yellow-triangle)    icon="$wayback/http://www.iconbazaar.com/dots/6dot2a.gif";;
+        green-triangle)     icon="$wayback/http://www.iconbazaar.com/dots/6dot4a.gif";;
+        blue-triangle)      icon="$wayback/http://www.iconbazaar.com/dots/6dot5a.gif";;
+        pink-triangle)      icon="$wayback/http://www.iconbazaar.com/dots/6dot6a.gif";;
 
-        red-square|square)  icon="http://www.iconbazaar.com/dots/8dot1a.gif";;
-        yellow-square)      icon="http://www.iconbazaar.com/dots/8dot2a.gif";;
-        green-square)       icon="http://www.iconbazaar.com/dots/8dot4a.gif";;
-        blue-square)        icon="http://www.iconbazaar.com/dots/8dot5a.gif";;
-        pink-square)        icon="http://www.iconbazaar.com/dots/8dot6a.gif";;
+        red-square|square)  icon="$wayback/http://www.iconbazaar.com/dots/8dot1a.gif";;
+        yellow-square)      icon="$wayback/http://www.iconbazaar.com/dots/8dot2a.gif";;
+        green-square)       icon="$wayback/http://www.iconbazaar.com/dots/8dot4a.gif";;
+        blue-square)        icon="$wayback/http://www.iconbazaar.com/dots/8dot5a.gif";;
+        pink-square)        icon="$wayback/http://www.iconbazaar.com/dots/8dot6a.gif";;
 
-        red-diamond|diamond) icon="http://www.iconbazaar.com/dots/10dot1a.gif";;
-        yellow-diamond)     icon="http://www.iconbazaar.com/dots/10dot2a.gif";;
-        green-diamond)      icon="http://www.iconbazaar.com/dots/10dot4a.gif";;
-        blue-diamond)       icon="http://www.iconbazaar.com/dots/10dot5a.gif";;
-        pink-diamond)       icon="http://www.iconbazaar.com/dots/10dot6a.gif";;
+        red-diamond|diamond) icon="$wayback/http://www.iconbazaar.com/dots/10dot1a.gif";;
+        yellow-diamond)     icon="$wayback/http://www.iconbazaar.com/dots/10dot2a.gif";;
+        green-diamond)      icon="$wayback/http://www.iconbazaar.com/dots/10dot4a.gif";;
+        blue-diamond)       icon="$wayback/http://www.iconbazaar.com/dots/10dot5a.gif";;
+        pink-diamond)       icon="$wayback/http://www.iconbazaar.com/dots/10dot6a.gif";;
 
-        big-red-diamond|big-diamond) icon="http://www.iconbazaar.com/dots/17dot1a.gif";;
-        big-yellow-diamond) icon="http://www.iconbazaar.com/dots/17dot2a.gif";;
-        big-green-diamond)  icon="http://www.iconbazaar.com/dots/17dot4a.gif";;
-        big-blue-diamond)   icon="http://www.iconbazaar.com/dots/17dot5a.gif";;
-        big-pink-diamond)   icon="http://www.iconbazaar.com/dots/17dot6a.gif";;
+        big-red-diamond|big-diamond) icon="$wayback/http://www.iconbazaar.com/dots/17dot1a.gif";;
+        big-yellow-diamond) icon="$wayback/http://www.iconbazaar.com/dots/17dot2a.gif";;
+        big-green-diamond)  icon="$wayback/http://www.iconbazaar.com/dots/17dot4a.gif";;
+        big-blue-diamond)   icon="$wayback/http://www.iconbazaar.com/dots/17dot5a.gif";;
+        big-pink-diamond)   icon="$wayback/http://www.iconbazaar.com/dots/17dot6a.gif";;
 
-        red-arrow|arrow)    icon="http://www.iconbazaar.com/arrows/arrw01_31a.gif";;
-        yellow-arrow)       icon="http://www.iconbazaar.com/arrows/arrw01_32a.gif";;
-        green-arrow)        icon="http://www.iconbazaar.com/arrows/arrw01_34a.gif";;
-        blue-arrow)         icon="http://www.iconbazaar.com/arrows/arrw01_35a.gif";;
-        pink-arrow)         icon="http://www.iconbazaar.com/arrows/arrw01_36a.gif";;
+        red-arrow|arrow)    icon="$wayback/http://www.iconbazaar.com/arrows/arrw01_31a.gif";;
+        yellow-arrow)       icon="$wayback/http://www.iconbazaar.com/arrows/arrw01_32a.gif";;
+        green-arrow)        icon="$wayback/http://www.iconbazaar.com/arrows/arrw01_34a.gif";;
+        blue-arrow)         icon="$wayback/http://www.iconbazaar.com/arrows/arrw01_35a.gif";;
+        pink-arrow)         icon="$wayback/http://www.iconbazaar.com/arrows/arrw01_36a.gif";;
 
         x|black-x)          icon="https://cdn1.iconfinder.com/data/icons/iconic/raster/32/x_alt.png";;
         x2|black-circle-x)  icon="https://cdn1.iconfinder.com/data/icons/iconic/raster/32/x_alt.png";;
