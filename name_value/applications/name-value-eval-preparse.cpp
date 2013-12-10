@@ -323,10 +323,9 @@ void transform_special_tokens(/*out*/ std::vector<Token> &tokens)
                 std::vector<Token> rest(tokens.begin() + n + 2, tokens.end()); // the rest of the tokens
                 tokens.erase(tokens.begin() + n - 3, tokens.end());
 
-                int num_spaces = 0;
-                if (op == "!=") { tokens.push_back(Token(t_keyword, "not")); num_spaces = 1; }
+                if (op == "!=") { tokens.push_back(Token(t_keyword, "not", 1)); }
 
-                tokens.push_back(Token(t_function, "near", num_spaces));
+                tokens.push_back(Token(t_function, "near", 1));
                 tokens.push_back(Token(t_operator, "("));
                 tokens.push_back(lhs);
                 tokens.push_back(Token(t_operator, ","));
