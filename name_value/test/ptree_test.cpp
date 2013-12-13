@@ -34,6 +34,7 @@
 #include <gtest/gtest.h>
 #include <boost/function.hpp>
 #include <boost/optional.hpp>
+#include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <comma/base/types.h>
 #include <comma/name_value/ptree.h>
@@ -596,6 +597,41 @@ TEST( ptree, xmlattr )
     EXPECT_EQ( "C1", c.f[1].c );
     
     // todo: more testing
+}
+
+} } // namespace comma { namespace test {
+
+struct derived : public std::vector< std::string > {};
+
+namespace comma { namespace visiting {
+    
+template <> struct traits< derived >
+{
+    template< typename K, typename V > static void visit( const K& k, derived& t, V& v )
+    {
+        v.apply( "", static_cast< std::vector< std::string >& >( t ) );
+    }
+};
+    
+} } // namespace comma { namespace visiting {
+
+namespace comma { namespace test {
+    
+static const std::string json_string = "[ \"a\", \"b\" ]";
+
+TEST ( name_value_ptree, vector_at_the_root )
+{
+    {
+        std::stringstream iss( json_string );
+        boost::property_tree::ptree p;
+        boost::property_tree::read_json( iss, p );
+        derived d;
+        comma::from_ptree from_ptree( p, true );
+        comma::visiting::apply( from_ptree ).to( d );
+        ASSERT_EQ( d.size(), 2 );
+        EXPECT_EQ( d[0], "a" );
+        EXPECT_EQ( d[1], "b" );
+    }
 }
 
 } } // namespace comma { namespace test {
