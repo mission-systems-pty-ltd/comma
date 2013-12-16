@@ -121,7 +121,16 @@ fi
 err="$tmpdir/nv_eval_err.$$"
 tmp_vars="$tmpdir/nv_eval_vars.$$"
 
-variables_filename=$variables; if [[ -z "$variables_filename" ]]; then variables_filename="input"; fi
+if [[ -n "$variables" ]]; then
+    if [[ ! -f "$variables" ]]; then echo "$name: cannot open variables file $variables" >&2; exit 1; fi
+    variables=$( readlink -e $variables )   # full pathname
+fi
+
+if [[ -n "$input" ]]; then
+    if [[ ! -f "$input" ]]; then echo "$name: cannot open input file $input" >&2; exit 1; fi
+    input=$( readlink -e $input )    # full pathname
+fi
+
 input_filename=$input; if [[ -z "$input_filename" ]]; then input_filename="input"; fi
 
 # use file name rather than standard input if the name is known, since error messages mention it
