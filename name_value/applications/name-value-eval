@@ -65,7 +65,7 @@ function demangle_name()
 function process_python_errors()
 {
   if [[ -n "$2" ]]; then extra_info=" in: '$2'"; else extra_info=""; fi
-  ( desc=$( echo $( egrep 'Error|Exception|Warning|KeyboardInterrupt' $1 ) )
+  ( desc=$( echo $( egrep 'Error|Exception|Warning|KeyboardInterrupt' $1 ) | sed 's/.*SyntaxError/SyntaxError/g' )
     if [[ -z "$desc" ]]; then cat "$1" | egrep -v 'Traceback|"<stdin>"'
     elif [[ $desc = NameError* ]]; then
         local var_name=$( echo $desc | cut -d' ' -f3 )
