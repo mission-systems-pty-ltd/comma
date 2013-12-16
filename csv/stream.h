@@ -83,8 +83,11 @@ class ascii_input_stream : public boost::noncopyable
         /// return fields
         const std::vector< std::string >& fields() const { return fields_; }
 
-        /// return true, if read will not block
-        bool ready() const { return false; }
+        /// returns true if the stream has data in its buffer to be read
+        /// the buffered data may not contain a complete line and a subsequent read (getline) may block
+        /// this is under the consideration that the ascii_input_stream is mainly used for
+        /// debug purposes only
+        bool ready() const;
 
     private:
         std::istream& is_;
@@ -159,7 +162,7 @@ class binary_input_stream : public boost::noncopyable
         const S* read( const boost::posix_time::ptime& timeout );
 
         /// return the last line read
-        const char* last() const { return last_; }
+        const char* last() const { return &buf_[0]; }
 
         /// a helper: return the engine
         const csv::binary< S > binary() const { return binary_; }
@@ -179,12 +182,7 @@ class binary_input_stream : public boost::noncopyable
         const S default_;
         S result_;
         const std::size_t size_;
-        std::vector< char > buf_; // todo
-        char* begin_;
-        const char* end_;
-        char* cur_;
-        char* last_;
-        std::size_t offset_;
+        std::vector< char > buf_;
         std::vector< std::string > fields_;
 };
 
@@ -321,6 +319,7 @@ inline ascii_input_stream< S >::ascii_input_stream( std::istream& is, const std:
     , result_( sample )
     , fields_( split( column_names, delimiter ) )
 {
+    is_.sync_with_stdio( false );
 }
 
 template < typename S >
@@ -331,6 +330,7 @@ inline ascii_input_stream< S >::ascii_input_stream(std::istream& is, const optio
     , result_( sample )
     , fields_( split( o.fields, o.delimiter ) )
 {
+    is_.sync_with_stdio( false );
 }
 
 template < typename S >
@@ -341,6 +341,13 @@ inline ascii_input_stream< S >::ascii_input_stream(std::istream& is, const S& sa
     , result_( sample )
     , fields_( split( options().fields, options().delimiter ) )
 {
+    is_.sync_with_stdio( false );
+}
+
+template < typename S >
+inline bool ascii_input_stream< S >::ready() const
+{
+    return is_.rdbuf()->in_avail() > 0;
 }
 
 template < typename S >
@@ -425,19 +432,15 @@ inline binary_input_stream< S >::binary_input_stream( std::istream& is, const st
     , binary_( format, column_names, full_path_as_name, sample )
     , default_( sample )
     , result_( sample )
-    , size_( ( binary_.format().size() < 65536 ? 65536 / binary_.format().size() : 1 ) * binary_.format().size() ) // quick and dirty
+    , size_( binary_.format().size() )
     , buf_( size_ )
-    , begin_( &buf_[0] )
-    , end_( begin_ + size_ )
-    , cur_( begin_ )
-    , last_( begin_ )
-    , offset_( 0 )
     , fields_( split
 ( column_names, ',' ) )
 {
     #ifdef WIN32
     if( &is == &std::cin ) { _setmode( _fileno( stdin ), _O_BINARY ); }
     #endif
+    is_.sync_with_stdio( false );
 }
 
 template < typename S >
@@ -446,76 +449,31 @@ inline binary_input_stream< S >::binary_input_stream( std::istream& is, const op
     , binary_( o.format().string(), o.fields, o.full_xpath, sample )
     , default_( sample )
     , result_( sample )
-    , size_( ( binary_.format().size() < 65536 ? 65536 / binary_.format().size() : 1 ) * binary_.format().size() ) // quick and dirty
+    , size_( binary_.format().size() )
     , buf_( size_ )
-    , begin_( &buf_[0] )
-    , end_( begin_ + size_ )
-    , cur_( begin_ )
-    , last_( begin_ )
-    , offset_( 0 )
     , fields_( split( o.fields, ',' ) )
 {
-
     #ifdef WIN32
     if( &is == &std::cin ) { _setmode( _fileno( stdin ), _O_BINARY ); }
     #endif
+    is_.sync_with_stdio( false );
 }
 
 template < typename S >
 inline bool binary_input_stream< S >::ready() const
 {
-    return offset_ >= binary_.format().size();
+    return is_.rdbuf()->in_avail() >= size_;
 }
 
 template < typename S >
 inline const S* binary_input_stream< S >::read()
 {
-    while( true ) // reading a big chunk for better performance
-    {
-        if( ready() )
-        {
-            result_ = default_;
-            binary_.get( result_, cur_ );
-            last_ = cur_;
-            cur_ += binary_.format().size();
-            offset_ -= binary_.format().size();
-            if( cur_ >= end_ ) { cur_ = begin_; offset_ = 0; }
-            return &result_;
-        }
-        bool bad = is_.eof() || !is_.good() || is_.bad() || is_.fail();
-        if( offset_ > 0 && bad ) { COMMA_THROW( comma::exception, "expected at least " << binary_.format().size() << " bytes; got " << offset_ ); }
-        if( bad ) { return NULL; }
-        std::size_t size = end_ - cur_ - offset_;
-        // this is a painful part to read only the available bytes
-        // if using sockets or pipes, make sure that data is there
-        // e.g. using ::select(), comma::Io::Select(), or alike
-        // on the internet they say there is no good way,
-        // (google "readsome does not work"
-        // STL streams seem to take you to a world of pain...)
-        std::streamsize a = is_.rdbuf()->in_avail();
-        if( a < 0 ) { continue; }
-        std::size_t available = a;
-        if( size > available )
-        {
-            size =   offset_ + available > binary_.format().size()
-                   ? available
-                   : binary_.format().size() - offset_;
-
-            //if( binary_.format().size() < available )
-            //{
-            //    size = available;
-            //}
-            //else
-            //{
-            //    size = size % binary_.format().size();
-            //    if( size == 0 ) { size = binary_.format().size(); }
-            //}
-        }
-        is_.read( cur_ + offset_, size ); // blocks till full size bytes read
-        std::streamsize count = is_.gcount();
-        if( count < 0 ) { continue; }
-        offset_ += count;
-    }
+    is_.read( &buf_[0], size_ );
+    if( is_.gcount() == 0 ) { return NULL; }
+    if( is_.gcount() != size_ ) { COMMA_THROW( comma::exception, "expected " << size_ << " bytes; got " << is_.gcount() ); }
+    result_ = default_;
+    binary_.get( result_, &buf_[0] );
+    return &result_;
 }
 
 template < typename S >
