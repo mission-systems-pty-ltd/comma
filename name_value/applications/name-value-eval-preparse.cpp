@@ -505,8 +505,10 @@ void process_test(const std::vector<Token> &tokens, const std::string &original_
         }
     }
 
-    std::cout << "# " << input_line << '\n';
-    std::cout << "if not(" << tokens << "):\n";
+    std::cout << "# " << input_line << '\n'
+        << "if type(" << tokens
+        << ") != type(True): print >> sys.stderr, 'TypeError: expected a true or false expression'\n"
+        << "elif not(" << tokens << "):\n";
 
     if (vars.size() != 0)
     {
@@ -557,9 +559,10 @@ void process_command(const std::vector<Token> &tokens, Varmap &assigned_vars, co
     }
 }
 
-void print_function_defs()
+void print_header()
 {
     std::cout
+        << "import sys\n"
         << "def near(x, y, eps):\n"
         << "    return abs(x - y) <= eps\n";
 }
@@ -679,7 +682,7 @@ int main(int argc, char* argv[])
         read_restrict_vars(restrict_filename, restrict_vars);
     }
 
-    if (!opt.assign && !opt.demangle) { print_function_defs(); }
+    if (!opt.assign && !opt.demangle) { print_header(); }
     process(filename, opt, restrict_vars);
     return 0;
 }
