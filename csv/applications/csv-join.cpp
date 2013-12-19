@@ -67,6 +67,7 @@ static void usage( bool more )
     std::cerr << "options:" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
     std::cerr << "    --first-matching: output only the first matching record (a bit of hack for now, but we needed it)" << std::endl;
+    std::cerr << "    --not-matching: not matching records as read from stdin, no join performed" << std::endl;
     std::cerr << "    --string,-s: keys are strings; a quick and dirty option to support strings" << std::endl;
     std::cerr << "                 default: integers" << std::endl;
     std::cerr << "    --strict: fail, if id on stdin is not found" << std::endl;
@@ -141,6 +142,7 @@ template < typename T > struct traits< input< T > >
 static bool verbose;
 static bool first_matching;
 static bool strict;
+static bool not_matching;
 static comma::csv::options stdin_csv;
 static comma::csv::options filter_csv;
 boost::scoped_ptr< comma::io::istream > filter_transport;
@@ -215,6 +217,12 @@ template < typename K > struct join_impl_ // quick and dirty
             typename input< K >::filter_map::const_iterator it = filter_map.find( *p );
             if( it == filter_map.end() || it->second.empty() )
             {
+                if( not_matching )
+                {
+                    if( stdin_stream.is_binary() ) { std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() ); }
+                    else { std::cout << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << std::endl; }
+                    continue;
+                }
                 if( !strict ) { ++discarded; continue; }
                 std::string s;
                 comma::csv::options c;
@@ -222,6 +230,7 @@ template < typename K > struct join_impl_ // quick and dirty
                 std::cerr << "csv-join: match not found for key(s): " << comma::csv::ascii< input< K > >( c, default_input ).put( *p, s ) << ", block: " << block << std::endl;
                 return 1;
             }
+            if( not_matching ) { continue; }
             if( stdin_stream.is_binary() )
             {
                 for( std::size_t i = 0; i < ( first_matching ? 1 : it->second.size() ); ++i )
@@ -258,8 +267,9 @@ int main( int ac, char** av )
         if( options.exists( "--help,-h" ) ) { usage( verbose ); }
         first_matching = options.exists( "--first-matching" );
         strict = options.exists( "--strict" );
+        not_matching = options.exists( "--not-matching" );
         stdin_csv = comma::csv::options( options );
-        std::vector< std::string > unnamed = options.unnamed( "--verbose,-v,--first-matching,--string,-s,--strict", "--binary,-b,--delimiter,-d,--fields,-f" );
+        std::vector< std::string > unnamed = options.unnamed( "--verbose,-v,--first-matching,--not-matching,--string,-s,--strict", "--binary,-b,--delimiter,-d,--fields,-f" );
         if( unnamed.empty() ) { std::cerr << "csv-join: please specify the second source" << std::endl; return 1; }
         if( unnamed.size() > 1 ) { std::cerr << "csv-join: expected one file or stream to join, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         comma::name_value::parser parser( "filename", ';', '=', false );
