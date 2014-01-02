@@ -21,7 +21,7 @@ function usage_()
 source "${0%run}util"
 
 name=$( basename $0 )
-path="/mnt/q-storage"
+path="--path=/mnt/q-storage"
 for arg in $@ ; do
     if [[ "$arg" == "--help" || "$arg" == "-h" ]] ; then usage_ ; fi
     if [[ "$arg" == "--debug" ]] ; then debug="--debug" ; fi
@@ -88,7 +88,7 @@ if (( $test_scripts_count > 0 )) ; then
         basedir=$( pwd )
         cd $( dirname $t )
         if [ -f ./input ] ; then cat ./input ; fi \
-            | ./$( basename $t ) --path="$path"  $verbose 2> >( $grep_failed_ >&2 ) \
+            | ./$( basename $t ) $path $verbose 2> >( $grep_failed_ >&2 ) \
             | if [ -f ./expected ] ; then aero-test-match ./expected | fail_on_output ; else cat > /dev/null ; fi
         if status_ok ; then message_ "$name: $t: succeeded" ; else result=1 ; (( ++failed_count )) ; error_ "$name: $t: failed" ; fi
         cd $basedir
