@@ -58,7 +58,7 @@ fi
 old_vals=$( echo "$old_vals" | sed 's/"/\\"/g' )
 new_vals=$( echo "$new_vals" | sed 's/"/\\"/g' )
 
-echo "old: /$old_vals/  new: /$new_vals/"
+# echo "old: /$old_vals/  new: /$new_vals/" >&2
 
 awk -F, '
 BEGIN \
