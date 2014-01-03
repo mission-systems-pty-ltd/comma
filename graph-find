@@ -197,9 +197,11 @@ get_graph()
 if [[ "$reachable" == 1 ]]; then
     result=$( get_graph | awk -F, '
 {
-    edge[$1,++num_from[$1]] = $2;
-    is_vertex[$1] = 1;
-    is_vertex[$2] = 1;
+    from = $1 "";   # need to treat as a string, not a number
+    to = $2 "";
+    edge[from,++num_from[from]] = to;
+    is_vertex[from] = 1;
+    is_vertex[to] = 1;
 }
 
 END \
@@ -247,14 +249,16 @@ elif [[ "$bfs" == 1 ]]; then
         # breadth first search, constant weight
         result=$( get_graph | awk -F, '
 {
-    edge[$1,++num_from[$1]] = $2;
+    from = $1 "";   # need to treat as a string, not a number
+    to = $2 "";
+    edge[from,++num_from[from]] = to;
 }
 
 END \
 {
     output_edges = '"$output_edges"';
-    dest = '"$to_id"';
-    queue[0] = '"$from_id"';
+    dest = "'"$to_id"'";
+    queue[0] = "'"$from_id"'";
     vis[queue[0]] = 1;
     if (!output_edges) { path[0] = queue[0]; }
     q_front = 0;
@@ -290,7 +294,7 @@ else
 {
     from = $1 "";   # need to treat as a string, not a number
     to = $2 "";
-    edge[from,++num_from[$1]] = to;
+    edge[from,++num_from[from]] = to;
 }
 
 END \
@@ -353,17 +357,19 @@ else
 
         ( cat "$vertices" | "${cmd[@]}"; echo "---"; echo $result | fmt -1 ) | awk -F, '
         /^---$/ { z = 1; next; }
-        z != 1 { pos[$4] = $1 "," $2; next; }
+        z != 1 { pos[$4 ""] = $1 "," $2; next; }
         {
             ignore = 0;
-            if (!($1 in pos)) { print "Vertex " $1 " not found" | "cat 1>&2"; ignore = 1; }
-            if (NF == 2 && !($2 in pos)) { print "Vertex " $2 " not found" | "cat 1>&2"; ignore = 1; }
+            v1 = $1 "";
+            v2 = $2 "";
+            if (!(v1 in pos)) { print "Vertex " v1 " not found" | "cat 1>&2"; ignore = 1; }
+            if (NF == 2 && !(v2 in pos)) { print "Vertex " v2 " not found" | "cat 1>&2"; ignore = 1; }
             if (!ignore)
             {
-                printf pos[$1];
-                if (NF == 2) { printf "," pos[$2]; }
-                printf "," $1;
-                if (NF == 2) { printf "," $2; }
+                printf pos[v1];
+                if (NF == 2) { printf "," pos[v2]; }
+                printf "," v1;
+                if (NF == 2) { printf "," v2; }
                 printf "\n";
             }
         }'
