@@ -288,14 +288,16 @@ else
     # depth first search
     result=$( get_graph | awk -F, '
 {
-    edge[$1,++num_from[$1]] = $2;
+    from = $1 "";   # need to treat as a string, not a number
+    to = $2 "";
+    edge[from,++num_from[$1]] = to;
 }
 
 END \
 {
     output_edges = '"$output_edges"';
-    dest = '"$to_id"';
-    stack[0] = '"$from_id"';
+    dest = "'"$to_id"'";
+    stack[0] = "'"$from_id"'";
     vis[stack[0]] = 1;
     if (!output_edges) { path[0] = stack[0]; }
     num = 1;
