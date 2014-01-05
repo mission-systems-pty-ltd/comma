@@ -34,6 +34,7 @@ function aero_path_value_to_var()
     while IFS='=' read path value ; do
         if [[ "$path" == "" ]] ; then continue ; fi
         if [[ "$path" =~ "#" ]] ; then continue ; fi
+        if [[ "$value" == "" ]] ; then continue ; fi
         name=$prefix$( echo $path | sed "s/\//$delimiter/g" | sed "s/-/_/g" )
         eval $name=\"$value\"
     done
@@ -103,14 +104,14 @@ function replace_value_in_name_value()
     for pair in "${config_replace_list[@]}" ; do
         from_value=${pair%%$assignment*}
         to_value=${pair##*$assignment}
-        
+
         input_key=${input_string%%$assignment*}
         input_value_old=${input_string##*$assignment}
         input_value_new=${input_value_old/$from_value/$to_value}
         if [[ "$input_value_new" != "$input_value_old" ]]; then
-            echo "$input_key""$assignment""$input_value_new" 
+            echo "$input_key""$assignment""$input_value_new"
             return
-        fi    
+        fi
     done
     echo "$1"
 }
@@ -122,21 +123,21 @@ function extract_config_replace_list()
     local line
     local keyword="@"
     local keyword_length=${#keyword[@]}
-    
+
     while read -r line
     do
         if [[ "${line:0:$keyword_length}" == "$keyword" ]]; then
             #s1=${line%%$keyword*}
             s2=${line##*$keyword}
             config_replace_list+=( "$s2" )
-        else    
+        else
             lines+=( "$line" )
-        fi    
+        fi
     done
 
     for line in "${lines[@]}" ; do
         result+=$( replace_value_in_name_value "$line" $config_replace_list )$'\n'
     done
-    
-    echo "$result" 
+
+    echo "$result"
 }
