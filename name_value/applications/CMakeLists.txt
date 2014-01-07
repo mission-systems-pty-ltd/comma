@@ -14,4 +14,4 @@ INSTALL( TARGETS name-value-convert name-value-get name-value-eval-preparse
          RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR}
          COMPONENT Runtime )
 
-install( PROGRAMS name-value-from-csv name-value-eval DESTINATION ${comma_INSTALL_BIN_DIR} )
+install( PROGRAMS name-value-from-csv name-value-eval name-value-calc DESTINATION ${comma_INSTALL_BIN_DIR} )

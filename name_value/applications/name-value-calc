@@ -1,0 +1,146 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+simple_usage()
+{
+    echo "Usage: $name <file1> <file2> ... [--add|--sub|--subtract] [--json] [-h|--help] " >&2
+    if [[ $# != 0 ]]; then exit $1; fi
+}
+
+usage()
+{
+    simple_usage
+    cat >&2 <<EOF
+
+Perform simple calculations on corresponding values in multiple name=value or .json input files.
+
+Only values from the first input file are included in the output. If a name does not appear in
+the second (or later) input file, the value from the first input file is output unchanged.
+
+All values in the input files are expected to be numbers. If a non-numeric value appears, it is
+treated as zero (unless it only appears in the first input file, in which case it is output unchanged).
+
+Options:
+
+    --add               Add corresponding values in input files
+    --sub|--subtract    Subtract corresponding values in file2 from file1 (only two input files permitted)
+    --json              Input and output is in json format instead of name=value format
+
+Examples:
+
+    $name f1 f2 f3 --add
+        -- add all values in f1, f2 and f3
+
+    $name f1.json f2.json --sub --json
+        -- subtract all values in f2.json from f1.json (output in .json format)
+
+EOF
+    if [[ $# != 0 ]]; then exit $1; fi
+}
+
+function status_ok()
+{
+    [[ ! "${PIPESTATUS[@]}" =~ [1-9] ]]
+}
+
+function bye()
+{
+    if [[ -z $1 ]] ; then exit 1 ; else exit $1; fi
+}
+
+# arguments are an error message to print
+function die()
+{
+    echo "$name: $*" >&2
+    if [[ -n "$user_log" ]]; then echo "$name: $*" >> "$user_log"; fi
+    bye 1
+}
+
+trap 'bye 1' SIGHUP SIGINT SIGTERM SIGPIPE
+
+if [[ $# == 0 ]]; then simple_usage 1; fi
+
+input_files=()
+operation=
+json_format=0
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help)          usage 0;;
+        --add)              operation="+";;
+        --sub|--subtract)   operation="-";;
+        --json)             json_format=1;;
+        -*)                 echo "$name: unrecognized option '$1'" >&2; exit 1;;
+        *)                  input_files+=( $1 );;
+    esac
+    shift
+done
+
+if [[ ${#input_files[@]} == 0 ]]; then simple_usage 1; fi
+if [[ ${#input_files[@]} == 1 ]]; then echo "$name: at least two input files required" >&2; exit 1; fi
+if [[ -z "$operation" ]]; then echo "$name: operation must be specified (e.g. --subtract)" >&2; exit 1; fi
+if [[ $operation == "-" && ${#input_files[@]} > 2 ]]; then echo "$name: only two input files permitted with --subtract"; exit 1; fi
+
+for file in "${input_files[@]}"; do
+    if [[ ! -f "$file" ]]; then echo "$name: cannot open '$file'" >&2; exit 1; fi
+done
+
+convert_input="cat"
+convert_output="cat"
+
+if (( json_format )); then
+    convert_input="name-value-convert --from=json --to=path-value"
+    convert_output="name-value-convert --from=path-value --to=json"
+fi
+
+file_separator="@-@-@-@-@"
+
+( for file in "${input_files[@]}"; do $convert_input < "$file"; echo $file_separator; done ) | awk '
+BEGIN { first_file = 1; }
+
+/^'$file_separator'$/ { first_file = 0; next; }
+
+NF == 0 || /^ *#/ { next; }     # skip comments and empty lines
+
+function strip_spaces_and_quotes(s)
+{
+    for (n = 1;substr(s, n, 1) == " ";n++) { }
+    if (n > length(s)) { return ""; }
+    for (m = length(s);substr(s, m, 1) == " ";m--) { }
+    if (substr(s, n, 1) == "\"") { n++; }
+    if (substr(s, m, 1) == "\"") { m--; }
+    return substr(s, n, m - n + 1);
+}
+
+{
+    pos = index($0, "=");
+    if (pos == -1) { next; }
+
+    name = strip_spaces_and_quotes(substr($0, 1, pos - 1));
+    if (name == "") { next; }
+
+    value = strip_spaces_and_quotes(substr($0, pos + 1));
+
+    if (first_file) { name_val[name] = value; nth_name[++num] = name; }
+    else if (name in name_val) { name_val[name] = name_val[name] '$operation' value; }
+}
+
+END \
+{
+    if (num == 0 && '$json_format' == 0) \
+    {
+        print "'$name': warning: no \"name=value\" lines found (maybe --json option was intended?)" | "cat 1>&2";
+        exit;
+    }
+
+    for (n = 1;n <= num;n++) \
+    {
+        name = nth_name[n];
+        print name "=" name_val[name];
+    }
+}
+' | $convert_output
+
+bye 0
+
