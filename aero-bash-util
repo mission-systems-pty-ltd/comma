@@ -36,7 +36,7 @@ function aero_path_value_to_var()
         if [[ "$path" =~ "#" ]] ; then continue ; fi
         if [[ "$value" == "" ]] ; then continue ; fi
         name=$prefix$( echo $path | sed "s/\//$delimiter/g" | sed "s/-/_/g" )
-        eval $name=\"$value\"
+        eval $3 $name=\"$value\"
     done
 }
 
@@ -140,4 +140,16 @@ function extract_config_replace_list()
     done
 
     echo "$result"
+}
+
+function qpath()
+{
+    local input=${1#"/"}
+    input=${input%"/"}
+    local varname="path_"$(echo $input|sed 's#\/#\_#g')
+    if [ -v $varname ] ; then 
+        eval echo \$$varname
+    else
+        echo ${qstorage%"/"}"/"$input 
+    fi
 }
