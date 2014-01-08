@@ -4,7 +4,7 @@ name=$( basename $0 )
 
 simple_usage()
 {
-    echo "Usage: $name [-h|--help] <edge-file> <from> <to> [-v|--vertices=<vertex-file>] [-vf|--vfields=<vfields>] [-f|--fields=<fields>] [-e|--edges] [--rev] [-b|--bidirectional] [--dfs|--bfs|--shortest] [--reachable|-r]" >&2
+    echo "Usage: $name [-h|--help] <edge-file> <from> <to> [-v|--vertices=<vertex-file>] [-vf|--vfields=<vfields>] [-f|--fields=<fields>] [-e|--edges] [--rev] [-b|--bidirectional] [--dfs|--bfs|--shortest] [--reachable|-r] [-q|--quiet]" >&2
 }
 
 usage()
@@ -51,6 +51,8 @@ Arguments:
                        is not required, but if more than one vertex is specified, all of the
                        vertices that can be reached by any of them are output.
 
+  -q|--quiet           Suppress normal output (just set the exit code).
+
 Output:
 
     If a path is found, all of the vertices are output on a single line, and the exit code is 0.
@@ -96,6 +98,7 @@ bfs=0
 reachable=0
 output_edges=0
 reverse_edges=0
+quiet=0
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -130,6 +133,9 @@ while [[ $# -gt 0 ]]; do
         ;;
     -e|--edges)
         output_edges=1
+        ;;
+    -q|--quiet)
+        quiet=1
         ;;
     -*)
         echo "$name: unrecognized option '$1'" >&2
@@ -331,17 +337,20 @@ END \
 fi
 
 if [[ -z "$result" ]]; then
-    if [[ $reachable == 1 ]]; then
-        if [[ $output_edges == 1 ]]; then
-            echo "No reachable edges" >&2
+    if (( !quiet )); then
+        if [[ $reachable == 1 ]]; then
+            if [[ $output_edges == 1 ]]; then
+                echo "No reachable edges" >&2
+            else
+                echo "No reachable vertices" >&2
+            fi
         else
-            echo "No reachable vertices" >&2
+            echo "No path found" >&2
         fi
-    else
-        echo "No path found" >&2
     fi
     exit 2
 else
+    if (( quiet )); then exit 0; fi
     if [[ $output_edges == 1 && $reverse_edges == 1 ]]; then
         result=$( echo $result | fmt -1 | awk -F, '{ print $2 "," $1; }' )
     fi
