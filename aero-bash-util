@@ -34,7 +34,7 @@ function aero_path_value_to_var()
     while IFS='=' read path value ; do
         if [[ "$path" == "" ]] ; then continue ; fi
         if [[ "$path" =~ "#" ]] ; then continue ; fi
-        if [[ "$value" == "" ]] ; then continue ; fi
+        if [[ "$value" == "" && "$3" == "" ]] ; then continue ; fi
         name=$prefix$( echo $path | sed "s/\//$delimiter/g" | sed "s/-/_/g" )
         eval $3 $name=\"$value\"
     done
@@ -150,6 +150,6 @@ function qpath()
     if [ -v $varname ] ; then 
         eval echo \$$varname
     else
-        echo ${qstorage%"/"}"/"$input 
+        echo ${qstorage%"/"}"/"$input"/" 
     fi
 }
