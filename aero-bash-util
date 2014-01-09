@@ -10,8 +10,10 @@
 # lines starting with '#' ignored
 # empty lines ignored
 #
-# $1: variable name prefix
-# $2: slash replacement; default: _
+# [--export] : variables created export
+# [--null-ok]: null variables are defined, otherwise ignored
+# [--prefix="<prefix>"]: prefix used for defining variables
+# [--delimiter="<delimiter>"]: delimiter used for replacing '/'
 #
 # examples (try them):
 #     aero_path_value_eval < <( echo hello=world )
@@ -24,19 +26,32 @@
 #     echo $blah__hello__world
 function aero_path_value_to_var()
 {
-    local prefix=$1
+    local prefix
+    local delimiter="_"
+    local export_variable
+    local null_ok
+    
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+        --export)  export_variable="export" ;;
+        --null-ok) null_ok="true" ;;
+        --prefix=*) prefix=${1#*=} ;;
+        --delimiter=*) delimiter=${1#*=} ;;
+        esac
+        shift
+    done
+    
+    if [ ! -z $prefix ] ; then prefix="$prefix$delimiter" ; fi
+
     local path
     local value
     local name
-    local delimiter="_"
-    if [ ! -z $2 ] ; then delimiter="$2" ; fi
-    if [ ! -z $1 ] ; then prefix="$1$delimiter" ; fi
     while IFS='=' read path value ; do
         if [[ "$path" == "" ]] ; then continue ; fi
         if [[ "$path" =~ "#" ]] ; then continue ; fi
-        if [[ "$value" == "" && "$3" == "" ]] ; then continue ; fi
+        if [[ "$value" == "" && "$null_ok" == "" ]] ; then continue ; fi
         name=$prefix$( echo $path | sed "s/\//$delimiter/g" | sed "s/-/_/g" )
-        eval $3 $name=\"$value\"
+        eval $export_variable $name=\"$value\"
     done
 }
 
@@ -50,8 +65,10 @@ function aero_path_value_to_var()
 # lines starting with '#' ignored
 # empty lines ignored
 #
-# $1: variable name prefix
-# $2: slash replacement; default: _
+# usage: aero_path_value_from_var [--export] [<prefix>] [<slash replacement>]
+#     <prefix>: variable name prefix
+#     <slash replacement>: slash replacement; default: _
+#     --export: if present, export variables
 #
 # examples (try them):
 #     todo
