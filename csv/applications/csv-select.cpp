@@ -341,6 +341,7 @@ int main( int ac, char** av )
         }
         else
         {
+            std::cin.sync_with_stdio( false );
             std::string line;
             while( !is_shutdown && std::cin.good() && !std::cin.eof() )
             {
