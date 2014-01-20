@@ -89,7 +89,7 @@ if (( $test_scripts_count > 0 )) ; then
         cd $( dirname $t )
         if [ -f ./input ] ; then cat ./input ; fi \
             | ./$( basename $t ) $path $verbose 2> >( $grep_failed_ >&2 ) \
-            | if [ -f ./expected ] ; then aero-test-match ./expected | fail_on_output ; else cat > /dev/null ; fi
+            | if [ -f ./expected ] ; then aero-test-match ./expected 2>&1 | fail_on_output ; else cat > /dev/null ; fi
         if status_ok ; then message_ "$name: $t: succeeded" ; else result=1 ; (( ++failed_count )) ; error_ "$name: $t: failed" ; fi
         cd $basedir
         if [[ "$result" != 0 && "$until_first_failure" == true ]] ; then break ; fi
