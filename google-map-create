@@ -10,7 +10,7 @@ tmp_vert=tmp_vertices.$$
 
 simple_usage()
 {
-    echo "Usage: $name [-h|--help] [--events|--noevents] { -v=<vertex-file> } { -l=<line-file> } { -p=<polygon-file> } { -e=<edge-file> } {--pos=<lat,lon>} { -i=<icon> } { -c=<colour> } { -w=<width> } { -d|--dash } { -s|--solid }" >&2
+    echo "Usage: $name [-h|--help] [--events|--noevents] { -v=<vertex-file> } { -l=<line-file> } { -p=<polygon-file> } { -e=<edge-file> } {--pos=<lat,lon>} { -i=<icon> } { -c=<colour> } { -w=<width> } { -d|--dash } { -s|--solid } { --region=<region> ... --region-expr=<expr> [ --fill_region|--outline-region ] }" >&2
 }
 
 usage()
@@ -60,6 +60,17 @@ Options:
     -d|--dash       Following lines, edges and polygons drawn in dashed style.
 
     -s|--solid      Following lines, edges and polygons drawn in solid (non-dashed) style.
+
+    --region        Region definition, in the style used by sphere-region (e.g. --region="circle;-23.5,45,6;name=a")
+
+    --region-expr   Expression for combining regions (e.g. "a & !b") (optional; by default, union will be used)
+
+    --fill-region   Draw the region defined before this argument, filling with the current colour
+                    (resets the region to empty). Note that due to limitations of shape-to-polygon,
+                    unions of multiple regions might not be drawn correctly (recommended to only fill one at a time)
+
+    --outline-region Draw the region defined before this argument, outlining it with the current colour
+                     (resets the region to empty)
 
 The -v, -e and -p arguments may appear multiple times on the command line.
 
@@ -456,12 +467,31 @@ process_edges()
     output_edges "$1"
 }
 
+process_regions()
+{
+    local option=$1   # --fill or --outline
+    local region_expr=$2
+    local regions=$3
+
+    if [[ "$option" != "--fill" && "$option" != "--outline" ]]; then
+        echo "$name: internal error: expected first argument to process_regions to be --fill or --outline" >&2; exit 1
+    fi
+
+    if [[ -z "$regions" ]]; then return; fi
+    shape-to-polygon $regions "$region_expr" > "$tmp_vert"
+    if [[ "$option" == "--fill" ]]; then process_polygons "$tmp_vert"; else process_edges "$tmp_vert"; fi
+    rm -f "$tmp_vert"
+}
+
 single_vertex()
 {
     echo "$1" > "$tmp_vert"
     process_vertices "$tmp_vert"
     rm -f "$tmp_vert"
 }
+
+regions=
+region_expr=
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -521,6 +551,23 @@ while [[ $# -gt 0 ]]; do
     --noevents) inc_events=0
           ;;
 
+    --region=*) regions+=" $1"
+          ;;
+
+    --region-expr=*) region_expr=${1#*=}
+          ;;
+
+    --fill-region)
+          process_regions --fill "$region_expr" "$regions"
+          region_expr=
+          regions=
+          ;;
+    --outline-region)
+          process_regions --outline "$region_expr" "$regions"
+          region_expr=
+          regions=
+          ;;
+
     -*) echo "$name: unknown option \"$1\"" >&2
         simple_usage
         exit 1
@@ -534,5 +581,6 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
+process_regions --outline "$region_expr" "$regions"
 output_trailer
 
