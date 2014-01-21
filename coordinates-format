@@ -2,7 +2,7 @@
 
 name=$( basename $0 )
 
-lat_lon_separator="/"
+lat_lon_separator=","
 degrees_char="."
 minutes_char="'"
 
