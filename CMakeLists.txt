@@ -5,6 +5,7 @@ INSTALL( PROGRAMS aero-bash-util
                   google-map-create
                   graph-find
                   mesh-to-edges
+                  coordinates-format
          DESTINATION ${aero_INSTALL_BIN_DIR} )
 
 add_executable(qadrax-mesh-to-csv qadrax-mesh-to-csv.cpp )
