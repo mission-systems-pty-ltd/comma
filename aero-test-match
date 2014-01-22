@@ -51,6 +51,6 @@ done
 if [[ -z "$expr_file" ]]; then echo "$name: missing required argument <expected-values-file>" >&2; exit 1; fi
 
 # if the variables file name is known, pass it to name-value-eval, since it can appear in some error messages
-if [[ -z "variables" ]]; then cat $variables | name-value-eval --test "$expr_file"
+if [[ -z "$variables" ]]; then name-value-eval --test "$expr_file"
 else name-value-eval --test "$expr_file" --variables="$variables"; fi
 
