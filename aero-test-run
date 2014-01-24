@@ -52,6 +52,22 @@ function fail_on_output()
     if grep "."; then return 1; else return 0; fi
 }
 
+# attempt to trace shared memory leaks
+# will report false positives if multiple flight-plan-builds are running at once
+function report_leaked_shared()
+{
+    local timestamp="$1"
+    local testname="$2"
+    suspects=$( find /run/shm -newer "$timestamp" -and -type f -and -name \*"q-storage"\* )
+    if [[ -n "$suspects" ]] ; then
+        error_ "$name: possible shared memory leak in '$testname':"
+        for s in $suspects ; do
+            echo "    $s" >&2
+        done
+    fi
+    rm -f "$timestamp"
+}
+
 basedir=$( pwd )
 dirs=$( find . -name "tests" )
 dir_count=$( find . -name "tests" | wc -l )
@@ -66,8 +82,13 @@ if (( $dir_count > 0 )) ; then
         intermediate_result=0
         for t in $tests ; do
             message_ "$name: $t: running..."
+            # capture starting time
+            timestamp="/tmp/aero-test-run-timestamp-$(basename $t)"
+            touch "$timestamp"
             ./$( basename $t ) $path $debug 2> >( $grep_failed_ >&2 )
             if status_ok ; then message_ "$name: $t: succeeded" ; else intermediate_result=1; result=1 ; error_ "$name: $t: failed" ; fi
+            # see if there are files in /dev/shm created past start_time and report
+            report_leaked_shared "$timestamp" "$t"
             if [[ "$result" != 0 && "$until_first_failure" == true ]] ; then break ; fi
         done
         cd $basedir
@@ -87,10 +108,15 @@ if (( $test_scripts_count > 0 )) ; then
         message_ "$name: $t: running..."
         basedir=$( pwd )
         cd $( dirname $t )
+        # capture starting time
+        timestamp="/tmp/aero-test-run-timestamp-$(basename $t)"
+        touch "$timestamp"
         if [ -f ./input ] ; then cat ./input ; fi \
             | ./$( basename $t ) $path $verbose 2> >( $grep_failed_ >&2 ) \
             | if [ -f ./expected ] ; then aero-test-match ./expected 2>&1 | fail_on_output ; else cat > /dev/null ; fi
         if status_ok ; then message_ "$name: $t: succeeded" ; else result=1 ; (( ++failed_count )) ; error_ "$name: $t: failed" ; fi
+        # see if there are files in /dev/shm created past start_time and report
+        report_leaked_shared "$timestamp" "$t"
         cd $basedir
         if [[ "$result" != 0 && "$until_first_failure" == true ]] ; then break ; fi
     done
