@@ -60,10 +60,14 @@ function report_leaked_shared()
     local testname="$2"
     suspects=$( find /run/shm -newer "$timestamp" -and -type f -and -name \*"q-storage"\* )
     if [[ -n "$suspects" ]] ; then
-        error_ "$name: possible shared memory leak in '$testname':"
+        local msg="$name: possible shared memory leak in '$testname':"
+        error_ "$msg"
+        echo "$msg" > "$timestamp"
         for s in $suspects ; do
             echo "    $s" >&2
+            echo "    $s" >> "$timestamp"
         done
+        logger -f "$timestamp"
     fi
     rm -f "$timestamp"
 }
@@ -83,7 +87,7 @@ if (( $dir_count > 0 )) ; then
         for t in $tests ; do
             message_ "$name: $t: running..."
             # capture starting time
-            timestamp="/tmp/aero-test-run-timestamp-$(basename $t)"
+            timestamp="$( mktemp -t aero-test-run-timestamp-$(basename $t).XXXXXX )"
             touch "$timestamp"
             ./$( basename $t ) $path $debug 2> >( $grep_failed_ >&2 )
             if status_ok ; then message_ "$name: $t: succeeded" ; else intermediate_result=1; result=1 ; error_ "$name: $t: failed" ; fi
