@@ -462,7 +462,7 @@ inline binary_input_stream< S >::binary_input_stream( std::istream& is, const op
 template < typename S >
 inline bool binary_input_stream< S >::ready() const
 {
-    return is_.rdbuf()->in_avail() >= size_;
+    return is_.rdbuf()->in_avail() >= int( size_ );
 }
 
 template < typename S >
@@ -470,7 +470,7 @@ inline const S* binary_input_stream< S >::read()
 {
     is_.read( &buf_[0], size_ );
     if( is_.gcount() == 0 ) { return NULL; }
-    if( is_.gcount() != size_ ) { COMMA_THROW( comma::exception, "expected " << size_ << " bytes; got " << is_.gcount() ); }
+    if( is_.gcount() != int( size_ ) ) { COMMA_THROW( comma::exception, "expected " << size_ << " bytes; got " << is_.gcount() ); }
     result_ = default_;
     binary_.get( result_, &buf_[0] );
     return &result_;
