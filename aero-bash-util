@@ -30,7 +30,7 @@ function aero_path_value_to_var()
     local delimiter="_"
     local export_variable
     local null_ok
-    
+
     while [[ $# -gt 0 ]]; do
         case "$1" in
         --export)  export_variable="export" ;;
@@ -40,7 +40,7 @@ function aero_path_value_to_var()
         esac
         shift
     done
-    
+
     if [ ! -z $prefix ] ; then prefix="$prefix$delimiter" ; fi
 
     local path
@@ -106,7 +106,7 @@ function aero_elapsed()
     echo "$name/seconds=$elapsed" >> $output_file
 }
 
-
+# todo: document usage
 function replace_value_in_name_value()
 {
     local input_string=$1
@@ -133,6 +133,7 @@ function replace_value_in_name_value()
     echo "$1"
 }
 
+# todo: document usage
 function extract_config_replace_list()
 {
     local result=""
@@ -159,14 +160,15 @@ function extract_config_replace_list()
     echo "$result"
 }
 
+# todo: document usage
 function qpath()
 {
     local input=${1#"/"}
     input=${input%"/"}
     local varname="path_"$(echo $input|sed 's#\/#\_#g')
-    if [ -v $varname ] ; then 
+    if [ -v $varname ] ; then
         eval echo \$$varname
     else
-        echo ${qstorage%"/"}"/"$input"/" 
+        echo ${qstorage%"/"}"/"$input"/"
     fi
 }
