@@ -210,6 +210,7 @@ int main( int ac, char** av )
             input( std::cin, ptree );
             output( std::cout, ptree );
         }
+        return 0;
     }
     catch( std::exception& ex )
     {
