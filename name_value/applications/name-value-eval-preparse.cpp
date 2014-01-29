@@ -48,6 +48,11 @@ void usage()
 "    -d|--demangle          Transform variable names from \"mangled\" form (no slashes or square brackets) back to\n"
 "                           their original form\n"
 "\n"
+"Special operators:\n"
+"\n"
+"    a == b +/- c           Becomes \"near(a, b, c)\" (or with \"!=\", \"not near(a, b, c)\"\n"
+"    a == b +/- c%          Becomes \"near(a, b, c / 100.0 * a)\"\n"
+"\n"
 "Example:\n"
 "\n"
 "    ( " << exec_name << " --assign fixm-prototype.path-value\n"
@@ -320,7 +325,14 @@ void transform_special_tokens(/*out*/ std::vector<Token> &tokens)
                 Token rhs = tokens[n - 1];
                 // (tokens[n] is "+/-")
                 Token eps = tokens[n + 1];
-                std::vector<Token> rest(tokens.begin() + n + 2, tokens.end()); // the rest of the tokens
+
+                // check for percentage (e.g. "500 +/- 10%")
+                bool is_percent = (n + 2 < tokens.size() && tokens[n + 2].type == t_operator && tokens[n + 2].str == "%");
+
+                int start_of_rest = n + 2;
+                if (is_percent) { ++start_of_rest; }
+
+                std::vector<Token> rest(tokens.begin() + start_of_rest, tokens.end()); // the rest of the tokens
                 tokens.erase(tokens.begin() + n - 3, tokens.end());
 
                 if (op == "!=") { tokens.push_back(Token(t_keyword, "not", 1)); }
@@ -332,6 +344,16 @@ void transform_special_tokens(/*out*/ std::vector<Token> &tokens)
                 tokens.push_back(rhs);
                 tokens.push_back(Token(t_operator, ","));
                 tokens.push_back(eps);
+
+                if (is_percent)
+                {
+                    tokens.push_back(Token(t_operator, "/", 1));
+                    tokens.push_back(Token(t_number, "100.0", 1));
+                    tokens.push_back(Token(t_operator, "*", 1));
+                    // no need to put lhs in parentheses, since is always a single token (number or variable)
+                    tokens.push_back(lhs);
+                }
+
                 tokens.push_back(Token(t_operator, ")"));
                 tokens.insert(tokens.end(), rest.begin(), rest.end());  // append rest of tokens
             }
