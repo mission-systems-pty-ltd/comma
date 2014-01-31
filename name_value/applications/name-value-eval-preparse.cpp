@@ -48,6 +48,11 @@ void usage()
 "    -d|--demangle          Transform variable names from \"mangled\" form (no slashes or square brackets) back to\n"
 "                           their original form\n"
 "\n"
+"Special operators:\n"
+"\n"
+"    a == b +/- c           Becomes \"near(a, b, c)\" (or with \"!=\", \"not near(a, b, c)\"\n"
+"    a == b +/- c%          Becomes \"near(a, b, c / 100.0 * a)\"\n"
+"\n"
 "Example:\n"
 "\n"
 "    ( " << exec_name << " --assign fixm-prototype.path-value\n"
@@ -94,6 +99,8 @@ struct Token
 
 // map from demangled to mangled variable names (for storing things like the set of assigned variables)
 typedef std::map<std::string, std::string> Varmap;
+
+typedef std::set<std::string> Varset;
 
 // return a string with n spaces
 std::string spaces(size_t n)
@@ -148,7 +155,7 @@ inline bool is_start_of_id(char ch)
 // return true if ch can be a character in an identifier (other than the first character)
 inline bool is_id(char ch)
 {
-    return is_start_of_id(ch) || std::isdigit(ch) || ch == '/' || ch == '[' || ch == ']';
+    return is_start_of_id(ch) || std::isdigit(ch) || ch == '/' || ch == '.' || ch == '[' || ch == ']';
 }
 
 // return str[index] unless index is beyond the end of the string, in which case return '\0'
@@ -216,9 +223,9 @@ std::string quote(const std::string &str, char quote_char)
 
         for (size_t n = first;n <= last;++n)
         {
-            // escape any quotes of the same type, unless it is already escaped
+            // escape any quotes
             if (str[n] == '\\') { result += str[++n]; if (n > last) break; }
-            else if (str[n] == quote_char) { result += '\\'; }
+            else if (str[n] == squote || str[n] == dquote) { result += '\\'; }
             result += str[n];
         }
     }
@@ -268,37 +275,57 @@ bool is_keyword(const std::string &str)
 std::string mangle_id(const std::string &id)
 {
     std::string result;
+    int last_start_pos = 0;
+
     for (size_t n = 0;n < id.length();++n)
     {
         char ch = id[n];
+        if (ch == '/') { ch = '.'; }
+
+        if (ch == '.')
+        {
+            std::string sub_id = id.substr(last_start_pos, n - last_start_pos);
+            if (is_keyword(sub_id)) { result += '_'; }
+            last_start_pos = n + 1;
+        }
+
+        result += ch;
+
+        /*
         if (ch == '/')      { result += "_S"; }
         else if (ch == '[') { result += "_L"; }
         else if (ch == ']') { result += "_R"; }
         else if (ch == '_') { result += "__"; }
         else { result += ch; }
+        */
 
     }
+
+    std::string sub_id = id.substr(last_start_pos, std::string::npos);
+    if (is_keyword(sub_id)) { result += '_'; }
+
     return result;
 }
 
 // inverse of mangle_id()
-std::string demangle_id(const std::string &id)
+std::string demangle_id(const std::string &id, bool restore_slashes)
 {
     std::string result;
     size_t len = id.length();
+    int start_pos = 0;
 
     for (size_t n = 0;n < len;++n)
     {
         char ch = id[n];
+        if (ch == '.' || ch == '/') { start_pos = n + 1; }
 
-        if (ch == '_' && n + 1 < len)
+        if (ch == '.' && restore_slashes) { ch = '/'; }
+        else if (ch == '_' && (n + 1 == len || id[n + 1] == '.' || id[n + 1] == '/'))
         {
-            ch = id[++n];
-            if (ch == 'S') { ch = '/'; }
-            else if (ch == 'L') { ch = '['; }
-            else if (ch == 'R') { ch = ']'; }
-            // otherwise ch must be "_'
+            std::string sub_id = id.substr(start_pos, n - start_pos);
+            if (is_keyword(sub_id)) { continue; }  // exclude the final underscore
         }
+
         result += ch;
     }
     return result;
@@ -320,7 +347,14 @@ void transform_special_tokens(/*out*/ std::vector<Token> &tokens)
                 Token rhs = tokens[n - 1];
                 // (tokens[n] is "+/-")
                 Token eps = tokens[n + 1];
-                std::vector<Token> rest(tokens.begin() + n + 2, tokens.end()); // the rest of the tokens
+
+                // check for percentage (e.g. "500 +/- 10%")
+                bool is_percent = (n + 2 < tokens.size() && tokens[n + 2].type == t_operator && tokens[n + 2].str == "%");
+
+                int start_of_rest = n + 2;
+                if (is_percent) { ++start_of_rest; }
+
+                std::vector<Token> rest(tokens.begin() + start_of_rest, tokens.end()); // the rest of the tokens
                 tokens.erase(tokens.begin() + n - 3, tokens.end());
 
                 if (op == "!=") { tokens.push_back(Token(t_keyword, "not", 1)); }
@@ -332,6 +366,16 @@ void transform_special_tokens(/*out*/ std::vector<Token> &tokens)
                 tokens.push_back(rhs);
                 tokens.push_back(Token(t_operator, ","));
                 tokens.push_back(eps);
+
+                if (is_percent)
+                {
+                    tokens.push_back(Token(t_operator, "/", 1));
+                    tokens.push_back(Token(t_number, "100.0", 1));
+                    tokens.push_back(Token(t_operator, "*", 1));
+                    // no need to put lhs in parentheses, since is always a single token (number or variable)
+                    tokens.push_back(lhs);
+                }
+
                 tokens.push_back(Token(t_operator, ")"));
                 tokens.insert(tokens.end(), rest.begin(), rest.end());  // append rest of tokens
             }
@@ -345,6 +389,20 @@ int find_token(const std::vector<Token> &tokens, token_type type, const std::str
 {
     for (size_t n = 0;n < tokens.size();++n) { if (tokens[n].type == type && tokens[n].str == val) return n; }
     return -1;
+}
+
+void check_transform_id(std::string &id)
+{
+    while (true)
+    {
+        size_t pos = id.find("[MAX]");
+        if (pos == std::string::npos) { break; }
+
+        std::string replacement = "max_index(";
+        replacement += id.substr(0, pos);
+        replacement += ")";
+        id.replace(pos + 1, 3, replacement);
+    }
 }
 
 // split a string into individual tokens
@@ -382,14 +440,18 @@ void tokenise(const std::string &line, const Options &opt,
         else
         if (is_start_of_id(ch))
         {
+            // TODO: maybe allow spaces around array indexes , e.g. "a/b[ 10 ]/c"
             while (is_id(char_at(line, pos))) { ++pos; }
             std::string id = line.substr(tok_start, pos - tok_start);
+            check_transform_id(id);
             if (is_keyword(id)) { tok_str = id; type = t_keyword; }
             else if (next_nonblank_char(line, pos) == '(') { tok_str = id; type = t_function; }
-            else { tok_str = (opt.demangle ? demangle_id(id) : mangle_id(id)); type = t_id; }
+            else { tok_str = (opt.demangle ? demangle_id(id, true) : mangle_id(id)); type = t_id; }
         }
         else
-        if (std::isdigit(ch) || ch == '.' || (ch == '-' && (std::isdigit(next_ch) || next_ch == '.')))
+        if (std::isdigit(ch) ||
+            (ch == '.' && std::isdigit(next_ch)) ||
+            (ch == '-' && (std::isdigit(next_ch) || next_ch == '.')))
         {
             bool any_digits = false;
 
@@ -461,6 +523,68 @@ void tokenise(const std::string &line, const Options &opt,
     }
 }
 
+// output the definition of an empty Python class
+void define_python_class(const char *class_name)
+{
+    std::cout << "class " << class_name << " : pass\n";
+}
+
+// output the appropriate Python statements to initialise a variable such as "a.b[10].c"
+//
+// Each level of the hierarchy is checked to see if it has already been initialised; if not,
+// the appropriate initialisation is performed. For arrays (treated as Python dictionaries),
+// the statement "whatever={}" is output if the array has not been seen before;
+// for everything else, a new level in the hierarchy is initialised using "whatever=OBJ()"
+// (other than the last one, e.g. c in a.b.c, since it will be assigned a value directly)
+
+void init_variable_hierarchy(const std::string &var_name, Varset &variable_hierarchy)
+{
+    // an empty class
+    const char *python_class = "OBJ";
+
+    int last_pos = -1;
+    std::string hierarchy;
+
+    while (true)
+    {
+        size_t pos = var_name.find_first_of('.', last_pos + 1);
+        int next_pos = (pos == std::string::npos ? var_name.length() : (int) pos);
+
+        // path up to this point ("a", then "a.b", then "a.b.c", etc.)
+        std::string hierarchy(var_name, 0, next_pos);
+
+        size_t bracket_pos = hierarchy.find_first_of('[', last_pos + 1);
+        bool is_array = (bracket_pos != std::string::npos);
+
+        if (is_array)
+        {
+            std::string upto_bracket(var_name, 0, bracket_pos + 1);  // include final "["
+            Varset::iterator i = variable_hierarchy.find(upto_bracket);
+
+            if (i == variable_hierarchy.end())
+            {
+                if (variable_hierarchy.size() == 0) { define_python_class(python_class); }
+                variable_hierarchy.insert(upto_bracket);
+                std::string before_bracket(var_name, 0, bracket_pos);  // exclude final "["
+                std::cout << before_bracket << "={}\n";
+            }
+        }
+
+        if (next_pos == (int) var_name.length()) { break; }
+
+        Varset::iterator i = variable_hierarchy.find(hierarchy);
+
+        if (i == variable_hierarchy.end())
+        {
+            if (variable_hierarchy.size() == 0) { define_python_class(python_class); }
+            variable_hierarchy.insert(hierarchy);
+            std::cout << hierarchy << "=" << python_class << "()\n";
+        }
+
+        last_pos = next_pos;
+    }
+}
+
 void print_error_prefix(const std::string &filename, int line_num)
 {
     std::cerr << exec_name << ": line " << line_num;
@@ -469,7 +593,7 @@ void print_error_prefix(const std::string &filename, int line_num)
 }
 
 void process_assign(const std::vector<Token> &tokens, const std::string &input_line,
-    const std::string &filename, int line_num)
+    const std::string &filename, int line_num, Varset &variable_hierarchy)
 {
     if (tokens.size() != 0)
     {
@@ -485,7 +609,10 @@ void process_assign(const std::vector<Token> &tokens, const std::string &input_l
             std::cerr << "illegal name \"" << tokens[0].str << "\" (Python keyword)\n";
         }
         else
-        { std::cout << tokens << '\n'; }
+        {
+            init_variable_hierarchy(tokens[0].str, variable_hierarchy);
+            std::cout << tokens << '\n';
+        }
     }
 }
 
@@ -501,7 +628,7 @@ void process_test(const std::vector<Token> &tokens, const std::string &original_
         if (tokens[n].type == t_id)
         {
             std::string id = tokens[n].str;
-            vars[demangle_id(id)] = id;
+            vars[demangle_id(id, true)] = id;
         }
     }
 
@@ -527,10 +654,12 @@ void process_test(const std::vector<Token> &tokens, const std::string &original_
                 else if (starts_with(expr_str, "=")) { expr_str = trim_spaces(expr_str.substr(1)); }
             }
 
-            // i->first is the demangled (original) name, i->second is the mangled name
-            // (repr() puts single quotes around strings; replace with double quotes)
             std::cout << "    print '" << i->first << "/expected=" << quote(expr_str, '"') << "'\n";
-            std::cout << "    print '" << i->first << "/actual='+repr(" << i->second << ").replace(\"'\", '\"')\n";
+
+            // use a Python trick to force repr() to use double quotes instead of single
+            // (for an explanation, see: http://www.gossamer-threads.com/lists/python/python/157285
+            // -- search that page for "Python delimits a string it by single quotes preferably")
+            std::cout << "    print '" << i->first << "/actual=\"'+repr(\"'\\0\"+str(" << i->second << "))[6:]\n";
         }
     }
     else
@@ -553,7 +682,7 @@ void process_command(const std::vector<Token> &tokens, Varmap &assigned_vars, co
             {
                 std::string id = tokens[n - 1].str;
                 if (!(opt.restrict_vars && restrict_vars.find(id) == restrict_vars.end()))
-                { assigned_vars[demangle_id(id)] = id; }
+                { assigned_vars[demangle_id(id, false)] = id; }
             }
         }
     }
@@ -563,8 +692,8 @@ void print_header()
 {
     std::cout
         << "import sys\n"
-        << "def near(x, y, eps):\n"
-        << "    return abs(x - y) <= eps\n";
+        << "def near(x, y, eps): return abs(x - y) <= eps\n"
+        << "def max_index(dict) : return max(dict, key=dict.get)\n";
 }
 
 void print_assigned_variables(const Varmap &assigned_vars)
@@ -600,13 +729,16 @@ void process(const std::string &filename, const Options &opt, const std::set<std
     // not used for --assign or --test
     Varmap assigned_vars;
 
+    // set of "seen" variable names (e.g. "a", "a.b", "a.b["); only used for --assign
+    Varset variable_hierarchy;
+
     for (int line_num = 1;std::getline(infile, line);++line_num)
     {
         tokens.resize(0);
         tokenise(line, opt, tokens);
         // debug_tokens(tokens);
 
-        if (opt.assign) { process_assign(tokens, line, filename, line_num); }
+        if (opt.assign) { process_assign(tokens, line, filename, line_num, variable_hierarchy); }
         else if (opt.test) { process_test(tokens, line); }
         else { process_command(tokens, assigned_vars, opt, restrict_vars); }
     }
