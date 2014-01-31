@@ -391,6 +391,20 @@ int find_token(const std::vector<Token> &tokens, token_type type, const std::str
     return -1;
 }
 
+void check_transform_id(std::string &id)
+{
+    while (true)
+    {
+        size_t pos = id.find("[MAX]");
+        if (pos == std::string::npos) { break; }
+
+        std::string replacement = "max_index(";
+        replacement += id.substr(0, pos);
+        replacement += ")";
+        id.replace(pos + 1, 3, replacement);
+    }
+}
+
 // split a string into individual tokens
 void tokenise(const std::string &line, const Options &opt,
     /*out*/ std::vector<Token> &tokens)
@@ -429,6 +443,7 @@ void tokenise(const std::string &line, const Options &opt,
             // TODO: maybe allow spaces around array indexes , e.g. "a/b[ 10 ]/c"
             while (is_id(char_at(line, pos))) { ++pos; }
             std::string id = line.substr(tok_start, pos - tok_start);
+            check_transform_id(id);
             if (is_keyword(id)) { tok_str = id; type = t_keyword; }
             else if (next_nonblank_char(line, pos) == '(') { tok_str = id; type = t_function; }
             else { tok_str = (opt.demangle ? demangle_id(id, true) : mangle_id(id)); type = t_id; }
@@ -677,8 +692,8 @@ void print_header()
 {
     std::cout
         << "import sys\n"
-        << "def near(x, y, eps):\n"
-        << "    return abs(x - y) <= eps\n";
+        << "def near(x, y, eps): return abs(x - y) <= eps\n"
+        << "def max_index(dict) : return max(dict, key=dict.get)\n";
 }
 
 void print_assigned_variables(const Varmap &assigned_vars)
