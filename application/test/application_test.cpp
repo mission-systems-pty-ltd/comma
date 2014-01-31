@@ -31,6 +31,7 @@
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
+#include <limits>
 #include <gtest/gtest.h>
 #include <comma/application/command_line_options.h>
 #include <comma/application/signal_flag.h>
@@ -123,6 +124,61 @@ TEST( application, unnamed )
         }
     }
     // TODO: definitely more tests!
+}
+
+TEST( command_line_options, optional )
+{
+    {
+        std::vector< std::string > argv;
+        argv.push_back( "app" );
+        comma::command_line_options options( argv );
+        boost::optional< double > d = options.optional< double >( "--d" );
+        bool b = options.exists( "--d" );
+        EXPECT_FALSE( bool( d ) );
+        EXPECT_FALSE( b );
+    }
+    {
+        std::vector< std::string > argv;
+        argv.push_back( "app" );
+        argv.push_back( "--d=" );
+        comma::command_line_options options( argv );
+        boost::optional< double > d = options.optional< double >( "--d" );
+        bool b = options.exists( "--d" );
+        EXPECT_FALSE( bool( d ) );
+        EXPECT_TRUE( b );
+    }
+    {
+        std::vector< std::string > argv;
+        argv.push_back( "app" );
+        argv.push_back( "--d" );
+        comma::command_line_options options( argv );
+        boost::optional< double > d = options.optional< double >( "--d" );
+        bool b = options.exists( "--d" );
+        EXPECT_FALSE( bool( d ) );
+        EXPECT_TRUE( b );
+    }
+    {
+        std::vector< std::string > argv;
+        argv.push_back( "app" );
+        argv.push_back( "--d=123" );
+        comma::command_line_options options( argv );
+        boost::optional< double > d = options.optional< double >( "--d" );
+        bool b = options.exists( "--d" );
+        EXPECT_TRUE( bool( d ) );
+        EXPECT_EQ( 123, *d );
+        EXPECT_TRUE( b );
+    }
+    {
+        std::vector< std::string > argv;
+        argv.push_back( "app" );
+        argv.push_back( "--d=" );
+        comma::command_line_options options( argv );
+        boost::optional< double > d = options.optional< double >( "--d" );
+        EXPECT_FALSE( bool( d ) );
+        boost::optional< double > e = options.value< double >( "--d", std::numeric_limits< double >::quiet_NaN() );
+        EXPECT_TRUE( bool( e ) );
+        EXPECT_FALSE( *e == *e );
+    }
 }
 
 int main( int argc, char* argv[] )
