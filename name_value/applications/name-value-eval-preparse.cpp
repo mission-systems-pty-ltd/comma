@@ -703,7 +703,7 @@ void print_header()
     std::cout
         << "import sys, re\n"
         << "def near(x, y, eps): return abs(x - y) <= eps\n"
-        << "def max_index(dict) : return max(dict, key=dict.get)\n"
+        << "def max_index(dict) : return max(dict.keys())\n"
         << "def starts_with(s, x): return s.find(x) == 0\n"
         << "def ends_with(s, x): return s.find(x) == len(s) - len(x)\n"
         << "def contains(s, x): return s.find(x) != -1\n";
