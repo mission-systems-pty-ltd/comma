@@ -1,0 +1,49 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+simple_usage()
+{
+    echo "Usage: $name [fixm-file] [-h|--help] " >&2
+    if [[ $# != 0 ]]; then exit $1; fi
+}
+
+usage()
+{
+    simple_usage
+    cat >&2 <<EOF
+
+Appends tolerance ("+/-") values to FIXM data in path=value format.
+
+If no input file is specified, reads from standard input.
+
+EOF
+    if [[ $# != 0 ]]; then exit $1; fi
+}
+
+input=
+
+while [[ $# -gt 0 ]]; do
+    arg="${1#*=}"
+    case "$1" in
+        -h|--help) usage 0;;
+
+        -*)        echo "$name: unrecognized option '$1'" >&2; exit 1;;
+
+        *)         if [[ -z "$input" ]]; then input=$1;
+                   else echo "$name: unexpected argument '$1'" >&2; exit 1; fi;;
+    esac
+    shift
+done
+
+cat $input | awk '
+/^config/                           { print $0; next; }
+/latitude=[^"]/ || /longitude=[^"]/ { print $0 " +/- 0.1"; next; }
+/altitude=[^"]/                     { print $0 " +/- 100"; next; }
+/weight=[^"]/                       { print $0 " +/- 500"; next; }
+/heading=[^"]/                      { print $0 " +/- 1"; next; }
+/amount=[^"0]/                      { print $0 " +/- 5%"; next; }
+
+{ print $0; }  # default
+'
+
