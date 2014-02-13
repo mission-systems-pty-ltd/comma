@@ -8,6 +8,8 @@ function usage_()
     echo >&2
     echo "usage: aero-test-run [<options>]" >&2
     echo >&2
+    echo "note: in quiet mode, only the messages containing the word \"failed\" will be displayed" >&2
+    echo >&2
     echo "options" >&2
     echo "    --debug: much more debug output" >&2
     echo "    --quiet,-q: output only failures" >&2
