@@ -53,6 +53,9 @@
 
 namespace comma { namespace csv {
 
+/// @todo document
+namespace detail { void unsyncronize_with_stdio(); }
+
 /// ascii csv input stream
 template < typename S >
 class ascii_input_stream : public boost::noncopyable
@@ -319,7 +322,7 @@ inline ascii_input_stream< S >::ascii_input_stream( std::istream& is, const std:
     , result_( sample )
     , fields_( split( column_names, delimiter ) )
 {
-    is_.sync_with_stdio( false );
+    detail::unsyncronize_with_stdio();
 }
 
 template < typename S >
@@ -330,7 +333,7 @@ inline ascii_input_stream< S >::ascii_input_stream(std::istream& is, const optio
     , result_( sample )
     , fields_( split( o.fields, o.delimiter ) )
 {
-    is_.sync_with_stdio( false );
+    detail::unsyncronize_with_stdio();
 }
 
 template < typename S >
@@ -341,7 +344,7 @@ inline ascii_input_stream< S >::ascii_input_stream(std::istream& is, const S& sa
     , result_( sample )
     , fields_( split( options().fields, options().delimiter ) )
 {
-    is_.sync_with_stdio( false );
+    detail::unsyncronize_with_stdio();
 }
 
 template < typename S >
@@ -425,7 +428,6 @@ inline void ascii_output_stream< S >::write( const S& s, std::vector< std::strin
     m_os << std::endl;
 }
 
-
 template < typename S >
 inline binary_input_stream< S >::binary_input_stream( std::istream& is, const std::string& format, const std::string& column_names, bool full_path_as_name, const S& sample )
     : is_( is )
@@ -434,13 +436,12 @@ inline binary_input_stream< S >::binary_input_stream( std::istream& is, const st
     , result_( sample )
     , size_( binary_.format().size() )
     , buf_( size_ )
-    , fields_( split
-( column_names, ',' ) )
+    , fields_( split( column_names, ',' ) )
 {
     #ifdef WIN32
     if( &is == &std::cin ) { _setmode( _fileno( stdin ), _O_BINARY ); }
     #endif
-    is_.sync_with_stdio( false );
+    detail::unsyncronize_with_stdio();
 }
 
 template < typename S >
@@ -456,7 +457,7 @@ inline binary_input_stream< S >::binary_input_stream( std::istream& is, const op
     #ifdef WIN32
     if( &is == &std::cin ) { _setmode( _fileno( stdin ), _O_BINARY ); }
     #endif
-    is_.sync_with_stdio( false );
+    detail::unsyncronize_with_stdio();
 }
 
 template < typename S >

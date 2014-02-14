@@ -140,7 +140,7 @@ int main( int argc, char** argv )
         multiPlay.reset( new comma::Multiplay( sourceConfigs, 1.0 / speed, quiet, boost::posix_time::milliseconds(precision), fromtime, totime, flush ) );
         while( multiPlay->read() && !shutdownFlag && std::cout.good() && !std::cout.bad() &&!std::cout.eof() )
         {
-            
+
         }
         multiPlay->close();
         if( shutdownFlag ) { std::cerr << "csv-play: interrupted by signal" << std::endl; return -1; }
