@@ -65,7 +65,7 @@ class command_line_options
 
         /// print all command line arguments, quoting any arguments that include special
         /// charaters such as ";", white space or quotes (in which case " is replaced with \")
-        void dump( std::ostream &out = std::cout ) const;
+        std::string string() const;
 
         /// return true, if option exists (list, e.g.: "--binary,-b" is allowed)
         bool exists( const std::string& name ) const;

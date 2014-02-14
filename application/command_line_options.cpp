@@ -55,8 +55,9 @@ command_line_options::command_line_options( const std::vector< std::string >& ar
     fill_map_( argv_ );
 }
 
-void command_line_options::dump( std::ostream &out ) const
+std::string command_line_options::string() const
 {
+    std::ostringstream out;
     for ( size_t arg = 0; arg < argv_.size(); ++arg )
     {
         if ( arg > 0 ) { out << ' '; }
@@ -83,8 +84,8 @@ void command_line_options::dump( std::ostream &out ) const
             out << argv_[arg];
         }
     }
-
     out << '\n';
+    return out.str();
 }
 
 command_line_options::command_line_options( const command_line_options& rhs ) { operator=( rhs ); }
