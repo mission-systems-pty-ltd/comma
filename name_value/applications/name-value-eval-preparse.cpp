@@ -48,6 +48,16 @@ void usage()
 "    -d|--demangle          Transform variable names from \"mangled\" form (no slashes or square brackets) back to\n"
 "                           their original form\n"
 "\n"
+"Predefined Python functions:\n"
+"\n"
+"   near(x, y, eps)         True if x and y are within eps of each other (i.e. abs(x - y) <= eps)\n"
+"   max_index(dict)         Returns the maximum (integer) index in a dictionary\n"
+"   starts_with(s, x)       True if string s begins with string x\n"
+"   ends_with(s, x)         True if string s ends with string x\n"
+"   contains(s, x)          True if string s has a substring x\n"
+"   re.match(r, s)          Check if s matches regular expression r (or use re.search(r, s) if r can be anywhere in s)\n"
+"                           See: http://docs.python.org/2/howto/regex.html\n"
+"\n"
 "Special operators:\n"
 "\n"
 "    a == b +/- c           Becomes \"near(a, b, c)\" (or with \"!=\", \"not near(a, b, c)\"\n"
@@ -691,9 +701,12 @@ void process_command(const std::vector<Token> &tokens, Varmap &assigned_vars, co
 void print_header()
 {
     std::cout
-        << "import sys\n"
+        << "import sys, re\n"
         << "def near(x, y, eps): return abs(x - y) <= eps\n"
-        << "def max_index(dict) : return max(dict, key=dict.get)\n";
+        << "def max_index(dict) : return max(dict.keys())\n"
+        << "def starts_with(s, x): return s.find(x) == 0\n"
+        << "def ends_with(s, x): return s.find(x) == len(s) - len(x)\n"
+        << "def contains(s, x): return s.find(x) != -1\n";
 }
 
 void print_assigned_variables(const Varmap &assigned_vars)
