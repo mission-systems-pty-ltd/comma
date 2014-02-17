@@ -198,6 +198,7 @@ ADD_SUBDIRECTORY( xpath )
     SET(CPACK_PACKAGE_VERSION_MAJOR "1")
     SET(CPACK_PACKAGE_VERSION_MINOR "0")
     SET(CPACK_PACKAGE_VERSION_PATCH "4")
+	SET(CPACK_PACKAGE_CONTACT "t.teo@acfr.usyd.edu.au")
 
     #this line finds the appropriate Visual Studio DLLS in windows. Maybe it would find other dlls if a different build tool were used. Probably should be windows only.
     INCLUDE( InstallRequiredSystemLibraries )
