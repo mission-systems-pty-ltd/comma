@@ -106,6 +106,18 @@ function aero_elapsed()
     echo "$name/seconds=$elapsed" >> $output_file
 }
 
+# append to <file> a coarse progress indication for <command> execution
+# the rationale of writing to a file is to have no side effects for <command>
+# usage: aero_progress <file> <command> <args>
+function aero_progress()
+{
+    local output_file=$1
+    local name=$( basename $2 )
+    echo "$( date +%Y%m%dT%H%M%S.%N | cut -b1-22 ),$name,begin" >> $output_file
+    ${@:2}
+    echo "$( date +%Y%m%dT%H%M%S.%N | cut -b1-22 ),$name,end" >> $output_file
+}
+
 # todo: document usage
 function replace_value_in_name_value()
 {
