@@ -150,20 +150,40 @@ struct constraints
 };
 
 template < typename T >
-struct value_t
+struct constrained
 {
     T value;
-    ::constraints< T > constraints;
+    std::vector< ::constraints< T > > constraints;
 
-    bool is_a_match() const { return this->constraints.is_a_match( value ); }
-    bool done() const { return this->constraints.done( value ); }
+    bool is_a_match( bool is_or = false ) const
+    {
+        if( is_or )
+        {
+            for( unsigned int i = 0; i < constraints.size(); ++i ) { if( this->constraints[i].is_a_match( value ) ) { return true; } }
+            return false;
+        }
+        for( unsigned int i = 0; i < constraints.size(); ++i ) { if( !this->constraints[i].is_a_match( value ) ) { return false; } }
+        return true;
+    }
+
+    bool done( bool is_or = false ) const
+    {
+        if( constraints.empty() ) { return false; }
+        if( is_or )
+        {
+            for( unsigned int i = 0; i < constraints.size(); ++i ) { if( this->constraints[i].done( value ) ) { return true; } }
+            return false;
+        }
+        for( unsigned int i = 0; i < constraints.size(); ++i ) { if( !this->constraints[i].done( value ) ) { return false; } }
+        return true;
+    }
 };
 
 struct input_t
 {
-    std::vector< value_t< boost::posix_time::ptime > > time;
-    std::vector< value_t< double > > doubles;
-    std::vector< value_t< std::string > > strings;
+    std::vector< constrained< boost::posix_time::ptime > > time;
+    std::vector< constrained< double > > doubles;
+    std::vector< constrained< std::string > > strings;
 
     bool is_a_match(bool is_or) const
     {
@@ -172,9 +192,9 @@ struct input_t
 //         std::cerr << std::endl;
         if (is_or)
         {
-            for( unsigned int i = 0; i < time.size(); ++i ) { if( time[i].is_a_match() ) { return true; } }
-            for( unsigned int i = 0; i < doubles.size(); ++i ) { if( doubles[i].is_a_match() ) { return true; } }
-            for( unsigned int i = 0; i < strings.size(); ++i ) { if( strings[i].is_a_match() ) { return true; } }
+            for( unsigned int i = 0; i < time.size(); ++i ) { if( time[i].is_a_match( is_or ) ) { return true; } }
+            for( unsigned int i = 0; i < doubles.size(); ++i ) { if( doubles[i].is_a_match( is_or ) ) { return true; } }
+            for( unsigned int i = 0; i < strings.size(); ++i ) { if( strings[i].is_a_match( is_or ) ) { return true; } }
     //        std::cerr << "==> is_a_match: done" << std::endl << std::endl;
             return false;
         }
@@ -192,9 +212,9 @@ struct input_t
     {
         if (is_or)
         {
-            for( unsigned int i = 0; i < time.size(); ++i ) { if( !time[i].done() ) { return false; } }
-            for( unsigned int i = 0; i < doubles.size(); ++i ) { if( !doubles[i].done() ) { return false; } }
-            for( unsigned int i = 0; i < strings.size(); ++i ) { if( !strings[i].done() ) { return false; } }
+            for( unsigned int i = 0; i < time.size(); ++i ) { if( !time[i].done( is_or ) ) { return false; } }
+            for( unsigned int i = 0; i < doubles.size(); ++i ) { if( !doubles[i].done( is_or ) ) { return false; } }
+            for( unsigned int i = 0; i < strings.size(); ++i ) { if( !strings[i].done( is_or ) ) { return false; } }
             return true;
         }
         else
@@ -209,14 +229,14 @@ struct input_t
 
 namespace comma { namespace visiting {
 
-template < typename T > struct traits< value_t< T > >
+template < typename T > struct traits< constrained< T > >
 {
-    template < typename K, typename V > static void visit( const K&, const value_t< T >& p, V& v )
+    template < typename K, typename V > static void visit( const K&, const constrained< T >& p, V& v )
     {
         v.apply( "value", p.value );
     }
 
-    template < typename K, typename V > static void visit( const K&, value_t< T >& p, V& v )
+    template < typename K, typename V > static void visit( const K&, constrained< T >& p, V& v )
     {
         v.apply( "value", p.value );
     }
@@ -242,11 +262,11 @@ template <> struct traits< input_t >
 } } // namespace comma { namespace visiting {
 
 template < typename T >
-static value_t< T > make_value( const std::string& constraints_string, const comma::command_line_options& options )
+static constrained< T > make_value( const std::vector< std::string >& constraints_strings, const comma::command_line_options& options )
 {
     static constraints< T > default_constraints( options );
-    value_t< T > v;
-    v.constraints = constraints< T >( constraints_string, default_constraints );
+    constrained< T > v;
+    for( unsigned int i = 0; i < constraints_strings.size(); ++i ) { v.constraints.push_back( constraints< T >( constraints_strings[i], default_constraints ) ); }
     return v;
 }
 
@@ -254,7 +274,20 @@ static bool verbose;
 static comma::csv::options csv;
 static input_t input;
 static std::vector< std::string > fields;
-static std::map< std::string, std::string > constraints_map;
+typedef std::multimap< std::string, std::string > constraints_map_t;
+static constraints_map_t constraints_map;
+
+template < typename T >
+static constrained< T > make_value( unsigned int i, const comma::command_line_options& options )
+{
+    static constraints< T > default_constraints( options );
+    constrained< T > v;
+    for( std::pair< constraints_map_t::const_iterator, constraints_map_t::const_iterator > r = constraints_map.equal_range( fields[i] ); r.first != r.second; ++r.first )
+    {
+        v.constraints.push_back( constraints< T >( r.first->second, default_constraints ) );
+    }
+    return v;
+}
 
 static void init_input( const comma::csv::format& format, const comma::command_line_options& options )
 {
@@ -266,15 +299,15 @@ static void init_input( const comma::csv::format& format, const comma::command_l
         {
             case comma::csv::format::time:
             case comma::csv::format::long_time:
-                input.time.push_back( make_value< boost::posix_time::ptime >( constraints_map[ fields[i] ], options ) );
+                input.time.push_back( make_value< boost::posix_time::ptime >( i, options ) );
                 fields[i] = "t[" + boost::lexical_cast< std::string >( input.time.size() - 1 ) + "]/value";
                 break;
             case comma::csv::format::fixed_string:
-                input.strings.push_back( make_value< std::string >( constraints_map[ fields[i] ], options ) );
+                input.strings.push_back( make_value< std::string >( i, options ) );
                 fields[i] = "strings[" + boost::lexical_cast< std::string >( input.strings.size() - 1 ) + "]/value";
                 break;
             default:
-                input.doubles.push_back( make_value< double >( constraints_map[ fields[i] ], options ) );
+                input.doubles.push_back( make_value< double >( i, options ) );
                 fields[i] = "doubles[" + boost::lexical_cast< std::string >( input.doubles.size() - 1 ) + "]/value";
                 break;
         }
