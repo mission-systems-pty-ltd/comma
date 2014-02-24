@@ -1,0 +1,83 @@
+#!/bin/bash
+
+# Note: this version is incomplete:
+# it doesn't actually add any jobs to the queue, it just prints the appropriate SQL "insert" statements.
+
+name=$( basename $0 )
+
+output_base_dir="/mnt/qstorage/log/gui/aero-test"
+user_name="acceptance"
+version_to_use="prod"   # "prod", "test" or "bleeding"
+task_priority=3
+
+# aero-test-util is in the same folder as this script
+source $( dirname $0 )/aero-test-util
+
+function usage_()
+{
+    echo "Usage: $name [<options>]" >&2
+    echo >&2
+    echo "Search for subdirectories containing \"expected\" (and \"input\") files and submit these tests to the job queue" >&2
+    echo >&2
+    echo "options" >&2
+    echo "    --path=<qstorage path>: q-storage directory; default: /mnt/q-storage" >&2
+    echo >&2
+    exit 1
+}
+
+# arguments: <filename> <path plan_to get>, e.g. "input" "plan/from"
+function extract_value()
+{
+    local result=$( grep "^ *$2=" "$1" | sed 's/^[^=]*=//g' )
+    if [[ -z "$result" ]]; then echo "$name: missing \"$2\" in $( readlink -e $1 )" >&2; return 1; fi
+    echo $result
+}
+
+# argument: <input file>
+function create_insert_statement()
+{
+    local input_file=$1
+    local input=$( cat "$input_file" | sed 's/$/\\/g' | tr '\n' 'n' )   # all one line, newlines replaced with a literal "\n"
+    local plan_from=$( extract_value "$input_file" "plan/from" )
+    local plan_to=$( extract_value "$input_file" "plan/to" )
+    local plan_time=$( extract_value "$input_file" "plan/departure_time" )
+    if [[ -z "$plan_from" || -z "$plan_to" || -z "$plan_time" ]]; then return 1; fi  # error message already printed
+    local output_path="$output_base_dir/${plan_time}_$plan_from-$plan_to"
+
+    # time format is like: "2014-01-23 12:34:56"
+    local time_in_sql_format=$( echo $plan_time | awk '{ print substr($1, 1, 4) "-"  substr($1, 5, 2) "-" substr($1, 7, 2) " " substr($1, 10, 2) ":" substr($1, 12, 2) ":" substr($1, 14, 2); }' )
+
+    echo "INSERT INTO JobQ (submitTime, task, JobQ.from, JobQ.to, takeoffTime, username, stdin, outputPath, build, priority)
+VALUES (now(), 'BUILDPLAN', '$plan_from', '$plan_to', '$time_in_sql_format', '$user_name', '$input', '$output_path',
+'$version_to_use', $task_priority);"
+}
+
+path="--path=/mnt/q-storage"
+for arg in $@ ; do
+    if [[ "$arg" == "--help" || "$arg" == "-h" ]] ; then usage_ ; fi
+    if [[ "$arg" != "${arg#--path=}" ]] ; then path="$arg" ; fi
+done
+
+expected_files=$( find . -name "expected" )
+expected_files_count=$( find . -name "expected" | wc -l )
+
+if (( $expected_files_count > 0 )) ; then
+    echo "$name: $expected_files_count test[s] in subdirectories of $( pwd )"
+    for e in $expected_files ; do
+        basedir=$( pwd )
+        cd $( dirname $e )
+        if [[ ! -f "input" ]]; then
+            echo "$name: warning: \"expected\" but no \"input\" file in $( pwd )"
+        else
+            insert_statement=$( create_insert_statement "input" )
+            if [[ $? == 0 ]]; then
+                echo "$name: adding plan_to job queue: $( readlink -e $e )"
+                echo $insert_statement
+            fi
+        fi
+        cd $basedir
+    done
+else
+    echo "$name: no \"expected\" files found in subdirectories of $( pwd )"
+fi
+
