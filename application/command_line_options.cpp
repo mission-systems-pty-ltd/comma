@@ -84,7 +84,6 @@ std::string command_line_options::string() const
             out << argv_[arg];
         }
     }
-    out << '\n';
     return out.str();
 }
 
