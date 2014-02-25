@@ -184,3 +184,11 @@ function qpath()
         echo ${qstorage%"/"}"/"$input"/"
     fi
 }
+
+# returns 0 (success) if arg1 > arg2 using floating point comparison, otherwise prints returns 1 (failure)
+# (this is so it can be used in a bash "if" statement)
+function float_greater()
+{
+    return $( echo | awk '{ print !('"$1"' > '"$2"'); }' )
+}
+
