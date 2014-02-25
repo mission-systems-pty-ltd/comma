@@ -98,6 +98,8 @@ struct constraints
     boost::optional< T > to;
     bool sorted;
 
+    bool empty() const { return !equals && !not_equal && !less && !greater && !from && !to; }
+
     constraints() : sorted( false ) {}
 
     constraints( const comma::command_line_options& options ) // quick and dirty
@@ -111,9 +113,8 @@ struct constraints
         sorted = options.exists( "--sorted" );
     }
 
-    constraints( const std::string& options, const constraints& defaults )
+    constraints( const std::string& options )
     {
-        *this = defaults;
         comma::name_value::map m( options, ';', '=' ); // quick and dirty, since optional is not well-supported (euphymism for 'buggy') in comma::name_value::parser
         if( m.exists( "equals" ) ) { equals = m.value< T >( "equals" ); }
         if( m.exists( "not-equal" ) ) { not_equal = m.value< T >( "not-equal" ); }
@@ -261,15 +262,6 @@ template <> struct traits< input_t >
 
 } } // namespace comma { namespace visiting {
 
-template < typename T >
-static constrained< T > make_value( const std::vector< std::string >& constraints_strings, const comma::command_line_options& options )
-{
-    static constraints< T > default_constraints( options );
-    constrained< T > v;
-    for( unsigned int i = 0; i < constraints_strings.size(); ++i ) { v.constraints.push_back( constraints< T >( constraints_strings[i], default_constraints ) ); }
-    return v;
-}
-
 static bool verbose;
 static comma::csv::options csv;
 static input_t input;
@@ -280,12 +272,13 @@ static constraints_map_t constraints_map;
 template < typename T >
 static constrained< T > make_value( unsigned int i, const comma::command_line_options& options )
 {
-    static constraints< T > default_constraints( options );
     constrained< T > v;
     for( std::pair< constraints_map_t::const_iterator, constraints_map_t::const_iterator > r = constraints_map.equal_range( fields[i] ); r.first != r.second; ++r.first )
     {
-        v.constraints.push_back( constraints< T >( r.first->second, default_constraints ) );
+        v.constraints.push_back( constraints< T >( r.first->second ) );
     }
+    static constraints< T > common_constraints( options );
+    if( !common_constraints.empty() ) { v.constraints.push_back( common_constraints ); }
     return v;
 }
 
