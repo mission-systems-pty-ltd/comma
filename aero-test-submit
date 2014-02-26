@@ -20,7 +20,7 @@ source $( dirname $0 )/aero-test-util
 
 function usage_()
 {
-    echo "Usage: $name [<options>]" >&2
+    echo "Usage: $name [-h|--help]" >&2
     echo >&2
     echo "Search for subdirectories containing \"expected\" (and \"input\") files and submit these tests to the job queue" >&2
     echo >&2
