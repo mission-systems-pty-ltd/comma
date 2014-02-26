@@ -3,7 +3,7 @@
 name=$( basename $0 )
 
 submit_time=$( date --utc "+%Y%m%dT%H%M%S" )
-output_base_dir="/var/qantas/data/log/gui/aero-test"
+output_base_dir="/var/qantas/data/log/gui/acceptance"
 user_name="acceptance"
 # TODO: change to "prod" when ready for release
 build_to_use="bleeding"   # "prod", "test" or "bleeding"
@@ -35,46 +35,25 @@ function extract_value()
     echo $result
 }
 
-# argument: <input file> <sequence number>
+# argument: <input file> <batch id> <sequence number>
 function create_insert_statement()
 {
     local input_file=$1
-    local seq_num=$2
+    local batch_id=$2
+    local seq_num=$3
     local input=$( cat "$input_file" | sed 's/$/\\/g' | tr '\n' 'n' )   # all one line, newlines replaced with a literal "\n"
     local plan_from=$( extract_value "$input_file" "plan/from" )
     local plan_to=$( extract_value "$input_file" "plan/to" )
     local plan_time=$( extract_value "$input_file" "plan/departure_time" )
     if [[ -z "$plan_from" || -z "$plan_to" || -z "$plan_time" ]]; then return 1; fi  # error message already printed
-    local output_path="$output_base_dir/${submit_time}_${seq_num}_${plan_from}-${plan_to}"
+    local output_path="$output_base_dir/${submit_time}_${batch_id}_${seq_num}_${plan_from}-${plan_to}"
 
     # time format is like: "2014-01-23 12:34:56"
     local time_in_sql_format=$( echo $plan_time | awk '{ print substr($1, 1, 4) "-"  substr($1, 5, 2) "-" substr($1, 7, 2) " " substr($1, 10, 2) ":" substr($1, 12, 2) ":" substr($1, 14, 2); }' )
 
-    echo "INSERT INTO JobQ (submitTime, task, JobQ.from, JobQ.to, takeoffTime, username, stdin, outputPath, build, priority)
-VALUES (now(), 'BUILDPLAN', '$plan_from', '$plan_to', '$time_in_sql_format', '$user_name', '$input', '$output_path',
+    echo "INSERT INTO JobQ (submitTime, batchId, task, JobQ.from, JobQ.to, takeoffTime, username, stdin, outputPath, build, priority)
+VALUES (now(), $batch_id, 'BUILDPLAN', '$plan_from', '$plan_to', '$time_in_sql_format', '$user_name', '$input', '$output_path',
 '$build_to_use', $task_priority)"
-}
-
-# arguments: a list of job ids
-function wait_for_completion()
-{
-    remaining_jobs=$*
-    while sleep $poll_frequency_seconds; do
-        unfinished_jobs=
-        for job_id in $remaining_jobs; do
-            sql_to_execute="select status from JobQ where jobId = $job_id"
-            job_status=$( $sql_command "$sql_to_execute" | tail -1 )
-            if [[ "$job_status" == "DONE" ]]; then
-                echo "Job $job_id completed successfully -- checking expected results"
-                # TODO: call aero-test-match in the appropriate directory
-            elif [[ "$job_status" == "ERROR" ]]; then
-                echo "Job $job_id failed"
-            else
-                unfinished_jobs+=" $job_id"
-            fi
-        done
-        if [[ -z "$unfinished_jobs" ]]; then break; else remaining_jobs=$unfinished_jobs; fi
-    done
 }
 
 for arg in "$@" ; do
@@ -89,6 +68,8 @@ expected_files_count=$( find . -name "expected" | wc -l )
 job_id_list=()
 
 if (( $expected_files_count > 0 )) ; then
+    batch_id=$( $sql_command "CALL getNextBatchId()" | tail -1 )
+    if [[ -z "$batch_id" ]]; then echo "$name: error getting batch id; aborting"; exit 1; fi
     echo "$expected_files_count test[s] in subdirectories of $( pwd )"
     for e in $expected_files ; do
         basedir=$( pwd )
@@ -96,7 +77,7 @@ if (( $expected_files_count > 0 )) ; then
         if [[ ! -f "input" ]]; then
             echo "Warning: found \"expected\" but no \"input\" file in $( pwd )"
         else
-            insert_statement=$( create_insert_statement "input" ${#job_id_list[@]} )
+            insert_statement=$( create_insert_statement "input" $batch_id ${#job_id_list[@]} )
             if [[ $? == 0 ]]; then
                 sql_to_execute="$insert_statement; SELECT LAST_INSERT_ID();"
                 job_id=$( $sql_command "$sql_to_execute" | tail -1 )
@@ -111,10 +92,7 @@ if (( $expected_files_count > 0 )) ; then
         cd $basedir
     done
     echo "${#job_id_list[@]} job(s) submitted"
-    if [[ ${#job_id_list[@]} != 0 ]]; then
-        echo; echo "Waiting for jobs to complete ..."
-        wait_for_completion ${job_id_list[@]}
-    fi
+    if [[ ${#job_id_list[@]} != 0 ]]; then echo "Batch id $batch_id"; fi
 else
     echo "$name: no \"expected\" files found in subdirectories of $( pwd )"
 fi
