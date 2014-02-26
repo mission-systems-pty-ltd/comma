@@ -1,0 +1,60 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+db_host="129.78.214.114"
+db_port="3306"
+db_user="jobq_submit"
+db_pwd="bReWAca4rUJu"
+db_name="qdata"
+sql_command="mysql -h $db_host -P $db_port -u $db_user -p$db_pwd $db_name -e "
+
+# aero-test-util is in the same folder as this script
+source $( dirname $0 )/aero-test-util
+
+function usage()
+{
+    echo "Usage: $name [<batch id>]" >&2
+    echo >&2
+    echo "Get the status of tests that were run using aero-test-submit. If a <batch id> is missing, the most recent id is used."
+    echo >&2
+}
+
+batch_id=
+
+for arg in "$@"; do
+    case $arg in
+        -h|--help) usage; exit 0;;
+        -*)        echo "$name: unknown option '$arg'" >&2; exit 1;;
+        *)         if [[ -z "$batch_id" ]]; then batch_id=$arg
+                   else echo "$name: unexpected argument '$arg'" >&2; exit 1; fi;;
+    esac
+done
+
+if [[ -z "$batch_id" ]]; then
+    batch_id=$( $sql_command "select max(batchId) from JobQ" | tail -1 )
+fi
+
+echo "Status of batch $batch_id:"
+$sql_command "select jobId, status from JobQ where batchId = $batch_id" |
+awk 'BEGIN { finished = unfinished = 0; }
+
+    # returns "s" if the number is not 1
+    function plural_s(num) { return (num == 1 ? "" : "s"); }
+
+    # ignore first line, "jobId   status"
+    NR == 1 { next; }
+
+    {
+        job_list[$2] = job_list[$2] " " $1; count[$2]++;
+        if ($2 == "DONE" || $2 == "ERROR") { finished++; } else { unfinished++; }
+    }
+
+    END \
+    {
+        for (status in job_list) { print "(" count[status] ") " status ":" job_list[status]; }
+        if (finished == 0 && unfinished == 0) { print "No jobs found with that batch id."; } \
+        else if (unfinished == 0) { print "All " finished " job" plural_s(finished) " completed."; } \
+        else { print finished " job" plural_s(finished) " completed, waiting for " unfinished \
+               " job" plural_s(unfinished) "."; }
+    }'
