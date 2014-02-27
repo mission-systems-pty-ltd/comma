@@ -27,16 +27,10 @@ struct log {
     boost::posix_time::ptime timestamp;
 };
 
-struct path_value {
-    std::string name;
-    bool is_begin;
-    boost::posix_time::ptime timestamp;
-};
-    
 } // namespace impl_ {
     
 std::ostream& operator<<( std::ostream& os, const impl_::log& l ) { os << l.name; return os; }
-std::ostream& operator<<( std::ostream& os, const impl_::path_value& l ) { os << l.name; return os; }
+
     
 namespace comma { namespace visiting {
     
@@ -56,23 +50,6 @@ template < > struct traits< impl_::log > {
         v.apply( "is_begin", t.is_begin ? std::string("begin") : std::string("end")  );
     }
 };
-template < > struct traits< impl_::path_value > {
-    template< typename K, typename V > static void visit( const K& k, impl_::path_value& t, V& v )
-    {
-        v.apply( "timestamp", t.timestamp );
-        v.apply( "name", t.name );
-        std::string tmp;
-        v.apply( "is_begin", tmp );
-        t.is_begin = ( tmp == "begin" );
-    }
-    template< typename K, typename V > static void visit( const K& k, const impl_::path_value& t, V& v )
-    {
-        v.apply( "timestamp", t.timestamp );
-        v.apply( "name", t.name );
-        v.apply( "is_begin", t.is_begin ? std::string("begin") : std::string("end")  );
-    }
-};
-
     
 } } // namespace comma { namespace visiting { 
 
@@ -112,8 +89,7 @@ void output( const impl_::log& begin, const impl_::log& end, const std::string& 
     std::cout << enclosing_branches << addition_sep << end.name << '/'   << finished  << '=' << boost::posix_time::to_iso_string( end.timestamp ) << std::endl; 
 }
 
-template < typename T >
-void output_elapsed( const T& begin, const T& end, const std::string& enclosing_branches )
+void output_elapsed( const impl_::log& begin, const impl_::log& end, const std::string& enclosing_branches )
 {
     std::string addition_sep = enclosing_branches.empty() ? "" : "/";
     std::cout << enclosing_branches << addition_sep << end.name << '/'   << "elapsed"  << '=' << ( (end.timestamp - begin.timestamp).total_milliseconds() / 1000.0 ) << std::endl; 
@@ -125,9 +101,9 @@ const impl_::log* get_log()
     return istream.read();
 }
 
-const impl_::path_value* get_elapsed()
+const impl_::log* get_elapsed()
 {
-    static impl_::path_value log;
+    static impl_::log log;
     std::string line;
     std::getline( std::cin, line );
     if( line.empty() || line[0] == '#' ) return NULL;
@@ -251,7 +227,7 @@ int main( int ac, char** av )
             boost::property_tree::ptree ptree; 
             std::set< std::string > leaf_keys;
             merge_elapsed( ptree, leaf_keys );
-            comma::property_tree::to_path_value( std::cout, ptree, equal_sign, '\n' );
+            comma::property_tree::to_path_value ( std::cout, ptree, equal_sign, '\n' );
         }
         else if( options.exists( "--ratio" ) )
         {
@@ -292,18 +268,13 @@ int main( int ac, char** av )
         else if( options.exists( "--elapsed" ) )
         {
             std::vector< std::string > no_names = options.unnamed( "-h,--help,--elapsed,--sum,--ratio", "" );
+            std::function< void( const impl_::log&, const impl_::log&, const std::string&) > outputting( &output_elapsed );
+            std::function< const impl_::log*() > extractor( &get_log );
             if( !no_names.empty() && no_names.front() == "path-value" )
             {
-                std::function< void( const impl_::path_value&, const impl_::path_value&, const std::string&) > outputting( &output_elapsed< impl_::path_value > );
-                std::function< const impl_::path_value*() > extractor( &get_elapsed );
-                impl_::process_begin_end< impl_::path_value >( extractor , outputting );
+                extractor = &get_elapsed;
             }
-            else 
-            {
-                std::function< void( const impl_::log&, const impl_::log&, const std::string&) > outputting( &output_elapsed< impl_::log > );
-                std::function< const impl_::log*() > extractor( &get_log );
-                impl_::process_begin_end< impl_::log >( extractor , outputting );
-            }
+            impl_::process_begin_end< impl_::log >( extractor , outputting );
             
             return 0;
         }
