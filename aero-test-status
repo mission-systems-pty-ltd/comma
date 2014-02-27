@@ -54,7 +54,7 @@ awk 'BEGIN { finished = unfinished = 0; }
     {
         for (status in job_list) { print "(" count[status] ") " status ":" job_list[status]; }
         if (finished == 0 && unfinished == 0) { print "No jobs found with that batch id."; } \
-        else if (unfinished == 0) { print "All " finished " job" plural_s(finished) " completed."; } \
+        else if (unfinished == 0) { if (finished == 1) print "Job completed."; else print "All " finished " jobs completed."; } \
         else { print finished " job" plural_s(finished) " completed, waiting for " unfinished \
                " job" plural_s(unfinished) "."; }
     }'
