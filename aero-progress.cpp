@@ -84,7 +84,7 @@ void output( const impl_::log& begin, const impl_::log& end, const std::string& 
     std::string addition_sep = enclosing_branches.empty() ? "" : "/";
     std::cout << enclosing_branches << addition_sep << begin.name << '/' << start     << '=' << boost::posix_time::to_iso_string( begin.timestamp ) << std::endl; 
     std::cout << enclosing_branches << addition_sep << end.name << '/'   << finished  << '=' << boost::posix_time::to_iso_string( end.timestamp ) << std::endl; 
-    std::cout << enclosing_branches << addition_sep << end.name << '/'   << "elapsed" << '=' << boost::posix_time::to_iso_string( end.timestamp - begin.timestamp ) << std::endl; 
+    std::cout << enclosing_branches << addition_sep << end.name << '/'   << "elapsed" << '=' << ( double( ( end.timestamp - begin.timestamp ).total_milliseconds() ) / 1000 ) << std::endl; 
 }
 
 int main( int ac, char** av )
@@ -98,7 +98,7 @@ int main( int ac, char** av )
     
     try
     {
-        std::deque< impl_::log > entries; 
+        std::deque< impl_::log > stack; 
         
         while( std::cin.good() && !std::cin.eof() )
         {
@@ -107,30 +107,30 @@ int main( int ac, char** av )
             const impl_::log& message = *plog;
             
             
-            if( entries.empty() || message.name == start ) {
-                entries.push_back( message );
+            if( stack.empty() || message.name == start ) {
+                stack.push_back( message );
             }
             else
             {
-                if( entries.empty() ) {
+                if( stack.empty() ) {
                     std::cerr << name() << ": failed on "; estream().write( message );
                     COMMA_THROW( comma::exception, "'end' must have a 'start' log entry" );
                 }
                 
-                if( entries.back().name != message.name )
+                if( stack.back().name != message.name )
                 {
                     if( !message.is_begin ) 
                     { 
                         std::cerr << name() << ": failed on "; estream().write( message );
                         COMMA_THROW( comma::exception, "incorrect nexting for log entry, expecting 'begin'" );
                     }
-                    entries.push_back( message );
+                    stack.push_back( message );
                 }
                 else     // must be an 'end' 
                 {
-                    impl_::log begin = entries.back();
-                    entries.pop_back();
-                    output( begin, message, comma::join( entries, entries.size(), '/' ) );
+                    const impl_::log& begin = stack.back();
+                    output( begin, message, comma::join( stack, stack.size()-1, '/' ) );
+                    stack.pop_back();
                 }
             }
         
