@@ -48,6 +48,20 @@ function message_()
     if [[ "$quiet" != "true" ]] ; then tput bold ; echo $1 >&2 ; tput sgr0 ; fi
 }
 
+function warning_()
+{
+    if [[ "$quiet" != "true" ]] ; then tput bold ; echo -e "${brown}$1${none}" >&2  ; tput sgr0 ; fi
+}
+
+function disabled_()
+{
+    if [[ -f "$1/disabled" ]] ; then return 0 ; fi
+    d=$( dirname $1 )
+    if [[ "$d" == "$1" ]] ; then return 1 ; fi
+    disabled_ $d
+    return $?
+}
+
 # copy input to output, and return failure (1) if there was any output
 function fail_on_output()
 {
@@ -88,13 +102,11 @@ if (( $dir_count > 0 )) ; then
         intermediate_result=0
         for t in $tests ; do
             message_ "$name: $t: running..."
-            # capture starting time
-            timestamp="$( mktemp -t aero-test-run-timestamp-$(basename $t).XXXXXX )"
+            timestamp="$( mktemp -t aero-test-run-timestamp-$(basename $t).XXXXXX )" # capture starting time
             touch "$timestamp"
             ./$( basename $t ) $path $debug 2> >( $grep_failed_ >&2 )
             if status_ok ; then message_ "$name: $t: succeeded" ; else intermediate_result=1; result=1 ; error_ "$name: $t: failed" ; fi
-            # see if there are files in /dev/shm created past start_time and report
-            report_leaked_shared "$timestamp" "$t"
+            report_leaked_shared "$timestamp" "$t" # see if there are files in /dev/shm created past start_time and report
             if [[ "$result" != 0 && "$until_first_failure" == true ]] ; then break ; fi
         done
         cd $basedir
@@ -111,11 +123,11 @@ if [[ "$debug" != "" ]] ; then verbose="--verbose" ; fi # quick and dirty
 if (( $test_scripts_count > 0 )) ; then
     message_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): running..."
     for t in $test_scripts ; do
+        if disabled_ $t ; then warning_ "$name: $t: disabled" ; continue ; fi
         message_ "$name: $t: running..."
         basedir=$( pwd )
         cd $( dirname $t )
-        # capture starting time
-        timestamp="/tmp/aero-test-run-timestamp-$(basename $t)"
+        timestamp="/tmp/aero-test-run-timestamp-$(basename $t)" # capture starting time
         touch "$timestamp"
         if [ -f ./input ] ; then cat ./input ; fi \
             | ./$( basename $t ) $path $verbose 2> >( $grep_failed_ >&2 ) \
