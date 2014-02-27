@@ -1,5 +1,5 @@
 #include <boost/date_time/posix_time/ptime.hpp>
-#include <queue>
+#include <vector>
 #include <deque>
 #include <functional>
 #include <boost/function.hpp>
@@ -13,25 +13,30 @@ static const std::string& name() {
     return name;
 }
 
+static char delimiter = ';';
+static const char equal_sign = '=';
+
 
 namespace impl_ {
     
 
 /// Input data structure
 struct log {
-    boost::posix_time::ptime timestamp;
     std::string name;
     bool is_begin;     // true for begin, false for end
+    boost::posix_time::ptime timestamp;
 };
 
-struct elapsed_sum {
-    std::deque< std::string > names;    // path names in order
-    double duration;
+struct path_value {
+    std::string name;
+    bool is_begin;
+    boost::posix_time::ptime timestamp;
 };
     
 } // namespace impl_ {
     
 std::ostream& operator<<( std::ostream& os, const impl_::log& l ) { os << l.name; return os; }
+std::ostream& operator<<( std::ostream& os, const impl_::path_value& l ) { os << l.name; return os; }
     
 namespace comma { namespace visiting {
     
@@ -45,6 +50,22 @@ template < > struct traits< impl_::log > {
         t.is_begin = ( tmp == "begin" );
     }
     template< typename K, typename V > static void visit( const K& k, const impl_::log& t, V& v )
+    {
+        v.apply( "timestamp", t.timestamp );
+        v.apply( "name", t.name );
+        v.apply( "is_begin", t.is_begin ? std::string("begin") : std::string("end")  );
+    }
+};
+template < > struct traits< impl_::path_value > {
+    template< typename K, typename V > static void visit( const K& k, impl_::path_value& t, V& v )
+    {
+        v.apply( "timestamp", t.timestamp );
+        v.apply( "name", t.name );
+        std::string tmp;
+        v.apply( "is_begin", tmp );
+        t.is_begin = ( tmp == "begin" );
+    }
+    template< typename K, typename V > static void visit( const K& k, const impl_::path_value& t, V& v )
     {
         v.apply( "timestamp", t.timestamp );
         v.apply( "name", t.name );
@@ -65,7 +86,9 @@ static void usage( bool verbose=false )
     std::cerr << "    These are mutually exclusive." << std::endl;
     std::cerr << "    <no option>: Outputs path value for input data: " << comma::join( comma::csv::names< impl_::log >(), ',' )  << std::endl;
     std::cerr << "                 Output format is 'path/{begin,end}=<ISO timestamp>'" << std::endl;
-    std::cerr << "    --elapsed:   Outputs path value with 'elapsed' time, input data format: " << comma::join( comma::csv::names< impl_::log >(), ',' )  << std::endl;
+    std::cerr << "    --elapsed [ path-value ]" << std::endl;
+    std::cerr << "                 Outputs path value with 'elapsed' time, input data format: " << comma::join( comma::csv::names< impl_::log >(), ',' )  << std::endl;
+    std::cerr << "                 If 'path-value' is given, it takes input from < no option >" << std::endl;
     std::cerr << "                 Output format is 'path/elapsed=<duration in second>'" << std::endl;
     std::cerr << "    --sum:       Outputs path value with 'elapsed' time, taking input data from --elapsed mode." << std::endl;
     std::cerr << "                 Output format is 'path/elapsed=<duration in second>'" << std::endl;
@@ -88,7 +111,9 @@ void output( const impl_::log& begin, const impl_::log& end, const std::string& 
     std::cout << enclosing_branches << addition_sep << begin.name << '/' << start     << '=' << boost::posix_time::to_iso_string( begin.timestamp ) << std::endl; 
     std::cout << enclosing_branches << addition_sep << end.name << '/'   << finished  << '=' << boost::posix_time::to_iso_string( end.timestamp ) << std::endl; 
 }
-void output_elapsed( const impl_::log& begin, const impl_::log& end, const std::string& enclosing_branches )
+
+template < typename T >
+void output_elapsed( const T& begin, const T& end, const std::string& enclosing_branches )
 {
     std::string addition_sep = enclosing_branches.empty() ? "" : "/";
     std::cout << enclosing_branches << addition_sep << end.name << '/'   << "elapsed"  << '=' << ( (end.timestamp - begin.timestamp).total_milliseconds() / 1000.0 ) << std::endl; 
@@ -100,8 +125,34 @@ const impl_::log* get_log()
     return istream.read();
 }
 
-static char delimiter = ';';
-static const char equal_sign = '=';
+const impl_::path_value* get_elapsed()
+{
+    static impl_::path_value log;
+    std::string line;
+    std::getline( std::cin, line );
+    if( line.empty() || line[0] == '#' ) return NULL;
+        
+    std::string::size_type p = line.find_first_of( equal_sign );
+    if( p == std::string::npos ) { COMMA_THROW( comma::exception, "expected '" << delimiter << "'-separated xpath" << equal_sign << "value pairs; got \"" << line << "\"" ); }
+    
+    const std::string path = comma::strip( line.substr( 0, p ), '"' );
+    try { log.timestamp = boost::posix_time::from_iso_string( comma::strip( line.substr( p + 1), '"' ) ); }
+    catch( std::exception& e ) {
+        std::cerr << name() << ": failed to parse date time from: " << line << std::endl;
+        COMMA_THROW( comma::exception, std::string("failed to parse date time, cause: " ) + e.what() );
+    }
+    
+    std::vector< std::string > names = comma::split( path, '/' );
+    // TODO check for path
+    if( names.empty() || names.back().empty() ) {
+        std::cerr << name() << ": failed to parse path value line, cannot get path: '" << line << '\'' << std::endl;
+        COMMA_THROW( comma::exception, "failed to parse: " + line );
+    }
+    log.name = comma::join( names, names.size() - 1, '/' );
+    log.is_begin = (names.back()== start);
+    
+    return &log;
+}
 
 /// Merge values (expects double) with the same key
 /// Returns the total value of all keys
@@ -130,6 +181,7 @@ double merge_elapsed( boost::property_tree::ptree& tree, std::set< std::string >
         
         leaf_keys.insert( key_str );
         tree.put( key, value );
+        
     
     }
     
@@ -167,7 +219,7 @@ void process_begin_end( L get_log, O output )
                 if( !message.is_begin ) 
                 { 
                     std::cerr << name() << ": failed on "; estream.write( message );
-                    COMMA_THROW( comma::exception, "incorrect nexting for log entry, expecting 'begin'" );
+                    COMMA_THROW( comma::exception, "incorrect nesting for log entry, expecting 'begin'" );
                 }
                 stack.push_back( message );
             }
@@ -210,18 +262,21 @@ int main( int ac, char** av )
             
             // This is the optional path for base denominator
             std::vector< std::string > no_names = options.unnamed( "-h,--help,--elapsed,--sum,--ratio", "" );
-            if( !no_names.empty() )
+            std::string& denominator_path = no_names.front(); 
+            if( !no_names.empty() && !denominator_path.empty() )
             {
-//                 std::cerr << "no names: " << no_names.front() << std::endl;
+                static const std::string elapsed_end("/elapsed");
+                if( denominator_path.substr( denominator_path.size() - (elapsed_end.size()) ) != elapsed_end ) {
+                    denominator_path += "/elapsed";
+                }
                 // This is the path for base denominator
-                const boost::property_tree::ptree::path_type key( no_names.front(), '/' );
+                const boost::property_tree::ptree::path_type key( denominator_path, '/' );
                 boost::optional< double > denominator = ptree.get_optional< double >( key );
                 
-                if( !denominator ) { COMMA_THROW( comma::exception, "failed to find path in input data: " + no_names.front() ); }
+                if( !denominator ) { COMMA_THROW( comma::exception, "failed to find path in input data: " + denominator_path ); }
                 total_time = *denominator;
             }
             
-//             std::cerr << "reached here" << std::endl;
             // Now make ratio tree
             for( const auto& key_str : leaf_keys )
             {
@@ -229,7 +284,6 @@ int main( int ac, char** av )
                 std::string ratio_key_str =  key_str.substr(0, key_str.find_last_of( '/' ) );
                 const boost::property_tree::ptree::path_type ratio_key( ratio_key_str + '/' + "ratio", '/' );
                 
-//                 std::cerr << "key_str: " << key_str << " ratio_key_str: " << ratio_key_str << '/' << "ratio" << std::endl;
                 boost::optional< double > value = ptree.get_optional< double >( key );
                 ptree.put( ratio_key, (*value)/total_time );
             }
@@ -237,9 +291,19 @@ int main( int ac, char** av )
         }
         else if( options.exists( "--elapsed" ) )
         {
-            std::function< const impl_::log*() > extractor( &get_log );
-            std::function< void( const impl_::log&, const impl_::log&, const std::string&) > outputting( &output_elapsed );
-            impl_::process_begin_end< impl_::log >( extractor , outputting );
+            std::vector< std::string > no_names = options.unnamed( "-h,--help,--elapsed,--sum,--ratio", "" );
+            if( !no_names.empty() && no_names.front() == "path-value" )
+            {
+                std::function< void( const impl_::path_value&, const impl_::path_value&, const std::string&) > outputting( &output_elapsed< impl_::path_value > );
+                std::function< const impl_::path_value*() > extractor( &get_elapsed );
+                impl_::process_begin_end< impl_::path_value >( extractor , outputting );
+            }
+            else 
+            {
+                std::function< void( const impl_::log&, const impl_::log&, const std::string&) > outputting( &output_elapsed< impl_::log > );
+                std::function< const impl_::log*() > extractor( &get_log );
+                impl_::process_begin_end< impl_::log >( extractor , outputting );
+            }
             
             return 0;
         }
