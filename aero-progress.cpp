@@ -1,6 +1,8 @@
 #include <boost/date_time/posix_time/ptime.hpp>
 #include <queue>
 #include <deque>
+#include <functional>
+#include <boost/function.hpp>
 #include <comma/csv/stream.h>
 #include <comma/visiting/traits.h>
 #include <comma/application/command_line_options.h>
@@ -19,6 +21,11 @@ struct log {
     boost::posix_time::ptime timestamp;
     std::string name;
     bool is_begin;     // true for begin, false for end
+};
+
+struct path_elapsed {
+    std::deque< std::string > names;    // path names in order
+    double duration;
 };
     
 } // namespace impl_ {
@@ -60,8 +67,21 @@ comma::csv::output_stream< impl_::log >& ostream() {
 static void usage( bool verbose=false )
 {
     std::cerr << std::endl;
-    std::cerr << "cat progress.csv | " << name() << "  [<options>] > stat.csv" << std::endl;
+    std::cerr << "cat progress.csv | " << name() << " [<options>] > stat.csv" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "modes" << std::endl;
+    std::cerr << "    These are mutually exclusive." << std::endl;
+    std::cerr << "    <no option>: Outputs path value for input data: " << comma::join( comma::csv::names< impl_::log >(), ',' )  << std::endl;
+    std::cerr << "                 Output format is 'path/{begin,end}=<ISO timestamp>'" << std::endl;
+    std::cerr << "    --elapsed:   Outputs path value with 'elapsed' time, input data format: " << comma::join( comma::csv::names< impl_::log >(), ',' )  << std::endl;
+    std::cerr << "                 Output format is 'path/elapsed=<duration in second>'" << std::endl;
+    std::cerr << "    --sum:       Outputs path value with 'elapsed' time, taking input data from --elapsed mode." << std::endl;
+    std::cerr << "                 Output format is 'path/elapsed=<duration in second>'" << std::endl;
+    std::cerr << "                 Elapsed duration is duration sum of run with the same path e.g. plan-fuel/flight-prm called multiple times." << std::endl;
+    std::cerr << "    --ratio [path]" << std::endl;
+    std::cerr << "                 Outputs path value with 'elapsed' time and ratio of total time, taking input data from --sum or --elapsed mode." << std::endl;
+    std::cerr << "                 Output format is 'path/elapsed=<duration in second>'" << std::endl;
+    std::cerr << "                 Output format is 'path/ratio=< ratio to total time or time of [path] if given >'" << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
 //     std::cerr << "    --make-unidirectional,-u: for bidirectional legs output one leg for each direction, each of type forward" << std::endl;
@@ -84,8 +104,67 @@ void output( const impl_::log& begin, const impl_::log& end, const std::string& 
     std::string addition_sep = enclosing_branches.empty() ? "" : "/";
     std::cout << enclosing_branches << addition_sep << begin.name << '/' << start     << '=' << boost::posix_time::to_iso_string( begin.timestamp ) << std::endl; 
     std::cout << enclosing_branches << addition_sep << end.name << '/'   << finished  << '=' << boost::posix_time::to_iso_string( end.timestamp ) << std::endl; 
-    std::cout << enclosing_branches << addition_sep << end.name << '/'   << "elapsed" << '=' << ( double( ( end.timestamp - begin.timestamp ).total_milliseconds() ) / 1000 ) << std::endl; 
 }
+void output_elapsed( const impl_::log& begin, const impl_::log& end, const std::string& enclosing_branches )
+{
+    std::string addition_sep = enclosing_branches.empty() ? "" : "/";
+    std::cout << enclosing_branches << addition_sep << end.name << '/'   << "elapsed"  << '=' << ( (end.timestamp - begin.timestamp).total_milliseconds() / 1000.0 ) << std::endl; 
+}
+
+const impl_::log* get_log()
+{
+    static comma::csv::input_stream< impl_::log > istream( std::cin );
+    return istream.read();
+}
+
+
+namespace impl_ {
+    
+template < typename T, typename L, typename O >
+void process_begin_end( L get_log, O output )
+{
+    static comma::csv::input_stream< T > istream( std::cin );
+    static comma::csv::output_stream< T > estream( std::cerr );
+    std::deque< T > stack; 
+    while( std::cin.good() && !std::cin.eof() )
+    {
+        const T* plog = istream.read();
+        if( plog == NULL ) { break; }
+        const T& message = *plog;
+        
+        
+        if( stack.empty() || message.name == start ) {
+            stack.push_back( message );
+        }
+        else
+        {
+            if( stack.empty() ) {
+                std::cerr << name() << ": failed on "; estream.write( message );
+                COMMA_THROW( comma::exception, "'end' must have a 'start' log entry" );
+            }
+            
+            if( stack.back().name != message.name )
+            {
+                if( !message.is_begin ) 
+                { 
+                    std::cerr << name() << ": failed on "; estream.write( message );
+                    COMMA_THROW( comma::exception, "incorrect nexting for log entry, expecting 'begin'" );
+                }
+                stack.push_back( message );
+            }
+            else     // must be an 'end' 
+            {
+                const T& begin = stack.back();
+                output( begin, message, comma::join( stack, stack.size()-1, '/' ) );
+                stack.pop_back();
+            }
+        }
+    
+    }
+}
+
+    
+} // namespace impl_ {
 
 int main( int ac, char** av )
 {
@@ -93,47 +172,23 @@ int main( int ac, char** av )
     
     if( options.exists( "-h|--help" ) ) { usage(); }
     
-    comma::csv::input_stream< impl_::log > istream( std::cin );
-    
-    
     try
     {
-        std::deque< impl_::log > stack; 
-        
-        while( std::cin.good() && !std::cin.eof() )
+        if( options.exists( "--elapsed" ) )
         {
-            const impl_::log* plog = istream.read();
-            if( plog == NULL ) { break; }
-            const impl_::log& message = *plog;
+            std::function< const impl_::log*() > extractor( &get_log );
+            std::function< void( const impl_::log&, const impl_::log&, const std::string&) > outputting( &output_elapsed );
+            impl_::process_begin_end< impl_::log >( extractor , outputting );
             
+            return 0;
+        }
+        else
+        {
+            std::function< const impl_::log*() > extractor( &get_log );
+            std::function< void( const impl_::log&, const impl_::log&, const std::string&) > outputting( &output );
+            impl_::process_begin_end< impl_::log >( extractor , outputting );
             
-            if( stack.empty() || message.name == start ) {
-                stack.push_back( message );
-            }
-            else
-            {
-                if( stack.empty() ) {
-                    std::cerr << name() << ": failed on "; estream().write( message );
-                    COMMA_THROW( comma::exception, "'end' must have a 'start' log entry" );
-                }
-                
-                if( stack.back().name != message.name )
-                {
-                    if( !message.is_begin ) 
-                    { 
-                        std::cerr << name() << ": failed on "; estream().write( message );
-                        COMMA_THROW( comma::exception, "incorrect nexting for log entry, expecting 'begin'" );
-                    }
-                    stack.push_back( message );
-                }
-                else     // must be an 'end' 
-                {
-                    const impl_::log& begin = stack.back();
-                    output( begin, message, comma::join( stack, stack.size()-1, '/' ) );
-                    stack.pop_back();
-                }
-            }
-        
+            return 0;
         }
         
     }
