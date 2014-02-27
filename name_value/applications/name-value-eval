@@ -140,7 +140,8 @@ else name-value-eval-preparse --assign > $tmp_vars; fi
 if (( test_option )); then
     # process one line at a time, since Python exits for most errors
     linenum=0
-    cat $input | while read line; do
+    # (using "read -r" prevents "\\" from being changed to "\")
+    cat $input | while read -r line; do
         (( linenum++ ))
         ( cat "$tmp_vars"; echo "$line" | name-value-eval-preparse --test ) | $python_cmd 2> $err
 
