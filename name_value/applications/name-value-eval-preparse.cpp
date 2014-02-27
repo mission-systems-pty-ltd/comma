@@ -234,7 +234,8 @@ std::string quote(const std::string &str, char quote_char)
         for (size_t n = first;n <= last;++n)
         {
             // escape any quotes
-            if (str[n] == '\\') { result += str[++n]; if (n > last) break; }
+            //if (str[n] == '\\') { result += str[++n]; if (n > last) break; }
+            if (str[n] == '\\') { result += str[n]; }
             else if (str[n] == squote || str[n] == dquote) { result += '\\'; }
             result += str[n];
         }
@@ -705,8 +706,9 @@ void print_header()
         << "def near(x, y, eps): return abs(x - y) <= eps\n"
         << "def max_index(dict) : return max(dict.keys())\n"
         << "def starts_with(s, x): return s.find(x) == 0\n"
-        << "def ends_with(s, x): return s.find(x) == len(s) - len(x)\n"
-        << "def contains(s, x): return s.find(x) != -1\n";
+        << "def ends_with(s, x): return s.rfind(x) == len(s) - len(x)\n"
+        << "def contains(s, x): return s.find(x) != -1\n"
+        << "def matches(s, p): return re.search(p, s) != None\n";
 }
 
 void print_assigned_variables(const Varmap &assigned_vars)
