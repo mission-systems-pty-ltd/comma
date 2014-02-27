@@ -34,13 +34,16 @@ function extract_value()
     echo $result
 }
 
-# argument: <input file> <batch id> <sequence number>
+# argument: <input file> <test directory> <batch id> <sequence number>
 function create_insert_statement()
 {
     local input_file=$1
-    local batch_id=$2
-    local seq_num=$3
-    local input=$( cat "$input_file" | sed 's/$/\\/g' | tr '\n' 'n' )   # all one line, newlines replaced with a literal "\n"
+    local test_dir=$2
+    local batch_id=$3
+    local seq_num=$4
+
+    local input="# path: $test_dir\\n"
+    input+=$( cat "$input_file" | sed 's/$/\\/g' | tr '\n' 'n' )   # all one line, newlines replaced with a literal "\n"
     local plan_from=$( extract_value "$input_file" "plan/from" )
     local plan_to=$( extract_value "$input_file" "plan/to" )
     local plan_time=$( extract_value "$input_file" "plan/departure_time" )
@@ -76,7 +79,7 @@ if (( $expected_files_count > 0 )) ; then
         if [[ ! -f "input" ]]; then
             echo "Warning: found \"expected\" but no \"input\" file in $( pwd )"
         else
-            insert_statement=$( create_insert_statement "input" $batch_id ${#job_id_list[@]} )
+            insert_statement=$( create_insert_statement "input" "$( pwd )" $batch_id ${#job_id_list[@]} )
             if [[ $? == 0 ]]; then
                 sql_to_execute="$insert_statement; SELECT LAST_INSERT_ID();"
                 job_id=$( $sql_command "$sql_to_execute" | tail -1 )
