@@ -4,7 +4,7 @@ name=$( basename $0 )
 
 function simple_usage()
 {
-    echo "Usage: $name [-h|--help] [-v|--variables=<file>] [--tmp-dir=<dir>] <expected-values-file>" >&2
+    echo "Usage: $name [-h|--help] [-v|--variables=<file>] <expected-values-file>" >&2
     if [[ $# != 0 ]]; then exit $1; fi
 }
 
