@@ -6,6 +6,7 @@
 #include <comma/csv/stream.h>
 #include <comma/visiting/traits.h>
 #include <comma/application/command_line_options.h>
+#include <comma/name_value/ptree.h>
 
 static const std::string& name() {
     static const std::string name = "aero-progress";
@@ -23,7 +24,7 @@ struct log {
     bool is_begin;     // true for begin, false for end
 };
 
-struct path_elapsed {
+struct elapsed_sum {
     std::deque< std::string > names;    // path names in order
     double duration;
 };
@@ -54,15 +55,6 @@ template < > struct traits< impl_::log > {
     
 } } // namespace comma { namespace visiting { 
 
-comma::csv::output_stream< impl_::log >& estream()
-{
-    static comma::csv::output_stream< impl_::log > es( std::cerr );
-    return es;
-}
-comma::csv::output_stream< impl_::log >& ostream() {
-    static comma::csv::output_stream< impl_::log > os( std::cout );
-    return os;
-}
 
 static void usage( bool verbose=false )
 {
@@ -117,18 +109,68 @@ const impl_::log* get_log()
     return istream.read();
 }
 
+static char delimiter = ';';
+static const char equal_sign = '=';
+
+static void path_value_read( std::istream& is, boost::property_tree::ptree& ptree )
+{
+    std::string s;
+    while( is.good() && !is.eof() ) // quick and dirty: read to the end of file
+    {
+        std::string t;
+        std::getline( is, t );
+        std::string::size_type pos = t.find_first_not_of( ' ' );
+        if( pos == std::string::npos || t[pos] == '#' ) { continue; }
+        s += t + delimiter;
+    }
+    ptree = comma::property_tree::from_path_value_string( s, equal_sign, delimiter );
+}
+
+/// Merge values (expects double) with the same key
+/// Returns the total value of all keys
+double merge_elapsed( boost::property_tree::ptree& tree, std::set< std::string >& leaf_keys  )
+{
+    using boost::property_tree::ptree;
+    
+    std::string line;
+    double total_elapsed = 0;
+    while( std::cin.good() && !std::cin.eof() )
+    {
+        std::getline( std::cin, line );
+        if( line.empty() ) continue;
+        std::string::size_type p = line.find_first_of( equal_sign );
+        if( p == std::string::npos ) { COMMA_THROW( comma::exception, "expected '" << delimiter << "'-separated xpath" << equal_sign << "value pairs; got \"" << line << "\"" ); }
+        
+        //const std::string key = comma::strip( v[i].substr( 0, p );
+        const std::string key_str = comma::strip( line.substr( 0, p ), '"' );
+        ptree::path_type key( key_str, '/' );
+        double value = boost::lexical_cast< double >( comma::strip( line.substr( p + 1), '"' ) );
+        total_elapsed += value;
+        
+        // Check if there is an existing value, if so merge elapsed time
+        boost::optional< double > existing_value = tree.get_optional< double >( key );
+        if( existing_value ) { value += *existing_value; } // sum it up
+        
+        leaf_keys.insert( key_str );
+        tree.put( key, value );
+    
+    }
+    
+    return total_elapsed;
+}
+
 
 namespace impl_ {
     
 template < typename T, typename L, typename O >
 void process_begin_end( L get_log, O output )
 {
-    static comma::csv::input_stream< T > istream( std::cin );
+//     static comma::csv::input_stream< T > istream( std::cin );
     static comma::csv::output_stream< T > estream( std::cerr );
     std::deque< T > stack; 
     while( std::cin.good() && !std::cin.eof() )
     {
-        const T* plog = istream.read();
+        const T* plog = get_log();
         if( plog == NULL ) { break; }
         const T& message = *plog;
         
@@ -163,8 +205,54 @@ void process_begin_end( L get_log, O output )
     }
 }
 
+void sum_visit( const boost::property_tree::ptree& branch, const std::string& path )
+{
+     for( boost::property_tree::ptree::const_iterator i = branch.begin(); i != branch.end(); ++i )
+     {
+     }
+}
+
+void output_tree( const boost::property_tree::ptree& parent, 
+                  const std::string& childpath, const boost::property_tree::ptree &child )
+{
+    if( parent.empty() )
+        std::cout << "path: " << childpath << ", value: " << child.data() << std::endl;
+}
+
+template<typename T>
+void traverse_recursive(const boost::property_tree::ptree &parent, 
+                        const std::string &childPath, const boost::property_tree::ptree &child, T method)
+{
+    using boost::property_tree::ptree;
+    
+    //method(parent, childPath, child);
+    if( parent.empty() )
+        std::cout << "path: " << childPath << ", value: " << child.data() << std::endl;
+    for(ptree::const_iterator it=child.begin();it!=child.end();++it) 
+    {
+        //ptree::path_type curPath = childPath / ptree::path_type(it->first);
+        std::string curPath = childPath + it->first;
+        traverse_recursive(child, curPath, it->second, method);
+    }
+}
     
 } // namespace impl_ {
+void recurse( const boost::property_tree::ptree& t )
+{
+//     std::cerr << "data: " << t.data() << std::endl;
+    for( boost::property_tree::ptree::const_iterator i = t.begin(); i != t.end(); ++i )
+    {
+       
+        std::cerr << "data 2: " << i->first << '-' << i->second.data() << std::endl;
+        if( !(i->second.empty()) ) {
+            recurse( i->second );
+        }
+        else {
+            std::cerr << "leaf: " << i->first << '_' << i->second.data() << std::endl;
+        }
+        
+    }
+}
 
 int main( int ac, char** av )
 {
@@ -174,7 +262,65 @@ int main( int ac, char** av )
     
     try
     {
-        if( options.exists( "--elapsed" ) )
+        if( options.exists( "--sum" ) )
+        {
+            
+            boost::property_tree::ptree ptree; 
+            std::set< std::string > leaf_keys;
+            merge_elapsed( ptree, leaf_keys );
+            comma::property_tree::to_path_value( std::cout, ptree, equal_sign, '\n' );
+/*            
+            path_value_read( std::cin, ptree );
+            std::cerr << "data 1: " <<  ptree.data() << " children: " << ptree.size() << std::endl; 
+            for( boost::property_tree::ptree::const_iterator i = ptree.begin(); i != ptree.end(); ++i )
+            {
+                std::cerr << " data: " << i->first << std::endl;
+                recurse( i->second );
+                
+            }
+            std::function< void( const boost::property_tree::ptree& parent, 
+                  const std::string &childPath, const boost::property_tree::ptree &child ) > outputting;
+            for( auto it=ptree.begin();it!=ptree.end();++it)
+            {
+                impl_::traverse_recursive( ptree, "", it->second, outputting );
+            }
+             */
+        }
+        else if( options.exists( "--ratio" ) )
+        {
+            
+            boost::property_tree::ptree ptree; 
+            std::set< std::string > leaf_keys;
+            double total_time = merge_elapsed( ptree, leaf_keys );
+            
+            // This is the optional path for base denominator
+            std::vector< std::string > no_names = options.unnamed( "-h,--help,--elapsed,--sum,--ratio", "" );
+            if( !no_names.empty() )
+            {
+//                 std::cerr << "no names: " << no_names.front() << std::endl;
+                // This is the path for base denominator
+                const boost::property_tree::ptree::path_type key( no_names.front(), '/' );
+                boost::optional< double > denominator = ptree.get_optional< double >( key );
+                
+                if( !denominator ) { COMMA_THROW( comma::exception, "failed to find path in input data: " + no_names.front() ); }
+                total_time = *denominator;
+            }
+            
+//             std::cerr << "reached here" << std::endl;
+            // Now make ratio tree
+            for( const auto& key_str : leaf_keys )
+            {
+                const boost::property_tree::ptree::path_type key( key_str, '/' );
+                std::string ratio_key_str =  key_str.substr(0, key_str.find_last_of( '/' ) );
+                const boost::property_tree::ptree::path_type ratio_key( ratio_key_str + '/' + "ratio", '/' );
+                
+//                 std::cerr << "key_str: " << key_str << " ratio_key_str: " << ratio_key_str << '/' << "ratio" << std::endl;
+                boost::optional< double > value = ptree.get_optional< double >( key );
+                ptree.put( ratio_key, (*value)/total_time );
+            }
+            comma::property_tree::to_path_value( std::cout, ptree, equal_sign, '\n' );
+        }
+        else if( options.exists( "--elapsed" ) )
         {
             std::function< const impl_::log*() > extractor( &get_log );
             std::function< void( const impl_::log&, const impl_::log&, const std::string&) > outputting( &output_elapsed );
@@ -193,7 +339,7 @@ int main( int ac, char** av )
         
     }
     catch( std::exception& e ) {
-        std::cerr << name() << ": exception cause - " << e.what() << std::endl;
+        std::cerr << name() << ": exception caught - " << e.what() << std::endl;
     }
     catch(...) {
         std::cerr << name() << ": unknown exception caught, terminating." << std::endl;
