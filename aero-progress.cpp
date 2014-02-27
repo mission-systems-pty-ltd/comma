@@ -76,15 +76,6 @@ static void usage( bool verbose=false )
     std::cerr << "                 Output format is 'path/ratio=< ratio to total time or time of [path] if given >'" << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
-//     std::cerr << "    --make-unidirectional,-u: for bidirectional legs output one leg for each direction, each of type forward" << std::endl;
-//     std::cerr << "                              for backward direction swap points and change type to forward" << std::endl;
-//     std::cerr << "                              (\"airways,waypoints\" only)" << std::endl;
-    if( verbose )
-    {
-        std::cerr << std::endl;
-        std::cerr << "csv options" << std::endl;
-        std::cerr << comma::csv::options::usage() << std::endl;
-    }
     std::cerr << std::endl;
     exit( 1 );
 }
@@ -111,20 +102,6 @@ const impl_::log* get_log()
 
 static char delimiter = ';';
 static const char equal_sign = '=';
-
-static void path_value_read( std::istream& is, boost::property_tree::ptree& ptree )
-{
-    std::string s;
-    while( is.good() && !is.eof() ) // quick and dirty: read to the end of file
-    {
-        std::string t;
-        std::getline( is, t );
-        std::string::size_type pos = t.find_first_not_of( ' ' );
-        if( pos == std::string::npos || t[pos] == '#' ) { continue; }
-        s += t + delimiter;
-    }
-    ptree = comma::property_tree::from_path_value_string( s, equal_sign, delimiter );
-}
 
 /// Merge values (expects double) with the same key
 /// Returns the total value of all keys
@@ -205,54 +182,8 @@ void process_begin_end( L get_log, O output )
     }
 }
 
-void sum_visit( const boost::property_tree::ptree& branch, const std::string& path )
-{
-     for( boost::property_tree::ptree::const_iterator i = branch.begin(); i != branch.end(); ++i )
-     {
-     }
-}
-
-void output_tree( const boost::property_tree::ptree& parent, 
-                  const std::string& childpath, const boost::property_tree::ptree &child )
-{
-    if( parent.empty() )
-        std::cout << "path: " << childpath << ", value: " << child.data() << std::endl;
-}
-
-template<typename T>
-void traverse_recursive(const boost::property_tree::ptree &parent, 
-                        const std::string &childPath, const boost::property_tree::ptree &child, T method)
-{
-    using boost::property_tree::ptree;
-    
-    //method(parent, childPath, child);
-    if( parent.empty() )
-        std::cout << "path: " << childPath << ", value: " << child.data() << std::endl;
-    for(ptree::const_iterator it=child.begin();it!=child.end();++it) 
-    {
-        //ptree::path_type curPath = childPath / ptree::path_type(it->first);
-        std::string curPath = childPath + it->first;
-        traverse_recursive(child, curPath, it->second, method);
-    }
-}
     
 } // namespace impl_ {
-void recurse( const boost::property_tree::ptree& t )
-{
-//     std::cerr << "data: " << t.data() << std::endl;
-    for( boost::property_tree::ptree::const_iterator i = t.begin(); i != t.end(); ++i )
-    {
-       
-        std::cerr << "data 2: " << i->first << '-' << i->second.data() << std::endl;
-        if( !(i->second.empty()) ) {
-            recurse( i->second );
-        }
-        else {
-            std::cerr << "leaf: " << i->first << '_' << i->second.data() << std::endl;
-        }
-        
-    }
-}
 
 int main( int ac, char** av )
 {
@@ -269,22 +200,6 @@ int main( int ac, char** av )
             std::set< std::string > leaf_keys;
             merge_elapsed( ptree, leaf_keys );
             comma::property_tree::to_path_value( std::cout, ptree, equal_sign, '\n' );
-/*            
-            path_value_read( std::cin, ptree );
-            std::cerr << "data 1: " <<  ptree.data() << " children: " << ptree.size() << std::endl; 
-            for( boost::property_tree::ptree::const_iterator i = ptree.begin(); i != ptree.end(); ++i )
-            {
-                std::cerr << " data: " << i->first << std::endl;
-                recurse( i->second );
-                
-            }
-            std::function< void( const boost::property_tree::ptree& parent, 
-                  const std::string &childPath, const boost::property_tree::ptree &child ) > outputting;
-            for( auto it=ptree.begin();it!=ptree.end();++it)
-            {
-                impl_::traverse_recursive( ptree, "", it->second, outputting );
-            }
-             */
         }
         else if( options.exists( "--ratio" ) )
         {
