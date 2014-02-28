@@ -20,10 +20,16 @@ source $( dirname $0 )/aero-test-util
 
 function usage_()
 {
-    echo "Usage: $name [-h|--help]" >&2
-    echo >&2
-    echo "Search for subdirectories containing \"expected\" (and \"input\") files and submit these tests to the job queue" >&2
-    echo >&2
+cat <<EOF >&2
+Usage: $name [-h|--help] [--build|-b=prod|test|bleeding]
+
+Search for subdirectories containing \"expected\" (and \"input\") files and submit these tests to the job queue.
+
+Options:
+
+    --build|-b=     Specify which build to use ("prod", "test" or "bleeding", default "$build_to_use")
+
+EOF
 }
 
 # arguments: <filename> <path plan to get>, e.g. "input" "plan/from"
@@ -58,12 +64,19 @@ VALUES (now(), $batch_id, 'BUILDPLAN', '$plan_from', '$plan_to', '$time_in_sql_f
 '$build_to_use', $task_priority)"
 }
 
-for arg in "$@" ; do
-    if [[ "$arg" == "--help" || "$arg" == "-h" ]] ; then usage_; exit 0
-    elif [[ "$arg" == -* ]]; then echo "$name: unrecognised option: $arg" >&2; exit 1
-    else echo "$name: unexpected argument: $arg" >&2; exit 1
-    fi
+for arg in "$@"; do
+    case $arg in
+        -h|--help)      usage_; exit 0;;
+        -b=*|--build=*) build_to_use=${arg#*=};;
+        -*)             echo "$name: unrecognised option: $arg" >&2; exit 1;;
+        *)              echo "$name: unexpected argument: $arg" >&2; exit 1;;
+    esac
 done
+
+case "$build_to_use" in
+    prod|test|bleeding) ;;
+    *) echo "$name: illegal --build \"$build_to_use\"; must be one of: \"prod\" \"test\" \"bleeding\"" >&2; exit 1;;
+esac
 
 expected_files=$( find . -name "expected" )
 expected_files_count=$( find . -name "expected" | wc -l )
@@ -72,7 +85,7 @@ job_id_list=()
 if (( $expected_files_count > 0 )) ; then
     batch_id=$( $sql_command "CALL getNextBatchId()" | tail -1 )
     if [[ -z "$batch_id" ]]; then echo "$name: error getting batch id; aborting"; exit 1; fi
-    echo "$expected_files_count test[s] in subdirectories of $( pwd )"
+    echo "$expected_files_count test(s) in subdirectories of $( pwd )"
     for e in $expected_files ; do
         basedir=$( pwd )
         cd $( dirname $e )
