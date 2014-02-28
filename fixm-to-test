@@ -40,8 +40,10 @@ cat $input | awk '
 /^config/                           { print $0; next; }
 /latitude=[^"]/ || /longitude=[^"]/ { print $0 " +/- 0.1"; next; }
 /altitude=[^"]/                     { print $0 " +/- 100"; next; }
-/weight=[^"]/                       { print $0 " +/- 500"; next; }
+/weight.*=[^"]/                     { print $0 " +/- 500"; next; }
 /heading=[^"]/                      { print $0 " +/- 1"; next; }
+/temperature=[^"]/                  { print $0 " +/- 1"; next; }
+/wind\/.*=[^"]/                     { print $0 " +/- 0.1"; next; }
 /amount=[^"0]/                      { print $0 " +/- 5%"; next; }
 
 { print $0; }  # default
