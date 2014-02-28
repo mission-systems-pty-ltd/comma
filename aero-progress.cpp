@@ -28,7 +28,8 @@ struct log {
 };
 
 } // namespace impl_ {
-    
+
+/// serialiser so comma::join will work, output name only
 std::ostream& operator<<( std::ostream& os, const impl_::log& l ) { os << l.name; return os; }
 
     
@@ -63,9 +64,9 @@ static void usage( bool verbose=false )
     std::cerr << "    These are mutually exclusive." << std::endl;
     std::cerr << "    <no option>: Outputs path value for input data: " << comma::join( comma::csv::names< impl_::log >(), ',' )  << std::endl;
     std::cerr << "                 Output format is 'path/{begin,end}=<ISO timestamp>'" << std::endl;
-    std::cerr << "    --elapsed [ path-value ]" << std::endl;
+    std::cerr << "    --elapsed [ --from-path-value|--from-pv ]" << std::endl;
     std::cerr << "                 Outputs path value with 'elapsed' time, input data format: " << comma::join( comma::csv::names< impl_::log >(), ',' )  << std::endl;
-    std::cerr << "                 If 'path-value' is given, it takes input from < no option >" << std::endl;
+    std::cerr << "                 If '--from-path-value|--from-pv' is given, it takes inputs from outputs of < no option >" << std::endl;
     std::cerr << "                 Output format is 'path/elapsed=<duration in second>'" << std::endl;
     std::cerr << "    --sum:       Outputs path value with 'elapsed' time, taking input data from --elapsed mode." << std::endl;
     std::cerr << "                 Output format is 'path/elapsed=<duration in second>'" << std::endl;
@@ -82,26 +83,28 @@ static void usage( bool verbose=false )
 static const std::string start = "begin";
 static const std::string finished = "end";
 
+// output begin, and end of a function/script in path value - nesting/tree - format
 void output( const impl_::log& begin, const impl_::log& end, const std::string& enclosing_branches )
 {
     std::string addition_sep = enclosing_branches.empty() ? "" : "/";
     std::cout << enclosing_branches << addition_sep << begin.name << '/' << start     << '=' << boost::posix_time::to_iso_string( begin.timestamp ) << std::endl; 
     std::cout << enclosing_branches << addition_sep << end.name << '/'   << finished  << '=' << boost::posix_time::to_iso_string( end.timestamp ) << std::endl; 
 }
-
+/// Output in path value with elapsed: end time - begin time
 void output_elapsed( const impl_::log& begin, const impl_::log& end, const std::string& enclosing_branches )
 {
     std::string addition_sep = enclosing_branches.empty() ? "" : "/";
     std::cout << enclosing_branches << addition_sep << end.name << '/'   << "elapsed"  << '=' << ( (end.timestamp - begin.timestamp).total_milliseconds() / 1000.0 ) << std::endl; 
 }
 
+// Retrieve log from std::cin using comma
 const impl_::log* get_log()
 {
     static comma::csv::input_stream< impl_::log > istream( std::cin );
     return istream.read();
 }
-
-const impl_::log* get_elapsed()
+// Retrieve log data from path value format, but it is the same data as get_log
+const impl_::log* get_log_path_value()
 {
     static impl_::log log;
     std::string line;
@@ -147,6 +150,7 @@ double merge_elapsed( boost::property_tree::ptree& tree, std::set< std::string >
         
         //const std::string key = comma::strip( v[i].substr( 0, p );
         const std::string key_str = comma::strip( line.substr( 0, p ), '"' );
+        
         ptree::path_type key( key_str, '/' );
         double value = boost::lexical_cast< double >( comma::strip( line.substr( p + 1), '"' ) );
         total_elapsed += value;
@@ -167,6 +171,25 @@ double merge_elapsed( boost::property_tree::ptree& tree, std::set< std::string >
 
 namespace impl_ {
     
+/// Take input data in the form of impl_::logs, and convert them into path value structure
+/// Where path is the tree/nested path
+// Example input
+//     20140226T162515.444639,update-weight,begin
+//     20140226T162515.450169,update-weight,end
+//     20140226T162515.485293,plan-fuel,begin
+//     20140226T162515.553752,flight-prm,begin
+//     20140226T162519.128530,flight-prm,end
+//     20140226T162519.133253,short_sector,begin
+//     20140226T162519.170131,short_sector,end
+//     20140226T162519.279924,update-weight,begin
+//     20140226T162519.292069,update-weight,end
+//     20140226T162519.344238,flight-prm,begin
+//     20140226T162522.012378,flight-prm,end
+//     20140226T162522.016931,short_sector,begin
+//     20140226T162522.053642,short_sector,end
+//     20140226T162522.160048,update-weight,begin
+//     20140226T162522.172084,update-weight,end
+//     20140226T162522.227812,plan-fuel,end
 template < typename T, typename L, typename O >
 void process_begin_end( L get_log, O output )
 {
@@ -236,12 +259,12 @@ int main( int ac, char** av )
             std::set< std::string > leaf_keys;
             double total_time = merge_elapsed( ptree, leaf_keys );
             
+            static const std::string elapsed_end("/elapsed");
             // This is the optional path for base denominator
             std::vector< std::string > no_names = options.unnamed( "-h,--help,--elapsed,--sum,--ratio", "" );
             std::string& denominator_path = no_names.front(); 
             if( !no_names.empty() && !denominator_path.empty() )
             {
-                static const std::string elapsed_end("/elapsed");
                 if( denominator_path.substr( denominator_path.size() - (elapsed_end.size()) ) != elapsed_end ) {
                     denominator_path += "/elapsed";
                 }
@@ -256,6 +279,9 @@ int main( int ac, char** av )
             // Now make ratio tree
             for( const auto& key_str : leaf_keys )
             {
+                // Only if the key is '*/elapsed', do not make ratio key for other keys
+                if( key_str.substr( key_str.size() - elapsed_end.size() ) != elapsed_end ) { continue; } 
+                
                 const boost::property_tree::ptree::path_type key( key_str, '/' );
                 std::string ratio_key_str =  key_str.substr(0, key_str.find_last_of( '/' ) );
                 const boost::property_tree::ptree::path_type ratio_key( ratio_key_str + '/' + "ratio", '/' );
@@ -267,12 +293,11 @@ int main( int ac, char** av )
         }
         else if( options.exists( "--elapsed" ) )
         {
-            std::vector< std::string > no_names = options.unnamed( "-h,--help,--elapsed,--sum,--ratio", "" );
             std::function< void( const impl_::log&, const impl_::log&, const std::string&) > outputting( &output_elapsed );
             std::function< const impl_::log*() > extractor( &get_log );
-            if( !no_names.empty() && no_names.front() == "path-value" )
+            if( options.exists( "--from-path-value,--from-pv" ) )
             {
-                extractor = &get_elapsed;
+                extractor = &get_log_path_value;
             }
             impl_::process_begin_end< impl_::log >( extractor , outputting );
             
