@@ -202,7 +202,7 @@ void process_begin_end( L get_log, O output )
         const T& message = *plog;
         
         
-        if( stack.empty() || message.name == start ) {
+        if( stack.empty() ) {
             stack.push_back( message );
         }
         else
@@ -212,23 +212,21 @@ void process_begin_end( L get_log, O output )
                 COMMA_THROW( comma::exception, "'end' must have a 'start' log entry" );
             }
             
-            if( stack.back().name != message.name )
+            if( message.is_begin ) 
             {
-                if( !message.is_begin ) 
-                { 
-                    std::cerr << name() << ": failed on "; estream.write( message );
-                    COMMA_THROW( comma::exception, "incorrect nesting for log entry, expecting 'begin'" );
-                }
                 stack.push_back( message );
             }
-            else     // must be an 'end' 
+            else 
             {
+                if( stack.back().name != message.name ) {
+                    std::cerr << name() << ": failed on "; estream.write( message );
+                    COMMA_THROW( comma::exception, "found 'end' but missing FIFO entry 'begin' log entry with that name" );
+                }
                 const T& begin = stack.back();
                 output( begin, message, comma::join( stack, stack.size()-1, '/' ) );
                 stack.pop_back();
             }
         }
-    
     }
 }
 
