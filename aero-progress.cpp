@@ -254,37 +254,50 @@ int main( int ac, char** av )
         }
         else if( options.exists( "--ratio" ) )
         {
-            
+            typedef boost::property_tree::ptree::path_type ptree_path_type;
             boost::property_tree::ptree ptree; 
             std::set< std::string > leaf_keys;
-            double total_time = merge_elapsed( ptree, leaf_keys );
+            merge_elapsed( ptree, leaf_keys );
             
             static const std::string elapsed_end("/elapsed");
             // This is the optional path for base denominator
             std::vector< std::string > no_names = options.unnamed( "-h,--help,--elapsed,--sum,--ratio", "" );
             std::string& denominator_path = no_names.front(); 
+            double total_time = 0;
             if( !no_names.empty() && !denominator_path.empty() )
             {
-                if( denominator_path.substr( denominator_path.size() - (elapsed_end.size()) ) != elapsed_end ) {
+                if( denominator_path.size() < elapsed_end.size() || denominator_path.substr( denominator_path.size() - (elapsed_end.size()) ) != elapsed_end ) {
                     denominator_path += "/elapsed";
                 }
                 // This is the path for base denominator
-                const boost::property_tree::ptree::path_type key( denominator_path, '/' );
+                const ptree_path_type key( denominator_path, '/' );
                 boost::optional< double > denominator = ptree.get_optional< double >( key );
                 
                 if( !denominator ) { COMMA_THROW( comma::exception, "failed to find path in input data: " + denominator_path ); }
                 total_time = *denominator;
             }
+            else 
+            {
+                // total time is total time of all childs of root node in tree/path
+                for( boost::property_tree::ptree::const_iterator i = ptree.begin(); i != ptree.end(); ++i )
+                {
+                    /// search for elapsed because it is in the second ptree node under 'elapsed'
+                    boost::optional< double > elapsed = i->second.get_optional< double >( ptree_path_type( "elapsed" ) );
+                    if( elapsed ) { total_time += *elapsed; }
+                }
+            }
+            
+            if( total_time == 0 ) { COMMA_THROW( comma::exception, "denominator time cannot be found" ); }
             
             // Now make ratio tree
             for( const auto& key_str : leaf_keys )
             {
                 // Only if the key is '*/elapsed', do not make ratio key for other keys
-                if( key_str.substr( key_str.size() - elapsed_end.size() ) != elapsed_end ) { continue; } 
+                if( key_str.size() < elapsed_end.size() || key_str.substr( key_str.size() - elapsed_end.size() ) != elapsed_end ) { continue; } 
                 
-                const boost::property_tree::ptree::path_type key( key_str, '/' );
+                const ptree_path_type key( key_str, '/' );
                 std::string ratio_key_str =  key_str.substr(0, key_str.find_last_of( '/' ) );
-                const boost::property_tree::ptree::path_type ratio_key( ratio_key_str + '/' + "ratio", '/' );
+                const ptree_path_type ratio_key( ratio_key_str + '/' + "ratio", '/' );
                 
                 boost::optional< double > value = ptree.get_optional< double >( key );
                 ptree.put( ratio_key, (*value)/total_time );
