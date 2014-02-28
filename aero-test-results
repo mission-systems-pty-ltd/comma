@@ -15,7 +15,7 @@ source $( dirname $0 )/aero-test-util
 function usage()
 {
     cat <<EOF >&2
-Usage: $name [<batch id>] [-f|--force] [--path=<qstorage dir>]
+Usage: $name [<batch id>] [-f|--force] [-v|--verbose] [--path=<qstorage dir>]
 
 Check the results of tests that were run using aero-test-submit.
 If <batch id> is not specified, the latest id is used, but the user is asked to verify it first.
@@ -24,6 +24,7 @@ Options:
 
     -h|--help       Show this help
     -f|--force      Force the results to be checked even if all jobs have not yet completed
+    -v|--verbose    Print information about successful tests as well as failed ones
     --path=         Qstorage directory (e.g. "/mnt/q-storage", "/var/qantas/data"; default: check for both)
 
 EOF
@@ -61,11 +62,15 @@ function determine_path_prefix()
 }
 
 # copy input to output, and return failure (1) if there was any output
-# Argument: message to print (first) on failure
+# Argument: description of test (job id and path)
 function fail_on_output()
 {
-    output="$( awk 'NR == 1 { print "'"$1"'"; } { print $0; }' )"
-    if [[ -z "$output" ]]; then return 0; fi
+    local description=$1
+    output="$( awk 'NR == 1 { print "Failed: '"$description"'"; } { print $0; }' )"
+    if [[ -z "$output" ]]; then
+        if (( verbose )); then echo "Passed: $description"; fi
+        return 0
+    fi
     echo "$output"
     echo
     return 1
@@ -94,7 +99,7 @@ function check_results()
     if [[ ! -f "$actual" ]]; then echo "Error (job $job_id): result file not found: $actual"; return 1; fi
     if [[ ! -f "$expected" ]]; then echo "Error (job $job_id): test file not found: $expected"; return 1; fi
 
-    if aero-test-match -v="$actual" "$expected" 2>&1 | fail_on_output "Failed: job $job_id $test_dir"; then
+    if aero-test-match -v="$actual" "$expected" 2>&1 | fail_on_output "job $job_id $test_dir"; then
         (( ++success_count ))
     fi 
 }
@@ -102,15 +107,17 @@ function check_results()
 path_prefix=
 batch_id=
 force=0
+verbose=0
 
 for arg in "$@"; do
     case $arg in
-        -h|--help)   usage; exit 0;;
-        -f|--force)  force=1;;
-        --path=*)    path_prefix=${arg#*=};;
-        -*)          echo "$name: unknown option '$arg'" >&2; exit 1;;
-        *)           if [[ -z "$batch_id" ]]; then batch_id=$arg
-                     else echo "$name: unexpected argument '$arg'" >&2; exit 1; fi;;
+        -h|--help)    usage; exit 0;;
+        -f|--force)   force=1;;
+        -v|--verbose) verbose=1;;
+        --path=*)     path_prefix=${arg#*=};;
+        -*)           echo "$name: unknown option '$arg'" >&2; exit 1;;
+        *)            if [[ -z "$batch_id" ]]; then batch_id=$arg
+                      else echo "$name: unexpected argument '$arg'" >&2; exit 1; fi;;
     esac
 done
 
@@ -148,7 +155,7 @@ if [[ "$plan_completed_count" != 0 ]]; then
     done < <( $sql_command "select jobId, outputPath, stdin from JobQ where batchId = $batch_id and status = 'DONE'" |
               awk 'NR != 1 { print $0; }' | sed 's/\\n.*//g' )
 
-    echo "$success_count out of $(( plan_completed_count + plan_failed_count )) tests succeeded$unfinished_msg."
+    echo "$success_count out of $(( plan_completed_count + plan_failed_count )) tests passed$unfinished_msg."
 else
     echo "No successful plans$unfinished_msg."
 fi
