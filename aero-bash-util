@@ -118,61 +118,27 @@ function aero_progress()
     echo "$( date +%Y%m%dT%H%M%S.%N | cut -b1-22 ),$name,end" >> $output_file
 }
 
-# todo: document usage
-function replace_value_in_name_value()
-{
-    local input_string=$1
-    local config_replace_list=$2
-    local input_kay
-    local input_value_old
-    local input_value_new
-    local pair
-    local from_value
-    local to_value
-    local assignment="="
-    for pair in "${config_replace_list[@]}" ; do
-        from_value=${pair%%$assignment*}
-        to_value=${pair##*$assignment}
+# qpath( navigation/free_flight/regions )
+# path_navigation
+# path_navigation_free_flight
+# path_navigation_free_flight_regions
 
-        input_key=${input_string%%$assignment*}
-        input_value_old=${input_string##*$assignment}
-        input_value_new=${input_value_old/$from_value/$to_value}
-        if [[ "$input_value_new" != "$input_value_old" ]]; then
-            echo "$input_key""$assignment""$input_value_new"
-            return
-        fi
-    done
-    echo "$1"
-}
-
-# todo: document usage
-function extract_config_replace_list()
-{
-    local result=""
-    local lines=()
-    local line
-    local keyword="@"
-    local keyword_length=${#keyword[@]}
-
-    while read -r line
-    do
-        if [[ "${line:0:$keyword_length}" == "$keyword" ]]; then
-            #s1=${line%%$keyword*}
-            s2=${line##*$keyword}
-            config_replace_list+=( "$s2" )
-        else
-            lines+=( "$line" )
-        fi
-    done
-
-    for line in "${lines[@]}" ; do
-        result+=$( replace_value_in_name_value "$line" $config_replace_list )$'\n'
-    done
-
-    echo "$result"
-}
-
-# todo: document usage
+# todo!!! document usage
+# todo: implement "hierarchy" with the usage like this:
+#       qpath navigation/restrictive works as following:
+#       run qpath navigation: if it is not pointing to q-storage, this will become the default
+#       run qpath navigation/restrictive, using the "default" from qpath navigation
+#       i.e:
+#           no path_* variables:
+#               qpath navigation/restrictive echoes navigation_restrictive as /mnt/q-storage/navigation/restrictive
+#           path_navigation=blah
+#               qpath navigation/restrictive echoes navigation_restrictive as blah/restrictive
+#           path_navigation_restrictive=oops
+#               qpath navigation/restrictive echoes navigation_restrictive as oops
+#           path_navigation=blah
+#           path_navigation_restrictive=oops
+#               qpath navigation/restrictive echoes navigation_restrictive as oops
+#
 function qpath()
 {
     local input=${1#"/"}
@@ -184,6 +150,17 @@ function qpath()
         echo ${qstorage%"/"}"/"$input"/"
     fi
 }
+# 
+# function qpath_new() # todo: debug, test, and rename to qpath (remove the old implementation)
+# {
+#     local input=${1#"/"}
+#     input=${input%"/"}
+#     local varname="path_"$(echo $input|sed 's#\/#\_#g')
+#     if [ -v $varname ] ; then eval echo \$$varname ; return ; fi
+#     local dir=$( dirname $input )
+#     if [[ "$dir" == "." ]] ; echo ${qstorage%"/"}"/"$input"/" ; fi
+#     echo $( qpath $dir )/$( basename $input ) ; fi
+# }
 
 # returns 0 (success) if arg1 > arg2 using floating point comparison, otherwise prints returns 1 (failure)
 # (this is so it can be used in a bash "if" statement)
