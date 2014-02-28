@@ -60,6 +60,10 @@ static void usage( bool verbose=false )
     std::cerr << std::endl;
     std::cerr << "cat progress.csv | " << name() << " [<options>] > stat.csv" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "Example: cat progress.csv | aero-progress --elapsed | aero-progress --ratio run_all/build_flight_plan"  << std::endl;
+    std::cerr << "         In this example, every 'ratio' value is compared against time of run_all/build_flight_plan, instead" << std::endl;
+    std::cerr << "         of total time." << std::endl;
+    std::cerr << std::endl;
     std::cerr << "modes" << std::endl;
     std::cerr << "    These are mutually exclusive." << std::endl;
     std::cerr << "    <no option>: Outputs path value for input data: " << comma::join( comma::csv::names< impl_::log >(), ',' )  << std::endl;
@@ -70,13 +74,14 @@ static void usage( bool verbose=false )
     std::cerr << "                 Output format is 'path/elapsed=<duration in second>'" << std::endl;
     std::cerr << "    --sum:       Outputs path value with 'elapsed' time, taking input data from --elapsed mode." << std::endl;
     std::cerr << "                 Output format is 'path/elapsed=<duration in second>'" << std::endl;
-    std::cerr << "                 Elapsed duration is duration sum of run with the same path e.g. plan-fuel/flight-prm called multiple times." << std::endl;
+    std::cerr << "                 Elapsed duration is duration sum of run with the same path e.g. where plan-fuel/flight-prm called multiple times." << std::endl;
     std::cerr << "    --ratio [path]" << std::endl;
     std::cerr << "                 Outputs path value with 'elapsed' time and ratio of total time, taking input data from --sum or --elapsed mode." << std::endl;
     std::cerr << "                 Output format is 'path/elapsed=<duration in second>'" << std::endl;
+    std::cerr << "                 Elapsed duration is duration sum of run with the same path e.g. where plan-fuel/flight-prm called multiple times." << std::endl;
     std::cerr << "                 Output format is 'path/ratio=< ratio to total time or time of [path] if given >'" << std::endl;
     std::cerr << "options" << std::endl;
-    std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
+    std::cerr << "    --help,-h:   Print this message.." << std::endl;
     std::cerr << std::endl;
     exit( 1 );
 }
@@ -133,14 +138,12 @@ const impl_::log* get_log_path_value()
     return &log;
 }
 
-/// Merge values (expects double) with the same key
-/// Returns the total value of all keys
-double merge_elapsed( boost::property_tree::ptree& tree, std::set< std::string >& leaf_keys  )
+/// Merge values (expects double) with the same key 
+void merge_elapsed( boost::property_tree::ptree& tree, std::set< std::string >& leaf_keys  )
 {
     using boost::property_tree::ptree;
     
     std::string line;
-    double total_elapsed = 0;
     while( std::cin.good() && !std::cin.eof() )
     {
         std::getline( std::cin, line );
@@ -153,7 +156,6 @@ double merge_elapsed( boost::property_tree::ptree& tree, std::set< std::string >
         
         ptree::path_type key( key_str, '/' );
         double value = boost::lexical_cast< double >( comma::strip( line.substr( p + 1), '"' ) );
-        total_elapsed += value;
         
         // Check if there is an existing value, if so merge elapsed time
         boost::optional< double > existing_value = tree.get_optional< double >( key );
@@ -162,10 +164,7 @@ double merge_elapsed( boost::property_tree::ptree& tree, std::set< std::string >
         leaf_keys.insert( key_str );
         tree.put( key, value );
         
-    
     }
-    
-    return total_elapsed;
 }
 
 
@@ -240,7 +239,7 @@ int main( int ac, char** av )
 {
     comma::command_line_options options( ac, av );
     
-    if( options.exists( "-h|--help" ) ) { usage(); }
+    if( options.exists( "-h,--help" ) ) { usage(); }
     
     try
     {
