@@ -5,8 +5,7 @@ name=$( basename $0 )
 submit_time=$( date --utc "+%Y%m%dT%H%M%S" )
 output_base_dir="/var/qantas/data/log/gui/acceptance"
 user_name="acceptance"
-# TODO: change to "prod" when ready for release
-build_to_use="bleeding"   # "prod", "test" or "bleeding"
+build_to_use="prod"   # "prod", "test" or "bleeding"
 task_priority=3
 db_host="129.78.214.114"
 db_port="3306"
