@@ -74,17 +74,13 @@ static void usage( bool verbose=false )
     std::cerr << "                 Outputs path value with 'elapsed' time, input data format: " << comma::join( comma::csv::names< impl_::log >(), ',' )  << std::endl;
     std::cerr << "                 If '--from-path-value|--from-pv' is given, it takes inputs from outputs of < no option >" << std::endl;
     std::cerr << "                 Output format is 'path/elapsed=<duration in second>'" << std::endl;
-    std::cerr << "    --sum:       Outputs path value with 'elapsed' time, taking input data from --elapsed mode." << std::endl;
-    std::cerr << "                 Output format is 'path/elapsed=<duration in second>'" << std::endl;
-    std::cerr << "                  and 'path/mean=< mean duration in second >'" << std::endl;
-    std::cerr << "                 Elapsed duration is duration sum of run with the same path e.g. where plan-fuel/flight-prm called multiple times." << std::endl;
-    std::cerr << "    --ratio [path] [ --percentage|-P ]" << std::endl;
-    std::cerr << "                 Outputs path value with 'elapsed' time and ratio of total time, taking input data from --sum or --elapsed mode." << std::endl;
-    std::cerr << "                 Output format is 'path/elapsed=<duration in second>'" << std::endl;
-    std::cerr << "                  and 'path/mean=< mean duration in second >'" << std::endl;
-    std::cerr << "                 Elapsed duration is duration sum of run with the same path e.g. where plan-fuel/flight-prm called multiple times." << std::endl;
-    std::cerr << "                 Output format is 'path/ratio=< ratio to total time or time of [path] if given >', " << std::endl;
-    std::cerr << "                  with -P|--percentage, a percentage is shown." << std::endl;
+    std::cerr << "    --sum [--mean] [--ratio ] [-P|--percentage] " << std::endl;
+    std::cerr << "                 Outputs path value with summed 'elapsed' time, taking input data from --elapsed mode." << std::endl;
+    std::cerr << "                 Elapsed duration is duration sum of run with the same <path> key e.g. where plan-fuel/flight-prm called multiple times." << std::endl;
+    std::cerr << "                 Output format is '<path>/elapsed=<duration in second>'" << std::endl;
+    std::cerr << "                 --mean  adds '<path>/mean=< mean duration in second >' for items that ran more than once - duplicated elapsed path/keys." << std::endl;
+    std::cerr << "                 --ratio adds '<path>/ratio=< ratio to total time or time of [path] if given >', " << std::endl;
+    std::cerr << "                  --ratio with -P|--percentage, a percentage is the value for <path>/ratio, rounded to 3 decimal places." << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --help,-h:   Print this message.." << std::endl;
     std::cerr << std::endl;
@@ -148,7 +144,7 @@ static const std::string elapsed_end("/elapsed");
 /// Merge values (expects double) with the same key 
 /// It merges values for identical key string that end in '/elapsed' and 
 ///  add a '/mean' key with the mean of the values 
-void merge_elapsed( boost::property_tree::ptree& tree, std::unordered_set< std::string >& leaf_keys )
+void merge_elapsed( boost::property_tree::ptree& tree, std::unordered_set< std::string >& leaf_keys, bool add_mean_key )
 {
     using boost::property_tree::ptree;
     
@@ -189,7 +185,7 @@ void merge_elapsed( boost::property_tree::ptree& tree, std::unordered_set< std::
             tree.put( key, value );
             
             // wether to create a 'mean' key - if there is more than one elapsed
-            if( count > 1 ) 
+            if( add_mean_key && count > 1 ) 
             {
                 //make a 'mean' key by replacing /elapsed with /mean
                 std::ostringstream ss;
@@ -285,64 +281,61 @@ int main( int ac, char** av )
         if( options.exists( "--sum" ) )
         {
             
-            boost::property_tree::ptree ptree; 
-            std::unordered_set< std::string > leaf_keys;
-            merge_elapsed( ptree, leaf_keys );
-            comma::property_tree::to_path_value ( std::cout, ptree, equal_sign, '\n' );
-        }
-        else if( options.exists( "--ratio" ) )
-        {
             typedef boost::property_tree::ptree::path_type ptree_path_type;
             boost::property_tree::ptree ptree; 
             std::unordered_set< std::string > leaf_keys;
-            merge_elapsed( ptree, leaf_keys );
+            merge_elapsed( ptree, leaf_keys, options.exists( "--mean" ) );
             
-            // This is the optional path for base denominator
-            std::vector< std::string > no_names = options.unnamed( "-h,--help,--elapsed,--sum,--ratio,-P,--percentage", "" );
-            std::string& denominator_path = no_names.front(); 
-            double total_time = 0;
-            if( !no_names.empty() && !denominator_path.empty() )
+            if( options.exists( "--ratio" ) )  
             {
-                if( denominator_path.size() < elapsed_end.size() || denominator_path.substr( denominator_path.size() - (elapsed_end.size()) ) != elapsed_end ) {
-                    denominator_path += "/elapsed";
-                }
-                // This is the path for base denominator
-                const ptree_path_type key( denominator_path, '/' );
-                boost::optional< double > denominator = ptree.get_optional< double >( key );
                 
-                if( !denominator ) { COMMA_THROW( comma::exception, "failed to find path in input data: " + denominator_path ); }
-                total_time = *denominator;
-            }
-            else 
-            {
-                // total time is total time of all childs of root node in tree/path
-                for( boost::property_tree::ptree::const_iterator i = ptree.begin(); i != ptree.end(); ++i )
+                // This is the optional path for base denominator
+                std::vector< std::string > no_names = options.unnamed( "-h,--help,--elapsed,--sum,--ratio,--mean,-P,--percentage", "" );
+                std::string& denominator_path = no_names.front(); 
+                double total_time = 0;
+                if( !no_names.empty() && !denominator_path.empty() )
                 {
-                    /// search for elapsed because it is in the second ptree node under 'elapsed'
-                    boost::optional< double > elapsed = i->second.get_optional< double >( ptree_path_type( "elapsed" ) );
-                    if( elapsed ) { total_time += *elapsed; }
+                    if( denominator_path.size() < elapsed_end.size() || denominator_path.substr( denominator_path.size() - (elapsed_end.size()) ) != elapsed_end ) {
+                        denominator_path += "/elapsed";
+                    }
+                    // This is the path for base denominator
+                    const ptree_path_type key( denominator_path, '/' );
+                    boost::optional< double > denominator = ptree.get_optional< double >( key );
+                    
+                    if( !denominator ) { COMMA_THROW( comma::exception, "failed to find path in input data: " + denominator_path ); }
+                    total_time = *denominator;
                 }
-            }
-            
-            if( total_time == 0 ) { COMMA_THROW( comma::exception, "denominator time cannot be found" ); }
-            
-            const bool show_percentage = options.exists( "-P,--percentage" );
-            // Now make ratio tree
-            for( const auto& key_str : leaf_keys )
-            {
-                // Only if the key is '*/elapsed', do not make ratio key for other keys
-                if( key_str.size() < elapsed_end.size() || key_str.substr( key_str.size() - elapsed_end.size() ) != elapsed_end ) { continue; } 
-                
-                const ptree_path_type key( key_str, '/' );
-                std::string ratio_key_str =  key_str.substr(0, key_str.find_last_of( '/' ) );
-                const ptree_path_type ratio_key( ratio_key_str + '/' + "ratio", '/' );
-                
-                boost::optional< double > value = ptree.get_optional< double >( key );
-                if( !show_percentage ) {
-                    ptree.put( ratio_key, (*value)/total_time );
+                else 
+                {
+                    // total time is total time of all childs of root node in tree/path
+                    for( boost::property_tree::ptree::const_iterator i = ptree.begin(); i != ptree.end(); ++i )
+                    {
+                        /// search for elapsed because it is in the second ptree node under 'elapsed'
+                        boost::optional< double > elapsed = i->second.get_optional< double >( ptree_path_type( "elapsed" ) );
+                        if( elapsed ) { total_time += *elapsed; }
+                    }
                 }
-                else { 
-                    ptree.put( ratio_key, boost::math::round( ( ((*value)*100.0)/total_time ) * 1000.0 ) / 1000.0 );
+                
+                if( total_time == 0 ) { COMMA_THROW( comma::exception, "denominator time cannot be found" ); }
+                
+                const bool show_percentage = options.exists( "-P,--percentage" );
+                // Now make ratio tree
+                for( const auto& key_str : leaf_keys )
+                {
+                    // Only if the key is '*/elapsed', do not make ratio key for other keys
+                    if( key_str.size() < elapsed_end.size() || key_str.substr( key_str.size() - elapsed_end.size() ) != elapsed_end ) { continue; } 
+                    
+                    const ptree_path_type key( key_str, '/' );
+                    std::string ratio_key_str =  key_str.substr(0, key_str.find_last_of( '/' ) );
+                    const ptree_path_type ratio_key( ratio_key_str + '/' + "ratio", '/' );
+                    
+                    boost::optional< double > value = ptree.get_optional< double >( key );
+                    if( !show_percentage ) {
+                        ptree.put( ratio_key, (*value)/total_time );
+                    }
+                    else { 
+                        ptree.put( ratio_key, boost::math::round( ( ((*value)*100.0)/total_time ) * 1000.0 ) / 1000.0 );
+                    }
                 }
             }
             
