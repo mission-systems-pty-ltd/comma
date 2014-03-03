@@ -1,6 +1,8 @@
 #include <boost/date_time/posix_time/ptime.hpp>
 #include <vector>
+#include <unordered_map>
 #include <deque>
+#include <unordered_set>
 #include <functional>
 #include <boost/math/special_functions/round.hpp>
 #include <comma/csv/stream.h>
@@ -74,10 +76,12 @@ static void usage( bool verbose=false )
     std::cerr << "                 Output format is 'path/elapsed=<duration in second>'" << std::endl;
     std::cerr << "    --sum:       Outputs path value with 'elapsed' time, taking input data from --elapsed mode." << std::endl;
     std::cerr << "                 Output format is 'path/elapsed=<duration in second>'" << std::endl;
+    std::cerr << "                  and 'path/mean=< mean duration in second >'" << std::endl;
     std::cerr << "                 Elapsed duration is duration sum of run with the same path e.g. where plan-fuel/flight-prm called multiple times." << std::endl;
     std::cerr << "    --ratio [path] [ --percentage|-P ]" << std::endl;
     std::cerr << "                 Outputs path value with 'elapsed' time and ratio of total time, taking input data from --sum or --elapsed mode." << std::endl;
     std::cerr << "                 Output format is 'path/elapsed=<duration in second>'" << std::endl;
+    std::cerr << "                  and 'path/mean=< mean duration in second >'" << std::endl;
     std::cerr << "                 Elapsed duration is duration sum of run with the same path e.g. where plan-fuel/flight-prm called multiple times." << std::endl;
     std::cerr << "                 Output format is 'path/ratio=< ratio to total time or time of [path] if given >', " << std::endl;
     std::cerr << "                  with -P|--percentage, a percentage is shown." << std::endl;
@@ -139,12 +143,18 @@ const impl_::log* get_log_path_value()
     return &log;
 }
 
+static const std::string elapsed_end("/elapsed");
+
 /// Merge values (expects double) with the same key 
-void merge_elapsed( boost::property_tree::ptree& tree, std::set< std::string >& leaf_keys  )
+/// It merges values for identical key string that end in '/elapsed' and 
+///  add a '/mean' key with the mean of the values 
+void merge_elapsed( boost::property_tree::ptree& tree, std::unordered_set< std::string >& leaf_keys )
 {
     using boost::property_tree::ptree;
     
     std::string line;
+    // counts the number of times a key is used for 'mean' value calculation e.g. for flight-prm
+    std::unordered_map< std::string, int > key_counts;    
     while( std::cin.good() && !std::cin.eof() )
     {
         std::getline( std::cin, line );
@@ -154,16 +164,46 @@ void merge_elapsed( boost::property_tree::ptree& tree, std::set< std::string >& 
         
         //const std::string key = comma::strip( v[i].substr( 0, p );
         const std::string key_str = comma::strip( line.substr( 0, p ), '"' );
-        
         ptree::path_type key( key_str, '/' );
-        double value = boost::lexical_cast< double >( comma::strip( line.substr( p + 1), '"' ) );
         
-        // Check if there is an existing value, if so merge elapsed time
-        boost::optional< double > existing_value = tree.get_optional< double >( key );
-        if( existing_value ) { value += *existing_value; } // sum it up
+        std::string value_str = comma::strip( line.substr( p + 1), '"' );
         
-        leaf_keys.insert( key_str );
-        tree.put( key, value );
+        // Only merges keys ending in '/elapsed'
+        if( key_str.size() < elapsed_end.size() || key_str.substr( key_str.size() - elapsed_end.size() ) != elapsed_end ) { 
+            tree.put( key, value_str );     // not 'elapsed' ending key, just put it into the ptree, may replaces earlier value for same key
+        }
+        else
+        {   // This is /elapsed key, count occurances
+            int& count = key_counts[ key_str ];
+            ++count;
+            
+            // Get value and merge if needed
+            
+            double value = boost::lexical_cast< double >( value_str );
+            
+            // Check if there is an existing value, if so merge elapsed time
+            boost::optional< double > existing_value = tree.get_optional< double >( key );
+            if( existing_value ) { value += *existing_value; } // sum it up
+            
+            leaf_keys.insert( key_str );
+            tree.put( key, value );
+            
+            // wether to create a 'mean' key - if there is more than one elapsed
+            if( count > 1 ) 
+            {
+                //make a 'mean' key by replacing /elapsed with /mean
+                std::ostringstream ss;
+                ss << key_str.substr( 0,  key_str.size() - elapsed_end.size() ) << "/mean";
+                ptree::path_type mean_key( ss.str(), '/' );
+                
+                tree.put( mean_key, value/count );
+/*                
+                std::ostringstream cc;
+                cc << key_str.substr( 0,  key_str.size() - elapsed_end.size() ) << "/count";
+                ptree::path_type count_key( cc.str(), '/' );
+                tree.put( count_key, count ); */
+            }
+        }
         
     }
 }
@@ -246,7 +286,7 @@ int main( int ac, char** av )
         {
             
             boost::property_tree::ptree ptree; 
-            std::set< std::string > leaf_keys;
+            std::unordered_set< std::string > leaf_keys;
             merge_elapsed( ptree, leaf_keys );
             comma::property_tree::to_path_value ( std::cout, ptree, equal_sign, '\n' );
         }
@@ -254,10 +294,9 @@ int main( int ac, char** av )
         {
             typedef boost::property_tree::ptree::path_type ptree_path_type;
             boost::property_tree::ptree ptree; 
-            std::set< std::string > leaf_keys;
+            std::unordered_set< std::string > leaf_keys;
             merge_elapsed( ptree, leaf_keys );
             
-            static const std::string elapsed_end("/elapsed");
             // This is the optional path for base denominator
             std::vector< std::string > no_names = options.unnamed( "-h,--help,--elapsed,--sum,--ratio,-P,--percentage", "" );
             std::string& denominator_path = no_names.front(); 
@@ -306,7 +345,6 @@ int main( int ac, char** av )
                     ptree.put( ratio_key, boost::math::round( ( ((*value)*100.0)/total_time ) * 1000.0 ) / 1000.0 );
                 }
             }
-            if( show_percentage ) { std::cout.precision(3); } // show up to three decimal places
             
             comma::property_tree::to_path_value( std::cout, ptree, equal_sign, '\n' );
         }
