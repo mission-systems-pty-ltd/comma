@@ -74,13 +74,14 @@ static void usage( bool verbose=false )
     std::cerr << "                 Outputs path value with 'elapsed' time, input data format: " << comma::join( comma::csv::names< impl_::log >(), ',' )  << std::endl;
     std::cerr << "                 If '--from-path-value|--from-pv' is given, it takes inputs from outputs of < no option >" << std::endl;
     std::cerr << "                 Output format is 'path/elapsed=<duration in second>'" << std::endl;
-    std::cerr << "    --sum [--mean] [--ratio ] [-P|--percentage] " << std::endl;
+    std::cerr << "    --sum [--mean] [--count] [--ratio ] [-P|--percentage] " << std::endl;
     std::cerr << "                 Outputs path value with summed 'elapsed' time, taking input data from --elapsed mode." << std::endl;
     std::cerr << "                 Elapsed duration is duration sum of run with the same <path> key e.g. where plan-fuel/flight-prm called multiple times." << std::endl;
     std::cerr << "                 Output format is '<path>/elapsed=<duration in second>'" << std::endl;
     std::cerr << "                 --mean  adds '<path>/mean=< mean duration in second >' for items that ran more than once - duplicated elapsed path/keys." << std::endl;
+    std::cerr << "                 --mean  adds '<path>/count=< occurances of <path>/elapsed >', where mean=( elapsed / count )." << std::endl;
     std::cerr << "                 --ratio adds '<path>/ratio=< ratio to total time or time of [path] if given >', " << std::endl;
-    std::cerr << "                  --ratio with -P|--percentage, a percentage is the value for <path>/ratio, rounded to 3 decimal places." << std::endl;
+    std::cerr << "                 --ratio with -P|--percentage, a percentage is the value for <path>/ratio, rounded to 3 decimal places." << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --help,-h:   Print this message.." << std::endl;
     std::cerr << std::endl;
@@ -144,7 +145,12 @@ static const std::string elapsed_end("/elapsed");
 /// Merge values (expects double) with the same key 
 /// It merges values for identical key string that end in '/elapsed' and 
 ///  add a '/mean' key with the mean of the values 
-void merge_elapsed( boost::property_tree::ptree& tree, std::unordered_set< std::string >& leaf_keys, bool add_mean_key )
+/// All keys are returned via 'leaf_keys'
+/// add_mean_key: adds '/mean' when sum combine '<path>/elapsed'
+/// add_count_key: adds '/count' when sum combine '<path>/elapsed'
+void merge_elapsed( boost::property_tree::ptree& tree, 
+                    std::unordered_set< std::string >& leaf_keys, 
+                    bool add_mean_key, bool add_count_key )
 {
     using boost::property_tree::ptree;
     
@@ -193,11 +199,12 @@ void merge_elapsed( boost::property_tree::ptree& tree, std::unordered_set< std::
                 ptree::path_type mean_key( ss.str(), '/' );
                 
                 tree.put( mean_key, value/count );
-/*                
+                
+                if( !add_count_key ) { continue; }
                 std::ostringstream cc;
                 cc << key_str.substr( 0,  key_str.size() - elapsed_end.size() ) << "/count";
                 ptree::path_type count_key( cc.str(), '/' );
-                tree.put( count_key, count ); */
+                tree.put( count_key, count );
             }
         }
         
@@ -284,13 +291,13 @@ int main( int ac, char** av )
             typedef boost::property_tree::ptree::path_type ptree_path_type;
             boost::property_tree::ptree ptree; 
             std::unordered_set< std::string > leaf_keys;
-            merge_elapsed( ptree, leaf_keys, options.exists( "--mean" ) );
+            merge_elapsed( ptree, leaf_keys, options.exists( "--mean" ), options.exists( "--count" ) );
             
             if( options.exists( "--ratio" ) )  
             {
                 
                 // This is the optional path for base denominator
-                std::vector< std::string > no_names = options.unnamed( "-h,--help,--elapsed,--sum,--ratio,--mean,-P,--percentage", "" );
+                std::vector< std::string > no_names = options.unnamed( "-h,--help,--elapsed,--sum,--mean,--count,--ratio,-P,--percentage", "" );
                 std::string& denominator_path = no_names.front(); 
                 double total_time = 0;
                 if( !no_names.empty() && !denominator_path.empty() )
