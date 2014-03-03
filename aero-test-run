@@ -1,20 +1,26 @@
 #!/bin/bash
 
+. $( which aero-bash-util )
+
 function usage_()
 {
     echo >&2
-    echo "run all the scripts in subdirectories called 'tests' of the current directory" >&2
-    echo "return 0, if all tests succeed; non-zero, if failure" >&2
+    echo -e "run all the scripts in subdirectories called 'tests' of the current directory" >&2
+    echo -e "return 0, if all tests succeed; non-zero, if failure" >&2
     echo >&2
-    echo "usage: aero-test-run [<options>]" >&2
+    echo -e "usage: aero-test-run [<options>]" >&2
     echo >&2
-    echo "note: in quiet mode, only the messages containing the word \"failed\" will be displayed" >&2
+    echo -e "note: in quiet mode, only the messages containing the word \"failed\" will be displayed" >&2
     echo >&2
-    echo "options" >&2
-    echo "    --debug: much more debug output" >&2
-    echo "    --quiet,-q: output only failures" >&2
-    echo "    --path=<qstorage path>: q-storage directory; default: /mnt/q-storage" >&2
-    echo "    --until-first-failure,-f: exit after the first failure" >&2
+    echo -e "options" >&2
+    echo -e "    --debug: much more debug output" >&2
+    echo -e "    --quiet,-q: output only failures" >&2
+    echo -e "    --path=<qstorage path>: q-storage directory; default: /mnt/q-storage" >&2
+    echo -e "    --until-first-failure,-f: exit after the first failure" >&2
+    echo >&2
+    echo -e "disabling tests" >&2
+    echo -e "    to disable tests in a directory and all its subdirectories" >&2
+    echo -e "    drop an empty file named ${brown}disabled${none} in that directory" >&2
     echo >&2
     exit 1
 }
@@ -101,6 +107,7 @@ if (( $dir_count > 0 )) ; then
         cd $dir
         intermediate_result=0
         for t in $tests ; do
+            if disabled_ $t ; then warning_ "$name: $t: disabled" ; continue ; fi
             message_ "$name: $t: running..."
             timestamp="$( mktemp -t aero-test-run-timestamp-$(basename $t).XXXXXX )" # capture starting time
             touch "$timestamp"
