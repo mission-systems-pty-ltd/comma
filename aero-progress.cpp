@@ -2,7 +2,7 @@
 #include <vector>
 #include <deque>
 #include <functional>
-#include <boost/function.hpp>
+#include <boost/math/special_functions/round.hpp>
 #include <comma/csv/stream.h>
 #include <comma/visiting/traits.h>
 #include <comma/application/command_line_options.h>
@@ -75,11 +75,12 @@ static void usage( bool verbose=false )
     std::cerr << "    --sum:       Outputs path value with 'elapsed' time, taking input data from --elapsed mode." << std::endl;
     std::cerr << "                 Output format is 'path/elapsed=<duration in second>'" << std::endl;
     std::cerr << "                 Elapsed duration is duration sum of run with the same path e.g. where plan-fuel/flight-prm called multiple times." << std::endl;
-    std::cerr << "    --ratio [path]" << std::endl;
+    std::cerr << "    --ratio [path] [ --percentage|-P ]" << std::endl;
     std::cerr << "                 Outputs path value with 'elapsed' time and ratio of total time, taking input data from --sum or --elapsed mode." << std::endl;
     std::cerr << "                 Output format is 'path/elapsed=<duration in second>'" << std::endl;
     std::cerr << "                 Elapsed duration is duration sum of run with the same path e.g. where plan-fuel/flight-prm called multiple times." << std::endl;
-    std::cerr << "                 Output format is 'path/ratio=< ratio to total time or time of [path] if given >'" << std::endl;
+    std::cerr << "                 Output format is 'path/ratio=< ratio to total time or time of [path] if given >', " << std::endl;
+    std::cerr << "                  with -P|--percentage, a percentage is shown." << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --help,-h:   Print this message.." << std::endl;
     std::cerr << std::endl;
@@ -258,7 +259,7 @@ int main( int ac, char** av )
             
             static const std::string elapsed_end("/elapsed");
             // This is the optional path for base denominator
-            std::vector< std::string > no_names = options.unnamed( "-h,--help,--elapsed,--sum,--ratio", "" );
+            std::vector< std::string > no_names = options.unnamed( "-h,--help,--elapsed,--sum,--ratio,-P,--percentage", "" );
             std::string& denominator_path = no_names.front(); 
             double total_time = 0;
             if( !no_names.empty() && !denominator_path.empty() )
@@ -286,6 +287,7 @@ int main( int ac, char** av )
             
             if( total_time == 0 ) { COMMA_THROW( comma::exception, "denominator time cannot be found" ); }
             
+            const bool show_percentage = options.exists( "-P,--percentage" );
             // Now make ratio tree
             for( const auto& key_str : leaf_keys )
             {
@@ -297,8 +299,15 @@ int main( int ac, char** av )
                 const ptree_path_type ratio_key( ratio_key_str + '/' + "ratio", '/' );
                 
                 boost::optional< double > value = ptree.get_optional< double >( key );
-                ptree.put( ratio_key, (*value)/total_time );
+                if( !show_percentage ) {
+                    ptree.put( ratio_key, (*value)/total_time );
+                }
+                else { 
+                    ptree.put( ratio_key, boost::math::round( ( ((*value)*100.0)/total_time ) * 1000.0 ) / 1000.0 );
+                }
             }
+            if( show_percentage ) { std::cout.precision(3); } // show up to three decimal places
+            
             comma::property_tree::to_path_value( std::cout, ptree, equal_sign, '\n' );
         }
         else if( options.exists( "--elapsed" ) )
