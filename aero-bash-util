@@ -115,7 +115,9 @@ function aero_progress()
     local name=$( basename $2 )
     echo "$( date +%Y%m%dT%H%M%S.%N | cut -b1-22 ),$name,begin" >> $output_file
     ${@:2}
+    exit_code=$?
     echo "$( date +%Y%m%dT%H%M%S.%N | cut -b1-22 ),$name,end" >> $output_file
+    return $exit_code
 }
 
 # qpath( navigation/free_flight/regions )
