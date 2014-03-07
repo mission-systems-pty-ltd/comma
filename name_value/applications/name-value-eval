@@ -140,10 +140,23 @@ else name-value-eval-preparse --assign > $tmp_vars; fi
 if (( test_option )); then
     # process one line at a time, since Python exits for most errors
     linenum=0
+    line_list=
+
+    # (the extra echo is to handle line continuation "\" on the last line of the file)
     # (using "read -r" prevents "\\" from being changed to "\")
-    cat $input | while read -r line; do
+    ( cat $input; echo ) | while read -r line; do
         (( linenum++ ))
-        ( cat "$tmp_vars"; echo "$line" | name-value-eval-preparse --test ) | $python_cmd 2> $err
+        # skip comments and blank lines (unless there is a pending expression to evaluate)
+        if [[ -z "$line_list" && -z "$( echo $line | sed 's/^#.*//g; s/^ *//g' )" ]]; then continue; fi
+
+        # check for line continuation "\"
+        if [[ "$line" = *\\ ]]; then
+            line_list+=" $( echo "$line" | sed 's/.$//g' )"
+        else
+            line_list+=" $line"
+            ( cat "$tmp_vars"; echo "${line_list[@]}" | name-value-eval-preparse --test ) | $python_cmd 2> $err
+            line_list=
+        fi
 
         if [[ -s "$err" ]]; then
             ( echo -n "$name: line $linenum of $input_filename: "; process_python_errors "$err" "$line" ) >&2
