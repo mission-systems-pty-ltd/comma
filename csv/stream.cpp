@@ -6,6 +6,7 @@ bool unsyncronize_with_stdio_impl()
 {
     bool b = std::ios_base::sync_with_stdio( false ); // std::cin, std::cout access are thread-unsafe now (safe by default)
     std::cin.tie( NULL ); // std::cin is tied to std::cout by default, which is thread-unsafe now
+    return b;
 }
 
 static const bool unsyncronize_with_stdio_dummy = unsyncronize_with_stdio_impl();
