@@ -1,15 +1,12 @@
 %bin_load Load headerless binary data (as used by comma) into workspace.
 %   data = bin_load(FILENAME,FORMAT) loads the variables from a file into a
 %   double-precision array, with raw data types specified by the format
-%   string
+%   string.
 %
 %       FILENAME                 The string file name for the file
 %                                containing raw binary data.
 %       FORMAT                   A string specifying the data types in the
-%                                file.Load only the variables that match the
-%                                specified regular expressions.  For more
-%                                information on regular expressions, type
-%                                "doc regexp" at the command prompt.
+%                                file.
 %
 %           't':        timestamp*
 %           'd':        64 bit float
