@@ -22,7 +22,7 @@ function usage_()
 cat <<EOF >&2
 Usage: $name [-h|--help] [--build|-b=prod|test|bleeding]
 
-Search for subdirectories containing \"expected\" (and \"input\") files and submit these tests to the job queue.
+Search for subdirectories containing \"input\" files and submit these tests to the job queue.
 
 Options:
 
@@ -79,30 +79,26 @@ case "$build_to_use" in
     *) echo "$name: illegal --build \"$build_to_use\"; must be one of: \"prod\" \"test\" \"bleeding\"" >&2; exit 1;;
 esac
 
-expected_files=$( find . -name "expected" )
-expected_files_count=$( find . -name "expected" | wc -l )
+input_files=$( find . -name "input" )
+input_files_count=$( find . -name "input" | wc -l )
 job_id_list=()
 
-if (( $expected_files_count > 0 )) ; then
+if (( $input_files_count > 0 )) ; then
     batch_id=$( $sql_command "CALL getNextBatchId()" | tail -1 )
     if [[ -z "$batch_id" ]]; then echo "$name: error getting batch id; aborting"; exit 1; fi
-    echo "$expected_files_count test(s) in subdirectories of $( pwd )"
-    for e in $expected_files ; do
+    echo "$input_files_count test(s) in subdirectories of $( pwd )"
+    for i in $input_files ; do
         basedir=$( pwd )
-        cd $( dirname $e )
-        if [[ ! -f "input" ]]; then
-            echo "Warning: found \"expected\" but no \"input\" file in $( pwd )"
-        else
-            insert_statement=$( create_insert_statement "input" "$( pwd )" $batch_id ${#job_id_list[@]} )
-            if [[ $? == 0 ]]; then
-                sql_to_execute="$insert_statement; SELECT LAST_INSERT_ID();"
-                job_id=$( $sql_command "$sql_to_execute" | tail -1 )
-                if [[ -z "$job_id" || "$job_id" == 0 ]]; then
-                    echo "$name: error executing SQL: $sql_to_execute; SELECT LAST_INSERT_ID();"
-                else
-                    job_id_list+=( $job_id )
-                    echo "Job $job_id: $( pwd )/input"
-                fi
+        cd $( dirname $i )
+        insert_statement=$( create_insert_statement "input" "$( pwd )" $batch_id ${#job_id_list[@]} )
+        if [[ $? == 0 ]]; then
+            sql_to_execute="$insert_statement; SELECT LAST_INSERT_ID();"
+            job_id=$( $sql_command "$sql_to_execute" | tail -1 )
+            if [[ -z "$job_id" || "$job_id" == 0 ]]; then
+                echo "$name: error executing SQL: $sql_to_execute; SELECT LAST_INSERT_ID();"
+            else
+                job_id_list+=( $job_id )
+                echo "Job $job_id: $( pwd )/input"
             fi
         fi
         cd $basedir
@@ -110,6 +106,6 @@ if (( $expected_files_count > 0 )) ; then
     echo "${#job_id_list[@]} job(s) submitted"
     if [[ ${#job_id_list[@]} != 0 ]]; then echo "Batch id $batch_id"; fi
 else
-    echo "$name: no \"expected\" files found in subdirectories of $( pwd )"
+    echo "$name: no \"input\" files found in subdirectories of $( pwd )"
 fi
 
