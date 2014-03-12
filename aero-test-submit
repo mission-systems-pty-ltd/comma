@@ -49,6 +49,8 @@ function create_insert_statement()
 
     local input="# path: $test_dir\\n"
     input+=$( cat "$input_file" | sed 's/$/\\/g' | tr '\n' 'n' )   # all one line, newlines replaced with a literal "\n"
+    if [[ "$input" != *n ]]; then input+='n'; fi                   # handle no newline at EOF
+
     local plan_from=$( extract_value "$input_file" "plan/from" )
     local plan_to=$( extract_value "$input_file" "plan/to" )
     local plan_time=$( extract_value "$input_file" "plan/departure_time" )
