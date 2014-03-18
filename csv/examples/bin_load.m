@@ -91,9 +91,14 @@ end
 %get file size
 fileinfo=dir(filename);
 fsize=fileinfo.bytes;
+if fsize < entrysize
+    fclose(f);
+    error(sprintf('file %s with %d bytes, contains fewer than one entry (entrysize: %d)',filename,fsize,entrysize));
+end
 
 %get number of entries for preallocation
 if( mod(fsize,entrysize)~=0 )
+    fclose(f);
     error( sprintf('filesize does not match entry size: remainder = %d bytes', mod(fsize,entrysize)) )
 end
 entries=fsize/entrysize;
