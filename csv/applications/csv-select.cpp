@@ -39,10 +39,12 @@
 #include <vector>
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
+#include <boost/regex.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <comma/application/command_line_options.h>
 #include <comma/application/signal_flag.h>
 #include <comma/application/contact_info.h>
+#include <comma/base/exception.h>
 #include <comma/csv/stream.h>
 #include <comma/math/compare.h>
 #include <comma/name_value/parser.h>
@@ -63,6 +65,7 @@ void usage()
     std::cerr << "    --less=<value>: less than <value>" << std::endl;
     std::cerr << "    --from,--greater-or-equal,--ge=<value>: from <value> (inclusive, i.e. greater or equals)" << std::endl;
     std::cerr << "    --to,--less-or-equal,--le=<value>: to <value> (inclusive, i.e. less or equals)" << std::endl;
+    std::cerr << "    --regex=<regex>: posix regular expression, string fields only" << std::endl;
     std::cerr << std::endl;
     std::cerr << "      todo: implement a simple boolean expression grammar" << std::endl;
     std::cerr << std::endl;
@@ -81,11 +84,15 @@ void usage()
     std::cerr << "    cat a.csv | csv-select --fields=,,t --from=20120101T000000 --to=20120101T000010 --sorted" << std::endl;
     std::cerr << "    cat xyz.csv | csv-select --fields=x,y,z \"x;from=1;to=2\" \"y;from=-1;to=1.1\" \"z;from=5;to=5.5\"" << std::endl;
     std::cerr << "    cat a.csv | csv-select --fields=t,scalar \"t;from=20120101T000000;sorted\" \"scalar;from=-10;to=20.5\"" << std::endl;
+    std::cerr << "    echo hello,world | csv-select --fields=h,w \"h;regex=he.*\"" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 1 );
 }
+
+bool matches( const std::string& value, const boost::regex& r ) { return boost::regex_match( value, r ); }
+template < typename T > bool matches( const T& value, const boost::regex& r ) { COMMA_THROW( comma::exception, "regex implemented only for strings" ); }
 
 template < typename T >
 struct constraints
@@ -96,9 +103,10 @@ struct constraints
     boost::optional< T > greater;
     boost::optional< T > from;
     boost::optional< T > to;
+    boost::optional< boost::regex > regex;
     bool sorted;
 
-    bool empty() const { return !equals && !not_equal && !less && !greater && !from && !to; }
+    bool empty() const { return !equals && !not_equal && !less && !greater && !from && !to && !regex; }
 
     constraints() : sorted( false ) {}
 
@@ -110,6 +118,7 @@ struct constraints
         to = options.optional< T >( "--to,--less-or-equal,--le" );
         less = options.optional< T >( "--less" );
         greater = options.optional< T >( "--greater" );
+        regex = options.optional< std::string >( "--regex" );
         sorted = options.exists( "--sorted" );
     }
 
@@ -126,6 +135,7 @@ struct constraints
         if( m.exists( "to" ) ) { to = m.value< T >( "to" ); }
         if( m.exists( "less-or-equal" ) ) { to = m.value< T >( "less-or-equal" ); }
         if( m.exists( "le" ) ) { to = m.value< T >( "le" ); }
+        if( m.exists( "regex" ) ) { regex = boost::regex( m.value< std::string >( "regex" ) ); }
         sorted = m.exists( "sorted" );
     }
 
@@ -136,7 +146,8 @@ struct constraints
                && ( !from || !comma::math::less( t, *from ) )
                && ( !to || !comma::math::less( *to, t ) )
                && ( !less || comma::math::less( t, *less ) )
-               && ( !greater || comma::math::less( *greater, t ) );
+               && ( !greater || comma::math::less( *greater, t ) )
+               && ( !regex || matches( t, *regex ) );
     }
 
     bool done( const T& t ) const // quick and dirty
@@ -186,12 +197,12 @@ struct input_t
     std::vector< constrained< double > > doubles;
     std::vector< constrained< std::string > > strings;
 
-    bool is_a_match(bool is_or) const
+    bool is_a_match( bool is_or ) const
     {
 //         std::cerr << "==> is_a_match: doubles: ";
 //         for( unsigned int i = 0; i < doubles.size(); ++i ) { std::cerr << doubles[i].value << " "; }
 //         std::cerr << std::endl;
-        if (is_or)
+        if( is_or )
         {
             for( unsigned int i = 0; i < time.size(); ++i ) { if( time[i].is_a_match( is_or ) ) { return true; } }
             for( unsigned int i = 0; i < doubles.size(); ++i ) { if( doubles[i].is_a_match( is_or ) ) { return true; } }
@@ -209,9 +220,9 @@ struct input_t
         }
     }
 
-    bool done(bool is_or) const
+    bool done( bool is_or ) const
     {
-        if (is_or)
+        if( is_or )
         {
             for( unsigned int i = 0; i < time.size(); ++i ) { if( !time[i].done( is_or ) ) { return false; } }
             for( unsigned int i = 0; i < doubles.size(); ++i ) { if( !doubles[i].done( is_or ) ) { return false; } }
