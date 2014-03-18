@@ -370,23 +370,13 @@ void transform_special_tokens(/*out*/ std::vector<Token> &tokens)
 
                 if (op == "!=") { tokens.push_back(Token(t_keyword, "not", 1)); }
 
-                tokens.push_back(Token(t_function, "near", 1));
+                tokens.push_back(Token(t_function, (is_percent ? "near_percent" : "near"), 1));
                 tokens.push_back(Token(t_operator, "("));
                 tokens.push_back(lhs);
                 tokens.push_back(Token(t_operator, ","));
                 tokens.push_back(rhs);
                 tokens.push_back(Token(t_operator, ","));
                 tokens.push_back(eps);
-
-                if (is_percent)
-                {
-                    tokens.push_back(Token(t_operator, "/", 1));
-                    tokens.push_back(Token(t_number, "100.0", 1));
-                    tokens.push_back(Token(t_operator, "*", 1));
-                    // no need to put lhs in parentheses, since is always a single token (number or variable)
-                    tokens.push_back(lhs);
-                }
-
                 tokens.push_back(Token(t_operator, ")"));
                 tokens.insert(tokens.end(), rest.begin(), rest.end());  // append rest of tokens
             }
@@ -704,6 +694,7 @@ void print_header()
     std::cout
         << "import sys, re\n"
         << "def near(x, y, eps): return abs(x - y) <= eps\n"
+        << "def near_percent(x, y, percent): return abs(x - y) <= x * percent * 0.01\n"
         << "def max_index(dict) : return max(dict.keys())\n"
         << "def starts_with(s, x): return s.find(x) == 0\n"
         << "def ends_with(s, x): return s.rfind(x) == len(s) - len(x)\n"
