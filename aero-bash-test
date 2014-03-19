@@ -1,0 +1,13 @@
+#! /bin/bash
+
+[ -n "$aero_bash_test_include_guard_" ] && return || readonly aero_bash_test_include_guard_=1
+
+. $( which aero-bash-util )
+
+function expect_eq()
+{
+    if [[ "$1" == "$2" ]] ; then return ; fi
+    if [[ -n "$aero_test_case" ]] ; then name="$aero_test_case:" ; fi
+    echo -e "${red}${name}expected \"$2\" got \"$1\"${none}" >&2
+}
+

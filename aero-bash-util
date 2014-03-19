@@ -2,6 +2,11 @@
 
 [ -n "$aero_bash_util_include_guard_" ] && return || readonly aero_bash_util_include_guard_=1
 
+red="\033[0;31m"
+green="\033[0;32m"
+brown="\033[0;33m"
+none="\033[m"
+
 # take path-value pairs, assign the values to corresponding bash variables
 # in the variable name slashes will be replaced with given delimiter
 #
@@ -126,42 +131,25 @@ function aero_progress()
 # path_navigation_free_flight_regions
 
 # todo!!! document usage
-# todo: implement "hierarchy" with the usage like this:
-#       qpath navigation/restrictive works as following:
-#       run qpath navigation: if it is not pointing to q-storage, this will become the default
-#       run qpath navigation/restrictive, using the "default" from qpath navigation
-#       i.e:
-#           no path_* variables:
-#               qpath navigation/restrictive echoes navigation_restrictive as /mnt/q-storage/navigation/restrictive
-#           path_navigation=blah
-#               qpath navigation/restrictive echoes navigation_restrictive as blah/restrictive
-#           path_navigation_restrictive=oops
-#               qpath navigation/restrictive echoes navigation_restrictive as oops
-#           path_navigation=blah
-#           path_navigation_restrictive=oops
-#               qpath navigation/restrictive echoes navigation_restrictive as oops
-#
+# todo: it is quite slow; rewrite in c++ or in python?
 function qpath()
 {
-    local input=${1#"/"}
-    input=${input%"/"}
-    local varname="path_"$(echo $input|sed 's#\/#\_#g')
-    if [ -v $varname ] ; then
-        eval echo \$$varname
-    else
-        echo ${qstorage%"/"}"/"$input"/"
-    fi
+    local input=${1#/}
+    input=${input%/}
+    local varname="path_$( echo $input | sed 's#/#_#g' )"
+    if [ -v $varname ] ; then eval echo \$$varname ; return ; fi
+    local dir=$( dirname $input )
+    if [[ "$dir" == "." ]] ; then echo "${qstorage%/}/$input"
+    else echo $( qpath $dir )/$( basename $input ) ; fi
 }
-# 
-# function qpath_new() # todo: debug, test, and rename to qpath (remove the old implementation)
+
+# function qpath_old()
 # {
 #     local input=${1#"/"}
 #     input=${input%"/"}
 #     local varname="path_"$(echo $input|sed 's#\/#\_#g')
-#     if [ -v $varname ] ; then eval echo \$$varname ; return ; fi
-#     local dir=$( dirname $input )
-#     if [[ "$dir" == "." ]] ; echo ${qstorage%"/"}"/"$input"/" ; fi
-#     echo $( qpath $dir )/$( basename $input ) ; fi
+#     if [ -v $varname ] ; then eval echo \$$varname
+#     else echo ${qstorage%"/"}"/"$input"/" ; fi
 # }
 
 # returns 0 (success) if arg1 > arg2 using floating point comparison, otherwise prints returns 1 (failure)
@@ -170,4 +158,3 @@ function float_greater()
 {
     return $( echo | awk '{ print !('"$1"' > '"$2"'); }' )
 }
-
