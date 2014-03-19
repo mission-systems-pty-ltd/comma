@@ -51,8 +51,9 @@ function create_insert_statement()
     input+=$( cat "$input_file" | sed 's/$/\\/g' | tr '\n' 'n' )   # all one line, newlines replaced with a literal "\n"
     if [[ "$input" != *n ]]; then input+='n'; fi                   # handle no newline at EOF
 
-    local plan_from=$( extract_value "$input_file" "plan/from" )
-    local plan_to=$( extract_value "$input_file" "plan/to" )
+    # (remove any ",<altitude>" after plan/to and plan/from)
+    local plan_from=$( extract_value "$input_file" "plan/from" | sed 's/,.*//g' )
+    local plan_to=$( extract_value "$input_file" "plan/to" | sed 's/,.*//g' )
     local plan_time=$( extract_value "$input_file" "plan/departure_time" )
     if [[ -z "$plan_from" || -z "$plan_to" || -z "$plan_time" ]]; then return 1; fi  # error message already printed
     local output_path="$output_base_dir/${submit_time}_${batch_id}_${seq_num}_${plan_from}-${plan_to}"
