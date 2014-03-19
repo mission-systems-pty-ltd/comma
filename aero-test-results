@@ -139,7 +139,7 @@ if [[ "$plan_failed_count" != 0 ]]; then
     echo "Flight planning failed for $plan_failed_count test(s):"
     $sql_command "select stdin from JobQ where batchId = $batch_id and status = 'ERROR'" |
         awk 'NR == 1 { next; }  # skip header line
-             /^# expected:/ { pos1 = index($0, "/"); pos2 = index($0, "\\n"); print substr($0, pos1, pos2 - pos1); next; }
+             /^# path:/ { pos1 = index($0, "/"); pos2 = index($0, "\\n"); print substr($0, pos1, pos2 - pos1); next; }
              !warned { print "(warning: cannot get path for some of the jobs in batch '$batch_id')"; warned = 1; }'
 fi
 
