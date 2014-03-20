@@ -1,0 +1,27 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+tmp_dir="/tmp"
+results="$tmp_dir/aero-test-run_result.$$"
+expected="data/expected_results"
+quiet=0
+
+function bye()
+{
+    rm -f "$results"
+    exit $1
+}
+
+trap 'bye 1' SIGHUP SIGINT SIGTERM SIGPIPE
+
+aero-test-run 2>&1 | sed 's/in subdirectories of [^:]*/in subdirectories of DIR/g' > "$results"
+diff -b "$results" "$expected" > /dev/null
+
+if [[ $? != 0 ]]; then
+    echo "$name: failed with the following differences:"
+    diff -b "$results" "$expected"
+    bye 1
+fi
+
+bye 0

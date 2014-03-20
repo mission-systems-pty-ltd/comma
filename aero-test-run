@@ -74,6 +74,56 @@ function fail_on_output()
     if grep "."; then return 1; else return 0; fi
 }
 
+# return a string with "\" before any characters that are special in regular expressions
+function escape_special_chars()
+{
+    echo $* | sed 's/[].*|&^$[]/\\&/g'
+}
+
+# arguments: a list of directories containing "test" and "input" files
+# Outputs the same list, excluding any directories that
+# (1) contain only "test" (no "expected" or "input" file), and
+# (2) have at least one subdirectory containing another test
+# This is so that it is possible to have a generic "test" script in the base directory that is not
+# executed in that directory.
+function exclude_generic_tests()
+{
+    local dir_list=$*
+    local result_list=()
+
+    for dir in $dir_list; do
+        if [[ -f "$dir/test" && ! -f "$dir/input" && ! -f "$dir/expected" ]]; then
+            local pattern="^$( escape_special_chars "$dir" )/."
+            if echo $dir_list | fmt -1 | grep -q "$pattern"; then
+                if [[ "$debug" != "" ]] ; then echo "Excluding generic test '$dir/test'" >&2; fi
+                continue
+            fi
+        fi
+        result_list+=( $dir )
+    done
+
+    echo "${result_list[@]}"
+}
+
+# find a file inside a path, checking in each subdirectory (starting from the full path)
+# arguments: <path> <file to find>
+function closest_file_in_path()
+{
+    local path=$1
+    local file=$2
+
+    # sanity check (and avoid infinite loop)
+    if [[ -z "$path" ]]; then echo "$name: error: empty path in closest_file_in_path()" >&2; exit 1; fi
+    # get canonical name (so path always starts with "/")
+    path=$( readlink -e "$path" )
+
+    while true; do
+        if [[ -f "$path/$file" ]]; then echo $path/$file; break; fi
+        if [[ $path == "/" ]]; then break; fi
+        path=$( dirname "$path" )
+    done
+}
+
 # attempt to trace shared memory leaks
 # will report false positives if multiple flight-plan-builds are running at once
 function report_leaked_shared()
@@ -123,27 +173,37 @@ if (( $dir_count > 0 )) ; then
     if [[ "$result" == 0 ]] ; then message_ "$name: tests in $dir_count subdirectories of $pwd: succeeded" ; else error_ "$name: tests in $dir_count directories: some tests failed" ; fi
 fi
 
-test_scripts=$( find . -name "test" )
-test_scripts_count=$( find . -name "test" | wc -l )
+# search for directories containing either "test" or "input";
+# if "test" is absent, use the "test" in the closest parent directory
+
+test_script_dirs=$( exclude_generic_tests $( dirname $( find . -name "test" -or -name "input" ) | sort -u ) )
+test_scripts_count=$( echo $test_script_dirs | wc -w )
 failed_count=0
 if [[ "$debug" != "" ]] ; then verbose="--verbose" ; fi # quick and dirty
 if (( $test_scripts_count > 0 )) ; then
     message_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): running..."
-    for t in $test_scripts ; do
-        if disabled_ $t ; then warning_ "$name: $t: disabled" ; continue ; fi
-        message_ "$name: $t: running..."
-        basedir=$( pwd )
-        cd $( dirname $t )
-        timestamp="/tmp/aero-test-run-timestamp-$(basename $t)" # capture starting time
-        touch "$timestamp"
-        if [ -f ./input ] ; then cat ./input ; fi \
-            | ./$( basename $t ) $path $verbose 2> >( $grep_failed_ >&2 ) \
-            | if [ -f ./expected ] ; then aero-test-match ./expected 2>&1 | fail_on_output ; else cat > /dev/null ; fi
-        if status_ok ; then message_ "$name: $t: succeeded" ; else result=1 ; (( ++failed_count )) ; error_ "$name: $t: failed" ; fi
-        # see if there are files in /dev/shm created past start_time and report
-        report_leaked_shared "$timestamp" "$t"
-        cd $basedir
-        if [[ "$result" != 0 && "$until_first_failure" == true ]] ; then break ; fi
+    for dir in $test_script_dirs ; do
+        if disabled_ $dir ; then warning_ "$name: $dir: disabled" ; continue ; fi
+        test_exec=$( closest_file_in_path "$dir" "test" )
+        if [[ -z "$test_exec" ]]; then
+            echo "$name: error: no \"test\" file found in any parent directory of $dir" >&2
+        elif [[ ! -x "$test_exec" ]]; then
+            echo "$name: error: test is not executable: $test_exec" >&2
+        else
+            message_ "$name: $dir: running..."
+            basedir=$( pwd )
+            cd $dir
+            timestamp="$( mktemp -t aero-test-run-timestamp-$(basename $dir).XXXXXX )" # capture starting time
+            touch "$timestamp"
+            if [ -f ./input ] ; then cat ./input ; fi \
+                | "$test_exec" $path $verbose 2> >( $grep_failed_ >&2 ) \
+                | if [ -f ./expected ] ; then aero-test-match ./expected 2>&1 | fail_on_output ; else cat > /dev/null ; fi
+            if status_ok ; then message_ "$name: $dir: succeeded" ; else result=1 ; (( ++failed_count )) ; error_ "$name: $dir: failed" ; fi
+            # see if there are files in /dev/shm created past start_time and report
+            report_leaked_shared "$timestamp" "$dir"
+            cd $basedir
+            if [[ "$result" != 0 && "$until_first_failure" == true ]] ; then break ; fi
+        fi
     done
     if [[ "$result" == 0 ]] ; then message_ "$name: in subdirectories of $( pwd ): succeeded" ; else error_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): $failed_count test[s] out of $test_scripts_count failed" ; fi
 fi
