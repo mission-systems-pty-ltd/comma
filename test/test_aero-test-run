@@ -15,6 +15,7 @@ function bye()
 
 trap 'bye 1' SIGHUP SIGINT SIGTERM SIGPIPE
 
+cd $( dirname $0 )
 aero-test-run 2>&1 | sed 's/in subdirectories of [^:]*/in subdirectories of DIR/g' > "$results"
 diff -b "$results" "$expected" > /dev/null
 
