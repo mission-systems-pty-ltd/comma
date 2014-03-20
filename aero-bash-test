@@ -11,5 +11,10 @@ function expect_eq()
     if [[ -n "$aero_test_suite" ]] ; then name+=": $aero_test_suite" ; fi
     if [[ -n "$aero_test_case" ]] ; then name+=": $aero_test_case" ; fi
     echo -e "${red}${name}: expected \"$2\"; got \"$1\"${none}" >&2
+    aero_test_exit_code=1
 }
 
+function aero_test_exit()
+{
+    exit $aero_test_exit_code
+}

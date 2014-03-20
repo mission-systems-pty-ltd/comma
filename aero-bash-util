@@ -133,6 +133,9 @@ function default_qpath()
     echo "${qstorage%/}/$input"
 }
 
+# customized path prefix, e.g. path/weather/uk=my_weather
+qpath_prefix="path"
+
 # see usage below for timestamped_qpath
 #
 # todo: it is quite slow; rewrite in c++ or in python?
@@ -172,12 +175,14 @@ function qpath()
 #
 function timestamped_qpath()
 {
-    local t="$( basename $1 )"
+    local input=${1#/}
+    input=${input%/}
+    local t="$( basename $input )"
     if [[ "$t" =~ ^[0-9]{8}T[0-9]{6}(\.[0-9]+)?$ ]] ; then
-        local p=$( qpath $( dirname $1 ) )
-        if [[ "$p/$t" != "$( default_qpath $1 )" ]] ; then echo $p ; return ; fi
+        local p=$( qpath $( dirname $input ) )
+        if [[ "$p/$t" != "$( default_qpath $input )" ]] ; then echo $p ; return ; fi
     fi
-    qpath $1
+    qpath $input
 }
 
 # function qpath_old()
