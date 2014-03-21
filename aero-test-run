@@ -149,7 +149,7 @@ dirs=$( find . -name "tests" )
 dir_count=$( find . -name "tests" | wc -l )
 result=0
 if (( $dir_count > 0 )) ; then
-    message_ "$name: tests in $dir_count subdirectories of $pwd: running..."
+    message_ "$name: tests in $dir_count subdirectories of $basedir: running..."
     for dir in $dirs ; do
         tests=$( find $dir -name "*" -executable -type f )
         tests_count=$( find $dir -name "*" -executable -type f | wc -l )
@@ -170,7 +170,7 @@ if (( $dir_count > 0 )) ; then
         if [[ "$result" != 0 && "$until_first_failure" == true ]] ; then break ; fi
         if [[ "$intermediate_result" == 0 ]] ; then message_ "$name: $tests_count test(s) in $dir: succeeded" ; else error_ "$name: tests in $tests_count test(s) in $dir...: some tests failed" ; fi
     done
-    if [[ "$result" == 0 ]] ; then message_ "$name: tests in $dir_count subdirectories of $pwd: succeeded" ; else error_ "$name: tests in $dir_count directories: some tests failed" ; fi
+    if [[ "$result" == 0 ]] ; then message_ "$name: tests in $dir_count subdirectories of $basedir: succeeded" ; else error_ "$name: tests in $dir_count directories: some tests failed" ; fi
 fi
 
 # search for directories containing either "test" or "input";
