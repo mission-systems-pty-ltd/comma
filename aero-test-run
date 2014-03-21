@@ -176,7 +176,7 @@ fi
 # search for directories containing either "test" or "input";
 # if "test" is absent, use the "test" in the closest parent directory
 
-test_script_dirs=$( exclude_generic_tests $( dirname $( find . -name "test" -or -name "input" ) | sort -u ) )
+test_script_dirs=$( exclude_generic_tests $( dirname $( find . -name "test" -or -name "input" ) 2> /dev/null | sort -u ) )
 test_scripts_count=$( echo $test_script_dirs | wc -w )
 failed_count=0
 if [[ "$debug" != "" ]] ; then verbose="--verbose" ; fi # quick and dirty
