@@ -92,7 +92,7 @@ function exclude_generic_tests()
     local result_list=()
 
     for dir in $dir_list; do
-        if [[ -f "$dir/test" && ! -f "$dir/input" && ! -f "$dir/expected" ]]; then
+        if [[ -f "$dir/test" && ! -f "$dir/input" && ! -f "$dir/expected" && ! -f "$dir/disabled" ]]; then
             local pattern="^$( escape_special_chars "$dir" )/."
             if echo $dir_list | fmt -1 | grep -q "$pattern"; then
                 if [[ "$debug" != "" ]] ; then echo "Excluding generic test '$dir/test'" >&2; fi
@@ -209,3 +209,16 @@ if (( $test_scripts_count > 0 )) ; then
 fi
 if (( $test_scripts_count == 0 && $dir_count == 0 )) ; then echo -e "${brown}$name: warning: no tests or test directories found in $( pwd )${none}" >&2 ; fi
 exit $result
+
+
+# for batch modification of test cases
+# for file in `find -name "expected"` ; do
+#     echo $(dirname $file)
+#     #cat $file | awk '{print "# "$0}' > $file".txt"
+#     git_ignore=$(dirname $file)"/.gitignore"
+#     echo "output" > $git_ignore
+#     echo "stderr.log" >> $git_ignore
+#     cat $git_ignore
+# #   rm $git_ignore
+#     #mv $file".txt" $file
+# done
