@@ -124,6 +124,12 @@ function closest_file_in_path()
     done
 }
 
+# "dirname" with multiple arguments allowed (since some versions of "dirname" don't allow them)
+function get_dirnames()
+{
+    for i in $*; do dirname $i; done
+}
+
 # attempt to trace shared memory leaks
 # will report false positives if multiple flight-plan-builds are running at once
 function report_leaked_shared()
@@ -176,7 +182,7 @@ fi
 # search for directories containing either "test" or "input";
 # if "test" is absent, use the "test" in the closest parent directory
 
-test_script_dirs=$( exclude_generic_tests $( dirname $( find . -name "test" -or -name "input" ) 2> /dev/null | sort -u ) )
+test_script_dirs=$( exclude_generic_tests $( get_dirnames $( find . -name "test" -or -name "input" ) 2> /dev/null | sort -u ) )
 test_scripts_count=$( echo $test_script_dirs | wc -w )
 failed_count=0
 if [[ "$debug" != "" ]] ; then verbose="--verbose" ; fi # quick and dirty
