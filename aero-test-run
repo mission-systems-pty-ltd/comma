@@ -150,6 +150,8 @@ function report_leaked_shared()
     rm -f "$timestamp"
 }
 
+trap "error_ 'aero-test-run: received signal, terminating...' >&2 ; is_shutdown=true" SIGINT SIGTERM
+
 basedir=$( pwd )
 dirs=$( find . -name "tests" )
 dir_count=$( find . -name "tests" | wc -l )
@@ -163,6 +165,7 @@ if (( $dir_count > 0 )) ; then
         cd $dir
         intermediate_result=0
         for t in $tests ; do
+            if [[ -n "$is_shutdown" ]] ; then error_ "aero-test-run: terminated" >&2 ; exit 1 ; fi
             if disabled_ $t ; then warning_ "$name: $t: disabled" ; continue ; fi
             message_ "$name: $t: running..."
             timestamp="$( mktemp -t aero-test-run-timestamp-$(basename $t).XXXXXX )" # capture starting time
@@ -189,6 +192,7 @@ if [[ "$debug" != "" ]] ; then verbose="--verbose" ; fi # quick and dirty
 if (( $test_scripts_count > 0 )) ; then
     message_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): running..."
     for dir in $test_script_dirs ; do
+        if [[ -n "$is_shutdown" ]] ; then error_ "aero-test-run: terminated" >&2 ; exit 1 ; fi
         if disabled_ $dir ; then warning_ "$name: $dir: disabled" ; continue ; fi
         test_exec=$( closest_file_in_path "$dir" "test" )
         if [[ -z "$test_exec" ]]; then
