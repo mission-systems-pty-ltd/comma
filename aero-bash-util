@@ -40,13 +40,13 @@ function aero_path_value_to_var()
         case "$1" in
         --export)  export_variable="export" ;;
         --null-ok) null_ok="true" ;;
-        --prefix=*) prefix=${1#*=} ;;
-        --delimiter=*) delimiter=${1#*=} ;;
+        --prefix=*) prefix="${1#*=}" ;;
+        --delimiter=*) delimiter="${1#*=}" ;;
         esac
         shift
     done
 
-    if [ ! -z $prefix ] ; then prefix="$prefix$delimiter" ; fi
+    if [ ! -z "$prefix" ] ; then prefix="$prefix$delimiter" ; fi
 
     local path
     local value
