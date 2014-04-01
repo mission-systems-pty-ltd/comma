@@ -161,7 +161,7 @@ function stats_init()
 
 function stats_finalize()
 {
-    cat $stats_progress_csv | aero-progress --elapsed > $stats_elapsed_path_value
+    if [[ -f $stats_progress_csv ]] ; then cat $stats_progress_csv | aero-progress --elapsed > $stats_elapsed_path_value ; fi
 }
 
 trap "error_ 'aero-test-run: received signal, terminating...' >&2 ; is_shutdown=true" SIGINT SIGTERM
@@ -179,12 +179,12 @@ if (( $dir_count > 0 )) ; then
     for dir in $dirs ; do
         tests=$( find $dir -name "*" -executable -type f )
         tests_count=$( find $dir -name "*" -executable -type f | wc -l )
+        if disabled_ $dir ; then warning_ "$name: $dir: disabled" ; continue ; fi
         message_ "$name: $tests_count test(s) in $dir: running..."
         cd $dir
         intermediate_result=0
         for t in $tests ; do
             if [[ -n "$is_shutdown" ]] ; then error_ "aero-test-run: terminated" >&2 ; exit 1 ; fi
-            if disabled_ $t ; then warning_ "$name: $t: disabled" ; continue ; fi
             message_ "$name: $t: running..."
             timestamp="$( mktemp -t aero-test-run-timestamp-$(basename $t).XXXXXX )" # capture starting time
             touch "$timestamp"
