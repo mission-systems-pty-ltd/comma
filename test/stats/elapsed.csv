@@ -1,10 +1,10 @@
-./data/dir1/elapsed=0.009
+./data/dir1/elapsed=0.008
 ./data/dir2/elapsed=0.003
 ./data/dir3/elapsed=0.003
 ./data/dir4/elapsed=0.003
-./data/dir5/subdir1/elapsed=0.026
+./data/dir5/subdir1/elapsed=0.021
 ./data/dir5/subdir2/elapsed=0.003
 ./data/dir5/subdir3/elapsed=0.003
-./data/dir5/subdir3/subsubdir/elapsed=0.003
+./data/dir5/subdir3/subsubdir/elapsed=0.002
 ./data/dir6/elapsed=0.002
 ./data/dir7_expect_failure/elapsed=0.003
