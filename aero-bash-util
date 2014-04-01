@@ -113,16 +113,32 @@ function aero_elapsed()
 
 # append to <file> a coarse progress indication for <command> execution
 # the rationale of writing to a file is to have no side effects for <command>
-# usage: aero_progress <file> <command> <args>
-function aero_progress()
+# usage: aero_progress_named <file> <name> <command> <args>
+#        where <name> is an arbitrary name of user's choice that will be put in the log
+function aero_progress_named()
 {
     local output_file=$1
-    local name=$( basename $2 )
+    local name=$2
     echo "$( date +%Y%m%dT%H%M%S.%N | cut -b1-22 ),$name,begin" >> $output_file
-    ${@:2}
+    ${@:3}
     exit_code=$?
     echo "$( date +%Y%m%dT%H%M%S.%N | cut -b1-22 ),$name,end" >> $output_file
     return $exit_code
+}
+
+# append to <file> a coarse progress indication for <command> execution
+# the rationale of writing to a file is to have no side effects for <command>
+# usage: aero_progress <file> <command> <args>
+function aero_progress()
+{
+    aero_progress_named $1 $( basename $2 ) ${@:2}
+#     local output_file=$1
+#     local name=$( basename $2 )
+#     echo "$( date +%Y%m%dT%H%M%S.%N | cut -b1-22 ),$name,begin" >> $output_file
+#     ${@:2}
+#     exit_code=$?
+#     echo "$( date +%Y%m%dT%H%M%S.%N | cut -b1-22 ),$name,end" >> $output_file
+#     return $exit_code
 }
 
 # default path looking like /mnt/q-storage/weather/uk
