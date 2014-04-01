@@ -283,7 +283,7 @@ stream< S >::stream( const std::string& name, mode::value m, mode::blocking_valu
         typename impl::traits< S >::file_stream* s =
             m == comma::io::mode::binary ? new typename impl::traits< S >::file_stream( &name[0], std::ios::binary )
                                          : new typename impl::traits< S >::file_stream( &name[0] );
-        if( s->bad() ) { COMMA_THROW( comma::exception, "failed to open " << name_ ); }
+        if( s->bad() || !s->is_open() ) { COMMA_THROW( comma::exception, "failed to open " << name_ ); }
         stream_ = s;
         close_ = boost::bind( &impl::close_file_stream< S >, s, fd_ );
         fd_ = io::invalid_file_descriptor; // as select does not work on regular files on windows
