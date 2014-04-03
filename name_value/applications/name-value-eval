@@ -156,10 +156,10 @@ if (( test_option )); then
             line_list+=" $line"
             ( cat "$tmp_vars"; echo "${line_list[@]}" | name-value-eval-preparse --test ) | $python_cmd 2> $err
             line_list=
-        fi
 
-        if [[ -s "$err" ]]; then
-            ( echo -n "$name: line $linenum of $input_filename: "; process_python_errors "$err" "$line" ) >&2
+            if [[ -s "$err" ]]; then
+                ( echo -n "$name: line $linenum of $input_filename: "; process_python_errors "$err" "$line" ) >&2
+            fi
         fi
     done
 else
