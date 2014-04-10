@@ -1,0 +1,66 @@
+#!/bin/bash
+
+# this script is designed to be included in another script directly, for example:
+# . $( which comma-application-util )
+
+[[ -n "$comma_application_util_include_guard_" ]] && return
+readonly comma_application_util_include_guard_=1
+
+# output the process ids of all children of a process (one per line); by default, just direct children, not descendants
+# options:
+#   <pid = positive integer>    Target process (only one allowed) (default = current process)
+#   --recursive                 Get all descendants, not just immediate children
+function get_children()
+{
+    local is_recursive=0
+    local target_pid=$$
+
+    while [[ $# -ne 0 ]]; do
+        case $1 in
+            --recursive) is_recursive=1;;
+            -*)          echo "$0: get_children(): unknown option '$1'" >&2; return 1;;
+            *)           target_pid=$1;;
+        esac
+        shift
+    done
+
+    if (( is_recursive )); then
+        ps -eo ppid:1,pid:1 | awk '
+            { child[$1, ++num_children[$1]] = $2; }
+            # idosyncracy of awk: local function variables must be defined as (unused) function arguments
+            function print_children(parent, local_n) \
+            {
+                print parent;
+                for (local_n = 1;local_n <= num_children[parent];local_n++)
+                { print_children(child[parent, local_n]); }
+            }
+            END { print_children('"$target_pid"'); }'
+    else
+        ps -eo ppid:1,pid:1 | grep "^$target_pid " | cut -f2 -d' '
+    fi
+}
+
+# kill all children of a process
+# options:
+#   <pid = positive integer>    Process to kill (only one allowed) (default = current process)
+#   -<"kill" option ...>        Options to pass to the "kill" command (e.g. -SIGUSR1 or -9)
+#   --recursive                 Kills all descendants, not just immediate children
+function kill_children()
+{
+    local recursive_option=
+    local kill_options=()
+    local target_pid=$$
+
+    while [[ $# -ne 0 ]]; do
+        case $1 in
+            --recursive) recursive_option="--recursive";;
+            -*)          kill_options+=( $1 );;
+            *)           target_pid=$1;;
+        esac
+        shift
+    done
+
+    local child_pids=$( get_children $recursive_option $target_pid )
+    kill ${kill_options[@]} $child_pids 2> /dev/null
+}
+
