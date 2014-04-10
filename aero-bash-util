@@ -2,10 +2,89 @@
 
 [ -n "$aero_bash_util_include_guard_" ] && return || readonly aero_bash_util_include_guard_=1
 
+. $( which comma-application-util )
+
 red="\033[0;31m"
 green="\033[0;32m"
 brown="\033[0;33m"
 none="\033[m"
+
+# Trap common termination signals.
+# Arguments: [<"bye" function>] [--kill-children|--no-kill-children|--kill-recursive] (default = --kill-recursive)
+#
+# The (optional) "bye" function performs any necessary cleanup for the script.
+# Do not call "exit" from the "bye" function; instead, call "standard_bye $*" once at the end.
+#
+# Example:
+#
+# function bye() {
+#     trap "" SIGTERM SIGINT SIGHUP SIGPIPE SIGQUIT   # ignore signals
+#     rm -f $tmp_dir
+#     standard_bye $*
+# }
+#
+# standard_trap bye --kill-recursive
+#
+function standard_trap()
+{
+    local bye_function
+    local kill_option="--kill-recursive"
+    while [[ $# -ne 0 ]]; do
+        case $1 in
+            --kill-children|--kill-recursive) kill_option=$1;;
+            --no-kill-children)               kill_option="";;
+            -*) echo "aero-bash-util: standard_trap(): unknown option '$1'" >&2; return 1;;
+            *)  if [[ -z "$bye_function" ]]; then bye_function=$1
+                else echo "aero-bash-util: standard_trap(): unexpected argument '$1'" >&2; return 1; fi;;
+        esac
+        shift
+    done
+
+    if [[ -z "$bye_function" ]]; then bye_function="standard_bye"; fi
+    trap "echo $name: Interrupted by SIGHUP>&2;  $bye_function $kill_option" SIGHUP
+    trap "echo $name: Interrupted by SIGTERM>&2; $bye_function $kill_option" SIGTERM
+    trap "echo $name: Interrupted by SIGPIPE>&2; $bye_function $kill_option" SIGPIPE
+    trap "echo $name: Interrupted by SIGQUIT>&2; $bye_function $kill_option" SIGQUIT
+    # handle SIGINT specially
+    trap "echo $name: Interrupted by SIGINT>&2;  $bye_function $kill_option --SIGINT" SIGINT
+}
+
+# A "bye" function for use with standard_trap. Always exits, after killing children if instructed to.
+# Options:
+#   <exit code>         Exit code to use (default: 1)
+#   --SIGINT            Interrupted by SIGINT (control-C) (propagates signal to parent and exits with code 1)
+#   --kill-children     Kill (direct) children of the current process (default)
+#   --kill-recursive    Kill all descendants, not just direct children
+#   --no-kill-children  Do not kill any other processes
+function standard_bye()
+{
+    # ignore signals
+    trap '' SIGHUP SIGINT SIGTERM SIGPIPE SIGQUIT
+
+    local exit_code=1
+    local got_sigint=0
+    local kill_option
+    while [[ $# -ne 0 ]]; do
+        case $1 in
+            --kill-children|--kill-recursive) kill_option=$1;;
+            --no-kill-children)               kill_option="";;
+            --SIGINT)                         got_sigint=1;;
+            -*) echo "aero-bash-util: standard_trap(): unknown option '$1'" >&2; return 1;;
+            *)  if [[ $1 =~ ^[0-9]+$ ]]; then exit_code=$1
+                else echo "aero-bash-util: standard_bye(): unexpected argument '$1'" >&2; exit 1; fi;;
+        esac
+        shift
+    done
+
+    if [[ "$kill_option" == "--kill-children" ]]; then
+        echo "$name: killing children" >&2; kill_children
+    elif [[ "$kill_option" == "--kill-recursive" ]]; then
+        echo "$name: killing children recursively" >&2; kill_children --recursive
+    fi
+
+    if (( got_sigint )); then trap - SIGINT; kill -SIGINT $$; exit 1
+    else exit $exit_code; fi
+}
 
 # take path-value pairs, assign the values to corresponding bash variables
 # in the variable name slashes will be replaced with given delimiter
