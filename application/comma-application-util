@@ -13,7 +13,7 @@ readonly comma_application_util_include_guard_=1
 function get_children()
 {
     local is_recursive=0
-    local target_pid=$$
+    local target_pid=$BASHPID   # using $BASHPID instead of $$ handles subshells properly (e.g backgrounded functions)
 
     while [[ $# -ne 0 ]]; do
         case $1 in
@@ -49,7 +49,7 @@ function kill_children()
 {
     local recursive_option=
     local kill_options=()
-    local target_pid=$$
+    local target_pid=$BASHPID   # using $BASHPID instead of $$ handles subshells properly (e.g backgrounded functions)
 
     while [[ $# -ne 0 ]]; do
         case $1 in
