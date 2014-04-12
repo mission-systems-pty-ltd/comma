@@ -205,6 +205,7 @@ fi
 
 test_script_dirs=$( exclude_generic_tests $( get_dirnames $( find . -name "test" -or -name "input" ) 2> /dev/null | sort -u ) )
 test_scripts_count=$( echo $test_script_dirs | wc -w )
+count=0
 failed_count=0
 if [[ "$debug" != "" ]] ; then verbose="--verbose" ; fi # quick and dirty
 if (( $test_scripts_count > 0 )) ; then
@@ -215,15 +216,16 @@ if (( $test_scripts_count > 0 )) ; then
         test_exec=$( closest_file_in_path "$dir" "test" )
         if [[ -z "$test_exec" ]]; then echo "$name: error: no \"test\" file found in any parent directory of $dir" >&2 ; continue ; fi
         if [[ ! -x "$test_exec" ]]; then echo "$name: error: test is not executable: $test_exec" >&2 ; continue ; fi
-        message_ "$name: $dir: running..."
+        (( ++count ))
+        message_ "$name: test $count of $test_scripts_count: $dir: running..."
         basedir=$( pwd )
         cd $dir
-        timestamp="$( mktemp -t aero-test-run-timestamp-$(basename $dir).XXXXXX )" # capture starting time
+        timestamp="$( mktemp -t aero-test-run-timestamp-$( basename $dir ).XXXXXX )" # capture starting time
         touch "$timestamp"
         if [ -f ./input ] ; then cat ./input ; fi \
             | aero_progress_named $stats_progress_csv "$dir" "$test_exec" $path $verbose 2> >( $grep_failed_ >&2 ) \
             | if [ -f ./expected ] ; then aero-test-match ./expected 2>&1 | fail_on_output ; else cat > /dev/null ; fi
-        if status_ok ; then message_ "$name: $dir: succeeded" ; else result=1 ; (( ++failed_count )) ; error_ "$name: $dir: failed" ; fi
+        if status_ok ; then message_ "$name: test $count of $test_scripts_count: $dir: succeeded" ; else result=1 ; (( ++failed_count )) ; error_ "$name: $dir: failed" ; fi
         report_leaked_shared "$timestamp" "$dir" # see if there are files in /dev/shm created past start_time and report
         cd $basedir
         if [[ "$result" != 0 && "$until_first_failure" == true ]] ; then break ; fi
