@@ -1,8 +1,8 @@
-./data/dir1/elapsed=0.016
-./data/dir2/elapsed=0.026
+./data/dir1/elapsed=0.011
+./data/dir2/elapsed=0.017
 ./data/dir3/elapsed=0.003
 ./data/dir4/elapsed=0.003
-./data/dir5/subdir1/elapsed=0.037
+./data/dir5/subdir1/elapsed=0.029
 ./data/dir5/subdir2/elapsed=0.003
 ./data/dir5/subdir3/elapsed=0.003
 ./data/dir5/subdir3/subsubdir/elapsed=0.003
