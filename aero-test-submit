@@ -15,7 +15,7 @@ db_name="qdata"
 sql_command="mysql -h $db_host -P $db_port -u $db_user -p$db_pwd $db_name -e "
 
 # aero-test-util is in the same folder as this script
-. $( whiche aero-test-util )
+. $( which aero-test-util )
 
 function usage_()
 {
