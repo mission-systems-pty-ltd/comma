@@ -6,6 +6,7 @@
 [[ -n "$comma_application_util_include_guard_" ]] && return
 readonly comma_application_util_include_guard_=1
 
+# usage: get_children [<pid>] [--recursive]
 # output the process ids of all children of a process (space separated); by default, just direct children,
 # not descendants
 # options:
@@ -45,6 +46,7 @@ function get_children()
     fi
 }
 
+# usage: kill_children [<pid>] [--recursive] [-<"kill" options> ...]
 # kill all children of a process
 # options:
 #   <pid = positive integer>    Process to kill (only one allowed) (default = current process)
@@ -69,8 +71,8 @@ function kill_children()
     kill ${kill_options[@]} $child_pids 2> /dev/null
 }
 
+# usage: comma_trap [<"cleanup" command>] [<signal list> ...] [--exit[=]<exit code>] [--kill-children|--no-kill-children|--kill-recursive] (default = --kill-recursive)
 # Trap termination signals.
-# Arguments: [<"cleanup" command>] [<signal list> ...] [--exit[=]<exit code>] [--kill-children|--no-kill-children|--kill-recursive] (default = --kill-recursive)
 # Order of arguments does not matter; arguments starting with "SIG" are assumed to be signal names.
 # If no signals are listed, SIGTERM (the default "kill" signal) and SIGINT (control-C) are implied,
 # otherwise all signals must be specified explicitly.
