@@ -6,7 +6,8 @@
 [[ -n "$comma_application_util_include_guard_" ]] && return
 readonly comma_application_util_include_guard_=1
 
-# output the process ids of all children of a process (one per line); by default, just direct children, not descendants
+# output the process ids of all children of a process (space separated); by default, just direct children,
+# not descendants
 # options:
 #   <pid = positive integer>    Target process (only one allowed) (default = current process)
 #   --recursive                 Get all descendants, not just immediate children
@@ -30,13 +31,17 @@ function get_children()
             # idosyncracy of awk: local function variables must be defined as (unused) function arguments
             function print_children(parent, local_n) \
             {
-                print parent;
                 for (local_n = 1;local_n <= num_children[parent];local_n++)
-                { print_children(child[parent, local_n]); }
+                {
+                    printf "%s%s", separator, child[parent, local_n];
+                    separator = " ";
+                    print_children(child[parent, local_n]);
+                }
             }
-            END { print_children('"$target_pid"'); }'
+            END { print_children('"$target_pid"'); printf "\n"; }'
     else
-        ps -eo ppid:1,pid:1 | grep "^$target_pid " | cut -f2 -d' '
+        ps -eo ppid:1,pid:1 | grep "^$target_pid " | cut -f2 -d' ' | tr '\n' ' ' | sed 's/ $//g'
+        echo   # add final newline
     fi
 }
 
@@ -62,5 +67,125 @@ function kill_children()
 
     local child_pids=$( get_children $recursive_option $target_pid )
     kill ${kill_options[@]} $child_pids 2> /dev/null
+}
+
+# Trap termination signals.
+# Arguments: [<"cleanup" command>] [<signal list> ...] [--exit[=]<exit code>] [--kill-children|--no-kill-children|--kill-recursive] (default = --kill-recursive)
+# Order of arguments does not matter; arguments starting with "SIG" are assumed to be signal names.
+# If no signals are listed, SIGTERM (the default "kill" signal) and SIGINT (control-C) are implied,
+# otherwise all signals must be specified explicitly.
+#
+# The optional "cleanup" command should perform any necessary cleanup for the script, but should not call "exit"
+# (exit is automatic).
+# The default exit code is 1; use option --exit to set the code (doesn't work for SIGINT).
+# The variable $SIGNAL_NAME may be used in the cleanup command (the name of the signal caught),
+# but be sure to use single quotes in this case.
+#
+# Examples:
+#
+# comma_trap
+# comma_trap --exit 3
+# comma_trap 'echo Killed' SIGTERM SIGINT SIGQUIT --kill-children
+# comma_trap SIGTERM SIGINT SIGQUIT SIGHUP
+# comma_trap SIGINT 'echo Cleaning up; rm -f $tmp_dir'
+# comma_trap do_cleanup SIGTERM
+#
+function comma_trap()
+{
+    local cleanup_command
+    local signal_list=()
+    local kill_option="--kill-recursive"
+    local exit_code=1
+    local script_name
+    local original_args="$*"
+    while [[ $# -ne 0 ]]; do
+        case $1 in
+            SIG*)     signal_list+=( $1 );;
+            INT|TERM) echo "comma_trap: signal names must start with 'SIG' (found '$1') (called: comma_trap $original_args)" >&2; return 1;;
+            --kill-children|--kill-recursive) kill_option=$1;;
+            --no-kill-children)               kill_option="";;
+            --exit=*)                         exit_code=${1#*=};;
+            --exit)                           shift; exit_code=$1;;
+            --name=*)                         script_name=${1#*=};;
+            -*) echo "comma_trap: unknown option '$1' (called: comma_trap $original_args)" >&2; return 1;;
+            *)  if [[ -n "$cleanup_command" || "$1" =~ ^[0-9]+$ ]]; then
+                echo "comma_trap: unexpected argument '$1' (called: comma_trap $original_args)" >&2; return 1
+                else cleanup_command=$1; fi;;
+        esac
+        shift
+    done
+
+    if echo $cleanup_command | grep -q "\<exit\>"; then
+        echo "comma_trap: cleanup command cannot contain 'exit' (called: comma_trap $original_args)" >&2; return 1
+    fi
+
+    if [[ ! "$exit_code" =~ ^[0-9]+$ ]]; then
+        echo "comma_trap: illegal exit code '$exit_code' (called: comma_trap $original_args)" >&2; return 1
+    fi
+
+    local trap_options="$kill_option --exit=$exit_code"
+    if [[ -n "$script_name" ]]; then trap_options+=" --name=$script_name"; fi
+    if [[ ${#signal_list[@]} == 0 ]]; then signal_list=( "SIGINT" "SIGTERM" ); fi
+
+    local sig
+    local sig_option
+    for sig in ${signal_list[@]}; do
+        if [[ $sig == "SIGINT" ]]; then sig_option="--SIGINT"; else sig_option=""; fi
+        trap "SIGNAL_NAME='$sig'; comma_trap_bye_impl '$cleanup_command' $trap_options $sig_option" $sig
+    done
+}
+
+# Used by comma_trap; do not call this function directly.
+# Usage: comma_trap_bye_impl <cleanup command> [<options ...>]
+# Options:
+#   --name=<caller>     Name of script
+#   --exit=<exit code>  Exit code to use (default: 1)
+#   --SIGINT            Interrupted by SIGINT (control-C)
+#   --kill-children     Kill (direct) children of the current process (default)
+#   --kill-recursive    Kill all descendants, not just direct children
+function comma_trap_bye_impl()
+{
+    # ignore signals while handling a signal
+    trap '' SIGHUP SIGINT SIGTERM SIGPIPE SIGQUIT
+    local cleanup_command=$1
+    shift
+
+    local exit_code=1
+    local caught_sigint=0
+    local kill_option
+    local script_name
+    while [[ $# -ne 0 ]]; do
+        case $1 in
+            --kill-children|--kill-recursive)
+                      kill_option=$1;;
+            --SIGINT) caught_sigint=1;;
+            --name=*) script_name=${1#*=};;
+            --exit=*) exit_code=${1#*=};;
+            -*)       echo "comma_trap_bye_impl(): unknown option '$1'" >&2; return 1;;
+            *)        echo "comma_trap_bye_impl(): unexpected argument '$1'" >&2; exit 1;;
+        esac
+        shift
+    done
+
+    local msg
+    if [[ -n "$script_name" ]]; then msg="$script_name "; fi
+    msg+="(pid $BASHPID): caught $SIGNAL_NAME"
+    local kill_command
+
+    if [[ "$kill_option" == "--kill-children" ]]; then
+        kill_command="kill_children"
+        msg+=": killing children"
+    elif [[ "$kill_option" == "--kill-recursive" ]]; then
+        kill_command="kill_children --recursive"
+        msg+=": killing children recursively"
+    fi
+    if (( caught_sigint )); then msg+="; propagating SIGINT"; fi
+
+    echo $msg >&2
+    if [[ -n "$kill_command" ]]; then $kill_command; fi
+    if [[ -n "$cleanup_command" ]]; then eval "$cleanup_command"; fi
+
+    if (( caught_sigint )); then trap - SIGINT; kill -SIGINT $BASHPID; fi
+    exit $exit_code
 }
 
