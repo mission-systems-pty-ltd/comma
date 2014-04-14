@@ -169,7 +169,7 @@ function comma_trap_bye_impl()
 
     local msg
     if [[ -n "$script_name" ]]; then msg="$script_name "; fi
-    msg+="(pid $BASHPID): caught $SIGNAL_NAME"
+    msg+="(pid $BASHPID): comma_trap caught $SIGNAL_NAME"
     local kill_command
 
     if [[ "$kill_option" == "--kill-children" ]]; then
