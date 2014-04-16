@@ -212,11 +212,11 @@ if (( $test_scripts_count > 0 )) ; then
     message_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): running..."
     for dir in $test_script_dirs ; do
         if [[ -n "$is_shutdown" ]] ; then error_ "aero-test-run: terminated" >&2 ; exit 1 ; fi
-        if disabled_ $dir ; then warning_ "$name: $dir: disabled" ; continue ; fi
+        (( ++count ))
+        if disabled_ $dir ; then warning_ "$name: test $count of $test_scripts_count: $dir: disabled" ; continue ; fi
         test_exec=$( closest_file_in_path "$dir" "test" )
         if [[ -z "$test_exec" ]]; then echo "$name: error: no \"test\" file found in any parent directory of $dir" >&2 ; continue ; fi
         if [[ ! -x "$test_exec" ]]; then echo "$name: error: test is not executable: $test_exec" >&2 ; continue ; fi
-        (( ++count ))
         message_ "$name: test $count of $test_scripts_count: $dir: running..."
         basedir=$( pwd )
         cd $dir
