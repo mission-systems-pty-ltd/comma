@@ -10,7 +10,7 @@
 #include <comma/application/command_line_options.h>
 #include <comma/csv/stream.h>
 
-#include <aero/geometry/traits.h>
+#include "../../geometry/traits.h"
 
 struct free_flight_edge {
     acfr::aero::coordinates source;
