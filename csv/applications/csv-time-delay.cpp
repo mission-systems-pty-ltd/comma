@@ -86,11 +86,13 @@ int main( int ac, char** av )
         if( options.exists( "--help" ) || options.exists( "-h" ) || ac == 1 ) { usage(); }        
         double d = boost::lexical_cast< double >( options.unnamed( "", "--binary,-b,--delimiter,-d,--fields,-f" )[0] );
         int sign = d < 0 ? -1 : 1;
-        int seconds = int( std::floor( std::abs( d ) ) );
-        int microseconds = int( ( std::abs( d ) - seconds ) * 1000000 );
+        int minutes = int( std::floor( std::abs( d )/60 ) );
+        int seconds = int( std::floor( std::abs( d ) - double(minutes) * 60 ) );
+        int microseconds = int( ( std::abs( d ) - ( double(minutes) * 60 + seconds ) ) * 1000000 );
+        minutes *= sign;
         seconds *= sign;
         microseconds *= sign;
-        boost::posix_time::time_duration delay = boost::posix_time::seconds( seconds ) + boost::posix_time::microseconds( microseconds );
+        boost::posix_time::time_duration delay = boost::posix_time::minutes( minutes ) + boost::posix_time::seconds( seconds ) + boost::posix_time::microseconds( microseconds );
         comma::csv::options csv( options );
         comma::csv::input_stream< Point > istream( std::cin, csv );
         comma::csv::output_stream< Point > ostream( std::cout, csv );
