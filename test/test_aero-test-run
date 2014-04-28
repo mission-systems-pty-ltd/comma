@@ -15,7 +15,7 @@ function bye()
 
 trap 'bye 1' SIGHUP SIGINT SIGTERM SIGPIPE
 
-echo "$name: disabled for now" >&2
+#echo "$name: disabled for now" >&2
 exit 0
 
 #cd $( dirname $0 )
