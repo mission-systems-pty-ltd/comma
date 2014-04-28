@@ -143,6 +143,17 @@ function aero_progress()
 #     return $exit_code
 }
 
+# Returns 0 (success) if the variable is defined (including empty string), otherwise returns 1
+# (note: could just use "if [[ -v $varname ]]" on Ubuntu, but "-v" is unavailable on RedHat)
+function variable_defined()
+{
+    local varname=$1
+    if [[ ! "$varname" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then return 1; fi
+
+    if [[ $( eval $( echo "if [[ ! -z \${$varname+x} ]]; then echo set; fi" ) ) == "set" ]]
+    then return 0; else return 1; fi
+}
+
 # default path looking like /mnt/q-storage/weather/uk
 function default_qpath()
 {
@@ -161,8 +172,8 @@ function qpath()
 {
     local input=${1#/}
     input=${input%/}
-    local varname="path_$( echo $input | sed 's#/#_#g' )"
-    if [ -v $varname ] ; then eval echo \$$varname ; return ; fi
+    local varname="path_$( echo $input | sed 's#[/-]#_#g' )"
+    if variable_defined $varname; then eval echo \$$varname ; return ; fi
     local dir=$( dirname $input )
     if [[ "$dir" == "." ]] ; then default_qpath $input
     else echo $( qpath $dir )/$( basename $input ) ; fi
