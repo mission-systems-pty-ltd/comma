@@ -123,7 +123,7 @@ function aero_progress_named()
     local name=$2
     echo "$( date +%Y%m%dT%H%M%S.%N | cut -b1-22 ),$name,begin" >> $output_file
     ${@:3}
-    exit_code=$?
+    local exit_code=$?
     echo "$( date +%Y%m%dT%H%M%S.%N | cut -b1-22 ),$name,end" >> $output_file
     return $exit_code
 }
