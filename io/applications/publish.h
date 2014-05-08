@@ -49,13 +49,13 @@ public:
     
     publish(const std::vector<std::string> file_names, unsigned int n = 10u, unsigned int c = 10u, unsigned int packet_size = 0, bool discard = true, bool flush = true );
     ~publish();
-    void read_line();
+    bool read_line();
     bool read_bytes();
 
 private:
     std::size_t write(const char* buffer, std::size_t size);
-    void push(const std::string& line);
-    void push(char* buffer, std::size_t size);
+    int push(const std::string& line);
+    int push(char* buffer, std::size_t size);
     void pop();
     std::vector< boost::shared_ptr< io::publisher > > publishers_;
     io::select select_;

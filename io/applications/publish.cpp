@@ -86,12 +86,13 @@ publish::~publish()
     for( std::size_t i = 0; i < publishers_.size(); ++i ) { publishers_[i]->close(); }
 }
 
-void publish::read_line()
+bool publish::read_line()
 {
     if( line_buffer_ && !line_buffer_->empty() )
     {
         select_.wait();
     }
+    bool written_count = 0;
     if( !line_buffer_ || line_buffer_->empty() || select_.read().ready( stdin_fd ) )
     {
         std::string line;
@@ -99,13 +100,17 @@ void publish::read_line()
         if( line.length() != 0 )
         {
             line += '\n';
-            push(line);
+            written_count += push(line);
         }
     }
-    while( line_buffer_ && ( !line_buffer_->empty() ) && ( write( line_buffer_->front().data(), line_buffer_->front().size() ) ) ) // pop the buffer
+    while( line_buffer_ && ( !line_buffer_->empty() ) ) // pop the buffer
     {
-        line_buffer_->pop();
+        int written_ok = write( line_buffer_->front().data(), line_buffer_->front().size() );
+        if( written_ok ) { line_buffer_->pop(); }
+	written_count += written_ok;
     }
+    
+    return true;
 }
 
 bool publish::read_bytes()
@@ -114,6 +119,8 @@ bool publish::read_bytes()
     {
         select_.wait();
     }
+    
+    int written_count = 0;
     if( !char_buffer_ || char_buffer_->empty() || select_.read().ready( stdin_fd ) )
     {
         std::vector< char > w( packet_size_ );
@@ -124,13 +131,16 @@ bool publish::read_bytes()
         int gcount = _read( 0, buf, packet_size_ );
 #endif
         if( gcount == 0 ) { return false; } // i.e. end of file
-        push( buf, gcount );
+        written_count = push( buf, gcount );
     }
 
-    while( char_buffer_ &&  !char_buffer_->empty() && write( &char_buffer_->front()[0], packet_size_ ) ) // pop the buffer packet by packet
+    while( char_buffer_ &&  !char_buffer_->empty() ) // pop the buffer packet by packet
     {
-        char_buffer_->pop();
+        int written_ok = write( &char_buffer_->front()[0], packet_size_ );
+	if( written_ok ) { char_buffer_->pop(); }
+	written_count += written_ok;
     }
+    
     return true;
 }
 
@@ -142,10 +152,12 @@ std::size_t publish::write( const char* buffer, std::size_t size )
 }
 
 
-void publish::push(const std::string& line)
+int publish::push(const std::string& line)
 {
-    if( ( !line_buffer_ || ( line_buffer_->empty() ) ) && write( line.data(), line.size() ) )
+    int written_count = 0; // streams written to
+    if( ( !line_buffer_ || ( line_buffer_->empty() ) ) )
     {
+	written_count = write( line.data(), line.size() );
     }
     else if( line_buffer_ )
     {
@@ -161,9 +173,11 @@ void publish::push(const std::string& line)
         }
         line_buffer_->push(line);
     }
+    
+    return written_count;
 }
 
-void publish::push(char* buffer, std::size_t size)
+int publish::push(char* buffer, std::size_t size)
 {
     // fill out the packet buffer
     char* p = buffer;
@@ -186,11 +200,13 @@ void publish::push(char* buffer, std::size_t size)
         packet = &packet_[0];
     }
 
+    int written_count = 0;
     if( packet_offset_ == packet_size_ )
     {
         // try to write packet buffer to the pipes
-        if ( ( !char_buffer_ || ( char_buffer_->empty() ) ) &&  write( packet, packet_size_ ) )
+        if ( ( !char_buffer_ || ( char_buffer_->empty() ) ) )
         {
+	    written_count = write( packet, packet_size_ );
         }
         else if ( char_buffer_ )
         {
@@ -215,8 +231,10 @@ void publish::push(char* buffer, std::size_t size)
     // handle the remaining bytes
     if ( p < buffer + size )
     {
-        push( p, size - static_cast<std::size_t>(p - buffer) );
+        written_count += push( p, size - static_cast<std::size_t>(p - buffer) );
     }
+    
+    return written_count;
 }
 
 } } } /// namespace comma { namespace io { namespace applications {

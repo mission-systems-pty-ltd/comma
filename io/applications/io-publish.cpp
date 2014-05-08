@@ -111,7 +111,7 @@ int main( int ac, char** av )
         else
         {
             comma::io::applications::publish publish( names, n, 1, 0, discard, flush );
-            while( !is_shutdown && std::cin.good() && !std::cin.eof() ) { publish.read_line(); }
+            while( !is_shutdown && std::cin.good() && !std::cin.eof() && publish.read_line() );
         }
         if( is_shutdown ) { std::cerr << "io-publish: interrupted by signal" << std::endl; }
         return 0;
