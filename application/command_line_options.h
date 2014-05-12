@@ -33,8 +33,8 @@
 
 /// @author vsevolod vlaskine
 
-#ifndef COMMA_APPLICATION_COMMANDLINEOPTIONS_H_
-#define COMMA_APPLICATION_COMMANDLINEOPTIONS_H_
+#ifndef COMMA_APPLICATION_COMMAND_LINE_OPTIONS_H_
+#define COMMA_APPLICATION_COMMAND_LINE_OPTIONS_H_
 
 #include <map>
 #include <string>
@@ -109,26 +109,48 @@ class command_line_options
         /// throw, if more than one of given options exists (freaking ugly name)
         void assert_mutually_exclusive( const std::string& names ) const;
 
+        /// an option description
+        template < typename T >
+        struct description
+        {
+            std::vector< std::string > names;
+            bool is_optional;
+            bool has_value;
+            boost::optional< T > default_value;
+            std::string help;
+
+            /// default constructor
+            description() : is_optional( false ), has_value( false ) {}
+
+            /// if invalid, throw a meaningful exception
+            void validate( const command_line_options& options ) const;
+
+            /// return true, if this option is correctly represented in options
+            bool valid( const command_line_options& options ) const;
+
+            /// construct from string
+            void from_string( const std::string& s );
+
+            /// construct from string
+            std::string as_string() const;
+        };
+
     private:
         typedef std::map< std::string, std::vector< std::string > > map_type_;
 
         void fill_map_( const std::vector< std::string >& v );
-        template < typename T >
-        static T lexical_cast_( const std::string& s );
+        template < typename T > static T lexical_cast_( const std::string& s );
+        static std::string to_string_( bool v );
+        template < typename T > static std::string to_string_( const T& v );
 
         std::vector< std::string > argv_;
         map_type_ map_;
         std::vector< std::string > names_;
 };
 
-template < typename T >
-inline T command_line_options::lexical_cast_( const std::string& s )
-{
-    return boost::lexical_cast< T >( s );
-}
+template < typename T > inline T command_line_options::lexical_cast_( const std::string& s ) { return boost::lexical_cast< T >( s ); }
 
-template <>
-inline bool command_line_options::lexical_cast_< bool >( const std::string& s )
+template <> inline bool command_line_options::lexical_cast_< bool >( const std::string& s )
 {
     if( s == "true" ) { return true; }
     if( s == "false" ) { return false; }
@@ -179,6 +201,55 @@ inline std::vector< T > command_line_options::values( const std::string& name, T
     return v;
 }
 
+template < typename T >
+inline void command_line_options::description< T >::validate( const command_line_options& options ) const
+{
+    if( !has_value ) { return; }
+    const boost::optional< T >& v = options.optional< T >( names[0] );
+    if( is_optional || default_value || v ) { return; }
+    COMMA_THROW( comma_exception, "please specify " << names[0] );
+}
+
+template < typename T >
+inline bool command_line_options::description< T >::valid( const command_line_options& options ) const
+{
+    try { return !has_value || is_optional || default_value || options.optional< T >( names[0] ); }
+    catch( ... ) { return false; }
+}
+
+template < typename T > inline std::string command_line_options::to_string_( const T& v ) { return boost::lexical_cast< std::string >( v ); }
+
+inline std::string command_line_options::to_string_( bool s ) { return s ? "true" : "false"; }
+
+namespace impl { command_line_options::description< std::string > from_string_impl_( const std::string& s ); }
+
+template < typename T >
+inline void command_line_options::description< T >::from_string( const std::string& s )
+{
+    command_line_options::description< std::string > d = impl::from_string_impl_( s ); // real quick and dirty, just to get it working
+    names = d.names;
+    has_value = d.has_value;
+    is_optional = d.is_optional;
+    help = d.help;
+    if( d.default_value ) { default_value = lexical_cast_< T >( *d.default_value ); }
+}
+
+template < typename T >
+inline std::string command_line_options::description< T >::as_string() const
+{
+    std::string s = names[0];
+    for( unsigned int i = 1; i < names.size(); ++i ) { s += ',' + names[i]; }
+    if( has_value )
+    {
+        s += '=';
+        s += is_optional ? "[<value>]" : "<value>";
+        if( default_value ) { s += "; default=" + command_line_options::to_string_( *default_value ); }
+    }
+    s += "; ";
+    s += help;
+    return s;
+}
+
 } // namespace comma {
 
-#endif // COMMA_APPLICATION_COMMANDLINEOPTIONS_H_
+#endif // COMMA_APPLICATION_COMMAND_LINE_OPTIONS_H_
