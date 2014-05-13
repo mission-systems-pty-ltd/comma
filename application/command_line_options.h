@@ -109,24 +109,23 @@ class command_line_options
         /// throw, if more than one of given options exists (freaking ugly name)
         void assert_mutually_exclusive( const std::string& names ) const;
 
-        /// an option description
-        template < typename T >
+        /// description
         struct description
         {
             std::vector< std::string > names;
             bool is_optional;
             bool has_value;
-            boost::optional< T > default_value;
+            boost::optional< std::string > default_value; // todo: make strongly typed
             std::string help;
 
             /// default constructor
             description() : is_optional( false ), has_value( false ) {}
 
             /// if invalid, throw a meaningful exception
-            void validate( const command_line_options& options ) const;
+            void assert_valid( const command_line_options& options ) const;
 
             /// return true, if this option is correctly represented in options
-            bool valid( const command_line_options& options ) const;
+            bool valid( const command_line_options& options ) const throw();
 
             /// construct from string
             void from_string( const std::string& s );
@@ -135,13 +134,14 @@ class command_line_options
             std::string as_string() const;
         };
 
+        /// if invalid, throw a meaningful exception
+        void assert_valid( const std::vector< description >& d, bool unknown_options_invalid = false );
+
     private:
         typedef std::map< std::string, std::vector< std::string > > map_type_;
 
         void fill_map_( const std::vector< std::string >& v );
         template < typename T > static T lexical_cast_( const std::string& s );
-        static std::string to_string_( bool v );
-        template < typename T > static std::string to_string_( const T& v );
 
         std::vector< std::string > argv_;
         map_type_ map_;
@@ -199,55 +199,6 @@ inline std::vector< T > command_line_options::values( const std::string& name, T
     std::vector< T > v = values< T >( name );
     if( v.empty() ) { v.push_back( default_value ); }
     return v;
-}
-
-template < typename T >
-inline void command_line_options::description< T >::validate( const command_line_options& options ) const
-{
-    if( !has_value ) { return; }
-    const boost::optional< T >& v = options.optional< T >( names[0] );
-    if( is_optional || default_value || v ) { return; }
-    COMMA_THROW( comma_exception, "please specify " << names[0] );
-}
-
-template < typename T >
-inline bool command_line_options::description< T >::valid( const command_line_options& options ) const
-{
-    try { return !has_value || is_optional || default_value || options.optional< T >( names[0] ); }
-    catch( ... ) { return false; }
-}
-
-template < typename T > inline std::string command_line_options::to_string_( const T& v ) { return boost::lexical_cast< std::string >( v ); }
-
-inline std::string command_line_options::to_string_( bool s ) { return s ? "true" : "false"; }
-
-namespace impl { command_line_options::description< std::string > from_string_impl_( const std::string& s ); }
-
-template < typename T >
-inline void command_line_options::description< T >::from_string( const std::string& s )
-{
-    command_line_options::description< std::string > d = impl::from_string_impl_( s ); // real quick and dirty, just to get it working
-    names = d.names;
-    has_value = d.has_value;
-    is_optional = d.is_optional;
-    help = d.help;
-    if( d.default_value ) { default_value = lexical_cast_< T >( *d.default_value ); }
-}
-
-template < typename T >
-inline std::string command_line_options::description< T >::as_string() const
-{
-    std::string s = names[0];
-    for( unsigned int i = 1; i < names.size(); ++i ) { s += ',' + names[i]; }
-    if( has_value )
-    {
-        s += '=';
-        s += is_optional ? "[<value>]" : "<value>";
-        if( default_value ) { s += "; default=" + command_line_options::to_string_( *default_value ); }
-    }
-    s += "; ";
-    s += help;
-    return s;
 }
 
 } // namespace comma {

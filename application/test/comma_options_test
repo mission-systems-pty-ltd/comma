@@ -1,0 +1,8 @@
+#!/bin/bash
+
+. $( which comma-application-options )
+
+comma_options --hello --world <<< "--verbose,-v: some description"
+comma_options --hello --world <<< "--filename,-f=<filename>: some description"
+comma_options --hello --world <<< "--filename,-f=[<filename>]: some description"
+comma_options --hello --world <<< "--filename,-f=[<filename>]; default=5: some description"

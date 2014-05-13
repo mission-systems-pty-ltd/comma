@@ -191,21 +191,20 @@ void command_line_options::assert_mutually_exclusive( const std::string& names )
 
 }
 
-namespace impl
-{
+namespace impl {
     namespace qi = boost::spirit::qi;
     namespace ascii = boost::spirit::ascii;
 
     typedef std::string::const_iterator iterator;
-    typedef comma::command_line_options::description< std::string > description_t;
+    typedef comma::command_line_options::description description_t;
 
     static void set_( std::string& s, const std::string& t ) { s = t; }
-    static void set_default( boost::optional< std::string >& s, const std::string& t ) { s = t; }
     static void push_back_( std::vector< std::string >& v, const std::string& t ) { v.push_back( t ); }
     static void got_value( description_t& d, const std::string& ) { d.has_value = true; d.is_optional = false; }
     static void got_optional_value( description_t& d, const std::string& ) { d.has_value = true; d.is_optional = true; }
+    static void got_default_value( description_t& d, const std::string& s ) { if( d.has_value ) { d.default_value = s; d.is_optional = true; } }
 
-    comma::command_line_options::description< std::string > from_string_impl_( const std::string& s )
+    comma::command_line_options::description from_string_impl_( const std::string& s )
     {
         qi::rule< iterator, std::string(), ascii::space_type > string = qi::lexeme[ +( boost::spirit::qi::alpha | boost::spirit::qi::digit | ascii::char_( '-' ) | ascii::char_( '_' ) ) ];
         qi::rule< iterator, std::string(), ascii::space_type > name = ascii::char_( '-' ) >> string;
@@ -222,13 +221,50 @@ namespace impl
                                                     >> *( ',' >> name[ boost::bind( push_back_, boost::ref( d.names ), _1 ) ] )
                                                     >> -( '=' >> ( value[ boost::bind( got_value, boost::ref( d ), _1 ) ]
                                                                 | optional_value[ boost::bind( got_optional_value, boost::ref( d ), _1 ) ] ) )
-                                                    >> -( ';' >> default_value[ boost::bind( set_default, boost::ref( d.default_value ), _1 ) ] )
+                                                    >> -( ';' >> default_value[ boost::bind( got_default_value, boost::ref( d ), _1 ) ] )
                                                     >> -( ';' >> *( ascii::space ) >> help[ boost::bind( set_, boost::ref( d.help ), _1 ) ] )
                                                 , ascii::space );
         if( !r ) { COMMA_THROW( comma::exception, "invalid option description: \"" << s << "\"" ); }
         if( !d.has_value ) { d.is_optional = true; d.default_value.reset(); }
         return d;
     }
+} // namespace impl {
+
+template < typename T > std::string to_string_( const T& v ) { return boost::lexical_cast< std::string >( v ); }
+
+std::string to_string_( bool s ) { return s ? "true" : "false"; }
+
+void command_line_options::description::assert_valid( const command_line_options& options ) const
+{
+    if( !has_value ) { return; }
+    const boost::optional< std::string >& v = options.optional< std::string >( names[0] ); // todo: quick and dirty; make it strongly typed?
+    if( is_optional || default_value || v ) { return; }
+    COMMA_THROW( comma::exception, "please specify " << names[0] );
+}
+
+bool command_line_options::description::valid( const command_line_options& options ) const throw()
+{
+    try { return !has_value || is_optional || default_value || options.optional< std::string >( names[0] ); }
+    catch( ... ) { return false; }
+}
+
+namespace impl { command_line_options::description from_string_impl_( const std::string& s ); }
+
+void command_line_options::description::from_string( const std::string& s ) { *this = impl::from_string_impl_( s ); } // real quick and dirty, just to get it working
+
+std::string command_line_options::description::as_string() const
+{
+    std::string s = names[0];
+    for( unsigned int i = 1; i < names.size(); ++i ) { s += ',' + names[i]; }
+    if( has_value )
+    {
+        s += '=';
+        s += is_optional ? "[<value>]" : "<value>";
+        if( default_value ) { s += "; default=" + *default_value; }
+    }
+    s += "; ";
+    s += help;
+    return s;
 }
 
 } // namespace comma {

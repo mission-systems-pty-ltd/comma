@@ -183,7 +183,7 @@ TEST( command_line_options, optional )
 TEST( application, command_line_options_description_parsing )
 {
     {
-        comma::command_line_options::description< std::string > d;
+        comma::command_line_options::description d;
         d.from_string( "--verbose" );
         EXPECT_EQ( 1, d.names.size() );
         EXPECT_EQ( "--verbose", d.names[0] );
@@ -192,7 +192,7 @@ TEST( application, command_line_options_description_parsing )
         EXPECT_FALSE( bool( d.default_value ) );
     }
     {
-        comma::command_line_options::description< std::string > d;
+        comma::command_line_options::description d;
         d.from_string( "--verbose,-v" );
         EXPECT_EQ( 2, d.names.size() );
         EXPECT_EQ( "--verbose", d.names[0] );
@@ -202,7 +202,7 @@ TEST( application, command_line_options_description_parsing )
         EXPECT_FALSE( bool( d.default_value ) );
     }
     {
-        comma::command_line_options::description< std::string > d;
+        comma::command_line_options::description d;
         d.from_string( "--filename,-f=<filename>; some filename" );
         EXPECT_EQ( 2, d.names.size() );
         EXPECT_EQ( "--filename", d.names[0] );
@@ -213,7 +213,7 @@ TEST( application, command_line_options_description_parsing )
         EXPECT_EQ( "some filename", d.help );
     }
     {
-        comma::command_line_options::description< std::string > d;
+        comma::command_line_options::description d;
         d.from_string( "--filename,-f=[<filename>]; some filename" );
         EXPECT_EQ( 2, d.names.size() );
         EXPECT_EQ( "--filename", d.names[0] );
@@ -224,7 +224,7 @@ TEST( application, command_line_options_description_parsing )
         EXPECT_EQ( "some filename", d.help );
     }
     {
-        comma::command_line_options::description< std::string > d;
+        comma::command_line_options::description d;
         d.from_string( "--filename,-f=[<filename>]; default=blah.csv; some filename" );
         EXPECT_EQ( 2, d.names.size() );
         EXPECT_EQ( "--filename", d.names[0] );
@@ -236,7 +236,7 @@ TEST( application, command_line_options_description_parsing )
         EXPECT_EQ( "some filename", d.help );
     }
     {
-        comma::command_line_options::description< std::string > d;
+        comma::command_line_options::description d;
         EXPECT_THROW( d.from_string( "" ), std::exception );
         EXPECT_THROW( d.from_string( ";;" ), std::exception );
         EXPECT_THROW( d.from_string( "no-hyphen" ), std::exception );
