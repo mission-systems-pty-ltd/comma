@@ -197,6 +197,7 @@ namespace impl {
     comma::command_line_options::description from_string_impl_( const std::string& s )
     {
         qi::rule< iterator, std::string(), ascii::space_type > string = qi::lexeme[ +( boost::spirit::qi::alpha | boost::spirit::qi::digit | ascii::char_( '-' ) | ascii::char_( '_' ) ) ];
+        //qi::rule< iterator, std::string(), ascii::space_type > long_name = ascii::char_( '-' ) >> ascii::char_( '-' ) >> string;
         qi::rule< iterator, std::string(), ascii::space_type > name = ascii::char_( '-' ) >> string;
         qi::rule< iterator, std::string(), ascii::space_type > value = '<' >> string >> '>';
         qi::rule< iterator, std::string(), ascii::space_type > optional_value = qi::lit( "[<" ) >> string >> qi::lit( ">]" );
@@ -207,7 +208,7 @@ namespace impl {
         description_t d;
         bool r = boost::spirit::qi::phrase_parse( s.begin()
                                                 , s.end()
-                                                ,    name[ boost::bind( push_back_, boost::ref( d.names ), _1 ) ]
+                                                ,      name[ boost::bind( push_back_, boost::ref( d.names ), _1 ) ]
                                                     >> *( ',' >> name[ boost::bind( push_back_, boost::ref( d.names ), _1 ) ] )
                                                     >> -( '=' >> ( value[ boost::bind( got_value, boost::ref( d ), _1 ) ]
                                                                 | optional_value[ boost::bind( got_optional_value, boost::ref( d ), _1 ) ] ) )
@@ -215,7 +216,7 @@ namespace impl {
                                                     >> -( ';' >> *( ascii::space ) >> help[ boost::bind( set_, boost::ref( d.help ), _1 ) ] )
                                                 , ascii::space );
         if( !r ) { COMMA_THROW( comma::exception, "invalid option description: \"" << s << "\"" ); }
-        if( d.names.empty() ) { COMMA_THROW( comma::exception, "invalid option names in: \"" << s << "\"" ); }
+        if( d.names[0].size() < 3 || d.names[0][0] != '-' || d.names[0][1] != '-' ) { COMMA_THROW( comma::exception, "expected full name (e.g. --filename), got \"" << d.names[0] << "\" in: \"" << s << "\"" ); }
         if( !d.has_value ) { d.is_optional = true; d.default_value.reset(); }
         return d;
     }
