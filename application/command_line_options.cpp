@@ -45,6 +45,8 @@
 #include <comma/base/exception.h>
 #include <comma/string/split.h>
 
+#include <algorithm>
+
 namespace comma {
 
 command_line_options::command_line_options( int argc, char ** argv )
@@ -56,34 +58,21 @@ command_line_options::command_line_options( int argc, char ** argv )
 
 command_line_options::command_line_options( const std::vector< std::string >& argv ) : argv_( argv ) { fill_map_( argv_ ); }
 
+std::string command_line_options::escaped( const std::string& s ) // quick and dirty
+{
+    static const boost::regex r( "\\\"" );
+    //return s.find_first_of( "; \t\n&<>|$#*?()[]{}\'\"" ) == std::string::npos ? s : boost::regex_replace( s, r, "\\\\\"" );
+    return boost::regex_replace( s, r, "\\\\\"" );
+}
+
 std::string command_line_options::string() const
 {
     std::ostringstream out;
-    for ( size_t arg = 0; arg < argv_.size(); ++arg )
+    std::string space;
+    for( std::size_t i = 0; i < argv_.size(); ++i )
     {
-        if ( arg > 0 ) { out << ' '; }
-
-        // check if string needs to be quoted
-        if ( argv_[arg].find_first_of( "; \t\n&<>|$#*?()[]{}\'\"" ) != std::string::npos )
-        {
-            std::string a = argv_[arg];
-
-            // check for double quotes inside the string
-            size_t pos = 0;
-            while ( true )
-            {
-                pos = a.find( '"', pos );
-                if ( pos == std::string::npos ) { break; }
-                a.replace( pos, 1, "\\\"" );
-                pos += 2;
-            }
-
-            out << '"' << a << '"';
-        }
-        else
-        {
-            out << argv_[arg];
-        }
+        out << space << '"' << escaped( argv_[i] ) << '"';
+        space = " ";
     }
     return out.str();
 }

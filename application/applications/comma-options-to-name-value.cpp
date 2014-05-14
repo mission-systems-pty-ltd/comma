@@ -33,11 +33,11 @@ void usage()
     std::cerr << "        EOF" << std::endl;
     std::cerr << "        }" << std::endl;
     std::cerr << "        " << std::endl;
-    std::cerr << "        comma_path_value_to_var < <( description | comma-options-to-name-value $@ | grep '=' )" << std::endl;
+    std::cerr << "        comma_path_value_to_var < <( description | comma-options-to-name-value $@ | grep -v '^\"' )" << std::endl;
     std::cerr << "        " << std::endl;
     std::cerr << "        echo $filename" << std::endl;
     std::cerr << "        " << std::endl;
-    std::cerr << "        comma_path_value_to_var --prefix=some_prefix < <( description | comma-options-to-name-value $@ | grep '=' )" << std::endl;
+    std::cerr << "        comma_path_value_to_var --prefix=some_prefix < <( description | comma-options-to-name-value $@ | grep -v '^\"' )" << std::endl;
     std::cerr << "        " << std::endl;
     std::cerr << "        echo $some_prefix_filename" << std::endl;
     std::cerr << std::endl;
@@ -69,15 +69,15 @@ int main( int ac, char** av )
             if( d.has_value )
             {
                 const std::vector< std::string >& values = options.values< std::string >( name );
-                for( unsigned int i = 0; i < values.size(); ++i ) { std::cout << stripped << "=" << values[i] << std::endl; }
+                for( unsigned int i = 0; i < values.size(); ++i ) { std::cout << stripped << "=\"" << comma::command_line_options::escaped( values[i] ) << "\"" << std::endl; }
             }
             else
             {
-                std::cerr << stripped << "=true" << std::endl;
+                std::cout << stripped << "=\"true\"" << std::endl;
             }
         }
         const std::vector< std::string >& unnamed = options.unnamed( valueless, valued );
-        for( unsigned int i = 0; i < unnamed.size(); ++i ) { std::cout << unnamed[i] << std::endl; }
+        for( unsigned int i = 0; i < unnamed.size(); ++i ) { std::cout << '"' << comma::command_line_options::escaped( unnamed[i] ) << '"' << std::endl; }
         return 0;
     }
     catch( std::exception& ex )
