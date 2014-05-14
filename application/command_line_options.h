@@ -128,10 +128,13 @@ class command_line_options
             bool valid( const command_line_options& options ) const throw();
 
             /// construct from string
-            void from_string( const std::string& s );
+            static description from_string( const std::string& s );
 
             /// construct from string
             std::string as_string() const;
+
+            /// return usage
+            static std::string usage();
         };
 
         /// if invalid, throw a meaningful exception

@@ -33,12 +33,14 @@
 
 /// @author vsevolod vlaskine
 
+#include <sstream>
 #include <set>
 #include <boost/bind.hpp>
 #include <boost/config/warning_disable.hpp>
 #include <boost/optional.hpp>
 #include <boost/regex.hpp>
 #include <boost/spirit/include/qi.hpp>
+#include <boost/unordered_set.hpp>
 #include <comma/application/command_line_options.h>
 #include <comma/base/exception.h>
 #include <comma/string/split.h>
@@ -52,11 +54,7 @@ command_line_options::command_line_options( int argc, char ** argv )
     fill_map_( argv_ );
 }
 
-command_line_options::command_line_options( const std::vector< std::string >& argv )
-    : argv_( argv )
-{
-    fill_map_( argv_ );
-}
+command_line_options::command_line_options( const std::vector< std::string >& argv ) : argv_( argv ) { fill_map_( argv_ ); }
 
 std::string command_line_options::string() const
 {
@@ -127,10 +125,7 @@ std::vector< std::string > command_line_options::unnamed( const std::string& val
     return w;
 }
 
-std::vector< std::string > command_line_options::names() const
-{
-    return names_;
-}
+std::vector< std::string > command_line_options::names() const { return names_; }
 
 void command_line_options::fill_map_( const std::vector< std::string >& v )
 {
@@ -172,10 +167,7 @@ void command_line_options::fill_map_( const std::vector< std::string >& v )
 //         }
         std::vector< std::string >& values = map_[name];
         if( value ) { values.push_back( *value ); }
-        if( name.size() != 0u )
-        {
-            names_.push_back( name );
-        }
+        if( !name.empty() ) { names_.push_back( name ); }
     }
 }
 
@@ -189,6 +181,15 @@ void command_line_options::assert_mutually_exclusive( const std::string& names )
         if( count > 1 ) { COMMA_THROW( comma::exception, "options " << names << " are mutually exclusive" ); }
     }
 
+}
+
+void command_line_options::assert_valid( const std::vector< description >& d, bool unknown_options_invalid )
+{
+    for( unsigned int i = 0; i < d.size(); ++i ) { d[i].assert_valid( *this ); }
+    if( !unknown_options_invalid ) { return; }
+    boost::unordered_set< std::string > s; // real quick and dirty, just to make it work
+    for( unsigned int i = 0; i < d.size(); ++i ) { for( unsigned int j = 0; j < d[i].names.size(); s.insert( d[i].names[j] ), ++j ); }
+    for( unsigned int i = 0; i < names_.size(); ++i ) { if( s.find( names_[i] ) == s.end() ) { COMMA_THROW( comma::exception, "unknown option " << names_[i] ); } }
 }
 
 namespace impl {
@@ -225,6 +226,7 @@ namespace impl {
                                                     >> -( ';' >> *( ascii::space ) >> help[ boost::bind( set_, boost::ref( d.help ), _1 ) ] )
                                                 , ascii::space );
         if( !r ) { COMMA_THROW( comma::exception, "invalid option description: \"" << s << "\"" ); }
+        if( d.names.empty() ) { COMMA_THROW( comma::exception, "invalid option names in: \"" << s << "\"" ); }
         if( !d.has_value ) { d.is_optional = true; d.default_value.reset(); }
         return d;
     }
@@ -237,20 +239,21 @@ std::string to_string_( bool s ) { return s ? "true" : "false"; }
 void command_line_options::description::assert_valid( const command_line_options& options ) const
 {
     if( !has_value ) { return; }
-    const boost::optional< std::string >& v = options.optional< std::string >( names[0] ); // todo: quick and dirty; make it strongly typed?
-    if( is_optional || default_value || v ) { return; }
+    if( is_optional || default_value ) { return; }
+    for( unsigned int i = 0; i < names.size(); ++i ) { if( options.exists( names[i] ) ) { return; } }
     COMMA_THROW( comma::exception, "please specify " << names[0] );
 }
 
 bool command_line_options::description::valid( const command_line_options& options ) const throw()
 {
-    try { return !has_value || is_optional || default_value || options.optional< std::string >( names[0] ); }
-    catch( ... ) { return false; }
+    if( is_optional || default_value ) { return true; }
+    try { for( unsigned int i = 0; i < names.size(); ++i ) { if( options.exists( names[i] ) ) { return true; } } } catch( ... ) {}
+    return false;
 }
 
 namespace impl { command_line_options::description from_string_impl_( const std::string& s ); }
 
-void command_line_options::description::from_string( const std::string& s ) { *this = impl::from_string_impl_( s ); } // real quick and dirty, just to get it working
+command_line_options::description command_line_options::description::from_string( const std::string& s ) { return impl::from_string_impl_( s ); } // real quick and dirty, just to get it working
 
 std::string command_line_options::description::as_string() const
 {
@@ -266,5 +269,39 @@ std::string command_line_options::description::as_string() const
     s += help;
     return s;
 }
+
+std::string comma::command_line_options::description::usage()
+{
+    std::ostringstream oss;
+    oss << "    option description: <name>[,<name>,<name>...][=[<value>]][; default=<value>][; help], e.g:" << std::endl;
+    description has_no_value;
+    has_no_value.names.push_back( "--verbose" );
+    has_no_value.names.push_back( "-v" );
+    has_no_value.help = "option with no value";
+    description has_mandatory_value;
+    has_mandatory_value.names.push_back( "--filename" );
+    has_mandatory_value.names.push_back( "--file" );
+    has_mandatory_value.names.push_back( "--f" );
+    has_mandatory_value.has_value = true;
+    has_mandatory_value.help = "mandatory option with value and no default";
+    description has_optional_value;
+    has_optional_value.names.push_back( "--output-file" );
+    has_optional_value.names.push_back( "-o" );
+    has_optional_value.has_value = true;
+    has_optional_value.is_optional = true;
+    has_optional_value.help = "optional option with value and no default";
+    description has_default_value;
+    has_default_value.names.push_back( "--threshold" );
+    has_default_value.names.push_back( "-t" );
+    has_default_value.has_value = true;
+    has_default_value.default_value = "20";
+    has_default_value.help = "option with a default value";
+    oss << "        " << has_no_value.as_string() << std::endl;
+    oss << "        " << has_mandatory_value.as_string() << std::endl;
+    oss << "        " << has_optional_value.as_string() << std::endl;
+    oss << "        " << has_default_value.as_string() << std::endl;
+    return oss.str();
+}
+
 
 } // namespace comma {
