@@ -226,8 +226,8 @@ if (( $test_scripts_count > 0 )) ; then
         (( ++count ))
         if disabled_ $dir ; then warning_ "$name: test $count of $test_scripts_count: $dir: disabled" ; continue ; fi
         test_exec=$( closest_file_in_path "$dir" "test" )
-        if [[ -z "$test_exec" ]]; then echo "$name: error: no \"test\" file found in any parent directory of $dir" >&2 ; continue ; fi
-        if [[ ! -x "$test_exec" ]]; then echo "$name: error: test is not executable: $test_exec" >&2 ; continue ; fi
+        if [[ -z "$test_exec" ]]; then error_ "$name: error: no \"test\" file found in any parent directory of $dir" >&2 ; continue ; fi
+        if [[ ! -x "$test_exec" ]]; then error_ "$name: error: test is not executable: $test_exec${none}" >&2 ; continue ; fi
         message_ "$name: test $count of $test_scripts_count: $dir: running..."
         basedir=$( pwd )
         cd $dir
