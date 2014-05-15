@@ -284,6 +284,8 @@ function comma_path_value_from_var()
 # options
 #     --use-equal-sign: options set as --file=foo.txt; default --file foo.txt
 #
+# todo: there still may be trouble with option values with spaces inside; check and test it... later...
+#
 # example (try it)
 #      echo -e hello=\"\\\"world\\\"\"\\nverbose=\"true\" | comma_options_from_path_value
 function comma_options_from_name_value()
