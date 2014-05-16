@@ -33,6 +33,7 @@
 
 /// @author Matthew Herrmann 2007
 /// @author Vsevolod Vlaskine 2010-2011
+/// @author Dewey Nguyen 2014-2014
 
 #ifndef COMMA_PACKED_STRING_H_
 #define COMMA_PACKED_STRING_H_
