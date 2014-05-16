@@ -102,7 +102,7 @@ class casted : public packed::field< casted< T, S, Padding >, T, S >
         {
             std::string v = boost::lexical_cast< std::string >( value );
             ::memset( storage, Padding, size );
-            ::memcpy( storage, &v[0], std::min( size, v.size() ) );
+            ::memcpy( storage, &v[0], std::min( std::size_t(size), v.size() ) );
         }
 
         static T unpack( const char* storage )
@@ -111,6 +111,39 @@ class casted : public packed::field< casted< T, S, Padding >, T, S >
         }
 
         const casted& operator=( const T& rhs ) { return base_type::operator=( rhs ); }
+};
+
+template < typename T, std::size_t S, char Padding = ' ' >
+class ascii_hex : public packed::field< ascii_hex< T, S, Padding >, T, S >
+{
+public:
+    enum { size = S };
+    
+    typedef T Type;
+    
+    typedef packed::field< casted< T, S, Padding >, T, S > base_type;
+    
+    static T default_value() { return 0; }
+    
+    static void pack( char* storage, const T& value )
+    {
+        //std::string v = boost::lexical_cast< std::string >( value );
+        std::ostringstream ss;
+        ss << std::hex << value;
+        ::memset( storage, Padding, size );
+        ::memcpy( storage, &(ss.str()[0]), size );
+    }
+    
+    static T unpack( const char* storage )
+    {
+        // no padding
+        std::istringstream iss( comma::strip( std::string( storage, size ), Padding ) );
+        T value;
+        iss >> std::hex >> value;
+        return value;
+    }
+    
+    const ascii_hex& operator=( const T& rhs ) { return base_type::operator=( rhs ); }
 };
 
 } } // namespace comma { namespace packed {
