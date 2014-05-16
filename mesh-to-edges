@@ -88,8 +88,8 @@ BEGIN { m = n = 0; }
 m == 0 { lat[$4] = $1; lon[$4] = $2; next; }
 m == 1 \
 {
-    if (!($1 in lat)) { print "Error: id " $1 " not found" | "cat >&2"; exit; }
-    if (!($2 in lat)) { print "Error: id " $2 " not found" | "cat >&2"; exit; }
+    if (!($1 in lat)) { print "mesh-to-edges: error: id " $1 " not found" | "cat >&2"; exit; }
+    if (!($2 in lat)) { print "mesh-to-edges: error: id " $2 " not found" | "cat >&2"; exit; }
     print lat[$1] "," lon[$1] "," lat[$2] "," lon[$2] "," $1 "," $2;
 }
 ' | csv-shuffle --fields="$default_out_fields" --output-fields="$out_fields"
