@@ -11,6 +11,8 @@ function usage()
     echo "    --output-line-number,--line-number,-n: output line numbers (see examples)" >&2
     echo "    --delimiter,-d <delimiter>: default: ," >&2
     echo "    --end-of-line,--eol <delimiter>: end of line output delimiter; default: end of line" >&2
+    echo "    --exec=<cmd>  Each record will be passed to <eval cmd>. E.g. --exec=\"name-value-convert --from path-value --to json | tr -d \\\"\\n \\\" \"" >&2
+    echo "    --single-record  Exits after one record only." >&2
     echo >&2
     echo "examples" >&2
     echo "    echo 1,2,3 | name-value-from-csv a,b,c/d -d ," >&2
@@ -25,12 +27,16 @@ function usage()
 
 delimiter=","
 end_of_line=$'\n'
+single_record=
+exec_cmd=cat
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -h|--help) usage ;;
         --delimiter|-d) shift ; delimiter=$1 ;;
         --end-of-line|--eol) shift ; end_of_line=$1 ;;
         --fields|-f) shift ; fields=$1 ;;
+        --single-record) shift ; single_record=1 ;;
+        --exec) shift ; exec_cmd=$1 ;;
         --output-line-number|--line-number|-n) output_line_numbers="true" ;;
         -*) echo "name-value-from-csv: unrecognized option '$1'" >&2 ; exit 1 ;;
         *) fields=$1 ;;
@@ -47,6 +53,7 @@ while read line ; do
     if [[ "$output_line_numbers" != "" ]] ; then prefix="[$count]/" ; fi
     values=( $( echo $line | sed "s/$delimiter/\n/g" | sed 's/^/"/g' | sed 's/$/"/g' ) )
     i=0
-    for path in $paths ; do echo $prefix$path=${values[$i]}$end_of_line ; (( ++i )) ; done
+    for path in $paths ; do echo $prefix$path=${values[$i]}$end_of_line ; (( ++i )) ; done | eval $exec_cmd
     (( ++count ))
+    [[ -n "$single_record" ]] && exit 0
 done
