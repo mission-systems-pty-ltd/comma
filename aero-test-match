@@ -53,7 +53,10 @@ if [[ -z "$expr_file" ]]; then echo "$name: missing required argument <expected-
 # if the variables file name is known, pass it to name-value-eval, since it can appear in some error messages
 if [[ -z "$variables" ]]; then
     input="$( cat )"
-    if [[ -z "$input" ]]; then echo "$name: error: empty input (test script failed?)" >&2; exit 1; fi
+    if [[ -z "$input" ]]; then
+        if [[ -s "$expr_file" ]]; then echo "$name: error: empty input (test script failed?)" >&2; exit 1;
+        else exit 0; fi  # no variables means it is OK for the input to be empty
+    fi
     echo "$input" | name-value-eval --test "$expr_file"
 else
     if [[ ! -f "$variables" || ! -s "$variables" ]]; then

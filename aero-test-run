@@ -235,7 +235,7 @@ if (( $test_scripts_count > 0 )) ; then
         touch "$timestamp_file"
         if [ -f ./input ] ; then cat ./input ; fi \
             | aero_progress_named $stats_progress_csv "$dir" "$test_exec" $path $verbose 2> >( $grep_failed_ >&2 ) \
-            | if [[ -s ./expected ]]; then aero-test-match ./expected 2>&1 | fail_on_output; fi
+            | if [[ -f ./expected ]]; then aero-test-match ./expected 2>&1 | fail_on_output; else cat > /dev/null; fi
         if status_ok ; then message_ "$name: test $count of $test_scripts_count: $dir: succeeded" ; else result=1 ; (( ++failed_count )) ; error_ "$name: $dir: failed" ; fi
         report_leaked_shared "$timestamp_file" "$dir" # see if there are files in /dev/shm created past start_time and report
         cd $basedir
