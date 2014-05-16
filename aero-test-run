@@ -11,7 +11,7 @@ function usage_()
     echo -e "(1) run all scripts in any subdirectories called 'tests'. A non-zero exit status indicates failure." >&2
     echo >&2
     echo -e "(2) find subdirectories containing the files 'test', 'input' or 'expected'. Execute 'test', then either:" >&2
-    echo -e "    (a) if 'expected' exists and is non-empty, compare its contents to the output of 'test' (\"path=value\" format)" >&2
+    echo -e "    (a) if 'expected' exists, compare its contents to the output of 'test' (\"path=value\" format)" >&2
     echo -e "    (b) otherwise the success of the test depends on the exit status of 'test'." >&2
     echo >&2
     echo -e "If there is an 'input' or 'expected' file but no 'test' in the same directory, the 'test' script in the" >&2
