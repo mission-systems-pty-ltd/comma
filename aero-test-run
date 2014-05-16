@@ -115,12 +115,12 @@ function exclude_generic_tests()
     echo "${result_list[@]}"
 }
 
-# find a file inside a path, checking in each subdirectory (starting from the full path)
+# find "test" file inside a path, checking in each subdirectory (starting from the full path)
 # arguments: <path> <file to find>
-function closest_file_in_path()
+function closest_test_in_path()
 {
     local path=$1
-    local file=$2
+    local file="test"
 
     # sanity check (and avoid infinite loop)
     if [[ -z "$path" ]]; then echo "$name: error: empty path in closest_file_in_path()" >&2; exit 1; fi
@@ -128,8 +128,13 @@ function closest_file_in_path()
     path=$( readlink -e "$path" )
 
     while true; do
-        if [[ -f "$path/$file" ]]; then echo $path/$file; break; fi
-        if [[ $path == "/" ]]; then break; fi
+        if [[ -d "$path/$file" ]]; then
+            echo "$name: warning: \"$path/$file\" is a directory (expected an executable script); ignoring" >&2
+        elif [[ -f "$path/$file" ]]; then
+            if [[ -x "$path/$file" ]]; then echo $path/$file; break
+            else echo "$name: warning: \"$path/$file\" is not executable; ignoring" >&2; fi
+        elif [[ $path == "/" ]]; then break
+        fi
         path=$( dirname "$path" )
     done
 }
@@ -225,9 +230,8 @@ if (( $test_scripts_count > 0 )) ; then
         if [[ -n "$is_shutdown" ]] ; then error_ "aero-test-run: terminated" >&2 ; exit 1 ; fi
         (( ++count ))
         if disabled_ $dir ; then warning_ "$name: test $count of $test_scripts_count: $dir: disabled" ; continue ; fi
-        test_exec=$( closest_file_in_path "$dir" "test" )
-        if [[ -z "$test_exec" ]]; then error_ "$name: error: no \"test\" file found in any parent directory of $dir" >&2 ; continue ; fi
-        if [[ ! -x "$test_exec" ]]; then error_ "$name: error: test is not executable: $test_exec${none}" >&2 ; continue ; fi
+        test_exec=$( closest_test_in_path "$dir" )
+        if [[ -z "$test_exec" ]]; then error_ "$name: error: no \"test\" script found in any parent directory of $dir" >&2 ; continue ; fi
         message_ "$name: test $count of $test_scripts_count: $dir: running..."
         basedir=$( pwd )
         cd $dir
