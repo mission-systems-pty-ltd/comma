@@ -87,6 +87,7 @@ job_id_list=()
 if (( $input_files_count > 0 )) ; then
     batch_id=$( $sql_command "CALL getNextBatchId()" | tail -1 )
     if [[ -z "$batch_id" ]]; then echo "$name: error getting batch id; aborting"; exit 1; fi
+    if [[ "$batch_id" == "NULL" ]]; then echo "$name: first time use, setting batch id to zero"; batch_id=0; fi
     echo "$input_files_count test(s) in subdirectories of $( pwd )"
     for i in $input_files ; do
         basedir=$( pwd )
