@@ -33,8 +33,8 @@
 
 /// @author vsevolod vlaskine
 
-#ifndef COMMA_APPLICATION_COMMANDLINEOPTIONS_H_
-#define COMMA_APPLICATION_COMMANDLINEOPTIONS_H_
+#ifndef COMMA_APPLICATION_COMMAND_LINE_OPTIONS_H_
+#define COMMA_APPLICATION_COMMAND_LINE_OPTIONS_H_
 
 #include <map>
 #include <string>
@@ -63,9 +63,13 @@ class command_line_options
         /// return argv
         const std::vector< std::string >& argv() const;
 
-        /// print all command line arguments, quoting any arguments that include special
-        /// charaters such as ";", white space or quotes (in which case " is replaced with \")
+        /// print all command line arguments, quoting all arguments and escaping them
+        /// to make it transparently working in bash
         std::string string() const;
+
+        /// escape double quotes
+        /// to make it transparently working in bash
+        static std::string escaped( const std::string& s );
 
         /// return true, if option exists (list, e.g.: "--binary,-b" is allowed)
         bool exists( const std::string& name ) const;
@@ -109,26 +113,51 @@ class command_line_options
         /// throw, if more than one of given options exists (freaking ugly name)
         void assert_mutually_exclusive( const std::string& names ) const;
 
+        /// description
+        struct description
+        {
+            std::vector< std::string > names;
+            bool is_optional;
+            bool has_value;
+            boost::optional< std::string > default_value; // todo: make strongly typed
+            std::string help;
+
+            /// default constructor
+            description() : is_optional( false ), has_value( false ) {}
+
+            /// if invalid, throw a meaningful exception
+            void assert_valid( const command_line_options& options ) const;
+
+            /// return true, if this option is correctly represented in options
+            bool valid( const command_line_options& options ) const throw();
+
+            /// construct from string
+            static description from_string( const std::string& s );
+
+            /// construct from string
+            std::string as_string() const;
+
+            /// return usage
+            static std::string usage();
+        };
+
+        /// if invalid, throw a meaningful exception
+        void assert_valid( const std::vector< description >& d, bool unknown_options_invalid = false );
+
     private:
         typedef std::map< std::string, std::vector< std::string > > map_type_;
 
         void fill_map_( const std::vector< std::string >& v );
-        template < typename T >
-        static T lexical_cast_( const std::string& s );
+        template < typename T > static T lexical_cast_( const std::string& s );
 
         std::vector< std::string > argv_;
         map_type_ map_;
         std::vector< std::string > names_;
 };
 
-template < typename T >
-inline T command_line_options::lexical_cast_( const std::string& s )
-{
-    return boost::lexical_cast< T >( s );
-}
+template < typename T > inline T command_line_options::lexical_cast_( const std::string& s ) { return boost::lexical_cast< T >( s ); }
 
-template <>
-inline bool command_line_options::lexical_cast_< bool >( const std::string& s )
+template <> inline bool command_line_options::lexical_cast_< bool >( const std::string& s )
 {
     if( s == "true" ) { return true; }
     if( s == "false" ) { return false; }
@@ -181,4 +210,4 @@ inline std::vector< T > command_line_options::values( const std::string& name, T
 
 } // namespace comma {
 
-#endif // COMMA_APPLICATION_COMMANDLINEOPTIONS_H_
+#endif // COMMA_APPLICATION_COMMAND_LINE_OPTIONS_H_

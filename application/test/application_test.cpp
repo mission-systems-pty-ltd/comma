@@ -30,7 +30,6 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 #include <limits>
 #include <gtest/gtest.h>
 #include <comma/application/command_line_options.h>
@@ -178,6 +177,63 @@ TEST( command_line_options, optional )
         boost::optional< double > e = options.value< double >( "--d", std::numeric_limits< double >::quiet_NaN() );
         EXPECT_TRUE( bool( e ) );
         EXPECT_FALSE( *e == *e );
+    }
+}
+
+TEST( application, command_line_options_description_parsing )
+{
+    {
+        comma::command_line_options::description d = comma::command_line_options::description::from_string( "--verbose" );
+        EXPECT_EQ( 1, d.names.size() );
+        EXPECT_EQ( "--verbose", d.names[0] );
+        EXPECT_FALSE( d.has_value );
+        EXPECT_TRUE( d.is_optional );
+        EXPECT_FALSE( bool( d.default_value ) );
+    }
+    {
+        comma::command_line_options::description d = comma::command_line_options::description::from_string( "--verbose,-v" );
+        EXPECT_EQ( 2, d.names.size() );
+        EXPECT_EQ( "--verbose", d.names[0] );
+        EXPECT_EQ( "-v", d.names[1] );
+        EXPECT_FALSE( d.has_value );
+        EXPECT_TRUE( d.is_optional );
+        EXPECT_FALSE( bool( d.default_value ) );
+    }
+    {
+        comma::command_line_options::description d = comma::command_line_options::description::from_string( "--filename,-f=<filename>; some filename" );
+        EXPECT_EQ( 2, d.names.size() );
+        EXPECT_EQ( "--filename", d.names[0] );
+        EXPECT_EQ( "-f", d.names[1] );
+        EXPECT_TRUE( d.has_value );
+        EXPECT_FALSE( d.is_optional );
+        EXPECT_FALSE( bool( d.default_value ) );
+        EXPECT_EQ( "some filename", d.help );
+    }
+    {
+        comma::command_line_options::description d = comma::command_line_options::description::from_string( "--filename,-f=[<filename>]; some filename" );
+        EXPECT_EQ( 2, d.names.size() );
+        EXPECT_EQ( "--filename", d.names[0] );
+        EXPECT_EQ( "-f", d.names[1] );
+        EXPECT_TRUE( d.has_value );
+        EXPECT_TRUE( d.is_optional );
+        EXPECT_FALSE( bool( d.default_value ) );
+        EXPECT_EQ( "some filename", d.help );
+    }
+    {
+        comma::command_line_options::description d = comma::command_line_options::description::from_string( "--filename,-f=[<filename>]; default=blah.csv; some filename" );
+        EXPECT_EQ( 2, d.names.size() );
+        EXPECT_EQ( "--filename", d.names[0] );
+        EXPECT_EQ( "-f", d.names[1] );
+        EXPECT_TRUE( d.has_value );
+        EXPECT_TRUE( d.is_optional );
+        ASSERT_TRUE( bool( d.default_value ) );
+        EXPECT_EQ( "blah.csv", *d.default_value );
+        EXPECT_EQ( "some filename", d.help );
+    }
+    {
+        EXPECT_THROW( comma::command_line_options::description::from_string( "" ), std::exception );
+        EXPECT_THROW( comma::command_line_options::description::from_string( ";;" ), std::exception );
+        EXPECT_THROW( comma::command_line_options::description::from_string( "no-hyphen" ), std::exception );
     }
 }
 

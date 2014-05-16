@@ -28,6 +28,9 @@ specially: the "value" part of "name=value" does not need to be quoted if it is 
 
 Either the variables or the commands/expressions may be read from standard input, but not both.
 
+Returns 0 if there are no errors, or 1 otherwise. This includes syntax errors etc. in the input,
+as well as "expected" not matching "actual" values with option --test.
+
 Options:
 
     -h|--help               Show this help
@@ -78,6 +81,7 @@ function bye()
 {
     if [[ -n "$tmp_vars" ]]; then rm -f "$tmp_vars" ; fi
     if [[ -n "$err" ]]; then rm -f "$err" ; fi
+    if [[ -n "$out" ]]; then rm -f "$out" ; fi
     if [[ -z $1 ]] ; then exit 1 ; else exit $1; fi
 }
 
@@ -119,6 +123,7 @@ if [[ ! ( -d "$tmpdir" && -x "$tmpdir" ) ]]; then
 fi
 
 err="$tmpdir/nv_eval_err.$$"
+out="$tmpdir/nv_eval_out.$$"
 tmp_vars="$tmpdir/nv_eval_vars.$$"
 
 if [[ -n "$variables" ]]; then
@@ -137,14 +142,15 @@ input_filename=$input; if [[ -z "$input_filename" ]]; then input_filename="input
 if [[ -n "$variables" ]]; then name-value-eval-preparse --assign "$variables" > $tmp_vars
 else name-value-eval-preparse --assign > $tmp_vars; fi
 
+any_errors=0
+
 if (( test_option )); then
     # process one line at a time, since Python exits for most errors
     linenum=0
     line_list=
 
-    # (the extra echo is to handle line continuation "\" on the last line of the file)
-    # (using "read -r" prevents "\\" from being changed to "\")
-    ( cat $input; echo ) | while read -r line; do
+    # using "read -r" prevents "\\" from being changed to "\"
+    while read -r line; do
         (( linenum++ ))
         # skip comments and blank lines (unless there is a pending expression to evaluate)
         if [[ -z "$line_list" && -z "$( echo $line | sed 's/^#.*//g; s/^ *//g' )" ]]; then continue; fi
@@ -154,14 +160,19 @@ if (( test_option )); then
             line_list+=" $( echo "$line" | sed 's/.$//g' )"
         else
             line_list+=" $line"
-            ( cat "$tmp_vars"; echo "${line_list[@]}" | name-value-eval-preparse --test ) | $python_cmd 2> $err
+            ( cat "$tmp_vars"; echo "${line_list[@]}" | name-value-eval-preparse --test ) | $python_cmd 2> $err > $out
             line_list=
-        fi
 
-        if [[ -s "$err" ]]; then
-            ( echo -n "$name: line $linenum of $input_filename: "; process_python_errors "$err" "$line" ) >&2
+            if [[ -s "$err" ]]; then
+                any_errors=1
+                ( echo -n "$name: line $linenum of $input_filename: "; process_python_errors "$err" "$line" ) >&2
+            elif [[ -s "$out" ]]; then
+                any_errors=1
+                cat $out
+            fi
         fi
-    done
+    done < <( cat $input; echo )
+    # (the extra echo is to handle line continuation "\" on the last line of the file)
 else
   # process all at once rather than one line at a time, since one command may span multiple lines
   ( cat "$tmp_vars";
@@ -170,11 +181,12 @@ else
     else name-value-eval-preparse $output_vars_option; fi ) | $python_cmd 2> $err
 
     if [[ -s "$err" ]]; then
+        any_errors=1
         ( echo -n "$name: "
           if [[ -n "$input" ]]; then echo -n "source file '$input': "; fi
           process_python_errors "$err" ) >&2
     fi
 fi
 
-bye 0
+bye $any_errors
 
