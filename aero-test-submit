@@ -32,7 +32,12 @@ Options:
     --build|-b=     Specify which build to use ("prod", "test" or "bleeding", default "$build_to_use")
     --config=       Provide a configuration file in name=value format; possible input fields
                     are ${all_db_vars/,/ }
+    --search=       Specify the search path (like in 'find .. path ..'); default '.'
+    --input=        Specify a single input file with the task description instead of searching
+                    for \"input\" files.
 
+Examples:
+    $name --build=test --config=my.config --search=$HOME/projects/mytests
 EOF
 }
 
@@ -72,12 +77,21 @@ VALUES (now(), $batch_id, 'BUILDPLAN', '$plan_from', '$plan_to', '$time_in_sql_f
 }
 
 config_file=""
+search_path="."
+input_plan=""
+
 for arg in "$@"; do
     case $arg in
         -h|--help)      usage_; exit 0;;
         -b=*|--build=*) build_to_use=${arg#*=};;
         --config=*)     config_file=${arg#*=}
                         if [ ! -f "$config_file" ] ; then echo "$name: config file '$config_file' not found" >&2; exit 1; fi
+                        ;;
+        --input=*)      input_plan=${arg#*=}
+                        if [ ! -f "$input_plan" ] ; then echo "$name: input file '$input_plan' not found" >&2; exit 1; fi
+                        ;;
+        --search=*)     search_path=${arg#*=}
+                        if [ ! -d "$search_path" ] ; then echo "$name: search path '$search_path' is not a directory" >&2; exit 1; fi
                         ;;
         -*)             echo "$name: unrecognised option: $arg" >&2; exit 1;;
         *)              echo "$name: unexpected argument: $arg" >&2; exit 1;;
@@ -92,8 +106,13 @@ case "$build_to_use" in
     *) echo "$name: illegal --build \"$build_to_use\"; must be one of: \"prod\" \"test\" \"bleeding\"" >&2; exit 1;;
 esac
 
-input_files=$( find . -name "input" )
-input_files_count=$( find . -name "input" | wc -l )
+if [ -z "$input_plan" ] ; then
+    input_files=$( find "$search_path" -name "input" )
+    input_files_count=$( find "$search_path" -name "input" | wc -l )
+else
+    input_files="$input_plan"
+    input_files_count=1
+fi
 job_id_list=()
 
 if (( $input_files_count > 0 )) ; then
