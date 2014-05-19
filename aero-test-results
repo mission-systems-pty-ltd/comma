@@ -2,15 +2,18 @@
 
 name=$( basename $0 )
 
+# defaults can be overridden through config
 db_host="129.78.214.114"
 db_port="3306"
 db_user="jobq_submit"
 db_pwd="bReWAca4rUJu"
 db_name="qdata"
-sql_command="mysql -h $db_host -P $db_port -u $db_user -p$db_pwd $db_name -e "
+all_db_vars="db_host,db_port,db_user,db_pwd,db_name"
 
-# aero-test-util is in the same folder as this script
+# aero-test-[sql-]util are in the same folder as this script
+source $( which comma-application-util )
 source $( dirname $0 )/aero-test-util
+source $( dirname $0 )/aero-test-sql-util
 
 function usage()
 {
@@ -25,6 +28,7 @@ Options:
     -h|--help       Show this help
     -f|--force      Force the results to be checked even if all jobs have not yet completed
     -v|--verbose    Print information about successful tests as well as failed ones
+    --config=       Provide a configuration file to override default parameters of SQL database
     --path=         Qstorage directory (e.g. "/mnt/q-storage", "/var/qantas/data"; default: check for both)
 
 EOF
@@ -108,6 +112,7 @@ path_prefix=
 batch_id=
 force=0
 verbose=0
+config_file=""
 
 for arg in "$@"; do
     case $arg in
@@ -115,11 +120,15 @@ for arg in "$@"; do
         -f|--force)   force=1;;
         -v|--verbose) verbose=1;;
         --path=*)     path_prefix=${arg#*=};;
+        --config=*)   config_file=${arg#*=};;
         -*)           echo "$name: unknown option '$arg'" >&2; exit 1;;
         *)            if [[ -z "$batch_id" ]]; then batch_id=$arg
                       else echo "$name: unexpected argument '$arg'" >&2; exit 1; fi;;
     esac
 done
+
+if [ -n "$config_file" ] ; then sql_read_config "$config_file" "$all_db_vars" || exit 1 ; fi
+sql_command=$( sql_get_command )
 
 determine_path_prefix
 verify_batch_id

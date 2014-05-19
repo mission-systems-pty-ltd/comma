@@ -3,6 +3,7 @@
 name=$( basename $0 )
 
 submit_time=$( date --utc "+%Y%m%dT%H%M%S" )
+# defaults can be overridden through config
 output_base_dir="/var/qantas/data/log/gui/acceptance"
 user_name="acceptance"
 build_to_use="prod"   # "prod", "test" or "bleeding"
@@ -12,21 +13,25 @@ db_port="3306"
 db_user="jobq_submit"
 db_pwd="bReWAca4rUJu"
 db_name="qdata"
-sql_command="mysql -h $db_host -P $db_port -u $db_user -p$db_pwd $db_name -e "
+all_db_vars="output_base_dir,user_name,build_to_use,task_priority,db_host,db_port,db_user,db_pwd,db_name"
 
-# aero-test-util is in the same folder as this script
-. $( which aero-test-util )
+# aero-test-[sql-]util are in the same folder as this script
+source $( which comma-application-util )
+source $( dirname $0 )/aero-test-util
+source $( dirname $0 )/aero-test-sql-util
 
 function usage_()
 {
 cat <<EOF >&2
-Usage: $name [-h|--help] [--build|-b=prod|test|bleeding]
+Usage: $name [-h|--help] [--build|-b=prod|test|bleeding] [--config=<config file>]
 
 Search for subdirectories containing \"input\" files and submit these tests to the job queue.
 
 Options:
 
     --build|-b=     Specify which build to use ("prod", "test" or "bleeding", default "$build_to_use")
+    --config=       Provide a configuration file in name=value format; possible input fields
+                    are ${all_db_vars/,/ }
 
 EOF
 }
@@ -66,14 +71,21 @@ VALUES (now(), $batch_id, 'BUILDPLAN', '$plan_from', '$plan_to', '$time_in_sql_f
 '$build_to_use', $task_priority)"
 }
 
+config_file=""
 for arg in "$@"; do
     case $arg in
         -h|--help)      usage_; exit 0;;
         -b=*|--build=*) build_to_use=${arg#*=};;
+        --config=*)     config_file=${arg#*=}
+                        if [ ! -f "$config_file" ] ; then echo "$name: config file '$config_file' not found" >&2; exit 1; fi
+                        ;;
         -*)             echo "$name: unrecognised option: $arg" >&2; exit 1;;
         *)              echo "$name: unexpected argument: $arg" >&2; exit 1;;
     esac
 done
+
+if [ -n "$config_file" ] ; then sql_read_config "$config_file" "$all_db_vars" || exit 1 ; fi
+sql_command=$( sql_get_command )
 
 case "$build_to_use" in
     prod|test|bleeding) ;;
