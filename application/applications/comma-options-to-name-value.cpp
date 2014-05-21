@@ -73,7 +73,7 @@ int main( int ac, char** av )
             }
             else
             {
-                std::cout << stripped << "=\"true\"" << std::endl;
+                std::cout << stripped << "=\"1\"" << std::endl;
             }
         }
         const std::vector< std::string >& unnamed = options.unnamed( valueless, valued );
