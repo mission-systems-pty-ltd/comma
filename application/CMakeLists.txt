@@ -20,7 +20,8 @@ INSTALL(
 
 INSTALL( PROGRAMS comma-application-util DESTINATION ${comma_INSTALL_BIN_DIR} )
 
+ADD_SUBDIRECTORY( applications )
+
 IF( comma_BUILD_TESTS )
-    ADD_SUBDIRECTORY( applications )
     ADD_SUBDIRECTORY( test )
 ENDIF( comma_BUILD_TESTS )
