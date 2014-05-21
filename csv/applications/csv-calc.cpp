@@ -412,10 +412,12 @@ namespace Operations
     class Variance : public base // todo: generalise for kth moment
     {
         public:
-            Variance() : count_( 0 ) {}
+            Variance() : first_( 0 ), count_( 0 ) {}
             void push( const char* buf )
             {
                 T t = comma::csv::format::traits< T, F >::from_bin( buf );
+                if( !squares_ ) { first_ = t; }
+                t -= first_; // todo: quick and dirty, to account for large numbers; it would be nice to add ld for long double in csv, too
                 ++count_;
                 mean_ = mean_ ? *mean_ + ( t - *mean_ ) / count_ : t;
                 squares_ = squares_ ? *squares_ + ( t * t - *squares_ ) / count_ : t * t;
@@ -424,6 +426,7 @@ namespace Operations
             base* clone() const { return new Variance< T, F >( *this ); }
         private:
             friend class Stddev< T, F >;
+            T first_;
             boost::optional< typename result_traits< T >::type > mean_;
             boost::optional< typename result_traits< T >::type > squares_;
             std::size_t count_;
