@@ -300,3 +300,13 @@ function comma_options_from_name_value()
         | sed 's/\\"/"/g' \
         | tr '=' "$delimiter"
 }
+
+# usage: comma_options_has <what> $@
+# example:
+#     if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then usage ; fi
+function comma_options_has()
+{
+    for a in ${@:2} ; do if [[ "$1" == "$a" ]] ; then echo 1 ; exit ; fi ; done
+    echo 0
+}
+
