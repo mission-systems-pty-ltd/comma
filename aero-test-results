@@ -65,6 +65,30 @@ function determine_path_prefix()
     fi
 }
 
+# find "test" file inside a path, checking in each subdirectory (starting from the full path)
+# arguments: <path>
+function closest_test_in_path()
+{
+    local path=$1
+    local file="test"
+
+    # sanity check (and avoid infinite loop)
+    if [[ -z "$path" ]]; then echo "$name: error: empty path in closest_file_in_path()" >&2; exit 1; fi
+    # get canonical name (so path always starts with "/")
+    path=$( readlink -e "$path" )
+
+    while true; do
+        if [[ -d "$path/$file" ]]; then
+            echo "$name: warning: \"$path/$file\" is a directory (expected an executable script); ignoring" >&2
+        elif [[ -f "$path/$file" ]]; then
+            if [[ -x "$path/$file" ]]; then echo $path/$file; break
+            else echo "$name: warning: \"$path/$file\" is not executable; ignoring" >&2; fi
+        elif [[ $path == "/" ]]; then break
+        fi
+        path=$( dirname "$path" )
+    done
+}
+
 # copy input to output, and return failure (1) if there was any output
 # Argument: description of test (job id and path)
 function fail_on_output()
@@ -97,15 +121,26 @@ function check_results()
         { if (substr($0, 1, length(prefix)) == prefix) { print $0; } \
           else print prefix "/" substr($0, length("'$hardcoded_prefix'") + 1); } ' | sed 's/\/\//\//g' )
     
-    local actual="$plan_dir/fixm-prototype.path-value"
     local expected="$test_dir/expected"
-
-    if [[ ! -f "$actual" ]]; then echo "Error (job $job_id): result file not found: $actual"; return 1; fi
     if [[ ! -f "$expected" ]]; then echo "Error (job $job_id): test file not found: $expected"; return 1; fi
 
-    if aero-test-match -v="$actual" "$expected" 2>&1 | fail_on_output "job $job_id $test_dir"; then
-        (( ++success_count ))
-    fi 
+    local test_script=$( closest_test_in_path "$test_dir" )
+    if [[ -z "$test_script" ]]; then echo "$name: cannot find a \"test\" script to use for '$test_dir'" >&2; exit 1; fi
+
+    grep -q -- "--use-existing-results" "$test_script"
+    if [[ $? == 0 ]]; then
+        if "$test_script" --use-existing-results="$plan_dir" \
+            | aero-test-match "$expected" 2>&1 \
+            | fail_on_output "job $job_id $test_dir"; then
+            (( ++success_count ))
+        fi 
+    else
+        local actual="$plan_dir/fixm-prototype.path-value"
+        if [[ ! -f "$actual" ]]; then echo "Error (job $job_id): result file not found: $actual"; return 1; fi
+        if aero-test-match -v="$actual" "$expected" 2>&1 | fail_on_output "job $job_id $test_dir"; then
+            (( ++success_count ))
+        fi 
+    fi
 }
 
 path_prefix=
