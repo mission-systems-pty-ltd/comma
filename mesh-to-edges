@@ -81,7 +81,7 @@ else
     cmd=( csv-shuffle --fields="$fields" --output-fields="$default_vertex_fields" )
 fi
 
-( cat "$vert" | "${cmd[@]}" ; echo "---"; grep '^[0-9][0-9]*,[0-9][0-9]*$' "$mesh" ) | awk -F, '
+( cat "$vert" | "${cmd[@]}" ; echo "---"; cat "$mesh" ) | awk -F, '
 BEGIN { m = n = 0; }
 /^---$/ { m = 1; next; }
 
