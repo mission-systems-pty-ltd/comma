@@ -49,6 +49,7 @@ TARGET_LINK_LIBRARIES ( csv-shuffle ${comma_ALL_EXTERNAL_LIBRARIES} comma_applic
 TARGET_LINK_LIBRARIES ( csv-thin ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io )
 TARGET_LINK_LIBRARIES ( csv-analyse ${comma_ALL_EXTERNAL_LIBRARIES} comma_application )
 
+INSTALL(  PROGRAMS csv-to-sql DESTINATION ${comma_INSTALL_BIN_DIR} )
 INSTALL( TARGETS csv-bin-cut
                  csv-join
                  csv-from-columns
