@@ -13,7 +13,7 @@ usage()
     simple_usage
     cat >&2 <<EOF
 
-Converts csv to SQL "insert" statements.
+Converts csv to MySQL "insert" statements.
 
 Options:
     -h|--help           Show this help
