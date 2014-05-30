@@ -1,0 +1,87 @@
+#!/bin/bash
+name=$( basename $0 )
+. $( which comma-application-util )
+
+function description()
+{
+    cat <<EOF
+--graph; take as input statistics in CSV format and produce a graph
+--output-fields; output fields and exit
+--verbose,-v; verbose
+--help,-h; print this message and exit
+EOF
+}
+
+function usage()
+{
+    cat >&2 <<EOF2
+    
+$name   converts path-value summary statistics from flight-plan-build and converts to CSV format; optionally produces graphs
+
+$name arguments:
+$(description)
+
+Example 1: find all summary.path_value outputs in sub-folders and collect flight plan statistics
+
+aero-stats \$( find -name summary.path_value ) > stats.csv
+
+Example 2: generate graph from statistics summarised in Example 1
+
+cat stats.csv | aero-stats --graph > graph.pdf
+
+EOF2
+
+exit 0
+}
+
+function stats_to_record()
+{
+    total_time=$(cat $1 | name-value-get --from path-value run_all/elapsed)   
+    main_route=$(cat $1 | name-value-get --from path-value run_all/build_flight_plan/fuel-search/plan-fuel/flight-prm/elapsed)
+    dpd=$(cat $1 | name-value-get --from path-value run_all/build_flight_plan/fuel-search/plan-fuel/perform_dpd/elapsed)
+    dp1=$(cat $1 | name-value-get --from path-value run_all/build_flight_plan/fuel-search/plan-fuel/perform_dp1/elapsed)
+    etops=$(cat $1 | name-value-get --from path-value run_all/build_flight_plan/fuel-search/plan-fuel/perform_etops/elapsed) 
+    alternates_all=$(cat $1 | name-value-get --from path-value run_all/build_flight_plan/fuel-search/plan-fuel/perform_alternates/elapsed)
+    alternates_flight_prm=$(cat $1 | name-value-get --from path-value run_all/build_flight_plan/fuel-search/plan-fuel/perform_alternates/fuel-search/plan-fuel/flight-prm/elapsed)
+    dpa_all=$(cat $1 | name-value-get --from path-value run_all/perform_dpa/elapsed)
+    dpa_flight_prm=$(cat $1 | name-value-get --from path-value run_all/perform_dpa/fuel-search/plan-fuel/flight-prm/elapsed)
+
+    if [[ -z $dpd ]] ; then dpd=0 ; fi
+    if [[ -z $dp1 ]] ; then dp1=0 ; fi
+    if [[ -z $dpa_all ]] ; then dpa_all=0 ; fi
+    if [[ -z $etops ]] ; then etops=0 ; fi
+    if [[ -z $alternates_all ]] ; then alternates_all=0 ; fi
+
+    overhead=$(echo "$total_time - $main_route - $dpd - $dp1 - $etops - $alternates_all - $dpa_all" | bc -l )
+
+    echo "$overhead,$main_route,$dpd,$etops,$dpa_all,$alternates_all,$dp1"
+}
+
+if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then usage ; fi
+
+comma_path_value_to_var < <( description | comma-options-to-name-value $@ | grep -v '^"' )
+
+output_fields="name,overhead,main,dpd,etops,dpa,alternates,dp1"
+
+if [[ $output_fields == "1" ]] ; then 
+    echo $output_fields
+    exit 0
+fi
+
+if [[ $graph == "1" ]] ; then
+    temp=$(mktemp)
+    echo $output_fields > $temp
+    cat >> $temp
+    echo -e "set key outside \nset key autotitle columnheader\nset style data histogram\nset style histogram rowstacked\nset ylabel \"Time (seconds)\"\nset style fill pattern border\nset samples 11\nset xtics nomirror rotate by -20 scale 0 font \",8\"\nset datafile separator \",\"\nset terminal postscript color \nplot for [i=2:8] \"$temp\" using i:xtic(1)" | gnuplot | ps2pdf -
+    rm $temp    
+    exit 0
+fi
+
+files=("$(description | comma-options-to-name-value $@ | grep -v =)")
+for i in ${files[@]} ; do
+    filename=$(echo $i | sed s/\"//g)
+    if [[ ! -s $filename ]] ; then continue; fi
+    echo "\"$filename\",$(stats_to_record $filename)"
+done
+
+

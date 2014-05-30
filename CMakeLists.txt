@@ -1,5 +1,6 @@
 INSTALL( PROGRAMS aero-bash-util
                   aero-bash-test
+                  aero-stats
                   csv-from-bin-schema
                   csv-merge-bin-schema
                   csv-replace
