@@ -29,6 +29,10 @@ Example 2: generate graph from statistics summarised in Example 1
 
 cat stats.csv | aero-stats --graph > graph.pdf
 
+Example 3: generating statistics on individual cost indices with speed search (speed search produces additional summary.path_value files which should be disregarded)
+
+aero-stats \$( find -name summary.path_value ) | grep -v ,, > stats.csv
+
 EOF2
 
 exit 0
