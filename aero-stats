@@ -5,8 +5,8 @@ name=$( basename $0 )
 function description()
 {
     cat <<EOF
---graph; take as input statistics in CSV format and produce a graph
---output-fields; output fields and exit
+--graph; take as input statistics in CSV format and produce a graph in PDF format
+--output-fields,-o; output fields and exit
 --verbose,-v; verbose
 --help,-h; print this message and exit
 EOF
@@ -36,15 +36,18 @@ exit 0
 
 function stats_to_record()
 {
-    total_time=$(cat $1 | name-value-get --from path-value run_all/elapsed)   
-    main_route=$(cat $1 | name-value-get --from path-value run_all/build_flight_plan/fuel-search/plan-fuel/flight-prm/elapsed)
-    dpd=$(cat $1 | name-value-get --from path-value run_all/build_flight_plan/fuel-search/plan-fuel/perform_dpd/elapsed)
-    dp1=$(cat $1 | name-value-get --from path-value run_all/build_flight_plan/fuel-search/plan-fuel/perform_dp1/elapsed)
-    etops=$(cat $1 | name-value-get --from path-value run_all/build_flight_plan/fuel-search/plan-fuel/perform_etops/elapsed) 
-    alternates_all=$(cat $1 | name-value-get --from path-value run_all/build_flight_plan/fuel-search/plan-fuel/perform_alternates/elapsed)
-    alternates_flight_prm=$(cat $1 | name-value-get --from path-value run_all/build_flight_plan/fuel-search/plan-fuel/perform_alternates/fuel-search/plan-fuel/flight-prm/elapsed)
-    dpa_all=$(cat $1 | name-value-get --from path-value run_all/perform_dpa/elapsed)
-    dpa_flight_prm=$(cat $1 | name-value-get --from path-value run_all/perform_dpa/fuel-search/plan-fuel/flight-prm/elapsed)
+    local prefix=run_all
+    if [[ -z $( cat $1 | grep $prefix ) ]] ; then prefix=run ; fi
+
+    total_time=$(cat $1 | name-value-get --from path-value $prefix/elapsed)
+    main_route=$(cat $1 | name-value-get --from path-value $prefix/build_flight_plan/fuel-search/plan-fuel/flight-prm/elapsed)
+    dpd=$(cat $1 | name-value-get --from path-value $prefix/build_flight_plan/fuel-search/plan-fuel/perform_dpd/elapsed)
+    dp1=$(cat $1 | name-value-get --from path-value $prefix/build_flight_plan/fuel-search/plan-fuel/perform_dp1/elapsed)
+    etops=$(cat $1 | name-value-get --from path-value $prefix/build_flight_plan/fuel-search/plan-fuel/perform_etops/elapsed)
+    alternates_all=$(cat $1 | name-value-get --from path-value $prefix/build_flight_plan/fuel-search/plan-fuel/perform_alternates/elapsed)
+    alternates_flight_prm=$(cat $1 | name-value-get --from path-value $prefix/build_flight_plan/fuel-search/plan-fuel/perform_alternates/fuel-search/plan-fuel/flight-prm/elapsed)
+    dpa_all=$(cat $1 | name-value-get --from path-value $prefix/perform_dpa/elapsed)
+    dpa_flight_prm=$(cat $1 | name-value-get --from path-value $prefix/perform_dpa/fuel-search/plan-fuel/flight-prm/elapsed)
 
     if [[ -z $dpd ]] ; then dpd=0 ; fi
     if [[ -z $dp1 ]] ; then dp1=0 ; fi
@@ -61,16 +64,16 @@ if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then
 
 comma_path_value_to_var < <( description | comma-options-to-name-value $@ | grep -v '^"' )
 
-output_fields="name,overhead,main,dpd,etops,dpa,alternates,dp1"
+fields="name,overhead,main,dpd,etops,dpa,alternates,dp1"
 
 if [[ $output_fields == "1" ]] ; then 
-    echo $output_fields
+    echo "$fields"
     exit 0
 fi
 
 if [[ $graph == "1" ]] ; then
     temp=$(mktemp)
-    echo $output_fields > $temp
+    echo $fields > $temp
     cat >> $temp
     echo -e "set key outside \nset key autotitle columnheader\nset style data histogram\nset style histogram rowstacked\nset ylabel \"Time (seconds)\"\nset style fill pattern border\nset samples 11\nset xtics nomirror rotate by -20 scale 0 font \",8\"\nset datafile separator \",\"\nset terminal postscript color \nplot for [i=2:8] \"$temp\" using i:xtic(1)" | gnuplot | ps2pdf -
     rm $temp    
