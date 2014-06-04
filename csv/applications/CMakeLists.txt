@@ -26,6 +26,7 @@ ADD_EXECUTABLE( csv-play ${dir}/csv-play.cpp ${dir}/play/multiplay.cpp ${dir}/pl
 ADD_EXECUTABLE( csv-shuffle ${dir}/csv-shuffle.cpp )
 ADD_EXECUTABLE( csv-thin ${dir}/csv-thin.cpp )
 ADD_EXECUTABLE( csv-analyse ${dir}/csv-analyse.cpp )
+ADD_EXECUTABLE( csv-to-sql ${dir}/csv-to-sql.cpp )
 
 TARGET_LINK_LIBRARIES ( csv-size ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
 TARGET_LINK_LIBRARIES ( csv-bin-cut ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv comma_xpath )
@@ -48,8 +49,8 @@ TARGET_LINK_LIBRARIES ( csv-play ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma
 TARGET_LINK_LIBRARIES ( csv-shuffle ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
 TARGET_LINK_LIBRARIES ( csv-thin ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io )
 TARGET_LINK_LIBRARIES ( csv-analyse ${comma_ALL_EXTERNAL_LIBRARIES} comma_application )
+TARGET_LINK_LIBRARIES ( csv-to-sql ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
 
-INSTALL(  PROGRAMS csv-to-sql DESTINATION ${comma_INSTALL_BIN_DIR} )
 INSTALL( TARGETS csv-bin-cut
                  csv-join
                  csv-from-columns
@@ -70,5 +71,6 @@ INSTALL( TARGETS csv-bin-cut
                  csv-select
                  csv-thin
                  csv-analyse
+                 csv-to-sql
          RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR}
          COMPONENT Runtime )
