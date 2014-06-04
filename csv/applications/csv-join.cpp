@@ -245,7 +245,10 @@ template < typename K > struct join_impl_ // quick and dirty
             {
                 for( std::size_t i = 0; i < ( first_matching ? 1 : it->second.size() ); ++i )
                 {
-                    std::cout << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << stdin_csv.delimiter << it->second[i] << std::endl;
+                    std::cout << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << stdin_csv.delimiter;
+                    std::cout << ( filter_csv.binary()
+                                 ? filter_csv.format().bin_to_csv( &it->second[i][0], stdin_csv.delimiter )
+                                 : it->second[i] ) << std::endl;
                 }
             }
             if( first_matching ) { filter_map.erase( it->first ); } // quick and dirty for now
@@ -274,7 +277,7 @@ int main( int ac, char** av )
         if( unnamed.size() > 1 ) { std::cerr << "csv-join: expected one file or stream to join, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         comma::name_value::parser parser( "filename", ';', '=', false );
         filter_csv = parser.get< comma::csv::options >( unnamed[0] );
-        if( stdin_csv.binary() != filter_csv.binary() ) { std::cerr << "csv-join: expected both streams ascii or both streams binary" << std::endl; return 1; }
+        if( stdin_csv.binary() && !filter_csv.binary() ) { std::cerr << "csv-join: stdin stream binary and filter stream ascii: this combination is not supported" << std::endl; return 1; }
         return options.exists( "--string,-s" ) ? join_impl_< std::string >::run( options ) : join_impl_< comma::int64 >::run( options );
     }
     catch( std::exception& ex )
