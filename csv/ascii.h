@@ -77,6 +77,9 @@ class ascii
         /// put value at the right place in the line (convenience function)
         const std::string& put( const S& s, std::string& line ) const;
 
+        /// put value at the right place in the line (convenience function)
+        std::string put( const S& s ) const;
+
         /// return delimiter
         char delimiter() const { return delimiter_; }
 
@@ -143,6 +146,13 @@ inline const std::string& ascii< S >::put( const S& s, std::string& line ) const
     if( !line.empty() ) { v = split( line, delimiter_ ); }
     line = join( put( s, v ), delimiter_ );
     return line;
+}
+
+template < typename S >
+inline std::string ascii< S >::put( const S& s ) const
+{
+    std::vector< std::string > v;
+    return join( put( s, v ), delimiter_ );
 }
 
 } } // namespace comma { namespace csv {

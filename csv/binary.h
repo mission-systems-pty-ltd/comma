@@ -60,8 +60,11 @@ class binary
         /// get value (returns reference pointing to the parameter)
         const S& get( S& s, const char* buf ) const;
 
-        /// put value at the right place in the vector
+        /// put value at the right place in the buffer
         char* put( const S& s, char* buf ) const;
+
+        /// allocate buffer and put value in it (convenience function)
+        std::vector< char > put( const S& s ) const;
 
         /// return format
         const csv::format& format() const { return format_; }
@@ -118,6 +121,14 @@ inline char* binary< S >::put( const S& s, char* buf ) const
     {
         ::memcpy( buf, reinterpret_cast< const char* >( &s ), sizeof( S ) );
     }
+    return buf;
+}
+
+template < typename S >
+inline std::vector< char > binary< S >::put( const S& s ) const
+{
+    std::vector< char > buf( format_.size() );
+    put( s, &buf[0] );
     return buf;
 }
 
