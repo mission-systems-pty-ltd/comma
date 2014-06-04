@@ -3,11 +3,11 @@
 #include <io.h>
 #endif
 
-#include <iostream>
-#include <vector>
-#include <set>
-#include <string>
 #include <algorithm>
+#include <iostream>
+#include <string>
+#include <vector>
+#include <boost/unordered_set.hpp>
 #include <comma/application/command_line_options.h>
 #include <comma/csv/options.h>
 #include <comma/string/string.h>
@@ -55,59 +55,57 @@ struct field
     field( const std::string& name, unsigned int index ) : name( name ), index( index ) {}
 };
 
-static std::set< std::string > reserved_word_set;
+static boost::unordered_set< std::string > fill_reserved_words()
+{
+    static const char *reserved_words[] =
+    {
+        "access", "accessible", "add", "all", "alter", "analyze", "and", "any", "as", "asc",
+        "asensitive", "audit", "before", "between", "bigint", "binary", "blob", "both", "by", "call",
+        "cascade", "case", "change", "char", "character", "check", "cluster", "collate", "column",
+        "column_value", "comment", "compress", "condition", "connect", "constraint", "continue",
+        "convert", "create", "cross", "current", "current_date", "current_time", "current_timestamp",
+        "current_user", "cursor", "database", "databases", "date", "day_hour", "day_microsecond",
+        "day_minute", "day_second", "dec", "decimal", "declare", "default", "delayed", "delete", "desc",
+        "describe", "deterministic", "distinct", "distinctrow", "div", "double", "drop", "dual",
+        "each", "else", "elseif", "enclosed", "escaped", "exclusive", "exists", "exit", "explain",
+        "false", "fetch", "file", "float", "float4", "float8", "for", "force", "foreign", "from",
+        "fulltext", "grant", "group", "having", "high_priority", "hour_microsecond", "hour_minute",
+        "hour_second", "identified", "if", "ignore", "immediate", "in", "increment", "index", "infile",
+        "initial", "inner", "inout", "insensitive", "insert", "int", "int1", "int2", "int3", "int4",
+        "int8", "integer", "intersect", "interval", "into", "is", "iterate", "join", "key", "keys",
+        "kill", "leading", "leave", "left", "level", "like", "limit", "linear", "lines", "load",
+        "localtime", "localtimestamp", "lock", "long", "longblob", "longtext", "loop", "low_priority",
+        "master_ssl_verify_server_cert", "match", "maxextents", "maxvalue", "mediumblob", "mediumint",
+        "mediumtext", "middleint", "minus", "minute_microsecond", "minute_second", "mlslabel", "mod",
+        "mode", "modifies", "modify", "natural", "nested_table_id", "noaudit", "nocompress", "not",
+        "nowait", "no_write_to_binlog", "number", "numeric", "of", "offline", "on", "online",
+        "optimize", "option", "optionally", "or", "order", "out", "outer", "outfile", "pctfree",
+        "precision", "primary", "prior", "privileges", "procedure", "public", "purge", "range",
+        "raw", "read", "reads", "read_write", "real", "references", "regexp", "release", "rename",
+        "repeat", "replace", "require", "resignal", "resource", "restrict", "return", "revoke", "right",
+        "rlike", "row", "rowid", "rownum", "rows", "schema", "schemas", "second_microsecond", "select",
+        "sensitive", "separator", "session", "set", "share", "show", "signal", "size", "smallint",
+        "spatial", "specific", "sql", "sql_big_result", "sql_calc_found_rows", "sqlexception",
+        "sql_small_result", "sqlstate", "sqlwarning", "ssl", "start", "starting", "straight_join",
+        "successful", "synonym", "sysdate", "table", "terminated", "then", "tinyblob", "tinyint",
+        "tinytext", "to", "trailing", "trigger", "true", "uid", "undo", "union", "unique", "unlock",
+        "unsigned", "update", "usage", "use", "user", "using", "utc_date", "utc_time", "utc_timestamp",
+        "validate", "values", "varbinary", "varchar", "varchar2", "varcharacter", "varying", "view",
+        "when", "whenever", "where", "while", "with", "write", "xor", "year_month", "zerofill",
+        NULL
+    };
+    boost::unordered_set< std::string > s;
+    for( int n = 0; reserved_words[n]; s.insert( reserved_words[n++] ) );
+    return s;
+}
 
 // returns true if the argument is a reserved word (in either MySQL or Oracle SQL)
 bool sql_reserved_word( const std::string &word )
 {
+    static boost::unordered_set< std::string > reserved_words = fill_reserved_words();
     std::string w = word;
     std::transform( w.begin(), w.end(), w.begin(), ::tolower );
-
-    if ( reserved_word_set.empty() )
-    {
-        static const char *reserved_words[] =
-        {
-            "access", "accessible", "add", "all", "alter", "analyze", "and", "any", "as", "asc",
-            "asensitive", "audit", "before", "between", "bigint", "binary", "blob", "both", "by", "call",
-            "cascade", "case", "change", "char", "character", "check", "cluster", "collate", "column",
-            "column_value", "comment", "compress", "condition", "connect", "constraint", "continue",
-            "convert", "create", "cross", "current", "current_date", "current_time", "current_timestamp",
-            "current_user", "cursor", "database", "databases", "date", "day_hour", "day_microsecond",
-            "day_minute", "day_second", "dec", "decimal", "declare", "default", "delayed", "delete", "desc",
-            "describe", "deterministic", "distinct", "distinctrow", "div", "double", "drop", "dual",
-            "each", "else", "elseif", "enclosed", "escaped", "exclusive", "exists", "exit", "explain",
-            "false", "fetch", "file", "float", "float4", "float8", "for", "force", "foreign", "from",
-            "fulltext", "grant", "group", "having", "high_priority", "hour_microsecond", "hour_minute",
-            "hour_second", "identified", "if", "ignore", "immediate", "in", "increment", "index", "infile",
-            "initial", "inner", "inout", "insensitive", "insert", "int", "int1", "int2", "int3", "int4",
-            "int8", "integer", "intersect", "interval", "into", "is", "iterate", "join", "key", "keys",
-            "kill", "leading", "leave", "left", "level", "like", "limit", "linear", "lines", "load",
-            "localtime", "localtimestamp", "lock", "long", "longblob", "longtext", "loop", "low_priority",
-            "master_ssl_verify_server_cert", "match", "maxextents", "maxvalue", "mediumblob", "mediumint",
-            "mediumtext", "middleint", "minus", "minute_microsecond", "minute_second", "mlslabel", "mod",
-            "mode", "modifies", "modify", "natural", "nested_table_id", "noaudit", "nocompress", "not",
-            "nowait", "no_write_to_binlog", "number", "numeric", "of", "offline", "on", "online",
-            "optimize", "option", "optionally", "or", "order", "out", "outer", "outfile", "pctfree",
-            "precision", "primary", "prior", "privileges", "procedure", "public", "purge", "range",
-            "raw", "read", "reads", "read_write", "real", "references", "regexp", "release", "rename",
-            "repeat", "replace", "require", "resignal", "resource", "restrict", "return", "revoke", "right",
-            "rlike", "row", "rowid", "rownum", "rows", "schema", "schemas", "second_microsecond", "select",
-            "sensitive", "separator", "session", "set", "share", "show", "signal", "size", "smallint",
-            "spatial", "specific", "sql", "sql_big_result", "sql_calc_found_rows", "sqlexception",
-            "sql_small_result", "sqlstate", "sqlwarning", "ssl", "start", "starting", "straight_join",
-            "successful", "synonym", "sysdate", "table", "terminated", "then", "tinyblob", "tinyint",
-            "tinytext", "to", "trailing", "trigger", "true", "uid", "undo", "union", "unique", "unlock",
-            "unsigned", "update", "usage", "use", "user", "using", "utc_date", "utc_time", "utc_timestamp",
-            "validate", "values", "varbinary", "varchar", "varchar2", "varcharacter", "varying", "view",
-            "when", "whenever", "where", "while", "with", "write", "xor", "year_month", "zerofill",
-            NULL
-        };
-
-        for ( int n = 0; reserved_words[n] != NULL; ++n )
-        { reserved_word_set.insert( std::string( reserved_words[n] ) ); }
-    }
-
-    return (reserved_word_set.find( w ) != reserved_word_set.end());
+    return reserved_words.find( w ) != reserved_words.end();
 }
 
 int main( int ac, char** av )
