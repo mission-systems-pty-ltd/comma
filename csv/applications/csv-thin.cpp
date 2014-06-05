@@ -113,7 +113,7 @@ int main( int ac, char** av )
 
         if( binary ) // quick and dirty, improve performance by reading larger buffer
         {
-            unsigned int factor = 16384 / size; // arbitrary
+            unsigned int factor = 65536 / size; // arbitrary
             if( factor == 0 ) { factor = 1; }
             std::vector< char > buf( size * factor );
             #ifdef WIN32
