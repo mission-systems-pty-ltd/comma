@@ -48,19 +48,89 @@
 static void usage()
 {
     std::cerr << std::endl;
-    std::cerr << "Convert to and from seconds since epoch as double to ISO string" << std::endl;
-    std::cerr << "Usage: cat log.csv | csv-time <options> > converted.csv" << std::endl;
-    std::cerr << "<options>:" << std::endl;
-    std::cerr << "    --to-seconds,--sec,-s" << std::endl;
-    std::cerr << "    --to-iso-string,--iso,-i" << std::endl;
+    std::cerr << "convert between a couple of common time representations:" << std::endl;
+    std::cerr << "    - iso string, e.g: 20140101T001122.333" << std::endl;
+    std::cerr << "    - seconds since epoch as double" << std::endl;
+    std::cerr << "    - sql time format, e.g: 2014-01-01 00:11:22" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "usage: cat log.csv | csv-time <options> > converted.csv" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "options" << std::endl;
+    std::cerr << "    --from <what>: input format: iso, seconds, sql; default iso" << std::endl;
+    std::cerr << "    --to <what>: output format: iso, seconds, sql; default iso" << std::endl;
+    std::cerr << "    --to-seconds,--sec,-s: iso input expected; deprecated, use --from, --to" << std::endl;
+    std::cerr << "    --to-iso-string,--iso,-i: input as seconds expected; deprecated, use --from, --to" << std::endl;
     std::cerr << "    --delimiter,-d <delimiter> : default: ','" << std::endl;
     std::cerr << "    --fields <fields> : time field numbers as in \"cut\"" << std::endl;
     std::cerr << "                        e.g. \"1,5,7\"; default: 1" << std::endl;
-    std::cerr << "    --verbose,-v: more output" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( -1 );
+}
+
+enum what_t { iso, seconds, sql };
+
+static what_t what( const std::string& option, const comma::command_line_options& options )
+{
+    std::string s = options.value< std::string >( option, "iso" );
+    if( s == "seconds" ) { return seconds; }
+    if( s == "sql" ) { return sql; }
+    if( s == "iso" ) { return iso; }
+    std::cerr << "csv-time: expected seconds, sql, or iso; got: \"" << s << "\"" << std::endl;
+    exit( 1 );
+}
+
+boost::posix_time::ptime from_string( const std::string& s, what_t w )
+{
+    switch( w )
+    {
+        case iso:
+            return boost::posix_time::from_iso_string( s );
+
+        case seconds:
+        {
+            double d = boost::lexical_cast< double >( s );
+            long long seconds = d;
+            int microseconds = ( d - seconds ) * 1000000;
+            return boost::posix_time::ptime( comma::csv::impl::epoch, boost::posix_time::seconds( seconds ) + boost::posix_time::microseconds( microseconds ) );
+        }
+
+        case sql:
+            return boost::posix_time::time_from_string( s );
+    }
+    COMMA_THROW( comma::exception, "never here" );
+}
+
+std::string to_string( const boost::posix_time::ptime& t, what_t w )
+{
+    switch( w )
+    {
+        case iso:
+            return boost::posix_time::to_iso_string( t );
+
+        case seconds: // quick and dirty
+        {
+            const boost::posix_time::ptime base( comma::csv::impl::epoch );
+            const boost::posix_time::time_duration d = t - base;
+            comma::int64 seconds = d.total_seconds();
+            comma::int32 nanoseconds = ( d - boost::posix_time::seconds( seconds ) ).total_microseconds() * 1000;
+            std::ostringstream oss;
+            oss << ( seconds == 0 && nanoseconds < 0 ? "-" : "" ) << seconds;
+            if( nanoseconds != 0 )
+            {
+                oss << '.';
+                oss.width( 9 );
+                oss.fill( '0' );
+                oss << std::abs( nanoseconds );
+            }
+            return oss.str();
+        }
+
+        case sql:
+            return comma::split( boost::replace_all_copy( boost::posix_time::to_iso_extended_string( t ), "T", " " ), '.' )[0];
+    }
+    COMMA_THROW( comma::exception, "never here" );
 }
 
 int main( int ac, char** av )
@@ -69,19 +139,21 @@ int main( int ac, char** av )
     {
         comma::command_line_options options( ac, av );
         if( options.exists( "--help" ) || options.exists( "-h" ) || ac == 1 ) { usage(); }
-        bool verbose = options.exists( "--verbose,-v" );
-        bool from = options.exists( "--to-iso-string" ) || options.exists( "--iso" ) || options.exists( "-i" );
-        bool to = options.exists( "--to-seconds" ) || options.exists( "--sec" ) || options.exists( "-s" );
-        if( to && from ) { COMMA_THROW( comma::exception, "cannot have both --to-seconds and --to-iso-string" ); }
-        if( !to && !from ) { COMMA_THROW( comma::exception, "please specify either --to-seconds or --to-iso-string" ); }
-        char delimiter = options.exists( "-d" ) ? options.value( "-d", ',' ) : options.value( "--delimiter", ',' );
+        options.assert_mutually_exclusive( "--to-seconds,--to-iso-string,--seconds,--sec,--iso,-s,-i,--from" );
+        options.assert_mutually_exclusive( "--to-seconds,--to-iso-string,--seconds,--sec,--iso,-s,-i,--to" );
+        what_t from;
+        what_t to;
+        if( options.exists( "--to-iso-string,--iso,-i" ) ) { from = seconds; to = iso; }
+        else if ( options.exists( "--to-seconds,--sec,-s" ) ) { from = iso; to = seconds; }
+        else { from = what( "--from", options ); to = what( "--to", options ); }
+        char delimiter = options.value( "--delimiter,-d", ',' );
         std::vector< std::string > fields = comma::split( options.value< std::string >( "--fields", "1" ), ',' );
         std::vector< std::size_t > indices( fields.size() );
-        unsigned int minSize = 0;
+        unsigned int min_size = 0;
         for( unsigned int i = 0; i < fields.size(); ++i )
         {
             unsigned int v = boost::lexical_cast< unsigned int >( fields[i] );
-            if( v > minSize ) { minSize = v; }
+            if( v > min_size ) { min_size = v; }
             indices[i] = v - 1;
         }
         while( std::cin.good() && !std::cin.eof() )
@@ -91,63 +163,13 @@ int main( int ac, char** av )
             if( !s.empty() && *s.rbegin() == '\r' ) { s = s.substr( 0, s.length() - 1 ); } // windows... sigh...
             if( s.length() == 0 ) { continue; }
             std::vector< std::string > v = comma::split( s, delimiter );
-            if( v.size() < minSize ) { COMMA_THROW( comma::exception, "expected at least " << minSize << " '" << delimiter << "'-separated values; got [" << s << "]" ); }
-            if( from )
-            {
-                for( unsigned int i = 0; i < indices.size(); ++i )
-                {
-                    std::vector< std::string > w = comma::split( v[ indices[i] ], '.' );
-                    boost::posix_time::ptime t;
-                    switch( w.size() )
-                    {
-                        case 1:
-                        {
-                            t = boost::posix_time::ptime( comma::csv::impl::epoch, boost::posix_time::seconds(boost::lexical_cast< long >( w[0] ) ) );
-                            break;
-                        }
-                        case 2:
-                        {
-                            if( w[1].length() > 9 && verbose ) { std::cerr << "csv-time: warning: nanoseconds trunkated at: " << v[ indices[i] ] << std::endl; }
-                            std::string n = "000000000";
-                            ::memcpy( &n[0], &w[1][0], w[1].length() < 9 ? w[1].length() : 9 );
-                            comma::uint32 nanoseconds = boost::lexical_cast< comma::uint32 >( n );
-                            t = boost::posix_time::ptime(comma::csv::impl::epoch, boost::posix_time::seconds( boost::lexical_cast< long >( w[0] ) ) + boost::posix_time::microseconds(nanoseconds/1000));
-                            break;
-                        }
-                        default:
-                            COMMA_THROW( comma::exception, "expected seconds as double; got [" << v[ indices[i] ] << "]" );
-                    }
-                    v[ indices[i] ] = boost::posix_time::to_iso_string( t );
-                }
-            }
-            else
-            {
-                for( unsigned int i = 0; i < indices.size(); ++i )
-                {
-                    boost::posix_time::ptime t = boost::posix_time::from_iso_string( v[ indices[i] ] );
-                    const boost::posix_time::ptime base( comma::csv::impl::epoch );
-                    const boost::posix_time::time_duration posix = t - base;
-                    comma::uint64 seconds = posix.total_seconds();
-                    comma::uint32 nanoseconds = static_cast< unsigned int >( posix.total_microseconds() % 1000000 ) * 1000;
-                    std::ostringstream oss;
-                    oss << seconds;
-                    if( nanoseconds > 0 )
-                    {
-                        oss << '.';
-                        oss.width( 9 );
-                        oss.fill( '0' );
-                        oss << nanoseconds;
-                    }
-                    v[ indices[i] ] = oss.str();
-                }
-            }
-            std::cout << v[0];
-            for( unsigned int i = 1; i < v.size(); ++i ) { std::cout << delimiter << v[i]; }
-            std::cout << std::endl;
+            if( v.size() < min_size ) { std::cerr << "expected at least " << min_size << " '" << delimiter << "'-separated values; got: \"" << s << "\"" << std::endl; return 1; }
+            for( unsigned int i = 0; i < indices.size(); v[ indices[i] ] = to_string( from_string( v[ indices[i] ], from ), to ), ++i );
+            std::cout << comma::join( v, delimiter ) << std::endl;
         }
         return 0;
     }
     catch( std::exception& ex ) { std::cerr << "csv-time: " << ex.what() << std::endl; }
     catch( ... ) { std::cerr << "csv-time: unknown exception" << std::endl; }
-    usage();
+    return 1;
 }
