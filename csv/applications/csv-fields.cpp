@@ -73,7 +73,7 @@ int main( int ac, char** av )
         int from = options.value( "--from", 1 );
         std::string line;
         std::getline( std::cin, line );
-        if( line.empty() ) { std::cerr << "csv-fields: expected fields on stdin, got nothing" << std::cerr; return 1; }
+        if( line.empty() ) { std::cerr << "csv-fields: expected fields on stdin, got nothing" << std::endl; return 1; }
         const std::vector< std::string >& v = comma::split( line, ',' );
         std::string comma;
         for( unsigned int i = 0; i < v.size(); ++i )
