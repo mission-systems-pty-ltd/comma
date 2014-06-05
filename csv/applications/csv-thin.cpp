@@ -30,7 +30,6 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author vsevolod vlaskine
 
 #ifdef WIN32
@@ -45,7 +44,6 @@
 #include <boost/random/variate_generator.hpp>
 #include <comma/application/command_line_options.h>
 #include <comma/application/contact_info.h>
-#include <comma/application/signal_flag.h>
 #include <comma/base/exception.h>
 #include <comma/base/types.h>
 #include <comma/io/file_descriptor.h>
@@ -79,31 +77,27 @@ static void usage()
 static double rate;
 static bool deterministic;
 
-bool ignore()
+static bool ignore()
 {
+    if( deterministic )
+    {
+        static unsigned long long size = static_cast< unsigned long long >( 1.0 / rate );
+        static unsigned long long count = size - 1;
+        if( ++count == size ) { count = 0; }
+        return count == 0;
+    }
     static boost::mt19937 rng;
     static boost::uniform_real<> dist( 0, 1 );
-    static boost::variate_generator< boost::mt19937&, boost::uniform_real<> > flip( rng, dist );
+    static boost::variate_generator< boost::mt19937&, boost::uniform_real<> > random( rng, dist );
     static bool do_ignore = comma::math::less( rate, 1.0 );
+    return do_ignore && random() > rate;
 
-    if(deterministic)
-    {
-        static int count = 0;
-        bool result = count % int(1.0 / rate);
-        count = (count + 1) % int(1.0 / rate);
-        return result;
-    }
-    else
-    {
-        return do_ignore && flip() > rate;
-    }
 }
 
 int main( int ac, char** av )
 {
     try
     {
-        signal_flag shutdownFlag;
         comma::command_line_options options( ac, av );
         if( options.exists( "--help,-h" ) || ac == 1 ) { usage(); }
         bool binary = options.exists( "--size,-s" );
@@ -112,17 +106,18 @@ int main( int ac, char** av )
         #ifdef WIN32
         if( binary ) { _setmode( _fileno( stdin ), _O_BINARY ); _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
-        std::vector< std::string > v = options.unnamed( "", "-s,--size" );
+        std::vector< std::string > v = options.unnamed( "--deterministic,-d", "-.*" );
         if( v.empty() ) { std::cerr << "csv-thin: please specify rate" << std::endl; usage(); }
         rate = boost::lexical_cast< double >( v[0] );
-        if(comma::math::less( rate, 0 ) || comma::math::less( 1, rate ) ) { std::cerr << "csv-thin: expected rate between 0 and 1, got " << rate << std::endl; usage(); }
+        if( comma::math::less( rate, 0 ) || comma::math::less( 1, rate ) ) { std::cerr << "csv-thin: expected rate between 0 and 1, got " << rate << std::endl; usage(); }
 
         if( binary ) // quick and dirty, improve performance by reading larger buffer
         {
-            const unsigned int factor = 16384 / size; // arbitrary
+            unsigned int factor = 16384 / size; // arbitrary
+            if( factor == 0 ) { factor = 1; }
             std::vector< char > buf( size * factor );
             #ifdef WIN32
-            while( !shutdownFlag && std::cin.good() && !std::cin.eof() )
+            while( std::cin.good() && !std::cin.eof() )
             {
                 // it all does not seem to work: in_avail() always returns 0
                 //std::streamsize available = std::cin.rdbuf()->in_avail();
@@ -138,13 +133,13 @@ int main( int ac, char** av )
             char* cur = &buf[0];
             unsigned int offset = 0;
             unsigned int capacity = buf.size();
-            while( !shutdownFlag && std::cin.good() && !std::cin.eof() )
+            while( std::cin.good() && !std::cin.eof() )
             {
                 int count = ::read( comma::io::stdin_fd, cur + offset, capacity );
                 if( count <= 0 )
                 {
                     if( offset != 0 ) { std::cerr << "csv-thin: expected at least " << size << " bytes, got only " << offset << std::endl; return 1; }
-                    break;                    
+                    break;
                 }
                 offset += count;
                 capacity -= count;
@@ -154,16 +149,16 @@ int main( int ac, char** av )
                 }
                 if( capacity == 0 ) { cur = &buf[0]; offset = 0; capacity = buf.size(); }
                 std::cout.flush();
-            }            
+            }
             #endif
         }
         else
         {
             std::string line;
-            while( !shutdownFlag && std::cin.good() && !std::cin.eof() )
+            while( std::cin.good() && !std::cin.eof() )
             {
                 std::getline( std::cin, line );
-                if( !ignore() ) { std::cout << line << std::endl; }
+                if( !line.empty() && !ignore() ) { std::cout << line << std::endl; }
             }
         }
         return 0;
