@@ -5,6 +5,7 @@ FILE( GLOB play_source   ${dir}/play/*.cpp)
 FILE( GLOB play_includes ${dir}/play/*.h)
 SOURCE_GROUP( ${TARGET_NAME} FILES ${play_source} ${play_includes} ${source} ${includes} )
 
+ADD_EXECUTABLE( csv-fields ${dir}/csv-fields.cpp )
 ADD_EXECUTABLE( csv-size ${dir}/csv-size.cpp )
 ADD_EXECUTABLE( csv-select ${dir}/csv-select.cpp )
 ADD_EXECUTABLE( csv-bin-cut ${dir}/csv-bin-cut.cpp )
@@ -28,6 +29,7 @@ ADD_EXECUTABLE( csv-thin ${dir}/csv-thin.cpp )
 ADD_EXECUTABLE( csv-analyse ${dir}/csv-analyse.cpp )
 ADD_EXECUTABLE( csv-to-sql ${dir}/csv-to-sql.cpp )
 
+TARGET_LINK_LIBRARIES ( csv-fields ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
 TARGET_LINK_LIBRARIES ( csv-size ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
 TARGET_LINK_LIBRARIES ( csv-bin-cut ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv comma_xpath )
 TARGET_LINK_LIBRARIES ( csv-split comma_csv comma_application comma_string comma_xpath ${comma_ALL_EXTERNAL_LIBRARIES} )
@@ -52,6 +54,7 @@ TARGET_LINK_LIBRARIES ( csv-analyse ${comma_ALL_EXTERNAL_LIBRARIES} comma_applic
 TARGET_LINK_LIBRARIES ( csv-to-sql ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
 
 INSTALL( TARGETS csv-bin-cut
+                 csv-fields
                  csv-join
                  csv-from-columns
                  csv-paste
