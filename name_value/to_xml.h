@@ -2,9 +2,12 @@
 #define COMMA_XML_TO_XML_
 
 #include <iostream>
+#include <vector>
+#include <boost/optional.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/date_time/posix_time/ptime.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/type_traits.hpp>
+#include <comma/visiting/visit.h>
 #include <comma/visiting/while.h>
 
 namespace comma {
