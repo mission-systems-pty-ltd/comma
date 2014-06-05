@@ -40,6 +40,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <boost/function.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
 #include <comma/base/exception.h>
@@ -52,10 +53,14 @@ class command_line_options
 {
     public:
         /// constructor
-        command_line_options( int argc, char ** argv );
+        /// if --help,-h present, call usage()
+        /// if --verbose,-v present, call usage( verbose )
+        command_line_options( int argc, char ** argv, boost::function< void( bool ) > usage = NULL );
 
         /// constructor
-        command_line_options( const std::vector< std::string >& argv );
+        /// if --help,-h present, call usage()
+        /// if --verbose,-v present, call usage( verbose )
+        command_line_options( const std::vector< std::string >& argv, boost::function< void( bool ) > usage = NULL );
 
         /// constructor
         command_line_options( const command_line_options& rhs );

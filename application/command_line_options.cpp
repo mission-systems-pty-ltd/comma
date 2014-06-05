@@ -49,14 +49,20 @@
 
 namespace comma {
 
-command_line_options::command_line_options( int argc, char ** argv )
+command_line_options::command_line_options( int argc, char ** argv, boost::function< void( bool ) > usage )
 {
     argv_.resize( argc );
     for( int i = 0; i < argc; ++i ) { argv_[i] = argv[i]; }
     fill_map_( argv_ );
+    if( usage && exists( "--help,-h" ) ) { usage( exists( "--verbose,-v" ) ); exit( 1 ); }
 }
 
-command_line_options::command_line_options( const std::vector< std::string >& argv ) : argv_( argv ) { fill_map_( argv_ ); }
+command_line_options::command_line_options( const std::vector< std::string >& argv, boost::function< void( bool ) > usage )
+    : argv_( argv )
+{
+    fill_map_( argv_ );
+    if( usage && exists( "--help,-h" ) ) { usage( exists( "--verbose,-v" ) ); exit( 1 ); }
+}
 
 std::string command_line_options::escaped( const std::string& s ) // quick and dirty
 {
