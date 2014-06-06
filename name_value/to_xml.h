@@ -4,7 +4,6 @@
 #include <iostream>
 #include <vector>
 #include <boost/optional.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/type_traits.hpp>
 #include <comma/visiting/visit.h>
@@ -20,12 +19,14 @@ class to_xml
 
         /// apply_next on boost optional
         template < typename K, typename T >
-        void apply_next( const K& name, const boost::optional< T >& value )
+        void apply( const K& name, const boost::optional< T >& value )
         {
             if( !value ) { return; }
+            open_( name );
             visiting::do_while<    !boost::is_fundamental< T >::value
                                 && !boost::is_same< T, boost::posix_time::ptime >::value
                                 && !boost::is_same< T, std::string >::value >::visit( name, *value, *this );
+            close_( name );
         }
 
         /// apply
@@ -46,12 +47,11 @@ class to_xml
         template < typename K, typename T >
         void apply( const K& name, const T& value )
         {
-            std::string s = boost::lexical_cast< std::string >( name );
-            open_( &s[0] );
+            open_( name );
             visiting::do_while<    !boost::is_fundamental< T >::value
                                 && !boost::is_same< T, boost::posix_time::ptime >::value
                                 && !boost::is_same< T, std::string >::value >::visit( name, value, *this );
-            close_( &s[0] );
+            close_( name );
         }
 
         /// apply to non-leaf elements
@@ -62,8 +62,21 @@ class to_xml
         template < typename K, typename T >
         void apply_final( const K& name, const T& value )
         {
-            os_ << value_( value );
-            final_ = true;
+            const std::string& s = value_( value );
+            std::string::size_type n = s.find_first_of( '\n' );
+            final_ = n == std::string::npos;
+            if( final_ || indent_step_.empty() ) { os_ << s; return; }
+            for( std::string::size_type p = 0; p < s.size(); ) // quick and dirty
+            {
+                std::size_t end = n == std::string::npos ? s.size() : n;
+                os_ << std::endl << indent_;
+                os_.write( &s[p], end - p );
+                if( end == s.size() ) { break; }
+                p = end + 1;
+                if( s[p] == '\r' ) { ++p; } // windows...
+                n = s.find_first_of( '\n', p );
+            }
+            os_ << std::endl;
         }
 
     private:
