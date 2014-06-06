@@ -3,8 +3,9 @@
 
 #include <iostream>
 #include <vector>
-#include <boost/optional.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/optional.hpp>
 #include <boost/type_traits.hpp>
 #include <comma/visiting/visit.h>
 #include <comma/visiting/while.h>
@@ -105,7 +106,8 @@ class to_xml
             closed_ = true;
         }
         static std::string value_( const boost::posix_time::ptime& t ) { return boost::posix_time::to_iso_string( t ); }
-        template < typename T > static T value_( T v ) { return v; }
+        //template < typename T > static T value_( T v ) { return v; }
+        template < typename T > static std::string value_( const T& v ) { return boost::lexical_cast< std::string >( v ); }
 };
 
 } // namespace comma {
