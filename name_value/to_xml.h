@@ -16,7 +16,7 @@ namespace comma {
 class to_xml
 {
     public:
-        to_xml( std::ostream& os, unsigned int indent_step = 4, unsigned int indent = 0 ) : os_( os ), indent_( indent, ' ' ), indent_step_( indent_step, ' ' ), final_( false ), closed_( true ) {}
+        to_xml( std::ostream& os, unsigned int indent = 4, unsigned int indent_depth = 0 ) : os_( os ), indent_( indent_depth * indent, ' ' ), indent_step_( indent, ' ' ), final_( false ), closed_( true ) {}
 
         /// apply_next on boost optional
         template < typename K, typename T >
