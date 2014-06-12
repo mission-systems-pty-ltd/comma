@@ -9,6 +9,11 @@ green="\033[0;32m"
 brown="\033[0;33m"
 none="\033[m"
 
+function status_ok()
+{
+    [[ ! "${PIPESTATUS[@]}" =~ [1-9] ]]
+}
+
 # a coarse elapsed time estimate of <command> execution appended to <file>
 # the rationale of writing to a file is to have no side effects for <command>
 # usage: aero_elapsed <file> <command> <args>
