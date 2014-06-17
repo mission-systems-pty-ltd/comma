@@ -12,8 +12,6 @@ function usage()
     echo "    --delimiter,-d <delimiter>: default: ," >&2
     echo "    --end-of-line,--eol <delimiter>: end of line output delimiter; default: end of line" >&2
     echo >&2
-    echo "todo: reimplement in c++" >&2
-    echo >&2
     echo "examples" >&2
     echo "    echo 1,2,3 | name-value-from-csv a,b,c/d -d ," >&2
     echo "    a=1,b=2,c/d=3" >&2
@@ -47,8 +45,8 @@ count=0
 while read line ; do
     if [[ "$line" == "" ]] ; then continue ; fi
     if [[ "$output_line_numbers" != "" ]] ; then prefix="[$count]/" ; fi
-    values=( $( echo $line | sed "s/$delimiter/\n/g" ) )
+    values=( $( echo $line | sed "s/$delimiter/\n/g" | sed 's/^/"/g' | sed 's/$/"/g' ) )
     i=0
-    for path in $paths ; do echo $prefix$path=\"${values[$i]}\"$end_of_line ; (( ++i )) ; done
+    for path in $paths ; do echo $prefix$path=${values[$i]}$end_of_line ; (( ++i )) ; done
     (( ++count ))
 done
