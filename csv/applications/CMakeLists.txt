@@ -47,7 +47,7 @@ TARGET_LINK_LIBRARIES ( csv-from-bin ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv c
 TARGET_LINK_LIBRARIES ( csv-calc ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application comma_string )
 TARGET_LINK_LIBRARIES ( csv-calc-new ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application comma_string )
 TARGET_LINK_LIBRARIES ( csv-crc ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application comma_string )
-TARGET_LINK_LIBRARIES ( csv-play ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application comma_io boost_atomic )
+TARGET_LINK_LIBRARIES ( csv-play ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application comma_io )
 TARGET_LINK_LIBRARIES ( csv-shuffle ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
 TARGET_LINK_LIBRARIES ( csv-thin ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io )
 TARGET_LINK_LIBRARIES ( csv-analyse ${comma_ALL_EXTERNAL_LIBRARIES} comma_application )
