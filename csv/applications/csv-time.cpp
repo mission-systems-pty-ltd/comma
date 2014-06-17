@@ -86,7 +86,7 @@ boost::posix_time::ptime from_string( const std::string& s, what_t w )
     switch( w )
     {
         case iso:
-            return boost::posix_time::from_iso_string( s );
+            return s == boost::posix_time::to_iso_string( boost::posix_time::ptime() ) ? boost::posix_time::ptime() : boost::posix_time::from_iso_string( s );
 
         case seconds:
         {
@@ -97,7 +97,7 @@ boost::posix_time::ptime from_string( const std::string& s, what_t w )
         }
 
         case sql:
-            return boost::posix_time::time_from_string( s );
+            return s == "NULL" || s == "null" || s.empty() ? boost::posix_time::ptime() : boost::posix_time::time_from_string( s );
     }
     COMMA_THROW( comma::exception, "never here" );
 }
@@ -128,7 +128,7 @@ std::string to_string( const boost::posix_time::ptime& t, what_t w )
         }
 
         case sql:
-            return comma::split( boost::replace_all_copy( boost::posix_time::to_iso_extended_string( t ), "T", " " ), '.' )[0];
+            return t.is_not_a_date_time() ? std::string( "NULL" ) : comma::split( boost::replace_all_copy( boost::posix_time::to_iso_extended_string( t ), "T", " " ), '.' )[0];
     }
     COMMA_THROW( comma::exception, "never here" );
 }
