@@ -119,7 +119,7 @@ IF( comma_BUILD_ZEROMQ )
     INCLUDE_DIRECTORIES( ${ZeroMQ_INCLUDE_PATH} )
 ENDIF( comma_BUILD_ZEROMQ )
 
-SET( comma_ALL_LIBRARIES 
+SET( comma_ALL_LIBRARIES
         debug comma_application-d
         optimized comma_application
         debug comma_base-d
@@ -197,7 +197,7 @@ ADD_SUBDIRECTORY( xpath )
     SET(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/COPYING")
     SET(CPACK_PACKAGE_VERSION_MAJOR "1")
     SET(CPACK_PACKAGE_VERSION_MINOR "0")
-    SET(CPACK_PACKAGE_VERSION_PATCH "4")
+    SET(CPACK_PACKAGE_VERSION_PATCH "5")
 	SET(CPACK_PACKAGE_CONTACT "t.teo@acfr.usyd.edu.au")
 
     #this line finds the appropriate Visual Studio DLLS in windows. Maybe it would find other dlls if a different build tool were used. Probably should be windows only.
