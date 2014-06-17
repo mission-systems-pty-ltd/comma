@@ -239,12 +239,14 @@ function comma_path_value_to_var()
         if [[ "$path" == "" ]] ; then continue ; fi
         if [[ "$path" =~ "#" ]] ; then continue ; fi
         if [[ "$value" == "" && "$null_ok" == "" ]] ; then continue ; fi
-        name=$prefix$path
-        name=${name//\//$delimiter}
-        name=${name//-/$delimiter}
-        name=${name//./$delimiter}
+        name=$prefix$( echo $path | sed "s/\//$delimiter/g" | sed "s/-/_/g" )
         eval $export_variable $name=\"$value\"
-        #eval $export_variable $name="$value" todo: works on values with whitespaces and seems right thing to do, but makes lots of test failing
+        # todo: below seems to be a better way, but it breaks lots of tests
+        #name=$prefix$path
+        #name=${name//\//$delimiter}
+        #name=${name//-/$delimiter}
+        #name=${name//./$delimiter}
+        #eval $export_variable $name="$value"
     done
 }
 
