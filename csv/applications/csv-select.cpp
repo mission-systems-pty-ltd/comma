@@ -386,16 +386,9 @@ int main( int ac, char** av )
                 if( !line.empty() ) { break; }
             }
             if( line.empty() ) { return 0; }
-
-            comma::csv::format format;
-            if( options.exists( "--format" ) )
-            {
-                format = comma::csv::format( options.value< std::string >( "--format" ) );
-            }
-            else
-            {
-                format = guess_format( line );
-            }
+            comma::csv::format format = options.exists( "--format" )
+                                      ? comma::csv::format( options.value< std::string >( "--format" ) )
+                                      : guess_format( line );
             init_input( format, options );
             comma::csv::ascii_input_stream< input_t > istream( std::cin, csv, input );
             // todo: quick and dirty: no time to debug why the commented section does not work (but that's the right way)
