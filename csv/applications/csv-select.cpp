@@ -298,7 +298,7 @@ static void init_input( const comma::csv::format& format, const comma::command_l
     if( fields.empty() ) { for( unsigned int i = 0; i < format.count(); ++i ) { fields.push_back( "v" ); } }
     for( unsigned int i = 0; i < fields.size(); ++i )
     {
-        if( comma::strip( fields[i], ' ' ).empty() ) { continue; }
+        if( comma::strip( fields[i], ' ' ).empty() || constraints_map.find( fields[i] ) == constraints_map.end() ) { continue; }
         switch( format.offset( i ).type )
         {
             case comma::csv::format::time:
