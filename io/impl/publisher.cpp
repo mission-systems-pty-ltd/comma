@@ -36,7 +36,7 @@
 #ifdef WIN32
 #include <io.h>
 #include <fcntl.h>
-#include <sys/stat.h> 
+#include <sys/stat.h>
 #include <sys/types.h>
 #endif
 
@@ -46,6 +46,7 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/lexical_cast.hpp>
 #include <comma/base/exception.h>
+#include <comma/io/file_descriptor.h>
 #include <comma/string/string.h>
 #include "./publisher.h"
 
@@ -62,7 +63,7 @@ class file_acceptor : public acceptor
         {
         }
 
-        ~file_acceptor() 
+        ~file_acceptor()
         {
 #ifndef WIN32
             ::close( fd_ );
@@ -240,11 +241,8 @@ unsigned int publisher::write( const char* buf, std::size_t size )
         ( **it )->write( buf, size );
         if( ( **it )->good() )
         {
-            if( m_flush )
-            {
-                ( **it )->flush();
-            }
-            ++count;            
+            if( m_flush ) { ( **it )->flush(); }
+            ++count;
         }
        else { remove( it ); }
     }
@@ -274,7 +272,11 @@ void publisher::accept()
 
 void publisher::remove( streams::iterator it )
 {
+#ifdef WIN32
+    if( *it->fd() != comma::io::invalid_file_descriptor ) { select_.write().remove( **it ); }
+#else // #ifdef WIN32
     select_.write().remove( **it );
+#endif // #ifdef WIN32
     ( *it )->close();
     streams_.erase( it );
     if( acceptor_ ) { acceptor_->notify_closed(); }
