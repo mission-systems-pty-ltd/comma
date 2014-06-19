@@ -295,12 +295,12 @@ static constrained< T > make_value( unsigned int i, const comma::command_line_op
 
 static void init_input( const comma::csv::format& format, const comma::command_line_options& options )
 {
-    bool default_constraints_empty = constraints<>( options ).empty();
+    //bool default_constraints_empty = constraints<>( options ).empty();
     if( fields.empty() ) { for( unsigned int i = 0; i < format.count(); ++i ) { fields.push_back( "v" ); } }
     for( unsigned int i = 0; i < fields.size(); ++i )
     {
         if( comma::strip( fields[i], ' ' ).empty() ) { continue; }
-        if( default_constraints_empty && constraints_map.find( fields[i] ) == constraints_map.end() ) { continue; }
+        //if( default_constraints_empty && constraints_map.find( fields[i] ) == constraints_map.end() ) { continue; }
         switch( format.offset( i ).type )
         {
             case comma::csv::format::time:
