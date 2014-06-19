@@ -49,8 +49,8 @@ static std::size_t select_impl_( int nfds, fd_set* fdr, fd_set* fdw, fd_set* fde
     if( fdr == NULL && fdw == NULL && fde == NULL ) { return 0; } // good semantics?
     int r = ::select( nfds, fdr, fdw, fde, t );
     if( r >= 0 ) { return r; }
-    int error = last_error::value();
 #ifndef WIN32
+    int error = last_error::value();
     if( error != EINTR ) // do no throw if select is interrupted by signal
 #endif
     {

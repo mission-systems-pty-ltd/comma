@@ -272,11 +272,7 @@ void publisher::accept()
 
 void publisher::remove( streams::iterator it )
 {
-#ifdef WIN32
-    if( *it->fd() != comma::io::invalid_file_descriptor ) { select_.write().remove( **it ); }
-#else // #ifdef WIN32
     select_.write().remove( **it );
-#endif // #ifdef WIN32
     ( *it )->close();
     streams_.erase( it );
     if( acceptor_ ) { acceptor_->notify_closed(); }
