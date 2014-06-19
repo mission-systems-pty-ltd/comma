@@ -94,7 +94,7 @@ void usage()
 bool matches( const std::string& value, const boost::regex& r ) { return boost::regex_match( value, r ); }
 template < typename T > bool matches( const T& value, const boost::regex& r ) { COMMA_THROW( comma::exception, "regex implemented only for strings" ); }
 
-template < typename T = double >
+template < typename T >
 struct constraints
 {
     boost::optional< T > equals;
@@ -160,6 +160,12 @@ struct constraints
         return false;
     }
 };
+
+static bool default_constraints_empty( const comma::command_line_options& options ) // quick and dirty
+{
+    static bool empty = constraints< std::string >( options ).empty();
+    return empty;
+}
 
 template < typename T >
 struct constrained
@@ -295,12 +301,11 @@ static constrained< T > make_value( unsigned int i, const comma::command_line_op
 
 static void init_input( const comma::csv::format& format, const comma::command_line_options& options )
 {
-    //bool default_constraints_empty = constraints<>( options ).empty();
     if( fields.empty() ) { for( unsigned int i = 0; i < format.count(); ++i ) { fields.push_back( "v" ); } }
     for( unsigned int i = 0; i < fields.size(); ++i )
     {
         if( comma::strip( fields[i], ' ' ).empty() ) { continue; }
-        //if( default_constraints_empty && constraints_map.find( fields[i] ) == constraints_map.end() ) { continue; }
+        if( default_constraints_empty( options ) && constraints_map.find( fields[i] ) == constraints_map.end() ) { continue; }
         switch( format.offset( i ).type )
         {
             case comma::csv::format::time:
@@ -361,7 +366,7 @@ int main( int ac, char** av )
         csv = comma::csv::options( options );
         fields = comma::split( csv.fields, ',' );
         if( fields.size() == 1 && fields[0].empty() ) { fields.clear(); }
-        std::vector< std::string > unnamed = options.unnamed( "--or,--sorted,--verbose,-v", "-b,--binary,-f,--fields,-d,--delimiter,--precision,--equals,--not-equal,--less-or-equal,--le,--greater-or-equal,--ge,--less,--greater,--from,--to" );
+        std::vector< std::string > unnamed = options.unnamed( "--or,--sorted,--verbose,-v", "-.*" );
         for( unsigned int i = 0; i < unnamed.size(); constraints_map.insert( std::make_pair( comma::split( unnamed[i], ';' )[0], unnamed[i] ) ), ++i );
         comma::signal_flag is_shutdown;
         if( csv.binary() )
@@ -384,7 +389,7 @@ int main( int ac, char** av )
             while( !is_shutdown && std::cin.good() && !std::cin.eof() )
             {
                 std::getline( std::cin, line );
-                line = comma::strip( line, '\r' );
+                line = comma::strip( line, '\r' ); // windows, sigh...
                 if( !line.empty() ) { break; }
             }
             if( line.empty() ) { return 0; }
