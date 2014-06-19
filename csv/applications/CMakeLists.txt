@@ -5,6 +5,10 @@ FILE( GLOB play_source   ${dir}/play/*.cpp)
 FILE( GLOB play_includes ${dir}/play/*.h)
 SOURCE_GROUP( ${TARGET_NAME} FILES ${play_source} ${play_includes} ${source} ${includes} )
 
+add_executable( csv-quote csv-quote.cpp )
+target_link_libraries( csv-quote ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
+install( TARGETS csv-quote RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
+
 ADD_EXECUTABLE( csv-fields ${dir}/csv-fields.cpp )
 ADD_EXECUTABLE( csv-size ${dir}/csv-size.cpp )
 ADD_EXECUTABLE( csv-select ${dir}/csv-select.cpp )
