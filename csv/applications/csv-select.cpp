@@ -94,7 +94,7 @@ void usage()
 bool matches( const std::string& value, const boost::regex& r ) { return boost::regex_match( value, r ); }
 template < typename T > bool matches( const T& value, const boost::regex& r ) { COMMA_THROW( comma::exception, "regex implemented only for strings" ); }
 
-template < typename T >
+template < typename T = double >
 struct constraints
 {
     boost::optional< T > equals;
@@ -295,12 +295,12 @@ static constrained< T > make_value( unsigned int i, const comma::command_line_op
 
 static void init_input( const comma::csv::format& format, const comma::command_line_options& options )
 {
+    bool default_constraints_empty = constraints<>( options ).empty();
     if( fields.empty() ) { for( unsigned int i = 0; i < format.count(); ++i ) { fields.push_back( "v" ); } }
     for( unsigned int i = 0; i < fields.size(); ++i )
     {
-        // todo: the line below substantially relaxes unnecessary limitations on --fields, but it breaks something; certainly fix
-        //if( comma::strip( fields[i], ' ' ).empty() || constraints_map.find( fields[i] ) == constraints_map.end() ) { continue; }
         if( comma::strip( fields[i], ' ' ).empty() ) { continue; }
+        if( default_constraints_empty && constraints_map.find( fields[i] ) == constraints_map.end() ) { continue; }
         switch( format.offset( i ).type )
         {
             case comma::csv::format::time:
