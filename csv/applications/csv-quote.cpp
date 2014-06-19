@@ -14,6 +14,7 @@ static void usage( bool verbose )
     std::cerr << "    --delimiter,-d=<delimiter>; default: ," << std::endl;
     std::cerr << "    --fields=<fields>: quote given fields, even if their values are numbers" << std::endl;
     std::cerr << "                       if --unquote, unquote only given fields" << std::endl;
+    std::cerr << "    --force=<fields>: quote given fields, if their values are numbers" << std::endl;
     std::cerr << "    --quote=<quote sign>; default: double quote" << std::endl;
     std::cerr << "    --unquote; remove quotes" << std::endl;
     std::cerr << std::endl;
@@ -25,10 +26,15 @@ int main( int ac, char** av )
     try
     {
         comma::command_line_options options( ac, av, usage );
-        std::set< unsigned int > fields;
+        std::set< std::size_t > fields;
         {
             const std::vector< std::string >& v = comma::split( options.value< std::string >( "--fields", "" ), ',' );
             for( unsigned int i = 0; i < v.size(); ++i ) { if( !v[i].empty() ) { fields.insert( i ); } }
+        }
+        std::set< std::size_t > forced;
+        {
+            const std::vector< std::string >& v = comma::split( options.value< std::string >( "--force", "" ), ',' );
+            for( unsigned int i = 0; i < v.size(); ++i ) { if( !v[i].empty() ) { forced.insert( i ); } }
         }
         char delimiter = options.value( "--delimiter,-d", ',' );
         char quote = options.value( "--quote", '\"' );
@@ -42,26 +48,33 @@ int main( int ac, char** av )
             std::string comma;
             for( std::size_t i = 0; i < v.size(); ++i )
             {
+                bool has_field = fields.empty() || fields.find( i ) != fields.end();
+                std::cout << comma;
+                comma = delimiter;
                 if( unquote )
                 {
-                    std::cout << comma << ( fields.empty() || fields.find( i ) != fields.end() ? comma::strip( v[i], quote ) : v[i] );
+                    std::cout << ( has_field ? comma::strip( v[i], quote ) : v[i] );
                 }
                 else
                 {
-                    const std::string& stripped = comma::strip( v[i], quote );
-                    if( fields.find( i ) == fields.end() )
+                    const std::string& value = comma::strip( v[i], quote );
+                    bool do_quote = false;
+                    if( has_field )
                     {
-                        try
+                        do_quote = true;
+                        if( forced.find( i ) == forced.end() )
                         {
-                            boost::lexical_cast< double >( stripped );
-                            std::cout << comma << stripped;
-                            continue;
+                            try
+                            {
+                                boost::lexical_cast< double >( value );
+                                do_quote = false;
+                            }
+                            catch( ... ) {}
                         }
-                        catch( ... ) {}
                     }
-                    std::cout << comma << quote << stripped << quote;
+                    if( do_quote ) { std::cout << quote << value << quote; }
+                    else { std::cout << value; }
                 }
-                comma = delimiter;
             }
             std::cout << std::endl;
         }
