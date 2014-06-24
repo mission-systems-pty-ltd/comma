@@ -81,6 +81,8 @@ class field
 
         type unpack( const char* storage );
 
+        const Derived& operator=( const field& rhs ) { return operator=( reinterpret_cast< const Derived& >( rhs ) ); }
+
         const Derived& operator=( const Derived& rhs ) { ::memcpy( storage_, rhs.storage_, size ); return reinterpret_cast< const Derived& >( *this ); }
 
         const Derived& operator=( const type& rhs ) { Derived::pack( storage_, rhs ); return reinterpret_cast< const Derived& >( *this ); }
