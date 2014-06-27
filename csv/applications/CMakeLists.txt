@@ -81,3 +81,7 @@ INSTALL( TARGETS csv-bin-cut
                  csv-to-sql
          RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR}
          COMPONENT Runtime )
+
+ADD_EXECUTABLE( csv-units ${dir}/csv-units.cpp )
+TARGET_LINK_LIBRARIES ( csv-units ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io comma_string comma_xpath comma_csv )
+INSTALL( TARGETS csv-units RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
