@@ -64,6 +64,12 @@ function message_()
     if [[ "$quiet" != "true" ]] ; then tput bold ; echo $1 >&2 ; tput sgr0 ; fi
 }
 
+function dump_file_()
+{
+    if [[ "$quiet" != "true" ]] ; then cat "$1" >&2 ; fi
+}
+
+
 function warning_()
 {
     if [[ "$quiet" != "true" ]] ; then tput bold ; echo -e "${brown}$1${none}" >&2  ; tput sgr0 ; fi
@@ -199,6 +205,7 @@ if (( $dir_count > 0 )) ; then
         message_ "$name: $tests_count test(s) in $dir: running..."
         cd $dir
         intermediate_result=0
+
         for t in $tests ; do
             if [[ -n "$is_shutdown" ]] ; then error_ "aero-test-run: terminated" >&2 ; exit 1 ; fi
             message_ "$name: $t: running..."
@@ -233,6 +240,7 @@ if (( $test_scripts_count > 0 )) ; then
         test_exec=$( closest_test_in_path "$dir" )
         if [[ -z "$test_exec" ]]; then error_ "$name: error: no \"test\" script found in any parent directory of $dir" >&2 ; continue ; fi
         message_ "$name: test $count of $test_scripts_count: $dir: running..."
+        [ -f "$dir/readme" ] && dump_file_ "$dir/readme" 
         basedir=$( pwd )
         cd $dir
         timestamp_file="$( mktemp -t aero-test-run-timestamp-$( basename $dir ).XXXXXX )" # capture starting time
