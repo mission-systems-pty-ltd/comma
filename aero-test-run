@@ -240,7 +240,8 @@ if (( $test_scripts_count > 0 )) ; then
         test_exec=$( closest_test_in_path "$dir" )
         if [[ -z "$test_exec" ]]; then error_ "$name: error: no \"test\" script found in any parent directory of $dir" >&2 ; continue ; fi
         message_ "$name: test $count of $test_scripts_count: $dir: running..."
-        [ -f "$dir/readme" ] && dump_file_ "$dir/readme" 
+        ## Comment out for now: the exact usage to be discussed, it is confusing and can be taken as a sign of error
+        ##[ -f "$dir/readme" ] && dump_file_ "$dir/readme" 
         basedir=$( pwd )
         cd $dir
         timestamp_file="$( mktemp -t aero-test-run-timestamp-$( basename $dir ).XXXXXX )" # capture starting time
