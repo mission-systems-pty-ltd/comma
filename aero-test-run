@@ -1,6 +1,6 @@
 #!/bin/bash
 
-. $( which aero-bash-util )
+source $( which aero-bash-util )
 
 function usage_()
 {
