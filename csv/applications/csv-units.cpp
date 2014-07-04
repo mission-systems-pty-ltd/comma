@@ -35,12 +35,6 @@
 /// @author kai huang
 
 #include <iostream>
-#include <comma/application/command_line_options.h>
-#include <comma/application/contact_info.h>
-#include <comma/base/exception.h>
-#include <comma/csv/stream.h>
-#include <comma/visiting/traits.h>
-
 #include <boost/units/systems/si.hpp>
 #include <boost/units/systems/si/length.hpp>
 #include <boost/units/systems/si/mass.hpp>
@@ -56,6 +50,12 @@
 #include <boost/units/base_units/angle/radian.hpp>
 #include <boost/units/base_units/angle/degree.hpp>
 
+#include <comma/application/command_line_options.h>
+#include <comma/application/contact_info.h>
+#include <comma/base/exception.h>
+#include <comma/csv/stream.h>
+#include <comma/visiting/traits.h>
+
 void usage()
 {
     std::cerr << std::endl;
@@ -68,12 +68,15 @@ void usage()
     std::cerr << "    --from <unit> : unit converting from" << std::endl;
     std::cerr << "    --to   <unit> : unit converting to" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "unit (supported)" << std::endl;
+    std::cerr << "supported units" << std::endl;
     std::cerr << "    meters / feet / nautical-miles " << std::endl;
     std::cerr << "    kilograms / pounds " << std::endl;
     std::cerr << "    meters-per-second / knots " << std::endl;
     std::cerr << "    kelvin / celsius / fahrenheit " << std::endl;
     std::cerr << "    radians / degrees " << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    uppercase and abbreviations" << std::endl;
+    std::cerr << "    todo: document abbreviations" << std::endl;
     std::cerr << std::endl;
     std::cerr << "csv options" << std::endl;
     std::cerr << comma::csv::options::usage() << std::endl;
@@ -118,7 +121,7 @@ typedef boost::units::angle::degree_base_unit::unit_type degree_t;
 typedef boost::units::absolute< boost::units::si::temperature > kelvin_t;
 typedef boost::units::absolute< boost::units::celsius::temperature > celsius_t;
 typedef boost::units::absolute< boost::units::fahrenheit::temperature > fahrenheit_t;
- 
+
 static bool verbose;
 static comma::csv::options csv;
 static input_t input;
@@ -163,6 +166,30 @@ static int run( const std::string& from, const std::string& to, const std::strin
     return 0;
 }
 
+static std::string normalized_name( const std::string& s )
+{
+    if( s == "pounds" || s == "lbs" ) { return "pounds"; }
+    if( s == "kilograms" || s == "kg" ) { return "kilograms"; }
+    if( s == "feet" || s == "ft" ) { return "feet"; }
+    if( s == "nautical-miles" || s == "nm" ) { return "nautical-miles"; }
+    if( s == "meters" || s == "metres" ) { return "meters"; }
+    if( s == "meters-per-second" ) { return "meters-per-second"; }
+    if( s == "knots" ) { return "knots"; }
+    if( s == "radians" || s == "rad" ) { return "radians"; }
+    if( s == "degrees" || s == "deg" ) { return "degrees"; }
+    if( s == "kelvin" ) { return "kelvin"; }
+    if( s == "celsius" ) { return "celsius"; }
+    if( s == "fahrenheit" ) { return "fahrenheit"; }
+    COMMA_THROW( comma::exception, "unsupported or unexpected unit: \"" << s << "\"" );
+}
+
+static std::string to_lower( const std::string& s )
+{
+    std::string t = s;
+    for( unsigned int i = 0; i < s.size(); ++i ) { if( s[i] >= 'A' && s[i] <= 'Z' ) { t[i] = s[i] - 'A' + 'a'; } }
+    return t;
+}
+
 int main( int ac, char** av )
 {
     try
@@ -173,8 +200,8 @@ int main( int ac, char** av )
         csv = comma::csv::options( options );
         if( csv.fields.empty() ) { csv.fields="a"; }
         init_input();
-        std::string from = options.value< std::string >( "--from" );
-        std::string to = options.value< std::string >( "--to" );
+        std::string from = normalized_name( to_lower( options.value< std::string >( "--from" ) ) );
+        std::string to = normalized_name( to_lower( options.value< std::string >( "--to" ) ) );
 
         if( from == "pounds" )
         {
@@ -186,12 +213,12 @@ int main( int ac, char** av )
         }
         if( from == "feet" )
         {
-            if( to == "nautical-miles" ) { return run< imperial_us_length_t, nautical_mile_t >( from, to, "nautical-miles" ); }
+            if( to == "nautical-miles" || to == "nm" ) { return run< imperial_us_length_t, nautical_mile_t >( from, to, "nautical-miles" ); }
             return run< imperial_us_length_t, length_t >( from, to, "meters" );
         }
         if( from == "meters" )
         {
-            if( to == "nautical-miles" ) { return run< length_t, nautical_mile_t >( from, to, "nautical-miles" ); }
+            if( to == "nautical-miles" || to == "nm" ) { return run< length_t, nautical_mile_t >( from, to, "nautical-miles" ); }
             return run< length_t, imperial_us_length_t >( from, to, "feet" );
         }
         if( from == "meters-per-second" )
