@@ -221,6 +221,11 @@ int main( int ac, char** av )
             if( to == "nautical-miles" || to == "nm" ) { return run< length_t, nautical_mile_t >( from, to, "nautical-miles" ); }
             return run< length_t, imperial_us_length_t >( from, to, "feet" );
         }
+        if( from == "nautical-miles" )
+        {
+            if( to == "feet" ) { return run< nautical_mile_t, imperial_us_length_t >( from, to, "feet" ); }
+            return run< nautical_mile_t, length_t >( from, to, "meters" );
+        }
         if( from == "meters-per-second" )
         {
             return run< velocity_t, knot_t >( from, to, "knots" );
