@@ -81,6 +81,16 @@ static bool ignore()
 {
     if( deterministic )
     {
+        /*
+        static unsigned int count = 1;
+        static unsigned int kept = 1;
+        if( double( kept ) / count > rate ) { ++count; return false; }
+        if( kept == rate * count ) { count = 0; kept = 0; }
+        ++kept;
+        ++count;
+        return true;
+        */
+        
         static unsigned long long size = 1000000;
         static unsigned long long step = 0;
         static unsigned long long count = 0;
