@@ -11,7 +11,7 @@
 #include <comma/name_value/ptree.h>
 
 static const std::string& name() {
-    static const std::string name = "aero-progress";
+    static const std::string name = "comma-progress";
     return name;
 }
 
@@ -62,7 +62,7 @@ static void usage( bool verbose=false )
     std::cerr << std::endl;
     std::cerr << "cat progress.csv | " << name() << " [<options>] > stat.csv" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "Example: cat progress.csv | aero-progress --elapsed | aero-progress --ratio run_all/build_flight_plan"  << std::endl;
+    std::cerr << "Example: cat progress.csv | comma-progress --elapsed | comma-progress --ratio run_all/build_flight_plan"  << std::endl;
     std::cerr << "         In this example, every 'ratio' value is compared against time of run_all/build_flight_plan, instead" << std::endl;
     std::cerr << "         of total time." << std::endl;
     std::cerr << std::endl;
