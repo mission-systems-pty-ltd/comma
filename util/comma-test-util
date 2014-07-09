@@ -4,7 +4,7 @@
 #
 #   To include these functions and use them in your regression test, use the following command:
 #
-#   .  ./aero-test-util
+#   source comma-test-util
 #
 #   Names are chosen to be short so that they could be used without any overhead (to be discussed, though)
 

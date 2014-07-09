@@ -4,7 +4,7 @@ source $( which aero-bash-util )
 
 function usage_()
 {
-    echo -e "Usage: aero-test-run [<options>]" >&2
+    echo -e "Usage: comma-test-run [<options>]" >&2
     echo >&2
     echo -e "Searches for and executes tests under the current directory." >&2
     echo >&2
@@ -35,7 +35,7 @@ function usage_()
     exit 1
 }
 
-# aero-test-util is in the same folder as this script aero-test-run
+# comma-test-util is in the same folder as this script
 source "${0%run}util"
 
 name=$( basename $0 )
@@ -165,7 +165,7 @@ function stats_finalize()
     if [[ -f $stats_progress_csv ]] ; then cat $stats_progress_csv | aero-progress --elapsed > $stats_elapsed_path_value ; fi
 }
 
-trap "error_ 'aero-test-run: received signal, terminating...' >&2 ; is_shutdown=true" SIGINT SIGTERM
+trap "error_ 'comma-test-run: received signal, terminating...' >&2 ; is_shutdown=true" SIGINT SIGTERM
 trap stats_finalize EXIT
 
 basedir=$( pwd )
@@ -184,7 +184,7 @@ if [[ "$debug" != "" ]] ; then verbose="--verbose" ; fi # quick and dirty
 if (( $test_scripts_count > 0 )) ; then
     message_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): running..."
     for dir in $test_script_dirs ; do
-        if [[ -n "$is_shutdown" ]] ; then error_ "aero-test-run: terminated" >&2 ; exit 1 ; fi
+        if [[ -n "$is_shutdown" ]] ; then error_ "comma-test-run: terminated" >&2 ; exit 1 ; fi
         (( ++count ))
         if disabled_ $dir ; then warning_ "$name: test $count of $test_scripts_count: $dir: disabled" ; continue ; fi
         test_exec=$( closest_test_in_path "$dir" )
@@ -196,7 +196,7 @@ if (( $test_scripts_count > 0 )) ; then
         cd $dir
         if [ -f ./input ] ; then cat ./input ; fi \
             | aero_progress_named $stats_progress_csv "$dir" "$test_exec" $path $verbose 2> >( $grep_failed_ >&2 ) \
-            | if [[ -f ./expected ]]; then aero-test-match ./expected 2>&1 | fail_on_output; else cat > /dev/null; fi
+            | if [[ -f ./expected ]]; then comma-test-match ./expected 2>&1 | fail_on_output; else cat > /dev/null; fi
         if status_ok ; then message_ "$name: test $count of $test_scripts_count: $dir: succeeded" ; else result=1 ; (( ++failed_count )) ; error_ "$name: $dir: failed" ; fi
         cd $basedir
         if [[ "$result" != 0 && "$until_first_failure" == true ]] ; then break ; fi
