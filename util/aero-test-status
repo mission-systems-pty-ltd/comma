@@ -1,0 +1,70 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+# defaults can be overridden through config
+db_host="129.78.214.114"
+db_port="3306"
+db_user="jobq_submit"
+db_pwd="bReWAca4rUJu"
+db_name="qdata"
+all_db_vars="db_host,db_port,db_user,db_pwd,db_name"
+
+# aero-test-[sql-]util are in the same folder as this script
+source $( which comma-application-util )
+source $( dirname $0 )/aero-test-util
+source $( dirname $0 )/aero-test-sql-util
+
+function usage()
+{
+    echo "Usage: $name [<batch id>] [--config=<config file>]" >&2
+    echo >&2
+    echo "Get the status of tests that were run using aero-test-submit." >&2
+    echo "If a <batch id> is missing, the most recent id is used." >&2
+    echo "Convig allows to override the default sql settings." >&2
+    echo >&2
+}
+
+batch_id=
+config_file=""
+
+for arg in "$@"; do
+    case $arg in
+        -h|--help)    usage; exit 0;;
+        --config=*)   config_file=${arg#*=};;
+        -*)           echo "$name: unknown option '$arg'" >&2; exit 1;;
+        *)            if [[ -z "$batch_id" ]]; then batch_id=$arg
+                      else echo "$name: unexpected argument '$arg'" >&2; exit 1; fi;;
+    esac
+done
+
+if [ -n "$config_file" ] ; then sql_read_config "$config_file" "$all_db_vars" || exit 1 ; fi
+sql_command=$( sql_get_command )
+
+if [[ -z "$batch_id" ]]; then
+    batch_id=$( $sql_command "select max(batchId) from JobQ" | tail -1 )
+fi
+
+echo "Status of batch $batch_id:"
+$sql_command "select jobId, status from JobQ where batchId = $batch_id" |
+awk 'BEGIN { finished = unfinished = 0; }
+
+    # returns "s" if the number is not 1
+    function plural_s(num) { return (num == 1 ? "" : "s"); }
+
+    # ignore first line, "jobId   status"
+    NR == 1 { next; }
+
+    {
+        job_list[$2] = job_list[$2] " " $1; count[$2]++;
+        if ($2 == "DONE" || $2 == "ERROR") { finished++; } else { unfinished++; }
+    }
+
+    END \
+    {
+        for (status in job_list) { print "(" count[status] ") " status ":" job_list[status]; }
+        if (finished == 0 && unfinished == 0) { print "No jobs found with that batch id."; } \
+        else if (unfinished == 0) { if (finished == 1) print "Job completed."; else print "All " finished " jobs completed."; } \
+        else { print finished " job" plural_s(finished) " completed, waiting for " unfinished \
+               " job" plural_s(unfinished) "."; }
+    }'

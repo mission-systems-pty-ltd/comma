@@ -1,0 +1,220 @@
+#!/bin/bash
+
+source $( which aero-bash-util )
+
+function usage_()
+{
+    echo -e "Usage: aero-test-run [<options>]" >&2
+    echo >&2
+    echo -e "Searches for and executes tests under the current directory." >&2
+    echo >&2
+    echo -e "Finds subdirectories containing the files 'test', 'input' or 'expected'. Execute 'test', then either:" >&2
+    echo -e "    (a) if 'expected' exists, compare its contents to the output of 'test' (\"path=value\" format)" >&2
+    echo -e "    (b) otherwise the success of the test depends on the exit status of the 'test' script." >&2
+    echo >&2
+    echo -e "File 'input', if exists, is fed to the stdin of the test script." >&2
+    echo >&2
+    echo -e "If there is an 'input' or 'expected' file but no 'test' in the same directory, the 'test' script in the" >&2
+    echo -e "closest parent directory is used. If there is a 'test' by itself with no 'input' or 'expected' file," >&2
+    echo "it is only executed if there is no subdirectory containing 'input', 'expected' or 'test'." >&2
+    echo >&2
+    echo -e "Returns 0 if all tests succeed, or non-zero if any of the tests fail." >&2
+    echo >&2
+    echo -e "Note: in quiet mode, only the messages containing the word \"failed\" will be displayed" >&2
+    echo >&2
+    echo -e "Options" >&2
+    echo -e "    --debug: much more debug output" >&2
+    echo -e "    --quiet,-q: output only failures" >&2
+    echo -e "    --path=<qstorage path>: q-storage directory; default: /mnt/q-storage" >&2
+    echo -e "    --until-first-failure,-f: exits after the first failure" >&2
+    echo >&2
+    echo -e "Disabling tests:" >&2
+    echo -e "    to disable tests in a directory and all its subdirectories" >&2
+    echo -e "    create an empty file named ${brown}disabled${none} in that directory" >&2
+    echo >&2
+    exit 1
+}
+
+# aero-test-util is in the same folder as this script aero-test-run
+source "${0%run}util"
+
+name=$( basename $0 )
+path="--path=/mnt/q-storage"
+for arg in $@ ; do
+    if [[ "$arg" == "--help" || "$arg" == "-h" ]] ; then usage_ ; fi
+    if [[ "$arg" == "--debug" ]] ; then debug="--debug" ; fi
+    if [[ "$arg" == "--quiet" || "$arg" == "-q" ]] ; then quiet="true" ; fi
+    if [[ "$arg" == "--until-first-failure" || "$arg" == "-f" ]] ; then until_first_failure="true" ; fi
+    if [[ "$arg" != "${arg#--path=}" ]] ; then path="$arg" ; fi
+done
+
+if [[ "$quiet" != "true" ]] ; then grep_failed_=cat ; else grep_failed_="grep failed" ; fi
+
+function error_()
+{
+    tput bold
+    high="\033[1;31m"
+    normal="\033[0m"
+    echo -e "$high$1$normal" >&2
+    tput sgr0
+}
+
+function message_()
+{
+    if [[ "$quiet" != "true" ]] ; then tput bold ; echo $1 >&2 ; tput sgr0 ; fi
+}
+
+function dump_file_()
+{
+    if [[ "$quiet" != "true" ]] ; then cat "$1" >&2 ; fi
+}
+
+
+function warning_()
+{
+    if [[ "$quiet" != "true" ]] ; then tput bold ; echo -e "${brown}$1${none}" >&2  ; tput sgr0 ; fi
+}
+
+function disabled_()
+{
+    if [[ -f "$1/disabled" ]] ; then return 0 ; fi
+    d=$( dirname $1 )
+    if [[ "$d" == "$1" ]] ; then return 1 ; fi
+    disabled_ $d
+    return $?
+}
+
+# copy input to output, and return failure (1) if there was any output
+function fail_on_output()
+{
+    if grep "."; then return 1; else return 0; fi
+}
+
+# return a string with "\" before any characters that are special in regular expressions
+function escape_special_chars()
+{
+    echo $* | sed 's/[].*|&^$[]/\\&/g'
+}
+
+# arguments: a list of directories containing "test", "input" and "expected" files
+# Outputs the same list, excluding any directories that
+# (1) contain only "test" (no "expected" or "input" file), and
+# (2) have at least one subdirectory containing another test
+# This is so that it is possible to have a generic "test" script in the base directory that is not
+# executed in that directory.
+function exclude_generic_tests()
+{
+    local dir_list=$*
+    local result_list=()
+
+    for dir in $dir_list; do
+        if [[ -f "$dir/test" && ! -f "$dir/input" && ! -f "$dir/expected" && ! -f "$dir/disabled" ]]; then
+            local pattern="^$( escape_special_chars "$dir" )/."
+            if echo $dir_list | fmt -1 | grep -q "$pattern"; then
+                if [[ "$debug" != "" ]] ; then echo "Excluding generic test '$dir/test'" >&2; fi
+                continue
+            fi
+        fi
+        result_list+=( $dir )
+    done
+
+    echo "${result_list[@]}"
+}
+
+# find "test" file inside a path, checking in each subdirectory (starting from the full path)
+# arguments: <path> <file to find>
+function closest_test_in_path()
+{
+    local path=$1
+    local file="test"
+
+    # sanity check (and avoid infinite loop)
+    if [[ -z "$path" ]]; then echo "$name: error: empty path in closest_file_in_path()" >&2; exit 1; fi
+    # get canonical name (so path always starts with "/")
+    path=$( readlink -e "$path" )
+
+    while true; do
+        if [[ -d "$path/$file" ]]; then
+            echo "$name: warning: \"$path/$file\" is a directory (expected an executable script); ignoring" >&2
+        elif [[ -f "$path/$file" ]]; then
+            if [[ -x "$path/$file" ]]; then echo $path/$file; break
+            else echo "$name: warning: \"$path/$file\" is not executable; ignoring" >&2; fi
+        elif [[ $path == "/" ]]; then break
+        fi
+        path=$( dirname "$path" )
+    done
+}
+
+# "dirname" with multiple arguments allowed (since some versions of "dirname" don't allow them)
+function get_dirnames()
+{
+    for i in $*; do dirname $i; done
+}
+
+function stats_init()
+{
+    stats="$(pwd)/stats"
+    stats_progress_csv="$stats/progress.csv"
+    stats_elapsed_path_value="$stats/elapsed.csv"
+    rm -rf $stats
+    mkdir $stats
+}
+
+function stats_finalize()
+{
+    if [[ -f $stats_progress_csv ]] ; then cat $stats_progress_csv | aero-progress --elapsed > $stats_elapsed_path_value ; fi
+}
+
+trap "error_ 'aero-test-run: received signal, terminating...' >&2 ; is_shutdown=true" SIGINT SIGTERM
+trap stats_finalize EXIT
+
+basedir=$( pwd )
+result=0
+
+stats_init
+
+# search for directories containing either "test", "input" or "expected";
+# if "test" is absent, use the "test" in the closest parent directory
+
+test_script_dirs=$( exclude_generic_tests $( get_dirnames $( find . -name "test" -or -name "input" -or -name "expected" ) 2> /dev/null | sort -u ) )
+test_scripts_count=$( echo $test_script_dirs | wc -w )
+count=0
+failed_count=0
+if [[ "$debug" != "" ]] ; then verbose="--verbose" ; fi # quick and dirty
+if (( $test_scripts_count > 0 )) ; then
+    message_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): running..."
+    for dir in $test_script_dirs ; do
+        if [[ -n "$is_shutdown" ]] ; then error_ "aero-test-run: terminated" >&2 ; exit 1 ; fi
+        (( ++count ))
+        if disabled_ $dir ; then warning_ "$name: test $count of $test_scripts_count: $dir: disabled" ; continue ; fi
+        test_exec=$( closest_test_in_path "$dir" )
+        if [[ -z "$test_exec" ]]; then error_ "$name: error: no \"test\" script found in any parent directory of $dir" >&2 ; continue ; fi
+        message_ "$name: test $count of $test_scripts_count: $dir: running..."
+        ## Comment out for now: the exact usage to be discussed, it is confusing and can be taken as a sign of error
+        ##[ -f "$dir/readme" ] && dump_file_ "$dir/readme" 
+        basedir=$( pwd )
+        cd $dir
+        if [ -f ./input ] ; then cat ./input ; fi \
+            | aero_progress_named $stats_progress_csv "$dir" "$test_exec" $path $verbose 2> >( $grep_failed_ >&2 ) \
+            | if [[ -f ./expected ]]; then aero-test-match ./expected 2>&1 | fail_on_output; else cat > /dev/null; fi
+        if status_ok ; then message_ "$name: test $count of $test_scripts_count: $dir: succeeded" ; else result=1 ; (( ++failed_count )) ; error_ "$name: $dir: failed" ; fi
+        cd $basedir
+        if [[ "$result" != 0 && "$until_first_failure" == true ]] ; then break ; fi
+    done
+    if [[ "$result" == 0 ]] ; then message_ "$name: in subdirectories of $( pwd ): succeeded" ; else error_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): $failed_count test[s] out of $test_scripts_count failed" ; fi
+fi
+if (( $test_scripts_count == 0 )) ; then echo -e "${brown}$name: warning: no tests found in $( pwd )${none}" >&2 ; fi
+
+exit $result
+
+# for batch modification of test cases
+# for file in `find -name "expected"` ; do
+#     echo $(dirname $file)
+#     #cat $file | awk '{print "# "$0}' > $file".txt"
+#     git_ignore=$(dirname $file)"/.gitignore"
+#     echo "output" > $git_ignore
+#     echo "stderr.log" >> $git_ignore
+#     cat $git_ignore
+# #   rm $git_ignore
+#     #mv $file".txt" $file
+# done

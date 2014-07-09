@@ -1,0 +1,168 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+submit_time=$( date --utc "+%Y%m%dT%H%M%S" )
+# defaults can be overridden through config
+output_base_dir="/var/qantas/data/log/gui/acceptance"
+user_name="acceptance"
+build_to_use="prod"   # "prod", "test" or "bleeding"
+task_priority=3
+db_host="129.78.214.114"
+db_port="3306"
+db_user="jobq_submit"
+db_pwd="bReWAca4rUJu"
+db_name="qdata"
+all_db_vars="output_base_dir,user_name,build_to_use,task_priority,db_host,db_port,db_user,db_pwd,db_name"
+
+# aero-test-[sql-]util are in the same folder as this script
+source $( which comma-application-util )
+source $( dirname $0 )/aero-test-util
+source $( dirname $0 )/aero-test-sql-util
+
+function usage_()
+{
+cat <<EOF >&2
+Usage: $name [-h|--help] [--build|-b=prod|test|bleeding] [--config=<config file>]
+
+Search for subdirectories containing \"input\" files and submit these tests to the job queue.
+
+Options:
+
+    --build|-b=     Specify which build to use ("prod", "test" or "bleeding", default "$build_to_use")
+    --config=       Provide a configuration file in name=value format; possible input fields
+                    are ${all_db_vars/,/ }
+    --timestamp=    Specify the precise time when the job shall be executed in YYYYmmddTHHMMSS format
+    --delayed-by=   Specify the delay for executing the job wrt current time; see 'man date' for
+                    the list of possible formats.
+    --search=       Specify the search path (like in 'find .. path ..'); default '.'
+    --input=        Specify a single input file with the task description instead of searching
+                    for \"input\" files.
+
+Examples:
+    $name --build=test --config=my.config --search=$HOME/projects/mytests
+    $name --delayed-by='10 minutes' --input=plan.in
+    $name --timestamp='20140812T090000'
+
+EOF
+}
+
+# arguments: <filename> <path plan to get>, e.g. "input" "plan/from"
+function extract_value()
+{
+    local result=$( grep "^ *$2=" "$1" | sed 's/^[^=]*=//g' )
+    if [[ -z "$result" ]]; then echo "$name: missing \"$2\" in $( readlink -e $1 )" >&2; return 1; fi
+    echo $result
+}
+
+# input is a timestamp YYYYmmddTHHMMSS( literal 'T' in the middle), output is YYYY-mm-dd HH:MM:SS
+function timestamp_to_iso()
+{
+    awk '{ printf "%4s-%2s-%2s %2s:%2s:%2s\n", substr($1,1,4), substr($1,5,2), substr($1,7,2), substr($1,10,2), substr($1,12,2), substr($1,14,2) }'
+}
+
+# argument: <input file> <test directory> <batch id> <sequence number>
+function create_insert_statement()
+{
+    local input_file=$1
+    local test_dir=$2
+    local batch_id=$3
+    local seq_num=$4
+    local scheduled_time=$5
+    [[ -z "$scheduled_time" ]] && scheduled_time="NULL"
+
+    local input="# path: $test_dir\\n"
+    input+=$( cat "$input_file" | sed 's/$/\\/g' | tr '\n' 'n' )   # all one line, newlines replaced with a literal "\n"
+    if [[ "$input" != *n ]]; then input+='n'; fi                   # handle no newline at EOF
+
+    # (remove any ",<altitude>" after plan/to and plan/from)
+    local plan_from=$( extract_value "$input_file" "plan/from" | sed 's/,.*//g' )
+    local plan_to=$( extract_value "$input_file" "plan/to" | sed 's/,.*//g' )
+    local plan_time=$( extract_value "$input_file" "plan/departure_time" )
+    if [[ -z "$plan_from" || -z "$plan_to" || -z "$plan_time" ]]; then return 1; fi  # error message already printed
+    local output_path="$output_base_dir/${submit_time}_${batch_id}_${seq_num}_${plan_from}-${plan_to}"
+
+    # time format is like: "2014-01-23 12:34:56"
+    local time_in_sql_format=$( echo $plan_time | awk '{ print substr($1, 1, 4) "-"  substr($1, 5, 2) "-" substr($1, 7, 2) " " substr($1, 10, 2) ":" substr($1, 12, 2) ":" substr($1, 14, 2); }' )
+
+    echo "INSERT INTO JobQ (submitTime, batchId, task, JobQ.from, JobQ.to, takeoffTime, username, stdin, outputPath, build, priority, scheduledTime)
+VALUES (now(), $batch_id, 'BUILDPLAN', '$plan_from', '$plan_to', '$time_in_sql_format', '$user_name', '$input', '$output_path',
+'$build_to_use', $task_priority, '$scheduled_time')"
+}
+
+config_file=""
+scheduled_time=""
+search_path="."
+input_plan=""
+
+for arg in "$@"; do
+    case $arg in
+        -h|--help)      usage_; exit 0;;
+        -b=*|--build=*) build_to_use=${arg#*=};;
+        --config=*)     config_file=${arg#*=}
+                        if [ ! -f "$config_file" ] ; then echo "$name: config file '$config_file' not found" >&2; exit 1; fi
+                        ;;
+        --input=*)      input_plan=${arg#*=}
+                        if [ ! -f "$input_plan" ] ; then echo "$name: input file '$input_plan' not found" >&2; exit 1; fi
+                        ;;
+        --search=*)     search_path=${arg#*=}
+                        if [ ! -d "$search_path" ] ; then echo "$name: search path '$search_path' is not a directory" >&2; exit 1; fi
+                        ;;
+        --timestamp=*)  timestamp=${arg#*=}
+                        scheduled_time=$( echo $timestamp | timestamp_to_iso )
+                        date --date "$scheduled_time" >/dev/null
+                        if [ $? != 0 ] ; then echo "$name: bad timestamp '$timestamp'" >&2; exit 1; fi
+                        ;;
+        --delayed-by=*) delay=${arg#*=}
+                        scheduled_time=$( date +%F\ %T --date "$delay" )
+                        if [ $? != 0 ] ; then echo "$name: bad delayed format '$delay'" >&2; exit 1; fi
+                        ;;
+        -*)             echo "$name: unrecognised option: $arg" >&2; exit 1;;
+        *)              echo "$name: unexpected argument: $arg" >&2; exit 1;;
+    esac
+done
+
+if [ -n "$config_file" ] ; then sql_read_config "$config_file" "$all_db_vars" || exit 1 ; fi
+sql_command=$( sql_get_command )
+
+case "$build_to_use" in
+    prod|test|bleeding) ;;
+    *) echo "$name: illegal --build \"$build_to_use\"; must be one of: \"prod\" \"test\" \"bleeding\"" >&2; exit 1;;
+esac
+
+if [ -z "$input_plan" ] ; then
+    input_files=$( find "$search_path" -name "input" )
+    input_files_count=$( find "$search_path" -name "input" | wc -l )
+else
+    input_files="$input_plan"
+    input_files_count=1
+fi
+job_id_list=()
+
+if (( $input_files_count > 0 )) ; then
+    batch_id=$( $sql_command "CALL getNextBatchId()" | tail -1 )
+    if [[ -z "$batch_id" ]]; then echo "$name: error getting batch id; aborting"; exit 1; fi
+    if [[ "$batch_id" == "NULL" ]]; then echo "$name: first time use, setting batch id to zero"; batch_id=0; fi
+    echo "$input_files_count test(s) in subdirectories of $( pwd )"
+    for i in $input_files ; do
+        basedir=$( pwd )
+        cd $( dirname $i )
+        insert_statement=$( create_insert_statement "input" "$( pwd )" $batch_id ${#job_id_list[@]} "$scheduled_time" )
+        if [[ $? == 0 ]]; then
+            sql_to_execute="$insert_statement; SELECT LAST_INSERT_ID();"
+            job_id=$( $sql_command "$sql_to_execute" | tail -1 )
+            if [[ -z "$job_id" || "$job_id" == 0 ]]; then
+                echo "$name: error executing SQL: $sql_to_execute; SELECT LAST_INSERT_ID();"
+            else
+                job_id_list+=( $job_id )
+                echo "Job $job_id: $( pwd )/input"
+            fi
+        fi
+        cd $basedir
+    done
+    echo "${#job_id_list[@]} job(s) submitted"
+    if [[ ${#job_id_list[@]} != 0 ]]; then echo "Batch id $batch_id"; fi
+else
+    echo "$name: no \"input\" files found in subdirectories of $( pwd )"
+fi
+
