@@ -1,0 +1,144 @@
+#!/bin/bash
+
+[ -n "$aero_bash_util_include_guard_" ] && return || readonly aero_bash_util_include_guard_=1
+
+. $( which comma-application-util )
+
+red="\033[0;31m"
+green="\033[0;32m"
+brown="\033[0;33m"
+none="\033[m"
+
+function status_ok()
+{
+    [[ ! "${PIPESTATUS[@]}" =~ [1-9] ]]
+}
+
+# a coarse elapsed time estimate of <command> execution appended to <file>
+# the rationale of writing to a file is to have no side effects for <command>
+# usage: aero_elapsed <file> <command> <args>
+function aero_elapsed()
+{
+    local output_file=$1
+    local name=$( basename $2 )
+    local start=$( date +%s.%N )
+    ${@:2}
+    local end=$( date +%s.%N )
+    local elapsed=$( echo "$end - $start" | bc )
+    echo "$name/seconds=$elapsed" >> $output_file
+}
+
+# append to <file> a coarse progress indication for <command> execution
+# the rationale of writing to a file is to have no side effects for <command>
+# usage: aero_progress_named <file> <name> <command> <args>
+#        where <name> is an arbitrary name of user's choice that will be put in the log
+function aero_progress_named()
+{
+    local output_file=$1
+    local name=$2
+    echo "$( date +%Y%m%dT%H%M%S.%N | cut -b1-22 ),$name,begin" >> $output_file
+    ${@:3}
+    local exit_code=$?
+    echo "$( date +%Y%m%dT%H%M%S.%N | cut -b1-22 ),$name,end" >> $output_file
+    return $exit_code
+}
+
+# append to <file> a coarse progress indication for <command> execution
+# the rationale of writing to a file is to have no side effects for <command>
+# usage: aero_progress <file> <command> <args>
+function aero_progress()
+{
+    aero_progress_named $1 $( basename $2 ) ${@:2}
+#     local output_file=$1
+#     local name=$( basename $2 )
+#     echo "$( date +%Y%m%dT%H%M%S.%N | cut -b1-22 ),$name,begin" >> $output_file
+#     ${@:2}
+#     exit_code=$?
+#     echo "$( date +%Y%m%dT%H%M%S.%N | cut -b1-22 ),$name,end" >> $output_file
+#     return $exit_code
+}
+
+# Returns 0 (success) if the variable is defined (including empty string), otherwise returns 1
+# (note: could just use "if [[ -v $varname ]]" on Ubuntu, but "-v" is unavailable in bash < 4.2)
+function variable_defined()
+{
+    local varname=$1
+    local str="[[ -z \${$varname+\"xxx\"} ]] && echo 1 || echo 0"
+    return $( eval $str )
+}
+
+# default path looking like /mnt/q-storage/weather/uk
+function default_qpath()
+{
+    local input=${1#/}
+    input=${input%/}
+    echo "${qstorage%/}/$input"
+}
+
+# customized path prefix, e.g. path/weather/uk=my_weather
+qpath_prefix="path"
+
+# see usage below for timestamped_qpath
+#
+# todo: it is quite slow; rewrite in c++ or in python?
+function qpath()
+{
+    local input=${1#/}
+    input=${input%/}
+    local varname="path_$( echo $input | sed 's#[/-]#_#g' )"
+    if variable_defined $varname; then eval echo \$$varname ; return ; fi
+    local dir=$( dirname $input )
+    if [[ "$dir" == "." ]] ; then default_qpath $input
+    else echo $( qpath $dir )/$( basename $input ) ; fi
+}
+
+# expected timestamp as the leaf, substitute the whole path, including timestamp
+# todo: it is quite slow; rewrite in c++ or in python?
+#
+# examples
+#
+# unset path_navigation_extras
+# echo $( qpath navigation/extras/20140101T000000 )
+# /mnt/q-storage/navigation/extras/20140101T000000
+# echo $( timestamped_qpath navigation/extras/20140101T000000 )
+# /mnt/q-storage/navigation/extras/20140101T000000
+#
+# path_navigation_extras=simulated_extras
+# echo $( qpath navigation/extras/20140101T000000 )
+# simulated_extras/20140101T000000
+# echo $( timestamped_qpath navigation/extras/20140101T000000 )
+# simulated_extras
+#
+# path_navigation=simulated_navigation
+# echo $( qpath navigation/extras/20140101T000000 )
+# simulated_navigation/extras/20140101T000000
+# echo $( timestamped_qpath navigation/extras/20140101T000000 )
+# simulated_navigation/extras
+#
+function timestamped_qpath()
+{
+    local input=${1#/}
+    input=${input%/}
+    local t="$( basename $input )"
+    if [[ "$t" =~ ^[0-9]{8}T[0-9]{6}(\.[0-9]+)?$ ]] ; then
+        local p=$( qpath $( dirname $input ) )
+        if [[ "$p/$t" != "$( default_qpath $input )" ]] ; then echo $p ; return ; fi
+    fi
+    qpath $input
+}
+
+# function qpath_old()
+# {
+#     local input=${1#"/"}
+#     input=${input%"/"}
+#     local varname="path_"$(echo $input|sed 's#\/#\_#g')
+#     if [ -v $varname ] ; then eval echo \$$varname
+#     else echo ${qstorage%"/"}"/"$input"/" ; fi
+# }
+
+# returns 0 (success) if arg1 > arg2 using floating point comparison, otherwise prints returns 1 (failure)
+# (this is so it can be used in a bash "if" statement)
+function float_greater()
+{
+    return $( echo | awk '{ print !('"$1"' > '"$2"'); }' )
+}
