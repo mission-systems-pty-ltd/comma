@@ -1,6 +1,4 @@
-INSTALL( PROGRAMS aero-bash-util
-                  aero-bash-test
-                  comma-stats
+INSTALL( PROGRAMS comma-stats
          DESTINATION ${comma_INSTALL_BIN_DIR} )
 
 add_executable(comma-progress comma-progress.cpp )
