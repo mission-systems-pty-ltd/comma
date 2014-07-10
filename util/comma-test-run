@@ -1,6 +1,7 @@
 #!/bin/bash
 
-source $( which aero-bash-util )
+source $( which comma-application-util )
+source $( which comma-test-util )
 
 function usage_()
 {
@@ -162,7 +163,7 @@ function stats_init()
 
 function stats_finalize()
 {
-    if [[ -f $stats_progress_csv ]] ; then cat $stats_progress_csv | aero-progress --elapsed > $stats_elapsed_path_value ; fi
+    if [[ -f $stats_progress_csv ]] ; then cat $stats_progress_csv | comma-progress --elapsed > $stats_elapsed_path_value ; fi
 }
 
 trap "error_ 'comma-test-run: received signal, terminating...' >&2 ; is_shutdown=true" SIGINT SIGTERM
@@ -195,7 +196,7 @@ if (( $test_scripts_count > 0 )) ; then
         basedir=$( pwd )
         cd $dir
         if [ -f ./input ] ; then cat ./input ; fi \
-            | aero_progress_named $stats_progress_csv "$dir" "$test_exec" $path $verbose 2> >( $grep_failed_ >&2 ) \
+            | comma_progress_named $stats_progress_csv "$dir" "$test_exec" $path $verbose 2> >( $grep_failed_ >&2 ) \
             | if [[ -f ./expected ]]; then comma-test-match ./expected 2>&1 | fail_on_output; else cat > /dev/null; fi
         if status_ok ; then message_ "$name: test $count of $test_scripts_count: $dir: succeeded" ; else result=1 ; (( ++failed_count )) ; error_ "$name: $dir: failed" ; fi
         cd $basedir
