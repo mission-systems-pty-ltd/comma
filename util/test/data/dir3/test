@@ -1,0 +1,2 @@
+echo "{called dir3/test}" >&2
+echo 'result="dir3 result"'

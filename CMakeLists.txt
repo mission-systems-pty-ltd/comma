@@ -189,6 +189,7 @@ ADD_SUBDIRECTORY( string )
 ADD_SUBDIRECTORY( sync )
 ADD_SUBDIRECTORY( visiting )
 ADD_SUBDIRECTORY( xpath )
+ADD_SUBDIRECTORY( util )
 
 #IF( WIN32 )
     #in future, may need to add third party dlls somehow, if they are linked as dlls. Not needed for statically linking to boost.
