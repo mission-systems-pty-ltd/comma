@@ -65,8 +65,10 @@ void usage()
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    --from <unit> : unit converting from" << std::endl;
-    std::cerr << "    --to   <unit> : unit converting to" << std::endl;
+    std::cerr << "    --from <unit>   : unit converting from" << std::endl;
+    std::cerr << "    --to   <unit>   : unit converting to" << std::endl;
+    std::cerr << "    --scale <factor> : scale value by given factor instead of unit conversion" << std::endl;
+    std::cerr << "                       a convenience option, probably somewhat misplaced" << std::endl;
     std::cerr << std::endl;
     std::cerr << "supported units" << std::endl;
     std::cerr << "    meters / feet / nautical-miles " << std::endl;
@@ -143,6 +145,21 @@ static void init_input()
     input.values.resize( size );
 }
 
+static int scale( double factor )
+{
+    comma::csv::input_stream< input_t > istream( std::cin, csv, input );
+    comma::csv::output_stream< input_t > ostream( std::cout, csv, input );
+    while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
+    {
+        const input_t* p = istream.read();
+        if( !p ) { break; }
+        input_t output = *p;
+        for( unsigned int i = 0; i < output.values.size(); output.values[i] = output.values[i] * factor, ++i );
+        ostream.write( output, istream );
+    }
+    return 0;
+}
+
 template < typename From, typename To >
 static int run( const std::string& from, const std::string& to, const std::string& target )
 {
@@ -200,9 +217,10 @@ int main( int ac, char** av )
         csv = comma::csv::options( options );
         if( csv.fields.empty() ) { csv.fields="a"; }
         init_input();
+        boost::optional< double > scale_factor = options.optional< double >( "--scale" );
+        if( scale_factor ) { return scale( *scale_factor ); }
         std::string from = normalized_name( to_lower( options.value< std::string >( "--from" ) ) );
         std::string to = normalized_name( to_lower( options.value< std::string >( "--to" ) ) );
-
         if( from == "pounds" )
         {
             return run< imperial_us_mass_t, mass_t >( from, to, "kilograms" );
