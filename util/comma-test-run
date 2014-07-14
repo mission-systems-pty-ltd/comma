@@ -179,7 +179,7 @@ comma_test_run_flock=$( mktemp )
 export comma_test_run_flock
 
 trap "error_ 'comma-test-run: received signal, terminating...' >&2 ; is_shutdown=true" SIGINT SIGTERM
-trap "stats_finalize; rm -f $comma_test_run_flock" EXIT
+trap "stats_finalize; final_words \"$comma_test_run_flock\"" EXIT
 
 basedir=$( pwd )
 result=0
@@ -266,9 +266,35 @@ export -f run_single_test
 
 function process_accumulated_tests()
 {
-    echo "$all_args" | xargs -n2 | xargs -P $num_parallel_tests -I{} bash -c run_single_test\ "'$name'"\ "'$path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$grep_failed_'"\ "'$test_scripts_count'"\ {}
-    all_args=""
+    echo "$batch_of_tests" | xargs -n2 | xargs -P $num_parallel_tests -I{} bash -c run_single_test\ "'$name'"\ "'$path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$grep_failed_'"\ "'$test_scripts_count'"\ {}
+    status_ok || {
+        result=1
+        [[ "$until_first_failure" == "true" ]] && exit 1
+    }
+    batch_of_tests=""
     initial_count=$count
+}
+
+function count_failures()
+{
+    exec 8>>"$comma_test_run_flock"
+    flock -x 8
+    local failed_count
+    failed_count=$( grep -c "failed" "$comma_test_run_flock" )
+    flock -u 8
+    exec 8>&-
+    echo $failed_count
+}
+
+function final_words()
+{
+    failed_count=$( count_failures )
+    local afterword=
+    [[ "$is_shutdown" == "true" ]] && afterword=" (untill killed)"
+    if [[ "$failed_count" == 0 ]] ; then message_ "$name: in subdirectories of $( pwd ): succeeded${afterword}" ; else error_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): $failed_count test[s] out of $test_scripts_count failed${afterword}" ; fi
+    debug="yes"
+    [[ -n "$debug" ]] && { echo "$name: detailed breakdown:" >&2 ; cat "$comma_test_run_flock" >&2; }
+    rm -f "$comma_test_run_flock"
 }
 
 # to run 
@@ -284,21 +310,18 @@ failed_count=0
 if [[ "$debug" != "" ]] ; then verbose="--verbose" ; fi # quick and dirty
 if (( $test_scripts_count > 0 )) ; then
     message_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): running..."
-    all_args=""
+    batch_of_tests=""
     initial_count=0
     for dir in $test_script_dirs ; do
         if [[ -n "$is_shutdown" ]] ; then error_ "comma-test-run: terminated" >&2 ; exit 1 ; fi
         (( ++count ))
-        all_args+=" $count \"$dir\""
+        batch_of_tests+=" $count \"$dir\""
         (( $count - $initial_count == $num_parallel_tests )) && process_accumulated_tests
     done
-    [[ -n "$all_args" ]] && process_accumulated_tests
-    failed_count=$( grep -c "failed" "$comma_test_run_flock" )
-    echo "failed_count=$failed_count"
-    cat "$comma_test_run_flock"
-    if [[ "$result" == 0 ]] ; then message_ "$name: in subdirectories of $( pwd ): succeeded" ; else error_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): $failed_count test[s] out of $test_scripts_count failed" ; fi
+    [[ -n "$batch_of_tests" ]] && process_accumulated_tests
+else
+    echo -e "${brown}$name: warning: no tests found in $( pwd )${none}" >&2
 fi
-if (( $test_scripts_count == 0 )) ; then echo -e "${brown}$name: warning: no tests found in $( pwd )${none}" >&2 ; fi
 
 exit $result
 
