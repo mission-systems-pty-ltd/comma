@@ -18,6 +18,7 @@ status_ok()
 {
     [[ ! "${PIPESTATUS[@]}" =~ [1-9] ]]
 }
+export -f status_ok
 
 #gets the absolute number
 function abs()
