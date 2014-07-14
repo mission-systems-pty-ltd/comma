@@ -87,6 +87,7 @@ function disabled_()
     disabled_ $d
     return $?
 }
+export -f disabled_
 
 # copy input to output, and return failure (1) if there was any output
 function fail_on_output()
@@ -149,6 +150,7 @@ function closest_test_in_path()
         path=$( dirname "$path" )
     done
 }
+export -f closest_test_in_path
 
 # "dirname" with multiple arguments allowed (since some versions of "dirname" don't allow them)
 function get_dirnames()
@@ -186,27 +188,22 @@ stats_init
 
 # this function runs the actual test
 # arguments:
+#     name                    - top-level script name, use as output prefix
 #     test directory          - will cd and run the test inside
 #     stats file name         - will write start/stop time into this file
-#     test script executable  - the test to execute
 #     path to q-storage       - where the data are
 #     verbosity flag          - auxiliary, chatter more/less
 #     'grep failed' routine   - filters/not stderr output
-#     success_message         - print if all fine
-#     failure_message         - print if test fails
+#     counter                 - string like 'num out of Num' (e.g., '3 out of 30')
 function run_single_test()
 {
-    local dir=$1
-    local stats_progress=$2
-    local test_exec=$3
-    local path=$4
-    local verbose=$5
-    local grep_failed_=$6
-    local success_message=$7
-    local failure_message=$8
-
-    local basedir
-    basedir=$( pwd )
+    local name=$1
+    local path=$2
+    local stats_progress=$3
+    local verbose=$4
+    local grep_failed_=$5
+    local counter=$6
+    local dir=$7
 
     # create a unique file for local comma_progress output; will append to the main output at the end
     local our_stats_progress="$stats_progress.$(mktemp -u XXXXXX)"
@@ -215,14 +212,31 @@ function run_single_test()
     local our_stdout_log=$( mktemp --tmpdir=$( dirname "$stats_progress" ) )
     exec 3>&1 4>&2 1>"$our_stdout_log" 2>&1
 
+    local test_exec basedir
     local result=0
 
-    cd "$dir"
-    if [ -f ./input ] ; then cat ./input ; fi \
-        | comma_progress_named "$our_stats_progress" "$dir" "$test_exec" "$path" "$verbose" 2> >( "$grep_failed_" >&2 ) \
-        | if [[ -f ./expected ]]; then comma-test-match ./expected 2>&1 | fail_on_output; else cat > /dev/null; fi
-    if status_ok ; then message_ "$success_message" ; else result=1 ; error_ "$failure_message" ; fi
-    cd $basedir
+    if disabled_ "$dir" ; then
+        warning_ "$name: test $counter: $dir: disabled"
+    else
+        test_exec=$( closest_test_in_path "$dir" )
+        if [[ -z "$test_exec" ]]; then
+            error_ "$name: error: no \"test\" script found in any parent directory of $dir" >&2
+            result=1
+        else
+            message_ "$name: test $counter: $dir: running..."
+
+            basedir=$( pwd )
+
+            ## Comment out for now: the exact usage to be discussed, it is confusing and can be taken as a sign of error
+            ##[ -f "$dir/readme" ] && dump_file_ "$dir/readme"
+            cd "$dir"
+            if [ -f ./input ] ; then cat ./input ; fi \
+                | comma_progress_named "$our_stats_progress" "$dir" "$test_exec" "$path" "$verbose" 2> >( "$grep_failed_" >&2 ) \
+                | if [[ -f ./expected ]]; then comma-test-match ./expected 2>&1 | fail_on_output; else cat > /dev/null; fi
+            if status_ok ; then message_ "$name: test $counter: $dir: succeeded" ; else result=1 ; error_ "$name: $dir: failed" ; fi
+            cd $basedir
+        fi
+    fi
 
     # serialize all access to global resources: stats file, stdout/err
     exec 8>"$comma_test_run_flock"
@@ -254,13 +268,7 @@ if (( $test_scripts_count > 0 )) ; then
     for dir in $test_script_dirs ; do
         if [[ -n "$is_shutdown" ]] ; then error_ "comma-test-run: terminated" >&2 ; exit 1 ; fi
         (( ++count ))
-        if disabled_ $dir ; then warning_ "$name: test $count of $test_scripts_count: $dir: disabled" ; continue ; fi
-        test_exec=$( closest_test_in_path "$dir" )
-        if [[ -z "$test_exec" ]]; then error_ "$name: error: no \"test\" script found in any parent directory of $dir" >&2 ; continue ; fi
-        message_ "$name: test $count of $test_scripts_count: $dir: running..."
-        ## Comment out for now: the exact usage to be discussed, it is confusing and can be taken as a sign of error
-        ##[ -f "$dir/readme" ] && dump_file_ "$dir/readme"
-        run_single_test "$dir" "$stats_progress_csv" "$test_exec" "$path" "$verbose" "$grep_failed_" "$name: test $count of $test_scripts_count: $dir: succeeded" "$name: $dir: failed" &
+        run_single_test "$name" "$path" "$stats_progress_csv" "$verbose" "$grep_failed_" "$count of $test_scripts_count" "$dir" &
         single_test_pid=$!
         wait $single_test_pid
         single_test_result=$?
