@@ -189,12 +189,13 @@ stats_init
 # this function runs the actual test
 # arguments:
 #     name                    - top-level script name, use as output prefix
-#     test directory          - will cd and run the test inside
-#     stats file name         - will write start/stop time into this file
 #     path to q-storage       - where the data are
+#     stats file name         - will write start/stop time into this file
 #     verbosity flag          - auxiliary, chatter more/less
 #     'grep failed' routine   - filters/not stderr output
-#     counter                 - string like 'num out of Num' (e.g., '3 out of 30')
+#     total                   - total number of tests
+#     count                   - sequential test number
+#     test directory          - will cd and run the test inside
 function run_single_test()
 {
     local name=$1
@@ -202,11 +203,18 @@ function run_single_test()
     local stats_progress=$3
     local verbose=$4
     local grep_failed_=$5
-    local counter=$6
-    local dir=$7
+    local total=$6
+    local count=$7
+    local dir=$8
+
+    source $( which comma-application-util ) || return 1
+    source $( which comma-test-util ) || return 1
+
+    local counter="$count of $total"
 
     # create a unique file for local comma_progress output; will append to the main output at the end
     local our_stats_progress="$stats_progress.$(mktemp -u XXXXXX)"
+    >"$our_stats_progress"
 
     # create a unique file for redirecting all output; will append to the main output at the end
     local our_stdout_log=$( mktemp --tmpdir=$( dirname "$stats_progress" ) )
@@ -239,10 +247,13 @@ function run_single_test()
     fi
 
     # serialize all access to global resources: stats file, stdout/err
-    exec 8>"$comma_test_run_flock"
+    exec 8>>"$comma_test_run_flock"
     flock -x 8
     cat "$our_stats_progress" >> "$stats_progress"
     cat "$our_stdout_log" >&3
+    local msg="test $count in '$dir': "
+    (( $result == 0 )) && { msg+="success"; } || { msg+="failed"; }
+    echo "$msg" >&8
     flock -u 8
     exec 8>&-
 
@@ -253,6 +264,13 @@ function run_single_test()
 }
 export -f run_single_test
 
+function process_accumulated_tests()
+{
+    echo "$all_args" | xargs -n2 | xargs -P $num_parallel_tests -I{} bash -c run_single_test\ "'$name'"\ "'$path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$grep_failed_'"\ "'$test_scripts_count'"\ {}
+    all_args=""
+    initial_count=$count
+}
+
 # to run 
 
 # search for directories containing either "test", "input" or "expected";
@@ -261,23 +279,23 @@ export -f run_single_test
 test_script_dirs=$( exclude_generic_tests $( get_dirnames $( find . -name "test" -or -name "input" -or -name "expected" ) 2> /dev/null | sort -u ) )
 test_scripts_count=$( echo $test_script_dirs | wc -w )
 count=0
+num_parallel_tests=5
 failed_count=0
 if [[ "$debug" != "" ]] ; then verbose="--verbose" ; fi # quick and dirty
 if (( $test_scripts_count > 0 )) ; then
     message_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): running..."
+    all_args=""
+    initial_count=0
     for dir in $test_script_dirs ; do
         if [[ -n "$is_shutdown" ]] ; then error_ "comma-test-run: terminated" >&2 ; exit 1 ; fi
         (( ++count ))
-        run_single_test "$name" "$path" "$stats_progress_csv" "$verbose" "$grep_failed_" "$count of $test_scripts_count" "$dir" &
-        single_test_pid=$!
-        wait $single_test_pid
-        single_test_result=$?
-        if [[ "$single_test_result" != 0 ]] ; then
-            result=$single_test_result
-            (( ++failed_count ))
-            if [[ "$until_first_failure" == true ]] ; then break ; fi
-        fi
+        all_args+=" $count \"$dir\""
+        (( $count - $initial_count == $num_parallel_tests )) && process_accumulated_tests
     done
+    [[ -n "$all_args" ]] && process_accumulated_tests
+    failed_count=$( grep -c "failed" "$comma_test_run_flock" )
+    echo "failed_count=$failed_count"
+    cat "$comma_test_run_flock"
     if [[ "$result" == 0 ]] ; then message_ "$name: in subdirectories of $( pwd ): succeeded" ; else error_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): $failed_count test[s] out of $test_scripts_count failed" ; fi
 fi
 if (( $test_scripts_count == 0 )) ; then echo -e "${brown}$name: warning: no tests found in $( pwd )${none}" >&2 ; fi
