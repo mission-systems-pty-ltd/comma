@@ -28,6 +28,7 @@ function usage_()
     echo -e "    --quiet,-q: output only failures" >&2
     echo -e "    --path=<qstorage path>: q-storage directory; default: /mnt/q-storage" >&2
     echo -e "    --until-first-failure,-f: exits after the first failure" >&2
+    echo -e "    --parallel=N: run up to N tests in parallel" >&2
     echo >&2
     echo -e "Disabling tests:" >&2
     echo -e "    to disable tests in a directory and all its subdirectories" >&2
@@ -41,13 +42,16 @@ source "${0%run}util"
 
 name=$( basename $0 )
 path="--path=/mnt/q-storage"
+num_parallel_tests=1
 for arg in $@ ; do
     if [[ "$arg" == "--help" || "$arg" == "-h" ]] ; then usage_ ; fi
     if [[ "$arg" == "--debug" ]] ; then debug="--debug" ; fi
     if [[ "$arg" == "--quiet" || "$arg" == "-q" ]] ; then quiet="true" ; fi
     if [[ "$arg" == "--until-first-failure" || "$arg" == "-f" ]] ; then until_first_failure="true" ; fi
     if [[ "$arg" != "${arg#--path=}" ]] ; then path="$arg" ; fi
+    if [[ "$arg" != "${arg#--parallel=}" ]] ; then num_parallel_tests="${arg#--parallel=}" ; fi
 done
+export num_parallel_tests
 
 if [[ "$quiet" != "true" ]] ; then grep_failed_=cat ; else grep_failed_="grep failed" ; fi
 
@@ -305,7 +309,6 @@ function final_words()
 test_script_dirs=$( exclude_generic_tests $( get_dirnames $( find . -name "test" -or -name "input" -or -name "expected" ) 2> /dev/null | sort -u ) )
 test_scripts_count=$( echo $test_script_dirs | wc -w )
 count=0
-num_parallel_tests=5
 failed_count=0
 if [[ "$debug" != "" ]] ; then verbose="--verbose" ; fi # quick and dirty
 if (( $test_scripts_count > 0 )) ; then
