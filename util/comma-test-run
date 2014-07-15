@@ -179,11 +179,11 @@ function stats_finalize()
 
 # to run tests in parallel, we need to lock stats_progress_csv and/or stdout/stderr
 # this is the global flock name
-comma_test_run_flock=$( mktemp )
-export comma_test_run_flock
+comma_test_run_output_flock=$( mktemp )
+export comma_test_run_output_flock
 
 trap "error_ 'comma-test-run: received signal, terminating...' >&2 ; is_shutdown=true" SIGINT SIGTERM
-trap "stats_finalize; final_words \"$comma_test_run_flock\"" EXIT
+trap "stats_finalize; final_words" EXIT
 
 basedir=$( pwd )
 result=0
@@ -251,7 +251,7 @@ function run_single_test()
     fi
 
     # serialize all access to global resources: stats file, stdout/err
-    exec 8>>"$comma_test_run_flock"
+    exec 8>>"$comma_test_run_output_flock"
     flock -x 8
     cat "$our_stats_progress" >> "$stats_progress"
     cat "$our_stdout_log" >&3
@@ -279,10 +279,10 @@ function process_accumulated_tests()
 
 function count_failures()
 {
-    exec 8>>"$comma_test_run_flock"
+    exec 8>>"$comma_test_run_output_flock"
     flock -x 8
     local failed_count
-    failed_count=$( grep -c "failed" "$comma_test_run_flock" )
+    failed_count=$( grep -c "failed" "$comma_test_run_output_flock" )
     flock -u 8
     exec 8>&-
     echo $failed_count
@@ -294,9 +294,8 @@ function final_words()
     local afterword=
     [[ "$is_shutdown" == "true" ]] && afterword=" (untill killed)"
     if [[ "$failed_count" == 0 ]] ; then message_ "$name: in subdirectories of $( pwd ): succeeded${afterword}" ; else error_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): $failed_count test[s] out of $test_scripts_count failed${afterword}" ; fi
-    debug="yes"
-    [[ -n "$debug" ]] && { echo "$name: detailed breakdown:" >&2 ; cat "$comma_test_run_flock" >&2; }
-    rm -f "$comma_test_run_flock"
+    [[ -n "$debug" ]] && { echo "$name: detailed breakdown:" >&2 ; cat "$comma_test_run_output_flock" >&2; }
+    rm -f "$comma_test_run_output_flock"
 }
 
 # to run 
