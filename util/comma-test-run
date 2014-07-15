@@ -8,7 +8,7 @@ name=$( basename $0 )
 # defaults
 qstorage="/mnt/q-storage"
 max_parallel=1
-max_wait=600
+max_wait="forever"
 
 function default_options()
 {
@@ -26,7 +26,7 @@ function description()
 --until-first-failure,-f; exit after the first failure
 --path=[<dir>]; q-storage directory, default: '$qstorage'
 --max-parallel=[<N>]; run up to N tests in parallel; default: $max_parallel
---max-wait=[<time>]; maximal time to wait for available CPUs before failing a test, default: ${max_wait}s
+--max-wait=[<time>]; maximal time to wait for available CPUs before failing a test, default: ${max_wait}
 EOF
 }
 
@@ -270,7 +270,9 @@ comma_path_value_to_var --prefix=options < <( description | comma-options-to-nam
 # and perform sanity check
 [[ ! -d "$options_path" ]] && { error_ "$name: q-storage '$options_path' not found"; exit 1; }
 (( $options_max_parallel < 1 )) && { error_ "$name: number of parallel tests $options_max_parallel < 1"; exit 1; }
-(( $options_max_wait < 1 )) && { error_ "$name: wait time $options_max_wait < 1s"; exit 1; }
+[[ "$options_max_wait" != "forever" ]] && {
+    (( $options_max_wait < 1 )) && { error_ "$name: wait time $options_max_wait < 1s or not a number"; exit 1; }
+}
 export options_max_parallel options_max_wait options_debug options_quiet options_path options_until_first_failure
 
 if [[ "$options_quiet" != "1" ]] ; then grep_failed_=cat ; else grep_failed_="grep failed" ; fi
@@ -353,7 +355,9 @@ function run_single_test()
             while true ; do
                 occupy_cpus "$dir" $parallel
                 (( $? != 0 )) && {
-                    (( $wait_time >= $options_max_wait )) && { echo "$name: in '$dir', could not get $parallel CPUs for ${wait_time}s, failed to run" >&2; result=1; break; }
+                    [[ "$options_max_wait" != "forever" ]] && {
+                        (( $wait_time >= $options_max_wait )) && { echo "$name: in '$dir', could not get $parallel CPUs for ${wait_time}s, failed to run" >&2; result=1; break; }
+                    }
                     sleep_time=$[ ( $RANDOM % 10 )  + 1 ]
                     wait_time=$(( $wait_time + $sleep_time ))
                     sleep ${sleep_time}s
