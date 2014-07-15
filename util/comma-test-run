@@ -251,15 +251,14 @@ function run_single_test()
     fi
 
     # serialize all access to global resources: stats file, stdout/err
-    exec 8>>"$comma_test_run_output_flock"
-    flock -x 8
-    cat "$our_stats_progress" >> "$stats_progress"
-    cat "$our_stdout_log" >&3
-    local msg="test $count in '$dir': "
-    (( $result == 0 )) && { msg+="success"; } || { msg+="failed"; }
-    echo "$msg" >&8
-    flock -u 8
-    exec 8>&-
+    (
+        flock -x 8
+        cat "$our_stats_progress" >> "$stats_progress"
+        cat "$our_stdout_log" >&3
+        local msg="test $count in '$dir': "
+        (( $result == 0 )) && { msg+="success"; } || { msg+="failed"; }
+        echo "$msg" >&8
+    ) 8>>"$comma_test_run_output_flock"
 
     rm -f "$our_stats_progress"
     rm -f "$our_stdout_log"
@@ -279,13 +278,10 @@ function process_accumulated_tests()
 
 function count_failures()
 {
-    exec 8>>"$comma_test_run_output_flock"
-    flock -x 8
-    local failed_count
-    failed_count=$( grep -c "failed" "$comma_test_run_output_flock" )
-    flock -u 8
-    exec 8>&-
-    echo $failed_count
+    (
+        flock -x 8
+        grep -c "failed" "$comma_test_run_output_flock"
+    ) 8>>"$comma_test_run_output_flock"
 }
 
 function final_words()
