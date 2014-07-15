@@ -3,13 +3,40 @@
 source $( which comma-application-util )
 source $( which comma-test-util )
 
+name=$( basename $0 )
+
+# defaults
+qstorage="/mnt/q-storage"
+max_parallel=1
+max_wait=600
+
+function default_options()
+{
+    echo "path=$qstorage"
+    echo "max_parallel=$max_parallel"
+    echo "max_wait=$max_wait"
+}
+
+function description()
+{
+    cat <<EOF
+--help,-h; show this help
+--debug; much more debug output
+--quiet,-q; output only failures
+--until-first-failure,-f; exit after the first failure
+--path=[<dir>]; q-storage directory, default: '$qstorage'
+--max-parallel=[<N>]; run up to N tests in parallel; default: $max_parallel
+--max-wait=[<time>]; maximal time to wait for available CPUs before failing a test, default: ${max_wait}s
+EOF
+}
+
 function usage_()
 {
     echo -e "Usage: comma-test-run [<options>]" >&2
     echo >&2
     echo -e "Searches for and executes tests under the current directory." >&2
     echo >&2
-    echo -e "Finds subdirectories containing the files 'test', 'input' or 'expected'. Execute 'test', then either:" >&2
+    echo -e "Finds subdirectories containing the files ${brown}test${none}, ${brown}input${none} or ${brown}expected${none}. Execute 'test', then either:" >&2
     echo -e "    (a) if 'expected' exists, compare its contents to the output of 'test' (\"path=value\" format)" >&2
     echo -e "    (b) otherwise the success of the test depends on the exit status of the 'test' script." >&2
     echo >&2
@@ -23,37 +50,23 @@ function usage_()
     echo >&2
     echo -e "Note: in quiet mode, only the messages containing the word \"failed\" will be displayed" >&2
     echo >&2
-    echo -e "Options" >&2
-    echo -e "    --debug: much more debug output" >&2
-    echo -e "    --quiet,-q: output only failures" >&2
-    echo -e "    --path=<qstorage path>: q-storage directory; default: /mnt/q-storage" >&2
-    echo -e "    --until-first-failure,-f: exits after the first failure" >&2
-    echo -e "    --parallel=N: run up to N tests in parallel" >&2
+    echo -e "Options:" >&2
+    description | sed 's/^/    /g' >&2
     echo >&2
     echo -e "Disabling tests:" >&2
     echo -e "    to disable tests in a directory and all its subdirectories" >&2
     echo -e "    create an empty file named ${brown}disabled${none} in that directory" >&2
+    echo >&2
+    echo -e "Load-balancing and serializing tests:" >&2
+    echo -e "    to indicate a CPU-heavy test, create a file named ${brown}parallel${none} in the test directory" >&2
+    echo -e "    and specify the number of CPUs to be used by the test; value -1 indicates 'all' CPUs," >&2
+    echo -e "    i.e., serializing the test" >&2
     echo >&2
     exit 1
 }
 
 # comma-test-util is in the same folder as this script
 source "${0%run}util"
-
-name=$( basename $0 )
-path="--path=/mnt/q-storage"
-num_parallel_tests=1
-for arg in $@ ; do
-    if [[ "$arg" == "--help" || "$arg" == "-h" ]] ; then usage_ ; fi
-    if [[ "$arg" == "--debug" ]] ; then debug="--debug" ; fi
-    if [[ "$arg" == "--quiet" || "$arg" == "-q" ]] ; then quiet="true" ; fi
-    if [[ "$arg" == "--until-first-failure" || "$arg" == "-f" ]] ; then until_first_failure="true" ; fi
-    if [[ "$arg" != "${arg#--path=}" ]] ; then path="$arg" ; fi
-    if [[ "$arg" != "${arg#--parallel=}" ]] ; then num_parallel_tests="${arg#--parallel=}" ; fi
-done
-export num_parallel_tests
-
-if [[ "$quiet" != "true" ]] ; then grep_failed_=cat ; else grep_failed_="grep failed" ; fi
 
 function error_()
 {
@@ -67,19 +80,19 @@ export -f error_
 
 function message_()
 {
-    if [[ "$quiet" != "true" ]] ; then tput bold ; echo $1 >&2 ; tput sgr0 ; fi
+    if [[ "$options_quiet" != "1" ]] ; then tput bold ; echo $1 >&2 ; tput sgr0 ; fi
 }
 export -f message_
 
 function dump_file_()
 {
-    if [[ "$quiet" != "true" ]] ; then cat "$1" >&2 ; fi
+    if [[ "$options_quiet" != "1" ]] ; then cat "$1" >&2 ; fi
 }
 export -f dump_file_
 
 function warning_()
 {
-    if [[ "$quiet" != "true" ]] ; then tput bold ; echo -e "${brown}$1${none}" >&2  ; tput sgr0 ; fi
+    if [[ "$options_quiet" != "1" ]] ; then tput bold ; echo -e "${brown}$1${none}" >&2  ; tput sgr0 ; fi
 }
 export -f warning_
 
@@ -121,7 +134,7 @@ function exclude_generic_tests()
         if [[ -f "$dir/test" && ! -f "$dir/input" && ! -f "$dir/expected" && ! -f "$dir/disabled" ]]; then
             local pattern="^$( escape_special_chars "$dir" )/."
             if echo $dir_list | fmt -1 | grep -q "$pattern"; then
-                if [[ "$debug" != "" ]] ; then echo "Excluding generic test '$dir/test'" >&2; fi
+                if [[ "$options_debug" != "" ]] ; then echo "Excluding generic test '$dir/test'" >&2; fi
                 continue
             fi
         fi
@@ -200,18 +213,18 @@ function occupy_cpus()
     (
         flock -x 8
         currently_occupied=$( tail -n 1 "$comma_test_run_cpucount_flock" )
-        [[ -n "$debug" ]] && {
+        [[ -n "$options_debug" ]] && {
             num_to_take_str=$num_to_take
-            (( $num_to_take == -1 )) && num_to_take_str="all $num_parallel_tests"
+            (( $num_to_take == -1 )) && num_to_take_str="all $options_max_parallel"
             currently_occupied_str=$currently_occupied
-            (( $currently_occupied == -1 )) && currently_occupied_str="all $num_parallel_tests"
+            (( $currently_occupied == -1 )) && currently_occupied_str="all $options_max_parallel"
             echo "$name (occupy_cpus): need $num_to_take_str CPUs, have $currently_occupied_str occupied" >&2
         }
         (( $currently_occupied == -1 )) && exit 1
         (( $num_to_take == -1 && $currently_occupied != 0 )) && exit 1
         (( $currently_occupied == 0 )) && { echo $num_to_take >&8; exit 0; }
         next_occupied=$(( $num_to_take + $currently_occupied ))
-        (( $next_occupied > $num_parallel_tests )) && exit 1
+        (( $next_occupied > $options_max_parallel )) && exit 1
         echo $next_occupied >&8
         exit 0
     ) 8>>"$comma_test_run_cpucount_flock"
@@ -228,11 +241,11 @@ function release_cpus()
     (
         flock -x 8
         currently_occupied=$( tail -n 1 "$comma_test_run_cpucount_flock" )
-        [[ -n "$debug" ]] && {
+        [[ -n "$options_debug" ]] && {
             num_to_yield_str=$num_to_yield
-            (( $num_to_yield == -1 )) && num_to_yield_str="all $num_parallel_tests"
+            (( $num_to_yield == -1 )) && num_to_yield_str="all $options_max_parallel"
             currently_occupied_str=$currently_occupied
-            (( $currently_occupied == -1 )) && currently_occupied_str="all $num_parallel_tests"
+            (( $currently_occupied == -1 )) && currently_occupied_str="all $options_max_parallel"
             echo "$name (release_cpus): have $currently_occupied_str CPUs occupied, yield $num_to_yield_str" >&2
         }
         (( $currently_occupied == -1 )) && {
@@ -249,6 +262,18 @@ function release_cpus()
     return $result
 }
 export -f release_cpus
+
+# process command line...
+if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then usage_ ; fi
+comma_path_value_to_var  --prefix=options < <( default_options )
+comma_path_value_to_var --prefix=options < <( description | comma-options-to-name-value $@ )
+# and perform sanity check
+[[ ! -d "$options_path" ]] && { error_ "$name: q-storage '$options_path' not found"; exit 1; }
+(( $options_max_parallel < 1 )) && { error_ "$name: number of parallel tests $options_max_parallel < 1"; exit 1; }
+(( $options_max_wait < 1 )) && { error_ "$name: wait time $options_max_wait < 1s"; exit 1; }
+export options_max_parallel options_max_wait options_debug options_quiet options_path options_until_first_failure
+
+if [[ "$options_quiet" != "1" ]] ; then grep_failed_=cat ; else grep_failed_="grep failed" ; fi
 
 # to run tests in parallel, we need to lock stats_progress_csv and/or stdout/stderr
 # this is the global flock name
@@ -283,6 +308,7 @@ function run_single_test()
 {
     local name=$1
     local path=$2
+    [[ -n "$path" ]] && path="--path=$path"
     local stats_progress=$3
     local verbose=$4
     local grep_failed_=$5
@@ -321,15 +347,16 @@ function run_single_test()
             ## Comment out for now: the exact usage to be discussed, it is confusing and can be taken as a sign of error
             ##[ -f "$dir/readme" ] && dump_file_ "$dir/readme"
             cd "$dir"
-            local parallel iter max_iter
-            max_iter=128
+            local parallel wait_time sleep_time
+            wait_time=0
             parallel=$( get_parallel_requirements )
             while true ; do
                 occupy_cpus "$dir" $parallel
                 (( $? != 0 )) && {
-                    iter=$(( $iter + 1 ))
-                    (( $iter >= $max_iter )) && { echo "$name: in '$dir', could not get $parallel CPUs, failed to run" >&2; result=1; break; }
-                    sleep $[ ( $RANDOM % 10 )  + 1 ]s
+                    (( $wait_time >= $options_max_wait )) && { echo "$name: in '$dir', could not get $parallel CPUs for ${wait_time}s, failed to run" >&2; result=1; break; }
+                    sleep_time=$[ ( $RANDOM % 10 )  + 1 ]
+                    wait_time=$(( $wait_time + $sleep_time ))
+                    sleep ${sleep_time}s
                     continue
                 }
                 if [ -f ./input ] ; then cat ./input ; fi \
@@ -362,10 +389,10 @@ export -f run_single_test
 
 function process_accumulated_tests()
 {
-    xargs -n2 | xargs -P $num_parallel_tests -I{} bash -c run_single_test\ "'$name'"\ "'$path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$grep_failed_'"\ "'$test_scripts_count'"\ {}
+    xargs -n2 | xargs -P $options_max_parallel -I{} bash -c run_single_test\ "'$name'"\ "'$options_path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$grep_failed_'"\ "'$test_scripts_count'"\ {}
     status_ok || {
         result=1
-        [[ "$until_first_failure" == "true" ]] && exit 1
+        [[ "$options_until_first_failure" == "true" ]] && exit 1
     }
 }
 
@@ -383,7 +410,7 @@ function final_words()
     local afterword=
     [[ "$is_shutdown" == "true" ]] && afterword=" (untill killed)"
     if [[ "$failed_count" == 0 ]] ; then message_ "$name: in subdirectories of $( pwd ): succeeded${afterword}" ; else error_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): $failed_count test[s] out of $test_scripts_count failed${afterword}" ; fi
-    [[ -n "$debug" ]] && { echo "$name: detailed breakdown:" >&2 ; cat "$comma_test_run_output_flock" >&2; }
+    [[ -n "$options_debug" ]] && { echo "$name: detailed breakdown:" >&2 ; cat "$comma_test_run_output_flock" >&2; }
     rm -f "$comma_test_run_output_flock"
     rm -f "$comma_test_run_cpucount_flock"
 }
