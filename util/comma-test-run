@@ -177,10 +177,89 @@ function stats_finalize()
     if [[ -f $stats_progress_csv ]] ; then cat $stats_progress_csv | comma-progress --elapsed > $stats_elapsed_path_value ; fi
 }
 
+# each test may specify the desired number of CPUs:
+#   0      - does not matter, very lightweight
+#   n > 0  - n CPUs
+#  -1      - all CPUs (serial test)
+# default is 1
+function get_parallel_requirements()
+{
+    [[ -f ./parallel ]] && {
+        cat ./parallel
+    } || {
+        echo 1
+    }
+}
+export -f get_parallel_requirements
+
+function occupy_cpus()
+{
+    local dir=$1
+    local num_to_take=$2
+    (( $num_to_take == 0 )) && return 0   # default: always can run quick tests, do not change CPU count
+    (
+        flock -x 8
+        currently_occupied=$( tail -n 1 "$comma_test_run_cpucount_flock" )
+        [[ -n "$debug" ]] && {
+            num_to_take_str=$num_to_take
+            (( $num_to_take == -1 )) && num_to_take_str="all $num_parallel_tests"
+            currently_occupied_str=$currently_occupied
+            (( $currently_occupied == -1 )) && currently_occupied_str="all $num_parallel_tests"
+            echo "$name (occupy_cpus): need $num_to_take_str CPUs, have $currently_occupied_str occupied" >&2
+        }
+        (( $currently_occupied == -1 )) && exit 1
+        (( $num_to_take == -1 && $currently_occupied != 0 )) && exit 1
+        (( $currently_occupied == 0 )) && { echo $num_to_take >&8; exit 0; }
+        next_occupied=$(( $num_to_take + $currently_occupied ))
+        (( $next_occupied > $num_parallel_tests )) && exit 1
+        echo $next_occupied >&8
+        exit 0
+    ) 8>>"$comma_test_run_cpucount_flock"
+    local result=$?
+    return $result
+}
+export -f occupy_cpus
+
+function release_cpus()
+{
+    local dir=$1
+    local num_to_yield=$2
+    (( $num_to_yield == 0 )) && return 0   # default: always can run quick tests, do not change CPU count
+    (
+        flock -x 8
+        currently_occupied=$( tail -n 1 "$comma_test_run_cpucount_flock" )
+        [[ -n "$debug" ]] && {
+            num_to_yield_str=$num_to_yield
+            (( $num_to_yield == -1 )) && num_to_yield_str="all $num_parallel_tests"
+            currently_occupied_str=$currently_occupied
+            (( $currently_occupied == -1 )) && currently_occupied_str="all $num_parallel_tests"
+            echo "$name (release_cpus): have $currently_occupied_str CPUs occupied, yield $num_to_yield_str" >&2
+        }
+        (( $currently_occupied == -1 )) && {
+            (( $num_to_yield != -1 )) && { echo "Major logic error" >&2; exit 1; }
+            echo 0 >&8
+            exit 0
+        }
+        next_occupied=$(( $currently_occupied - $num_to_yield ))
+        (( $next_occupied < 0 )) && next_occupied=0
+        echo $next_occupied >&8
+        exit 0
+    ) 8>>"$comma_test_run_cpucount_flock"
+    local result=$?
+    return $result
+}
+export -f release_cpus
+
 # to run tests in parallel, we need to lock stats_progress_csv and/or stdout/stderr
 # this is the global flock name
 comma_test_run_output_flock=$( mktemp )
 export comma_test_run_output_flock
+
+# keep the number of CPUs currently occupied/available
+# this is the global file name; access serialized via flocks
+comma_test_run_cpucount_flock=$( mktemp )
+export comma_test_run_cpucount_flock
+echo 0 >"$comma_test_run_cpucount_flock"
 
 trap "error_ 'comma-test-run: received signal, terminating...' >&2 ; is_shutdown=true" SIGINT SIGTERM
 trap "stats_finalize; final_words" EXIT
@@ -242,10 +321,24 @@ function run_single_test()
             ## Comment out for now: the exact usage to be discussed, it is confusing and can be taken as a sign of error
             ##[ -f "$dir/readme" ] && dump_file_ "$dir/readme"
             cd "$dir"
-            if [ -f ./input ] ; then cat ./input ; fi \
-                | comma_progress_named "$our_stats_progress" "$dir" "$test_exec" "$path" "$verbose" 2> >( "$grep_failed_" >&2 ) \
-                | if [[ -f ./expected ]]; then comma-test-match ./expected 2>&1 | fail_on_output; else cat > /dev/null; fi
-            if status_ok ; then message_ "$name: test $counter: $dir: succeeded" ; else result=1 ; error_ "$name: $dir: failed" ; fi
+            local parallel iter max_iter
+            max_iter=128
+            parallel=$( get_parallel_requirements )
+            while true ; do
+                occupy_cpus "$dir" $parallel
+                (( $? != 0 )) && {
+                    iter=$(( $iter + 1 ))
+                    (( $iter >= $max_iter )) && { echo "$name: in '$dir', could not get $parallel CPUs, failed to run" >&2; result=1; break; }
+                    sleep $[ ( $RANDOM % 10 )  + 1 ]s
+                    continue
+                }
+                if [ -f ./input ] ; then cat ./input ; fi \
+                    | comma_progress_named "$our_stats_progress" "$dir" "$test_exec" "$path" "$verbose" 2> >( "$grep_failed_" >&2 ) \
+                    | if [[ -f ./expected ]]; then comma-test-match ./expected 2>&1 | fail_on_output; else cat > /dev/null; fi
+                if status_ok ; then message_ "$name: test $counter: $dir: succeeded" ; else result=1 ; error_ "$name: $dir: failed" ; fi
+                release_cpus "$dir" $parallel
+                break
+            done
             cd $basedir
         fi
     fi
@@ -292,6 +385,7 @@ function final_words()
     if [[ "$failed_count" == 0 ]] ; then message_ "$name: in subdirectories of $( pwd ): succeeded${afterword}" ; else error_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): $failed_count test[s] out of $test_scripts_count failed${afterword}" ; fi
     [[ -n "$debug" ]] && { echo "$name: detailed breakdown:" >&2 ; cat "$comma_test_run_output_flock" >&2; }
     rm -f "$comma_test_run_output_flock"
+    rm -f "$comma_test_run_cpucount_flock"
 }
 
 # to run 
