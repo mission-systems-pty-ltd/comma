@@ -397,7 +397,7 @@ test_script_dirs=$( exclude_generic_tests $( get_dirnames $( find . -name "test"
 test_scripts_count=$( echo $test_script_dirs | wc -w )
 count=0
 failed_count=0
-if [[ "$debug" != "" ]] ; then verbose="--verbose" ; fi # quick and dirty
+#if [[ "$options_debug" != "" ]] ; then verbose="--verbose" ; fi # quick and dirty
 if (( $test_scripts_count > 0 )) ; then
     message_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): running..."
     for dir in $test_script_dirs ; do
