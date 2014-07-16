@@ -15,11 +15,6 @@ function bye()
 
 trap 'bye 1' SIGHUP SIGINT SIGTERM SIGPIPE
 
-[[ "$force" == "true" ]] || {
-    echo "$name: disabled for now" >&2
-    exit 0
-}
-
 cd $( dirname $0 )
 comma-test-run 2>&1 | sed 's/in subdirectories of [^:]*/in subdirectories of DIR/g' > "$results"
 diff -b "$results" "$expected" > /dev/null
