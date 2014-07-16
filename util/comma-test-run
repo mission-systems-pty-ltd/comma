@@ -6,6 +6,7 @@ source $( which comma-test-util )
 name=$( basename $0 )
 
 # defaults
+# TODO: determine the number of CPUs and the amount of shared memory at run-time
 qstorage="/mnt/q-storage"
 max_parallel=1
 max_memory_shared=8000
@@ -19,6 +20,8 @@ function default_options()
     echo "max_wait=$max_wait"
 }
 
+# TODO: provide a separate option, '--parallel', which would default max_parallel
+#       to the total number of CPUs; without '--parallel', default to 1.
 function description()
 {
     cat <<EOF
