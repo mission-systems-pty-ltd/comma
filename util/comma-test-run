@@ -5,6 +5,16 @@ source $( which comma-test-util )
 
 name=$( basename $0 )
 
+# determine system parameters
+total_num_cpus=$( grep -c ^processor "/proc/cpuinfo" )
+(( $total_num_cpus > 0 )) || { echo "$name: cannot grep '/proc/cpuinfo' for the number of processors" >&2; exit 1; }
+total_memory_limits=$( ipcs -m -l 2>/dev/null )
+(( $? != 0 )) && { echo "$name: cannot determine memory limits by calling ipcs" >&2; exit 1; }
+total_memory_shared=$( echo "$total_memory_limits" | sed '/shared/!d;s/.* //g' )
+(( $total_memory_shared > 0 )) || { echo "$name: cannot determine shared memory limits" >&2; exit 1; }
+# convert to MB
+total_memory_shared=$(( $total_memory_shared / 1024 )) || { echo "$name: shared memory limit is not a number" >&2; exit 1; }
+
 # defaults
 # TODO: determine the number of CPUs and the amount of shared memory at run-time
 qstorage="/mnt/q-storage"
