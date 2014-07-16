@@ -8,12 +8,14 @@ name=$( basename $0 )
 # defaults
 qstorage="/mnt/q-storage"
 max_parallel=1
+max_memory_shared=8000
 max_wait="forever"
 
 function default_options()
 {
     echo "path=$qstorage"
     echo "max_parallel=$max_parallel"
+    echo "max_memory_shared=$max_memory_shared"
     echo "max_wait=$max_wait"
 }
 
@@ -26,6 +28,7 @@ function description()
 --until-first-failure,-f; exit after the first failure
 --path=[<dir>]; q-storage directory, default: '$qstorage'
 --max-parallel=[<N>]; run up to N tests in parallel; default: $max_parallel
+--max-memory-shared=[<N>]; limit on shared memory, in MB; default: $max_memory_shared
 --max-wait=[<time>]; maximal time to wait for available CPUs before failing a test, default: ${max_wait}
 EOF
 }
@@ -58,7 +61,7 @@ function usage_()
     echo -e "    create an empty file named ${brown}disabled${none} in that directory" >&2
     echo >&2
     echo -e "Load-balancing and serializing tests:" >&2
-    echo -e "    to indicate a CPU-heavy test, create a file named ${brown}parallel${none} in the test directory" >&2
+    echo -e "    to indicate a CPU-heavy test, create a file named ${brown}resources${none} in the test directory" >&2
     echo -e "    and specify the number of CPUs to be used by the test; value -1 indicates 'all' CPUs," >&2
     echo -e "    i.e., serializing the test" >&2
     echo >&2
@@ -190,78 +193,146 @@ function stats_finalize()
     if [[ -f $stats_progress_csv ]] ; then cat $stats_progress_csv | comma-progress --elapsed > $stats_elapsed_path_value ; fi
 }
 
-# each test may specify the desired number of CPUs:
+# Each test may specify the desired number of CPUs, the necessary shared memory, if the test is serial, etc.
+# - number of CPUs
 #   0      - does not matter, very lightweight
 #   n > 0  - n CPUs
-#  -1      - all CPUs (serial test)
-# default is 1
-function get_parallel_requirements()
+# - serial: true or false
+# - shared memory in MB
+
+# initially no resources are occupied
+function initialize_resources()
 {
-    [[ -f ./parallel ]] && {
-        cat ./parallel
+    comma_test_run_resources_flock=$( mktemp )
+    echo "0,0" >"$comma_test_run_resources_flock"
+    export comma_test_run_resources_flock
+}
+
+function default_requirements()
+{
+    cat <<EOF
+cpus=1
+memory/shared=0
+serial="false"
+EOF
+}
+export -f default_requirements
+
+# used to initialize variables to non-empty values
+function zero_requirements()
+{
+    cat <<EOF
+cpus=0
+memory/shared=0
+serial="false"
+EOF
+}
+export -f zero_requirements
+
+function get_required_resources()
+{
+    comma_path_value_to_var --prefix=required < <( zero_requirements )
+    comma_path_value_to_var --prefix=required < <( [[ -f ./resources ]] && { cat ./resources; } || { default_requirements; } )
+}
+export -f get_required_resources
+
+function get_occupied_resources()
+{
+    comma_path_value_to_var --prefix=occupied < <( paste <( echo "cpus"; echo "memory/shared"; ) <( tail -n 1 "$comma_test_run_resources_flock" | tr ',' '\n' ) --delimiter='=' )
+}
+export -f get_occupied_resources
+
+# for trace messages only; arguments: test name, "occupy" when take resources, otherwise release
+function print_resources()
+{
+    local dir=$1
+    local action=$2
+    echo "$name: currently occupied $occupied_cpus CPU(s), $occupied_memory_shared MB of shared memory"
+    [[ "$action" == "occupy" ]] && {
+        echo -n "${name//?/ }  $dir requires $required_cpus CPU(s), $required_memory_shared MB of shared memory"
+        [[ "$required_serial" == "true" ]] && { echo ", serial"; } || { echo ", not serial"; }
+        echo "${name//?/ }  in total may use $options_max_parallel CPU(s), $options_max_memory_shared MB of shared memory"
     } || {
-        echo 1
+        echo "${name//?/ }  $dir releases $required_cpus CPU(s), $required_memory_shared MB of shared memory"
     }
 }
-export -f get_parallel_requirements
+export -f print_resources
 
-function occupy_cpus()
+# calculates resources occupied after starting/finishing a test
+# arguments: "occupy" is to add resources, otherwise release
+function calculate_next_resources()
 {
-    local dir=$1
-    local num_to_take=$2
-    (( $num_to_take == 0 )) && return 0   # default: always can run quick tests, do not change CPU count
-    (
-        flock -x 8
-        currently_occupied=$( tail -n 1 "$comma_test_run_cpucount_flock" )
-        [[ -n "$options_debug" ]] && {
-            num_to_take_str=$num_to_take
-            (( $num_to_take == -1 )) && num_to_take_str="all $options_max_parallel"
-            currently_occupied_str=$currently_occupied
-            (( $currently_occupied == -1 )) && currently_occupied_str="all $options_max_parallel"
-            echo "$name (occupy_cpus): need $num_to_take_str CPUs, have $currently_occupied_str occupied" >&2
-        }
-        (( $currently_occupied == -1 )) && exit 1
-        (( $num_to_take == -1 && $currently_occupied != 0 )) && exit 1
-        (( $currently_occupied == 0 )) && { echo $num_to_take >&8; exit 0; }
-        next_occupied=$(( $num_to_take + $currently_occupied ))
-        (( $next_occupied > $options_max_parallel )) && exit 1
-        echo $next_occupied >&8
-        exit 0
-    ) 8>>"$comma_test_run_cpucount_flock"
-    local result=$?
-    return $result
+    local action=$1
+    [[ "$action" == "occupy" ]] && {
+        next_cpus=$(( $occupied_cpus + $required_cpus ))
+        next_memory_shared=$(( $occupied_memory_shared + $required_memory_shared ))
+    } || {
+        next_cpus=$(( $occupied_cpus - $required_cpus ))
+        (( $next_cpus < 0 )) && next_cpus=0
+        next_memory_shared=$(( $occupied_memory_shared - $required_memory_shared ))
+        (( $next_memory_shared < 0 )) && next_memory_shared=0
+    }
 }
-export -f occupy_cpus
+export -f calculate_next_resources
 
-function release_cpus()
+function resources_within_limits()
+{
+    [[ $occupied_cpus > 0 && "$required_serial" == "true" ]] && return 1
+    # corner cases: CPU and shared memory requirements can exceed system limits
+    # if so, let the tests to proceed in serial mode
+    (( $next_cpus > $options_max_parallel )) && {
+        (( $occupied_cpus == 0 )) && return 0
+        return 1
+    }
+    (( $next_memory_shared > $options_max_memory_shared )) && {
+        (( $occupied_cpus == 0 )) && return 0
+        return 1
+    }
+    return 0
+}
+export -f resources_within_limits
+
+function output_next_resources()
+{
+    echo "$next_cpus,$next_memory_shared"
+}
+export -f output_next_resources
+
+function occupy_resources()
 {
     local dir=$1
-    local num_to_yield=$2
-    (( $num_to_yield == 0 )) && return 0   # default: always can run quick tests, do not change CPU count
     (
         flock -x 8
-        currently_occupied=$( tail -n 1 "$comma_test_run_cpucount_flock" )
-        [[ -n "$options_debug" ]] && {
-            num_to_yield_str=$num_to_yield
-            (( $num_to_yield == -1 )) && num_to_yield_str="all $options_max_parallel"
-            currently_occupied_str=$currently_occupied
-            (( $currently_occupied == -1 )) && currently_occupied_str="all $options_max_parallel"
-            echo "$name (release_cpus): have $currently_occupied_str CPUs occupied, yield $num_to_yield_str" >&2
-        }
-        (( $currently_occupied == -1 )) && {
-            (( $num_to_yield != -1 )) && { echo "Major logic error" >&2; exit 1; }
-            echo 0 >&8
+        get_occupied_resources
+        [[ -n "$options_debug" ]] && { print_resources "$dir" "occupy"; }
+        calculate_next_resources "occupy"
+        resources_within_limits && {
+            output_next_resources >&8
             exit 0
+        } || {
+            exit 1
         }
-        next_occupied=$(( $currently_occupied - $num_to_yield ))
-        (( $next_occupied < 0 )) && next_occupied=0
-        echo $next_occupied >&8
-        exit 0
-    ) 8>>"$comma_test_run_cpucount_flock"
+    ) 8>>"$comma_test_run_resources_flock"
     local result=$?
     return $result
 }
-export -f release_cpus
+export -f occupy_resources
+
+function release_resources()
+{
+    local dir=$1
+    (
+        flock -x 8
+        get_occupied_resources
+        [[ -n "$options_debug" ]] && { print_resources "$dir" "release"; }
+        calculate_next_resources "release"
+        output_next_resources >&8
+        exit 0
+    ) 8>>"$comma_test_run_resources_flock"
+    local result=$?
+    return $result
+}
+export -f release_resources
 
 # process command line...
 if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then usage_ ; fi
@@ -270,10 +341,11 @@ comma_path_value_to_var --prefix=options < <( description | comma-options-to-nam
 # and perform sanity check
 [[ ! -d "$options_path" ]] && { error_ "$name: q-storage '$options_path' not found"; exit 1; }
 (( $options_max_parallel < 1 )) && { error_ "$name: number of parallel tests $options_max_parallel < 1"; exit 1; }
+(( $options_max_memory_shared < 512 )) && { error_ "$name: amount of shared memory $options_max_memory_shared < 512"; exit 1; }
 [[ "$options_max_wait" != "forever" ]] && {
     (( $options_max_wait < 1 )) && { error_ "$name: wait time $options_max_wait < 1s or not a number"; exit 1; }
 }
-export options_max_parallel options_max_wait options_debug options_quiet options_path options_until_first_failure
+export options_max_parallel options_max_memory_shared options_max_wait options_debug options_quiet options_path options_until_first_failure
 
 if [[ "$options_quiet" != "1" ]] ; then grep_failed_=cat ; else grep_failed_="grep failed" ; fi
 
@@ -282,11 +354,9 @@ if [[ "$options_quiet" != "1" ]] ; then grep_failed_=cat ; else grep_failed_="gr
 comma_test_run_output_flock=$( mktemp )
 export comma_test_run_output_flock
 
-# keep the number of CPUs currently occupied/available
-# this is the global file name; access serialized via flocks
-comma_test_run_cpucount_flock=$( mktemp )
-export comma_test_run_cpucount_flock
-echo 0 >"$comma_test_run_cpucount_flock"
+# store the currently occupied resources (number of CPUs, amount of memory)
+# in a global file name; access serialized via flocks
+initialize_resources
 
 trap "error_ 'comma-test-run: received signal, terminating...' >&2 ; is_shutdown=true" SIGINT SIGTERM
 trap "stats_finalize; final_words" EXIT
@@ -349,12 +419,13 @@ function run_single_test()
             ## Comment out for now: the exact usage to be discussed, it is confusing and can be taken as a sign of error
             ##[ -f "$dir/readme" ] && dump_file_ "$dir/readme"
             cd "$dir"
-            local parallel wait_time sleep_time
-            wait_time=0
-            parallel=$( get_parallel_requirements )
+            local wait_time=0
+            local sleep_time=0
+            get_required_resources
             while true ; do
-                occupy_cpus "$dir" $parallel
+                occupy_resources "$dir"
                 (( $? != 0 )) && {
+                    [[ -n "$options_debug" ]] && message_ "$name: have to wait..."
                     [[ "$options_max_wait" != "forever" ]] && {
                         (( $wait_time >= $options_max_wait )) && { echo "$name: in '$dir', could not get $parallel CPUs for ${wait_time}s, failed to run" >&2; result=1; break; }
                     }
@@ -367,7 +438,7 @@ function run_single_test()
                     | comma_progress_named "$our_stats_progress" "$dir" "$test_exec" "$path" "$verbose" 2> >( "$grep_failed_" >&2 ) \
                     | if [[ -f ./expected ]]; then comma-test-match ./expected 2>&1 | fail_on_output; else cat > /dev/null; fi
                 if status_ok ; then message_ "$name: test $counter: $dir: succeeded" ; else result=1 ; error_ "$name: $dir: failed" ; fi
-                release_cpus "$dir" $parallel
+                release_resources "$dir"
                 break
             done
             cd $basedir
@@ -416,7 +487,7 @@ function final_words()
     if [[ "$failed_count" == 0 ]] ; then message_ "$name: in subdirectories of $( pwd ): succeeded${afterword}" ; else error_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): $failed_count test[s] out of $test_scripts_count failed${afterword}" ; fi
     [[ -n "$options_debug" ]] && { echo "$name: detailed breakdown:" >&2 ; cat "$comma_test_run_output_flock" >&2; }
     rm -f "$comma_test_run_output_flock"
-    rm -f "$comma_test_run_cpucount_flock"
+    rm -f "$comma_test_run_resources_flock"
 }
 
 # to run, search for directories containing either "test", "input" or "expected";
