@@ -64,9 +64,9 @@ function usage_()
     echo -e "    create an empty file named ${brown}disabled${none} in that directory" >&2
     echo >&2
     echo -e "Load-balancing and serializing tests:" >&2
-    echo -e "    to indicate a CPU-heavy test, create a file named ${brown}resources${none} in the test directory" >&2
-    echo -e "    and specify the number of CPUs to be used by the test; value -1 indicates 'all' CPUs," >&2
-    echo -e "    i.e., serializing the test" >&2
+    echo -e "    to describe a resourse-heavy test, create a file named ${brown}resources${none} in the test directory" >&2
+    echo -e "    and specify the number of CPUs and the amount of shared memory to be used by the test;" >&2
+    echo -e "    may also specify 'serial=\"true\"' to serialize the test" >&2
     echo >&2
     exit 1
 }
