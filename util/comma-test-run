@@ -87,7 +87,7 @@ function usage_()
     echo -e "    create an empty file named ${brown}disabled${none} in that directory" >&2
     echo >&2
     echo -e "Load-balancing and serializing tests:" >&2
-    echo -e "    to describe a resourse-heavy test, create a file named ${brown}resources${none} in the test directory" >&2
+    echo -e "    to describe a resourse-heavy test, create a file named ${brown}config${none} in the test directory" >&2
     echo -e "    and specify the number of CPUs and the amount of shared memory to be used by the test;" >&2
     echo -e "    may also specify 'serial=\"true\"' to serialize the test" >&2
     echo >&2
@@ -234,9 +234,9 @@ function initialize_resources()
 function default_requirements()
 {
     cat <<EOF
-cpus=1
-memory/shared=0
-serial="false"
+resources/cpus=1
+resources/memory/shared=0
+resources/serial="false"
 EOF
 }
 export -f default_requirements
@@ -245,17 +245,17 @@ export -f default_requirements
 function zero_requirements()
 {
     cat <<EOF
-cpus=0
-memory/shared=0
-serial="false"
+resources/cpus=0
+resources/memory/shared=0
+resources/serial="false"
 EOF
 }
 export -f zero_requirements
 
 function get_required_resources()
 {
-    comma_path_value_to_var --prefix=required < <( zero_requirements )
-    comma_path_value_to_var --prefix=required < <( [[ -f ./resources ]] && { cat ./resources; } || { default_requirements; } )
+    comma_path_value_to_var < <( zero_requirements )
+    comma_path_value_to_var < <( [[ -f ./config ]] && { cat ./config; } || { default_requirements; } )
 }
 export -f get_required_resources
 
@@ -272,11 +272,11 @@ function print_resources()
     local action=$2
     echo "$name: currently occupied $occupied_cpus CPU(s), $occupied_memory_shared MB of shared memory"
     [[ "$action" == "occupy" ]] && {
-        echo -n "${name//?/ }  $dir requires $required_cpus CPU(s), $required_memory_shared MB of shared memory"
-        [[ "$required_serial" == "true" ]] && { echo ", serial"; } || { echo ", not serial"; }
+        echo -n "${name//?/ }  $dir requires $resources_cpus CPU(s), $resources_memory_shared MB of shared memory"
+        [[ "$resources_serial" == "true" ]] && { echo ", serial"; } || { echo ", not serial"; }
         echo "${name//?/ }  in total may use $options_max_parallel CPU(s), $options_max_memory_shared MB of shared memory"
     } || {
-        echo "${name//?/ }  $dir releases $required_cpus CPU(s), $required_memory_shared MB of shared memory"
+        echo "${name//?/ }  $dir releases $resources_cpus CPU(s), $resources_memory_shared MB of shared memory"
     }
 }
 export -f print_resources
@@ -287,12 +287,12 @@ function calculate_next_resources()
 {
     local action=$1
     [[ "$action" == "occupy" ]] && {
-        next_cpus=$(( $occupied_cpus + $required_cpus ))
-        next_memory_shared=$(( $occupied_memory_shared + $required_memory_shared ))
+        next_cpus=$(( $occupied_cpus + $resources_cpus ))
+        next_memory_shared=$(( $occupied_memory_shared + $resources_memory_shared ))
     } || {
-        next_cpus=$(( $occupied_cpus - $required_cpus ))
+        next_cpus=$(( $occupied_cpus - $resources_cpus ))
         (( $next_cpus < 0 )) && next_cpus=0
-        next_memory_shared=$(( $occupied_memory_shared - $required_memory_shared ))
+        next_memory_shared=$(( $occupied_memory_shared - $resources_memory_shared ))
         (( $next_memory_shared < 0 )) && next_memory_shared=0
     }
 }
@@ -300,7 +300,7 @@ export -f calculate_next_resources
 
 function resources_within_limits()
 {
-    [[ $occupied_cpus > 0 && "$required_serial" == "true" ]] && return 1
+    [[ $occupied_cpus > 0 && "$resources_serial" == "true" ]] && return 1
     # corner cases: CPU and shared memory requirements can exceed system limits
     # if so, let the tests to proceed in serial mode
     (( $next_cpus > $options_max_parallel )) && {
