@@ -59,38 +59,46 @@ function description()
 EOF
 }
 
+# put into a separate function to avoid using echo -e on each line
+function raw_usage_()
+{
+    cat <<EOF
+Usage: comma-test-run [<options>]
+
+Searches for and executes tests under the current directory.
+
+Finds subdirectories containing the files ${brown}test${none}, ${brown}input${none} or ${brown}expected${none}. Execute 'test', then either:
+    (a) if 'expected' exists, compare its contents to the output of 'test' ("path=value" format)
+    (b) otherwise the success of the test depends on the exit status of the 'test' script.
+
+File 'input', if exists, is fed to the stdin of the test script.
+
+If there is an 'input' or 'expected' file but no 'test' in the same directory, the 'test' script in the
+closest parent directory is used. If there is a 'test' by itself with no 'input' or 'expected' file,
+it is only executed if there is no subdirectory containing 'input', 'expected' or 'test'.
+
+Returns 0 if all tests succeed, or non-zero if any of the tests fail.
+
+Note: in quiet mode, only the messages containing the word "failed" will be displayed
+
+Options:
+$( description | sed 's/^/    /g' )
+
+Disabling tests:
+    to disable tests in a directory and all its subdirectories
+    create an empty file named ${brown}disabled${none} in that directory
+
+Load-balancing and serializing tests:
+    to describe a resourse-heavy test, create a file named ${brown}config${none} in the test directory
+    and specify the number of CPUs and the amount of shared memory to be used by the test;
+    may also specify 'serial="true"' to serialize the test
+
+EOF
+}
+
 function usage_()
 {
-    echo -e "Usage: comma-test-run [<options>]" >&2
-    echo >&2
-    echo -e "Searches for and executes tests under the current directory." >&2
-    echo >&2
-    echo -e "Finds subdirectories containing the files ${brown}test${none}, ${brown}input${none} or ${brown}expected${none}. Execute 'test', then either:" >&2
-    echo -e "    (a) if 'expected' exists, compare its contents to the output of 'test' (\"path=value\" format)" >&2
-    echo -e "    (b) otherwise the success of the test depends on the exit status of the 'test' script." >&2
-    echo >&2
-    echo -e "File 'input', if exists, is fed to the stdin of the test script." >&2
-    echo >&2
-    echo -e "If there is an 'input' or 'expected' file but no 'test' in the same directory, the 'test' script in the" >&2
-    echo -e "closest parent directory is used. If there is a 'test' by itself with no 'input' or 'expected' file," >&2
-    echo "it is only executed if there is no subdirectory containing 'input', 'expected' or 'test'." >&2
-    echo >&2
-    echo -e "Returns 0 if all tests succeed, or non-zero if any of the tests fail." >&2
-    echo >&2
-    echo -e "Note: in quiet mode, only the messages containing the word \"failed\" will be displayed" >&2
-    echo >&2
-    echo -e "Options:" >&2
-    description | sed 's/^/    /g' >&2
-    echo >&2
-    echo -e "Disabling tests:" >&2
-    echo -e "    to disable tests in a directory and all its subdirectories" >&2
-    echo -e "    create an empty file named ${brown}disabled${none} in that directory" >&2
-    echo >&2
-    echo -e "Load-balancing and serializing tests:" >&2
-    echo -e "    to describe a resourse-heavy test, create a file named ${brown}config${none} in the test directory" >&2
-    echo -e "    and specify the number of CPUs and the amount of shared memory to be used by the test;" >&2
-    echo -e "    may also specify 'serial=\"true\"' to serialize the test" >&2
-    echo >&2
+    echo -e "$( raw_usage_ )" >&2
     exit 1
 }
 
