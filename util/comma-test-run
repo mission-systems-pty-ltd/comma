@@ -16,22 +16,23 @@ total_memory_shared=$( echo "$total_memory_limits" | sed '/shared/!d;s/.* //g' )
 total_memory_shared=$(( $total_memory_shared / 1024 )) || { echo "$name: shared memory limit is not a number" >&2; exit 1; }
 
 # defaults
-# TODO: determine the number of CPUs and the amount of shared memory at run-time
 qstorage="/mnt/q-storage"
-max_parallel=1
-max_memory_shared=8000
+max_parallel=$total_num_cpus
+max_memory_shared=$total_memory_shared
 max_wait="forever"
 
 function default_options()
 {
     echo "path=$qstorage"
+    echo "parallel=0"
+    echo "quiet=0"
+    echo "debug=0"
+    echo "until_first_failure=0"
     echo "max_parallel=$max_parallel"
     echo "max_memory_shared=$max_memory_shared"
     echo "max_wait=$max_wait"
 }
 
-# TODO: provide a separate option, '--parallel', which would default max_parallel
-#       to the total number of CPUs; without '--parallel', default to 1.
 function description()
 {
     cat <<EOF
@@ -40,6 +41,7 @@ function description()
 --quiet,-q; output only failures
 --until-first-failure,-f; exit after the first failure (TODO)
 --path=[<dir>]; q-storage directory, default: '$qstorage'
+--parallel; run tests in parallel
 --max-parallel=[<N>]; run up to N tests in parallel; default: $max_parallel
 --max-memory-shared=[<N>]; limit on shared memory, in MB; default: $max_memory_shared
 --max-wait=[<time>]; maximal time to wait for available CPUs before failing a test, default: ${max_wait}
@@ -478,6 +480,7 @@ comma_path_value_to_var  --prefix=options < <( default_options )
 comma_path_value_to_var --prefix=options < <( description | comma-options-to-name-value $@ )
 # and perform sanity check
 [[ ! -d "$options_path" ]] && { error_ "$name: q-storage '$options_path' not found"; exit 1; }
+(( $options_parallel == 0 )) && options_max_parallel=1
 (( $options_max_parallel < 1 )) && { error_ "$name: number of parallel tests $options_max_parallel < 1"; exit 1; }
 (( $options_max_memory_shared < 512 )) && { error_ "$name: amount of shared memory $options_max_memory_shared < 512"; exit 1; }
 [[ "$options_max_wait" != "forever" ]] && {
