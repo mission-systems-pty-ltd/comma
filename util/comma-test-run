@@ -88,17 +88,37 @@ Disabling tests:
     to disable tests in a directory and all its subdirectories
     create an empty file named ${brown}disabled${none} in that directory
 
+Running tests in parallel:
+    (a) If none of '--parallel' and '--max-parallel' options is given, tests are run sequentially.
+    (b) If '--max-parallel' is given, e.g., as in '--max-parallel=4', up to 4 tests are run at once;
+        but see below for load-balancing.
+    (c) If '--parallel' is given without '--max-parallel', the script attempts to use as many CPUs/cores
+        as are available on the system. This is currently ${red}not recommended${none} for resource-heavy
+        tests as explained below.
+
 Load-balancing and serializing tests:
     to describe a resourse-heavy test, create a file named ${brown}config${none} in the test directory
     and specify the number of CPUs and the amount of shared memory to be used by the test;
-    may also specify 'serial="true"' to serialize the test
+    may also specify 'serial="true"' to serialize the test.
+
+    Examples of config files:
+
+        resources/cpus=4
+        resources/memory/shared=3200
+
+    Will not run until at least 4 or all CPUs (out of '--max-parallel' number) are available. Will
+    not run until 3200 MB of shared memory (counted out of '--max-memory-shared' total) is available.
+
+        resources/serial="true"
+
+    Will run only when no other test is running.
 
 EOF
 }
 
 function usage_()
 {
-    echo -e "$( raw_usage_ )" >&2
+    echo -e "$( raw_usage_ )\n" >&2
     exit 1
 }
 
