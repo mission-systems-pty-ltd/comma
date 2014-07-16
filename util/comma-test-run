@@ -38,7 +38,7 @@ function description()
 --help,-h; show this help
 --debug; much more debug output
 --quiet,-q; output only failures
---until-first-failure,-f; exit after the first failure
+--until-first-failure,-f; exit after the first failure (TODO)
 --path=[<dir>]; q-storage directory, default: '$qstorage'
 --max-parallel=[<N>]; run up to N tests in parallel; default: $max_parallel
 --max-memory-shared=[<N>]; limit on shared memory, in MB; default: $max_memory_shared
