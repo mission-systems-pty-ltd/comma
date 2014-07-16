@@ -1,7 +1,6 @@
 #!/bin/bash
 
 source $( which comma-application-util )
-source $( which comma-test-util )
 
 name=$( basename $0 )
 
@@ -20,6 +19,18 @@ qstorage="/mnt/q-storage"
 max_parallel=$total_num_cpus
 max_memory_shared=$total_memory_shared
 max_wait="forever"
+
+red="\033[0;31m"
+green="\033[0;32m"
+brown="\033[0;33m"
+white="\033[0;37m"
+none="\033[m"
+
+status_ok()
+{
+    [[ ! "${PIPESTATUS[@]}" =~ [1-9] ]]
+}
+export -f status_ok
 
 function default_options()
 {
