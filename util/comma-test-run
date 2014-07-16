@@ -419,7 +419,7 @@ function run_single_test()
             while true ; do
                 occupy_resources "$dir"
                 (( $? != 0 )) && {
-                    message_ "$name: have to wait..."
+                    message_ "$name: test $counter waiting for resources..."
                     [[ "$options_max_wait" != "forever" ]] && {
                         (( $wait_time >= $options_max_wait )) && { echo "$name: in '$dir', could not get $parallel CPUs for ${wait_time}s, failed to run" >&2; result=1; break; }
                     }
