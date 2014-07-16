@@ -293,8 +293,6 @@ function resources_within_limits()
     [[ $occupied_cpus > 0 && "$required_serial" == "true" ]] && return 1
     # corner cases: CPU and shared memory requirements can exceed system limits
     # if so, let the tests to proceed in serial mode
-    # TODO: provide an option controlling this behaviour; if '--strict-limits'
-    # is given, do not let such tests to proceed; default to not-strict
     (( $next_cpus > $options_max_parallel )) && {
         (( $occupied_cpus == 0 )) && return 0
         return 1
