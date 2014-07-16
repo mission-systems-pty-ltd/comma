@@ -95,9 +95,6 @@ function usage_()
     exit 1
 }
 
-# comma-test-util is in the same folder as this script
-source "${0%run}util"
-
 function error_()
 {
     tput bold
