@@ -360,7 +360,7 @@ function release_resources()
 }
 export -f release_resources
 
-# this function runs the actual test
+# this function runs the actual test; must be run as a background process
 # arguments:
 #     name                    - top-level script name, use as output prefix
 #     path to q-storage       - where the data are
@@ -381,6 +381,9 @@ function run_single_test()
     local total=$6
     local count=$7
     local dir=$8
+    # unquote, just in case
+    local temp="${dir%\"}"
+    dir="${temp#\"}"
 
     source $( which comma-application-util ) || return 1
     source $( which comma-test-util ) || return 1
