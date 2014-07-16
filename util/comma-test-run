@@ -152,7 +152,7 @@ function exclude_generic_tests()
         if [[ -f "$dir/test" && ! -f "$dir/input" && ! -f "$dir/expected" && ! -f "$dir/disabled" ]]; then
             local pattern="^$( escape_special_chars "$dir" )/."
             if echo $dir_list | fmt -1 | grep -q "$pattern"; then
-                if [[ "$options_debug" != "" ]] ; then echo "Excluding generic test '$dir/test'" >&2; fi
+                if [[ "$options_debug" != "0" ]] ; then echo "Excluding generic test '$dir/test'" >&2; fi
                 continue
             fi
         fi
@@ -319,7 +319,7 @@ function occupy_resources()
     (
         flock -x 8
         get_occupied_resources
-        [[ -n "$options_debug" ]] && { print_resources "$dir" "occupy"; }
+        [[ "$options_debug" != "0" ]] && { print_resources "$dir" "occupy"; }
         calculate_next_resources "occupy"
         resources_within_limits && {
             output_next_resources >&8
@@ -339,7 +339,7 @@ function release_resources()
     (
         flock -x 8
         get_occupied_resources
-        [[ -n "$options_debug" ]] && { print_resources "$dir" "release"; }
+        [[ "$options_debug" != "0" ]] && { print_resources "$dir" "release"; }
         calculate_next_resources "release"
         output_next_resources >&8
         exit 0
@@ -450,7 +450,7 @@ function process_accumulated_tests()
     xargs -n2 | xargs -P $options_max_parallel -I{} bash -c run_single_test\ "'$name'"\ "'$options_path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$grep_failed_'"\ "'$test_scripts_count'"\ {}
     status_ok || {
         result=1
-        [[ "$options_until_first_failure" == "true" ]] && exit 1
+        [[ "$options_until_first_failure" == "1" ]] && exit 1
     }
 }
 
@@ -469,7 +469,7 @@ function final_words()
     local afterword=
     [[ "$is_shutdown" == "true" ]] && afterword=" (untill killed)"
     if [[ "$failed_count" == 0 ]] ; then message_ "$name: in subdirectories of $( pwd ): succeeded${afterword}" ; else error_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): $failed_count test[s] out of $test_scripts_count failed${afterword}" ; fi
-    [[ -n "$options_debug" ]] && { echo "$name: detailed breakdown:" >&2 ; cat "$comma_test_run_output_flock" >&2; }
+    [[ "$options_debug" != "0" ]] && { echo "$name: detailed breakdown:" >&2 ; cat "$comma_test_run_output_flock" >&2; }
     rm -f "$comma_test_run_output_flock"
     rm -f "$comma_test_run_resources_flock"
 }
@@ -515,7 +515,7 @@ test_script_dirs=$( exclude_generic_tests $( get_dirnames $( find . -name "test"
 test_scripts_count=$( echo $test_script_dirs | wc -w )
 count=0
 failed_count=0
-#if [[ "$options_debug" != "" ]] ; then verbose="--verbose" ; fi # quick and dirty
+#if [[ "$options_debug" != "0" ]] ; then verbose="--verbose" ; fi # quick and dirty
 if (( $test_scripts_count > 0 )) ; then
     message_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): running..."
     for dir in $test_script_dirs ; do
