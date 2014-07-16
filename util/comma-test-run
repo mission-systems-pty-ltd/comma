@@ -419,9 +419,7 @@ function final_words()
     rm -f "$comma_test_run_cpucount_flock"
 }
 
-# to run 
-
-# search for directories containing either "test", "input" or "expected";
+# to run, search for directories containing either "test", "input" or "expected";
 # if "test" is absent, use the "test" in the closest parent directory
 
 test_script_dirs=$( exclude_generic_tests $( get_dirnames $( find . -name "test" -or -name "input" -or -name "expected" ) 2> /dev/null | sort -u ) )
