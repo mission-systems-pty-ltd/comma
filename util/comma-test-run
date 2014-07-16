@@ -480,7 +480,8 @@ comma_path_value_to_var  --prefix=options < <( default_options )
 comma_path_value_to_var --prefix=options < <( description | comma-options-to-name-value $@ )
 # and perform sanity check
 [[ ! -d "$options_path" ]] && { error_ "$name: q-storage '$options_path' not found"; exit 1; }
-(( $options_parallel == 0 )) && options_max_parallel=1
+have_max_parallel=$( comma_options_has --max-parallel=$options_max_parallel $@ )
+(( $options_parallel == 0 && $have_max_parallel == 0 )) && options_max_parallel=1
 (( $options_max_parallel < 1 )) && { error_ "$name: number of parallel tests $options_max_parallel < 1"; exit 1; }
 (( $options_max_memory_shared < 512 )) && { error_ "$name: amount of shared memory $options_max_memory_shared < 512"; exit 1; }
 [[ "$options_max_wait" != "forever" ]] && {
