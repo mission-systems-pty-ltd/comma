@@ -50,7 +50,7 @@ function description()
 --help,-h; show this help
 --debug; much more debug output
 --quiet,-q; output only failures
---until-first-failure,-f; exit after the first failure (TODO)
+--until-first-failure,-f; exit after the first failure (works only when tests run serially)
 --path=[<dir>]; q-storage directory, default: '$qstorage'
 --parallel; run tests in parallel
 --max-parallel=[<N>]; run up to N tests in parallel; default: $max_parallel
@@ -459,13 +459,26 @@ function run_single_test()
 }
 export -f run_single_test
 
-function process_accumulated_tests()
+function process_tests_parallel()
 {
     xargs -n2 | xargs -P $options_max_parallel -I{} bash -c run_single_test\ "'$name'"\ "'$options_path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$grep_failed_'"\ "'$test_scripts_count'"\ {}
     status_ok || {
         result=1
-        [[ "$options_until_first_failure" == "1" ]] && exit 1
     }
+}
+
+function process_tests_serial()
+{
+    while true; do
+        read line
+        [[ -z "$line" ]] && break
+        run_single_test "$name" "$options_path" "$stats_progress_csv" "$verbose" "$grep_failed_" "$test_scripts_count" $line &
+        wait $!
+        (( $? == 0 )) || {
+            result=1
+            [[ "$options_until_first_failure" == "1" ]] && exit 1
+        }
+    done
 }
 
 function count_failures()
@@ -532,13 +545,16 @@ failed_count=0
 # too quick and dirty, some tests fail when an unknown option is given
 #if [[ "$options_debug" != "0" ]] ; then verbose="--verbose" ; fi
 
+run_tests="process_tests_parallel"
+[[ "$options_parallel" == "0" ]] && run_tests="process_tests_serial"
+
 if (( $test_scripts_count > 0 )) ; then
     message_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): running..."
     for dir in $test_script_dirs ; do
         if [[ -n "$is_shutdown" ]] ; then error_ "comma-test-run: terminated" >&2 ; exit 1 ; fi
         (( ++count ))
         echo "$count  \"$dir\""
-    done | process_accumulated_tests
+    done | $run_tests
 else
     echo -e "${brown}$name: warning: no tests found in $( pwd )${none}" >&2
 fi
