@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # this script is designed to be included in another script directly, for example:
-# . $( which comma-application-util )
+# source $( which comma-application-util )
 
 [[ -n "$comma_application_util_include_guard_" ]] && return
 readonly comma_application_util_include_guard_=1
@@ -308,48 +308,4 @@ function comma_options_has()
 {
     for a in ${@:2} ; do if [[ "$1" == "$a" ]] ; then echo 1 ; exit ; fi ; done
     echo 0
-}
-
-# a coarse elapsed time estimate of <command> execution appended to <file>
-# the rationale of writing to a file is to have no side effects for <command>
-# usage: comma_elapsed <file> <command> <args>
-function comma_elapsed()
-{
-    local output_file=$1
-    local name=$( basename $2 )
-    local start=$( date +%s.%N )
-    ${@:2}
-    local end=$( date +%s.%N )
-    local elapsed=$( echo "$end - $start" | bc )
-    echo "$name/seconds=$elapsed" >> $output_file
-}
-
-# append to <file> a coarse progress indication for <command> execution
-# the rationale of writing to a file is to have no side effects for <command>
-# usage: comma_progress_named <file> <name> <command> <args>
-#        where <name> is an arbitrary name of user's choice that will be put in the log
-function comma_progress_named()
-{
-    local output_file=$1
-    local name=$2
-    echo "$( date +%Y%m%dT%H%M%S.%N | cut -b1-22 ),$name,begin" >> $output_file
-    ${@:3}
-    local exit_code=$?
-    echo "$( date +%Y%m%dT%H%M%S.%N | cut -b1-22 ),$name,end" >> $output_file
-    return $exit_code
-}
-
-# append to <file> a coarse progress indication for <command> execution
-# the rationale of writing to a file is to have no side effects for <command>
-# usage: comma_progress <file> <command> <args>
-function comma_progress()
-{
-    comma_progress_named $1 $( basename $2 ) ${@:2}
-#     local output_file=$1
-#     local name=$( basename $2 )
-#     echo "$( date +%Y%m%dT%H%M%S.%N | cut -b1-22 ),$name,begin" >> $output_file
-#     ${@:2}
-#     exit_code=$?
-#     echo "$( date +%Y%m%dT%H%M%S.%N | cut -b1-22 ),$name,end" >> $output_file
-#     return $exit_code
 }
