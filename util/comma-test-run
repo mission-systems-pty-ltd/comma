@@ -15,7 +15,7 @@ total_memory_shared=$( echo "$total_memory_limits" | sed '/shared/!d;s/.* //g' )
 total_memory_shared=$(( $total_memory_shared / 1024 )) || { echo "$name: shared memory limit is not a number" >&2; exit 1; }
 
 # defaults
-qstorage="/mnt/q-storage"
+qstorage=""
 max_parallel=$total_num_cpus
 max_memory_shared=$total_memory_shared
 max_wait="forever"
@@ -51,7 +51,7 @@ function description()
 --debug; much more debug output
 --quiet,-q; output only failures
 --until-first-failure,-f; exit after the first failure (works only when tests run serially)
---path=[<dir>]; q-storage directory, default: '$qstorage'
+--path=[<dir>]; data-storage directory for tests, default: none, let the tests define it
 --parallel; run tests in parallel
 --max-parallel=[<N>]; run up to N tests in parallel; default: $max_parallel
 --max-memory-shared=[<N>]; limit on shared memory, in MB; default: $max_memory_shared
@@ -531,7 +531,7 @@ if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then
 comma_path_value_to_var  --prefix=options < <( default_options )
 comma_path_value_to_var --prefix=options < <( description | comma-options-to-name-value $@ )
 # and perform sanity check
-[[ ! -d "$options_path" ]] && { error_ "$name: q-storage '$options_path' not found"; exit 1; }
+[[ -n "$options_path" && ! -d "$options_path" ]] && { error_ "$name: directory '$options_path' not found"; exit 1; }
 have_max_parallel=$( comma_options_has --max-parallel=$options_max_parallel $@ )
 (( $options_parallel == 0 && $have_max_parallel == 0 )) && options_max_parallel=1
 (( $have_max_parallel != 0 )) && options_parallel=1
