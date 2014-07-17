@@ -259,31 +259,21 @@ function initialize_resources()
     export comma_test_run_resources_flock
 }
 
+# used to initialize variables to non-empty values
 function default_requirements()
 {
     cat <<EOF
 resources/cpus=1
-resources/memory/shared=0
+resources/memory/shared=1000
 resources/serial="false"
 EOF
 }
 export -f default_requirements
 
-# used to initialize variables to non-empty values
-function zero_requirements()
-{
-    cat <<EOF
-resources/cpus=0
-resources/memory/shared=0
-resources/serial="false"
-EOF
-}
-export -f zero_requirements
-
 function get_required_resources()
 {
-    comma_path_value_to_var < <( zero_requirements )
-    comma_path_value_to_var < <( [[ -f ./config ]] && { cat ./config; } || { default_requirements; } )
+    comma_path_value_to_var < <( default_requirements )
+    [[ -f ./config ]] && comma_path_value_to_var < <( cat ./config; )
 }
 export -f get_required_resources
 
