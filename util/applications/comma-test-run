@@ -566,11 +566,11 @@ run_tests="process_tests_parallel"
 
 if (( $test_scripts_count > 0 )) ; then
     message_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): running..."
-    for dir in $test_script_dirs ; do
+    $run_tests < <( for dir in $test_script_dirs ; do
         if [[ -n "$is_shutdown" ]] ; then error_ "comma-test-run: terminated" >&2 ; exit 1 ; fi
         (( ++count ))
         echo "$count  \"$dir\""
-    done | $run_tests
+    done )
 else
     echo -e "${brown}$name: warning: no tests found in $( pwd )${none}" >&2
 fi
