@@ -3,6 +3,8 @@
 source $( which comma-application-util ) || exit 1
 
 name=$( basename $0 )
+name_offset="${name//?/ } "
+export name name_offset
 
 # determine system parameters
 total_num_cpus=$( grep -c ^processor "/proc/cpuinfo" )
@@ -288,13 +290,13 @@ function print_resources()
 {
     local dir=$1
     local action=$2
-    echo "$name: currently occupied $occupied_cpus CPU(s), $occupied_memory_shared MB of shared memory"
+    echo "$name_offset currently occupied $occupied_cpus CPU(s), $occupied_memory_shared MB of shared memory"
     [[ "$action" == "occupy" ]] && {
-        echo -n "${name//?/ }  $dir requires $resources_cpus CPU(s), $resources_memory_shared MB of shared memory"
+        echo -n "$name_offset $dir requires $resources_cpus CPU(s), $resources_memory_shared MB of shared memory"
         [[ "$resources_serial" == "true" ]] && { echo ", serial"; } || { echo ", not serial"; }
-        echo "${name//?/ }  in total may use $options_max_parallel CPU(s), $options_max_memory_shared MB of shared memory"
+        echo "$name_offset in total may use $options_max_parallel CPU(s), $options_max_memory_shared MB of shared memory"
     } || {
-        echo "${name//?/ }  $dir releases $resources_cpus CPU(s), $resources_memory_shared MB of shared memory"
+        echo "$name_offset $dir releases $resources_cpus CPU(s), $resources_memory_shared MB of shared memory"
     }
 }
 export -f print_resources
@@ -342,10 +344,11 @@ export -f output_next_resources
 function occupy_resources()
 {
     local dir=$1
+    local verbose=$2
     (
         flock -x 8
         get_occupied_resources
-        [[ "$options_debug" != "0" ]] && { print_resources "$dir" "occupy"; }
+        [[ "$verbose" == "true" ]] && { print_resources "$dir" "occupy"; }
         calculate_next_resources "occupy"
         resources_within_limits && {
             output_next_resources >&8
@@ -362,10 +365,11 @@ export -f occupy_resources
 function release_resources()
 {
     local dir=$1
+    local verbose=$2
     (
         flock -x 8
         get_occupied_resources
-        [[ "$options_debug" != "0" ]] && { print_resources "$dir" "release"; }
+        [[ "$verbose" == "true" ]] && { print_resources "$dir" "release"; }
         calculate_next_resources "release"
         output_next_resources >&8
         exit 0
@@ -377,7 +381,6 @@ export -f release_resources
 
 # this function runs the actual test; must be run as a background process
 # arguments:
-#     name                    - top-level script name, use as output prefix
 #     path to q-storage       - where the data are
 #     stats file name         - will write start/stop time into this file
 #     verbosity flag          - auxiliary, chatter more/less
@@ -387,15 +390,14 @@ export -f release_resources
 #     test directory          - will cd and run the test inside
 function run_single_test()
 {
-    local name=$1
-    local path=$2
+    local path=$1
     [[ -n "$path" ]] && path="--path=$path"
-    local stats_progress=$3
-    local verbose=$4
-    local grep_failed_=$5
-    local total=$6
-    local count=$7
-    local dir=$8
+    local stats_progress=$2
+    local verbose=$3
+    local grep_failed_=$4
+    local total=$5
+    local count=$6
+    local dir=$7
     # unquote, just in case
     local temp="${dir%\"}"
     dir="${temp#\"}"
@@ -435,10 +437,20 @@ function run_single_test()
             local sleep_time=0
             get_required_resources
             local first="true"
+            local verbose_resources="false"
+            [[ "$options_debug" != "0" ]] && verbose_resources="true"
             while true ; do
-                occupy_resources "$dir"
+                [[ "$first" == "false" ]] && verbose_resources="false"
+                occupy_resources "$dir" "$verbose_resources"
                 (( $? != 0 )) && {
-                    [[ "$first" == "true" ]] && { message_ "$name: test $counter waiting for resources..."; first="false"; }
+                    [[ "$options_debug" != "0" ]] && {
+                        [[ "$first" == "true" ]] && {
+                            echo -n "$name_offset waiting for resources ." >&2
+                            first="false"
+                        } || {
+                            echo -n " ." >&2
+                        }
+                    }
                     [[ "$options_max_wait" != "forever" ]] && {
                         (( $wait_time >= $options_max_wait )) && { echo "$name: in '$dir', could not get $parallel CPUs for ${wait_time}s, failed to run" >&2; result=1; break; }
                     }
@@ -447,11 +459,12 @@ function run_single_test()
                     sleep ${sleep_time}s
                     continue
                 }
+                [[ "$first" == "false" && "$options_debug" != "0" ]] && echo " end of wait" >&2
                 if [ -f ./input ] ; then cat ./input ; fi \
                     | comma_progress_named "$our_stats_progress" "$dir" "$test_exec" "$path" "$verbose" 2> >( "$grep_failed_" >&2 ) \
                     | if [[ -f ./expected ]]; then comma-test-match ./expected 2>&1 | fail_on_output; else cat > /dev/null; fi
                 if status_ok ; then message_ "$name: test $counter: $dir: succeeded" ; else result=1 ; error_ "$name: $dir: failed" ; fi
-                release_resources "$dir"
+                release_resources "$dir" "$verbose_resources"
                 break
             done
             cd $basedir
@@ -477,7 +490,7 @@ export -f run_single_test
 
 function process_tests_parallel()
 {
-    xargs -n2 | xargs -P $options_max_parallel -I{} bash -c run_single_test\ "'$name'"\ "'$options_path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$grep_failed_'"\ "'$test_scripts_count'"\ {}
+    xargs -n2 | xargs -P $options_max_parallel -I{} bash -c run_single_test\ "'$options_path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$grep_failed_'"\ "'$test_scripts_count'"\ {}
     status_ok || {
         result=1
     }
@@ -488,7 +501,7 @@ function process_tests_serial()
     while true; do
         read line
         [[ -z "$line" ]] && break
-        run_single_test "$name" "$options_path" "$stats_progress_csv" "$verbose" "$grep_failed_" "$test_scripts_count" $line &
+        run_single_test "$options_path" "$stats_progress_csv" "$verbose" "$grep_failed_" "$test_scripts_count" $line &
         wait $!
         (( $? == 0 )) || {
             result=1
