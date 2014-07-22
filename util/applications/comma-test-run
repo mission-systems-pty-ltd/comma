@@ -379,6 +379,16 @@ function release_resources()
 }
 export -f release_resources
 
+function signal_handler()
+{
+    trap '' SIGINT SIGTERM
+    error_ 'comma-test-run: received signal, terminating...'
+    is_killed=true
+    kill_children --recursive $BASHPID
+    exit 1
+}
+export -f signal_handler
+
 # this function runs the actual test; must be run as a background process
 # arguments:
 #     path to q-storage       - where the data are
@@ -390,6 +400,7 @@ export -f release_resources
 #     test directory          - will cd and run the test inside
 function run_single_test()
 {
+    trap 'signal_handler' SIGINT SIGTERM
     local path=$1
     [[ -n "$path" ]] && path="--path=$path"
     local stats_progress=$2
@@ -523,7 +534,7 @@ function final_words()
 {
     failed_count=$( count_failures )
     local afterword=
-    [[ "$is_shutdown" == "true" ]] && afterword=" (untill killed)"
+    [[ "$is_killed" == "true" ]] && afterword=" (until killed)"
     if [[ "$failed_count" == 0 ]] ; then message_ "$name: in subdirectories of $( pwd ): succeeded${afterword}" ; else error_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): $failed_count test[s] out of $test_scripts_count failed${afterword}" ; fi
     [[ "$options_debug" != "0" ]] && { echo "$name: detailed breakdown:" >&2 ; cat "$comma_test_run_output_flock" >&2; }
     rm -f "$comma_test_run_output_flock"
@@ -557,8 +568,8 @@ export comma_test_run_output_flock
 # in a global file name; access serialized via flocks
 initialize_resources
 
-trap "error_ 'comma-test-run: received signal, terminating...' >&2 ; is_shutdown=true" SIGINT SIGTERM
-trap "stats_finalize; final_words" EXIT
+trap 'signal_handler' SIGINT SIGTERM
+trap 'stats_finalize; final_words' EXIT
 
 basedir=$( pwd )
 result=0
@@ -581,7 +592,6 @@ run_tests="process_tests_parallel"
 if (( $test_scripts_count > 0 )) ; then
     message_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): running..."
     $run_tests < <( for dir in $test_script_dirs ; do
-        if [[ -n "$is_shutdown" ]] ; then error_ "comma-test-run: terminated" >&2 ; exit 1 ; fi
         (( ++count ))
         echo "$count  \"$dir\""
     done )
