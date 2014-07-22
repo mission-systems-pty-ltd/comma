@@ -390,6 +390,15 @@ function signal_handler()
 }
 export -f signal_handler
 
+function setup_signal_handler()
+{
+    # a process that exits in response to SIGINT should kill itself with SIGINT
+    # see http://www.cons.org/cracauer/sigint.html
+    trap 'signal_handler; kill -SIGINT $$' SIGINT
+    trap 'signal_handler' SIGTERM
+}
+export -f setup_signal_handler
+
 # this function runs the actual test; must be run as a background process
 # arguments:
 #     path to q-storage       - where the data are
@@ -401,7 +410,7 @@ export -f signal_handler
 #     test directory          - will cd and run the test inside
 function run_single_test()
 {
-    trap 'signal_handler' SIGINT SIGTERM
+    setup_signal_handler
     local path=$1
     [[ -n "$path" ]] && path="--path=$path"
     local stats_progress=$2
@@ -574,7 +583,7 @@ export comma_test_run_output_flock
 # in a global file name; access serialized via flocks
 initialize_resources
 
-trap 'signal_handler' SIGINT SIGTERM
+setup_signal_handler
 trap 'stats_finalize; final_words' EXIT
 
 basedir=$( pwd )
