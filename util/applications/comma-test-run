@@ -385,6 +385,7 @@ function signal_handler()
     error_ 'comma-test-run: received signal, terminating...'
     is_killed=true
     kill_children --recursive $BASHPID
+    rm -f "$comma_test_run_xargs_pipe"
     exit 1
 }
 export -f signal_handler
@@ -501,10 +502,15 @@ export -f run_single_test
 
 function process_tests_parallel()
 {
-    xargs -n2 | xargs -P $options_max_parallel -I{} bash -c run_single_test\ "'$options_path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$grep_failed_'"\ "'$test_scripts_count'"\ {}
-    status_ok || {
-        result=1
-    }
+    comma_test_run_xargs_pipe=$( mktemp -u )
+    mkfifo -m 600 "$comma_test_run_xargs_pipe"
+    xargs -P $options_max_parallel -I{} bash -c run_single_test\ "'$options_path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$grep_failed_'"\ "'$test_scripts_count'"\ {} < "$comma_test_run_xargs_pipe" &
+    local xargs_pid=$!
+    xargs -n2 > "$comma_test_run_xargs_pipe"
+    wait "$xargs_pid"
+    (( $? != 0 )) && result=1
+    rm -f "$comma_test_run_xargs_pipe"
+    unset comma_test_run_xargs_pipe
 }
 
 function process_tests_serial()
