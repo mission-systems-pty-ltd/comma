@@ -52,7 +52,7 @@ function description()
     cat <<EOF
 --help,-h; show this help
 --debug; much more debug output
---quiet,-q; output only failures
+--quiet,-q; minimize output
 --until-first-failure,-f; exit after the first failure (works only when tests run serially)
 --force,-f; include disabled tests
 --path=[<dir>]; data-storage directory for tests, default: none, let the tests define it
@@ -103,8 +103,6 @@ closest parent directory is used. If there is a 'test' by itself with no 'input'
 it is only executed if there is no subdirectory containing 'input', 'expected' or 'test'.
 
 Returns 0 if all tests succeed, or non-zero if any of the tests fail.
-
-Note: in quiet mode, only the messages containing the word "failed" will be displayed
 
 Options:
 $( description | sed 's/^/    /g' )
@@ -428,7 +426,6 @@ export -f setup_signal_handler
 #     path to q-storage       - where the data are
 #     stats file name         - will write start/stop time into this file
 #     verbosity flag          - auxiliary, chatter more/less
-#     'grep failed' routine   - filters/not stderr output
 #     total                   - total number of tests
 #     count                   - sequential test number
 #     test directory          - will cd and run the test inside
@@ -439,10 +436,9 @@ function run_single_test()
     [[ -n "$path" ]] && path="--path=$path"
     local stats_progress=$2
     local verbose=$3
-    local grep_failed_=$4
-    local total=$5
-    local count=$6
-    local dir=$7
+    local total=$4
+    local count=$5
+    local dir=$6
     # unquote, just in case
     local temp="${dir%\"}"
     dir="${temp#\"}"
@@ -505,12 +501,29 @@ function run_single_test()
                     continue
                 }
                 [[ "$first" == "false" && "$options_debug" != "0" ]] && echo " end of wait" >&2
+                first="true"
+                local passed="false"
                 if [ -f ./input ] ; then cat ./input ; fi \
-                    | comma_progress_named "$our_stats_progress" "$dir" "$test_exec" "$path" "$verbose" 2> >( "$grep_failed_" >&2 ) \
+                    | comma_progress_named "$our_stats_progress" "$dir" "$test_exec" "$path" "$verbose" 2>&1 \
                     | if [[ -f ./expected ]]; then comma-test-match ./expected 2>&1 | fail_on_output; else cat > /dev/null; fi
-                if status_ok ; then message_ "$name: test $counter: $dir: succeeded" ; else result=1 ; error_ "$name: $dir: failed" ; fi
+                if status_ok ; then passed="true" ; fi
                 release_resources "$dir" "$verbose_resources"
-                break
+                [[ "$passed" == "true" ]] && {
+                    message_ "$name: test $counter: $dir: succeeded"
+                    break
+                } || {
+                    local error_files
+                    error_files="$( find . -name out_of_shared_memory )"
+                    [[ -n "$error_files" ]] && {
+                        [[ "$first" == "true" ]] && { echo "$name_offset ran out of shared memory, will try again ..." >&2; first="false"; }
+                        echo "$error_files" | xargs rm -f
+                        continue
+                    } || {
+                        result=1
+                        error_ "$name: $dir: failed"
+                        break
+                    }
+                }
             done
             cd $basedir
         fi
@@ -537,7 +550,7 @@ function process_tests_parallel()
 {
     comma_test_run_xargs_pipe=$( mktemp -u )
     mkfifo -m 600 "$comma_test_run_xargs_pipe"
-    xargs -P $options_max_parallel -I{} bash -c run_single_test\ "'$options_path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$grep_failed_'"\ "'$test_scripts_count'"\ {} < "$comma_test_run_xargs_pipe" &
+    xargs -P $options_max_parallel -I{} bash -c run_single_test\ "'$options_path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$test_scripts_count'"\ {} < "$comma_test_run_xargs_pipe" &
     local xargs_pid=$!
     xargs -n2 > "$comma_test_run_xargs_pipe"
     wait "$xargs_pid"
@@ -551,7 +564,7 @@ function process_tests_serial()
     while true; do
         read line
         [[ -z "$line" ]] && break
-        run_single_test "$options_path" "$stats_progress_csv" "$verbose" "$grep_failed_" "$test_scripts_count" $line &
+        run_single_test "$options_path" "$stats_progress_csv" "$verbose" "$test_scripts_count" $line &
         wait $!
         (( $? == 0 )) || {
             result=1
@@ -595,8 +608,6 @@ have_max_parallel=$( comma_options_has --max-parallel=$options_max_parallel $@ )
     (( $options_max_wait < 1 )) && { error_ "$name: wait time $options_max_wait < 1s or not a number"; exit 1; }
 }
 export options_max_parallel options_max_memory_shared options_max_wait options_debug options_quiet options_path options_until_first_failure
-
-if [[ "$options_quiet" != "1" ]] ; then grep_failed_=cat ; else grep_failed_="grep failed" ; fi
 
 # to run tests in parallel, we need to lock stats_progress_csv and/or stdout/stderr
 # this is the global flock name
