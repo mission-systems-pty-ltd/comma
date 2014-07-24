@@ -65,14 +65,35 @@ EOF
 function raw_usage_()
 {
     cat <<EOF
-Usage: comma-test-run [<options>]
 
 Searches for and executes tests under the current directory.
 
-Finds subdirectories containing the files ${brown}test${none}, ${brown}input${none} or ${brown}expected${none}. Execute 'test', then either:
+Usage: comma-test-run [<options>]
+
+Find subdirectories containing the files ${brown}test${none}, ${brown}input${none} or ${brown}expected${none}. Execute 'test', then either:
     (a) if 'expected' exists, compare its contents to the output of 'test' ("path=value" format)
     (b) otherwise the success of the test depends on the exit status of the 'test' script.
 
+    
+A quick tutorial
+
+    mkdir success
+    echo "hello=\"world\"" > success/input
+    echo "hello=\"world\"" > success/expected
+    echo "cat" > success/test
+    chmod +x success/test
+
+    comma-test-run
+
+    mkdir failure
+    echo "hello=\"world\"" > failure/input
+    echo "hello=\"moon\"" > failure/expected
+    echo "cat" > failure/test
+    chmod +x failure/test
+
+    comma-test-run
+
+    
 File 'input', if exists, is fed to the stdin of the test script.
 
 If there is an 'input' or 'expected' file but no 'test' in the same directory, the 'test' script in the
