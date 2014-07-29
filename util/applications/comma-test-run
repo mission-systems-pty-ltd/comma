@@ -41,6 +41,7 @@ function default_options()
     echo "quiet=0"
     echo "debug=0"
     echo "until_first_failure=0"
+    echo "force=0"
     echo "max_parallel=$max_parallel"
     echo "max_memory_shared=$max_memory_shared"
     echo "max_wait=$max_wait"
@@ -53,6 +54,7 @@ function description()
 --debug; much more debug output
 --quiet,-q; output only failures
 --until-first-failure,-f; exit after the first failure (works only when tests run serially)
+--force,-f; include disabled tests
 --path=[<dir>]; data-storage directory for tests, default: none, let the tests define it
 --parallel; run tests in parallel
 --max-parallel=[<N>]; run up to N tests in parallel; default: $max_parallel
@@ -175,6 +177,7 @@ export -f warning_
 
 function disabled_()
 {
+    if [[ "$options_force" == "1" ]]; then return 1; fi
     if [[ -f "$1/disabled" ]] ; then return 0 ; fi
     d=$( dirname $1 )
     if [[ "$d" == "$1" ]] ; then return 1 ; fi
