@@ -4,6 +4,24 @@ cmake_minimum_required(VERSION 2.6)
 
 ENABLE_TESTING()
 
+IF (UNIX)
+	# Get the date of the last commit (for use by CPack)
+	# Check if Git is installed
+	find_package(Git)
+	IF(GIT_FOUND)
+		EXECUTE_PROCESS(
+		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+		COMMAND git log -n1 --format=%ci
+		COMMAND xargs -0 date +%Y%m%dT%H%M -d
+		OUTPUT_VARIABLE COMMITDATE
+		OUTPUT_STRIP_TRAILING_WHITESPACE
+		)
+	ELSE()
+		SET ( COMMITDATE 1 )
+	ENDIF()
+ELSE() # Probably windows; gets hardcoded patch version
+	SET ( COMMITDATE 1 ) 
+ENDIF()
 # ---------------------------------------------------------------------------
 # set compiler and linker flags and variables
 
@@ -197,12 +215,12 @@ ADD_SUBDIRECTORY( util )
     #install(FILES "${Boost_LIBRARY_DIRS}/*.dll" DESTINATION bin )
 
     #the following set up optional parameters for cpack
-    SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "This is a description of comma. It's great!")
-    SET(CPACK_PACKAGE_VENDOR "ACFR")
+    SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Command line utilities to manipulate various structured and unstructured data from offline or real time data.")
+    SET(CPACK_PACKAGE_VENDOR "Australian Centre for Field Robotics")
     SET(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/COPYING")
     SET(CPACK_PACKAGE_VERSION_MAJOR "1")
     SET(CPACK_PACKAGE_VERSION_MINOR "0")
-    SET(CPACK_PACKAGE_VERSION_PATCH "5")
+    SET(CPACK_PACKAGE_VERSION_PATCH ${COMMITDATE})
 	SET(CPACK_PACKAGE_CONTACT "t.teo@acfr.usyd.edu.au")
 
     #this line finds the appropriate Visual Studio DLLS in windows. Maybe it would find other dlls if a different build tool were used. Probably should be windows only.
