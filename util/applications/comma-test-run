@@ -436,11 +436,13 @@ function report_waiting()
         }
     }
 }
+export -f report_waiting
 
 function report_end_of_wait() {
     [[ "$first" == "false" && "$options_debug" != "0" ]] && echo " end of wait" >&2
     first="true"
 }
+export -f report_end_of_wait
 
 # this function runs the actual test; must be run as a background process
 # arguments:
