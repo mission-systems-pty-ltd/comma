@@ -404,7 +404,7 @@ export -f release_resources
 function signal_handler()
 {
     trap '' SIGINT SIGTERM
-    error_ 'comma-test-run: received signal $1, terminating...'
+    error_ "comma-test-run: received signal $1, terminating..."
     is_killed=true
     kill_children --recursive $BASHPID
     rm -f "$comma_test_run_xargs_pipe"
