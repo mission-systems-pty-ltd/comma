@@ -424,6 +424,24 @@ function setup_signal_handler()
 }
 export -f setup_signal_handler
 
+function report_waiting()
+{
+    local msg=$1
+    [[ "$options_debug" != "0" ]] && {
+        [[ "$first" == "true" ]] && {
+            echo -n "$name_offset $msg ." >&2
+            first="false"
+        } || {
+            echo -n " ." >&2
+        }
+    }
+}
+
+function report_end_of_wait() {
+    [[ "$first" == "false" && "$options_debug" != "0" ]] && echo " end of wait" >&2
+    first="true"
+}
+
 # this function runs the actual test; must be run as a background process
 # arguments:
 #     path to q-storage       - where the data are
@@ -488,14 +506,7 @@ function run_single_test()
                 [[ "$first" == "false" ]] && verbose_resources="false"
                 occupy_resources "$dir" "$verbose_resources"
                 (( $? != 0 )) && {
-                    [[ "$options_debug" != "0" ]] && {
-                        [[ "$first" == "true" ]] && {
-                            echo -n "$name_offset waiting for resources ." >&2
-                            first="false"
-                        } || {
-                            echo -n " ." >&2
-                        }
-                    }
+                    report_waiting "waiting for resources"
                     [[ "$options_max_wait" != "forever" ]] && {
                         (( $wait_time >= $options_max_wait )) && { echo "$name: in '$dir', could not get $parallel CPUs for ${wait_time}s, failed to run" >&2; result=1; break; }
                     }
@@ -504,8 +515,7 @@ function run_single_test()
                     sleep ${sleep_time}s
                     continue
                 }
-                [[ "$first" == "false" && "$options_debug" != "0" ]] && echo " end of wait" >&2
-                first="true"
+                report_end_of_wait
                 local output error_files
                 find . -name out_of_shared_memory | xargs rm -f
                 output=$( if [ -f ./input ] ; then cat ./input ; fi \
@@ -515,7 +525,7 @@ function run_single_test()
                 release_resources "$dir" "$verbose_resources"
                 error_files="$( find . -name out_of_shared_memory )"
                 [[ -n "$error_files" ]] && {
-                    [[ "$first" == "true" ]] && { echo "$name_offset ran out of shared memory, will try again ..." >&2; first="false"; }
+                    report_waiting "ran out of shared memory, re-try"
                     echo "$error_files" | xargs rm -f
                     continue
                 }
