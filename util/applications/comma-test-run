@@ -287,7 +287,7 @@ function initialize_resources()
 function default_requirements()
 {
     cat <<EOF
-resources/cpus=0
+resources/cpus=1
 resources/memory/shared=0
 resources/serial="false"
 EOF
