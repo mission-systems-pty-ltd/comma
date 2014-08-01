@@ -1,0 +1,10 @@
+{
+    "resources":
+    {
+        "memory":
+        {
+            "shared": "1000",
+            "main": "1000"
+        }
+    }
+}
