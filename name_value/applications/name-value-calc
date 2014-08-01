@@ -4,7 +4,8 @@ name=$( basename $0 )
 
 simple_usage()
 {
-    echo "Usage: $name <file1> <file2> ... [--add|--sub|--subtract] [--json] [-h|--help] " >&2
+    echo "Usage: $name <file1> <file2> ... [--add|--sub|--other-operations]" >&2
+    echo "       ${name//?/ } [--json] [--echo] [-h|--help]" >&2
     if [[ $# != 0 ]]; then exit $1; fi
 }
 
@@ -25,7 +26,23 @@ Options:
 
     --add               Add corresponding values in input files
     --sub|--subtract    Subtract corresponding values in file2 from file1 (only two input files permitted)
+    --less              Values in file1 are less than in file2 (only two input files permitted)
+                        returns 0 on success (all values satisfy the logical condition) and 1 on failure;
+                        also see '--echo' below
+    --less-or-equal
+    --more
+    --more-or-equal
+    --equal
+    --non-equal
+    --not-equal         Akin to '--less', logical operations as the names imply
     --json              Input and output is in json format instead of name=value format
+    --echo              For logical operations, instead of the true/false exit status echoes
+                        the result as "1" for "true" and "0" for "false" (opposite to exit status)
+
+Notes on comparison:
+    File f1 is considered '--less' than file f2 only if this condition is true for all the data
+    in the file. Therefore, "f1 --less f2" being false does not imply that "f2 --less f1" is true.
+    Same constraint applies to all the other comparison operations.
 
 Examples:
 
@@ -34,6 +51,18 @@ Examples:
 
     $name f1.json f2.json --sub --json
         -- subtract all values in f2.json from f1.json (output in .json format)
+
+    $name f1 --less f2 && echo "f1 < f2" || echo "f1 is not < f2"
+        -- compares values in f1 and f2 and reports the outcome
+
+    $name f1 f2 --less
+        -- same as above; placement of '--less' does not matter
+
+    if $name f1 f2 --less ; then some_command; fi
+        -- will execute some_command if all fields in f1 are < than in f2
+
+    v=\$( $name f1 f2 --less --echo )
+        -- capture the comparison result in a variable; v is 1 if comparison is true
 
 EOF
     if [[ $# != 0 ]]; then exit $1; fi
@@ -57,6 +86,29 @@ function die()
     bye 1
 }
 
+function inlist()
+{
+    local value="$1"
+    local list="$2"
+    local c
+    for c in $list ; do
+        if [[ "$c" == "$value" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+function binary_op()
+{
+    inlist "$1" "$( echo ${binary_operands[@]} )"
+}
+
+function logical_op()
+{
+    inlist "$1" "$( echo ${logical_operands[@]} )"
+}
+
 trap 'bye 1' SIGHUP SIGINT SIGTERM SIGPIPE
 
 if [[ $# == 0 ]]; then simple_usage 1; fi
@@ -64,23 +116,35 @@ if [[ $# == 0 ]]; then simple_usage 1; fi
 input_files=()
 operation=
 json_format=0
+use_echo=0
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -h|--help)          usage 0;;
         --add)              operation="+";;
         --sub|--subtract)   operation="-";;
+        --less)             operation="<";;
+        --less-or-equal)    operation="<=";;
+        --more)             operation=">";;
+        --more-or-equal)    operation=">=";;
+        --equal)            operation="==";;
+        --non-equal)        operation="!=";;
+        --not-equal)        operation="!=";;
         --json)             json_format=1;;
+        --echo)             use_echo=1;;
         -*)                 echo "$name: unrecognized option '$1'" >&2; exit 1;;
-        *)                  input_files+=( $1 );;
+        *)                  input_files+=( "$1" );;
     esac
     shift
 done
 
+binary_operands=( "-" "<" "<=" ">" ">=" "==" "!=" )
+logical_operands=( "<" "<=" ">" ">=" "==" "!=" )
+
 if [[ ${#input_files[@]} == 0 ]]; then simple_usage 1; fi
 if [[ ${#input_files[@]} == 1 ]]; then echo "$name: at least two input files required" >&2; exit 1; fi
 if [[ -z "$operation" ]]; then echo "$name: operation must be specified (e.g. --subtract)" >&2; exit 1; fi
-if [[ $operation == "-" && ${#input_files[@]} > 2 ]]; then echo "$name: only two input files permitted with --subtract"; exit 1; fi
+if binary_op "$operation" && [[ ${#input_files[@]} > 2 ]]; then echo "$name: only two input files permitted with $operation operation"; exit 1; fi
 
 for file in "${input_files[@]}"; do
     if [[ ! -f "$file" ]]; then echo "$name: cannot open '$file'" >&2; exit 1; fi
@@ -89,9 +153,27 @@ done
 convert_input="cat"
 convert_output="cat"
 
+# Using '-v' does not work because it inverts the _matching_ while we need to invert the exit status only
+function invert_grep_q()
+{
+    grep -q '0$'
+    (( $? == 0 )) && exit 1 || exit 0
+}
+
+# Same as above but for $( name-value-calc --echo ... ) usage pattern
+function invert_grep()
+{
+    grep -q '0$'
+    echo $?
+}
+
 if (( json_format )); then
     convert_input="name-value-convert --from=json --to=path-value"
     convert_output="name-value-convert --from=path-value --to=json"
+fi
+if logical_op "$operation" ; then
+    convert_output="invert_grep_q"
+    (( "$use_echo" == 1 )) && convert_output="invert_grep"
 fi
 
 file_separator="@-@-@-@-@"
@@ -141,6 +223,3 @@ END \
     }
 }
 ' | $convert_output
-
-bye 0
-
