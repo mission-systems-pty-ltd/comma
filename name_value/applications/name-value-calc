@@ -27,8 +27,6 @@ Options:
     --add               Add corresponding values in input files
     --sub|--subtract    Subtract corresponding values in file2 from file1 (only two input files permitted)
     --less              Values in file1 are less than in file2 (only two input files permitted)
-                        returns 0 on success (all values satisfy the logical condition) and 1 on failure;
-                        also see '--echo' below
     --less-or-equal
     --more
     --more-or-equal
@@ -36,6 +34,9 @@ Options:
     --non-equal
     --not-equal         Akin to '--less', logical operations as the names imply
     --json              Input and output is in json format instead of name=value format
+    --status            Instead of printing the results, return 0 on success (all values satisfy the
+                        logical condition) and 1 on failure; applicable only to logical operations;
+                        also see '--echo'
     --echo              For logical operations, instead of the true/false exit status echoes
                         the result as "1" for "true" and "0" for "false" (opposite to exit status)
 
@@ -109,6 +110,67 @@ function logical_op()
     inlist "$1" "$( echo ${logical_operands[@]} )"
 }
 
+function python_converter()
+{
+    python -c "import sys, operator
+filesep = '$file_separator'
+what = '$operation'
+
+operands = {
+             '+'  : operator.add,
+             '-'  : operator.sub,
+             '>'  : operator.gt,
+             '>=' : operator.ge,
+             '<'  : operator.lt,
+             '<=' : operator.le,
+             '==' : operator.eq,
+             '<>' : operator.ne,
+             '!=' : operator.ne,
+             '/'  : operator.div,
+             '*'  : operator.mul,
+           }
+
+arithmetic = [ '+', '-', '/', '*' ]
+
+names = {}
+first = True
+op = operands[what]
+logical = what not in arithmetic
+
+def output( was_assigned, value, logical ):
+    if was_assigned:
+        return int(value) if logical else value
+    else:
+        return 1 if logical else value
+
+while True:
+    l = sys.stdin.readline().strip()
+    if not l:
+        break
+    if l == filesep:
+        first = False
+        continue
+    n, v = l.split('=')
+    v = v.strip('\"')
+    try:
+        v = int(v)
+    except ValueError:
+        pass
+    try:
+        v = float(v)
+    except ValueError:
+        pass
+    if first:
+        names[n] = ( False, v )
+    else:
+        if names.has_key( n ):
+            names[n] = ( True, op(names[n][1], v) )
+
+for n, v in names.iteritems():
+    print '%s=\"%s\"' % ( n, str(output(v[0], v[1], logical)) )
+"
+}
+
 trap 'bye 1' SIGHUP SIGINT SIGTERM SIGPIPE
 
 if [[ $# == 0 ]]; then simple_usage 1; fi
@@ -117,6 +179,7 @@ input_files=()
 operation=
 json_format=0
 use_echo=0
+use_status=0
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -132,6 +195,7 @@ while [[ $# -gt 0 ]]; do
         --not-equal)        operation="!=";;
         --json)             json_format=1;;
         --echo)             use_echo=1;;
+        --status)           use_status=1;;
         -*)                 echo "$name: unrecognized option '$1'" >&2; exit 1;;
         *)                  input_files+=( "$1" );;
     esac
@@ -157,7 +221,7 @@ convert_output="cat"
 function invert_grep_q()
 {
     grep -q '0$'
-    (( $? == 0 )) && exit 1 || exit 0
+    (( $? == 0 )) && return 1 || return 0
 }
 
 # Same as above but for $( name-value-calc --echo ... ) usage pattern
@@ -172,54 +236,13 @@ if (( json_format )); then
     convert_output="name-value-convert --from=path-value --to=json"
 fi
 if logical_op "$operation" ; then
-    convert_output="invert_grep_q"
+    (( "$use_status" == 1 )) && convert_output="invert_grep_q"
     (( "$use_echo" == 1 )) && convert_output="invert_grep"
+else
+    (( $use_status == 1 )) && echo "$name: warning, --status is ignored, not a logical op" >&2
+    (( $use_echo == 1 )) && echo "$name: warning, --echo is ignored, not a logical op" >&2
 fi
 
 file_separator="@-@-@-@-@"
 
-( for file in "${input_files[@]}"; do $convert_input < "$file"; echo $file_separator; done ) | awk '
-BEGIN { first_file = 1; }
-
-/^'$file_separator'$/ { first_file = 0; next; }
-
-NF == 0 || /^ *#/ { next; }     # skip comments and empty lines
-
-function strip_spaces_and_quotes(s)
-{
-    for (n = 1;substr(s, n, 1) == " ";n++) { }
-    if (n > length(s)) { return ""; }
-    for (m = length(s);substr(s, m, 1) == " ";m--) { }
-    if (substr(s, n, 1) == "\"") { n++; }
-    if (substr(s, m, 1) == "\"") { m--; }
-    return substr(s, n, m - n + 1);
-}
-
-{
-    pos = index($0, "=");
-    if (pos == -1) { next; }
-
-    name = strip_spaces_and_quotes(substr($0, 1, pos - 1));
-    if (name == "") { next; }
-
-    value = strip_spaces_and_quotes(substr($0, pos + 1));
-
-    if (first_file) { name_val[name] = value; nth_name[++num] = name; }
-    else if (name in name_val) { name_val[name] = (name_val[name]+0) '$operation' (value+0); }
-}
-
-END \
-{
-    if (num == 0 && '$json_format' == 0) \
-    {
-        print "'$name': warning: no \"name=value\" lines found (maybe --json option was intended?)" | "cat 1>&2";
-        exit;
-    }
-
-    for (n = 1;n <= num;n++) \
-    {
-        name = nth_name[n];
-        print name "=" name_val[name];
-    }
-}
-' | $convert_output
+( for file in "${input_files[@]}"; do $convert_input < "$file"; echo $file_separator; done ) | python_converter | $convert_output
