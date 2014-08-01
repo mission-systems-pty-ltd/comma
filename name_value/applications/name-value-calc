@@ -136,6 +136,7 @@ operands = {
 arithmetic = [ '+', '-', '/', '*' ]
 
 names = {}
+ordered_names = []
 first = True
 op = operands[what]
 logical = what not in arithmetic
@@ -165,13 +166,29 @@ while True:
         pass
     if first:
         names[n] = ( False, v )
+        ordered_names.append( n )
     else:
         if names.has_key( n ):
             names[n] = ( True, op(names[n][1], v) )
 
-for n, v in names.iteritems():
+for n in ordered_names:
+    v = names[n]
     print '%s=\"%s\"' % ( n, str(output(v[0], v[1], logical)) )
 "
+}
+
+# Using '-v' does not work because it inverts the _matching_ while we need to invert the exit status only
+function invert_grep_q()
+{
+    grep -q '="0"$'
+    (( $? == 0 )) && return 1 || return 0
+}
+
+# Same as above but for $( name-value-calc --echo ... ) usage pattern
+function invert_grep()
+{
+    grep -q '="0"$'
+    echo $?
 }
 
 trap 'bye 1' SIGHUP SIGINT SIGTERM SIGPIPE
@@ -207,7 +224,7 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
-binary_operands=( "-" "<" "<=" ">" ">=" "==" "!=" )
+binary_operands=( "-" "/" "<" "<=" ">" ">=" "==" "!=" )
 logical_operands=( "<" "<=" ">" ">=" "==" "!=" )
 
 if [[ ${#input_files[@]} == 0 ]]; then simple_usage 1; fi
@@ -221,20 +238,6 @@ done
 
 convert_input="cat"
 convert_output="cat"
-
-# Using '-v' does not work because it inverts the _matching_ while we need to invert the exit status only
-function invert_grep_q()
-{
-    grep -q '0$'
-    (( $? == 0 )) && return 1 || return 0
-}
-
-# Same as above but for $( name-value-calc --echo ... ) usage pattern
-function invert_grep()
-{
-    grep -q '0$'
-    echo $?
-}
 
 if (( json_format )); then
     convert_input="name-value-convert --from=json --to=path-value"
