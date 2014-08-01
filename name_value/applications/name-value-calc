@@ -205,7 +205,7 @@ function strip_spaces_and_quotes(s)
     value = strip_spaces_and_quotes(substr($0, pos + 1));
 
     if (first_file) { name_val[name] = value; nth_name[++num] = name; }
-    else if (name in name_val) { name_val[name] = name_val[name] '$operation' value; }
+    else if (name in name_val) { name_val[name] = (name_val[name]+0) '$operation' (value+0); }
 }
 
 END \
