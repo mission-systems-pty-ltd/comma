@@ -159,11 +159,10 @@ while True:
     try:
         v = int(v)
     except ValueError:
-        pass
-    try:
-        v = float(v)
-    except ValueError:
-        pass
+        try:
+            v = float(v)
+        except ValueError:
+            pass
     if first:
         names[n] = ( False, v )
         ordered_names.append( n )
