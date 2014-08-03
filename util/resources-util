@@ -1,0 +1,167 @@
+#!/bin/bash
+
+# This script provides Bash functions for coordination of system
+# resources usage across a pool of workers (processes).
+
+# Read a json file as text stream on stdin and in the given path (2nd argument)
+# append the pid (1st argument) to the end of []-enclosed list (insert into
+# the list if empty); output the resulting json to stdout. Path argument is
+# optional, default is "processes/queue". Operation shall be invoked under
+# external synchronization mechanism.
+function enqueue_pid()
+{
+    local pid=$1
+    local path=$2
+    local default_path="^processes\/queue="
+    path=${path:-"$default_path"}
+    name-value-convert --from json --to path-value \
+        | sed --regexp-extended "/$path/s/\[(.+)\]/\[\1,$pid\]/;/$path/s/\[\]/\[$pid\]/" \
+        | name-value-convert --from path-value --to json
+}
+
+# Opposite to enqueue_pid above. Remove the given pid from the list.
+function dequeue_pid()
+{
+    local pid=$1
+    local path=$2
+    local default_path="^processes\/queue="
+    path=${path:-"$default_path"}
+    name-value-convert --from json --to path-value \
+        | sed --regexp-extended "/$path/s/\[$pid,(.+)\]/\[\1\]/;/$path/s/\[(.+),$pid\]/\[\1\]/;/$path/s/\[(.+),$pid,(.+)\]/\[\1,\2\]/;/$path/s/\[$pid\]/\[\]/" \
+        | name-value-convert --from path-value --to json
+}
+
+# Synchronized versions of enqueue/dequeue functions protected by flock.
+# Input: lock file (1st argument), then same argumens as enqueue/dequeue.
+function locked_enqueue_pid()
+{
+    local lock=$1
+    shift
+    (
+        flock -x 8
+        enqueue_pid $@
+    ) 8>"$lock"
+}
+
+function locked_dequeue_pid()
+{
+    local lock=$1
+    shift
+    (
+        flock -x 8
+        dequeue_pid $@
+    ) 8>"$lock"
+}
+
+# Output the most commonly used system resources: number of CPUs, total RAM,
+# size, total shared memory size.
+function total_system_resources()
+{
+    local cpus memory_main memory_shared memory_limits fcn_name
+    fcn_name=${name:-"total_system_resources"}
+    cpus=$( grep -c '^processor' /proc/cpuinfo )
+    (( $? == 0 || $cpus > 0 )) || { echo "$fcn_name: cannot grep '/proc/cpuinfo' for the number of processors" >&2; return 1; }
+    #
+    memory_limits=$( ipcs -ml 2>/dev/null )
+    (( $? == 0 )) || { echo "$fcn_name: cannot determine memory limits by calling ipcs" >&2; exit 1; }
+    memory_shared=$( echo "$memory_limits" | sed '/shared/!d;s/.* //g' )
+    (( $memory_shared > 0 )) || { echo "$fcn_name: cannot determine shared memory size" >&2; exit 1; }
+    memory_shared=$(( $memory_shared * 1024 ))
+    #
+    memory_main=$( cat /proc/meminfo | sed -n --regexp-extended "s/^MemTotal: *(.*) .*$/\1/p" )
+    (( $memory_main > 0 )) || { echo "$fcn_name: cannot determine total memory size" >&2; exit 1; }
+    memory_main=$(( $memory_main * 1024 ))
+    #
+    echo "resources/cpus=\"$cpus\""
+    echo "resources/memory/main=\"$memory_main\""
+    echo "resources/memory/shared=\"$memory_shared\""
+}
+
+# Initialize a json file listing the currently occupied system resources
+# and a list of processes waiting for them.
+#
+# Input: flock file name (1st argument) and resource book-keeping file name
+# (2nd argument). Read on stdin resource description in path-value format.
+# No output. Write the book-keeping file in json format.
+function initialize_resources()
+{
+    local lock=$1
+    local counter=$2
+    (
+        flock -x 8
+        (
+            sed 's/=.*$/="0"/'
+            echo 'processes/queue="[]"'
+        ) | name-value-convert --from path-value --to json > "$counter"
+    ) 8>"$lock"
+}
+
+# Under a synchronization flock (1st argument), compare the requested
+# resources with currently available as: occupied + requested < maximum.
+# Resources described in json files: requested (2nd argument), currently
+# occupied (3rd argument), and maximal allowed (4th argument). If the request
+# is within the limits, increase the counter of occupied resources and
+# return 0. No output is produced. If request exceeds the limits, push
+# the caller id (PID, 5th argument) into the list of waiting processes, output
+# "wait" to stdout and return 1. Any other combination of non-zero exit
+# status and non-empty output marks a general system error. Optional 6th
+# argument specifies the json path to the []-enclosed list of waiting processes.
+# Default path is defined in enqueue/dequeue functions.
+function acquire_resources()
+{
+    local lock=$1
+    local request=$2
+    local counter=$3
+    local maximum=$4
+    local pid=$5
+    local path=$6
+    (
+        flock -x 8
+        local next
+        next=$( name-value-calc "$counter" "$request" --add --json )
+        (( $? == 0 )) || { echo "$name: cannot add resources" >&2; return 1; }
+        if name-value-calc <( echo "$next" ) "$maximum" --less-or-equal --json --status ; then
+            (( $? == 0 )) || { echo "$name: cannot compare resources" >&2; return 1; }
+            next=$( echo "$next" | dequeue_pid "$pid" "$path" )
+            (( $? == 0 )) || { echo "$name: cannot dequeue from waiting list" >&2; return 1; }
+            echo "$next" > "$counter"
+            return 0
+        else
+            next=$( cat "$counter" | enqueue_pid "$pid" "$path" )
+            (( $? == 0 )) || { echo "$name: cannot enqueue for waiting" >&2; return 1; }
+            echo "$next" > "$counter"
+            echo "wait"
+            return 1
+        fi
+    ) 8>"$lock"
+}
+
+# Helper function ensures that all resource counters are non-negative.
+# Takes resource description on stdin in json format, outputs sanitized
+# description on stdout.
+function non_negative_resources()
+{
+    name-value-convert --from json --to path-value \
+        | sed '/^resources\//s/="-[0-9][0-9]*"$/="0"/' \
+        | name-value-convert --from path-value --to json
+}
+
+# Opposite to acquire_resources. Input: lock file (1st argument), description
+# of resources being released (2nd argument), resource counter (3rd argument).
+# No output. Writes an updated counter file.
+function release_resources()
+{
+    local lock=$1
+    local request=$2
+    local counter=$3
+    (
+        flock -x 8
+        local next
+        next=$( name-value-calc "$counter" "$request" --subtract --json )
+        (( $? == 0 )) || { echo "$name: cannot subtract resources" >&2; return 1; }
+        next=$( echo "$next" | non_negative_resources )
+        (( $? == 0 )) || { echo "$name: cannot sanitize resources" >&2; return 1; }
+        echo "$next" > "$counter"
+        return 0
+    ) 8>"$lock"
+}
