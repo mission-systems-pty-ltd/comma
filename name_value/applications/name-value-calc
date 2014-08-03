@@ -232,7 +232,7 @@ if [[ -z "$operation" ]]; then echo "$name: operation must be specified (e.g. --
 if binary_op "$operation" && [[ ${#input_files[@]} > 2 ]]; then echo "$name: only two input files permitted with $operation operation"; exit 1; fi
 
 for file in "${input_files[@]}"; do
-    if [[ ! -f "$file" ]]; then echo "$name: cannot open '$file'" >&2; exit 1; fi
+    if [[ ! -r "$file" ]]; then echo "$name: cannot open '$file'" >&2; exit 1; fi
 done
 
 convert_input="cat"
