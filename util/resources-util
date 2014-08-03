@@ -31,28 +31,6 @@ function dequeue_pid()
         | name-value-convert --from path-value --to json
 }
 
-# Synchronized versions of enqueue/dequeue functions protected by flock.
-# Input: lock file (1st argument), then same argumens as enqueue/dequeue.
-function locked_enqueue_pid()
-{
-    local lock=$1
-    shift
-    (
-        flock -x 8
-        enqueue_pid $@
-    ) 8>"$lock"
-}
-
-function locked_dequeue_pid()
-{
-    local lock=$1
-    shift
-    (
-        flock -x 8
-        dequeue_pid $@
-    ) 8>"$lock"
-}
-
 # Output the most commonly used system resources: number of CPUs, total RAM,
 # size, total shared memory size.
 function total_system_resources()
@@ -80,60 +58,74 @@ function total_system_resources()
 # Initialize a json file listing the currently occupied system resources
 # and a list of processes waiting for them.
 #
-# Input: flock file name (1st argument) and resource book-keeping file name
-# (2nd argument). Read on stdin resource description in path-value format.
-# No output. Write the book-keeping file in json format.
+# Input: resource book-keeping file name. Read on stdin resource description
+# in path-value format. No output. Write the book-keeping file in json format.
+#
+# See below for a variant of this function that is safe for parallel use.
 function initialize_resources()
 {
-    local lock=$1
-    local counter=$2
+    local counter=$1
     (
-        flock -x 8
-        (
-            sed 's/=.*$/="0"/'
-            echo 'processes/queue="[]"'
-        ) | name-value-convert --from path-value --to json > "$counter"
-    ) 8>"$lock"
+        sed 's/=.*$/="0"/'
+        echo 'processes/queue="[]"'
+    ) | name-value-convert --from path-value --to json > "$counter"
 }
 
-# Under a synchronization flock (1st argument), compare the requested
-# resources with currently available as: occupied + requested < maximum.
-# Resources described in json files: requested (2nd argument), currently
-# occupied (3rd argument), and maximal allowed (4th argument). If the request
-# is within the limits, increase the counter of occupied resources and
-# return 0. No output is produced. If request exceeds the limits, push
-# the caller id (PID, 5th argument) into the list of waiting processes, output
-# "wait" to stdout and return 1. Any other combination of non-zero exit
-# status and non-empty output marks a general system error. Optional 6th
-# argument specifies the json path to the []-enclosed list of waiting processes.
-# Default path is defined in enqueue/dequeue functions.
+# Given a description of requested resources (1st argument), currently occupied
+# resources (2nd argument) and maximal allowed resources (3rd argument), check
+# that resources can be acquired ( occupied + requested < maximum ).
+#
+# If yes, increase the counters of occupied resources and return 0. No output is
+# produced.
+#
+# If request exceeds the limits, append the caller id (such as PID, 4th argument)
+# to the list of waiting processes kept in the counter file, output "wait" to stdout
+# and return 1.
+#
+# Any other combination of non-zero exit status and non-empty output indicate
+# a general system error.
+#
+# Optional 5th argument specifies the json path to the []-enclosed list of waiting
+# processes in the counter file. Default path defined in enqueue/dequeue functions.
+#
+# Resources are described in json files like:
+# {
+#     "resources":
+#     {
+#         "cpus": "8",
+#         "memory":
+#         {
+#             "main": "1000000",
+#             "shared": "500000"
+#         }
+#     }
+# }
+#
+# See below for a variant of this function that is safe for parallel use.
 function acquire_resources()
 {
-    local lock=$1
-    local request=$2
-    local counter=$3
-    local maximum=$4
-    local pid=$5
-    local path=$6
-    (
-        flock -x 8
-        local next
-        next=$( name-value-calc "$counter" "$request" --add --json )
-        (( $? == 0 )) || { echo "$name: cannot add resources" >&2; return 1; }
-        if name-value-calc <( echo "$next" ) "$maximum" --less-or-equal --json --status ; then
-            (( $? == 0 )) || { echo "$name: cannot compare resources" >&2; return 1; }
-            next=$( echo "$next" | dequeue_pid "$pid" "$path" )
-            (( $? == 0 )) || { echo "$name: cannot dequeue from waiting list" >&2; return 1; }
-            echo "$next" > "$counter"
-            return 0
-        else
-            next=$( cat "$counter" | enqueue_pid "$pid" "$path" )
-            (( $? == 0 )) || { echo "$name: cannot enqueue for waiting" >&2; return 1; }
-            echo "$next" > "$counter"
-            echo "wait"
-            return 1
-        fi
-    ) 8>"$lock"
+    local request=$1
+    local counter=$2
+    local maximum=$3
+    local pid=$4
+    local path=$4
+
+    local next
+    next=$( name-value-calc "$counter" "$request" --add --json )
+    (( $? == 0 )) || { echo "$name: cannot add resources" >&2; return 1; }
+    if name-value-calc <( echo "$next" ) "$maximum" --less-or-equal --json --status ; then
+        (( $? == 0 )) || { echo "$name: cannot compare resources" >&2; return 1; }
+        next=$( echo "$next" | dequeue_pid "$pid" "$path" )
+        (( $? == 0 )) || { echo "$name: cannot dequeue from waiting list" >&2; return 1; }
+        echo "$next" > "$counter"
+        return 0
+    else
+        next=$( cat "$counter" | enqueue_pid "$pid" "$path" )
+        (( $? == 0 )) || { echo "$name: cannot enqueue for waiting" >&2; return 1; }
+        echo "$next" > "$counter"
+        echo "wait"
+        return 1
+    fi
 }
 
 # Helper function ensures that all resource counters are non-negative.
@@ -146,22 +138,54 @@ function non_negative_resources()
         | name-value-convert --from path-value --to json
 }
 
-# Opposite to acquire_resources. Input: lock file (1st argument), description
-# of resources being released (2nd argument), resource counter (3rd argument).
-# No output. Writes an updated counter file.
+# Opposite to acquire_resources. Input: description of resources being
+# released (1st argument), resource counter (2nd argument) in json format.
+# No output. Write an updated counter file.
+#
+# See below for a variant of this function that is safe for parallel use.
 function release_resources()
 {
+    local request=$1
+    local counter=$2
+    local next
+    next=$( name-value-calc "$counter" "$request" --subtract --json )
+    (( $? == 0 )) || { echo "$name: cannot subtract resources" >&2; return 1; }
+    next=$( echo "$next" | non_negative_resources )
+    (( $? == 0 )) || { echo "$name: cannot sanitize resources" >&2; return 1; }
+    echo "$next" > "$counter"
+    return 0
+}
+
+# General synchronization function. Takes on input a lock file name to be used
+# in a flock call (this file will be truncated to zero) and the command to be
+# executed with all the arguments. Example:
+#
+#     serialize /tmp/mylock myfcn --option1 "$value1" "$arg1" ...
+#
+# Note: do not re-direct output of the function being protected. Do all writes
+# within a function while it is protected by the serialization lock.
+function serialize()
+{
     local lock=$1
-    local request=$2
-    local counter=$3
+    shift
     (
         flock -x 8
-        local next
-        next=$( name-value-calc "$counter" "$request" --subtract --json )
-        (( $? == 0 )) || { echo "$name: cannot subtract resources" >&2; return 1; }
-        next=$( echo "$next" | non_negative_resources )
-        (( $? == 0 )) || { echo "$name: cannot sanitize resources" >&2; return 1; }
-        echo "$next" > "$counter"
-        return 0
+        $@
     ) 8>"$lock"
+}
+
+# Lock-protected versions of the relevant functions from this script.
+function locked_initialize_resources()
+{
+    serialize $1 initialize_resources $2 $3
+}
+
+function locked_acquire_resources()
+{
+    serialize $1 acquire_resources $2 $3 $4 $5 $6
+}
+
+function locked_release_resources()
+{
+    serialize $1 release_resources $2 $3
 }
