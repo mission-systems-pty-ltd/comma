@@ -1,0 +1,12 @@
+#!/bin/bash
+
+source $( which resources-util ) || exit 1
+
+output="output"
+rm -rf "$output" || exit 1
+mkdir -p "$output" || exit 1
+
+lock="$output/lock"
+touch "$lock"
+
+total_system_resources | sed 's/"//g'
