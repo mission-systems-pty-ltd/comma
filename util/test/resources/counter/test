@@ -65,3 +65,20 @@ cat "$counter" | prepare_for_match "second/large/request" | grep queue
 release_resources "data/small_request.json" "$counter" "data/maximum.json" 123 || must_work "releasing first small request"
 release_resources "data/small_request.json" "$counter" "data/maximum.json" 234 || must_work "releasing second small request"
 cat "$counter" | prepare_for_match "large/waiting"
+
+# now attempt to proceed with the second large-resource request; it is not the first in the queue and shall fail
+outcome=$( acquire_resources "data/large_request.json" "$counter" "data/maximum.json" 456 ) && must_fail "repeated second large request"
+echo "third/large/request/outcome=\"$outcome\""
+cat "$counter" | prepare_for_match "third/large/request" | grep queue
+
+# the first large-resource request is the head of the queue and shall pass
+acquire_resources "data/large_request.json" "$counter" "data/maximum.json" 345 || must_work "repeated first large request"
+cat "$counter" | prepare_for_match "third/large/request"
+
+# release the resources and try the second large request again; now shall work
+release_resources "data/large_request.json" "$counter" || must_work "releasing first large request"
+acquire_resources "data/large_request.json" "$counter" "data/maximum.json" 456 || must_work "second large request at last"
+release_resources "data/large_request.json" "$counter" || must_work "releasing second large request"
+
+# release all resources; counters shall be down to zero
+cat "$counter" | prepare_for_match "final" | grep queue
