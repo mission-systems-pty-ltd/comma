@@ -1,4 +1,8 @@
-resources/cpus > 0
-resources/memory/main > 0
-resources/memory/shared > 0
-resources/memory/main >= resources/memory/shared
+total/resources/cpus > 0
+total/resources/memory/main > 0
+total/resources/memory/shared > 0
+total/resources/memory/main >= total/resources/memory/shared
+initial/resources/cpus = 0
+initial/resources/memory/main = 0
+initial/resources/memory/shared = 0
+initial/processes/queue = "[]"

@@ -9,4 +9,13 @@ mkdir -p "$output" || exit 1
 lock="$output/lock"
 touch "$lock"
 
-total_system_resources | sed 's/"//g'
+total_system_resources | sed 's/^/total\//;s/"//g'
+
+counter="$output/counter.json"
+cat <<EOF | locked_initialize_resources "$lock" "$counter"
+resources/cpus="8"
+resources/memory/main="1000000"
+resources/memory/shared="500000"
+EOF
+
+cat "$counter" | name-value-convert --from json --to path-value | sed 's/^/initial\//;/resources/s/"//g'
