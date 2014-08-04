@@ -35,6 +35,9 @@ EOF
 
 cat "$counter" | prepare_for_match "initial"
 
+# check non-negative sanity
+cat "data/negative.json" | non_negative_resources | prepare_for_match "non_negative"
+
 # check small request; shall succeed; pids here and below are fake
 acquire_resources "data/small_request.json" "$counter" "data/maximum.json" 123 || must_work "acquiring small resources"
 cat "$counter" | prepare_for_match "one/small"
