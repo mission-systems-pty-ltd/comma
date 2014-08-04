@@ -4,8 +4,10 @@ name=$( basename $0 )
 
 simple_usage()
 {
-    echo "Usage: $name <file1> <file2> ... [--add|--sub|--other-operations]" >&2
-    echo "       ${name//?/ } [--json] [--echo] [-h|--help]" >&2
+    cat <<EOF
+Usage: $name <file1> <file2> ... [--add|--sub|--other-operations] [-h|--help]
+       ${name//?/ } [--json] [--permissive] [--details] [--exclude path]
+EOF
     if [[ $# != 0 ]]; then exit $1; fi
 }
 
@@ -19,10 +21,12 @@ Perform simple calculations on corresponding values in multiple name=value or .j
 Only values from the first input file are included in the output. If a name does not appear in
 the second (or later) input file, the value from the first input file is output unchanged.
 
-All values in the input files are expected to be numbers. If a non-numeric value appears, it is
-treated as zero (unless it only appears in the first input file, in which case it is output unchanged).
+All values in the input files are expected to be numbers. Bools are promoted to numbers. Unless
+'--strict' option is given, strings are ignored if the operation is not defined for the string
+type, in which case the strings from the first input file are unchanged and from the other files
+are ignored.
 
-Options:
+Operation options:
 
     --add                     Add corresponding values in input files
     --sub|--subtract          Subtract corresponding values in file2 from file1 (only 2 files permitted)
@@ -36,12 +40,16 @@ Options:
     --equal
     --non-equal
     --not-equal               Akin to '--less', logical operations as the names imply
+
+Control options:
     --json                    Input and output is in json format instead of name=value format
-    --status                  Instead of printing the results, return 0 on success (all values satisfy the
-                              logical condition) and 1 on failure; applicable only to logical operations;
-                              also see '--echo'
-    --echo                    For logical operations, instead of the true/false exit status echoes
-                              the result as "1" for "true" and "0" for "false" (opposite to exit status)
+    --strict                  Do not ignore invalid operations for the data types that do not support them,
+                              e.g., using '--sub' on string data would cause the script to fail.
+    --exclude path            Exclude the given paths (and their sub-paths) from the operation.
+    --details                 Normally for logical operations the script prints 1 on success (all values
+                              satisfy the logical condition) and 1 on failure; this option produces results
+                              of comparison for each input path, similar to the behaviour of arithmetic
+                              operations.
 
 Notes on comparison:
     File f1 is considered '--less' than file f2 only if this condition is true for all the data
@@ -53,20 +61,26 @@ Examples:
     $name f1 f2 f3 --add
         -- add all values in f1, f2 and f3
 
-    $name f1.json f2.json --sub --json
+    $name f1.json --sub f2.json --json
         -- subtract all values in f2.json from f1.json (output in .json format)
 
-    $name f1 --less f2 && echo "f1 < f2" || echo "f1 is not < f2"
+    $name f1.json f2.json --sub --json
+        -- same as above; placement of the operation option does not matter
+
+    v=\$( $name f1 f2 --less )
+        -- capture the comparison result in a variable; v is 1 if comparison is true
+
+    (( $($name f1 --less f2) == 1 )) && echo "f1 < f2" || echo "f1 is not < f2"
         -- compares values in f1 and f2 and reports the outcome
 
-    $name f1 f2 --less
-        -- same as above; placement of '--less' does not matter
+    $name f1 f2 --sub --strict > outfile
+    (( $? == 0 )) || exit 1
+        -- will fail if the first input file contains string data (operation '-' is not
+           defined for strings)
 
-    if $name f1 f2 --less ; then some_command; fi
-        -- will execute some_command if all fields in f1 are < than in f2
-
-    v=\$( $name f1 f2 --less --echo )
-        -- capture the comparison result in a variable; v is 1 if comparison is true
+    $name f1 f2 --sub --strict --exclude "path/to/string" > outfile
+        -- specifically exclude a specified data path from the operation, e.g., because
+           the '-' operation is not defined for strings
 
 EOF
     if [[ $# != 0 ]]; then exit $1; fi
