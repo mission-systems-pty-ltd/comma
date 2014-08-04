@@ -6,7 +6,7 @@ simple_usage()
 {
     cat <<EOF
 Usage: $name <file1> <file2> ... [--add|--sub|--other-operations] [-h|--help]
-       ${name//?/ } [--json] [--permissive] [--details] [--exclude path]
+       ${name//?/ } [--json] [--strict] [--details] [--exclude path]
 EOF
     if [[ $# != 0 ]]; then exit $1; fi
 }
@@ -21,10 +21,10 @@ Perform simple calculations on corresponding values in multiple name=value or .j
 Only values from the first input file are included in the output. If a name does not appear in
 the second (or later) input file, the value from the first input file is output unchanged.
 
-All values in the input files are expected to be numbers. Bools are promoted to numbers. Unless
-'--strict' option is given, strings are ignored if the operation is not defined for the string
-type, in which case the strings from the first input file are unchanged and from the other files
-are ignored.
+All values in the input files are expected to be numbers. Strings 'True', 'true', 'yes', 'False',
+'false', and 'no' are treated as booleans and are promoted to numbers. Unless '--strict' option
+is given, strings are ignored if the operation is not defined for the string type, in which case
+the strings from the first input file are unchanged and from the other files are ignored.
 
 Operation options:
 
@@ -46,7 +46,7 @@ Control options:
     --strict                  Do not ignore invalid operations for the data types that do not support them,
                               e.g., using '--sub' on string data would cause the script to fail.
     --exclude path            Exclude the given paths (and their sub-paths) from the operation.
-    --details                 Normally for logical operations the script prints 1 on success (all values
+    --detailed                Normally for logical operations the script prints 1 on success (all values
                               satisfy the logical condition) and 1 on failure; this option produces results
                               of comparison for each input path, similar to the behaviour of arithmetic
                               operations.
@@ -132,6 +132,9 @@ function python_converter()
     python -c "import sys, operator
 filesep = '$file_separator'
 what = '$operation'
+strict = $strict
+excluded = '${excluded[@]}'.split()
+excluded = [ e.strip('/') + '/' for e in excluded ]
 
 operands = {
              '+'  : operator.add,
@@ -176,13 +179,21 @@ while True:
         try:
             v = float(v)
         except ValueError:
-            pass
+            if v in ['True', 'true', 'yes']:
+                v = True
+            if v in ['False', 'false', 'no']:
+                v = False
     if first:
-        names[n] = ( False, v )
-        ordered_names.append( n )
+        if not any( [ (n + '/').startswith(e) for e in excluded ] ):
+            names[n] = ( False, v )
+            ordered_names.append( n )
     else:
         if names.has_key( n ):
-            names[n] = ( True, op(names[n][1], v) )
+            try:
+                names[n] = ( True, op(names[n][1], v) )
+            except TypeError:
+                if strict:
+                    raise
 
 for n in ordered_names:
     v = names[n]
@@ -190,14 +201,8 @@ for n in ordered_names:
 "
 }
 
-# Using '-v' does not work because it inverts the _matching_ while we need to invert the exit status only
-function invert_grep_q()
-{
-    grep -q '="0"$'
-    (( $? == 0 )) && return 1 || return 0
-}
-
-# Same as above but for $( name-value-calc --echo ... ) usage pattern
+# Using '-v' does not work because it inverts the _matching_ while we need to invert the exit
+# status only.
 function invert_grep()
 {
     grep -q '="0"$'
@@ -211,8 +216,9 @@ if [[ $# == 0 ]]; then simple_usage 1; fi
 input_files=()
 operation=
 json_format=0
-use_echo=0
-use_status=0
+strict=0
+detailed=0
+excluded=()
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -229,8 +235,9 @@ while [[ $# -gt 0 ]]; do
         --non-equal)             operation="!=";;
         --not-equal)             operation="!=";;
         --json)                  json_format=1;;
-        --echo)                  use_echo=1;;
-        --status)                use_status=1;;
+        --strict)                strict=1;;
+        --detailed)              detailed=1;;
+        --exclude)               shift; if [[ $# == 0 ]] ; then echo "$name: --exclude lack argument" >&2; exit 1; fi; excluded+=( "$1" );;
         -*)                      echo "$name: unrecognized option '$1'" >&2; exit 1;;
         *)                       input_files+=( "$1" );;
     esac
@@ -257,11 +264,9 @@ if (( json_format )); then
     convert_output="name-value-convert --from=path-value --to=json"
 fi
 if logical_op "$operation" ; then
-    (( "$use_status" == 1 )) && convert_output="invert_grep_q"
-    (( "$use_echo" == 1 )) && convert_output="invert_grep"
+    (( "$detailed" == 0 )) && convert_output="invert_grep"
 else
-    (( $use_status == 1 )) && echo "$name: warning, --status is ignored, not a logical op" >&2
-    (( $use_echo == 1 )) && echo "$name: warning, --echo is ignored, not a logical op" >&2
+    (( $detailed == 1 )) && echo "$name: warning, --detailed is ignored, not a logical op" >&2
 fi
 
 file_separator="@-@-@-@-@"
