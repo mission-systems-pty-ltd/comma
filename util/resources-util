@@ -75,12 +75,20 @@ function initialize_resources()
 # resources (2nd argument) and maximal allowed resources (3rd argument), check
 # that resources can be acquired ( occupied + requested < maximum ).
 #
-# If yes, increase the counters of occupied resources and return 0. No output is
-# produced.
+# If yes, check if any process is already waiting for resources. If yes, and if
+# that process has the same PID as ourselves (4th argument), and it is the first
+# in the queue, then:
+# - remove this PID from the waiting queue,
+# - increase the counters of occupied resources,
+# - return 0.
+# No output is produced.
 #
-# If request exceeds the limits, append the caller id (such as PID, 4th argument)
-# to the list of waiting processes kept in the counter file, output "wait" to stdout
-# and return 1.
+# If the PID is already in the waiting list, but not at the first position, do not
+# modify any files, output "wait" to stdout, and return 1.
+#
+# If request exceeds the limits, or if the waiting list is not empty and PID is not
+# on the list, append the PID to the list of waiting processes kept in the counter
+# file, output "wait" to stdout and return 1.
 #
 # Any other combination of non-zero exit status and non-empty output indicate
 # a general system error.
