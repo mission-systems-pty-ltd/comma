@@ -152,14 +152,14 @@ function acquire_resources()
     local pid=$4
     local path=$5
 
-    local next position can_acquire any_waiting
+    local next position can_acquire any_waiting exceed
     # hope for the best if asking for more than available
-    if name-value-calc "$request" "$maximum" --more --json --status ; then
-        request="$maximum"
-    fi
+    exceed=$( name-value-calc "$request" "$maximum" --more --json )
+    (( $? == 0 )) || { echo "$name: cannot compare for being excessive" >&2; return 1; }
+    (( $exceed == 1 )) && request="$maximum"
     next=$( name-value-calc "$counter" "$request" --add --json )
     (( $? == 0 )) || { echo "$name: cannot add resources" >&2; return 1; }
-    can_acquire=$( name-value-calc <( echo "$next" ) "$maximum" --less-or-equal --json --echo )
+    can_acquire=$( name-value-calc <( echo "$next" ) "$maximum" --less-or-equal --json )
     (( $? == 0 )) || { echo "$name: cannot compare resources" >&2; return 1; }
     position=$( cat "$counter" | check_pid_position "$pid" "$path" )
     (( $? == 0 )) || { echo "$name: cannot check pid position" >&2; return 1; }
