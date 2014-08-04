@@ -137,7 +137,7 @@ function acquire_resources()
     local counter=$2
     local maximum=$3
     local pid=$4
-    local path=$4
+    local path=$5
 
     local next
     next=$( name-value-calc "$counter" "$request" --add --json )

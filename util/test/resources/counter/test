@@ -11,6 +11,13 @@ function must_work()
     exit 1
 }
 
+function must_fail()
+{
+    local msg=$1
+    echo "$name: $msg must fail" >&2
+    exit 1
+}
+
 function prepare_for_match()
 {
     local path=$1
@@ -43,3 +50,8 @@ acquire_resources "data/small_request.json" "$counter" "data/maximum.json" 123 |
 cat "$counter" | prepare_for_match "one/small"
 acquire_resources "data/small_request.json" "$counter" "data/maximum.json" 234 || must_work "acquiring small resources"
 cat "$counter" | prepare_for_match "two/small"
+
+# check large request; shall fail
+outcome=$( acquire_resources "data/large_request.json" "$counter" "data/maximum.json" 345 ) && must_fail "acquiring large resources"
+echo "first/large/request/outcome=\"$outcome\""
+cat "$counter" | prepare_for_match "first/large/request" | grep queue

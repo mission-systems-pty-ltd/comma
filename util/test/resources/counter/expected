@@ -18,3 +18,5 @@ two/small/resources/cpus = 0
 two/small/resources/memory/main = 400000
 two/small/resources/memory/shared = 200000
 two/small/processes/queue = "[]"
+first/large/request/outcome = "wait"
+first/large/request/processes/queue = "[345]"
