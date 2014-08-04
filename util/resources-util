@@ -33,7 +33,7 @@ function dequeue_pid()
         | name-value-convert --from path-value --to json
 }
 
-# Read a json file as text stream on stdin.  # Check the position of the given
+# Read a json file as text stream on stdin. Check the position of the given
 # PID (1st argument) in the waiting list described by path (optional second
 # argument). Echo the positional index counted from 0, if found. Otherwise,
 # echo "-1".
@@ -50,6 +50,19 @@ function check_pid_position()
     else
         echo "-1"
     fi
+}
+
+# Tell if the queue is empty. Read book-keeping file in json format on stdin.
+# Take an optional argument, path to the queue. Exit with status 0 for empty
+# queue and status 1 for non-empty.
+function empty_queue()
+{
+    local path=$1
+    local default_path="processes/queue"
+    path=${path:-"$default_path"}
+    local list
+    list=$( name-value-get --from json "$path" | sed "s/^\[//;s/\]\$//;s/ //g" )
+    [[ -z "$list" ]]
 }
 
 # Output the most commonly used system resources: number of CPUs, total RAM,
@@ -139,21 +152,50 @@ function acquire_resources()
     local pid=$4
     local path=$5
 
-    local next
+    local next position can_acquire any_waiting
+    # hope for the best if asking for more than available
+    if name-value-calc "$request" "$maximum" --more --json --status ; then
+        request="$maximum"
+    fi
     next=$( name-value-calc "$counter" "$request" --add --json )
     (( $? == 0 )) || { echo "$name: cannot add resources" >&2; return 1; }
-    if name-value-calc <( echo "$next" ) "$maximum" --less-or-equal --json --status ; then
-        (( $? == 0 )) || { echo "$name: cannot compare resources" >&2; return 1; }
-        next=$( echo "$next" | dequeue_pid "$pid" "$path" )
-        (( $? == 0 )) || { echo "$name: cannot dequeue from waiting list" >&2; return 1; }
-        echo "$next" > "$counter"
-        return 0
-    else
-        next=$( cat "$counter" | enqueue_pid "$pid" "$path" )
-        (( $? == 0 )) || { echo "$name: cannot enqueue for waiting" >&2; return 1; }
-        echo "$next" > "$counter"
-        echo "wait"
-        return 1
+    can_acquire=$( name-value-calc <( echo "$next" ) "$maximum" --less-or-equal --json --echo )
+    (( $? == 0 )) || { echo "$name: cannot compare resources" >&2; return 1; }
+    position=$( cat "$counter" | check_pid_position "$pid" "$path" )
+    (( $? == 0 )) || { echo "$name: cannot check pid position" >&2; return 1; }
+    any_waiting=$( cat "$counter" | empty_queue && echo 0 || echo 1 )
+    (( $? == 0 )) || { echo "$name: check for empty queue failed" >&2; return 1; }
+    if [[ $any_waiting == 1 ]] ; then                 # queue is not empty, can acquire only if
+        if [[ $position == 0 ]] ; then                # we are the first in line and
+            if [[ $can_acquire == 1 ]] ; then         # there are enough resources
+                next=$( echo "$next" | dequeue_pid "$pid" "$path" )
+                (( $? == 0 )) || { echo "$name: cannot dequeue from waiting list" >&2; return 1; }
+                echo "$next" > "$counter"
+                return 0
+            else                                      # otherwise just keep waiting
+                echo "wait"
+                return 1
+            fi
+        else
+            if [[ $position == -1 ]] ; then           # but if we are not in the queue, append
+                next=$( cat "$counter" | enqueue_pid "$pid" "$path" )
+                (( $? == 0 )) || { echo "$name: cannot enqueue for waiting" >&2; return 1; }
+                echo "$next" > "$counter"
+            fi
+            echo "wait"
+            return 1
+        fi
+    else                                              # if no-one is waiting
+        if [[ $can_acquire == 1 ]] ; then             # easy if enough resources
+            echo "$next" > "$counter"
+            return 0
+        else                                          # otherwise append to the queue
+            next=$( cat "$counter" | enqueue_pid "$pid" "$path" )
+            (( $? == 0 )) || { echo "$name: cannot enqueue for waiting" >&2; return 1; }
+            echo "$next" > "$counter"
+            echo "wait"
+            return 1
+        fi
     fi
 }
 
