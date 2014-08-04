@@ -1,0 +1,33 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+source $( which resources-util ) || exit 1
+
+# This function simulates one of the worker processes that coordinate their
+# resource usage using comma resources-util facilities.
+#
+# Worker operation:
+# - randomly generate "resource request" with some arbitrary values
+# - try to acquire these resources in coordination with other workers
+# - if successful, sleep for a short time simulating some work, then
+#   release the resources
+# - else, if cannot acquire resources, sleep for a short time, then
+#   try again
+# - perform this activity for a prescribed number of cycles
+function worker()
+{
+    echo "not yet implemented" >&2
+    return 1
+}
+
+# Parse command-line options. Include options to change the number of cycles
+# for workers to iterate, the random seed, and the number of workers. Provide
+# reasonable default values.
+
+# Create a lock file, a maximal resources file (fudge), initialize resource
+# counter.
+
+# Start workers, wait for their completion, etc.
+
+exit 0
