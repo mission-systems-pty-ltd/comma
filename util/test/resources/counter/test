@@ -46,22 +46,22 @@ cat "$counter" | prepare_for_match "initial"
 cat "data/negative.json" | non_negative_resources | prepare_for_match "non_negative"
 
 # check small request; shall succeed; pids here and below are fake
-acquire_resources "data/small_request.json" "$counter" "data/maximum.json" 123 || must_work "acquiring small resources"
+acquire_resources "data/small_request.json" "$counter" "data/maximum.json" 123 || must_work "first small request"
 cat "$counter" | prepare_for_match "one/small"
-acquire_resources "data/small_request.json" "$counter" "data/maximum.json" 234 || must_work "acquiring small resources"
+acquire_resources "data/small_request.json" "$counter" "data/maximum.json" 234 || must_work "second small request"
 cat "$counter" | prepare_for_match "two/small"
 
 # check large request; shall fail, and append pid to the queue
-outcome=$( acquire_resources "data/large_request.json" "$counter" "data/maximum.json" 345 ) && must_fail "acquiring large resources"
+outcome=$( acquire_resources "data/large_request.json" "$counter" "data/maximum.json" 345 ) && must_fail "first large request"
 echo "first/large/request/outcome=\"$outcome\""
 cat "$counter" | prepare_for_match "first/large/request" | grep queue
 
 # second large request shall also fail and append pid to the queue
-outcome=$( acquire_resources "data/large_request.json" "$counter" "data/maximum.json" 456 ) && must_fail "acquiring large resources"
+outcome=$( acquire_resources "data/large_request.json" "$counter" "data/maximum.json" 456 ) && must_fail "second large request"
 echo "second/large/request/outcome=\"$outcome\""
 cat "$counter" | prepare_for_match "second/large/request" | grep queue
 
 # release small resource allocations
-release_resources "data/small_request.json" "$counter" "data/maximum.json" 123 || must_work "releasing small resources"
-release_resources "data/small_request.json" "$counter" "data/maximum.json" 234 || must_work "releasing small resources"
+release_resources "data/small_request.json" "$counter" "data/maximum.json" 123 || must_work "releasing first small request"
+release_resources "data/small_request.json" "$counter" "data/maximum.json" 234 || must_work "releasing second small request"
 cat "$counter" | prepare_for_match "large/waiting"
