@@ -51,7 +51,17 @@ cat "$counter" | prepare_for_match "one/small"
 acquire_resources "data/small_request.json" "$counter" "data/maximum.json" 234 || must_work "acquiring small resources"
 cat "$counter" | prepare_for_match "two/small"
 
-# check large request; shall fail
+# check large request; shall fail, and append pid to the queue
 outcome=$( acquire_resources "data/large_request.json" "$counter" "data/maximum.json" 345 ) && must_fail "acquiring large resources"
 echo "first/large/request/outcome=\"$outcome\""
 cat "$counter" | prepare_for_match "first/large/request" | grep queue
+
+# second large request shall also fail and append pid to the queue
+outcome=$( acquire_resources "data/large_request.json" "$counter" "data/maximum.json" 456 ) && must_fail "acquiring large resources"
+echo "second/large/request/outcome=\"$outcome\""
+cat "$counter" | prepare_for_match "second/large/request" | grep queue
+
+# release small resource allocations
+release_resources "data/small_request.json" "$counter" "data/maximum.json" 123 || must_work "releasing small resources"
+release_resources "data/small_request.json" "$counter" "data/maximum.json" 234 || must_work "releasing small resources"
+cat "$counter" | prepare_for_match "large/waiting"
