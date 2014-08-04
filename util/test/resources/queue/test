@@ -5,19 +5,26 @@ source $( which resources-util ) || exit 1
 function print_queue()
 {
     local prefix=$1
-    name-value-get --from json processes/queue | sed "s,^\[,$prefix=\",;s,\]$,\","
+    name-value-get --from json processes/queue | sed "s,^,$prefix=\",;s,\$,\","
 }
 
-cat data/no_waiting.json    | enqueue_pid 123 | print_queue "none/add/one"
+cat data/no_waiting.json    | enqueue_pid 123 | print_queue "no/add/one"
 cat data/one_waiting.json   | enqueue_pid 123 | print_queue "one/add/one"
 cat data/two_waiting.json   | enqueue_pid 123 | print_queue "two/add/one"
 cat data/three_waiting.json | enqueue_pid 123 | print_queue "three/add/one"
 
-cat data/no_waiting.json    | dequeue_pid 1 | print_queue "none/pop/one"
+cat data/no_waiting.json    | dequeue_pid 1 | print_queue "no/pop/one"
 cat data/one_waiting.json   | dequeue_pid 1 | print_queue "one/pop/one"
-cat data/one_waiting.json   | dequeue_pid 2 | print_queue "one/pop/none"
+cat data/one_waiting.json   | dequeue_pid 2 | print_queue "one/pop/no"
 cat data/two_waiting.json   | dequeue_pid 1 | print_queue "two/pop/first"
 cat data/two_waiting.json   | dequeue_pid 2 | print_queue "two/pop/second"
 cat data/three_waiting.json | dequeue_pid 1 | print_queue "three/pop/first"
 cat data/three_waiting.json | dequeue_pid 2 | print_queue "three/pop/middle"
 cat data/three_waiting.json | dequeue_pid 3 | print_queue "three/pop/last"
+
+cat data/three_waiting.json | check_pid_position 1 | sed 's/^/position[1]=/'
+cat data/three_waiting.json | check_pid_position 2 | sed 's/^/position[2]=/'
+cat data/three_waiting.json | check_pid_position 3 | sed 's/^/position[3]=/'
+cat data/three_waiting.json | check_pid_position 4 | sed 's/^/position[4]=/'
+
+exit 0
