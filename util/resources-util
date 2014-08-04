@@ -12,8 +12,9 @@ function enqueue_pid()
 {
     local pid=$1
     local path=$2
-    local default_path="^processes\/queue="
+    local default_path="processes/queue"
     path=${path:-"$default_path"}
+    path="^${path//\//\\\/}="
     name-value-convert --from json --to path-value \
         | sed --regexp-extended "/$path/s/\[(.+)\]/\[\1,$pid\]/;/$path/s/\[\]/\[$pid\]/" \
         | name-value-convert --from path-value --to json
@@ -24,11 +25,31 @@ function dequeue_pid()
 {
     local pid=$1
     local path=$2
-    local default_path="^processes\/queue="
+    local default_path="processes/queue"
     path=${path:-"$default_path"}
+    path="^${path//\//\\\/}="
     name-value-convert --from json --to path-value \
         | sed --regexp-extended "/$path/s/\[$pid,(.+)\]/\[\1\]/;/$path/s/\[(.+),$pid\]/\[\1\]/;/$path/s/\[(.+),$pid,(.+)\]/\[\1,\2\]/;/$path/s/\[$pid\]/\[\]/" \
         | name-value-convert --from path-value --to json
+}
+
+# Read a json file as text stream on stdin.  # Check the position of the given
+# PID (1st argument) in the waiting list described by path (optional second
+# argument). Echo the positional index counted from 0, if found. Otherwise,
+# echo "-1".
+function check_pid_position()
+{
+    local pid=$1
+    local path=$2
+    local default_path="processes/queue"
+    path=${path:-"$default_path"}
+    local list
+    list=$( name-value-get --from json "$path" | sed "s/^\[/ /;s/\]\$/ /;s/,/ /g" )
+    if echo "$list" | grep -q " $pid " ; then
+        echo "$list" | sed "s/ $pid .*\$//" | wc -w
+    else
+        echo "-1"
+    fi
 }
 
 # Output the most commonly used system resources: number of CPUs, total RAM,
