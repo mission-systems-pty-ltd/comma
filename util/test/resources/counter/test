@@ -1,21 +1,33 @@
 #!/bin/bash
 
+name=$0
+
 source $( which resources-util ) || exit 1
 
 output="output"
 rm -rf "$output" || exit 1
 mkdir -p "$output" || exit 1
 
-lock="$output/lock"
-touch "$lock"
-
 total_system_resources | sed 's/^/total\//;s/"//g'
 
 counter="$output/counter.json"
-cat <<EOF | locked_initialize_resources "$lock" "$counter"
+cat <<EOF | initialize_resources "$counter"
 resources/cpus="8"
 resources/memory/main="1000000"
 resources/memory/shared="500000"
 EOF
 
+function must_work()
+{
+    local msg=$1
+    echo "$name: $msg must work" >&2
+    exit 1
+}
+
 cat "$counter" | name-value-convert --from json --to path-value | sed 's/^/initial\//;/resources/s/"//g'
+
+# small request shall succeed; pids here and below are fake
+acquire_resources "data/small_request.json" "$counter" "data/maximum.json" 123 || must_work "acquiring small resources"
+cat "$counter" | name-value-convert --from json --to path-value | sed 's/^/one\/small\//;/resources/s/"//g'
+acquire_resources "data/small_request.json" "$counter" "data/maximum.json" 234 || must_work "acquiring small resources"
+cat "$counter" | name-value-convert --from json --to path-value | sed 's/^/two\/small\//;/resources/s/"//g'
