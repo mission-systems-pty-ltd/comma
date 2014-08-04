@@ -14,3 +14,5 @@ position[1]=0
 position[2]=1
 position[3]=2
 position[4]=-1
+none/waiting/empty=1
+some/waiting/empty=1
