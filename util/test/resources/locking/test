@@ -2,6 +2,7 @@
 
 name=$( basename $0 )
 
+source $( which comma-application-util ) || exit 1
 source $( which resources-util ) || exit 1
 
 # This function simulates one of the worker processes that coordinate their
@@ -17,17 +18,111 @@ source $( which resources-util ) || exit 1
 # - perform this activity for a prescribed number of cycles
 function worker()
 {
-    echo "not yet implemented" >&2
-    return 1
+    local pid=$1
+    local lock=$2
+    local counter=$3
+    local limits=$4
+    local outdir=$5
+    local ntasks=$6
+    local duration=$7
+    local overflow=$8
+
+    outdir=${outdir:-"output"}
+    ntasks=${ntasks:-"100"}
+    duration=${duration:-"0.01"}
+    overflow=${overflow:-"1.1"}
+
+    local input resources_cpus resources_memory_main resources_memory_shared itask cpus memory_main memory_shared request outcome iter maxiter
+
+    [[ -f "$lock" ]] || { echo "$name::worker: lock file '$lock' not found" >&2; return 1; }
+    [[ -f "$counter" ]] || { echo "$name::worker: counter file '$counter' not found" >&2; return 1; }
+    [[ -f "$limits" ]] || { echo "$name::worker: limits file '$limits' not found" >&2; return 1; }
+    [[ -d "$outdir" ]] || { echo "$name::worker: output directory '$outdir' not found" >&2; return 1; }
+    (( $ntasks > 0 )) || { echo "$name::worker: number of tasks '$ntasks' <= 0" >&2; return 1; }
+    (( $( echo "$duration > 0" | bc ) == 1 )) || { echo "$name::worker: task duration '$duration' <= 0" >&2; return 1; }
+    (( $( echo "$overflow > 0" | bc ) == 1 )) || { echo "$name::worker: overflow factor '$overflow' <= 0" >&2; return 1; }
+    maxiter=$( echo "100 / $duration + 1" | bc )
+
+    input=$( cat "$limits" | name-value-convert --from json --to path-value )
+    (( $? == 0 )) || { echo "$name::worker: cannot parse '$limits'" >&2; return 1; }
+    comma_path_value_to_var <<< "$input"
+    (( $? == 0 )) || { echo "$name::worker: cannot setup limit variables" >&2; return 1; }
+
+    request="$outdir/request.$BASHPID.json"
+
+    echo "$name: worker $pid started"
+    for itask in $( seq $ntasks ) ; do
+        cpus=$( echo "$resources_cpus * $overflow * $RANDOM / 32767" | bc )
+        memory_main=$( echo "$resources_memory_main * $overflow * $RANDOM / 32767" | bc )
+        memory_shared=$( echo "$resources_memory_shared * $overflow * $RANDOM / 32767" | bc )
+        ( echo "resources/cpus=$cpus"; echo "resources/memory/main=$memory_main"; echo "resources/memory/shared=$memory_shared"; ) \
+            | name-value-convert --from path-value --to json > "$request"
+        iter=0
+        while true ; do
+            (( ++iter ))
+            (( $iter >= $maxiter )) && { echo "$name::worker: cannot wait longer" >&2; return 1; }
+            outcome=$( locked_acquire_resources "$lock" "$request" "$counter" "$limits" "$pid" )
+            if [[ $? == 0 ]] ; then
+                echo "$name: worker $pid working ..."
+                cat "$counter"
+                sleep "$duration"
+                locked_release_resources "$lock" "$request" "$counter"
+                (( $? == 0 )) || { echo "$name::worker: cannot release resources" >&2; return 1; }
+                cat "$counter"
+                break
+            else
+                if [[ "$outcome" == "wait" ]] ; then
+                    sleep "$duration"
+                    echo "$name: worker $pid waiting for resources ..."
+                else
+                    echo "$name::worker: unknown error in acquire_resources '$outcome'" >&2
+                    return 1
+                fi
+            fi
+        done
+    done
+    return 0
 }
 
 # Parse command-line options. Include options to change the number of cycles
 # for workers to iterate, the random seed, and the number of workers. Provide
 # reasonable default values.
 
-# Create a lock file, a maximal resources file (fudge), initialize resource
-# counter.
+num_workers=8
+num_tasks=10
+duration=1
+overflow="1.1"
+
+# Create a lock file, resource limits file (fudge), and initialize resource counter.
+
+output="output"
+rm -rf "$output" || exit 1
+mkdir -p "$output" || exit 1
+
+lock="$output/lock"
+counter="$output/counter.json"
+limits="$output/limits.json"
+( echo "cpus=8"; echo "memory/main=1000000"; echo "memory/shared=500000" ) \
+    | sed 's/^/resources\//' \
+    | name-value-convert --from path-value --to json \
+    > "$limits"
+cat "$limits" | name-value-convert --from json --to path-value | locked_initialize_resources "$lock" "$counter"
 
 # Start workers, wait for their completion, etc.
+worker_pids=()
+worker_exit=()
+for iw in $( seq $num_workers ) ; do
+    worker "$iw" "$lock" "$counter" "$limits" "$output" "$num_tasks" "$duration" "$overflow"
+    worker_pids+=( $! )
+done
 
-exit 0
+rv=0
+for pid in ${worker_pids[@]} ; do
+    wait $pid
+    worker_exit+=( $? )
+    (( $rv == 0 )) && rv=${worker_exit[-1]}
+done
+
+echo "results=\"${worker_exit[@]}\""
+
+exit $rv
