@@ -3,27 +3,7 @@
 name=$0
 
 source $( which resources-util ) || exit 1
-
-function must_work()
-{
-    local msg=$1
-    echo "$name: $msg must work" >&2
-    exit 1
-}
-
-function must_fail()
-{
-    local msg=$1
-    echo "$name: $msg must fail" >&2
-    exit 1
-}
-
-function prepare_for_match()
-{
-    local path=$1
-    path="${path//\//\\\/}"
-    name-value-convert --from json --to path-value | sed "s/^/$path\//;/resources/s/\"//g"
-}
+source "$( dirname $0 )/../resources-test-util" || exit 1
 
 output="output"
 rm -rf "$output" || exit 1
@@ -62,8 +42,8 @@ echo "second/large/request/outcome=\"$outcome\""
 cat "$counter" | prepare_for_match "second/large/request" | grep queue
 
 # release small resource allocations
-release_resources "data/small_request.json" "$counter" "data/maximum.json" 123 || must_work "releasing first small request"
-release_resources "data/small_request.json" "$counter" "data/maximum.json" 234 || must_work "releasing second small request"
+release_resources "data/small_request.json" "$counter" || must_work "releasing first small request"
+release_resources "data/small_request.json" "$counter" || must_work "releasing second small request"
 cat "$counter" | prepare_for_match "large/waiting"
 
 # now attempt to proceed with the second large-resource request; it is not the first in the queue and shall fail
