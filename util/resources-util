@@ -65,6 +65,59 @@ function queue_is_empty()
     [[ -z "$list" ]]
 }
 
+# These versions take the counter file as an additional first argument and
+# modify it in place.
+
+# Arguments: counter file, pid, (optional) path.
+function enqueue_pid_infile()
+{
+    local counter=$1
+    shift
+    local name=${name:-"enqueue_pid_infile"}
+    local contents
+    contents=$( cat "$counter" )
+    (( $? == 0 )) || { echo "$name: cannot read '$counter'" >&2; return 1; }
+    [[ -w "$counter" ]] || { echo "$name: cannot write '$counter'" >&2; return 1; }
+    echo "$contents" | enqueue_pid $@ > "$counter"
+}
+
+# Arguments: counter file, pid, (optional) path.
+function dequeue_pid_infile()
+{
+    local counter=$1
+    shift
+    local name=${name:-"dequeue_pid_infile"}
+    local contents
+    contents=$( cat "$counter" )
+    (( $? == 0 )) || { echo "$name: cannot read '$counter'" >&2; return 1; }
+    [[ -w "$counter" ]] || { echo "$name: cannot write '$counter'" >&2; return 1; }
+    echo "$contents" | dequeue_pid $@ > "$counter"
+}
+
+# Arguments: counter file, pid, (optional) path.
+function check_pid_position_infile()
+{
+    local counter=$1
+    shift
+    local name=${name:-"check_pid_position_infile"}
+    local contents
+    contents=$( cat "$counter" )
+    (( $? == 0 )) || { echo "$name: cannot read '$counter'" >&2; return 1; }
+    echo "$contents" | check_pid_position_infile $@
+}
+
+# Arguments: counter file, (optional) path.
+function queue_is_empty_infile()
+{
+    local counter=$1
+    shift
+    local name=${name:-"queue_is_empty_infile"}
+    local contents
+    contents=$( cat "$counter" )
+    (( $? == 0 )) || { echo "$name: cannot read '$counter'" >&2; return 1; }
+    echo "$contents" | queue_is_empty $@
+}
+
 # Output the most commonly used system resources: number of CPUs, total RAM,
 # size, total shared memory size. No arguments. Do not read stdin.
 function total_system_resources()
@@ -158,6 +211,7 @@ function acquire_resources()
 
     local next position can_acquire any_waiting exceed
     local name=${name:-"acquire_resources"}
+
     # hope for the best if asking for more than available
     exceed=$( name-value-calc "$request" "$maximum" --more --json --detailed )
     (( $? == 0 )) || { echo "$name: cannot compare for being excessive" >&2; return 1; }
@@ -272,4 +326,28 @@ function locked_release_resources()
 {
     local name=${name:-"locked_release_resources"}
     serialize $1 release_resources $2 $3
+}
+
+function locked_enqueue_pid_infile()
+{
+    local name=${name:-"locked_enqueue_pid_infile"}
+    serialize $1 enqueue_pid_infile $2 $3 $4
+}
+
+function locked_dequeue_pid_infile()
+{
+    local name=${name:-"locked_dequeue_pid_infile"}
+    serialize $1 dequeue_pid_infile $2 $3 $4
+}
+
+function locked_check_pid_position_infile()
+{
+    local name=${name:-"locked_check_pid_position_infile"}
+    serialize $1 check_pid_position_infile $2 $3 $4
+}
+
+function locked_queue_is_empty_infile()
+{
+    local name=${name:-"locked_queue_is_empty_infile"}
+    serialize $1 queue_is_empty_infile $2 $3
 }
