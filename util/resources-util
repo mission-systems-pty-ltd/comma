@@ -55,7 +55,7 @@ function check_pid_position()
 # Tell if the queue is empty. Read book-keeping file in json format on stdin.
 # Take an optional argument, path to the queue. Exit with status 0 for empty
 # queue and status 1 for non-empty.
-function empty_queue()
+function queue_is_empty()
 {
     local path=$1
     local default_path="processes/queue"
@@ -163,7 +163,7 @@ function acquire_resources()
     (( $? == 0 )) || { echo "$name: cannot compare resources" >&2; return 1; }
     position=$( cat "$counter" | check_pid_position "$pid" "$path" )
     (( $? == 0 )) || { echo "$name: cannot check pid position" >&2; return 1; }
-    any_waiting=$( cat "$counter" | empty_queue && echo 0 || echo 1 )
+    any_waiting=$( cat "$counter" | queue_is_empty && echo 0 || echo 1 )
     (( $? == 0 )) || { echo "$name: check for empty queue failed" >&2; return 1; }
     if [[ $any_waiting == 1 ]] ; then                 # queue is not empty, can acquire only if
         if [[ $position == 0 ]] ; then                # we are the first in line and

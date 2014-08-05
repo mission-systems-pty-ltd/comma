@@ -27,7 +27,7 @@ cat data/three_waiting.json | check_pid_position 2 | sed 's/^/position[2]=/'
 cat data/three_waiting.json | check_pid_position 3 | sed 's/^/position[3]=/'
 cat data/three_waiting.json | check_pid_position 4 | sed 's/^/position[4]=/'
 
-( cat data/no_waiting.json    | empty_queue && echo 1 || echo 0 ) | sed 's/^/none\/waiting\/empty=/'
-( cat data/two_waiting.json   | empty_queue && echo 1 || echo 0 ) | sed 's/^/some\/waiting\/empty=/'
+( cat data/no_waiting.json  | queue_is_empty && echo 1 || echo 0 ) | sed 's/^/none\/waiting\/empty=/'
+( cat data/two_waiting.json | queue_is_empty && echo 1 || echo 0 ) | sed 's/^/some\/waiting\/empty=/'
 
 exit 0
