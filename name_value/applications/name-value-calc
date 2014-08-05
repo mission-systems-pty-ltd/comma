@@ -270,6 +270,15 @@ else
 fi
 
 file_separator="@-@-@-@-@"
+function feed_input()
+{
+    local file
+    for file in "${input_files[@]}"; do
+        $convert_input < "$file"
+        (( $? == 0 )) || { echo "$name: cannot parse '$file'" >&2; return 1; }
+        echo "$file_separator"
+    done
+}
 
-( for file in "${input_files[@]}"; do $convert_input < "$file"; echo $file_separator; done ) | python_converter | $convert_output
+feed_input | python_converter | $convert_output
 if ! status_ok; then exit 1; else exit 0; fi
