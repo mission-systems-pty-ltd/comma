@@ -157,6 +157,7 @@ function acquire_resources()
     local path=$5
 
     local next position can_acquire any_waiting exceed
+    local name=${name:-"acquire_resources"}
     # hope for the best if asking for more than available
     exceed=$( name-value-calc "$request" "$maximum" --more --json --detailed )
     (( $? == 0 )) || { echo "$name: cannot compare for being excessive" >&2; return 1; }
@@ -227,6 +228,7 @@ function release_resources()
     local request=$1
     local counter=$2
     local next
+    local name=${name:-"release_resources"}
     next=$( name-value-calc "$counter" "$request" --subtract --json )
     (( $? == 0 )) || { echo "$name: cannot subtract resources" >&2; return 1; }
     next=$( echo "$next" | non_negative_resources )
@@ -256,15 +258,18 @@ function serialize()
 # Lock-protected versions of the relevant functions from this script.
 function locked_initialize_resources()
 {
+    local name=${name:-"locked_initialize_resources"}
     serialize $1 initialize_resources $2
 }
 
 function locked_acquire_resources()
 {
+    local name=${name:-"locked_acquire_resources"}
     serialize $1 acquire_resources $2 $3 $4 $5 $6
 }
 
 function locked_release_resources()
 {
+    local name=${name:-"locked_release_resources"}
     serialize $1 release_resources $2 $3
 }
