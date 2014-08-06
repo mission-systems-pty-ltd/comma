@@ -1,0 +1,6 @@
+num_workers=8
+num_tasks=16
+duration=0.01
+max_task_scale="0.5"
+verbose=0
+random_seed=123

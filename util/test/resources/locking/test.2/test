@@ -3,4 +3,4 @@
 app="../application/locking-test"
 [[ -x "$app" ]] || exit 1
 
-$app 2>&1 | tee stderr.log | tail -n 3 | grep -q "Success." && echo 'passed="OK"'
+$app > stderr.log 2>&1
