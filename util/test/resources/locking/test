@@ -120,9 +120,10 @@ function worker()
     return $exit_status
 }
 
-# Parse command-line options. Include options to change the number of cycles
-# for workers to iterate, the random seed, the number of workers, the overflow
-# factor, and verbosity. Provide reasonable default values.
+# Provide default values the number of cycles for workers to iterate, the random
+# seed, the number of workers, the max_task_scale factor (maximal task will take
+# resources equal to this scale factor times the system limits), and verbosity.
+# Then override using the input file.
 
 num_workers=8
 num_tasks=16
@@ -130,6 +131,9 @@ duration=2
 max_task_scale="1.1"
 verbose=1
 random_seed=1
+
+# Override the defaults. Skip if the input is a terminal
+[[ ! -t 0 ]] && comma_path_value_to_var
 
 # Make the random sequences repeatable.
 RANDOM=$random_seed
