@@ -129,75 +129,80 @@ function logical_op()
 
 function python_converter()
 {
-    python -c "import sys, operator
-filesep = '$file_separator'
-what = '$operation'
-strict = $strict
-excluded = '${excluded[@]}'.split()
-excluded = [ e.strip('/') + '/' for e in excluded ]
+    python -c "try:
+    import sys, operator, traceback
+    filesep = '$file_separator'
+    what = '$operation'
+    strict = $strict
+    excluded = '${excluded[@]}'.split()
+    excluded = [ e.strip('/') + '/' for e in excluded ]
 
-operands = {
-             '+'  : operator.add,
-             '-'  : operator.sub,
-             '>'  : operator.gt,
-             '>=' : operator.ge,
-             '<'  : operator.lt,
-             '<=' : operator.le,
-             '==' : operator.eq,
-             '<>' : operator.ne,
-             '!=' : operator.ne,
-             '/'  : operator.div,
-             '*'  : operator.mul,
-           }
+    operands = {
+                 '+'  : operator.add,
+                 '-'  : operator.sub,
+                 '>'  : operator.gt,
+                 '>=' : operator.ge,
+                 '<'  : operator.lt,
+                 '<=' : operator.le,
+                 '==' : operator.eq,
+                 '<>' : operator.ne,
+                 '!=' : operator.ne,
+                 '/'  : operator.div,
+                 '*'  : operator.mul,
+               }
 
-arithmetic = [ '+', '-', '/', '*' ]
+    arithmetic = [ '+', '-', '/', '*' ]
 
-names = {}
-ordered_names = []
-first = True
-op = operands[what]
-logical = what not in arithmetic
+    names = {}
+    ordered_names = []
+    first = True
+    op = operands[what]
+    logical = what not in arithmetic
 
-def output( was_assigned, value, logical ):
-    if was_assigned:
-        return int(value) if logical else value
-    else:
-        return 1 if logical else value
+    def output( was_assigned, value, logical ):
+        if was_assigned:
+            return int(value) if logical else value
+        else:
+            return 1 if logical else value
 
-while True:
-    l = sys.stdin.readline().strip()
-    if not l:
-        break
-    if l == filesep:
-        first = False
-        continue
-    n, v = l.split('=')
-    v = v.strip('\"')
-    try:
-        v = int(v)
-    except ValueError:
+    while True:
+        l = sys.stdin.readline().strip()
+        if not l:
+            break
+        if l == filesep:
+            first = False
+            continue
+        n, v = l.split('=')
+        v = v.strip('\"')
         try:
-            v = float(v)
+            v = int(v)
         except ValueError:
-            if v in ['True', 'true', 'yes']:
-                v = True
-            if v in ['False', 'false', 'no']:
-                v = False
-    if first:
-        if not any( [ (n + '/').startswith(e) for e in excluded ] ):
-            names[n] = ( False, v )
-            ordered_names.append( n )
-    else:
-        if names.has_key( n ):
             try:
-                names[n] = ( True, op(names[n][1], v) )
-            except TypeError:
-                if strict:
-                    raise
+                v = float(v)
+            except ValueError:
+                if v in ['True', 'true', 'yes']:
+                    v = True
+                if v in ['False', 'false', 'no']:
+                    v = False
+        if first:
+            if not any( [ (n + '/').startswith(e) for e in excluded ] ):
+                names[n] = ( False, v )
+                ordered_names.append( n )
+        else:
+            if names.has_key( n ):
+                try:
+                    names[n] = ( True, op(names[n][1], v) )
+                except TypeError:
+                    if strict:
+                        raise
 
-for n in ordered_names:
-    v = names[n]
-    print '%s=\"%s\"' % ( n, str(output(v[0], v[1], logical)) )
+    for n in ordered_names:
+        v = names[n]
+        print '%s=\"%s\"' % ( n, str(output(v[0], v[1], logical)) )
+except KeyboardInterrupt:
+    sys.exit(1)
+except Exception:
+    traceback.print_exc(file=sys.stdout)
 "
 }
 
