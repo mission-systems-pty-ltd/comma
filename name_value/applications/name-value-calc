@@ -130,7 +130,7 @@ function logical_op()
 function python_converter()
 {
     python -c "try:
-    import sys, operator, traceback
+    import sys, operator, traceback, signal
     filesep = '$file_separator'
     what = '$operation'
     strict = $strict
@@ -200,10 +200,10 @@ function python_converter()
         v = names[n]
         print '%s=\"%s\"' % ( n, str(output(v[0], v[1], logical)) )
 except KeyboardInterrupt:
-    sys.exit(1)
+    sys.exit(128 + signal.SIGINT)
 except Exception:
     traceback.print_exc(file=sys.stdout)
-"
+" 2>/dev/null
 }
 
 # Using '-v' does not work because it inverts the _matching_ while we need to invert the exit
