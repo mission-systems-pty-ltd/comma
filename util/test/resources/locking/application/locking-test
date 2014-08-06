@@ -5,17 +5,6 @@ name=$( basename $0 )
 source $( which comma-application-util ) || exit 1
 source $( which resources-util ) || exit 1
 
-# This function round-down a scaled random number to an integer.
-# Can be used to simulate memory size, number of CPUs, and other
-# integer values. Argument is the desired scale: output values
-# are from zero to $1.
-function round_random()
-{
-    local scale=$1
-    echo "$scale * $( urandom )" | bc | sed 's/^\./0\./;s/\..*//'
-}
-export -f round_random
-
 # This function simulates one of the worker processes that coordinate their
 # resource usage using comma resources-util facilities.
 #

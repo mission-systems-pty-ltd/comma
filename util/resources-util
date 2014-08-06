@@ -10,6 +10,17 @@ function urandom()
 }
 export -f urandom
 
+# This function round-down a scaled random number to an integer.
+# Can be used to simulate memory size, number of CPUs, and other
+# integer values. Argument is the desired scale: output values
+# are from zero to $1.
+function round_random()
+{
+    local scale=$1
+    echo "$scale * $( urandom )" | bc | sed 's/^\./0\./;s/\..*//'
+}
+export -f round_random
+
 # Read a json file as text stream on stdin and in the given path (2nd argument)
 # append the pid (1st argument) to the end of []-enclosed list (insert into
 # the list if empty); output the resulting json to stdout. Path argument is
