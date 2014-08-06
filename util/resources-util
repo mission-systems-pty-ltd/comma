@@ -236,7 +236,7 @@ function acquire_resources()
     # lines ending in ="1" correspond to a requested value exceeding maximum value
     # however, '--more' operation may still give negative result if some other
     # requested values are below the maximal values
-    echo "$exceed" | name-value-convert --from json --to path-value | grep -q '="1"'
+    echo "$exceed" | name-value-convert --from json --to path-value | grep resources | grep -q '="1"'
     (( $? == 0 )) && { cat "$maximum" > "$request"; }
     next=$( name-value-calc "$counter" "$request" --add --json )
     (( $? == 0 )) || { echo "$name: cannot add resources" >&2; return 1; }
