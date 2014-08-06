@@ -5,35 +5,14 @@ name=$( basename $0 )
 source $( which comma-application-util ) || exit 1
 source $( which resources-util ) || exit 1
 
-# Random value uniformly distributed in [0, 1].
-function urandom()
-{
-    echo "$RANDOM / 32767" | bc -l
-}
-export -f urandom
-
-# This function generates a random number in [0, 1) interval. The built-in
-# $RANDOM variable is roughly uniformly distributed, which causes almost
-# complete serialization of the tasks (good chance that any two tasks with
-# random resource requests would exceed the system resource limits). Thus,
-# take a square / cube / etc of the uniform variable.
-function srandom()
-{
-    local value=$RANDOM
-    echo "( $value / 32767 )^2" | bc -l
-}
-export -f srandom
-
-function crandom()
-{
-    local value=$RANDOM
-    echo "( $value / 32767 )^3" | bc -l
-}
-export -f crandom
-
+# This function round-down a scaled random number to an integer.
+# Can be used to simulate memory size, number of CPUs, and other
+# integer values. Argument is the desired scale: output values
+# are from zero to $1.
 function round_random()
 {
-    echo "$1 * $( crandom )" | bc | sed 's/^\./0\./;s/\..*//'
+    local scale=$1
+    echo "$scale * $( urandom )" | bc | sed 's/^\./0\./;s/\..*//'
 }
 export -f round_random
 

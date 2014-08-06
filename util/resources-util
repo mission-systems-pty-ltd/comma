@@ -3,6 +3,13 @@
 # This script provides Bash functions for coordination of system
 # resources usage across a pool of workers (processes).
 
+# Auxiliary function: random value uniformly distributed in [0, 1].
+function urandom()
+{
+    echo "$RANDOM / 32767" | bc -l
+}
+export -f urandom
+
 # Read a json file as text stream on stdin and in the given path (2nd argument)
 # append the pid (1st argument) to the end of []-enclosed list (insert into
 # the list if empty); output the resulting json to stdout. Path argument is
