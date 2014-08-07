@@ -60,6 +60,7 @@ function description()
 --max-parallel=[<N>]; run up to N tests in parallel; default: $max_parallel
 --max-memory-shared=[<N>]; limit on shared memory, in MB; default: $max_memory_shared
 --max-wait=[<time>]; maximal time to wait for available CPUs before failing a test, default: ${max_wait}
+--test-option=[<option>]; extra command line argument(s) pass to "test" script
 EOF
 }
 
@@ -521,7 +522,7 @@ function run_single_test()
                 local output error_files
                 find . -name out_of_shared_memory | xargs rm -f
                 output=$( if [ -f ./input ] ; then cat ./input ; fi \
-                    | comma_progress_named "$our_stats_progress" "$dir" "$test_exec" "$path" "$verbose" \
+                    | comma_progress_named "$our_stats_progress" "$dir" "$test_exec" "$path" "$verbose" $options_test_option \
                     | if [[ -f ./expected ]]; then comma-test-match ./expected 2>&1 | fail_on_output; else cat > /dev/null; fi )
                 local test_failed=$?
                 release_resources "$dir" "$verbose_resources"
@@ -622,7 +623,7 @@ have_max_parallel=$( comma_options_has --max-parallel=$options_max_parallel $@ )
 [[ "$options_max_wait" != "forever" ]] && {
     (( $options_max_wait < 1 )) && { error_ "$name: wait time $options_max_wait < 1s or not a number"; exit 1; }
 }
-export options_max_parallel options_max_memory_shared options_max_wait options_debug options_quiet options_path options_until_first_failure
+export options_max_parallel options_max_memory_shared options_max_wait options_debug options_quiet options_path options_until_first_failure options_test_option
 
 # to run tests in parallel, we need to lock stats_progress_csv and/or stdout/stderr
 # this is the global flock name
@@ -648,8 +649,7 @@ test_script_dirs=$( exclude_generic_tests $( get_dirnames $( find . -name "test"
 test_scripts_count=$( echo $test_script_dirs | wc -w )
 count=0
 failed_count=0
-# too quick and dirty, some tests fail when an unknown option is given
-#if [[ "$options_debug" != "0" ]] ; then verbose="--verbose" ; fi
+if [[ "$options_debug" != "0" ]] ; then verbose="--verbose" ; fi
 
 run_tests="process_tests_parallel"
 [[ "$options_parallel" == "0" ]] && run_tests="process_tests_serial"
