@@ -1,0 +1,52 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+source $( which comma-application-util ) || exit 1
+source $( which resources-util ) || exit 1
+
+function handler()
+{
+    echo "count=$iter"
+    exit 0
+}
+
+function count()
+{
+    iter=0
+    trap 'handler' SIGINT
+    while true ; do
+        acquire_resources "$output/tiny.json" "$output/counter.json" "$output/limits.json" 123 || return 1
+        (( ++iter ))
+    done
+}
+
+output="output"
+rm -rf "$output" || exit 1
+mkdir -p "$output" || exit 1
+
+# initialize
+counter="$output/counter.json"
+limits="$output/limits.json"
+tiny="$output/tiny.json"
+cat <<EOF | name-value-convert --from path-value --to json > "$limits"
+resources/cpus="8"
+resources/memory/main="1000000"
+resources/memory/shared="500000"
+EOF
+cat <<EOF | name-value-convert --from path-value --to json > "$tiny"
+resources/cpus="0"
+resources/memory/main="1"
+resources/memory/shared="1"
+EOF
+cat "$limits" | name-value-convert --from json --to path-value | initialize_resources "$counter"
+
+count &
+count_pid=$!
+
+sleep 10
+kill -s SIGINT $count_pid
+wait $count_pid
+rv=$?
+
+exit $rv
