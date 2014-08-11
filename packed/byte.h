@@ -98,6 +98,8 @@ struct const_byte : public packed::field< const_byte< C >, unsigned char, sizeof
     //const const_byte& operator=( type rhs ) { return base_type::operator=( rhs ); }
 };
 
+typedef byte uint8;
+
 } } // namespace comma { namespace packed {
 
 #endif // #ifndef COMMA_PACKED_BYTE_HEADER_H_
