@@ -91,6 +91,8 @@ class ascii_input_stream : public boost::noncopyable
         /// this is under the consideration that the ascii_input_stream is mainly used for
         /// debug purposes only
         bool ready() const;
+	/// returns true if there is at least one byte in its buffer 
+	bool has_data() const;
 
     private:
         std::istream& is_;
@@ -178,6 +180,8 @@ class binary_input_stream : public boost::noncopyable
 
         /// return true, if read will not block
         bool ready() const;
+	/// returns true if there is at least one byte in its buffer 
+	bool has_data() const;
 
     private:
         std::istream& is_;
@@ -261,6 +265,7 @@ class input_stream : public boost::noncopyable
         binary_input_stream< S >& binary() { return *binary_; }
         bool is_binary() const { return binary_; }
         bool ready() const { return binary_ ? binary_->ready() : ascii_->ready(); }
+        bool has_data() const { return binary_ ? binary_->has_data() : ascii_->has_data(); }
 
     private:
         boost::scoped_ptr< ascii_input_stream< S > > ascii_;
@@ -349,6 +354,12 @@ inline ascii_input_stream< S >::ascii_input_stream(std::istream& is, const S& sa
 
 template < typename S >
 inline bool ascii_input_stream< S >::ready() const
+{
+    return is_.rdbuf()->in_avail() > 0;
+}
+
+template < typename S >
+inline bool ascii_input_stream< S >::has_data() const
 {
     return is_.rdbuf()->in_avail() > 0;
 }
@@ -458,6 +469,12 @@ inline binary_input_stream< S >::binary_input_stream( std::istream& is, const op
     if( &is == &std::cin ) { _setmode( _fileno( stdin ), _O_BINARY ); }
     #endif
     detail::unsyncronize_with_stdio();
+}
+
+template < typename S >
+inline bool binary_input_stream< S >::has_data() const
+{
+    return is_.rdbuf()->in_avail() > 0;
 }
 
 template < typename S >
