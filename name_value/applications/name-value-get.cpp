@@ -304,10 +304,12 @@ int main( int ac, char** av )
     catch( std::exception& ex )
     {
         std::cerr << std::endl << "name-value-get: " << ex.what() << std::endl << std::cerr << std::endl;
+        return 1;
     }
     catch( ... )
     {
         std::cerr << std::endl << "name-value-get: unknown exception" << std::endl << std::endl;
+        return 1;
     }
-    return 1;
+    return 0;
 }

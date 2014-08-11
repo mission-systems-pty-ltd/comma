@@ -129,7 +129,8 @@ function logical_op()
 
 function python_converter()
 {
-    python -c "import sys, operator
+    python -c "import operator
+from sys import stdin
 filesep = '$file_separator'
 what = '$operation'
 strict = $strict
@@ -165,7 +166,7 @@ def output( was_assigned, value, logical ):
         return 1 if logical else value
 
 while True:
-    l = sys.stdin.readline().strip()
+    l = stdin.readline().strip()
     if not l:
         break
     if l == filesep:
@@ -198,7 +199,7 @@ while True:
 for n in ordered_names:
     v = names[n]
     print '%s=\"%s\"' % ( n, str(output(v[0], v[1], logical)) )
-"
+" 2>/dev/null
 }
 
 # Using '-v' does not work because it inverts the _matching_ while we need to invert the exit
