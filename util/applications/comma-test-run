@@ -1,0 +1,683 @@
+#!/bin/bash
+
+source $( which comma-application-util ) || exit 1
+
+name=$( basename $0 )
+name_offset="${name//?/ } "
+export name name_offset
+
+# determine system parameters
+total_num_cpus=$( grep -c ^processor "/proc/cpuinfo" )
+(( $total_num_cpus > 0 )) || { echo "$name: cannot grep '/proc/cpuinfo' for the number of processors" >&2; exit 1; }
+total_memory_limits=$( ipcs -m -l 2>/dev/null )
+(( $? != 0 )) && { echo "$name: cannot determine memory limits by calling ipcs" >&2; exit 1; }
+total_memory_shared=$( echo "$total_memory_limits" | sed '/shared/!d;s/.* //g' )
+(( $total_memory_shared > 0 )) || { echo "$name: cannot determine shared memory limits" >&2; exit 1; }
+# convert to MB
+total_memory_shared=$(( $total_memory_shared / 1024 )) || { echo "$name: shared memory limit is not a number" >&2; exit 1; }
+
+# defaults
+qstorage=""
+max_parallel=$total_num_cpus
+max_memory_shared=$total_memory_shared
+max_wait="forever"
+
+red="\033[0;31m"
+green="\033[0;32m"
+brown="\033[0;33m"
+white="\033[0;37m"
+none="\033[m"
+
+status_ok()
+{
+    [[ ! "${PIPESTATUS[@]}" =~ [1-9] ]]
+}
+export -f status_ok
+
+function default_options()
+{
+    echo "path=$qstorage"
+    echo "parallel=0"
+    echo "quiet=0"
+    echo "debug=0"
+    echo "until_first_failure=0"
+    echo "force=0"
+    echo "max_parallel=$max_parallel"
+    echo "max_memory_shared=$max_memory_shared"
+    echo "max_wait=$max_wait"
+}
+
+function description()
+{
+    cat <<EOF
+--help,-h; show this help
+--debug; much more debug output
+--quiet,-q; minimize output
+--until-first-failure,-f; exit after the first failure (works only when tests run serially)
+--force,-f; include disabled tests
+--path=[<dir>]; data-storage directory for tests, default: none, let the tests define it
+--parallel; run tests in parallel
+--max-parallel=[<N>]; run up to N tests in parallel; default: $max_parallel
+--max-memory-shared=[<N>]; limit on shared memory, in MB; default: $max_memory_shared
+--max-wait=[<time>]; maximal time to wait for available CPUs before failing a test, default: ${max_wait}
+--test-option=[<option>]; extra command line argument(s) pass to "test" script
+EOF
+}
+
+# put into a separate function to avoid using echo -e on each line
+function raw_usage_()
+{
+    cat <<EOF
+
+Searches for and executes tests under the current directory.
+
+Usage: comma-test-run [<options>]
+
+Find subdirectories containing the files ${brown}test${none}, ${brown}input${none} or ${brown}expected${none}. Execute 'test', then either:
+    (a) if 'expected' exists, compare its contents to the output of 'test' ("path=value" format)
+    (b) otherwise the success of the test depends on the exit status of the 'test' script.
+
+    
+A quick tutorial
+
+    mkdir success
+    echo "hello=\"world\"" > success/input
+    echo "hello=\"world\"" > success/expected
+    echo "cat" > success/test
+    chmod +x success/test
+
+    comma-test-run
+
+    mkdir failure
+    echo "hello=\"world\"" > failure/input
+    echo "hello=\"moon\"" > failure/expected
+    echo "cat" > failure/test
+    chmod +x failure/test
+
+    comma-test-run
+
+    
+File 'input', if exists, is fed to the stdin of the test script.
+
+If there is an 'input' or 'expected' file but no 'test' in the same directory, the 'test' script in the
+closest parent directory is used. If there is a 'test' by itself with no 'input' or 'expected' file,
+it is only executed if there is no subdirectory containing 'input', 'expected' or 'test'.
+
+Returns 0 if all tests succeed, or non-zero if any of the tests fail.
+
+Options:
+$( description | sed 's/^/    /g' )
+
+Disabling tests:
+    to disable tests in a directory and all its subdirectories
+    create an empty file named ${brown}disabled${none} in that directory
+
+Running tests in parallel:
+    (a) If none of '--parallel' and '--max-parallel' options is given, tests are run sequentially.
+    (b) If '--max-parallel' is given, e.g., as in '--max-parallel=4', up to 4 tests are run at once;
+        but see below for load-balancing.
+    (c) If '--parallel' is given without '--max-parallel', the script attempts to use as many CPUs/cores
+        as are available on the system. This is currently ${red}not recommended${none} for resource-heavy
+        tests as explained below.
+
+Load-balancing and serializing tests:
+    to describe a resourse-heavy test, create a file named ${brown}config${none} in the test directory
+    and specify the number of CPUs and the amount of shared memory to be used by the test;
+    may also specify 'serial="true"' to serialize the test.
+
+    Examples of config files:
+
+        resources/cpus=4
+        resources/memory/shared=3200
+
+    Will not run until at least 4 or all CPUs (out of '--max-parallel' number) are available. Will
+    not run until 3200 MB of shared memory (counted out of '--max-memory-shared' total) is available.
+
+        resources/serial="true"
+
+    Will run only when no other test is running.
+
+EOF
+}
+
+function usage_()
+{
+    echo -e "$( raw_usage_ )\n" >&2
+    exit 1
+}
+
+function error_()
+{
+    tput bold
+    high="\033[1;31m"
+    normal="\033[0m"
+    echo -e "$high$1$normal" >&2
+    tput sgr0
+}
+export -f error_
+
+function message_()
+{
+    if [[ "$options_quiet" != "1" ]] ; then tput bold ; echo $1 >&2 ; tput sgr0 ; fi
+}
+export -f message_
+
+function dump_file_()
+{
+    if [[ "$options_quiet" != "1" ]] ; then cat "$1" >&2 ; fi
+}
+export -f dump_file_
+
+function warning_()
+{
+    if [[ "$options_quiet" != "1" ]] ; then tput bold ; echo -e "${brown}$1${none}" >&2  ; tput sgr0 ; fi
+}
+export -f warning_
+
+function disabled_()
+{
+    if [[ "$options_force" == "1" ]]; then return 1; fi
+    if [[ -f "$1/disabled" ]] ; then return 0 ; fi
+    d=$( dirname $1 )
+    if [[ "$d" == "$1" ]] ; then return 1 ; fi
+    disabled_ $d
+    return $?
+}
+export -f disabled_
+
+# copy input to output, and return failure (1) if there was any output
+function fail_on_output()
+{
+    if grep "."; then return 1; else return 0; fi
+}
+export -f fail_on_output
+
+# return a string with "\" before any characters that are special in regular expressions
+function escape_special_chars()
+{
+    echo $* | sed 's/[].*|&^$[]/\\&/g'
+}
+
+# arguments: a list of directories containing "test", "input" and "expected" files
+# Outputs the same list, excluding any directories that
+# (1) contain only "test" (no "expected" or "input" file), and
+# (2) have at least one subdirectory containing another test
+# This is so that it is possible to have a generic "test" script in the base directory that is not
+# executed in that directory.
+function exclude_generic_tests()
+{
+    local dir_list=$*
+    local result_list=()
+
+    for dir in $dir_list; do
+        if [[ -f "$dir/test" && ! -f "$dir/input" && ! -f "$dir/expected" && ! -f "$dir/disabled" ]]; then
+            local pattern="^$( escape_special_chars "$dir" )/."
+            if echo $dir_list | fmt -1 | grep -q "$pattern"; then
+                if [[ "$options_debug" != "0" ]] ; then echo "Excluding generic test '$dir/test'" >&2; fi
+                continue
+            fi
+        fi
+        result_list+=( $dir )
+    done
+
+    echo "${result_list[@]}"
+}
+
+# find "test" file inside a path, checking in each subdirectory (starting from the full path)
+# arguments: <path> <file to find>
+function closest_test_in_path()
+{
+    local path=$1
+    local file="test"
+
+    # sanity check (and avoid infinite loop)
+    if [[ -z "$path" ]]; then echo "$name: error: empty path in closest_file_in_path()" >&2; exit 1; fi
+    # get canonical name (so path always starts with "/")
+    path=$( readlink -e "$path" )
+
+    while true; do
+        if [[ -d "$path/$file" ]]; then
+            echo "$name: warning: \"$path/$file\" is a directory (expected an executable script); ignoring" >&2
+        elif [[ -f "$path/$file" ]]; then
+            if [[ -x "$path/$file" ]]; then echo $path/$file; break
+            else echo "$name: warning: \"$path/$file\" is not executable; ignoring" >&2; fi
+        elif [[ $path == "/" ]]; then break
+        fi
+        path=$( dirname "$path" )
+    done
+}
+export -f closest_test_in_path
+
+# "dirname" with multiple arguments allowed (since some versions of "dirname" don't allow them)
+function get_dirnames()
+{
+    for i in $*; do dirname $i; done
+}
+
+function stats_init()
+{
+    stats="$(pwd)/stats"
+    stats_progress_csv="$stats/progress.csv"
+    stats_elapsed_path_value="$stats/elapsed.csv"
+    rm -rf $stats
+    mkdir $stats
+    touch "$stats_progress_csv"
+}
+
+function stats_finalize()
+{
+    if [[ -f $stats_progress_csv ]] ; then cat $stats_progress_csv | comma-progress --elapsed > $stats_elapsed_path_value ; fi
+}
+
+# Each test may specify the desired number of CPUs, the necessary shared memory, if the test is serial, etc.
+# - number of CPUs
+#   0      - does not matter, very lightweight
+#   n > 0  - n CPUs
+# - serial: true or false
+# - shared memory in MB
+
+# initially no resources are occupied
+function initialize_resources()
+{
+    comma_test_run_resources_flock=$( mktemp )
+    echo "0,0" >"$comma_test_run_resources_flock"
+    export comma_test_run_resources_flock
+}
+
+# used to initialize variables to non-empty values
+function default_requirements()
+{
+    cat <<EOF
+resources/cpus=1
+resources/memory/shared=0
+resources/serial="false"
+EOF
+}
+export -f default_requirements
+
+function get_required_resources()
+{
+    comma_path_value_to_var < <( default_requirements )
+    [[ -f ./config ]] && comma_path_value_to_var < <( cat ./config; )
+}
+export -f get_required_resources
+
+function get_occupied_resources()
+{
+    comma_path_value_to_var --prefix=occupied < <( paste <( echo "cpus"; echo "memory/shared"; ) <( tail -n 1 "$comma_test_run_resources_flock" | tr ',' '\n' ) --delimiter='=' )
+}
+export -f get_occupied_resources
+
+# for trace messages only; arguments: test name, "occupy" when take resources, otherwise release
+function print_resources()
+{
+    local dir=$1
+    local action=$2
+    echo "$name_offset currently occupied $occupied_cpus CPU(s), $occupied_memory_shared MB of shared memory"
+    [[ "$action" == "occupy" ]] && {
+        echo -n "$name_offset $dir requires $resources_cpus CPU(s), $resources_memory_shared MB of shared memory"
+        [[ "$resources_serial" == "true" ]] && { echo ", serial"; } || { echo ", not serial"; }
+        echo "$name_offset in total may use $options_max_parallel CPU(s), $options_max_memory_shared MB of shared memory"
+    } || {
+        echo "$name_offset $dir releases $resources_cpus CPU(s), $resources_memory_shared MB of shared memory"
+    }
+}
+export -f print_resources
+
+# calculates resources occupied after starting/finishing a test
+# arguments: "occupy" is to add resources, otherwise release
+function calculate_next_resources()
+{
+    local action=$1
+    [[ "$action" == "occupy" ]] && {
+        next_cpus=$(( $occupied_cpus + $resources_cpus ))
+        next_memory_shared=$(( $occupied_memory_shared + $resources_memory_shared ))
+    } || {
+        next_cpus=$(( $occupied_cpus - $resources_cpus ))
+        (( $next_cpus < 0 )) && next_cpus=0
+        next_memory_shared=$(( $occupied_memory_shared - $resources_memory_shared ))
+        (( $next_memory_shared < 0 )) && next_memory_shared=0
+    }
+}
+export -f calculate_next_resources
+
+function resources_within_limits()
+{
+    [[ $occupied_cpus > 0 && "$resources_serial" == "true" ]] && return 1
+    # corner cases: CPU and shared memory requirements can exceed system limits
+    # if so, let the tests to proceed in serial mode
+    (( $next_cpus > $options_max_parallel )) && {
+        (( $occupied_cpus == 0 )) && return 0
+        return 1
+    }
+    (( $next_memory_shared > $options_max_memory_shared )) && {
+        (( $occupied_cpus == 0 )) && return 0
+        return 1
+    }
+    return 0
+}
+export -f resources_within_limits
+
+function output_next_resources()
+{
+    echo "$next_cpus,$next_memory_shared"
+}
+export -f output_next_resources
+
+function occupy_resources()
+{
+    local dir=$1
+    local verbose=$2
+    (
+        flock -x 8
+        get_occupied_resources
+        [[ "$verbose" == "true" ]] && { print_resources "$dir" "occupy"; }
+        calculate_next_resources "occupy"
+        resources_within_limits && {
+            output_next_resources >&8
+            exit 0
+        } || {
+            exit 1
+        }
+    ) 8>>"$comma_test_run_resources_flock"
+    local result=$?
+    return $result
+}
+export -f occupy_resources
+
+function release_resources()
+{
+    local dir=$1
+    local verbose=$2
+    (
+        flock -x 8
+        get_occupied_resources
+        [[ "$verbose" == "true" ]] && { print_resources "$dir" "release"; }
+        calculate_next_resources "release"
+        output_next_resources >&8
+        exit 0
+    ) 8>>"$comma_test_run_resources_flock"
+    local result=$?
+    return $result
+}
+export -f release_resources
+
+function signal_handler()
+{
+    trap '' SIGINT SIGTERM
+    error_ "comma-test-run: received signal $1, terminating..."
+    is_killed=true
+    kill_children --recursive $BASHPID
+    rm -f "$comma_test_run_xargs_pipe"
+    # a process that exits in response to SIGINT should kill itself with SIGINT
+    # see http://www.cons.org/cracauer/sigint.html
+    [[ "$1" == "SIGINT" ]] && kill -SIGINT $$
+    exit 1
+}
+export -f signal_handler
+
+function setup_signal_handler()
+{
+    trap 'signal_handler SIGINT' SIGINT
+    trap 'signal_handler SIGTERM' SIGTERM
+    trap 'signal_handler SIGHUP' SIGHUP
+    trap 'signal_handler SIGPIPE' SIGPIPE
+}
+export -f setup_signal_handler
+
+function report_waiting()
+{
+    local msg=$1
+    [[ "$options_debug" != "0" ]] && {
+        [[ "$first" == "true" ]] && {
+            echo -n "$name_offset $msg ." >&2
+            first="false"
+        } || {
+            echo -n " ." >&2
+        }
+    }
+}
+export -f report_waiting
+
+function report_end_of_wait() {
+    [[ "$first" == "false" && "$options_debug" != "0" ]] && echo " end of wait" >&2
+    first="true"
+}
+export -f report_end_of_wait
+
+# this function runs the actual test; must be run as a background process
+# arguments:
+#     path to q-storage       - where the data are
+#     stats file name         - will write start/stop time into this file
+#     verbosity flag          - auxiliary, chatter more/less
+#     total                   - total number of tests
+#     count                   - sequential test number
+#     test directory          - will cd and run the test inside
+function run_single_test()
+{
+    local path=$1
+    [[ -n "$path" ]] && path="--path=$path"
+    local stats_progress=$2
+    local verbose=$3
+    local total=$4
+    local count=$5
+    local dir=$6
+    # unquote, just in case
+    local temp="${dir%\"}"
+    dir="${temp#\"}"
+
+    source $( which comma-application-util ) || return 1
+    source $( which comma-util ) || return 1
+
+    setup_signal_handler
+
+    local counter="$count of $total"
+
+    # create a unique file for local comma_progress output; will append to the main output at the end
+    local our_stats_progress="$stats_progress.$(mktemp -u XXXXXX)"
+    >"$our_stats_progress"
+
+    # create a unique file for redirecting all output; will append to the main output at the end
+    local our_stdout_log=$( mktemp --tmpdir=$( dirname "$stats_progress" ) )
+    exec 3>&1 4>&2 1>"$our_stdout_log" 2>&1
+
+    local test_exec basedir
+    local result=0
+
+    if disabled_ "$dir" ; then
+        warning_ "$name: test $counter: $dir: disabled"
+    else
+        test_exec=$( closest_test_in_path "$dir" )
+        if [[ -z "$test_exec" ]]; then
+            error_ "$name: error: no \"test\" script found in any parent directory of $dir" >&2
+            result=1
+        else
+            message_ "$name: test $counter: $dir: running..."
+
+            basedir=$( pwd )
+
+            ## Comment out for now: the exact usage to be discussed, it is confusing and can be taken as a sign of error
+            ##[ -f "$dir/readme" ] && dump_file_ "$dir/readme"
+            cd "$dir"
+            local wait_time=0
+            local sleep_time=0
+            get_required_resources
+            local first="true"
+            local verbose_resources="false"
+            [[ "$options_debug" != "0" ]] && verbose_resources="true"
+            while true ; do
+                [[ "$first" == "false" ]] && verbose_resources="false"
+                occupy_resources "$dir" "$verbose_resources"
+                (( $? != 0 )) && {
+                    report_waiting "waiting for resources"
+                    [[ "$options_max_wait" != "forever" ]] && {
+                        (( $wait_time >= $options_max_wait )) && { echo "$name: in '$dir', could not get $parallel CPUs for ${wait_time}s, failed to run" >&2; result=1; break; }
+                    }
+                    sleep_time=$[ ( $RANDOM % 10 )  + 1 ]
+                    wait_time=$(( $wait_time + $sleep_time ))
+                    sleep ${sleep_time}s
+                    continue
+                }
+                report_end_of_wait
+                local output error_files
+                find . -name out_of_shared_memory | xargs rm -f
+                test_output=$( if [ -f ./input ] ; then cat ./input ; fi \
+                    | comma_progress_named "$our_stats_progress" "$dir" "$test_exec" "$path" "$verbose" $options_test_option )
+                local test_failed=$?
+                local match_output
+                if [[ $test_failed == 0 && -f "./expected" ]]; then
+                    match_output=$( echo "$test_output" | comma-test-match ./expected 2>&1 )
+                    if [[ -n "$match_output" ]]; then test_failed=1; fi
+                fi
+                release_resources "$dir" "$verbose_resources"
+                error_files="$( find . -name out_of_shared_memory )"
+                [[ -n "$error_files" ]] && {
+                    report_waiting "ran out of shared memory, re-try"
+                    echo "$error_files" | xargs rm -f
+                    continue
+                }
+                [[ -n "$match_output" ]] && echo "$match_output" >&2
+                [[ "$test_failed" == "0" ]] && {
+                    message_ "$name: test $counter: $dir: succeeded"
+                } || {
+                    result=1
+                    error_ "$name: $dir: failed"
+                }
+                break
+            done
+            cd $basedir
+        fi
+    fi
+
+    # serialize all access to global resources: stats file, stdout/err
+    (
+        flock -x 8
+        cat "$our_stats_progress" >> "$stats_progress"
+        cat "$our_stdout_log" >&3
+        local msg="test $count in '$dir': "
+        (( $result == 0 )) && { msg+="success"; } || { msg+="failed"; }
+        echo "$msg" >&8
+    ) 8>>"$comma_test_run_output_flock"
+
+    rm -f "$our_stats_progress"
+    rm -f "$our_stdout_log"
+
+    return $result
+}
+export -f run_single_test
+
+function process_tests_parallel()
+{
+    comma_test_run_xargs_pipe=$( mktemp -u )
+    mkfifo -m 600 "$comma_test_run_xargs_pipe"
+    xargs -P $options_max_parallel -I{} bash -c run_single_test\ "'$options_path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$test_scripts_count'"\ {} < "$comma_test_run_xargs_pipe" &
+    local xargs_pid=$!
+    xargs -n2 > "$comma_test_run_xargs_pipe"
+    wait "$xargs_pid"
+    (( $? != 0 )) && result=1
+    rm -f "$comma_test_run_xargs_pipe"
+    unset comma_test_run_xargs_pipe
+}
+
+function process_tests_serial()
+{
+    while true; do
+        read line
+        [[ -z "$line" ]] && break
+        run_single_test "$options_path" "$stats_progress_csv" "$verbose" "$test_scripts_count" $line &
+        wait $!
+        (( $? == 0 )) || {
+            result=1
+            [[ "$options_until_first_failure" == "1" ]] && exit 1
+        }
+    done
+}
+
+function count_failures()
+{
+    (
+        flock -x 8
+        grep -c "failed" "$comma_test_run_output_flock"
+    ) 8>>"$comma_test_run_output_flock"
+}
+export -f count_failures
+
+function final_words()
+{
+    failed_count=$( count_failures )
+    local afterword=
+    [[ "$is_killed" == "true" ]] && afterword=" (until killed)"
+    if [[ "$failed_count" == 0 ]] ; then message_ "$name: in subdirectories of $( pwd ): succeeded${afterword}" ; else error_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): $failed_count test[s] out of $test_scripts_count failed${afterword}" ; fi
+    [[ "$options_debug" != "0" ]] && { echo "$name: detailed breakdown:" >&2 ; cat "$comma_test_run_output_flock" >&2; }
+    rm -f "$comma_test_run_output_flock"
+    rm -f "$comma_test_run_resources_flock"
+}
+
+# process command line...
+if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then usage_ ; fi
+comma_path_value_to_var  --prefix=options < <( default_options )
+comma_path_value_to_var --prefix=options < <( description | comma-options-to-name-value $@ )
+# and perform sanity check
+[[ -n "$options_path" && ! -d "$options_path" ]] && { error_ "$name: directory '$options_path' not found"; exit 1; }
+have_max_parallel=$( comma_options_has --max-parallel=$options_max_parallel $@ )
+(( $options_parallel == 0 && $have_max_parallel == 0 )) && options_max_parallel=1
+(( $have_max_parallel != 0 )) && options_parallel=1
+(( $options_max_parallel < 1 )) && { error_ "$name: number of parallel tests $options_max_parallel < 1"; exit 1; }
+(( $options_max_memory_shared < 512 )) && { error_ "$name: amount of shared memory $options_max_memory_shared < 512"; exit 1; }
+[[ "$options_max_wait" != "forever" ]] && {
+    (( $options_max_wait < 1 )) && { error_ "$name: wait time $options_max_wait < 1s or not a number"; exit 1; }
+}
+export options_max_parallel options_max_memory_shared options_max_wait options_debug options_quiet options_path options_until_first_failure options_test_option
+
+# to run tests in parallel, we need to lock stats_progress_csv and/or stdout/stderr
+# this is the global flock name
+comma_test_run_output_flock=$( mktemp )
+export comma_test_run_output_flock
+
+# store the currently occupied resources (number of CPUs, amount of memory)
+# in a global file name; access serialized via flocks
+initialize_resources
+
+setup_signal_handler
+trap 'stats_finalize; final_words' EXIT
+
+basedir=$( pwd )
+result=0
+
+stats_init
+
+# to run, search for directories containing either "test", "input" or "expected";
+# if "test" is absent, use the "test" in the closest parent directory
+
+test_script_dirs=$( exclude_generic_tests $( get_dirnames $( find . -name "test" -or -name "input" -or -name "expected" ) 2> /dev/null | sort -u ) )
+test_scripts_count=$( echo $test_script_dirs | wc -w )
+count=0
+failed_count=0
+if [[ "$options_debug" != "0" ]] ; then verbose="--verbose" ; fi
+
+run_tests="process_tests_parallel"
+[[ "$options_parallel" == "0" ]] && run_tests="process_tests_serial"
+
+if (( $test_scripts_count > 0 )) ; then
+    message_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): running..."
+    $run_tests < <( for dir in $test_script_dirs ; do
+        (( ++count ))
+        echo "$count  \"$dir\""
+    done )
+else
+    echo -e "${brown}$name: warning: no tests found in $( pwd )${none}" >&2
+fi
+
+exit $result
+
+# for batch modification of test cases
+# for file in `find -name "expected"` ; do
+#     echo $(dirname $file)
+#     #cat $file | awk '{print "# "$0}' > $file".txt"
+#     git_ignore=$(dirname $file)"/.gitignore"
+#     echo "output" > $git_ignore
+#     echo "stderr.log" >> $git_ignore
+#     cat $git_ignore
+# #   rm $git_ignore
+#     #mv $file".txt" $file
+# done

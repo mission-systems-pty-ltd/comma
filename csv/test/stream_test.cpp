@@ -39,7 +39,7 @@
 #include <comma/base/types.h>
 #include <comma/csv/stream.h>
 
-namespace comma { namespace csv { namespace test {
+namespace comma { namespace csv { namespace stream_test {
 
 struct test_struct
 {
@@ -53,17 +53,17 @@ struct test_struct
 
 namespace comma { namespace visiting {
 
-template <> struct traits< comma::csv::test::test_struct >
+template <> struct traits< comma::csv::stream_test::test_struct >
 {
     template < typename Key, class Visitor >
-    static void visit( const Key&, const comma::csv::test::test_struct& p, Visitor& v )
+    static void visit( const Key&, const comma::csv::stream_test::test_struct& p, Visitor& v )
     {
         v.apply( "x", p.x );
         v.apply( "y", p.y );
     }
     
     template < typename Key, class Visitor >
-    static void visit( const Key&, comma::csv::test::test_struct& p, Visitor& v )
+    static void visit( const Key&, comma::csv::stream_test::test_struct& p, Visitor& v )
     {
         v.apply( "x", p.x );
         v.apply( "y", p.y );
@@ -72,7 +72,7 @@ template <> struct traits< comma::csv::test::test_struct >
 
 } } // namespace comma { namespace visiting {
 
-namespace comma { namespace csv { namespace test {
+namespace comma { namespace csv { namespace stream_test {
 
 TEST( csv, stream )
 {
@@ -103,5 +103,5 @@ TEST( csv, stream )
 //	std::cerr << "ProfileStream(): stop" << std::endl;
 }
 
-} } } // namespace comma { namespace csv { namespace test {
+} } } // namespace comma { namespace csv { namespace stream_test {
 

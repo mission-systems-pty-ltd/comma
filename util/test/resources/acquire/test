@@ -1,0 +1,69 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+source $( which resources-util ) || exit 1
+source "$( dirname $0 )/../resources-test-util" || exit 1
+
+output="output"
+rm -rf "$output" || exit 1
+mkdir -p "$output" || exit 1
+
+# initialize
+counter="$output/counter.json"
+cat <<EOF | initialize_resources "$counter"
+resources/cpus="8"
+resources/memory/main="1000000"
+resources/memory/shared="500000"
+EOF
+
+cat "$counter" | prepare_for_match "initial"
+
+# The sequence of commands below shall exercise all the execution paths in
+# the acquire_resources function, which is quite complicated.
+
+# 1. Can acquire resources.
+acquire_resources "data/first.json" "$counter" "data/maximum.json" 123 || must_work "first request"
+cat "$counter" | prepare_for_match "first/request"
+
+# 2. Cannot acquire because of insufficient resources.
+outcome=$( acquire_resources "data/second.json" "$counter" "data/maximum.json" 456 ) && must_fail "second request"
+echo "second/request/outcome=\"$outcome\""
+cat "$counter" | prepare_for_match "second/request"
+
+# 3. Cannot acquire because someone is waiting (resources are sufficient)
+outcome=$( acquire_resources "data/third.json" "$counter" "data/maximum.json" 789 ) && must_fail "third request"
+echo "third/request/outcome=\"$outcome\""
+cat "$counter" | prepare_for_match "third/request"
+
+# 4. Can release resources
+release_resources "data/first.json" "$counter" || must_work "releasing first request"
+cat "$counter" | prepare_for_match "first/released"
+
+# 5. Still cannot acquire because someone is waiting (resources are plenty)
+outcome=$( acquire_resources "data/third.json" "$counter" "data/maximum.json" 789 ) && must_fail "repeated third request"
+echo "third/request/repeated/outcome=\"$outcome\""
+cat "$counter" | prepare_for_match "third/request/repeated"
+
+# 6. Can acquire when we are waiting and we are the first in line.
+acquire_resources "data/second.json" "$counter" "data/maximum.json" 456 || must_work "repeated second request"
+cat "$counter" | prepare_for_match "second/request/repeated"
+release_resources "data/second.json" "$counter" || must_work "releasing second request"
+cat "$counter" | prepare_for_match "second/released"
+
+# 7. Can acquire when we are waiting and we are the first in line.
+#    Once all released, the counters shall be down to zero
+acquire_resources "data/third.json" "$counter" "data/maximum.json" 789 || must_work "final third request"
+cat "$counter" | prepare_for_match "third/request/final"
+release_resources "data/third.json" "$counter" || must_work "releasing third request"
+cat "$counter" | prepare_for_match "third/released"
+
+# 8. Someone releases more resources by mistake: in this case (but not in general) shall work,
+#    but have no impact, the resource counters shall not go below zero.
+# NOTE: shall we keep a track of who occupied resources and flag double-releases by mistake?
+# It is harder than it sounds, because in error it is possible to release more than taken,
+# which will break resource counter.
+release_resources "data/third.json" "$counter" || must_work "releasing third request again"
+cat "$counter" | prepare_for_match "third/released/repeated"
+
+exit 0

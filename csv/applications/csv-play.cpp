@@ -143,6 +143,7 @@ int main( int argc, char** argv )
 
         }
         multiPlay->close();
+        multiPlay.reset();
         if( shutdownFlag ) { std::cerr << "csv-play: interrupted by signal" << std::endl; return -1; }
         return 0;
     }
@@ -154,9 +155,8 @@ int main( int argc, char** argv )
     {
         std::cerr << "csv-play: unknown exception" << std::endl;
     }
-    if( multiPlay ) { multiPlay->close(); }
+    try { if( multiPlay ) { multiPlay->close(); } } catch ( ... ) {} // windows thing
     std::cerr << "reset multiplay" << std::endl;
-    multiPlay.reset();
     std::cerr << "done" << std::endl;
     return -1;
 }

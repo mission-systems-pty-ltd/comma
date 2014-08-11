@@ -170,11 +170,6 @@ int main( int ac, char** av )
         comma::csv::input_stream< Point > istream( *is, csv );
         std::pair< std::string, std::string > last;
         std::pair< boost::posix_time::ptime, boost::posix_time::ptime > last_timestamp;
-
-        #ifdef WIN32
-        if( stdin_csv.binary() ) { _setmode( _fileno( stdout ), _O_BINARY ); }
-        #endif
-        
         while( stdin_stream.ready() || istream.ready() || ( std::cin.good() && !std::cin.eof() && is->good() && !is->eof() ) )
         {
             const Point* p = stdin_stream.read();
@@ -187,11 +182,7 @@ int main( int ac, char** av )
                 const Point* q = istream.read();
                 if( !q ) { eof = true; break; }
                 last_timestamp.second = q->timestamp;
-                if( !timestamp_only )
-                {
-                    if( csv.binary() ) { last.second = std::string( istream.binary().last(), csv.format().size() ); }
-                    else { last.second = comma::join( istream.ascii().last(), stdin_csv.delimiter ); }
-                }
+                if( !timestamp_only ) { last.second = csv.binary() ? std::string( istream.binary().last(), csv.format().size() ) : comma::join( istream.ascii().last(), stdin_csv.delimiter ); }
             }
             if( eof && p->timestamp != last_timestamp.first ) { break; }
             if( discard && p->timestamp < last_timestamp.first ) { continue; }

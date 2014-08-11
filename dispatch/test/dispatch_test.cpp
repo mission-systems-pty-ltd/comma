@@ -113,7 +113,7 @@ struct soldier : public dispatch::handler_of< dispatched< human > >
     void handle( dispatched< star >& s ) { std::cerr << "    saw aliens landing" << std::endl; }
 };
 
-TEST( dispatch, non_invasive_example )
+TEST( dispatch, DISABLED_non_invasive_example ) // enable to see it working
 {
     comma::dispatch::handler* h = new hunter;
     comma::dispatch::handler* s = new soldier;
@@ -148,7 +148,7 @@ struct scientist : public dispatch::handler_of< fish >
     void handle( butterfly& f ) { std::cerr << "    pinned butterfly in his collection" << std::endl; }
 };
 
-TEST( dispatch, invasive_example )
+TEST( dispatch, DISABLED_invasive_example ) // enable to see it working
 {
     comma::dispatch::handler* f = new fisherman;
     comma::dispatch::handler* s = new scientist;

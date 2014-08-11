@@ -5,6 +5,10 @@ FILE( GLOB play_source   ${dir}/play/*.cpp)
 FILE( GLOB play_includes ${dir}/play/*.h)
 SOURCE_GROUP( ${TARGET_NAME} FILES ${play_source} ${play_includes} ${source} ${includes} )
 
+add_executable( csv-quote csv-quote.cpp )
+target_link_libraries( csv-quote ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
+install( TARGETS csv-quote RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
+
 ADD_EXECUTABLE( csv-fields ${dir}/csv-fields.cpp )
 ADD_EXECUTABLE( csv-size ${dir}/csv-size.cpp )
 ADD_EXECUTABLE( csv-select ${dir}/csv-select.cpp )
@@ -47,7 +51,7 @@ TARGET_LINK_LIBRARIES ( csv-from-bin ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv c
 TARGET_LINK_LIBRARIES ( csv-calc ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application comma_string )
 TARGET_LINK_LIBRARIES ( csv-calc-new ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application comma_string )
 TARGET_LINK_LIBRARIES ( csv-crc ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application comma_string )
-TARGET_LINK_LIBRARIES ( csv-play ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application comma_io boost_atomic )
+TARGET_LINK_LIBRARIES ( csv-play ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application comma_io )
 TARGET_LINK_LIBRARIES ( csv-shuffle ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
 TARGET_LINK_LIBRARIES ( csv-thin ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io )
 TARGET_LINK_LIBRARIES ( csv-analyse ${comma_ALL_EXTERNAL_LIBRARIES} comma_application )
@@ -77,3 +81,7 @@ INSTALL( TARGETS csv-bin-cut
                  csv-to-sql
          RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR}
          COMPONENT Runtime )
+
+ADD_EXECUTABLE( csv-units ${dir}/csv-units.cpp )
+TARGET_LINK_LIBRARIES ( csv-units ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io comma_string comma_xpath comma_csv )
+INSTALL( TARGETS csv-units RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )

@@ -4,6 +4,24 @@ cmake_minimum_required(VERSION 2.6)
 
 ENABLE_TESTING()
 
+IF (UNIX)
+	# Get the date of the last commit (for use by CPack)
+	# Check if Git is installed
+	find_package(Git)
+	IF(GIT_FOUND)
+		EXECUTE_PROCESS(
+		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+		COMMAND git log -n1 --format=%ci
+		COMMAND xargs -0 date +%Y%m%dT%H%M -d
+		OUTPUT_VARIABLE COMMITDATE
+		OUTPUT_STRIP_TRAILING_WHITESPACE
+		)
+	ELSE()
+		SET ( COMMITDATE 1 )
+	ENDIF()
+ELSE() # Probably windows; gets hardcoded patch version
+	SET ( COMMITDATE 1 ) 
+ENDIF()
 # ---------------------------------------------------------------------------
 # set compiler and linker flags and variables
 
@@ -105,12 +123,16 @@ INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIRS} )
 LINK_DIRECTORIES( ${Boost_LIBRARY_DIRS} )
 
 IF( comma_BUILD_TESTS )
-    #FIND_PACKAGE( GTest )
-    #INCLUDE_DIRECTORIES(${GTEST_INCLUDE_DIRS})
-    FIND_PATH( GTest_SOURCE_DIR NAMES CMakeLists.txt HINTS /usr/src/gtest DOC "source code of gtest" )
-    ADD_SUBDIRECTORY( ${GTest_SOURCE_DIR} gtest )
-    INCLUDE_DIRECTORIES( src ${GTest_SOURCE_DIR}/include ${GTest_SOURCE_DIR} )
-    SET( GTEST_BOTH_LIBRARIES gtest gtest_main )
+    # todo: maybe else clause is actually the right way to do things
+    IF( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR ${CMAKE_SYSTEM_NAME} MATCHES "Windows" )
+        FIND_PATH( GTest_SOURCE_DIR NAMES CMakeLists.txt HINTS /usr/src/gtest DOC "source code of gtest" )
+        ADD_SUBDIRECTORY( ${GTest_SOURCE_DIR} gtest )
+        INCLUDE_DIRECTORIES( src ${GTest_SOURCE_DIR}/include ${GTest_SOURCE_DIR} )
+        SET( GTEST_BOTH_LIBRARIES gtest gtest_main )
+    ELSE( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR ${CMAKE_SYSTEM_NAME} MATCHES "Windows" )
+        FIND_PACKAGE( GTest )
+        INCLUDE_DIRECTORIES( ${GTEST_INCLUDE_DIRS} )
+    ENDIF( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR ${CMAKE_SYSTEM_NAME} MATCHES "Windows" )
 ENDIF( comma_BUILD_TESTS )
 
 IF( comma_BUILD_ZEROMQ )
@@ -119,7 +141,7 @@ IF( comma_BUILD_ZEROMQ )
     INCLUDE_DIRECTORIES( ${ZeroMQ_INCLUDE_PATH} )
 ENDIF( comma_BUILD_ZEROMQ )
 
-SET( comma_ALL_LIBRARIES 
+SET( comma_ALL_LIBRARIES
         debug comma_application-d
         optimized comma_application
         debug comma_base-d
@@ -185,6 +207,7 @@ ADD_SUBDIRECTORY( string )
 ADD_SUBDIRECTORY( sync )
 ADD_SUBDIRECTORY( visiting )
 ADD_SUBDIRECTORY( xpath )
+ADD_SUBDIRECTORY( util )
 
 #IF( WIN32 )
     #in future, may need to add third party dlls somehow, if they are linked as dlls. Not needed for statically linking to boost.
@@ -192,12 +215,12 @@ ADD_SUBDIRECTORY( xpath )
     #install(FILES "${Boost_LIBRARY_DIRS}/*.dll" DESTINATION bin )
 
     #the following set up optional parameters for cpack
-    SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "This is a description of comma. It's great!")
-    SET(CPACK_PACKAGE_VENDOR "ACFR")
+    SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Command line utilities to manipulate various structured and unstructured data from offline or real time data.")
+    SET(CPACK_PACKAGE_VENDOR "Australian Centre for Field Robotics")
     SET(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/COPYING")
     SET(CPACK_PACKAGE_VERSION_MAJOR "1")
     SET(CPACK_PACKAGE_VERSION_MINOR "0")
-    SET(CPACK_PACKAGE_VERSION_PATCH "4")
+    SET(CPACK_PACKAGE_VERSION_PATCH ${COMMITDATE})
 	SET(CPACK_PACKAGE_CONTACT "t.teo@acfr.usyd.edu.au")
 
     #this line finds the appropriate Visual Studio DLLS in windows. Maybe it would find other dlls if a different build tool were used. Probably should be windows only.

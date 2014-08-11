@@ -112,7 +112,7 @@ class select
         /// return except descriptors
         descriptors& except() { return except_descriptors_; }
         const descriptors& except() const { return except_descriptors_; }
-        
+
     private:
         descriptors read_descriptors_;
         descriptors write_descriptors_;
@@ -121,14 +121,8 @@ class select
 
 inline void select::descriptors::add( file_descriptor fd )
 {
-    if( fd != invalid_file_descriptor )
-    {
-        descriptors_.insert( fd );
-    }
-    else
-    {
-        COMMA_THROW( comma::exception, "invalid file descriptor" );
-    }
+    if( fd == invalid_file_descriptor ) { COMMA_THROW( comma::exception, "invalid file descriptor" ); }
+    descriptors_.insert( fd );
 }
 
 inline void select::descriptors::remove( file_descriptor fd )
@@ -140,7 +134,7 @@ inline void select::descriptors::remove( file_descriptor fd )
 inline bool select::descriptors::ready( file_descriptor fd ) const
 {
     if( fd == invalid_file_descriptor ) { COMMA_THROW( comma::exception, "invalid file descriptor" ); }
-    assert( descriptors_.find( fd ) != descriptors_.end() );
+    assert( descriptors_.find( fd ) != descriptors_.end() ); // todo? throw instead?
     return FD_ISSET( fd, const_cast< fd_set* >( &fd_set_ ) ) != 0;
 }
 

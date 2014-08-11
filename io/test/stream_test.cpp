@@ -45,10 +45,10 @@
 TEST( io, file_stream )
 {
     {
-        boost::filesystem::remove( "./blah" );
-        boost::filesystem::remove( "./testfile" );
-        comma::io::ostream ostream( "./testfile" );
-        comma::io::istream istream( "./testfile" );
+        boost::filesystem::remove( "./test.pipe" );
+        boost::filesystem::remove( "./test.file" );
+        comma::io::ostream ostream( "./test.file" );
+        comma::io::istream istream( "./test.file" );
         std::string line;
         *ostream << "hello, world" << std::endl;
         ostream->flush();
@@ -56,26 +56,17 @@ TEST( io, file_stream )
         EXPECT_EQ( line, "hello, world" );
         ostream.close();
         istream.close();
-        boost::filesystem::remove( "./testfile" );
+        boost::filesystem::remove( "./test.file" );
     }
     // todo: more testing?
-    system( "mkfifo blah" );
-    comma::io::ostream os( "./blah" );
-    while( true )
-    {
-        if( os() == NULL ) { std::cerr << "---> still NULL" << std::endl; }
-        else
-        {
-            *os << "blah" << std::endl;
-            std::cerr << "---> " << ( os->good() ? "good" : "bad" ) << std::endl;
-        }
-#ifndef WIN32
-        sleep( 1 );
-#else
-        Sleep( 1000 );
-#endif
-    }
-    system( "rm ./blah" );
+    system( "mkfifo test.pipe" );
+    EXPECT_TRUE( boost::filesystem::exists( "./test.pipe" ) );
+    EXPECT_TRUE( !boost::filesystem::is_regular_file( "./test.pipe" ) );
+    EXPECT_TRUE( ::open( "./test.pipe", O_RDONLY | O_NONBLOCK ) > 0 );
+    comma::io::ostream os( "./test.pipe" );
+    EXPECT_TRUE( os() != NULL );
+    EXPECT_TRUE( os->good() );
+    system( "rm ./test.pipe" );
 }
 
 TEST( io, std_stream )

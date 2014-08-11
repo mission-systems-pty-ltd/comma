@@ -1,0 +1,11 @@
+{
+    "resources":
+    {
+        "cpus": "1",
+        "memory":
+        {
+            "main": "200000",
+            "shared": "100000"
+        }
+    }
+}

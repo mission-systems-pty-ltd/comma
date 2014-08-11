@@ -1,0 +1,2 @@
+echo "{called dir7_expect_failure/test}" >&2
+echo 'result="this should fail"'

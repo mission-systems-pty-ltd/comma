@@ -1,0 +1,14 @@
+{
+    "resources":
+    {
+        "memory":
+        {
+            "shared": "50",
+            "main": "500",
+            "positive": "+50",
+            "negative": "-500",
+            "pluszero": "+0",
+            "minuszero": "-0"
+        }
+    }
+}

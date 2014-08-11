@@ -107,7 +107,7 @@ class asciiVisitor
         const std::vector< boost::optional< std::size_t > >& indices() const { return indices_; }
 
         /// return flags, which are true for optional values that are present
-        std::deque< bool > optional() const { return optional_; }
+        const std::deque< bool >& optional() const { return optional_; }
 
         /// return number of columns that will be visited
         std::size_t size() const { return size_; }
