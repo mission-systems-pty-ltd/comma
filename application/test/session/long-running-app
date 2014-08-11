@@ -1,0 +1,67 @@
+#!/bin/bash
+
+name=$( basename $0 )
+pgid=$( ps -o pgid $BASHPID | tail -n 1 )
+pgid=$( echo $pgid )  # get rid of spaces for PIDs < 10000
+
+function handler()
+{
+    trap '' SIGINT SIGTERM
+    echo "application terminated in $BASHPID, attempt clean-up..." >&2
+    echo "terminate all processes in group $pgid" >&2
+    set -x
+    kill -s TERM -- -$pgid
+    set +x
+    wait
+    echo "error in $name" >&2
+    exit 1
+}
+
+trap 'handler' SIGINT SIGTERM
+
+function grandchild()
+{
+    local rank=$1
+    local delay=$2
+    $nap $delay >&2 &
+    wait
+    echo "grandchild of parent $rank exit normally" >&2
+}
+export -f grandchild
+
+function child()
+{
+    local rank=$1    # our worker number
+    local num=$2     # number of grandchildren to spawn
+    local delay=$3   # time for offspring to sleep
+    local ip cmd
+    #trap - SIGINT SIGTERM
+    echo "child of $rank started as PID $BASHPID" >&2
+    for ip in $( seq $num ) ; do
+        grandchild $rank $delay &
+    done
+    echo "child $rank finished parenting" >&2
+    wait
+    echo "child $rank exit normally" >&2
+    return 0
+}
+export -f child
+
+# Fine-tune these parameters
+num_children=4
+num_larvae=32
+bed_time=30
+
+nap=$( which nap 2>/dev/null )
+[[ -x "$nap" ]] || { echo "executable '$nap' not found" >&2 ; exit 1; }
+export nap
+
+echo "$name is running as PID $BASHPID, PGID $pgid" >&2
+
+# create children
+for n in $( seq $num_children ) ; do
+    child $n $num_larvae $bed_time &
+done
+
+wait
+echo "normal exit from $name" >&2

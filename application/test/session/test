@@ -1,0 +1,44 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+app="long-running-app"
+[[ -x "./$app" ]] || { echo "executable '$app' not found" >&2 ; exit 1; }
+export app
+
+outdir="output"
+log="test.log"
+rm -rf "$outdir" || exit 1
+mkdir -p "$outdir" || exit 1
+
+export PATH="$( pwd ):$PATH"
+cd "$outdir"
+
+setsid "$app" > "${app}.log" 2>&1 &
+apid=$!
+apgid=$( ps -o pgid $apid | tail -n 1 )
+# get rid of spaces for PIDs < 10000
+apgid=$( echo $apgid )
+
+echo "Application running as PID $apid, PGID $apgid..." >"$log"
+
+sleep 2
+
+echo "Before the kill:" >> "$log"
+ps afx -o user,pid,pgid,sid,%cpu,%mem,vsz,rss,tty,stat,start,time,cmd >> "$log"
+
+# Send a normal signal to the app, it is the app job
+# to terminate all its child processes
+echo "Now terminating..." >> "$log"
+kill -s TERM -- $apid >> "$log"
+
+wait $apid
+rv=$?
+echo "After the kill:" >> "$log"
+ps afx -o user,pid,pgid,sid,%cpu,%mem,vsz,rss,tty,stat,start,time,cmd >> "$log"
+
+count=$( grep -c exit "${app}.log" )
+echo "Application exit status: $rv, sub-processes exited normally: $count" > "$log"
+echo "All done." > "$log"
+
+echo "count=$count"
