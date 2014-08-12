@@ -75,6 +75,7 @@ static void usage()
     std::cerr << "    <file> : <filename>[;size=<size>|binary=<format>]: file name or \"-\" for stdin; specify size or format, if binary" << std::endl;
     std::cerr << "    <value> : <csv values>[;binary=<format>]; specify size or format, if binary" << std::endl;
     std::cerr << "    line-number : add the line number; as ui, if binary (quick and dirty, will override the file named \"line-number\")" << std::endl;
+    std::cerr << "    --begin <index>: start line number count at <index> (default 0)" << std::endl;    
     std::cerr << comma::csv::format::usage() << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
@@ -153,7 +154,7 @@ struct value : public source
 class line_number : public source
 {
     public:
-        line_number( bool is_binary ) : source( is_binary ? "binary=ui" : "" ), value_( 0 ) {}
+        line_number( bool is_binary, comma::uint32 begin=0 ) : source( is_binary ? "binary=ui" : "" ), value_( begin ) {}
         
         const std::string* read()
         { 
@@ -180,7 +181,7 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av );
         if( options.exists( "--help,-h" ) ) { usage(); }
         char delimiter = options.value( "--delimiter,-d", ',' );
-        std::vector< std::string > unnamed = options.unnamed( "", "--delimiter,-d" );
+        std::vector< std::string > unnamed = options.unnamed( "", "--delimiter,-d,--begin" );
         boost::ptr_vector< source > sources;
         bool is_binary = false;
         for( unsigned int i = 0; i < unnamed.size(); ++i ) // quick and dirty
@@ -208,7 +209,13 @@ int main( int ac, char** av )
             }
             else if( unnamed[i] == "line-number" )
             { 
-                s = new line_number( is_binary );
+                long long begin = 0;
+                if( options.exists( "--begin" ) ) 
+                { 
+                    begin = options.value( "--begin", 0 ); 
+                    if( begin < 0) { std::cerr << "csv-paste: expected non-negative --begin, got " << begin << std::endl; return 1; }
+                }
+                s = new line_number( is_binary , boost::lexical_cast< comma::uint32 >( begin ) );
             }
             else
             { 
