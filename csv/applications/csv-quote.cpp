@@ -15,6 +15,7 @@ static void usage( bool verbose )
     std::cerr << "    --fields=<fields>: quote given fields, even if their values are numbers" << std::endl;
     std::cerr << "                       if --unquote, unquote only given fields" << std::endl;
     std::cerr << "    --force=<fields>: quote given fields, if their values are numbers" << std::endl;
+    std::cerr << "    --escaped: escape quotes with backslash" << std::endl;
     std::cerr << "    --quote=<quote sign>; default: double quote" << std::endl;
     std::cerr << "    --unquote; remove quotes" << std::endl;
     std::cerr << std::endl;
@@ -39,6 +40,8 @@ int main( int ac, char** av )
         char delimiter = options.value( "--delimiter,-d", ',' );
         char quote = options.value( "--quote", '\"' );
         bool unquote = options.exists( "--unquote" );
+        std::string backslash;
+        if( options.exists( "--escape" ) ) { backslash = "\\"; }
         while( std::cin.good() )
         {
             std::string line;
@@ -72,7 +75,7 @@ int main( int ac, char** av )
                             catch( ... ) {}
                         }
                     }
-                    if( do_quote ) { std::cout << quote << value << quote; }
+                    if( do_quote ) { std::cout << backslash << quote << value << backslash << quote; }
                     else { std::cout << value; }
                 }
             }
