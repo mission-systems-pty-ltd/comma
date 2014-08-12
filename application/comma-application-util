@@ -46,6 +46,21 @@ function get_children()
     fi
 }
 
+# usage: stacktrace <any message>
+# print the stacktrace, the list of lines and script names that were passed
+# through on the way to the currently executed line of the script
+# finally prints the supplied arguments, if any
+function stacktrace()
+{
+    local frame=0
+
+    while caller $frame; do
+        ((frame++));
+    done
+
+    echo "$*"
+}
+
 # usage: kill_children [<pid>] [--recursive] [-<"kill" options> ...]
 # kill all children of a process
 # options:
