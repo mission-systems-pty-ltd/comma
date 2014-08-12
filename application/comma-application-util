@@ -244,6 +244,8 @@ function comma_path_value_to_var()
     done
 }
 
+export -f comma_path_value_to_var
+
 # take path-value pairs, output the values of corresponding bash variables
 # in the variable name slashes will be replaced with given delimiter
 #
@@ -279,6 +281,8 @@ function comma_path_value_from_var()
     done
 }
 
+export -f comma_path_value_from_var
+
 # usage: my_options=( $( cat name-value-pairs | comma_options_from_name_value [<options>] ) )
 #
 # options
@@ -301,11 +305,13 @@ function comma_options_from_name_value()
         | tr '=' "$delimiter"
 }
 
+export -f comma_options_from_name_value
+
 # usage: comma_options_has <what> $@
 # example:
 #     if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then usage ; fi
 function comma_options_has()
 {
-    for a in ${@:2} ; do if [[ "$1" == "$a" ]] ; then echo 1 ; exit ; fi ; done
+    for a in ${@:2} ; do if [[ "$1" == "$a" || "$a" =~ ${1}= ]] ; then echo 1 ; exit ; fi ; done
     echo 0
 }

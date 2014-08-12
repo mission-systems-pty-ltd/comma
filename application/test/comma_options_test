@@ -1,8 +1,20 @@
 #!/bin/bash
 
-. $( which comma-application-options )
+. $( which comma-application-util )
 
-comma_options --hello --world <<< "--verbose,-v: some description"
-comma_options --hello --world <<< "--filename,-f=<filename>: some description"
-comma_options --hello --world <<< "--filename,-f=[<filename>]: some description"
-comma_options --hello --world <<< "--filename,-f=[<filename>]; default=5: some description"
+# todo
+
+echo "--verbose,-v: some description" | comma-options-to-name-value --verbose
+(( $? == 0 )) || { echo "comma_options_test: line $LINENO: failed" >&2 ; exit 1 ; }
+
+echo "--verbose,-v: some description" | comma-options-to-name-value -v
+(( $? == 0 )) || { echo "comma_options_test: line $LINENO: failed" >&2 ; exit 1 ; }
+
+echo "--filename,-f=<filename>: some description" | comma-options-to-name-value --hello --world >&2
+(( $? != 0 )) || { echo "supposed to fail, but did not" >&2 ; exit 1 ; }
+
+echo "--filename,-f=[<filename>]: some description" | comma-options-to-name-value --hello --world
+(( $? == 0 )) || { echo "comma_options_test: line $LINENO: failed" >&2 ; exit 1 ; }
+
+echo "--filename,-f=[<filename>]; default=5: some description" | comma-options-to-name-value --hello --world
+(( $? == 0 )) || { echo "comma_options_test: line $LINENO: failed" >&2 ; exit 1 ; }
