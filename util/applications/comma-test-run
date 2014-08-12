@@ -480,9 +480,12 @@ function run_single_test()
     local our_stats_progress="$stats_progress.$(mktemp -u XXXXXX)"
     >"$our_stats_progress"
 
-    # create a unique file for redirecting all output; will append to the main output at the end
-    local our_stdout_log=$( mktemp --tmpdir=$( dirname "$stats_progress" ) )
-    exec 3>&1 4>&2 1>"$our_stdout_log" 2>&1
+    # if running tests in parallel, create a unique file for redirecting all output
+    # will append to the main output at the end
+    [[ "$options_parallel" == "0" ]] || {
+        local our_stdout_log=$( mktemp --tmpdir=$( dirname "$stats_progress" ) )
+        exec 3>&1 4>&2 1>"$our_stdout_log" 2>&1
+    }
 
     local test_exec basedir
     local result=0
@@ -556,14 +559,14 @@ function run_single_test()
     (
         flock -x 8
         cat "$our_stats_progress" >> "$stats_progress"
-        cat "$our_stdout_log" >&3
+        [[ "$options_parallel" == "0" ]] || cat "$our_stdout_log" >&3
         local msg="test $count in '$dir': "
         (( $result == 0 )) && { msg+="success"; } || { msg+="failed"; }
         echo "$msg" >&8
     ) 8>>"$comma_test_run_output_flock"
 
     rm -f "$our_stats_progress"
-    rm -f "$our_stdout_log"
+    [[ "$options_parallel" == "0" ]] || rm -f "$our_stdout_log"
 
     return $result
 }
@@ -630,7 +633,7 @@ have_max_parallel=$( comma_options_has --max-parallel=$options_max_parallel $@ )
 [[ "$options_max_wait" != "forever" ]] && {
     (( $options_max_wait < 1 )) && { error_ "$name: wait time $options_max_wait < 1s or not a number"; exit 1; }
 }
-export options_max_parallel options_max_memory_shared options_max_wait options_debug options_quiet options_path options_until_first_failure options_test_option
+export options_max_parallel options_max_memory_shared options_max_wait options_debug options_quiet options_path options_until_first_failure options_test_option options_parallel
 
 # to run tests in parallel, we need to lock stats_progress_csv and/or stdout/stderr
 # this is the global flock name
