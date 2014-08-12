@@ -37,6 +37,7 @@
 #ifndef COMMA_PACKED_LITTLEENDIAN_H_
 #define COMMA_PACKED_LITTLEENDIAN_H_
 
+#include <boost/static_assert.hpp>
 #include <comma/base/types.h>
 #include <comma/packed/field.h>
 
@@ -44,7 +45,10 @@ namespace comma { namespace packed {
 
 namespace detail {
 
-template < unsigned int Size, bool Signed > struct little_endian_traits { typedef void type; };
+BOOST_STATIC_ASSERT( sizeof( float ) == 4 );
+BOOST_STATIC_ASSERT( sizeof( double ) == 8 );
+    
+template < unsigned int Size, bool Signed, bool Floating = false > struct little_endian_traits { typedef void type; };
 template <> struct little_endian_traits< 2, true > { typedef comma::int16 type; };
 template <> struct little_endian_traits< 2, false > { typedef comma::uint16 type; };
 template <> struct little_endian_traits< 3, true > { typedef comma::int32 type; };
@@ -53,17 +57,19 @@ template <> struct little_endian_traits< 4, true > { typedef comma::int32 type; 
 template <> struct little_endian_traits< 4, false > { typedef comma::uint32 type; };
 template <> struct little_endian_traits< 8, true > { typedef comma::int64 type; };
 template <> struct little_endian_traits< 8, false > { typedef comma::uint64 type; };
+template <> struct little_endian_traits< 4, true, true > { typedef float type; };
+template <> struct little_endian_traits< 8, true, true > { typedef double type; };
     
 template < unsigned int Size, bool Signed, bool Floating = false >
-struct little_endian_int : public packed::field< little_endian_int< Size, Signed >, typename little_endian_traits< Size, Signed >::type, Size >
+struct little_endian_int : public packed::field< little_endian_int< Size, Signed >, typename little_endian_traits< Size, Signed, Floating >::type, Size >
 {
     static const unsigned int size = Size;
 
-    typedef typename little_endian_traits< Size, Signed >::type type;
+    typedef typename little_endian_traits< Size, Signed, Floating >::type type;
     
     BOOST_STATIC_ASSERT( size <= sizeof( type ) );
 
-    typedef packed::field< little_endian_int< Size, Signed >, typename little_endian_traits< Size, Signed >::type, Size > base_type;
+    typedef packed::field< little_endian_int< Size, Signed >, typename little_endian_traits< Size, Signed, Floating >::type, Size > base_type;
 
     static type default_value() { return 0; }
 
@@ -110,6 +116,11 @@ typedef detail::little_endian_int< 4, true > little_endian_int32;
 typedef detail::little_endian_int< 4, false > little_endian_uint32;
 typedef little_endian_int32 int32;
 typedef little_endian_uint32 uint32;
+/// packed floating point number (does it even make sense?)
+typedef detail::little_endian_int< 4, true, true > little_endian_float32;
+typedef detail::little_endian_int< 8, true, true > little_endian_float64;
+typedef little_endian_float32 float32;
+typedef little_endian_float64 float64;
 
 } } // namespace comma { namespace packed {
 
