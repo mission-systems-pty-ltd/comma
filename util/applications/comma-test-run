@@ -201,7 +201,7 @@ function escape_special_chars()
 # arguments: a list of directories containing "test", "input" and "expected" files
 # Outputs the same list, excluding any directories that
 # (1) contain only "test" (no "expected" or "input" file), and
-# (2) have at least one subdirectory containing another test
+# (2) have at least one subdirectory containing another test, OR where "test" itself is a directory
 # This is so that it is possible to have a generic "test" script in the base directory that is not
 # executed in that directory.
 function exclude_generic_tests()
@@ -210,11 +210,14 @@ function exclude_generic_tests()
     local result_list=()
 
     for dir in $dir_list; do
-        if [[ -f "$dir/test" && ! -f "$dir/input" && ! -f "$dir/expected" && ! -f "$dir/disabled" ]]; then
-            local pattern="^$( escape_special_chars "$dir" )/."
-            if echo $dir_list | fmt -1 | grep -q "$pattern"; then
-                if [[ "$options_debug" != "0" ]] ; then echo "Excluding generic test '$dir/test'" >&2; fi
-                continue
+        if [[ ! -f "$dir/input" && ! -f "$dir/expected" && ! -f "$dir/disabled" ]]; then
+            if [[ -d "$dir/test" ]]; then continue; fi
+            if [[ -f "$dir/test" ]]; then
+                local pattern="^$( escape_special_chars "$dir" )/."
+                if echo $dir_list | fmt -1 | grep -q "$pattern"; then
+                    if [[ "$options_debug" != "0" ]] ; then echo "Excluding generic test '$dir/test'" >&2; fi
+                    continue
+                fi
             fi
         fi
         result_list+=( $dir )
