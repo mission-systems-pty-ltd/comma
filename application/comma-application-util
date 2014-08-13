@@ -244,8 +244,6 @@ function comma_path_value_to_var()
     done
 }
 
-export -f comma_path_value_to_var
-
 # take path-value pairs, output the values of corresponding bash variables
 # in the variable name slashes will be replaced with given delimiter
 #
@@ -281,8 +279,6 @@ function comma_path_value_from_var()
     done
 }
 
-export -f comma_path_value_from_var
-
 # usage: my_options=( $( cat name-value-pairs | comma_options_from_name_value [<options>] ) )
 #
 # options
@@ -304,8 +300,6 @@ function comma_options_from_name_value()
         | sed 's/\\"/"/g' \
         | tr '=' "$delimiter"
 }
-
-export -f comma_options_from_name_value
 
 # usage: comma_options_has <what> $@
 # example:
