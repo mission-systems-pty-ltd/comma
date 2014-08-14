@@ -174,7 +174,7 @@ template < typename K > struct join_impl_ // quick and dirty
     
     static void output_unmatched()
     {
-        if( !matched_only )
+        if( !is_shutdown && !matched_only )
         {
             for( typename filter_map_t::const_iterator it = unmatched.begin(); it != unmatched.end(); output_entry( it->second[0] ), ++it );
         }
