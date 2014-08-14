@@ -213,7 +213,6 @@ template < typename K > struct join_impl_ // quick and dirty
             const input< K >* p = stdin_stream.read();
             if( !p ) { break; }
             if( block != p->block ) { read_filter_block(); }
-            if( filter_map.empty() ) { break; }
             typename input< K >::filter_map::const_iterator it = filter_map.find( *p );
             if( it == filter_map.end() || it->second.empty() )
             {
