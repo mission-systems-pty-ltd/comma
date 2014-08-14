@@ -59,7 +59,7 @@ static void usage( bool more )
     std::cerr << std::endl;
     std::cerr << "update ... csv files or streams by one or several keys (integer only for now)" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "usage: cat something.csv csv-update \"something_else.csv[,options]\" [<options>]" << std::endl;
+    std::cerr << "usage: cat something.csv | csv-update \"something_else.csv\" [<options>]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    fields:" << std::endl;
     std::cerr << "        block: block number" << std::endl;
@@ -68,7 +68,7 @@ static void usage( bool more )
     std::cerr << "options:" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
     std::cerr << "    --matched-only,--matched,-m: output only updates present on stdin" << std::endl;
-    std::cerr << "    --update-non-empty,-u:" << std::endl;
+    std::cerr << "    --update-non-empty-fields,--update-non-empty,-u:" << std::endl;
     std::cerr << "         ascii: if update has empty fields, keep the fields values from stdin" << std::endl;
     std::cerr << "         binary: todo, since the semantics of an \"empty\" value is unclear" << std::endl;
     std::cerr << "    --string,-s: keys are strings; a quick and dirty option to support strings" << std::endl;
@@ -81,8 +81,18 @@ static void usage( bool more )
         std::cerr << comma::csv::options::usage() << std::endl;
     }
     std::cerr << std::endl;
-    std::cerr << "examples:" << std::endl;
-    std::cerr << "    todo" << std::endl;
+    std::cerr << "examples" << std::endl;
+    std::cerr << "    single key" << std::endl;
+    std::cerr << "        cat entries.csv | csv-update updates.csv --fields=id" << std::endl;
+    std::cerr << "    multiple keys" << std::endl;
+    std::cerr << "        cat entries.csv | csv-update updates.csv --fields=id,id" << std::endl;
+    std::cerr << "    keys are strings" << std::endl;
+    std::cerr << "        cat entries.csv | csv-update updates.csv --fields=id --string" << std::endl;
+    std::cerr << "    output only matched entries from update.csv" << std::endl;
+    std::cerr << "        cat entries.csv | csv-update updates.csv --fields=id --matched-only" << std::endl;
+    std::cerr << "    update only non-empty fields in update.csv" << std::endl;
+    std::cerr << "    e.g. if an entry in update.csv is: 0,,1 only the 1st and 3rd fields will be updated" << std::endl;
+    std::cerr << "        cat entries.csv | csv-update updates.csv --fields=id --update-non-empty-fields" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -276,9 +286,9 @@ int main( int ac, char** av )
         verbose = options.exists( "--verbose,-v" );
         csv = comma::csv::options( options );
         matched_only = options.exists( "--matched-only,--matched,-m" );
-        update_non_empty = options.exists( "--update-non-empty,-u" );
-        if( csv.binary() && update_non_empty ) { std::cerr << "csv-update: --update-non-empty in binary mode not supported" << std::endl; return 1; }
-        std::vector< std::string > unnamed = options.unnamed( "--matched-only,--matched,-m,--string,-s,--update-non-empty,-u,--verbose,-v", "-.*" );
+        update_non_empty = options.exists( "--update-non-empty-fields,--update-non-empty,-u" );
+        if( csv.binary() && update_non_empty ) { std::cerr << "csv-update: --update-non-empty-fields in binary mode not supported" << std::endl; return 1; }
+        std::vector< std::string > unnamed = options.unnamed( "--matched-only,--matched,-m,--string,-s,--update-non-empty-fields,--update-non-empty,-u,--verbose,-v", "-.*" );
         if( unnamed.empty() ) { std::cerr << "csv-update: please specify the second source" << std::endl; return 1; }
         if( unnamed.size() > 1 ) { std::cerr << "csv-update: expected one file or stream to join, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         filter_name = unnamed[0];
