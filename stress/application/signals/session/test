@@ -13,7 +13,6 @@ mkdir -p "$outdir" || exit 1
 
 export PATH="$( pwd ):$PATH"
 cd "$outdir"
->"$log"
 
 function report_processes()
 {
@@ -51,27 +50,39 @@ function worker()
     return $arv
 }
 
-worker > "worker.log" 2>&1 &
-wpid=$!
-echo "Worker running as PID $wpid..." >> "$log"
+function run_once()
+{
+    >"$log"
+    worker > "worker.log" 2>&1 &
+    wpid=$!
+    echo "Worker running as PID $wpid..." >> "$log"
 
-sleep 2
+    sleep 2
 
-echo "Before the kill:" >> "$log"
-report_processes >> "$log"
+    echo "Before the kill:" >> "$log"
+    report_processes >> "$log"
 
-# Send a normal signal to the app, it is the app job
-# to terminate all its child processes
-echo "Now terminating..." >> "$log"
-kill -s TERM -- $wpid >> "$log"
+    # Send a normal signal to the app, it is the app job
+    # to terminate all its child processes
+    echo "Now terminating..." >> "$log"
+    kill -s TERM -- $wpid >> "$log"
 
-wait $wpid
-rv=$?
-echo "After the kill:" >> "$log"
-report_processes >> "$log"
+    wait $wpid
+    rv=$?
+    echo "After the kill:" >> "$log"
+    report_processes >> "$log"
 
-count=$( grep -c exit "${app}.log" )
-echo "Application exit status: $rv, sub-processes exited normally: $count" >> "$log"
-echo "All done." >> "$log"
+    count=$( grep -c exit "${app}.log" )
+    echo "Application exit status: $rv, sub-processes exited normally: $count" >> "$log"
+    echo "All done." >> "$log"
 
-echo "count=$count"
+    echo "count[$iter]=$count"
+}
+
+for iter in $( seq 100 ) ; do
+    mkdir -p "$iter" || exit 1
+    cd "$iter"
+    run_once
+    (( $? == 0 )) || { echo "$name: iteration $iter failed, see the logs in '$outdir/$iter'" >&2; exit 1; }
+    cd ..
+done
