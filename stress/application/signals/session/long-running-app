@@ -46,7 +46,7 @@ num_children=4
 num_larvae=32
 bed_time=30
 
-nap=$( which nap 2>/dev/null )
+nap=$( which comma-nap 2>/dev/null )
 [[ -x "$nap" ]] || { echo "executable '$nap' not found" >&2 ; exit 1; }
 export nap
 
