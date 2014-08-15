@@ -655,7 +655,7 @@ stats_init
 # to run, search for directories containing either "test", "input" or "expected";
 # if "test" is absent, use the "test" in the closest parent directory
 
-test_script_dirs=$( exclude_generic_tests $( get_dirnames $( find . -name "test" -or -name "input" -or -name "expected" ) 2> /dev/null | sort -u ) )
+test_script_dirs=$( exclude_generic_tests $( get_dirnames $( find . -name "test" -or -name "input" -or -name "expected" | grep -v "/\." ) 2> /dev/null | sort -u ) )
 test_scripts_count=$( echo $test_script_dirs | wc -w )
 count=0
 failed_count=0
