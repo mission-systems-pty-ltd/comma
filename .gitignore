@@ -5,3 +5,6 @@
 .*.swo
 html/
 *.kdev4
+output
+stats
+stderr.log
