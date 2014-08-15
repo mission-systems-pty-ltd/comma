@@ -1,0 +1,123 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+workdir=$1
+[[ "$workdir" == '-h' || "$workdir" == '--help' ]] && {
+    cat >&2 <<EOF
+Usage: $name <working directory>
+
+If all correct, output shall have no word "exit". Otherwise, some subprocesses
+have not been killed.
+
+Warning: heavy stress on your system, which may become unresponsive for a while.
+
+Warning: check the number of user processes allowed by 'ulimit -u'. It shall be
+at least 20000 for this application to run.
+EOF
+exit 0
+}
+[[ -d "$workdir" ]] || { echo "$name: working directory '$workdir' not found." >&2; exit 1; }
+
+comma_nap=$( which comma-nap ) || { echo "$name: comma-nap utility not found" >&2; exit 1; }
+
+function clean_up()
+{
+    trap '' SIGTERM # ignore signals
+    echo "killed, clean up in $name ($BASHPID, subshell $BASH_SUBSHELL)..." >&2
+    rm -f $pipes
+    pkill --signal TERM -P $BASHPID
+    wait
+    echo "do not touch for $bed_time s..." >&2
+    exit 1
+}
+export -f clean_up
+
+function handler()
+{
+    trap '' SIGTERM # ignore signals
+    echo "killed, handler in $BASHPID, subshell $BASH_SUBSHELL" >&2
+    pkill --signal TERM -P $BASHPID
+    wait
+    exit 1
+}
+export -f handler
+
+# handle signals (clean up and exit)
+trap 'clean_up' SIGTERM
+
+function grandchild()
+{
+    local rank=$1
+    local stage=$2
+    local delay=$3
+    trap 'handler' SIGTERM
+    $comma_nap $delay >&2 &
+    wait
+    echo "$stage grandchild of parent $rank exit normally" >&2
+}
+export -f grandchild
+
+function child()
+{
+    local rank=$1    # our worker number
+    local num=$2     # number of grandchildren to spawn
+    local pipe=$3    # wait for the command on this fifo
+    local delay=$4   # time for offspring to sleep
+    trap 'handler' SIGTERM
+    local ip cmd
+    echo "child of $rank started as PID $BASHPID" >&2
+    # first spawn
+    for ip in $( seq $num ) ; do
+        grandchild $rank "early" $delay &
+    done
+    echo "child $rank finished eary parenting" >&2
+    read cmd < $pipe
+    [[ "$cmd" == "true" ]] && {
+        # second spawn
+        echo "child $rank start late parenting" >&2
+        for ip in $( seq $num ) ; do
+            grandchild $rank "late" $delay &
+        done
+    }
+    wait
+    echo "child $rank exit normally" >&2
+    return 0
+}
+export -f child
+
+# Fine-tune these parameters
+num_children=8
+num_larvae=256
+bed_time=600
+spawn_trigger="true"
+do_kill="true"
+trigger_delay=10
+
+pipes=""
+
+echo "Top-level script is running as PID $BASHPID" >&2
+
+# create children
+for n in $( seq $num_children ) ; do
+    pipe="$workdir/pipe${n}"
+    pipes="$pipes $pipe"
+    mkfifo "$pipe" || exit 1
+    child $n $num_larvae $pipe $bed_time &
+done
+
+# let the grandchildren goto sleep
+sleep $trigger_delay
+
+# optionally trigger second spawning
+for pipe in $pipes ; do
+    echo "$spawn_trigger" > "$pipe"
+done
+
+[[ "$do_kill" == "true" ]] && {
+    echo "bring the house down" >&2
+    kill -s TERM $BASHPID
+}
+
+wait
+echo "normal exit" >&2
