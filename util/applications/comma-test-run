@@ -497,7 +497,7 @@ function run_test_with_timeout()
 }
 export -f run_test_with_timeout
 
-function terminate_test_pid()
+function terminate_run_single_test()
 {
     trap '' SIGINT SIGTERM SIGHUP SIGPIPE
     echo "test run terminated by $1..." >&2
@@ -505,13 +505,22 @@ function terminate_test_pid()
         kill -s TERM -- $test_pid 2>/dev/null
         wait $test_pid
     fi
-    is_killed=true
+    # serialize all access to global resources: stats file, stdout/err
+    (
+        flock -x 8
+        [[ "$options_parallel" == "0" ]] || cat "$our_stdout_log" >&3
+        local msg="test $count in '$dir': killed"
+        echo "$msg" >&8
+    ) 8>>"$comma_test_run_output_flock"
+
+    rm -f "$our_stats_progress"
+    [[ "$options_parallel" == "0" ]] || rm -f "$our_stdout_log"
     # a process that exits in response to SIGINT should kill itself with SIGINT
     # see http://www.cons.org/cracauer/sigint.html
     [[ "$1" == "SIGINT" ]] && { trap - INT ; kill -s INT $BASHPID ; }
     exit 1
 }
-export -f terminate_test_pid
+export -f terminate_run_single_test
 
 # this function runs the actual test; must be run as a background process
 # arguments:
@@ -537,7 +546,7 @@ function run_single_test()
     source $( which comma-application-util ) || return 1
     source $( which comma-util ) || return 1
 
-    setup_signal_handler terminate_test_pid
+    setup_signal_handler terminate_run_single_test
 
     local counter="$count of $total"
 
@@ -638,7 +647,7 @@ function run_single_test()
 }
 export -f run_single_test
 
-function terminate_parallel_tests()
+function terminate_tests_parallel()
 {
     trap '' SIGINT SIGTERM SIGHUP SIGPIPE
     echo "parallel test run terminated by $1..." >&2
@@ -657,7 +666,7 @@ function terminate_parallel_tests()
 
 function process_tests_parallel()
 {
-    setup_signal_handler terminate_parallel_tests
+    setup_signal_handler terminate_tests_parallel
     comma_test_run_xargs_pipe=$( mktemp -u )
     mkfifo -m 600 "$comma_test_run_xargs_pipe"
     xargs -P $options_max_parallel -I{} bash -c run_single_test\ "'$options_path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$test_scripts_count'"\ {} < "$comma_test_run_xargs_pipe" &
@@ -669,9 +678,24 @@ function process_tests_parallel()
     unset comma_test_run_xargs_pipe
 }
 
+function terminate_tests_serial()
+{
+    trap '' SIGINT SIGTERM SIGHUP SIGPIPE
+    echo "serial test run terminated by $1..." >&2
+    if [[ -n "$test_pid" ]] ; then
+        kill -s TERM -- $test_pid 2>/dev/null
+        wait $test_pid
+    fi
+    is_killed=true
+    # a process that exits in response to SIGINT should kill itself with SIGINT
+    # see http://www.cons.org/cracauer/sigint.html
+    [[ "$1" == "SIGINT" ]] && { trap - INT ; kill -s INT $BASHPID ; }
+    exit 1
+}
+
 function process_tests_serial()
 {
-    setup_signal_handler terminate_test_pid
+    setup_signal_handler terminate_tests_serial
     local test_pid line
     while true; do
         read line
