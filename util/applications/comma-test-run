@@ -23,7 +23,7 @@ qstorage=""
 max_parallel=$total_num_cpus
 max_memory_shared=$total_memory_shared
 max_wait_time="forever"
-max_run_time="600"
+max_run_time="1200"
 
 red="\033[0;31m"
 green="\033[0;32m"
@@ -652,6 +652,7 @@ function terminate_tests_parallel()
     trap '' SIGINT SIGTERM SIGHUP SIGPIPE
     echo "parallel test run terminated by $1..." >&2
     if [[ -n "$xargs_pid" ]] ; then
+        kill -s STOP -- $xargs_pid 2>/dev/null
         pkill --signal TERM -P $xargs_pid 2>/dev/null
         kill -s TERM -- $xargs_pid 2>/dev/null
         wait $xargs_pid
