@@ -22,7 +22,7 @@ total_memory_shared=$(( $total_memory_shared / 1024 )) || { echo "$name: shared 
 qstorage=""
 max_parallel=$total_num_cpus
 max_memory_shared=$total_memory_shared
-max_wait="forever"
+max_wait="600"
 
 red="\033[0;31m"
 green="\033[0;32m"
@@ -61,7 +61,7 @@ function description()
 --parallel; run tests in parallel
 --max-parallel=[<N>]; run up to N tests in parallel; default: $max_parallel
 --max-memory-shared=[<N>]; limit on shared memory, in MB; default: $max_memory_shared
---max-wait=[<time>]; maximal time to wait for available CPUs before failing a test, default: ${max_wait}
+--max-wait=[<time>]; maximal time to wait for available CPUs before failing a test, default: ${max_wait} TODO: refactor, make it the maximal test time
 --test-option=[<option>]; extra command line argument(s) pass to "test" script
 EOF
 }
@@ -450,6 +450,48 @@ function report_end_of_wait() {
 }
 export -f report_end_of_wait
 
+# this functions terminates a currently running test using its group id
+# the test running under the timeout command will have its own group id
+function terminate_test()
+{
+    echo "terminating test in $( pwd )..." >&2
+    [[ -n "$test_pgid" ]] && kill -s TERM -- -$test_pgid 2>/dev/null
+    exit 1
+}
+export -f terminate_test
+
+# this functions executes a provided test with optional input and captures its stdout
+# then it optionally compares the output with the expected file
+# finally echoes the result of comma-test-match and the status of the match
+function run_and_match_test()
+{
+    local test_output test_failed match_output
+    test_output=$( if [ -f ./input ] ; then cat ./input ; fi \
+        | comma_progress_named "$our_stats_progress" "$dir" "$test_exec" "$path" "$verbose" $options_test_option )
+    test_failed=$?
+    if [[ $test_failed == 0 && -f "./expected" ]]; then
+        match_output=$( echo "$test_output" | comma-test-match ./expected 2>&1 )
+        if [[ -n "$match_output" ]]; then
+            echo "$match_output" >&2
+            test_failed=1
+        fi
+    fi
+    return $test_failed
+}
+export -f run_and_match_test
+
+# this function runs a provided test application under the timeout command
+function run_test_with_timeout()
+{
+    trap "terminate_test" TERM
+    export -f comma_progress_named
+    export our_stats_progress dir test_exec path verbose
+    timeout -s TERM $options_max_wait bash -c run_and_match_test &
+    local test_pgid=$!
+    wait $test_pgid
+}
+export -f run_test_with_timeout
+
 # this function runs the actual test; must be run as a background process
 # arguments:
 #     path to q-storage       - where the data are
@@ -518,6 +560,7 @@ function run_single_test()
                 occupy_resources "$dir" "$verbose_resources"
                 (( $? != 0 )) && {
                     report_waiting "waiting for resources"
+                    # TODO max_wait gets a new meaning
                     [[ "$options_max_wait" != "forever" ]] && {
                         (( $wait_time >= $options_max_wait )) && { echo "$name: in '$dir', could not get $parallel CPUs for ${wait_time}s, failed to run" >&2; result=1; break; }
                     }
@@ -527,16 +570,12 @@ function run_single_test()
                     continue
                 }
                 report_end_of_wait
-                local output error_files
+                local error_files test_failed
                 find . -name out_of_shared_memory | xargs rm -f
-                test_output=$( if [ -f ./input ] ; then cat ./input ; fi \
-                    | comma_progress_named "$our_stats_progress" "$dir" "$test_exec" "$path" "$verbose" $options_test_option )
-                local test_failed=$?
-                local match_output
-                if [[ $test_failed == 0 && -f "./expected" ]]; then
-                    match_output=$( echo "$test_output" | comma-test-match ./expected 2>&1 )
-                    if [[ -n "$match_output" ]]; then test_failed=1; fi
-                fi
+                # run this test on the background under a separate group id provided by the timeout command
+                # wait for the period of options_max_wait, and, if still running, kill the group and fail the test
+                run_test_with_timeout
+                test_failed=$?
                 release_resources "$dir" "$verbose_resources"
                 error_files="$( find . -name out_of_shared_memory )"
                 [[ -n "$error_files" ]] && {
@@ -544,7 +583,6 @@ function run_single_test()
                     echo "$error_files" | xargs rm -f
                     continue
                 }
-                [[ -n "$match_output" ]] && echo "$match_output" >&2
                 [[ "$test_failed" == "0" ]] && {
                     message_ "$name: test $counter: $dir: succeeded"
                 } || {
