@@ -416,29 +416,6 @@ function release_resources()
 }
 export -f release_resources
 
-function signal_handler()
-{
-    trap '' SIGINT SIGTERM
-    error_ "comma-test-run: received signal $1, terminating..."
-    is_killed=true
-    kill_children --recursive $BASHPID
-    rm -f "$comma_test_run_xargs_pipe"
-    # a process that exits in response to SIGINT should kill itself with SIGINT
-    # see http://www.cons.org/cracauer/sigint.html
-    [[ "$1" == "SIGINT" ]] && kill -SIGINT $$
-    exit 1
-}
-export -f signal_handler
-
-function setup_signal_handler()
-{
-    trap 'signal_handler SIGINT' SIGINT
-    trap 'signal_handler SIGTERM' SIGTERM
-    trap 'signal_handler SIGHUP' SIGHUP
-    trap 'signal_handler SIGPIPE' SIGPIPE
-}
-export -f setup_signal_handler
-
 function report_waiting()
 {
     local msg=$1
@@ -459,15 +436,34 @@ function report_end_of_wait() {
 }
 export -f report_end_of_wait
 
+# auxiliary function to simplify setting the same handler for multiple signals
+# _and_ telling the handler which signal has been intercepted
+function setup_signal_handler()
+{
+    local handler=$1
+    trap "$handler SIGINT" SIGINT
+    trap "$handler SIGTERM" SIGTERM
+    trap "$handler SIGHUP" SIGHUP
+    trap "$handler SIGPIPE" SIGPIPE
+}
+export -f setup_signal_handler
+
 # this functions terminates a currently running test using its group id
 # the test running under the timeout command will have its own group id
-function terminate_test()
+function terminate_run_and_match_test()
 {
+    trap '' SIGINT SIGTERM SIGHUP SIGPIPE
     echo "terminating test in $( pwd )..." >&2
-    [[ -n "$test_pgid" ]] && kill -s TERM -- -$test_pgid 2>/dev/null
+    if [[ -n "$test_pgid" ]] ; then
+        kill -s TERM -- -$test_pgid 2>/dev/null
+        wait $test_pid
+    fi
+    # a process that exits in response to SIGINT should kill itself with SIGINT
+    # see http://www.cons.org/cracauer/sigint.html
+    [[ "$1" == "SIGINT" ]] && { trap - INT ; kill -SIGINT $BASHPID ; }
     exit 1
 }
-export -f terminate_test
+export -f terminate_run_and_match_test
 
 # this functions executes a provided test with optional input and captures its stdout
 # then it optionally compares the output with the expected file
@@ -492,7 +488,7 @@ export -f run_and_match_test
 # this function runs a provided test application under the timeout command
 function run_test_with_timeout()
 {
-    trap "terminate_test" TERM
+    setup_signal_handler terminate_run_and_match_test
     export -f comma_progress_named
     export our_stats_progress dir test_exec path verbose
     timeout -k 10 -s TERM $options_max_run_time bash -c run_and_match_test &
@@ -500,6 +496,22 @@ function run_test_with_timeout()
     wait $test_pgid
 }
 export -f run_test_with_timeout
+
+function terminate_test_pid()
+{
+    trap '' SIGINT SIGTERM SIGHUP SIGPIPE
+    echo "test run terminated by $1..." >&2
+    if [[ -n "$test_pid" ]] ; then
+        kill -s TERM -- $test_pid 2>/dev/null
+        wait $test_pid
+    fi
+    is_killed=true
+    # a process that exits in response to SIGINT should kill itself with SIGINT
+    # see http://www.cons.org/cracauer/sigint.html
+    [[ "$1" == "SIGINT" ]] && { trap - INT ; kill -s INT $BASHPID ; }
+    exit 1
+}
+export -f terminate_test_pid
 
 # this function runs the actual test; must be run as a background process
 # arguments:
@@ -525,7 +537,7 @@ function run_single_test()
     source $( which comma-application-util ) || return 1
     source $( which comma-util ) || return 1
 
-    setup_signal_handler
+    setup_signal_handler terminate_test_pid
 
     local counter="$count of $total"
 
@@ -541,6 +553,8 @@ function run_single_test()
     }
 
     local test_exec basedir
+    # must save pid of any background process in this variable, so that it is killed by signal handler
+    local test_pid
     local result=0
 
     if disabled_ "$dir" ; then
@@ -574,7 +588,9 @@ function run_single_test()
                     }
                     sleep_time=$[ ( $RANDOM % 10 )  + 1 ]
                     wait_time=$(( $wait_time + $sleep_time ))
-                    sleep ${sleep_time}s
+                    sleep ${sleep_time}s &
+                    test_pid=$!
+                    wait $test_pid
                     continue
                 }
                 report_end_of_wait
@@ -582,7 +598,9 @@ function run_single_test()
                 find . -name out_of_shared_memory | xargs rm -f
                 # run this test on the background under a separate group id provided by the timeout command
                 # wait for the period of options_max_run_time, and, if still running, kill the group and fail the test
-                run_test_with_timeout
+                run_test_with_timeout &
+                test_pid=$!
+                wait $test_pid
                 test_failed=$?
                 release_resources "$dir" "$verbose_resources"
                 error_files="$( find . -name out_of_shared_memory )"
@@ -620,8 +638,26 @@ function run_single_test()
 }
 export -f run_single_test
 
+function terminate_parallel_tests()
+{
+    trap '' SIGINT SIGTERM SIGHUP SIGPIPE
+    echo "parallel test run terminated by $1..." >&2
+    if [[ -n "$xargs_pid" ]] ; then
+        pkill --signal TERM -P $xargs_pid 2>/dev/null
+        kill -s TERM -- $xargs_pid 2>/dev/null
+        wait $xargs_pid
+    fi
+    rm -f "$comma_test_run_xargs_pipe"
+    is_killed=true
+    # a process that exits in response to SIGINT should kill itself with SIGINT
+    # see http://www.cons.org/cracauer/sigint.html
+    [[ "$1" == "SIGINT" ]] && { trap - INT ; kill -s INT $BASHPID ; }
+    exit 1
+}
+
 function process_tests_parallel()
 {
+    setup_signal_handler terminate_parallel_tests
     comma_test_run_xargs_pipe=$( mktemp -u )
     mkfifo -m 600 "$comma_test_run_xargs_pipe"
     xargs -P $options_max_parallel -I{} bash -c run_single_test\ "'$options_path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$test_scripts_count'"\ {} < "$comma_test_run_xargs_pipe" &
@@ -635,16 +671,20 @@ function process_tests_parallel()
 
 function process_tests_serial()
 {
+    setup_signal_handler terminate_test_pid
+    local test_pid line
     while true; do
         read line
         [[ -z "$line" ]] && break
         run_single_test "$options_path" "$stats_progress_csv" "$verbose" "$test_scripts_count" $line &
-        wait $!
+        test_pid=$!
+        wait $test_pid
         (( $? == 0 )) || {
             result=1
-            [[ "$options_until_first_failure" == "1" ]] && exit 1
+            [[ "$options_until_first_failure" == "1" ]] && return 1
         }
     done
+    return 0
 }
 
 function count_failures()
@@ -693,7 +733,6 @@ export comma_test_run_output_flock
 # in a global file name; access serialized via flocks
 initialize_resources
 
-setup_signal_handler
 trap 'stats_finalize; final_words' EXIT
 
 basedir=$( pwd )
