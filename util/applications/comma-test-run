@@ -22,7 +22,8 @@ total_memory_shared=$(( $total_memory_shared / 1024 )) || { echo "$name: shared 
 qstorage=""
 max_parallel=$total_num_cpus
 max_memory_shared=$total_memory_shared
-max_wait="600"
+max_wait_time="forever"
+max_run_time="600"
 
 red="\033[0;31m"
 green="\033[0;32m"
@@ -46,7 +47,8 @@ function default_options()
     echo "force=0"
     echo "max_parallel=$max_parallel"
     echo "max_memory_shared=$max_memory_shared"
-    echo "max_wait=$max_wait"
+    echo "max_wait_time=$max_wait_time"
+    echo "max_run_time=$max_run_time"
 }
 
 function description()
@@ -61,7 +63,8 @@ function description()
 --parallel; run tests in parallel
 --max-parallel=[<N>]; run up to N tests in parallel; default: $max_parallel
 --max-memory-shared=[<N>]; limit on shared memory, in MB; default: $max_memory_shared
---max-wait=[<time>]; maximal time to wait for available CPUs before failing a test, default: ${max_wait} TODO: refactor, make it the maximal test time
+--max-wait-time=[<time>]; maximal time to wait for available CPUs before failing a test, default: ${max_wait_time}
+--max-run-time=[<time>]; maximal time to wait for a test completion before failing it by force, default: ${max_run_time}
 --test-option=[<option>]; extra command line argument(s) pass to "test" script
 EOF
 }
@@ -138,6 +141,12 @@ Load-balancing and serializing tests:
         resources/serial="true"
 
     Will run only when no other test is running.
+
+    When running multiple tests, will wait at most for the period specified by '--max-wait-time' seconds
+    until the resources are available. If the wait time exceeds the limit, will fail the test.
+
+    No test shall take longer than the period specified by '--max-run-time'. If a test does not complete
+    within this time, it is forcefully terminated and marked as failed.
 
 EOF
 }
@@ -486,7 +495,7 @@ function run_test_with_timeout()
     trap "terminate_test" TERM
     export -f comma_progress_named
     export our_stats_progress dir test_exec path verbose
-    timeout -s TERM $options_max_wait bash -c run_and_match_test &
+    timeout -k 10 -s TERM $options_max_run_time bash -c run_and_match_test &
     local test_pgid=$!
     wait $test_pgid
 }
@@ -560,9 +569,8 @@ function run_single_test()
                 occupy_resources "$dir" "$verbose_resources"
                 (( $? != 0 )) && {
                     report_waiting "waiting for resources"
-                    # TODO max_wait gets a new meaning
-                    [[ "$options_max_wait" != "forever" ]] && {
-                        (( $wait_time >= $options_max_wait )) && { echo "$name: in '$dir', could not get $parallel CPUs for ${wait_time}s, failed to run" >&2; result=1; break; }
+                    [[ "$options_max_wait_time" != "forever" ]] && {
+                        (( $wait_time >= $options_max_wait_time )) && { echo "$name: in '$dir', could not get $parallel CPUs for ${wait_time}s, failed to run" >&2; result=1; break; }
                     }
                     sleep_time=$[ ( $RANDOM % 10 )  + 1 ]
                     wait_time=$(( $wait_time + $sleep_time ))
@@ -573,7 +581,7 @@ function run_single_test()
                 local error_files test_failed
                 find . -name out_of_shared_memory | xargs rm -f
                 # run this test on the background under a separate group id provided by the timeout command
-                # wait for the period of options_max_wait, and, if still running, kill the group and fail the test
+                # wait for the period of options_max_run_time, and, if still running, kill the group and fail the test
                 run_test_with_timeout
                 test_failed=$?
                 release_resources "$dir" "$verbose_resources"
@@ -587,7 +595,7 @@ function run_single_test()
                     message_ "$name: test $counter: $dir: succeeded"
                 } || {
                     result=1
-                    error_ "$name: $dir: failed"
+                    error_ "$name: $dir: failed$( (( $test_failed == 124 )) && echo ' (likely timed out)' )"
                 }
                 break
             done
@@ -670,10 +678,11 @@ have_max_parallel=$( comma_options_has --max-parallel=$options_max_parallel $@ )
 (( $have_max_parallel != 0 )) && options_parallel=1
 (( $options_max_parallel < 1 )) && { error_ "$name: number of parallel tests $options_max_parallel < 1"; exit 1; }
 (( $options_max_memory_shared < 512 )) && { error_ "$name: amount of shared memory $options_max_memory_shared < 512"; exit 1; }
-[[ "$options_max_wait" != "forever" ]] && {
-    (( $options_max_wait < 1 )) && { error_ "$name: wait time $options_max_wait < 1s or not a number"; exit 1; }
+[[ "$options_max_wait_time" != "forever" ]] && {
+    (( $options_max_wait_time < 1 )) && { error_ "$name: wait time $options_max_wait_time < 1s or not a number"; exit 1; }
 }
-export options_max_parallel options_max_memory_shared options_max_wait options_debug options_quiet options_path options_until_first_failure options_test_option options_parallel
+(( $options_max_run_time < 1 )) && { error_ "$name: timeout run time $options_max_run_time < 1s or not a number"; exit 1; }
+export options_max_parallel options_max_memory_shared options_max_wait_time options_max_run_time options_debug options_quiet options_path options_until_first_failure options_test_option options_parallel
 
 # to run tests in parallel, we need to lock stats_progress_csv and/or stdout/stderr
 # this is the global flock name
