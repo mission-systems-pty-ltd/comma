@@ -295,12 +295,17 @@ function resources_limits()
 export -f resources_limits
 
 # initially no resources are occupied
-function initialize_resources()
+function comma_initialize_resources()
 {
     comma_test_run_resources_flock="$comma_test_run_unique_dir/resources_flock"
     comma_test_run_resources_counter="$comma_test_run_unique_dir/resources_counter.json"
+    comma_test_run_resources_limits="$comma_test_run_unique_dir/resources_limits.json"
+    resources_limits | name-value-convert --from path-value --to json > "$comma_test_run_resources_limits"
+    touch "$comma_test_run_resources_flock"
+    echo "trying to initialize resources" >&2
     resources_limits | locked_initialize_resources "$comma_test_run_resources_flock" "$comma_test_run_resources_counter"
-    export comma_test_run_resources_flock comma_test_run_resources_counter
+    echo "done" >&2
+    export comma_test_run_resources_flock comma_test_run_resources_counter comma_test_run_resources_limits
 }
 
 # used to initialize variables to non-empty values
@@ -308,122 +313,20 @@ function default_requirements()
 {
     # TODO figure out how to handle serial
     # can we just count on it? set to false (0), then 1 > 0, etc.
-    # TODO output path-value or json?
     cat <<EOF
 resources/cpus=1
 resources/memory/main=0
 resources/memory/shared=0
-resources/serial="false"
 EOF
+##resources/serial="false"
 }
 export -f default_requirements
 
 function get_required_resources()
 {
-    # TODO output path-value or json?
-    ( default_requirements; [[ -f ./config ]] && cat ./config ) | name-value-convert --from path-value --to json
+    ( default_requirements; [[ -f ./config ]] && cat ./config; ) | name-value-convert --from path-value --to json
 }
 export -f get_required_resources
-
-function get_occupied_resources()
-{
-    comma_path_value_to_var --prefix=occupied < <( paste <( echo "cpus"; echo "memory/shared"; ) <( tail -n 1 "$comma_test_run_resources_flock" | tr ',' '\n' ) --delimiter='=' )
-}
-export -f get_occupied_resources
-
-# for trace messages only; arguments: test name, "occupy" when take resources, otherwise release
-function print_resources()
-{
-    local dir=$1
-    local action=$2
-    echo "$name_offset currently occupied $occupied_cpus CPU(s), $occupied_memory_shared MB of shared memory"
-    [[ "$action" == "occupy" ]] && {
-        echo -n "$name_offset $dir requires $resources_cpus CPU(s), $resources_memory_shared MB of shared memory"
-        [[ "$resources_serial" == "true" ]] && { echo ", serial"; } || { echo ", not serial"; }
-        echo "$name_offset in total may use $options_max_parallel CPU(s), $options_max_memory_shared MB of shared memory"
-    } || {
-        echo "$name_offset $dir releases $resources_cpus CPU(s), $resources_memory_shared MB of shared memory"
-    }
-}
-export -f print_resources
-
-# calculates resources occupied after starting/finishing a test
-# arguments: "occupy" is to add resources, otherwise release
-function calculate_next_resources()
-{
-    local action=$1
-    [[ "$action" == "occupy" ]] && {
-        next_cpus=$(( $occupied_cpus + $resources_cpus ))
-        next_memory_shared=$(( $occupied_memory_shared + $resources_memory_shared ))
-    } || {
-        next_cpus=$(( $occupied_cpus - $resources_cpus ))
-        (( $next_cpus < 0 )) && next_cpus=0
-        next_memory_shared=$(( $occupied_memory_shared - $resources_memory_shared ))
-        (( $next_memory_shared < 0 )) && next_memory_shared=0
-    }
-}
-export -f calculate_next_resources
-
-function resources_within_limits()
-{
-    [[ $occupied_cpus > 0 && "$resources_serial" == "true" ]] && return 1
-    # corner cases: CPU and shared memory requirements can exceed system limits
-    # if so, let the tests to proceed in serial mode
-    (( $next_cpus > $options_max_parallel )) && {
-        (( $occupied_cpus == 0 )) && return 0
-        return 1
-    }
-    (( $next_memory_shared > $options_max_memory_shared )) && {
-        (( $occupied_cpus == 0 )) && return 0
-        return 1
-    }
-    return 0
-}
-export -f resources_within_limits
-
-function output_next_resources()
-{
-    echo "$next_cpus,$next_memory_shared"
-}
-export -f output_next_resources
-
-function occupy_resources()
-{
-    local dir=$1
-    local verbose=$2
-    (
-        flock -x 8
-        get_occupied_resources
-        [[ "$verbose" == "true" ]] && { print_resources "$dir" "occupy"; }
-        calculate_next_resources "occupy"
-        resources_within_limits && {
-            output_next_resources >&8
-            exit 0
-        } || {
-            exit 1
-        }
-    ) 8>>"$comma_test_run_resources_flock"
-    local result=$?
-    return $result
-}
-export -f occupy_resources
-
-function release_resources()
-{
-    local dir=$1
-    local verbose=$2
-    (
-        flock -x 8
-        get_occupied_resources
-        [[ "$verbose" == "true" ]] && { print_resources "$dir" "release"; }
-        calculate_next_resources "release"
-        output_next_resources >&8
-        exit 0
-    ) 8>>"$comma_test_run_resources_flock"
-    local result=$?
-    return $result
-}
-export -f release_resources
 
 function report_waiting()
 {
@@ -551,6 +454,8 @@ function run_single_test()
     # unquote, just in case
     local temp="${dir%\"}"
     dir="${temp#\"}"
+    echo "run_single_test: '$dir'" >&2
+    local worker_id=$BASHPID
 
     source $( which comma-application-util ) || return 1
     source $( which comma-util ) || return 1
@@ -572,8 +477,9 @@ function run_single_test()
 
     local test_exec basedir
     # must save pid of any background process in this variable, so that it is killed by signal handler
-    local test_pid
+    local test_pid outcome
     local result=0
+    local request="$comma_test_run_unique_dir/request.${worker_id}.json"
 
     if disabled_ "$dir" ; then
         warning_ "$name: test $counter: $dir: disabled"
@@ -592,74 +498,61 @@ function run_single_test()
             cd "$dir"
             local wait_time=0
             local sleep_time=0
-            # TODO write required resources (and maximal resources available) into files
-            # acquire_resources and related functions operate on files
-            get_required_resources
+            get_required_resources > "$request"
             local first="true"
-            local verbose_resources="false"
-            [[ "$options_debug" != "0" ]] && verbose_resources="true"
             while true ; do
-                [[ "$first" == "false" ]] && verbose_resources="false"
-                occupy_resources "$dir" "$verbose_resources"
-            ## TODO separate the actural work (running a job) into a function of its own, wrapped into
-            ## resource-manipulation business
-            ##
-            ##outcome=$( locked_acquire_resources "$lock" "$request" "$counter" "$limits" "$pid" )
-            ##if [[ $? == 0 ]] ; then
-            ##    [[ $verbose == 1 ]] && echo "$name::worker $pid working on $config for $duration s ..." >&2
-            ##    sleep "$duration"
-            ##    locked_release_resources "$lock" "$request" "$counter"
-            ##    (( $? == 0 )) || {
-            ##        echo "$name::worker $pid: cannot release resources" >&2
-            ##        exit_status=1
-            ##    }
-            ##    [[ $verbose == 1 ]] && echo " $name::worker $pid done with $config" >&2
-            ##    break
-            ##else
-            ##    if [[ "$outcome" == "wait" ]] ; then
-            ##        sleep "$poll_interval"
-            ##        waittotal=$( echo "$waittotal + $poll_interval" | bc -l )
-            ##    else
-            ##        echo "$name::worker $pid: unknown error in acquire_resources '$outcome'" >&2
-            ##        exit_status=1
-            ##        break
-            ##    fi
-            ##fi
-                (( $? != 0 )) && {
-                    report_waiting "waiting for resources"
-                    [[ "$options_max_wait_time" != "forever" ]] && {
-                        (( $wait_time >= $options_max_wait_time )) && { echo "$name: in '$dir', could not get $parallel CPUs for ${wait_time}s, failed to run" >&2; result=1; break; }
-                    }
-                    sleep_time=$[ ( $RANDOM % 10 )  + 1 ]
-                    wait_time=$(( $wait_time + $sleep_time ))
-                    sleep ${sleep_time}s &
+                outcome=$( locked_acquire_resources "$comma_test_run_resources_flock" "$request" "$comma_test_run_resources_counter" "$comma_test_run_resources_limits" "$worker_id" )
+                if [[ $? == 0 ]] ; then
+                    report_end_of_wait
+                    local error_files test_failed
+                    find . -name out_of_shared_memory | xargs rm -f
+                    # run this test on the background under a separate group id provided by the timeout command
+                    # wait for the period of options_max_run_time, and, if still running, kill the group and fail the test
+                    run_test_with_timeout &
                     test_pid=$!
                     wait $test_pid
-                    continue
-                }
-                report_end_of_wait
-                local error_files test_failed
-                find . -name out_of_shared_memory | xargs rm -f
-                # run this test on the background under a separate group id provided by the timeout command
-                # wait for the period of options_max_run_time, and, if still running, kill the group and fail the test
-                run_test_with_timeout &
-                test_pid=$!
-                wait $test_pid
-                test_failed=$?
-                release_resources "$dir" "$verbose_resources"
-                error_files="$( find . -name out_of_shared_memory )"
-                [[ -n "$error_files" ]] && {
-                    report_waiting "ran out of shared memory, re-try"
-                    echo "$error_files" | xargs rm -f
-                    continue
-                }
-                [[ "$test_failed" == "0" ]] && {
-                    message_ "$name: test $counter: $dir: succeeded"
-                } || {
-                    result=1
-                    error_ "$name: $dir: failed$( (( $test_failed == 124 )) && echo ' (likely timed out)' )"
-                }
-                break
+                    test_failed=$?
+                    locked_release_resources "$comma_test_run_resources_flock" "$request" "$comma_test_run_resources_counter"
+                    (( $? == 0 )) || {
+                        echo "$name::worker $worker_id: cannot release resources" >&2
+                        result=1
+                        break
+                    }
+                    error_files="$( find . -name out_of_shared_memory )"
+                    [[ -n "$error_files" ]] && {
+                        report_waiting "ran out of shared memory, re-try"
+                        echo "$error_files" | xargs rm -f
+                        continue
+                    }
+                    [[ "$test_failed" == "0" ]] && {
+                        message_ "$name: test $counter: $dir: succeeded"
+                    } || {
+                        result=1
+                        error_ "$name: $dir: failed$( (( $test_failed == 124 )) && echo ' (likely timed out)' )"
+                    }
+                    break
+                else
+                    if [[ "$outcome" == "wait" ]] ; then
+                        report_waiting "waiting for resources"
+                        [[ "$options_max_wait_time" != "forever" ]] && {
+                            (( $wait_time >= $options_max_wait_time )) && {
+                                echo "$name: in '$dir', could not get $parallel CPUs for ${wait_time}s, failed to run" >&2
+                                result=1
+                                break
+                            }
+                        }
+                        sleep_time=$[ ( $RANDOM % 10 )  + 1 ]
+                        wait_time=$(( $wait_time + $sleep_time ))
+                        sleep ${sleep_time}s &
+                        test_pid=$!
+                        wait $test_pid
+                        continue
+                    else
+                        echo "$name::worker $worker_id: unknown error in acquire_resources '$outcome'" >&2
+                        result=1
+                        break
+                    fi
+                fi
             done
             cd $basedir
         fi
@@ -731,10 +624,12 @@ function terminate_tests_serial()
 
 function process_tests_serial()
 {
+    echo "this is process_tests_serial" >&2
     setup_signal_handler terminate_tests_serial
     local test_pid line
     while true; do
         read line
+        echo "got line '$line'" >&2
         [[ -z "$line" ]] && break
         run_single_test "$options_path" "$stats_progress_csv" "$verbose" "$test_scripts_count" $line &
         test_pid=$!
@@ -763,7 +658,7 @@ function final_words()
     [[ "$is_killed" == "true" ]] && afterword=" (until killed)"
     if [[ "$failed_count" == 0 ]] ; then message_ "$name: in subdirectories of $( pwd ): succeeded${afterword}" ; else error_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): $failed_count test[s] out of $test_scripts_count failed${afterword}" ; fi
     [[ "$options_debug" != "0" ]] && { echo "$name: detailed breakdown:" >&2 ; cat "$comma_test_run_output_flock" >&2; }
-    rm -fr "$comma_test_run_unique_dir"
+    #rm -fr "$comma_test_run_unique_dir"
 }
 
 # process command line...
@@ -784,16 +679,19 @@ have_max_parallel=$( comma_options_has --max-parallel=$options_max_parallel $@ )
 (( $options_max_run_time < 1 )) && { error_ "$name: timeout run time $options_max_run_time < 1s or not a number"; exit 1; }
 export options_max_parallel options_max_memory_shared options_max_wait_time options_max_run_time options_debug options_quiet options_path options_until_first_failure options_test_option options_parallel
 
+# keep all plumbing under a common directory
+temp_dir=$( dirname "$( mktemp -d -u )" )
+comma_test_run_unique_dir=$( mktemp -d --tmpdir="$temp_dir" comma-test-run.XXXXXX )
+echo "comma_test_run_unique_dir='$comma_test_run_unique_dir'" >&2
+export comma_test_run_unique_dir
 # to run tests in parallel, we need to lock stats_progress_csv and/or stdout/stderr
 # this is the global flock name
-comma_test_run_unique_dir=$( mktemp -d )
-export comma_test_run_unique_dir
 comma_test_run_output_flock="$comma_test_run_unique_dir/output_flock"
 export comma_test_run_output_flock
 
 # store the currently occupied resources (number of CPUs, amount of memory)
 # in a global file name; access serialized via flocks
-initialize_resources
+comma_initialize_resources
 
 trap 'stats_finalize; final_words' EXIT
 
