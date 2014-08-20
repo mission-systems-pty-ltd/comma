@@ -177,9 +177,11 @@ template < typename S > S& stream< S >::operator*() { return *this->operator->()
 
 static void set_non_blocking_flags_( io::file_descriptor fd )
 {
+#ifndef WIN32
     std::size_t flags = ::fcntl( fd, F_GETFL, 0 );
     flags = flags & ( ~O_NONBLOCK );
     ::fcntl( fd, F_SETFL, flags );
+#endif // #ifndef WIN32
 }
 
 template < typename S >
