@@ -4,26 +4,27 @@ name=$( basename $0 )
 
 source $( which comma-application-util ) || { echo "$name: cannot source 'comma-application-util'" >&2; exit 1; }
 source $( which comma-util ) || { echo "$name: cannot source 'comma-util'" >&2; exit 1; }
+source $( which resources-util ) || { echo "$name: cannot source 'resources-util'" >&2; exit 1; }
 
 name_offset="${name//?/ } "
 export name name_offset
 
-# determine system parameters
-total_num_cpus=$( grep -c ^processor "/proc/cpuinfo" )
-(( $total_num_cpus > 0 )) || { echo "$name: cannot grep '/proc/cpuinfo' for the number of processors" >&2; exit 1; }
-total_memory_limits=$( ipcs -m -l 2>/dev/null )
-(( $? != 0 )) && { echo "$name: cannot determine memory limits by calling ipcs" >&2; exit 1; }
-total_memory_shared=$( echo "$total_memory_limits" | sed '/shared/!d;s/.* //g' )
-(( $total_memory_shared > 0 )) || { echo "$name: cannot determine shared memory limits" >&2; exit 1; }
-# convert to MB
-total_memory_shared=$(( $total_memory_shared / 1024 )) || { echo "$name: shared memory limit is not a number" >&2; exit 1; }
-
-# defaults
-qstorage=""
-max_parallel=$total_num_cpus
-max_memory_shared=$total_memory_shared
+# determine system parameters and set defaults
+comma_path_value_to_var --prefix=max < <( total_system_resources )
+data_storage=""
+max_parallel=$max_resources_cpus
+max_memory_main=$max_resources_memory_main
+max_memory_shared=$max_resources_memory_shared
 max_wait_time="forever"
 max_run_time="1200"
+
+# TODO: review usage of variables
+#   max_memory_main
+#   max_memory_shared
+#   options_max_memory_main
+#   options_max_memory_shared
+#   max_cpus
+#   max_parallel
 
 red="\033[0;31m"
 green="\033[0;32m"
@@ -39,13 +40,14 @@ export -f status_ok
 
 function default_options()
 {
-    echo "path=$qstorage"
+    echo "path=$data_storage"
     echo "parallel=0"
     echo "quiet=0"
     echo "debug=0"
     echo "until_first_failure=0"
     echo "force=0"
     echo "max_parallel=$max_parallel"
+    echo "max_memory_main=$max_memory_main"
     echo "max_memory_shared=$max_memory_shared"
     echo "max_wait_time=$max_wait_time"
     echo "max_run_time=$max_run_time"
@@ -62,6 +64,7 @@ function description()
 --path=[<dir>]; data-storage directory for tests, default: none, let the tests define it
 --parallel; run tests in parallel
 --max-parallel=[<N>]; run up to N tests in parallel; default: $max_parallel
+--max-memory-main=[<N>]; limit on main memory, in MB; default: $max_memory_main
 --max-memory-shared=[<N>]; limit on shared memory, in MB; default: $max_memory_shared
 --max-wait-time=[<time>]; maximal time to wait for available CPUs before failing a test, default: ${max_wait_time}
 --max-run-time=[<time>]; maximal time to wait for a test completion before failing it by force, default: ${max_run_time}
@@ -283,26 +286,32 @@ function stats_finalize()
     if [[ -f $stats_progress_csv ]] ; then cat $stats_progress_csv | comma-progress --elapsed > $stats_elapsed_path_value ; fi
 }
 
-# Each test may specify the desired number of CPUs, the necessary shared memory, if the test is serial, etc.
-# - number of CPUs
-#   0      - does not matter, very lightweight
-#   n > 0  - n CPUs
-# - serial: true or false
-# - shared memory in MB
+function resources_limits()
+{
+    echo "resources/cpus=$max_parallel"
+    echo "resources/memory/main=$max_memory_main"
+    echo "resources/memory/shared=$max_memory_shared"
+}
+export -f resources_limits
 
 # initially no resources are occupied
 function initialize_resources()
 {
-    comma_test_run_resources_flock=$( mktemp )
-    echo "0,0" >"$comma_test_run_resources_flock"
-    export comma_test_run_resources_flock
+    comma_test_run_resources_flock="$comma_test_run_unique_dir/resources_flock"
+    comma_test_run_resources_counter="$comma_test_run_unique_dir/resources_counter.json"
+    resources_limits | locked_initialize_resources "$comma_test_run_resources_flock" "$comma_test_run_resources_counter"
+    export comma_test_run_resources_flock comma_test_run_resources_counter
 }
 
 # used to initialize variables to non-empty values
 function default_requirements()
 {
+    # TODO figure out how to handle serial
+    # can we just count on it? set to false (0), then 1 > 0, etc.
+    # TODO output path-value or json?
     cat <<EOF
 resources/cpus=1
+resources/memory/main=0
 resources/memory/shared=0
 resources/serial="false"
 EOF
@@ -311,8 +320,8 @@ export -f default_requirements
 
 function get_required_resources()
 {
-    comma_path_value_to_var < <( default_requirements )
-    [[ -f ./config ]] && comma_path_value_to_var < <( cat ./config; )
+    # TODO output path-value or json?
+    ( default_requirements; [[ -f ./config ]] && cat ./config ) | name-value-convert --from path-value --to json
 }
 export -f get_required_resources
 
@@ -551,13 +560,13 @@ function run_single_test()
     local counter="$count of $total"
 
     # create a unique file for local comma_progress output; will append to the main output at the end
-    local our_stats_progress="$stats_progress.$(mktemp -u XXXXXX)"
+    local our_stats_progress="$comma_test_run_unique_dir/stats_progress.$(mktemp -u XXXXXX)"
     >"$our_stats_progress"
 
     # if running tests in parallel, create a unique file for redirecting all output
     # will append to the main output at the end
     [[ "$options_parallel" == "0" ]] || {
-        local our_stdout_log=$( mktemp --tmpdir=$( dirname "$stats_progress" ) )
+        local our_stdout_log="$comma_test_run_unique_dir/stdout_log.$( mktemp -u XXXXXX )"
         exec 3>&1 4>&2 1>"$our_stdout_log" 2>&1
     }
 
@@ -583,6 +592,8 @@ function run_single_test()
             cd "$dir"
             local wait_time=0
             local sleep_time=0
+            # TODO write required resources (and maximal resources available) into files
+            # acquire_resources and related functions operate on files
             get_required_resources
             local first="true"
             local verbose_resources="false"
@@ -590,6 +601,30 @@ function run_single_test()
             while true ; do
                 [[ "$first" == "false" ]] && verbose_resources="false"
                 occupy_resources "$dir" "$verbose_resources"
+            ## TODO separate the actural work (running a job) into a function of its own, wrapped into
+            ## resource-manipulation business
+            ##
+            ##outcome=$( locked_acquire_resources "$lock" "$request" "$counter" "$limits" "$pid" )
+            ##if [[ $? == 0 ]] ; then
+            ##    [[ $verbose == 1 ]] && echo "$name::worker $pid working on $config for $duration s ..." >&2
+            ##    sleep "$duration"
+            ##    locked_release_resources "$lock" "$request" "$counter"
+            ##    (( $? == 0 )) || {
+            ##        echo "$name::worker $pid: cannot release resources" >&2
+            ##        exit_status=1
+            ##    }
+            ##    [[ $verbose == 1 ]] && echo " $name::worker $pid done with $config" >&2
+            ##    break
+            ##else
+            ##    if [[ "$outcome" == "wait" ]] ; then
+            ##        sleep "$poll_interval"
+            ##        waittotal=$( echo "$waittotal + $poll_interval" | bc -l )
+            ##    else
+            ##        echo "$name::worker $pid: unknown error in acquire_resources '$outcome'" >&2
+            ##        exit_status=1
+            ##        break
+            ##    fi
+            ##fi
                 (( $? != 0 )) && {
                     report_waiting "waiting for resources"
                     [[ "$options_max_wait_time" != "forever" ]] && {
@@ -668,7 +703,7 @@ function terminate_tests_parallel()
 function process_tests_parallel()
 {
     setup_signal_handler terminate_tests_parallel
-    comma_test_run_xargs_pipe=$( mktemp -u )
+    comma_test_run_xargs_pipe="$comma_test_run_unique_dir/xargs.pipe"
     mkfifo -m 600 "$comma_test_run_xargs_pipe"
     xargs -P $options_max_parallel -I{} bash -c run_single_test\ "'$options_path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$test_scripts_count'"\ {} < "$comma_test_run_xargs_pipe" &
     local xargs_pid=$!
@@ -728,8 +763,7 @@ function final_words()
     [[ "$is_killed" == "true" ]] && afterword=" (until killed)"
     if [[ "$failed_count" == 0 ]] ; then message_ "$name: in subdirectories of $( pwd ): succeeded${afterword}" ; else error_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): $failed_count test[s] out of $test_scripts_count failed${afterword}" ; fi
     [[ "$options_debug" != "0" ]] && { echo "$name: detailed breakdown:" >&2 ; cat "$comma_test_run_output_flock" >&2; }
-    rm -f "$comma_test_run_output_flock"
-    rm -f "$comma_test_run_resources_flock"
+    rm -fr "$comma_test_run_unique_dir"
 }
 
 # process command line...
@@ -742,7 +776,8 @@ have_max_parallel=$( comma_options_has --max-parallel=$options_max_parallel $@ )
 (( $options_parallel == 0 && $have_max_parallel == 0 )) && options_max_parallel=1
 (( $have_max_parallel != 0 )) && options_parallel=1
 (( $options_max_parallel < 1 )) && { error_ "$name: number of parallel tests $options_max_parallel < 1"; exit 1; }
-(( $options_max_memory_shared < 512 )) && { error_ "$name: amount of shared memory $options_max_memory_shared < 512"; exit 1; }
+(( $options_max_memory_main < 512 )) && { error_ "$name: amount of shared memory $options_max_memory_main < 512 MB"; exit 1; }
+(( $options_max_memory_shared < 512 )) && { error_ "$name: amount of shared memory $options_max_memory_shared < 512 MB"; exit 1; }
 [[ "$options_max_wait_time" != "forever" ]] && {
     (( $options_max_wait_time < 1 )) && { error_ "$name: wait time $options_max_wait_time < 1s or not a number"; exit 1; }
 }
@@ -751,7 +786,9 @@ export options_max_parallel options_max_memory_shared options_max_wait_time opti
 
 # to run tests in parallel, we need to lock stats_progress_csv and/or stdout/stderr
 # this is the global flock name
-comma_test_run_output_flock=$( mktemp )
+comma_test_run_unique_dir=$( mktemp -d )
+export comma_test_run_unique_dir
+comma_test_run_output_flock="$comma_test_run_unique_dir/output_flock"
 export comma_test_run_output_flock
 
 # store the currently occupied resources (number of CPUs, amount of memory)
