@@ -145,20 +145,19 @@ function queue_is_empty_infile()
 export -f queue_is_empty_infile
 
 # Auxiliary function to convert various storage units to bytes
-# Search for regular expressions [0-9]+ unit (where unit is one
-# of kB, MB, GB, and TB) and replaces these substrings with corresponding
-# quantities in bytes.
+# Search for regular expressions [0-9]+unit (where space-separation is optional
+# and unit is one of kB, MB, GB, and TB) and replaces these substrings with
+# corresponding quantities in bytes.
 function storage_to_bytes()
 {
     local line
-    local storage_regex='([0-9]+)( +)([kMGT]B)'
+    local storage_regex='([0-9]+)( *)([kMGT]B)'
     while true ; do
         read line
         [[ -z "$line" ]] && break
         while true ; do
             # replace storage expressions one-by-one from the left until none found
             if [[ "$line" =~ $storage_regex ]] ; then
-                echo "storage: ${BASH_REMATCH[1]}, ${BASH_REMATCH[3]}" >&2
                 case ${BASH_REMATCH[3]} in
                     kB) value=$(( ${BASH_REMATCH[1]} * 1024 ));;
                     MB) value=$(( ${BASH_REMATCH[1]} * 1024 * 1024 ));;
