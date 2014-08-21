@@ -18,14 +18,6 @@ max_memory_shared=$max_resources_memory_shared
 max_wait_time="forever"
 max_run_time="1200"
 
-# TODO: review usage of variables
-#   max_memory_main
-#   max_memory_shared
-#   options_max_memory_main
-#   options_max_memory_shared
-#   max_cpus
-#   max_parallel
-
 red="\033[0;31m"
 green="\033[0;32m"
 brown="\033[0;33m"
@@ -40,17 +32,19 @@ export -f status_ok
 
 function default_options()
 {
-    echo "path=$data_storage"
-    echo "parallel=0"
-    echo "quiet=0"
-    echo "debug=0"
-    echo "until_first_failure=0"
-    echo "force=0"
-    echo "max_parallel=$max_parallel"
-    echo "max_memory_main=$max_memory_main"
-    echo "max_memory_shared=$max_memory_shared"
-    echo "max_wait_time=$max_wait_time"
-    echo "max_run_time=$max_run_time"
+    cat <<EOF
+path=$data_storage
+parallel=0
+quiet=0
+debug=0
+until_first_failure=0
+force=0
+max_parallel=$max_parallel
+max_memory_main=$max_memory_main
+max_memory_shared=$max_memory_shared
+max_wait_time=$max_wait_time
+max_run_time=$max_run_time
+EOF
 }
 
 function description()
@@ -125,8 +119,8 @@ Running tests in parallel:
     (b) If '--max-parallel' is given, e.g., as in '--max-parallel=4', up to 4 tests are run at once;
         but see below for load-balancing.
     (c) If '--parallel' is given without '--max-parallel', the script attempts to use as many CPUs/cores
-        as are available on the system. This is currently ${red}not recommended${none} for resource-heavy
-        tests as explained below.
+        as are available on the system. This is ${red}not recommended${none} for resource-heavy tests
+        unless additional configuration files are provided as explained below.
 
 Load-balancing and serializing tests:
     to describe a resourse-heavy test, create a file named ${brown}config${none} in the test directory
@@ -288,9 +282,15 @@ function stats_finalize()
 
 function resources_limits()
 {
-    echo "resources/cpus=$max_parallel"
-    echo "resources/memory/main=$max_memory_main"
-    echo "resources/memory/shared=$max_memory_shared"
+    # the "serial" Boolean is used numerically: false as 0, true as 1, then 1 > 0, etc.
+    # the limit of "true" (1) means only 1 task at a time can be serial (occupy this
+    # resource to itself)
+    cat <<EOF
+resources/cpus=$max_parallel
+resources/memory/main=$max_memory_main
+resources/memory/shared=$max_memory_shared
+resources/serial="true"
+EOF
 }
 export -f resources_limits
 
@@ -302,23 +302,19 @@ function comma_initialize_resources()
     comma_test_run_resources_limits="$comma_test_run_unique_dir/resources_limits.json"
     resources_limits | name-value-convert --from path-value --to json > "$comma_test_run_resources_limits"
     touch "$comma_test_run_resources_flock"
-    echo "trying to initialize resources" >&2
     resources_limits | locked_initialize_resources "$comma_test_run_resources_flock" "$comma_test_run_resources_counter"
-    echo "done" >&2
     export comma_test_run_resources_flock comma_test_run_resources_counter comma_test_run_resources_limits
 }
 
 # used to initialize variables to non-empty values
 function default_requirements()
 {
-    # TODO figure out how to handle serial
-    # can we just count on it? set to false (0), then 1 > 0, etc.
     cat <<EOF
 resources/cpus=1
 resources/memory/main=0
 resources/memory/shared=0
+resources/serial="false"
 EOF
-##resources/serial="false"
 }
 export -f default_requirements
 
@@ -403,7 +399,7 @@ function run_test_with_timeout()
     setup_signal_handler terminate_run_and_match_test
     export -f comma_progress_named
     export our_stats_progress dir test_exec path verbose
-    timeout -k 10 -s TERM $options_max_run_time bash -c run_and_match_test &
+    timeout -k 10 -s TERM $max_run_time bash -c run_and_match_test &
     local test_pgid=$!
     wait $test_pgid
 }
@@ -454,11 +450,11 @@ function run_single_test()
     # unquote, just in case
     local temp="${dir%\"}"
     dir="${temp#\"}"
-    echo "run_single_test: '$dir'" >&2
     local worker_id=$BASHPID
 
     source $( which comma-application-util ) || return 1
     source $( which comma-util ) || return 1
+    source $( which resources-util ) || return 1
 
     setup_signal_handler terminate_run_single_test
 
@@ -507,7 +503,7 @@ function run_single_test()
                     local error_files test_failed
                     find . -name out_of_shared_memory | xargs rm -f
                     # run this test on the background under a separate group id provided by the timeout command
-                    # wait for the period of options_max_run_time, and, if still running, kill the group and fail the test
+                    # wait for the period of max_run_time, and, if still running, kill the group and fail the test
                     run_test_with_timeout &
                     test_pid=$!
                     wait $test_pid
@@ -534,8 +530,8 @@ function run_single_test()
                 else
                     if [[ "$outcome" == "wait" ]] ; then
                         report_waiting "waiting for resources"
-                        [[ "$options_max_wait_time" != "forever" ]] && {
-                            (( $wait_time >= $options_max_wait_time )) && {
+                        [[ "$max_wait_time" != "forever" ]] && {
+                            (( $wait_time >= $max_wait_time )) && {
                                 echo "$name: in '$dir', could not get $parallel CPUs for ${wait_time}s, failed to run" >&2
                                 result=1
                                 break
@@ -598,7 +594,7 @@ function process_tests_parallel()
     setup_signal_handler terminate_tests_parallel
     comma_test_run_xargs_pipe="$comma_test_run_unique_dir/xargs.pipe"
     mkfifo -m 600 "$comma_test_run_xargs_pipe"
-    xargs -P $options_max_parallel -I{} bash -c run_single_test\ "'$options_path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$test_scripts_count'"\ {} < "$comma_test_run_xargs_pipe" &
+    xargs -P $max_parallel -I{} bash -c run_single_test\ "'$options_path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$test_scripts_count'"\ {} < "$comma_test_run_xargs_pipe" &
     local xargs_pid=$!
     xargs -n2 > "$comma_test_run_xargs_pipe"
     wait "$xargs_pid"
@@ -624,12 +620,10 @@ function terminate_tests_serial()
 
 function process_tests_serial()
 {
-    echo "this is process_tests_serial" >&2
     setup_signal_handler terminate_tests_serial
     local test_pid line
     while true; do
         read line
-        echo "got line '$line'" >&2
         [[ -z "$line" ]] && break
         run_single_test "$options_path" "$stats_progress_csv" "$verbose" "$test_scripts_count" $line &
         test_pid=$!
@@ -658,7 +652,7 @@ function final_words()
     [[ "$is_killed" == "true" ]] && afterword=" (until killed)"
     if [[ "$failed_count" == 0 ]] ; then message_ "$name: in subdirectories of $( pwd ): succeeded${afterword}" ; else error_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): $failed_count test[s] out of $test_scripts_count failed${afterword}" ; fi
     [[ "$options_debug" != "0" ]] && { echo "$name: detailed breakdown:" >&2 ; cat "$comma_test_run_output_flock" >&2; }
-    #rm -fr "$comma_test_run_unique_dir"
+    rm -fr "$comma_test_run_unique_dir"
 }
 
 # process command line...
@@ -671,18 +665,23 @@ have_max_parallel=$( comma_options_has --max-parallel=$options_max_parallel $@ )
 (( $options_parallel == 0 && $have_max_parallel == 0 )) && options_max_parallel=1
 (( $have_max_parallel != 0 )) && options_parallel=1
 (( $options_max_parallel < 1 )) && { error_ "$name: number of parallel tests $options_max_parallel < 1"; exit 1; }
-(( $options_max_memory_main < 512 )) && { error_ "$name: amount of shared memory $options_max_memory_main < 512 MB"; exit 1; }
-(( $options_max_memory_shared < 512 )) && { error_ "$name: amount of shared memory $options_max_memory_shared < 512 MB"; exit 1; }
+(( $options_max_memory_main < 1 )) && { error_ "$name: amount of shared memory $options_max_memory_main < 1 MB"; exit 1; }
+(( $options_max_memory_shared < 1 )) && { error_ "$name: amount of shared memory $options_max_memory_shared < 1 MB"; exit 1; }
 [[ "$options_max_wait_time" != "forever" ]] && {
     (( $options_max_wait_time < 1 )) && { error_ "$name: wait time $options_max_wait_time < 1s or not a number"; exit 1; }
 }
 (( $options_max_run_time < 1 )) && { error_ "$name: timeout run time $options_max_run_time < 1s or not a number"; exit 1; }
-export options_max_parallel options_max_memory_shared options_max_wait_time options_max_run_time options_debug options_quiet options_path options_until_first_failure options_test_option options_parallel
+# and convert to bytes and export for everyone to use
+max_parallel=$options_max_parallel
+max_memory_main=$(( $options_max_memory_main * 1024 * 1024 ))
+max_memory_shared=$(( $options_max_memory_shared * 1024 * 1024 ))
+max_wait_time=$options_max_wait_time
+max_run_time=$options_max_run_time
+export max_parallel max_memory_main max_memory_shared max_wait_time max_run_time options_debug options_quiet options_path options_until_first_failure options_test_option options_parallel
 
 # keep all plumbing under a common directory
 temp_dir=$( dirname "$( mktemp -d -u )" )
 comma_test_run_unique_dir=$( mktemp -d --tmpdir="$temp_dir" comma-test-run.XXXXXX )
-echo "comma_test_run_unique_dir='$comma_test_run_unique_dir'" >&2
 export comma_test_run_unique_dir
 # to run tests in parallel, we need to lock stats_progress_csv and/or stdout/stderr
 # this is the global flock name
