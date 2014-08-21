@@ -141,18 +141,24 @@ int main(int argc, char* argv[])
             std::cerr << std::endl;
             return 0;
         }
+        const bool is_publisher = bool( vm.count( "publish" ) );
+        
         const std::vector< std::string >& endpoints = boost::program_options::collect_unrecognized( parsed.options, boost::program_options::include_positional );
         if( endpoints.empty() ) { std::cerr << "zero-cat: please provide at least one endpoint" << std::endl; return 1; }
         comma::signal_flag is_shutdown;
         zmq::context_t context( 1 );
-        int mode = vm.count( "publish" ) ? ZMQ_PUB : ZMQ_SUB;
+        int mode = is_publisher ? ZMQ_PUB : ZMQ_SUB;
         zmq::socket_t socket( context, mode );
         bool binary = vm.count( "size" );
         #ifdef WIN32
-        if( vm.count( "publish" ) && binary ) { _setmode( _fileno( stdin ), _O_BINARY ); }
+        if( is_publisher && binary ) { _setmode( _fileno( stdin ), _O_BINARY ); }
         #endif
+        // Although the documentation says that HWM is supported in ZMQ4, the
+        // code shows that if the sock opt is HWM an exception will be thrown.
+        #if ZMQ_VERSION_MAJOR == 2
         socket.setsockopt( ZMQ_HWM, &hwm, sizeof( hwm ) );
-        if( vm.count( "publish" ) )
+        #endif
+        if( is_publisher )
         {
             bool output_to_stdout = false;
             for( unsigned int i = 0; i < endpoints.size(); i++ )
