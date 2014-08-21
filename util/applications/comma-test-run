@@ -9,8 +9,10 @@ source $( which resources-util ) || { echo "$name: cannot source 'resources-util
 name_offset="${name//?/ } "
 export name name_offset
 
-# determine system parameters and set defaults
+# determine system parameters and set defaults; command-line options operate in MB
 comma_path_value_to_var --prefix=max < <( total_system_resources )
+max_resources_memory_main=$(( $max_resources_memory_main / 1024 / 1024 ))
+max_resources_memory_shared=$(( $max_resources_memory_shared / 1024 / 1024 ))
 data_storage=""
 max_parallel=$max_resources_cpus
 max_memory_main=$max_resources_memory_main
@@ -130,7 +132,7 @@ Load-balancing and serializing tests:
     Examples of config files:
 
         resources/cpus=4
-        resources/memory/shared=3200
+        resources/memory/shared=3200 MB
 
     Will not run until at least 4 or all CPUs (out of '--max-parallel' number) are available. Will
     not run until 3200 MB of shared memory (counted out of '--max-memory-shared' total) is available.
@@ -138,6 +140,9 @@ Load-balancing and serializing tests:
         resources/serial="true"
 
     Will run only when no other test is running.
+
+    The required memory sizes can be specified in units of kB, MB, or GB. However, the value must
+    be an integer, i.e., values like 3.2 GB are not allowed and have to be approximated as 3300 MB.
 
     When running multiple tests, will wait at most for the period specified by '--max-wait-time' seconds
     until the resources are available. If the wait time exceeds the limit, will fail the test.
@@ -452,10 +457,6 @@ function run_single_test()
     dir="${temp#\"}"
     local worker_id=$BASHPID
 
-    source $( which comma-application-util ) || return 1
-    source $( which comma-util ) || return 1
-    source $( which resources-util ) || return 1
-
     setup_signal_handler terminate_run_single_test
 
     local counter="$count of $total"
@@ -494,7 +495,7 @@ function run_single_test()
             cd "$dir"
             local wait_time=0
             local sleep_time=0
-            get_required_resources > "$request"
+            get_required_resources | storage_to_bytes > "$request"
             local first="true"
             while true ; do
                 outcome=$( locked_acquire_resources "$comma_test_run_resources_flock" "$request" "$comma_test_run_resources_counter" "$comma_test_run_resources_limits" "$worker_id" )
