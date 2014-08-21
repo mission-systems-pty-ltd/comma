@@ -236,8 +236,8 @@ export -f initialize_resources
 # list of waiting processes kept in the counter file, output "wait" to stdout and
 # return 1.
 #
-# If the requested resources alone exceed the limits, overwrite the requested
-# file and set all its values to the maximal allowed.
+# If the requested resources alone exceed (or equal to) the limits, overwrite
+# the requested file and set all its values to the maximal allowed.
 #
 # Any other combination of non-zero exit status and non-empty output indicate
 # a general system error.
@@ -271,10 +271,10 @@ function acquire_resources()
     local name=${name:-"acquire_resources"}
 
     # hope for the best if asking for more than available
-    exceed=$( name-value-calc "$request" "$maximum" --more --json --detailed )
+    exceed=$( name-value-calc "$request" "$maximum" --more-or-equal --json --detailed )
     (( $? == 0 )) || { echo "$name: cannot compare for being excessive" >&2; return 1; }
     # lines ending in ="1" correspond to a requested value exceeding maximum value
-    # however, '--more' operation may still give negative result if some other
+    # however, '--more-or-equal' operation may still give negative result if some other
     # requested values are below the maximal values
     echo "$exceed" | name-value-convert --from json --to path-value | grep resources | grep -q '="1"'
     (( $? == 0 )) && { cat "$maximum" > "$request"; }
