@@ -435,6 +435,18 @@ function terminate_run_single_test()
 }
 export -f terminate_run_single_test
 
+# Auxiliary function to make waiting for resource
+function take_a_random_nap()
+{
+    local max_nap=2 # make a configuration parameter
+    local sleep_time=$( echo $RANDOM | awk -v max_nap=$max_nap '{ print $1 * $max_nap / 32768 }' )
+    wait_time=$( echo $wait_time $sleep_time | awk '{ print $1 + $2 }' )
+    sleep ${sleep_time}s &
+    test_pid=$!
+    wait $test_pid
+}
+export -f take_a_random_nap
+
 # this function runs the actual test; must be run as a background process
 # arguments:
 #     path to q-storage       - where the data are
@@ -494,7 +506,6 @@ function run_single_test()
             ##[ -f "$dir/readme" ] && dump_file_ "$dir/readme"
             cd "$dir"
             local wait_time=0
-            local sleep_time=0
             get_required_resources | storage_to_bytes > "$request"
             local first="true"
             while true ; do
@@ -532,17 +543,13 @@ function run_single_test()
                     if [[ "$outcome" == "wait" ]] ; then
                         report_waiting "waiting for resources"
                         [[ "$max_wait_time" != "forever" ]] && {
-                            (( $wait_time >= $max_wait_time )) && {
+                            if awk '{ a=$1 > $2; exit !a }' < <( echo $wait_time $max_wait_time ) ; then
                                 echo "$name: in '$dir', could not get $parallel CPUs for ${wait_time}s, failed to run" >&2
                                 result=1
                                 break
-                            }
+                            fi
                         }
-                        sleep_time=$[ ( $RANDOM % 10 )  + 1 ]
-                        wait_time=$(( $wait_time + $sleep_time ))
-                        sleep ${sleep_time}s &
-                        test_pid=$!
-                        wait $test_pid
+                        take_a_random_nap
                         continue
                     else
                         echo "$name::worker $worker_id: unknown error in acquire_resources '$outcome'" >&2
