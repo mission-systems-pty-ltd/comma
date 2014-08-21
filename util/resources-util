@@ -37,6 +37,7 @@ function enqueue_pid()
         | sed --regexp-extended "/$path/s/\[(.+)\]/\[\1,$pid\]/;/$path/s/\[\]/\[$pid\]/" \
         | name-value-convert --from path-value --to json
 }
+export -f enqueue_pid
 
 # Opposite to enqueue_pid above. Remove the given pid from the list.
 function dequeue_pid()
@@ -50,6 +51,7 @@ function dequeue_pid()
         | sed --regexp-extended "/$path/s/\[$pid,(.+)\]/\[\1\]/;/$path/s/\[(.+),$pid\]/\[\1\]/;/$path/s/\[(.+),$pid,(.+)\]/\[\1,\2\]/;/$path/s/\[$pid\]/\[\]/" \
         | name-value-convert --from path-value --to json
 }
+export -f dequeue_pid
 
 # Read a json file as text stream on stdin. Check the position of the given
 # PID (1st argument) in the waiting list described by path (optional second
@@ -69,6 +71,7 @@ function check_pid_position()
         echo "-1"
     fi
 }
+export -f check_pid_position
 
 # Tell if the queue is empty. Read book-keeping file in json format on stdin.
 # Take an optional argument, path to the queue. Exit with status 0 for empty
@@ -82,6 +85,7 @@ function queue_is_empty()
     list=$( name-value-get --from json "$path" | sed "s/^\[//;s/\]\$//;s/ //g" )
     [[ -z "$list" ]]
 }
+export -f queue_is_empty
 
 # These versions take the counter file as an additional first argument and
 # modify it in place.
@@ -98,6 +102,7 @@ function enqueue_pid_infile()
     [[ -w "$counter" ]] || { echo "$name: cannot write '$counter'" >&2; return 1; }
     echo "$contents" | enqueue_pid $@ > "$counter"
 }
+export -f enqueue_pid_infile
 
 # Arguments: counter file, pid, (optional) path.
 function dequeue_pid_infile()
@@ -111,6 +116,7 @@ function dequeue_pid_infile()
     [[ -w "$counter" ]] || { echo "$name: cannot write '$counter'" >&2; return 1; }
     echo "$contents" | dequeue_pid $@ > "$counter"
 }
+export -f dequeue_pid_infile
 
 # Arguments: counter file, pid, (optional) path.
 function check_pid_position_infile()
@@ -123,6 +129,7 @@ function check_pid_position_infile()
     (( $? == 0 )) || { echo "$name: cannot read '$counter'" >&2; return 1; }
     echo "$contents" | check_pid_position_infile $@
 }
+export -f check_pid_position_infile
 
 # Arguments: counter file, (optional) path.
 function queue_is_empty_infile()
@@ -135,6 +142,7 @@ function queue_is_empty_infile()
     (( $? == 0 )) || { echo "$name: cannot read '$counter'" >&2; return 1; }
     echo "$contents" | queue_is_empty $@
 }
+export -f queue_is_empty_infile
 
 # Output the most commonly used system resources: number of CPUs, total RAM,
 # size, total shared memory size. No arguments. Do not read stdin.
@@ -159,6 +167,7 @@ function total_system_resources()
     echo "resources/memory/main=\"$memory_main\""
     echo "resources/memory/shared=\"$memory_shared\""
 }
+export -f total_system_resources
 
 # Initialize a json file listing the currently occupied system resources
 # and a list of processes waiting for them.
@@ -175,6 +184,7 @@ function initialize_resources()
         echo 'processes/queue="[]"'
     ) | name-value-convert --from path-value --to json > "$counter"
 }
+export -f initialize_resources
 
 # Given a description of requested resources (1st argument), currently occupied
 # resources (2nd argument) and maximal allowed resources (3rd argument), check
@@ -279,6 +289,7 @@ function acquire_resources()
         fi
     fi
 }
+export -f acquire_resources
 
 # Helper function ensures that all resource counters are non-negative.
 # Takes resource description on stdin in json format, outputs sanitized
@@ -289,6 +300,7 @@ function non_negative_resources()
         | sed '/^resources\//s/="-[0-9][0-9]*"$/="0"/' \
         | name-value-convert --from path-value --to json
 }
+export -f non_negative_resources
 
 # Opposite to acquire_resources. Input: description of resources being
 # released (1st argument), resource counter (2nd argument) in json format.
@@ -308,6 +320,7 @@ function release_resources()
     echo "$next" > "$counter"
     return 0
 }
+export -f release_resources
 
 # General synchronization function. Takes on input a lock file name to be used
 # in a flock call (this file will be truncated to zero) and the command to be
@@ -326,6 +339,7 @@ function serialize()
         $@
     ) 8>"$lock"
 }
+export -f serialize
 
 # Lock-protected versions of the relevant functions from this script.
 function locked_initialize_resources()
@@ -333,39 +347,46 @@ function locked_initialize_resources()
     local name=${name:-"locked_initialize_resources"}
     serialize $1 initialize_resources $2
 }
+export -f locked_initialize_resources
 
 function locked_acquire_resources()
 {
     local name=${name:-"locked_acquire_resources"}
     serialize $1 acquire_resources $2 $3 $4 $5 $6
 }
+export -f locked_acquire_resources
 
 function locked_release_resources()
 {
     local name=${name:-"locked_release_resources"}
     serialize $1 release_resources $2 $3
 }
+export -f locked_release_resources
 
 function locked_enqueue_pid_infile()
 {
     local name=${name:-"locked_enqueue_pid_infile"}
     serialize $1 enqueue_pid_infile $2 $3 $4
 }
+export -f locked_enqueue_pid_infile
 
 function locked_dequeue_pid_infile()
 {
     local name=${name:-"locked_dequeue_pid_infile"}
     serialize $1 dequeue_pid_infile $2 $3 $4
 }
+export -f locked_dequeue_pid_infile
 
 function locked_check_pid_position_infile()
 {
     local name=${name:-"locked_check_pid_position_infile"}
     serialize $1 check_pid_position_infile $2 $3 $4
 }
+export -f locked_check_pid_position_infile
 
 function locked_queue_is_empty_infile()
 {
     local name=${name:-"locked_queue_is_empty_infile"}
     serialize $1 queue_is_empty_infile $2 $3
 }
+export -f locked_queue_is_empty_infile
