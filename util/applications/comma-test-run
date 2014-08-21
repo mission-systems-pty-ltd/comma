@@ -1,8 +1,10 @@
 #!/bin/bash
 
-source $( which comma-application-util ) || exit 1
-
 name=$( basename $0 )
+
+source $( which comma-application-util ) || { echo "$name: cannot source 'comma-application-util'" >&2; exit 1; }
+source $( which comma-util ) || { echo "$name: cannot source 'comma-util'" >&2; exit 1; }
+
 name_offset="${name//?/ } "
 export name name_offset
 
@@ -20,7 +22,8 @@ total_memory_shared=$(( $total_memory_shared / 1024 )) || { echo "$name: shared 
 qstorage=""
 max_parallel=$total_num_cpus
 max_memory_shared=$total_memory_shared
-max_wait="forever"
+max_wait_time="forever"
+max_run_time="1200"
 
 red="\033[0;31m"
 green="\033[0;32m"
@@ -44,7 +47,8 @@ function default_options()
     echo "force=0"
     echo "max_parallel=$max_parallel"
     echo "max_memory_shared=$max_memory_shared"
-    echo "max_wait=$max_wait"
+    echo "max_wait_time=$max_wait_time"
+    echo "max_run_time=$max_run_time"
 }
 
 function description()
@@ -59,7 +63,8 @@ function description()
 --parallel; run tests in parallel
 --max-parallel=[<N>]; run up to N tests in parallel; default: $max_parallel
 --max-memory-shared=[<N>]; limit on shared memory, in MB; default: $max_memory_shared
---max-wait=[<time>]; maximal time to wait for available CPUs before failing a test, default: ${max_wait}
+--max-wait-time=[<time>]; maximal time to wait for available CPUs before failing a test, default: ${max_wait_time}
+--max-run-time=[<time>]; maximal time to wait for a test completion before failing it by force, default: ${max_run_time}
 --test-option=[<option>]; extra command line argument(s) pass to "test" script
 EOF
 }
@@ -136,6 +141,12 @@ Load-balancing and serializing tests:
         resources/serial="true"
 
     Will run only when no other test is running.
+
+    When running multiple tests, will wait at most for the period specified by '--max-wait-time' seconds
+    until the resources are available. If the wait time exceeds the limit, will fail the test.
+
+    No test shall take longer than the period specified by '--max-run-time'. If a test does not complete
+    within this time, it is forcefully terminated and marked as failed.
 
 EOF
 }
@@ -405,29 +416,6 @@ function release_resources()
 }
 export -f release_resources
 
-function signal_handler()
-{
-    trap '' SIGINT SIGTERM
-    error_ "comma-test-run: received signal $1, terminating..."
-    is_killed=true
-    kill_children --recursive $BASHPID
-    rm -f "$comma_test_run_xargs_pipe"
-    # a process that exits in response to SIGINT should kill itself with SIGINT
-    # see http://www.cons.org/cracauer/sigint.html
-    [[ "$1" == "SIGINT" ]] && kill -SIGINT $$
-    exit 1
-}
-export -f signal_handler
-
-function setup_signal_handler()
-{
-    trap 'signal_handler SIGINT' SIGINT
-    trap 'signal_handler SIGTERM' SIGTERM
-    trap 'signal_handler SIGHUP' SIGHUP
-    trap 'signal_handler SIGPIPE' SIGPIPE
-}
-export -f setup_signal_handler
-
 function report_waiting()
 {
     local msg=$1
@@ -447,6 +435,92 @@ function report_end_of_wait() {
     first="true"
 }
 export -f report_end_of_wait
+
+# auxiliary function to simplify setting the same handler for multiple signals
+# _and_ telling the handler which signal has been intercepted
+function setup_signal_handler()
+{
+    local handler=$1
+    trap "$handler SIGINT" SIGINT
+    trap "$handler SIGTERM" SIGTERM
+    trap "$handler SIGHUP" SIGHUP
+    trap "$handler SIGPIPE" SIGPIPE
+}
+export -f setup_signal_handler
+
+# this functions terminates a currently running test using its group id
+# the test running under the timeout command will have its own group id
+function terminate_run_and_match_test()
+{
+    trap '' SIGINT SIGTERM SIGHUP SIGPIPE
+    echo "terminating test in $( pwd )..." >&2
+    if [[ -n "$test_pgid" ]] ; then
+        kill -s TERM -- -$test_pgid 2>/dev/null
+        wait $test_pid
+    fi
+    # a process that exits in response to SIGINT should kill itself with SIGINT
+    # see http://www.cons.org/cracauer/sigint.html
+    [[ "$1" == "SIGINT" ]] && { trap - INT ; kill -SIGINT $BASHPID ; }
+    exit 1
+}
+export -f terminate_run_and_match_test
+
+# this functions executes a provided test with optional input and captures its stdout
+# then it optionally compares the output with the expected file
+# finally echoes the result of comma-test-match and the status of the match
+function run_and_match_test()
+{
+    local test_output test_failed match_output
+    test_output=$( if [ -f ./input ] ; then cat ./input ; fi \
+        | comma_progress_named "$our_stats_progress" "$dir" "$test_exec" "$path" "$verbose" $options_test_option )
+    test_failed=$?
+    if [[ $test_failed == 0 && -f "./expected" ]]; then
+        match_output=$( echo "$test_output" | comma-test-match ./expected 2>&1 )
+        if [[ -n "$match_output" ]]; then
+            echo "$match_output" >&2
+            test_failed=1
+        fi
+    fi
+    return $test_failed
+}
+export -f run_and_match_test
+
+# this function runs a provided test application under the timeout command
+function run_test_with_timeout()
+{
+    setup_signal_handler terminate_run_and_match_test
+    export -f comma_progress_named
+    export our_stats_progress dir test_exec path verbose
+    timeout -k 10 -s TERM $options_max_run_time bash -c run_and_match_test &
+    local test_pgid=$!
+    wait $test_pgid
+}
+export -f run_test_with_timeout
+
+function terminate_run_single_test()
+{
+    trap '' SIGINT SIGTERM SIGHUP SIGPIPE
+    echo "test run terminated by $1..." >&2
+    if [[ -n "$test_pid" ]] ; then
+        kill -s TERM -- $test_pid 2>/dev/null
+        wait $test_pid
+    fi
+    # serialize all access to global resources: stats file, stdout/err
+    (
+        flock -x 8
+        [[ "$options_parallel" == "0" ]] || cat "$our_stdout_log" >&3
+        local msg="test $count in '$dir': killed"
+        echo "$msg" >&8
+    ) 8>>"$comma_test_run_output_flock"
+
+    rm -f "$our_stats_progress"
+    [[ "$options_parallel" == "0" ]] || rm -f "$our_stdout_log"
+    # a process that exits in response to SIGINT should kill itself with SIGINT
+    # see http://www.cons.org/cracauer/sigint.html
+    [[ "$1" == "SIGINT" ]] && { trap - INT ; kill -s INT $BASHPID ; }
+    exit 1
+}
+export -f terminate_run_single_test
 
 # this function runs the actual test; must be run as a background process
 # arguments:
@@ -472,7 +546,7 @@ function run_single_test()
     source $( which comma-application-util ) || return 1
     source $( which comma-util ) || return 1
 
-    setup_signal_handler
+    setup_signal_handler terminate_run_single_test
 
     local counter="$count of $total"
 
@@ -488,6 +562,8 @@ function run_single_test()
     }
 
     local test_exec basedir
+    # must save pid of any background process in this variable, so that it is killed by signal handler
+    local test_pid
     local result=0
 
     if disabled_ "$dir" ; then
@@ -516,25 +592,25 @@ function run_single_test()
                 occupy_resources "$dir" "$verbose_resources"
                 (( $? != 0 )) && {
                     report_waiting "waiting for resources"
-                    [[ "$options_max_wait" != "forever" ]] && {
-                        (( $wait_time >= $options_max_wait )) && { echo "$name: in '$dir', could not get $parallel CPUs for ${wait_time}s, failed to run" >&2; result=1; break; }
+                    [[ "$options_max_wait_time" != "forever" ]] && {
+                        (( $wait_time >= $options_max_wait_time )) && { echo "$name: in '$dir', could not get $parallel CPUs for ${wait_time}s, failed to run" >&2; result=1; break; }
                     }
                     sleep_time=$[ ( $RANDOM % 10 )  + 1 ]
                     wait_time=$(( $wait_time + $sleep_time ))
-                    sleep ${sleep_time}s
+                    sleep ${sleep_time}s &
+                    test_pid=$!
+                    wait $test_pid
                     continue
                 }
                 report_end_of_wait
-                local output error_files
+                local error_files test_failed
                 find . -name out_of_shared_memory | xargs rm -f
-                test_output=$( if [ -f ./input ] ; then cat ./input ; fi \
-                    | comma_progress_named "$our_stats_progress" "$dir" "$test_exec" "$path" "$verbose" $options_test_option )
-                local test_failed=$?
-                local match_output
-                if [[ $test_failed == 0 && -f "./expected" ]]; then
-                    match_output=$( echo "$test_output" | comma-test-match ./expected 2>&1 )
-                    if [[ -n "$match_output" ]]; then test_failed=1; fi
-                fi
+                # run this test on the background under a separate group id provided by the timeout command
+                # wait for the period of options_max_run_time, and, if still running, kill the group and fail the test
+                run_test_with_timeout &
+                test_pid=$!
+                wait $test_pid
+                test_failed=$?
                 release_resources "$dir" "$verbose_resources"
                 error_files="$( find . -name out_of_shared_memory )"
                 [[ -n "$error_files" ]] && {
@@ -542,12 +618,11 @@ function run_single_test()
                     echo "$error_files" | xargs rm -f
                     continue
                 }
-                [[ -n "$match_output" ]] && echo "$match_output" >&2
                 [[ "$test_failed" == "0" ]] && {
                     message_ "$name: test $counter: $dir: succeeded"
                 } || {
                     result=1
-                    error_ "$name: $dir: failed"
+                    error_ "$name: $dir: failed$( (( $test_failed == 124 )) && echo ' (likely timed out)' )"
                 }
                 break
             done
@@ -572,8 +647,27 @@ function run_single_test()
 }
 export -f run_single_test
 
+function terminate_tests_parallel()
+{
+    trap '' SIGINT SIGTERM SIGHUP SIGPIPE
+    echo "parallel test run terminated by $1..." >&2
+    if [[ -n "$xargs_pid" ]] ; then
+        kill -s STOP -- $xargs_pid 2>/dev/null
+        pkill --signal TERM -P $xargs_pid 2>/dev/null
+        kill -s TERM -- $xargs_pid 2>/dev/null
+        wait $xargs_pid
+    fi
+    rm -f "$comma_test_run_xargs_pipe"
+    is_killed=true
+    # a process that exits in response to SIGINT should kill itself with SIGINT
+    # see http://www.cons.org/cracauer/sigint.html
+    [[ "$1" == "SIGINT" ]] && { trap - INT ; kill -s INT $BASHPID ; }
+    exit 1
+}
+
 function process_tests_parallel()
 {
+    setup_signal_handler terminate_tests_parallel
     comma_test_run_xargs_pipe=$( mktemp -u )
     mkfifo -m 600 "$comma_test_run_xargs_pipe"
     xargs -P $options_max_parallel -I{} bash -c run_single_test\ "'$options_path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$test_scripts_count'"\ {} < "$comma_test_run_xargs_pipe" &
@@ -585,18 +679,37 @@ function process_tests_parallel()
     unset comma_test_run_xargs_pipe
 }
 
+function terminate_tests_serial()
+{
+    trap '' SIGINT SIGTERM SIGHUP SIGPIPE
+    echo "serial test run terminated by $1..." >&2
+    if [[ -n "$test_pid" ]] ; then
+        kill -s TERM -- $test_pid 2>/dev/null
+        wait $test_pid
+    fi
+    is_killed=true
+    # a process that exits in response to SIGINT should kill itself with SIGINT
+    # see http://www.cons.org/cracauer/sigint.html
+    [[ "$1" == "SIGINT" ]] && { trap - INT ; kill -s INT $BASHPID ; }
+    exit 1
+}
+
 function process_tests_serial()
 {
+    setup_signal_handler terminate_tests_serial
+    local test_pid line
     while true; do
         read line
         [[ -z "$line" ]] && break
         run_single_test "$options_path" "$stats_progress_csv" "$verbose" "$test_scripts_count" $line &
-        wait $!
+        test_pid=$!
+        wait $test_pid
         (( $? == 0 )) || {
             result=1
-            [[ "$options_until_first_failure" == "1" ]] && exit 1
+            [[ "$options_until_first_failure" == "1" ]] && return 1
         }
     done
+    return 0
 }
 
 function count_failures()
@@ -630,10 +743,11 @@ have_max_parallel=$( comma_options_has --max-parallel=$options_max_parallel $@ )
 (( $have_max_parallel != 0 )) && options_parallel=1
 (( $options_max_parallel < 1 )) && { error_ "$name: number of parallel tests $options_max_parallel < 1"; exit 1; }
 (( $options_max_memory_shared < 512 )) && { error_ "$name: amount of shared memory $options_max_memory_shared < 512"; exit 1; }
-[[ "$options_max_wait" != "forever" ]] && {
-    (( $options_max_wait < 1 )) && { error_ "$name: wait time $options_max_wait < 1s or not a number"; exit 1; }
+[[ "$options_max_wait_time" != "forever" ]] && {
+    (( $options_max_wait_time < 1 )) && { error_ "$name: wait time $options_max_wait_time < 1s or not a number"; exit 1; }
 }
-export options_max_parallel options_max_memory_shared options_max_wait options_debug options_quiet options_path options_until_first_failure options_test_option options_parallel
+(( $options_max_run_time < 1 )) && { error_ "$name: timeout run time $options_max_run_time < 1s or not a number"; exit 1; }
+export options_max_parallel options_max_memory_shared options_max_wait_time options_max_run_time options_debug options_quiet options_path options_until_first_failure options_test_option options_parallel
 
 # to run tests in parallel, we need to lock stats_progress_csv and/or stdout/stderr
 # this is the global flock name
@@ -644,7 +758,6 @@ export comma_test_run_output_flock
 # in a global file name; access serialized via flocks
 initialize_resources
 
-setup_signal_handler
 trap 'stats_finalize; final_words' EXIT
 
 basedir=$( pwd )
