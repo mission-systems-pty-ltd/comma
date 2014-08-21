@@ -579,6 +579,7 @@ function terminate_tests_parallel()
         kill -s STOP -- $xargs_pid 2>/dev/null
         pkill --signal TERM -P $xargs_pid 2>/dev/null
         kill -s TERM -- $xargs_pid 2>/dev/null
+        kill -s CONT -- $xargs_pid 2>/dev/null
         wait $xargs_pid
     fi
     rm -f "$comma_test_run_xargs_pipe"
