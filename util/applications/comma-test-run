@@ -731,15 +731,3 @@ else
 fi
 
 exit $result
-
-# for batch modification of test cases
-# for file in `find -name "expected"` ; do
-#     echo $(dirname $file)
-#     #cat $file | awk '{print "# "$0}' > $file".txt"
-#     git_ignore=$(dirname $file)"/.gitignore"
-#     echo "output" > $git_ignore
-#     echo "stderr.log" >> $git_ignore
-#     cat $git_ignore
-# #   rm $git_ignore
-#     #mv $file".txt" $file
-# done
