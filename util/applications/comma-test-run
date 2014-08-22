@@ -435,17 +435,17 @@ function terminate_run_single_test()
 }
 export -f terminate_run_single_test
 
-# Auxiliary function to make waiting for resource
-function take_a_random_nap()
+# Auxiliary function to make waiting for resource a one-liner
+function random_sleep()
 {
-    local max_nap=2 # make a configuration parameter
+    local max_nap=$1
     local sleep_time=$( echo $RANDOM | awk -v max_nap=$max_nap '{ print $1 * $max_nap / 32768 }' )
     wait_time=$( echo $wait_time $sleep_time | awk '{ print $1 + $2 }' )
     sleep ${sleep_time}s &
     test_pid=$!
     wait $test_pid
 }
-export -f take_a_random_nap
+export -f random_sleep
 
 # this function runs the actual test; must be run as a background process
 # arguments:
@@ -549,7 +549,7 @@ function run_single_test()
                                 break
                             fi
                         }
-                        take_a_random_nap
+                        random_sleep 2 # make a configuration parameter
                         continue
                     else
                         echo "$name::worker $worker_id: unknown error in acquire_resources '$outcome'" >&2
