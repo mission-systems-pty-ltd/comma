@@ -369,7 +369,7 @@ function terminate_run_and_match_test()
     echo "terminating test in $( pwd )..." >&2
     if [[ -n "$test_pgid" ]] ; then
         kill -s TERM -- -$test_pgid 2>/dev/null
-        wait $test_pid
+        wait $test_pgid
     fi
     # a process that exits in response to SIGINT should kill itself with SIGINT
     # see http://www.cons.org/cracauer/sigint.html
