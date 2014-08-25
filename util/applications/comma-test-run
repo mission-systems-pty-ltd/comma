@@ -18,7 +18,7 @@ max_parallel=$max_resources_cpus
 max_memory_main=$max_resources_memory_main
 max_memory_shared=$max_resources_memory_shared
 max_wait_time="forever"
-max_run_time="1200"
+max_run_time="3600"
 
 red="\033[0;31m"
 green="\033[0;32m"
