@@ -57,7 +57,7 @@ function description()
 --help,-h; show this help
 --debug; much more debug output
 --quiet,-q; minimize output
---until-first-failure,-f; exit after the first failure (works only when tests run serially)
+--until-first-failure; exit after the first failure (works only when tests run serially)
 --force,-f; include disabled tests
 --path=[<dir>]; data-storage directory for tests, default: none, let the tests define it
 --parallel; run tests in parallel
