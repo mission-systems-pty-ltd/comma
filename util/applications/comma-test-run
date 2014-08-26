@@ -520,7 +520,7 @@ function run_single_test()
                     test_pid=$!
                     wait $test_pid
                     test_failed=$?
-                    locked_release_resources "$comma_test_run_resources_flock" "$request" "$comma_test_run_resources_counter"
+                    locked_release_resources "$comma_test_run_resources_flock" "$request" "$comma_test_run_resources_counter" "$worker_id"
                     (( $? == 0 )) || {
                         echo "$name::worker $worker_id: cannot release resources" >&2
                         result=1

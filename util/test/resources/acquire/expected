@@ -2,46 +2,73 @@ initial/resources/cpus = 0
 initial/resources/memory/main = 0
 initial/resources/memory/shared = 0
 initial/processes/queue = "[]"
+initial/processes/users = "[]"
+
 first/request/resources/cpus = 4
 first/request/resources/memory/main = 600000
 first/request/resources/memory/shared = 400000
 first/request/processes/queue = "[]"
+first/request/processes/users = "[123]"
+
 second/request/outcome = "wait"
 second/request/resources/cpus = 4
 second/request/resources/memory/main = 600000
 second/request/resources/memory/shared = 400000
 second/request/processes/queue = "[456]"
+second/request/processes/users = "[123]"
+
 third/request/outcome = "wait"
 third/request/resources/cpus = 4
 third/request/resources/memory/main = 600000
 third/request/resources/memory/shared = 400000
 third/request/processes/queue = "[456,789]"
+third/request/processes/users = "[123]"
+
 first/released/resources/cpus = 0
 first/released/resources/memory/main = 0
 first/released/resources/memory/shared = 0
 first/released/processes/queue = "[456,789]"
+first/released/processes/users = "[]"
+
 third/request/repeated/outcome = "wait"
 third/request/repeated/resources/cpus = 0
 third/request/repeated/resources/memory/main = 0
 third/request/repeated/resources/memory/shared = 0
 third/request/repeated/processes/queue = "[456,789]"
+third/request/repeated/processes/users = "[]"
+
 second/request/repeated/resources/cpus = 4
 second/request/repeated/resources/memory/main = 600000
 second/request/repeated/resources/memory/shared = 400000
 second/request/repeated/processes/queue = "[789]"
+second/request/repeated/processes/users = "[456]"
+
 second/released/resources/cpus = 0
 second/released/resources/memory/main = 0
 second/released/resources/memory/shared = 0
 second/released/processes/queue = "[789]"
+second/released/processes/users = "[]"
+
 third/request/final/resources/cpus = 1
 third/request/final/resources/memory/main = 200000
 third/request/final/resources/memory/shared = 100000
 third/request/final/processes/queue = "[]"
+third/request/final/processes/users = "[789]"
+
+unknown/released/resources/cpus = third/request/final/resources/cpus
+unknown/released/resources/memory/main = third/request/final/resources/memory/main
+unknown/released/resources/memory/shared = third/request/final/resources/memory/shared
+unknown/released/processes/queue = third/request/final/processes/queue
+unknown/released/processes/users = third/request/final/processes/users
+
 third/released/resources/cpus = 0
 third/released/resources/memory/main = 0
 third/released/resources/memory/shared = 0
 third/released/processes/queue = "[]"
+third/released/processes/users = "[]"
+
 third/released/repeated/resources/cpus = 0
 third/released/repeated/resources/memory/main = 0
 third/released/repeated/resources/memory/shared = 0
 third/released/repeated/processes/queue = "[]"
+third/released/repeated/processes/users = "[]"
