@@ -169,11 +169,11 @@ std::string format::usage()
     oss << "        <format> : e.g. \"%t%d%d%d%ul\" or \"t,d,d,d,ul\" (same)" << std::endl
         << "            b  : byte (8-bit int)" << std::endl
         << "            ub : unsigned byte (unsigned 8-bit int)" << std::endl
-        << "            w  : 16-bit int (not implemented)" << std::endl
+        << "            w  : 16-bit int" << std::endl
         << "            uw : unsigned 16-bit int" << std::endl
-        << "            i  : 32-bit int (not implemented)" << std::endl
+        << "            i  : 32-bit int" << std::endl
         << "            ui : unsigned 32-bit int" << std::endl
-        << "            l  : 64-bit int (not implemented)" << std::endl
+        << "            l  : 64-bit int" << std::endl
         << "            ul : unsigned 64-bit int" << std::endl
         << "            c  : char" << std::endl
         << "            f  : float" << std::endl

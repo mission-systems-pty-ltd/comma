@@ -1,0 +1,6 @@
+#!/bin/bash
+
+app="../application/locking-test"
+[[ -x "$app" ]] || exit 1
+
+$app stderr.log 2>&1

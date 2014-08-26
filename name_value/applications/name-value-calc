@@ -4,7 +4,10 @@ name=$( basename $0 )
 
 simple_usage()
 {
-    echo "Usage: $name <file1> <file2> ... [--add|--sub|--subtract] [--json] [-h|--help] " >&2
+    cat <<EOF
+Usage: $name <file1> <file2> ... [--add|--sub|--other-operations] [-h|--help]
+       ${name//?/ } [--json] [--strict] [--details] [--exclude path]
+EOF
     if [[ $# != 0 ]]; then exit $1; fi
 }
 
@@ -18,22 +21,66 @@ Perform simple calculations on corresponding values in multiple name=value or .j
 Only values from the first input file are included in the output. If a name does not appear in
 the second (or later) input file, the value from the first input file is output unchanged.
 
-All values in the input files are expected to be numbers. If a non-numeric value appears, it is
-treated as zero (unless it only appears in the first input file, in which case it is output unchanged).
+All values in the input files are expected to be numbers. Strings 'True', 'true', 'yes', 'False',
+'false', and 'no' are treated as booleans and are promoted to numbers. Unless '--strict' option
+is given, strings are ignored if the operation is not defined for the string type, in which case
+the strings from the first input file are unchanged and from the other files are ignored.
 
-Options:
+Operation options:
 
-    --add               Add corresponding values in input files
-    --sub|--subtract    Subtract corresponding values in file2 from file1 (only two input files permitted)
-    --json              Input and output is in json format instead of name=value format
+    --add                     Add corresponding values in input files
+    --sub|--subtract          Subtract corresponding values in file2 from file1 (only 2 files permitted)
+    --mul|--mult|--multiply   Multiply corresponding values
+    --div|--divide            Divide corresponding values (only 2 files permitted; error if file2 has
+                              zero values)
+    --less                    Values in file1 are less than in file2 (only 2 files permitted)
+    --less-or-equal
+    --more
+    --more-or-equal
+    --equal
+    --non-equal
+    --not-equal               Akin to '--less', logical operations as the names imply
+
+Control options:
+    --json                    Input and output is in json format instead of name=value format
+    --strict                  Do not ignore invalid operations for the data types that do not support them,
+                              e.g., using '--sub' on string data would cause the script to fail.
+    --exclude path            Exclude the given paths (and their sub-paths) from the operation.
+    --detailed                Normally for logical operations the script prints 1 on success (all values
+                              satisfy the logical condition) and 1 on failure; this option produces results
+                              of comparison for each input path, similar to the behaviour of arithmetic
+                              operations.
+
+Notes on comparison:
+    File f1 is considered '--less' than file f2 only if this condition is true for all the data
+    in the file. Therefore, "f1 --less f2" being false does not imply that "f2 --less f1" is true.
+    Same constraint applies to all the other comparison operations.
 
 Examples:
 
     $name f1 f2 f3 --add
         -- add all values in f1, f2 and f3
 
-    $name f1.json f2.json --sub --json
+    $name f1.json --sub f2.json --json
         -- subtract all values in f2.json from f1.json (output in .json format)
+
+    $name f1.json f2.json --sub --json
+        -- same as above; placement of the operation option does not matter
+
+    v=\$( $name f1 f2 --less )
+        -- capture the comparison result in a variable; v is 1 if comparison is true
+
+    (( $($name f1 --less f2) == 1 )) && echo "f1 < f2" || echo "f1 is not < f2"
+        -- compares values in f1 and f2 and reports the outcome
+
+    $name f1 f2 --sub --strict > outfile
+    (( $? == 0 )) || exit 1
+        -- will fail if the first input file contains string data (operation '-' is not
+           defined for strings)
+
+    $name f1 f2 --sub --strict --exclude "path/to/string" > outfile
+        -- specifically exclude a specified data path from the operation, e.g., because
+           the '-' operation is not defined for strings
 
 EOF
     if [[ $# != 0 ]]; then exit $1; fi
@@ -57,6 +104,112 @@ function die()
     bye 1
 }
 
+function inlist()
+{
+    local value="$1"
+    local list="$2"
+    local c
+    for c in $list ; do
+        if [[ "$c" == "$value" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+function binary_op()
+{
+    inlist "$1" "$( echo ${binary_operands[@]} )"
+}
+
+function logical_op()
+{
+    inlist "$1" "$( echo ${logical_operands[@]} )"
+}
+
+function python_converter()
+{
+    python -c "import operator
+from sys import stdin
+filesep = '$file_separator'
+what = '$operation'
+strict = $strict
+excluded = '${excluded[@]}'.split()
+excluded = [ e.strip('/') + '/' for e in excluded ]
+
+operands = {
+             '+'  : operator.add,
+             '-'  : operator.sub,
+             '>'  : operator.gt,
+             '>=' : operator.ge,
+             '<'  : operator.lt,
+             '<=' : operator.le,
+             '==' : operator.eq,
+             '<>' : operator.ne,
+             '!=' : operator.ne,
+             '/'  : operator.div,
+             '*'  : operator.mul,
+           }
+
+arithmetic = [ '+', '-', '/', '*' ]
+
+names = {}
+ordered_names = []
+first = True
+op = operands[what]
+logical = what not in arithmetic
+
+def output( was_assigned, value, logical ):
+    if was_assigned:
+        return int(value) if logical else value
+    else:
+        return 1 if logical else value
+
+while True:
+    l = stdin.readline().strip()
+    if not l:
+        break
+    if l == filesep:
+        first = False
+        continue
+    n, v = l.split('=')
+    v = v.strip('\"')
+    try:
+        v = int(v)
+    except ValueError:
+        try:
+            v = float(v)
+        except ValueError:
+            if v in ['True', 'true', 'yes']:
+                v = True
+            if v in ['False', 'false', 'no']:
+                v = False
+    if first:
+        if not any( [ (n + '/').startswith(e) for e in excluded ] ):
+            names[n] = ( False, v )
+            ordered_names.append( n )
+    else:
+        if names.has_key( n ):
+            try:
+                names[n] = ( True, op(names[n][1], v) )
+            except TypeError:
+                if strict:
+                    raise
+
+for n in ordered_names:
+    v = names[n]
+    print '%s=\"%s\"' % ( n, str(output(v[0], v[1], logical)) )
+" 2>/dev/null
+}
+
+# Using '-v' does not work because it inverts the _matching_ while we need to invert the exit
+# status only.
+function invert_grep()
+{
+    grep -q '="0"$'
+    echo $?
+}
+
 trap 'bye 1' SIGHUP SIGINT SIGTERM SIGPIPE
 
 if [[ $# == 0 ]]; then simple_usage 1; fi
@@ -64,26 +217,44 @@ if [[ $# == 0 ]]; then simple_usage 1; fi
 input_files=()
 operation=
 json_format=0
+strict=0
+detailed=0
+excluded=()
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        -h|--help)          usage 0;;
-        --add)              operation="+";;
-        --sub|--subtract)   operation="-";;
-        --json)             json_format=1;;
-        -*)                 echo "$name: unrecognized option '$1'" >&2; exit 1;;
-        *)                  input_files+=( $1 );;
+        -h|--help)               usage 0;;
+        --add)                   operation="+";;
+        --sub|--subtract)        operation="-";;
+        --mul|--mult|--multiply) operation="*";;
+        --div|--divide)          operation="/";;
+        --less)                  operation="<";;
+        --less-or-equal)         operation="<=";;
+        --more)                  operation=">";;
+        --more-or-equal)         operation=">=";;
+        --equal)                 operation="==";;
+        --non-equal)             operation="!=";;
+        --not-equal)             operation="!=";;
+        --json)                  json_format=1;;
+        --strict)                strict=1;;
+        --detailed)              detailed=1;;
+        --exclude)               shift; if [[ $# == 0 ]] ; then echo "$name: --exclude lack argument" >&2; exit 1; fi; excluded+=( "$1" );;
+        -*)                      echo "$name: unrecognized option '$1'" >&2; exit 1;;
+        *)                       input_files+=( "$1" );;
     esac
     shift
 done
 
+binary_operands=( "-" "/" "<" "<=" ">" ">=" "==" "!=" )
+logical_operands=( "<" "<=" ">" ">=" "==" "!=" )
+
 if [[ ${#input_files[@]} == 0 ]]; then simple_usage 1; fi
 if [[ ${#input_files[@]} == 1 ]]; then echo "$name: at least two input files required" >&2; exit 1; fi
 if [[ -z "$operation" ]]; then echo "$name: operation must be specified (e.g. --subtract)" >&2; exit 1; fi
-if [[ $operation == "-" && ${#input_files[@]} > 2 ]]; then echo "$name: only two input files permitted with --subtract"; exit 1; fi
+if binary_op "$operation" && [[ ${#input_files[@]} > 2 ]]; then echo "$name: only two input files permitted with $operation operation"; exit 1; fi
 
 for file in "${input_files[@]}"; do
-    if [[ ! -f "$file" ]]; then echo "$name: cannot open '$file'" >&2; exit 1; fi
+    if [[ ! -r "$file" ]]; then echo "$name: cannot open '$file'" >&2; exit 1; fi
 done
 
 convert_input="cat"
@@ -93,54 +264,22 @@ if (( json_format )); then
     convert_input="name-value-convert --from=json --to=path-value"
     convert_output="name-value-convert --from=path-value --to=json"
 fi
+if logical_op "$operation" ; then
+    (( "$detailed" == 0 )) && convert_output="invert_grep"
+else
+    (( $detailed == 1 )) && echo "$name: warning, --detailed is ignored, not a logical op" >&2
+fi
 
 file_separator="@-@-@-@-@"
-
-( for file in "${input_files[@]}"; do $convert_input < "$file"; echo $file_separator; done ) | awk '
-BEGIN { first_file = 1; }
-
-/^'$file_separator'$/ { first_file = 0; next; }
-
-NF == 0 || /^ *#/ { next; }     # skip comments and empty lines
-
-function strip_spaces_and_quotes(s)
+function feed_input()
 {
-    for (n = 1;substr(s, n, 1) == " ";n++) { }
-    if (n > length(s)) { return ""; }
-    for (m = length(s);substr(s, m, 1) == " ";m--) { }
-    if (substr(s, n, 1) == "\"") { n++; }
-    if (substr(s, m, 1) == "\"") { m--; }
-    return substr(s, n, m - n + 1);
+    local file
+    for file in "${input_files[@]}"; do
+        $convert_input < "$file"
+        (( $? == 0 )) || { echo "$name: cannot parse '$file'" >&2; return 1; }
+        echo "$file_separator"
+    done
 }
 
-{
-    pos = index($0, "=");
-    if (pos == -1) { next; }
-
-    name = strip_spaces_and_quotes(substr($0, 1, pos - 1));
-    if (name == "") { next; }
-
-    value = strip_spaces_and_quotes(substr($0, pos + 1));
-
-    if (first_file) { name_val[name] = value; nth_name[++num] = name; }
-    else if (name in name_val) { name_val[name] = name_val[name] '$operation' value; }
-}
-
-END \
-{
-    if (num == 0 && '$json_format' == 0) \
-    {
-        print "'$name': warning: no \"name=value\" lines found (maybe --json option was intended?)" | "cat 1>&2";
-        exit;
-    }
-
-    for (n = 1;n <= num;n++) \
-    {
-        name = nth_name[n];
-        print name "=" name_val[name];
-    }
-}
-' | $convert_output
-
-bye 0
-
+feed_input | python_converter | $convert_output
+if ! status_ok; then exit 1; else exit 0; fi

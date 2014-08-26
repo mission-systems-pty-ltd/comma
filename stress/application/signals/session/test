@@ -1,0 +1,88 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+app="long-running-app"
+[[ -x "./$app" ]] || { echo "executable '$app' not found" >&2 ; exit 1; }
+export app
+
+outdir="output"
+log="test.log"
+rm -rf "$outdir" || exit 1
+mkdir -p "$outdir" || exit 1
+
+export PATH="$( pwd ):$PATH"
+cd "$outdir"
+
+function report_processes()
+{
+    ps afx -o user,pid,pgid,sid,%cpu,%mem,vsz,rss,tty,stat,start,time,cmd
+}
+export -f report_processes
+
+function handler()
+{
+    trap '' SIGINT SIGTERM
+    echo "worker terminated in $BASHPID, attempt clean-up..." >&2
+    echo "first terminate the app and let it clean up by itself..." >&2
+    kill -s TERM -- $apid
+    wait
+    report_processes >&2
+    echo "terminate all processes in group $apgid" >&2
+    # this will kill the worker, nothing to do here
+    kill -s TERM -- -$apgid
+    sleep 2  # cannot wait, as after the early death of the broken main process all its subprocesses are parented to init
+    report_processes >&2
+    echo "$name::worker terminated with simulated error" >&2
+    exit 1
+}
+
+function worker()
+{
+    local apid apgid arv
+    trap 'handler' SIGINT SIGTERM
+    setsid "$app" > "${app}.log" 2>&1 &
+    apid=$!
+    apgid=$( ps -o pgid $apid | tail -n 1 )
+    apgid=$( echo $apgid ) # get rid of spaces for PIDs < 10000
+    wait
+    arv=$?
+    return $arv
+}
+
+function run_once()
+{
+    >"$log"
+    worker > "worker.log" 2>&1 &
+    wpid=$!
+    echo "Worker running as PID $wpid..." >> "$log"
+
+    sleep 2
+
+    echo "Before the kill:" >> "$log"
+    report_processes >> "$log"
+
+    # Send a normal signal to the app, it is the app job
+    # to terminate all its child processes
+    echo "Now terminating..." >> "$log"
+    kill -s TERM -- $wpid >> "$log"
+
+    wait $wpid
+    rv=$?
+    echo "After the kill:" >> "$log"
+    report_processes >> "$log"
+
+    count=$( grep -c exit "${app}.log" )
+    echo "Application exit status: $rv, sub-processes exited normally: $count" >> "$log"
+    echo "All done." >> "$log"
+
+    echo "count[$iter]=$count"
+}
+
+for iter in $( seq 100 ) ; do
+    mkdir -p "$iter" || exit 1
+    cd "$iter"
+    run_once
+    (( $? == 0 )) || { echo "$name: iteration $iter failed, see the logs in '$outdir/$iter'" >&2; exit 1; }
+    cd ..
+done

@@ -1,0 +1,20 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+app="./app"
+[[ -x "$app" ]] || { echo "$name: application '$app' not found" >&2; exit 1; }
+
+outdir="output"
+rm -rf "$outdir" || exit 1
+mkdir -p "$outdir" || exit 1
+
+for n in $( seq 10 ) ; do
+    log="$outdir/$n.log"
+    $app "$outdir" > "$log" 2>&1
+    (( $? == 0 )) && { echo "$name: application was supposed to fail, but did not, see '$log'" >&2; exit 1; }
+    sleep 8 # this is bed_time parameter in app
+    nbugs=$( grep -c "Bug" "$log" )
+    (( $nbugs > 0 )) && break
+done
+echo "bug/count=$nbugs"

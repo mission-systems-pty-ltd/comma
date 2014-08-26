@@ -1,0 +1,20 @@
+function must_work()
+{
+    local msg=$1
+    echo "$name: $msg must work" >&2
+    exit 1
+}
+
+function must_fail()
+{
+    local msg=$1
+    echo "$name: $msg must fail" >&2
+    exit 1
+}
+
+function prepare_for_match()
+{
+    local path=$1
+    path="${path//\//\\\/}"
+    name-value-convert --from json --to path-value | sed "s/^/$path\//;/resources/s/\"//g"
+}

@@ -1,0 +1,15 @@
+{
+    "resources":
+    {
+        "cpus": "-2",
+        "memory":
+        {
+            "main": "-1000000",
+            "shared": "500000"
+        }
+    },
+    "negative":
+    {
+        "value": "-3"
+    }
+}

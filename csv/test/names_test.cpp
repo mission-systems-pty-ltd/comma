@@ -38,7 +38,7 @@
 #include <comma/visiting/apply.h>
 #include <comma/string/string.h>
 
-namespace comma { namespace csv { namespace test {
+namespace comma { namespace csv { namespace names_test {
 
 struct deep_nested
 {
@@ -71,48 +71,48 @@ struct struct_with_optional_element
     boost::optional< deep_nested > nested;
 };
 
-} } } // namespace comma { namespace csv { namespace test {
+} } } // namespace comma { namespace csv { namespace names_test {
 
 namespace comma { namespace visiting {
 
-template <> struct traits< comma::csv::test::deep_nested >
+template <> struct traits< comma::csv::names_test::deep_nested >
 {
     /// const visiting
     template < typename Key, class Visitor >
-    static void visit( const Key&, const comma::csv::test::deep_nested& p, Visitor& v )
+    static void visit( const Key&, const comma::csv::names_test::deep_nested& p, Visitor& v )
     {
         v.apply( "X", p.X );
         v.apply( "Y", p.Y );
     }
 };
 
-template <> struct traits< comma::csv::test::nested >
+template <> struct traits< comma::csv::names_test::nested >
 {
     /// const visiting
     template < typename Key, class Visitor >
-    static void visit( const Key&, const comma::csv::test::nested& p, Visitor& v )
+    static void visit( const Key&, const comma::csv::names_test::nested& p, Visitor& v )
     {
         v.apply( "A", p.A );
         v.apply( "B", p.B );
     }
 };
 
-template <> struct traits< comma::csv::test::test_struct >
+template <> struct traits< comma::csv::names_test::test_struct >
 {
     /// const visiting
     template < typename Key, class Visitor >
-    static void visit( const Key&, const comma::csv::test::test_struct& p, Visitor& v )
+    static void visit( const Key&, const comma::csv::names_test::test_struct& p, Visitor& v )
     {
         v.apply( "C", p.C );
         v.apply( "D", p.D );
     }
 };
 
-template <> struct traits< comma::csv::test::containers >
+template <> struct traits< comma::csv::names_test::containers >
 {
     /// const visiting
     template < typename Key, class Visitor >
-    static void visit( const Key&, const comma::csv::test::containers& p, Visitor& v )
+    static void visit( const Key&, const comma::csv::names_test::containers& p, Visitor& v )
     {
         v.apply( "size", p.size );
         v.apply( "vector", p.vector );
@@ -120,11 +120,11 @@ template <> struct traits< comma::csv::test::containers >
     }
 };
 
-template <> struct traits< comma::csv::test::struct_with_optional_element >
+template <> struct traits< comma::csv::names_test::struct_with_optional_element >
 {
     /// const visiting
     template < typename Key, class Visitor >
-    static void visit( const Key&, const comma::csv::test::struct_with_optional_element& p, Visitor& v )
+    static void visit( const Key&, const comma::csv::names_test::struct_with_optional_element& p, Visitor& v )
     {
         v.apply( "x", p.x );
         v.apply( "nested", p.nested );
@@ -133,7 +133,7 @@ template <> struct traits< comma::csv::test::struct_with_optional_element >
 
 } } // namespace comma { namespace visiting {
 
-namespace comma { namespace csv { namespace test {
+namespace comma { namespace csv { namespace names_test {
 
 TEST( csv, names_to_names )
 {
@@ -242,4 +242,4 @@ TEST( csv, names_optional_element )
     // todo: more testing
 }
 
-} } } // namespace comma { namespace csv { namespace test {
+} } } // namespace comma { namespace csv { namespace names_test {

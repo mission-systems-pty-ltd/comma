@@ -1,0 +1,2 @@
+Aggressive test of resource-manipulation methods in parallel environment under
+flock protection.

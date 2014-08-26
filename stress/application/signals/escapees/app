@@ -1,0 +1,113 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+workdir=$1
+[[ "$workdir" == '-h' || "$workdir" == '--help' ]] && {
+    cat >&2 <<EOF
+Usage: $name <working directory>
+
+If all correct, output shall have no word "exit". Otherwise, some subprocesses
+have not been killed.
+
+Warning: heavy stress on your system, which may become unresponsive for a while.
+
+Warning: check the number of user processes allowed by 'ulimit -u'. It shall be
+at least 20000 for this application to run.
+EOF
+exit 0
+}
+[[ -d "$workdir" ]] || { echo "$name: working directory '$workdir' not found." >&2; exit 1; }
+
+# Test idea: create several child processes that spawn a large number
+# of grand-children. Leave these processes waiting so that on a special
+# event (reading from a fifo pipe) they start spawining more and more
+# grandchildren. Set up a signal handler in the main script to kill all
+# its offspring recursively (the default in comma_trap). Then trigger
+# the spawning event (write into the pipes) and immediately after that
+# send a kill signal to the top-level (this) script. Grandchildren shall
+# sleep for some time, then report termination. No termination will be
+# reported for grandchildren killed prematurely. Thus, any termination
+# report indicates escapees.
+
+source $( which comma-application-util ) || exit 1
+
+function clean_up()
+{
+    trap '' SIGHUP SIGINT SIGTERM SIGPIPE SIGQUIT   # ignore signals
+    echo "terminated, clean up in $name..." >&2
+    rm -f $pipes
+    wait # $child_pids
+    echo "do not touch for $bed_time s..." >&2
+    exit 1
+}
+
+# handle signals (clean up and exit)
+comma_trap clean_up SIGHUP SIGINT SIGTERM SIGPIPE SIGQUIT --name=$name
+
+function grandchild()
+{
+    local parent=$1
+    local stage=$2
+    local delay=$3
+    sleep $delay
+    echo "Bug? $stage grandchild of parent $parent terminated" >&2
+}
+
+function child()
+{
+    local rank=$1    # our worker number
+    local num=$2     # number of grandchildren to spawn
+    local pipe=$3    # wait for the command on this fifo
+    local delay=$4   # time for offspring to sleep
+    local ip cmd pids
+    # first spawn
+    for ip in $( seq $num ) ; do
+        grandchild $rank "early" $delay &
+        pids="$pids $!"
+    done
+    read cmd < $pipe
+    [[ "$cmd" == "true" ]] && {
+        # second spawn
+        for ip in $( seq $num ) ; do
+            grandchild $rank "late" $delay &
+            pids="$pids $!"
+        done
+    }
+    wait # $pids
+    echo "child $rank terminated" >&2
+    return 0
+}
+
+# Fine-tune these parameters
+num_children=8
+num_larvae=1024
+bed_time=4  # also change sleep time in the test
+spawn_trigger="true"
+do_kill="true"
+trigger_delay=2
+
+child_pids=""
+pipes=""
+
+# create children
+for n in $( seq $num_children ) ; do
+    pipe="$workdir/pipe${n}"
+    pipes="$pipes $pipe"
+    mkfifo "$pipe" || exit 1
+    child $n $num_larvae $pipe $bed_time &
+    child_pids="$child_pids $!"
+done
+
+# let the grandchildren goto sleep
+sleep $trigger_delay
+
+# optionally trigger second spawning
+for pipe in $pipes ; do
+    echo "$spawn_trigger" > "$pipe"
+done
+
+[[ "$do_kill" == "true" ]] && kill -s INT $BASHPID
+
+wait $child_pids
+echo "normal exit" >&2

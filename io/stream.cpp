@@ -120,7 +120,8 @@ struct traits < std::ostream >
     }
     #ifdef WIN32
         #ifdef O_LARGEFILE
-            static io::file_descriptor open( const std::string& name ) { return _open( &name[0], O_WRONLY | O_CREAT | O_LARGEFILE, _S_IWRITE ); }
+            static io::file_descriptor open( const std::string& name ) { return _open( &name[0], O_WRONLY | O_CREAT | O_LARGEFILE, _S_IWRITE );
+            }
         #else
             static io::file_descriptor open( const std::string& name ) { return _open( &name[0], O_WRONLY | O_CREAT, _S_IWRITE ); }
         #endif
@@ -168,14 +169,20 @@ stream< S >::~stream()
     close_ = NULL;
 }
 
-template < typename S >
-void stream< S >::close() { close_d = true; if( close_ ) { close_(); } }
+template < typename S > void stream< S >::close() { close_d = true; if( close_ ) { close_(); } }
 
-template < typename S >
-S* stream< S >::operator()() { return this->operator->(); }
+template < typename S > S* stream< S >::operator()() { return this->operator->(); }
 
-template < typename S >
-S& stream< S >::operator*() { return *this->operator->(); }
+template < typename S > S& stream< S >::operator*() { return *this->operator->(); }
+
+static void set_non_blocking_flags_( io::file_descriptor fd )
+{
+#ifndef WIN32
+    std::size_t flags = ::fcntl( fd, F_GETFL, 0 );
+    flags = flags & ( ~O_NONBLOCK );
+    ::fcntl( fd, F_SETFL, flags );
+#endif // #ifndef WIN32
+}
 
 template < typename S >
 S* stream< S >::operator->()
@@ -215,8 +222,7 @@ comma::io::file_descriptor stream< S >::fd() const
     return fd_;
 }
 
-template < typename S >
-const std::string& stream< S >::name() const { return name_; }
+template < typename S > const std::string& stream< S >::name() const { return name_; }
 
 template < typename S >
 stream< S >::stream( const std::string& name, mode::value m, mode::blocking_value blocking )
@@ -314,10 +320,8 @@ stream< S >::stream( const std::string& name, mode::value m, mode::blocking_valu
         //   currently, we simply go for a dirty trick below, which we
         //   have been using successfully in a few applications
         fd_ = impl::traits< S >::open( name );
-        if( fd_ == io::invalid_file_descriptor ) { COMMA_THROW( comma::exception, "failed to open " << name ); }
-        std::size_t flags = ::fcntl( fd_, F_GETFL, 0 );
-        flags = flags & ( ~O_NONBLOCK );
-        ::fcntl( fd_, F_SETFL, flags );
+        if( fd_ != io::invalid_file_descriptor ) { set_non_blocking_flags_( fd_ ); return; }
+        if( boost::filesystem::is_regular_file( name ) ) { COMMA_THROW( comma::exception, "failed to open \"" << name << "\"" ); }
         #endif // #ifdef WIN32
     }
 }
