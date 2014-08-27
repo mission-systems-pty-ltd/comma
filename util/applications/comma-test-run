@@ -404,7 +404,7 @@ function run_test_with_timeout()
     setup_signal_handler terminate_run_and_match_test
     export -f comma_progress_named
     export our_stats_progress dir test_exec path verbose
-    timeout -k 10 -s TERM $max_run_time bash -c run_and_match_test &
+    timeout -s TERM $max_run_time bash -c run_and_match_test & # -k 10 # option missing in RHEL6, remove for now
     local test_pgid=$!
     wait $test_pgid
 }
