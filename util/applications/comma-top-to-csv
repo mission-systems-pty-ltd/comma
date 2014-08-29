@@ -14,9 +14,9 @@ function extract_cpus()
     local timestamp=$1
     local input=$2
     local us=${input%% us, *}
-    us=${us##%Cpu(s): }
+    us=${us##%Cpu(s): *( )}
     local sy=${input%% sy, *}
-    sy=${sy##* us, }
+    sy=${sy##* us, *( )}
     local total=$( echo "$us + $sy" | bc )
     echo "$timestamp,$us,$sy,$total"
 }
