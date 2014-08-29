@@ -1,5 +1,11 @@
 // g++ -std=c++0x -o xml-xpath-map xml-xpath-map.cpp -lstdc++ -lexpat
 
+// NOTE the original output format was thought to be used as arguments to cut
+//         path1,s1,e1,s2,e2,s3,e3
+//         path2,s1,e1,s2,e2,s3,e3
+// However this exploded to massively long lines and so could not be used.
+// Now it is one line per element
+
 #include <iostream>
 #include <limits>
 #include <vector>
@@ -17,9 +23,9 @@ static unsigned element_depth_max = 0;
 
 static XML_Parser parser = nullptr;
 
-static std::vector<std::string> element_path_list;
-// static std::string element_path;
-static std::map<std::string,std::vector<std::pair<long long, long long>>> element_map;
+typedef std::pair<std::string, long long> element_entry_t;
+
+static std::vector<element_entry_t> element_list;
 
 // ~~~~~~~~~~~~~~~~~~
 // USER INTERFACE
@@ -47,32 +53,31 @@ element_start(void * userdata, char const * element, char const ** attributes)
     
     std::string element_path;
     element_path.reserve(4000);
-    if (! element_path_list.empty())
-        element_path = element_path_list.back();
+    if (! element_list.empty())
+        element_path = element_list.back().first;
     element_path.append("/");
     element_path.append(element);
     
-    element_path_list.push_back(std::string(element_path));
-    
     long long const at = XML_GetCurrentByteIndex(parser);
-    std::pair<long long, long long> loc(at,0);
-    element_map[element_path].push_back(loc);
 
-    // std::cout << "+ " << element_path << ' ' << at << std::endl;
+    element_entry_t curr;
+    curr.first = element_path;
+    curr.second = at;
+    
+    element_list.push_back(curr);
 }
 
 static void
 element_end(void * userdata, char const * element)
 {
-    long long const was = element_map[element_path_list.back()].back().first;
     long long const at = XML_GetCurrentByteIndex(parser);
-    std::cout << element_path_list.back() << ' ' << was << '-' << at << std::endl;
 
-    element_map[element_path_list.back()].back().second = at;
+    element_entry_t const & curr = element_list.back();
 
+    std::cout << curr.first << ',' << curr.second << ',' << at << std::endl;
+
+    element_list.pop_back();
     --element_depth;
-    element_path_list.pop_back();
-
 }
 
 // ~~~~~~~~~~~~~~~~~~
@@ -134,19 +139,6 @@ int main(int argc, char ** argv)
     XML_ParserFree(parser);
     
     std::cerr << "Number of Elements " << element_count << ", Maximum Depth " << element_depth_max << std::endl;
-
-    if (false)
-    {
-        for (auto & kv : element_map)
-        {
-            std::cout << kv.first;
-            for (auto & se : kv.second)
-            {
-                std::cout << ',' << se.first << ',' << se.second;
-            }
-            std::cout << '\n';
-        }
-    }
         
     return code;
 }
