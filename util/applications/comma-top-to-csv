@@ -24,7 +24,7 @@ top (1) output, and collects the results into CVS file (sent to stdout).
 
 Usage: ${name} <options> [ > output_file.csv ]
 
-Note 1: top (1) output is affected by its global and user configuration files.
+Note: top (1) output is affected by its global and user configuration files.
 There is no option to ignore those files. This utility assumes the default format
 of top (1) output and will fail if alternative output layout is enforced through
 the configuration file(s). It shall be possible to explicitly mandate the desired
@@ -60,7 +60,7 @@ function feeder()
     local num=$1
     local extra_opts=$2
     local top_opts="-b $extra_opts"
-    [[ -n "num" ]] && top_opts="$top_opts -n $num"
+    [[ -n "$num" ]] && top_opts="$top_opts -n $num"
     # make all buffering per-line
     stdbuf -oL -eL top $top_opts | grep --line-buffered -A 4 ^top
 }
