@@ -1,9 +1,65 @@
 #!/bin/bash
 
+name=$( basename $0 )
+
+source $( which comma-application-util ) 2>/dev/null || { echo "$name: could not source 'comma-application-util'" >&2; exit 1; }
+
+function description()
+{
+    cat <<EOF
+--help,-h; show this help
+--debug; much more debug output
+--output-fields; output the field names to stdout and exit
+--num-samples=[<N>]; number of samples to take, default: forever, until terminated
+--sampling-interval=[<time>]; sampling interval, see '-d' option of top (1), default: defined by top (1)
+--top-options=[<options>]; extra command line argument(s) pass to the top (1) utility
+EOF
+}
+
+function usage()
+{
+    cat >&2 <<EOF
+Invokes the performance monitoring utility top (1) in continuous mode, parses
+top (1) output, and collects the results into CVS file (sent to stdout).
+
+Usage: ${name} <options> [ > output_file.csv ]
+
+Note 1: top (1) output is affected by its global and user configuration files.
+There is no option to ignore those files. This utility assumes the default format
+of top (1) output and will fail if alternative output layout is enforced through
+the configuration file(s). It shall be possible to explicitly mandate the desired
+output layout through command-line switches to top that override configuration
+files. This is a possible future extension.
+
+Options:
+EOF
+    description | sed 's/^/    /g' >&2
+    cat >&2 <<EOF
+
+Examples:
+
+    Collect data until terminated by the user:
+
+        $name > results.csv
+
+    Take 1000 samples and quit (default sampling interval of top (1) is 3s; thus,
+    collect 3000s of data):
+
+        $name --num-samples=1000 > results.csv
+
+    Facilitate parsing $name output:
+
+        $name --output-fields
+
+EOF
+    exit 0
+}
+
 function feeder()
 {
     local num=$1
-    local top_opts="-b"
+    local extra_opts=$2
+    local top_opts="-b $extra_opts"
     [[ -n "num" ]] && top_opts="$top_opts -n $num"
     # make all buffering per-line
     stdbuf -oL -eL top $top_opts | grep --line-buffered -A 4 ^top
@@ -11,52 +67,60 @@ function feeder()
 
 function extract_cpus()
 {
-    local timestamp=$1
-    local input=$2
+    local input=$1
     local us=${input%% us, *}
     us=${us##%Cpu(s): *( )}
     local sy=${input%% sy, *}
     sy=${sy##* us, *( )}
     local total=$( echo "$us + $sy" | bc )
-    echo "$timestamp,$us,$sy,$total"
+    echo -n ",$us,$sy,$total"
 }
 
 function extract_mem()
 {
-    local timestamp=$1
-    local input=$2
+    local input=$1
     local used=${input%% used, *}
     used=${used##* total, *( )}
-    echo "$timestamp,$used"
-}
-
-function extract_swap()
-{
-    local timestamp=$1
-    local input=$2
-    local used=${input%% used, *}
-    used=${used##* total, *( )}
-    echo "$timestamp,$used"
+    echo -n ",$used"
 }
 
 function parser()
 {
     shopt -s extglob
-    local cpus_out=$1
-    local mem_out=$2
-    local swap_out=$3
-    local timestamp
+    local timestamp line first
+    first="true"
     while true ; do
         read line
         [[ -z "$line" ]] && break
-        timestamp=$( date +%Y%m%dT%H%M%S )
-        [[ "$line" = "%Cpu(s):"* ]]  && extract_cpus "$timestamp" "$line" >> "$cpus_out"
-        [[ "$line" = "KiB Mem:"* ]]  && extract_mem  "$timestamp" "$line" >> "$mem_out"
-        [[ "$line" = "KiB Swap:"* ]] && extract_swap "$timestamp" "$line" >> "$swap_out"
+        [[ "$first" == "true" ]] && {
+            timestamp=$( date +%Y%m%dT%H%M%S )
+            echo -n "$timestamp"
+            first="false"
+        }
+        [[ "$line" = "%Cpu(s):"* ]]  && extract_cpus "$line"
+        [[ "$line" = "KiB Mem:"* ]]  && extract_mem  "$line"
+        # swap is last, finish the line
+        [[ "$line" = "KiB Swap:"* ]] && { extract_mem  "$line" ; echo ; }
+        [[ "$line" = "--" ]] && first="true"
     done
 }
 
->cpus.log
->mem.log
->swap.log
-feeder 1000 | parser cpus.log mem.log swap.log
+function output_fields()
+{
+    echo "timestamp,cpu/user,cpu/system,cpu/total,memory/ram,memory/swap"
+}
+
+if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then usage ; exit ; fi
+if (( $( comma_options_has --output-fields $@ ) )) ; then output_fields ; exit ; fi
+
+debug=0
+
+description | comma-options-validate $@
+comma_path_value_to_var --export < <( description | comma-options-to-name-value $@ )
+
+feeder_opts=""
+[[ -n "$sampling_interval" ]] && feeder_opts="-d $sampling_interval"
+[[ -n "$top_options" ]] && feeder_opts="$feeder_opts $top_options"
+[[ -n "$num_samples" ]] && (( ++num_samples )) # first line will be ignored, leaving num_samples lines
+
+feeder $num_samples "$feeder_opts" | parser | tail -n +2

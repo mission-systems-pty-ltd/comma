@@ -18,3 +18,4 @@ INSTALL( PROGRAMS comma-stats
          DESTINATION ${comma_INSTALL_BIN_DIR} )
 install( PROGRAMS comma-test-match DESTINATION ${comma_INSTALL_BIN_DIR} )
 install( PROGRAMS comma-test-run DESTINATION ${comma_INSTALL_BIN_DIR} )
+install( PROGRAMS comma-top-to-csv DESTINATION ${comma_INSTALL_BIN_DIR} )
