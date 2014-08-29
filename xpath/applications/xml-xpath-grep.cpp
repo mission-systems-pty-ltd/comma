@@ -1,13 +1,18 @@
 // g++ -std=c++0x -o xml-xpath-grep xml-xpath-grep.cpp -lstdc++ -lexpat
 
+#include <cassert>
+
 #include <iostream>
 #include <limits>
 #include <vector>
 #include <map>
 
 #include <cstdio>
+#include <cctype>
 
 #include <expat.h>
+
+bool const TRIMWS = true;
 
 static unsigned const BUFFY_SIZE = 4 * 1024 * 1024;
 
@@ -44,8 +49,38 @@ usage(char const * const argv0)
 // SAX HANDLERS
 // ~~~~~~~~~~~~~~~~~~
 static void XMLCALL
-element_start(void * userdata, char const * element, char const ** attributes)
+default_handler(void * userdata, XML_Char const * str, int length)
 {
+    if (element_found > 0)
+        if (! TRIMWS)
+        {
+            std::cout.write(str, length);
+        }
+        else
+        {
+            bool was_ws = false;
+            for (unsigned i = 0; i < length; ++i)
+                if (! std::isspace(str[i]))
+                    std::cout << str[i];
+                else
+                {
+                    if (! was_ws) std::cout << ' ';
+                    was_ws = true;
+                }
+        }
+}
+
+static void XMLCALL
+comment(void * userdata, XML_Char const * str)
+{
+    // DO NOTHING
+}
+
+static void XMLCALL
+element_start(void * userdata, XML_Char const * element, XML_Char const ** attributes)
+{
+    assert(nullptr != element);
+
     ++element_count;
     element_depth_max = std::max(element_depth_max, element_depth);
     ++element_depth;
@@ -74,16 +109,32 @@ element_start(void * userdata, char const * element, char const ** attributes)
 
     if (element_found > 0)
     {
-        std::cout << '<' << element << '>';
+        std::cout << '<' << element;
+        if (nullptr != attributes)
+            for (unsigned i = 0; nullptr != attributes[i]; i += 2)
+            {
+                if (i > 0) std::cout << ' ';
+                std::cout << attributes[i] << "='";
+                for (XML_Char const * p = attributes[i+1]; *p != 0; ++p)
+                    if ('\'' == *p)
+                        std::cout << "\\\'";
+                    else if ('\\' == *p)
+                        std::cout << "\\\\";
+                    else if ('\'' == *p)
+                        std::cout << *p;
+                std::cout << "'";
+            }
+        std::cout << '>';
     }
 }
 
 static void
-element_end(void * userdata, char const * element)
+element_end(void * userdata, XML_Char const * element)
 {
     std::string const & element_path = element_list.back();
+    bool const was_found = element_found > 0;
 
-    if (element_found > 0)
+    if (was_found)
     {
         std::cout << "</" << element << '>';
     }
@@ -102,6 +153,11 @@ element_end(void * userdata, char const * element)
         }
     }    
 
+    if (was_found && 0 == element_found)
+    {
+        std::cout << std::endl;
+    }
+
     element_list.pop_back();
     --element_depth;
 }
@@ -112,6 +168,8 @@ element_end(void * userdata, char const * element)
 int parse(char const * const argv0, XML_Parser const parser)
 {
     XML_SetElementHandler(parser, element_start, element_end);
+    XML_SetDefaultHandler(parser, default_handler);
+    XML_SetCommentHandler(parser, comment);
 
     for (;;)
     {
