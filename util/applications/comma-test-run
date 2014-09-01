@@ -404,9 +404,13 @@ function run_test_with_timeout()
     setup_signal_handler terminate_run_and_match_test
     export -f comma_progress_named
     export our_stats_progress dir test_exec path verbose
+    # Note: timeout option '-k' is missing in RHEL6, remove '-k 10' if need be
     timeout -k 10 -s TERM $max_run_time bash -c run_and_match_test &
     local test_pgid=$!
     wait $test_pgid
+    local rv=$?
+    unset test_pgid
+    return $rv
 }
 export -f run_test_with_timeout
 
@@ -520,7 +524,7 @@ function run_single_test()
                     test_pid=$!
                     wait $test_pid
                     test_failed=$?
-                    locked_release_resources "$comma_test_run_resources_flock" "$request" "$comma_test_run_resources_counter"
+                    locked_release_resources "$comma_test_run_resources_flock" "$request" "$comma_test_run_resources_counter" "$worker_id"
                     (( $? == 0 )) || {
                         echo "$name::worker $worker_id: cannot release resources" >&2
                         result=1

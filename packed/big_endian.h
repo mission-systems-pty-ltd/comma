@@ -54,10 +54,22 @@ template <> struct big_endian_traits< comma::uint16 >
     static comma::uint16 ntoh( comma::uint16 v ) { return ntohs( v ); }
 };
 
+template <> struct big_endian_traits< comma::int16 >
+{
+    static comma::int16 hton( comma::int16 v ) { return htons( v ); }
+    static comma::int16 ntoh( comma::int16 v ) { return ntohs( v ); }
+};
+
 template <> struct big_endian_traits< comma::uint32 >
 {
     static comma::uint32 hton( comma::uint32 v ) { return htonl( v ); }
     static comma::uint32 ntoh( comma::uint32 v ) { return ntohl( v ); }
+};
+
+template <> struct big_endian_traits< comma::int32 >
+{
+    static comma::int32 hton( comma::int32 v ) { return htonl( v ); }
+    static comma::int32 ntoh( comma::int32 v ) { return ntohl( v ); }
 };
 
 template < typename T >
@@ -94,14 +106,18 @@ class big_endian_int : public packed::field< big_endian_int< T >, T, sizeof( T )
 
 } // namespace detail {
 
-/// big endian 16-bit integer    
+/// big endian 16-bit integers
 typedef detail::big_endian_int< comma::uint16 > big_endian_uint16;
-/// alias for big endian 16-bit integer
+typedef detail::big_endian_int< comma::int16 > big_endian_int16;
+/// aliases for big endian 16-bit integers
 typedef big_endian_uint16 net_uint16;
-/// big endian 32-bit integer
+typedef big_endian_int16 net_int16;
+/// big endian 32-bit integers
 typedef detail::big_endian_int< comma::uint32 > big_endian_uint32;
-/// alias for big endian 32-bit integer
+typedef detail::big_endian_int< comma::int32 > big_endian_int32;
+/// aliases for big endian 32-bit integers
 typedef big_endian_uint32 net_uint32;
+typedef big_endian_int32 net_int32;
 
 } } // namespace comma { namespace packed {
 
