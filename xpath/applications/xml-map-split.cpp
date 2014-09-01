@@ -3,13 +3,21 @@
 #include <cassert>
 
 #include <iostream>
+#include <sstream>
 #include <fstream>
 #include <iterator>
 #include <algorithm>
+#include <limits>
 #include <vector>
 #include <set>
+#include <list>
 
-std::set<std::string> grep_set;
+#include <cstring>
+
+static std::set<std::string> exact_set;
+static std::list<std::string> grep_list;
+static unsigned block_start = 0;
+static unsigned block_end = std::numeric_limits<unsigned>::max(); 
 
 // ~~~~~~~~~~~~~~~~~~
 // HELPERS
@@ -47,7 +55,7 @@ struct punct
 std::istream &
 operator >>(std::istream & is, punct const & p)
 {
-    char c = 0; is >> c;
+    char const c = is.get();
     if (c != p._c) is.setstate(std::ios::failbit);
     return is;
 }
@@ -73,12 +81,25 @@ operator >>(std::istream & is, until const & p)
     }
 }
 
-template<typename T>
 bool
-contains(std::set<T> const & m, T const & v)
+match(std::string const & v)
 {
     // std::cerr << "Find " << v << std::endl;
-    return m.end() != m.find(v);
+    if (exact_set.end() != exact_set.find(v))
+        return true;
+
+    std::list<std::string>::const_iterator const end = grep_list.end();
+    std::list<std::string>::const_iterator itr = grep_list.begin();
+    for (; itr != end; ++itr)
+        if (v.size() > itr->size()) // can't do a partial match if smaller
+        {
+            size_t pos = v.size() - itr->size();
+            // std::cerr << "Compare to " << v.c_str() + pos << std::endl;
+            if (0 == std::strcmp(v.c_str() + pos, itr->c_str()))
+                return true;
+        }
+
+    return false;
 }
 
 // ~~~~~~~~~~~~~~~~~~
@@ -89,7 +110,8 @@ usage(char const * const argv0)
 {
     assert(NULL != argv0);
 
-    std::cout <<   "USAGE: " << argv0 << " <inputname> <mapname> <xpath>+"
+    std::cout <<   "USAGE:   " << argv0 << " <inputname> <mapname> <range> <xpath>+"
+              << "\nWHERE:   <range> is 'all' or M-N"
               << "\nRETURNS: 0 - on success"
                  "\n         1 - on data error; like invalid xml"
               << std::endl;
@@ -107,6 +129,8 @@ parse(char const * const argv0, std::istream & infile, std::istream & mapfile)
     std::string path;
     path.reserve(1024);
     
+    unsigned block_curr = 0;
+    
     while (mapfile)
     {
         long long start = 0, stop = 0;
@@ -114,9 +138,14 @@ parse(char const * const argv0, std::istream & infile, std::istream & mapfile)
 
         mapfile >> until(path, ',') >> start >> punct('-') >> stop >> newline;
         
-        if (contains(grep_set, path))
+        if (match(path))
         {
             // std::cerr << '@' << path << '|' << start << '|' << stop << std::endl;        
+
+            ++block_curr;
+            
+            if (block_curr < block_start) continue;
+            if (block_curr > block_end) return 0;
 
             long long len = stop - start;
 
@@ -146,19 +175,40 @@ parse(char const * const argv0, std::istream & infile, std::istream & mapfile)
 int
 main(int argc, char ** argv)
 {
-    if (argc < 4)
+    if (argc < 5)
     {
         usage(argv[0]);
         return 1;
     }
     
-    for (unsigned i = 3; i < argc; ++i)
-        grep_set.insert(std::string(argv[i]));
+    if (0 != std::strcmp("all", argv[3]))
+    {
+        std::istringstream iss(argv[3]);
+        unsigned s = 0, e = std::numeric_limits<unsigned>::max();
+        iss >> s >> punct('-') >> e;
+        block_start = std::min(s, e);
+        block_end = std::max(s, e);
+        // std::cerr << "Blocks (" << argv[3] << ") " << block_start << "-" << block_end << std::endl;
+    }
+    
+    for (unsigned i = 4; i < argc; ++i)
+    {
+        std::string const str(argv[i]);
+        if (1 == str.length())
+            exact_set.insert(str);
+        else if ('/' != str[0])
+            grep_list.push_back(str);
+        else if ('/' != str[1])
+            exact_set.insert(str);
+        else 
+            grep_list.push_back(str.substr(1)); // keep a preceeding slash because of namespaces
+    }
 
-    if (false)        
+    if (false)
     {
         std::ostream_iterator<std::string> out_itr(std::cerr, "\n");
-        std::copy(grep_set.begin(), grep_set.end(), out_itr);
+        std::copy(exact_set.begin(), exact_set.end(), out_itr);
+        std::copy(grep_list.begin(), grep_list.end(), out_itr);
     }
     
     std::ifstream infile;

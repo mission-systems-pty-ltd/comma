@@ -1,4 +1,4 @@
-// g++ -std=c++0x -o xml-xpath-map xml-xpath-map.cpp -lstdc++ -lexpat
+// g++ -o xml-xpath-map xml-xpath-map.cpp -lstdc++ -lexpat
 
 // NOTE the original output format was thought to be used as arguments to cut
 //         path1,s1,e1,s2,e2,s3,e3
@@ -6,22 +6,25 @@
 // However this exploded to massively long lines and so could not be used.
 // Now it is one line per element
 
+#include <cassert>
+
 #include <iostream>
 #include <limits>
 #include <vector>
 #include <map>
 
 #include <cstdio>
+#include <cstring>
 
 #include <expat.h>
 
-static unsigned const BUFFY_SIZE = 64 * 1024 * 1024;
+static unsigned const BUFFY_SIZE = 4 * 1024 * 1024;
 
 static unsigned element_count = 0;
 static unsigned element_depth = 0;
 static unsigned element_depth_max = 0;
 
-static XML_Parser parser = nullptr;
+static XML_Parser parser = NULL;
 
 typedef std::pair<std::string, long long> element_entry_t;
 
@@ -33,11 +36,11 @@ static std::vector<element_entry_t> element_list;
 static void XMLCALL
 usage(char const * const argv0)
 {
+    assert(NULL != argv0);
+
     std::cout <<   "USAGE: " << argv0 
               << "\nRETURNS: 0 - on success"
                  "\n         1 - on data error; like invalid xml"
-                 "\n         2 - on simple error; like incorrect argument"
-                 "\n         3 - on internal error; like memory / library fault"
               << std::endl;
 }
 
@@ -47,6 +50,9 @@ usage(char const * const argv0)
 static void XMLCALL
 element_start(void * userdata, char const * element, char const ** attributes)
 {
+    assert(NULL != element);
+    assert(NULL != attributes);
+
     ++element_count;
     element_depth_max = std::max(element_depth_max, element_depth);
     ++element_depth;
@@ -70,11 +76,14 @@ element_start(void * userdata, char const * element, char const ** attributes)
 static void
 element_end(void * userdata, char const * element)
 {
-    long long const at = XML_GetCurrentByteIndex(parser);
+    assert(NULL != element);
+
+    long long len = 3 + std::strlen(element);
+    long long const at = XML_GetCurrentByteIndex(parser) + len;
 
     element_entry_t const & curr = element_list.back();
 
-    std::cout << curr.first << ',' << curr.second << ',' << at << std::endl;
+    std::cout << curr.first << ',' << curr.second << '-' << at << std::endl;
 
     element_list.pop_back();
     --element_depth;
@@ -83,14 +92,16 @@ element_end(void * userdata, char const * element)
 // ~~~~~~~~~~~~~~~~~~
 // MAIN
 // ~~~~~~~~~~~~~~~~~~
-int parse(char const * const argv0, XML_Parser const parser)
+int parse(char const * const argv0)
 {
+    assert(NULL != argv0);
+
     XML_SetElementHandler(parser, element_start, element_end);
 
     for (;;)
     {
         void * const buffy = XML_GetBuffer(parser, BUFFY_SIZE);
-        if (nullptr == buffy)
+        if (NULL == buffy)
         {
             std::cout << argv0 << "Error: Could not allocate expat parser buffer. Abort!" << std::endl;
             return 3;
@@ -113,9 +124,7 @@ int parse(char const * const argv0, XML_Parser const parser)
         }
 
         if (std::feof(stdin))
-        {
             return 0;
-        }
     }
 }
 
@@ -128,13 +137,13 @@ int main(int argc, char ** argv)
     }
 
     parser = XML_ParserCreate(NULL);
-    if (nullptr == parser)
+    if (NULL == parser)
     {
         std::cout << argv[0] << "Error: Could not create expat parser. Abort!" << std::endl;
         return 3;
     }
 
-    int const code = parse(argv[0], parser);
+    int const code = parse(argv[0]);
     
     XML_ParserFree(parser);
     
