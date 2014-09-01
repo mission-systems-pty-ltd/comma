@@ -37,6 +37,7 @@ function enqueue_pid()
         | sed --regexp-extended "/$path/s/\[(.+)\]/\[\1,$pid\]/;/$path/s/\[\]/\[$pid\]/" \
         | name-value-convert --from path-value --to json
 }
+export -f enqueue_pid
 
 # Opposite to enqueue_pid above. Remove the given pid from the list.
 function dequeue_pid()
@@ -50,6 +51,7 @@ function dequeue_pid()
         | sed --regexp-extended "/$path/s/\[$pid,(.+)\]/\[\1\]/;/$path/s/\[(.+),$pid\]/\[\1\]/;/$path/s/\[(.+),$pid,(.+)\]/\[\1,\2\]/;/$path/s/\[$pid\]/\[\]/" \
         | name-value-convert --from path-value --to json
 }
+export -f dequeue_pid
 
 # Read a json file as text stream on stdin. Check the position of the given
 # PID (1st argument) in the waiting list described by path (optional second
@@ -69,6 +71,7 @@ function check_pid_position()
         echo "-1"
     fi
 }
+export -f check_pid_position
 
 # Tell if the queue is empty. Read book-keeping file in json format on stdin.
 # Take an optional argument, path to the queue. Exit with status 0 for empty
@@ -82,6 +85,7 @@ function queue_is_empty()
     list=$( name-value-get --from json "$path" | sed "s/^\[//;s/\]\$//;s/ //g" )
     [[ -z "$list" ]]
 }
+export -f queue_is_empty
 
 # These versions take the counter file as an additional first argument and
 # modify it in place.
@@ -98,6 +102,7 @@ function enqueue_pid_infile()
     [[ -w "$counter" ]] || { echo "$name: cannot write '$counter'" >&2; return 1; }
     echo "$contents" | enqueue_pid $@ > "$counter"
 }
+export -f enqueue_pid_infile
 
 # Arguments: counter file, pid, (optional) path.
 function dequeue_pid_infile()
@@ -111,6 +116,7 @@ function dequeue_pid_infile()
     [[ -w "$counter" ]] || { echo "$name: cannot write '$counter'" >&2; return 1; }
     echo "$contents" | dequeue_pid $@ > "$counter"
 }
+export -f dequeue_pid_infile
 
 # Arguments: counter file, pid, (optional) path.
 function check_pid_position_infile()
@@ -123,6 +129,7 @@ function check_pid_position_infile()
     (( $? == 0 )) || { echo "$name: cannot read '$counter'" >&2; return 1; }
     echo "$contents" | check_pid_position_infile $@
 }
+export -f check_pid_position_infile
 
 # Arguments: counter file, (optional) path.
 function queue_is_empty_infile()
@@ -135,6 +142,37 @@ function queue_is_empty_infile()
     (( $? == 0 )) || { echo "$name: cannot read '$counter'" >&2; return 1; }
     echo "$contents" | queue_is_empty $@
 }
+export -f queue_is_empty_infile
+
+# Auxiliary function to convert various storage units to bytes
+# Search for regular expressions [0-9]+unit (where space-separation is optional
+# and unit is one of kB, MB, GB, and TB) and replaces these substrings with
+# corresponding quantities in bytes.
+function storage_to_bytes()
+{
+    local line
+    local storage_regex='([0-9]+)( *)([kMGT]B)'
+    while true ; do
+        read line
+        [[ -z "$line" ]] && break
+        while true ; do
+            # replace storage expressions one-by-one from the left until none found
+            if [[ "$line" =~ $storage_regex ]] ; then
+                case ${BASH_REMATCH[3]} in
+                    kB) value=$(( ${BASH_REMATCH[1]} * 1024 ));;
+                    MB) value=$(( ${BASH_REMATCH[1]} * 1024 * 1024 ));;
+                    GB) value=$(( ${BASH_REMATCH[1]} * 1024 * 1024 * 1024 ));;
+                    TB) value=$(( ${BASH_REMATCH[1]} * 1024 * 1024 * 1024 * 1024 ));;
+                esac
+                line="${line/${BASH_REMATCH[1]}${BASH_REMATCH[2]}${BASH_REMATCH[3]}/$value}"
+            else
+                echo "$line"
+                break
+            fi
+        done
+    done
+}
+export -f storage_to_bytes
 
 # Output the most commonly used system resources: number of CPUs, total RAM,
 # size, total shared memory size. No arguments. Do not read stdin.
@@ -159,6 +197,7 @@ function total_system_resources()
     echo "resources/memory/main=\"$memory_main\""
     echo "resources/memory/shared=\"$memory_shared\""
 }
+export -f total_system_resources
 
 # Initialize a json file listing the currently occupied system resources
 # and a list of processes waiting for them.
@@ -167,14 +206,24 @@ function total_system_resources()
 # in path-value format. No output. Write the book-keeping file in json format.
 #
 # See below for a variant of this function that is safe for parallel use.
+#
+# Optional 2nd and 3rd arguments give json paths for the queue and user list.
 function initialize_resources()
 {
     local counter=$1
+    local path=$2
+    local users=$3
+    local default_path="processes/queue"
+    local default_users="processes/users"
+    path=${path:-"$default_path"}
+    users=${users:-"$default_users"}
     (
         sed 's/=.*$/="0"/'
-        echo 'processes/queue="[]"'
+        echo "$path=\"[]\""
+        echo "$users=\"[]\""
     ) | name-value-convert --from path-value --to json > "$counter"
 }
+export -f initialize_resources
 
 # Given a description of requested resources (1st argument), currently occupied
 # resources (2nd argument) and maximal allowed resources (3rd argument), check
@@ -196,14 +245,18 @@ function initialize_resources()
 # list of waiting processes kept in the counter file, output "wait" to stdout and
 # return 1.
 #
-# If the requested resources alone exceed the limits, overwrite the requested
-# file and set all its values to the maximal allowed.
+# If the requested resources alone exceed (or equal to) the limits, overwrite
+# the requested file and set all its values to the maximal allowed.
 #
 # Any other combination of non-zero exit status and non-empty output indicate
 # a general system error.
 #
 # Optional 5th argument specifies the json path to the []-enclosed list of waiting
 # processes in the counter file. Default path defined in enqueue/dequeue functions.
+#
+# Optional 6th argument specifies the json path to the list of current resource
+# users (add our PID to this list when occupy resources). Default path is
+# defined below. See also release_resources.
 #
 # Resources are described in json files like:
 # {
@@ -226,15 +279,18 @@ function acquire_resources()
     local maximum=$3
     local pid=$4
     local path=$5
+    local users=$6
+    local default_users="processes/users"
+    users=${users:-"$default_users"}
 
     local next position can_acquire any_waiting exceed
     local name=${name:-"acquire_resources"}
 
     # hope for the best if asking for more than available
-    exceed=$( name-value-calc "$request" "$maximum" --more --json --detailed )
+    exceed=$( name-value-calc "$request" "$maximum" --more-or-equal --json --detailed )
     (( $? == 0 )) || { echo "$name: cannot compare for being excessive" >&2; return 1; }
     # lines ending in ="1" correspond to a requested value exceeding maximum value
-    # however, '--more' operation may still give negative result if some other
+    # however, '--more-or-equal' operation may still give negative result if some other
     # requested values are below the maximal values
     echo "$exceed" | name-value-convert --from json --to path-value | grep resources | grep -q '="1"'
     (( $? == 0 )) && { cat "$maximum" > "$request"; }
@@ -251,6 +307,8 @@ function acquire_resources()
             if [[ $can_acquire == 1 ]] ; then         # there are enough resources
                 next=$( echo "$next" | dequeue_pid "$pid" "$path" )
                 (( $? == 0 )) || { echo "$name: cannot dequeue from waiting list" >&2; return 1; }
+                next=$( echo "$next" | enqueue_pid "$pid" "$users" )
+                (( $? == 0 )) || { echo "$name: cannot add to the users list" >&2; return 1; }
                 echo "$next" > "$counter"
                 return 0
             else                                      # otherwise just keep waiting
@@ -268,6 +326,8 @@ function acquire_resources()
         fi
     else                                              # if no-one is waiting
         if [[ $can_acquire == 1 ]] ; then             # easy if enough resources
+            next=$( echo "$next" | enqueue_pid "$pid" "$users" )
+            (( $? == 0 )) || { echo "$name: cannot add to the users list" >&2; return 1; }
             echo "$next" > "$counter"
             return 0
         else                                          # otherwise append to the queue
@@ -279,6 +339,7 @@ function acquire_resources()
         fi
     fi
 }
+export -f acquire_resources
 
 # Helper function ensures that all resource counters are non-negative.
 # Takes resource description on stdin in json format, outputs sanitized
@@ -289,25 +350,47 @@ function non_negative_resources()
         | sed '/^resources\//s/="-[0-9][0-9]*"$/="0"/' \
         | name-value-convert --from path-value --to json
 }
+export -f non_negative_resources
 
 # Opposite to acquire_resources. Input: description of resources being
-# released (1st argument), resource counter (2nd argument) in json format.
-# No output. Write an updated counter file.
+# released (1st argument), resource counter (2nd argument) in json format,
+# PID (some id) of the process releasing the resources, and optional json
+# path to the list of resource users. See also acquire_resources.
+#
+# No stdout output. Write an updated counter file.
+# No changes made if the provided PID is not in the users list.
 #
 # See below for a variant of this function that is safe for parallel use.
 function release_resources()
 {
     local request=$1
     local counter=$2
+    local pid=$3
+    local users=$4
+    local default_users="processes/users"
+    users=${users:-"$default_users"}
     local next
     local name=${name:-"release_resources"}
+    [[ -z "$pid" ]] && { echo "$name: no PID provided" >&2; return 1; }
+    # search the pid position in the list of users; if not found, print a warning
+    # and ignore the release request
+    position=$( cat "$counter" | check_pid_position "$pid" "$users" )
+    (( $? == 0 )) || { echo "$name: cannot check pid position" >&2; return 1; }
+    if [[ $position == "-1" ]] ; then
+        echo "$name: warning - resource user not in the list, ignore request" >&2
+        return 0
+    fi
+    # decrease the counter and remove ourselves from the user list
     next=$( name-value-calc "$counter" "$request" --subtract --json )
     (( $? == 0 )) || { echo "$name: cannot subtract resources" >&2; return 1; }
     next=$( echo "$next" | non_negative_resources )
     (( $? == 0 )) || { echo "$name: cannot sanitize resources" >&2; return 1; }
+    next=$( echo "$next" | dequeue_pid "$pid" "$users" )
+    (( $? == 0 )) || { echo "$name: cannot remove from the users list" >&2; return 1; }
     echo "$next" > "$counter"
     return 0
 }
+export -f release_resources
 
 # General synchronization function. Takes on input a lock file name to be used
 # in a flock call (this file will be truncated to zero) and the command to be
@@ -326,6 +409,7 @@ function serialize()
         $@
     ) 8>"$lock"
 }
+export -f serialize
 
 # Lock-protected versions of the relevant functions from this script.
 function locked_initialize_resources()
@@ -333,39 +417,46 @@ function locked_initialize_resources()
     local name=${name:-"locked_initialize_resources"}
     serialize $1 initialize_resources $2
 }
+export -f locked_initialize_resources
 
 function locked_acquire_resources()
 {
     local name=${name:-"locked_acquire_resources"}
-    serialize $1 acquire_resources $2 $3 $4 $5 $6
+    serialize $1 acquire_resources $2 $3 $4 $5 $6 $7
 }
+export -f locked_acquire_resources
 
 function locked_release_resources()
 {
     local name=${name:-"locked_release_resources"}
-    serialize $1 release_resources $2 $3
+    serialize $1 release_resources $2 $3 $4 $5
 }
+export -f locked_release_resources
 
 function locked_enqueue_pid_infile()
 {
     local name=${name:-"locked_enqueue_pid_infile"}
     serialize $1 enqueue_pid_infile $2 $3 $4
 }
+export -f locked_enqueue_pid_infile
 
 function locked_dequeue_pid_infile()
 {
     local name=${name:-"locked_dequeue_pid_infile"}
     serialize $1 dequeue_pid_infile $2 $3 $4
 }
+export -f locked_dequeue_pid_infile
 
 function locked_check_pid_position_infile()
 {
     local name=${name:-"locked_check_pid_position_infile"}
     serialize $1 check_pid_position_infile $2 $3 $4
 }
+export -f locked_check_pid_position_infile
 
 function locked_queue_is_empty_infile()
 {
     local name=${name:-"locked_queue_is_empty_infile"}
     serialize $1 queue_is_empty_infile $2 $3
 }
+export -f locked_queue_is_empty_infile

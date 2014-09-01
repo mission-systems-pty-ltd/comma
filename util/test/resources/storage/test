@@ -1,0 +1,5 @@
+#!/bin/bash
+
+source $( which resources-util ) || exit 1
+
+storage_to_bytes

@@ -77,7 +77,7 @@ function worker()
                 [[ $verbose == 1 ]] && echo "$name::worker $pid working ..."
                 sleep "$worktime"
                 worktotal=$( echo "$worktotal + $worktime" | bc -l )
-                locked_release_resources "$lock" "$request" "$counter"
+                locked_release_resources "$lock" "$request" "$counter" "$pid"
                 (( $? == 0 )) || {
                     echo "$name::worker $pid: cannot release resources" >&2
                     exit_status=1

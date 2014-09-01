@@ -45,6 +45,7 @@ function get_children()
         echo   # add final newline
     fi
 }
+export -f get_children
 
 # usage: stacktrace <any message>
 # print the stacktrace, the list of lines and script names that were passed
@@ -60,6 +61,7 @@ function stacktrace()
 
     echo "$*"
 }
+export -f stacktrace
 
 # usage: kill_children [<pid>] [--recursive] [-<"kill" options> ...]
 # kill all children of a process
@@ -85,6 +87,7 @@ function kill_children()
     local child_pids=$( get_children $recursive_option $target_pid )
     kill ${kill_options[@]} $child_pids 2> /dev/null
 }
+export -f kill_children
 
 # usage: comma_trap [<"cleanup" command>] [<signal list> ...] [--exit[=]<exit code>] [--kill-children|--no-kill-children|--kill-recursive] (default = --kill-recursive)
 # Trap termination signals.
@@ -151,6 +154,7 @@ function comma_trap()
         trap "SIGNAL_NAME='$sig'; comma_trap_bye_impl '$cleanup_command' $trap_options $sig_option" $sig
     done
 }
+export -f comma_trap
 
 # Used by comma_trap; do not call this function directly.
 # Usage: comma_trap_bye_impl <cleanup command> [<options ...>]
@@ -205,6 +209,7 @@ function comma_trap_bye_impl()
     if (( caught_sigint )); then trap - SIGINT; kill -SIGINT $BASHPID; fi
     exit $exit_code
 }
+export -f comma_trap_bye_impl
 
 # take path-value pairs, assign the values to corresponding bash variables
 # in the variable name slashes will be replaced with given delimiter
@@ -218,15 +223,16 @@ function comma_trap_bye_impl()
 # [--null-ok]: null variables are defined, otherwise ignored
 # [--prefix="<prefix>"]: prefix used for defining variables
 # [--delimiter="<delimiter>"]: delimiter used for replacing '/'
+# [--no-quotes]: don't quote the values
 #
 # examples (try them):
-#     comma_path_value_eval < <( echo hello=world )
+#     comma_path_value_to_var < <( echo hello=world )
 #     echo $hello
 #
-#     comma_path_value_eval < <( echo hello/world=bye )
+#     comma_path_value_to_var < <( echo hello/world=bye )
 #     echo $hello__world
 #
-#     comma_path_value_eval blah < <( echo hello/world=bye )
+#     comma_path_value_to_var blah < <( echo hello/world=bye )
 #     echo $blah__hello__world
 function comma_path_value_to_var()
 {
@@ -234,6 +240,7 @@ function comma_path_value_to_var()
     local delimiter="_"
     local export_variable
     local null_ok
+    local no_quotes
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -241,6 +248,7 @@ function comma_path_value_to_var()
         --null-ok) null_ok="true" ;;
         --prefix=*) prefix="${1#*=}" ;;
         --delimiter=*) delimiter="${1#*=}" ;;
+        --no-quotes) no_quotes="true" ;;
         esac
         shift
     done
@@ -255,9 +263,12 @@ function comma_path_value_to_var()
         if [[ "$path" =~ "#" ]] ; then continue ; fi
         if [[ "$value" == "" && "$null_ok" == "" ]] ; then continue ; fi
         name=$prefix$( echo $path | sed "s/\//$delimiter/g" | sed "s/-/_/g" )
-        eval $export_variable $name=\"$value\"
+        #eval $export_variable $name=\"$value\"
+        if [[ -z "$no_quotes" ]] ; then eval $export_variable $name=\"$value\"
+        else eval $export_variable $name="$value" ; fi
     done
 }
+export -f comma_path_value_to_var
 
 # take path-value pairs, output the values of corresponding bash variables
 # in the variable name slashes will be replaced with given delimiter
@@ -293,6 +304,7 @@ function comma_path_value_from_var()
         [[ "$value" != "" ]] && echo "$path=$value"
     done
 }
+export -f comma_path_value_from_var
 
 # usage: my_options=( $( cat name-value-pairs | comma_options_from_name_value [<options>] ) )
 #
@@ -315,6 +327,7 @@ function comma_options_from_name_value()
         | sed 's/\\"/"/g' \
         | tr '=' "$delimiter"
 }
+export -f comma_options_from_name_value
 
 # usage: comma_options_has <what> $@
 # example:
@@ -324,3 +337,4 @@ function comma_options_has()
     for a in ${@:2} ; do if [[ "$1" == "$a" || "$a" =~ ${1}= ]] ; then echo 1 ; exit ; fi ; done
     echo 0
 }
+export -f comma_options_has

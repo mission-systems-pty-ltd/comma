@@ -1,7 +1,7 @@
 {
     "resources":
     {
-        "cpus": "4",
+        "cpus": "8",
         "memory":
         {
             "main": "1000000",

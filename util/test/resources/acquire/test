@@ -37,7 +37,7 @@ echo "third/request/outcome=\"$outcome\""
 cat "$counter" | prepare_for_match "third/request"
 
 # 4. Can release resources
-release_resources "data/first.json" "$counter" || must_work "releasing first request"
+release_resources "data/first.json" "$counter" 123 || must_work "releasing first request"
 cat "$counter" | prepare_for_match "first/released"
 
 # 5. Still cannot acquire because someone is waiting (resources are plenty)
@@ -48,22 +48,25 @@ cat "$counter" | prepare_for_match "third/request/repeated"
 # 6. Can acquire when we are waiting and we are the first in line.
 acquire_resources "data/second.json" "$counter" "data/maximum.json" 456 || must_work "repeated second request"
 cat "$counter" | prepare_for_match "second/request/repeated"
-release_resources "data/second.json" "$counter" || must_work "releasing second request"
+release_resources "data/second.json" "$counter" 456 || must_work "releasing second request"
 cat "$counter" | prepare_for_match "second/released"
 
 # 7. Can acquire when we are waiting and we are the first in line.
 #    Once all released, the counters shall be down to zero
+# 8. If some unrelated user attempts to release resources, the request shall be ignored.
 acquire_resources "data/third.json" "$counter" "data/maximum.json" 789 || must_work "final third request"
 cat "$counter" | prepare_for_match "third/request/final"
-release_resources "data/third.json" "$counter" || must_work "releasing third request"
+release_resources "data/third.json" "$counter" 999 2>/dev/null || must_work "ignoring unknown user"
+cat "$counter" | prepare_for_match "unknown/released"
+release_resources "data/third.json" "$counter" 789 || must_work "releasing third request"
 cat "$counter" | prepare_for_match "third/released"
 
-# 8. Someone releases more resources by mistake: in this case (but not in general) shall work,
+# 9. Someone releases more resources by mistake: in this case (but not in general) shall work,
 #    but have no impact, the resource counters shall not go below zero.
 # NOTE: shall we keep a track of who occupied resources and flag double-releases by mistake?
 # It is harder than it sounds, because in error it is possible to release more than taken,
 # which will break resource counter.
-release_resources "data/third.json" "$counter" || must_work "releasing third request again"
+release_resources "data/third.json" "$counter" 789 2>/dev/null || must_work "releasing third request again"
 cat "$counter" | prepare_for_match "third/released/repeated"
 
 exit 0
