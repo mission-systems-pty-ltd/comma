@@ -95,8 +95,9 @@ usage(bool)
 {
     assert(NULL != argv0);
 
-    std::cout <<   "USAGE:   xml-grep <path>"
-              << "\nOPTIONS: <path> is either absolute and fully qualified e.g. /n:a/n:b/n:c"
+    std::cout <<   "USAGE:   xml-grep [--blocks=M-N] <path>"
+              << "\nOPTIONS: --blocks=M-N to output just the blocks between M and N"
+                 "\n         <path> is either absolute and fully qualified e.g. /n:a/n:b/n:c"
                  "\n                or it is fully qualified and realtive without subordinates e.g. n:c"
                  "\nRETURNS: 0 - on success"
                  "\n         1 - on data error; like invalid xml"
