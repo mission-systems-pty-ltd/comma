@@ -12,9 +12,18 @@
 
 #include <expat.h>
 
+#include <comma/application/command_line_options.h>
+#include <comma/csv/options.h>
+
+#define CMDNAME "xml-grep"
+
 bool const TRIMWS = false;
 
 static unsigned const BUFFY_SIZE = 4 * 1024 * 1024;
+
+static unsigned block_start = 0;
+static unsigned block_end = std::numeric_limits<unsigned>::max(); 
+static unsigned block_curr = 0;
 
 static unsigned element_count = 0;
 static unsigned element_found_count = 0;
@@ -30,6 +39,21 @@ static grep_list_t grep_list;
 
 static std::vector<std::string> element_list;
 static unsigned element_found = 0;
+
+// An istream manipulator to read a punctuation char or fail.
+struct punct
+{
+    punct(char const c) : _c(c) {;}
+    char const _c;
+};
+
+std::istream &
+operator >>(std::istream & is, punct const & p)
+{
+    char const c = is.get();
+    if (c != p._c) is.setstate(std::ios::failbit);
+    return is;
+}
 
 // ~~~~~~~~~~~~~~~~~~
 // UTILITIES
@@ -66,19 +90,19 @@ grep(XML_Char const * element, std::string const & element_path)
 // ~~~~~~~~~~~~~~~~~~
 // USER INTERFACE
 // ~~~~~~~~~~~~~~~~~~
-static void XMLCALL
-usage(char const * const argv0)
+static void
+usage(bool)
 {
     assert(NULL != argv0);
 
-    std::cout <<   "USAGE: " << argv0 << " <path>"
+    std::cout <<   "USAGE:   xml-grep <path>"
               << "\nOPTIONS: <path> is either absolute and fully qualified e.g. /n:a/n:b/n:c"
                  "\n                or it is fully qualified and realtive without subordinates e.g. n:c"
                  "\nRETURNS: 0 - on success"
                  "\n         1 - on data error; like invalid xml"
-                 "\n         2 - on simple error; like incorrect argument"
-                 "\n         3 - on internal error; like memory / library fault"
               << std::endl;
+
+    exit(1);
 }
 
 // ~~~~~~~~~~~~~~~~~~
@@ -90,21 +114,24 @@ default_handler(void * userdata, XML_Char const * str, int length)
     assert(NULL != str);
     assert(length > 0);
 
+    if (block_curr < block_start || block_curr > block_end)
+        return;
+
     if (element_found > 0)
         std::cout.write(str, length);
 
-        if (false)
-        {
-            bool was_ws = false;
-            for (unsigned i = 0; i < length; ++i)
-                if (! std::isspace(str[i]))
-                    std::cout << str[i];
-                else
-                {
-                    if (! was_ws) std::cout << ' ';
-                    was_ws = true;
-                }
-        }
+    if (false)
+    {
+        bool was_ws = false;
+        for (unsigned i = 0; i < unsigned(length); ++i)
+            if (! std::isspace(str[i]))
+                std::cout << str[i];
+            else
+            {
+                if (! was_ws) std::cout << ' ';
+                was_ws = true;
+            }
+    }
 }
 
 static void XMLCALL
@@ -132,7 +159,13 @@ element_start(void * userdata, XML_Char const * element, XML_Char const ** attri
     element_list.push_back(element_path);
     
     if (grep(element, element_path))
+    {
         ++element_found;
+        ++block_curr;
+    }
+    
+    if (block_curr < block_start || block_curr > block_end)
+        return;
 
     if (element_found > 0)
     {
@@ -146,7 +179,7 @@ element_start(void * userdata, XML_Char const * element, XML_Char const ** attri
                         std::cout << "\\\'";
                     else if ('\\' == *p)
                         std::cout << "\\\\";
-                    else if ('\'' == *p)
+                    else
                         std::cout << *p;
                 std::cout << "' ";
             }
@@ -163,13 +196,21 @@ element_end(void * userdata, XML_Char const * element)
     bool const was_found = element_found > 0;
 
     if (was_found)
-        std::cout << "</" << element << '>';
+        if (block_curr >= block_start && block_curr <= block_end)
+            std::cout << "</" << element << '>';
     
     if (grep(element, element_path))
         --element_found;
+        
+    if (was_found && 0 == element_found)
+        if (block_curr >= block_start && block_curr <= block_end)
+            std::cout << std::endl;
 
     element_list.pop_back();
     --element_depth;
+
+    if (block_curr > block_end)
+        XML_StopParser(parser, false);
 }
 
 // ~~~~~~~~~~~~~~~~~~
@@ -187,7 +228,7 @@ parse(char const * const argv0, XML_Parser const parser)
         void * const buffy = XML_GetBuffer(parser, BUFFY_SIZE);
         if (NULL == buffy)
         {
-            std::cout << argv0 << "Error: Could not allocate expat parser buffer. Abort!" << std::endl;
+            std::cout << CMDNAME ": Error: Could not allocate expat parser buffer. Abort!" << std::endl;
             return 1;
         }
 
@@ -196,14 +237,16 @@ parse(char const * const argv0, XML_Parser const parser)
         {
             if (XML_STATUS_OK != XML_ParseBuffer(parser, bytes_read, bytes_read < BUFFY_SIZE))
             {
-                std::cout << argv0 << "Error: Parsing Buffer. Abort!" << std::endl;
+                if (block_curr <= block_end)
+                    std::cout << CMDNAME ": Error: Parsing Buffer. Abort!" << std::endl;
+                std::cout << std::endl;
                 return 1;
             }
         }
 
         if (std::ferror(stdin))
         {
-            std::cout << argv0 << "Error: Could not read stdin. Abort!" << std::endl;
+            std::cout << CMDNAME ": Error: Could not read stdin. Abort!" << std::endl;
             return 1;
         }
 
@@ -214,45 +257,72 @@ parse(char const * const argv0, XML_Parser const parser)
     }
 }
 
-int
-main(int argc, char ** argv)
+static int
+run(char const * const argv0)
 {
-    if (argc < 2)
-    {
-        usage(argv[0]);
-        return 1;
-    }
-    
-    for (unsigned i = 1; i < argc; ++i)
-    {   
-        grep_entry_t curr(argv[i], false);
-        
-        // is realtive test
-        if ("/" == curr.first || "//" == curr.first)
-        {
-            usage(argv[0]);
-            return 1;
-        }
-        curr.second = curr.first[0] != '/';
-    
-        grep_list.push_back(curr);
-    }
-
     parser = XML_ParserCreate(NULL);
     if (NULL == parser)
     {
-        std::cout << argv[0] << "Error: Could not create expat parser. Abort!" << std::endl;
+        std::cout << CMDNAME ": Error: Could not create expat parser. Abort!" << std::endl;
         return 1;
     }
 
-    int const code = parse(argv[0], parser);
+    int const code = parse(argv0, parser);
     
     XML_ParserFree(parser);
     
     std::cerr << "Number of Elements " << element_count
               << ", Number of Found Elements  " << element_found_count
               << ", Maximum Depth " << element_depth_max << std::endl;
-        
+              
     return code;
+}
+
+int
+main(int argc, char ** argv)
+{
+    try
+    {
+        comma::command_line_options options( argc, argv );
+        bool const verbose = options.exists( "--verbose,-v" );
+        if (argc < 2 || options.exists("--help,-h")) { usage(verbose); }
+
+        if (options.exists("--blocks"))
+        {
+            std::istringstream iss(options.value<std::string>("--blocks"));
+            unsigned s = 0, e = std::numeric_limits<unsigned>::max();
+            iss >> s >> punct('-') >> e;
+            block_start = std::min(s, e);
+            block_end = std::max(s, e);
+
+            // std::cerr << "Blocks " << block_start << '-' << block_end << std::endl;
+        }
+        
+        for (unsigned i = 1; i < unsigned(argc); ++i)
+        {   
+            grep_entry_t curr(argv[i], false);
+            
+            // is realtive test
+            if ("/" == curr.first || "//" == curr.first)
+            {
+                usage(argv[0]);
+                return 1;
+            }
+            curr.second = curr.first[0] != '/';
+        
+            grep_list.push_back(curr);
+        }
+        
+        return run(argv[0]);
+    }
+    catch (std::exception const & ex)
+    {
+        std::cerr << CMDNAME ": Error: " << ex.what() << std::endl;
+    }
+    catch (...)
+    {
+        std::cerr << CMDNAME ": Error: Unknown Exception." << std::endl;
+    }
+    return 1;
 }
 
