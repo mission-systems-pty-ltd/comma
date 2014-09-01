@@ -258,7 +258,7 @@ int main( int ac, char** av )
             //check late points
             if( (discard || !by_upper) && p->timestamp < bounding_queue.front().first )
             {
-                std::cerr<<bounding_queue[0].first<<","<<p->timestamp<<","<<bounding_queue[1].first<<std::endl;
+                //std::cerr<<bounding_queue[0].first<<","<<p->timestamp<<","<<bounding_queue[1].first<<std::endl;
                 next=true;
                 continue;
             }
