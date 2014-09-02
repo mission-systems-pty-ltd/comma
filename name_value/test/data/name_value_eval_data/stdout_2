@@ -1,0 +1,6 @@
+x/expected="25"
+x/actual="2"
+y2/expected="some string"
+y2/actual="-3.5"
+the_name/expected="45"
+the_name/actual="Fred Flintstone"

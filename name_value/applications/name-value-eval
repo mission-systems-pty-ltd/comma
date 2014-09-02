@@ -70,7 +70,7 @@ function process_python_errors()
     local err_file=$1
     local input_file=$2
     # Python error should contain line number, e.g. 'File "<stdin>", line 17' (or: 'line 17, in <module>')
-    local err_line_num=$( cat $err_file | grep ', line [0-9]' | sed 's/.*, line //g; s/[^0-9].*//g' )
+    local err_line_num=$( cat $err_file | grep ', line [0-9]' | head -1 | sed 's/.*, line //g; s/[^0-9].*//g' )
     if [[ -n "$err_line_num" ]]; then
         # find the original source line number (input file includes lines like: "# SRCLINE <number> ...")
         line_num=$( cat "$input_file" | awk '

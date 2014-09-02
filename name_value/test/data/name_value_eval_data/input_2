@@ -1,0 +1,7 @@
+# mix of errors and non-errors
+x=2
+x=25
+y2="some string"
+x=2
+the_name=45
+y2=-3.5

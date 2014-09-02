@@ -1,0 +1,10 @@
+# various expression and operators (no errors)
+
+x = 10 - 8
+y2 = -(3 + 4) * 0.5
+the_name != "something else"
+x != 3
+x != "some string"
+
+# integer division
+x = 11 / 5
