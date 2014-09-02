@@ -30,9 +30,9 @@ function enqueue_pid()
 {
     local pid=$1
     local path=$2
-    local default_path="processes/queue"
+    local default_path="processes\/queue"
     path=${path:-"$default_path"}
-    path="^${path//\//\\\/}="
+    #path=$( echo "$path" | sed 's/\//\\\//g' )
     name-value-convert --from json --to path-value \
         | sed --regexp-extended "/$path/s/\[(.+)\]/\[\1,$pid\]/;/$path/s/\[\]/\[$pid\]/" \
         | name-value-convert --from path-value --to json
@@ -44,9 +44,9 @@ function dequeue_pid()
 {
     local pid=$1
     local path=$2
-    local default_path="processes/queue"
+    local default_path="processes\/queue"
     path=${path:-"$default_path"}
-    path="^${path//\//\\\/}="
+    #path=$( echo "$path" | sed 's/\//\\\//g' )
     name-value-convert --from json --to path-value \
         | sed --regexp-extended "/$path/s/\[$pid,(.+)\]/\[\1\]/;/$path/s/\[(.+),$pid\]/\[\1\]/;/$path/s/\[(.+),$pid,(.+)\]/\[\1,\2\]/;/$path/s/\[$pid\]/\[\]/" \
         | name-value-convert --from path-value --to json
@@ -61,7 +61,7 @@ function check_pid_position()
 {
     local pid=$1
     local path=$2
-    local default_path="processes/queue"
+    local default_path="processes\/queue"
     path=${path:-"$default_path"}
     local list
     list=$( name-value-get --from json "$path" | sed "s/^\[/ /;s/\]\$/ /;s/,/ /g" )
@@ -79,7 +79,7 @@ export -f check_pid_position
 function queue_is_empty()
 {
     local path=$1
-    local default_path="processes/queue"
+    local default_path="processes\/queue"
     path=${path:-"$default_path"}
     local list
     list=$( name-value-get --from json "$path" | sed "s/^\[//;s/\]\$//;s/ //g" )
@@ -280,8 +280,9 @@ function acquire_resources()
     local pid=$4
     local path=$5
     local users=$6
-    local default_users="processes/users"
+    local default_users="processes\/users"
     users=${users:-"$default_users"}
+    #users=$( echo "$users" | sed 's/\//\\\//g' )
 
     local next position can_acquire any_waiting exceed
     local name=${name:-"acquire_resources"}
@@ -367,8 +368,9 @@ function release_resources()
     local counter=$2
     local pid=$3
     local users=$4
-    local default_users="processes/users"
+    local default_users="processes\/users"
     users=${users:-"$default_users"}
+    #users=$( echo "$users" | sed 's/\//\\\//g' )
     local next
     local name=${name:-"release_resources"}
     [[ -z "$pid" ]] && { echo "$name: no PID provided" >&2; return 1; }
