@@ -1,0 +1,2 @@
+# AttributeError ("route" is not an array)
+route[1]/point[0]/name = "nonexistent"

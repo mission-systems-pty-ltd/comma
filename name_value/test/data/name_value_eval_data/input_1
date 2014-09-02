@@ -1,0 +1,7 @@
+# identical to input (re-ordered)
+the_name="Fred Flintstone"
+y2=-3.5
+x=2
+route/point[2]/name="end"
+route/point[1]/name="middle"
+route/point[0]/name="start"

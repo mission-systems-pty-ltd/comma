@@ -1,0 +1,3 @@
+x = 2
+# TypeError (expression must be boolean)
+1 + 2

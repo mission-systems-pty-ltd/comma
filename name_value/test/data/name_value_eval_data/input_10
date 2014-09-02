@@ -1,0 +1,2 @@
+# SyntaxError ("+/-" can only be used in a simple expression like "x = 10 +/- 3")
+x = (1 + 1) +/- 0.5

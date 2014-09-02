@@ -1,0 +1,5 @@
+x != 0
+x < 20
+# NameError (no such variable as z)
+z = 5
+x > 0
