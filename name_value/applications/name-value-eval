@@ -64,12 +64,23 @@ function demangle_name()
     echo $1 | sed "s/['\"]//g" | name-value-eval-preparse --demangle
 }
 
-# argument: <error_file> [ optional <original_line> ]
+# argument: <error_file> <python input file>
 function process_python_errors()
 {
-  if [[ -n "$2" ]]; then extra_info=" in: '$2'"; else extra_info=""; fi
-  ( desc=$( echo $( egrep 'Error|Exception|Warning|KeyboardInterrupt' $1 ) | sed 's/.*SyntaxError/SyntaxError/g' )
-    if [[ -z "$desc" ]]; then cat "$1" | egrep -v 'Traceback|"<stdin>"'
+    local err_file=$1
+    local input_file=$2
+    # Python error should contain line number, e.g. 'File "<stdin>", line 17' (or: 'line 17, in <module>')
+    local err_line_num=$( cat $err_file | grep ', line [0-9]' | sed 's/.*, line //g; s/[^0-9].*//g' )
+    if [[ -n "$err_line_num" ]]; then
+        # find the original source line number (input file includes lines like: "# SRCLINE <number> ...")
+        line_num=$( cat "$input_file" | awk '
+            NR > '"$err_line_num"' { exit; }  # still does END part
+            $1 == "#" && $2 == "SRCLINE" { last_line_num = $3; }
+            END { print last_line_num; }' )
+        if [[ -n $line_num ]]; then echo -n "line $line_num: "; fi
+    fi
+  ( desc=$( echo $( egrep 'Error|Exception|Warning|KeyboardInterrupt' "$err_file" ) | sed 's/.*SyntaxError/SyntaxError/g' )
+    if [[ -z "$desc" ]]; then cat "$err_file" | egrep -v 'Traceback|"<stdin>"|in <module>'
     elif [[ $desc = NameError* ]]; then
         local var_name=$( echo $desc | cut -d' ' -f3 )
         echo "NameError: \""$( demangle_name "$var_name" )"\" undefined$extra_info"
@@ -82,6 +93,7 @@ function bye()
     if [[ -n "$tmp_vars" ]]; then rm -f "$tmp_vars" ; fi
     if [[ -n "$err" ]]; then rm -f "$err" ; fi
     if [[ -n "$out" ]]; then rm -f "$out" ; fi
+    if [[ -n "$python_input" ]]; then rm -f "$python_input" ; fi
     if [[ -z $1 ]] ; then exit 1 ; else exit $1; fi
 }
 
@@ -125,6 +137,7 @@ fi
 err="$tmpdir/nv_eval_err.$$"
 out="$tmpdir/nv_eval_out.$$"
 tmp_vars="$tmpdir/nv_eval_vars.$$"
+python_input="$tmpdir/nv_python.$$"
 
 if [[ -n "$variables" ]]; then
     if [[ ! -f "$variables" ]]; then echo "$name: cannot open variables file $variables" >&2; exit 1; fi
@@ -142,51 +155,25 @@ input_filename=$input; if [[ -z "$input_filename" ]]; then input_filename="input
 if [[ -n "$variables" ]]; then name-value-eval-preparse --assign "$variables" > $tmp_vars
 else name-value-eval-preparse --assign > $tmp_vars; fi
 
-any_errors=0
+preparse_options=$output_vars_option
+if (( test_option )); then preparse_options+=" --test"; fi
 
-if (( test_option )); then
-    # process one line at a time, since Python exits for most errors
-    linenum=0
-    line_list=
+( cat "$tmp_vars";
+  if [[ -n "$input" ]]; then name-value-eval-preparse $preparse_options "$input"
+  else name-value-eval-preparse $preparse_options; fi ) > $python_input
+  
+$python_cmd $python_input 2> $err > $out
 
-    # using "read -r" prevents "\\" from being changed to "\"
-    while read -r line; do
-        (( linenum++ ))
-        # skip comments and blank lines (unless there is a pending expression to evaluate)
-        if [[ -z "$line_list" && -z "$( echo $line | sed 's/^#.*//g; s/^ *//g' )" ]]; then continue; fi
+exit_code=0
 
-        # check for line continuation "\"
-        if [[ "$line" = *\\ ]]; then
-            line_list+=" $( echo "$line" | sed 's/.$//g' )"
-        else
-            line_list+=" $line"
-            ( cat "$tmp_vars"; echo "${line_list[@]}" | name-value-eval-preparse --test ) | $python_cmd 2> $err > $out
-            line_list=
-
-            if [[ -s "$err" ]]; then
-                any_errors=1
-                ( echo -n "$name: line $linenum of $input_filename: "; process_python_errors "$err" "$line" ) >&2
-            elif [[ -s "$out" ]]; then
-                any_errors=1
-                cat $out
-            fi
-        fi
-    done < <( cat $input; echo )
-    # (the extra echo is to handle line continuation "\" on the last line of the file)
+if [[ -s "$err" ]]; then
+    exit_code=1
+    echo -n "$name: " >&2
+    if [[ -n "$input" ]]; then echo -n "source file '$input': " >&2; fi
+    process_python_errors "$err" "$python_input" >&2
 else
-  # process all at once rather than one line at a time, since one command may span multiple lines
-  ( cat "$tmp_vars";
-    # use file name rather than standard input if the name is known, since error messages mention it
-    if [[ -n "$input" ]]; then name-value-eval-preparse "$input" $output_vars_option
-    else name-value-eval-preparse $output_vars_option; fi ) | $python_cmd 2> $err
-
-    if [[ -s "$err" ]]; then
-        any_errors=1
-        ( echo -n "$name: "
-          if [[ -n "$input" ]]; then echo -n "source file '$input': "; fi
-          process_python_errors "$err" ) >&2
-    fi
+    cat $out
 fi
 
-bye $any_errors
+bye $exit_code
 

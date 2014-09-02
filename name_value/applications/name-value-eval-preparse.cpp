@@ -617,7 +617,8 @@ void process_assign(const std::vector<Token> &tokens, const std::string &input_l
     }
 }
 
-void process_test(const std::vector<Token> &tokens, const std::string &original_line)
+void process_test(const std::vector<Token> &tokens, const std::string &original_line,
+    const std::string &filename, int line_num)
 {
     if (tokens.empty()) { return; }
     std::string input_line = trim_spaces(original_line);
@@ -633,10 +634,10 @@ void process_test(const std::vector<Token> &tokens, const std::string &original_
         }
     }
 
-    std::cout << "# " << input_line << '\n'
-        << "if type(" << tokens
-        << ") != type(True): print >> sys.stderr, 'TypeError: expected a true or false expression'\n"
-        << "elif not(" << tokens << "):\n";
+    std::cout << "# SRCLINE " << line_num << " " << input_line << '\n'
+        << "_result_ = (" << tokens << ")\n"
+        << "if type(_result_) != bool: err_expr_not_bool()\n"
+        << "elif not _result_:\n";
 
     if (vars.size() != 0)
     {
@@ -692,14 +693,17 @@ void process_command(const std::vector<Token> &tokens, Varmap &assigned_vars, co
 void print_header()
 {
     std::cout
-        << "import sys, re\n"
+        << "import sys, re, inspect\n"
         << "def near(x, y, eps): return abs(x - y) <= eps\n"
         << "def near_percent(x, y, percent): return abs(x - y) <= x * percent * 0.01\n"
         << "def max_index(dict) : return max(dict.keys())\n"
         << "def starts_with(s, x): return s.find(x) == 0\n"
         << "def ends_with(s, x): return s.rfind(x) == len(s) - len(x)\n"
         << "def contains(s, x): return s.find(x) != -1\n"
-        << "def matches(s, p): return re.search(p, s) != None\n";
+        << "def matches(s, p): return re.search(p, s) != None\n"
+        << "def err_expr_not_bool(): print >> sys.stderr, 'File \"?\", line ' + str(inspect.currentframe().f_back.f_lineno) + '\\nTypeError: expected a true or false expression'\n";
+        // note: err_expr_not_bool() imitates standard Python error printing:
+        // 'File "name", line n' on one line, followed by the error message
 }
 
 void print_assigned_variables(const Varmap &assigned_vars)
@@ -745,7 +749,7 @@ void process(const std::string &filename, const Options &opt, const std::set<std
         // debug_tokens(tokens);
 
         if (opt.assign) { process_assign(tokens, line, filename, line_num, variable_hierarchy); }
-        else if (opt.test) { process_test(tokens, line); }
+        else if (opt.test) { process_test(tokens, line, filename, line_num); }
         else { process_command(tokens, assigned_vars, opt, restrict_vars); }
     }
 
