@@ -190,7 +190,7 @@ int main(int argc, char ** argv)
     {
         comma::command_line_options options( argc, argv );
         bool const verbose = options.exists( "--verbose,-v" );
-        if (argc < 2 || options.exists("--help,-h"))
+        if (options.exists("--help,-h"))
         {
             usage(verbose);
             return 1;
