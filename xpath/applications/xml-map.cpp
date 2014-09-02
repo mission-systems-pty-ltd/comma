@@ -45,7 +45,7 @@ static element_location_map_t element_location_map;
 static void XMLCALL
 usage(bool const verbose)
 {
-    std::cout <<   "Generates a byte map of each element in an xml file, for later use by xml-map-split"
+    std::cerr <<   "Generates a byte map of each element in an xml file, for later use by xml-map-split"
                  "\nUSAGE:   " CMDNAME " [--compact]"
                  "\nRETURNS: 0 - on success"
                  "\n         1 - on data error; like invalid xml"

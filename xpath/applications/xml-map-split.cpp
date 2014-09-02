@@ -134,7 +134,7 @@ match(std::string const & v)
 static void
 usage(bool const verbose)
 {
-    std::cout <<   "USAGE:   " CMDNAME " <inputname> <mapname> <range> <xpath>+"
+    std::cerr <<   "USAGE:   " CMDNAME " <inputname> <mapname> <range> <xpath>+"
               << "\nWHERE:   <range> is 'all' or M-N"
               << "\nRETURNS: 0 - on success"
                  "\n         1 - on data error; like invalid xml"

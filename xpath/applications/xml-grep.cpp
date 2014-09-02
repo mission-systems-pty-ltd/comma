@@ -94,7 +94,7 @@ usage(bool const verbose)
 {
     assert(NULL != argv0);
 
-    std::cout <<   "USAGE:   " CMDNAME " [--range=M-N] <path>"
+    std::cerr <<   "USAGE:   " CMDNAME " [--range=M-N] <path>"
               << "\nOPTIONS: --range=M-N to output just the blocks between M and N"
                  "\n         <path> is either absolute and fully qualified e.g. /n:a/n:b/n:c"
                  "\n                or it is fully qualified and realtive without subordinates e.g. n:c"
