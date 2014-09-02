@@ -94,8 +94,9 @@ usage(bool const verbose)
 {
     assert(NULL != argv0);
 
-    std::cerr <<   "USAGE:   " CMDNAME " [--range=M-N] <path>"
+    std::cerr <<   "USAGE:   " CMDNAME " [--range=M-N] [--limit=Q] <path>"
               << "\nOPTIONS: --range=M-N to output just the blocks between M and N"
+                 "\n         --limit=N to output just the blocks between 1 and Q-1"
                  "\n         <path> is either absolute and fully qualified e.g. /n:a/n:b/n:c"
                  "\n                or it is fully qualified and realtive without subordinates e.g. n:c"
                  "\nRETURNS: 0 - on success"
@@ -301,6 +302,13 @@ main(int argc, char ** argv)
             iss >> s >> punct('-') >> e;
             block_start = std::min(s, e);
             block_end = std::max(s, e);
+
+            // std::cerr << "Blocks " << block_start << '-' << block_end << std::endl;
+        }
+        if (options.exists("--limit"))
+        {
+            unsigned e = options.value<unsigned>("--limit");
+            block_end = std::max(1u, e) - 1;
 
             // std::cerr << "Blocks " << block_start << '-' << block_end << std::endl;
         }
