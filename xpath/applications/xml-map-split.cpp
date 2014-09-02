@@ -47,6 +47,23 @@ operator >>(std::istream & is, newline_t const & p)
     return is;
 }
 
+std::istream &
+ignore_until_newline(std::istream & is)
+{
+    for (;;)
+    {
+        char const c = is.get();
+        if (! is || '\n' == c) return is;
+        if ('\r' != c ) continue;
+
+        // we got a \r so test for \n
+        int next = is.peek();
+        if (EOF == next) return is;
+        if ('\n' == next) next = is.get();
+        return is;
+    }
+}
+
 // An istream manipulator to read a punctuation char or fail.
 struct punct
 {
@@ -158,7 +175,7 @@ output_block(std::istream & infile, std::vector<char> & buffy, long long const s
     std::cout.write(&buffy[0], len);
     std::cout << std::endl;
     
-    return false;
+    return true;
 }
 
 static bool
@@ -183,36 +200,39 @@ parse(std::istream & infile, std::istream & mapfile)
             std::cerr << CMDNAME ": Error: Parsing: Failed to get an XPath then a comma." << std::endl;
             return false;
         }
-        bool const is_match = match(path);
-        
-        do
+        if (! match(path))
         {
-            mapfile >> punct(',') >> start >> punct('-') >> stop;
-            if (! mapfile)
+            ignore_until_newline(mapfile);
+        }
+        else
+        {
+            do
             {
-                std::cerr << CMDNAME ": Error: Parsing: Failed to get a block location." << std::endl;
-                return false;
-            }
-            //DB std::cerr << path << '|' << start << '|' << stop << std::endl;
-
-            if (is_match)
-            {
-                std::cerr << path << '|' << start << '|' << stop << std::endl;
+                mapfile >> punct(',') >> start >> punct('-') >> stop;
+                if (! mapfile)
+                {
+                    std::cerr << CMDNAME ": Error: Parsing: Failed to get a block location." << std::endl;
+                    return false;
+                }
+                //DB std::cerr << path << '|' << start << '|' << stop << std::endl;
 
                 ++block_curr;
-                if (block_curr < block_start) continue;
-                if (block_curr > block_end) return 0;
+                if (block_curr > block_end)
+                    return true;
 
-                if (! output_block(infile, buffy, start, stop))
-                    return false;
+                //DB std::cerr << '@' << path << '|' << start << '|' << stop << std::endl;
+
+                if (block_curr >= block_start)
+                    if (! output_block(infile, buffy, start, stop))
+                        return false;
+            } while (',' == mapfile.peek());
+
+            mapfile >> newline;
+            if (! mapfile)
+            {
+                std::cerr << CMDNAME ": Error: Parsing: Failed to get a newline." << std::endl;
+                return false;
             }
-        } while (',' == mapfile.peek());
-
-        mapfile >> newline;
-        if (! mapfile)
-        {
-            std::cerr << CMDNAME ": Error: Parsing: Failed to get a newline." << std::endl;
-            return false;
         }
     }
     return true;
@@ -260,7 +280,7 @@ main(int argc, char ** argv)
             iss >> s >> punct('-') >> e;
             block_start = std::min(s, e);
             block_end = std::max(s, e);
-            // std::cerr << "Blocks (" << argv[3] << ") " << block_start << "-" << block_end << std::endl;
+            //DB std::cerr << "Blocks (" << argv[3] << ") " << block_start << "-" << block_end << std::endl;
         }
         
         for (unsigned i = 4; i < unsigned(argc); ++i)
