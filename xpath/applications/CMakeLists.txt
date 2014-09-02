@@ -9,8 +9,8 @@ add_executable( xml-map ${dir}/xml-map.cpp )
 add_executable( xml-map-split ${dir}/xml-map-split.cpp )
 
 target_link_libraries ( xml-grep ${comma_ALL_EXTERNAL_LIBRARIES} comma_application )
-target_link_libraries ( xml-map ${comma_ALL_EXTERNAL_LIBRARIES} )
-target_link_libraries ( xml-map-split ${comma_ALL_EXTERNAL_LIBRARIES} )
+target_link_libraries ( xml-map ${comma_ALL_EXTERNAL_LIBRARIES} comma_application )
+target_link_libraries ( xml-map-split ${comma_ALL_EXTERNAL_LIBRARIES} comma_application )
 	
 install( TARGETS xml-grep
                  xml-map

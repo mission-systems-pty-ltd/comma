@@ -13,7 +13,6 @@
 #include <expat.h>
 
 #include <comma/application/command_line_options.h>
-#include <comma/csv/options.h>
 
 #define CMDNAME "xml-grep"
 
@@ -61,7 +60,7 @@ operator >>(std::istream & is, punct const & p)
 bool
 grep(XML_Char const * element, std::string const & element_path)
 {
-    // std::cout << element << std::endl;
+    // std::cerr << element << std::endl;
 
     grep_list_t::const_iterator const end = grep_list.end();
     grep_list_t::const_iterator itr = grep_list.begin();
@@ -91,19 +90,17 @@ grep(XML_Char const * element, std::string const & element_path)
 // USER INTERFACE
 // ~~~~~~~~~~~~~~~~~~
 static void
-usage(bool)
+usage(bool const verbose)
 {
     assert(NULL != argv0);
 
-    std::cout <<   "USAGE:   xml-grep [--blocks=M-N] <path>"
-              << "\nOPTIONS: --blocks=M-N to output just the blocks between M and N"
+    std::cout <<   "USAGE:   " CMDNAME " [--range=M-N] <path>"
+              << "\nOPTIONS: --range=M-N to output just the blocks between M and N"
                  "\n         <path> is either absolute and fully qualified e.g. /n:a/n:b/n:c"
                  "\n                or it is fully qualified and realtive without subordinates e.g. n:c"
                  "\nRETURNS: 0 - on success"
                  "\n         1 - on data error; like invalid xml"
               << std::endl;
-
-    exit(1);
 }
 
 // ~~~~~~~~~~~~~~~~~~
@@ -177,9 +174,7 @@ element_start(void * userdata, XML_Char const * element, XML_Char const ** attri
                 std::cout << attributes[i] << "='";
                 for (XML_Char const * p = attributes[i+1]; *p != 0; ++p)
                     if ('\'' == *p)
-                        std::cout << "\\\'";
-                    else if ('\\' == *p)
-                        std::cout << "\\\\";
+                        std::cout << "&apos;";
                     else
                         std::cout << *p;
                 std::cout << "' ";
@@ -217,8 +212,8 @@ element_end(void * userdata, XML_Char const * element)
 // ~~~~~~~~~~~~~~~~~~
 // MAIN
 // ~~~~~~~~~~~~~~~~~~
-static int
-parse(char const * const argv0, XML_Parser const parser)
+static bool
+parse()
 {
     XML_SetElementHandler(parser, element_start, element_end);
     XML_SetDefaultHandler(parser, default_handler);
@@ -229,8 +224,8 @@ parse(char const * const argv0, XML_Parser const parser)
         void * const buffy = XML_GetBuffer(parser, BUFFY_SIZE);
         if (NULL == buffy)
         {
-            std::cout << CMDNAME ": Error: Could not allocate expat parser buffer. Abort!" << std::endl;
-            return 1;
+            std::cerr << CMDNAME ": Error: Could not allocate expat parser buffer. Abort!" << std::endl;
+            return false;
         }
 
         size_t const bytes_read = std::fread(buffy, 1, BUFFY_SIZE, stdin);
@@ -239,44 +234,51 @@ parse(char const * const argv0, XML_Parser const parser)
             if (XML_STATUS_OK != XML_ParseBuffer(parser, bytes_read, bytes_read < BUFFY_SIZE))
             {
                 if (block_curr <= block_end)
-                    std::cout << CMDNAME ": Error: Parsing Buffer. Abort!" << std::endl;
-                std::cout << std::endl;
-                return 1;
+                    std::cerr << CMDNAME ": Error: Parsing Buffer. Abort!" << std::endl;
+                std::cerr << std::endl;
+                return false;
             }
         }
 
         if (std::ferror(stdin))
         {
-            std::cout << CMDNAME ": Error: Could not read stdin. Abort!" << std::endl;
-            return 1;
+            std::cerr << CMDNAME ": Error: Could not read stdin. Abort!" << std::endl;
+            return false;
         }
 
         if (std::feof(stdin))
         {
-            return 0;
+            return true;
         }
     }
 }
 
 static int
-run(char const * const argv0)
+run()
 {
     parser = XML_ParserCreate(NULL);
     if (NULL == parser)
     {
-        std::cout << CMDNAME ": Error: Could not create expat parser. Abort!" << std::endl;
+        std::cerr << CMDNAME ": Error: Could not create expat parser. Abort!" << std::endl;
         return 1;
     }
 
-    int const code = parse(argv0, parser);
+    bool const ok = parse();
     
     XML_ParserFree(parser);
-    
-    std::cerr << "Number of Elements " << element_count
-              << ", Number of Found Elements  " << element_found_count
-              << ", Maximum Depth " << element_depth_max << std::endl;
+
+    if (block_start > element_count)
+    {
+        std::cerr << CMDNAME ": Error: Block start out of range (" << element_count << "). Abort!" << std::endl;
+        return 1;
+    }
               
-    return code;
+    if (ok)
+        std::cerr << CMDNAME ": Number of Elements " << element_count
+                  << ", Number of Found Elements  " << element_found_count
+                  << ", Maximum Depth " << element_depth_max << std::endl;
+                  
+    return ok ? 0 : 1;
 }
 
 int
@@ -286,11 +288,15 @@ main(int argc, char ** argv)
     {
         comma::command_line_options options( argc, argv );
         bool const verbose = options.exists( "--verbose,-v" );
-        if (argc < 2 || options.exists("--help,-h")) { usage(verbose); }
-
-        if (options.exists("--blocks"))
+        if (argc < 2 || options.exists("--help,-h"))
         {
-            std::istringstream iss(options.value<std::string>("--blocks"));
+            usage(verbose);
+            return 1;
+        }
+
+        if (options.exists("--range"))
+        {
+            std::istringstream iss(options.value<std::string>("--range"));
             unsigned s = 0, e = std::numeric_limits<unsigned>::max();
             iss >> s >> punct('-') >> e;
             block_start = std::min(s, e);
@@ -314,7 +320,7 @@ main(int argc, char ** argv)
             grep_list.push_back(curr);
         }
         
-        return run(argv[0]);
+        return run();
     }
     catch (std::exception const & ex)
     {
