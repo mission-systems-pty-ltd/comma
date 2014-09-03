@@ -22,11 +22,14 @@
 
 #define CMDNAME "xml-map"
 
-static bool options_compact=false;
+static std::string options_file;
+static bool options_compact = false;
+static unsigned options_depth_max = std::numeric_limits<unsigned>::max();
 
 static unsigned const BUFFY_SIZE = 4 * 1024 * 1024;
 
 static unsigned element_count = 0;
+static unsigned element_found_count = 0;
 static unsigned element_depth = 0;
 static unsigned element_depth_max = 0;
 
@@ -46,7 +49,7 @@ static void XMLCALL
 usage(bool const verbose)
 {
     std::cerr <<   "Generates a byte map of each element in an xml file, for later use by xml-map-split"
-                 "\nUSAGE:   " CMDNAME " [--compact]"
+                 "\nUSAGE:   " CMDNAME " [--compact] [--maxdepth=N] [--source=XMLFILE]"
                  "\nRETURNS: 0 - on success"
                  "\n         1 - on data error; like invalid xml"
               << std::endl;
@@ -66,44 +69,53 @@ element_start(void * userdata, char const * element, char const ** attributes)
     element_depth_max = std::max(element_depth_max, element_depth);
     ++element_depth;
 
-    // build the xpath
-    std::string element_path;
-    element_path.reserve(4000);
-    if (! element_path_list.empty())
-        element_path = element_path_list.back();
-    element_path.append("/");
-    element_path.append(element);
-    element_path_list.push_back(element_path);
+    if (element_depth <= options_depth_max)
+    {
+        ++element_found_count;
     
-    // get the start location
-    long long const at = XML_GetCurrentByteIndex(parser);
-    element_location_t loc(at, 0);
-    // push the start location into the map
-    element_location_map[element_path].push_back(loc);
+        // build the xpath
+        std::string element_path;
+        element_path.reserve(4000);
+        if (! element_path_list.empty())
+            element_path = element_path_list.back();
+        element_path.append("/");
+        element_path.append(element);
+        element_path_list.push_back(element_path);
+        
+        // get the start location
+        long long const at = XML_GetCurrentByteIndex(parser);
+        element_location_t loc(at, 0);
+        // push the start location into the map
+        element_location_map[element_path].push_back(loc);
+    }
 }
 
 static void
 element_end(void * userdata, char const * element)
 {
     assert(NULL != element);
-    
-    std::string const & element_path = element_path_list.back();
-    element_location_t & entry = element_location_map[element_path].back();
 
-    { // force the use of the entry to prevent errors
-        long long txtlen = 3 + std::strlen(element);
-        long long const at = XML_GetCurrentByteIndex(parser) + txtlen;
+    if (element_depth <= options_depth_max)
+    {    
+        std::string const & element_path = element_path_list.back();
+        element_location_t & entry = element_location_map[element_path].back();
 
-        entry.second = at;
+        { // force the use of the entry to prevent errors
+            long long txtlen = 3 + std::strlen(element);
+            long long const at = XML_GetCurrentByteIndex(parser) + txtlen;
+
+            entry.second = at;
+        }
+        
+        if (! options_compact)
+        {
+            std::cout << element_path << ',' << entry.first << '-' << entry.second << std::endl;
+        }
+        // std::cerr << element_path << ',' << entry.first << '-' << entry.second << std::endl;
+
+        element_path_list.pop_back();
     }
-    
-    if (! options_compact)
-    {
-        std::cout << element_path << ',' << entry.first << '-' << entry.second << std::endl;
-    }
-    // std::cerr << element_path << ',' << entry.first << '-' << entry.second << std::endl;
 
-    element_path_list.pop_back();
     --element_depth;
 }
 
@@ -111,12 +123,8 @@ element_end(void * userdata, char const * element)
 // MAIN
 // ~~~~~~~~~~~~~~~~~~
 static bool
-parse()
+parse_as_blocks(FILE * infile)
 {
-    assert(NULL != argv0);
-
-    XML_SetElementHandler(parser, element_start, element_end);
-
     for (;;)
     {
         void * const buffy = XML_GetBuffer(parser, BUFFY_SIZE);
@@ -126,24 +134,27 @@ parse()
             return false;
         }
 
-        size_t const bytes_read = std::fread(buffy, 1, BUFFY_SIZE, stdin);
+        size_t const bytes_read = std::fread(buffy, 1, BUFFY_SIZE, infile);
         if (0 != bytes_read)
         {
             if (XML_STATUS_OK != XML_ParseBuffer(parser, bytes_read, bytes_read < BUFFY_SIZE))
             {
+                std::cerr << CMDNAME ": " << XML_ErrorString(XML_GetErrorCode(parser)) << std::endl;
                 std::cerr << CMDNAME ": Error: Parsing Buffer. Abort!" << std::endl;
                 return false;
             }
         }
 
-        if (std::ferror(stdin))
+        if (std::ferror(infile))
         {
-            std::cerr << CMDNAME ": Error: Could not read stdin. Abort!" << std::endl;
+            std::cerr << CMDNAME ": Error: Could not read. Abort!" << std::endl;
             return false;
         }
 
-        if (std::feof(stdin))
+        if (std::feof(infile))
+        {
             return true;
+        }
     }
 }
 
@@ -157,7 +168,26 @@ run()
         return 1;
     }
 
-    bool const ok = parse();
+    XML_SetElementHandler(parser, element_start, element_end);
+
+    bool ok = false;
+    if (options_file.empty())
+    {
+        ok = parse_as_blocks(stdin);
+    }
+    else
+    {
+        FILE * infile = fopen(options_file.c_str(), "rb");
+        if (NULL != infile)
+        {
+            ok = parse_as_blocks(infile);
+            fclose(infile);
+        }
+        else
+        {
+            std::cerr << CMDNAME ": Error: Could not open input file '" << options_file.c_str() << "'. Abort!" << std::endl;
+        }
+    }
     
     XML_ParserFree(parser);
     
@@ -179,7 +209,9 @@ run()
         }
     }
 
-    std::cerr << CMDNAME ": Number of Elements " << element_count << ", Maximum Depth " << element_depth_max << std::endl;
+    std::cerr << CMDNAME ": Number of Elements " << element_count
+              << ", Number of Found Elements " << element_found_count
+              << ", Maximum Depth " << element_depth_max << std::endl;
                   
     return ok ? 0 : 1;
 }
@@ -195,8 +227,13 @@ int main(int argc, char ** argv)
             usage(verbose);
             return 1;
         }
-        
-        options_compact=options.exists("--compact");
+
+        if (options.exists("--source"))
+        {
+            options_file = options.value<std::string>("--source");
+        }
+        options_compact = options.exists("--compact");
+        options_depth_max = options.value<unsigned>("--maxdepth", std::numeric_limits<unsigned>::max());
 
         return run();
     }
