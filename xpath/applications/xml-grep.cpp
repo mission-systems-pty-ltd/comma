@@ -213,13 +213,10 @@ element_end(void * userdata, XML_Char const * element)
 // ~~~~~~~~~~~~~~~~~~
 // MAIN
 // ~~~~~~~~~~~~~~~~~~
+// this is useful for parsing a file.
 static bool
-parse()
+parse_as_blocks(FILE * infile)
 {
-    XML_SetElementHandler(parser, element_start, element_end);
-    XML_SetDefaultHandler(parser, default_handler);
-    XML_SetCommentHandler(parser, comment);
-
     for (;;)
     {
         void * const buffy = XML_GetBuffer(parser, BUFFY_SIZE);
@@ -235,7 +232,10 @@ parse()
             if (XML_STATUS_OK != XML_ParseBuffer(parser, bytes_read, bytes_read < BUFFY_SIZE))
             {
                 if (block_curr <= block_end)
+                {
+                    std::cerr << CMDNAME ": " << XML_ErrorString(XML_GetErrorCode(parser)) << std::endl;
                     std::cerr << CMDNAME ": Error: Parsing Buffer. Abort!" << std::endl;
+                }
                 std::cerr << std::endl;
                 return false;
             }
@@ -254,6 +254,63 @@ parse()
     }
 }
 
+static bool
+parse_as_chars(FILE * infile)
+{
+    if (0 == setvbuf(infile, NULL, _IONBF, 0))
+        std::cerr << CMDNAME ": Set stdin to unbuffered mode." << std::endl;
+
+    char * buffy = new char[BUFFY_SIZE + 1];
+    buffy[BUFFY_SIZE] = 0;
+    
+    bool gt_code = 0;
+   
+    bool good = true;
+    bool work = true;
+    while (work)
+    {
+        size_t count = 0;
+        while (count < BUFFY_SIZE)
+        {
+            int ch = fgetc(infile);
+            if (EOF == ch)
+            {
+                if (std::ferror(stdin))
+                {
+                    std::cerr << CMDNAME ": Error: Could not read stdin. Abort!" << std::endl;
+                    good = false;
+                }
+                work = false;
+                break;
+            }
+            buffy[count] = ch;
+            ++count;
+            if ('>' == ch) {
+                ++gt_code;
+                if (gt_code >= 2) break;
+            }
+        }
+
+        if (count > 0)
+        {
+            // std::cerr << "Parse: '" << buffy << '\'' << std::endl;
+            if (XML_STATUS_OK != XML_Parse(parser, buffy, count, count < BUFFY_SIZE))
+            {
+                if (block_curr <= block_end)
+                {
+                    std::cerr << CMDNAME ": " << XML_ErrorString(XML_GetErrorCode(parser)) << std::endl;
+                    std::cerr << CMDNAME ": Error: Parsing Buffer. Abort!" << std::endl;
+                }
+                std::cerr << std::endl;
+                good = false;
+                work = false;
+            }
+        }
+    }
+    delete [] buffy;
+    return good;
+}
+
 static int
 run()
 {
@@ -264,7 +321,15 @@ run()
         return 1;
     }
 
-    bool const ok = parse();
+    XML_SetElementHandler(parser, element_start, element_end);
+    XML_SetDefaultHandler(parser, default_handler);
+    XML_SetCommentHandler(parser, comment);
+
+    bool ok;
+    if (block_end != std::numeric_limits<unsigned>::max())
+        ok = parse_as_chars(stdin);
+    else
+        ok = parse_as_blocks(stdin);
     
     XML_ParserFree(parser);
 
