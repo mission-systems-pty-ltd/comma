@@ -4,7 +4,7 @@ name=$( basename $0 )
 
 simple_usage()
 {
-    echo "Usage: $name [-h|--help] [-v|--variables=<file>] [-t|--test] [-o|--output-variables=<file>] [-c|--commands] [--tmp-dir=<dir>] [<input-file>]" >&2
+    echo "Usage: $name [-h|--help] [--debug] [-v|--variables=<file>] [-t|--test] [-o|--output-variables=<file>] [-c|--commands] [--tmp-dir=<dir>] [<input-file>]" >&2
     if [[ $# != 0 ]]; then exit $1; fi
 }
 
@@ -100,6 +100,7 @@ function bye()
 trap 'bye 1' SIGHUP SIGINT SIGTERM SIGPIPE
 
 test_option=0
+debug=0
 variables=
 output_vars_option=
 input=
@@ -110,6 +111,7 @@ while [[ $# -gt 0 ]]; do
     arg="${1#*=}"
     case "$1" in
         -h|--help)                  usage 0;;
+        --debug)                    debug=1;;
         -t|--test)                  test_option=1;;
         -c|--commands)              python_cmd="cat";;
         -v=*|--variables=*)         variables=$arg;;
@@ -162,6 +164,7 @@ if (( test_option )); then preparse_options+=" --test"; fi
   if [[ -n "$input" ]]; then name-value-eval-preparse $preparse_options "$input"
   else name-value-eval-preparse $preparse_options; fi ) > $python_input
   
+if (( debug )); then cat $python_input | sed 's/^/debug: /g' > /dev/tty; fi
 $python_cmd $python_input 2> $err > $out
 
 exit_code=0

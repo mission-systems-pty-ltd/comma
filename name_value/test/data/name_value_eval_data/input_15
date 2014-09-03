@@ -1,0 +1,9 @@
+#python
+z = 5
+expect x + z = 7
+for i in range (0, 10):
+   expect x + i = i + x
+expect x = 3
+# above is error
+expect x = 2
+
