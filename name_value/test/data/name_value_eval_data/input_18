@@ -1,0 +1,11 @@
+# test line continuation
+x = 2 or\
+x = 3 or \
+x = 5
+
+y2 = x or \
+y2 > x
+
+# should fail
+y2 = x + 1 or \
+y2 = x - 1

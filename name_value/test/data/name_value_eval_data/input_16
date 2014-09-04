@@ -1,0 +1,7 @@
+#python
+# syntax error
+for i in range (0, 10:
+   expect x + i = i + x
+
+expect x = 2
+

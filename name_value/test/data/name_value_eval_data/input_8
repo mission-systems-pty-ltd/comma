@@ -1,0 +1,2 @@
+the_name + 3 < 100
+# TypeError (the_name is a string not a number)

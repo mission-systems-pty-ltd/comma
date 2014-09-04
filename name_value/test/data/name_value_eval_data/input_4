@@ -1,0 +1,27 @@
+# special syntax and functions
+
+x == 2
+x = 1.9 +/- 0.2
+x = 2.01 +/- 5%
+near(x, 2.1, 0.2)
+near_percent(x, 1.99, 5)
+starts_with(the_name, "Fred")
+ends_with(the_name, "stone")
+contains(the_name, "Flint")
+matches(the_name, "red.*tone")
+matches(the_name, "^F")
+matches(the_name, "tone$")
+route/point[MAX]/name="end"
+
+# errors
+x = 3 +/- 0.5
+x = 12 +/- 50%
+near(x, 100, 10)
+near_percent(x, 20, 3)
+starts_with(the_name, "Flint")
+ends_with(the_name, "Flint")
+contains(the_name, "Free")
+matches(the_name, "^Flint")
+matches(the_name, "Stone$")
+matches(the_name, "George")
+

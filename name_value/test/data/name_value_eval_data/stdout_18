@@ -1,0 +1,8 @@
+x/expected="y2 = x or  y2 > x"
+x/actual="2"
+y2/expected="x or  y2 > x"
+y2/actual="-3.5"
+x/expected="y2 = x + 1 or  y2 = x - 1"
+x/actual="2"
+y2/expected="x + 1 or  y2 = x - 1"
+y2/actual="-3.5"

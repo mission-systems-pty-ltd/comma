@@ -1,0 +1,2 @@
+# KeyError (illegal index)
+route/point[3]/name = "nonexistent"

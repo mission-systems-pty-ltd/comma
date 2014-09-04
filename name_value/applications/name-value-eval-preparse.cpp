@@ -11,6 +11,7 @@
 
 // name of executable (will be set to argv[0])
 static const char *exec_name = "";
+static std::string kwd_expect = "expect";
 
 void usage()
 {
@@ -51,12 +52,20 @@ void usage()
 "Predefined Python functions:\n"
 "\n"
 "   near(x, y, eps)         True if x and y are within eps of each other (i.e. abs(x - y) <= eps)\n"
-"   max_index(dict)         Returns the maximum (integer) index in a dictionary\n"
+"   near_percent(x, y, p)   True if x and y are within p% of each other (i.e. abs(x - y) <= x * p / 100)\n"
+"   max_index(dict)         Returns the maximum (integer) index in a dictionary (i.e. array)\n"
+"   number_of(dict)         Returns max_index(dict) + 1 (i.e. assumes indexes start from 0 and none are missing)\n"
 "   starts_with(s, x)       True if string s begins with string x\n"
 "   ends_with(s, x)         True if string s ends with string x\n"
 "   contains(s, x)          True if string s has a substring x\n"
-"   re.match(r, s)          Check if s matches regular expression r (or use re.search(r, s) if r can be anywhere in s)\n"
+"   matches(s, r)           Check if s matches regular expression r\n"
 "                           See: http://docs.python.org/2/howto/regex.html\n"
+"   sphere_distance_nm(lat1,lon1,lat2,lon2)   Great circle distance between two points (nautical miles)\n"
+"   sphere_distance_km(lat1,lon1,lat2,lon2)   Great circle distance between two points (km)\n"
+"   nm_to_km(nm)            Convert nautical miles to km\n"
+"   km_to_nm(km)            Convert km to nautical miles\n"
+"   rad_to_deg(rad)         Convert radians to degrees\n"
+"   deg_to_rad(deg)         Convert degrees to radians\n"
 "\n"
 "Special operators:\n"
 "\n"
@@ -343,45 +352,62 @@ std::string demangle_id(const std::string &id, bool restore_slashes)
 }
 
 // check for special token sequences such as "a == b +/- c" and replace them with the required Python code
+// TODO: maybe allow expression to continue after "+/- c", e.g. "x = y +/- 3 or z = 0.5 +/- 0.1"
 void transform_special_tokens(/*out*/ std::vector<Token> &tokens)
 {
-    for (size_t n = 0;n < tokens.size();++n)
+    int num = (int) tokens.size();
+    if (num < 5) { return; }
+    int plus_minus_pos = -1;
+    int comparison_pos = -1;
+
+    for (int n = 0;n < num;++n)
     {
-        if (tokens[n].type == t_operator && tokens[n].str == "+/-" && n >= 3 && n < tokens.size() - 1 &&
-            tokens[n - 2].type == t_operator)
+        if (tokens[n].type == t_operator)
         {
-            std::string op = tokens[n - 2].str;
-            if (op == "==" || op == "!=")
+            if (tokens[n].str == "+/-")
             {
-                Token lhs = tokens[n - 3];
-                // (tokens[n-2] is op)
-                Token rhs = tokens[n - 1];
-                // (tokens[n] is "+/-")
-                Token eps = tokens[n + 1];
-
-                // check for percentage (e.g. "500 +/- 10%")
-                bool is_percent = (n + 2 < tokens.size() && tokens[n + 2].type == t_operator && tokens[n + 2].str == "%");
-
-                int start_of_rest = n + 2;
-                if (is_percent) { ++start_of_rest; }
-
-                std::vector<Token> rest(tokens.begin() + start_of_rest, tokens.end()); // the rest of the tokens
-                tokens.erase(tokens.begin() + n - 3, tokens.end());
-
-                if (op == "!=") { tokens.push_back(Token(t_keyword, "not", 1)); }
-
-                tokens.push_back(Token(t_function, (is_percent ? "near_percent" : "near"), 1));
-                tokens.push_back(Token(t_operator, "("));
-                tokens.push_back(lhs);
-                tokens.push_back(Token(t_operator, ","));
-                tokens.push_back(rhs);
-                tokens.push_back(Token(t_operator, ","));
-                tokens.push_back(eps);
-                tokens.push_back(Token(t_operator, ")"));
-                tokens.insert(tokens.end(), rest.begin(), rest.end());  // append rest of tokens
+                if (plus_minus_pos != -1) { return; }
+                else { plus_minus_pos = n; }
+            }
+            else
+            // "=" will already have been transformed into "==" by this stage
+            if (tokens[n].str == "==" || tokens[n].str == "!=")
+            {
+                if (comparison_pos != -1) { return; }
+                else { comparison_pos = n; }
             }
         }
     }
+
+    if (plus_minus_pos == -1 || comparison_pos == -1 || plus_minus_pos - comparison_pos < 2) { return; }
+    bool is_percent = (tokens[num-1].type == t_operator && tokens[num-1].str == "%");
+    
+    if ((is_percent && plus_minus_pos != num - 3) ||
+        (!is_percent && plus_minus_pos != num - 2))
+    { return; }
+
+    // map "expr1 = expr2 +/- tolerance" to "near(expr1, expr2, tolerance)"
+    // - using "!=" puts "not" in front
+    // - using "val%" calls near_percent() instead of near()
+
+    std::vector<Token> new_tokens;
+    if (tokens[comparison_pos].str == "!=") { new_tokens.push_back(Token(t_keyword, "not", 1)); }
+    new_tokens.push_back(Token(t_function, (is_percent ? "near_percent" : "near"), 1));
+    new_tokens.push_back(Token(t_operator, "("));
+
+    new_tokens.push_back(Token(t_operator, "("));
+    new_tokens.insert(new_tokens.end(), tokens.begin(), tokens.begin() + comparison_pos);
+    new_tokens.push_back(Token(t_operator, ")"));
+
+    new_tokens.push_back(Token(t_operator, ","));
+    new_tokens.push_back(Token(t_operator, "("));
+    new_tokens.insert(new_tokens.end(), tokens.begin() + comparison_pos + 1, tokens.begin() + plus_minus_pos);
+    new_tokens.push_back(Token(t_operator, ")"));
+
+    new_tokens.push_back(Token(t_operator, ","));
+    new_tokens.push_back(tokens[plus_minus_pos + 1]);
+    new_tokens.push_back(Token(t_operator, ")"));
+    tokens = new_tokens;
 }
 
 // get the index of the first token with a particular type and value
@@ -408,7 +434,9 @@ void check_transform_id(std::string &id)
 
 // split a string into individual tokens
 void tokenise(const std::string &line, const Options &opt,
-    /*out*/ std::vector<Token> &tokens)
+    /*out*/ std::vector<Token> &tokens,
+    bool test_is_raw_python = false   // whether --test input is raw python code (vs just a list of boolean expressions)
+)
 {
     size_t pos = 0;
     size_t len = line.length();
@@ -487,7 +515,13 @@ void tokenise(const std::string &line, const Options &opt,
             pos += operator_length(line, pos);
             tok_str = line.substr(tok_start, pos - tok_start);
             type = t_operator;
-            if (tok_str == "=") { found_assign_op = true; if (opt.test) tok_str = "=="; }
+            if (tok_str == "=")
+            {
+                found_assign_op = true;
+                if (opt.test && (!test_is_raw_python || 
+                    (tokens.size() > 0 && tokens[0].type == t_id && tokens[0].str == kwd_expect)))
+                { tok_str = "=="; }
+            }
         }
 
         tokens.push_back(Token(type, tok_str, num_spaces));
@@ -617,11 +651,60 @@ void process_assign(const std::vector<Token> &tokens, const std::string &input_l
     }
 }
 
-void process_test(const std::vector<Token> &tokens, const std::string &original_line,
-    const std::string &filename, int line_num)
+size_t count_starting_spaces(const std::string &s)
 {
+    for (size_t n = 0;n < s.size();++n)
+    {
+        if (s[n] != ' ' && s[n] != '\t') { return n; }
+    }
+    return s.size();
+}
+
+void process_test(std::vector<Token> &tokens, const std::string &original_line,
+    const std::string &filename, int line_num, bool *raw_python)
+{
+    std::string input_line;
+    size_t leading_spaces = 0;
+
+    if (line_num == 1)
+    {
+        if (starts_with(original_line, "#python"))
+        {
+            std::cout << "# raw python\n";
+            *raw_python = true;
+            return;
+        }
+        std::cout << "# not raw python\n";
+    }
+
     if (tokens.empty()) { return; }
-    std::string input_line = trim_spaces(original_line);
+
+    if (*raw_python)
+    {
+        leading_spaces = count_starting_spaces(original_line);
+
+        if (tokens[0].type == t_id && tokens[0].str == kwd_expect)
+        {
+            tokens.erase(tokens.begin());
+            if (tokens.empty()) { return; }  // really an error to have nothing after "expect", but minor
+            tokens[0].spaces_before = 0;
+            // (by this stage, tokens[0].spaces_before has been set to 0; get leading_spaces from original line)
+            input_line = trim_spaces(original_line.substr(leading_spaces + kwd_expect.length()));
+            // continue to parse as normal
+        }
+        else
+        {
+            std::cout << "# SRCLINE " << line_num << ' ' << original_line << '\n'
+                << spaces(leading_spaces) << tokens << '\n';
+            // can't just output original_line, since variable names need to be transformed
+            // (e.g. from "a/b/c" to "a.b.c")
+            return;
+        }
+    }
+    else
+    {
+        input_line = trim_spaces(original_line);
+    }
 
     // create a set of all variables in the expression (so we can print each one just once)
     Varmap vars;
@@ -635,9 +718,9 @@ void process_test(const std::vector<Token> &tokens, const std::string &original_
     }
 
     std::cout << "# SRCLINE " << line_num << " " << input_line << '\n'
-        << "_result_ = (" << tokens << ")\n"
-        << "if type(_result_) != bool: err_expr_not_bool()\n"
-        << "elif not _result_:\n";
+        << spaces(leading_spaces) << "_result_ = (" << tokens << ")\n"
+        << spaces(leading_spaces) << "if type(_result_) != bool: err_expr_not_bool()\n"
+        << spaces(leading_spaces) << "elif not _result_:\n";
 
     if (vars.size() != 0)
     {
@@ -656,17 +739,20 @@ void process_test(const std::vector<Token> &tokens, const std::string &original_
                 else if (starts_with(expr_str, "=")) { expr_str = trim_spaces(expr_str.substr(1)); }
             }
 
-            std::cout << "    print '" << i->first << "/expected=" << quote(expr_str, '"') << "'\n";
+            std::cout << spaces(leading_spaces)
+                << "    print '" << i->first << "/expected=" << quote(expr_str, '"') << "'\n";
 
             // use a Python trick to force repr() to use double quotes instead of single
             // (for an explanation, see: http://www.gossamer-threads.com/lists/python/python/157285
             // -- search that page for "Python delimits a string it by single quotes preferably")
-            std::cout << "    print '" << i->first << "/actual=\"'+repr(\"'\\0\"+str(" << i->second << "))[6:]\n";
+            std::cout << spaces(leading_spaces)
+                << "    print '" << i->first << "/actual=\"'+repr(\"'\\0\"+str(" << i->second << "))[6:]\n";
         }
     }
     else
     {
-        std::cout << "    print 'false=" << quote(input_line, '\"') << "'\n";
+        std::cout << spaces(leading_spaces)
+            << "    print 'false=" << quote(input_line, '\"') << "'\n";
     }
 }
 
@@ -693,14 +779,27 @@ void process_command(const std::vector<Token> &tokens, Varmap &assigned_vars, co
 void print_header()
 {
     std::cout
-        << "import sys, re, inspect\n"
+        << "import sys, re, inspect, math\n"
         << "def near(x, y, eps): return abs(x - y) <= eps\n"
         << "def near_percent(x, y, percent): return abs(x - y) <= x * percent * 0.01\n"
         << "def max_index(dict) : return max(dict.keys())\n"
+        << "def number_of(dict) : return len(dict.keys())\n"
         << "def starts_with(s, x): return s.find(x) == 0\n"
         << "def ends_with(s, x): return s.rfind(x) == len(s) - len(x)\n"
         << "def contains(s, x): return s.find(x) != -1\n"
         << "def matches(s, p): return re.search(p, s) != None\n"
+        << "def deg_to_rad(d): return (d / 180.0) * 3.14159265359\n"
+        << "def rad_to_deg(r): return (r / 3.14159265359) * 180.0\n"
+        << "def km_to_nm(k): return k / 1.852\n"
+        << "def nm_to_km(n): return n * 1.852\n"
+        << "def sphere_distance_km(lat1, lon1, lat2, lon2):\n"
+        << "    phi1 = deg_to_rad(lat1)\n"
+        << "    phi2 = deg_to_rad(lat2)\n"
+        << "    lat_delta = deg_to_rad(lat2 - lat1)\n"
+        << "    lon_delta = deg_to_rad(lon2 - lon1)\n"
+        << "    res_val = math.sin(lat_delta / 2.0) * math.sin(lat_delta / 2.0) + math.cos(phi1) * math.cos(phi2) * math.sin(lon_delta / 2.0) * math.sin(lon_delta / 2.0)\n"
+        << "    return 6366.70702 * 2.0 * math.atan2(math.sqrt(res_val), math.sqrt(1.0 - res_val))\n"
+        << "def sphere_distance_nm(lat1, lon1, lat2, lon2): return km_to_nm(sphere_distance_km(lat1, lon1, lat2, lon2))\n"
         << "def err_expr_not_bool(): print >> sys.stderr, 'File \"?\", line ' + str(inspect.currentframe().f_back.f_lineno) + '\\nTypeError: expected a true or false expression'\n";
         // note: err_expr_not_bool() imitates standard Python error printing:
         // 'File "name", line n' on one line, followed by the error message
@@ -742,14 +841,36 @@ void process(const std::string &filename, const Options &opt, const std::set<std
     // set of "seen" variable names (e.g. "a", "a.b", "a.b["); only used for --assign
     Varset variable_hierarchy;
 
+    // with the input to --test is raw python code (vs just being a list of boolean expressions, one per line)
+    bool test_is_raw_python = false;
+    std::string pending_line;
+    int pending_line_num = 0;
+
     for (int line_num = 1;std::getline(infile, line);++line_num)
     {
+        size_t len = line.length();
+        if (len != 0 && line[len - 1] == '\\')
+        {
+            if (pending_line.empty()) { pending_line_num = line_num; }
+            pending_line += line.substr(0, len - 1);
+            pending_line += ' ';
+            continue;
+        }
+
+        int actual_line_num = line_num;
+        if (!pending_line.empty())
+        {
+            line = pending_line + line;
+            pending_line.clear();
+            actual_line_num = pending_line_num;
+        }
+
         tokens.resize(0);
-        tokenise(line, opt, tokens);
+        tokenise(line, opt, tokens, test_is_raw_python);
         // debug_tokens(tokens);
 
-        if (opt.assign) { process_assign(tokens, line, filename, line_num, variable_hierarchy); }
-        else if (opt.test) { process_test(tokens, line, filename, line_num); }
+        if (opt.assign) { process_assign(tokens, line, filename, actual_line_num, variable_hierarchy); }
+        else if (opt.test) { process_test(tokens, line, filename, actual_line_num, &test_is_raw_python); }
         else { process_command(tokens, assigned_vars, opt, restrict_vars); }
     }
 

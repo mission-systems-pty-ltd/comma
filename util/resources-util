@@ -3,6 +3,10 @@
 # This script provides Bash functions for coordination of system
 # resources usage across a pool of workers (processes).
 
+# TODO: move the three common functions to common-util
+# TODO: prefix all functions with comma_
+# TODO: rename serialize into comma_locked and move into comma_sync
+
 # Auxiliary function: random value uniformly distributed in [0, 1].
 function urandom()
 {
@@ -183,11 +187,8 @@ function total_system_resources()
     cpus=$( grep -c '^processor' /proc/cpuinfo )
     (( $? == 0 || $cpus > 0 )) || { echo "$name: cannot grep '/proc/cpuinfo' for the number of processors" >&2; return 1; }
     #
-    memory_limits=$( ipcs -ml 2>/dev/null )
-    (( $? == 0 )) || { echo "$name: cannot determine memory limits by calling ipcs" >&2; exit 1; }
-    memory_shared=$( echo "$memory_limits" | sed '/shared/!d;s/.* //g' )
-    (( $memory_shared > 0 )) || { echo "$name: cannot determine shared memory size" >&2; exit 1; }
-    memory_shared=$(( $memory_shared * 1024 ))
+    # ipcs -ml was found to return weird values on many systems
+    memory_shared=$( df --block-size=1 | grep shm$ | awk '{ print $2 }' )
     #
     memory_main=$( cat /proc/meminfo | sed -n --regexp-extended "s/^MemTotal: *(.*) .*$/\1/p" )
     (( $memory_main > 0 )) || { echo "$name: cannot determine total memory size" >&2; exit 1; }
@@ -372,7 +373,7 @@ function release_resources()
     users=${users:-"$default_users"}
     #users=$( echo "$users" | sed 's/\//\\\//g' )
     local next
-    local name=${name:-"release_resources"}
+    local name="release_resources"
     [[ -z "$pid" ]] && { echo "$name: no PID provided" >&2; return 1; }
     # search the pid position in the list of users; if not found, print a warning
     # and ignore the release request
@@ -414,8 +415,10 @@ function serialize()
 export -f serialize
 
 # Lock-protected versions of the relevant functions from this script.
+# TODO: just call serialize directly in the user scripts.
 function locked_initialize_resources()
 {
+    # TODO: do not propagate "name", set it locally at the bottom-most function
     local name=${name:-"locked_initialize_resources"}
     serialize $1 initialize_resources $2
 }

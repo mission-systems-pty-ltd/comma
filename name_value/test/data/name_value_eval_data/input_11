@@ -1,0 +1,4 @@
+# no errors
+route/point[0]/name = "start"
+route/point[1]/name = "middle"
+route/point[2]/name = "end"

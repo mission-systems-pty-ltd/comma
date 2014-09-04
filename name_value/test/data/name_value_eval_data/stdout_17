@@ -1,0 +1,6 @@
+route/point[i]/name/expected="whatever"
+route/point[i]/name/actual="start"
+route/point[i]/name/expected="whatever"
+route/point[i]/name/actual="middle"
+route/point[i]/name/expected="whatever"
+route/point[i]/name/actual="end"

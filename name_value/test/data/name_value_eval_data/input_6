@@ -1,0 +1,6 @@
+x = 1 + 1
+x > 0
+# SyntaxError
+x 3
+
+x < 10

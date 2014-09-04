@@ -1,0 +1,13 @@
+# test some prededefined functions
+sphere_distance_nm(0,0,1,0) = 60 +/- 0.01
+sphere_distance_nm(25,-35,27,-35) = 120 +/- 0.01
+sphere_distance_nm(0,-8,0,-9) = 60 +/- 0.01
+sphere_distance_nm(45,-8,45,-9) = 42.42 +/- 0.01
+sphere_distance_km(0,0,1,0) = 111.12 +/- 0.01
+deg_to_rad(90) = 1.5708 +/- 0.0001
+rad_to_deg(-0.785398) = -45 +/- 0.01
+km_to_nm(10) = 5.4 +/- 0.01
+nm_to_km(100) = 185.2 +/- 0.01
+
+# should fail
+sphere_distance_nm(8,1,9,1) = 0
