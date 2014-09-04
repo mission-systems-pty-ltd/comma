@@ -19,6 +19,8 @@
 #include <expat.h>
 
 #include <comma/application/command_line_options.h>
+#include <comma/io/stream-util.h>
+#include <comma/xpath/xpath.h>
 
 #define CMDNAME "xml-map"
 
@@ -26,7 +28,7 @@ static std::string options_file;
 static bool options_compact = false;
 static unsigned options_depth_max = std::numeric_limits<unsigned>::max();
 
-static unsigned const BUFFY_SIZE = 4 * 1024 * 1024;
+static unsigned const BUFFY_SIZE = 1 * 1024 * 1024;
 
 static unsigned element_count = 0;
 static unsigned element_found_count = 0;
@@ -35,12 +37,21 @@ static unsigned element_depth_max = 0;
 
 static XML_Parser parser = NULL;
 
-static std::vector<std::string> element_path_list;
+static std::vector<comma::xpath> element_path_list;
 
 typedef std::pair<long long, long long> element_location_t;
 typedef std::vector<element_location_t> element_location_list_t;
-typedef std::map<std::string, element_location_list_t> element_location_map_t;
+typedef std::map<comma::xpath, element_location_list_t> element_location_map_t;
 static element_location_map_t element_location_map;
+
+// ~~~~~~~~~~~~~~~~~~
+// UTILITIES
+// ~~~~~~~~~~~~~~~~~~
+inline std::ostream &
+operator <<(std::ostream & os, comma::xpath const & p)
+{
+    return p.output(os);
+}
 
 // ~~~~~~~~~~~~~~~~~~
 // USER INTERFACE
@@ -74,12 +85,10 @@ element_start(void * userdata, char const * element, char const ** attributes)
         ++element_found_count;
     
         // build the xpath
-        std::string element_path;
-        element_path.reserve(4000);
+        comma::xpath element_path;
         if (! element_path_list.empty())
             element_path = element_path_list.back();
-        element_path.append("/");
-        element_path.append(element);
+        element_path /= std::string(element);
         element_path_list.push_back(element_path);
         
         // get the start location
@@ -97,7 +106,7 @@ element_end(void * userdata, char const * element)
 
     if (element_depth <= options_depth_max)
     {    
-        std::string const & element_path = element_path_list.back();
+        comma::xpath & element_path = element_path_list.back();
         element_location_t & entry = element_location_map[element_path].back();
 
         { // force the use of the entry to prevent errors
