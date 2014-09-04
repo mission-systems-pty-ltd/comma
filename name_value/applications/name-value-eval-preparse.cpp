@@ -60,7 +60,12 @@ void usage()
 "   contains(s, x)          True if string s has a substring x\n"
 "   matches(s, r)           Check if s matches regular expression r\n"
 "                           See: http://docs.python.org/2/howto/regex.html\n"
-"   sphere_distance(lat1,lon1,lat2,lon2)   Great circle distance between two points\n"
+"   sphere_distance_nm(lat1,lon1,lat2,lon2)   Great circle distance between two points (nautical miles)\n"
+"   sphere_distance_km(lat1,lon1,lat2,lon2)   Great circle distance between two points (km)\n"
+"   nm_to_km(nm)            Convert nautical miles to km\n"
+"   km_to_nm(km)            Convert km to nautical miles\n"
+"   rad_to_deg(rad)         Convert radians to degrees\n"
+"   deg_to_rad(deg)         Convert degrees to radians\n"
 "\n"
 "Special operators:\n"
 "\n"
@@ -346,6 +351,7 @@ std::string demangle_id(const std::string &id, bool restore_slashes)
     return result;
 }
 
+// TODO: make more flexible (only handles "a = b +/- c"; allow "fn(...) = b +/-c" and "a = ..expr.. +/- c)
 // check for special token sequences such as "a == b +/- c" and replace them with the required Python code
 void transform_special_tokens(/*out*/ std::vector<Token> &tokens)
 {
