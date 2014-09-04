@@ -7,15 +7,15 @@
 #include <map>
 
 #include <cstdio>
-#include <cctype>
 
 #include <expat.h>
 
 #include <comma/application/command_line_options.h>
+#include <comma/io/stream-util.h>
 
 #define CMDNAME "xml-grep"
 
-static unsigned const BUFFY_SIZE = 4 * 1024 * 1024;
+static unsigned const BUFFY_SIZE = 1 * 1024 * 1024;
 
 static std::string options_file;
 
@@ -41,21 +41,6 @@ static unsigned element_found = 0;
 // ~~~~~~~~~~~~~~~~~~
 // UTILITIES
 // ~~~~~~~~~~~~~~~~~~
-// An istream manipulator to read a punctuation char or fail.
-struct punct
-{
-    punct(char const c) : _c(c) {;}
-    char const _c;
-};
-
-std::istream &
-operator >>(std::istream & is, punct const & p)
-{
-    char const c = is.get();
-    if (c != p._c) is.setstate(std::ios::failbit);
-    return is;
-}
-
 bool
 grep(XML_Char const * element, std::string const & element_path)
 {
@@ -92,8 +77,8 @@ static void
 usage(bool const verbose)
 {
     fputs("USAGE:   " CMDNAME " [--range=M-N] [--limit=Q] [--file=XMLFILE] PATH"
-          "\nOPTIONS: --range=M-N to output just the blocks between M and N"
-          "\n         --limit=N to output just the blocks between 1 and Q-1"
+          "\nOPTIONS: --range=M-N to output just the elements between M and N"
+          "\n         --limit=N to output just the elements between 1 and Q"
           "\n         --source=XMLFILE to open and parse that file."
           "\n         <path> is either absolute and fully qualified e.g. /n:a/n:b/n:c"
           "\n                or it is fully qualified and realtive without subordinates e.g. n:c"
@@ -247,63 +232,6 @@ parse_as_blocks(FILE * infile)
     }
 }
 
-static bool
-parse_as_chars(FILE * infile)
-{
-    if (0 == setvbuf(infile, NULL, _IONBF, 0))
-        ; //DB std::cerr << CMDNAME ": Set stdin to unbuffered mode." << std::endl;
-
-    char * buffy = new char[BUFFY_SIZE + 1];
-    buffy[BUFFY_SIZE] = 0;
-    
-    bool gt_code = 0;
-   
-    bool good = true;
-    bool work = true;
-    while (work)
-    {
-        size_t count = 0;
-        while (count < BUFFY_SIZE)
-        {
-            int ch = fgetc(infile);
-            if (EOF == ch)
-            {
-                if (std::ferror(infile))
-                {
-                    fputs(CMDNAME ": Error: Could not read. Abort!\n", stderr);
-                    good = false;
-                }
-                work = false;
-                break;
-            }
-            buffy[count] = ch;
-            ++count;
-            if ('>' == ch) {
-                ++gt_code;
-                if (gt_code >= 2) break;
-            }
-        }
-
-        if (count > 0)
-        {
-            // std::cerr << "Parse: '" << buffy << '\'' << std::endl;
-            if (XML_STATUS_OK != XML_Parse(parser, buffy, count, count < BUFFY_SIZE))
-            {
-                if (block_curr <= block_end)
-                {
-                    fprintf(stderr, CMDNAME ": %s\n", XML_ErrorString(XML_GetErrorCode(parser)));
-                    fputs(CMDNAME ": Error: Parsing Buffer. Abort!\n", stderr);
-                }
-                fputc('\n', stderr);
-                good = false;
-                work = false;
-            }
-        }
-    }
-    delete [] buffy;
-    return good;
-}
-
 static int
 run()
 {
@@ -321,10 +249,7 @@ run()
     bool ok = false;
     if (options_file.empty())
     {
-        if (block_end != std::numeric_limits<unsigned>::max())
-            ok = parse_as_chars(stdin);
-        else
-            ok = parse_as_blocks(stdin);
+        ok = parse_as_blocks(stdin);
     }
     else
     {
@@ -375,7 +300,7 @@ main(int argc, char ** argv)
         {
             std::istringstream iss(options.value<std::string>("--range"));
             unsigned s = 0, e = std::numeric_limits<unsigned>::max();
-            iss >> s >> punct('-') >> e;
+            iss >> s >> comma::io::punct('-') >> e;
             block_start = std::min(s, e);
             block_end = std::max(s, e);
         }
