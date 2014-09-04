@@ -351,47 +351,63 @@ std::string demangle_id(const std::string &id, bool restore_slashes)
     return result;
 }
 
-// TODO: make more flexible (only handles "a = b +/- c"; allow "fn(...) = b +/-c" and "a = ..expr.. +/- c)
 // check for special token sequences such as "a == b +/- c" and replace them with the required Python code
+// TODO: maybe allow expression to continue after "+/- c", e.g. "x = y +/- 3 or z = 0.5 +/- 0.1"
 void transform_special_tokens(/*out*/ std::vector<Token> &tokens)
 {
-    for (size_t n = 0;n < tokens.size();++n)
+    int num = (int) tokens.size();
+    if (num < 5) { return; }
+    int plus_minus_pos = -1;
+    int comparison_pos = -1;
+
+    for (int n = 0;n < num;++n)
     {
-        if (tokens[n].type == t_operator && tokens[n].str == "+/-" && n >= 3 && n < tokens.size() - 1 &&
-            tokens[n - 2].type == t_operator)
+        if (tokens[n].type == t_operator)
         {
-            std::string op = tokens[n - 2].str;
-            if (op == "==" || op == "!=")
+            if (tokens[n].str == "+/-")
             {
-                Token lhs = tokens[n - 3];
-                // (tokens[n-2] is op)
-                Token rhs = tokens[n - 1];
-                // (tokens[n] is "+/-")
-                Token eps = tokens[n + 1];
-
-                // check for percentage (e.g. "500 +/- 10%")
-                bool is_percent = (n + 2 < tokens.size() && tokens[n + 2].type == t_operator && tokens[n + 2].str == "%");
-
-                int start_of_rest = n + 2;
-                if (is_percent) { ++start_of_rest; }
-
-                std::vector<Token> rest(tokens.begin() + start_of_rest, tokens.end()); // the rest of the tokens
-                tokens.erase(tokens.begin() + n - 3, tokens.end());
-
-                if (op == "!=") { tokens.push_back(Token(t_keyword, "not", 1)); }
-
-                tokens.push_back(Token(t_function, (is_percent ? "near_percent" : "near"), 1));
-                tokens.push_back(Token(t_operator, "("));
-                tokens.push_back(lhs);
-                tokens.push_back(Token(t_operator, ","));
-                tokens.push_back(rhs);
-                tokens.push_back(Token(t_operator, ","));
-                tokens.push_back(eps);
-                tokens.push_back(Token(t_operator, ")"));
-                tokens.insert(tokens.end(), rest.begin(), rest.end());  // append rest of tokens
+                if (plus_minus_pos != -1) { return; }
+                else { plus_minus_pos = n; }
+            }
+            else
+            // "=" will already have been transformed into "==" by this stage
+            if (tokens[n].str == "==" || tokens[n].str == "!=")
+            {
+                if (comparison_pos != -1) { return; }
+                else { comparison_pos = n; }
             }
         }
     }
+
+    if (plus_minus_pos == -1 || comparison_pos == -1 || plus_minus_pos - comparison_pos < 2) { return; }
+    bool is_percent = (tokens[num-1].type == t_operator && tokens[num-1].str == "%");
+    
+    if ((is_percent && plus_minus_pos != num - 3) ||
+        (!is_percent && plus_minus_pos != num - 2))
+    { return; }
+
+    // map "expr1 = expr2 +/- tolerance" to "near(expr1, expr2, tolerance)"
+    // - using "!=" puts "not" in front
+    // - using "val%" calls near_percent() instead of near()
+
+    std::vector<Token> new_tokens;
+    if (tokens[comparison_pos].str == "!=") { new_tokens.push_back(Token(t_keyword, "not", 1)); }
+    new_tokens.push_back(Token(t_function, (is_percent ? "near_percent" : "near"), 1));
+    new_tokens.push_back(Token(t_operator, "("));
+
+    new_tokens.push_back(Token(t_operator, "("));
+    new_tokens.insert(new_tokens.end(), tokens.begin(), tokens.begin() + comparison_pos);
+    new_tokens.push_back(Token(t_operator, ")"));
+
+    new_tokens.push_back(Token(t_operator, ","));
+    new_tokens.push_back(Token(t_operator, "("));
+    new_tokens.insert(new_tokens.end(), tokens.begin() + comparison_pos + 1, tokens.begin() + plus_minus_pos);
+    new_tokens.push_back(Token(t_operator, ")"));
+
+    new_tokens.push_back(Token(t_operator, ","));
+    new_tokens.push_back(tokens[plus_minus_pos + 1]);
+    new_tokens.push_back(Token(t_operator, ")"));
+    tokens = new_tokens;
 }
 
 // get the index of the first token with a particular type and value

@@ -8,5 +8,3 @@ for i in range (0, number_of(route/point)):
     expect route/point[i]/name = "whatever"
     # should fail
 
-if x == 3 +/-2:
-    expect x = y2
