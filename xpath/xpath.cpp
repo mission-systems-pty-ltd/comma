@@ -211,4 +211,18 @@ bool xpath::operator<( const xpath& rhs ) const
 
 bool xpath::operator<=( const xpath& rhs ) const { return operator<( rhs ) || operator==( rhs ); }
 
+static std::ostream &
+operator <<(std::ostream & os, comma::xpath::element const & value)
+{
+    return os << value.name;
+}
+
+std::ostream &
+xpath::output(std::ostream & os) const
+{
+    std::ostream_iterator<comma::xpath::element const> out_itr(os, "/");
+    std::copy(elements.begin(), elements.end(), out_itr);
+}
+
+
 } // namespace comma {

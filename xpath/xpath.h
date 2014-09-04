@@ -40,7 +40,7 @@
 #include <float.h>
 #include <stdlib.h>
 #endif
-#include <iostream>
+#include <iosfwd>
 #include <string>
 #include <vector>
 #include <boost/optional.hpp>
@@ -137,6 +137,11 @@ class xpath
         
         /// return as string
         std::string to_string( char delimiter = '/' ) const;
+
+        // For various unknown reasons specifying the operator overload
+        // here causes explosions in util/applications/comma-progress.cpp
+        std::ostream &
+        output(std::ostream & os) const;
 };
 
 } // namespace comma {
