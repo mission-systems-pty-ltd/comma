@@ -827,15 +827,34 @@ void process(const std::string &filename, const Options &opt, const std::set<std
 
     // with the input to --test is raw python code (vs just being a list of boolean expressions, one per line)
     bool test_is_raw_python = false;
+    std::string pending_line;
+    int pending_line_num = 0;
 
     for (int line_num = 1;std::getline(infile, line);++line_num)
     {
+        size_t len = line.length();
+        if (len != 0 && line[len - 1] == '\\')
+        {
+            if (pending_line.empty()) { pending_line_num = line_num; }
+            pending_line += line.substr(0, len - 1);
+            pending_line += ' ';
+            continue;
+        }
+
+        int actual_line_num = line_num;
+        if (!pending_line.empty())
+        {
+            line = pending_line + line;
+            pending_line.clear();
+            actual_line_num = pending_line_num;
+        }
+
         tokens.resize(0);
         tokenise(line, opt, tokens, test_is_raw_python);
         // debug_tokens(tokens);
 
-        if (opt.assign) { process_assign(tokens, line, filename, line_num, variable_hierarchy); }
-        else if (opt.test) { process_test(tokens, line, filename, line_num, &test_is_raw_python); }
+        if (opt.assign) { process_assign(tokens, line, filename, actual_line_num, variable_hierarchy); }
+        else if (opt.test) { process_test(tokens, line, filename, actual_line_num, &test_is_raw_python); }
         else { process_command(tokens, assigned_vars, opt, restrict_vars); }
     }
 
