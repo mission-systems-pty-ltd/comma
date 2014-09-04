@@ -14,6 +14,11 @@
 
 #include <cstring>
 
+#include <comma/io/stream-util.h>
+
+using comma::io::punct;
+using comma::io::newline;
+
 #define CMDNAME "xml-map-split"
 
 static std::set<std::string> exact_set;
@@ -24,63 +29,9 @@ static unsigned block_end = std::numeric_limits<unsigned>::max();
 // ~~~~~~~~~~~~~~~~~~
 // HELPERS
 // ~~~~~~~~~~~~~~~~~~
-// An istream manipulator to remove the expected  newline 
-// Somewhat complicated by that whole DOS v UNIX v MAC bulldust
-struct newline_t
-{
-    newline_t() {;}
-} newline;
-
-std::istream &
-operator >>(std::istream & is, newline_t const & p)
-{
-    char const c = is.get();
-    if (! is || '\n' == c) return is;
-    if ('\r' != c )
-    {
-        is.setstate(std::ios::failbit);
-        return is;
-    }
-    int next = is.peek();
-    if (EOF == next) return is;
-    if ('\n' == next) next = is.get();
-    return is;
-}
-
-std::istream &
-ignore_until_newline(std::istream & is)
-{
-    for (;;)
-    {
-        char const c = is.get();
-        if (! is || '\n' == c) return is;
-        if ('\r' != c ) continue;
-
-        // we got a \r so test for \n
-        int next = is.peek();
-        if (EOF == next) return is;
-        if ('\n' == next) next = is.get();
-        return is;
-    }
-}
-
-// An istream manipulator to read a punctuation char or fail.
-struct punct
-{
-    punct(char const c) : _c(c) {;}
-    char const _c;
-};
-
-std::istream &
-operator >>(std::istream & is, punct const & p)
-{
-    char const c = is.get();
-    if (c != p._c) is.setstate(std::ios::failbit);
-    return is;
-}
-
 // An istream manipulator to fill a string until the given punctuation
 // will take in whitespace
+// but leaves the whitespace in the stream.
 struct before
 {
     before(std::string & str, char const c) : _str(str), _c(c) {;}
@@ -202,7 +153,7 @@ parse(std::istream & infile, std::istream & mapfile)
         }
         if (! match(path))
         {
-            ignore_until_newline(mapfile);
+            comma::io::ignore_until_newline(mapfile);
         }
         else
         {
