@@ -15,6 +15,7 @@
 
 #include <comma/application/command_line_options.h>
 #include <comma/xpath/xpath.h>
+#include <comma/xpath/applications/expat-util.h>
 
 namespace FS = boost::filesystem;
 
@@ -25,13 +26,6 @@ static std::string options_file;
 static unsigned const BUFFY_SIZE = 1 * 1024 * 1024;
 
 static unsigned block_end = 1000; 
-
-static unsigned element_count = 0;
-static unsigned element_found_count = 0;
-static unsigned element_depth = 0;
-static unsigned element_depth_max = 0;
-
-static XML_Parser parser = NULL;
 
 // can't use list or map on xpath because of the < overloading
 typedef std::set<comma::xpath, comma::xpath::less_t> exact_set_t;
@@ -179,35 +173,40 @@ usage(bool const verbose)
 }
 
 // ~~~~~~~~~~~~~~~~~~
-// SAX HANDLERS
+// APPLICATION
 // ~~~~~~~~~~~~~~~~~~
-static void XMLCALL
-default_handler(void * userdata, XML_Char const * str, int length)
+class xml_split_application : public simple_expat_application
 {
-    assert(NULL != str);
-    assert(length > 0);
+public:
+    xml_split_application();
 
+protected:
+    virtual void 
+    do_default(XML_Char const * const str, int const length);
+
+    virtual void
+    do_element_start(char const * const element, char const * const * const attributes);
+
+    virtual void
+    do_element_end(char const * const element);
+  
+};
+
+xml_split_application::xml_split_application()
+: simple_expat_application(CMDNAME)
+{
+}
+
+void 
+xml_split_application::do_default(XML_Char const * const str, int const length)
+{
     if (element_found_index >= 0)
         writers[element_found_index].more().write(str, length);
 }
 
-static void XMLCALL
-comment(void * userdata, XML_Char const * str)
+void
+xml_split_application::do_element_start(char const * const element, char const * const * const attributes)
 {
-    // DO NOTHING
-}
-
-static void XMLCALL
-element_start(void * userdata, char const * element, char const ** attributes)
-{
-    assert(NULL != element);
-    assert(NULL != attributes);
-
-    // track number of elements
-    ++element_count;
-    element_depth_max = std::max(element_depth_max, element_depth);
-    ++element_depth;
-    
     // build the xpath
     comma::xpath element_path;
     if (! element_path_list.empty())
@@ -247,11 +246,9 @@ element_start(void * userdata, char const * element, char const ** attributes)
     }
 }
 
-static void
-element_end(void * userdata, char const * element)
+void
+xml_split_application::do_element_end(char const * const element)
 {
-    assert(NULL != element);
-
     comma::xpath const & element_path = element_path_list.back();
     bool const was_found = element_found > 0;
 
@@ -271,90 +268,11 @@ element_end(void * userdata, char const * element)
         element_found_index = -1;
 
     element_path_list.pop_back();
-    --element_depth;
 }
 
 // ~~~~~~~~~~~~~~~~~~
 // MAIN
 // ~~~~~~~~~~~~~~~~~~
-static bool
-parse_as_blocks(FILE * infile)
-{
-    for (;;)
-    {
-        void * const buffy = XML_GetBuffer(parser, BUFFY_SIZE);
-        if (NULL == buffy)
-        {
-            std::cerr << CMDNAME ": Error: Could not allocate expat parser buffer. Abort!" << std::endl;
-            return false;
-        }
-
-        size_t const bytes_read = std::fread(buffy, 1, BUFFY_SIZE, infile);
-        if (0 != bytes_read)
-        {
-            if (XML_STATUS_OK != XML_ParseBuffer(parser, bytes_read, bytes_read < BUFFY_SIZE))
-            {
-                std::cerr << CMDNAME ": " << XML_ErrorString(XML_GetErrorCode(parser)) << std::endl;
-                std::cerr << CMDNAME ": Error: Parsing Buffer. Abort!" << std::endl;
-                return false;
-            }
-        }
-
-        if (std::ferror(infile))
-        {
-            std::cerr << CMDNAME ": Error: Could not read. Abort!" << std::endl;
-            return false;
-        }
-
-        if (std::feof(infile))
-        {
-            return true;
-        }
-    }
-}
-
-static int
-run()
-{
-    parser = XML_ParserCreate(NULL);
-    if (NULL == parser)
-    {
-        std::cerr << CMDNAME ": Error: Could not create expat parser. Abort!" << std::endl;
-        return 1;
-    }
-
-    XML_SetElementHandler(parser, element_start, element_end);
-    XML_SetDefaultHandler(parser, default_handler);
-    XML_SetCommentHandler(parser, comment);
-
-    bool ok = false;
-    if (options_file.empty())
-    {
-        ok = parse_as_blocks(stdin);
-    }
-    else
-    {
-        FILE * infile = fopen(options_file.c_str(), "rb");
-        if (NULL != infile)
-        {
-            ok = parse_as_blocks(infile);
-            fclose(infile);
-        }
-        else
-        {
-            std::cerr << CMDNAME ": Error: Could not open input file '" << options_file.c_str() << "'. Abort!" << std::endl;
-        }
-    }
-    
-    XML_ParserFree(parser);
-    
-    std::cerr << CMDNAME ": Number of Elements " << element_count
-              << ", Number of Found Elements " << element_found_count
-              << ", Maximum Depth " << element_depth_max << std::endl;
-                  
-    return ok ? 0 : 1;
-}
-
 int main(int argc, char ** argv)
 {
     try
@@ -432,7 +350,9 @@ int main(int argc, char ** argv)
                 writers[idx].set_name(*itr);
         }
         
-        return run();
+        xml_split_application app;
+        
+        return app.run(options_file);
     }
     catch (std::exception const & ex)
     {

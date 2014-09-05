@@ -13,6 +13,7 @@
 
 #include <comma/application/command_line_options.h>
 #include <comma/io/stream-util.h>
+#include <comma/xpath/applications/expat-util.h>
 
 #define CMDNAME "xml-grep"
 
@@ -23,13 +24,6 @@ static std::string options_file;
 static unsigned block_start = 0;
 static unsigned block_end = std::numeric_limits<unsigned>::max(); 
 static unsigned block_curr = 0;
-
-static unsigned element_count = 0;
-static unsigned element_found_count = 0;
-static unsigned element_depth = 0;
-static unsigned element_depth_max = 0;
-
-static XML_Parser parser = NULL;
 
 typedef std::pair<std::string, bool /* relative */> grep_entry_t;
 typedef std::vector<grep_entry_t> grep_list_t;
@@ -84,14 +78,33 @@ usage(bool const verbose)
 }
 
 // ~~~~~~~~~~~~~~~~~~
-// SAX HANDLERS
+// APPLICATION
 // ~~~~~~~~~~~~~~~~~~
-static void XMLCALL
-default_handler(void * userdata, XML_Char const * str, int length)
+class xml_grep_application : public simple_expat_application
 {
-    assert(NULL != str);
-    assert(length > 0);
+public:
+    xml_grep_application();
 
+protected:
+    virtual void 
+    do_default(XML_Char const * const str, int const length);
+
+    virtual void
+    do_element_start(char const * const element, char const * const * const attributes);
+
+    virtual void
+    do_element_end(char const * const element);
+  
+};
+
+xml_grep_application::xml_grep_application()
+: simple_expat_application(CMDNAME)
+{
+}
+
+void 
+xml_grep_application::do_default(XML_Char const * const str, int const length)
+{
     if (block_curr < block_start || block_curr > block_end)
         return;
 
@@ -99,22 +112,9 @@ default_handler(void * userdata, XML_Char const * str, int length)
         fwrite(str, 1, length, stdout);
 }
 
-static void XMLCALL
-comment(void * userdata, XML_Char const * str)
+void
+xml_grep_application::do_element_start(char const * const element, char const * const * const attributes)
 {
-    // DO NOTHING
-}
-
-static void XMLCALL
-element_start(void * userdata, XML_Char const * element, XML_Char const ** attributes)
-{
-    assert(NULL != element);
-    assert(NULL != attributes);
-
-    ++element_count;
-    element_depth_max = std::max(element_depth_max, element_depth);
-    ++element_depth;
-    
     std::string element_path;
     element_path.reserve(4000);
     if (! element_list.empty())
@@ -154,11 +154,9 @@ element_start(void * userdata, XML_Char const * element, XML_Char const ** attri
     }
 }
 
-static void
-element_end(void * userdata, XML_Char const * element)
+void
+xml_grep_application::do_element_end(char const * const element)
 {
-    assert(NULL != element);
-
     std::string const & element_path = element_list.back();
     bool const was_found = element_found > 0;
 
@@ -178,7 +176,6 @@ element_end(void * userdata, XML_Char const * element)
             fputc('\n', stdout);
 
     element_list.pop_back();
-    --element_depth;
 
     if (block_curr > block_end)
         XML_StopParser(parser, false);
@@ -187,98 +184,6 @@ element_end(void * userdata, XML_Char const * element)
 // ~~~~~~~~~~~~~~~~~~
 // MAIN
 // ~~~~~~~~~~~~~~~~~~
-// this is useful for parsing a file.
-static bool
-parse_as_blocks(FILE * infile)
-{
-    for (;;)
-    {
-        void * const buffy = XML_GetBuffer(parser, BUFFY_SIZE);
-        if (NULL == buffy)
-        {
-            fputs(CMDNAME ": Error: Could not allocate expat parser buffer. Abort!\n", stderr);
-            return false;
-        }
-
-        size_t const bytes_read = std::fread(buffy, 1, BUFFY_SIZE, infile);
-        if (0 != bytes_read)
-        {
-            if (XML_STATUS_OK != XML_ParseBuffer(parser, bytes_read, bytes_read < BUFFY_SIZE))
-            {
-                if (block_curr <= block_end)
-                {
-                    fprintf(stderr, CMDNAME ": %s\n", XML_ErrorString(XML_GetErrorCode(parser)));
-                    fputs(CMDNAME ": Error: Parsing Buffer. Abort!\n", stderr);
-                }
-                fputc('\n', stderr);
-                return false;
-            }
-        }
-
-        if (std::ferror(infile))
-        {
-            fputs(CMDNAME ": Error: Could not read. Abort!\n", stderr);
-            return false;
-        }
-
-        if (std::feof(infile))
-        {
-            return true;
-        }
-    }
-}
-
-static int
-run()
-{
-    parser = XML_ParserCreate(NULL);
-    if (NULL == parser)
-    {
-        fputs(CMDNAME ": Error: Could not create expat parser. Abort!\n", stderr);
-        return 1;
-    }
-
-    XML_SetElementHandler(parser, element_start, element_end);
-    XML_SetDefaultHandler(parser, default_handler);
-    XML_SetCommentHandler(parser, comment);
-
-    bool ok = false;
-    if (options_file.empty())
-    {
-        ok = parse_as_blocks(stdin);
-    }
-    else
-    {
-        FILE * infile = fopen(options_file.c_str(), "rb");
-        if (NULL != infile)
-        {
-            ok = parse_as_blocks(infile);
-            fclose(infile);
-        }
-        else
-        {
-            fprintf(stderr, CMDNAME ": Error: Could not open input file '%s'. Abort!\n", options_file.c_str());
-        }
-    }
-    
-    XML_ParserFree(parser);
-
-    if (block_start > element_count)
-    {
-        fprintf(stderr, CMDNAME ": Error: Block start out of range (%u). Abort!\n", element_count);
-        return 1;
-    }
-              
-    if (ok)
-        fprintf(stderr,
-                CMDNAME ": Number of Elements %u, Number of Found Elements  %u, Maximum Depth %u\n",
-                element_count,
-                element_found_count,
-                element_depth_max);
-                  
-    return ok ? 0 : 1;
-}
-
 int
 main(int argc, char ** argv)
 {
@@ -325,7 +230,17 @@ main(int argc, char ** argv)
             grep_list.push_back(curr);
         }
         
-        return run();
+        xml_grep_application app;
+        
+        int const code = app.run(options_file);
+
+        if (block_start > app.count_of_elements())
+        {
+            fprintf(stderr, CMDNAME ": Error: Block start out of range (%u)\n", app.count_of_elements());
+            return 1;
+        }       
+        
+        return code;
     }
     catch (std::exception const & ex)
     {

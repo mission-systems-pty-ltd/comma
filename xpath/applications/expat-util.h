@@ -57,6 +57,8 @@ public:
     void
     element_end(char const * const element);
 
+    unsigned count_of_elements() const { return element_count; }
+    
 protected:
     char const * const command_name;
     XML_Parser parser;
