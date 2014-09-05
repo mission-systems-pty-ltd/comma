@@ -11,6 +11,7 @@
 #include <iostream>
 #include <limits>
 #include <vector>
+#include <list>
 #include <map>
 
 #include <cstdio>
@@ -37,11 +38,11 @@ static unsigned element_depth_max = 0;
 
 static XML_Parser parser = NULL;
 
-static std::vector<comma::xpath> element_path_list;
+static std::list<comma::xpath> element_path_list;
 
 typedef std::pair<long long, long long> element_location_t;
 typedef std::vector<element_location_t> element_location_list_t;
-typedef std::map<comma::xpath, element_location_list_t> element_location_map_t;
+typedef std::map<comma::xpath, element_location_list_t, comma::xpath::less_t> element_location_map_t;
 static element_location_map_t element_location_map;
 
 // ~~~~~~~~~~~~~~~~~~
