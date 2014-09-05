@@ -22,7 +22,11 @@
 #include <comma/application/command_line_options.h>
 #include <comma/io/stream-util.h>
 #include <comma/xpath/xpath.h>
+#include <comma/xpath/applications/expat-util.h>
 
+// ~~~~~~~~~~~~~~~~~~
+// Locals
+// ~~~~~~~~~~~~~~~~~~
 #define CMDNAME "xml-map"
 
 static std::string options_file;
@@ -30,13 +34,6 @@ static bool options_compact = false;
 static unsigned options_depth_max = std::numeric_limits<unsigned>::max();
 
 static unsigned const BUFFY_SIZE = 1 * 1024 * 1024;
-
-static unsigned element_count = 0;
-static unsigned element_found_count = 0;
-static unsigned element_depth = 0;
-static unsigned element_depth_max = 0;
-
-static XML_Parser parser = NULL;
 
 static std::list<comma::xpath> element_path_list;
 
@@ -68,19 +65,30 @@ usage(bool const verbose)
 }
 
 // ~~~~~~~~~~~~~~~~~~
-// SAX HANDLERS
+// APPLICATION
 // ~~~~~~~~~~~~~~~~~~
-static void XMLCALL
-element_start(void * userdata, char const * element, char const ** attributes)
+class xml_map_application : public simple_expat_application
 {
-    assert(NULL != element);
-    assert(NULL != attributes);
+public:
+    xml_map_application();
 
-    // track number of elements
-    ++element_count;
-    element_depth_max = std::max(element_depth_max, element_depth);
-    ++element_depth;
+protected:
+    virtual void
+    do_element_start(char const * const element, char const * const * const attributes);
 
+    virtual void
+    do_element_end(char const * const element);
+  
+};
+
+xml_map_application::xml_map_application()
+: simple_expat_application(CMDNAME)
+{
+}
+
+void
+xml_map_application::do_element_start(char const * const element, char const * const * const attributes)
+{
     if (element_depth <= options_depth_max)
     {
         ++element_found_count;
@@ -100,11 +108,9 @@ element_start(void * userdata, char const * element, char const ** attributes)
     }
 }
 
-static void
-element_end(void * userdata, char const * element)
+void
+xml_map_application::do_element_end(char const * const element)
 {
-    assert(NULL != element);
-
     if (element_depth <= options_depth_max)
     {    
         comma::xpath & element_path = element_path_list.back();
@@ -125,107 +131,11 @@ element_end(void * userdata, char const * element)
 
         element_path_list.pop_back();
     }
-
-    --element_depth;
 }
 
 // ~~~~~~~~~~~~~~~~~~
 // MAIN
 // ~~~~~~~~~~~~~~~~~~
-static bool
-parse_as_blocks(FILE * infile)
-{
-    for (;;)
-    {
-        void * const buffy = XML_GetBuffer(parser, BUFFY_SIZE);
-        if (NULL == buffy)
-        {
-            std::cerr << CMDNAME ": Error: Could not allocate expat parser buffer. Abort!" << std::endl;
-            return false;
-        }
-
-        size_t const bytes_read = std::fread(buffy, 1, BUFFY_SIZE, infile);
-        if (0 != bytes_read)
-        {
-            if (XML_STATUS_OK != XML_ParseBuffer(parser, bytes_read, bytes_read < BUFFY_SIZE))
-            {
-                std::cerr << CMDNAME ": " << XML_ErrorString(XML_GetErrorCode(parser)) << std::endl;
-                std::cerr << CMDNAME ": Error: Parsing Buffer. Abort!" << std::endl;
-                return false;
-            }
-        }
-
-        if (std::ferror(infile))
-        {
-            std::cerr << CMDNAME ": Error: Could not read. Abort!" << std::endl;
-            return false;
-        }
-
-        if (std::feof(infile))
-        {
-            return true;
-        }
-    }
-}
-
-static int
-run()
-{
-    parser = XML_ParserCreate(NULL);
-    if (NULL == parser)
-    {
-        std::cerr << CMDNAME ": Error: Could not create expat parser. Abort!" << std::endl;
-        return 1;
-    }
-
-    XML_SetElementHandler(parser, element_start, element_end);
-
-    bool ok = false;
-    if (options_file.empty())
-    {
-        ok = parse_as_blocks(stdin);
-    }
-    else
-    {
-        FILE * infile = fopen(options_file.c_str(), "rb");
-        if (NULL != infile)
-        {
-            ok = parse_as_blocks(infile);
-            fclose(infile);
-        }
-        else
-        {
-            std::cerr << CMDNAME ": Error: Could not open input file '" << options_file.c_str() << "'. Abort!" << std::endl;
-        }
-    }
-    
-    XML_ParserFree(parser);
-    
-    if (options_compact)
-    {
-        element_location_map_t::const_iterator const end = element_location_map.end();
-        element_location_map_t::const_iterator itr = element_location_map.begin();
-        for (; itr != end; ++itr)
-        {
-            std::cout << itr->first;
-            
-            element_location_list_t::const_iterator const loc_end = itr->second.end();
-            element_location_list_t::const_iterator loc_itr = itr->second.begin();
-            for (; loc_itr != loc_end; ++loc_itr)
-            {
-                std::cout << ',' << loc_itr->first << '-' << loc_itr->second;
-            }
-            std::cout << '\n';
-        }
-    }
-
-    std::cerr << CMDNAME ": Number of Elements " << element_count
-              << ", Number of Found Elements " << element_found_count
-              << ", Maximum Depth " << element_depth_max << std::endl;
-                  
-    return ok ? 0 : 1;
-}
-
 int main(int argc, char ** argv)
 {
     try
@@ -245,7 +155,29 @@ int main(int argc, char ** argv)
         options_compact = options.exists("--compact");
         options_depth_max = options.value<unsigned>("--maxdepth", std::numeric_limits<unsigned>::max());
 
-        return run();
+        xml_map_application app;
+        
+        int const code = app.run(options_file);
+
+        if (options_compact)
+        {
+            element_location_map_t::const_iterator const end = element_location_map.end();
+            element_location_map_t::const_iterator itr = element_location_map.begin();
+            for (; itr != end; ++itr)
+            {
+                std::cout << itr->first;
+                
+                element_location_list_t::const_iterator const loc_end = itr->second.end();
+                element_location_list_t::const_iterator loc_itr = itr->second.begin();
+                for (; loc_itr != loc_end; ++loc_itr)
+                {
+                    std::cout << ',' << loc_itr->first << '-' << loc_itr->second;
+                }
+                std::cout << '\n';
+            }
+        }
+
+        return code;
     }
     catch (std::exception const & ex)
     {
