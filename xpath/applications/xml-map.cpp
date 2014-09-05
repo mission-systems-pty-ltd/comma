@@ -24,18 +24,10 @@
 #include <comma/xpath/xpath.h>
 #include <comma/xpath/applications/expat-util.h>
 
-// ~~~~~~~~~~~~~~~~~~
-// Locals
-// ~~~~~~~~~~~~~~~~~~
 #define CMDNAME "xml-map"
 
-static std::string options_file;
 static bool options_compact = false;
 static unsigned options_depth_max = std::numeric_limits<unsigned>::max();
-
-static unsigned const BUFFY_SIZE = 1 * 1024 * 1024;
-
-static std::list<comma::xpath> element_path_list;
 
 typedef std::pair<long long, long long> element_location_t;
 typedef std::vector<element_location_t> element_location_list_t;
@@ -89,48 +81,38 @@ xml_map_application::xml_map_application()
 void
 xml_map_application::do_element_start(char const * const element, char const * const * const attributes)
 {
-    if (element_depth <= options_depth_max)
-    {
-        ++element_found_count;
+    if (element_depth > options_depth_max)
+        return;
+
+    ++element_found_count;
+
+    comma::xpath const & element_path = current_xpath();
     
-        // build the xpath
-        comma::xpath element_path;
-        if (! element_path_list.empty())
-            element_path = element_path_list.back();
-        element_path /= std::string(element);
-        element_path_list.push_back(element_path);
-        
-        // get the start location
-        long long const at = XML_GetCurrentByteIndex(parser);
-        element_location_t loc(at, 0);
-        // push the start location into the map
-        element_location_map[element_path].push_back(loc);
-    }
+    // get the start location
+    long long const at = XML_GetCurrentByteIndex(parser);
+    element_location_t loc(at, 0);
+    // push the start location into the map
+    element_location_map[element_path].push_back(loc);
 }
 
 void
 xml_map_application::do_element_end(char const * const element)
 {
-    if (element_depth <= options_depth_max)
-    {    
-        comma::xpath & element_path = element_path_list.back();
-        element_location_t & entry = element_location_map[element_path].back();
+    if (element_depth > options_depth_max)
+        return;
 
-        { // force the use of the entry to prevent errors
-            long long txtlen = 3 + std::strlen(element);
-            long long const at = XML_GetCurrentByteIndex(parser) + txtlen;
+    comma::xpath const & element_path = current_xpath();
+    element_location_t & entry = element_location_map[element_path].back();
 
-            entry.second = at;
-        }
-        
-        if (! options_compact)
-        {
-            std::cout << element_path << ',' << entry.first << '-' << entry.second << std::endl;
-        }
-        // std::cerr << element_path << ',' << entry.first << '-' << entry.second << std::endl;
+    { // force the use of the entry to prevent errors
+        long long txtlen = 3 + std::strlen(element);
+        long long const at = XML_GetCurrentByteIndex(parser) + txtlen;
 
-        element_path_list.pop_back();
+        entry.second = at;
     }
+    
+    if (! options_compact)
+        std::cout << element_path << ',' << entry.first << '-' << entry.second << std::endl;
 }
 
 // ~~~~~~~~~~~~~~~~~~
@@ -148,6 +130,7 @@ int main(int argc, char ** argv)
             return 1;
         }
 
+        std::string options_file;
         if (options.exists("--source"))
         {
             options_file = options.value<std::string>("--source");

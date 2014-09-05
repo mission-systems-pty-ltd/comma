@@ -19,18 +19,13 @@
 
 static unsigned const BUFFY_SIZE = 1 * 1024 * 1024;
 
-static std::string options_file;
-
 static unsigned block_start = 0;
 static unsigned block_end = std::numeric_limits<unsigned>::max(); 
 static unsigned block_curr = 0;
 
 typedef std::pair<std::string, bool /* relative */> grep_entry_t;
 typedef std::vector<grep_entry_t> grep_list_t;
-
 static grep_list_t grep_list;
-
-static std::list<std::string> element_list;
 static unsigned element_found = 0;
 
 // ~~~~~~~~~~~~~~~~~~
@@ -115,13 +110,7 @@ xml_grep_application::do_default(XML_Char const * const str, int const length)
 void
 xml_grep_application::do_element_start(char const * const element, char const * const * const attributes)
 {
-    std::string element_path;
-    element_path.reserve(4000);
-    if (! element_list.empty())
-        element_path = element_list.back();
-    element_path.append("/");
-    element_path.append(element);
-    element_list.push_back(element_path);
+    std::string const & element_path = current_xpath().to_string();
     
     if (grep(element, element_path))
     {
@@ -157,7 +146,7 @@ xml_grep_application::do_element_start(char const * const element, char const * 
 void
 xml_grep_application::do_element_end(char const * const element)
 {
-    std::string const & element_path = element_list.back();
+    std::string const & element_path = current_xpath().to_string();
     bool const was_found = element_found > 0;
 
     if (was_found)
@@ -174,8 +163,6 @@ xml_grep_application::do_element_end(char const * const element)
     if (was_found && 0 == element_found)
         if (block_curr >= block_start && block_curr <= block_end)
             fputc('\n', stdout);
-
-    element_list.pop_back();
 
     if (block_curr > block_end)
         XML_StopParser(parser, false);
@@ -210,6 +197,8 @@ main(int argc, char ** argv)
             unsigned e = options.value<unsigned>("--limit");
             block_end = std::max(1u, e);
         }
+
+        std::string options_file;
         if (options.exists("--source"))
         {
             options_file = options.value<std::string>("--source");

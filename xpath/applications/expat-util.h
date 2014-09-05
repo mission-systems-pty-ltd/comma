@@ -36,9 +36,12 @@
 #define COMMA_XPATH_EXPAT_UTIL_HEADER_GUARD_
 
 #include <iosfwd>
+#include <list>
 #include <string>
 
 #include <expat.h>
+
+#include <comma/xpath/xpath.h>
 
 class simple_expat_application
 {
@@ -58,6 +61,8 @@ public:
     element_end(char const * const element);
 
     unsigned count_of_elements() const { return element_count; }
+    
+    comma::xpath const & current_xpath() const { return element_path_list.back(); }
     
 protected:
     char const * const command_name;
@@ -80,6 +85,8 @@ protected:
 private:
     bool
     parse_as_blocks(std::istream & infile);
+
+    std::list<comma::xpath> element_path_list;
 };
 
 #endif

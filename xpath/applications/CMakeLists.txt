@@ -16,7 +16,7 @@ add_executable( xml-grep ${dir}/xml-grep.cpp )
 add_executable( xml-map ${dir}/xml-map.cpp )
 add_executable( xml-split ${dir}/xml-split.cpp )
 
-target_link_libraries ( xml-grep ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io comma_xpath_application )
+target_link_libraries ( xml-grep ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io comma_xpath comma_xpath_application )
 target_link_libraries ( xml-map ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io  comma_xpath comma_xpath_application )
 target_link_libraries ( xml-split ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io comma_xpath comma_xpath_application )
 

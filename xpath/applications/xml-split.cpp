@@ -21,10 +21,6 @@ namespace FS = boost::filesystem;
 
 #define CMDNAME "xml-split"
 
-static std::string options_file;
-
-static unsigned const BUFFY_SIZE = 1 * 1024 * 1024;
-
 static unsigned block_end = 1000; 
 
 // can't use list or map on xpath because of the < overloading
@@ -33,7 +29,6 @@ static exact_set_t exact_set;
 typedef std::list<std::string> grep_list_t;
 static grep_list_t grep_list;
 
-static std::list<comma::xpath> element_path_list;
 static unsigned element_found = 0;
 static signed element_found_index = 0;
 
@@ -207,12 +202,7 @@ xml_split_application::do_default(XML_Char const * const str, int const length)
 void
 xml_split_application::do_element_start(char const * const element, char const * const * const attributes)
 {
-    // build the xpath
-    comma::xpath element_path;
-    if (! element_path_list.empty())
-        element_path = element_path_list.back();
-    element_path /= std::string(element);
-    element_path_list.push_back(element_path);
+    comma::xpath const & element_path = current_xpath();
     
     signed idx = grep(element, element_path);
     if (idx >= 0)
@@ -249,7 +239,7 @@ xml_split_application::do_element_start(char const * const element, char const *
 void
 xml_split_application::do_element_end(char const * const element)
 {
-    comma::xpath const & element_path = element_path_list.back();
+    comma::xpath const & element_path = current_xpath();
     bool const was_found = element_found > 0;
 
     signed idx = grep(element, element_path);
@@ -266,8 +256,6 @@ xml_split_application::do_element_end(char const * const element)
     
     if (0 == element_found)
         element_found_index = -1;
-
-    element_path_list.pop_back();
 }
 
 // ~~~~~~~~~~~~~~~~~~
@@ -290,6 +278,8 @@ int main(int argc, char ** argv)
             unsigned e = options.value<unsigned>("--limit");
             block_end = std::max(1u, e);
         }
+
+        std::string options_file;
         if (options.exists("--source"))
         {
             options_file = options.value<std::string>("--source");

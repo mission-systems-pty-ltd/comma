@@ -199,6 +199,13 @@ simple_expat_application::element_start(char const * const element, char const *
     ++element_count;
     element_depth_max = std::max(element_depth_max, element_depth);
     ++element_depth;
+    
+    // build the xpath
+    comma::xpath element_path;
+    if (! element_path_list.empty())
+        element_path = element_path_list.back();
+    element_path /= std::string(element);
+    element_path_list.push_back(element_path);
 
     do_element_start(element, attributes);
 }
@@ -209,7 +216,8 @@ simple_expat_application::element_end(char const * const element)
     assert(NULL != this);
 
     do_element_end(element);
-        
+
+    element_path_list.pop_back();
     --element_depth;
 }
 
