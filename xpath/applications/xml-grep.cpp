@@ -4,6 +4,7 @@
 
 #include <limits>
 #include <vector>
+#include <list>
 #include <map>
 
 #include <cstdio>
@@ -35,7 +36,7 @@ typedef std::vector<grep_entry_t> grep_list_t;
 
 static grep_list_t grep_list;
 
-static std::vector<std::string> element_list;
+static std::list<std::string> element_list;
 static unsigned element_found = 0;
 
 // ~~~~~~~~~~~~~~~~~~
@@ -53,18 +54,12 @@ grep(XML_Char const * element, std::string const & element_path)
         if (itr->second) // relative
         {
             if (element == itr->first)
-            {
-                ++element_found_count;
                 return true;
-            }
         }
         else
         {
             if (element_path == itr->first)
-            {
-                ++element_found_count;
                 return true;
-            }
         }
 
     return false;
@@ -130,6 +125,7 @@ element_start(void * userdata, XML_Char const * element, XML_Char const ** attri
     
     if (grep(element, element_path))
     {
+        ++element_found_count;
         ++element_found;
         ++block_curr;
     }
