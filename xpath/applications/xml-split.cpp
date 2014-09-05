@@ -1,14 +1,22 @@
 #include <cassert>
 
+#include <iomanip>
 #include <iostream>
+#include <fstream>
 #include <limits>
 #include <list>
 #include <set>
+#include <sstream>
+#include <string>
 
 #include <expat.h>
 
+#include <boost/filesystem.hpp>
+
 #include <comma/application/command_line_options.h>
 #include <comma/xpath/xpath.h>
+
+namespace FS = boost::filesystem;
 
 #define CMDNAME "xml-split"
 
@@ -16,7 +24,7 @@ static std::string options_file;
 
 static unsigned const BUFFY_SIZE = 1 * 1024 * 1024;
 
-static unsigned block_end = std::numeric_limits<unsigned>::max(); 
+static unsigned block_end = 1000; 
 
 static unsigned element_count = 0;
 static unsigned element_found_count = 0;
@@ -26,11 +34,33 @@ static unsigned element_depth_max = 0;
 static XML_Parser parser = NULL;
 
 // can't use list or map on xpath because of the < overloading
-static std::set<comma::xpath, comma::xpath::less_t> exact_set;
-static std::list<comma::xpath> grep_list;
+typedef std::set<comma::xpath, comma::xpath::less_t> exact_set_t;
+static exact_set_t exact_set;
+typedef std::list<std::string> grep_list_t;
+static grep_list_t grep_list;
 
 static std::list<comma::xpath> element_path_list;
 static unsigned element_found = 0;
+static signed element_found_index = 0;
+
+class output_wrapper
+{
+public:
+    output_wrapper();
+    void set_name(std::string const & name);
+    std::ostream & start();
+    std::ostream & more() { return _destination; }
+    
+private:
+    std::string _name;
+    unsigned _block_count;
+    unsigned _file_count;
+    
+    std::ofstream _destination;
+};
+
+static unsigned const TAG_MAX = 16;
+static output_wrapper writers[TAG_MAX];
 
 // ~~~~~~~~~~~~~~~~~~
 // UTILITIES
@@ -45,37 +75,92 @@ namespace comma
     }
 }
 
-bool
+signed
 grep(XML_Char const * element, comma::xpath const & element_path)
 {
     // std::cerr << element << " or " << element_path << std::endl;
 
-    if (exact_set.end() != exact_set.find(element_path))
+    signed idx = 0;
     {
-        std::cerr << "Found Exact " << element_path << std::endl;
-        return true;
+        exact_set_t::const_iterator const end = exact_set.end();
+        exact_set_t::const_iterator itr = exact_set.begin();
+        for (; itr != end; ++itr, ++idx)
+            if (*itr == element)
+                return idx;
     }
-    /*
-    std::list<comma::xpath>::const_iterator const exact_result
-        = std::find(exact_list.begin(), exact_list.end(), element_path);
-    if (exact_list.end() != exact_result)
-        return true;
-    */
+    {
+        grep_list_t::const_iterator const end = grep_list.end();
+        grep_list_t::const_iterator itr = grep_list.begin();
+        
+        for (; itr != end; ++itr, ++idx)
+            if (*itr == element)
+                return idx;
+    }
+    return -1;
+}
 
-    std::list<comma::xpath>::const_iterator const end = grep_list.end();
-    std::list<comma::xpath>::const_iterator itr = grep_list.begin();
+output_wrapper::output_wrapper()
+: _name()
+, _block_count(0)
+{
+    assert(NULL != this);
+}
     
-    for (; itr != end; ++itr)
-    {
-        // std::cerr << "Compare " << element << " Against  " << itr->elements.back().name << std::endl;
-        if (itr->elements.back().name == element)
-        {
-            // std::cerr << "Found Partial " << element_path << std::endl;
-            return true;
-        }
-    }
+void
+output_wrapper::set_name(std::string const & name)
+{
+    assert(NULL != this);
+    assert(_name.empty());
+    _name = name;
+}
+    
+std::ostream &
+output_wrapper::start()
+{
+    assert(NULL != this);
+    assert(! _name.empty());
 
-    return false;
+    ++_block_count;
+    if (_block_count > block_end || ! _destination.good())
+    {
+        _destination.close();
+        _block_count = 0;
+    }
+    
+    if (! _destination.good())
+    {
+        std::ostringstream oss;
+        oss << CMDNAME << "/" << _name;
+
+        if (! FS::exists(oss.str()))
+        {
+            if (! FS::create_directory(oss.str()))
+            {
+                std::cerr << CMDNAME ": Error: Could not Create Output Directory '" << oss.str() << "'. Abort!" << std::endl;
+                return _destination;
+            }
+            else
+            {
+                std::cerr << CMDNAME ": Create Output Directory '" << oss.str() << '\'' << std::endl;
+            }
+        }
+        
+        oss << "/" << std::setw(6) << std::setfill('0') << _file_count << ".xml";
+
+        _destination.open(oss.str().c_str(), std::ios::out);
+        if (! _destination.good())
+        {
+            std::cerr << CMDNAME ": Error: Could not open file '" << oss.str() << "'. Abort!" << std::endl;
+            return _destination;
+        }
+        else
+        {
+            std::cerr << CMDNAME ": Create Output File '" << oss.str() << '\'' << std::endl;
+        }
+
+        ++_file_count;
+    }
+    return _destination;
 }
 
 // ~~~~~~~~~~~~~~~~~~
@@ -86,7 +171,7 @@ usage(bool const verbose)
 {
     std::cerr <<   "Splits the file up into chunks based on the size, also does grep for efficiency"
                  "\nUSAGE:   " CMDNAME " [--limit=Q]  [--source=XMLFILE]"
-                 "\nOPTIONS: --limit=Q to output just the elements between 1 and Q"
+                 "\nOPTIONS: --limit=Q; default 1000; to output just the elements between 1 and Q"
                  "\n         --source=XMLFILE to open and parse that file."
                  "\nRETURNS: 0 - on success"
                  "\n         1 - on data error; like invalid xml"
@@ -102,8 +187,8 @@ default_handler(void * userdata, XML_Char const * str, int length)
     assert(NULL != str);
     assert(length > 0);
 
-    if (element_found > 0)
-        std::cout.write(str, length);
+    if (element_found_index >= 0)
+        writers[element_found_index].more().write(str, length);
 }
 
 static void XMLCALL
@@ -130,27 +215,35 @@ element_start(void * userdata, char const * element, char const ** attributes)
     element_path /= std::string(element);
     element_path_list.push_back(element_path);
     
-    if (grep(element, element_path))
+    signed idx = grep(element, element_path);
+    if (idx >= 0)
     {
         ++element_found_count;
+        if (0 == element_found)
+        {
+            element_found_index = idx;
+            writers[element_found_index].start();
+        }
         ++element_found;
     }
 
     if (element_found > 0)
     {
-        std::cout  << '<' << element << ' ';
+        assert(element_found_index >= 0);
+        std::ostream  & os(writers[element_found_index].more());
+        os  << '<' << element << ' ';
         if (NULL != attributes)
             for (unsigned i = 0; NULL != attributes[i]; i += 2)
             {
-                std::cout << attributes[i] << "='";
+                os << attributes[i] << "='";
                 for (XML_Char const * p = attributes[i+1]; *p != 0; ++p)
                     if ('\'' == *p)
-                        std::cout << "&apos;";
+                        os << "&apos;";
                     else
-                        std::cout << *p;
-                std::cout << "' ";
+                        os << *p;
+                os << "' ";
             }
-        std::cout << '>';
+        os << '>';
     }
 }
 
@@ -161,15 +254,21 @@ element_end(void * userdata, char const * element)
 
     comma::xpath const & element_path = element_path_list.back();
     bool const was_found = element_found > 0;
+
+    signed idx = grep(element, element_path);
+    if (idx >= 0)
+        --element_found;
     
     if (was_found)
-        std::cout << "</" << element << '>';
+    {
+        assert(element_found_index >= 0);
+        writers[element_found_index].more() << "</" << element << '>';
+        if (0 == element_found)
+            writers[element_found_index].more() << std::endl;
+    }
     
-    if (grep(element, element_path))
-        --element_found;
-        
-    if (was_found && 0 == element_found)
-        std::cout << std::endl;
+    if (0 == element_found)
+        element_found_index = -1;
 
     element_path_list.pop_back();
     --element_depth;
@@ -287,11 +386,11 @@ int main(int argc, char ** argv)
             if (0 == argv[i][1]) // length of 1
                 exact_set.insert(comma::xpath(argv[i]));
             else if ('/' != argv[i][0])
-                grep_list.push_back(comma::xpath(argv[i]));
+                grep_list.push_back(argv[i]);
             else if ('/' != argv[i][1])
                 exact_set.insert(comma::xpath(argv[i] + 1));
             else 
-                grep_list.push_back(comma::xpath(argv[i] + 2));
+                grep_list.push_back(argv[i] + 2);
         }
 
         if (true)
@@ -301,6 +400,36 @@ int main(int argc, char ** argv)
             std::copy(exact_set.begin(), exact_set.end(), out_itr);
             std::cerr << "Partials ..." << std::endl;
             std::copy(grep_list.begin(), grep_list.end(), out_itr);
+        }
+
+        if (FS::exists(CMDNAME))
+        {
+            std::cerr << CMDNAME ": Error: Output Directory Name '" CMDNAME "' Already Exists on Filesystem. Abort!" << std::endl;
+            return 1;
+        }
+
+        if (! FS::create_directory(CMDNAME))
+        {
+            std::cerr << CMDNAME ": Error: Could not Create Output Directory '" CMDNAME "' Already Exists on Filesystem. Abort!" << std::endl;
+            return 1;
+        }
+        else
+        {
+            std::cerr << CMDNAME ": Create Output Directory '" CMDNAME "'" << std::endl;
+        }
+        
+        signed idx = 0;
+        {
+            exact_set_t::const_iterator const end = exact_set.end();
+            exact_set_t::const_iterator itr = exact_set.begin();
+            for (; itr != end; ++itr, ++idx)
+                writers[idx].set_name(itr->to_string('|'));
+        }
+        {
+            grep_list_t::const_iterator const end = grep_list.end();
+            grep_list_t::const_iterator itr = grep_list.begin();
+            for (; itr != end; ++itr, ++idx)
+                writers[idx].set_name(*itr);
         }
         
         return run();
