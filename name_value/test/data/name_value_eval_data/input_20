@@ -1,0 +1,8 @@
+#python
+expect x = 2.1 +/- 0.2
+
+if x > 0:
+    expect y2 < 0
+
+# should fail
+expect x != 1 +/- 5

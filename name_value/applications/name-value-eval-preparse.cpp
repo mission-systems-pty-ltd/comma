@@ -390,13 +390,26 @@ void transform_special_tokens(/*out*/ std::vector<Token> &tokens)
     // - using "!=" puts "not" in front
     // - using "val%" calls near_percent() instead of near()
 
+    // find start of expr1 (either beginning of line, or after "expect" or ":")
+    std::vector<Token>::iterator start_of_expr = tokens.begin() + comparison_pos - 1;
+    while (true)
+    {
+        if ((start_of_expr->type == t_operator && start_of_expr->str == ":") ||
+            (start_of_expr->type == t_id && start_of_expr->str == "expect"))
+        { ++start_of_expr; break; }
+
+        if (start_of_expr == tokens.begin()) { break; }
+        --start_of_expr;
+    }
+
     std::vector<Token> new_tokens;
-    if (tokens[comparison_pos].str == "!=") { new_tokens.push_back(Token(t_keyword, "not", 1)); }
-    new_tokens.push_back(Token(t_function, (is_percent ? "near_percent" : "near"), 1));
+    int extra_space = 0;
+    if (tokens[comparison_pos].str == "!=") { new_tokens.push_back(Token(t_keyword, "not")); extra_space = 1; }
+    new_tokens.push_back(Token(t_function, (is_percent ? "near_percent" : "near"), extra_space));
     new_tokens.push_back(Token(t_operator, "("));
 
     new_tokens.push_back(Token(t_operator, "("));
-    new_tokens.insert(new_tokens.end(), tokens.begin(), tokens.begin() + comparison_pos);
+    new_tokens.insert(new_tokens.end(), start_of_expr, tokens.begin() + comparison_pos);
     new_tokens.push_back(Token(t_operator, ")"));
 
     new_tokens.push_back(Token(t_operator, ","));
@@ -407,7 +420,9 @@ void transform_special_tokens(/*out*/ std::vector<Token> &tokens)
     new_tokens.push_back(Token(t_operator, ","));
     new_tokens.push_back(tokens[plus_minus_pos + 1]);
     new_tokens.push_back(Token(t_operator, ")"));
-    tokens = new_tokens;
+
+    tokens.erase(start_of_expr, tokens.end());
+    tokens.insert(tokens.end(), new_tokens.begin(), new_tokens.end());
 }
 
 // get the index of the first token with a particular type and value
@@ -678,6 +693,7 @@ void process_test(std::vector<Token> &tokens, const std::string &original_line,
     }
 
     if (tokens.empty()) { return; }
+    std::string input_line_prefix;
 
     if (*raw_python)
     {
@@ -690,6 +706,7 @@ void process_test(std::vector<Token> &tokens, const std::string &original_line,
             tokens[0].spaces_before = 0;
             // (by this stage, tokens[0].spaces_before has been set to 0; get leading_spaces from original line)
             input_line = trim_spaces(original_line.substr(leading_spaces + kwd_expect.length()));
+            input_line_prefix = kwd_expect + ' ';
             // continue to parse as normal
         }
         else
@@ -717,7 +734,7 @@ void process_test(std::vector<Token> &tokens, const std::string &original_line,
         }
     }
 
-    std::cout << "# SRCLINE " << line_num << " " << input_line << '\n'
+    std::cout << "# SRCLINE " << line_num << " " << input_line_prefix << input_line << '\n'
         << spaces(leading_spaces) << "_result_ = (" << tokens << ")\n"
         << spaces(leading_spaces) << "if type(_result_) != bool: err_expr_not_bool()\n"
         << spaces(leading_spaces) << "elif not _result_:\n";
