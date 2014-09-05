@@ -211,18 +211,31 @@ bool xpath::operator<( const xpath& rhs ) const
 
 bool xpath::operator<=( const xpath& rhs ) const { return operator<( rhs ) || operator==( rhs ); }
 
-static std::ostream &
-operator <<(std::ostream & os, comma::xpath::element const & value)
+bool xpath::less( const xpath& rhs ) const
 {
-    return os << value.name;
+    for (unsigned i = 0; i < elements.size(); ++i)
+    {
+        if (rhs.elements.size() <= i) // /a/b/c > /a/b
+            return false;
+        int result = elements.at(i).name.compare(rhs.elements.at(i).name);
+        if (result < 0) // /a/b < /a/c
+            return true;
+        if (result > 0) // /a/c > /a/b
+            return false;
+    }
+    // /a/b < /a/b/c but /a/b == /a/b
+    return elements.size() < rhs.elements.size();
 }
 
 std::ostream &
-xpath::output(std::ostream & os) const
+xpath::output(std::ostream & os, char delimiter) const
 {
-    std::ostream_iterator<comma::xpath::element const> out_itr(os, "/");
-    std::copy(elements.begin(), elements.end(), out_itr);
+    for (unsigned i = 0; i < elements.size(); ++i)
+        os << delimiter << elements.at(i).name;
+    // The following prints out the / on the wrong side i.e. after
+    //std::ostream_iterator<comma::xpath::element const> out_itr(os, "/");
+    //std::copy(elements.begin(), elements.end(), out_itr);
+    return os;
 }
-
 
 } // namespace comma {

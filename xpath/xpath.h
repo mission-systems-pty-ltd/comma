@@ -119,7 +119,15 @@ class xpath
         
         /// inequality
         bool operator!=( const xpath& rhs ) const;
-        
+
+        // necessary for use with std::map / std::set
+        bool less( const xpath& rhs ) const;
+
+        // convenience for use with std::map / std::set
+        struct less_t {
+            bool operator() ( const xpath& lhs, const xpath& rhs ) const { return lhs.less(rhs); }
+        };
+
         /// return true, if it's a subpath of rhs, e.g hello/world < hello
         bool operator<( const xpath& rhs ) const;
         
@@ -141,7 +149,7 @@ class xpath
         // For various unknown reasons specifying the operator overload
         // here causes explosions in util/applications/comma-progress.cpp
         std::ostream &
-        output(std::ostream & os) const;
+        output(std::ostream &, char delimiter = '/') const;
 };
 
 } // namespace comma {
