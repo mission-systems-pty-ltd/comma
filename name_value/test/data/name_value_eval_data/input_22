@@ -1,0 +1,13 @@
+#python
+# test "+/-" not being at the end of the line
+expect x = 2.1 +/- 0.2 or y2 = 5
+expect x = 1.9 +/- 10% or y2 = 7
+expect x = 2.001 +/- 0.1 or y2 = -4 +/- 100%
+if x == 2:
+    expect x = 1.999 +/- 0.1 and y2 = -3 +/- 90% and x + y2 != 100 +/- 5
+
+# should fail
+expect x = 10 +/- 3 and y2 = -3.5 +/- 1%
+if y2 == -3.5:
+    expect x = 0.999 +/- 0.1 and y2 = 12 +/- 3% and x + y2 = 50 +/- 1
+    

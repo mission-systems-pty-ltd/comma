@@ -1,0 +1,4 @@
+x/expected="10 +/- 3 and y2 = -3.5 +/- 1%"
+x/actual="2"
+y2/expected="x = 10 +/- 3 and y2 = -3.5 +/- 1%"
+y2/actual="-3.5"

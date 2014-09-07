@@ -720,6 +720,7 @@ void process_test(std::vector<Token> &tokens, const std::string &original_line,
     {
         leading_spaces = count_starting_spaces(original_line);
 
+        // TODO: handle "expect" appearing anywhere in the line (e.g. "if x < 3: expect ...")
         if (tokens[0].type == t_id && tokens[0].str == kwd_expect)
         {
             tokens.erase(tokens.begin());
