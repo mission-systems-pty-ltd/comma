@@ -351,12 +351,23 @@ std::string demangle_id(const std::string &id, bool restore_slashes)
     return result;
 }
 
-// check for special token sequences such as "a == b +/- c" and replace them with the required Python code
-// TODO: maybe allow expression to continue after "+/- c", e.g. "x = y +/- 3 or z = 0.5 +/- 0.1"
-void transform_special_tokens(/*out*/ std::vector<Token> &tokens)
+// return true if a token comes before the beginning of a (simple) expression
+// (including keywords such as "and" and "or")
+bool is_stop_token(const Token &tok)
+{
+    if (tok.type == t_operator) { return tok.str == ":"; }
+    else if (tok.type == t_id) { return tok.str == "expect"; }
+    else if (tok.type == t_keyword) { return true; }
+    else { return false; }
+}
+
+// check for a "+/-" token and replace with the appropriate Python code
+// Only the first occurence is replaced
+// Returns true if the tokens were modified
+bool replace_plus_or_minus(/*out*/ std::vector<Token> &tokens)
 {
     int num = (int) tokens.size();
-    if (num < 5) { return; }
+    if (num < 5) { return false; }
     int plus_minus_pos = -1;
     int comparison_pos = -1;
 
@@ -366,37 +377,45 @@ void transform_special_tokens(/*out*/ std::vector<Token> &tokens)
         {
             if (tokens[n].str == "+/-")
             {
-                if (plus_minus_pos != -1) { return; }
-                else { plus_minus_pos = n; }
+                plus_minus_pos = n;
+                break;
             }
             else
             // "=" will already have been transformed into "==" by this stage
             if (tokens[n].str == "==" || tokens[n].str == "!=")
-            {
-                if (comparison_pos != -1) { return; }
-                else { comparison_pos = n; }
-            }
+            { comparison_pos = n; }
         }
     }
 
-    if (plus_minus_pos == -1 || comparison_pos == -1 || plus_minus_pos - comparison_pos < 2) { return; }
-    bool is_percent = (tokens[num-1].type == t_operator && tokens[num-1].str == "%");
-    
-    if ((is_percent && plus_minus_pos != num - 3) ||
-        (!is_percent && plus_minus_pos != num - 2))
-    { return; }
+    if (plus_minus_pos == -1 || comparison_pos == -1 || plus_minus_pos - comparison_pos < 2 ||
+        plus_minus_pos + 1 >= num)
+    { return false; }
 
+    bool is_percent = plus_minus_pos + 2 < num &&
+        tokens[plus_minus_pos + 2].type == t_operator &&
+        tokens[plus_minus_pos + 2].str == "%";
+    
     // map "expr1 = expr2 +/- tolerance" to "near(expr1, expr2, tolerance)"
     // - using "!=" puts "not" in front
     // - using "val%" calls near_percent() instead of near()
 
+    // find start of expr1 (either beginning of line, or after "expect" or ":")
+    std::vector<Token>::iterator start_of_expr = tokens.begin() + comparison_pos - 1;
+    while (true)
+    {
+        if (is_stop_token(*start_of_expr)) { ++start_of_expr; break; }
+        if (start_of_expr == tokens.begin()) { break; }
+        --start_of_expr;
+    }
+
     std::vector<Token> new_tokens;
-    if (tokens[comparison_pos].str == "!=") { new_tokens.push_back(Token(t_keyword, "not", 1)); }
-    new_tokens.push_back(Token(t_function, (is_percent ? "near_percent" : "near"), 1));
+    int extra_space = 0;
+    if (tokens[comparison_pos].str == "!=") { new_tokens.push_back(Token(t_keyword, "not")); extra_space = 1; }
+    new_tokens.push_back(Token(t_function, (is_percent ? "near_percent" : "near"), extra_space));
     new_tokens.push_back(Token(t_operator, "("));
 
     new_tokens.push_back(Token(t_operator, "("));
-    new_tokens.insert(new_tokens.end(), tokens.begin(), tokens.begin() + comparison_pos);
+    new_tokens.insert(new_tokens.end(), start_of_expr, tokens.begin() + comparison_pos);
     new_tokens.push_back(Token(t_operator, ")"));
 
     new_tokens.push_back(Token(t_operator, ","));
@@ -407,7 +426,24 @@ void transform_special_tokens(/*out*/ std::vector<Token> &tokens)
     new_tokens.push_back(Token(t_operator, ","));
     new_tokens.push_back(tokens[plus_minus_pos + 1]);
     new_tokens.push_back(Token(t_operator, ")"));
-    tokens = new_tokens;
+
+    // save the rest of the tokens after "+/- val[%]"
+    int rest_pos = plus_minus_pos + 2;
+    if (is_percent) { ++rest_pos; }
+    std::vector<Token> rest_of_tokens(tokens.begin() + rest_pos, tokens.end());
+
+    if (start_of_expr != tokens.begin()) { new_tokens[0].spaces_before = 1; }
+    tokens.erase(start_of_expr, tokens.end());
+    tokens.insert(tokens.end(), new_tokens.begin(), new_tokens.end());
+    tokens.insert(tokens.end(), rest_of_tokens.begin(), rest_of_tokens.end());
+    return true;
+}
+
+// check for special token sequences such as "a == b +/- c" and replace them with the required Python code
+void transform_special_tokens(/*out*/ std::vector<Token> &tokens)
+{
+    while (replace_plus_or_minus(tokens))
+    { }
 }
 
 // get the index of the first token with a particular type and value
@@ -678,11 +714,13 @@ void process_test(std::vector<Token> &tokens, const std::string &original_line,
     }
 
     if (tokens.empty()) { return; }
+    std::string input_line_prefix;
 
     if (*raw_python)
     {
         leading_spaces = count_starting_spaces(original_line);
 
+        // TODO: handle "expect" appearing anywhere in the line (e.g. "if x < 3: expect ...")
         if (tokens[0].type == t_id && tokens[0].str == kwd_expect)
         {
             tokens.erase(tokens.begin());
@@ -690,6 +728,7 @@ void process_test(std::vector<Token> &tokens, const std::string &original_line,
             tokens[0].spaces_before = 0;
             // (by this stage, tokens[0].spaces_before has been set to 0; get leading_spaces from original line)
             input_line = trim_spaces(original_line.substr(leading_spaces + kwd_expect.length()));
+            input_line_prefix = kwd_expect + ' ';
             // continue to parse as normal
         }
         else
@@ -717,7 +756,7 @@ void process_test(std::vector<Token> &tokens, const std::string &original_line,
         }
     }
 
-    std::cout << "# SRCLINE " << line_num << " " << input_line << '\n'
+    std::cout << "# SRCLINE " << line_num << " " << input_line_prefix << input_line << '\n'
         << spaces(leading_spaces) << "_result_ = (" << tokens << ")\n"
         << spaces(leading_spaces) << "if type(_result_) != bool: err_expr_not_bool()\n"
         << spaces(leading_spaces) << "elif not _result_:\n";
@@ -781,7 +820,7 @@ void print_header()
     std::cout
         << "import sys, re, inspect, math\n"
         << "def near(x, y, eps): return abs(x - y) <= eps\n"
-        << "def near_percent(x, y, percent): return abs(x - y) <= x * percent * 0.01\n"
+        << "def near_percent(x, y, percent): return abs(x - y) <= abs(x) * percent * 0.01\n"
         << "def max_index(dict) : return max(dict.keys())\n"
         << "def number_of(dict) : return len(dict.keys())\n"
         << "def starts_with(s, x): return s.find(x) == 0\n"

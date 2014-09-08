@@ -1,0 +1,7 @@
+# test "+/-" not being at the end of the line
+x = 2.1 +/- 0.2 or y2 = 5
+x = 1.9 +/- 10% or y2 = 7
+x = 2.001 +/- 0.1 or y2 = -4 +/- 100%
+
+# should fail
+x = 10 +/- 3 and y2 = -3.5 +/- 1%
