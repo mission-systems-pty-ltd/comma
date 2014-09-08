@@ -43,6 +43,7 @@ public:
 private:
     std::string _name;
     unsigned _block_count;
+    unsigned _total_count;
     unsigned _file_count;
     
     std::ofstream _destination;
@@ -91,6 +92,8 @@ grep(XML_Char const * element, comma::xpath const & element_path)
 output_wrapper::output_wrapper()
 : _name()
 , _block_count(0)
+, _total_count(0)
+, _file_count(0)
 {
     assert(NULL != this);
 }
@@ -109,19 +112,17 @@ output_wrapper::start()
     assert(NULL != this);
     assert(! _name.empty());
 
-    ++_block_count;
-    if (_block_count > block_end || ! _destination.good())
-    {
-        _destination.close();
-        _block_count = 0;
-    }
+    std::ostringstream oss;
+    oss << _name;
     
-    if (! _destination.good())
+    if (0 == _total_count)
     {
-        std::ostringstream oss;
-        oss << CMDNAME << "/" << _name;
-
-        if (! FS::exists(oss.str()))
+        if (FS::exists(oss.str()))
+        {
+            std::cerr << CMDNAME ": Error: Output Directory Name '" << oss.str() << "' Already Exists on Filesystem. Abort!" << std::endl;
+            exit(1);
+        }
+        else
         {
             if (! FS::create_directory(oss.str()))
             {
@@ -133,7 +134,18 @@ output_wrapper::start()
                 std::cerr << CMDNAME ": Create Output Directory '" << oss.str() << '\'' << std::endl;
             }
         }
-        
+    }
+
+    ++_block_count;
+    ++_total_count;
+    if (_block_count > block_end || ! _destination.good())
+    {
+        _destination.close();
+        _block_count = 0;
+    }
+    
+    if (! _destination.good())
+    {
         oss << "/" << std::setw(6) << std::setfill('0') << _file_count << ".xml";
 
         _destination.open(oss.str().c_str(), std::ios::out);
@@ -308,22 +320,6 @@ int main(int argc, char ** argv)
             std::copy(exact_set.begin(), exact_set.end(), out_itr);
             std::cerr << "Partials ..." << std::endl;
             std::copy(grep_list.begin(), grep_list.end(), out_itr);
-        }
-
-        if (FS::exists(CMDNAME))
-        {
-            std::cerr << CMDNAME ": Error: Output Directory Name '" CMDNAME "' Already Exists on Filesystem. Abort!" << std::endl;
-            return 1;
-        }
-
-        if (! FS::create_directory(CMDNAME))
-        {
-            std::cerr << CMDNAME ": Error: Could not Create Output Directory '" CMDNAME "' Already Exists on Filesystem. Abort!" << std::endl;
-            return 1;
-        }
-        else
-        {
-            std::cerr << CMDNAME ": Create Output Directory '" CMDNAME "'" << std::endl;
         }
         
         signed idx = 0;
