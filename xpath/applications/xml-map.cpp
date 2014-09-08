@@ -18,7 +18,7 @@
 #include <cstring>
 
 #include <expat.h>
-
+#include <boost/unordered_map.hpp>
 #include <comma/application/command_line_options.h>
 #include <comma/io/stream-util.h>
 #include <comma/xpath/xpath.h>
@@ -31,7 +31,17 @@ static unsigned options_depth_max = std::numeric_limits<unsigned>::max();
 
 typedef std::pair<long long, long long> element_location_t;
 typedef std::vector<element_location_t> element_location_list_t;
-typedef std::map<comma::xpath, element_location_list_t, comma::xpath::less_t> element_location_map_t;
+
+struct hash_t
+{
+    std::size_t operator()( const comma::xpath& p ) const
+    {
+        std::size_t seed = 0;
+        boost::hash_combine( seed, p.to_string() );
+        return seed;
+    }
+};
+typedef boost::unordered_map<comma::xpath, element_location_list_t, hash_t> element_location_map_t;
 static element_location_map_t element_location_map;
 
 // ~~~~~~~~~~~~~~~~~~
