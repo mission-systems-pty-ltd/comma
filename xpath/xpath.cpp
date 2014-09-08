@@ -211,20 +211,20 @@ bool xpath::operator<( const xpath& rhs ) const
 
 bool xpath::operator<=( const xpath& rhs ) const { return operator<( rhs ) || operator==( rhs ); }
 
-bool xpath::less( const xpath& rhs ) const
+bool xpath::less_t::operator()( const xpath& lhs, const xpath& rhs ) const
 {
-    for (unsigned i = 0; i < elements.size(); ++i)
+    for (unsigned i = 0; i < lhs.elements.size(); ++i)
     {
         if (rhs.elements.size() <= i) // /a/b/c > /a/b
             return false;
-        int result = elements.at(i).name.compare(rhs.elements.at(i).name);
+        int result = lhs.elements.at(i).name.compare(rhs.elements.at(i).name);
         if (result < 0) // /a/b < /a/c
             return true;
         if (result > 0) // /a/c > /a/b
             return false;
     }
     // /a/b < /a/b/c but /a/b == /a/b
-    return elements.size() < rhs.elements.size();
+    return lhs.elements.size() < rhs.elements.size();
 }
 
 std::ostream &
@@ -232,7 +232,7 @@ xpath::output(std::ostream & os, char delimiter) const
 {
     for (unsigned i = 0; i < elements.size(); ++i)
         os << delimiter << elements.at(i).name;
-    // The following prints out the / on the wrong side i.e. after
+    // The following prints out the / on the wrong side i.e. after each section a/b/c/
     //std::ostream_iterator<comma::xpath::element const> out_itr(os, "/");
     //std::copy(elements.begin(), elements.end(), out_itr);
     return os;

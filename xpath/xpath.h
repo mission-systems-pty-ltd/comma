@@ -120,18 +120,22 @@ class xpath
         /// inequality
         bool operator!=( const xpath& rhs ) const;
 
-        // necessary for use with std::map / std::set
-        bool less( const xpath& rhs ) const;
-
-        // convenience for use with std::map / std::set
+        // Less than predicate to return lexicographical order to standard
+        // containers like std::map and std::set. This is a convenience
+        // to make it easier to use a path
+        // e.g. std::set<comma::xpath, comma::xpath::less_t> exact_set;
         struct less_t {
-            bool operator() ( const xpath& lhs, const xpath& rhs ) const { return lhs.less(rhs); }
+            bool operator() ( const xpath& lhs, const xpath& rhs ) const;
         };
 
         /// return true, if it's a subpath of rhs, e.g hello/world < hello
+        // This function does not return lexicographical order and should not
+        // be used with standard algorithms.
         bool operator<( const xpath& rhs ) const;
         
         /// return true, if xpath is less or equal to rhs
+        // This function does not return lexicographical order and should not
+        // be used with standard algorithms.
         bool operator<=( const xpath& rhs ) const;
         
         /// return xpath without the first element; if empty, return empty xpath
@@ -146,8 +150,9 @@ class xpath
         /// return as string
         std::string to_string( char delimiter = '/' ) const;
 
+        // Output a delimited path to the given stream. 
         // For various unknown reasons specifying the operator overload
-        // here causes explosions in util/applications/comma-progress.cpp
+        // causes explosions in util/applications/comma-progress.cpp
         std::ostream &
         output(std::ostream &, char delimiter = '/') const;
 };
