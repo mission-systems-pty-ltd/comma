@@ -49,7 +49,7 @@
 // stream '\r\n.' => true leaves '.'
 // stream '.' => false leaves '.'
 // stream '' => false leaves ''
-bool
+static bool
 get_newline(std::istream & is)
 {
     int const c = is.peek();
@@ -62,8 +62,7 @@ get_newline(std::istream & is)
         if ('\n' == next) (void)is.get();
     }
 
-    if ('\r' == c || '\n' == c) return true;
-    return false;
+    return '\r' == c || '\n' == c;
 }
 
 std::istream &
