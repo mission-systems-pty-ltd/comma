@@ -17,7 +17,6 @@
 #include <comma/xpath/applications/stream_util.h>
 
 using comma::io::punct;
-using comma::io::newline;
 
 #define CMDNAME "xml-map-split"
 
@@ -153,7 +152,7 @@ parse(std::istream & infile, std::istream & mapfile)
         }
         if (! match(path))
         {
-            comma::io::ignore_until_newline(mapfile);
+            comma::io::ignore_until_endl(mapfile);
         }
         else
         {
@@ -178,7 +177,7 @@ parse(std::istream & infile, std::istream & mapfile)
                         return false;
             } while (',' == mapfile.peek());
 
-            mapfile >> newline;
+            mapfile >> comma::io::endl;
             if (! mapfile)
             {
                 std::cerr << CMDNAME ": Error: Parsing: Failed to get a newline." << std::endl;

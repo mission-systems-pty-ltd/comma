@@ -15,7 +15,7 @@
 
 #include <comma/application/command_line_options.h>
 #include <comma/xpath/xpath.h>
-#include <comma/xpath/applications/expat-util.h>
+#include <comma/xpath/applications/expat_util.h>
 
 namespace FS = boost::filesystem;
 

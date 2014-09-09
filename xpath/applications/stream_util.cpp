@@ -43,46 +43,59 @@
 
 #include <comma/xpath/applications/stream_util.h>
 
-comma::io::newline_t comma::io::newline;
+// Retrieves the next character sequence in the stream if it is a newline.
+// stream '\n.' => true leaves '.'
+// stream '\r.' => true leaves '.'
+// stream '\r\n.' => true leaves '.'
+// stream '.' => false leaves '.'
+// stream '' => false leaves ''
+bool
+get_newline(std::istream & is)
+{
+    int const c = is.peek();
+    if ('\r' == c || '\n' == c) (void)is.get();
+    
+    if ('\r' == c)
+    {
+        // we got a \r so test for \n
+        int const next = is.peek();
+        if ('\n' == next) (void)is.get();
+    }
+
+    if ('\r' == c || '\n' == c) return true;
+    return false;
+}
 
 std::istream &
-comma::io::ignore_until_newline(std::istream & is)
+comma::io::ignore_until_endl(std::istream & is)
 {
     for (;;)
     {
-        char const c = is.get();
-        if (! is || '\n' == c) return is;
-        if ('\r' != c ) continue;
-
-        // we got a \r so test for \n
-        int next = is.peek();
-        if (EOF == next) return is;
-        if ('\n' == next) next = is.get();
-        return is;
+        bool const got = get_newline(is);
+        if (! is || got) return is;
+        (void)is.get();
     }
 }
 
 std::istream &
-operator >>(std::istream & is, comma::io::punct const & p)
+comma::io::endl(std::istream & is)
 {
-    char const c = is.get();
-    if (c != p._c) is.setstate(std::ios::failbit);
-    return is;
-}
-
-std::istream &
-operator >>(std::istream & is, comma::io::newline_t const & p)
-{
-    char const c = is.get();
-    if (! is || '\n' == c) return is;
-    if ('\r' != c )
-    {
+    bool const got = get_newline(is);
+    if (is && ! got)
         is.setstate(std::ios::failbit);
-        return is;
-    }
-    int next = is.peek();
-    if (EOF == next) return is;
-    if ('\n' == next) next = is.get();
+
     return is;
 }
+
+std::istream &
+comma::io::operator >>(std::istream & is, comma::io::punct const & p)
+{
+    char const c = is.peek();
+    if (c == p._c)
+        (void)is.get();
+    else
+        is.setstate(std::ios::failbit);
+    return is;
+}
+
 

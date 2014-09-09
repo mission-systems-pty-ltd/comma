@@ -50,26 +50,18 @@ struct punct
     char const _c;
 };
 
-// An istream manipulator to remove the expected  newline 
-// Somewhat complicated by that whole DOS v UNIX v MAC complication
-// so that the client code can ignore that problem.
-struct newline_t
-{
-    newline_t() {;}
-};
-
-extern newline_t newline;
-
-std::istream &
-ignore_until_newline(std::istream & is);
-
-} } // namespace comma { namespace io {
-
-
 std::istream &
 operator >>(std::istream & is, comma::io::punct const & p);
 
+// An istream manipulator to remove the expected  newline 
+// Somewhat complicated by that whole DOS v UNIX v MAC complication
+// so that the client code can ignore that problem.
+std::istream & endl(std::istream & os);
+
 std::istream &
-operator >>(std::istream & is, comma::io::newline_t const & p);
+ignore_until_endl(std::istream & is);
+
+} } // namespace comma { namespace io {
+
 
 #endif
