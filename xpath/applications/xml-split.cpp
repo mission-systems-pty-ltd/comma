@@ -129,10 +129,6 @@ output_wrapper::start()
                 std::cerr << CMDNAME ": Error: Could not Create Output Directory '" << oss.str() << "'. Abort!" << std::endl;
                 return _destination;
             }
-            else
-            {
-                std::cerr << CMDNAME ": Create Output Directory '" << oss.str() << '\'' << std::endl;
-            }
         }
     }
 
@@ -156,7 +152,7 @@ output_wrapper::start()
         }
         else
         {
-            std::cerr << CMDNAME ": Create Output File '" << oss.str() << '\'' << std::endl;
+            std::cerr << oss.str() << " ... " << std::flush;
         }
 
         ++_file_count;
@@ -227,7 +223,7 @@ xml_split_application::do_element_start(char const * const element, char const *
         }
         ++element_found;
     }
-
+    
     if (element_found > 0)
     {
         assert(element_found_index >= 0);
@@ -312,14 +308,28 @@ int main(int argc, char ** argv)
             else 
                 grep_list.push_back(argv[i] + 2);
         }
+        
+        if (grep_list.empty() && exact_set.empty())
+        {
+            usage(true);
+            return 1;
+        }
 
         if (true)
         {
-            std::ostream_iterator<comma::xpath const> out_itr(std::cerr, "\n");
-            std::cerr << "Exacts ..." << std::endl;
-            std::copy(exact_set.begin(), exact_set.end(), out_itr);
-            std::cerr << "Partials ..." << std::endl;
-            std::copy(grep_list.begin(), grep_list.end(), out_itr);
+            std::ostream_iterator<comma::xpath const> out_itr(std::cerr, " ... ");
+            if (! grep_list.empty())
+            {
+                std::cerr << CMDNAME ": Partial: ";
+                std::copy(grep_list.begin(), grep_list.end(), out_itr);
+                std::cerr << std::endl;
+            }            
+            if (! exact_set.empty())
+            {
+                std::cerr << CMDNAME ": Exact: ";
+                std::copy(exact_set.begin(), exact_set.end(), out_itr);
+                std::cerr << std::endl;
+            }
         }
         
         signed idx = 0;
@@ -338,7 +348,11 @@ int main(int argc, char ** argv)
         
         xml_split_application app;
         
-        return app.run(options_file);
+        std::cerr << CMDNAME ": Output: " << std::flush;
+        int const code = app.run(options_file);
+        std::cerr << std::endl;
+        
+        return code;
     }
     catch (std::exception const & ex)
     {
