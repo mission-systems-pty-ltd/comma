@@ -41,9 +41,7 @@
 #include <algorithm>
 #include <iterator>
 
-#include <comma/io/stream-util.h>
-
-#include <comma/xpath/xpath.h>
+#include <comma/xpath/applications/stream_util.h>
 
 comma::io::newline_t comma::io::newline;
 
@@ -87,3 +85,4 @@ operator >>(std::istream & is, comma::io::newline_t const & p)
     if ('\n' == next) next = is.get();
     return is;
 }
+

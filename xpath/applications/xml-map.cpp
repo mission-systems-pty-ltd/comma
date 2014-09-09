@@ -20,9 +20,9 @@
 #include <expat.h>
 #include <boost/unordered_map.hpp>
 #include <comma/application/command_line_options.h>
-#include <comma/io/stream-util.h>
 #include <comma/xpath/xpath.h>
-#include <comma/xpath/applications/expat-util.h>
+#include <comma/xpath/applications/expat_util.h>
+#include <comma/xpath/applications/stream_util.h>
 
 #define CMDNAME "xml-map"
 

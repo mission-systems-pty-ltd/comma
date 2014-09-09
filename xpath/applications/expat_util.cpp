@@ -37,7 +37,7 @@
 #include <iostream>
 #include <fstream>
 
-#include <comma/xpath/applications/expat-util.h>
+#include <comma/xpath/applications/expat_util.h>
 
 static unsigned const BUFFY_SIZE = 1 * 1024 * 1024;
 
