@@ -23,6 +23,8 @@ namespace FS = boost::filesystem;
 
 static unsigned block_end = 1000; 
 
+static bool options_verbose = false;
+
 // can't use list or map on xpath because of the < overloading
 typedef std::set<comma::xpath, comma::xpath::less_t> exact_set_t;
 static exact_set_t exact_set;
@@ -150,7 +152,7 @@ output_wrapper::start()
             std::cerr << CMDNAME ": Error: Could not open file '" << oss.str() << "'. Abort!" << std::endl;
             return _destination;
         }
-        else
+        else if (options_verbose)
         {
             std::cerr << oss.str() << " ... " << std::flush;
         }
@@ -274,10 +276,10 @@ int main(int argc, char ** argv)
     try
     {
         comma::command_line_options options( argc, argv );
-        bool const verbose = options.exists( "--verbose,-v" );
+        options_verbose = options.exists( "--verbose,-v" );
         if (options.exists("--help,-h"))
         {
-            usage(verbose);
+            usage(options_verbose);
             return 1;
         }
 
@@ -315,7 +317,7 @@ int main(int argc, char ** argv)
             return 1;
         }
 
-        if (true)
+        if (options_verbose)
         {
             std::ostream_iterator<comma::xpath const> out_itr(std::cerr, " ... ");
             if (! grep_list.empty())
@@ -348,9 +350,13 @@ int main(int argc, char ** argv)
         
         xml_split_application app;
         
-        std::cerr << CMDNAME ": Output: " << std::flush;
+        if (options_verbose)
+            std::cerr << CMDNAME ": Output: " << std::flush;
+
         int const code = app.run(options_file);
-        std::cerr << std::endl;
+
+        if (options_verbose)
+            std::cerr << std::endl;
         
         return code;
     }
