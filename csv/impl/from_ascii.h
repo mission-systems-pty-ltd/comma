@@ -86,11 +86,11 @@ class from_ascii_
         std::size_t optional_index;
         static void lexical_cast_( char& v, const std::string& s ) { v = s.at( 0 ) == '\'' && s.at( 2 ) == '\'' && s.length() == 3 ? s.at( 1 ) : static_cast< char >( boost::lexical_cast< int >( s ) ); }
         static void lexical_cast_( unsigned char& v, const std::string& s ) { v = s.at( 0 ) == '\'' && s.at( 2 ) == '\'' && s.length() == 3 ? s.at( 1 ) : static_cast< unsigned char >( boost::lexical_cast< unsigned int >( s ) ); }
-        static void lexical_cast_( boost::posix_time::ptime& v, const std::string& s ) { try { v = boost::posix_time::from_iso_string( s ); } catch( ... ) { v = boost::posix_time::not_a_date_time; } }
+        static void lexical_cast_( boost::posix_time::ptime& v, const std::string& s ) { if( s.empty() ) { return; } try { v = boost::posix_time::from_iso_string( s ); } catch( ... ) { v = boost::posix_time::not_a_date_time; } }
         static void lexical_cast_( std::string& v, const std::string& s ) { v = comma::strip( s, "\"" ); }
-        static void lexical_cast_( bool& v, const std::string& s ) { if( !s.empty() ) { v = static_cast< bool >( boost::lexical_cast< unsigned int >( s ) ); } }
+        static void lexical_cast_( bool& v, const std::string& s ) { if( s.empty() ) { return; } v = static_cast< bool >( boost::lexical_cast< unsigned int >( s ) ); }
         template < typename T >
-        static void lexical_cast_( T& v, const std::string& s ) { if( !s.empty() ) { v = boost::lexical_cast< T >( s ); } }
+        static void lexical_cast_( T& v, const std::string& s ) { if( s.empty() ) { return; } v = boost::lexical_cast< T >( s ); }
 };
 
 inline from_ascii_::from_ascii_( const std::vector< boost::optional< std::size_t > >& indices
