@@ -21,7 +21,10 @@ namespace FS = boost::filesystem;
 
 #define CMDNAME "xml-split"
 
-static unsigned block_end = 1000; 
+static unsigned TOTAL_MAX = std::numeric_limits<unsigned>::max() - 1;
+
+static unsigned block_limit = 1000; 
+static unsigned total_limit = TOTAL_MAX; 
 
 static bool options_verbose = false;
 
@@ -39,6 +42,7 @@ class output_wrapper
 public:
     output_wrapper();
     void set_name(std::string const & name);
+    bool is_full() const { return _total_count > total_limit; }
     std::ostream & start();
     std::ostream & more() { return _destination; }
     
@@ -67,7 +71,19 @@ namespace comma
     }
 }
 
-signed
+static bool
+is_all_full()
+{
+    unsigned const max = exact_set.size() + grep_list.size();
+    assert(max <= TAG_MAX);
+    unsigned full = 0;
+    for (unsigned i = 0; i < max; ++i)
+        if (writers[i].is_full()) ++full;
+        
+    return max == full;
+}
+
+static signed
 grep(XML_Char const * element, comma::xpath const & element_path)
 {
     // std::cerr << element << " or " << element_path << std::endl;
@@ -114,6 +130,12 @@ output_wrapper::start()
     assert(NULL != this);
     assert(! _name.empty());
 
+    if (is_full())
+    {
+        if (_destination.good()) _destination.close();
+        return _destination;
+    }
+
     std::ostringstream oss;
     oss << _name;
     
@@ -136,7 +158,8 @@ output_wrapper::start()
 
     ++_block_count;
     ++_total_count;
-    if (_block_count > block_end || ! _destination.good())
+    
+    if (_block_count > block_limit || ! _destination.good())
     {
         _destination.close();
         _block_count = 0;
@@ -159,6 +182,7 @@ output_wrapper::start()
 
         ++_file_count;
     }
+
     return _destination;
 }
 
@@ -170,7 +194,8 @@ usage(bool const verbose)
 {
     std::cerr <<   "Splits the file up into chunks based on the size, also does grep for efficiency"
                  "\nUSAGE:   " CMDNAME " [--limit=Q]  [--source=XMLFILE]"
-                 "\nOPTIONS: --limit=Q; default 1000; to output just the elements between 1 and Q"
+                 "\nOPTIONS: --block=P; default 1000; to output just P elements per block"
+                 "\n         --total=Q; default INF; to output just Q of each element" 
                  "\n         --source=XMLFILE to open and parse that file."
                  "\nRETURNS: 0 - on success"
                  "\n         1 - on data error; like invalid xml"
@@ -206,7 +231,10 @@ void
 xml_split_application::do_default(XML_Char const * const str, int const length)
 {
     if (element_found_index >= 0)
-        writers[element_found_index].more().write(str, length);
+        if (! writers[element_found_index].is_full())
+        {    
+            writers[element_found_index].more().write(str, length);
+        }
 }
 
 void
@@ -229,20 +257,23 @@ xml_split_application::do_element_start(char const * const element, char const *
     if (element_found > 0)
     {
         assert(element_found_index >= 0);
-        std::ostream  & os(writers[element_found_index].more());
-        os  << '<' << element << ' ';
-        if (NULL != attributes)
-            for (unsigned i = 0; NULL != attributes[i]; i += 2)
-            {
-                os << attributes[i] << "='";
-                for (XML_Char const * p = attributes[i+1]; *p != 0; ++p)
-                    if ('\'' == *p)
-                        os << "&apos;";
-                    else
-                        os << *p;
-                os << "' ";
-            }
-        os << '>';
+        if (! writers[element_found_index].is_full())
+        {    
+            std::ostream  & os(writers[element_found_index].more());
+            os  << '<' << element << ' ';
+            if (NULL != attributes)
+                for (unsigned i = 0; NULL != attributes[i]; i += 2)
+                {
+                    os << attributes[i] << "='";
+                    for (XML_Char const * p = attributes[i+1]; *p != 0; ++p)
+                        if ('\'' == *p)
+                            os << "&apos;";
+                        else
+                            os << *p;
+                    os << "' ";
+                }
+            os << '>';
+        }
     }
 }
 
@@ -259,13 +290,19 @@ xml_split_application::do_element_end(char const * const element)
     if (was_found)
     {
         assert(element_found_index >= 0);
-        writers[element_found_index].more() << "</" << element << '>';
-        if (0 == element_found)
-            writers[element_found_index].more() << std::endl;
+        if (! writers[element_found_index].is_full())
+        {    
+            writers[element_found_index].more() << "</" << element << '>';
+            if (0 == element_found)
+                writers[element_found_index].more() << std::endl;
+        }
     }
     
     if (0 == element_found)
         element_found_index = -1;
+        
+    if (is_all_full())
+         XML_StopParser(parser, false);
 }
 
 // ~~~~~~~~~~~~~~~~~~
@@ -285,16 +322,28 @@ int main(int argc, char ** argv)
 
         if (options.exists("--limit"))
         {
-            unsigned e = options.value<unsigned>("--limit");
-            block_end = std::max(1u, e);
+            std::cerr << CMDNAME ": Error: This option is OBSOLETE because of it's confusing name." << std::endl;
+            return 1;
         }
-
+        block_limit = options.value<unsigned>("--block", 1000);
+        if (block_limit < 1)
+        {
+            std::cerr << CMDNAME ": Error: Block Limit must be greater then 1" << std::endl;
+            return 1;
+        }
+        total_limit = options.value<unsigned>("--total", TOTAL_MAX);
+        if (total_limit < 1)
+        {
+            std::cerr << CMDNAME ": Error: Total Limit must be greater then 1" << std::endl;
+            return 1;
+        }
         std::string options_file;
         if (options.exists("--source"))
         {
             options_file = options.value<std::string>("--source");
         }
 
+        unsigned kept = 0;
         for (unsigned i = 1; i < unsigned(argc); ++i)
         {   
             if ('-' == argv[i][0])
@@ -309,6 +358,13 @@ int main(int argc, char ** argv)
                 exact_set.insert(comma::xpath(argv[i] + 1));
             else 
                 grep_list.push_back(argv[i] + 2);
+                
+            ++kept;
+            if (kept > TAG_MAX)
+            {
+                std::cerr << CMDNAME ": Error: Only " << TAG_MAX << " patterns are supported." << std::endl;
+                return 1;
+            }
         }
         
         if (grep_list.empty() && exact_set.empty())
