@@ -5,19 +5,16 @@ SOURCE_GROUP( ${TARGET_NAME} FILES ${source} ${includes} )
 
 IF( comma_BUILD_EXPAT )
 
-add_executable( xml-map-split ${dir}/xml-map-split.cpp )
+FILE( GLOB util_source ${dir}/*util*.cpp )
+add_executable( xml-map-split ${dir}/xml-map-split.cpp ${util_source} )
+add_executable( xml-grep ${dir}/xml-grep.cpp ${util_source} )
+add_executable( xml-map ${dir}/xml-map.cpp ${util_source} )
+add_executable( xml-split ${dir}/xml-split.cpp ${util_source} )
 
-SOURCE_GROUP( comma_xpath_application FILES stream_util.cpp stream_util.h expat_util.cpp expat_util.h )
-ADD_LIBRARY( comma_xpath_application ${source} ${includes} )
-
-add_executable( xml-grep ${dir}/xml-grep.cpp )
-add_executable( xml-map ${dir}/xml-map.cpp )
-add_executable( xml-split ${dir}/xml-split.cpp )
-
-target_link_libraries ( xml-map-split ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io comma_xpath_application )
-target_link_libraries ( xml-grep ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io comma_xpath comma_xpath_application )
-target_link_libraries ( xml-map ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io  comma_xpath comma_xpath_application )
-target_link_libraries ( xml-split ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io comma_xpath comma_xpath_application )
+target_link_libraries ( xml-map-split ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io comma_xpath )
+target_link_libraries ( xml-grep ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io comma_xpath )
+target_link_libraries ( xml-map ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io  comma_xpath )
+target_link_libraries ( xml-split ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io comma_xpath )
 
 install( TARGETS xml-grep
                  xml-map
