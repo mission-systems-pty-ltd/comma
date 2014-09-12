@@ -34,9 +34,6 @@ static exact_set_t exact_set;
 typedef std::list<std::string> grep_list_t;
 static grep_list_t grep_list;
 
-static unsigned element_found = 0;
-static signed element_found_index = 0;
-
 class output_wrapper
 {
 public:
@@ -51,7 +48,8 @@ private:
     unsigned _block_count;
     unsigned _total_count;
     unsigned _file_count;
-    
+ 
+    bool _flag_open;   
     std::ofstream _destination;
 };
 
@@ -112,6 +110,7 @@ output_wrapper::output_wrapper()
 , _block_count(0)
 , _total_count(0)
 , _file_count(0)
+, _flag_open(false)
 {
     assert(NULL != this);
 }
@@ -132,7 +131,11 @@ output_wrapper::start()
 
     if (is_full())
     {
-        if (_destination.good()) _destination.close();
+        if (_flag_open)
+        {
+            _destination.close(); 
+            _flag_open = false;
+        }
         return _destination;
     }
 
@@ -162,10 +165,11 @@ output_wrapper::start()
     if (_block_count > block_limit || ! _destination.good())
     {
         _destination.close();
+        _flag_open = false;
         _block_count = 0;
     }
     
-    if (! _destination.good())
+    if (! _flag_open)
     {
         oss << "/" << std::setw(6) << std::setfill('0') << _file_count << ".xml";
 
@@ -180,6 +184,7 @@ output_wrapper::start()
             std::cerr << oss.str() << " ... " << std::flush;
         }
 
+        _flag_open = true;
         ++_file_count;
     }
 
@@ -219,11 +224,16 @@ protected:
 
     virtual void
     do_element_end(char const * const element);
-  
+
+private:
+    unsigned element_found_depth;
+    signed element_found_index;
 };
 
 xml_split_application::xml_split_application()
 : simple_expat_application(CMDNAME)
+, element_found_depth(0)
+, element_found_index(0)
 {
 }
 
@@ -246,15 +256,15 @@ xml_split_application::do_element_start(char const * const element, char const *
     if (idx >= 0)
     {
         ++element_found_count;
-        if (0 == element_found)
+        if (0 == element_found_depth)
         {
             element_found_index = idx;
             writers[element_found_index].start();
         }
-        ++element_found;
+        ++element_found_depth;
     }
     
-    if (element_found > 0)
+    if (element_found_depth > 0)
     {
         assert(element_found_index >= 0);
         if (! writers[element_found_index].is_full())
@@ -281,11 +291,11 @@ void
 xml_split_application::do_element_end(char const * const element)
 {
     comma::xpath const & element_path = current_xpath();
-    bool const was_found = element_found > 0;
+    bool const was_found = element_found_depth > 0;
 
     signed idx = grep(element, element_path);
     if (idx >= 0)
-        --element_found;
+        --element_found_depth;
     
     if (was_found)
     {
@@ -293,12 +303,12 @@ xml_split_application::do_element_end(char const * const element)
         if (! writers[element_found_index].is_full())
         {    
             writers[element_found_index].more() << "</" << element << '>';
-            if (0 == element_found)
+            if (0 == element_found_depth)
                 writers[element_found_index].more() << std::endl;
         }
     }
     
-    if (0 == element_found)
+    if (0 == element_found_depth)
         element_found_index = -1;
         
     if (is_all_full())
