@@ -38,6 +38,7 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <comma/base/types.h>
 #include <comma/name_value/ptree.h>
+#include <comma/name_value/serialize.h>
 #include <comma/visiting/apply.h>
 
 namespace comma { namespace test {
