@@ -27,6 +27,7 @@ static unsigned block_limit = 1000;
 static unsigned total_limit = TOTAL_MAX; 
 
 static bool options_verbose = false;
+static std::string options_default_namespace = "";
 
 // can't use list or map on xpath because of the < overloading
 typedef std::set<comma::xpath, comma::xpath::less_t> exact_set_t;
@@ -44,7 +45,7 @@ public:
     std::ostream & more() { return _destination; }
     
 private:
-    std::string _name;
+    std::string _folder;
     unsigned _block_count;
     unsigned _total_count;
     unsigned _file_count;
@@ -102,11 +103,26 @@ grep(XML_Char const * element, comma::xpath const & element_path)
             if (*itr == element)
                 return idx;
     }
+    idx = exact_set.size();
+    if (NULL == strchr(element, ':') && ! options_default_namespace.empty()) // no namespace
+    {
+        std::string renamed(options_default_namespace);
+        renamed.append(":");
+        renamed.append(element);
+    
+        grep_list_t::const_iterator const end = grep_list.end();
+        grep_list_t::const_iterator itr = grep_list.begin();
+        
+        for (; itr != end; ++itr, ++idx)
+            if (*itr == renamed)
+                return idx;
+    }
+    
     return -1;
 }
 
 output_wrapper::output_wrapper()
-: _name()
+: _folder()
 , _block_count(0)
 , _total_count(0)
 , _file_count(0)
@@ -119,15 +135,18 @@ void
 output_wrapper::set_name(std::string const & name)
 {
     assert(NULL != this);
-    assert(_name.empty());
-    _name = name;
+    assert(_folder.empty());
+    _folder = name;
+    for (unsigned i = 0; i < _folder.size(); ++i)
+       if (':' == _folder[i])
+            _folder[i] = '-';
 }
     
 std::ostream &
 output_wrapper::start()
 {
     assert(NULL != this);
-    assert(! _name.empty());
+    assert(! _folder.empty());
 
     if (is_full())
     {
@@ -140,7 +159,7 @@ output_wrapper::start()
     }
 
     std::ostringstream oss;
-    oss << _name;
+    oss << _folder;
     
     if (0 == _total_count)
     {
@@ -352,6 +371,7 @@ int main(int argc, char ** argv)
         {
             options_file = options.value<std::string>("--source");
         }
+        options_default_namespace = options.value<std::string>("--default-namespace","");
 
         unsigned kept = 0;
         for (unsigned i = 1; i < unsigned(argc); ++i)
