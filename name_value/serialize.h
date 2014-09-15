@@ -55,12 +55,24 @@ template < typename T > T read_json( const std::string& filename, const xpath& r
 template < typename T > T read_json( const std::string& filename, const char* root );
 template < typename T > T read_json( const std::string& filename, bool permissive );
 template < typename T > T read_json( const std::string& filename );
+template < typename T > void read_json( T& t, const std::string& filename, const xpath& root, bool permissive );
+template < typename T > void read_json( T& t, const std::string& filename, const char* root, bool permissive );
+template < typename T > void read_json( T& t, const std::string& filename, const xpath& root );
+template < typename T > void read_json( T& t, const std::string& filename, const char* root );
+template < typename T > void read_json( T& t, const std::string& filename, bool permissive );
+template < typename T > void read_json( T& t, const std::string& filename );
 template < typename T > T read_json( std::istream& stream, const xpath& root, bool permissive );
 template < typename T > T read_json( std::istream& stream, const char* root, bool permissive );
 template < typename T > T read_json( std::istream& stream, const xpath& root );
 template < typename T > T read_json( std::istream& stream, const char* root );
 template < typename T > T read_json( std::istream& stream, bool permissive );
 template < typename T > T read_json( std::istream& stream );
+template < typename T > void read_json( T& t, std::istream& stream, const xpath& root, bool permissive );
+template < typename T > void read_json( T& t, std::istream& stream, const char* root, bool permissive );
+template < typename T > void read_json( T& t, std::istream& stream, const xpath& root );
+template < typename T > void read_json( T& t, std::istream& stream, const char* root );
+template < typename T > void read_json( T& t, std::istream& stream, bool permissive );
+template < typename T > void read_json( T& t, std::istream& stream );
 
 /// read object from xml file or stream
 /// convenience wrappers for comma::property_tree boiler-plate code
@@ -70,12 +82,24 @@ template < typename T > T read_xml( const std::string& filename, const xpath& ro
 template < typename T > T read_xml( const std::string& filename, const char* root );
 template < typename T > T read_xml( const std::string& filename, bool permissive );
 template < typename T > T read_xml( const std::string& filename );
+template < typename T > void read_xml( T& t, const std::string& filename, const xpath& root, bool permissive );
+template < typename T > void read_xml( T& t, const std::string& filename, const char* root, bool permissive );
+template < typename T > void read_xml( T& t, const std::string& filename, const xpath& root );
+template < typename T > void read_xml( T& t, const std::string& filename, const char* root );
+template < typename T > void read_xml( T& t, const std::string& filename, bool permissive );
+template < typename T > void read_xml( T& t, const std::string& filename );
 template < typename T > T read_xml( std::istream& stream, const xpath& root, bool permissive );
 template < typename T > T read_xml( std::istream& stream, const char* root, bool permissive );
 template < typename T > T read_xml( std::istream& stream, const xpath& root );
 template < typename T > T read_xml( std::istream& stream, const char* root );
 template < typename T > T read_xml( std::istream& stream, bool permissive );
 template < typename T > T read_xml( std::istream& stream );
+template < typename T > void read_xml( T& t, std::istream& stream, const xpath& root, bool permissive );
+template < typename T > void read_xml( T& t, std::istream& stream, const char* root, bool permissive );
+template < typename T > void read_xml( T& t, std::istream& stream, const xpath& root );
+template < typename T > void read_xml( T& t, std::istream& stream, const char* root );
+template < typename T > void read_xml( T& t, std::istream& stream, bool permissive );
+template < typename T > void read_xml( T& t, std::istream& stream );
 
 /// read object from json file or stream
 /// convenience wrappers for comma::property_tree boiler-plate code
@@ -96,67 +120,90 @@ template < typename T > void write_xml( const T& t, std::ostream& stream, const 
 template < typename T > void write_xml( const T& t, std::ostream& stream );
 
 
-template < typename T > inline T read_json( const std::string& filename, const xpath& root, bool permissive )
+template < typename T > inline void read_json( T& t, const std::string& filename, const xpath& root, bool permissive )
 {
     std::ifstream ifs( &filename[0] );
     if( !ifs.is_open() ) { COMMA_THROW( comma::exception, "failed to open \"" << filename << "\"" ); }
-    return read_json< T >( ifs, root, permissive );
+    read_json< T >( t, ifs, root, permissive );
+    ifs.close();
 }
 
-template < typename T > inline T read_json( std::istream& stream, const xpath& root, bool permissive )
+template < typename T > inline void read_json( T& t, std::istream& stream, const xpath& root, bool permissive )
 {
-    T t;
     boost::property_tree::ptree p;
     boost::property_tree::read_json( stream, p );
     comma::from_ptree from_ptree( p, root, permissive );
     comma::visiting::apply( from_ptree ).to( t );
-    return t;
 }
 
+template < typename T > inline T read_json( const std::string& filename, const xpath& root, bool permissive ) { T t; read_json( t, filename, root, permissive ); return t; }
 template < typename T > inline T read_json( const std::string& filename, const char* root, bool permissive ) { return root ? read_json< T >( filename, xpath( root ), permissive ) : read_json< T >( filename, permissive ); }
 template < typename T > inline T read_json( const std::string& filename, const xpath& root ) { return read_json< T >( filename, root, true ); }
 template < typename T > inline T read_json( const std::string& filename, const char* root ) { return root ? read_json< T >( filename, xpath( root ), true ) : read_json< T >( filename, true ); }
 template < typename T > inline T read_json( const std::string& filename, bool permissive ) { return read_json< T >( filename, xpath(), permissive ); }
 template < typename T > inline T read_json( const std::string& filename ) { return read_json< T >( filename, xpath(), true ); }
+template < typename T > inline T read_json( std::istream& stream, const xpath& root, bool permissive ) { T t; read_json( t, stream, root, permissive ); return t; }
 template < typename T > inline T read_json( std::istream& stream, const char* root, bool permissive ) { return root ? read_json< T >( stream, xpath( root ), permissive ) : read_json< T >( stream, permissive ); }
 template < typename T > inline T read_json( std::istream& stream, const xpath& root ) { return read_json< T >( stream, root, true ); }
 template < typename T > inline T read_json( std::istream& stream, const char* root ) { return root ? read_json< T >( stream, xpath( root ), true ) : read_json< T >( stream, true ); }
 template < typename T > inline T read_json( std::istream& stream, bool permissive ) { return read_json< T >( stream, xpath(), permissive ); }
 template < typename T > inline T read_json( std::istream& stream ) { return read_json< T >( stream, xpath(), true ); }
+template < typename T > inline void read_json( T& t, const std::string& filename, const char* root, bool permissive ) { if( root ) { read_json< T >( t, filename, xpath( root ), permissive ); } else { read_json< T >( t, filename, permissive ); } }
+template < typename T > inline void read_json( T& t, const std::string& filename, const xpath& root ) { read_json< T >( t, filename, root, true ); }
+template < typename T > inline void read_json( T& t, const std::string& filename, const char* root ) { if( root ) { read_json< T >( t, filename, xpath( root ), true ); } else { read_json< T >( t, filename, true ); } }
+template < typename T > inline void read_json( T& t, const std::string& filename, bool permissive ) { read_json< T >( t, filename, xpath(), permissive ); }
+template < typename T > inline void read_json( T& t, const std::string& filename ) { return read_json< T >( t, filename, xpath(), true ); }
+template < typename T > inline void read_json( T& t, std::istream& stream, const char* root, bool permissive ) { if( root ) { read_json< T >( t, stream, xpath( root ), permissive ); } else { read_json< T >( t, stream, permissive ); } }
+template < typename T > inline void read_json( T& t, std::istream& stream, const xpath& root ) { read_json< T >( t, stream, root, true ); }
+template < typename T > inline void read_json( T& t, std::istream& stream, const char* root ) { if( root ) { read_json< T >( t, stream, xpath( root ), true ); } else { read_json< T >( t, stream, true ); } }
+template < typename T > inline void read_json( T& t, std::istream& stream, bool permissive ) { read_json< T >( t, stream, xpath(), permissive ); }
+template < typename T > inline void read_json( T& t, std::istream& stream ) { read_json< T >( t, stream, xpath(), true ); }
 
-template < typename T > inline T read_xml( const std::string& filename, const xpath& root, bool permissive )
+template < typename T > inline void read_xml( T& t, const std::string& filename, const xpath& root, bool permissive )
 {
     std::ifstream ifs( &filename[0] );
     if( !ifs.is_open() ) { COMMA_THROW( comma::exception, "failed to open \"" << filename << "\"" ); }
-    return read_xml< T >( ifs, root, permissive );
+    read_xml< T >( t, ifs, root, permissive );
+    ifs.close();
 }
 
-template < typename T > inline T read_xml( std::istream& stream, const xpath& root, bool permissive )
+template < typename T > inline void read_xml( T& t, std::istream& stream, const xpath& root, bool permissive )
 {
-    T t;
     boost::property_tree::ptree p;
     boost::property_tree::read_xml( stream, p );
     comma::from_ptree from_ptree( p, root, permissive );
     comma::visiting::apply( from_ptree ).to( t );
-    return t;
 }
 
+template < typename T > inline T read_xml( const std::string& filename, const xpath& root, bool permissive ) { T t; read_xml( t, filename, root, permissive ); return t; }
 template < typename T > inline T read_xml( const std::string& filename, const char* root, bool permissive ) { return root ? read_xml< T >( filename, xpath( root ), permissive ) : read_xml< T >( filename, permissive ); }
 template < typename T > inline T read_xml( const std::string& filename, const xpath& root ) { return read_xml< T >( filename, root, true ); }
 template < typename T > inline T read_xml( const std::string& filename, const char* root ) { return root ? read_xml< T >( filename, xpath( root ), true ) : read_xml< T >( filename, true ); }
 template < typename T > inline T read_xml( const std::string& filename, bool permissive ) { return read_xml< T >( filename, xpath(), permissive ); }
 template < typename T > inline T read_xml( const std::string& filename ) { return read_xml< T >( filename, xpath(), true ); }
+template < typename T > inline T read_xml( std::istream& stream, const xpath& root, bool permissive ) { T t; read_xml( t, stream, root, permissive ); return t; }
 template < typename T > inline T read_xml( std::istream& stream, const char* root, bool permissive ) { return root ? read_xml< T >( stream, xpath( root ), permissive ) : read_xml< T >( stream, permissive ); }
 template < typename T > inline T read_xml( std::istream& stream, const xpath& root ) { return read_xml< T >( stream, root, true ); }
 template < typename T > inline T read_xml( std::istream& stream, const char* root ) { return root ? read_xml< T >( stream, xpath( root ), true ) : read_xml< T >( stream, true ); }
 template < typename T > inline T read_xml( std::istream& stream, bool permissive ) { return read_xml< T >( stream, xpath(), permissive ); }
 template < typename T > inline T read_xml( std::istream& stream ) { return read_xml< T >( stream, xpath(), true ); }
+template < typename T > inline void read_xml( T& t, const std::string& filename, const char* root, bool permissive ) { if( root ) { read_xml< T >( t, filename, xpath( root ), permissive ); } else { read_xml< T >( t, filename, permissive ); } }
+template < typename T > inline void read_xml( T& t, const std::string& filename, const xpath& root ) { read_xml< T >( t, filename, root, true ); }
+template < typename T > inline void read_xml( T& t, const std::string& filename, const char* root ) { if( root ) { read_xml< T >( t, filename, xpath( root ), true ); } else { read_xml< T >( t, filename, true ); } }
+template < typename T > inline void read_xml( T& t, const std::string& filename, bool permissive ) { read_xml< T >( t, filename, xpath(), permissive ); }
+template < typename T > inline void read_xml( T& t, const std::string& filename ) { return read_xml< T >( t, filename, xpath(), true ); }
+template < typename T > inline void read_xml( T& t, std::istream& stream, const char* root, bool permissive ) { if( root ) { read_xml< T >( t, stream, xpath( root ), permissive ); } else { read_xml< T >( t, stream, permissive ); } }
+template < typename T > inline void read_xml( T& t, std::istream& stream, const xpath& root ) { read_xml< T >( t, stream, root, true ); }
+template < typename T > inline void read_xml( T& t, std::istream& stream, const char* root ) { if( root ) { read_xml< T >( t, stream, xpath( root ), true ); } else { read_xml< T >( t, stream, true ); } }
+template < typename T > inline void read_xml( T& t, std::istream& stream, bool permissive ) { read_xml< T >( t, stream, xpath(), permissive ); }
+template < typename T > inline void read_xml( T& t, std::istream& stream ) { read_xml< T >( t, stream, xpath(), true ); }
 
 template < typename T > inline void write_json( const T& t, const std::string& filename, const xpath& root )
 {
     std::ofstream ofs( &filename[0] );
     if( !ofs.is_open() ) { COMMA_THROW( comma::exception, "failed to open \"" << filename << "\"" ); }
-    return write_json< T >( ofs, root );
+    write_json< T >( t, ofs, root );
+    ofs.close();
 }
 
 template < typename T > inline void write_json( const T& t, std::ostream& stream, const xpath& root )
@@ -176,7 +223,8 @@ template < typename T > inline void write_xml( const T& t, const std::string& fi
 {
     std::ofstream ofs( &filename[0] );
     if( !ofs.is_open() ) { COMMA_THROW( comma::exception, "failed to open \"" << filename << "\"" ); }
-    return write_xml< T >( ofs, root );
+    write_xml< T >( t, ofs, root );
+    ofs.close();
 }
 
 template < typename T > inline void write_xml( const T& t, std::ostream& stream, const xpath& root )
