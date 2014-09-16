@@ -3,6 +3,12 @@
 # This script provides Bash functions for coordination of system
 # resources usage across a pool of workers (processes).
 
+# This script is designed to be included in another script directly, for example:
+# source $( which comma-resources-util )
+
+[[ -n "$comma_resources_util_include_guard_" ]] && return
+readonly comma_resources_util_include_guard_=1
+
 # Read a json file as text stream on stdin and in the given path (2nd argument)
 # append the pid (1st argument) to the end of []-enclosed list (insert into
 # the list if empty); output the resulting json to stdout. Path argument is
@@ -138,7 +144,7 @@ function comma_total_system_resources()
     (( $? == 0 || $cpus > 0 )) || { echo "$name: cannot grep '/proc/cpuinfo' for the number of processors" >&2; return 1; }
     #
     # ipcs -ml was found to return weird values on many systems
-    memory_shared=$( df --block-size=1 | grep shm$ | awk '{ print $2 }' )
+    memory_shared=$( timeout 5s df --block-size=1 | grep shm$ | awk '{ print $2 }' )
     #
     memory_main=$( cat /proc/meminfo | sed -n --regexp-extended "s/^MemTotal: *(.*) .*$/\1/p" )
     (( $memory_main > 0 )) || { echo "$name: cannot determine total memory size" >&2; exit 1; }
