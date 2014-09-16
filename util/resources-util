@@ -36,6 +36,7 @@ function enqueue_pid()
     local path=$2
     local default_path="processes\/queue"
     path=${path:-"$default_path"}
+    ##path=$( echo "$path" | sed --regexp-extended 's@([^\\])\/@\1\\\/@g' )
     #path=$( echo "$path" | sed 's/\//\\\//g' )
     name-value-convert --from json --to path-value \
         | sed --regexp-extended "/$path/s/\[(.+)\]/\[\1,$pid\]/;/$path/s/\[\]/\[$pid\]/" \
@@ -50,6 +51,7 @@ function dequeue_pid()
     local path=$2
     local default_path="processes\/queue"
     path=${path:-"$default_path"}
+    ##path=$( echo "$path" | sed --regexp-extended 's@([^\\])\/@\1\\\/@g' )
     #path=$( echo "$path" | sed 's/\//\\\//g' )
     name-value-convert --from json --to path-value \
         | sed --regexp-extended "/$path/s/\[$pid,(.+)\]/\[\1\]/;/$path/s/\[(.+),$pid\]/\[\1\]/;/$path/s/\[(.+),$pid,(.+)\]/\[\1,\2\]/;/$path/s/\[$pid\]/\[\]/" \
@@ -283,6 +285,7 @@ function acquire_resources()
     local users=$6
     local default_users="processes\/users"
     users=${users:-"$default_users"}
+    ##users=$( echo "$users" | sed --regexp-extended 's@([^\\])\/@\1\\\/@g' )
     #users=$( echo "$users" | sed 's/\//\\\//g' )
 
     local next position can_acquire any_waiting exceed
@@ -371,6 +374,7 @@ function release_resources()
     local users=$4
     local default_users="processes\/users"
     users=${users:-"$default_users"}
+    ##users=$( echo "$users" | sed --regexp-extended 's@([^\\])\/@\1\\\/@g' )
     #users=$( echo "$users" | sed 's/\//\\\//g' )
     local next
     local name="release_resources"
