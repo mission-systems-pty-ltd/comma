@@ -4,13 +4,14 @@ name=$( basename $0 )
 
 source $( which comma-application-util ) || { echo "$name: cannot source 'comma-application-util'" >&2; exit 1; }
 source $( which comma-util ) || { echo "$name: cannot source 'comma-util'" >&2; exit 1; }
-source $( which resources-util ) || { echo "$name: cannot source 'resources-util'" >&2; exit 1; }
+source $( which comma-resources-util ) || { echo "$name: cannot source 'comma-resources-util'" >&2; exit 1; }
+source $( which comma-sync ) || { echo "$name: cannot source 'comma-sync'" >&2; exit 1; }
 
 name_offset="${name//?/ } "
 export name name_offset
 
 # determine system parameters and set defaults; command-line options operate in MB
-comma_path_value_to_var --prefix=max < <( total_system_resources )
+comma_path_value_to_var --prefix=max < <( comma_total_system_resources )
 max_resources_memory_main=$(( $max_resources_memory_main / 1024 / 1024 ))
 max_resources_memory_shared=$(( $max_resources_memory_shared / 1024 / 1024 ))
 data_storage=""
@@ -304,14 +305,14 @@ EOF
 export -f resources_limits
 
 # initially no resources are occupied
-function comma_initialize_resources()
+function comma_test_run_initialize_resources()
 {
     comma_test_run_resources_flock="$comma_test_run_unique_dir/resources_flock"
     comma_test_run_resources_counter="$comma_test_run_unique_dir/resources_counter.json"
     comma_test_run_resources_limits="$comma_test_run_unique_dir/resources_limits.json"
     resources_limits | name-value-convert --from path-value --to json > "$comma_test_run_resources_limits"
     touch "$comma_test_run_resources_flock"
-    resources_limits | locked_initialize_resources "$comma_test_run_resources_flock" "$comma_test_run_resources_counter"
+    resources_limits | comma_locked "$comma_test_run_resources_flock" comma_initialize_resources "$comma_test_run_resources_counter"
     export comma_test_run_resources_flock comma_test_run_resources_counter comma_test_run_resources_limits
 }
 
@@ -428,11 +429,11 @@ function terminate_run_single_test()
     fi
     # serialize all access to global resources: stats file, stdout/err
     (
-        flock -x 8
+        flock -x 9
         [[ "$options_parallel" == "0" ]] || cat "$our_stdout_log" >&3
         local msg="test $count in '$dir': killed"
-        echo "$msg" >&8
-    ) 8>>"$comma_test_run_output_flock"
+        echo "$msg" >&9
+    ) 9>>"$comma_test_run_output_flock"
 
     rm -f "$our_stats_progress"
     [[ "$options_parallel" == "0" ]] || rm -f "$our_stdout_log"
@@ -514,10 +515,10 @@ function run_single_test()
             ##[ -f "$dir/readme" ] && dump_file_ "$dir/readme"
             cd "$dir"
             local wait_time=0
-            get_required_resources | storage_to_bytes > "$request"
+            get_required_resources | comma_storage_to_bytes > "$request"
             local first="true"
             while true ; do
-                outcome=$( locked_acquire_resources "$comma_test_run_resources_flock" "$request" "$comma_test_run_resources_counter" "$comma_test_run_resources_limits" "$worker_id" )
+                outcome=$( comma_locked "$comma_test_run_resources_flock" comma_acquire_resources "$request" "$comma_test_run_resources_counter" "$comma_test_run_resources_limits" "$worker_id" )
                 if [[ $? == 0 ]] ; then
                     report_end_of_wait
                     local error_files test_failed
@@ -528,7 +529,7 @@ function run_single_test()
                     test_pid=$!
                     wait $test_pid
                     test_failed=$?
-                    locked_release_resources "$comma_test_run_resources_flock" "$request" "$comma_test_run_resources_counter" "$worker_id"
+                    comma_locked "$comma_test_run_resources_flock" comma_release_resources "$request" "$comma_test_run_resources_counter" "$worker_id"
                     (( $? == 0 )) || {
                         echo "$name::worker $worker_id: cannot release resources" >&2
                         result=1
@@ -560,7 +561,7 @@ function run_single_test()
                         random_sleep 2 # make a configuration parameter
                         continue
                     else
-                        echo "$name::worker $worker_id: unknown error in acquire_resources '$outcome'" >&2
+                        echo "$name::worker $worker_id: unknown error in comma_acquire_resources '$outcome'" >&2
                         result=1
                         break
                     fi
@@ -572,13 +573,13 @@ function run_single_test()
 
     # serialize all access to global resources: stats file, stdout/err
     (
-        flock -x 8
+        flock -x 9
         cat "$our_stats_progress" >> "$stats_progress"
         [[ "$options_parallel" == "0" ]] || cat "$our_stdout_log" >&3
         local msg="test $count in '$dir': "
         (( $result == 0 )) && { msg+="success"; } || { msg+="failed"; }
-        echo "$msg" >&8
-    ) 8>>"$comma_test_run_output_flock"
+        echo "$msg" >&9
+    ) 9>>"$comma_test_run_output_flock"
 
     rm -f "$our_stats_progress"
     [[ "$options_parallel" == "0" ]] || rm -f "$our_stdout_log"
@@ -656,9 +657,9 @@ function process_tests_serial()
 function count_failures()
 {
     (
-        flock -x 8
+        flock -x 9
         grep -c "failed" "$comma_test_run_output_flock"
-    ) 8>>"$comma_test_run_output_flock"
+    ) 9>>"$comma_test_run_output_flock"
 }
 export -f count_failures
 
@@ -707,7 +708,7 @@ export comma_test_run_output_flock
 
 # store the currently occupied resources (number of CPUs, amount of memory)
 # in a global file name; access serialized via flocks
-comma_initialize_resources
+comma_test_run_initialize_resources
 
 trap 'stats_finalize; final_words' EXIT
 

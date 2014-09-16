@@ -52,3 +52,51 @@ function comma_progress()
 #     return $exit_code
 }
 export -f comma_progress
+
+# Auxiliary function: random value uniformly distributed in [0, 1].
+function comma_urandom()
+{
+    echo "$RANDOM / 32767" | bc -l
+}
+export -f comma_urandom
+
+# This function round-down a scaled random number to an integer.
+# Can be used to simulate memory size, number of CPUs, and other
+# integer values. Argument is the desired scale: output values
+# are from zero to $1.
+function comma_round_random()
+{
+    local scale=$1
+    echo "$scale * $( comma_urandom )" | bc | sed 's/^\./0\./;s/\..*//'
+}
+export -f comma_round_random
+
+# Auxiliary function to convert various storage units to bytes
+# Search for regular expressions [0-9]+unit (where space-separation is optional
+# and unit is one of kB, MB, GB, and TB) and replaces these substrings with
+# corresponding quantities in bytes.
+function comma_storage_to_bytes()
+{
+    local line
+    local storage_regex='([0-9]+)( *)([kMGT]B)'
+    while true ; do
+        read line
+        [[ -z "$line" ]] && break
+        while true ; do
+            # replace storage expressions one-by-one from the left until none found
+            if [[ "$line" =~ $storage_regex ]] ; then
+                case ${BASH_REMATCH[3]} in
+                    kB) value=$(( ${BASH_REMATCH[1]} * 1024 ));;
+                    MB) value=$(( ${BASH_REMATCH[1]} * 1024 * 1024 ));;
+                    GB) value=$(( ${BASH_REMATCH[1]} * 1024 * 1024 * 1024 ));;
+                    TB) value=$(( ${BASH_REMATCH[1]} * 1024 * 1024 * 1024 * 1024 ));;
+                esac
+                line="${line/${BASH_REMATCH[1]}${BASH_REMATCH[2]}${BASH_REMATCH[3]}/$value}"
+            else
+                echo "$line"
+                break
+            fi
+        done
+    done
+}
+export -f comma_storage_to_bytes

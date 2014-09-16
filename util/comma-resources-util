@@ -3,34 +3,12 @@
 # This script provides Bash functions for coordination of system
 # resources usage across a pool of workers (processes).
 
-# TODO: move the three common functions to common-util
-# TODO: prefix all functions with comma_
-# TODO: rename serialize into comma_locked and move into comma_sync
-
-# Auxiliary function: random value uniformly distributed in [0, 1].
-function urandom()
-{
-    echo "$RANDOM / 32767" | bc -l
-}
-export -f urandom
-
-# This function round-down a scaled random number to an integer.
-# Can be used to simulate memory size, number of CPUs, and other
-# integer values. Argument is the desired scale: output values
-# are from zero to $1.
-function round_random()
-{
-    local scale=$1
-    echo "$scale * $( urandom )" | bc | sed 's/^\./0\./;s/\..*//'
-}
-export -f round_random
-
 # Read a json file as text stream on stdin and in the given path (2nd argument)
 # append the pid (1st argument) to the end of []-enclosed list (insert into
 # the list if empty); output the resulting json to stdout. Path argument is
 # optional, default is "processes/queue". Operation shall be invoked under
 # external synchronization mechanism.
-function enqueue_pid()
+function comma_enqueue_pid()
 {
     local pid=$1
     local path=$2
@@ -42,10 +20,10 @@ function enqueue_pid()
         | sed --regexp-extended "/$path/s/\[(.+)\]/\[\1,$pid\]/;/$path/s/\[\]/\[$pid\]/" \
         | name-value-convert --from path-value --to json
 }
-export -f enqueue_pid
+export -f comma_enqueue_pid
 
-# Opposite to enqueue_pid above. Remove the given pid from the list.
-function dequeue_pid()
+# Opposite to comma_enqueue_pid above. Remove the given pid from the list.
+function comma_dequeue_pid()
 {
     local pid=$1
     local path=$2
@@ -57,13 +35,13 @@ function dequeue_pid()
         | sed --regexp-extended "/$path/s/\[$pid,(.+)\]/\[\1\]/;/$path/s/\[(.+),$pid\]/\[\1\]/;/$path/s/\[(.+),$pid,(.+)\]/\[\1,\2\]/;/$path/s/\[$pid\]/\[\]/" \
         | name-value-convert --from path-value --to json
 }
-export -f dequeue_pid
+export -f comma_dequeue_pid
 
 # Read a json file as text stream on stdin. Check the position of the given
 # PID (1st argument) in the waiting list described by path (optional second
 # argument). Echo the positional index counted from 0, if found. Otherwise,
 # echo "-1".
-function check_pid_position()
+function comma_check_pid_position()
 {
     local pid=$1
     local path=$2
@@ -77,12 +55,12 @@ function check_pid_position()
         echo "-1"
     fi
 }
-export -f check_pid_position
+export -f comma_check_pid_position
 
 # Tell if the queue is empty. Read book-keeping file in json format on stdin.
 # Take an optional argument, path to the queue. Exit with status 0 for empty
 # queue and status 1 for non-empty.
-function queue_is_empty()
+function comma_queue_is_empty()
 {
     local path=$1
     local default_path="processes\/queue"
@@ -91,101 +69,71 @@ function queue_is_empty()
     list=$( name-value-get --from json "$path" | sed "s/^\[//;s/\]\$//;s/ //g" )
     [[ -z "$list" ]]
 }
-export -f queue_is_empty
+export -f comma_queue_is_empty
 
 # These versions take the counter file as an additional first argument and
 # modify it in place.
 
 # Arguments: counter file, pid, (optional) path.
-function enqueue_pid_infile()
+function comma_enqueue_pid_infile()
 {
     local counter=$1
     shift
-    local name=${name:-"enqueue_pid_infile"}
+    local name=${name:-"comma_enqueue_pid_infile"}
     local contents
     contents=$( cat "$counter" )
     (( $? == 0 )) || { echo "$name: cannot read '$counter'" >&2; return 1; }
     [[ -w "$counter" ]] || { echo "$name: cannot write '$counter'" >&2; return 1; }
-    echo "$contents" | enqueue_pid $@ > "$counter"
+    echo "$contents" | comma_enqueue_pid $@ > "$counter"
 }
-export -f enqueue_pid_infile
+export -f comma_enqueue_pid_infile
 
 # Arguments: counter file, pid, (optional) path.
-function dequeue_pid_infile()
+function comma_dequeue_pid_infile()
 {
     local counter=$1
     shift
-    local name=${name:-"dequeue_pid_infile"}
+    local name=${name:-"comma_dequeue_pid_infile"}
     local contents
     contents=$( cat "$counter" )
     (( $? == 0 )) || { echo "$name: cannot read '$counter'" >&2; return 1; }
     [[ -w "$counter" ]] || { echo "$name: cannot write '$counter'" >&2; return 1; }
-    echo "$contents" | dequeue_pid $@ > "$counter"
+    echo "$contents" | comma_dequeue_pid $@ > "$counter"
 }
-export -f dequeue_pid_infile
+export -f comma_dequeue_pid_infile
 
 # Arguments: counter file, pid, (optional) path.
-function check_pid_position_infile()
+function comma_check_pid_position_infile()
 {
     local counter=$1
     shift
-    local name=${name:-"check_pid_position_infile"}
+    local name=${name:-"comma_check_pid_position_infile"}
     local contents
     contents=$( cat "$counter" )
     (( $? == 0 )) || { echo "$name: cannot read '$counter'" >&2; return 1; }
-    echo "$contents" | check_pid_position_infile $@
+    echo "$contents" | comma_check_pid_position_infile $@
 }
-export -f check_pid_position_infile
+export -f comma_check_pid_position_infile
 
 # Arguments: counter file, (optional) path.
-function queue_is_empty_infile()
+function comma_queue_is_empty_infile()
 {
     local counter=$1
     shift
-    local name=${name:-"queue_is_empty_infile"}
+    local name=${name:-"comma_queue_is_empty_infile"}
     local contents
     contents=$( cat "$counter" )
     (( $? == 0 )) || { echo "$name: cannot read '$counter'" >&2; return 1; }
-    echo "$contents" | queue_is_empty $@
+    echo "$contents" | comma_queue_is_empty $@
 }
-export -f queue_is_empty_infile
-
-# Auxiliary function to convert various storage units to bytes
-# Search for regular expressions [0-9]+unit (where space-separation is optional
-# and unit is one of kB, MB, GB, and TB) and replaces these substrings with
-# corresponding quantities in bytes.
-function storage_to_bytes()
-{
-    local line
-    local storage_regex='([0-9]+)( *)([kMGT]B)'
-    while true ; do
-        read line
-        [[ -z "$line" ]] && break
-        while true ; do
-            # replace storage expressions one-by-one from the left until none found
-            if [[ "$line" =~ $storage_regex ]] ; then
-                case ${BASH_REMATCH[3]} in
-                    kB) value=$(( ${BASH_REMATCH[1]} * 1024 ));;
-                    MB) value=$(( ${BASH_REMATCH[1]} * 1024 * 1024 ));;
-                    GB) value=$(( ${BASH_REMATCH[1]} * 1024 * 1024 * 1024 ));;
-                    TB) value=$(( ${BASH_REMATCH[1]} * 1024 * 1024 * 1024 * 1024 ));;
-                esac
-                line="${line/${BASH_REMATCH[1]}${BASH_REMATCH[2]}${BASH_REMATCH[3]}/$value}"
-            else
-                echo "$line"
-                break
-            fi
-        done
-    done
-}
-export -f storage_to_bytes
+export -f comma_queue_is_empty_infile
 
 # Output the most commonly used system resources: number of CPUs, total RAM,
 # size, total shared memory size. No arguments. Do not read stdin.
-function total_system_resources()
+function comma_total_system_resources()
 {
     local cpus memory_main memory_shared memory_limits
-    local name=${name:-"total_system_resources"}
+    local name=${name:-"comma_total_system_resources"}
     cpus=$( grep -c '^processor' /proc/cpuinfo )
     (( $? == 0 || $cpus > 0 )) || { echo "$name: cannot grep '/proc/cpuinfo' for the number of processors" >&2; return 1; }
     #
@@ -200,7 +148,7 @@ function total_system_resources()
     echo "resources/memory/main=\"$memory_main\""
     echo "resources/memory/shared=\"$memory_shared\""
 }
-export -f total_system_resources
+export -f comma_total_system_resources
 
 # Initialize a json file listing the currently occupied system resources
 # and a list of processes waiting for them.
@@ -211,7 +159,7 @@ export -f total_system_resources
 # See below for a variant of this function that is safe for parallel use.
 #
 # Optional 2nd and 3rd arguments give json paths for the queue and user list.
-function initialize_resources()
+function comma_initialize_resources()
 {
     local counter=$1
     local path=$2
@@ -226,7 +174,7 @@ function initialize_resources()
         echo "$users=\"[]\""
     ) | name-value-convert --from path-value --to json > "$counter"
 }
-export -f initialize_resources
+export -f comma_initialize_resources
 
 # Given a description of requested resources (1st argument), currently occupied
 # resources (2nd argument) and maximal allowed resources (3rd argument), check
@@ -259,7 +207,7 @@ export -f initialize_resources
 #
 # Optional 6th argument specifies the json path to the list of current resource
 # users (add our PID to this list when occupy resources). Default path is
-# defined below. See also release_resources.
+# defined below. See also comma_release_resources.
 #
 # Resources are described in json files like:
 # {
@@ -275,7 +223,7 @@ export -f initialize_resources
 # }
 #
 # See below for a variant of this function that is safe for parallel use.
-function acquire_resources()
+function comma_acquire_resources()
 {
     local request=$1
     local counter=$2
@@ -289,7 +237,7 @@ function acquire_resources()
     #users=$( echo "$users" | sed 's/\//\\\//g' )
 
     local next position can_acquire any_waiting exceed
-    local name=${name:-"acquire_resources"}
+    local name=${name:-"comma_acquire_resources"}
 
     # hope for the best if asking for more than available
     exceed=$( name-value-calc "$request" "$maximum" --more-or-equal --json --detailed )
@@ -303,16 +251,16 @@ function acquire_resources()
     (( $? == 0 )) || { echo "$name: cannot add resources" >&2; return 1; }
     can_acquire=$( name-value-calc <( echo "$next" ) "$maximum" --less-or-equal --json )
     (( $? == 0 )) || { echo "$name: cannot compare resources" >&2; return 1; }
-    position=$( cat "$counter" | check_pid_position "$pid" "$path" )
+    position=$( cat "$counter" | comma_check_pid_position "$pid" "$path" )
     (( $? == 0 )) || { echo "$name: cannot check pid position" >&2; return 1; }
-    any_waiting=$( cat "$counter" | queue_is_empty && echo 0 || echo 1 )
+    any_waiting=$( cat "$counter" | comma_queue_is_empty && echo 0 || echo 1 )
     (( $? == 0 )) || { echo "$name: check for empty queue failed" >&2; return 1; }
     if [[ $any_waiting == 1 ]] ; then                 # queue is not empty, can acquire only if
         if [[ $position == 0 ]] ; then                # we are the first in line and
             if [[ $can_acquire == 1 ]] ; then         # there are enough resources
-                next=$( echo "$next" | dequeue_pid "$pid" "$path" )
+                next=$( echo "$next" | comma_dequeue_pid "$pid" "$path" )
                 (( $? == 0 )) || { echo "$name: cannot dequeue from waiting list" >&2; return 1; }
-                next=$( echo "$next" | enqueue_pid "$pid" "$users" )
+                next=$( echo "$next" | comma_enqueue_pid "$pid" "$users" )
                 (( $? == 0 )) || { echo "$name: cannot add to the users list" >&2; return 1; }
                 echo "$next" > "$counter"
                 return 0
@@ -322,7 +270,7 @@ function acquire_resources()
             fi
         else
             if [[ $position == -1 ]] ; then           # but if we are not in the queue, append
-                next=$( cat "$counter" | enqueue_pid "$pid" "$path" )
+                next=$( cat "$counter" | comma_enqueue_pid "$pid" "$path" )
                 (( $? == 0 )) || { echo "$name: cannot enqueue for waiting" >&2; return 1; }
                 echo "$next" > "$counter"
             fi
@@ -331,12 +279,12 @@ function acquire_resources()
         fi
     else                                              # if no-one is waiting
         if [[ $can_acquire == 1 ]] ; then             # easy if enough resources
-            next=$( echo "$next" | enqueue_pid "$pid" "$users" )
+            next=$( echo "$next" | comma_enqueue_pid "$pid" "$users" )
             (( $? == 0 )) || { echo "$name: cannot add to the users list" >&2; return 1; }
             echo "$next" > "$counter"
             return 0
         else                                          # otherwise append to the queue
-            next=$( cat "$counter" | enqueue_pid "$pid" "$path" )
+            next=$( cat "$counter" | comma_enqueue_pid "$pid" "$path" )
             (( $? == 0 )) || { echo "$name: cannot enqueue for waiting" >&2; return 1; }
             echo "$next" > "$counter"
             echo "wait"
@@ -344,29 +292,29 @@ function acquire_resources()
         fi
     fi
 }
-export -f acquire_resources
+export -f comma_acquire_resources
 
 # Helper function ensures that all resource counters are non-negative.
 # Takes resource description on stdin in json format, outputs sanitized
 # description on stdout.
-function non_negative_resources()
+function comma_non_negative_resources()
 {
     name-value-convert --from json --to path-value \
         | sed '/^resources\//s/="-[0-9][0-9]*"$/="0"/' \
         | name-value-convert --from path-value --to json
 }
-export -f non_negative_resources
+export -f comma_non_negative_resources
 
-# Opposite to acquire_resources. Input: description of resources being
+# Opposite to comma_acquire_resources. Input: description of resources being
 # released (1st argument), resource counter (2nd argument) in json format,
 # PID (some id) of the process releasing the resources, and optional json
-# path to the list of resource users. See also acquire_resources.
+# path to the list of resource users. See also comma_acquire_resources.
 #
 # No stdout output. Write an updated counter file.
 # No changes made if the provided PID is not in the users list.
 #
 # See below for a variant of this function that is safe for parallel use.
-function release_resources()
+function comma_release_resources()
 {
     local request=$1
     local counter=$2
@@ -377,11 +325,11 @@ function release_resources()
     ##users=$( echo "$users" | sed --regexp-extended 's@([^\\])\/@\1\\\/@g' )
     #users=$( echo "$users" | sed 's/\//\\\//g' )
     local next
-    local name="release_resources"
+    local name="comma_release_resources"
     [[ -z "$pid" ]] && { echo "$name: no PID provided" >&2; return 1; }
     # search the pid position in the list of users; if not found, print a warning
     # and ignore the release request
-    position=$( cat "$counter" | check_pid_position "$pid" "$users" )
+    position=$( cat "$counter" | comma_check_pid_position "$pid" "$users" )
     (( $? == 0 )) || { echo "$name: cannot check pid position" >&2; return 1; }
     if [[ $position == "-1" ]] ; then
         echo "$name: warning - resource user not in the list, ignore request" >&2
@@ -390,82 +338,11 @@ function release_resources()
     # decrease the counter and remove ourselves from the user list
     next=$( name-value-calc "$counter" "$request" --subtract --json )
     (( $? == 0 )) || { echo "$name: cannot subtract resources" >&2; return 1; }
-    next=$( echo "$next" | non_negative_resources )
+    next=$( echo "$next" | comma_non_negative_resources )
     (( $? == 0 )) || { echo "$name: cannot sanitize resources" >&2; return 1; }
-    next=$( echo "$next" | dequeue_pid "$pid" "$users" )
+    next=$( echo "$next" | comma_dequeue_pid "$pid" "$users" )
     (( $? == 0 )) || { echo "$name: cannot remove from the users list" >&2; return 1; }
     echo "$next" > "$counter"
     return 0
 }
-export -f release_resources
-
-# General synchronization function. Takes on input a lock file name to be used
-# in a flock call (this file will be truncated to zero) and the command to be
-# executed with all the arguments. Example:
-#
-#     serialize /tmp/mylock myfcn --option1 "$value1" "$arg1" ...
-#
-# Note: do not re-direct output of the function being protected. Do all writes
-# within a function while it is protected by the serialization lock.
-function serialize()
-{
-    local lock=$1
-    shift
-    (
-        flock -x 8
-        $@
-    ) 8>"$lock"
-}
-export -f serialize
-
-# Lock-protected versions of the relevant functions from this script.
-# TODO: just call serialize directly in the user scripts.
-function locked_initialize_resources()
-{
-    # TODO: do not propagate "name", set it locally at the bottom-most function
-    local name=${name:-"locked_initialize_resources"}
-    serialize $1 initialize_resources $2
-}
-export -f locked_initialize_resources
-
-function locked_acquire_resources()
-{
-    local name=${name:-"locked_acquire_resources"}
-    serialize $1 acquire_resources $2 $3 $4 $5 $6 $7
-}
-export -f locked_acquire_resources
-
-function locked_release_resources()
-{
-    local name=${name:-"locked_release_resources"}
-    serialize $1 release_resources $2 $3 $4 $5
-}
-export -f locked_release_resources
-
-function locked_enqueue_pid_infile()
-{
-    local name=${name:-"locked_enqueue_pid_infile"}
-    serialize $1 enqueue_pid_infile $2 $3 $4
-}
-export -f locked_enqueue_pid_infile
-
-function locked_dequeue_pid_infile()
-{
-    local name=${name:-"locked_dequeue_pid_infile"}
-    serialize $1 dequeue_pid_infile $2 $3 $4
-}
-export -f locked_dequeue_pid_infile
-
-function locked_check_pid_position_infile()
-{
-    local name=${name:-"locked_check_pid_position_infile"}
-    serialize $1 check_pid_position_infile $2 $3 $4
-}
-export -f locked_check_pid_position_infile
-
-function locked_queue_is_empty_infile()
-{
-    local name=${name:-"locked_queue_is_empty_infile"}
-    serialize $1 queue_is_empty_infile $2 $3
-}
-export -f locked_queue_is_empty_infile
+export -f comma_release_resources
