@@ -1,5 +1,5 @@
 #!/bin/bash
 
-source $( which resources-util ) || exit 1
+source $( which comma-util ) || exit 1
 
-storage_to_bytes
+comma_storage_to_bytes

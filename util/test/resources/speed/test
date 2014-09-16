@@ -3,7 +3,7 @@
 name=$( basename $0 )
 
 source $( which comma-application-util ) || exit 1
-source $( which resources-util ) || exit 1
+source $( which comma-resources-util ) || exit 1
 
 function handler()
 {
@@ -16,7 +16,7 @@ function count()
     iter=0
     trap 'handler' SIGINT
     while true ; do
-        acquire_resources "$output/tiny.json" "$output/counter.json" "$output/limits.json" 123 || return 1
+        comma_acquire_resources "$output/tiny.json" "$output/counter.json" "$output/limits.json" 123 || return 1
         (( ++iter ))
     done
 }
@@ -39,7 +39,7 @@ resources/cpus="0"
 resources/memory/main="1"
 resources/memory/shared="1"
 EOF
-cat "$limits" | name-value-convert --from json --to path-value | initialize_resources "$counter"
+cat "$limits" | name-value-convert --from json --to path-value | comma_initialize_resources "$counter"
 
 count &
 count_pid=$!
