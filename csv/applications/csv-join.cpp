@@ -79,8 +79,23 @@ static void usage( bool more )
         std::cerr << comma::csv::options::usage() << std::endl;
     }
     std::cerr << std::endl;
-    std::cerr << "examples:" << std::endl;
-    std::cerr << "    todo" << std::endl;
+    std::cerr << "examples (try them)" << std::endl;
+    std::cerr << "    on the following data file:" << std::endl;
+    std::cerr << "        echo 1,2,hello > data.csv" << std::endl;
+    std::cerr << "        echo 1,3,hello >> data.csv" << std::endl;
+    std::cerr << "        echo 3,4,world >> data.csv" << std::endl;
+    std::cerr << "    join with a matching record" << std::endl;
+    std::cerr << "        echo 1,blah | csv-join --fields=id \"data.csv;fields=id\"" << std::endl;
+    std::cerr << "        echo 3,blah | csv-join --fields=id \"data.csv;fields=,id\"" << std::endl;
+    std::cerr << "        echo 5,blah | csv-join --fields=id \"data.csv;fields=,id\"" << std::endl;
+    std::cerr << "        echo 5,blah | csv-join --fields=id \"data.csv;fields=,id\" --not-matching" << std::endl;
+    std::cerr << "        echo 5,blah | csv-join --fields=id \"data.csv;fields=,id\" --strict" << std::endl;
+    std::cerr << "    join by key which is a string" << std::endl;
+    std::cerr << "        echo 1,hello | csv-join --fields=id \"data.csv;fields=,,id\" --string" << std::endl;
+    std::cerr << "        echo 1,world | csv-join --fields=id \"data.csv;fields=,,id\" --string" << std::endl;
+    std::cerr << "        echo 1,blah | csv-join --fields=id \"data.csv;fields=,,id\" --string" << std::endl;
+    std::cerr << "        echo 1,blah | csv-join --fields=id \"data.csv;fields=,,id\" --string --not-matching" << std::endl;
+    std::cerr << "        echo 1,blah | csv-join --fields=id \"data.csv;fields=,,id\" --string --strict" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
