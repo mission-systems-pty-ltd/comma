@@ -78,6 +78,10 @@ static void usage()
     std::cerr << "    --no-discard: do not discard input points" << std::endl;
     std::cerr << "                         default: discard input points that cannot be" << std::endl;
     std::cerr << "                         consistently timestamped, especially head or tail" << std::endl;
+    std::cerr << "    --discard-bouding: discard bounding data" << std::endl;
+    std::cerr << "                         default: no discard" << std::endl;
+    std::cerr << "    --buffer: bounding data buffer size" << std::endl;
+    std::cerr << "                         default: infinite" << std::endl;
     std::cerr << "    --timestamp-only,--time-only: join only timestamp from the second input" << std::endl;
     std::cerr << "                                  otherwise join the whole line" << std::endl;
     std::cerr << std::endl;
@@ -139,7 +143,7 @@ int main( int ac, char** av )
         if( options.exists( "--bound" ) ) { bound = boost::posix_time::microseconds( options.value< double >( "--bound" ) * 1000000 ); }
         comma::csv::options stdin_csv( options, "t" );
         comma::csv::input_stream< Point > stdin_stream( std::cin, stdin_csv );
-        std::vector< std::string > unnamed = options.unnamed( "--by-lower,--by-upper,--nearest,--timestamp-only,--time-only,--no-discard", "--binary,-b,--delimiter,-d,--fields,-f,--bound" );
+        std::vector< std::string > unnamed = options.unnamed( "--by-lower,--by-upper,--nearest,--timestamp-only,--time-only,--no-discard,--discard-bounding", "--binary,-b,--delimiter,-d,--fields,-f,--bound,--buffer" );
         std::string properties;
         bool bounded_first = true;
         switch( unnamed.size() )
