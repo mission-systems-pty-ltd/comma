@@ -284,7 +284,7 @@ static std::size_t csv_to_bin( char* buf, const std::string& s, format::types_en
     }
     catch( std::exception& ex )
     {
-        COMMA_THROW( comma::exception, "for [" << s << "]: " << ex.what() );
+        COMMA_THROW( comma::exception, "for [" << s << "] to [" << format::to_format(type) << "]: "  << ex.what() );
     }
     catch( ... )
     {

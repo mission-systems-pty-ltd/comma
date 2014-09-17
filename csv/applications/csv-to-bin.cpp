@@ -66,6 +66,8 @@ int main( int ac, char** av )
     #ifdef WIN32
     _setmode( _fileno( stdout ), _O_BINARY ); /// @todo move to a library
     #endif
+    std::string line;
+    line.reserve(4000);
     try
     {        
         signal_flag shutdownFlag;
@@ -76,7 +78,6 @@ int main( int ac, char** av )
         while( std::cin.good() && !std::cin.eof() )
         {
             if( shutdownFlag ) { std::cerr << "csv-to-bin: interrupted by signal" << std::endl; return -1; }
-            std::string line;
             std::getline( std::cin, line );
             if( !line.empty() && *line.rbegin() == '\r' ) { line = line.substr( 0, line.length() - 1 ); } // windows... sigh...
             if( line.length() == 0 ) { continue; }
@@ -84,7 +85,16 @@ int main( int ac, char** av )
         }
         return 0;
     }
-    catch( std::exception& ex ) { std::cerr << "csv-to-bin: " << ex.what() << std::endl; }
-    catch( ... ) { std::cerr << "csv-to-bin: unknown exception" << std::endl; }
+    catch( std::exception& ex )
+    {
+        std::cerr << "csv-to-bin: " << ex.what() << std::endl;
+        std::cerr <<   "format: " << av[1]
+                  << "\ninput: " << line
+                  << "\n============================================" << std::endl;
+    }
+    catch( ... )
+    {
+        std::cerr << "csv-to-bin: unknown exception" << std::endl;
+    }
     usage();
 }
