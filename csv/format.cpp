@@ -341,8 +341,15 @@ void format::csv_to_bin( std::ostream& os, const std::vector< std::string >& v )
     unsigned int count = 0u;
     for( unsigned int i = 0; i < v.size(); ++i, ++count )
     {
-        if( count >= elements_[ offsetIndex ].count ) { count = 0; ++offsetIndex; }
-        p += impl::csv_to_bin( p, v[i], elements_[ offsetIndex ].type, elements_[ offsetIndex ].size );
+        try
+        {
+            if( count >= elements_[ offsetIndex ].count ) { count = 0; ++offsetIndex; }
+            p += impl::csv_to_bin( p, v[i], elements_[ offsetIndex ].type, elements_[ offsetIndex ].size );
+        }
+        catch( std::exception& ex )
+        {
+            COMMA_THROW( comma::exception, "column " << i + 1 << ": "  << ex.what() );
+        }
     }
     os.write( &buf[0], size_ );
 }
