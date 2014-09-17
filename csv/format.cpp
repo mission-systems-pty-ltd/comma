@@ -284,7 +284,7 @@ static std::size_t csv_to_bin( char* buf, const std::string& s, format::types_en
     }
     catch( std::exception& ex )
     {
-        COMMA_THROW( comma::exception, "for [" << s << "] to [" << format::to_format(type) << "]: "  << ex.what() );
+        COMMA_THROW( comma::exception, "failed to convert \"" << s << "\" to type \"" << format::to_format(type) << "\": "  << ex.what() );
     }
     catch( ... )
     {
@@ -320,7 +320,7 @@ static std::size_t bin_to_csv( std::ostringstream& oss, const char* buf, format:
         case format::fixed_string:
             oss << ( buf[ size - 1 ] == 0 ? std::string( buf ) : std::string( buf, size ) );
             return size;
-        default : COMMA_THROW( comma::exception, "Todo: not implemented" );
+        default : COMMA_THROW( comma::exception, "on type: " << type << ": todo: not implemented" );
     }
 }
 
