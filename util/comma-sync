@@ -15,8 +15,8 @@ readonly comma_sync_include_guard_=1
 # Note: do not re-direct output of the function being protected. Do all writes
 # within a function while it is protected by the serialization lock.
 #
-# Note: internally, this function internally uses file descriptor 8. Avoid re-using
-# it in your code that invokes comma_locked.
+# Note: internally, this function uses file descriptor 8. Avoid re-using it
+# in your code that invokes (or invoked under) comma_locked.
 
 function comma_locked()
 {

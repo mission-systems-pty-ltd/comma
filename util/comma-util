@@ -60,7 +60,7 @@ function comma_urandom()
 }
 export -f comma_urandom
 
-# This function round-down a scaled random number to an integer.
+# This function a scaled random number round-down to an integer.
 # Can be used to simulate memory size, number of CPUs, and other
 # integer values. Argument is the desired scale: output values
 # are from zero to $1.
@@ -71,7 +71,7 @@ function comma_round_random()
 }
 export -f comma_round_random
 
-# Auxiliary function to convert various storage units to bytes
+# Auxiliary function to convert various storage units to bytes.
 # Search for regular expressions [0-9]+unit (where space-separation is optional
 # and unit is one of kB, MB, GB, and TB) and replaces these substrings with
 # corresponding quantities in bytes.

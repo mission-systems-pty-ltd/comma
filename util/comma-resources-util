@@ -13,7 +13,7 @@ readonly comma_resources_util_include_guard_=1
 # append the pid (1st argument) to the end of []-enclosed list (insert into
 # the list if empty); output the resulting json to stdout. Path argument is
 # optional, default is "processes/queue". Operation shall be invoked under
-# external synchronization mechanism.
+# external synchronization mechanism if necessary.
 function comma_enqueue_pid()
 {
     local pid=$1
@@ -133,7 +133,7 @@ function comma_queue_is_empty_infile()
 export -f comma_queue_is_empty_infile
 
 # Output the most commonly used system resources: number of CPUs, total RAM,
-# size, total shared memory size. No arguments. Do not read stdin.
+# size, total shared memory size. No arguments. Does not read stdin.
 function comma_total_system_resources()
 {
     local cpus memory_main memory_shared memory_limits
@@ -154,15 +154,15 @@ function comma_total_system_resources()
 }
 export -f comma_total_system_resources
 
-# Initialize a json file listing the currently occupied system resources
-# and a list of processes waiting for them.
+# Initialize a json file listing the occupied system resources (initially zeros)
+# and lists of processes waiting for resources and using resources.
 #
 # Input: resource book-keeping file name. Read on stdin resource description
 # in path-value format. No output. Write the book-keeping file in json format.
 #
 # See below for a variant of this function that is safe for parallel use.
 #
-# Optional 2nd and 3rd arguments give json paths for the queue and user list.
+# Optional 2nd and 3rd arguments give json paths for the queue and user lists.
 function comma_initialize_resources()
 {
     local counter=$1
@@ -185,18 +185,18 @@ export -f comma_initialize_resources
 # that resources can be acquired ( occupied + requested < maximum ).
 #
 # If yes, check if any process is already waiting for resources. If yes, and if
-# that process has the same PID as ourselves (4th argument), and it is the first
+# that process has the same ID as ourselves (4th argument), and it is the first
 # in the queue, then:
-# - remove this PID from the waiting queue,
+# - remove this ID from the waiting queue,
 # - increase the counters of occupied resources,
 # - return 0.
 # No output is produced.
 #
-# If the PID is already in the waiting list, but not at the first position, do not
+# If the ID is already in the waiting list, but not at the first position, do not
 # modify any files, output "wait" to stdout, and return 1.
 #
 # If the request plus the already allocated resources exceed the limits, or if
-# the waiting list is not empty and PID is not on the list, append the PID to the
+# the waiting list is not empty and our ID is not on the list, append the ID to the
 # list of waiting processes kept in the counter file, output "wait" to stdout and
 # return 1.
 #
@@ -210,7 +210,7 @@ export -f comma_initialize_resources
 # processes in the counter file. Default path defined in enqueue/dequeue functions.
 #
 # Optional 6th argument specifies the json path to the list of current resource
-# users (add our PID to this list when occupy resources). Default path is
+# users (our ID is added to this list when we occupy resources). Default path is
 # defined below. See also comma_release_resources.
 #
 # Resources are described in json files like:
@@ -226,7 +226,7 @@ export -f comma_initialize_resources
 #     }
 # }
 #
-# See below for a variant of this function that is safe for parallel use.
+# The queue and user lists are [] lists of integers (often PIDs).
 function comma_acquire_resources()
 {
     local request=$1
@@ -310,13 +310,11 @@ export -f comma_non_negative_resources
 
 # Opposite to comma_acquire_resources. Input: description of resources being
 # released (1st argument), resource counter (2nd argument) in json format,
-# PID (some id) of the process releasing the resources, and optional json
+# ID (often PID) of the process releasing the resources, and optional json
 # path to the list of resource users. See also comma_acquire_resources.
 #
 # No stdout output. Write an updated counter file.
-# No changes made if the provided PID is not in the users list.
-#
-# See below for a variant of this function that is safe for parallel use.
+# No changes made if the provided ID is not in the users list.
 function comma_release_resources()
 {
     local request=$1
