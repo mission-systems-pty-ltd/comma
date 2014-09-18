@@ -131,8 +131,6 @@ output_block(std::istream & infile, std::vector<char> & buffy, long long const s
 static bool
 parse(std::istream & infile, std::istream & mapfile)
 {
-    assert(NULL != argv0);
-
     std::vector<char> buffy;
     std::string path;
     path.reserve(1024);

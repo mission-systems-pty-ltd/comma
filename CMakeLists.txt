@@ -112,7 +112,6 @@ OPTION( BUILD_APPLICATIONS "build applications" ON )
 SET( comma_BUILD_APPLICATIONS ${BUILD_APPLICATIONS} )
 
 OPTION( comma_BUILD_ZEROMQ "build io with zeromq support" OFF )
-OPTION( comma_BUILD_EXPAT "build with xml expat support" OFF )
 
 OPTION(BUILD_SHARED_LIBS "build with shared libraries" OFF)
 SET(comma_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
@@ -143,12 +142,6 @@ IF( comma_BUILD_ZEROMQ )
     INCLUDE_DIRECTORIES( ${ZeroMQ_INCLUDE_PATH} )
 ENDIF( comma_BUILD_ZEROMQ )
 
-IF( comma_BUILD_EXPAT )
-    FIND_LIBRARY( EXPAT_LIBRARY NAMES expat )
-    ADD_DEFINITIONS( -DUSE_EXPAT )
-    INCLUDE_DIRECTORIES( ${EXPAT_INCLUDE_PATH} )
-ENDIF( comma_BUILD_EXPAT )
-
 SET( comma_ALL_LIBRARIES
         debug comma_application-d
         optimized comma_application
@@ -176,9 +169,6 @@ SET( comma_ALL_EXTERNAL_LIBRARIES ${comma_ALL_EXTERNAL_LIBRARIES} )
 IF( comma_BUILD_ZEROMQ )
     SET( comma_ALL_EXTERNAL_LIBRARIES ${comma_ALL_EXTERNAL_LIBRARIES} ${ZeroMQ_LIBRARY} )
 ENDIF( comma_BUILD_ZEROMQ )
-IF( comma_BUILD_EXPAT )
-    SET( comma_ALL_EXTERNAL_LIBRARIES ${comma_ALL_EXTERNAL_LIBRARIES} ${EXPAT_LIBRARY} )
-ENDIF( comma_BUILD_EXPAT )
 
 SET( comma_ALL_LIBRARIES ${comma_ALL_LIBRARIES} ${comma_ALL_LIBRARIES} ${comma_ALL_EXTERNAL_LIBRARIES} ) # as gcc parses library list only once
 SET( comma_EXTERNAL_INCLUDES ${Boost_INCLUDE_DIRS} )
