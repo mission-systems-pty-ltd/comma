@@ -4,18 +4,29 @@ name=$( basename $0 )
 
 tmp_dir="/tmp"
 results="$tmp_dir/comma-test-run_result.$$"
-expected="data/expected_results"
+expected="expected_results"
 quiet=0
 
-function bye()
+function usage()
 {
-    rm -f "$results"
-    exit $1
+    cat <<EOF
+
+todo
+    
+usage: $name
+
+EOF
+    exit
 }
+
+[[ "$1" != "--help" && "$1" != "-h" ]] || usage
+
+function bye() { rm -f "$results" ; exit $1 ; }
 
 trap 'bye 1' SIGHUP SIGINT SIGTERM SIGPIPE
 
-cd $( dirname $0 )
+current_dir=$( pwd )
+cd $( dirname $0 )/data
 comma-test-run 2>&1 | sed 's/in subdirectories of [^:]*/in subdirectories of DIR/g' > "$results"
 diff -b "$results" "$expected" > /dev/null
 
@@ -24,5 +35,8 @@ if [[ $? != 0 ]]; then
     diff -b "$results" "$expected" >&2
     bye 1
 fi
+cd $current_dir
 
-bye 0
+( cd $( dirname $0 )/comma_test_run ; comma-test-run )
+
+bye $?

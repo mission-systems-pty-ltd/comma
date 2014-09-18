@@ -1,0 +1,3 @@
+#!/bin/bash
+read options
+( cd ../../data ; echo "directories=\"$( comma-test-run --dry $options | tr '\n' ' ' | sed 's/[ ]$//g' )\"" )

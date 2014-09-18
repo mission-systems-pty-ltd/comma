@@ -62,6 +62,7 @@ function description()
 --max-memory-shared=[<N>]; limit on shared memory, in MB; default: $max_memory_shared
 --max-wait-time=[<time>]; maximal time to wait for available CPUs before failing a test, default: ${max_wait_time}
 --max-run-time=[<time>]; maximal time to wait for a test completion before failing it by force, default: ${max_run_time}
+--output-directories,--dry-run,--dry; output list of test directories intended to run and exit
 --path=[<dir>]; data-storage directory for tests, default: none, let the tests define it
 --parallel; run tests in parallel
 --quiet,-q; minimize output
@@ -736,6 +737,7 @@ function test_directories()
 }
 
 test_script_dirs=( $( test_directories ) )
+[[ -z "$options_output_directories" ]] || { trap "" EXIT ; echo ${test_script_dirs[@]} | tr ' ' '\n' ; exit ; }
 test_scripts_count=${#test_script_dirs[@]}
 count=0
 failed_count=0
