@@ -54,17 +54,20 @@ function description()
     cat <<EOF
 --help,-h; show this help
 --debug; much more debug output
---quiet,-q; minimize output
---until-first-failure; exit after the first failure (works only when tests run serially)
+--end=[<dir>]; run tests up to a given test, the latter excluded, where test directories are ordered lexicographically
 --force,-f; include disabled tests
---path=[<dir>]; data-storage directory for tests, default: none, let the tests define it
---parallel; run tests in parallel
+--from,--begin=[<dir>]; run tests starting from a given test, where test directories are ordered lexicographically
 --max-parallel=[<N>]; run up to N tests in parallel; default: $max_parallel
 --max-memory-main=[<N>]; limit on main memory, in MB; default: $max_memory_main
 --max-memory-shared=[<N>]; limit on shared memory, in MB; default: $max_memory_shared
 --max-wait-time=[<time>]; maximal time to wait for available CPUs before failing a test, default: ${max_wait_time}
 --max-run-time=[<time>]; maximal time to wait for a test completion before failing it by force, default: ${max_run_time}
+--path=[<dir>]; data-storage directory for tests, default: none, let the tests define it
+--parallel; run tests in parallel
+--quiet,-q; minimize output
 --test-option=[<option>]; extra command line argument(s) pass to "test" script
+--to=[<dir>]; run tests up to a given test, the latter included, where test directories are ordered lexicographically
+--until-first-failure; exit after the first failure (works only when tests run serially)
 EOF
 }
 
@@ -715,8 +718,25 @@ stats_init
 # to run, search for directories containing either "test", "input" or "expected";
 # if "test" is absent, use the "test" in the closest parent directory
 
-test_script_dirs=$( exclude_generic_tests $( get_dirnames $( find . -name "test" -or -name "input" -or -name "expected" | grep -v "/\." ) 2> /dev/null | sort -u ) )
-test_scripts_count=$( echo $test_script_dirs | wc -w )
+function test_directories()
+{
+    test_script_dirs_all=( $( exclude_generic_tests $( get_dirnames $( find . -name "test" -or -name "input" -or -name "expected" | grep -v "/\." ) 2> /dev/null | sort -u ) ) )
+    [[ -n "$options_from" || -n "$options_to" || -n "$options_end" ]] || { echo ${test_script_dirs_all[@]} ; return ; }
+    [[ -z "$options_from" ]] || { local from="${options_from#\.\/}" ; }
+    [[ -z "$options_to" ]] || { local to="${options_to#\.\/}" ; }
+    [[ -z "$options_end" ]] || { local end="${options_end#\.\/}" ; }
+    for d in ${test_script_dirs_all[@]} ; do
+        local e="${d#\.\/}"
+        [[ -z "$from" || "$e" == "$from" ]] || continue
+        unset from
+        [[ -z "$end" || "$e" != "$end" ]] || return
+        echo $d
+        [[ -z "$to" || "$e" != "$to" ]] || return
+    done
+}
+
+test_script_dirs=( $( test_directories ) )
+test_scripts_count=${#test_script_dirs[@]}
 count=0
 failed_count=0
 if [[ "$options_debug" != "0" ]] ; then verbose="--verbose" ; fi
@@ -726,7 +746,7 @@ run_tests="process_tests_parallel"
 
 if (( $test_scripts_count > 0 )) ; then
     message_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): running..."
-    $run_tests < <( for dir in $test_script_dirs ; do
+    $run_tests < <( for dir in ${test_script_dirs[@]} ; do
         (( ++count ))
         echo "$count  \"$dir\""
     done )
