@@ -94,7 +94,7 @@ function parser()
         [[ -z "$line" ]] && break
         [[ "$first" == "true" ]] && {
             timestamp=$( date +%Y%m%dT%H%M%S )
-            shared=$( timeout 2s df --block-size=1024 | grep '/shm$' | awk '{ print $2 }' )
+            shared=$( timeout 2s df --block-size=1024 | grep '/shm$' | awk '{ print $3 }' )
             echo -n "$timestamp"
             first="false"
         }
