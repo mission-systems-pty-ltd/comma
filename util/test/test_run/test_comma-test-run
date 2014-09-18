@@ -20,8 +20,8 @@ comma-test-run 2>&1 | sed 's/in subdirectories of [^:]*/in subdirectories of DIR
 diff -b "$results" "$expected" > /dev/null
 
 if [[ $? != 0 ]]; then
-    echo "$name: failed with the following differences:"
-    diff -b "$results" "$expected"
+    echo "$name: failed with the following differences:" >&2
+    diff -b "$results" "$expected" >&2
     bye 1
 fi
 
