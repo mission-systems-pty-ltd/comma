@@ -15,7 +15,7 @@
 
 #include <comma/application/command_line_options.h>
 #include <comma/xpath/xpath.h>
-#include <comma/xpath/applications/expat_util.h>
+#include "./expat_util.h"
 
 namespace FS = boost::filesystem;
 
@@ -137,9 +137,7 @@ output_wrapper::set_name(std::string const & name)
     assert(NULL != this);
     assert(_folder.empty());
     _folder = name;
-    for (unsigned i = 0; i < _folder.size(); ++i)
-       if (':' == _folder[i])
-            _folder[i] = '-';
+    for (unsigned i = 0; i < _folder.size(); ++i) { if (':' == _folder[i]) { _folder[i] = '-'; } }
 }
     
 std::ostream &
@@ -213,17 +211,20 @@ output_wrapper::start()
 // ~~~~~~~~~~~~~~~~~~
 // USER INTERFACE
 // ~~~~~~~~~~~~~~~~~~
-static void XMLCALL
-usage(bool const verbose)
+static void XMLCALL usage(bool verbose)
 {
-    std::cerr <<   "Splits the file up into chunks based on the size, also does grep for efficiency"
-                 "\nUSAGE:   " CMDNAME " [--limit=Q]  [--source=XMLFILE]"
-                 "\nOPTIONS: --block=P; default 1000; to output just P elements per block"
-                 "\n         --total=Q; default INF; to output just Q of each element" 
-                 "\n         --source=XMLFILE to open and parse that file."
-                 "\nRETURNS: 0 - on success"
-                 "\n         1 - on data error; like invalid xml"
-              << std::endl;
+    std::cerr << std::endl;
+    std::cerr <<   "splits the file up into chunks based on the size, also does grep for efficiency" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "usage:   " CMDNAME " [--limit=Q]  [--source=XMLFILE]" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "options" << std::endl;
+    std::cerr << "    --block=P; default 1000; to output just P elements per block" << std::endl
+              << "    --total=Q; default INF; to output just Q of each element" << std::endl
+              << "    --source=XMLFILE to open and parse that file." << std::endl
+              << "    --verbose,-v: more output" << std::endl;
+    std::cerr << std::endl;
+    exit( 0 );
 }
 
 // ~~~~~~~~~~~~~~~~~~
@@ -341,14 +342,8 @@ int main(int argc, char ** argv)
 {
     try
     {
-        comma::command_line_options options( argc, argv );
+        comma::command_line_options options( argc, argv, usage );
         options_verbose = options.exists( "--verbose,-v" );
-        if (options.exists("--help,-h"))
-        {
-            usage(options_verbose);
-            return 1;
-        }
-
         if (options.exists("--limit"))
         {
             std::cerr << CMDNAME ": Error: This option is OBSOLETE because of it's confusing name." << std::endl;
@@ -366,28 +361,31 @@ int main(int argc, char ** argv)
             std::cerr << CMDNAME ": Error: Total Limit must be greater then 1" << std::endl;
             return 1;
         }
-        std::string options_file;
-        if (options.exists("--source"))
-        {
-            options_file = options.value<std::string>("--source");
-        }
+        std::string options_file = options.value<std::string>("--source", "");
         options_default_namespace = options.value<std::string>("--default-namespace","");
 
         unsigned kept = 0;
         for (unsigned i = 1; i < unsigned(argc); ++i)
         {   
-            if ('-' == argv[i][0])
-                continue;
+            if ('-' == argv[i][0]) { continue; }
             
             //std::string const str(argv[i]);
             if (0 == argv[i][1]) // length of 1
+            {
                 exact_set.insert(comma::xpath(argv[i]));
+            }
             else if ('/' != argv[i][0])
+            {
                 grep_list.push_back(argv[i]);
+            }
             else if ('/' != argv[i][1])
+            {
                 exact_set.insert(comma::xpath(argv[i] + 1));
+            }
             else 
+            {
                 grep_list.push_back(argv[i] + 2);
+            }
                 
             ++kept;
             if (kept > TAG_MAX)
@@ -397,24 +395,20 @@ int main(int argc, char ** argv)
             }
         }
         
-        if (grep_list.empty() && exact_set.empty())
-        {
-            usage(true);
-            return 1;
-        }
+        if(grep_list.empty() && exact_set.empty()) { usage(true); return 1; }
 
         if (options_verbose)
         {
             std::ostream_iterator<comma::xpath const> out_itr(std::cerr, " ... ");
-            if (! grep_list.empty())
+            if( options_verbose && ! grep_list.empty())
             {
-                std::cerr << CMDNAME ": Partial: ";
+                std::cerr << CMDNAME ": partial: ";
                 std::copy(grep_list.begin(), grep_list.end(), out_itr);
                 std::cerr << std::endl;
             }            
-            if (! exact_set.empty())
+            if ( options_verbose && ! exact_set.empty())
             {
-                std::cerr << CMDNAME ": Exact: ";
+                std::cerr << CMDNAME ": exact: ";
                 std::copy(exact_set.begin(), exact_set.end(), out_itr);
                 std::cerr << std::endl;
             }
@@ -436,23 +430,21 @@ int main(int argc, char ** argv)
         
         xml_split_application app;
         
-        if (options_verbose)
-            std::cerr << CMDNAME ": Output: " << std::flush;
+        if (options_verbose) { std::cerr << CMDNAME ": output: " << std::flush; }
 
         int const code = app.run(options_file);
 
-        if (options_verbose)
-            std::cerr << std::endl;
+        if (options_verbose) { std::cerr << std::endl; }
         
         return code;
     }
     catch (std::exception const & ex)
     {
-        std::cerr << CMDNAME ": Error: " << ex.what() << std::endl;
+        std::cerr << CMDNAME ": " << ex.what() << std::endl;
     }
     catch (...)
     {
-        std::cerr << CMDNAME ": Error: Unknown Exception." << std::endl;
+        std::cerr << CMDNAME ": unknown exception." << std::endl;
     }
     return 1;
 }
