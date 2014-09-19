@@ -87,18 +87,19 @@ function extract_mem()
 function parser()
 {
     shopt -s extglob
-    local timestamp line first
+    local timestamp line first shared
     first="true"
     while true ; do
         read line
         [[ -z "$line" ]] && break
         [[ "$first" == "true" ]] && {
             timestamp=$( date +%Y%m%dT%H%M%S )
+            shared=$( df --block-size=1024 --local | grep '/shm$' | awk '{ print $3 }' )
             echo -n "$timestamp"
             first="false"
         }
         [[ "$line" = "%Cpu(s):"* ]]  && extract_cpus "$line"
-        [[ "$line" = "KiB Mem:"* ]]  && extract_mem  "$line"
+        [[ "$line" = "KiB Mem:"* ]]  && { extract_mem  "$line" ; echo -n ",$shared" ; }
         # swap is last, finish the line
         [[ "$line" = "KiB Swap:"* ]] && { extract_mem  "$line" ; echo ; }
         [[ "$line" = "--" ]] && first="true"
@@ -107,7 +108,7 @@ function parser()
 
 function output_fields()
 {
-    echo "timestamp,cpu/user,cpu/system,cpu/total,memory/ram,memory/swap"
+    echo "timestamp,cpu/user,cpu/system,cpu/total,memory/ram,memory/shared,memory/swap"
 }
 
 if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then usage ; exit ; fi

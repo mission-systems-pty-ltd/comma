@@ -3,10 +3,12 @@
 name=$( basename $0 )
 
 source $( which comma-application-util ) || exit 1
-source $( which resources-util ) || exit 1
+source $( which comma-resources-util ) || exit 1
+source $( which comma-util ) || exit 1
+source $( which comma-sync ) || exit 1
 
 # This function simulates one of the worker processes that coordinate their
-# resource usage using comma resources-util facilities.
+# resource usage using comma-resources-util facilities.
 #
 # Worker operation:
 # - randomly generate "resource request" with some arbitrary values
@@ -59,25 +61,25 @@ function worker()
     waittotal=0
     exit_status=0
     for itask in $( seq $ntasks ) ; do
-        cpus=$( round_random "$resources_cpus * $max_task_scale" )
-        memory_main=$( round_random "$resources_memory_main * $max_task_scale" )
-        memory_shared=$( round_random "$resources_memory_shared * $max_task_scale" )
+        cpus=$( comma_round_random "$resources_cpus * $max_task_scale" )
+        memory_main=$( comma_round_random "$resources_memory_main * $max_task_scale" )
+        memory_shared=$( comma_round_random "$resources_memory_shared * $max_task_scale" )
         ( echo "resources/cpus=$cpus"; echo "resources/memory/main=$memory_main"; echo "resources/memory/shared=$memory_shared"; ) \
             | name-value-convert --from path-value --to json > "$request"
         # randomize task duration a bit
-        worktime=$( echo "$duration * $( urandom )" | bc -l )
+        worktime=$( echo "$duration * $( comma_urandom )" | bc -l )
         while true ; do
             if (( $( echo "$waittotal > 100 * $duration" | bc -l ) == 1 )) ; then
                 echo "$name::worker $pid: cannot wait longer" >&2
                 exit_status=1
                 break
             fi
-            outcome=$( locked_acquire_resources "$lock" "$request" "$counter" "$limits" "$pid" )
+            outcome=$( comma_locked "$lock" comma_acquire_resources "$request" "$counter" "$limits" "$pid" )
             if [[ $? == 0 ]] ; then
                 [[ $verbose == 1 ]] && echo "$name::worker $pid working ..."
                 sleep "$worktime"
                 worktotal=$( echo "$worktotal + $worktime" | bc -l )
-                locked_release_resources "$lock" "$request" "$counter" "$pid"
+                comma_locked "$lock" comma_release_resources "$request" "$counter" "$pid"
                 (( $? == 0 )) || {
                     echo "$name::worker $pid: cannot release resources" >&2
                     exit_status=1
@@ -88,14 +90,14 @@ function worker()
                     sleep "$waittime"
                     waittotal=$( echo "$waittotal + $waittime" | bc -l )
                 else
-                    echo "$name::worker $pid: unknown error in acquire_resources '$outcome'" >&2
+                    echo "$name::worker $pid: unknown error in comma_acquire_resources '$outcome'" >&2
                     exit_status=1
                     break
                 fi
             fi
         done
         (( $exit_status == 1 )) && {
-            locked_dequeue_pid_infile "$lock" "$counter" "$pid"
+            comma_locked "$lock" comma_dequeue_pid_infile "$counter" "$pid"
             (( $? == 0 )) || { echo "$name::worker $pid: cannot dequeue" >&2; }
             break
         }
@@ -140,7 +142,7 @@ limits="$output/limits.json"
     | sed 's/^/resources\//' \
     | name-value-convert --from path-value --to json \
     > "$limits"
-cat "$limits" | name-value-convert --from json --to path-value | locked_initialize_resources "$lock" "$counter"
+cat "$limits" | name-value-convert --from json --to path-value | comma_locked "$lock" comma_initialize_resources "$counter"
 
 # Start workers, wait for their completion, etc.
 worker_pids=()

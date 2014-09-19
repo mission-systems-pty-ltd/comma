@@ -2,7 +2,7 @@
 
 name=$0
 
-source $( which resources-util ) || exit 1
+source $( which comma-resources-util ) || exit 1
 source "$( dirname $0 )/../resources-test-util" || exit 1
 
 output="output"
@@ -10,11 +10,11 @@ rm -rf "$output" || exit 1
 mkdir -p "$output" || exit 1
 
 # check total
-total_system_resources | sed 's/^/total\//;s/"//g'
+comma_total_system_resources | sed 's/^/total\//;s/"//g'
 
 # check initialization
 counter="$output/counter.json"
-cat <<EOF | initialize_resources "$counter"
+cat <<EOF | comma_initialize_resources "$counter"
 resources/cpus="8"
 resources/memory/main="1000000"
 resources/memory/shared="500000"
@@ -23,42 +23,42 @@ EOF
 cat "$counter" | prepare_for_match "initial"
 
 # check non-negative sanity
-cat "data/negative.json" | non_negative_resources | prepare_for_match "non_negative" | sed 's/"//g'
+cat "data/negative.json" | comma_non_negative_resources | prepare_for_match "non_negative" | sed 's/"//g'
 
 # check small request; shall succeed; pids here and below are fake
-acquire_resources "data/small_request.json" "$counter" "data/maximum.json" 123 || must_work "first small request"
+comma_acquire_resources "data/small_request.json" "$counter" "data/maximum.json" 123 || must_work "first small request"
 cat "$counter" | prepare_for_match "one/small"
-acquire_resources "data/small_request.json" "$counter" "data/maximum.json" 234 || must_work "second small request"
+comma_acquire_resources "data/small_request.json" "$counter" "data/maximum.json" 234 || must_work "second small request"
 cat "$counter" | prepare_for_match "two/small"
 
 # check large request; shall fail, and append pid to the queue
-outcome=$( acquire_resources "data/large_request.json" "$counter" "data/maximum.json" 345 ) && must_fail "first large request"
+outcome=$( comma_acquire_resources "data/large_request.json" "$counter" "data/maximum.json" 345 ) && must_fail "first large request"
 echo "first/large/request/outcome=\"$outcome\""
 cat "$counter" | prepare_for_match "first/large/request" | grep processes
 
 # second large request shall also fail and append pid to the queue
-outcome=$( acquire_resources "data/large_request.json" "$counter" "data/maximum.json" 456 ) && must_fail "second large request"
+outcome=$( comma_acquire_resources "data/large_request.json" "$counter" "data/maximum.json" 456 ) && must_fail "second large request"
 echo "second/large/request/outcome=\"$outcome\""
 cat "$counter" | prepare_for_match "second/large/request" | grep processes
 
 # release small resource allocations
-release_resources "data/small_request.json" "$counter" 123 || must_work "releasing first small request"
-release_resources "data/small_request.json" "$counter" 234 || must_work "releasing second small request"
+comma_release_resources "data/small_request.json" "$counter" 123 || must_work "releasing first small request"
+comma_release_resources "data/small_request.json" "$counter" 234 || must_work "releasing second small request"
 cat "$counter" | prepare_for_match "large/waiting"
 
 # now attempt to proceed with the second large-resource request; it is not the first in the queue and shall fail
-outcome=$( acquire_resources "data/large_request.json" "$counter" "data/maximum.json" 456 ) && must_fail "repeated second large request"
+outcome=$( comma_acquire_resources "data/large_request.json" "$counter" "data/maximum.json" 456 ) && must_fail "repeated second large request"
 echo "third/large/request/outcome=\"$outcome\""
 cat "$counter" | prepare_for_match "third/large/request" | grep processes
 
 # the first large-resource request is the head of the queue and shall pass
-acquire_resources "data/large_request.json" "$counter" "data/maximum.json" 345 || must_work "repeated first large request"
+comma_acquire_resources "data/large_request.json" "$counter" "data/maximum.json" 345 || must_work "repeated first large request"
 cat "$counter" | prepare_for_match "fourth/large/request"
 
 # release the resources and try the second large request again; now shall work
-release_resources "data/large_request.json" "$counter" 345 || must_work "releasing first large request"
-acquire_resources "data/large_request.json" "$counter" "data/maximum.json" 456 || must_work "second large request at last"
-release_resources "data/large_request.json" "$counter" 456 || must_work "releasing second large request"
+comma_release_resources "data/large_request.json" "$counter" 345 || must_work "releasing first large request"
+comma_acquire_resources "data/large_request.json" "$counter" "data/maximum.json" 456 || must_work "second large request at last"
+comma_release_resources "data/large_request.json" "$counter" 456 || must_work "releasing second large request"
 
 # release all resources; counters shall be down to zero
 cat "$counter" | prepare_for_match "final"
