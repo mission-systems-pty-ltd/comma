@@ -142,7 +142,7 @@ function comma_total_system_resources()
     (( $? == 0 || $cpus > 0 )) || { echo "$name: cannot grep '/proc/cpuinfo' for the number of processors" >&2; return 1; }
     #
     # ipcs -ml was found to return weird values on many systems
-    memory_shared=$( timeout 5s df --block-size=1 | grep '/shm$' | awk '{ print $2 }' )
+    memory_shared=$( df --block-size=1 --local | grep '/shm$' | awk '{ print $2 }' )
     #
     memory_main=$( cat /proc/meminfo | sed -n --regexp-extended "s/^MemTotal: *(.*) .*$/\1/p" )
     (( $memory_main > 0 )) || { echo "$name: cannot determine total memory size" >&2; exit 1; }
