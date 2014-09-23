@@ -56,6 +56,8 @@ static void usage()
     std::cerr << std::endl;
     std::cerr << "timestamps are expected to be fully ordered" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "note: on windows only files are supported as bounding data" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "usage: cat a.csv | csv-time-join <how> [<options>] bounding.csv [-] > joined.csv" << std::endl;
     std::cerr << std::endl;
     std::cerr << "<how>" << std::endl;
@@ -168,13 +170,13 @@ int main( int ac, char** av )
         comma::csv::options csv = parser.get< comma::csv::options >( properties );
         if( csv.fields.empty() ) { csv.fields = "t"; }
         comma::csv::input_stream< Point > istream( *is, csv );
-        comma::io::select select;
         typedef std::pair< boost::posix_time::ptime, std::string > timestring_t;
         std::deque<timestring_t> bounding_queue;
-
+        #ifndef WIN32
+        comma::io::select select;
         select.read().add(0);
         select.read().add(is.fd());
-
+        #endif // #ifndef WIN32
         const Point* p;
         bool next=true;
 
@@ -183,11 +185,13 @@ int main( int ac, char** av )
         while( ( stdin_stream.ready() || ( std::cin.good() && !std::cin.eof() ) ) )
         {
             bounding_data_available =  istream.ready() || ( is->good() && !is->eof());
-
+            #ifdef WIN32
+            bool istream_ready = true;
+            bool stdin_stream_ready = true;
+            #else // #ifdef WIN32
             //check so we do not block
-            bool istream_ready=istream.ready();
-            bool stdin_stream_ready=stdin_stream.ready();
-
+            bool istream_ready = istream.ready();
+            bool stdin_stream_ready = stdin_stream.ready();
             if(!istream_ready || !stdin_stream_ready)
             {
                 if(!istream_ready && !stdin_stream_ready)
@@ -208,7 +212,7 @@ int main( int ac, char** av )
                 }
 
             }
-
+            #endif //#ifdef WIN32
             //keep storing available bounding data
             if(istream_ready)
             {
