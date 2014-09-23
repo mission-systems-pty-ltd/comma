@@ -114,6 +114,9 @@ SET( comma_BUILD_APPLICATIONS ${BUILD_APPLICATIONS} )
 OPTION( comma_BUILD_ZEROMQ "build io with zeromq support" OFF )
 
 OPTION(BUILD_SHARED_LIBS "build with shared libraries" OFF)
+
+OPTION( comma_BUILD_XML "build xml" OFF )
+
 SET(comma_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 
 IF( NOT BUILD_SHARED_LIBS )
@@ -206,9 +209,12 @@ ADD_SUBDIRECTORY( name_value )
 ADD_SUBDIRECTORY( packed )
 ADD_SUBDIRECTORY( string )
 ADD_SUBDIRECTORY( sync )
-ADD_SUBDIRECTORY( visiting )
-ADD_SUBDIRECTORY( xpath )
 ADD_SUBDIRECTORY( util )
+ADD_SUBDIRECTORY( visiting )
+if( comma_BUILD_XML )
+    add_subdirectory( xml )
+endif( comma_BUILD_XML )
+add_subdirectory( xpath )
 
 #IF( WIN32 )
     #in future, may need to add third party dlls somehow, if they are linked as dlls. Not needed for statically linking to boost.

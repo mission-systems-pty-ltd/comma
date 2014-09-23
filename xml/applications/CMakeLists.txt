@@ -1,12 +1,9 @@
-SET( dir ${SOURCE_CODE_BASE_DIR}/xpath/applications )
+SET( dir ${SOURCE_CODE_BASE_DIR}/xml/applications )
 FILE( GLOB source   ${dir}/*.cpp)
 FILE( GLOB includes ${dir}/*.h)
 SOURCE_GROUP( ${TARGET_NAME} FILES ${source} ${includes} )
 
-OPTION( comma_BUILD_XML_UTILITIES "build xml utilities, requires expat library" OFF )
-
-IF( comma_BUILD_XML_UTILITIES )
-
+IF( comma_BUILD_XML )
     FIND_LIBRARY( EXPAT_LIBRARY NAMES expat )
     ADD_DEFINITIONS( -DUSE_EXPAT )
     INCLUDE_DIRECTORIES( ${EXPAT_INCLUDE_PATH} )
@@ -28,5 +25,5 @@ IF( comma_BUILD_XML_UTILITIES )
                     xml-split
             RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR}
             COMPONENT Runtime )
-ENDIF( comma_BUILD_XML_UTILITIES )
+ENDIF( comma_BUILD_XML )
 

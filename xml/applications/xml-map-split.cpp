@@ -14,7 +14,7 @@
 
 #include <cstring>
 
-#include <comma/xpath/applications/stream_util.h>
+#include "./stream_util.h"
 
 using comma::io::punct;
 
