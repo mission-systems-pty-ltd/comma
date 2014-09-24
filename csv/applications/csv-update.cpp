@@ -59,27 +59,31 @@ static void usage( bool more )
     std::cerr << std::endl;
     std::cerr << "update ... csv files or streams by one or several keys (integer only for now)" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "usage: cat something.csv | csv-update \"something_else.csv\" [<options>]" << std::endl;
+    std::cerr << "usage: cat something.csv | csv-update \"update.csv\" [<options>] > updated.csv" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    fields:" << std::endl;
     std::cerr << "        block: block number" << std::endl;
-    std::cerr << "        any other field names: keys" << std::endl;
+    std::cerr << "        id: key to match, multiple id fields allowed" << std::endl;
+    std::cerr << "        any other field names: fields to update, if none given, update " << std::endl;
+    std::cerr << "                               all the non-id fields" << std::endl;
+    std::cerr << "                               todo: only ascii supported, binary: to implement" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options:" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
+    std::cerr << "    --empty=<field values>; what field value stands for an empty field" << std::endl;
+    std::cerr << "        ascii: default: empty string" << std::endl;
+    std::cerr << "        binary: todo: no reasonable default" << std::endl;
+    std::cerr << "        e.g: --empty=,,empty,,0: for the 3rd field, \"empty\" indicates it has empty value, for the 5th: 0" << std::endl;
     std::cerr << "    --matched-only,--matched,-m: output only updates present on stdin" << std::endl;
-    std::cerr << "    --update-non-empty-fields,--update-non-empty,-u:" << std::endl;
-    std::cerr << "         ascii: if update has empty fields, keep the fields values from stdin" << std::endl;
-    std::cerr << "         binary: todo, since the semantics of an \"empty\" value is unclear" << std::endl;
+    std::cerr << "    --remove,--unset=<field values>; what field value indicates that previous value should be replaced with empty value" << std::endl;
+    std::cerr << "        e.g: --remove=,,remove,,: for the 3rd field, \"empty\" indicates it has empty value, for the 5th: 0" << std::endl;
     std::cerr << "    --string,-s: keys are strings; a quick and dirty option to support strings" << std::endl;
     std::cerr << "                 default: integers" << std::endl;
+    std::cerr << "    --update-non-empty-fields,--update-non-empty,-u:" << std::endl;
+    std::cerr << "        ascii: if update has empty fields, keep the fields values from stdin" << std::endl;
+    std::cerr << "        binary: todo, since the semantics of an \"empty\" value is unclear" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
-    if( more )
-    {
-        std::cerr << std::endl;
-        std::cerr << "csv options:" << std::endl;
-        std::cerr << comma::csv::options::usage() << std::endl;
-    }
+    if( more ) { std::cerr << std::endl << "csv options:" << std::endl << comma::csv::options::usage() << std::endl; }
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << "    single key" << std::endl;
@@ -229,21 +233,23 @@ template < typename K > struct join_impl_ // quick and dirty
     static int run( const comma::command_line_options& options )
     {
         std::vector< std::string > v = comma::split( csv.fields, ',' );
-        std::vector< std::string > w = comma::split( csv.fields, ',' );
-        for( std::size_t i = 0; i < v.size(); ++i ) // quick and dirty, wasteful, but who cares
+        std::vector< unsigned int > is_value( v.size(), 0 );
+        for( std::size_t i = 0; i < v.size(); ++i )
         {
             if( v[i].empty() || v[i] == "block" ) { continue; }
-            for( std::size_t k = 0; k < w.size(); ++k )
+            if( v[i] != "id" )
+            { 
+                is_value[i] = true;
+                v[i] = ""; //v[i] = "strings[" + boost::lexical_cast< std::string >( default_input.keys.size() ) + "]";
+            }
+            else
             {
-                if( v[i] != w[k] ) { continue; }
                 v[i] = "keys[" + boost::lexical_cast< std::string >( default_input.keys.size() ) + "]";
-                w[k] = "keys[" + boost::lexical_cast< std::string >( default_input.keys.size() ) + "]";
                 default_input.keys.resize( default_input.keys.size() + 1 ); // quick and dirty
             }
         }
-        if( default_input.keys.empty() ) { std::cerr << "csv-update: please specify at least one common key" << std::endl; return 1; }
+        if( default_input.keys.empty() ) { std::cerr << "csv-update: please specify at least one id field" << std::endl; return 1; }
         csv.fields = comma::join( v, ',' );
-        csv.fields = comma::join( w, ',' );
         input_stream_t stdin_stream( std::cin, csv, default_input );
         filter_transport.reset( new comma::io::istream( filter_name, csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii ) );
         read_filter_block();
