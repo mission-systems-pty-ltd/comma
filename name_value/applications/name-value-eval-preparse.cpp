@@ -59,6 +59,9 @@ void usage()
 "   contains(s, x)          True if string s has a substring x\n"
 "   matches(s, r)           Check if s matches regular expression r\n"
 "                           See: http://docs.python.org/2/howto/regex.html\n"
+"   valid(expr_str)         Check if an expression is valid, e.g. valid(\"x + y\")\n"
+"   exists(v)               Check if an (unquoted) variable is defined, e.g. exists(x/y/z)\n"
+"                           Example: exists(a/b/c)\n"
 "   sphere_distance_nm(lat1,lon1,lat2,lon2)   Great circle distance between two points (nautical miles)\n"
 "   sphere_distance_km(lat1,lon1,lat2,lon2)   Great circle distance between two points (km)\n"
 "   nm_to_km(nm)            Convert nautical miles to km\n"
@@ -141,6 +144,13 @@ struct Token
 typedef std::map<std::string, std::string> Varmap;
 
 typedef std::set<std::string> Varset;
+
+void print_error_prefix(const std::string &filename, int line_num)
+{
+    std::cerr << exec_name << ": line " << line_num;
+    if (!filename.empty()) { std::cerr << " of " << filename; }
+    std::cerr << ": ";
+}
 
 // return a string with n spaces
 std::string spaces(size_t n)
@@ -385,7 +395,7 @@ bool is_stop_token(const Token &tok)
 // check for a "+/-" token and replace with the appropriate Python code
 // Only the first occurence is replaced
 // Returns true if the tokens were modified
-bool replace_plus_or_minus(/*out*/ std::vector<Token> &tokens)
+bool replace_plus_or_minus(std::vector<Token> &tokens)
 {
     int num = (int) tokens.size();
     if (num < 5) { return false; }
@@ -460,11 +470,40 @@ bool replace_plus_or_minus(/*out*/ std::vector<Token> &tokens)
     return true;
 }
 
+void transform_special_functions(std::vector<Token> &tokens, const std::string &filename, int line_num)
+{
+    int num = (int) tokens.size();
+    for (int n = 0;n < num;++n)
+    {
+        // transform "exists(var)" to "valid('var')"
+        if (tokens[n].type == t_function && tokens[n].str == "exists")
+        {
+            if (n + 3 < num &&
+                tokens[n+1].type == t_operator && tokens[n+1].str == "(" &&
+                tokens[n+2].type == t_id &&
+                tokens[n+3].type == t_operator && tokens[n+3].str == ")")
+            {
+                tokens[n].str = "valid";
+                tokens[n+2].str = std::string("'") + tokens[n+2].str + std::string("'");
+                tokens[n+2].type = t_string;
+            }
+            else
+            {
+                print_error_prefix(filename, line_num);
+                std::cerr << "exists() function must have a single argument (an unquoted variable name)\n";
+                exit(1);
+            }
+        }
+    }
+}
+
 // check for special token sequences such as "a == b +/- c" and replace them with the required Python code
-void transform_special_tokens(/*out*/ std::vector<Token> &tokens)
+void transform_special_tokens(std::vector<Token> &tokens, const std::string &filename, int line_num)
 {
     while (replace_plus_or_minus(tokens))
     { }
+
+    transform_special_functions(tokens, filename, line_num);
 }
 
 // get the index of the first token with a particular type and value
@@ -490,7 +529,7 @@ void check_transform_id(std::string &id)
 }
 
 // split a string into individual tokens
-void tokenise(const std::string &line, const Options &opt,
+void tokenise(const std::string &line, const std::string &filename, int line_num, const Options &opt,
     /*out*/ std::vector<Token> &tokens,
     bool test_is_raw_python = false   // whether --test input is raw python code (vs just a list of boolean expressions)
 )
@@ -590,7 +629,7 @@ void tokenise(const std::string &line, const Options &opt,
         }
     }
 
-    transform_special_tokens(tokens);
+    transform_special_tokens(tokens, filename, line_num);
 
     if (opt.assign)
     {
@@ -675,13 +714,6 @@ void init_variable_hierarchy(const std::string &var_name, Varset &variable_hiera
 
         last_pos = next_pos;
     }
-}
-
-void print_error_prefix(const std::string &filename, int line_num)
-{
-    std::cerr << exec_name << ": line " << line_num;
-    if (!filename.empty()) { std::cerr << " of " << filename; }
-    std::cerr << ": ";
 }
 
 void process_assign(const std::vector<Token> &tokens, const std::string &input_line,
@@ -799,14 +831,18 @@ void process_test(std::vector<Token> &tokens, const std::string &original_line,
                 else if (starts_with(expr_str, "=")) { expr_str = trim_spaces(expr_str.substr(1)); }
             }
 
-            std::cout << spaces(leading_spaces)
-                << "    print '" << i->first << "/expected=" << quote(expr_str, '"') << "'\n";
-
-            // use a Python trick to force repr() to use double quotes instead of single
-            // (for an explanation, see: http://www.gossamer-threads.com/lists/python/python/157285
-            // -- search that page for "Python delimits a string it by single quotes preferably")
-            std::cout << spaces(leading_spaces)
-                << "    print '" << i->first << "/actual=\"'+repr(\"'\\0\"+str(" << i->second << "))[6:]\n";
+            std::cout
+                << spaces(leading_spaces)
+                << "    print '" << i->first << "/expected=" << quote(expr_str, '"') << "'\n"
+                << spaces(leading_spaces)
+                << "    sys.stdout.write('" << i->first << "/actual=\"')\n"
+                << spaces(leading_spaces)
+                << "    if type(" << i->second << ") == type({}): print dict_str(" << i->second << ")+'\"'\n"
+                << spaces(leading_spaces)
+                // use a Python trick to force repr() to use double quotes instead of single
+                // (for an explanation, see: http://www.gossamer-threads.com/lists/python/python/157285
+                // -- search that page for "Python delimits a string it by single quotes preferably")
+                << "    else: print repr(\"'\\0\"+str(" << i->second << "))[6:]\n";
         }
     }
     else
@@ -848,6 +884,9 @@ void print_header()
         << "def ends_with(s, x): return s.rfind(x) == len(s) - len(x)\n"
         << "def contains(s, x): return s.find(x) != -1\n"
         << "def matches(s, p): return re.search(p, s) != None\n"
+        << "def valid(expr_str):\n"
+        << "    try: eval(expr_str); return True\n"
+        << "    except: return False\n"
         << "def deg_to_rad(d): return (d / 180.0) * 3.14159265359\n"
         << "def rad_to_deg(r): return (r / 3.14159265359) * 180.0\n"
         << "def km_to_nm(k): return k / 1.852\n"
@@ -860,7 +899,8 @@ void print_header()
         << "    res_val = math.sin(lat_delta / 2.0) * math.sin(lat_delta / 2.0) + math.cos(phi1) * math.cos(phi2) * math.sin(lon_delta / 2.0) * math.sin(lon_delta / 2.0)\n"
         << "    return 6366.70702 * 2.0 * math.atan2(math.sqrt(res_val), math.sqrt(1.0 - res_val))\n"
         << "def sphere_distance_nm(lat1, lon1, lat2, lon2): return km_to_nm(sphere_distance_km(lat1, lon1, lat2, lon2))\n"
-        << "def err_expr_not_bool(): print >> sys.stderr, 'File \"?\", line ' + str(inspect.currentframe().f_back.f_lineno) + '\\nTypeError: expected a true or false expression'\n";
+        << "def err_expr_not_bool(): print >> sys.stderr, 'File \"?\", line ' + str(inspect.currentframe().f_back.f_lineno) + '\\nTypeError: expected a true or false expression'\n"
+        << "def dict_str(d): return \"<array of size \" + str(len(d.keys())) + \">\"\n";
         // note: err_expr_not_bool() imitates standard Python error printing:
         // 'File "name", line n' on one line, followed by the error message
 }
@@ -926,7 +966,7 @@ void process(const std::string &filename, const Options &opt, const std::set<std
         }
 
         tokens.resize(0);
-        tokenise(line, opt, tokens, test_is_raw_python);
+        tokenise(line, filename, line_num, opt, tokens, test_is_raw_python);
         // debug_tokens(tokens);
 
         if (opt.assign) { process_assign(tokens, line, filename, actual_line_num, variable_hierarchy); }
