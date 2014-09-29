@@ -106,7 +106,7 @@ inline to_names::to_names( const xpath& root, bool full_path_as_name ) : full_pa
 template < typename K, typename T >
 inline void to_names::apply( const K& name, const boost::optional< T >& value )
 {
-    if( value ) { apply( name, *value ); } else { T v; apply( name, v ); }
+    apply( name, value ? *value : T() );
 }
 
 template < typename K, typename T >
@@ -125,8 +125,8 @@ template < typename K, typename T >
 inline void to_names::apply( const K& name, const T& value )
 {
     visiting::do_while<    !boost::is_fundamental< T >::value
-                     && !boost::is_same< T, std::string >::value
-                     && !boost::is_same< T, boost::posix_time::ptime >::value >::visit( name, value, *this );
+                        && !boost::is_same< T, std::string >::value
+                        && !boost::is_same< T, boost::posix_time::ptime >::value >::visit( name, value, *this );
 }
 
 template < typename K, typename T >

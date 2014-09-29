@@ -71,6 +71,12 @@ struct struct_with_optional_element
     boost::optional< deep_nested > nested;
 };
 
+struct optionals
+{
+    boost::optional< double > a;
+    boost::optional< deep_nested > b;
+};
+
 } } } // namespace comma { namespace csv { namespace names_test {
 
 namespace comma { namespace visiting {
@@ -128,6 +134,15 @@ template <> struct traits< comma::csv::names_test::struct_with_optional_element 
     {
         v.apply( "x", p.x );
         v.apply( "nested", p.nested );
+    }
+};
+
+template <> struct traits< comma::csv::names_test::optionals >
+{
+    template < typename Key, class Visitor > static void visit( const Key&, const comma::csv::names_test::optionals& p, Visitor& v )
+    {
+        v.apply( "a", p.a );
+        v.apply( "b", p.b );
     }
 };
 
@@ -239,6 +254,8 @@ TEST( csv, names_optional_element )
     EXPECT_EQ( join( names< struct_with_optional_element >( "", false ), ',' ), "x,X,Y" );
     EXPECT_EQ( join( names< struct_with_optional_element >( "nested" ), ',' ), "nested/X,nested/Y" );
     EXPECT_EQ( join( names< struct_with_optional_element >( "nested", false ), ',' ), "X,Y" );
+    EXPECT_EQ( join( names< optionals >(), ',' ), "a,b/X,b/Y" );
+    EXPECT_EQ( join( names< optionals >( false ), ',' ), "a,X,Y" );
     // todo: more testing
 }
 

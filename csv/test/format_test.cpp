@@ -209,18 +209,24 @@ TEST( csv, format_floating_point )
 
 struct nested_struct
 {
-    int x;
-    int y;
+    comma::int32 x;
+    comma::int32 y;
 };
 
 struct simple_struct
 {
-    int a;
+    comma::int32 a;
     double b;
     char c;
     std::string s;
     boost::posix_time::ptime t;
     nested_struct nested;
+};
+
+struct optionals
+{
+    boost::optional< double > a;
+    boost::optional< nested_struct > b;
 };
 
 namespace comma { namespace visiting {
@@ -247,6 +253,15 @@ template <> struct traits< simple_struct >
     }
 };
 
+template <> struct traits< optionals >
+{
+    template < typename Key, class Visitor > static void visit( const Key&, const optionals& p, Visitor& v )
+    {
+        v.apply( "a", p.a );
+        v.apply( "b", p.b );
+    }
+};
+
 } } // namespace comma { namespace visiting {
 
 TEST( csv, format_with_fields )
@@ -259,6 +274,11 @@ TEST( csv, format_with_fields )
     EXPECT_EQ( comma::csv::format::value< simple_struct >( "a,b,c", false ), "i,d,b" );
     EXPECT_EQ( comma::csv::format::value< simple_struct >( "a,s,t", false ), "i,s,t" );
     EXPECT_EQ( comma::csv::format::value< simple_struct >( "x,y", false ), "i,i" );
+}
+
+TEST( csv, optional_format )
+{
+    EXPECT_EQ( comma::csv::format::value< optionals >(), "d,i,i" );
 }
 
 TEST( csv, unstructured )

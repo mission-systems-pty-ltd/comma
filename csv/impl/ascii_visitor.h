@@ -128,7 +128,7 @@ class asciiVisitor
         void apply_optional( const K& name, const optional_element< T >& value )
         {
             empty_.push_back( true );
-            if( value ) { this->apply( name, *value ); } else { T v; this->apply( name, v ); }
+            this->apply( name, value ? *value : T() );
             optional_.push_back( !empty_.back() );
             empty_.pop_back();
         }

@@ -179,6 +179,16 @@ class to_format
         }
         
         template < typename K, typename T >
+        void apply( const K& name, const boost::optional< T >& value )
+        {
+            append( name );
+            visiting::do_while<    !boost::is_fundamental< T >::value
+                                && !boost::is_same< T, std::string >::value
+                                && !boost::is_same< T, boost::posix_time::ptime >::value >::visit( name, value ? *value : T(), *this );
+            trim( name );
+        }
+        
+        template < typename K, typename T >
         void apply( const K& name, const T& value )
         {
             append( name );

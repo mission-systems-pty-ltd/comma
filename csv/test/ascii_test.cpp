@@ -276,6 +276,26 @@ TEST( csv, ascii_optional_element )
         EXPECT_EQ( s.nested->y, 3 );
         EXPECT_EQ( s.a, 4 );
     }
+    {
+        comma::csv::ascii< comma::csv::ascii_test::test_struct > ascii;
+        {
+            comma::csv::ascii_test::test_struct s;
+            ascii.get( s, "1,2,3,4" );
+            EXPECT_TRUE( s.z );
+            EXPECT_TRUE( s.nested );
+            EXPECT_EQ( s.z, 2 );
+            EXPECT_EQ( s.nested->x, 3 );
+            EXPECT_EQ( s.nested->y, 4 );
+        }
+//         {
+//             comma::csv::ascii_test::test_struct s;
+//             ascii.get( s, "1,,3,4" );
+//             EXPECT_FALSE( s.z );
+//             EXPECT_TRUE( s.nested );
+//             EXPECT_EQ( s.nested->x, 3 );
+//             EXPECT_EQ( s.nested->y, 4 );
+//         }
+    }
     // todo: more testing
 }
 
