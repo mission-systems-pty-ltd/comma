@@ -184,7 +184,7 @@ static void read_filter_block( comma::csv::output_stream< input_t >& ostream )
         if( !last ) { break; }
     }
     unmatched = filter_map;
-    if( verbose ) { std::cerr << "csv-update: read block " << block << " of " << count << " point[s]; hash map size: " << filter_map.size() << std::endl; }
+    if( verbose ) { std::cerr << "csv-update: read block " << block << " of " << count << " point[s]; got " << filter_map.size() << " different key(s)" << std::endl; }
 }
 
 static void output_last( const comma::csv::input_stream< input_t >& istream )
@@ -196,6 +196,7 @@ static void output_last( const comma::csv::input_stream< input_t >& istream )
 static void update( comma::csv::impl::unstructured& value, const comma::csv::impl::unstructured& value_update, bool non_empty_only )
 {
     if( !non_empty_only ) { value = value_update; return; }
+    for( std::size_t i = 0; i < value.longs.size(); ++i ) { if( value_update.longs[i] != empty.longs[i] ) { value.longs[i] = value_update.longs[i]; } }
     for( std::size_t i = 0; i < value.strings.size(); ++i ) { if( value_update.strings[i] != empty.strings[i] ) { value.strings[i] = value_update.strings[i]; } }
     for( std::size_t i = 0; i < value.doubles.size(); ++i ) { if( value_update.doubles[i] != empty.doubles[i] ) { value.doubles[i] = value_update.doubles[i]; } }
     for( std::size_t i = 0; i < value.time.size(); ++i ) { if( value_update.time[i] != empty.time[i] ) { value.time[i] = value_update.time[i]; } }
@@ -205,6 +206,8 @@ static void update( comma::csv::impl::unstructured& value, const comma::csv::imp
 static void update( const input_t& v, const comma::csv::input_stream< input_t >& istream, comma::csv::output_stream< input_t >& ostream, const std::string& last = std::string() )
 {
     typename input_t::map_t::const_iterator it = filter_map.find( v.key );
+    comma::csv::impl::unstructured u;
+    u.longs.push_back( 1 );    
     if( it == filter_map.end() || it->second.empty() )
     { 
         if( last.empty() ) { output_last( istream ); }
@@ -227,6 +230,7 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av, usage );
         verbose = options.exists( "--verbose,-v" );
         csv = comma::csv::options( options );
+        csv.full_xpath = true;
         matched_only = options.exists( "--matched-only,--matched,-m" );
         update_non_empty = options.exists( "--update-non-empty-fields,--update-non-empty,-u" );
         if( csv.binary() && update_non_empty ) { std::cerr << "csv-update: --update-non-empty-fields in binary mode not supported" << std::endl; return 1; }
@@ -248,11 +252,20 @@ int main( int ac, char** av )
             f = comma::csv::impl::unstructured::guess_format( first_line, csv.delimiter );
             std::cerr << "csv-update: guessed format: " << f.string() << std::endl;
         }
-        for( std::size_t i = 0; i < v.size(); ++i )
+        //for( std::size_t i = 0; i < v.size(); ++i )
+        unsigned int size = f.count();
+        for( std::size_t i = 0; i < size; ++i )
         {
-            if( v[i] == "block" ) { continue; }
-            if( v[i] == "id" ) { v[i] = "key/" + default_input.key.append( f.offset( i ).type ); continue; }
-            if( !v[i].empty() || !has_value_fields ) { v[i] = "value/" + default_input.value.append( f.offset( i ).type ); }
+            if( i < v.size() )
+            {
+                if( v[i] == "block" ) { continue; }
+                if( v[i] == "id" ) { v[i] = "key/" + default_input.key.append( f.offset( i ).type ); continue; }
+            }
+            if( !has_value_fields || !v[i].empty() )
+            {
+                v.resize( size );
+                v[i] = "value/" + default_input.value.append( f.offset( i ).type );
+            }
         }
         if( default_input.key.empty() ) { std::cerr << "csv-update: please specify at least one id field" << std::endl; return 1; }
         csv.fields = comma::join( v, ',' );
@@ -261,6 +274,10 @@ int main( int ac, char** av )
         filter_transport.reset( new comma::io::istream( filter_name, csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii ) );
         comma::csv::output_stream< input_t > ostream( std::cout, csv, default_input );
         empty = default_input.value;
+        
+        // todo: handle --empty
+        
+        for( unsigned int i = 0; i < empty.longs.size(); ++i ) { empty.longs[i] = std::numeric_limits< comma::int64 >::max(); } // quick and dirty
         for( unsigned int i = 0; i < empty.doubles.size(); ++i ) { empty.doubles[i] = std::numeric_limits< double >::max(); } // quick and dirty
         read_filter_block( ostream );
         if( !first_line.empty() ) { update( comma::csv::ascii< input_t >( csv, default_input ).get( first_line ), istream, ostream, first_line ); }
