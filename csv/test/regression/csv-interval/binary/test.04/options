@@ -1,0 +1,2 @@
+--fields ,,from,to --binary s[5],s[5],i,d,c --empty 99999 -l --intervals-only
+i,d
