@@ -92,7 +92,7 @@ class unstructured_values : public std::vector< T >
 /// todo: use in csv-calc, csv-join, etc
 struct unstructured
 {
-    //unstructured_values< comma::uint64 > integers;
+    unstructured_values< comma::int64 > integers;
     unstructured_values< double > doubles;
     unstructured_values< boost::posix_time::ptime > time;
     unstructured_values< std::string > strings;
@@ -111,9 +111,11 @@ struct unstructured
             case comma::csv::format::int32:
             case comma::csv::format::uint32:
             case comma::csv::format::int64:
+                integers.resize( integers.size() + 1 );
+                integers.back() = 0;
+                return "l[" + boost::lexical_cast< std::string >( integers.size() - 1 ) + "]";
             case comma::csv::format::uint64:
-                //integers.resize( integers.size() + 1 );
-                //break;
+                COMMA_THROW( comma::exception, "unsigned 64-bit integers not supported (todo)" );
             case comma::csv::format::float_t:
             case comma::csv::format::double_t:
                 doubles.resize( doubles.size() + 1 );
@@ -139,6 +141,7 @@ struct unstructured
     {
         if( !append_fields )
         {
+            integers.clear();
             doubles.clear();
             time.clear();
             strings.clear();
@@ -179,12 +182,20 @@ struct unstructured
             { 
                 try
                 {
-                    boost::lexical_cast< double >( v[i] );
-                    f += "d";
+                    boost::lexical_cast< comma::int64 >( v[i] );
+                    f += "l";
                 }
-                catch ( ... ) // way quick and dirty
+                catch( ... )
                 {
-                    f += "s[1024]";
+                    try
+                    {
+                        boost::lexical_cast< double >( v[i] );
+                        f += "d";
+                    }
+                    catch ( ... ) // way quick and dirty
+                    {
+                        f += "s[1024]";
+                    }
                 }
             }
         }
@@ -193,13 +204,11 @@ struct unstructured
     
     bool operator==( const unstructured& rhs ) const
     {
-        //return integers == rhs.integers && doubles == rhs.doubles && time == rhs.time && strings == rhs.strings;
-        return doubles == rhs.doubles && time == rhs.time && strings == rhs.strings;        
+        return integers == rhs.integers && doubles == rhs.doubles && time == rhs.time && strings == rhs.strings;        
     }
     
     bool operator<( const unstructured& rhs ) const
     {
-        //return integers < rhs.integers && doubles < rhs.doubles && time < rhs.time && strings < rhs.strings;
         return doubles < rhs.doubles && time < rhs.time && strings < rhs.strings;        
     }
     
@@ -211,9 +220,10 @@ struct unstructured
     {
         std::size_t operator()( unstructured const& p ) const
         {
+            if( !p.doubles.empty() ) { COMMA_THROW( comma::exception, "doubles are not supported as keys, got non-empty doubles" ); }
             static std::size_t seed = 0;
-            //boost::hash_combine( seed, unstructured_values< comma::uint64 >::hash( p.integers ) );
-            boost::hash_combine( seed, unstructured_values< double >::hash()( p.doubles ) );
+            boost::hash_combine( seed, unstructured_values< comma::int64 >::hash()( p.integers ) );
+            //boost::hash_combine( seed, unstructured_values< double >::hash()( p.doubles ) );
             boost::hash_combine( seed, unstructured_values< boost::posix_time::ptime >::hash()( p.time ) );
             boost::hash_combine( seed, unstructured_values< std::string >::hash()( p.strings ) );
             return seed;
@@ -221,6 +231,8 @@ struct unstructured
     };    
 };
 
+template <> inline unstructured_values< comma::int64 >& unstructured::get< comma::int64 >() { return integers; }
+template <> inline const unstructured_values< comma::int64 >& unstructured::get< comma::int64 >() const { return integers; }
 template <> inline unstructured_values< double >& unstructured::get< double >() { return doubles; }
 template <> inline const unstructured_values< double >& unstructured::get< double >() const { return doubles; }
 template <> inline unstructured_values< std::string >& unstructured::get< std::string >() { return strings; }
@@ -236,7 +248,7 @@ template <> struct traits< comma::csv::impl::unstructured >
 {
     template < typename K, typename V > static void visit( const K&, const comma::csv::impl::unstructured& p, V& v )
     { 
-        //v.apply( "i", static_cast< const std::vector< comma::uint64 >& >( p.integers ) );
+        v.apply( "l", static_cast< const std::vector< comma::int64 >& >( p.integers ) );
         v.apply( "d", static_cast< const std::vector< double >& >( p.doubles ) );
         v.apply( "t", static_cast< const std::vector< boost::posix_time::ptime >& >( p.time ) );
         v.apply( "s", static_cast< const std::vector< std::string >& >( p.strings ) );
@@ -244,7 +256,7 @@ template <> struct traits< comma::csv::impl::unstructured >
 
     template < typename K, typename V > static void visit( const K&, comma::csv::impl::unstructured& p, V& v )
     { 
-        //v.apply( "i", static_cast< std::vector< comma::uint64 >& >( p.integers ) );
+        v.apply( "l", static_cast< std::vector< comma::int64 >& >( p.integers ) );
         v.apply( "d", static_cast< std::vector< double >& >( p.doubles ) );
         v.apply( "t", static_cast< std::vector< boost::posix_time::ptime >& >( p.time ) );
         v.apply( "s", static_cast< std::vector< std::string >& >( p.strings ) );

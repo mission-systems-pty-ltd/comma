@@ -283,15 +283,16 @@ TEST( csv, optional_format )
 
 TEST( csv, unstructured )
 {
-    EXPECT_EQ( "d,d,d,d", comma::csv::impl::unstructured::guess_format( "1,2,3,4" ).string() );
-    EXPECT_EQ( "d,d,t,s[1024]", comma::csv::impl::unstructured::guess_format( "1,2.1,20121212T000000,blah" ).string() );
+    EXPECT_EQ( "l,l,l,l", comma::csv::impl::unstructured::guess_format( "1,2,3,4" ).string() );
+    EXPECT_EQ( "l,d,t,s[1024]", comma::csv::impl::unstructured::guess_format( "1,2.1,20121212T000000,blah" ).string() );
     comma::csv::options csv;
     csv.fields = "a,,,b,,,c";
     csv.delimiter = ',';
-    EXPECT_EQ( "d,s[1024],s[1024],s[1024],s[1024],s[1024],t", comma::csv::impl::unstructured::guess_format( "1,,,blah,,,20121212T000000" ).string() );
-    EXPECT_EQ( 1, comma::csv::impl::unstructured::make( csv, "1,,,blah,,,20121212T000000" ).first.doubles.size() );
+    EXPECT_EQ( "l,s[1024],s[1024],s[1024],s[1024],s[1024],t", comma::csv::impl::unstructured::guess_format( "1,,,blah,,,20121212T000000" ).string() );
+    EXPECT_EQ( 1, comma::csv::impl::unstructured::make( csv, "1,,,blah,,,20121212T000000" ).first.integers.size() );
+    EXPECT_EQ( 1, comma::csv::impl::unstructured::make( csv, "1.1,,,blah,,,20121212T000000" ).first.doubles.size() );
     EXPECT_EQ( 1, comma::csv::impl::unstructured::make( csv, "1,,,blah,,,20121212T000000" ).first.strings.size() );
     EXPECT_EQ( 1, comma::csv::impl::unstructured::make( csv, "1,,,blah,,,20121212T000000" ).first.time.size() );
-    EXPECT_EQ( "d[0],,,s[0],,,t[0]", comma::csv::impl::unstructured::make( csv, "1,,,blah,,,20121212T000000" ).second.fields );
+    EXPECT_EQ( "l[0],,,s[0],,,t[0]", comma::csv::impl::unstructured::make( csv, "1,,,blah,,,20121212T000000" ).second.fields );
     // todo: certainly more tests
 }
