@@ -231,6 +231,7 @@ int main( int ac, char** av )
         verbose = options.exists( "--verbose,-v" );
         csv = comma::csv::options( options );
         csv.full_xpath = true;
+        csv.quote.reset();
         matched_only = options.exists( "--matched-only,--matched,-m" );
         update_non_empty = options.exists( "--update-non-empty-fields,--update-non-empty,-u" );
         if( csv.binary() && update_non_empty ) { std::cerr << "csv-update: --update-non-empty-fields in binary mode not supported" << std::endl; return 1; }
@@ -264,7 +265,7 @@ int main( int ac, char** av )
             if( !has_value_fields || !v[i].empty() )
             {
                 v.resize( size );
-                v[i] = "value/" + default_input.value.append( f.offset( i ).type );
+                v[i] = "value/" + default_input.value.append( csv.binary() ? f.offset( i ).type : comma::csv::format::fixed_string ); // quick and dirty
             }
         }
         if( default_input.key.empty() ) { std::cerr << "csv-update: please specify at least one id field" << std::endl; return 1; }
@@ -275,10 +276,13 @@ int main( int ac, char** av )
         comma::csv::output_stream< input_t > ostream( std::cout, csv, default_input );
         empty = default_input.value;
         
+        
         // todo: handle --empty
+        
         
         for( unsigned int i = 0; i < empty.longs.size(); ++i ) { empty.longs[i] = std::numeric_limits< comma::int64 >::max(); } // quick and dirty
         for( unsigned int i = 0; i < empty.doubles.size(); ++i ) { empty.doubles[i] = std::numeric_limits< double >::max(); } // quick and dirty
+        default_input.value = empty;
         read_filter_block( ostream );
         if( !first_line.empty() ) { update( comma::csv::ascii< input_t >( csv, default_input ).get( first_line ), istream, ostream, first_line ); }
         while( !is_shutdown && ( istream.ready() || ( std::cin.good() && !std::cin.eof() ) ) )

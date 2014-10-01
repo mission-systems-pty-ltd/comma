@@ -85,17 +85,22 @@ class ascii
 
         /// set precision
         void precision( unsigned int p ) { precision_ = p; }
+        
+        /// return quote sign
+        boost::optional< char > quote() const { return quote_; }
 
     private:
         char delimiter_;
         boost::optional< unsigned int > precision_;
+        boost::optional< char > quote_;
         impl::asciiVisitor ascii_;
 };
 
 template < typename S >
 inline ascii< S >::ascii( const std::string& column_names, char d, bool full_path_as_name, const S& sample )
     : delimiter_( d )
-    , precision_( 12 )
+    , precision_( options().precision )
+    , quote_( options().quote )
     , ascii_( join( csv::names( column_names, full_path_as_name, sample ), ',' ), full_path_as_name )
 {
     visiting::apply( ascii_, sample );
@@ -106,6 +111,7 @@ template < typename S >
 inline ascii< S >::ascii( const options& o, const S& sample )
     : delimiter_( o.delimiter )
     , precision_( o.precision )
+    , quote_( o.quote )
     , ascii_( join( csv::names( o.fields, o.full_xpath, sample ), ',' ), o.full_xpath )
 {
     visiting::apply( ascii_, sample );
@@ -116,6 +122,7 @@ template < typename S >
 inline ascii< S >::ascii( const S& sample )
     : delimiter_( options().delimiter )
     , precision_( options().precision )
+    , quote_( options().quote )
     , ascii_( join( csv::names( options().fields, true, sample ), ',' ), true ) //, ascii_( join( csv::names( options().fields, options().full_xpath, sample ), ',' ), options().full_xpath )
 {
     visiting::apply( ascii_, sample );
@@ -133,7 +140,7 @@ template < typename S >
 inline const std::vector< std::string >& ascii< S >::put( const S& s, std::vector< std::string >& v ) const
 {
     if( v.empty() ) { v.resize( ascii_.size() ); }
-    impl::to_ascii f( ascii_.indices(), v );
+    impl::to_ascii f( ascii_.indices(), v, quote_ );
     if( precision_ ) { f.precision( *precision_ ); }
     visiting::apply( f, s );
     return v;

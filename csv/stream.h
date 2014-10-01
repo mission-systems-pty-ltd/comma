@@ -320,7 +320,7 @@ inline ascii_input_stream< S >::ascii_input_stream( std::istream& is, const std:
     , ascii_( column_names, delimiter, full_path_as_name, sample )
     , default_( sample )
     , result_( sample )
-    , fields_( split( column_names, delimiter ) )
+    , fields_( split( column_names, ',' ) )
 {
     detail::unsyncronize_with_stdio();
 }
@@ -328,10 +328,10 @@ inline ascii_input_stream< S >::ascii_input_stream( std::istream& is, const std:
 template < typename S >
 inline ascii_input_stream< S >::ascii_input_stream(std::istream& is, const options& o, const S& sample )
     : is_( is )
-    , ascii_( o.fields, o.delimiter, o.full_xpath, sample )
+    , ascii_( o, sample )
     , default_( sample )
     , result_( sample )
-    , fields_( split( o.fields, o.delimiter ) )
+    , fields_( split( o.fields, ',' ) )
 {
     detail::unsyncronize_with_stdio();
 }
@@ -342,7 +342,7 @@ inline ascii_input_stream< S >::ascii_input_stream(std::istream& is, const S& sa
     , ascii_( options().fields, options().delimiter, true, sample ) // , ascii_( options().fields, options().delimiter, o.full_xpath, sample )
     , default_( sample )
     , result_( sample )
-    , fields_( split( options().fields, options().delimiter ) )
+    , fields_( split( options().fields, ',' ) )
 {
     detail::unsyncronize_with_stdio();
 }
@@ -375,17 +375,15 @@ template < typename S >
 inline ascii_output_stream< S >::ascii_output_stream( std::ostream& os, const std::string& column_names, char delimiter, bool full_path_as_name, const S& sample )
     : m_os( os )
     , ascii_( column_names, delimiter, full_path_as_name, sample )
-    , fields_( split
-( column_names, delimiter ) )
+    , fields_( split( column_names, ',' ) )
 {
 }
 
 template < typename S >
 inline ascii_output_stream< S >::ascii_output_stream( std::ostream& os, const comma::csv::options& o, const S& sample )
     : m_os( os )
-    , ascii_( o.fields, o.delimiter, o.full_xpath, sample )
-    , fields_( split
-( o.fields, o.delimiter ) )
+    , ascii_( o, sample )
+    , fields_( split( o.fields, ',' ) )
 {
 }
 
@@ -393,7 +391,7 @@ template < typename S >
 inline ascii_output_stream< S >::ascii_output_stream( std::ostream& os, const S& sample )
     : m_os( os )
     , ascii_( options().fields, options().delimiter, true, sample ) // , ascii_( options().fields, options().delimiter, o.full_xpath, sample )
-    , fields_( split( options().fields, options().delimiter ) )
+    , fields_( split( options().fields, ',' ) )
 {
 }
 

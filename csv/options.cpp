@@ -33,6 +33,7 @@
 
 /// @author vsevolod vlaskine
 
+#include <comma/base/exception.h>
 #include <comma/csv/options.h>
 #include <comma/string/string.h>
 
@@ -50,25 +51,35 @@ bool options::binary() const { return format_; }
 
 namespace impl {
 
-inline static void init( comma::csv::options& csvoptions, const comma::command_line_options& options, const std::string& defaultFields )
+inline static void init( comma::csv::options& csv_options, const comma::command_line_options& options, const std::string& defaultFields )
 {
-    csvoptions.full_xpath = options.exists( "--full-xpath" );
-    csvoptions.fields = options.value( "--fields", defaultFields );
+    csv_options.full_xpath = options.exists( "--full-xpath" );
+    csv_options.fields = options.value( "--fields", defaultFields );
     if( options.exists( "--binary" ) )
     {
         boost::optional< std::string > format = options.optional< std::string >( "--binary" );
         if( format )
         {
-            csvoptions.format( options.value< std::string >( "--binary" ) );
+            csv_options.format( options.value< std::string >( "--binary" ) );
         }
     }
-    csvoptions.precision = options.value< unsigned int >( "--precision", 6 );
-    csvoptions.delimiter = options.exists( "--delimiter" ) ? options.value( "--delimiter", ',' ) : options.value( "-d", ',' );
+    csv_options.precision = options.value< unsigned int >( "--precision", 6 );
+    csv_options.delimiter = options.exists( "--delimiter" ) ? options.value( "--delimiter", ',' ) : options.value( "-d", ',' );
+    boost::optional< std::string > quote_sign = options.optional< std::string >( "--quote" );
+    if( quote_sign )
+    {
+        switch( quote_sign->size() )
+        {
+            case 0: csv_options.quote.reset(); break;
+            case 1: csv_options.quote = ( *quote_sign )[0]; break;
+            case 2: COMMA_THROW( comma::exception, "expected a quote sign, got \"" << *quote_sign << "\"" );
+        }
+    }
 }
 
 } // namespace impl {
 
-options::options() : full_xpath( false ), delimiter( ',' ), precision( 6 ) {}
+options::options() : full_xpath( false ), delimiter( ',' ), precision( 6 ), quote( '"' ) {}
 
 options::options( int argc, char** argv, const std::string& defaultFields )
 {
@@ -90,6 +101,7 @@ std::string options::usage()
     oss << "                   default false was a wrong choice, but changing it" << std::endl;
     oss << "                   to true now may break too many things" << std::endl;
     oss << "    --precision <precision> : floating point precision; default: 6" << std::endl;
+    oss << "    --quote=[<quote_sign>] : quote sign to quote strings (ascii only); default: '\"'" << std::endl;
     oss << format::usage();
     return oss.str();
 }
