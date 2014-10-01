@@ -110,6 +110,7 @@ struct input_t
     comma::uint32 block;
     
     input_t() : block( 0 ) {}
+    input_t( comma::csv::impl::unstructured key, comma::csv::impl::unstructured value, comma::uint32 block ): key( key ), value( value ), block( block ) {}
     
     typedef boost::unordered_map< comma::csv::impl::unstructured, std::vector< comma::csv::impl::unstructured >, comma::csv::impl::unstructured::hash > map_t;
     typedef comma::csv::input_stream< input_t > input_stream_t;
@@ -155,12 +156,10 @@ static void output_unmatched( comma::csv::output_stream< input_t >& ostream )
     {
         for( typename input_t::map_t::const_iterator it = unmatched.begin(); it != unmatched.end(); ++it )
         {
-           //for( std::size_t i = 0; i < it->second.size(); ++i ) { ostream.write( it->second[i] ); }
-           
-           
-           // todo
-           
-           
+            for( std::size_t i = 0; i < it->second.size(); ++i ) // quick and dirty
+            {
+                ostream.write( input_t( it->first, it->second[i], block ) );
+            }
         }
     }
     unmatched.clear();
@@ -207,8 +206,6 @@ static void update( comma::csv::impl::unstructured& value, const comma::csv::imp
 static void update( const input_t& v, const comma::csv::input_stream< input_t >& istream, comma::csv::output_stream< input_t >& ostream, const std::string& last = std::string() )
 {
     typename input_t::map_t::const_iterator it = filter_map.find( v.key );
-    comma::csv::impl::unstructured u;
-    u.longs.push_back( 1 );    
     if( it == filter_map.end() || it->second.empty() )
     { 
         if( last.empty() ) { output_last( istream ); }
@@ -284,7 +281,11 @@ int main( int ac, char** av )
         for( unsigned int i = 0; i < empty.doubles.size(); ++i ) { empty.doubles[i] = std::numeric_limits< double >::max(); } // quick and dirty
         default_input.value = empty;
         read_filter_block( ostream );
-        if( !first_line.empty() ) { update( comma::csv::ascii< input_t >( csv, default_input ).get( first_line ), istream, ostream, first_line ); }
+        if( !first_line.empty() )
+        {
+            input_t s = default_input; // todo: quick and dirty; fix the sample bug in csv::ascii, csv::binary
+            update( comma::csv::ascii< input_t >( csv, default_input ).get( s, first_line ), istream, ostream, first_line );
+        }
         while( !is_shutdown && ( istream.ready() || ( std::cin.good() && !std::cin.eof() ) ) )
         {
             const input_t* p = istream.read();
