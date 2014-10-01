@@ -305,6 +305,18 @@ bool is_number(const std::string &str)
         while (std::isdigit(char_at(str, pos))) { ++pos; any_digits = true; }
     }
 
+    // check for scientific notation
+    if (any_digits && std::tolower(char_at(str, pos)) == 'e')
+    {
+        size_t pos2 = pos + 1;
+        if (char_at(str, pos2) == '+' || char_at(str, pos2) == '-')
+        {
+            ++pos2;
+            if (std::isdigit(char_at(str, pos2)))
+            { for (pos = pos2 + 1;std::isdigit(char_at(str, pos));++pos) { } }
+        }
+    }
+
     return (any_digits && pos >= str.length());
 }
 
@@ -587,6 +599,19 @@ void tokenise(const std::string &line, const std::string &filename, int line_num
             {
                 ++pos;
                 while (std::isdigit(char_at(line, pos))) { ++pos; any_digits = true; }
+            }
+
+            // check for scientific notation
+            // (TODO: merge common code with is_number function)
+            if (any_digits && std::tolower(char_at(line, pos)) == 'e')
+            {
+                size_t pos2 = pos + 1;
+                if (char_at(line, pos2) == '+' || char_at(line, pos2) == '-')
+                {
+                    ++pos2;
+                    if (std::isdigit(char_at(line, pos2)))
+                    { for (pos = pos2 + 1;std::isdigit(char_at(line, pos));++pos) { } }
+                }
             }
 
             if (any_digits) { type = t_number; }
