@@ -46,6 +46,7 @@
 #include <boost/units/base_units/us/foot.hpp>
 #include <boost/units/base_units/us/pound.hpp>
 #include <boost/units/base_units/metric/nautical_mile.hpp>
+#include <boost/units/base_units/us/mile.hpp>
 #include <boost/units/base_units/metric/knot.hpp>
 #include <boost/units/base_units/angle/radian.hpp>
 #include <boost/units/base_units/angle/degree.hpp>
@@ -71,7 +72,7 @@ void usage()
     std::cerr << "                       a convenience option, probably somewhat misplaced" << std::endl;
     std::cerr << std::endl;
     std::cerr << "supported units" << std::endl;
-    std::cerr << "    meters / feet / nautical-miles " << std::endl;
+    std::cerr << "    meters / feet / statute-miles / nautical-miles " << std::endl;
     std::cerr << "    kilograms / pounds " << std::endl;
     std::cerr << "    meters-per-second / knots " << std::endl;
     std::cerr << "    kelvin / celsius / fahrenheit " << std::endl;
@@ -84,8 +85,8 @@ void usage()
     std::cerr << comma::csv::options::usage() << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
-    std::cerr << "    echo 1.2345 | csv-uints --from meters --to feet " << std::endl;
-    std::cerr << "    echo 1.2345,2.3456 | csv-uints --from kilograms --to pounds --fields=a,b" << std::endl;
+    std::cerr << "    echo 1.2345 | csv-units --from meters --to feet " << std::endl;
+    std::cerr << "    echo 1.2345,2.3456 | csv-units --from kilograms --to pounds --fields=a,b" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -114,6 +115,7 @@ template <> struct traits< input_t >
 typedef boost::units::si::length::unit_type length_t;
 typedef boost::units::us::foot_base_unit::unit_type imperial_us_length_t;
 typedef boost::units::metric::nautical_mile_base_unit::unit_type nautical_mile_t;
+typedef boost::units::us::mile_base_unit::unit_type statute_mile_t;
 typedef boost::units::si::velocity::unit_type velocity_t;
 typedef boost::units::metric::knot_base_unit::unit_type knot_t;
 typedef boost::units::si::kilogram_base_unit::unit_type mass_t;
@@ -189,6 +191,7 @@ static std::string normalized_name( const std::string& s )
     if( s == "kilograms" || s == "kg" ) { return "kilograms"; }
     if( s == "feet" || s == "ft" ) { return "feet"; }
     if( s == "nautical-miles" || s == "nm" ) { return "nautical-miles"; }
+    if( s == "miles" || s == "statute-miles" ) { return "statute-miles"; }
     if( s == "meters" || s == "metres" ) { return "meters"; }
     if( s == "meters-per-second" ) { return "meters-per-second"; }
     if( s == "knots" ) { return "knots"; }
@@ -232,17 +235,26 @@ int main( int ac, char** av )
         if( from == "feet" )
         {
             if( to == "nautical-miles" || to == "nm" ) { return run< imperial_us_length_t, nautical_mile_t >( from, to, "nautical-miles" ); }
+            else if ( to == "statute-miles" || to == "miles" ) { return run< imperial_us_length_t, statute_mile_t >( from, to, "statute-miles" ); }
             return run< imperial_us_length_t, length_t >( from, to, "meters" );
         }
         if( from == "meters" )
         {
             if( to == "nautical-miles" || to == "nm" ) { return run< length_t, nautical_mile_t >( from, to, "nautical-miles" ); }
+            else if ( to == "statute-miles" || to == "miles" ) { return run< length_t, statute_mile_t >( from, to, "statute-miles" ); }
             return run< length_t, imperial_us_length_t >( from, to, "feet" );
         }
         if( from == "nautical-miles" )
         {
             if( to == "feet" ) { return run< nautical_mile_t, imperial_us_length_t >( from, to, "feet" ); }
+            else if ( to == "statute-miles" || to == "miles" ) { return run< nautical_mile_t, statute_mile_t >( from, to, "statute-miles" ); }
             return run< nautical_mile_t, length_t >( from, to, "meters" );
+        }
+        if ( from == "statute-miles" )
+        {
+            if( to == "feet" ) { return run< statute_mile_t, imperial_us_length_t >( from, to, "feet" ); }
+            else if ( to == "nautical-miles" || to == "nm" ) { return run< statute_mile_t, nautical_mile_t >( from, to, "nautical-miles" ); }
+            return run< statute_mile_t, length_t >( from, to, "meters" );
         }
         if( from == "meters-per-second" )
         {
