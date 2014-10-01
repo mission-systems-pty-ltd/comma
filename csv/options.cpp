@@ -63,7 +63,7 @@ inline static void init( comma::csv::options& csv_options, const comma::command_
             csv_options.format( options.value< std::string >( "--binary" ) );
         }
     }
-    csv_options.precision = options.value< unsigned int >( "--precision", 6 );
+    csv_options.precision = options.value< unsigned int >( "--precision", 12 );
     csv_options.delimiter = options.exists( "--delimiter" ) ? options.value( "--delimiter", ',' ) : options.value( "-d", ',' );
     boost::optional< std::string > quote_sign = options.optional< std::string >( "--quote" );
     if( quote_sign )
