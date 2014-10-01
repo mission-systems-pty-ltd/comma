@@ -1,0 +1,5 @@
+interval[1]='-2147483648,2'
+interval[2]='2,3'
+interval[3]='3,4'
+interval[4]='4,5'
+interval[5]='5,1.797693134862316e+308'
