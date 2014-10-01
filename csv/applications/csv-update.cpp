@@ -153,14 +153,15 @@ static void output_unmatched( comma::csv::output_stream< input_t >& ostream )
 {
     if( !is_shutdown && !matched_only )
     {
-        std::cerr << "csv-advance: output_unmatched(): todo" << std::endl; exit( 1 );
-        //for( typename input_t::map_t::const_iterator it = unmatched.begin(); it != unmatched.end(); ++it )
-        //{
-        //    for( std::size_t i = 0; i < it->second.size(); ++i )
-        //    {
-        //        os.write( it->second[i].second );
-        //    }
-        //}
+        for( typename input_t::map_t::const_iterator it = unmatched.begin(); it != unmatched.end(); ++it )
+        {
+           //for( std::size_t i = 0; i < it->second.size(); ++i ) { ostream.write( it->second[i] ); }
+           
+           
+           // todo
+           
+           
+        }
     }
     unmatched.clear();
 }
@@ -253,7 +254,6 @@ int main( int ac, char** av )
             f = comma::csv::impl::unstructured::guess_format( first_line, csv.delimiter );
             std::cerr << "csv-update: guessed format: " << f.string() << std::endl;
         }
-        //for( std::size_t i = 0; i < v.size(); ++i )
         unsigned int size = f.count();
         for( std::size_t i = 0; i < size; ++i )
         {

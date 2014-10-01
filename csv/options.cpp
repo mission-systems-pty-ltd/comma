@@ -79,7 +79,7 @@ inline static void init( comma::csv::options& csv_options, const comma::command_
 
 } // namespace impl {
 
-options::options() : full_xpath( false ), delimiter( ',' ), precision( 6 ), quote( '"' ) {}
+options::options() : full_xpath( false ), delimiter( ',' ), precision( 12 ), quote( '"' ) {}
 
 options::options( int argc, char** argv, const std::string& defaultFields )
 {
@@ -100,7 +100,7 @@ std::string options::usage()
     oss << "    --full-xpath : expect full xpaths as field names; default: false" << std::endl;
     oss << "                   default false was a wrong choice, but changing it" << std::endl;
     oss << "                   to true now may break too many things" << std::endl;
-    oss << "    --precision <precision> : floating point precision; default: 6" << std::endl;
+    oss << "    --precision <precision> : floating point precision; default: 12" << std::endl;
     oss << "    --quote=[<quote_sign>] : quote sign to quote strings (ascii only); default: '\"'" << std::endl;
     oss << format::usage();
     return oss.str();
