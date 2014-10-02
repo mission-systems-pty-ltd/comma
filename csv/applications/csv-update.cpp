@@ -281,11 +281,7 @@ int main( int ac, char** av )
         for( unsigned int i = 0; i < empty.doubles.size(); ++i ) { empty.doubles[i] = std::numeric_limits< double >::max(); } // quick and dirty
         default_input.value = empty;
         read_filter_block( ostream );
-        if( !first_line.empty() )
-        {
-            input_t s = default_input; // todo: quick and dirty; fix the sample bug in csv::ascii, csv::binary
-            update( comma::csv::ascii< input_t >( csv, default_input ).get( s, first_line ), istream, ostream, first_line );
-        }
+        if( !first_line.empty() ) { update( comma::csv::ascii< input_t >( csv, default_input ).get( first_line ), istream, ostream, first_line ); }
         while( !is_shutdown && ( istream.ready() || ( std::cin.good() && !std::cin.eof() ) ) )
         {
             const input_t* p = istream.read();

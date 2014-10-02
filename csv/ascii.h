@@ -66,10 +66,10 @@ class ascii
         const S& get( S& s, const std::string& line ) const { return get( s, split( line, delimiter_ ) ); }
 
         /// get value (unfilled fields have the same value as in default constructor; convenience function)
-        S get( const std::vector< std::string >& v ) const { S s; get( s, v ); return s; }
+        S get( const std::vector< std::string >& v ) const { S s = sample_; get( s, v ); return s; }
 
         /// get value (unfilled fields have the same value as in default constructor; convenience function)
-        S get( const std::string& line ) const { S s; get( s, line ); return s; }
+        S get( const std::string& line ) const { S s = sample_; get( s, line ); return s; }
 
         /// put value at the right place in the vector
         const std::vector< std::string >& put( const S& s, std::vector< std::string >& v ) const;
@@ -91,6 +91,7 @@ class ascii
 
     private:
         char delimiter_;
+        S sample_;
         boost::optional< unsigned int > precision_;
         boost::optional< char > quote_;
         impl::asciiVisitor ascii_;
@@ -99,6 +100,7 @@ class ascii
 template < typename S >
 inline ascii< S >::ascii( const std::string& column_names, char d, bool full_path_as_name, const S& sample )
     : delimiter_( d )
+    , sample_( sample )
     , precision_( options().precision )
     , quote_( options().quote )
     , ascii_( join( csv::names( column_names, full_path_as_name, sample ), ',' ), full_path_as_name )
@@ -110,6 +112,7 @@ inline ascii< S >::ascii( const std::string& column_names, char d, bool full_pat
 template < typename S >
 inline ascii< S >::ascii( const options& o, const S& sample )
     : delimiter_( o.delimiter )
+    , sample_( sample )
     , precision_( o.precision )
     , quote_( o.quote )
     , ascii_( join( csv::names( o.fields, o.full_xpath, sample ), ',' ), o.full_xpath )
@@ -121,6 +124,7 @@ inline ascii< S >::ascii( const options& o, const S& sample )
 template < typename S >
 inline ascii< S >::ascii( const S& sample )
     : delimiter_( options().delimiter )
+    , sample_( sample )
     , precision_( options().precision )
     , quote_( options().quote )
     , ascii_( join( csv::names( options().fields, true, sample ), ',' ), true ) //, ascii_( join( csv::names( options().fields, options().full_xpath, sample ), ',' ), options().full_xpath )
