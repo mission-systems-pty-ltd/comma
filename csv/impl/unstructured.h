@@ -175,7 +175,7 @@ struct unstructured
         {
             try
             { 
-                boost::posix_time::from_iso_string( v[i] );
+                if( v[i] != "not-a-date-time" ) { boost::posix_time::from_iso_string( v[i] ); }
                 f += "t";
             }
             catch( ... )
