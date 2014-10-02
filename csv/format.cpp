@@ -207,7 +207,7 @@ static void withPrecision( std::ostringstream& oss, T t, const boost::optional< 
 
 static void withPrecision( std::ostringstream& oss, float t, const boost::optional< unsigned int >& precision )
 {
-    oss.precision( precision ? *precision : 12 );
+    oss.precision( precision ? *precision : 6 );
     oss << t;
 }
 
