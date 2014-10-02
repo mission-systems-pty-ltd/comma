@@ -249,7 +249,7 @@ int main( int ac, char** av )
             while( std::cin.good() && first_line.empty() ) { std::getline( std::cin, first_line ); }
             if( first_line.empty() ) { return 0; }
             f = comma::csv::impl::unstructured::guess_format( first_line, csv.delimiter );
-            std::cerr << "csv-update: guessed format: " << f.string() << std::endl;
+            if( verbose ) { std::cerr << "csv-update: guessed format: " << f.string() << std::endl; }
         }
         unsigned int size = f.count();
         for( std::size_t i = 0; i < size; ++i )
