@@ -239,10 +239,11 @@ static void update( const input_t& v, const comma::csv::input_stream< input_t >&
         return;
     }
     input_t current = v;
-    for( std::size_t i = 0; i < it->second.size(); ++i )
+    for( std::size_t i = 0; i < it->second.size(); ++i ) // todo: output last only
     {
         update( current.value, it->second[i].value, update_non_empty );
-        ostream.write( current, istream ); // todo: output last only
+        if( last.empty() ) { ostream.write( current, istream ); }
+        else { ostream.write( current, last ); }
     }
     unmatched.erase( it->first );
 }
