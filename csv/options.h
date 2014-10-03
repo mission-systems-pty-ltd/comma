@@ -36,6 +36,7 @@
 #ifndef COMMA_CSV_OPTIONS_H_
 #define COMMA_CSV_OPTIONS_H_
 
+#include <boost/optional.hpp>
 #include <comma/application/command_line_options.h>
 #include <comma/csv/format.h>
 #include <comma/visiting/traits.h>
@@ -73,6 +74,9 @@ class options
 
         /// precision
         unsigned int precision;
+        
+        /// quote sign for strings
+        boost::optional< char > quote;
 
         /// return format
         const csv::format& format() const;

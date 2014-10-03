@@ -143,7 +143,7 @@ inline bool lexical_cast< bool >( const std::string& s )
 template <>
 inline boost::posix_time::ptime lexical_cast< boost::posix_time::ptime >( const std::string& s )
 {
-    return boost::posix_time::from_iso_string( s );
+    return s == "not-a-date-time" ? boost::posix_time::not_a_date_time : boost::posix_time::from_iso_string( s );
 }
 
 } // namespace detail {

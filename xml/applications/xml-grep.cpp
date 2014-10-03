@@ -225,7 +225,7 @@ main(int argc, char ** argv)
 
         if (block_start > app.count_of_elements())
         {
-            fprintf(stderr, CMDNAME ": Error: Block start out of range (%u)\n", app.count_of_elements());
+            std::cerr << CMDNAME ": error: block start out of range (" << app.count_of_elements() << ")" << std::endl;
             return 1;
         }       
         
@@ -233,11 +233,11 @@ main(int argc, char ** argv)
     }
     catch (std::exception const & ex)
     {
-        fprintf(stderr, CMDNAME ": Error: %s\n", ex.what());
+        std::cerr << "xml-grep: " << ex.what() << std::endl;
     }
     catch (...)
     {
-        fputs(CMDNAME ": Error: Unknown Exception.\n", stderr);
+        std::cerr << "xml-grep: unknown exception" << std::endl;
     }
     return 1;
 }

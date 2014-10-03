@@ -209,18 +209,24 @@ TEST( csv, format_floating_point )
 
 struct nested_struct
 {
-    int x;
-    int y;
+    comma::int32 x;
+    comma::int32 y;
 };
 
 struct simple_struct
 {
-    int a;
+    comma::int32 a;
     double b;
     char c;
     std::string s;
     boost::posix_time::ptime t;
     nested_struct nested;
+};
+
+struct optionals
+{
+    boost::optional< double > a;
+    boost::optional< nested_struct > b;
 };
 
 namespace comma { namespace visiting {
@@ -247,6 +253,15 @@ template <> struct traits< simple_struct >
     }
 };
 
+template <> struct traits< optionals >
+{
+    template < typename Key, class Visitor > static void visit( const Key&, const optionals& p, Visitor& v )
+    {
+        v.apply( "a", p.a );
+        v.apply( "b", p.b );
+    }
+};
+
 } } // namespace comma { namespace visiting {
 
 TEST( csv, format_with_fields )
@@ -261,17 +276,36 @@ TEST( csv, format_with_fields )
     EXPECT_EQ( comma::csv::format::value< simple_struct >( "x,y", false ), "i,i" );
 }
 
+TEST( csv, optional_format )
+{
+    EXPECT_EQ( comma::csv::format::value< optionals >(), "d,i,i" );
+}
+
 TEST( csv, unstructured )
 {
-    EXPECT_EQ( "d,d,d,d", comma::csv::impl::unstructured::guess_format( "1,2,3,4" ).string() );
-    EXPECT_EQ( "d,d,t,s[1024]", comma::csv::impl::unstructured::guess_format( "1,2.1,20121212T000000,blah" ).string() );
+    EXPECT_EQ( "l,l,l,l", comma::csv::impl::unstructured::guess_format( "1,2,3,4" ).string() );
+    EXPECT_EQ( "l,d,t,s[1024]", comma::csv::impl::unstructured::guess_format( "1,2.1,20121212T000000,blah" ).string() );
     comma::csv::options csv;
     csv.fields = "a,,,b,,,c";
     csv.delimiter = ',';
-    EXPECT_EQ( "d,s[1024],s[1024],s[1024],s[1024],s[1024],t", comma::csv::impl::unstructured::guess_format( "1,,,blah,,,20121212T000000" ).string() );
-    EXPECT_EQ( 1, comma::csv::impl::unstructured::make( csv, "1,,,blah,,,20121212T000000" ).first.doubles.size() );
+    EXPECT_EQ( "l,s[1024],s[1024],s[1024],s[1024],s[1024],t", comma::csv::impl::unstructured::guess_format( "1,,,blah,,,20121212T000000" ).string() );
+    EXPECT_EQ( 1, comma::csv::impl::unstructured::make( csv, "1,,,blah,,,20121212T000000" ).first.longs.size() );
+    EXPECT_EQ( 1, comma::csv::impl::unstructured::make( csv, "1.1,,,blah,,,20121212T000000" ).first.doubles.size() );
     EXPECT_EQ( 1, comma::csv::impl::unstructured::make( csv, "1,,,blah,,,20121212T000000" ).first.strings.size() );
-    EXPECT_EQ( 1, comma::csv::impl::unstructured::make( csv, "1,,,blah,,,20121212T000000" ).first.timestamps.size() );
-    EXPECT_EQ( "d[0],,,s[0],,,t[0]", comma::csv::impl::unstructured::make( csv, "1,,,blah,,,20121212T000000" ).second.fields );
+    EXPECT_EQ( 1, comma::csv::impl::unstructured::make( csv, "1,,,blah,,,20121212T000000" ).first.time.size() );
+    EXPECT_EQ( "l[0],,,s[0],,,t[0]", comma::csv::impl::unstructured::make( csv, "1,,,blah,,,20121212T000000" ).second.fields );
     // todo: certainly more tests
+}
+
+TEST( csv, unstructured_hash )
+{
+    {
+        typedef comma::csv::impl::unstructured::values< long > value_t;
+        value_t v;
+        EXPECT_EQ( value_t::hash()( v ), value_t::hash()( v ) );
+        v.push_back( 1 );
+        EXPECT_EQ( value_t::hash()( v ), value_t::hash()( v ) );
+        v.push_back( 2 );
+        EXPECT_EQ( value_t::hash()( v ), value_t::hash()( v ) );
+    }
 }

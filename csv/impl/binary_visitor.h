@@ -71,7 +71,7 @@ class binary_visitor
         void apply( const K& name, const boost::optional< T >& value ) // breaks windows compiler: { apply_optional( name, value ); }
         {
             empty_.push_back( true );
-            if( value ) { apply( name, *value ); } else { T v; apply( name, v ); }
+            apply( name, value ? *value : T() );
             optional_.push_back( !empty_.back() );
             empty_.pop_back();
         }
@@ -80,7 +80,7 @@ class binary_visitor
         void apply( const K& name, const boost::scoped_ptr< T >& value ) // breaks windows compiler: { apply_optional( name, value ); }
         {
             empty_.push_back( true );
-            if( value ) { apply( name, *value ); } else { T v; apply( name, v ); }
+            apply( name, value ? *value : T() );
             optional_.push_back( !empty_.back() );
             empty_.pop_back();
         }
@@ -89,7 +89,7 @@ class binary_visitor
         void apply( const K& name, const boost::shared_ptr< T >& value ) // breaks windows compiler: { apply_optional( name, value ); }
         {
             empty_.push_back( true );
-            if( value ) { apply( name, *value ); } else { T v; apply( name, v ); }
+            apply( name, value ? *value : T() );
             optional_.push_back( !empty_.back() );
             empty_.pop_back();
         }

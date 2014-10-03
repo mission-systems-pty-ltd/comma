@@ -59,7 +59,7 @@ inline boost::program_options::options_description program_options::description(
         ( "binary,b", boost::program_options::value< std::string >(), "csv binary format" )
         ( "delimiter,d", boost::program_options::value< char >()->default_value( ',' ), "csv delimiter" )
         ( "full-xpath", "expect full xpaths as field names" )
-        ( "precision", boost::program_options::value< unsigned int >()->default_value( 6 ), "floating point precision" );
+        ( "precision", boost::program_options::value< unsigned int >()->default_value( 12 ), "floating point precision" );
     return d;
 }
 

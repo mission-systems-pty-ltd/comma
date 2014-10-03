@@ -213,7 +213,7 @@ TEST( visiting, containter )
         o_stream_visitor v( oss );
         visiting::apply( v, p );
         EXPECT_EQ( oss.str(), "{ object:pair={ string:first=\"blah\" int:second=111 } object:vector={ string:0=\"first\" string:1=\"second\" } object:set={ int:0=111 int:1=222 } object:map={ double:jupiter=888 double:saturn=999 } }" );
-        std::cerr << oss.str() << std::endl;
+        //std::cerr << oss.str() << std::endl;
     }
 }
 

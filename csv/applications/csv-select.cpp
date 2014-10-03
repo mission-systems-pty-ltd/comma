@@ -335,7 +335,7 @@ static comma::csv::format guess_format( const std::string& line )
     {
         try
         {
-            boost::posix_time::from_iso_string( v[i] );
+            if( v[i] != "not-a-date-time" ) { boost::posix_time::from_iso_string( v[i] ); }
             format += "t";
         }
         catch( ... )

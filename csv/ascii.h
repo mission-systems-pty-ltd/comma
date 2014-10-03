@@ -66,10 +66,10 @@ class ascii
         const S& get( S& s, const std::string& line ) const { return get( s, split( line, delimiter_ ) ); }
 
         /// get value (unfilled fields have the same value as in default constructor; convenience function)
-        S get( const std::vector< std::string >& v ) const { S s; get( s, v ); return s; }
+        S get( const std::vector< std::string >& v ) const { S s = sample_; get( s, v ); return s; }
 
         /// get value (unfilled fields have the same value as in default constructor; convenience function)
-        S get( const std::string& line ) const { S s; get( s, line ); return s; }
+        S get( const std::string& line ) const { S s = sample_; get( s, line ); return s; }
 
         /// put value at the right place in the vector
         const std::vector< std::string >& put( const S& s, std::vector< std::string >& v ) const;
@@ -85,17 +85,24 @@ class ascii
 
         /// set precision
         void precision( unsigned int p ) { precision_ = p; }
+        
+        /// return quote sign
+        boost::optional< char > quote() const { return quote_; }
 
     private:
         char delimiter_;
+        S sample_;
         boost::optional< unsigned int > precision_;
+        boost::optional< char > quote_;
         impl::asciiVisitor ascii_;
 };
 
 template < typename S >
 inline ascii< S >::ascii( const std::string& column_names, char d, bool full_path_as_name, const S& sample )
     : delimiter_( d )
-    , precision_( 12 )
+    , sample_( sample )
+    , precision_( options().precision )
+    , quote_( options().quote )
     , ascii_( join( csv::names( column_names, full_path_as_name, sample ), ',' ), full_path_as_name )
 {
     visiting::apply( ascii_, sample );
@@ -105,7 +112,9 @@ inline ascii< S >::ascii( const std::string& column_names, char d, bool full_pat
 template < typename S >
 inline ascii< S >::ascii( const options& o, const S& sample )
     : delimiter_( o.delimiter )
+    , sample_( sample )
     , precision_( o.precision )
+    , quote_( o.quote )
     , ascii_( join( csv::names( o.fields, o.full_xpath, sample ), ',' ), o.full_xpath )
 {
     visiting::apply( ascii_, sample );
@@ -115,7 +124,9 @@ inline ascii< S >::ascii( const options& o, const S& sample )
 template < typename S >
 inline ascii< S >::ascii( const S& sample )
     : delimiter_( options().delimiter )
+    , sample_( sample )
     , precision_( options().precision )
+    , quote_( options().quote )
     , ascii_( join( csv::names( options().fields, true, sample ), ',' ), true ) //, ascii_( join( csv::names( options().fields, options().full_xpath, sample ), ',' ), options().full_xpath )
 {
     visiting::apply( ascii_, sample );
@@ -133,7 +144,7 @@ template < typename S >
 inline const std::vector< std::string >& ascii< S >::put( const S& s, std::vector< std::string >& v ) const
 {
     if( v.empty() ) { v.resize( ascii_.size() ); }
-    impl::to_ascii f( ascii_.indices(), v );
+    impl::to_ascii f( ascii_.indices(), v, quote_ );
     if( precision_ ) { f.precision( *precision_ ); }
     visiting::apply( f, s );
     return v;

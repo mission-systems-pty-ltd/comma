@@ -53,7 +53,9 @@ class to_ascii
 {
     public:
         /// constructor
-        to_ascii( const std::vector< boost::optional< std::size_t > >& indices, std::vector< std::string >& line );
+        to_ascii( const std::vector< boost::optional< std::size_t > >& indices
+                , std::vector< std::string >& line
+                , boost::optional< char > quote );
 
         /// apply
         template < typename K, typename T > void apply( const K& name, const boost::optional< T >& value );
@@ -84,8 +86,9 @@ class to_ascii
         std::vector< std::string >& row_;
         std::size_t index_;
         boost::optional< unsigned int > precision_;
+        boost::optional< char > quote_;
         std::string as_string_( const boost::posix_time::ptime& v ) { return to_iso_string( v ); }
-        std::string as_string_( const std::string& v ) { return std::string( "\"" ) + v + "\""; } // todo: escape/unescape
+        std::string as_string_( const std::string& v ) { return quote_ ? *quote_ + v + *quote_ : v; } // todo: escape/unescape
         // todo: better output semantics for char/unsigned char
         std::string as_string_( const char& v ) { std::ostringstream oss; oss << static_cast< int >( v ); return oss.str(); }
         std::string as_string_( const unsigned char& v ) { std::ostringstream oss; oss << static_cast< unsigned int >( v ); return oss.str(); }
@@ -99,10 +102,13 @@ class to_ascii
         }
 };
 
-inline to_ascii::to_ascii( const std::vector< boost::optional< std::size_t > >& indices, std::vector< std::string >& line )
+inline to_ascii::to_ascii( const std::vector< boost::optional< std::size_t > >& indices
+                         , std::vector< std::string >& line
+                         , boost::optional< char > quote )
     : indices_( indices )
     , row_( line )
     , index_( 0 )
+    , quote_( quote )
 {
 }
 
