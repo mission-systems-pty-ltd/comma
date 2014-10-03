@@ -118,8 +118,6 @@ static void usage( bool verbose = false )
     std::cerr << std::endl;
     std::cerr << "ascii notes" << std::endl;
     std::cerr << "    unbounded intervals may be indicated by no value (e.g. ,3 \u2261 -\u221e,3), both sides unbounded is also supported" << std::endl;
-    std::cerr << "    if --empty is not given, numeric bounds with no value are output as their type limits" << std::endl;
-    std::cerr << "    todo: add csv quote option so that bounds with no value may be output unquoted" << std::endl;
     std::cerr << std::endl;
     std::cerr << "for examples see verbose help: " << app_name << " --help --verbose" << std::endl;
     std::cerr << std::endl;
@@ -273,6 +271,7 @@ struct intervals
     const comma::command_line_options& options;
     comma::csv::options csv;
     comma::csv::options ocsv;
+    comma::csv::options ascii_csv;
     boost::optional< bound_type > empty;
     bool intervals_only;
     bool use_limits;
@@ -281,6 +280,7 @@ struct intervals
     intervals( const comma::command_line_options& options ) : options( options )
                                                             , csv( options )
                                                             , ocsv( options )
+                                                            , ascii_csv( options )
                                                             , empty( traits< bound_type >::cast( options.optional< std::string >( "--empty" ) ) )
                                                             , intervals_only( options.exists( "--intervals-only" ) )
                                                             , use_limits( options.exists( "--limits,-l" ) )
@@ -291,6 +291,8 @@ struct intervals
             ocsv.fields = comma::join( comma::csv::names< interval_t< From, To > >(), ',' );
             if( ocsv.binary() && intervals_only ) { ocsv.format( comma::csv::format::value< interval_t< From, To > >() ); }
         }
+        ascii_csv.fields = ocsv.fields;
+        ascii_csv.quote = boost::none;
         if( verbose ) { std::cerr << app_name << ": empty: "; empty ? std::cerr << *empty : std::cerr << "<none>"; std::cerr << std::endl; }
     }
 
@@ -304,25 +306,23 @@ struct intervals
     void write()
     {
         static comma::csv::output_stream< interval_t< From, To > > ostream( std::cout, ocsv );
-        static comma::csv::ascii< from_t< std::string > > from_ascii( ocsv.fields );
-        static comma::csv::ascii< to_t< std::string > > to_ascii( ocsv.fields );
+        static comma::csv::ascii< from_t< std::string > > from_ascii( ascii_csv );
+        static comma::csv::ascii< to_t< std::string > > to_ascii( ascii_csv );
         for( typename map_t::iterator it = map.begin(); it != map.end(); ++it )
         {
             bound_t< bound_type > from = it->first.lower();
             bound_t< bound_type > to = it->first.upper();
             interval_t< From, To > interval;
-            // bool from_has_value = true;
-            // bool to_has_value = true;
+            bool from_has_value = true;
+            bool to_has_value = true;
             if( from.value ) { interval.from.value = *from.value; }
             else if( use_limits ) { interval.from.value = limits< From >::lowest(); }
             else if( empty ) { interval.from.value = static_cast< From >( *empty ); }
-            else if( std::numeric_limits< From >::is_specialized ) { interval.from.value = limits< From >::lowest(); }
-            // else { from_has_value = false; }
+            else { from_has_value = false; }
             if( to.value ) { interval.to.value = *to.value; }
             else if( use_limits ) { interval.to.value = limits< To >::max(); }
             else if( empty ) { interval.to.value = static_cast< To >( *empty ); }
-            else if( std::numeric_limits< To >::is_specialized ) { interval.to.value = limits< To >::max(); }
-            // else { to_has_value = false; }
+            else { to_has_value = false; }
             const set_t& s = it->second;
             if( csv.binary() )
             {
@@ -336,9 +336,8 @@ struct intervals
                 {
                     std::string payload( intervals_only ? "" : *v );
                     ostream.ascii().ascii().put( interval, payload );
-                    // todo: add csv quote option
-                    // if( !from_has_value ) { from_ascii.put( from_t< std::string >(), payload ); }
-                    // if( !to_has_value ) { to_ascii.put( to_t< std::string >(), payload); }
+                    if( !from_has_value ) { from_ascii.put( from_t< std::string >(), payload ); }
+                    if( !to_has_value ) { to_ascii.put( to_t< std::string >(), payload); }
                     std::cout << payload << std::endl;
                     if( intervals_only ) { break; }
                 }
