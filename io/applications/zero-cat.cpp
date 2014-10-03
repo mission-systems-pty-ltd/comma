@@ -206,7 +206,13 @@ int main(int argc, char* argv[])
                     if( !is_shutdown && std::cin.good() && !std::cin.eof() && !std::cin.bad() ) { buffer += endl; }
                 }
                 if( buffer.empty() ) { break; }
-                if( !socket.send(&buffer[0], buffer.size()) ) { std::cerr << "zero-cat: failed to send " << buffer.size() << " bytes; zmq errno: EAGAIN" << std::endl; return 1; }
+                #if ZMQ_VERSION_MAJOR == 2
+                zmq::message_t message( buffer.size() );
+                ::memcpy( ( void * )message.data(), &buffer[0], buffer.size() );
+                if( !socket.send( message ) ) { std::cerr << "zero-cat: failed to send " << buffer.size() << " bytes; zmq errno: EAGAIN" << std::endl; return 1; }
+                #else // ZMQ_VERSION_MAJOR == 2
+                if( !socket.send( &buffer[0], buffer.size() ) ) { std::cerr << "zero-cat: failed to send " << buffer.size() << " bytes; zmq errno: EAGAIN" << std::endl; return 1; }
+                #endif // ZMQ_VERSION_MAJOR == 2
                 if( !output_to_stdout ) { continue; }
                 std::cout.write( &buffer[0], buffer.size() );
                 if( binary ) { std::cout.flush(); }
