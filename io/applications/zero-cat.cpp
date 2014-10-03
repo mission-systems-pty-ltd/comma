@@ -43,6 +43,7 @@
 #include <zmq.hpp>
 #include <boost/array.hpp>
 #include <boost/program_options.hpp>
+#include <boost/thread.hpp>
 #include <comma/application/contact_info.h>
 #include <comma/application/signal_flag.h>
 #include <comma/io/publisher.h>
@@ -54,11 +55,86 @@ static std::string get_endl()
     return oss.str();
 }
 
+void usage( boost::program_options::options_description const & description, bool const verbose )
+{
+    std::cerr << "\nforward stdin to zeromq publisher or subscribe from zeromq to stdout"
+                 "\n"
+                 "\nusage: zero-cat <options> [endpoints]"
+                 "\n" << description
+                << std::endl;
+    if( verbose )
+    {
+        std::cerr << "\nconnect vs bind..."
+                     "\nexamples..."
+                     "\nuse --help --verbose for more detail"
+                    << std::endl;
+        return;
+    }
+    std::cerr << "\nconnect vs bind"
+                 "\n"
+                 "\n    persistent sender (publisher), multiple receivers (subscribers) (default behaviour)"
+                 "\n        use case: publishing sensor data to whoever is interested"
+                 "\n"
+                 "\n        publisher: listens to incoming connections (binds) and publishes"
+                 "\n            example: echo yes | zero-cat --publish ipc:///tmp/some_socket"
+                 "\n"
+                 "\n        subscribers: listens to incoming connections (binds)"
+                 "\n            example: zero-cat ipc:///tmp/some_socket"
+                 "\n"
+                 "\n    persistent receiver, multiple senders"
+                 "\n"
+                 "\n        use case: logging server"
+                 "\n"
+                 "\n        receiver: listens to incoming connections (binds) and receives"
+                 "\n            example: zero-cat ipc:///tmp/some_socket --bind > log.txt"
+                 "\n"
+                 "\n        senders: connect to the receiver and send"
+                 "\n            example: echo yes | zero-cat --publish ipc:///tmp/some_socket --connect"
+                 "\n"
+                 "\n        the difference is that if senders bind (as oppose to connect) and they"
+                 "\n        can send data straight away, since zmq is connectionless, even though the"
+                 "\n        receiver has not finished connecting to them yet and therefore the initial"
+                 "\n        portion of data may be lost"
+                 "\n"
+                 "\n        example"
+                 "\n            in the following case, the receiver most likely will miss the message"
+                 "\n            since the sender will send it, before the receiver has got connected:"
+                 "\n"
+                 "\n            zero-cat ipc:///tmp/some_socket > my-log.txt &"
+                 "\n            echo hello world | zero-cat --publish ipc:///tmp/some_socket"
+                 "\n"
+                 "\n            but this will work:"
+                 "\n"
+                 "\n            zero-cat ipc:///tmp/some_socket --bind > my-log.txt &"
+                 "\n            echo hello world | zero-cat --publish ipc:///tmp/some_socket --connect"
+                 "\n"
+                 "\nwait after connect"
+                 "\n"
+                 "\n    All inter-process and network protocols require some time to establish the"
+                 "\n    channel, and there is no way with the zmq connectionless design to"
+                 "\n    determine if a channel is open. As such, if message delivery is required"
+                 "\n    the user will need to specify a wait period after connection before"
+                 "\n    messages are sent. The user will need to tune the wait for the system."
+                 "\n    During testing on a 2014 PC, 0.2 seconds was adequate for Linux IPC."
+                 "\n    This problem was uncovered because data from a pipe was not being sent."
+                 "\n    Examples:"
+                 "\n        zero-cat ipc:///tmp/some_socket > msglog & "
+                 "\n        for i in seq 10; do echo Try $i | zero-cat --wait-after-connect=0.2 --publish ipc:///tmp/some_socket; done"
+                 "\n        # note reciever is still running use fg"
+                 "\n   Notes:"
+                 "\n        If outputting messages to a single pipe it is better to keep zero-cat"
+                 "\n        running to minimise load and maximise throughput."
+                 "\n"
+                << comma::contact_info
+                << std::endl;
+}
+
 int main(int argc, char* argv[])
 {
     try
     {
         unsigned int size;
+        double wait_after_connect = 0.0;
         std::size_t hwm;
         std::string server;
         boost::program_options::options_description description( "options" );
@@ -70,6 +146,7 @@ int main(int argc, char* argv[])
             ( "size,s", boost::program_options::value< unsigned int >( &size ), "packet size in bytes, in publish mode; if not present, data is line-based ascii" )
             ( "buffer,b", boost::program_options::value< std::size_t >( &hwm )->default_value( 1024 ), "set buffer size in packets (high water mark in zmq)" )
             ( "server", boost::program_options::value< std::string >( &server ), "in subscribe mode, republish the data on a socket, eg tcp:1234" )
+            ( "wait-after-connect,conwait", boost::program_options::value< double >( &wait_after_connect ), "time to wait, in seconds, after initial connection before attempting to read or write" )
             ( "verbose,v", "more output" );
 
         boost::program_options::variables_map vm;
@@ -79,66 +156,7 @@ int main(int argc, char* argv[])
 
         if( vm.count( "help" ) )
         {
-            std::cerr << std::endl;
-            std::cerr << "forward stdin to zeromq publisher or subscribe from zeromq to stdout" << std::endl;
-            std::cerr << std::endl;
-            std::cerr << "usage: zero-cat <options> [endpoints]" << std::endl;
-            std::cerr << std::endl;
-            std::cerr << description << std::endl;
-            std::cerr << std::endl;
-            if( !vm.count( "verbose" ) )
-            {
-                std::cerr << "connect vs bind..." << std::endl;
-                std::cerr << std::endl;
-                std::cerr << "examples..." << std::endl;
-                std::cerr << std::endl;
-                std::cerr << "use --help --verbose for more detail" << std::endl;
-                std::cerr << std::endl;
-                return 0;
-            }
-            std::cerr << std::endl;
-            std::cerr << "connect vs bind" << std::endl;
-            std::cerr << std::endl;
-            std::cerr << "    persistent sender (publisher), multiple receivers (subscribers) (default behaviour)" << std::endl;
-            std::cerr << std::endl;
-            std::cerr << "        use case: publishing sensor data to whoever is interested" << std::endl;
-            std::cerr << std::endl;
-            std::cerr << "        publisher: listens to incoming connections (binds) and publishes" << std::endl;
-            std::cerr << "            example: echo yes | zero-cat --publish ipc:///tmp/some_socket" << std::endl;
-            std::cerr << std::endl;
-            std::cerr << "        subscribers: listens to incoming connections (binds)" << std::endl;
-            std::cerr << "            example: zero-cat ipc:///tmp/some_socket" << std::endl;
-            std::cerr << std::endl;
-            std::cerr << "    persistent receiver, multiple senders" << std::endl;
-            std::cerr << std::endl;
-            std::cerr << "        use case: logging server" << std::endl;
-            std::cerr << std::endl;
-            std::cerr << "        receiver: listens to incoming connections (binds) and receives" << std::endl;
-            std::cerr << "            example: zero-cat ipc:///tmp/some_socket --bind > log.txt" << std::endl;
-            std::cerr << std::endl;
-            std::cerr << "        senders: connect to the receiver and send" << std::endl;
-            std::cerr << "            example: echo yes | zero-cat --publish ipc:///tmp/some_socket --connect" << std::endl;
-            std::cerr << std::endl;
-            std::cerr << "        the difference is that if senders bind (as oppose to connect) and they can send" << std::endl;
-            std::cerr << "        data straight away, since zmq is connectionless, even though the receiver has" << std::endl;
-            std::cerr << "        not finished connecting to them yet and therefore the initial portion of data" << std::endl;
-            std::cerr << "        may be lost" << std::endl;
-            std::cerr << std::endl;
-            std::cerr << "        example" << std::endl;
-            std::cerr << "            in the following case, the receiver most likely will miss the message" << std::endl;
-            std::cerr << "            since the sender will send it, before the receiver has got connected:" << std::endl;
-            std::cerr << std::endl;
-            std::cerr << "            zero-cat ipc:///tmp/some_socket > my-log.txt &" << std::endl;
-            std::cerr << "            echo hello world | zero-cat --publish ipc:///tmp/some_socket" << std::endl;
-            std::cerr << std::endl;
-            std::cerr << "            but this will work:" << std::endl;
-            std::cerr << std::endl;
-            std::cerr << "            zero-cat ipc:///tmp/some_socket --bind > my-log.txt &" << std::endl;
-            std::cerr << "            echo hello world | zero-cat --publish ipc:///tmp/some_socket --connect" << std::endl;
-            std::cerr << std::endl;
-            std::cerr << std::endl;
-            std::cerr << comma::contact_info << std::endl;
-            std::cerr << std::endl;
+            usage( description, !vm.count( "verbose" ) );
             return 0;
         }
         const bool is_publisher = bool( vm.count( "publish" ) );
@@ -167,6 +185,9 @@ int main(int argc, char* argv[])
                 else if( vm.count( "connect" ) ) { socket.connect( endpoints[i].c_str() ); }
                 else { socket.bind( endpoints[i].c_str() ); }
             }
+            // we convert to milliseconds as converting to second floors the number so 0.99 becomes 0
+            if (wait_after_connect > 0)
+                boost::this_thread::sleep(boost::posix_time::milliseconds(wait_after_connect * 1000.0));
             while( !is_shutdown && std::cin.good() && !std::cin.eof() && !std::cin.bad() )
             {
                 std::string buffer;
@@ -185,9 +206,7 @@ int main(int argc, char* argv[])
                     if( !is_shutdown && std::cin.good() && !std::cin.eof() && !std::cin.bad() ) { buffer += endl; }
                 }
                 if( buffer.empty() ) { break; }
-                zmq::message_t message( buffer.size() );
-                ::memcpy( ( void * )message.data(), &buffer[0], buffer.size() );
-                if( !socket.send( message ) ) { std::cerr << "zero-cat: failed to send " << buffer.size() << " bytes; zmq errno: EAGAIN" << std::endl; return 1; }
+                if( !socket.send(&buffer[0], buffer.size()) ) { std::cerr << "zero-cat: failed to send " << buffer.size() << " bytes; zmq errno: EAGAIN" << std::endl; return 1; }
                 if( !output_to_stdout ) { continue; }
                 std::cout.write( &buffer[0], buffer.size() );
                 if( binary ) { std::cout.flush(); }
@@ -201,6 +220,8 @@ int main(int argc, char* argv[])
                 else { socket.connect( endpoints[i].c_str() ); }
             }
             socket.setsockopt( ZMQ_SUBSCRIBE, "", 0 );
+            if (wait_after_connect > 0)
+                boost::this_thread::sleep(boost::posix_time::milliseconds(wait_after_connect * 1000.0));
             if( vm.count( "server" ) )
             {
                 comma::io::publisher publisher( server, comma::io::mode::binary, true, false );
