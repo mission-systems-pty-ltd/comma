@@ -112,7 +112,20 @@ struct input_t
     input_t() : block( 0 ) {}
     input_t( comma::csv::impl::unstructured key, comma::csv::impl::unstructured value, comma::uint32 block ): key( key ), value( value ), block( block ) {}
     
-    typedef boost::unordered_map< comma::csv::impl::unstructured, std::vector< comma::csv::impl::unstructured >, comma::csv::impl::unstructured::hash > map_t;
+    struct map
+    {
+        struct value_type
+        {
+            unsigned int index;
+            comma::csv::impl::unstructured value;
+            std::string string;
+            
+            value_type() {}
+            value_type( unsigned int index, const comma::csv::impl::unstructured& value, const std::string& string ) : index( index ), value( value ), string( string ) {}
+        };        
+        typedef boost::unordered_map< comma::csv::impl::unstructured, std::vector< value_type >, comma::csv::impl::unstructured::hash > type;
+    };
+    
     typedef comma::csv::input_stream< input_t > input_stream_t;
 };
 
@@ -147,44 +160,57 @@ static bool update_non_empty = false;
 static input_t default_input;
 static comma::csv::impl::unstructured empty;
 static comma::csv::impl::unstructured erase; // todo
-static input_t::map_t filter_map;
-static input_t::map_t unmatched;
+static input_t::map::type filter_map;
+static input_t::map::type unmatched;
 
-static void output_unmatched( comma::csv::output_stream< input_t >& ostream )
+static void output_unmatched_all()
+{
+    if( is_shutdown || matched_only ) { return; }
+    std::string s;
+    for( std::getline( **filter_transport, s ); ( **filter_transport ).good() && !( **filter_transport ).eof(); std::getline( **filter_transport, s ) )
+    {
+        std::cout << s << std::endl;
+    }
+}
+
+static void output_unmatched()
 {
     if( !is_shutdown && !matched_only )
     {
-        for( typename input_t::map_t::const_iterator it = unmatched.begin(); it != unmatched.end(); ++it )
+        typedef std::map< unsigned int, std::string > map_t;
+        map_t m;
+        for( typename input_t::map::type::const_iterator it = unmatched.begin(); it != unmatched.end(); ++it )
         {
-            for( std::size_t i = 0; i < it->second.size(); ++i ) // quick and dirty
-            {
-                ostream.write( input_t( it->first, it->second[i], block ) );
-            }
+            for( unsigned int i = 0; i < it->second.size(); m[ it->second[i].index ] = it->second[i].string, ++i );
         }
+        for( map_t::const_iterator it = m.begin(); std::cout << it->second, it != m.end(); ++it );
     }
     unmatched.clear();
 }
 
-static void read_filter_block( comma::csv::output_stream< input_t >& ostream )
+static void read_filter_block()
 {
-    output_unmatched( ostream );
+    output_unmatched();
     static input_t::input_stream_t filter_stream( **filter_transport, csv, default_input );
     static const input_t* last = filter_stream.read();
     if( !last ) { return; }
     block = last->block;
     filter_map.clear();
-    comma::uint64 count = 0;
+    unsigned int index = 0;
     while( last->block == block && !is_shutdown )
     {
-        filter_map[ last->key ].push_back( last->value );
+        std::string s;
+        if( csv.binary() ) { s.resize( csv.format().size() ); ::memcpy( &s[0], filter_stream.binary().last(), csv.format().size() ); }
+        else { s = comma::join( filter_stream.ascii().last(), csv.delimiter ) + '\n'; }
+        filter_map[ last->key ].push_back( input_t::map::value_type( index++, last->value, s ) );
         //if( d.size() > 1 ) {}
-        if( verbose ) { ++count; if( count % 10000 == 0 ) { std::cerr << "csv-update: reading block " << block << "; loaded " << count << " point[s]; hash map size: " << filter_map.size() << std::endl; } }
+        if( verbose ) { if( index % 10000 == 0 ) { std::cerr << "csv-update: reading block " << block << "; loaded " << index << " point[s]; hash map size: " << filter_map.size() << std::endl; } }
         //if( ( *filter_transport )->good() && !( *filter_transport )->eof() ) { break; }
         last = filter_stream.read();
         if( !last ) { break; }
     }
     unmatched = filter_map;
-    if( verbose ) { std::cerr << "csv-update: read block " << block << " of " << count << " point[s]; got " << filter_map.size() << " different key(s)" << std::endl; }
+    if( verbose ) { std::cerr << "csv-update: read block " << block << " of " << index << " point[s]; got " << filter_map.size() << " different key(s)" << std::endl; }
 }
 
 static void output_last( const comma::csv::input_stream< input_t >& istream )
@@ -205,7 +231,7 @@ static void update( comma::csv::impl::unstructured& value, const comma::csv::imp
 
 static void update( const input_t& v, const comma::csv::input_stream< input_t >& istream, comma::csv::output_stream< input_t >& ostream, const std::string& last = std::string() )
 {
-    typename input_t::map_t::const_iterator it = filter_map.find( v.key );
+    typename input_t::map::type::const_iterator it = filter_map.find( v.key );
     if( it == filter_map.end() || it->second.empty() )
     { 
         if( last.empty() ) { output_last( istream ); }
@@ -215,7 +241,7 @@ static void update( const input_t& v, const comma::csv::input_stream< input_t >&
     input_t current = v;
     for( std::size_t i = 0; i < it->second.size(); ++i )
     {
-        update( current.value, it->second[i], update_non_empty );
+        update( current.value, it->second[i].value, update_non_empty );
         ostream.write( current, istream ); // todo: output last only
     }
     unmatched.erase( it->first );
@@ -237,6 +263,7 @@ int main( int ac, char** av )
         if( unnamed.empty() ) { std::cerr << "csv-update: please specify the second source" << std::endl; return 1; }
         if( unnamed.size() > 1 ) { std::cerr << "csv-update: expected one file or stream to join, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         filter_name = unnamed[0];
+        filter_transport.reset( new comma::io::istream( filter_name, options.exists( "--binary,-b" ) ? comma::io::mode::binary : comma::io::mode::ascii ) );
         std::vector< std::string > v = comma::split( csv.fields, ',' );
         bool has_value_fields = false;
         for( std::size_t i = 0; !has_value_fields && i < v.size(); has_value_fields = !v[i].empty() && v[i] != "block" &&  v[i] != "id", ++i );
@@ -247,7 +274,7 @@ int main( int ac, char** av )
         else
         {
             while( std::cin.good() && first_line.empty() ) { std::getline( std::cin, first_line ); }
-            if( first_line.empty() ) { return 0; }
+            if( first_line.empty() ) { output_unmatched_all(); return 0; }
             f = comma::csv::impl::unstructured::guess_format( first_line, csv.delimiter );
             if( verbose ) { std::cerr << "csv-update: guessed format: " << f.string() << std::endl; }
         }
@@ -269,7 +296,6 @@ int main( int ac, char** av )
         csv.fields = comma::join( v, ',' );
         if( verbose ) { std::cerr << "csv-update: csv fields: " << csv.fields << std::endl; }
         comma::csv::input_stream< input_t > istream( std::cin, csv, default_input );
-        filter_transport.reset( new comma::io::istream( filter_name, csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii ) );
         comma::csv::output_stream< input_t > ostream( std::cout, csv, default_input );
         empty = default_input.value;
         
@@ -280,16 +306,16 @@ int main( int ac, char** av )
         for( unsigned int i = 0; i < empty.longs.size(); ++i ) { empty.longs[i] = std::numeric_limits< comma::int64 >::max(); } // quick and dirty
         for( unsigned int i = 0; i < empty.doubles.size(); ++i ) { empty.doubles[i] = std::numeric_limits< double >::max(); } // quick and dirty
         default_input.value = empty;
-        read_filter_block( ostream );
+        read_filter_block();
         if( !first_line.empty() ) { update( comma::csv::ascii< input_t >( csv, default_input ).get( first_line ), istream, ostream, first_line ); }
         while( !is_shutdown && ( istream.ready() || ( std::cin.good() && !std::cin.eof() ) ) )
         {
             const input_t* p = istream.read();
             if( !p ) { break; }
-            if( block != p->block ) { read_filter_block( ostream ); }
+            if( block != p->block ) { read_filter_block(); }
             update( *p, istream, ostream );
         }
-        output_unmatched( ostream );
+        output_unmatched();
         return 0;
     }
     catch( std::exception& ex ) { std::cerr << "csv-update: " << ex.what() << std::endl; }
