@@ -183,7 +183,7 @@ static void output_unmatched()
         {
             for( unsigned int i = 0; i < it->second.size(); m[ it->second[i].index ] = it->second[i].string, ++i );
         }
-        for( map_t::const_iterator it = m.begin(); std::cout << it->second, it != m.end(); ++it );
+        for( map_t::const_iterator it = m.begin(); it != m.end(); std::cout << it->second, ++it );
     }
     unmatched.clear();
 }
