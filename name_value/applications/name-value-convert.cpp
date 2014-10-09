@@ -72,6 +72,8 @@ static void usage()
     std::cerr << "name/path-value options:" << std::endl;
     std::cerr << "    --equal-sign,-e=<equal sign>: default '='" << std::endl;
     std::cerr << "    --delimiter,-d=<delimiter>: default ','" << std::endl;
+    std::cerr << "    --show-path-indices,--indices: show indices for array items e.g. y[0]/x/z[1]=\"a\"" << std::endl;
+    std::cerr << "    --no-brackets: use with --show-path-indices - above, show indices as path elements e.g. y/0/x/z/1=\"a\"" << std::endl;
     std::cerr << std::endl;
     std::cerr << "data flow options:" << std::endl;
     std::cerr << "    --linewise,-l: if present, treat each input line as a record" << std::endl;
@@ -85,6 +87,8 @@ static void usage()
 static char equal_sign;
 static char delimiter;
 static bool linewise;
+typedef comma::property_tree::path_mode path_mode;
+static path_mode indices_mode = comma::property_tree::disabled;
 
 enum Types { ini, info, json, xml, name_value, path_value };
 
@@ -93,32 +97,32 @@ template < Types Type > struct traits {};
 template <> struct traits< ini >
 {
     static void input( std::istream& is, boost::property_tree::ptree& ptree ) { boost::property_tree::read_ini( is, ptree ); }
-    static void output( std::ostream& os, boost::property_tree::ptree& ptree ) { boost::property_tree::write_ini( os, ptree ); }
+    static void output( std::ostream& os, boost::property_tree::ptree& ptree, path_mode ) { boost::property_tree::write_ini( os, ptree ); }
 };
 
 template <> struct traits< info >
 {
     static void input( std::istream& is, boost::property_tree::ptree& ptree ) { boost::property_tree::read_info( is, ptree ); }
-    static void output( std::ostream& os, boost::property_tree::ptree& ptree ) { boost::property_tree::write_info( os, ptree ); }
+    static void output( std::ostream& os, boost::property_tree::ptree& ptree, path_mode ) { boost::property_tree::write_info( os, ptree ); }
 };
 
 template <> struct traits< json >
 {
     static void input( std::istream& is, boost::property_tree::ptree& ptree ) { boost::property_tree::read_json( is, ptree ); }
-    static void output( std::ostream& os, boost::property_tree::ptree& ptree ) { boost::property_tree::write_json( os, ptree ); }
+    static void output( std::ostream& os, boost::property_tree::ptree& ptree, path_mode ) { boost::property_tree::write_json( os, ptree ); }
 };
 
 template <> struct traits< xml >
 {
     static void input( std::istream& is, boost::property_tree::ptree& ptree ) { boost::property_tree::read_xml( is, ptree ); }
-    static void output( std::ostream& os, boost::property_tree::ptree& ptree ) { boost::property_tree::write_xml( os, ptree ); }
+    static void output( std::ostream& os, boost::property_tree::ptree& ptree, path_mode ) { boost::property_tree::write_xml( os, ptree ); }
 };
 
 template <> struct traits< name_value >
 {
     // todo: handle indented input (quick and dirty: use exceptions)
     static void input( std::istream& is, boost::property_tree::ptree& ptree ) { comma::property_tree::from_name_value( is, ptree, equal_sign, delimiter ); }
-    static void output( std::ostream& os, boost::property_tree::ptree& ptree ) { comma::property_tree::to_name_value( os, ptree, !linewise, equal_sign, delimiter ); }
+    static void output( std::ostream& os, boost::property_tree::ptree& ptree, path_mode ) { comma::property_tree::to_name_value( os, ptree, !linewise, equal_sign, delimiter ); }
 };
 
 template <> struct traits< path_value > // quick and dirty
@@ -143,7 +147,7 @@ template <> struct traits< path_value > // quick and dirty
         }
         ptree = comma::property_tree::from_path_value_string( s, equal_sign, delimiter );
     }
-    static void output( std::ostream& os, boost::property_tree::ptree& ptree ) { comma::property_tree::to_path_value( os, ptree, equal_sign, delimiter ); if( delimiter == '\n' ) { os << std::endl; } }
+    static void output( std::ostream& os, boost::property_tree::ptree& ptree, path_mode mode) { comma::property_tree::to_path_value( os, ptree, mode, equal_sign, delimiter ); if( delimiter == '\n' ) { os << std::endl; } }
 };
 
 int main( int ac, char** av )
@@ -159,7 +163,7 @@ int main( int ac, char** av )
         char default_delimiter = ( to == "path-value" || from == "path-value" ) && !linewise ? '\n' : ',';
         delimiter = options.value( "--delimiter,-d", default_delimiter );
         void ( * input )( std::istream& is, boost::property_tree::ptree& ptree );
-        void ( * output )( std::ostream& is, boost::property_tree::ptree& ptree );
+        void ( * output )( std::ostream& is, boost::property_tree::ptree& ptree, path_mode );
         if( from == "ini" ) { input = &traits< ini >::input; }
         else if( from == "info" ) { input = &traits< info >::input; }
         else if( from == "json" ) { input = &traits< json >::input; }
@@ -172,6 +176,11 @@ int main( int ac, char** av )
         else if( to == "xml" ) { output = &traits< xml >::output; }
         else if( to == "path-value" ) { output = &traits< path_value >::output; }
         else { output = &traits< name_value >::output; }
+        if( options.exists( "--show-path-indices,--indices" ) ) 
+        {
+            if( options.exists( "--no-brackets" ) ) { indices_mode = comma::property_tree::without_brackets; }
+            else { indices_mode = comma::property_tree::with_brackets; }
+        }
         if( linewise )
         {
             comma::signal_flag is_shutdown;
@@ -184,7 +193,7 @@ int main( int ac, char** av )
                 boost::property_tree::ptree ptree;
                 input( iss, ptree );
                 std::ostringstream oss;
-                output( oss, ptree );
+                output( oss, ptree,  indices_mode );
                 std::string s = oss.str();
                 if( s.empty() ) { continue; }
                 bool escaped = false;
@@ -208,7 +217,7 @@ int main( int ac, char** av )
         {
             boost::property_tree::ptree ptree;
             input( std::cin, ptree );
-            output( std::cout, ptree );
+            output( std::cout, ptree, indices_mode );
         }
         return 0;
     }
