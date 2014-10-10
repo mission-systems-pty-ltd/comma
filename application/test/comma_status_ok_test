@@ -1,0 +1,146 @@
+#!/bin/bash
+
+source $( which comma-util ) || exit 1
+
+num_ok=0
+
+# Old-style definition
+function status_ok_1()
+{
+    [[ ! "${PIPESTATUS[@]}" =~ [1-9] ]]
+}
+export -f status_ok_1
+(( ++num_ok ))
+
+# Suggested new definition that ignores SIGPIPE exit status
+# In this test use value of "1" instead of real SIGPIPE
+# Correct implementation would do:
+#     local kill=$( kill -l SIGPIPE )
+#     kill=$(( kill + 128 ))
+# But this can be too slow, as it involves a subprocess.
+# Can define a global variable when this function is source-d.
+function status_ok_2()
+{
+    local as_string=" ${PIPESTATUS[*]}"  # note the leading space
+    local kill=1
+    as_string="${as_string//$kill/0}"
+    [[ ! "$as_string" =~ [1-9] ]]
+}
+export -f status_ok_2
+(( ++num_ok ))
+
+# Instead of using a regex, iterate over exit status array.
+function status_ok_3()
+{
+    local outcome
+    local kill=1
+    for outcome in "${PIPESTATUS[@]}" ; do
+        (( outcome == 0 || outcome == kill )) && return 0
+    done
+    return 1
+}
+export -f status_ok_3
+(( ++num_ok ))
+
+# Generate a pipeline of true/false calls
+function true_false_sequences()
+{
+    local num=$1
+    local prob_false=$2
+    local i value rv
+    for i in $( seq $num ) ; do
+        value=$( comma_urandom )
+        value=$( echo "$value < $prob_false" | bc )
+        (( value == 1 )) && rv="$rv false |" || rv="$rv true |"
+    done
+    echo "$rv true "  # make sure last command is a success
+}
+
+# Generate a list of pipelines
+function generate_pipelines()
+{
+    local nlines=$1
+    local ncalls=$2
+    local prob_false=$3
+    local i
+    for i in $(seq $nlines ) ; do
+        true_false_sequences $ncalls $prob_false
+    done
+}
+
+# Apply status_ok check after each pipeline
+function apply_status_ok()
+{
+    local fcn_name=$1
+    local line
+    local num=0
+    while true ; do
+        read line
+        [[ -z "$line" ]] && break
+        echo "$line"
+        echo "if ! $fcn_name ; then (( ++count_failure )) ; else (( ++count_success )) ; fi"
+        (( ++num ))
+    done
+}
+
+# Header and footer
+function header()
+{
+    local fcn_name=$1
+    local fcn=$( declare -f "$fcn_name" )
+    cat <<EOF
+#!/bin/bash
+
+$fcn 
+
+count_success=0
+count_failure=0
+
+EOF
+}
+
+function footer()
+{
+    local num=$1
+    cat <<EOF
+
+echo "test[$num]/count/success=\$count_success"
+echo "test[$num]/count/failure=\$count_failure"
+EOF
+}
+
+output_dir="output"
+rm -rf "$output_dir" || exit 1
+mkdir -p "$output_dir" || exit 1
+
+# later will override
+random_seed=123
+pipeline_length=5
+probability_false=0.1
+test_count=512
+replicate=32
+
+RANDOM=$random_seed
+pipelines="$output_dir/pipelines"
+generate_pipelines $test_count $pipeline_length $probability_false > "$pipelines"
+
+# Generate test scripts
+for iok in $( seq $num_ok ) ; do
+    test_script="$output_dir/test_${iok}"
+    fcn_name="status_ok_${iok}"
+    header "$fcn_name" > "$test_script"
+    # generating all randomly is too slow; repeat identical chunks
+    for irepl in $( seq $replicate ) ; do
+        cat "$pipelines" | apply_status_ok "$fcn_name" >> "$test_script"
+    done
+    footer $iok >> "$test_script"
+    chmod u+x "$test_script"
+done
+
+# Run test scripts, measure run-time
+for iok in $( seq $num_ok ) ; do
+    test_script="$output_dir/test_${iok}"
+    timer="$output_dir/time${iok}"
+    /usr/bin/time -f "%e" -o "$timer" "$test_script"
+    echo "test[$iok]/time/elapsed=$( cat $timer )"
+done
