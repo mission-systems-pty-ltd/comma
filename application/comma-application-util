@@ -357,7 +357,6 @@ export SIGPIPE_STATUS
 
 function status_ok()
 {
-    local outcome
     for outcome in "${PIPESTATUS[@]}" ; do
         (( outcome == 0 || outcome == SIGPIPE_STATUS )) && return 0
     done
