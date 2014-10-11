@@ -352,14 +352,16 @@ export -f comma_options_has
 # if ! status_ok ; then echo "failed"; else echo "ok"; fi
 
 # define this value once to avoid calling subprocesses inside status_ok
-SIGPIPE_STATUS=$( expr 128 \+ $( kill -l SIGPIPE ) )
-export SIGPIPE_STATUS
+SIGPIPE_EXIT_STATUS=$( expr 128 \+ $( kill -l SIGPIPE ) )
+export SIGPIPE_EXIT_STATUS
 
 function status_ok()
 {
-    for outcome in "${PIPESTATUS[@]}" ; do
-        (( outcome == 0 || outcome == SIGPIPE_STATUS )) && return 0
+    pipestatus_copy_status_ok=("${PIPESTATUS[@]}")  # make a safe copy
+    local outcome_status_ok=""
+    for outcome_status_ok in "${pipestatus_copy_status_ok[@]}" ; do
+        (( outcome_status_ok == 0 || outcome_status_ok == SIGPIPE_EXIT_STATUS )) || return 1
     done
-    return 1
+    return 0
 }
 export -f status_ok

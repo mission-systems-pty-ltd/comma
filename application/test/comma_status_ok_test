@@ -32,12 +32,13 @@ export -f status_ok_2
 # Instead of using a regex, iterate over exit status array.
 function status_ok_3()
 {
+    copy=("${PIPESTATUS[@]}")  # make a safe copy
     local outcome
     local kill=1
-    for outcome in "${PIPESTATUS[@]}" ; do
-        (( outcome == 0 || outcome == kill )) && return 0
+    for outcome in "${copy[@]}" ; do
+        (( outcome == 0 || outcome == kill )) || return 1
     done
-    return 1
+    return 0
 }
 export -f status_ok_3
 (( ++num_ok ))
