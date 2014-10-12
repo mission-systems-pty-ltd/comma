@@ -338,3 +338,30 @@ function comma_options_has()
     echo 0
 }
 export -f comma_options_has
+
+# verify the overall exit status of a pipeline ($? reports only the status of the last step
+# in a pipeline); ignore termination by SIGPIPE
+#
+# rationale for ignoring SIGPIPE: if in a pipeline " A | B " the process "B" may exit before A,
+# so that A (pipe writer) has no reader, then A is killed by SIGPIPE and has non-zero exit status
+# however, this may be (and likely is) not an error overall, as B has simply finished
+# processing and terminated
+#
+# example
+# A | B | C | D
+# if ! status_ok ; then echo "failed"; else echo "ok"; fi
+
+# define this value once to avoid calling subprocesses inside status_ok
+SIGPIPE_EXIT_STATUS=$( expr 128 \+ $( kill -l SIGPIPE ) )
+export SIGPIPE_EXIT_STATUS
+
+function status_ok()
+{
+    pipestatus_copy_status_ok=("${PIPESTATUS[@]}")  # make a safe copy
+    local outcome_status_ok=""
+    for outcome_status_ok in "${pipestatus_copy_status_ok[@]}" ; do
+        (( outcome_status_ok == 0 || outcome_status_ok == SIGPIPE_EXIT_STATUS )) || return 1
+    done
+    return 0
+}
+export -f status_ok

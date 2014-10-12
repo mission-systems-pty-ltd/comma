@@ -55,10 +55,11 @@ template < typename T >
 void run()
 {
     comma::csv::applications::split< T > split( duration, suffix, csv );
+    comma::signal_flag is_shutdown;
     if( size == 0 )
     {
         std::string line;
-        while( std::cin.good() && !std::cin.eof() )
+        while( !is_shutdown && std::cin.good() && !std::cin.eof() )
         {
             std::getline( std::cin, line );
             if( line.empty() ) { break; }
@@ -71,7 +72,6 @@ void run()
             _setmode( _fileno( stdin ), _O_BINARY );
         #endif
         std::vector< char > packet( size );
-        comma::signal_flag is_shutdown;
         while( !is_shutdown && std::cin.good() && !std::cin.eof() )
         {
             std::cin.read( &packet[0], size );

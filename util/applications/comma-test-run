@@ -27,12 +27,6 @@ brown="\033[0;33m"
 white="\033[0;37m"
 none="\033[m"
 
-status_ok()
-{
-    [[ ! "${PIPESTATUS[@]}" =~ [1-9] ]]
-}
-export -f status_ok
-
 function default_options()
 {
     cat <<EOF
