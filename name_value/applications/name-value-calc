@@ -207,8 +207,6 @@ function invert_grep()
     echo $?
 }
 
-trap 'bye 1' SIGHUP SIGINT SIGTERM SIGPIPE
-
 if [[ $# == 0 ]]; then simple_usage 1; fi
 
 input_files=()
