@@ -97,6 +97,9 @@ static void usage( bool more )
     std::cerr << "        binary: todo: no reasonable default" << std::endl;
     std::cerr << "        e.g: --empty=,,empty,,0: for the 3rd field, \"empty\" indicates it has empty value, for the 5th: 0" << std::endl;
     std::cerr << "    --format=<format>; in ascii mode, a hint of data format, e.g. --format=3ui,2d" << std::endl;
+    std::cerr << "    --last-only,--last: output only the result of the last update" << std::endl;
+    std::cerr << "                        only for single stdin input" << std::endl;
+    std::cerr << "                        default: output updated line on each update" << std::endl;
     std::cerr << "    --matched-only,--matched,-m: output only updates present on stdin" << std::endl;
     std::cerr << "    --remove,--reset,--unset=<field values>; what field value indicates that previous value should be replaced with empty value" << std::endl;
     std::cerr << "        e.g: --remove=,,remove,,: for the 3rd field, \"empty\" indicates it has empty value, for the 5th: 0" << std::endl;
@@ -106,23 +109,32 @@ static void usage( bool more )
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
     if( more ) { std::cerr << std::endl << "csv options:" << std::endl << comma::csv::options::usage() << std::endl; }
     std::cerr << std::endl;
-    std::cerr << "examples" << std::endl;
-    std::cerr << "    using update file" << std::endl;
-    std::cerr << "        single key" << std::endl;
-    std::cerr << "            cat entries.csv | csv-update updates.csv --fields=id" << std::endl;
-    std::cerr << "        multiple keys" << std::endl;
-    std::cerr << "            cat entries.csv | csv-update updates.csv --fields=id,id" << std::endl;
-    std::cerr << "        keys are strings" << std::endl;
-    std::cerr << "            cat entries.csv | csv-update updates.csv --fields=id --string" << std::endl;
-    std::cerr << "        output only matched entries from update.csv" << std::endl;
-    std::cerr << "            cat entries.csv | csv-update updates.csv --fields=id --matched-only" << std::endl;
-    std::cerr << "        update only non-empty fields in update.csv" << std::endl;
-    std::cerr << "        e.g. if an entry in update.csv is: 0,,1 only the 1st and 3rd fields will be updated" << std::endl;
-    std::cerr << "            cat entries.csv | csv-update updates.csv --fields=id --update-non-empty-fields" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "    without update file" << std::endl;
-    std::cerr << "        single key" << std::endl;
-    std::cerr << "            cat entries.csv | csv-update --fields=id" << std::endl;
+    if( more )
+    {
+        std::cerr << "examples" << std::endl;
+        std::cerr << "    using update file" << std::endl;
+        std::cerr << "        single key" << std::endl;
+        std::cerr << "            cat entries.csv | csv-update updates.csv --fields=id" << std::endl;
+        std::cerr << "        multiple keys" << std::endl;
+        std::cerr << "            cat entries.csv | csv-update updates.csv --fields=id,id" << std::endl;
+        std::cerr << "        keys are strings" << std::endl;
+        std::cerr << "            cat entries.csv | csv-update updates.csv --fields=id --string" << std::endl;
+        std::cerr << "        output only matched entries from update.csv" << std::endl;
+        std::cerr << "            cat entries.csv | csv-update updates.csv --fields=id --matched-only" << std::endl;
+        std::cerr << "        update only non-empty fields in update.csv" << std::endl;
+        std::cerr << "        e.g. if an entry in update.csv is: 0,,1 only the 1st and 3rd fields will be updated" << std::endl;
+        std::cerr << "            cat entries.csv | csv-update updates.csv --fields=id --update-non-empty-fields" << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "    without update file" << std::endl;
+        std::cerr << "        single key" << std::endl;
+        std::cerr << "            cat entries.csv | csv-update --fields=id" << std::endl;
+        std::cerr << "        output only the results of the last update" << std::endl;
+        std::cerr << "            cat entries.csv | csv-update --fields=id --last-only" << std::endl;
+    }
+    else
+    {
+        std::cerr << "examples ... use --help --verbose" << std::endl;
+    }
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -180,6 +192,7 @@ static comma::csv::options csv;
 static boost::scoped_ptr< comma::io::istream > filter_transport;
 static comma::signal_flag is_shutdown;
 static comma::uint32 block = 0;
+static bool last_only = false;
 static bool matched_only = false;
 static bool update_non_empty = false;
 static input_t default_input;
@@ -199,25 +212,25 @@ static void output_unmatched_all()
     }
 }
 
-static void output_unmatched()
+static void output_and_clear( input_t::map::type& map, bool do_output )
 {
-    if( !is_shutdown && !matched_only )
+    if( do_output && !is_shutdown )
     {
         typedef std::map< unsigned int, std::string > map_t;
         map_t m;
-        for( typename input_t::map::type::const_iterator it = unmatched.begin(); it != unmatched.end(); ++it )
+        for( typename input_t::map::type::const_iterator it = map.begin(); it != map.end(); ++it )
         {
             for( unsigned int i = 0; i < it->second.size(); m[ it->second[i].index ] = it->second[i].string, ++i );
         }
         for( map_t::const_iterator it = m.begin(); it != m.end(); std::cout << it->second, ++it );
     }
-    unmatched.clear();
+    map.clear();
 }
 
 static void read_filter_block()
 {
     if( !filter_transport ) { return; }
-    output_unmatched();
+    output_and_clear( unmatched, !matched_only );
     static input_t::input_stream_t filter_stream( **filter_transport, csv, default_input );
     static const input_t* last = filter_stream.read();
     if( !last ) { return; }
@@ -279,7 +292,7 @@ static void update( const input_t& v, const comma::csv::input_stream< input_t >&
     else
     {
         static unsigned int index = 0;
-        if( v.block != block ) { values.clear(); }
+        if( v.block != block ) { output_and_clear( values, last_only ); }
         if( last.empty() )
         {
             std::string s;
@@ -289,7 +302,7 @@ static void update( const input_t& v, const comma::csv::input_stream< input_t >&
             if( it == values.end() )
             {
                 values[ v.key ].push_back( input_t::map::value_type( index++, v.value, s ) );
-                ostream.write( v, s );
+                if( !last_only ) { ostream.write( v, s ); }
             }
             else
             {
@@ -298,13 +311,13 @@ static void update( const input_t& v, const comma::csv::input_stream< input_t >&
                 it->second[0].string = s;
                 input_t t = v;
                 t.value = it->second[0].value;
-                ostream.write( t, s );
+                if( !last_only ) { ostream.write( t, s ); }
             }
         }
         else
         {
             values[ v.key ].push_back( input_t::map::value_type( index++, v.value, last + '\n' ) );
-            ostream.write( v, last );
+            if( !last_only ) { ostream.write( v, last ); }
         }
     }
 }
@@ -318,14 +331,11 @@ int main( int ac, char** av )
         csv = comma::csv::options( options );
         csv.full_xpath = true;
         csv.quote.reset();
+        last_only = options.exists( "--last-only,--last" );
         matched_only = options.exists( "--matched-only,--matched,-m" );
         update_non_empty = options.exists( "--update-non-empty-fields,--update-non-empty,-u" );
         if( csv.binary() && update_non_empty ) { std::cerr << "csv-update: --update-non-empty-fields in binary mode not supported" << std::endl; return 1; }
-        std::vector< std::string > unnamed = options.unnamed( "--matched-only,--matched,-m,--string,-s,--update-non-empty-fields,--update-non-empty,-u,--verbose,-v", "-.*" );
-        if( unnamed.empty() )
-        {
-            // todo
-        }
+        std::vector< std::string > unnamed = options.unnamed( "--last-only,--last,--matched-only,--matched,-m,--string,-s,--update-non-empty-fields,--update-non-empty,-u,--verbose,-v", "-.*" );
         if( unnamed.size() > 1 ) { std::cerr << "csv-update: expected one file or stream to join, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         if( !unnamed.empty() ) { filter_transport.reset( new comma::io::istream( unnamed[0], options.exists( "--binary,-b" ) ? comma::io::mode::binary : comma::io::mode::ascii ) ); }
         std::vector< std::string > v = comma::split( csv.fields, ',' );
@@ -379,7 +389,8 @@ int main( int ac, char** av )
             if( block != p->block ) { read_filter_block(); }
             update( *p, istream, ostream );
         }
-        output_unmatched();
+        if( filter_transport ) { output_and_clear( unmatched, !matched_only ); }
+        else { output_and_clear( values, last_only ); }
         return 0;
     }
     catch( std::exception& ex ) { std::cerr << "csv-update: " << ex.what() << std::endl; }
