@@ -56,6 +56,12 @@ template < typename T > struct limits
     static T lowest() { return std::numeric_limits< T >::min(); }
 };
 
+template <> struct limits< std::string >
+{
+    static std::string max() { return ""; }
+    static std::string lowest() { return ""; }
+};
+
 template <> struct limits< float >
 {
     static float max() { return std::numeric_limits< float >::max(); }
