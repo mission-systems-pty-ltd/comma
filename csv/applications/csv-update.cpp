@@ -150,21 +150,21 @@ struct input_t
     input_t() : block( 0 ) {}
     input_t( comma::csv::impl::unstructured key, comma::csv::impl::unstructured value, comma::uint32 block ): key( key ), value( value ), block( block ) {}
     
-    struct map
-    {
-        struct value_type
-        {
-            unsigned int index;
-            comma::csv::impl::unstructured value;
-            std::string string;
-            
-            value_type() {}
-            value_type( unsigned int index, const comma::csv::impl::unstructured& value, const std::string& string ) : index( index ), value( value ), string( string ) {}
-        };        
-        typedef boost::unordered_map< comma::csv::impl::unstructured, std::vector< value_type >, comma::csv::impl::unstructured::hash > type;
-    };
-    
     typedef comma::csv::input_stream< input_t > input_stream_t;
+};
+
+struct map_t
+{
+    struct value_type
+    {
+        unsigned int index;
+        input_t value;
+        std::string string;
+        
+        value_type() {}
+        value_type( unsigned int index, const input_t& value, const std::string& string ) : index( index ), value( value ), string( string ) {}
+    };        
+    typedef boost::unordered_map< comma::csv::impl::unstructured, std::vector< value_type >, comma::csv::impl::unstructured::hash > type;
 };
 
 namespace comma { namespace visiting {
@@ -198,9 +198,9 @@ static bool update_non_empty = false;
 static input_t default_input;
 static comma::csv::impl::unstructured empty;
 static comma::csv::impl::unstructured erase; // todo
-static input_t::map::type filter_map;
-static input_t::map::type unmatched;
-static input_t::map::type values;
+static map_t::type filter_map;
+static map_t::type unmatched;
+static map_t::type values;
 
 static void output_unmatched_all()
 {
@@ -212,17 +212,21 @@ static void output_unmatched_all()
     }
 }
 
-static void output_and_clear( input_t::map::type& map, bool do_output )
+static void output_and_clear( map_t::type& map, bool do_output, comma::csv::output_stream< input_t >* ostream = NULL )
 {
     if( do_output && !is_shutdown )
     {
-        typedef std::map< unsigned int, std::string > map_t;
-        map_t m;
-        for( typename input_t::map::type::const_iterator it = map.begin(); it != map.end(); ++it )
+        typedef std::map< unsigned int, const map_t::value_type* > output_map_t;
+        output_map_t m;
+        for( map_t::type::const_iterator it = map.begin(); it != map.end(); ++it )
         {
-            for( unsigned int i = 0; i < it->second.size(); m[ it->second[i].index ] = it->second[i].string, ++i );
+            for( unsigned int i = 0; i < it->second.size(); m[ it->second[i].index ] = &it->second[i], ++i );
         }
-        for( map_t::const_iterator it = m.begin(); it != m.end(); std::cout << it->second, ++it );
+        for( output_map_t::const_iterator it = m.begin(); it != m.end(); ++it )
+        {
+            if( ostream ) { ostream->write( it->second->value, it->second->string ); }
+            else { std::cout << it->second->string; }
+        }
     }
     map.clear();
 }
@@ -242,7 +246,7 @@ static void read_filter_block()
         std::string s;
         if( csv.binary() ) { s.resize( csv.format().size() ); ::memcpy( &s[0], filter_stream.binary().last(), csv.format().size() ); }
         else { s = comma::join( filter_stream.ascii().last(), csv.delimiter ) + '\n'; }
-        filter_map[ last->key ].push_back( input_t::map::value_type( index++, last->value, s ) );
+        filter_map[ last->key ].push_back( map_t::value_type( index++, *last, s ) );
         //if( d.size() > 1 ) {}
         if( verbose ) { if( index % 10000 == 0 ) { std::cerr << "csv-update: reading block " << block << "; loaded " << index << " point[s]; hash map size: " << filter_map.size() << std::endl; } }
         //if( ( *filter_transport )->good() && !( *filter_transport )->eof() ) { break; }
@@ -273,7 +277,7 @@ static void update( const input_t& v, const comma::csv::input_stream< input_t >&
 {
     if( filter_transport )
     {
-        input_t::map::type::const_iterator it = filter_map.find( v.key );
+        map_t::type::const_iterator it = filter_map.find( v.key );
         if( it == filter_map.end() || it->second.empty() )
         { 
             if( last.empty() ) { output_last( istream ); }
@@ -283,7 +287,7 @@ static void update( const input_t& v, const comma::csv::input_stream< input_t >&
         input_t current = v;
         for( std::size_t i = 0; i < it->second.size(); ++i ) // todo: output last only
         {
-            update( current.value, it->second[i].value, update_non_empty );
+            update( current.value, it->second[i].value.value, update_non_empty );
             if( last.empty() ) { ostream.write( current, istream ); }
             else { ostream.write( current, last ); }
         }
@@ -292,31 +296,29 @@ static void update( const input_t& v, const comma::csv::input_stream< input_t >&
     else
     {
         static unsigned int index = 0;
-        if( v.block != block ) { output_and_clear( values, last_only ); }
+        if( v.block != block ) { output_and_clear( values, last_only, &ostream ); }
         if( last.empty() )
         {
             std::string s;
             if( csv.binary() ) { s.resize( csv.format().size() ); ::memcpy( &s[0], istream.binary().last(), csv.format().size() ); }
-            else { s = comma::join( istream.ascii().last(), csv.delimiter ) + '\n'; }
-            input_t::map::type::iterator it = values.find( v.key );
+            else { s = comma::join( istream.ascii().last(), csv.delimiter ); }
+            map_t::type::iterator it = values.find( v.key );
             if( it == values.end() )
             {
-                values[ v.key ].push_back( input_t::map::value_type( index++, v.value, s ) );
+                values[ v.key ].push_back( map_t::value_type( index++, v, s ) );
                 if( !last_only ) { ostream.write( v, s ); }
             }
             else
             {
-                update( it->second[0].value, v.value, update_non_empty );
+                update( it->second[0].value.value, v.value, update_non_empty );
                 it->second[0].index = index++;
                 it->second[0].string = s;
-                input_t t = v;
-                t.value = it->second[0].value;
-                if( !last_only ) { ostream.write( t, s ); }
+                if( !last_only ) { ostream.write( it->second[0].value, s ); }
             }
         }
         else
         {
-            values[ v.key ].push_back( input_t::map::value_type( index++, v.value, last + '\n' ) );
+            values[ v.key ].push_back( map_t::value_type( index++, v, last ) );
             if( !last_only ) { ostream.write( v, last ); }
         }
     }
@@ -390,7 +392,7 @@ int main( int ac, char** av )
             update( *p, istream, ostream );
         }
         if( filter_transport ) { output_and_clear( unmatched, !matched_only ); }
-        else { output_and_clear( values, last_only ); }
+        else { output_and_clear( values, last_only, &ostream ); }
         return 0;
     }
     catch( std::exception& ex ) { std::cerr << "csv-update: " << ex.what() << std::endl; }
