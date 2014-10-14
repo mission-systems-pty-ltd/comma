@@ -88,16 +88,32 @@ function process_python_errors()
     awk 'NR > 1 { printf "... "; } { print $0; }'   # (if multiple lines, indicate continuation)
 }
 
-function bye()
+function clean_up()
 {
     if [[ -n "$tmp_vars" ]]; then rm -f "$tmp_vars" ; fi
     if [[ -n "$err" ]]; then rm -f "$err" ; fi
     if [[ -n "$out" ]]; then rm -f "$out" ; fi
     if [[ -n "$python_input" ]]; then rm -f "$python_input" ; fi
+}
+
+function bye()
+{
+    clean_up
     if [[ -z $1 ]] ; then exit 1 ; else exit $1; fi
 }
 
-trap 'bye 1' SIGHUP SIGINT SIGTERM SIGPIPE
+function signal_handler()
+{
+    local signame=$1
+    clean_up
+    trap - $signame
+    kill -$signame $BASHPID
+}
+
+trap 'signal_handler SIGHUP'  SIGHUP
+trap 'signal_handler SIGINT'  SIGINT
+trap 'signal_handler SIGTERM' SIGTERM
+trap 'signal_handler SIGPIPE' SIGPIPE
 
 test_option=0
 debug=0
