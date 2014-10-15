@@ -94,7 +94,7 @@ static void usage( bool more )
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
     std::cerr << "    --empty=<field values>; what field value stands for an empty field" << std::endl;
     std::cerr << "        ascii: default: empty string" << std::endl;
-    std::cerr << "        binary: todo: no reasonable default" << std::endl;
+    std::cerr << "        binary: no reasonable default, thus --empty is mandatory" << std::endl;
     std::cerr << "        e.g: --empty=,,empty,,0: for the 3rd field, \"empty\" indicates it has empty value, for the 5th: 0" << std::endl;
     std::cerr << "    --format=<format>; in ascii mode, a hint of data format, e.g. --format=3ui,2d" << std::endl;
     std::cerr << "    --last-only,--last: output only the result of the last update" << std::endl;
@@ -387,9 +387,20 @@ int main( int ac, char** av )
         if( verbose ) { std::cerr << "csv-update: csv fields: " << csv.fields << std::endl; }
         comma::csv::input_stream< input_t > istream( std::cin, csv, default_input );
         comma::csv::output_stream< input_t > ostream( std::cout, csv, default_input );
+        if( csv.binary() && update_non_empty && !options.exists( "--empty" ) ) { std::cerr << "csv-update: in binary mode with --update-non-empty, please specify --empty" << std::endl; return 1; }
         empty = default_input.value; // todo: handle --empty
         for( unsigned int i = 0; i < empty.longs.size(); ++i ) { empty.longs[i] = std::numeric_limits< comma::int64 >::max(); } // quick and dirty
         for( unsigned int i = 0; i < empty.doubles.size(); ++i ) { empty.doubles[i] = std::numeric_limits< double >::max(); } // quick and dirty
+        if( options.exists( "--empty" ) )
+        {
+            if( !update_non_empty ) { std::cerr << "csv-update: --empty implemented only in combination with --update-non-empty" << std::endl; return 1; }
+            std::string s = options.value< std::string >( "--empty" ) + std::string( f.count(), ',' );
+            std::istringstream iss( s );
+            comma::csv::options c;
+            c.fields = csv.fields;
+            comma::csv::input_stream< input_t > isstream( iss, c, default_input );
+            empty = ( isstream.read() )->value;
+        }
         default_input.value = empty;
         if( options.exists( "--remove,--reset,--unset,--erase" ) )
         {
