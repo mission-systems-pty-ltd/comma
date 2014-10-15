@@ -57,3 +57,8 @@ update/unmatched/test[5]/output/line[0]="0,1,,"
 update/unmatched/test[5]/output/line[1]="0,1,2,"
 update/unmatched/test[5]/output/size=2
 
+erase/test[0]/output/line[0]="0,1,a,20140101T000000,1"
+erase/test[0]/output/line[1]="0,,,,2"
+erase/test[0]/output/line[2]="0,2,b,20140101T000000,3"
+erase/test[0]/output/line[3]="0,,,,4"
+erase/test[0]/output/size=4
