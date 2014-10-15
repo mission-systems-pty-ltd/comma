@@ -1,8 +1,8 @@
-single_input/all/test[0]/input[0]="0,,,"
-single_input/all/test[0]/input[1]="0,1,,"
-single_input/all/test[0]/input[2]="0,,2,"
-single_input/all/test[0]/input[3]="0,,,3"
-single_input/all/test[0]/command="csv-update --fields=id -u"
+single_input/each/test[0]/input[0]="0,,,"
+single_input/each/test[0]/input[1]="0,1,,"
+single_input/each/test[0]/input[2]="0,,2,"
+single_input/each/test[0]/input[3]="0,,,3"
+single_input/each/test[0]/command="csv-update --fields=id -u"
 
 single_input/last/test[0]/input[0]="0,,,"
 single_input/last/test[0]/input[1]="0,1,,"
@@ -10,8 +10,8 @@ single_input/last/test[0]/input[2]="0,,2,"
 single_input/last/test[0]/input[3]="0,,,3"
 single_input/last/test[0]/command="csv-update --fields=id -u --last"
 
-#single_input/format/guess/test[0]/input[0]=""
-#single_input/format/guess/test[0]/command="csv-update --fields=id -u --last"
+single_input/format/guess/test[0]/input[0]=""
+single_input/format/guess/test[0]/command="csv-update --fields=id -u --last"
 
 single_input/format/guess/test[1]/input[0]=""
 single_input/format/guess/test[1]/input[0]="0,,,"
@@ -26,4 +26,28 @@ single_input/format/guess/test[3]/command="csv-update --fields=id -u --last"
 
 single_input/format/guess/test[4]/input[0]="0,,,"
 single_input/format/guess/test[4]/input[0]="0,,a,"
+single_input/format/guess/test[4]/input[0]="0,1,,b"
 single_input/format/guess/test[4]/command="csv-update --fields=id -u --last"
+
+single_input/format/guess/test[5]/input[0]="0,,,"
+single_input/format/guess/test[5]/input[0]="0,,a,"
+single_input/format/guess/test[5]/input[0]="0,1,,20140101T000000"
+single_input/format/defined/test[5]/command="csv-update --fields=id -u --last"
+
+single_input/format/guess/test[0]/input[0]="0,,,"
+single_input/format/guess/test[0]/input[0]="0,,a,"
+single_input/format/guess/test[0]/input[0]="0,1,,20140101T000000"
+single_input/format/defined/test[0]/command="csv-update --fields=id -u --last --format=ui,d,s[20],t"
+
+update/all/test[0]/input[0]="0,,,"
+update/all/test[0]/update[0]="0,1,,"
+update/all/test[0]/update[1]="0,,2,"
+update/all/test[0]/command="csv-update --fields=id"
+
+update/non_empty/test[0]/input[0]="0,,,"
+update/non_empty/test[0]/update[0]="0,1,,"
+update/non_empty/test[0]/update[1]="0,,2,"
+update/non_empty/test[0]/update[2]="0,3,,"
+update/non_empty/test[0]/command="csv-update --fields=id -u"
+
+# todo: more testing

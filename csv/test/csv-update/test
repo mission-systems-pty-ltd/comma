@@ -3,22 +3,46 @@
 unset input
 unset update
 unset command
+
+function reset()
+{
+    rm -rf "update.csv"
+    unset input
+    unset update
+    unset update_file
+    unset command
+}
+
+function make_update()
+{
+    if [[ -n $update ]] ; then
+        update_file="update.csv"
+        for i in ${update[@]} ; do echo "$i" >> $update_file ; done
+    fi
+}
+
+function run_command()
+{
+    local count=0
+    for i in ${input[@]} ; do echo "$i" ; done \
+        | $command $update_file \
+        | while read line ; do echo "$( dirname "$key" )/output[$count]=\"$line\"" ; (( ++count )) ; done
+    echo
+}
+
+reset
 while IFS='=' read key value ; do
     [[ -n "$key" && "${key:0:1}" != "#" ]] || continue
     value="${value/#\"}"
     value="${value/%\"}"
     case "$( basename $key )" in
         input|input\[*\]) input+=( "$value" ) ;;
-        update|update\[*\]) update+=( "$value" ) ;; # todo: handle update as a temporary file
+        update|update\[*\]) update+=( "$value" ) ;;
         command)
             command="$value"
-            count=0
-            for i in ${input[@]} ; do echo "$i" ; done \
-                | $command \
-                | while read line ; do echo "$( dirname "$key" )/output[$count]=\"$line\"" ; (( ++count )) ; done
-            echo
-            unset input
-            unset command
+            make_update
+            run_command
+            reset
             ;;
     esac
 done

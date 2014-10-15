@@ -204,7 +204,7 @@ static map_t::type values;
 
 static void output_unmatched_all()
 {
-    if( is_shutdown || matched_only ) { return; }
+    if( is_shutdown || matched_only || !filter_transport ) { return; }
     std::string s;
     for( std::getline( **filter_transport, s ); ( **filter_transport ).good() && !( **filter_transport ).eof(); std::getline( **filter_transport, s ) )
     {
