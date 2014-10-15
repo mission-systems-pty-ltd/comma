@@ -101,8 +101,9 @@ static void usage( bool more )
     std::cerr << "                        only for single stdin input" << std::endl;
     std::cerr << "                        default: output updated line on each update" << std::endl;
     std::cerr << "    --matched-only,--matched,-m: output only updates present on stdin" << std::endl;
-    std::cerr << "    --remove,--reset,--unset=<field values>; what field value indicates that previous value should be replaced with empty value" << std::endl;
-    std::cerr << "        e.g: --remove=,,remove,,: for the 3rd field, \"empty\" indicates it has empty value, for the 5th: 0" << std::endl;
+    std::cerr << "    --remove,--reset,--unset,--erase=<field values>; what field value indicates that previous value should be replaced with empty value" << std::endl;
+    std::cerr << "        e.g: --remove=,,remove,,0: for the 3rd field, \"empty\" indicates it has empty value, for the 5th: 0" << std::endl;
+    std::cerr << "        the type of reset values has to be correct: number for numeric fields, time for time fields, etc" << std::endl;
     std::cerr << "    --update-non-empty-fields,--update-non-empty,-u:" << std::endl;
     std::cerr << "        ascii: if update has empty fields, keep the fields values from stdin" << std::endl;
     std::cerr << "        binary: todo, since the semantics of an \"empty\" value is unclear" << std::endl;
@@ -197,7 +198,7 @@ static bool matched_only = false;
 static bool update_non_empty = false;
 static input_t default_input;
 static comma::csv::impl::unstructured empty;
-static comma::csv::impl::unstructured erase; // todo
+static boost::optional< comma::csv::impl::unstructured > erase;
 static map_t::type filter_map;
 static map_t::type unmatched;
 static map_t::type values;
@@ -263,14 +264,22 @@ static void output_last( const comma::csv::input_stream< input_t >& istream )
     else { std::cout << comma::join( istream.ascii().last(), csv.delimiter ) << std::endl; }
 }
 
+template < typename V > static void update( V& values, const V& updates, const V& empty_values, const V& erase_values )
+{
+    for( std::size_t i = 0; i < values.size(); ++i )
+    {
+        if( updates[i] != empty_values[i] ) { values[i] = erase_values.empty() || updates[i] != erase_values[i] ? updates[i] : empty_values[i]; }
+    }
+}
+
 static void update( comma::csv::impl::unstructured& value, const comma::csv::impl::unstructured& value_update, bool non_empty_only )
 {
     if( !non_empty_only ) { value = value_update; return; }
-    for( std::size_t i = 0; i < value.longs.size(); ++i ) { if( value_update.longs[i] != empty.longs[i] ) { value.longs[i] = value_update.longs[i]; } }
-    for( std::size_t i = 0; i < value.strings.size(); ++i ) { if( value_update.strings[i] != empty.strings[i] ) { value.strings[i] = value_update.strings[i]; } }
-    for( std::size_t i = 0; i < value.doubles.size(); ++i ) { if( value_update.doubles[i] != empty.doubles[i] ) { value.doubles[i] = value_update.doubles[i]; } }
-    for( std::size_t i = 0; i < value.time.size(); ++i ) { if( value_update.time[i] != empty.time[i] ) { value.time[i] = value_update.time[i]; } }
-    // todo: handle erase value
+    static const comma::csv::impl::unstructured dummy;
+    update( value.longs, value_update.longs, empty.longs, erase ? erase->longs : dummy.longs );
+    update( value.strings, value_update.strings, empty.strings, erase ? erase->strings : dummy.strings );
+    update( value.doubles, value_update.doubles, empty.doubles, erase ? erase->doubles : dummy.doubles );
+    update( value.time, value_update.time, empty.time, erase ? erase->time : dummy.time );
 }
 
 static void update( const input_t& v, const comma::csv::input_stream< input_t >& istream, comma::csv::output_stream< input_t >& ostream, const std::string& last = std::string() )
@@ -373,16 +382,20 @@ int main( int ac, char** av )
         if( verbose ) { std::cerr << "csv-update: csv fields: " << csv.fields << std::endl; }
         comma::csv::input_stream< input_t > istream( std::cin, csv, default_input );
         comma::csv::output_stream< input_t > ostream( std::cout, csv, default_input );
-        empty = default_input.value;
-        
-        
-        // todo: handle --empty
-        // todo: handle --remove
-        
-        
+        empty = default_input.value; // todo: handle --empty
         for( unsigned int i = 0; i < empty.longs.size(); ++i ) { empty.longs[i] = std::numeric_limits< comma::int64 >::max(); } // quick and dirty
         for( unsigned int i = 0; i < empty.doubles.size(); ++i ) { empty.doubles[i] = std::numeric_limits< double >::max(); } // quick and dirty
         default_input.value = empty;
+        if( options.exists( "--remove,--reset,--unset,--erase" ) )
+        {
+            if( !update_non_empty ) { std::cerr << "csv-update: --erase implemented only in combination with --update-non-empty" << std::endl; return 1; }
+            std::string s = options.value< std::string >( "--remove,--reset,--unset,--erase" ) + std::string( f.count(), ',' );
+            std::istringstream iss( s );
+            comma::csv::options c;
+            c.fields = csv.fields;
+            comma::csv::input_stream< input_t > isstream( iss, c, default_input );
+            erase = ( isstream.read() )->value;
+        }
         read_filter_block();
         if( !first_line.empty() ) { update( comma::csv::ascii< input_t >( csv, default_input ).get( first_line ), istream, ostream, first_line ); }
         while( !is_shutdown && ( istream.ready() || ( std::cin.good() && !std::cin.eof() ) ) )
