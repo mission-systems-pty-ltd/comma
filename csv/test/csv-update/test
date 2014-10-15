@@ -23,10 +23,21 @@ function make_update()
 
 function run_command()
 {
-    local count=0
-    for i in ${input[@]} ; do echo "$i" ; done \
-        | $command $update_file \
-        | while read line ; do echo "$( dirname "$key" )/output[$count]=\"$line\"" ; (( ++count )) ; done
+    local size=0
+    local key="$1"
+#     for i in ${input[@]} ; do echo "$i" ; done \
+#         | $command $update_file \
+#         | while read line ; do
+#               echo "$( dirname "$key" )/output/line[$size]=\"$line\""
+#               unset none
+#               (( ++size ))
+#           done
+    while read line ; do
+        echo "$( dirname "$key" )/output/line[$size]=\"$line\""
+        unset none
+        (( ++size ))
+    done < <( for i in ${input[@]} ; do echo "$i" ; done | $command $update_file  )
+    echo "$( dirname "$key" )/output/size=$size"
     echo
 }
 
@@ -41,7 +52,7 @@ while IFS='=' read key value ; do
         command)
             command="$value"
             make_update
-            run_command
+            run_command "$key"
             reset
             ;;
     esac

@@ -1,25 +1,59 @@
-single_input/each/test[0]/output[0]="0,,,"
-single_input/each/test[0]/output[1]="0,1,,"
-single_input/each/test[0]/output[2]="0,1,2,"
-single_input/each/test[0]/output[3]="0,1,2,3"
+single_input/each/test[0]/output/line[0]="0,,,"
+single_input/each/test[0]/output/line[1]="0,1,,"
+single_input/each/test[0]/output/line[2]="0,1,2,"
+single_input/each/test[0]/output/line[3]="0,1,2,3"
+single_input/each/test[0]/output/size=4
 
-single_input/last/test[0]/output[0]="0,1,2,3"
+single_input/last/test[0]/output/line[0]="0,1,2,3"
+single_input/last/test[0]/output/size=1
 
-single_input/format/guess/test[1]/output[0]="0,,,"
+single_input/format/guess/test[0]/output/size=0
 
-single_input/format/guess/test[2]/output[0]="0,,,"
+single_input/format/guess/test[1]/output/line[0]="0,,,"
+single_input/format/guess/test[1]/output/size=1
 
-single_input/format/guess/test[3]/output[0]="0,,1,"
+single_input/format/guess/test[2]/output/line[0]="0,,,"
+single_input/format/guess/test[2]/output/size=1
 
-single_input/format/guess/test[4]/output[0]="0,1,a,b"
+single_input/format/guess/test[3]/output/line[0]="0,,1,"
+single_input/format/guess/test[3]/output/size=1
 
-single_input/format/defined/test[5]/output[0]="0,1,a,20140101T000000"
+single_input/format/guess/test[4]/output/line[0]="0,1,a,b"
+single_input/format/guess/test[4]/output/size=1
 
-single_input/format/defined/test[0]/output[0]="0,1,a,20140101T000000"
+single_input/format/defined/test[5]/output/line[0]="0,1,a,20140101T000000"
+single_input/format/defined/test[5]/output/size=1
 
-update/all/test[0]/output[0]="0,1,,"
-update/all/test[0]/output[1]="0,,2,"
+single_input/format/defined/test[0]/output/line[0]="0,1,a,20140101T000000"
+single_input/format/defined/test[0]/output/size=1
 
-update/non_empty/test[0]/output[0]="0,1,,"
-update/non_empty/test[0]/output[1]="0,1,2,"
-update/non_empty/test[0]/output[2]="0,3,2,"
+update/all/test[0]/output/line[0]="0,1,,"
+update/all/test[0]/output/line[1]="0,,2,"
+update/all/test[0]/output/size=2
+
+update/non_empty/test[0]/output/line[0]="0,1,,"
+update/non_empty/test[0]/output/line[1]="0,1,2,"
+update/non_empty/test[0]/output/line[2]="0,3,2,"
+update/non_empty/test[0]/output/size=3
+
+update/unmatched/test[0]/output/line[0]="1,,,3"
+update/unmatched/test[0]/output/size=1
+
+update/unmatched/test[1]/output/size=0
+
+update/unmatched/test[2]/output/line[0]="0,,,"
+update/unmatched/test[2]/output/line[1]="1,,,3"
+update/unmatched/test[2]/output/size=2
+
+update/unmatched/test[3]/output/line[0]="0,,,"
+update/unmatched/test[3]/output/size=1
+
+update/unmatched/test[4]/output/line[0]="0,1,,"
+update/unmatched/test[4]/output/line[1]="0,1,2,"
+update/unmatched/test[4]/output/line[2]="1,,,3"
+update/unmatched/test[4]/output/size=3
+
+update/unmatched/test[5]/output/line[0]="0,1,,"
+update/unmatched/test[5]/output/line[1]="0,1,2,"
+update/unmatched/test[5]/output/size=2
+
