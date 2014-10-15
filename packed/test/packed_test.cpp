@@ -278,7 +278,7 @@ void test_ascii_hex_pack_values_size1( const boost::array< std::string, 16 >& he
     }
 }
 
-TEST( test_packed_ascii_hex, test_pack_values_size_1_lowercase_only )
+TEST( test_packed_ascii_hex, test_pack_values_size_1 )
 {
     test_ascii_hex_pack_values_size1< comma::uint16 >( hex_digits_l );
 }
@@ -299,7 +299,7 @@ void test_ascii_hex_pack_values_size2( const boost::array< std::string, 16 >& he
     }    
 }
 
-TEST( test_packed_ascii_hex, test_pack_values_size_2_lowercase_only )
+TEST( test_packed_ascii_hex, test_pack_values_size_2 )
 {
     test_ascii_hex_pack_values_size2< comma::uint16 >( hex_digits_l );
 }
@@ -323,7 +323,7 @@ void test_ascii_hex_pack_values_size3( const boost::array< std::string, 16 >& he
     }    
 }
 
-TEST( test_packed_ascii_hex, test_pack_values_size_3_lowercase_only )
+TEST( test_packed_ascii_hex, test_pack_values_size_3 )
 {
     test_ascii_hex_pack_values_size3< comma::uint16 >( hex_digits_l );
 }
@@ -369,6 +369,12 @@ TEST( test_packed_ascii_hex, test_with_cast )
 
     std::string hex3 = " abcdef0 ";
     EXPECT_EQ( 180150000, reinterpret_cast< const ascii_hex_struct* >( &hex3[0] )->value() );
+}
+
+TEST( test_packed_ascii_hex, test_throw_unexpected_hexadecimal_digit )
+{
+    comma::packed::ascii_hex< comma::uint16, 1 > a;
+    ASSERT_THROW( a.unpack( "g" ), comma::exception );
 }
 
 int main( int argc, char *argv[] )
