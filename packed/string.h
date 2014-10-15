@@ -44,6 +44,7 @@
 #include <comma/base/exception.h>
 #include <comma/packed/field.h>
 #include <comma/string/string.h>
+#include <iomanip>
 
 namespace comma { namespace packed {
 
@@ -114,6 +115,25 @@ class casted : public packed::field< casted< T, S, Padding >, T, S >
         const casted& operator=( const T& rhs ) { return base_type::operator=( rhs ); }
 };
 
+inline unsigned int hex_to_int( char digit )
+{
+    if( digit >= '0' && digit <= '9' ) { return digit - '0'; }
+    if( digit >= 'a' && digit <= 'f' ) { return digit - 'a'; }
+    if( digit >= 'A' && digit <= 'F' ) { return digit - 'A'; }
+    COMMA_THROW( comma::exception, "expected hexadecimal digit, got: '" << digit << "'" );
+}
+
+inline unsigned int hex_to_int( const char* digits, unsigned int size, char padding = ' ' )
+{
+    unsigned int result = 0;
+    const char* end = digits + size;
+    for( const char* digit = digits; digit != end; ++digit ) { if( *digit != padding ) { result = result * 16 + hex_to_int( *digit ); } }
+    return result;
+}
+
+template < typename T >
+inline void hex_from_int( char* buf, unsigned int size, T t ); // todo
+
 template < typename T, std::size_t S, char Padding = ' ' >
 class ascii_hex : public packed::field< ascii_hex< T, S, Padding >, T, S >
 {
@@ -128,16 +148,14 @@ public:
     
     static void pack( char* storage, const T& value )
     {
-        //std::string v = boost::lexical_cast< std::string >( value );
         std::ostringstream ss;
-        ss << std::hex << value;
-        ::memset( storage, Padding, size );
+        ss << std::hex << std::setfill( Padding ) << std::setw( size ) << value;
         ::memcpy( storage, &(ss.str()[0]), size );
     }
     
     static T unpack( const char* storage )
     {
-        // no padding
+//        return hex_to_int( storage, size, Padding );
         std::istringstream iss( comma::strip( std::string( storage, size ), Padding ) );
         T value;
         iss >> std::hex >> value;
