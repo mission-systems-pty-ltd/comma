@@ -118,8 +118,8 @@ class casted : public packed::field< casted< T, S, Padding >, T, S >
 inline unsigned int hex_to_int( char digit )
 {
     if( digit >= '0' && digit <= '9' ) { return digit - '0'; }
-    if( digit >= 'a' && digit <= 'f' ) { return digit - 'a'; }
-    if( digit >= 'A' && digit <= 'F' ) { return digit - 'A'; }
+    if( digit >= 'a' && digit <= 'f' ) { return digit - 'a' + 10; }
+    if( digit >= 'A' && digit <= 'F' ) { return digit - 'A' + 10; }
     COMMA_THROW( comma::exception, "expected hexadecimal digit, got: '" << digit << "'" );
 }
 
@@ -127,17 +127,29 @@ inline unsigned int hex_to_int( const char* digits, unsigned int size, char padd
 {
     unsigned int result = 0;
     const char* end = digits + size;
-    for( const char* digit = digits; digit != end; ++digit ) { if( *digit != padding ) { result = result * 16 + hex_to_int( *digit ); } }
+    for( const char* digit = digits; digit != end && *digit != '\0'; ++digit ) { if( *digit != padding ) { result = result * 16 + hex_to_int( *digit ); } }
     return result;
 }
 
+inline char hex_from_int( unsigned int digit )
+{
+    if( digit >= 0 && digit <= 9 ) { return  '0' + digit; }
+    if( digit >= 10 && digit <= 15 ) { return  'a' + digit - 10; }
+}
+
 template < typename T >
-inline void hex_from_int( char* buf, unsigned int size, T t ); // todo
+inline void hex_from_int( char* storage, unsigned int size, const T& value, char padding = ' ' )
+{
+    unsigned int i = 1;
+    for( T v = value; i <= size; ) { storage[size-i] = hex_from_int( v % 16 ); ++i; v /= 16; if( v == 0 ) break; }
+    for( ; i <= size; ++i ) { storage[size-i] = padding; }
+}
 
 template < typename T, std::size_t S, char Padding = ' ' >
 class ascii_hex : public packed::field< ascii_hex< T, S, Padding >, T, S >
 {
 public:
+    BOOST_STATIC_ASSERT( boost::is_unsigned< T >::value );
     enum { size = S };
     
     typedef T Type;
@@ -148,18 +160,19 @@ public:
     
     static void pack( char* storage, const T& value )
     {
-        std::ostringstream ss;
-        ss << std::hex << std::setfill( Padding ) << std::setw( size ) << value;
-        ::memcpy( storage, &(ss.str()[0]), size );
+        return hex_from_int( storage, size, value, Padding );
+//         std::ostringstream ss;
+//         ss << std::hex << std::setfill( Padding ) << std::setw( size ) << value;
+//         ::memcpy( storage, &(ss.str()[0]), size );
     }
     
     static T unpack( const char* storage )
     {
-//        return hex_to_int( storage, size, Padding );
-        std::istringstream iss( comma::strip( std::string( storage, size ), Padding ) );
-        T value;
-        iss >> std::hex >> value;
-        return value;
+        return hex_to_int( storage, size, Padding );
+//         std::istringstream iss( comma::strip( std::string( storage, size ), Padding ) );
+//         T value;
+//         iss >> std::hex >> value;
+//         return value;
     }
     
     const ascii_hex& operator=( const T& rhs ) { return base_type::operator=( rhs ); }
