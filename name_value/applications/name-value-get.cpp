@@ -73,6 +73,8 @@ static void usage()
     std::cerr << "    --equal-sign,-e=<equal sign>: default '='" << std::endl;
     std::cerr << "    --delimiter,-d=<delimiter>: default ','" << std::endl;
     std::cerr << "    --output-path: if path-value, output path (for regex)" << std::endl;
+    std::cerr << "    --show-path-indices,--indices: show indices for array items e.g. y[0]/x/z[1]=\"a\"" << std::endl;
+    std::cerr << "    --no-brackets: use with --show-path-indices - above, show indices as path elements e.g. y/0/x/z/1=\"a\"" << std::endl;
     std::cerr << std::endl;
     std::cerr << "data flow options:" << std::endl;
     std::cerr << "    --linewise,-l: if present, treat each input line as a record" << std::endl;
@@ -87,6 +89,8 @@ static char equal_sign;
 static char delimiter;
 static bool linewise;
 static bool output_path;
+typedef comma::property_tree::path_mode path_mode;
+static path_mode indices_mode = comma::property_tree::disabled;
 
 enum Types { ini, info, json, xml, name_value, path_value };
 
@@ -150,7 +154,7 @@ template <> struct traits< path_value > // quick and dirty
         static bool first = true; // todo: will not work linewise, fix
         if( !first ) { std::cout << delimiter; }
         first = false;
-        comma::property_tree::to_path_value( os, ptree, equal_sign, delimiter, output_path ? path : std::string() );
+        comma::property_tree::to_path_value( os, ptree, indices_mode, equal_sign, delimiter, output_path ? path : std::string() );
     }
 };
 
@@ -206,7 +210,7 @@ static void traverse_( std::ostream& os, const boost::property_tree::ptree& ptre
     {
         traverse_( os, ptree, j, path );
     }
-    path = path.head();
+    if( !(it->first.empty()) ) { path = path.head(); }
 }
 
 void match_regex_( std::ostream& os, const boost::property_tree::ptree& ptree )
@@ -262,6 +266,11 @@ int main( int ac, char** av )
         else if( to == "xml" ) { output = &traits< xml >::output; }
         else if( to == "path-value" ) { output = &traits< path_value >::output; }
         else if( to == "name-value" ) { output = &traits< name_value >::output; }
+        if( options.exists( "--show-path-indices,--indices" ) ) 
+        {
+            if( options.exists( "--no-brackets" ) ) { indices_mode = comma::property_tree::without_brackets; }
+            else { indices_mode = comma::property_tree::with_brackets; }
+        }
         if( linewise )
         {
             comma::signal_flag is_shutdown;

@@ -346,7 +346,7 @@ int main( int ac, char** av )
                 }
             }
             
-            comma::property_tree::to_path_value( std::cout, ptree, equal_sign, '\n' );
+            comma::property_tree::to_path_value( std::cout, ptree, comma::property_tree::disabled, equal_sign, '\n' );
         }
         else if( options.exists( "--elapsed" ) )
         {

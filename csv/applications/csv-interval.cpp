@@ -56,6 +56,12 @@ template < typename T > struct limits
     static T lowest() { return std::numeric_limits< T >::min(); }
 };
 
+template <> struct limits< std::string >
+{
+    static std::string max() { return ""; }
+    static std::string lowest() { return ""; }
+};
+
 template <> struct limits< float >
 {
     static float max() { return std::numeric_limits< float >::max(); }
@@ -399,24 +405,24 @@ struct intervals
     }
 };
 
-template < typename From > void run( const comma::command_line_options& options, const comma::csv::format::types_enum to_type )
-{
-    switch( to_type )
-    {
-        case comma::csv::format::int8:          intervals< From, char >( options ).run(); break;
-        case comma::csv::format::uint8:         intervals< From, unsigned char >( options ).run(); break;
-        case comma::csv::format::int16:         intervals< From, comma::int16 >( options ).run(); break;
-        case comma::csv::format::uint16:        intervals< From, comma::uint16 >( options ).run(); break;
-        case comma::csv::format::int32:         intervals< From, comma::int32 >( options ).run(); break;
-        case comma::csv::format::uint32:        intervals< From, comma::uint32 >( options ).run(); break;
-        case comma::csv::format::int64:         intervals< From, comma::int64 >( options ).run(); break;
-        case comma::csv::format::uint64:        intervals< From, comma::uint64 >( options ).run(); break;
-        case comma::csv::format::char_t:        intervals< From, char >( options ).run(); break;
-        case comma::csv::format::float_t:       intervals< From, float >( options ).run(); break;
-        case comma::csv::format::double_t:      intervals< From, double >( options ).run(); break;
-        default:                                COMMA_THROW( comma::exception, "from/to type mismatch" ); break;
-    }
-}
+// template < typename From > static void run( const comma::command_line_options& options, const comma::csv::format::types_enum to_type )
+// {
+//     switch( to_type )
+//     {
+//         case comma::csv::format::int8:          intervals< From, char >( options ).run(); break;
+//         case comma::csv::format::uint8:         intervals< From, unsigned char >( options ).run(); break;
+//         case comma::csv::format::int16:         intervals< From, comma::int16 >( options ).run(); break;
+//         case comma::csv::format::uint16:        intervals< From, comma::uint16 >( options ).run(); break;
+//         case comma::csv::format::int32:         intervals< From, comma::int32 >( options ).run(); break;
+//         case comma::csv::format::uint32:        intervals< From, comma::uint32 >( options ).run(); break;
+//         case comma::csv::format::int64:         intervals< From, comma::int64 >( options ).run(); break;
+//         case comma::csv::format::uint64:        intervals< From, comma::uint64 >( options ).run(); break;
+//         case comma::csv::format::char_t:        intervals< From, char >( options ).run(); break;
+//         case comma::csv::format::float_t:       intervals< From, float >( options ).run(); break;
+//         case comma::csv::format::double_t:      intervals< From, double >( options ).run(); break;
+//         default:                                COMMA_THROW( comma::exception, "from/to type mismatch" ); break;
+//     }
+// }
 
 int main( int ac, char** av )
 {
@@ -453,23 +459,42 @@ int main( int ac, char** av )
         { COMMA_THROW( comma::exception, "from/to type mismatch; time" ); }
         if( ( from_type == comma::csv::format::fixed_string || to_type == comma::csv::format::fixed_string ) && from_type != to_type )
         { COMMA_THROW( comma::exception, "from/to type mismatch; string" ); }
-        switch( from_type )
+//         switch( from_type )
+//         {
+//             case comma::csv::format::int8:          run< char >( options, to_type ); break;
+//             case comma::csv::format::uint8:         run< unsigned char >( options, to_type ); break;
+//             case comma::csv::format::int16:         run< comma::int16 >( options, to_type ); break;
+//             case comma::csv::format::uint16:        run< comma::uint16 >( options, to_type ); break;
+//             case comma::csv::format::int32:         run< comma::int32 >( options, to_type ); break;
+//             case comma::csv::format::uint32:        run< comma::uint32 >( options, to_type ); break;
+//             case comma::csv::format::int64:         run< comma::int64 >( options, to_type ); break;
+//             case comma::csv::format::uint64:        run< comma::uint64 >( options, to_type ); break;
+//             case comma::csv::format::char_t:        run< char >( options, to_type ); break;
+//             case comma::csv::format::float_t:       run< float >( options, to_type ); break;
+//             case comma::csv::format::double_t:      run< double >( options, to_type ); break;
+//             case comma::csv::format::time:
+//             case comma::csv::format::long_time:     intervals< boost::posix_time::ptime >( options ).run(); break;
+//             case comma::csv::format::fixed_string:  intervals< std::string >( options ).run(); break;
+//             default:                                COMMA_THROW( comma::exception, "unknown type" ); break;
+//         }
+        if( from_type != to_type ) { std::cerr << app_name << ": support only from and to of the same type, got from: " << comma::csv::format::to_format( from_type ) << ", to: " << comma::csv::format::to_format( to_type ) << std::endl; return 1; }
+        switch( to_type )
         {
-            case comma::csv::format::int8:          run< char >( options, to_type ); break;
-            case comma::csv::format::uint8:         run< unsigned char >( options, to_type ); break;
-            case comma::csv::format::int16:         run< comma::int16 >( options, to_type ); break;
-            case comma::csv::format::uint16:        run< comma::uint16 >( options, to_type ); break;
-            case comma::csv::format::int32:         run< comma::int32 >( options, to_type ); break;
-            case comma::csv::format::uint32:        run< comma::uint32 >( options, to_type ); break;
-            case comma::csv::format::int64:         run< comma::int64 >( options, to_type ); break;
-            case comma::csv::format::uint64:        run< comma::uint64 >( options, to_type ); break;
-            case comma::csv::format::char_t:        run< char >( options, to_type ); break;
-            case comma::csv::format::float_t:       run< float >( options, to_type ); break;
-            case comma::csv::format::double_t:      run< double >( options, to_type ); break;
+            case comma::csv::format::int8:          intervals< char >( options ).run(); break;
+            case comma::csv::format::uint8:         intervals< unsigned char >( options ).run(); break;
+            case comma::csv::format::int16:         intervals< comma::int16 >( options ).run(); break;
+            case comma::csv::format::uint16:        intervals< comma::uint16 >( options ).run(); break;
+            case comma::csv::format::int32:         intervals< comma::int32 >( options ).run(); break;
+            case comma::csv::format::uint32:        intervals< comma::uint32 >( options ).run(); break;
+            case comma::csv::format::int64:         intervals< comma::int64 >( options ).run(); break;
+            case comma::csv::format::uint64:        intervals< comma::uint64 >( options ).run(); break;
+            case comma::csv::format::char_t:        intervals< char >( options ).run(); break;
+            case comma::csv::format::float_t:       intervals< float >( options ).run(); break;
+            case comma::csv::format::double_t:      intervals< double >( options ).run(); break;
             case comma::csv::format::time:
             case comma::csv::format::long_time:     intervals< boost::posix_time::ptime >( options ).run(); break;
-            case comma::csv::format::fixed_string:  intervals< std::string >( options ).run(); break;
-            default:                                COMMA_THROW( comma::exception, "unknown type" ); break;
+            case comma::csv::format::fixed_string:  intervals< std::string >( options ).run(); break;            
+            default:                                COMMA_THROW( comma::exception, "from/to type mismatch" ); break;
         }
         return 0;
     }
