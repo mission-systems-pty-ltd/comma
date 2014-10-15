@@ -115,7 +115,8 @@ class casted : public packed::field< casted< T, S, Padding >, T, S >
         const casted& operator=( const T& rhs ) { return base_type::operator=( rhs ); }
 };
 
-inline unsigned int hex_to_int( char digit )
+template < typename T >
+inline T hex_to_int( char digit )
 {
     if( digit >= '0' && digit <= '9' ) { return digit - '0'; }
     if( digit >= 'a' && digit <= 'f' ) { return digit - 'a' + 10; }
@@ -123,26 +124,29 @@ inline unsigned int hex_to_int( char digit )
     COMMA_THROW( comma::exception, "expected hexadecimal digit, got: '" << digit << "'" );
 }
 
-inline unsigned int hex_to_int( const char* digits, unsigned int size, char padding = ' ' )
+template < typename T >
+inline T hex_to_int( const char* digits, std::size_t size, char padding = ' ' )
 {
-    unsigned int result = 0;
+    T result = 0;
     const char* end = digits + size;
-    for( const char* digit = digits; digit != end && *digit != '\0'; ++digit ) { if( *digit != padding ) { result = result * 16 + hex_to_int( *digit ); } }
+    for( const char* digit = digits; digit != end && *digit != '\0'; ++digit ) { if( *digit != padding ) { result = result * 16 + hex_to_int< T >( *digit ); } }
     return result;
 }
 
-inline char hex_from_int( unsigned int digit )
+template < typename T >
+inline char hex_from_int( T decimal )
 {
-    if( digit >= 0 && digit <= 9 ) { return  '0' + digit; }
-    if( digit >= 10 && digit <= 15 ) { return  'a' + digit - 10; }
+    if( decimal >= 0 && decimal <= 9 ) { return  '0' + decimal; }
+    if( decimal >= 10 && decimal <= 15 ) { return  'a' + decimal - 10; }
+    COMMA_THROW( comma::exception, "expected decimal number from 0 to 15, got: '" << decimal << "'" );
 }
 
 template < typename T >
-inline void hex_from_int( char* storage, unsigned int size, const T& value, char padding = ' ' )
+inline void hex_from_int( char* storage, std::size_t size, T value, char padding = ' ' )
 {
-    unsigned int i = 1;
-    for( T v = value; i <= size; ) { storage[size-i] = hex_from_int( v % 16 ); ++i; v /= 16; if( v == 0 ) break; }
-    for( ; i <= size; ++i ) { storage[size-i] = padding; }
+    std::size_t i = 1;
+    while( i <= size ) { storage[size-i] = hex_from_int< T >( value % 16 ); ++i; value /= 16; if( value == 0 ) break; }
+    while( i <= size ) { storage[size-i] = padding; ++i; }
 }
 
 template < typename T, std::size_t S, char Padding = ' ' >
@@ -160,19 +164,12 @@ public:
     
     static void pack( char* storage, const T& value )
     {
-        return hex_from_int( storage, size, value, Padding );
-//         std::ostringstream ss;
-//         ss << std::hex << std::setfill( Padding ) << std::setw( size ) << value;
-//         ::memcpy( storage, &(ss.str()[0]), size );
+        return hex_from_int< T >( storage, size, value, Padding );
     }
     
     static T unpack( const char* storage )
     {
-        return hex_to_int( storage, size, Padding );
-//         std::istringstream iss( comma::strip( std::string( storage, size ), Padding ) );
-//         T value;
-//         iss >> std::hex >> value;
-//         return value;
+        return hex_to_int< T >( storage, size, Padding );
     }
     
     const ascii_hex& operator=( const T& rhs ) { return base_type::operator=( rhs ); }

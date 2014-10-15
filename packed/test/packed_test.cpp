@@ -377,6 +377,11 @@ TEST( test_packed_ascii_hex, test_throw_unexpected_hexadecimal_digit )
     ASSERT_THROW( a.unpack( "g" ), comma::exception );
 }
 
+TEST( test_packed_ascii_hex, test_throw_unexpected_decimal_digit )
+{
+    ASSERT_THROW( comma::packed::hex_from_int< comma::uint16 >( 16 ), comma::exception);
+}
+
 int main( int argc, char *argv[] )
 {
     ::testing::InitGoogleTest( &argc, argv );
