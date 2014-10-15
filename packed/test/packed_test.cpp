@@ -238,34 +238,6 @@ TEST( test_packed_ascii_hex, test_unpack_values_size_2_lowercase )
 }
 
 template < typename T >
-void test_ascii_hex_unpack_values_size3( const boost::array< std::string, 16 >& hex_digits )
-{
-    comma::packed::ascii_hex< T, 3 > a;
-    for( unsigned int i = 0; i < hex_digits.size(); ++i ) 
-    {
-        for( unsigned int j = 0; j < hex_digits.size(); ++j )
-        {
-            for( unsigned int k = 0; k < hex_digits.size(); ++k )
-            {
-                std::string hex = hex_digits[i] + hex_digits[j] + hex_digits[k];
-                T expected_decimal = i*16*16 + j*16 + k;
-                EXPECT_EQ( expected_decimal, a.unpack( hex.c_str() ) );
-            }
-        }
-    }    
-}
-
-TEST( test_packed_ascii_hex, test_unpack_values_size_3_uppercase )
-{    
-    test_ascii_hex_unpack_values_size3< comma::uint16 >( hex_digits_u );
-}
-
-TEST( test_packed_ascii_hex, test_unpack_values_size_3_lowercase )
-{   
-    test_ascii_hex_unpack_values_size3< comma::uint16 >( hex_digits_l );
-}
-
-template < typename T >
 void test_ascii_hex_pack_values_size1( const boost::array< std::string, 16 >& hex_digits )
 {
     comma::packed::ascii_hex< T, 1 > a;
@@ -304,30 +276,6 @@ TEST( test_packed_ascii_hex, test_pack_values_size_2 )
     test_ascii_hex_pack_values_size2< comma::uint16 >( hex_digits_l );
 }
 
-template < typename T >
-void test_ascii_hex_pack_values_size3( const boost::array< std::string, 16 >& hex_digits )
-{
-    comma::packed::ascii_hex< T, 3, '0' > a;
-    char buf[] = "XXX";
-    for( unsigned int i = 0; i < hex_digits.size(); ++i ) 
-    {
-        for( unsigned int j = 0; j < hex_digits.size(); ++j )
-        {
-            for( unsigned int k = 0; k < hex_digits.size(); ++k )
-            {
-                const T decimal = i*16*16 + j*16 + k;
-                a.pack( buf, decimal );
-                EXPECT_EQ( hex_digits[i] + hex_digits[j] + hex_digits[k], std::string( buf, 3 ) );
-            }
-        }
-    }    
-}
-
-TEST( test_packed_ascii_hex, test_pack_values_size_3 )
-{
-    test_ascii_hex_pack_values_size3< comma::uint16 >( hex_digits_l );
-}
-
 TEST( test_packed_ascii_hex, test_pack_default_padding )
 {
     comma::packed::ascii_hex< comma::uint16, 2, ' ' > a;
@@ -359,7 +307,7 @@ struct ascii_hex_struct : public comma::packed::packed_struct< ascii_hex_struct,
     comma::packed::const_byte< ' ' > p2;
 };
 
-TEST( test_packed_ascii_hex, test_with_cast )
+TEST( test_packed_ascii_hex, test_values_from_packed_struct )
 {
     std::string hex1 = "       0 ";
     EXPECT_EQ( 0, reinterpret_cast< const ascii_hex_struct* >( &hex1[0] )->value() );
