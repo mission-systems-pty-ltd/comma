@@ -131,6 +131,11 @@ static void usage( bool more )
         std::cerr << "            cat entries.csv | csv-update --fields=id" << std::endl;
         std::cerr << "        output only the results of the last update" << std::endl;
         std::cerr << "            cat entries.csv | csv-update --fields=id --last-only" << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "    erasing values" << std::endl;
+        std::cerr << "        echo -e 0,1,a,20140101T000000\\\\n0,-1,b,19000101T000000 | csv-update --fields=id -u --erase=,-1,,19000101T000000" << std::endl;
+        std::cerr << "        0,1,a,20140101T000000" << std::endl;
+        std::cerr << "        0,,b," << std::endl;
     }
     else
     {
@@ -139,7 +144,7 @@ static void usage( bool more )
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
-    exit( -1 );
+    exit( 0 );
 }
 
 struct input_t
