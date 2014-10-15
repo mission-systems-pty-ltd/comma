@@ -1,0 +1,14 @@
+single_input/all/test[0]/output[0]="0,,,"
+single_input/all/test[0]/output[1]="0,1,,"
+single_input/all/test[0]/output[2]="0,1,2,"
+single_input/all/test[0]/output[3]="0,1,2,3"
+
+single_input/last/test[0]/output[0]="0,1,2,3"
+
+single_input/format/guess/test[1]/output[0]="0,,,"
+
+single_input/format/guess/test[2]/output[0]="0,,,"
+
+single_input/format/guess/test[3]/output[0]="0,,1,"
+
+single_input/format/guess/test[4]/output[0]="0,,a,"

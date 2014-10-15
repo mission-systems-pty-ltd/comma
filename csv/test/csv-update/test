@@ -1,0 +1,24 @@
+#!/bin/bash
+
+unset input
+unset update
+unset command
+while IFS='=' read key value ; do
+    [[ -n "$key" && "${key:0:1}" != "#" ]] || continue
+    value="${value/#\"}"
+    value="${value/%\"}"
+    case "$( basename $key )" in
+        input|input\[*\]) input+=( "$value" ) ;;
+        update|update\[*\]) update+=( "$value" ) ;; # todo: handle update as a temporary file
+        command)
+            command="$value"
+            count=0
+            for i in ${input[@]} ; do echo "$i" ; done \
+                | $command \
+                | while read line ; do echo "$( dirname "$key" )/output[$count]=\"$line\"" ; (( ++count )) ; done
+            echo
+            unset input
+            unset command
+            ;;
+    esac
+done

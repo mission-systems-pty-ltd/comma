@@ -377,6 +377,7 @@ int main( int ac, char** av )
         
         
         // todo: handle --empty
+        // todo: handle --remove
         
         
         for( unsigned int i = 0; i < empty.longs.size(); ++i ) { empty.longs[i] = std::numeric_limits< comma::int64 >::max(); } // quick and dirty
