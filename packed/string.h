@@ -144,9 +144,9 @@ inline char hex_from_int( T decimal )
 template < typename T >
 inline void hex_from_int( char* storage, std::size_t size, T value, char padding = ' ' )
 {
+    ::memset( storage, padding, size );
     std::size_t i = 1;
     while( i <= size ) { storage[size-i] = hex_from_int< T >( value % 16 ); ++i; value /= 16; if( value == 0 ) break; }
-    while( i <= size ) { storage[size-i] = padding; ++i; }
 }
 
 template < typename T, std::size_t S, char Padding = ' ' >
