@@ -137,7 +137,7 @@ int main( int ac, char** av )
         bool nearest = options.exists( "--nearest" );
         bool by_lower = ( options.exists( "--by-lower" ) || !by_upper ) && !nearest;
         bool timestamp_only = options.exists( "--timestamp-only,--time-only" );
-        bool discard_bounding = !options.exists( "--discard-bounding" );
+        bool discard_bounding = options.exists( "--discard-bounding" );
         boost::optional< unsigned int > buffer_size;
         if( options.exists( "--buffer" ) ) { buffer_size = options.value< unsigned int >( "--buffer" ); }
         bool discard = !options.exists( "--no-discard" );
@@ -174,8 +174,10 @@ int main( int ac, char** av )
         std::deque<timestring_t> bounding_queue;
         #ifndef WIN32
         comma::io::select select;
+        comma::io::select istream_select;
         select.read().add(0);
         select.read().add(is.fd());
+        istream_select.read().add(is.fd());
         #endif // #ifndef WIN32
         const Point* p;
         bool next=true;
@@ -192,25 +194,39 @@ int main( int ac, char** av )
             //check so we do not block
             bool istream_ready = istream.ready();
             bool stdin_stream_ready = stdin_stream.ready();
-            if(!istream_ready || !stdin_stream_ready)
-            {
-                if(!istream_ready && !stdin_stream_ready)
-                {
-                    select.wait(boost::posix_time::milliseconds(10));
-                }
-                else
-                {
-                    select.check();
-                }
-                if(select.read().ready(is.fd()))
-                {
-                    istream_ready=true;
-                }
-                if(select.read().ready(0))
-                {
-                    stdin_stream_ready=true;
-                }
 
+            if(next)
+            {
+                if(!istream_ready || !stdin_stream_ready)
+                {
+                    if(!istream_ready && !stdin_stream_ready)
+                    {
+                        select.wait(boost::posix_time::milliseconds(10));
+                    }
+                    else
+                    {
+                        select.check();
+                    }
+                    if(select.read().ready(is.fd()))
+                    {
+                        istream_ready=true;
+                    }
+                    if(select.read().ready(0))
+                    {
+                        stdin_stream_ready=true;
+                    }
+                }
+            }
+            else
+            {
+                if(!istream_ready)
+                {
+                    istream_select.wait(boost::posix_time::milliseconds(10));
+                    if(istream_select.read().ready(is.fd()))
+                    {
+                        istream_ready=true;
+                    }
+                }
             }
             #endif //#ifdef WIN32
             //keep storing available bounding data
@@ -254,11 +270,14 @@ int main( int ac, char** av )
             {
                 //bound not found
                 //do we have more data?
-                if(bounding_data_available) { next=false; continue; }
-                if(bounding_queue.empty()) { break; } //no bounding data
-                if(p->timestamp < bounding_queue.front().first || !by_lower) { break; }
-                //duplicate point to emulate first
-                bounding_queue.push_back(bounding_queue.front());
+                if(!bounding_data_available) { break; }
+                next=false;
+                continue;
+//                if(bounding_data_available) { next=false; continue; }
+//                if(bounding_queue.empty()) { break; } //no bounding data
+//                if(p->timestamp < bounding_queue.front().first || !by_lower) { break; }
+//                //duplicate point to emulate first
+//                bounding_queue.push_back(bounding_queue.front());
             }
 
             //bound available
