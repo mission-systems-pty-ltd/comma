@@ -276,6 +276,19 @@ TEST( test_packed_ascii_hex, test_pack_values_size_2 )
     test_ascii_hex_pack_values_size2< comma::uint16 >( hex_digits_l );
 }
 
+TEST( test_packed_ascii_hex, test_pack_value_is_too_large )
+{
+    char buf1[] = "X";
+    char buf2[] = "XX";
+    comma::packed::ascii_hex< comma::uint16, 1 > a;
+    ASSERT_THROW( a.pack( buf1, 16 ), comma::exception );
+    ASSERT_THROW( a.pack( buf2, 16 ), comma::exception );
+   
+    comma::packed::ascii_hex< comma::uint16, 2 > b;
+    ASSERT_THROW( b.pack( buf2, 256 ), comma::exception );
+}
+
+
 TEST( test_packed_ascii_hex, test_pack_default_padding )
 {
     comma::packed::ascii_hex< comma::uint16, 2, ' ' > a;
