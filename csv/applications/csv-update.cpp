@@ -152,10 +152,10 @@ struct input_t
     comma::csv::impl::unstructured key;
     comma::csv::impl::unstructured value;
     comma::uint32 block;
-    
+
     input_t() : block( 0 ) {}
     input_t( comma::csv::impl::unstructured key, comma::csv::impl::unstructured value, comma::uint32 block ): key( key ), value( value ), block( block ) {}
-    
+
     typedef comma::csv::input_stream< input_t > input_stream_t;
 };
 
@@ -166,10 +166,10 @@ struct map_t
         unsigned int index;
         input_t value;
         std::string string;
-        
+
         value_type() {}
         value_type( unsigned int index, const input_t& value, const std::string& string ) : index( index ), value( value ), string( string ) {}
-    };        
+    };
     typedef boost::unordered_map< comma::csv::impl::unstructured, std::vector< value_type >, comma::csv::impl::unstructured::hash > type;
 };
 
@@ -280,7 +280,7 @@ template < typename V > static void update( V& values, const V& updates, const V
 static void update( comma::csv::impl::unstructured& value, const comma::csv::impl::unstructured& value_update, bool non_empty_only )
 {
     if( !non_empty_only ) { value = value_update; return; }
-    static const comma::csv::impl::unstructured dummy;
+    static comma::csv::impl::unstructured dummy;
     update( value.longs, value_update.longs, empty.longs, erase ? erase->longs : dummy.longs );
     update( value.strings, value_update.strings, empty.strings, erase ? erase->strings : dummy.strings );
     update( value.doubles, value_update.doubles, empty.doubles, erase ? erase->doubles : dummy.doubles );
@@ -293,7 +293,7 @@ static void update( const input_t& v, const comma::csv::input_stream< input_t >&
     {
         map_t::type::const_iterator it = filter_map.find( v.key );
         if( it == filter_map.end() || it->second.empty() )
-        { 
+        {
             if( last.empty() ) { output_last( istream ); }
             else { std::cout << last << std::endl; }
             return;
