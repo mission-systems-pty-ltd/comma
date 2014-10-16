@@ -124,6 +124,212 @@ TEST( test_packed_struct_test, test_int24_byte_order )
     test_int24_byte_order( -8388608, 0x00, 0x00, 0x80 );
 }
 
+static boost::array< std::string, 16 > hex_digits_u = { { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F" } };
+static boost::array< std::string, 16 > hex_digits_l = { { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f" } };
+
+template < typename T, unsigned int Size >
+void test_ascii_hex_default_value()
+{
+    unsigned int expected_default_value = 0;
+    comma::packed::ascii_hex< T, Size > a;
+    EXPECT_EQ( expected_default_value, a.default_value() );
+}
+
+TEST( test_packed_ascii_hex, test_default_value )
+{
+    test_ascii_hex_default_value< comma::uint16, 1 >();
+    test_ascii_hex_default_value< comma::uint16, 2 >();
+    test_ascii_hex_default_value< comma::uint16, 3 >();
+}
+
+template < typename T, unsigned int Size >
+void test_ascii_hex_default_padding( std::string hex_with_padding, T expected_decimal )
+{
+    comma::packed::ascii_hex< T, Size > a;
+    EXPECT_EQ(  expected_decimal, a.unpack( hex_with_padding.c_str() ) );
+}
+
+TEST( test_packed_ascii_hex, test_default_padding )
+{
+    test_ascii_hex_default_padding< comma::uint16, 2 >( " f", 15 );
+    test_ascii_hex_default_padding< comma::uint16, 3 >( "  f", 15 );
+    test_ascii_hex_default_padding< comma::uint16, 3 >( " ff", 255 );
+    test_ascii_hex_default_padding< comma::uint16, 3 >( "fff", 4095 );
+}
+
+template < typename T, unsigned int Size, char Padding >
+void test_ascii_hex_padding( std::string hex_with_padding, T expected_decimal )
+{
+    comma::packed::ascii_hex< T, Size, Padding > a;
+    EXPECT_EQ( expected_decimal, a.unpack( hex_with_padding.c_str() ) );
+}
+
+TEST( test_packed_ascii_hex, test_padding )
+{
+    test_ascii_hex_padding< comma::uint16, 2, '0' >( "0f", 15 );
+    test_ascii_hex_padding< comma::uint16, 3, '0' >( "00f", 15 );
+    test_ascii_hex_padding< comma::uint16, 3, '0' >( "0ff", 255 );
+    test_ascii_hex_padding< comma::uint16, 3, '0' >( "fff", 4095 );
+    test_ascii_hex_padding< comma::uint16, 2, '*' >( "*f", 15 );
+}
+
+template < typename T, unsigned int Size >
+void test_ascii_hex_unpack_size( const std::string& hex, T expected_decimal )
+{
+    comma::packed::ascii_hex< T, Size > a;
+    EXPECT_EQ( expected_decimal, a.unpack( hex.c_str() ) );
+}
+
+TEST( test_packed_ascii_hex, test_unpack_size )
+{
+    test_ascii_hex_unpack_size< comma::uint16, 1 >( "f", 15 );
+    test_ascii_hex_unpack_size< comma::uint16, 2 >( "f", 15 );
+    test_ascii_hex_unpack_size< comma::uint16, 2 >( "ff", 255 );
+    test_ascii_hex_unpack_size< comma::uint16, 3 >( "f", 15 );
+    test_ascii_hex_unpack_size< comma::uint16, 3 >( "ff", 255 );
+    test_ascii_hex_unpack_size< comma::uint16, 3 >( "fff", 4095 );
+}
+
+template < typename T >
+void test_ascii_hex_unpack_values_size1( const boost::array< std::string, 16 >& hex_digits )
+{
+    comma::packed::ascii_hex< T, 1 > a;
+    for( unsigned int i = 0; i < hex_digits.size(); ++i ) 
+    {
+        std::string hex = hex_digits[i];
+        T expected_decimal = i;
+        EXPECT_EQ( expected_decimal, a.unpack( hex.c_str() ) );
+    }
+}
+
+TEST( test_packed_ascii_hex, test_unpack_values_size_1_uppercase )
+{    
+    test_ascii_hex_unpack_values_size1< comma::uint16 >( hex_digits_u );
+}
+
+TEST( test_packed_ascii_hex, test_unpack_values_size_1_lowercase )
+{   
+    test_ascii_hex_unpack_values_size1< comma::uint16 >( hex_digits_l );
+}
+
+template < typename T >
+void test_ascii_hex_unpack_values_size2( const boost::array< std::string, 16 >& hex_digits )
+{
+    comma::packed::ascii_hex< T, 2 > a;
+    for( unsigned int i = 0; i < hex_digits.size(); ++i ) 
+    {
+        for( unsigned int j = 0; j < hex_digits.size(); ++j )
+        {
+            std::string hex = hex_digits[i] + hex_digits[j];
+            T expected_decimal = i*16 + j;
+            EXPECT_EQ( expected_decimal, a.unpack( hex.c_str() ) );
+        }
+    }    
+}
+
+TEST( test_packed_ascii_hex, test_unpack_values_size_2_uppercase )
+{    
+    test_ascii_hex_unpack_values_size2< comma::uint16 >( hex_digits_u );
+}
+
+TEST( test_packed_ascii_hex, test_unpack_values_size_2_lowercase )
+{   
+    test_ascii_hex_unpack_values_size2< comma::uint16 >( hex_digits_l );
+}
+
+template < typename T >
+void test_ascii_hex_pack_values_size1( const boost::array< std::string, 16 >& hex_digits )
+{
+    comma::packed::ascii_hex< T, 1 > a;
+    char buf[] = "X";
+    for( unsigned int i = 0; i < hex_digits.size(); ++i ) 
+    {
+        const T decimal = i;
+        a.pack( buf, decimal );
+        EXPECT_EQ( hex_digits[i], std::string( buf, 1 ) );
+    }
+}
+
+TEST( test_packed_ascii_hex, test_pack_values_size_1 )
+{
+    test_ascii_hex_pack_values_size1< comma::uint16 >( hex_digits_l );
+}
+
+template < typename T >
+void test_ascii_hex_pack_values_size2( const boost::array< std::string, 16 >& hex_digits )
+{
+    comma::packed::ascii_hex< T, 2, '0' > a;
+    char buf[] = "XX";
+    for( unsigned int i = 0; i < hex_digits.size(); ++i ) 
+    {
+        for( unsigned int j = 0; j < hex_digits.size(); ++j )
+        {
+            const T decimal = i*16 + j;
+            a.pack( buf, decimal );
+            EXPECT_EQ( hex_digits[i] + hex_digits[j], std::string( buf, 2 ) );
+        }
+    }    
+}
+
+TEST( test_packed_ascii_hex, test_pack_values_size_2 )
+{
+    test_ascii_hex_pack_values_size2< comma::uint16 >( hex_digits_l );
+}
+
+TEST( test_packed_ascii_hex, test_pack_default_padding )
+{
+    comma::packed::ascii_hex< comma::uint16, 2, ' ' > a;
+    char hex2[] = "XX";
+    a.pack( hex2, 0 ); EXPECT_EQ( " 0", std::string( hex2, 2 ) );
+    a.pack( hex2, 15 ); EXPECT_EQ( " f", std::string( hex2, 2 ) );
+    
+    comma::packed::ascii_hex< comma::uint16, 3 > b;
+    char hex3[] = "XXX";
+    b.pack( hex3, 0 ); EXPECT_EQ( "  0", std::string( hex3, 3 ) );
+    b.pack( hex3, 15 ); EXPECT_EQ( "  f", std::string( hex3, 3 ) );
+    b.pack( hex3, 255 ); EXPECT_EQ( " ff", std::string( hex3, 3 ) );    
+}    
+
+TEST( test_packed_ascii_hex, test_pack_padding )
+{
+    comma::packed::ascii_hex< comma::uint16, 3, '0' > c;
+    char hex3[] = "XXX";
+    c.pack( hex3, 0 ); EXPECT_EQ( "000", std::string( hex3, 3 ) );
+    c.pack( hex3, 15 ); EXPECT_EQ( "00f", std::string( hex3, 3 ) );
+    c.pack( hex3, 255 ); EXPECT_EQ( "0ff", std::string( hex3, 3 ) );
+    c.pack( hex3, 4095 ); EXPECT_EQ( "fff", std::string( hex3, 3 ) );
+}
+
+struct ascii_hex_struct : public comma::packed::packed_struct< ascii_hex_struct, 9 >
+{
+    comma::packed::const_byte< ' ' > p1;
+    comma::packed::ascii_hex< comma::uint32, 7 > value;
+    comma::packed::const_byte< ' ' > p2;
+};
+
+TEST( test_packed_ascii_hex, test_values_from_packed_struct )
+{
+    std::string hex1 = "       0 ";
+    EXPECT_EQ( 0, reinterpret_cast< const ascii_hex_struct* >( &hex1[0] )->value() );
+    
+    std::string hex2 = " 1234567 ";
+    EXPECT_EQ( 19088743, reinterpret_cast< const ascii_hex_struct* >( &hex2[0] )->value() );
+
+    std::string hex3 = " abcdef0 ";
+    EXPECT_EQ( 180150000, reinterpret_cast< const ascii_hex_struct* >( &hex3[0] )->value() );
+}
+
+TEST( test_packed_ascii_hex, test_throw_unexpected_hexadecimal_digit )
+{
+    comma::packed::ascii_hex< comma::uint16, 1 > a;
+    ASSERT_THROW( a.unpack( "g" ), comma::exception );
+}
+
+TEST( test_packed_ascii_hex, test_throw_unexpected_decimal_digit )
+{
+    ASSERT_THROW( comma::packed::hex_from_int< comma::uint16 >( 16 ), comma::exception);
+}
+
 int main( int argc, char *argv[] )
 {
     ::testing::InitGoogleTest( &argc, argv );

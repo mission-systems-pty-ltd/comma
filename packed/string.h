@@ -44,6 +44,7 @@
 #include <comma/base/exception.h>
 #include <comma/packed/field.h>
 #include <comma/string/string.h>
+#include <iomanip>
 
 namespace comma { namespace packed {
 
@@ -114,10 +115,45 @@ class casted : public packed::field< casted< T, S, Padding >, T, S >
         const casted& operator=( const T& rhs ) { return base_type::operator=( rhs ); }
 };
 
+template < typename T >
+inline T hex_to_int( char digit )
+{
+    if( digit >= '0' && digit <= '9' ) { return digit - '0'; }
+    if( digit >= 'a' && digit <= 'f' ) { return digit - 'a' + 10; }
+    if( digit >= 'A' && digit <= 'F' ) { return digit - 'A' + 10; }
+    COMMA_THROW( comma::exception, "expected hexadecimal digit, got: '" << digit << "'" );
+}
+
+template < typename T >
+inline T hex_to_int( const char* digits, std::size_t size, char padding = ' ' )
+{
+    T result = 0;
+    const char* end = digits + size;
+    for( const char* digit = digits; digit != end && *digit != '\0'; ++digit ) { if( *digit != padding ) { result = result * 16 + hex_to_int< T >( *digit ); } }
+    return result;
+}
+
+template < typename T >
+inline char hex_from_int( T decimal )
+{
+    if( decimal >= 0 && decimal <= 9 ) { return  '0' + decimal; }
+    if( decimal >= 10 && decimal <= 15 ) { return  'a' + decimal - 10; }
+    COMMA_THROW( comma::exception, "expected decimal number from 0 to 15, got: '" << decimal << "'" );
+}
+
+template < typename T >
+inline void hex_from_int( char* storage, std::size_t size, T value, char padding = ' ' )
+{
+    ::memset( storage, padding, size );
+    std::size_t i = 1;
+    while( i <= size ) { storage[size-i] = hex_from_int< T >( value % 16 ); ++i; value /= 16; if( value == 0 ) break; }
+}
+
 template < typename T, std::size_t S, char Padding = ' ' >
 class ascii_hex : public packed::field< ascii_hex< T, S, Padding >, T, S >
 {
 public:
+    BOOST_STATIC_ASSERT( boost::is_unsigned< T >::value );
     enum { size = S };
     
     typedef T Type;
@@ -128,20 +164,12 @@ public:
     
     static void pack( char* storage, const T& value )
     {
-        //std::string v = boost::lexical_cast< std::string >( value );
-        std::ostringstream ss;
-        ss << std::hex << value;
-        ::memset( storage, Padding, size );
-        ::memcpy( storage, &(ss.str()[0]), size );
+        return hex_from_int< T >( storage, size, value, Padding );
     }
     
     static T unpack( const char* storage )
     {
-        // no padding
-        std::istringstream iss( comma::strip( std::string( storage, size ), Padding ) );
-        T value;
-        iss >> std::hex >> value;
-        return value;
+        return hex_to_int< T >( storage, size, Padding );
     }
     
     const ascii_hex& operator=( const T& rhs ) { return base_type::operator=( rhs ); }
