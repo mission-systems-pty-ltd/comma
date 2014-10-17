@@ -91,5 +91,9 @@ target_link_libraries ( csv-units ${comma_ALL_EXTERNAL_LIBRARIES} comma_applicat
 install( TARGETS csv-units RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
 
 add_executable( csv-interval ${dir}/csv-interval.cpp )
-target_link_libraries ( csv-interval ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_io comma_xpath comma_string )
+target_link_libraries ( csv-interval ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_io comma_xpath )
 install( TARGETS csv-interval RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
+
+add_executable( csv-cast ${dir}/csv-cast.cpp )
+target_link_libraries ( csv-cast ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv )
+install( TARGETS csv-cast RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
