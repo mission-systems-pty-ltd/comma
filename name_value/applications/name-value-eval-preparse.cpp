@@ -399,7 +399,7 @@ std::string demangle_id(const std::string &id, bool restore_slashes)
 bool is_stop_token(const Token &tok)
 {
     if (tok.type == t_operator) { return tok.str == ":"; }
-    else if (tok.type == t_id) { return tok.str == "expect"; }
+    else if (tok.type == t_id) { return tok.str == kwd_expect; }
     else if (tok.type == t_keyword) { return true; }
     else { return false; }
 }
@@ -582,7 +582,7 @@ void tokenise(const std::string &line, const std::string &filename, int line_num
             std::string id = line.substr(tok_start, pos - tok_start);
             check_transform_id(id);
             if (is_keyword(id)) { tok_str = id; type = t_keyword; }
-            else if (next_nonblank_char(line, pos) == '(') { tok_str = id; type = t_function; }
+            else if (id != kwd_expect && next_nonblank_char(line, pos) == '(') { tok_str = id; type = t_function; }
             else { tok_str = (opt.demangle ? demangle_id(id, true) : mangle_id(id)); type = t_id; }
         }
         else
