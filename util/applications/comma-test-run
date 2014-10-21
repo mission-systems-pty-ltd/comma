@@ -41,6 +41,7 @@ max_memory_main=$max_memory_main
 max_memory_shared=$max_memory_shared
 max_wait_time=$max_wait_time
 max_run_time=$max_run_time
+raw=0
 EOF
 }
 
@@ -64,6 +65,7 @@ function description()
 --test-option=[<option>]; extra command line argument(s) pass to "test" script
 --to=[<dir>]; run tests up to a given test, the latter included, where test directories are ordered lexicographically
 --until-first-failure; exit after the first failure (works only when tests run serially)
+--raw; Unstyled output (no ANSIterm control characters)
 EOF
 }
 
@@ -160,17 +162,25 @@ function usage_()
 
 function error_()
 {
-    tput bold
-    high="\033[1;31m"
-    normal="\033[0m"
-    echo -e "$high$1$normal" >&2
-    tput sgr0
+    if [[ "$options_raw" != "1" ]] ; then
+	    tput bold
+	    high="\033[1;31m"
+	    normal="\033[0m"
+	    echo -e "$high$1$normal" >&2
+	    tput sgr0
+    else
+            echo -e "$1" >&2
+    fi
 }
 export -f error_
 
 function message_()
 {
-    if [[ "$options_quiet" != "1" ]] ; then tput bold ; echo $1 >&2 ; tput sgr0 ; fi
+    if [[ "$options_quiet" != "1" ]] ; then 
+	if [[ "$options_raw" != "1" ]] ; then tput bold ; fi
+	echo $1 >&2
+	if [[ "$options_raw" != "1" ]] ; then tput sgr0 ; fi
+    fi
 }
 export -f message_
 
@@ -182,7 +192,13 @@ export -f dump_file_
 
 function warning_()
 {
-    if [[ "$options_quiet" != "1" ]] ; then tput bold ; echo -e "${brown}$1${none}" >&2  ; tput sgr0 ; fi
+    if [[ "$options_quiet" != "1" ]] ; then 
+	if [[ "$options_raw" != "1" ]] ; then
+		tput bold ; echo -e "${brown}$1${none}" >&2  ; tput sgr0
+	else
+		echo -e "$1" >&2
+	fi
+    fi
 }
 export -f warning_
 
@@ -689,7 +705,7 @@ max_memory_main=$(( $options_max_memory_main * 1024 * 1024 ))
 max_memory_shared=$(( $options_max_memory_shared * 1024 * 1024 ))
 max_wait_time=$options_max_wait_time
 max_run_time=$options_max_run_time
-export max_parallel max_memory_main max_memory_shared max_wait_time max_run_time options_debug options_quiet options_path options_until_first_failure options_test_option options_parallel
+export max_parallel max_memory_main max_memory_shared max_wait_time max_run_time options_debug options_quiet options_path options_until_first_failure options_test_option options_parallel options_raw
 
 # keep all plumbing under a common directory
 temp_dir=$( dirname "$( mktemp -d -u )" )
