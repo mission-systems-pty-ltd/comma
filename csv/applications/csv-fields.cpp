@@ -56,7 +56,7 @@ static void usage()
     std::cerr << "                        to keep it consistent with linux cut utility" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    clear: clear some of the field values" << std::endl;
-    std::cerr << "        --keep=<fields>: keep given fields, e.g: echo a,b,c | csv-fields clear --keep=a,c outputs a,,c" << std::endl;
+    std::cerr << "        --keep,--except=<fields>: keep given fields, e.g: echo a,b,c | csv-fields clear --keep=a,c outputs a,,c" << std::endl;
     std::cerr << "        --mask=<fields>: keep given fields by position, e.g: echo a,b,c | csv-fields clear --keep=x,,y outputs a,,c" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
@@ -97,8 +97,8 @@ int main( int ac, char** av )
         }
         else if( operation == "clear" )
         {
-            options.assert_mutually_exclusive( "--keep,--mask" );
-            std::string keep = options.value< std::string >( "--keep", "" );
+            options.assert_mutually_exclusive( "--except,--keep,--mask" );
+            std::string keep = options.value< std::string >( "--keep,--except", "" );
             std::string mask = options.value< std::string >( "--mask", "" );
             if( !keep.empty() )
             {
