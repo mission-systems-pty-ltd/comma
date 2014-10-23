@@ -169,7 +169,7 @@ int main(int argc, char* argv[])
         const bool is_request = vm.count( "request" );
         const bool is_reply = vm.count( "reply" );
         const bool is_publisher = bool( vm.count( "publish" ) );
-        if( is_request + is_reply + is_publisher > 1 ) { std::cerr << "zero-cat: expected only one of: publisher, request, reply; got a very" << std::endl; return 1; }
+        if( is_request + is_reply + is_publisher > 1 ) { std::cerr << "zero-cat: expected only one of: --publisher, --request, --reply; got " << ( is_request + is_reply + is_publisher ) << std::endl; return 1; }
         if( is_request || is_reply )
         {
             #ifdef WIN32
