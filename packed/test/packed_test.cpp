@@ -37,6 +37,7 @@
 #include <math.h>
 #include <iostream>
 #include <gtest/gtest.h>
+#include <boost/array.hpp>
 #include <comma/packed/packed.h>
 
 struct test_packed_struct_t : public comma::packed::packed_struct< test_packed_struct_t, 16 >
