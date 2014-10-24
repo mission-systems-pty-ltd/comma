@@ -49,13 +49,6 @@
 #include <comma/io/publisher.h>
 #include <comma/string/string.h>
 
-static std::string get_endl()
-{
-    std::ostringstream oss;
-    oss << std::endl;
-    return oss.str();
-}
-
 void usage( boost::program_options::options_description const & description, bool const verbose )
 {
     std::cerr << "\nforward stdin to zeromq publisher or subscribe from zeromq to stdout"
@@ -130,6 +123,15 @@ void usage( boost::program_options::options_description const & description, boo
                 << std::endl;
 }
 
+static std::string get_endl()
+{
+    std::ostringstream oss;
+    oss << std::endl;
+    return oss.str();
+}
+
+static const std::string endl = get_endl();
+
 int main(int argc, char* argv[])
 {
     try
@@ -173,25 +175,48 @@ int main(int argc, char* argv[])
         if( is_request || is_reply )
         {
             #ifdef WIN32
-            if( binary )
-            { 
-                _setmode( _fileno( stdin ), _O_BINARY );
-                _setmode( _fileno( stdout ), _O_BINARY );
-            }
+            if( binary ) { _setmode( _fileno( stdin ), _O_BINARY ); _setmode( _fileno( stdout ), _O_BINARY ); }
             #endif
             zmq::socket_t socket( context, is_request ? ZMQ_REQ : ZMQ_REP );
             #if ZMQ_VERSION_MAJOR == 2
             socket.setsockopt( ZMQ_HWM, &hwm, sizeof( hwm ) );
             #endif
             if( endpoints.size() != 1 ) { std::cerr << "zero-cat: request/reply server/client expected 1 endpoint, got " << endpoints.size() << ": " << comma::join( endpoints, ',' ) << std::endl; return 1; }
+            if( is_request || vm.count( "connect" ) ) { socket.connect( &endpoints[0][0] ); }
+            else if( is_reply || vm.count( "bind" ) ) { socket.bind( &endpoints[0][0] ); }
             if( is_request )
             {
-                socket.connect( &endpoints[0][0] ); // or check --connect?
-                std::cerr << "zero-cat --request: todo" << std::endl; return 1;
+                while( !is_shutdown && std::cin.good() )
+                {
+                    std::string buffer( size, 0 );
+                    if( binary )
+                    {
+                        std::cin.read( &buffer[0], size );
+                        int count = std::cin.gcount();
+                        if( count == 0 ) { break; }
+                        if( count < int( size ) ) { std::cerr << "zero-cat: expected " << size << " byte(s), got: " << count << std::endl; return 1; }
+                    }
+                    else
+                    {
+                        std::getline( std::cin, buffer );
+                        if( buffer.empty() ) { break; }
+                        buffer += endl;
+                    }
+                    zmq::message_t request( buffer.size() );
+                    ::memcpy( ( void * )request.data(), &buffer[0], buffer.size() );
+                    #if ZMQ_VERSION_MAJOR == 2
+                    if( !socket.send( request ) ) { std::cerr << "zero-cat: failed to send " << buffer.size() << " bytes; zmq errno: EAGAIN" << std::endl; return 1; }
+                    #else // ZMQ_VERSION_MAJOR == 2
+                    if( !socket.send( &buffer[0], buffer.size() ) ) { std::cerr << "zero-cat: failed to send " << buffer.size() << " bytes; zmq errno: EAGAIN" << std::endl; return 1; }
+                    #endif // ZMQ_VERSION_MAJOR == 2
+                    zmq::message_t reply;
+                    if( !socket.recv( &reply ) ) { break; }
+                    std::cout.write( reinterpret_cast< const char* >( reply.data() ), reply.size() );
+                    if( binary ) { std::cout.flush(); }
+                }
             }
             else
             {
-                socket.bind( &endpoints[0][0] ); // or check --bind?
                 while( !is_shutdown && std::cin.good() )
                 {
                     zmq::message_t request;
@@ -210,6 +235,7 @@ int main(int argc, char* argv[])
                     {
                         std::getline( std::cin, buffer );
                         if( buffer.empty() ) { break; }
+                        buffer += endl;
                     }
                     zmq::message_t reply( buffer.size() );
                     ::memcpy( ( void * )reply.data(), &buffer[0], buffer.size() );
@@ -258,7 +284,6 @@ int main(int argc, char* argv[])
                 else
                 {
                     std::getline( std::cin, buffer );
-                    static const std::string endl = get_endl();
                     if( !is_shutdown && std::cin.good() && !std::cin.eof() && !std::cin.bad() ) { buffer += endl; }
                 }
                 if( buffer.empty() ) { break; }
