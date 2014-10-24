@@ -40,6 +40,7 @@
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/xml_parser.hpp>
+#include <boost/regex.hpp>
 #include <comma/base/exception.h>
 #include <comma/application/contact_info.h>
 #include <comma/application/command_line_options.h>
@@ -221,13 +222,26 @@ int main( int ac, char** av )
         }
         return 0;
     }
+    catch( boost::property_tree::ptree_bad_data& ex )
+    {
+        std::cerr << "name-value-convert: bad data: " << ex.what() << std::endl;
+    }
+    catch( boost::property_tree::ptree_bad_path& ex )
+    {
+        std::cerr << "name-value-convert: bad path: " << ex.what() << std::endl;
+    }
+    catch( boost::property_tree::ptree_error& ex )
+    {
+        boost::regex e( "<unspecified file>" );
+        std::cerr << "name-value-convert: parsing error: " << boost::regex_replace( std::string( ex.what() ), e, "line" ) << std::endl;
+    }
     catch( std::exception& ex )
     {
-        std::cerr << std::endl << "name-value-convert: " << ex.what() << std::endl << std::cerr << std::endl;
+        std::cerr << "name-value-convert: " << ex.what() << std::endl;
     }
     catch( ... )
     {
-        std::cerr << std::endl << "name-value-convert: unknown exception" << std::endl << std::endl;
+        std::cerr << "name-value-convert: unknown exception" << std::endl;
     }
     return 1;
 }
