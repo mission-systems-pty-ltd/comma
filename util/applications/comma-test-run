@@ -66,8 +66,8 @@ function description()
 --to=[<dir>]; run tests up to a given test, the latter included, where test directories are ordered lexicographically
 --until-first-failure; exit after the first failure (works only when tests run serially)
 --no-ansiterm-control-characters,--no-control-characters,--raw; unstyled output (no ANSIterm control characters)
---white-list=[<file>]; only run these tests mentioned in the <file>, this is applied first before black list. 
---black-list=[<file>]; do not run these tests mentioned in <file>, e.g. a lists of sub-directories in white list to be excluded
+--white-list=[<file>]; only run these tests mentioned in the <file>, this is applied first before black list. Comment lines starting with # are ignored. 
+--black-list=[<file>]; do not run these tests mentioned in <file>, e.g. a lists of sub-directories in white list to be excluded. Comment lines starting with # are ignored.
 EOF
 }
 
@@ -747,13 +747,12 @@ function apply_white_black_list()
 function test_directories()
 {
     if [[ -n "$options_white_list" && -f "$options_white_list" ]]; then 
-        echo "$name: applying white list from $options_white_list">&2
-        options_white_list="^(\./)?($( sed 's#\./##' <$options_white_list | tr \\n '|' | sed 's/|$//'  ))"; 
-        echo "$name: applying white list from $options_white_list">&2
+        echo "$name: applying white list from file '$options_white_list'">&2
+        options_white_list="^(\./)?($( sed 's#\./##' <$options_white_list | grep -v ^# | tr \\n '|' | sed 's/|$//'  ))"; 
     fi
     if [[ -n "$options_black_list" && -f "$options_black_list" ]]; then 
-        echo "$name: applying black list from $options_black_list">&2
-        options_black_list="^(\./)?($( sed 's#\./##' <$options_black_list | tr \\n '|' | sed 's/|$//' ))"; 
+        echo "$name: applying black list from file '$options_black_list'">&2
+        options_black_list="^(\./)?($( sed 's#\./##' <$options_black_list | grep -v ^# | tr \\n '|' | sed 's/|$//' ))"; 
     fi
 
     test_script_dirs_all=( $( exclude_generic_tests $( get_dirnames $( find . -name "test" -or -name "input" -or -name "expected" | grep -v "/\." ) 2> /dev/null | sort -u  | apply_white_black_list ) ) )
