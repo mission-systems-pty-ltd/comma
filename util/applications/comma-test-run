@@ -66,8 +66,8 @@ function description()
 --to=[<dir>]; run tests up to a given test, the latter included, where test directories are ordered lexicographically
 --until-first-failure; exit after the first failure (works only when tests run serially)
 --no-ansiterm-control-characters,--no-control-characters,--raw; unstyled output (no ANSIterm control characters)
---white-list=[<file>]; only run these tests mentioned in the <file>, this is applied first before black list. Comment lines starting with # are ignored. 
---black-list=[<file>]; do not run these tests mentioned in <file>, e.g. a lists of sub-directories in white list to be excluded. Comment lines starting with # are ignored.
+--white-list=[<file>]; only run these tests mentioned in the <file>, this is applied first before black list. Comment lines starting with # are ignored. Each entry in the list matches to sub directory or directories name using pattern ^<subdir>   
+--black-list=[<file>]; do not run these tests mentioned in <file>, e.g. a lists of sub-directories in white list to be excluded. Format - see --white-list above.
 EOF
 }
 
