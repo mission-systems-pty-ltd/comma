@@ -1,0 +1,2 @@
+echo "{called black_listed1/test}" >&2
+echo 'result="black_listed1 result"'

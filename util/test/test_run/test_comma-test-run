@@ -27,7 +27,7 @@ trap 'bye 1' SIGHUP SIGINT SIGTERM SIGPIPE
 
 current_dir=$( pwd )
 cd $( dirname $0 )/data
-comma-test-run 2>&1 | sed 's/in subdirectories of [^:]*/in subdirectories of DIR/g' > "$results"
+comma-test-run --white-list=white.list --black-list=black.list 2>&1 | sed 's/in subdirectories of [^:]*/in subdirectories of DIR/g' > "$results"
 diff -b "$results" "$expected" > /dev/null
 
 if [[ $? != 0 ]]; then

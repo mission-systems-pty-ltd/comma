@@ -1,0 +1,4 @@
+# This one shouldn't run, but white_listed/test* should
+white_listed/black_listed1
+# This one shouldn't run
+black_listed2

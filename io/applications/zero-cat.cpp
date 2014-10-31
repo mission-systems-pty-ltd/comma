@@ -47,13 +47,7 @@
 #include <comma/application/contact_info.h>
 #include <comma/application/signal_flag.h>
 #include <comma/io/publisher.h>
-
-static std::string get_endl()
-{
-    std::ostringstream oss;
-    oss << std::endl;
-    return oss.str();
-}
+#include <comma/string/string.h>
 
 void usage( boost::program_options::options_description const & description, bool const verbose )
 {
@@ -129,6 +123,15 @@ void usage( boost::program_options::options_description const & description, boo
                 << std::endl;
 }
 
+static std::string get_endl()
+{
+    std::ostringstream oss;
+    oss << std::endl;
+    return oss.str();
+}
+
+static const std::string endl = get_endl();
+
 int main(int argc, char* argv[])
 {
     try
@@ -143,7 +146,9 @@ int main(int argc, char* argv[])
             ( "publish", "use bind and publish (as opposed to connect and subscribe)" )
             ( "connect", "use connect instead of bind" )
             ( "bind", "use bind instead of connect" )
-            ( "size,s", boost::program_options::value< unsigned int >( &size ), "packet size in bytes, in publish mode; if not present, data is line-based ascii" )
+            ( "request", "request/reply client" )
+            ( "reply", "request/reply server" )
+            ( "size,s", boost::program_options::value< unsigned int >( &size ), "packet size in bytes, in publish, request, or reply mode; if not present, data is line-based ascii" )
             ( "buffer,b", boost::program_options::value< std::size_t >( &hwm )->default_value( 1024 ), "set buffer size in packets (high water mark in zmq)" )
             ( "server", boost::program_options::value< std::string >( &server ), "in subscribe mode, republish the data on a socket, eg tcp:1234" )
             ( "wait-after-connect,conwait", boost::program_options::value< double >( &wait_after_connect ), "time to wait, in seconds, after initial connection before attempting to read or write" )
@@ -153,21 +158,98 @@ int main(int argc, char* argv[])
         boost::program_options::store( boost::program_options::parse_command_line( argc, argv, description), vm );
         boost::program_options::parsed_options parsed = boost::program_options::command_line_parser(argc, argv).options( description ).allow_unregistered().run();
         boost::program_options::notify( vm );
-
         if( vm.count( "help" ) )
         {
             usage( description, !vm.count( "verbose" ) );
             return 0;
         }
-        const bool is_publisher = bool( vm.count( "publish" ) );
-        
         const std::vector< std::string >& endpoints = boost::program_options::collect_unrecognized( parsed.options, boost::program_options::include_positional );
         if( endpoints.empty() ) { std::cerr << "zero-cat: please provide at least one endpoint" << std::endl; return 1; }
+        bool binary = vm.count( "size" );
         comma::signal_flag is_shutdown;
         zmq::context_t context( 1 );
+        const bool is_request = vm.count( "request" );
+        const bool is_reply = vm.count( "reply" );
+        const bool is_publisher = bool( vm.count( "publish" ) );
+        if( is_request + is_reply + is_publisher > 1 ) { std::cerr << "zero-cat: expected only one of: --publisher, --request, --reply; got " << ( is_request + is_reply + is_publisher ) << std::endl; return 1; }
+        if( is_request || is_reply )
+        {
+            #ifdef WIN32
+            if( binary ) { _setmode( _fileno( stdin ), _O_BINARY ); _setmode( _fileno( stdout ), _O_BINARY ); }
+            #endif
+            zmq::socket_t socket( context, is_request ? ZMQ_REQ : ZMQ_REP );
+            #if ZMQ_VERSION_MAJOR == 2
+            socket.setsockopt( ZMQ_HWM, &hwm, sizeof( hwm ) );
+            #endif
+            if( endpoints.size() != 1 ) { std::cerr << "zero-cat: request/reply server/client expected 1 endpoint, got " << endpoints.size() << ": " << comma::join( endpoints, ',' ) << std::endl; return 1; }
+            if( is_request || vm.count( "connect" ) ) { socket.connect( &endpoints[0][0] ); }
+            else if( is_reply || vm.count( "bind" ) ) { socket.bind( &endpoints[0][0] ); }
+            if( is_request )
+            {
+                while( !is_shutdown && std::cin.good() )
+                {
+                    std::string buffer( size, 0 );
+                    if( binary )
+                    {
+                        std::cin.read( &buffer[0], size );
+                        int count = std::cin.gcount();
+                        if( count == 0 ) { break; }
+                        if( count < int( size ) ) { std::cerr << "zero-cat: expected " << size << " byte(s), got: " << count << std::endl; return 1; }
+                    }
+                    else
+                    {
+                        std::getline( std::cin, buffer );
+                        if( buffer.empty() ) { break; }
+                        buffer += endl;
+                    }
+                    zmq::message_t request( buffer.size() );
+                    ::memcpy( ( void * )request.data(), &buffer[0], buffer.size() );
+                    #if ZMQ_VERSION_MAJOR == 2
+                    if( !socket.send( request ) ) { std::cerr << "zero-cat: failed to send " << buffer.size() << " bytes; zmq errno: EAGAIN" << std::endl; return 1; }
+                    #else // ZMQ_VERSION_MAJOR == 2
+                    if( !socket.send( &buffer[0], buffer.size() ) ) { std::cerr << "zero-cat: failed to send " << buffer.size() << " bytes; zmq errno: EAGAIN" << std::endl; return 1; }
+                    #endif // ZMQ_VERSION_MAJOR == 2
+                    zmq::message_t reply;
+                    if( !socket.recv( &reply ) ) { break; }
+                    std::cout.write( reinterpret_cast< const char* >( reply.data() ), reply.size() );
+                    if( binary ) { std::cout.flush(); }
+                }
+            }
+            else
+            {
+                while( !is_shutdown && std::cin.good() )
+                {
+                    zmq::message_t request;
+                    if( !socket.recv( &request ) ) { break; }
+                    std::cout.write( reinterpret_cast< const char* >( request.data() ), request.size() );
+                    if( binary ) { std::cout.flush(); }
+                    std::string buffer( size, 0 );
+                    if( binary )
+                    {
+                        std::cin.read( &buffer[0], size );
+                        int count = std::cin.gcount();
+                        if( count == 0 ) { break; }
+                        if( count < int( size ) ) { std::cerr << "zero-cat: expected " << size << " byte(s), got: " << count << std::endl; return 1; }
+                    }
+                    else
+                    {
+                        std::getline( std::cin, buffer );
+                        if( buffer.empty() ) { break; }
+                        buffer += endl;
+                    }
+                    zmq::message_t reply( buffer.size() );
+                    ::memcpy( ( void * )reply.data(), &buffer[0], buffer.size() );
+                    #if ZMQ_VERSION_MAJOR == 2
+                    if( !socket.send( reply ) ) { std::cerr << "zero-cat: failed to send " << buffer.size() << " bytes; zmq errno: EAGAIN" << std::endl; return 1; }
+                    #else // ZMQ_VERSION_MAJOR == 2
+                    if( !socket.send( &buffer[0], buffer.size() ) ) { std::cerr << "zero-cat: failed to send " << buffer.size() << " bytes; zmq errno: EAGAIN" << std::endl; return 1; }
+                    #endif // ZMQ_VERSION_MAJOR == 2
+                }
+            }
+            return 0;
+        }
         int mode = is_publisher ? ZMQ_PUB : ZMQ_SUB;
         zmq::socket_t socket( context, mode );
-        bool binary = vm.count( "size" );
         #ifdef WIN32
         if( is_publisher && binary ) { _setmode( _fileno( stdin ), _O_BINARY ); }
         #endif
@@ -183,7 +265,7 @@ int main(int argc, char* argv[])
             {
                 if( endpoints[i] == "-" ) { output_to_stdout = true; }
                 else if( vm.count( "connect" ) ) { socket.connect( endpoints[i].c_str() ); }
-                else { socket.bind( endpoints[i].c_str() ); }
+                else { socket.bind( &endpoints[i][0] ); }
             }
             // we convert to milliseconds as converting to second floors the number so 0.99 becomes 0
             if (wait_after_connect > 0)
@@ -202,7 +284,6 @@ int main(int argc, char* argv[])
                 else
                 {
                     std::getline( std::cin, buffer );
-                    static const std::string endl = get_endl();
                     if( !is_shutdown && std::cin.good() && !std::cin.eof() && !std::cin.bad() ) { buffer += endl; }
                 }
                 if( buffer.empty() ) { break; }
@@ -226,8 +307,7 @@ int main(int argc, char* argv[])
                 else { socket.connect( endpoints[i].c_str() ); }
             }
             socket.setsockopt( ZMQ_SUBSCRIBE, "", 0 );
-            if (wait_after_connect > 0)
-                boost::this_thread::sleep(boost::posix_time::milliseconds(wait_after_connect * 1000.0));
+            if( wait_after_connect > 0 ) { boost::this_thread::sleep( boost::posix_time::milliseconds( wait_after_connect * 1000.0 ) ); }
             if( vm.count( "server" ) )
             {
                 comma::io::publisher publisher( server, comma::io::mode::binary, true, false );
@@ -235,7 +315,7 @@ int main(int argc, char* argv[])
                 {
                     zmq::message_t message;
                     socket.recv( &message );
-                    publisher.write( ( const char* )message.data(), message.size() );
+                    publisher.write( reinterpret_cast< const char* >( message.data() ), message.size() );
                 }
             }
             else
@@ -244,7 +324,7 @@ int main(int argc, char* argv[])
                 {
                     zmq::message_t message;
                     socket.recv( &message );
-                    std::cout.write( ( const char* )message.data(), message.size() );
+                    std::cout.write( reinterpret_cast< const char* >( message.data() ), message.size() );
                     if( binary ) { std::cout.flush(); }
                 }
             }

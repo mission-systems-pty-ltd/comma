@@ -41,6 +41,7 @@ max_memory_main=$max_memory_main
 max_memory_shared=$max_memory_shared
 max_wait_time=$max_wait_time
 max_run_time=$max_run_time
+raw=0
 EOF
 }
 
@@ -64,6 +65,9 @@ function description()
 --test-option=[<option>]; extra command line argument(s) pass to "test" script
 --to=[<dir>]; run tests up to a given test, the latter included, where test directories are ordered lexicographically
 --until-first-failure; exit after the first failure (works only when tests run serially)
+--no-ansiterm-control-characters,--no-control-characters,--raw; unstyled output (no ANSIterm control characters)
+--white-list=[<file>]; only run these tests mentioned in the <file>, this is applied first before black list. Comment lines starting with # are ignored. Each entry in the list matches to sub directory or directories name using pattern ^<subdir>   
+--black-list=[<file>]; do not run these tests mentioned in <file>, e.g. a lists of sub-directories in white list to be excluded. Format - see --white-list above.
 EOF
 }
 
@@ -152,25 +156,32 @@ Load-balancing and serializing tests:
 EOF
 }
 
-function usage_()
-{
-    echo -e "$( raw_usage_ )\n" >&2
-    exit 1
-}
+function usage_() { echo -e "$( raw_usage_ )\n" >&2 ; exit 1 ; }
 
 function error_()
 {
-    tput bold
-    high="\033[1;31m"
-    normal="\033[0m"
-    echo -e "$high$1$normal" >&2
-    tput sgr0
+    if [[ "$options_no_ansiterm_control_characters" == "1" ]] ; then
+        echo -e "$1" >&2
+    else
+        tput bold
+        high="\033[1;31m"
+        normal="\033[0m"
+        echo -e "$high$1$normal" >&2
+        tput sgr0
+    fi
 }
 export -f error_
 
 function message_()
 {
-    if [[ "$options_quiet" != "1" ]] ; then tput bold ; echo $1 >&2 ; tput sgr0 ; fi
+    [[ "$options_quiet" != "1" ]] || return
+    if [[ "$options_no_ansiterm_control_characters" == "1" ]] ; then
+        echo $1 >&2
+    else
+        tput bold
+        echo $1 >&2
+        tput sgr0
+    fi
 }
 export -f message_
 
@@ -182,7 +193,14 @@ export -f dump_file_
 
 function warning_()
 {
-    if [[ "$options_quiet" != "1" ]] ; then tput bold ; echo -e "${brown}$1${none}" >&2  ; tput sgr0 ; fi
+    [[ "$options_quiet" != "1" ]] || return
+    if [[ "$options_no_ansiterm_control_characters" == "1" ]] ; then
+        echo -e "$1" >&2
+    else
+        tput bold
+        echo -e "${brown}$1${none}" >&2
+        tput sgr0
+    fi
 }
 export -f warning_
 
@@ -689,7 +707,7 @@ max_memory_main=$(( $options_max_memory_main * 1024 * 1024 ))
 max_memory_shared=$(( $options_max_memory_shared * 1024 * 1024 ))
 max_wait_time=$options_max_wait_time
 max_run_time=$options_max_run_time
-export max_parallel max_memory_main max_memory_shared max_wait_time max_run_time options_debug options_quiet options_path options_until_first_failure options_test_option options_parallel
+export max_parallel max_memory_main max_memory_shared max_wait_time max_run_time options_debug options_quiet options_path options_until_first_failure options_test_option options_parallel options_no_ansiterm_control_characters
 
 # keep all plumbing under a common directory
 temp_dir=$( dirname "$( mktemp -d -u )" )
@@ -711,12 +729,33 @@ result=0
 
 stats_init
 
+function apply_white_list()
+{
+    if [[ -n "$options_white_list" ]] ; then grep -E "$options_white_list"; else cat ; fi
+}
+function apply_black_list()
+{
+    if [[ -n "$options_black_list" ]] ; then grep -vE "$options_black_list"; else cat ; fi
+}
+function apply_white_black_list()
+{
+    apply_white_list | apply_black_list
+}
+
 # to run, search for directories containing either "test", "input" or "expected";
 # if "test" is absent, use the "test" in the closest parent directory
-
 function test_directories()
 {
-    test_script_dirs_all=( $( exclude_generic_tests $( get_dirnames $( find . -name "test" -or -name "input" -or -name "expected" | grep -v "/\." ) 2> /dev/null | sort -u ) ) )
+    if [[ -n "$options_white_list" && -f "$options_white_list" ]]; then 
+        echo "$name: applying white list from file '$options_white_list'">&2
+        options_white_list="^(\./)?($( sed 's#\./##' <$options_white_list | grep -v ^# | tr \\n '|' | sed 's/|$//'  ))"; 
+    fi
+    if [[ -n "$options_black_list" && -f "$options_black_list" ]]; then 
+        echo "$name: applying black list from file '$options_black_list'">&2
+        options_black_list="^(\./)?($( sed 's#\./##' <$options_black_list | grep -v ^# | tr \\n '|' | sed 's/|$//' ))"; 
+    fi
+
+    test_script_dirs_all=( $( exclude_generic_tests $( get_dirnames $( find . -name "test" -or -name "input" -or -name "expected" | grep -v "/\." ) 2> /dev/null | sort -u  | apply_white_black_list ) ) )
     [[ -n "$options_from" || -n "$options_to" || -n "$options_end" ]] || { echo ${test_script_dirs_all[@]} ; return ; }
     [[ -z "$options_from" ]] || { local from="${options_from#\.\/}" ; }
     [[ -z "$options_to" ]] || { local to="${options_to#\.\/}" ; }

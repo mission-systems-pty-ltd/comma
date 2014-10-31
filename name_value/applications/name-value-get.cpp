@@ -310,6 +310,19 @@ int main( int ac, char** av )
             if( has_regex ) { match_regex_( std::cout, ptree ); } else { match_( std::cout, ptree ); }
         }
     }
+    catch( boost::property_tree::ptree_bad_data& ex )
+    {
+        std::cerr << "name-value-convert: bad data: " << ex.what() << std::endl;
+    }
+    catch( boost::property_tree::ptree_bad_path& ex )
+    {
+        std::cerr << "name-value-convert: bad path: " << ex.what() << std::endl;
+    }
+    catch( boost::property_tree::ptree_error& ex )
+    {
+        boost::regex e( "<unspecified file>" );
+        std::cerr << "name-value-convert: parsing error: " << boost::regex_replace( std::string( ex.what() ), e, "line" ) << std::endl;
+    }
     catch( std::exception& ex )
     {
         std::cerr << std::endl << "name-value-get: " << ex.what() << std::endl << std::cerr << std::endl;

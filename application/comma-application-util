@@ -355,7 +355,7 @@ export -f comma_options_has
 SIGPIPE_EXIT_STATUS=$( expr 128 \+ $( kill -l SIGPIPE ) )
 export SIGPIPE_EXIT_STATUS
 
-function status_ok()
+function comma_status_ok()
 {
     pipestatus_copy_status_ok=("${PIPESTATUS[@]}")  # make a safe copy
     local outcome_status_ok=""
@@ -364,4 +364,4 @@ function status_ok()
     done
     return 0
 }
-export -f status_ok
+export -f comma_status_ok

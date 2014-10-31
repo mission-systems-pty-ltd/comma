@@ -277,4 +277,4 @@ function feed_input()
 }
 
 feed_input | python_converter | $convert_output
-if ! status_ok; then exit 1; else exit 0; fi
+if ! comma_status_ok; then exit 1; else exit 0; fi

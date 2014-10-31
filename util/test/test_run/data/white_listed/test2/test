@@ -1,0 +1,2 @@
+echo "{called test2/test}" >&2
+echo 'result="test2 result"'
