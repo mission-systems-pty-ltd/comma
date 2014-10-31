@@ -8,7 +8,7 @@ function usage
 
 Usage: $basename [options]
 
-Generate graphiz visualisation of profile data
+Generate graphviz visualisation of profile data
 
 Options:
 
