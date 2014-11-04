@@ -59,7 +59,7 @@
 #include <comma/csv/stream.h>
 #include <comma/visiting/traits.h>
 
-void usage(char const * const txt = "")
+static void usage(char const * const txt = "")
 {
     static char const * const msg_general =
         "\n"
@@ -97,6 +97,53 @@ void usage(char const * const txt = "")
     exit( 1 );
 }
 
+typedef boost::units::si::length::unit_type length_t;
+typedef boost::units::us::foot_base_unit::unit_type imperial_us_length_t;
+typedef boost::units::metric::nautical_mile_base_unit::unit_type nautical_mile_t;
+typedef boost::units::us::mile_base_unit::unit_type statute_mile_t;
+typedef boost::units::si::velocity::unit_type velocity_t;
+typedef boost::units::metric::knot_base_unit::unit_type knot_t;
+typedef boost::units::si::kilogram_base_unit::unit_type mass_t;
+typedef boost::units::us::pound_base_unit::unit_type imperial_us_mass_t;
+typedef boost::units::angle::radian_base_unit::unit_type radian_t;
+typedef boost::units::angle::degree_base_unit::unit_type degree_t;
+typedef boost::units::absolute< boost::units::si::temperature > kelvin_t;
+typedef boost::units::absolute< boost::units::celsius::temperature > celsius_t;
+typedef boost::units::absolute< boost::units::fahrenheit::temperature > fahrenheit_t;
+
+template < typename From, typename To >
+double cast( const double input )
+{
+    typedef boost::units::quantity< From > from_quantity_t;
+    typedef boost::units::quantity< To > to_quantity_t;
+    return static_cast< to_quantity_t >( from_quantity_t( input * From() ) ).value();
+}
+
+template double cast< imperial_us_mass_t, mass_t >( const double );
+template double cast< mass_t, imperial_us_mass_t >( const double );
+template double cast< imperial_us_length_t, nautical_mile_t >( const double );
+template double cast< imperial_us_length_t, statute_mile_t >( const double );
+template double cast< imperial_us_length_t, length_t >( const double );
+template double cast< length_t, nautical_mile_t >( const double );
+template double cast< length_t, statute_mile_t >( const double );
+template double cast< length_t, imperial_us_length_t >( const double );
+template double cast< nautical_mile_t, imperial_us_length_t >( const double );
+template double cast< nautical_mile_t, statute_mile_t >( const double );
+template double cast< nautical_mile_t, length_t >( const double );
+template double cast< statute_mile_t, imperial_us_length_t >( const double );
+template double cast< statute_mile_t, nautical_mile_t >( const double );
+template double cast< statute_mile_t, length_t >( const double );
+template double cast< velocity_t, knot_t >( const double );
+template double cast< knot_t, velocity_t >( const double );
+template double cast< radian_t, degree_t >( const double );
+template double cast< degree_t, radian_t >( const double );
+template double cast< kelvin_t, fahrenheit_t >( const double );
+template double cast< kelvin_t, celsius_t >( const double );
+template double cast< celsius_t, fahrenheit_t >( const double );
+template double cast< celsius_t, kelvin_t >( const double );
+template double cast< fahrenheit_t, kelvin_t >( const double );
+template double cast< fahrenheit_t, celsius_t >( const double );
+
 namespace units {
     // sorted
     enum et { CELSIUS,
@@ -118,6 +165,9 @@ namespace units {
             
     char const * name( const et val )
     {
+        if ( val < 0 || val > INVALID )
+            COMMA_THROW( comma::exception, "can not get name for invalid units " << val );
+
         static char const * const NAMES[COUNT + 2]
             = { "celsius",
                 "degrees",
@@ -172,43 +222,59 @@ namespace units {
         return citr->second;
     }
     
+    typedef double (* cast_function)( const double );
+    
+    cast_function cast_lookup( const et from, const et to )
+    {
+        if ( from < 0 || from >= COUNT )
+            COMMA_THROW( comma::exception, "can not cast lookup for invalid unit (from) " << from );
+        if ( to < 0 || to >= COUNT )
+            COMMA_THROW( comma::exception, "can not cast lookup for invalid unit (to) " << to );
+        
+        cast_function MAP[COUNT][COUNT] = { NULL, };
+        static bool initialised = false;
+        if (! initialised )
+        {
+            MAP[POUNDS][KILOGRAMS] = cast<imperial_us_mass_t,mass_t>;
+            MAP[KILOGRAMS][POUNDS] = cast<mass_t,imperial_us_mass_t>;
+            MAP[METRES_PER_SECOND][KNOTS] = cast< velocity_t, knot_t >;
+            MAP[KNOTS][METRES_PER_SECOND] = cast< knot_t, velocity_t >;
+            MAP[RADIANS][DEGREES] = cast< radian_t, degree_t >;
+            MAP[DEGREES][RADIANS] = cast< degree_t, radian_t >;
+            MAP[KELVIN][CELSIUS] = cast< kelvin_t, celsius_t >;
+            MAP[KELVIN][FAHRENHEIHT] = cast< kelvin_t, fahrenheit_t >;
+            MAP[CELSIUS][KELVIN] = cast< celsius_t, kelvin_t >;
+            MAP[CELSIUS][FAHRENHEIHT] = cast< celsius_t, fahrenheit_t >;
+            MAP[FAHRENHEIHT][KELVIN] = cast< fahrenheit_t, kelvin_t >;
+            MAP[FAHRENHEIHT][CELSIUS] = cast< fahrenheit_t, celsius_t >;
+            MAP[FEET][NAUTICAL_MILES] = cast< imperial_us_length_t, nautical_mile_t >;
+            MAP[FEET][STATUTE_MILES] = cast< imperial_us_length_t, statute_mile_t >;
+            MAP[FEET][METRES] = cast< imperial_us_length_t, length_t >;
+            MAP[NAUTICAL_MILES][FEET] = cast< nautical_mile_t, imperial_us_length_t >;
+            MAP[NAUTICAL_MILES][STATUTE_MILES] = cast< nautical_mile_t, statute_mile_t >;
+            MAP[NAUTICAL_MILES][METRES] = cast< nautical_mile_t, length_t >;
+            MAP[STATUTE_MILES][FEET] = cast< statute_mile_t, imperial_us_length_t >;
+            MAP[STATUTE_MILES][NAUTICAL_MILES] = cast< statute_mile_t, nautical_mile_t >;
+            MAP[STATUTE_MILES][METRES] = cast< statute_mile_t, length_t >;
+            MAP[METRES][FEET] = cast< length_t, imperial_us_length_t >;
+            MAP[METRES][NAUTICAL_MILES] = cast< length_t, nautical_mile_t >;
+            MAP[METRES][STATUTE_MILES] = cast< length_t, statute_mile_t >;
+            initialised = true;
+        }
+        return MAP[from][to];
+    }
+    
     bool can_convert( const et from, const et to )
     {
-        typedef boost::unordered_multimap<et, et> map_t;
-        static map_t MAP;
-        if ( MAP.empty() )
-        {
-            MAP.insert(std::make_pair(POUNDS, KILOGRAMS));
-            MAP.insert(std::make_pair(KILOGRAMS, POUNDS));
-            MAP.insert(std::make_pair(METRES_PER_SECOND, KNOTS));
-            MAP.insert(std::make_pair(KNOTS, METRES_PER_SECOND));
-            MAP.insert(std::make_pair(RADIANS, DEGREES));
-            MAP.insert(std::make_pair(DEGREES, RADIANS));
-            MAP.insert(std::make_pair(KELVIN, CELSIUS));
-            MAP.insert(std::make_pair(KELVIN, FAHRENHEIHT));
-            MAP.insert(std::make_pair(CELSIUS, KELVIN));
-            MAP.insert(std::make_pair(CELSIUS, FAHRENHEIHT));
-            MAP.insert(std::make_pair(FAHRENHEIHT, KELVIN));
-            MAP.insert(std::make_pair(FAHRENHEIHT, CELSIUS));
-            MAP.insert(std::make_pair(FEET, NAUTICAL_MILES));
-            MAP.insert(std::make_pair(FEET, STATUTE_MILES));
-            MAP.insert(std::make_pair(FEET, METRES));
-            MAP.insert(std::make_pair(NAUTICAL_MILES, FEET));
-            MAP.insert(std::make_pair(NAUTICAL_MILES, STATUTE_MILES));
-            MAP.insert(std::make_pair(NAUTICAL_MILES, METRES));
-            MAP.insert(std::make_pair(STATUTE_MILES, FEET));
-            MAP.insert(std::make_pair(STATUTE_MILES, NAUTICAL_MILES));
-            MAP.insert(std::make_pair(STATUTE_MILES, METRES));
-            MAP.insert(std::make_pair(METRES, FEET));
-            MAP.insert(std::make_pair(METRES, NAUTICAL_MILES));
-            MAP.insert(std::make_pair(METRES, STATUTE_MILES));
-        }
-        
-        std::pair<map_t::const_iterator, map_t::const_iterator> const crange = MAP.equal_range( from );
-        if ( MAP.cend() == crange.first ) return false;
-        for ( map_t::const_iterator citr = crange.first; citr != crange.second; ++citr )
-            if ( to == citr->second ) return true;
-        return false;
+        return NULL != cast_lookup(from, to);
+    }
+    
+    double convert( const et from, const et to, const double value )
+    {
+        cast_function fnp = cast_lookup(from, to);
+        if ( NULL == fnp )
+            COMMA_THROW( comma::exception, "cast lookup failed for " << from << " to " << to );
+        return fnp( value );
     }
 }
 
@@ -230,20 +296,6 @@ template <> struct traits< input_t >
 };
 
 } } // namespace comma { namespace visiting {
-
-typedef boost::units::si::length::unit_type length_t;
-typedef boost::units::us::foot_base_unit::unit_type imperial_us_length_t;
-typedef boost::units::metric::nautical_mile_base_unit::unit_type nautical_mile_t;
-typedef boost::units::us::mile_base_unit::unit_type statute_mile_t;
-typedef boost::units::si::velocity::unit_type velocity_t;
-typedef boost::units::metric::knot_base_unit::unit_type knot_t;
-typedef boost::units::si::kilogram_base_unit::unit_type mass_t;
-typedef boost::units::us::pound_base_unit::unit_type imperial_us_mass_t;
-typedef boost::units::angle::radian_base_unit::unit_type radian_t;
-typedef boost::units::angle::degree_base_unit::unit_type degree_t;
-typedef boost::units::absolute< boost::units::si::temperature > kelvin_t;
-typedef boost::units::absolute< boost::units::celsius::temperature > celsius_t;
-typedef boost::units::absolute< boost::units::fahrenheit::temperature > fahrenheit_t;
 
 static bool verbose;
 static comma::csv::options csv;
