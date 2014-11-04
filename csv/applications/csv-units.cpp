@@ -35,6 +35,8 @@
 /// @author kai huang
 
 #include <iostream>
+#include <boost/unordered/unordered_map.hpp>
+
 #include <boost/units/systems/si.hpp>
 #include <boost/units/systems/si/length.hpp>
 #include <boost/units/systems/si/mass.hpp>
@@ -57,40 +59,157 @@
 #include <comma/csv/stream.h>
 #include <comma/visiting/traits.h>
 
-void usage()
+void usage(char const * const txt = "")
 {
-    std::cerr << std::endl;
-    std::cerr << "perform unit conversion in a file or stream by specifying the conversion units and the csv fields to be converted" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "usage: cat a.csv | csv-units <options>" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "options" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "    --from <unit>   : unit converting from" << std::endl;
-    std::cerr << "    --to   <unit>   : unit converting to" << std::endl;
-    std::cerr << "    --scale <factor> : scale value by given factor instead of unit conversion" << std::endl;
-    std::cerr << "                       a convenience option, probably somewhat misplaced" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "supported units" << std::endl;
-    std::cerr << "    meters / feet / statute-miles / nautical-miles " << std::endl;
-    std::cerr << "    kilograms / pounds " << std::endl;
-    std::cerr << "    meters-per-second / knots " << std::endl;
-    std::cerr << "    kelvin / celsius / fahrenheit " << std::endl;
-    std::cerr << "    radians / degrees " << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "    uppercase and abbreviations" << std::endl;
-    std::cerr << "    todo: document abbreviations" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "csv options" << std::endl;
-    std::cerr << comma::csv::options::usage() << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "examples" << std::endl;
-    std::cerr << "    echo 1.2345 | csv-units --from meters --to feet " << std::endl;
-    std::cerr << "    echo 1.2345,2.3456 | csv-units --from kilograms --to pounds --fields=a,b" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
-    std::cerr << std::endl;
+    static char const * const msg_general =
+        "\n"
+        "\nperform unit conversion in a file or stream by specifying the conversion units and the csv fields to be converted"
+        "\n"
+        "\nusage: cat a.csv | csv-units <options>"
+        "\n"
+        "\noptions"
+        "\n"
+        "\n    --from <unit>   : unit converting from"
+        "\n    --to   <unit>   : unit converting to"
+        "\n    --scale <factor> : scale value by given factor instead of unit conversion"
+        "\n                       a convenience option, probably somewhat misplaced"
+        "\n"
+        "\nsupported units"
+        "\n    meters / feet / statute-miles / nautical-miles "
+        "\n    kilograms / pounds "
+        "\n    meters-per-second / knots "
+        "\n    kelvin / celsius / fahrenheit "
+        "\n    radians / degrees "
+        "\n"
+        "\n    uppercase and abbreviations"
+        "\n    todo: document abbreviations";
+    static char const * const msg_examples =
+        "\n"
+        "\nexamples"
+        "\n    echo 1.2345 | csv-units --from meters --to feet "
+        "\n    echo 1.2345,2.3456 | csv-units --from kilograms --to pounds --fields=a,b";
+
+    if( 0 != txt[0] ) std::cerr << "error: " << txt << std::endl;
+    std::cerr << msg_general << std::endl; // endl to make this function easier to debug by flushing
+    std::cerr << "\ncsv options\n" << comma::csv::options::usage() << std::endl;
+    std::cerr << msg_examples << std::endl;
+    std::cerr << comma::contact_info << '\n' << std::endl;
     exit( 1 );
+}
+
+namespace units {
+    // sorted
+    enum et { CELSIUS,
+              DEGREES,
+              FAHRENHEIHT,
+              FEET,
+              KELVIN,
+              KILOGRAMS,
+              KNOTS,
+              METRES,
+              METRES_PER_SECOND,
+              NAUTICAL_MILES,
+              POUNDS,
+              RADIANS,
+              STATUTE_MILES,
+              COUNT,
+              INVALID
+            };
+            
+    char const * name( const et val )
+    {
+        static char const * const NAMES[COUNT + 2]
+            = { "celsius",
+                "degrees",
+                "fahrenheiht",
+                "feet",
+                "kelvin",
+                "kilograms",
+                "knots",
+                "metres",
+                "metres_per_second",
+                "nautical_miles",
+                "pounds",
+                "radians",
+                "statute_miles",
+                "ERROR",
+                "INVALID"
+            };
+        return NAMES[val];
+    }
+
+    et value( char const * const str )
+    {
+        typedef boost::unordered_map<std::string, et> map_t;
+        static map_t MAP;
+        if ( MAP.empty() )
+        {
+            MAP["pounds"] = POUNDS;
+            MAP["lbs"] = POUNDS;
+            MAP["kilograms"] = KILOGRAMS;
+            MAP["kg"] = KILOGRAMS;
+            MAP["feet"] = FEET;
+            MAP["ft"] = FEET;
+            MAP["nautical-miles"] = NAUTICAL_MILES;
+            MAP["nm"] = NAUTICAL_MILES;
+            MAP["miles"] = STATUTE_MILES;
+            MAP["statute-miles"] = STATUTE_MILES;
+            MAP["meters"] = METRES;
+            MAP["metres"] = METRES;
+            MAP["meters-per-second"] = METRES_PER_SECOND;
+            MAP["knots"] = KNOTS;
+            MAP["radians"] = RADIANS;
+            MAP["rad"] = RADIANS;
+            MAP["degrees"] = DEGREES;
+            MAP["deg"] = DEGREES;
+            MAP["kelvin"] = KELVIN;
+            MAP["celsius"] = CELSIUS;
+            MAP["fahrenheit"] = FAHRENHEIHT;
+        }
+        
+        map_t::const_iterator const citr = MAP.find( str );
+        if ( MAP.cend() == citr ) return INVALID;
+        return citr->second;
+    }
+    
+    bool can_convert( const et from, const et to )
+    {
+        typedef boost::unordered_multimap<et, et> map_t;
+        static map_t MAP;
+        if ( MAP.empty() )
+        {
+            MAP.insert(std::make_pair(POUNDS, KILOGRAMS));
+            MAP.insert(std::make_pair(KILOGRAMS, POUNDS));
+            MAP.insert(std::make_pair(METRES_PER_SECOND, KNOTS));
+            MAP.insert(std::make_pair(KNOTS, METRES_PER_SECOND));
+            MAP.insert(std::make_pair(RADIANS, DEGREES));
+            MAP.insert(std::make_pair(DEGREES, RADIANS));
+            MAP.insert(std::make_pair(KELVIN, CELSIUS));
+            MAP.insert(std::make_pair(KELVIN, FAHRENHEIHT));
+            MAP.insert(std::make_pair(CELSIUS, KELVIN));
+            MAP.insert(std::make_pair(CELSIUS, FAHRENHEIHT));
+            MAP.insert(std::make_pair(FAHRENHEIHT, KELVIN));
+            MAP.insert(std::make_pair(FAHRENHEIHT, CELSIUS));
+            MAP.insert(std::make_pair(FEET, NAUTICAL_MILES));
+            MAP.insert(std::make_pair(FEET, STATUTE_MILES));
+            MAP.insert(std::make_pair(FEET, METRES));
+            MAP.insert(std::make_pair(NAUTICAL_MILES, FEET));
+            MAP.insert(std::make_pair(NAUTICAL_MILES, STATUTE_MILES));
+            MAP.insert(std::make_pair(NAUTICAL_MILES, METRES));
+            MAP.insert(std::make_pair(STATUTE_MILES, FEET));
+            MAP.insert(std::make_pair(STATUTE_MILES, NAUTICAL_MILES));
+            MAP.insert(std::make_pair(STATUTE_MILES, METRES));
+            MAP.insert(std::make_pair(METRES, FEET));
+            MAP.insert(std::make_pair(METRES, NAUTICAL_MILES));
+            MAP.insert(std::make_pair(METRES, STATUTE_MILES));
+        }
+        
+        std::pair<map_t::const_iterator, map_t::const_iterator> const crange = MAP.equal_range( from );
+        if ( MAP.cend() == crange.first ) return false;
+        for ( map_t::const_iterator citr = crange.first; citr != crange.second; ++citr )
+            if ( to == citr->second ) return true;
+        return false;
+    }
 }
 
 struct input_t { std::vector< double > values; };
@@ -298,3 +417,4 @@ int main( int ac, char** av )
     }
     return 1;
 }
+
