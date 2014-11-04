@@ -460,8 +460,9 @@ static int run( const units::et from, const units::et to )
 
     units::cast_function const cast_fnp = units::cast_lookup( from, to );
     if (NULL == cast_fnp)
-        COMMA_THROW( comma::exception, "unsupported conversion from " << debug_name(from) << " to " << debug_name(to) );
+        COMMA_THROW( comma::exception, "unsupported default conversion from " << debug_name(from) << " to " << debug_name(to) );
     
+    unsigned line = 0;
     while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
     {
         const input_t* p = istream.read();
@@ -469,9 +470,22 @@ static int run( const units::et from, const units::et to )
         input_t output = *p;
         for( unsigned int i = 0; i < output.values.size(); ++i )
         {
-           output.values[i].value = cast_fnp( output.values[i].value );
+            units::cast_function const fld_cast_fnp = cast_fnp;
+            if ( ! output.values[i].units.empty() )
+            {
+                units::et fld_from = units::value( output.values[i].units );
+                if ( units::INVALID == fld_from )
+                    COMMA_THROW( comma::exception, "on line " << line << " unsupported units " << output.values[i].units );
+                units::cast_function const fld_cast_fnp = units::cast_lookup( fld_from, to );
+                if (NULL == fld_cast_fnp)
+                    COMMA_THROW( comma::exception, "on line " << line << " unsupported conversion from " << debug_name(fld_from) << " to " << debug_name(to) );
+
+                std::cerr << "csv-cast: Convert " << units::name(fld_from) << " to " << units::name(to) << std::endl;
+            }
+            output.values[i].value = fld_cast_fnp( output.values[i].value );
         }
         ostream.write( output, istream );
+        ++line;
     }
     return 0;
 }
