@@ -210,8 +210,8 @@ namespace units {
         return name(val);
     }
 
-    /// Given a canonical name or an alias of a measurement unit to
-    /// the canonical enumeration.
+    /// Given a canonical name or an alias of a measurement unit 
+    /// retrieve the canonical enumeration.
     et value( std::string const & str )
     {
         typedef boost::unordered_map<std::string, et> map_t;
@@ -280,8 +280,8 @@ namespace units {
             MAP_NOP(RADIANS);
             MAP_NOP(STATUTE_MILES);
 #undef MAP_NOP            
-            MAP[POUNDS][KILOGRAMS] = cast<imperial_us_mass_t,mass_t>;
-            MAP[KILOGRAMS][POUNDS] = cast<mass_t,imperial_us_mass_t>;
+            MAP[POUNDS][KILOGRAMS] = cast< imperial_us_mass_t,mass_t >;
+            MAP[KILOGRAMS][POUNDS] = cast< mass_t,imperial_us_mass_t >;
             MAP[METRES_PER_SECOND][KNOTS] = cast< velocity_t, knot_t >;
             MAP[KNOTS][METRES_PER_SECOND] = cast< knot_t, velocity_t >;
             MAP[RADIANS][DEGREES] = cast< radian_t, degree_t >;
@@ -313,16 +313,6 @@ namespace units {
     bool can_convert( const et from, const et to )
     {
         return NULL != cast_lookup(from, to);
-    }
-    
-    /// Convert the given value between the two given measurement units
-    /// or throw an exception on invalid or unspoorted conversion.
-    double convert( const et from, const et to, const double value )
-    {
-        cast_function fnp = cast_lookup(from, to);
-        if ( NULL == fnp )
-            COMMA_THROW( comma::exception, "cast lookup failed for " << debug_name(from) << " to " << debug_name(to) );
-        return fnp( value );
     }
 }
 
@@ -377,9 +367,7 @@ template <> struct traits< input_t >
 static bool verbose;
 static comma::csv::options csv;
 static input_t input;
-typedef boost::unordered_map< std::string, unsigned > input_map_t;
-static input_map_t input_fields;
-static unsigned input_units_count = 0;
+static boost::unordered_map< std::string, unsigned > input_fields;
 
 static std::string init_input_field( const std::string& v )
 {
@@ -397,9 +385,7 @@ static std::string init_input_field( const std::string& v )
     {
         head = stripped.substr(0, pos);
         tail = stripped.substr(pos + 1, std::string::npos);
-        if ( "units" == tail )
-            ++input_units_count;
-        else if ( "value" != tail )
+        if ( "units" != tail && "value" != tail )
         {
             head = stripped;
             tail = "value";
