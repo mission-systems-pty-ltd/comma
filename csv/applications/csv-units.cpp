@@ -297,7 +297,7 @@ namespace units {
     }
 }
 
-/// Support reading the data from a file.
+// Support reading the data from a file.
 struct input_t { std::vector< double > values; };
 
 namespace comma { namespace visiting {
@@ -353,7 +353,6 @@ static int scale( double factor )
     return 0;
 }
 
-template < typename From, typename To >
 static int run( const units::et from, const units::et to )
 {
     std::cerr << "csv-cast: Convert " << units::name(from) << " to " << units::name(to) << std::endl;
@@ -361,8 +360,10 @@ static int run( const units::et from, const units::et to )
     comma::csv::input_stream< input_t > istream( std::cin, csv, input );
     comma::csv::output_stream< input_t > ostream( std::cout, csv, input );
 
-    typedef boost::units::quantity< From > from_quantity_t;
-    typedef boost::units::quantity< To > to_quantity_t;
+    units::cast_function const cast_fnp = units::cast_lookup( from, to );
+    if (NULL == cast_fnp)
+        COMMA_THROW( comma::exception, "unsupported conversion from " << from << " to " << to );
+    
     while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
     {
         const input_t* p = istream.read();
@@ -370,85 +371,11 @@ static int run( const units::et from, const units::et to )
         input_t output = *p;
         for( unsigned int i = 0; i < output.values.size(); ++i )
         {
-           output.values[i] = static_cast< to_quantity_t >( from_quantity_t( output.values[i] * From() ) ).value();
+           output.values[i] = cast_fnp( output.values[i] );
         }
         ostream.write( output, istream );
     }
     return 0;
-}
-
-static int dispatch( const units::et from, const units::et to )
-{    
-    if( ! units::can_convert(from, to) )
-    {
-        std::cerr << "csv-units: don't know how to convert " << units::name(from) << " to " << units::name(to) << std::endl;
-        return 1; 
-    }
-
-    if( from == units::POUNDS )
-    {
-        return run< imperial_us_mass_t, mass_t >( from, to );
-    }
-    if( from == units::KILOGRAMS )
-    {
-        return run< mass_t, imperial_us_mass_t >( from, to );
-    }
-    if( from == units::FEET )
-    {
-        if( to == units::NAUTICAL_MILES ) { return run< imperial_us_length_t, nautical_mile_t >( from, to ); }
-        else if ( to == units::STATUTE_MILES ) { return run< imperial_us_length_t, statute_mile_t >( from, to ); }
-        return run< imperial_us_length_t, length_t >( from, to );
-    }
-    if( from == units::METRES )
-    {
-        if( to == units::NAUTICAL_MILES ) { return run< length_t, nautical_mile_t >( from, to ); }
-        else if ( to == units::STATUTE_MILES ) { return run< length_t, statute_mile_t >( from, to ); }
-        return run< length_t, imperial_us_length_t >( from, to );
-    }
-    if( from == units::NAUTICAL_MILES )
-    {
-        if( to == units::FEET ) { return run< nautical_mile_t, imperial_us_length_t >( from, to ); }
-        else if ( to == units::STATUTE_MILES ) { return run< nautical_mile_t, statute_mile_t >( from, to ); }
-        return run< nautical_mile_t, length_t >( from, to );
-    }
-    if ( from == units::STATUTE_MILES )
-    {
-        if( to == units::FEET ) { return run< statute_mile_t, imperial_us_length_t >( from, to ); }
-        else if ( to == units::NAUTICAL_MILES ) { return run< statute_mile_t, nautical_mile_t >( from, to ); }
-        return run< statute_mile_t, length_t >( from, to );
-    }
-    if( from == units::METRES_PER_SECOND )
-    {
-        return run< velocity_t, knot_t >( from, to );
-    }
-    if( from == units::KNOTS )
-    {
-        return run< knot_t, velocity_t >( from, to );
-    }
-    if( from == units::RADIANS )
-    {
-        return run< radian_t, degree_t >( from, to );
-    }
-    if( from == units::DEGREES )
-    {
-        return run< degree_t, radian_t >( from, to );
-    }
-    if( from == units::KELVIN )
-    {
-        if( to == units::FAHRENHEIHT ) { return run< kelvin_t, fahrenheit_t >( from, to ); }
-        return run< kelvin_t, celsius_t >( from, to );
-    }
-    if( from == units::CELSIUS )
-    {
-        if( to == units::FAHRENHEIHT ) { return run< celsius_t, fahrenheit_t >( from, to ); }
-        return run< celsius_t, kelvin_t >( from, to );
-    }
-    if( from == units::FAHRENHEIHT )
-    {
-        if( to == units::KELVIN ) { return run< fahrenheit_t, kelvin_t >( from, to ); }
-        return run< fahrenheit_t, celsius_t >( from, to );
-    }
-    COMMA_THROW( comma::exception, "unsupported conversion format " << from );
 }
 
 static std::string to_lower( const std::string& s )
@@ -480,7 +407,12 @@ int main( int ac, char** av )
         if( scale_factor ) { return scale( *scale_factor ); }
         units::et from = normalized_name( options.value< std::string >( "--from" ) );
         units::et to = normalized_name( options.value< std::string >( "--to" ) );
-        return dispatch( from, to );
+        if( ! units::can_convert(from, to) )
+        {
+            std::cerr << "csv-units: don't know how to convert " << units::name(from) << " to " << units::name(to) << std::endl;
+            return 1; 
+        }
+        return run( from, to );
     }
     catch( std::exception& ex )
     {
