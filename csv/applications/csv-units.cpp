@@ -282,9 +282,10 @@ static int scale( double factor )
 }
 
 template < typename From, typename To >
-static int run( const std::string& from, const std::string& to, const std::string& target )
+static int run( const units::et from, const units::et to )
 {
-    if( to != target ) { std::cerr << "csv-units: don't know how to convert " << from << " to " << to << std::endl; return 1; }
+    std::cerr << "csv-cast: Convert " << units::name(from) << " to " << units::name(to) << std::endl;
+    
     comma::csv::input_stream< input_t > istream( std::cin, csv, input );
     comma::csv::output_stream< input_t > ostream( std::cout, csv, input );
 
@@ -304,70 +305,76 @@ static int run( const std::string& from, const std::string& to, const std::strin
     return 0;
 }
 
-static int run( const std::string& from, const std::string& to )
+static int dispatch( const units::et from, const units::et to )
 {    
-    if( from == "pounds" )
+    if( ! units::can_convert(from, to) )
     {
-        return run< imperial_us_mass_t, mass_t >( from, to, "kilograms" );
+        std::cerr << "csv-units: don't know how to convert " << units::name(from) << " to " << units::name(to) << std::endl;
+        return 1; 
     }
-    if( from == "kilograms" )
+
+    if( from == units::POUNDS )
     {
-        return run< mass_t, imperial_us_mass_t >( from, to, "pounds" );
+        return run< imperial_us_mass_t, mass_t >( from, to );
     }
-    if( from == "feet" )
+    if( from == units::KILOGRAMS )
     {
-        if( to == "nautical-miles" || to == "nm" ) { return run< imperial_us_length_t, nautical_mile_t >( from, to, "nautical-miles" ); }
-        else if ( to == "statute-miles" || to == "miles" ) { return run< imperial_us_length_t, statute_mile_t >( from, to, "statute-miles" ); }
-        return run< imperial_us_length_t, length_t >( from, to, "meters" );
+        return run< mass_t, imperial_us_mass_t >( from, to );
     }
-    if( from == "meters" )
+    if( from == units::FEET )
     {
-        if( to == "nautical-miles" || to == "nm" ) { return run< length_t, nautical_mile_t >( from, to, "nautical-miles" ); }
-        else if ( to == "statute-miles" || to == "miles" ) { return run< length_t, statute_mile_t >( from, to, "statute-miles" ); }
-        return run< length_t, imperial_us_length_t >( from, to, "feet" );
+        if( to == units::NAUTICAL_MILES ) { return run< imperial_us_length_t, nautical_mile_t >( from, to ); }
+        else if ( to == units::STATUTE_MILES ) { return run< imperial_us_length_t, statute_mile_t >( from, to ); }
+        return run< imperial_us_length_t, length_t >( from, to );
     }
-    if( from == "nautical-miles" )
+    if( from == units::METRES )
     {
-        if( to == "feet" ) { return run< nautical_mile_t, imperial_us_length_t >( from, to, "feet" ); }
-        else if ( to == "statute-miles" || to == "miles" ) { return run< nautical_mile_t, statute_mile_t >( from, to, "statute-miles" ); }
-        return run< nautical_mile_t, length_t >( from, to, "meters" );
+        if( to == units::NAUTICAL_MILES ) { return run< length_t, nautical_mile_t >( from, to ); }
+        else if ( to == units::STATUTE_MILES ) { return run< length_t, statute_mile_t >( from, to ); }
+        return run< length_t, imperial_us_length_t >( from, to );
     }
-    if ( from == "statute-miles" )
+    if( from == units::NAUTICAL_MILES )
     {
-        if( to == "feet" ) { return run< statute_mile_t, imperial_us_length_t >( from, to, "feet" ); }
-        else if ( to == "nautical-miles" || to == "nm" ) { return run< statute_mile_t, nautical_mile_t >( from, to, "nautical-miles" ); }
-        return run< statute_mile_t, length_t >( from, to, "meters" );
+        if( to == units::FEET ) { return run< nautical_mile_t, imperial_us_length_t >( from, to ); }
+        else if ( to == units::STATUTE_MILES ) { return run< nautical_mile_t, statute_mile_t >( from, to ); }
+        return run< nautical_mile_t, length_t >( from, to );
     }
-    if( from == "meters-per-second" )
+    if ( from == units::STATUTE_MILES )
     {
-        return run< velocity_t, knot_t >( from, to, "knots" );
+        if( to == units::FEET ) { return run< statute_mile_t, imperial_us_length_t >( from, to ); }
+        else if ( to == units::NAUTICAL_MILES ) { return run< statute_mile_t, nautical_mile_t >( from, to ); }
+        return run< statute_mile_t, length_t >( from, to );
     }
-    if( from == "knots" )
+    if( from == units::METRES_PER_SECOND )
     {
-        return run< knot_t, velocity_t >( from, to, "meters-per-second" );
+        return run< velocity_t, knot_t >( from, to );
     }
-    if( from == "radians" )
+    if( from == units::KNOTS )
     {
-        return run< radian_t, degree_t >( from, to, "degrees" );
+        return run< knot_t, velocity_t >( from, to );
     }
-    if( from == "degrees" )
+    if( from == units::RADIANS )
     {
-        return run< degree_t, radian_t >( from, to, "radians" );
+        return run< radian_t, degree_t >( from, to );
     }
-    if( from == "kelvin" )
+    if( from == units::DEGREES )
     {
-        if( to == "fahrenheit" ) { return run< kelvin_t, fahrenheit_t >( from, to, "fahrenheit" ); }
-        return run< kelvin_t, celsius_t >( from, to, "celsius" );
+        return run< degree_t, radian_t >( from, to );
     }
-    if( from == "celsius" )
+    if( from == units::KELVIN )
     {
-        if( to == "fahrenheit" ) { return run< celsius_t, fahrenheit_t >( from, to, "fahrenheit" ); }
-        return run< celsius_t, kelvin_t >( from, to, "kelvin" );
+        if( to == units::FAHRENHEIHT ) { return run< kelvin_t, fahrenheit_t >( from, to ); }
+        return run< kelvin_t, celsius_t >( from, to );
     }
-    if( from == "fahrenheit" )
+    if( from == units::CELSIUS )
     {
-        if( to == "kelvin" ) { return run< fahrenheit_t, kelvin_t >( from, to, "kelvin" ); }
-        return run< fahrenheit_t, celsius_t >( from, to, "celsius" );
+        if( to == units::FAHRENHEIHT ) { return run< celsius_t, fahrenheit_t >( from, to ); }
+        return run< celsius_t, kelvin_t >( from, to );
+    }
+    if( from == units::FAHRENHEIHT )
+    {
+        if( to == units::KELVIN ) { return run< fahrenheit_t, kelvin_t >( from, to ); }
+        return run< fahrenheit_t, celsius_t >( from, to );
     }
     COMMA_THROW( comma::exception, "unsupported conversion format " << from );
 }
@@ -401,7 +408,7 @@ int main( int ac, char** av )
         if( scale_factor ) { return scale( *scale_factor ); }
         units::et from = normalized_name( options.value< std::string >( "--from" ) );
         units::et to = normalized_name( options.value< std::string >( "--to" ) );
-        return run( units::name(from), units::name(to) );
+        return dispatch( from, to );
     }
     catch( std::exception& ex )
     {
