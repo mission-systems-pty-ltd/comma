@@ -218,28 +218,29 @@ namespace units {
         static map_t MAP;
         if ( MAP.empty() )
         {
-            MAP["pounds"] = POUNDS;
-            MAP["lbs"] = POUNDS;
-            MAP["kilograms"] = KILOGRAMS;
-            MAP["kg"] = KILOGRAMS;
+            MAP["celsius"] = CELSIUS;
+            MAP["deg"] = DEGREES;
+            MAP["degrees"] = DEGREES;
+            MAP["fahrenheit"] = FAHRENHEIHT;
             MAP["feet"] = FEET;
             MAP["ft"] = FEET;
+            MAP["kelvin"] = KELVIN;
+            MAP["kg"] = KILOGRAMS;
+            MAP["kilograms"] = KILOGRAMS;
+            MAP["knots"] = KNOTS;
+            MAP["lbs"] = POUNDS;
+            MAP["meters"] = METRES;
+            MAP["meters-per-second"] = METRES_PER_SECOND;
+            MAP["metres"] = METRES;
+            MAP["miles"] = STATUTE_MILES;
+            MAP["mi"] = STATUTE_MILES;
+            MAP["m"] = METRES;
             MAP["nautical-miles"] = NAUTICAL_MILES;
             MAP["nm"] = NAUTICAL_MILES;
-            MAP["miles"] = STATUTE_MILES;
-            MAP["statute-miles"] = STATUTE_MILES;
-            MAP["metres"] = METRES;
-            MAP["meters"] = METRES;
-            MAP["m"] = METRES;
-            MAP["meters-per-second"] = METRES_PER_SECOND;
-            MAP["knots"] = KNOTS;
+            MAP["pounds"] = POUNDS;
             MAP["radians"] = RADIANS;
             MAP["rad"] = RADIANS;
-            MAP["degrees"] = DEGREES;
-            MAP["deg"] = DEGREES;
-            MAP["kelvin"] = KELVIN;
-            MAP["celsius"] = CELSIUS;
-            MAP["fahrenheit"] = FAHRENHEIHT;
+            MAP["statute-miles"] = STATUTE_MILES;
         }
         
         map_t::const_iterator const citr = MAP.find( str );
@@ -384,10 +385,10 @@ typedef boost::unordered_map< std::string, unsigned > input_map_t;
 static input_map_t input_fields;
 static unsigned input_units_count = 0;
 
-static void init_input_field( const std::string& v, std::string& out_fields )
+static std::string init_input_field( const std::string& v )
 {
     const std::string stripped( comma::strip( v, ' ' ) );
-    if ( stripped.empty() ) return;
+    if ( stripped.empty() ) return std::string();
     
     const size_t pos = stripped.rfind( '/' );
     std::string head, tail;
@@ -412,11 +413,11 @@ static void init_input_field( const std::string& v, std::string& out_fields )
     unsigned idx = input_fields.size();
     std::cerr << "--> head: " << head << " --> tail: " << tail << std::endl;
     if ( input_fields.cend() == input_fields.find( head ) )
-        input_fields[head] = input_fields.size();
+        std::cerr << "Not found" << std:: endl, input_fields[head] = idx;
     else
-        idx = input_fields.at(head);
+        std::cerr << "Found" << std:: endl, idx = input_fields.at(head);
     
-    out_fields += "values[" + boost::lexical_cast< std::string >( idx ) + "]/" + tail;
+    return "values[" + boost::lexical_cast< std::string >( idx ) + "]/" + tail;
 }
 
 static void init_input()
@@ -428,7 +429,7 @@ static void init_input()
     {
         fields += comma;
         comma = ",";
-        init_input_field( v[i], fields );
+        fields += init_input_field( v[i] );
     }
     std::cerr << "--> fields: " << fields << std::endl;
     csv.fields = fields;
@@ -470,13 +471,13 @@ static int run( const units::et from, const units::et to )
         input_t output = *p;
         for( unsigned int i = 0; i < output.values.size(); ++i )
         {
-            units::cast_function const fld_cast_fnp = cast_fnp;
+            units::cast_function fld_cast_fnp = cast_fnp;
             if ( ! output.values[i].units.empty() )
             {
                 units::et fld_from = units::value( output.values[i].units );
                 if ( units::INVALID == fld_from )
                     COMMA_THROW( comma::exception, "on line " << line << " unsupported units " << output.values[i].units );
-                units::cast_function const fld_cast_fnp = units::cast_lookup( fld_from, to );
+                fld_cast_fnp = units::cast_lookup( fld_from, to );
                 if (NULL == fld_cast_fnp)
                     COMMA_THROW( comma::exception, "on line " << line << " unsupported conversion from " << debug_name(fld_from) << " to " << debug_name(to) );
 
