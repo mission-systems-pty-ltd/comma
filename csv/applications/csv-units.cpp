@@ -65,37 +65,48 @@ static void usage(char const * const txt = "")
 {
     static char const * const msg_general =
         "\n"
-        "\nperform unit conversion in a file or stream by specifying the conversion units and the csv fields to be converted"
+        "\nPerform unit conversion in a file or stream by specifying the conversion units and the csv fields to be converted"
         "\n"
-        "\nusage: cat a.csv | csv-units <options>"
+        "\nUsage: cat a.csv | csv-units <options>"
         "\n"
-        "\noptions"
-        "\n"
+        "\nOptions:"
         "\n    --from <unit>   : unit converting from"
         "\n    --to   <unit>   : unit converting to"
         "\n    --scale <factor> : scale value by given factor instead of unit conversion"
         "\n                       a convenience option, probably somewhat misplaced"
         "\n"
-        "\nsupported units"
-        "\n    meters / feet / statute-miles / nautical-miles "
+        "\nSupported Units:"
+        "\n    metres / feet / statute-miles / nautical-miles "
         "\n    kilograms / pounds "
         "\n    meters-per-second / knots "
         "\n    kelvin / celsius / fahrenheit "
         "\n    radians / degrees "
         "\n"
-        "\n    uppercase and abbreviations"
-        "\n    todo: document abbreviations";
+        "\n    any case is supoorted and so are abbreviations"
+        "\n         meters, metres, m"
+        "\n         feet, ft"
+        "\n         statute-miles, miles, mi"
+        "\n         nautical-miles, nm"
+        "\n         radians, rad"
+        "\n         degrees, deg"
+        "\n"
+        "\ndata driven"
+        "\n    This program can be configured to read the --from units from the input data."
+        "\n    End a field name with 'units', to have it treated as --from for a field."
+        "\n    You can explicitlty or implicitly value for a data field."
+        "\n    So for you can specify x or x/value with x/units to drive --from by the date.";
     static char const * const msg_examples =
         "\n"
         "\nexamples"
         "\n    echo 1.2345 | csv-units --from meters --to feet "
-        "\n    echo 1.2345,2.3456 | csv-units --from kilograms --to pounds --fields=a,b";
+        "\n    echo 1.2345,2.3456 | csv-units --from kilograms --to pounds --fields=a,b"
+        "\n    echo 1,pounds,2,kilograms | csv-units --to pounds --fields x,x/units,y,y/units";
 
     if( 0 != txt[0] ) std::cerr << "error: " << txt << std::endl;
     std::cerr << msg_general << std::endl; // endl to make this function easier to debug by flushing
     std::cerr << "\ncsv options\n" << comma::csv::options::usage() << std::endl;
     std::cerr << msg_examples << std::endl;
-    std::cerr << comma::contact_info << '\n' << std::endl;
+    std::cerr << '\n' << comma::contact_info << '\n' << std::endl;
     exit( 1 );
 }
 
