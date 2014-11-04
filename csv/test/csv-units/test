@@ -1,0 +1,5 @@
+#!/bin/bash
+
+{ read option_1; read option_2; read option_3; } < options
+
+csv-units $option_1 $option_2 $option_3 | awk '{ printf( "output[%d]=%s\n", NR, $0 ); }'
