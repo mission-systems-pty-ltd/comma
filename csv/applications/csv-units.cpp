@@ -185,7 +185,7 @@ namespace units {
         static char const * const NAMES[COUNT + 2]
             = { "celsius",
                 "degrees",
-                "fahrenheiht",
+                "fahrenheit",
                 "feet",
                 "kelvin",
                 "kilograms",
@@ -509,8 +509,9 @@ int main( int ac, char** av )
         init_input();
         boost::optional< double > scale_factor = options.optional< double >( "--scale" );
         if( scale_factor ) { return scale( *scale_factor ); }
-        units::et from = normalized_name( options.value< std::string >( "--from" ) );
-        units::et to = normalized_name( options.value< std::string >( "--to" ) );
+        units::et const to = normalized_name( options.value< std::string >( "--to" ) );
+        units::et const from
+            = ! options.exists( "--from" ) ? to : normalized_name( options.value< std::string >( "--from" ) );
         if( ! units::can_convert(from, to) )
         {
             std::cerr << "csv-units: don't know how to convert " << units::name(from) << " to " << units::name(to) << std::endl;
