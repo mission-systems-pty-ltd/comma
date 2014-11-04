@@ -59,6 +59,8 @@
 #include <comma/csv/stream.h>
 #include <comma/visiting/traits.h>
 
+/// Outputs the usage syntax, options and examples
+/// @warning exits the program with an error code of 1
 static void usage(char const * const txt = "")
 {
     static char const * const msg_general =
@@ -97,6 +99,7 @@ static void usage(char const * const txt = "")
     exit( 1 );
 }
 
+// Specify some aliases to represent the measurement units supported.
 typedef boost::units::si::length::unit_type length_t;
 typedef boost::units::us::foot_base_unit::unit_type imperial_us_length_t;
 typedef boost::units::metric::nautical_mile_base_unit::unit_type nautical_mile_t;
@@ -111,6 +114,7 @@ typedef boost::units::absolute< boost::units::si::temperature > kelvin_t;
 typedef boost::units::absolute< boost::units::celsius::temperature > celsius_t;
 typedef boost::units::absolute< boost::units::fahrenheit::temperature > fahrenheit_t;
 
+/// Converts the given value between the two template measurement units 
 template < typename From, typename To >
 double cast( const double input )
 {
@@ -119,6 +123,8 @@ double cast( const double input )
     return static_cast< to_quantity_t >( from_quantity_t( input * From() ) ).value();
 }
 
+// Explicit instantiations specified here so that they can be 
+// used below in a lookup table.
 template double cast< imperial_us_mass_t, mass_t >( const double );
 template double cast< mass_t, imperial_us_mass_t >( const double );
 template double cast< imperial_us_length_t, nautical_mile_t >( const double );
@@ -144,8 +150,9 @@ template double cast< celsius_t, kelvin_t >( const double );
 template double cast< fahrenheit_t, kelvin_t >( const double );
 template double cast< fahrenheit_t, celsius_t >( const double );
 
+// A name space to wrap the manipulation of named conversions.
 namespace units {
-    // sorted
+    // A set of number to identify the supported measurement units.
     enum et { CELSIUS,
               DEGREES,
               FAHRENHEIHT,
@@ -161,8 +168,10 @@ namespace units {
               STATUTE_MILES,
               COUNT,
               INVALID
-            };
-            
+    };
+
+    /// Retrieve a human readable canonical name for the given number. Supports
+    /// the extra two internal numbers (count and invalid) for diagnostics.
     char const * name( const et val )
     {
         if ( val < 0 || val > INVALID )
@@ -188,6 +197,8 @@ namespace units {
         return NAMES[val];
     }
 
+    /// Given a canonical name or an alias of a measurement unit to
+    /// the canonical enumeration.
     et value( std::string const & str )
     {
         typedef boost::unordered_map<std::string, et> map_t;
@@ -204,8 +215,9 @@ namespace units {
             MAP["nm"] = NAUTICAL_MILES;
             MAP["miles"] = STATUTE_MILES;
             MAP["statute-miles"] = STATUTE_MILES;
-            MAP["meters"] = METRES;
             MAP["metres"] = METRES;
+            MAP["meters"] = METRES;
+            MAP["m"] = METRES;
             MAP["meters-per-second"] = METRES_PER_SECOND;
             MAP["knots"] = KNOTS;
             MAP["radians"] = RADIANS;
@@ -222,8 +234,12 @@ namespace units {
         return citr->second;
     }
     
+    /// A type to allow a lookup table for converting units
     typedef double (* cast_function)( const double );
     
+    /// Retrieve a function that will convert between the two given
+    /// measurement units.
+    /// @returns NULL if the conversion is not supported.
     cast_function cast_lookup( const et from, const et to )
     {
         if ( from < 0 || from >= COUNT )
@@ -264,11 +280,14 @@ namespace units {
         return MAP[from][to];
     }
     
+    /// Test if the conversion between two measurement units is supported.
     bool can_convert( const et from, const et to )
     {
         return NULL != cast_lookup(from, to);
     }
     
+    /// Convert the given value between the two given measurement units
+    /// or throw an exception on invalid or unspoorted conversion.
     double convert( const et from, const et to, const double value )
     {
         cast_function fnp = cast_lookup(from, to);
@@ -278,6 +297,7 @@ namespace units {
     }
 }
 
+/// Support reading the data from a file.
 struct input_t { std::vector< double > values; };
 
 namespace comma { namespace visiting {
