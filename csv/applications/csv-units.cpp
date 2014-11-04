@@ -138,7 +138,7 @@ namespace units {
         return NAMES[val];
     }
 
-    et value( char const * const str )
+    et value( std::string const & str )
     {
         typedef boost::unordered_map<std::string, et> map_t;
         static map_t MAP;
@@ -372,29 +372,19 @@ static int run( const std::string& from, const std::string& to )
     COMMA_THROW( comma::exception, "unsupported conversion format " << from );
 }
 
-static std::string normalized_name( const std::string& s )
-{
-    if( s == "pounds" || s == "lbs" ) { return "pounds"; }
-    if( s == "kilograms" || s == "kg" ) { return "kilograms"; }
-    if( s == "feet" || s == "ft" ) { return "feet"; }
-    if( s == "nautical-miles" || s == "nm" ) { return "nautical-miles"; }
-    if( s == "miles" || s == "statute-miles" ) { return "statute-miles"; }
-    if( s == "meters" || s == "metres" ) { return "meters"; }
-    if( s == "meters-per-second" ) { return "meters-per-second"; }
-    if( s == "knots" ) { return "knots"; }
-    if( s == "radians" || s == "rad" ) { return "radians"; }
-    if( s == "degrees" || s == "deg" ) { return "degrees"; }
-    if( s == "kelvin" ) { return "kelvin"; }
-    if( s == "celsius" ) { return "celsius"; }
-    if( s == "fahrenheit" ) { return "fahrenheit"; }
-    COMMA_THROW( comma::exception, "unsupported or unexpected unit: \"" << s << "\"" );
-}
-
 static std::string to_lower( const std::string& s )
 {
     std::string t = s;
     for( unsigned int i = 0; i < s.size(); ++i ) { if( s[i] >= 'A' && s[i] <= 'Z' ) { t[i] = s[i] - 'A' + 'a'; } }
     return t;
+}
+
+static units::et normalized_name( const std::string& s )
+{
+    units::et result = units::value( to_lower( s ) );
+    if ( result < 0 || result >= units::COUNT )
+        COMMA_THROW( comma::exception, "unsupported or unexpected unit: \"" << s << "\"" );
+    return result;
 }
 
 int main( int ac, char** av )
@@ -409,9 +399,9 @@ int main( int ac, char** av )
         init_input();
         boost::optional< double > scale_factor = options.optional< double >( "--scale" );
         if( scale_factor ) { return scale( *scale_factor ); }
-        std::string from = normalized_name( to_lower( options.value< std::string >( "--from" ) ) );
-        std::string to = normalized_name( to_lower( options.value< std::string >( "--to" ) ) );
-        return run( from, to );
+        units::et from = normalized_name( options.value< std::string >( "--from" ) );
+        units::et to = normalized_name( options.value< std::string >( "--to" ) );
+        return run( units::name(from), units::name(to) );
     }
     catch( std::exception& ex )
     {
