@@ -256,8 +256,6 @@ namespace units {
     /// @returns NULL if the conversion is not supported.
     cast_function cast_lookup( const et from, const et to )
     {
-        std::cerr << "cast_lookup " << debug_name(from) << " to " << debug_name(to) << std::endl;
-
         if ( from < 0 || from >= COUNT )
             COMMA_THROW( comma::exception, "can not cast lookup for invalid unit (from) " << from );
         if ( to < 0 || to >= COUNT )
@@ -267,7 +265,6 @@ namespace units {
         static bool initialised = false;
         if (! initialised )
         {
-            std::cerr << "cast_lookup initialising" << std::endl;
 #define MAP_NOP(x) MAP[x][x] = null_cast;
             MAP_NOP(CELSIUS);
             MAP_NOP(DEGREES);
@@ -309,7 +306,6 @@ namespace units {
             MAP[METRES][STATUTE_MILES] = cast< length_t, statute_mile_t >;
             initialised = true;
         }
-        std::cerr << "cast_lookup [" << from << "][" << to << "] found " << (void *)(MAP[from][to]) << std::endl;
         return MAP[from][to];
     }
     
@@ -411,11 +407,10 @@ static std::string init_input_field( const std::string& v )
     }
     
     unsigned idx = input_fields.size();
-    std::cerr << "--> head: " << head << " --> tail: " << tail << std::endl;
     if ( input_fields.cend() == input_fields.find( head ) )
-        std::cerr << "Not found" << std:: endl, input_fields[head] = idx;
+        input_fields[head] = idx;
     else
-        std::cerr << "Found" << std:: endl, idx = input_fields.at(head);
+        idx = input_fields.at(head);
     
     return "values[" + boost::lexical_cast< std::string >( idx ) + "]/" + tail;
 }
@@ -431,7 +426,6 @@ static void init_input()
         comma = ",";
         fields += init_input_field( v[i] );
     }
-    std::cerr << "--> fields: " << fields << std::endl;
     csv.fields = fields;
     csv.full_xpath = true;
     input.values.resize( input_fields.size() ); //input.values.resize( size );
@@ -454,8 +448,6 @@ static int scale( double factor )
 
 static int run( const units::et from, const units::et to )
 {
-    std::cerr << "csv-cast: Convert " << units::name(from) << " to " << units::name(to) << std::endl;
-    
     comma::csv::input_stream< input_t > istream( std::cin, csv, input );
     comma::csv::output_stream< input_t > ostream( std::cout, csv, input );
 
@@ -480,10 +472,9 @@ static int run( const units::et from, const units::et to )
                 fld_cast_fnp = units::cast_lookup( fld_from, to );
                 if (NULL == fld_cast_fnp)
                     COMMA_THROW( comma::exception, "on line " << line << " unsupported conversion from " << debug_name(fld_from) << " to " << debug_name(to) );
-
-                std::cerr << "csv-cast: Convert " << units::name(fld_from) << " to " << units::name(to) << std::endl;
             }
             output.values[i].value = fld_cast_fnp( output.values[i].value );
+            output.values[i].units = units::name( to );
         }
         ostream.write( output, istream );
         ++line;
