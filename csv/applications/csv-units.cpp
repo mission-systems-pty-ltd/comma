@@ -123,6 +123,11 @@ double cast( const double input )
     return static_cast< to_quantity_t >( from_quantity_t( input * From() ) ).value();
 }
 
+double null_cast( const double input )
+{
+    return input;
+}
+
 // Explicit instantiations specified here so that they can be 
 // used below in a lookup table.
 template double cast< imperial_us_mass_t, mass_t >( const double );
@@ -191,10 +196,18 @@ namespace units {
                 "pounds",
                 "radians",
                 "statute_miles",
-                "ERROR",
+                "COUNT",
                 "INVALID"
             };
         return NAMES[val];
+    }
+
+    /// returns a name even if the value is invalid
+    std::string debug_name( const et val )
+    {
+        if ( val < 0 || val > INVALID )
+            return "ERROR:" + boost::lexical_cast<std::string>(val);
+        return name(val);
     }
 
     /// Given a canonical name or an alias of a measurement unit to
@@ -242,15 +255,33 @@ namespace units {
     /// @returns NULL if the conversion is not supported.
     cast_function cast_lookup( const et from, const et to )
     {
+        std::cerr << "cast_lookup " << debug_name(from) << " to " << debug_name(to) << std::endl;
+
         if ( from < 0 || from >= COUNT )
             COMMA_THROW( comma::exception, "can not cast lookup for invalid unit (from) " << from );
         if ( to < 0 || to >= COUNT )
             COMMA_THROW( comma::exception, "can not cast lookup for invalid unit (to) " << to );
         
-        cast_function MAP[COUNT][COUNT] = { NULL, };
+        static cast_function MAP[COUNT][COUNT] = { NULL, };
         static bool initialised = false;
         if (! initialised )
         {
+            std::cerr << "cast_lookup initialising" << std::endl;
+#define MAP_NOP(x) MAP[x][x] = null_cast;
+            MAP_NOP(CELSIUS);
+            MAP_NOP(DEGREES);
+            MAP_NOP(FAHRENHEIHT);
+            MAP_NOP(FEET);
+            MAP_NOP(KELVIN);
+            MAP_NOP(KILOGRAMS);
+            MAP_NOP(KNOTS);
+            MAP_NOP(METRES);
+            MAP_NOP(METRES_PER_SECOND);
+            MAP_NOP(NAUTICAL_MILES);
+            MAP_NOP(POUNDS);
+            MAP_NOP(RADIANS);
+            MAP_NOP(STATUTE_MILES);
+#undef MAP_NOP            
             MAP[POUNDS][KILOGRAMS] = cast<imperial_us_mass_t,mass_t>;
             MAP[KILOGRAMS][POUNDS] = cast<mass_t,imperial_us_mass_t>;
             MAP[METRES_PER_SECOND][KNOTS] = cast< velocity_t, knot_t >;
@@ -277,6 +308,7 @@ namespace units {
             MAP[METRES][STATUTE_MILES] = cast< length_t, statute_mile_t >;
             initialised = true;
         }
+        std::cerr << "cast_lookup [" << from << "][" << to << "] found " << (void *)(MAP[from][to]) << std::endl;
         return MAP[from][to];
     }
     
@@ -292,15 +324,43 @@ namespace units {
     {
         cast_function fnp = cast_lookup(from, to);
         if ( NULL == fnp )
-            COMMA_THROW( comma::exception, "cast lookup failed for " << from << " to " << to );
+            COMMA_THROW( comma::exception, "cast lookup failed for " << debug_name(from) << " to " << debug_name(to) );
         return fnp( value );
     }
 }
 
-// Support reading the data from a file.
-struct input_t { std::vector< double > values; };
+/// Support reading the data from a file.
+/// A type to handle a pair of fields where one is named units and the other
+/// value, such that units contains the measurement standard represented by
+/// the value. For example 1,feet or on another row 0.3048,metres
+struct item_t
+{
+    double value;
+    std::string units;
+    item_t() : value(0.0) {}
+};
+
+struct input_t
+{
+    std::vector< item_t > values;    
+};
 
 namespace comma { namespace visiting {
+
+template <> struct traits< item_t >
+{
+    template < typename K, typename V > static void visit( const K&, const item_t& p, V& v )
+    {
+        v.apply( "value", p.value );
+        v.apply( "units", p.units );
+    }
+
+    template < typename K, typename V > static void visit( const K&, item_t& p, V& v )
+    {
+        v.apply( "value", p.value );
+        v.apply( "units", p.units );
+    }
+};
 
 template <> struct traits< input_t >
 {
@@ -320,22 +380,60 @@ template <> struct traits< input_t >
 static bool verbose;
 static comma::csv::options csv;
 static input_t input;
+typedef boost::unordered_map< std::string, unsigned > input_map_t;
+static input_map_t input_fields;
+static unsigned input_units_count = 0;
+
+static void init_input_field( const std::string& v, std::string& out_fields )
+{
+    const std::string stripped( comma::strip( v, ' ' ) );
+    if ( stripped.empty() ) return;
+    
+    const size_t pos = stripped.rfind( '/' );
+    std::string head, tail;
+    if ( std::string::npos == pos ) // just a
+    {
+        head = stripped;
+        tail = "value";
+    }
+    else
+    {
+        head = stripped.substr(0, pos);
+        tail = stripped.substr(pos + 1, std::string::npos);
+        if ( "units" == tail )
+            ++input_units_count;
+        else if ( "value" != tail )
+        {
+            head = stripped;
+            tail = "value";
+        }
+    }
+    
+    unsigned idx = input_fields.size();
+    std::cerr << "--> head: " << head << " --> tail: " << tail << std::endl;
+    if ( input_fields.cend() == input_fields.find( head ) )
+        input_fields[head] = input_fields.size();
+    else
+        idx = input_fields.at(head);
+    
+    out_fields += "values[" + boost::lexical_cast< std::string >( idx ) + "]/" + tail;
+}
 
 static void init_input()
 {
     std::string fields;
     std::string comma;
     const std::vector< std::string >& v = comma::split( csv.fields, ',' );
-    unsigned int size = 0;
     for( unsigned int i = 0; i < v.size(); ++i )
     {
         fields += comma;
         comma = ",";
-        if( !comma::strip( v[i], ' ' ).empty() ) { fields += "values[" + boost::lexical_cast< std::string >( size++ ) + "]"; }
+        init_input_field( v[i], fields );
     }
+    std::cerr << "--> fields: " << fields << std::endl;
     csv.fields = fields;
     csv.full_xpath = true;
-    input.values.resize( size );
+    input.values.resize( input_fields.size() ); //input.values.resize( size );
 }
 
 static int scale( double factor )
@@ -347,7 +445,7 @@ static int scale( double factor )
         const input_t* p = istream.read();
         if( !p ) { break; }
         input_t output = *p;
-        for( unsigned int i = 0; i < output.values.size(); output.values[i] = output.values[i] * factor, ++i );
+        for( unsigned int i = 0; i < output.values.size(); output.values[i].value = output.values[i].value * factor, ++i );
         ostream.write( output, istream );
     }
     return 0;
@@ -362,7 +460,7 @@ static int run( const units::et from, const units::et to )
 
     units::cast_function const cast_fnp = units::cast_lookup( from, to );
     if (NULL == cast_fnp)
-        COMMA_THROW( comma::exception, "unsupported conversion from " << from << " to " << to );
+        COMMA_THROW( comma::exception, "unsupported conversion from " << debug_name(from) << " to " << debug_name(to) );
     
     while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
     {
@@ -371,7 +469,7 @@ static int run( const units::et from, const units::et to )
         input_t output = *p;
         for( unsigned int i = 0; i < output.values.size(); ++i )
         {
-           output.values[i] = cast_fnp( output.values[i] );
+           output.values[i].value = cast_fnp( output.values[i].value );
         }
         ostream.write( output, istream );
     }
