@@ -169,31 +169,31 @@ template double cast< fahrenheit_t, celsius_t >( const double );
 // A name space to wrap the manipulation of named conversions.
 namespace units {
     // A set of number to identify the supported measurement units.
-    enum et { CELSIUS,
-              DEGREES,
-              FAHRENHEIHT,
-              FEET,
-              KELVIN,
-              KILOGRAMS,
-              KNOTS,
-              METRES,
-              METRES_PER_SECOND,
-              NAUTICAL_MILES,
-              POUNDS,
-              RADIANS,
-              STATUTE_MILES,
-              COUNT,
-              INVALID
+    enum et { celsius,
+              degrees,
+              fahrenheiht,
+              feet,
+              kelvin,
+              kilograms,
+              knots,
+              metres,
+              metres_per_second,
+              nautical_miles,
+              pounds,
+              radians,
+              statute_miles,
+              count,
+              invalid
     };
 
     /// Retrieve a human readable canonical name for the given number. Supports
     /// the extra two internal numbers (count and invalid) for diagnostics.
     char const * name( const et val )
     {
-        if ( val < 0 || val > INVALID )
+        if ( val < 0 || val > invalid )
             COMMA_THROW( comma::exception, "can not get name for invalid units " << val );
 
-        static char const * const NAMES[COUNT + 2]
+        static char const * const names[count + 2]
             = { "celsius",
                 "degrees",
                 "fahrenheit",
@@ -207,16 +207,16 @@ namespace units {
                 "pounds",
                 "radians",
                 "statute_miles",
-                "COUNT",
-                "INVALID"
+                "count",
+                "invalid"
             };
-        return NAMES[val];
+        return names[val];
     }
 
     /// returns a name even if the value is invalid
     std::string debug_name( const et val )
     {
-        if ( val < 0 || val > INVALID )
+        if ( val < 0 || val > invalid )
             return "ERROR:" + boost::lexical_cast<std::string>(val);
         return name(val);
     }
@@ -226,36 +226,36 @@ namespace units {
     et value( std::string const & str )
     {
         typedef boost::unordered_map<std::string, et> map_t;
-        static map_t MAP;
-        if ( MAP.empty() )
+        static map_t map;
+        if ( map.empty() )
         {
-            MAP["celsius"] = CELSIUS;
-            MAP["deg"] = DEGREES;
-            MAP["degrees"] = DEGREES;
-            MAP["fahrenheit"] = FAHRENHEIHT;
-            MAP["feet"] = FEET;
-            MAP["ft"] = FEET;
-            MAP["kelvin"] = KELVIN;
-            MAP["kg"] = KILOGRAMS;
-            MAP["kilograms"] = KILOGRAMS;
-            MAP["knots"] = KNOTS;
-            MAP["lbs"] = POUNDS;
-            MAP["meters"] = METRES;
-            MAP["meters-per-second"] = METRES_PER_SECOND;
-            MAP["metres"] = METRES;
-            MAP["miles"] = STATUTE_MILES;
-            MAP["mi"] = STATUTE_MILES;
-            MAP["m"] = METRES;
-            MAP["nautical-miles"] = NAUTICAL_MILES;
-            MAP["nm"] = NAUTICAL_MILES;
-            MAP["pounds"] = POUNDS;
-            MAP["radians"] = RADIANS;
-            MAP["rad"] = RADIANS;
-            MAP["statute-miles"] = STATUTE_MILES;
+            map["celsius"] = celsius;
+            map["deg"] = degrees;
+            map["degrees"] = degrees;
+            map["fahrenheit"] = fahrenheiht;
+            map["feet"] = feet;
+            map["ft"] = feet;
+            map["kelvin"] = kelvin;
+            map["kg"] = kilograms;
+            map["kilograms"] = kilograms;
+            map["knots"] = knots;
+            map["lbs"] = pounds;
+            map["meters"] = metres;
+            map["meters-per-second"] = metres_per_second;
+            map["metres"] = metres;
+            map["miles"] = statute_miles;
+            map["mi"] = statute_miles;
+            map["m"] = metres;
+            map["nautical-miles"] = nautical_miles;
+            map["nm"] = nautical_miles;
+            map["pounds"] = pounds;
+            map["radians"] = radians;
+            map["rad"] = radians;
+            map["statute-miles"] = statute_miles;
         }
         
-        map_t::const_iterator const citr = MAP.find( str );
-        if ( MAP.cend() == citr ) return INVALID;
+        map_t::const_iterator const citr = map.find( str );
+        if ( map.cend() == citr ) return invalid;
         return citr->second;
     }
     
@@ -267,57 +267,57 @@ namespace units {
     /// @returns NULL if the conversion is not supported.
     cast_function cast_lookup( const et from, const et to )
     {
-        if ( from < 0 || from >= COUNT )
+        if ( from < 0 || from >= count )
             COMMA_THROW( comma::exception, "can not cast lookup for invalid unit (from) " << from );
-        if ( to < 0 || to >= COUNT )
+        if ( to < 0 || to >= count )
             COMMA_THROW( comma::exception, "can not cast lookup for invalid unit (to) " << to );
         
-        static cast_function MAP[COUNT][COUNT] = { NULL, };
+        static cast_function map[count][count] = { { NULL, }, };
         static bool initialised = false;
         if (! initialised )
         {
-#define MAP_NOP(x) MAP[x][x] = null_cast;
-            MAP_NOP(CELSIUS);
-            MAP_NOP(DEGREES);
-            MAP_NOP(FAHRENHEIHT);
-            MAP_NOP(FEET);
-            MAP_NOP(KELVIN);
-            MAP_NOP(KILOGRAMS);
-            MAP_NOP(KNOTS);
-            MAP_NOP(METRES);
-            MAP_NOP(METRES_PER_SECOND);
-            MAP_NOP(NAUTICAL_MILES);
-            MAP_NOP(POUNDS);
-            MAP_NOP(RADIANS);
-            MAP_NOP(STATUTE_MILES);
+#define MAP_NOP(x) map[x][x] = null_cast;
+            MAP_NOP(celsius);
+            MAP_NOP(degrees);
+            MAP_NOP(fahrenheiht);
+            MAP_NOP(feet);
+            MAP_NOP(kelvin);
+            MAP_NOP(kilograms);
+            MAP_NOP(knots);
+            MAP_NOP(metres);
+            MAP_NOP(metres_per_second);
+            MAP_NOP(nautical_miles);
+            MAP_NOP(pounds);
+            MAP_NOP(radians);
+            MAP_NOP(statute_miles);
 #undef MAP_NOP            
-            MAP[POUNDS][KILOGRAMS] = cast< imperial_us_mass_t,mass_t >;
-            MAP[KILOGRAMS][POUNDS] = cast< mass_t,imperial_us_mass_t >;
-            MAP[METRES_PER_SECOND][KNOTS] = cast< velocity_t, knot_t >;
-            MAP[KNOTS][METRES_PER_SECOND] = cast< knot_t, velocity_t >;
-            MAP[RADIANS][DEGREES] = cast< radian_t, degree_t >;
-            MAP[DEGREES][RADIANS] = cast< degree_t, radian_t >;
-            MAP[KELVIN][CELSIUS] = cast< kelvin_t, celsius_t >;
-            MAP[KELVIN][FAHRENHEIHT] = cast< kelvin_t, fahrenheit_t >;
-            MAP[CELSIUS][KELVIN] = cast< celsius_t, kelvin_t >;
-            MAP[CELSIUS][FAHRENHEIHT] = cast< celsius_t, fahrenheit_t >;
-            MAP[FAHRENHEIHT][KELVIN] = cast< fahrenheit_t, kelvin_t >;
-            MAP[FAHRENHEIHT][CELSIUS] = cast< fahrenheit_t, celsius_t >;
-            MAP[FEET][NAUTICAL_MILES] = cast< imperial_us_length_t, nautical_mile_t >;
-            MAP[FEET][STATUTE_MILES] = cast< imperial_us_length_t, statute_mile_t >;
-            MAP[FEET][METRES] = cast< imperial_us_length_t, length_t >;
-            MAP[NAUTICAL_MILES][FEET] = cast< nautical_mile_t, imperial_us_length_t >;
-            MAP[NAUTICAL_MILES][STATUTE_MILES] = cast< nautical_mile_t, statute_mile_t >;
-            MAP[NAUTICAL_MILES][METRES] = cast< nautical_mile_t, length_t >;
-            MAP[STATUTE_MILES][FEET] = cast< statute_mile_t, imperial_us_length_t >;
-            MAP[STATUTE_MILES][NAUTICAL_MILES] = cast< statute_mile_t, nautical_mile_t >;
-            MAP[STATUTE_MILES][METRES] = cast< statute_mile_t, length_t >;
-            MAP[METRES][FEET] = cast< length_t, imperial_us_length_t >;
-            MAP[METRES][NAUTICAL_MILES] = cast< length_t, nautical_mile_t >;
-            MAP[METRES][STATUTE_MILES] = cast< length_t, statute_mile_t >;
+            map[pounds][kilograms] = cast< imperial_us_mass_t,mass_t >;
+            map[kilograms][pounds] = cast< mass_t,imperial_us_mass_t >;
+            map[metres_per_second][knots] = cast< velocity_t, knot_t >;
+            map[knots][metres_per_second] = cast< knot_t, velocity_t >;
+            map[radians][degrees] = cast< radian_t, degree_t >;
+            map[degrees][radians] = cast< degree_t, radian_t >;
+            map[kelvin][celsius] = cast< kelvin_t, celsius_t >;
+            map[kelvin][fahrenheiht] = cast< kelvin_t, fahrenheit_t >;
+            map[celsius][kelvin] = cast< celsius_t, kelvin_t >;
+            map[celsius][fahrenheiht] = cast< celsius_t, fahrenheit_t >;
+            map[fahrenheiht][kelvin] = cast< fahrenheit_t, kelvin_t >;
+            map[fahrenheiht][celsius] = cast< fahrenheit_t, celsius_t >;
+            map[feet][nautical_miles] = cast< imperial_us_length_t, nautical_mile_t >;
+            map[feet][statute_miles] = cast< imperial_us_length_t, statute_mile_t >;
+            map[feet][metres] = cast< imperial_us_length_t, length_t >;
+            map[nautical_miles][feet] = cast< nautical_mile_t, imperial_us_length_t >;
+            map[nautical_miles][statute_miles] = cast< nautical_mile_t, statute_mile_t >;
+            map[nautical_miles][metres] = cast< nautical_mile_t, length_t >;
+            map[statute_miles][feet] = cast< statute_mile_t, imperial_us_length_t >;
+            map[statute_miles][nautical_miles] = cast< statute_mile_t, nautical_mile_t >;
+            map[statute_miles][metres] = cast< statute_mile_t, length_t >;
+            map[metres][feet] = cast< length_t, imperial_us_length_t >;
+            map[metres][nautical_miles] = cast< length_t, nautical_mile_t >;
+            map[metres][statute_miles] = cast< length_t, statute_mile_t >;
             initialised = true;
         }
-        return MAP[from][to];
+        return map[from][to];
     }
     
     /// Test if the conversion between two measurement units is supported.
@@ -448,8 +448,8 @@ static int run( const units::et from, const units::et to )
     comma::csv::input_stream< input_t > istream( std::cin, csv, input );
     comma::csv::output_stream< input_t > ostream( std::cout, csv, input );
 
-    units::cast_function const cast_fnp = units::cast_lookup( from, to );
-    if (NULL == cast_fnp)
+    units::cast_function const default_cast_function = units::cast_lookup( from, to );
+    if (NULL == default_cast_function)
         COMMA_THROW( comma::exception, "unsupported default conversion from " << debug_name(from) << " to " << debug_name(to) );
     
     unsigned line = 0;
@@ -460,17 +460,17 @@ static int run( const units::et from, const units::et to )
         input_t output = *p;
         for( unsigned int i = 0; i < output.values.size(); ++i )
         {
-            units::cast_function fld_cast_fnp = cast_fnp;
+            units::cast_function field_cast_function = default_cast_function;
             if ( ! output.values[i].units.empty() )
             {
-                units::et fld_from = units::value( output.values[i].units );
-                if ( units::INVALID == fld_from )
+                units::et field_from = units::value( output.values[i].units );
+                if ( units::invalid == field_from )
                     COMMA_THROW( comma::exception, "on line " << line << " unsupported units " << output.values[i].units );
-                fld_cast_fnp = units::cast_lookup( fld_from, to );
-                if (NULL == fld_cast_fnp)
-                    COMMA_THROW( comma::exception, "on line " << line << " unsupported conversion from " << debug_name(fld_from) << " to " << debug_name(to) );
+                field_cast_function = units::cast_lookup( field_from, to );
+                if (NULL == field_cast_function)
+                    COMMA_THROW( comma::exception, "on line " << line << " unsupported conversion from " << debug_name(field_from) << " to " << debug_name(to) );
             }
-            output.values[i].value = fld_cast_fnp( output.values[i].value );
+            output.values[i].value = field_cast_function( output.values[i].value );
             output.values[i].units = units::name( to );
         }
         ostream.write( output, istream );
@@ -489,7 +489,7 @@ static std::string to_lower( const std::string& s )
 static units::et normalized_name( const std::string& s )
 {
     units::et result = units::value( to_lower( s ) );
-    if ( result < 0 || result >= units::COUNT )
+    if ( result < 0 || result >= units::count )
         COMMA_THROW( comma::exception, "unsupported or unexpected unit: \"" << s << "\"" );
     return result;
 }
