@@ -166,6 +166,13 @@ template double cast< celsius_t, kelvin_t >( const double );
 template double cast< fahrenheit_t, kelvin_t >( const double );
 template double cast< fahrenheit_t, celsius_t >( const double );
 
+static std::string to_lower( const std::string& s )
+{
+    std::string t = s;
+    for( unsigned int i = 0; i < s.size(); ++i ) { if( s[i] >= 'A' && s[i] <= 'Z' ) { t[i] = s[i] - 'A' + 'a'; } }
+    return t;
+}
+
 // A name space to wrap the manipulation of named conversions.
 namespace units {
     // A set of number to identify the supported measurement units.
@@ -254,7 +261,7 @@ namespace units {
             map["statute-miles"] = statute_miles;
         }
         
-        map_t::const_iterator const citr = map.find( str );
+        map_t::const_iterator const citr = map.find( to_lower(str) );
         if ( map.cend() == citr ) return invalid;
         return citr->second;
     }
@@ -479,16 +486,9 @@ static int run( const units::et from, const units::et to )
     return 0;
 }
 
-static std::string to_lower( const std::string& s )
-{
-    std::string t = s;
-    for( unsigned int i = 0; i < s.size(); ++i ) { if( s[i] >= 'A' && s[i] <= 'Z' ) { t[i] = s[i] - 'A' + 'a'; } }
-    return t;
-}
-
 static units::et normalized_name( const std::string& s )
 {
-    units::et result = units::value( to_lower( s ) );
+    units::et result = units::value( s );
     if ( result < 0 || result >= units::count )
         COMMA_THROW( comma::exception, "unsupported or unexpected unit: \"" << s << "\"" );
     return result;
