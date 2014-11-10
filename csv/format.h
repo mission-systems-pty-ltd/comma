@@ -46,7 +46,7 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <comma/base/exception.h>
 #include <comma/base/types.h>
-#include <comma/string/split.h>
+#include <comma/string/string.h>
 #include <comma/visiting/apply.h>
 #include <comma/visiting/visit.h>
 #include <comma/visiting/while.h>
@@ -171,11 +171,15 @@ class to_format
     public:
         to_format( const std::string& fields = "", bool full_xpath = true )
             : full_xpath_( full_xpath )
-            , first_( true )
         {
             if( fields.empty() ) { return; }
             std::vector< std::string > v = comma::split( fields, ',' );
-            for( std::size_t i = 0; i < v.size(); ++i ) { fields_.insert( v[i] ); }
+            for( std::size_t i = 0; i < v.size(); ++i )
+            { 
+                if( v[i].empty() ) { COMMA_THROW( comma::exception, "expected all fields non-empty, got field " << i << " empty" ); }
+                fields_[ v[i] ] = i;
+            }
+            elements_.resize( fields_.size() );
         }
         
         template < typename K, typename T >
@@ -204,37 +208,29 @@ class to_format
         template < typename K, typename T >
         void apply_final( const K& key, const T& value )
         {
-            //std::cerr << "---> fields_.size() = " << fields_.size() << std::endl;
             (void)key;
-            if( !fields_.empty() )
+            if( fields_.empty() )
             {
-                if( full_xpath_ )
-                {
-                    bool found = false; // quick and dirty, should be fast and is called only once anyway
-                    for( std::set< std::string >::const_iterator it = fields_.begin(); !found && it != fields_.end(); ++it ) // quick and dirty
-                    {
-                        found = xpath_ <= comma::xpath( *it );
-                    }
-                    if( !found ) { return; }
-                }
-                else
-                {
-                    if( fields_.find( xpath_.elements.back().to_string() ) == fields_.end() ) { return; }
-                }
+                format_ += ( format_.empty() ? "" : "," ) + format::value_impl( value );
             }
-            if( !first_ ) { format_ += ','; }
-            else { first_ = false; }
-            format_ += format::value_impl( value );
+            else
+            {
+                map_t_::const_iterator it = fields_.end();
+                if( full_xpath_ ) { for( it = fields_.begin(); it != fields_.end(); ++it ) { if( xpath_ <= comma::xpath( it->first ) ) { break; } } }
+                else { it = fields_.find( xpath_.elements.back().to_string() ); }
+                if( it != fields_.end() ) { elements_[ it->second ] += ( elements_[ it->second ].empty() ? "" : "," ) + format::value_impl( value ); }
+            }
         }
         
-        const std::string& operator()() const { return format_; }
+        std::string operator()() const { return format_.empty() ? comma::join( elements_, ',' ) : format_; }
         
     private:
-        std::set< std::string > fields_;
+        typedef std::map< std::string, unsigned int > map_t_;
+        map_t_ fields_;
         bool full_xpath_;
         std::string format_;
+        std::vector< std::string > elements_;
         xpath xpath_;
-        bool first_;
         const xpath& append( std::size_t index ) { xpath_.elements.back().index = index; return xpath_; }
         const xpath& append( const char* name ) { xpath_ /= xpath::element( name ); return xpath_; }
         const xpath& trim( std::size_t ) { xpath_.elements.back().index = boost::optional< std::size_t >(); return xpath_; }

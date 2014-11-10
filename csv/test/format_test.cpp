@@ -210,7 +210,7 @@ TEST( csv, format_floating_point )
 struct nested_struct
 {
     comma::int32 x;
-    comma::int32 y;
+    double y;
 };
 
 struct simple_struct
@@ -264,21 +264,87 @@ template <> struct traits< optionals >
 
 } } // namespace comma { namespace visiting {
 
+TEST( csv, format_with_default_fields )
+{
+    EXPECT_EQ( comma::csv::format::value< simple_struct >(), "i,d,b,s,t,i,d" );
+}
+
 TEST( csv, format_with_fields )
 {
-    EXPECT_EQ( comma::csv::format::value< simple_struct >(), "i,d,b,s,t,i,i" );
-    EXPECT_EQ( comma::csv::format::value< simple_struct >( "a,b,c", true ), "i,d,b" );
-    EXPECT_EQ( comma::csv::format::value< simple_struct >( "a,s,t", true ), "i,s,t" );
-    EXPECT_EQ( comma::csv::format::value< simple_struct >( "nested/x,nested/y", true ), "i,i" );
-    EXPECT_EQ( comma::csv::format::value< simple_struct >( "nested", true ), "i,i" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "a", false ), "i" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "t", false ), "t" );
     EXPECT_EQ( comma::csv::format::value< simple_struct >( "a,b,c", false ), "i,d,b" );
     EXPECT_EQ( comma::csv::format::value< simple_struct >( "a,s,t", false ), "i,s,t" );
-    EXPECT_EQ( comma::csv::format::value< simple_struct >( "x,y", false ), "i,i" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "s,t,a", false ), "s,t,i" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "a,b,c,s,t", false ), "i,d,b,s,t" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "t,s,c,b,a", false ), "t,s,b,d,i" );
+}
+    
+TEST( csv, format_with_fields_full_xpath )
+{
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "a", true ), "i" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "t", true ), "t" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "a,b,c", true ), "i,d,b" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "a,s,t", true ), "i,s,t" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "a,b,c,s,t", true ), "i,d,b,s,t" );
+}
+
+TEST( csv, format_with_nested_fields )
+{
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "x", false ), "i" );  
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "y", false ), "d" );  
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "x,y", false ), "i,d" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "y,x", false ), "d,i" );
+}    
+ 
+TEST( csv, format_with_nested_fields_fullxpath )
+{
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "nested/x", true ), "i" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "nested/y", true ), "d" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "nested/x,nested/y", true ), "i,d" );
+    EXPECT_EQ( "d,i", comma::csv::format::value< simple_struct >( "nested/y,nested/x", true ) );
+}
+    
+TEST( csv, format_with_mixed_fields )
+{    
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "a,b,c,s,t,x,y", false), "i,d,b,s,t,i,d" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "b,x,y", false ), "d,i,d" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "c,x,y", false ), "b,i,d" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "t,x", false ), "t,i" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "t,y", false ), "t,d" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "t,x,y", false ), "t,i,d" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "x,t,y", false ), "i,t,d" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "y,t,x", false ), "d,t,i" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "x,y,t", false ), "i,d,t" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "y,x,t", false ), "d,i,t" );
+}
+
+TEST( csv, format_with_mixed_fields_full_xpath )
+{    
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "a,b,c,s,t,nested/x,nested/y", true), "i,d,b,s,t,i,d" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "b,nested/x,nested/y", true ), "d,i,d" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "c,nested/x,nested/y", true ), "b,i,d" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "t,nested/x", true ), "t,i" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "t,nested/y", true ), "t,d" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "t,nested/x,nested/y", true ), "t,i,d" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "nested/x,t,nested/y", true ), "i,t,d" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "nested/y,t,nested/x", true ), "d,t,i" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "nested/x,nested/y,t", true ), "i,d,t" );
+    EXPECT_EQ( comma::csv::format::value< simple_struct >( "nested/y,nested/x,t", true ), "d,i,t" );
+}    
+
+TEST( csv, format_with_implied_nested_fields )
+{
+    EXPECT_EQ( "i,d", comma::csv::format::value< nested_struct >( "", true ) );
+    EXPECT_EQ( "i,d", comma::csv::format::value< simple_struct >( "nested", true ) );
+    EXPECT_EQ( "i,d,b,i,d", comma::csv::format::value< simple_struct >( "a,b,c,nested", true ) );
+    EXPECT_EQ( "t,i,d", comma::csv::format::value< simple_struct >( "t,nested", true ) );
+    EXPECT_EQ( "i,d,t", comma::csv::format::value< simple_struct >( "nested,t", true ) );
 }
 
 TEST( csv, optional_format )
 {
-    EXPECT_EQ( comma::csv::format::value< optionals >(), "d,i,i" );
+    EXPECT_EQ( comma::csv::format::value< optionals >(), "d,i,d" );
 }
 
 TEST( csv, unstructured )
