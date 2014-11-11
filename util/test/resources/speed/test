@@ -10,20 +10,23 @@ function handler()
     echo "count=$iter"
     exit 0
 }
+export -f handler
 
 function count()
 {
     iter=0
-    trap 'handler' SIGINT
+    trap 'handler' SIGTERM
     while true ; do
         comma_acquire_resources "$output/tiny.json" "$output/counter.json" "$output/limits.json" 123 || return 1
         (( ++iter ))
     done
 }
+export -f count
 
 output="output"
 rm -rf "$output" || exit 1
 mkdir -p "$output" || exit 1
+export output
 
 # initialize
 counter="$output/counter.json"
@@ -41,11 +44,8 @@ resources/memory/shared="1"
 EOF
 cat "$limits" | name-value-convert --from json --to path-value | comma_initialize_resources "$counter"
 
-count &
+timeout -k 10 -s TERM 10 bash -c count &
 count_pid=$!
-
-sleep 10
-kill -s SIGINT $count_pid
 wait $count_pid
 rv=$?
 
