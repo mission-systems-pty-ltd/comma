@@ -35,6 +35,7 @@
 /// @author kai huang
 
 #include <iostream>
+#include <boost/array.hpp>
 #include <boost/unordered/unordered_map.hpp>
 
 #include <boost/units/systems/si.hpp>
@@ -65,13 +66,13 @@ static void usage(char const * const txt = "")
 {
     static char const * const msg_general =
         "\n"
-        "\nPerform unit conversion in a file or stream by specifying the conversion units and the csv fields to be converted"
+        "\nconvert units in a file or stream by specifying the conversion units and the csv fields to be converted"
         "\n"
         "\nUsage: cat a.csv | csv-units <options>"
         "\n"
         "\nOptions:"
-        "\n    --from <unit>   : unit converting from"
-        "\n    --to   <unit>   : unit converting to"
+        "\n    --from <unit>   : unit converting from; default: metric, unless units specified in --fields"
+        "\n    --to   <unit>   : unit converting to; default: metric, unless units specified in --fields"
         "\n    --scale <factor> : scale value by given factor instead of unit conversion"
         "\n                       a convenience option, probably somewhat misplaced"
         "\n"
@@ -134,13 +135,7 @@ double cast( const double input )
     return static_cast< to_quantity_t >( from_quantity_t( input * From() ) ).value();
 }
 
-double null_cast( const double input )
-{
-    return input;
-}
-
-// Explicit instantiations specified here so that they can be 
-// used below in a lookup table.
+double null_cast( const double input ) { return input; }
 template double cast< imperial_us_mass_t, mass_t >( const double );
 template double cast< mass_t, imperial_us_mass_t >( const double );
 template double cast< imperial_us_length_t, nautical_mile_t >( const double );
@@ -176,7 +171,7 @@ static std::string to_lower( const std::string& s )
 // A name space to wrap the manipulation of named conversions.
 namespace units {
     // A set of number to identify the supported measurement units.
-    enum et { celsius,
+    enum et { celsius = 0,
               degrees,
               fahrenheiht,
               feet,
@@ -192,14 +187,26 @@ namespace units {
               count,
               invalid
     };
+    
+    static boost::array< et, count > metric = {{ kelvin
+                                               , radians
+                                               , kelvin
+                                               , metres
+                                               , kelvin
+                                               , kilograms
+                                               , metres_per_second
+                                               , metres
+                                               , metres_per_second
+                                               , metres
+                                               , kilograms
+                                               , radians
+                                               , metres }};
 
     /// Retrieve a human readable canonical name for the given number. Supports
     /// the extra two internal numbers (count and invalid) for diagnostics.
     char const * name( const et val )
     {
-        if ( val < 0 || val > invalid )
-            COMMA_THROW( comma::exception, "can not get name for invalid units " << val );
-
+        if ( val < 0 || val > invalid ) { COMMA_THROW( comma::exception, "can not get name for invalid units " << val ); }
         static char const * const names[count + 2]
             = { "celsius",
                 "degrees",
@@ -221,12 +228,7 @@ namespace units {
     }
 
     /// returns a name even if the value is invalid
-    std::string debug_name( const et val )
-    {
-        if ( val < 0 || val > invalid )
-            return "ERROR:" + boost::lexical_cast<std::string>(val);
-        return name(val);
-    }
+    std::string debug_name( const et val ) { return val < 0 || val > invalid ? "ERROR:" + boost::lexical_cast<std::string>(val) : name( val ); }
 
     /// Given a canonical name or an alias of a measurement unit 
     /// retrieve the canonical enumeration.
@@ -260,10 +262,9 @@ namespace units {
             map["rad"] = radians;
             map["statute-miles"] = statute_miles;
         }
-        
         map_t::const_iterator const citr = map.find( to_lower(str) );
-        if ( map.cend() == citr ) return invalid;
-        return citr->second;
+        if( map.cend() != citr ) { return citr->second; }
+        COMMA_THROW( comma::exception, "expected unit name, got \"" << str << "\"" );
     }
     
     /// A type to allow a lookup table for converting units
@@ -274,30 +275,14 @@ namespace units {
     /// @returns NULL if the conversion is not supported.
     cast_function cast_lookup( const et from, const et to )
     {
-        if ( from < 0 || from >= count )
-            COMMA_THROW( comma::exception, "can not cast lookup for invalid unit (from) " << from );
-        if ( to < 0 || to >= count )
-            COMMA_THROW( comma::exception, "can not cast lookup for invalid unit (to) " << to );
-        
+        if ( from < 0 || from >= count ) { COMMA_THROW( comma::exception, "can not cast lookup for invalid unit (from) " << from ); }
+        if ( to < 0 || to >= count ) { COMMA_THROW( comma::exception, "can not cast lookup for invalid unit (to) " << to ); }        
         static cast_function map[count][count] = { { NULL, }, };
         static bool initialised = false;
         if (! initialised )
         {
-#define MAP_NOP(x) map[x][x] = null_cast;
-            MAP_NOP(celsius);
-            MAP_NOP(degrees);
-            MAP_NOP(fahrenheiht);
-            MAP_NOP(feet);
-            MAP_NOP(kelvin);
-            MAP_NOP(kilograms);
-            MAP_NOP(knots);
-            MAP_NOP(metres);
-            MAP_NOP(metres_per_second);
-            MAP_NOP(nautical_miles);
-            MAP_NOP(pounds);
-            MAP_NOP(radians);
-            MAP_NOP(statute_miles);
-#undef MAP_NOP            
+            initialised = true;
+            for( unsigned int i = 0; i < count; ++i ) { map[i][i] = null_cast; }
             map[pounds][kilograms] = cast< imperial_us_mass_t,mass_t >;
             map[kilograms][pounds] = cast< mass_t,imperial_us_mass_t >;
             map[metres_per_second][knots] = cast< velocity_t, knot_t >;
@@ -322,16 +307,12 @@ namespace units {
             map[metres][feet] = cast< length_t, imperial_us_length_t >;
             map[metres][nautical_miles] = cast< length_t, nautical_mile_t >;
             map[metres][statute_miles] = cast< length_t, statute_mile_t >;
-            initialised = true;
         }
         return map[from][to];
     }
     
     /// Test if the conversion between two measurement units is supported.
-    bool can_convert( const et from, const et to )
-    {
-        return NULL != cast_lookup(from, to);
-    }
+    bool can_convert( const et from, const et to ) { return NULL != cast_lookup(from, to); }
 }
 
 /// Support reading the data from a file.
@@ -342,7 +323,7 @@ struct item_t
 {
     double value;
     std::string units;
-    item_t() : value(0.0) {}
+    item_t() : value( 0 ) {}
 };
 
 struct input_t
@@ -390,7 +371,7 @@ static boost::unordered_map< std::string, unsigned > input_fields;
 static std::string init_input_field( const std::string& v )
 {
     const std::string stripped( comma::strip( v, ' ' ) );
-    if ( stripped.empty() ) return std::string();
+    if( stripped.empty() ) { return std::string(); }
     
     const size_t pos = stripped.rfind( '/' );
     std::string head, tail;
@@ -411,10 +392,8 @@ static std::string init_input_field( const std::string& v )
     }
     
     unsigned idx = input_fields.size();
-    if ( input_fields.cend() == input_fields.find( head ) )
-        input_fields[head] = idx;
-    else
-        idx = input_fields.at(head);
+    if ( input_fields.cend() == input_fields.find( head ) ) { input_fields[head] = idx; }
+    else { idx = input_fields.at( head ); }
     
     return "values[" + boost::lexical_cast< std::string >( idx ) + "]/" + tail;
 }
@@ -456,8 +435,7 @@ static int run( const units::et from, const units::et to )
     comma::csv::output_stream< input_t > ostream( std::cout, csv, input );
 
     units::cast_function const default_cast_function = units::cast_lookup( from, to );
-    if (NULL == default_cast_function)
-        COMMA_THROW( comma::exception, "unsupported default conversion from " << debug_name(from) << " to " << debug_name(to) );
+    if (NULL == default_cast_function) { COMMA_THROW( comma::exception, "unsupported default conversion from " << debug_name(from) << " to " << debug_name(to) ); }
     
     unsigned line = 0;
     while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
@@ -471,11 +449,8 @@ static int run( const units::et from, const units::et to )
             if ( ! output.values[i].units.empty() )
             {
                 units::et field_from = units::value( output.values[i].units );
-                if ( units::invalid == field_from )
-                    COMMA_THROW( comma::exception, "on line " << line << " unsupported units " << output.values[i].units );
                 field_cast_function = units::cast_lookup( field_from, to );
-                if (NULL == field_cast_function)
-                    COMMA_THROW( comma::exception, "on line " << line << " unsupported conversion from " << debug_name(field_from) << " to " << debug_name(to) );
+                if( NULL == field_cast_function ) { COMMA_THROW( comma::exception, "on line " << line << " unsupported conversion from " << debug_name(field_from) << " to " << debug_name(to) ); }
             }
             output.values[i].value = field_cast_function( output.values[i].value );
             output.values[i].units = units::name( to );
@@ -484,14 +459,6 @@ static int run( const units::et from, const units::et to )
         ++line;
     }
     return 0;
-}
-
-static units::et normalized_name( const std::string& s )
-{
-    units::et result = units::value( s );
-    if ( result < 0 || result >= units::count )
-        COMMA_THROW( comma::exception, "unsupported or unexpected unit: \"" << s << "\"" );
-    return result;
 }
 
 int main( int ac, char** av )
@@ -503,27 +470,28 @@ int main( int ac, char** av )
         verbose = options.exists( "--verbose,-v" );
         csv = comma::csv::options( options );
         if( csv.fields.empty() ) { csv.fields="a"; }
-        init_input();
         boost::optional< double > scale_factor = options.optional< double >( "--scale" );
         if( scale_factor ) { return scale( *scale_factor ); }
-        units::et const to = normalized_name( options.value< std::string >( "--to" ) );
-        units::et const from
-            = ! options.exists( "--from" ) ? to : normalized_name( options.value< std::string >( "--from" ) );
-        if( ! units::can_convert(from, to) )
+        units::et from = units::metres; // quick and dirty: to avoid compilation warning
+        units::et to = units::metres; // quick and dirty: to avoid compilation warning
+        if( csv.fields.find( "/units" ) == std::string::npos )
         {
-            std::cerr << "csv-units: don't know how to convert " << units::name(from) << " to " << units::name(to) << std::endl;
-            return 1; 
+            if( !options.exists( "--from" ) && !options.exists( "--to" ) ) { std::cerr << "csv-units: got neither --from nor --to" << std::endl; return 1; }
+            if( options.exists( "--from" ) ) { from = units::value( options.value< std::string >( "--from" ) ); }
+            if( options.exists( "--to" ) ) { to = units::value( options.value< std::string >( "--to" ) ); }
+            if( !options.exists( "--from" ) ) { from = units::metric[to]; }
+            if( !options.exists( "--to" ) ) { to = units::metric[from]; }
         }
+        else
+        {
+            to = units::value( options.value< std::string >( "--to" ) );
+            from = !options.exists( "--from" ) ? to : units::value( options.value< std::string >( "--from" ) );
+        }
+        if( !units::can_convert( from, to ) ) { std::cerr << "csv-units: don't know how to convert " << units::name(from) << " to " << units::name(to) << std::endl; return 1; }
+        init_input();
         return run( from, to );
     }
-    catch( std::exception& ex )
-    {
-        std::cerr << "csv-units: caught: " << ex.what() << std::endl;
-    }
-    catch( ... )
-    {
-        std::cerr << "csv-units: unknown exception" << std::endl;
-    }
+    catch( std::exception& ex ) { std::cerr << "csv-units: caught: " << ex.what() << std::endl; }
+    catch( ... ) { std::cerr << "csv-units: unknown exception" << std::endl; }
     return 1;
 }
-
