@@ -173,7 +173,7 @@ namespace units {
     // A set of number to identify the supported measurement units.
     enum et { celsius = 0,
               degrees,
-              fahrenheiht,
+              fahrenheit,
               feet,
               kelvin,
               kilograms,
@@ -241,7 +241,7 @@ namespace units {
             map["celsius"] = celsius;
             map["deg"] = degrees;
             map["degrees"] = degrees;
-            map["fahrenheit"] = fahrenheiht;
+            map["fahrenheit"] = fahrenheit;
             map["feet"] = feet;
             map["ft"] = feet;
             map["kelvin"] = kelvin;
@@ -290,11 +290,11 @@ namespace units {
             map[radians][degrees] = cast< radian_t, degree_t >;
             map[degrees][radians] = cast< degree_t, radian_t >;
             map[kelvin][celsius] = cast< kelvin_t, celsius_t >;
-            map[kelvin][fahrenheiht] = cast< kelvin_t, fahrenheit_t >;
+            map[kelvin][fahrenheit] = cast< kelvin_t, fahrenheit_t >;
             map[celsius][kelvin] = cast< celsius_t, kelvin_t >;
-            map[celsius][fahrenheiht] = cast< celsius_t, fahrenheit_t >;
-            map[fahrenheiht][kelvin] = cast< fahrenheit_t, kelvin_t >;
-            map[fahrenheiht][celsius] = cast< fahrenheit_t, celsius_t >;
+            map[celsius][fahrenheit] = cast< celsius_t, fahrenheit_t >;
+            map[fahrenheit][kelvin] = cast< fahrenheit_t, kelvin_t >;
+            map[fahrenheit][celsius] = cast< fahrenheit_t, celsius_t >;
             map[feet][nautical_miles] = cast< imperial_us_length_t, nautical_mile_t >;
             map[feet][statute_miles] = cast< imperial_us_length_t, statute_mile_t >;
             map[feet][metres] = cast< imperial_us_length_t, length_t >;
