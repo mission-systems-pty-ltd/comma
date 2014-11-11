@@ -470,6 +470,7 @@ int main( int ac, char** av )
         verbose = options.exists( "--verbose,-v" );
         csv = comma::csv::options( options );
         if( csv.fields.empty() ) { csv.fields="a"; }
+        init_input();
         boost::optional< double > scale_factor = options.optional< double >( "--scale" );
         if( scale_factor ) { return scale( *scale_factor ); }
         units::et from = units::metres; // quick and dirty: to avoid compilation warning
@@ -488,7 +489,6 @@ int main( int ac, char** av )
             from = !options.exists( "--from" ) ? to : units::value( options.value< std::string >( "--from" ) );
         }
         if( !units::can_convert( from, to ) ) { std::cerr << "csv-units: don't know how to convert " << units::name(from) << " to " << units::name(to) << std::endl; return 1; }
-        init_input();
         return run( from, to );
     }
     catch( std::exception& ex ) { std::cerr << "csv-units: caught: " << ex.what() << std::endl; }
