@@ -1,3 +1,5 @@
+#!/bin/bash
+
 function must_work()
 {
     local msg=$1
@@ -15,6 +17,6 @@ function must_fail()
 function prepare_for_match()
 {
     local path=$1
-    path="${path//\//\\\/}"
+    path=$( echo "$path" | sed --regexp-extended 's@([^\\])\/@\1\\\/@g' )
     name-value-convert --from json --to path-value | sed "s/^/$path\//;/resources/s/\"//g"
 }

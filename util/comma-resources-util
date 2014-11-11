@@ -51,6 +51,7 @@ function comma_check_pid_position()
     local path=$2
     local default_path="processes/queue"
     path=${path:-"$default_path"}
+    path=$( echo "$path" | sed --regexp-extended 's@([^\\])\/@\1\\\/@g' )
     local list
     list=$( name-value-get --from json "$path" | sed "s/^\[/ /;s/\]\$/ /;s/,/ /g" )
     if echo "$list" | grep -q " $pid " ; then
@@ -69,6 +70,7 @@ function comma_queue_is_empty()
     local path=$1
     local default_path="processes/queue"
     path=${path:-"$default_path"}
+    path=$( echo "$path" | sed --regexp-extended 's@([^\\])\/@\1\\\/@g' )
     local list
     list=$( name-value-get --from json "$path" | sed "s/^\[//;s/\]\$//;s/ //g" )
     [[ -z "$list" ]]

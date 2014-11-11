@@ -680,7 +680,7 @@ function final_words()
     failed_count=$( count_failures )
     local afterword=
     [[ "$is_killed" == "true" ]] && afterword=" (before killed)"
-    if [[ "$failed_count" == 0 ]] ; then message_ "$name: in subdirectories of $( pwd ): succeeded${afterword}" ; else error_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): $failed_count test[s] out of $test_scripts_count failed${afterword}" ; fi
+    if [[ "$failed_count" == 0 ]] ; then message_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): succeeded${afterword}" ; else error_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): $failed_count test[s] out of $test_scripts_count failed${afterword}" ; fi
     [[ "$options_debug" != "0" ]] && { echo "$name: detailed breakdown:" >&2 ; cat "$comma_test_run_output_flock" >&2; }
     rm -fr "$comma_test_run_unique_dir"
 }
