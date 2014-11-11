@@ -3,6 +3,27 @@
 source $( which comma-util ) || exit 1
 
 num_ok=0
+name=$( basename $0 )
+
+function usage()
+{
+    local skip=${name//?/ }
+    cat <<EOF
+$name: test several possible implementations of status_ok function.
+$skip  runs several command pipelines a large number of times and
+$skip  checks the exit status using different status_ok variants.
+EOF
+    exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help)  usage;;
+        -*)         echo "$name: unrecognized option '$1'" >&2; exit 1;;
+        *)          echo "$name: unexpected argument '$1'" >&2; exit 1;;
+    esac
+    shift
+done
 
 # Old-style definition
 function status_ok_1()
