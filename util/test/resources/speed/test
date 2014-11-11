@@ -49,4 +49,5 @@ count_pid=$!
 wait $count_pid
 rv=$?
 
-exit $rv
+(( rv == 124 )) && exit 0  # normally killed by timeout
+exit 1
