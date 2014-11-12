@@ -1,0 +1,4 @@
+quoted_n/expected="10.0"
+quoted_n/actual="10"
+quoted_n2/expected="10"
+quoted_n2/actual="10.0"

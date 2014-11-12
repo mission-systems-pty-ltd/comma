@@ -1,0 +1,4 @@
+unquoted_n=10.0
+quoted_n="10.0"
+unquoted_n2=10
+quoted_n2="10"

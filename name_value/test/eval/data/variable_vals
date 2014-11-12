@@ -4,3 +4,7 @@ the_name="Fred Flintstone"
 route/point[0]/name="start"
 route/point[1]/name="middle"
 route/point[2]/name="end"
+unquoted_n=10
+quoted_n="10"
+unquoted_n2=10.0
+quoted_n2="10.0"

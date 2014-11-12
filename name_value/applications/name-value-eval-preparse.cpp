@@ -525,17 +525,30 @@ void transform_special_tokens(std::vector<Token> &tokens, const std::string &fil
     transform_special_functions(tokens, filename, line_num);
 }
 
-// for convenience, recognise quoted numbers in simple expressions like x=="3" and unquote them to x==3
-// (for option --test only; option --assign already handles this)
-void unquote_numeric_rhs(std::vector<Token> &tokens)
+// to prevent confusion, if the rhs is quoted then do a string comparison, not numeric
+// (for option --test only; option --assign already handles this by unquoting numbers on the rhs)
+void force_string_comparison_if_quoted(std::vector<Token> &tokens)
 {
-    if (tokens.size() == 3 &&
-        tokens[0].type == t_id &&
-        tokens[1].type == t_operator && is_comparison_operator(tokens[1].str) &&
-        tokens[2].type == t_string)
+    if (tokens.size() == 0) { return; }
+
+    size_t offset = 0;
+    if (tokens[0].type == t_id && tokens[0].str == kwd_expect) { offset = 1; }
+
+    if (tokens.size() == offset + 3 &&
+        tokens[offset].type == t_id &&
+        tokens[offset + 1].type == t_operator && (tokens[offset + 1].str == "==" || tokens[offset + 1].str == "!=") &&
+        tokens[offset + 2].type == t_string)
     {
-        std::string unquoted_rhs = tokens[2].str.substr(1, tokens[2].str.length() - 2);
-        if (is_number(unquoted_rhs)) { tokens[2].str = unquoted_rhs; }
+        // convert x="3" to str(x)="3"
+        std::vector<Token> old_tokens = tokens;
+        tokens.clear();
+        if (offset == 1) { tokens.push_back(Token(t_id, "expect", old_tokens[0].spaces_before)); }
+        tokens.push_back(Token(t_function, "str", offset == 0 ? old_tokens[0].spaces_before : 1));
+        tokens.push_back(Token(t_operator, "("));
+        tokens.push_back(Token(t_id, old_tokens[offset].str));
+        tokens.push_back(Token(t_operator, ")"));
+        tokens.push_back(old_tokens[offset+1]);
+        tokens.push_back(old_tokens[offset+2]);
     }
 }
 
@@ -683,7 +696,7 @@ void tokenise(const std::string &line, const std::string &filename, int line_num
         if (tokens.size() == 2 && tokens[1].str == "=") { tokens.push_back(Token(t_string, "''", 0)); }
     }
 
-    if (opt.test) { unquote_numeric_rhs(tokens); }
+    if (opt.test) { force_string_comparison_if_quoted(tokens); }
 
     if (opt.command)
     {
