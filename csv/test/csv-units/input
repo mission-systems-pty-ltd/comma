@@ -1,0 +1,15 @@
+default[0]/command="echo 1 | csv-units --from feet"
+default[1]/command="echo 0.3048 | csv-units --to feet"
+default[2]/command="echo 1 | csv-units"
+
+scale[0]/command="echo 1 | csv-units --scale 2"
+scale[1]/command="echo 1,2 | csv-units --scale 2"
+scale[2]/command="echo 1,2 | csv-units --scale 2 --fields a,b"
+
+units_fields[0]/command="echo test,1,1,kelvin | csv-units --from=celsius --to=kelvin --fields=,x,y/value,y/units"
+units_fields[1]/command="echo test,1,1,celsius | csv-units --from=celsius --to=kelvin --fields=,x,y/value,y/units"
+units_fields[2]/command="echo test,1,1,fahrenheit | csv-units --from=celsius --to=kelvin --fields=,x,y/value,y/units"
+
+units_fields[3]/command="echo test,1,1,kelvin | csv-units --from=kelvin --to=celsius --fields=,x,y/value,y/units"
+units_fields[4]/command="echo test,1,1,celsius | csv-units --from=kelvin --to=celsius --fields=,x,y/value,y/units"
+units_fields[5]/command="echo test,1,1,fahrenheit | csv-units --from=kelvin --to=celsius --fields=,x,y/value,y/units"
