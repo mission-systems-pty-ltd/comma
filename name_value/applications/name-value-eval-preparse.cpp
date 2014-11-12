@@ -305,15 +305,16 @@ bool is_number(const std::string &str)
         while (std::isdigit(char_at(str, pos))) { ++pos; any_digits = true; }
     }
 
-    // check for scientific notation
+    // check for scientific notation e.g. 3.2e+34, -1e99, 0.01e-45
     if (any_digits && std::tolower(char_at(str, pos)) == 'e')
     {
         size_t pos2 = pos + 1;
-        if (char_at(str, pos2) == '+' || char_at(str, pos2) == '-')
+        any_digits = false;
+        if (char_at(str, pos2) == '+' || char_at(str, pos2) == '-') { ++pos2; }
+        if (std::isdigit(char_at(str, pos2)))
         {
-            ++pos2;
-            if (std::isdigit(char_at(str, pos2)))
-            { for (pos = pos2 + 1;std::isdigit(char_at(str, pos));++pos) { } }
+            any_digits = true;
+            for (pos = pos2 + 1;std::isdigit(char_at(str, pos));++pos) { }
         }
     }
 
@@ -333,6 +334,12 @@ bool is_keyword(const std::string &str)
     for (size_t n = 0;python_keyword[n];++n) { if (str == python_keyword[n]) return true; }
     return false;
 }
+
+bool is_comparison_operator(const std::string &op)
+{
+    return op == "==" || op == "!=" || op == "<" || op == "<=" || op == ">" || op == ">=";
+}
+
 
 // transform an id so that it has no special characters ("/" "[" or "]")
 std::string mangle_id(const std::string &id)
@@ -518,6 +525,20 @@ void transform_special_tokens(std::vector<Token> &tokens, const std::string &fil
     transform_special_functions(tokens, filename, line_num);
 }
 
+// for convenience, recognise quoted numbers in simple expressions like x=="3" and unquote them to x==3
+// (for option --test only; option --assign already handles this)
+void unquote_numeric_rhs(std::vector<Token> &tokens)
+{
+    if (tokens.size() == 3 &&
+        tokens[0].type == t_id &&
+        tokens[1].type == t_operator && is_comparison_operator(tokens[1].str) &&
+        tokens[2].type == t_string)
+    {
+        std::string unquoted_rhs = tokens[2].str.substr(1, tokens[2].str.length() - 2);
+        if (is_number(unquoted_rhs)) { tokens[2].str = unquoted_rhs; }
+    }
+}
+
 // get the index of the first token with a particular type and value
 // Returns -1 if the token is not in the vector
 int find_token(const std::vector<Token> &tokens, token_type type, const std::string &val)
@@ -661,6 +682,8 @@ void tokenise(const std::string &line, const std::string &filename, int line_num
         // transform var= into var=''
         if (tokens.size() == 2 && tokens[1].str == "=") { tokens.push_back(Token(t_string, "''", 0)); }
     }
+
+    if (opt.test) { unquote_numeric_rhs(tokens); }
 
     if (opt.command)
     {
