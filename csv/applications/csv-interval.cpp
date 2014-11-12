@@ -353,7 +353,6 @@ struct intervals
 
     void run()
     {
-        if( debug ) { std::cerr << __PRETTY_FUNCTION__ << std::endl; }
         comma::csv::input_stream< interval_t< From, To > > istream( std::cin, csv );
         comma::csv::ascii< interval_t< std::string > > ascii( csv.fields );
 
