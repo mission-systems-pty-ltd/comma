@@ -1,6 +1,6 @@
-default[0]/command="echo 1 | csv-units --from feet"
-default[1]/command="echo 0.3048 | csv-units --to feet"
-default[2]/command="echo 1 | csv-units"
+default_units[0]/command="echo 1 | csv-units --from feet"
+default_units[1]/command="echo 0.3048 | csv-units --to feet"
+default_units[2]/command="echo 1 | csv-units"
 
 scale[0]/command="echo 1 | csv-units --scale 2"
 scale[1]/command="echo 1,2 | csv-units --scale 2"

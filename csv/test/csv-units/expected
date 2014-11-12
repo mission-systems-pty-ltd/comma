@@ -1,9 +1,9 @@
-default[0]/output="0.3048"
-default[0]/status=1
-default[1]/output="1"
-default[1]/status=1
-default[2]/output=""
-default[2]/status=0
+default_units[0]/output="0.3048"
+default_units[0]/status=1
+default_units[1]/output="1"
+default_units[1]/status=1
+default_units[2]/output=""
+default_units[2]/status=0
 
 scale[0]/output="2"
 scale[0]/status=1
