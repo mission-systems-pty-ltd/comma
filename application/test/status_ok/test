@@ -19,9 +19,12 @@ EOF
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        -h|--help)  usage;;
-        -*)         echo "$name: unrecognized option '$1'" >&2; exit 1;;
-        *)          echo "$name: unexpected argument '$1'" >&2; exit 1;;
+        -h|--help)      usage;;
+        -p=*|--path=*)  :;;
+        -v|--verbose)   :;;
+        -d|--debug)     :;;
+        -*)             echo "$name: unrecognized option '$1'" >&2; exit 1;;
+        *)              echo "$name: unexpected argument '$1'" >&2; exit 1;;
     esac
     shift
 done
