@@ -165,5 +165,8 @@ for iok in $( seq $num_ok ) ; do
     test_script="$output_dir/test_${iok}"
     timer="$output_dir/time${iok}"
     /usr/bin/time -f "%e" -o "$timer" "$test_script"
+    rv=$?
+    (( rv > 127 )) && { kill -$(( rv - 128 )) $BASHPID ; }
+    (( rv == 0 )) || exit 1
     echo "test[$iok]/time/elapsed=$( cat $timer )"
 done
