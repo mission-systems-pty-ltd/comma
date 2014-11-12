@@ -1,0 +1,14 @@
+#!/bin/bash
+
+name-value-calc data/small.json  data/large.json  --less --json                       | sed 's@^@less/small/large=@'
+name-value-calc data/mixed.json  data/medium.json --less --json                       | sed 's@^@less/mixed/medium=@'
+name-value-calc data/medium.json data/mixed.json  --less --json                       | sed 's@^@less/medium/mixed=@'
+name-value-calc data/medium.json data/large.json  --less --json                       | sed 's@^@less/medium/large=@'
+name-value-calc data/large.json  data/medium.json --less --json                       | sed 's@^@less/large/medium=@'
+name-value-calc data/string1.pv  data/string2.pv  --sub | cat -n                      | sed 's@^  *@sub/string[@;s@\t@]=@'   | sed "s@=@='@;s@\$@'@"
+name-value-calc data/string1.pv  data/string2.pv  --sub  --strict --exclude 'bar'     | sed 's@^@sub/strict/exclude/word=@'  | sed "s@=@='@;s@\$@'@"
+name-value-calc data/string1.pv  data/string2.pv  --sub  --strict --exclude 'bar/'    | sed 's@^@sub/strict/exclude/slash=@' | sed "s@=@='@;s@\$@'@"
+name-value-calc data/string1.pv  data/string2.pv  --sub  --strict --exclude 'bar/baz' | sed 's@^@sub/strict/exclude/path=@'  | sed "s@=@='@;s@\$@'@"
+name-value-calc data/small.json  data/large.json  --less --json             | wc -l   | sed 's@^@less/count=@'
+name-value-calc data/small.json  data/large.json  --less --json  --detailed | wc -l   | sed 's@^@less/detailed/count=@'
+name-value-calc data/string1.pv  data/string2.pv  --sub  --strict ; echo $?           | sed 's@^@sub/strict/string/status=@'

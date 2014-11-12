@@ -1,0 +1,13 @@
+less/small/large = 1
+less/mixed/medium = 0
+less/medium/mixed = 0
+less/medium/large = 1
+less/large/medium = 0
+sub/string[1] = 'foo="-1"'
+sub/string[2] = 'bar/baz="string1"'
+sub/strict/exclude/word = 'foo="-1"'
+sub/strict/exclude/slash = 'foo="-1"'
+sub/strict/exclude/path = 'foo="-1"'
+less/count = 1
+less/detailed/count = 10
+sub/strict/string/status = 1
