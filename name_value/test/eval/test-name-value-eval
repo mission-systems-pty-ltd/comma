@@ -14,7 +14,7 @@ unset stdout stderr
 trap 'bye 1' SIGTERM SIGINT
 
 if [[ $name = */* ]]; then dir="${name%/*}"; else dir="."; fi
-data_dir="$dir/data/name_value_eval_data"
+data_dir="$dir/data"
 
 if [[ ! -d "$data_dir" ]]; then
     echo "$name: cannot find data directory $data_dir" >&2
