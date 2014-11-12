@@ -32,7 +32,7 @@ IF(NOT CMAKE_BUILD_TYPE)
       FORCE)
 ENDIF(NOT CMAKE_BUILD_TYPE)
 
-IF(CMAKE_BUILD_TOOL MATCHES "(msdev|devenv|nmake|VCExpress)")
+IF(WIN32)
   SET(CMAKE_CXX_WARNING_LEVEL 4)
   IF(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
     STRING(REGEX REPLACE "/W[0-4]" "/W4" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
@@ -46,8 +46,8 @@ IF(CMAKE_BUILD_TOOL MATCHES "(msdev|devenv|nmake|VCExpress)")
   ADD_DEFINITIONS(/wd4244)
   SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D \"NOMINMAX\"")
   ADD_DEFINITIONS(-D_USE_MATH_DEFINES)
-  SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D \"NOMINMAX\"")
-ENDIF(CMAKE_BUILD_TOOL MATCHES "(msdev|devenv|nmake|VCExpress)")
+  ADD_DEFINITIONS(-DWIN32_LEAN_AND_MEAN) #used to fix winsock redefinition error
+ENDIF(WIN32)
 
 IF( CMAKE_SIZEOF_VOID_P EQUAL 8 )
   SET( IS_64_BIT TRUE )
@@ -216,23 +216,23 @@ if( comma_BUILD_XML )
 endif( comma_BUILD_XML )
 add_subdirectory( xpath )
 
-#IF( WIN32 )
-    #in future, may need to add third party dlls somehow, if they are linked as dlls. Not needed for statically linking to boost.
-    #if we set them up to install to bin they might be packaged through, e.g. roughly (using GLOB):
-    #install(FILES "${Boost_LIBRARY_DIRS}/*.dll" DESTINATION bin )
 
-    #the following set up optional parameters for cpack
-    SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Command line utilities to manipulate various structured and unstructured data from offline or real time data.")
-    SET(CPACK_PACKAGE_VENDOR "Australian Centre for Field Robotics")
-    SET(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/COPYING")
-    SET(CPACK_PACKAGE_VERSION_MAJOR "1")
-    SET(CPACK_PACKAGE_VERSION_MINOR "0")
-    SET(CPACK_PACKAGE_VERSION_PATCH ${COMMITDATE})
-	SET(CPACK_PACKAGE_CONTACT "t.teo@acfr.usyd.edu.au")
+#in future, may need to add third party dlls somehow, if they are linked as dlls. Not needed for statically linking to boost.
+#if we set them up to install to bin they might be packaged through, e.g. roughly (using GLOB):
+#install(FILES "${Boost_LIBRARY_DIRS}/*.dll" DESTINATION bin )
 
-    #this line finds the appropriate Visual Studio DLLS in windows. Maybe it would find other dlls if a different build tool were used. Probably should be windows only.
-    INCLUDE( InstallRequiredSystemLibraries )
+#the following set up optional parameters for cpack
+SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Command line utilities to manipulate various structured and unstructured data from offline or real time data.")
+SET(CPACK_PACKAGE_VENDOR "Australian Centre for Field Robotics")
+SET(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/COPYING")
+SET(CPACK_PACKAGE_VERSION_MAJOR "1")
+SET(CPACK_PACKAGE_VERSION_MINOR "0")
+SET(CPACK_PACKAGE_VERSION_PATCH ${COMMITDATE})
+SET(CPACK_PACKAGE_CONTACT "t.teo@acfr.usyd.edu.au")
 
-    #this line does all the work. Actually, even if this is the only line, you get all but the dlls...
-    INCLUDE( CPack )
-#ENDIF( WIN32 )
+#this line finds the appropriate Visual Studio DLLS in windows. Maybe it would find other dlls if a different build tool were used. Probably should be windows only.
+INCLUDE( InstallRequiredSystemLibraries )
+
+#this line does all the work. Actually, even if this is the only line, you get all but the dlls...
+INCLUDE( CPack )
+
