@@ -142,7 +142,7 @@ cat $input_tmp | while read line || [[ -n $line ]]; do
 
     if ! echo $nodes_done | grep -q "\b$target\b"; then
         [[ $scaled_object == "node" ]] && node_size_field="fixedsize=$fixedsize_option width=$size fontsize=$fontsize"
-        echo -e "\t$( nodename $target ) [label=\"$target\n($node_value_label)\" shape=circle $node_size_field ]"
+        echo -e "\t$( nodename $target ) [label=\"$target ($node_value_label)\" shape=circle $node_size_field ]"
         nodes_done+=" $target"
     fi
 
