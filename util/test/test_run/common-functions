@@ -1,0 +1,23 @@
+#!/bin/bash
+
+function format_tests_per_directory()
+{
+    # takes a typical log of comma-test-run for the its own tests (the tests are assumed
+    # to print their own name to stderr) on stdin
+    # mangle the log to print a list of which test script was invoked in a given directory
+    # directory name becomes the path and the script name the value in path=value format
+    # brief explanation of all the sed actions:
+    # - delete the comma-test-run prefix
+    # - for lines ending with 'running...' join the next line
+    # - delete all up to the first ':' and a bit more (leading './')
+    # - delete from the (next) ':' and up to 'called', insert '="' instead
+    # - remove the closing '}', insert '"' instead
+    # - remove lines that contain success statement (do not bother with failure, if any test fails
+    #   we bomb out earlier)
+    # - one of the test needs a suffix, just to please comma-test-match
+    sed 's@^comma-test-run: @@' | \
+        sed '/running...$/N;s@^[^:]*: ./@@;s@:.*{called @="@;s@}$@"@' | \
+        sed '/succeeded/d' | \
+        sed 's@dir5/subdir3=@dir5/subdir3/here=@'
+}
+export -f format_tests_per_directory
