@@ -28,6 +28,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --tmpdir=*)   tmpdir="${1#*=}";;
         -v|--verbose) verbose=1;;
+        -p=*|--path=*) :;;
         -*)           echo "$name: unrecognized option '$1'" >&2; exit 1;;
         *)            echo "$name: unexpected argument '$1'" >&2; exit 1;;
     esac
@@ -59,14 +60,9 @@ for input in $data_dir/input*; do
     else
         (( ++pass_count ))
         if (( verbose )); then echo "$name: test $suffix passed" >&2; fi
+        echo $(basename "$input" )"=\"pass\""
     fi
 done
 
-if [[ $fail_count == 0 ]]; then
-    echo "$name: all $total_count tests passed" >&2
-    bye 0
-else
-    echo "$name: $pass_count/$total_count test(s) passed" >&2
-    bye 1
-fi
-
+echo "count/total=$total_count"
+echo "count/pass=$pass_count"
