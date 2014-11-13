@@ -41,20 +41,18 @@ function worker()
 {
     local apid apgid arv
     trap 'handler' SIGINT SIGTERM
-    setsid "$app" > "${app}.log" 2>&1 &
-    apid=$!
+    ( setsid "$app" > "${app}.log" 2>&1 ) & apid=$!
     apgid=$( ps -o pgid $apid | tail -n 1 )
     apgid=$( echo $apgid ) # get rid of spaces for PIDs < 10000
-    wait
-    arv=$?
-    return $arv
+    echo "Application running as PID $apid, group $apgid..."
+    wait $apid
+    return $?
 }
 
 function run_once()
 {
-    >"$log"
-    worker > "worker.log" 2>&1 &
-    wpid=$!
+    echo "Test is running as PID $ownpid, PGID $ownpgid" > "$log"
+    worker > "worker.log" 2>&1 & wpid=$!
     echo "Worker running as PID $wpid..." >> "$log"
 
     sleep 2
@@ -78,6 +76,10 @@ function run_once()
 
     echo "count[$iter]=$count"
 }
+
+ownpid=$BASHPID
+ownpgid=$( ps -o pgid $ownpid | tail -n 1 )
+ownpgid=$( echo $ownpgid ) # get rid of spaces for PIDs < 10000
 
 for iter in $( seq 100 ) ; do
     mkdir -p "$iter" || exit 1
