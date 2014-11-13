@@ -36,6 +36,7 @@
 
 #include <iostream>
 #include <boost/array.hpp>
+#include <boost/bind.hpp>
 #include <boost/unordered/unordered_map.hpp>
 
 #include <boost/units/systems/si.hpp>
@@ -78,10 +79,12 @@ static void usage(char const * const txt = "")
         "\n"
         "\nSupported Units:"
         "\n    metres / feet / statute-miles / nautical-miles "
-        "\n    kilograms / pounds "
-        "\n    meters-per-second / knots "
-        "\n    kelvin / celsius / fahrenheit "
-        "\n    radians / degrees "
+        "\n    kilograms / pounds"
+        "\n    meters-per-second / knots"
+        "\n    kelvin / celsius / fahrenheit"
+        "\n    radians / degrees"
+        "\n    hours / minutes / seconds"
+        "\n    percent / fraction"
         "\n"
         "\n    any case is supoorted and so are abbreviations"
         "\n         meters, metres, m"
@@ -90,6 +93,11 @@ static void usage(char const * const txt = "")
         "\n         nautical-miles, nm"
         "\n         radians, rad"
         "\n         degrees, deg"
+        "\n         hours"
+        "\n         minuts, min"
+        "\n         seconds, sec"
+        "\n         percent"
+        "\n         fraction"
         "\n"
         "\ndata driven"
         "\n    This program can be configured to read the --from units from the input data."
@@ -128,38 +136,40 @@ typedef boost::units::absolute< boost::units::fahrenheit::temperature > fahrenhe
 
 /// Converts the given value between the two template measurement units 
 template < typename From, typename To >
-double cast( const double input )
+double cast( double input )
 {
     typedef boost::units::quantity< From > from_quantity_t;
     typedef boost::units::quantity< To > to_quantity_t;
     return static_cast< to_quantity_t >( from_quantity_t( input * From() ) ).value();
 }
 
-double null_cast( const double input ) { return input; }
-template double cast< imperial_us_mass_t, mass_t >( const double );
-template double cast< mass_t, imperial_us_mass_t >( const double );
-template double cast< imperial_us_length_t, nautical_mile_t >( const double );
-template double cast< imperial_us_length_t, statute_mile_t >( const double );
-template double cast< imperial_us_length_t, length_t >( const double );
-template double cast< length_t, nautical_mile_t >( const double );
-template double cast< length_t, statute_mile_t >( const double );
-template double cast< length_t, imperial_us_length_t >( const double );
-template double cast< nautical_mile_t, imperial_us_length_t >( const double );
-template double cast< nautical_mile_t, statute_mile_t >( const double );
-template double cast< nautical_mile_t, length_t >( const double );
-template double cast< statute_mile_t, imperial_us_length_t >( const double );
-template double cast< statute_mile_t, nautical_mile_t >( const double );
-template double cast< statute_mile_t, length_t >( const double );
-template double cast< velocity_t, knot_t >( const double );
-template double cast< knot_t, velocity_t >( const double );
-template double cast< radian_t, degree_t >( const double );
-template double cast< degree_t, radian_t >( const double );
-template double cast< kelvin_t, fahrenheit_t >( const double );
-template double cast< kelvin_t, celsius_t >( const double );
-template double cast< celsius_t, fahrenheit_t >( const double );
-template double cast< celsius_t, kelvin_t >( const double );
-template double cast< fahrenheit_t, kelvin_t >( const double );
-template double cast< fahrenheit_t, celsius_t >( const double );
+double scale( double input, double factor ) { return input * factor; }
+
+double null_cast( double input ) { return input; }
+template double cast< imperial_us_mass_t, mass_t >( double );
+template double cast< mass_t, imperial_us_mass_t >( double );
+template double cast< imperial_us_length_t, nautical_mile_t >( double );
+template double cast< imperial_us_length_t, statute_mile_t >( double );
+template double cast< imperial_us_length_t, length_t >( double );
+template double cast< length_t, nautical_mile_t >( double );
+template double cast< length_t, statute_mile_t >( double );
+template double cast< length_t, imperial_us_length_t >( double );
+template double cast< nautical_mile_t, imperial_us_length_t >( double );
+template double cast< nautical_mile_t, statute_mile_t >( double );
+template double cast< nautical_mile_t, length_t >( double );
+template double cast< statute_mile_t, imperial_us_length_t >( double );
+template double cast< statute_mile_t, nautical_mile_t >( double );
+template double cast< statute_mile_t, length_t >( double );
+template double cast< velocity_t, knot_t >( double );
+template double cast< knot_t, velocity_t >( double );
+template double cast< radian_t, degree_t >( double );
+template double cast< degree_t, radian_t >( double );
+template double cast< kelvin_t, fahrenheit_t >( double );
+template double cast< kelvin_t, celsius_t >( double );
+template double cast< celsius_t, fahrenheit_t >( double );
+template double cast< celsius_t, kelvin_t >( double );
+template double cast< fahrenheit_t, kelvin_t >( double );
+template double cast< fahrenheit_t, celsius_t >( double );
 
 static std::string to_lower( const std::string& s )
 {
@@ -184,6 +194,11 @@ namespace units {
               pounds,
               radians,
               statute_miles,
+              hours,
+              minutes,
+              seconds,
+              percent,
+              fraction,
               count,
               invalid
     };
@@ -200,7 +215,13 @@ namespace units {
                                                , metres
                                                , kilograms
                                                , radians
-                                               , metres }};
+                                               , metres
+                                               , seconds
+                                               , seconds
+                                               , seconds
+                                               , fraction
+                                               , fraction
+    }};
 
     /// Retrieve a human readable canonical name for the given number. Supports
     /// the extra two internal numbers (count and invalid) for diagnostics.
@@ -221,6 +242,11 @@ namespace units {
                 "pounds",
                 "radians",
                 "statute_miles",
+                "hours",
+                "minutes",
+                "seconds",
+                "percent",
+                "fraction",
                 "count",
                 "invalid"
             };
@@ -261,6 +287,13 @@ namespace units {
             map["radians"] = radians;
             map["rad"] = radians;
             map["statute-miles"] = statute_miles;
+            map["hours"] = hours;
+            map["minutes"] = minutes;
+            map["min"] = minutes;
+            map["seconds"] = seconds;
+            map["sec"] = seconds;
+            map["percent"] = percent;
+            map["fraction"] = fraction;
         }
         map_t::const_iterator const citr = map.find( to_lower(str) );
         if( map.cend() != citr ) { return citr->second; }
@@ -268,12 +301,13 @@ namespace units {
     }
     
     /// A type to allow a lookup table for converting units
-    typedef double (* cast_function)( const double );
+    //typedef double (* cast_function)( double );
+    typedef boost::function< double( double ) > cast_function;
     
     /// Retrieve a function that will convert between the two given
     /// measurement units.
     /// @returns NULL if the conversion is not supported.
-    cast_function cast_lookup( const et from, const et to )
+    cast_function cast_lookup( const et from, const et to ) // quick and dirty
     {
         if ( from < 0 || from >= count ) { COMMA_THROW( comma::exception, "can not cast lookup for invalid unit (from) " << from ); }
         if ( to < 0 || to >= count ) { COMMA_THROW( comma::exception, "can not cast lookup for invalid unit (to) " << to ); }        
@@ -307,6 +341,14 @@ namespace units {
             map[metres][feet] = cast< length_t, imperial_us_length_t >;
             map[metres][nautical_miles] = cast< length_t, nautical_mile_t >;
             map[metres][statute_miles] = cast< length_t, statute_mile_t >;
+            map[hours][minutes] = boost::bind( &scale, _1, 60.0 );
+            map[hours][seconds] = boost::bind( &scale, _1, 3600.0 );
+            map[minutes][seconds] = boost::bind( &scale, _1, 60.0 );
+            map[minutes][hours] = boost::bind( &scale, _1, 1.0 / 60.0 );
+            map[seconds][hours] = boost::bind( &scale, _1, 1.0 / 3600.0 );
+            map[seconds][minutes] = boost::bind( &scale, _1, 1.0 / 60.0 );
+            map[percent][fraction] = boost::bind( &scale, _1, 0.01 );
+            map[fraction][percent] = boost::bind( &scale, _1, 100.0 );
         }
         return map[from][to];
     }
