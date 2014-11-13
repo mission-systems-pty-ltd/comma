@@ -40,7 +40,8 @@ Input:
 
 Examples:
 
-    The output can most usefully be piped into dot.
+    The output can most usefully be piped into dot. The optimum format for
+    dot is svg or svgz.
 
     cat elapsed.path_value | $basename | dot -Tsvg > profile.svg
     cat elapsed.path_value | $basename --strict-size | dot -Tsvg > profile.svg
