@@ -1,0 +1,34 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+read options
+
+function handle()
+{
+    [[ -n "$workdir" ]] && rm -rf "$workdir"
+}
+
+trap 'handle' EXIT
+
+output_dir="output"
+rm -rf "$output_dir" || exit 1
+mkdir -p "$output_dir" || exit 1
+output_dir=$( realpath "$output_dir" )
+
+tarball="../../data/limits.tar"
+[[ -f "$tarball" ]] || {
+    echo "$name: file '$tarball' not found" >&2
+    exit 1
+}
+tarball=$( realpath "$tarball" )
+
+workdir=$( mktemp --directory )
+cd "$workdir"
+tar xf "$tarball" || exit 1
+cd limits || exit 1
+
+comma-test-run --dry $options $@ > "$output_dir/log" 2>&1
+(( $? == 0 )) || exit 1
+
+echo "directories=\"$( cat "$output_dir/log" | tr '\n' ' ' | sed 's/[ ]$//g' )\""

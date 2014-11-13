@@ -1,0 +1,34 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+source "../common-functions" || exit 1
+
+function handle()
+{
+    [[ -n "$workdir" ]] && rm -rf "$workdir"
+}
+
+trap 'handle' EXIT
+
+output_dir="output"
+rm -rf "$output_dir" || exit 1
+mkdir -p "$output_dir" || exit 1
+output_dir=$( realpath "$output_dir" )
+
+tarball="../data/sample.tar"
+[[ -f "$tarball" ]] || {
+    echo "$name: file '$tarball' not found" >&2
+    exit 1
+}
+tarball=$( realpath "$tarball" )
+
+workdir=$( mktemp --directory )
+cd "$workdir"
+tar xf "$tarball" || exit 1
+cd sample || exit 1
+comma-test-run --raw --white-list=white.list --black-list=black.list $@ > "$output_dir/log" 2>&1
+(( $? == 0 )) || exit 1
+
+cat "$output_dir/log" | sed '1,3d;$d' | format_tests_per_directory
+exit $?

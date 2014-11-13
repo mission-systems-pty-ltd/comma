@@ -1,2 +1,0 @@
-echo "{called generic test}" >&2
-echo 'result="generic result"'
