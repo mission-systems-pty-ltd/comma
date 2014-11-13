@@ -41,7 +41,9 @@ function worker()
 {
     local apid apgid arv
     trap 'handler' SIGINT SIGTERM
-    ( setsid "$app" > "${app}.log" 2>&1 ) & apid=$!
+    # just an arbitrary long time; timeout runs its argument in a separate process group
+    # and, from experience, does it very reliably as opposed to explicit setgid calls
+    timeout -k 10 -s TERM 36000 "$app" > "${app}.log" 2>&1 & apid=$!
     apgid=$( ps -o pgid $apid | tail -n 1 )
     apgid=$( echo $apgid ) # get rid of spaces for PIDs < 10000
     echo "Application running as PID $apid, group $apgid..."
