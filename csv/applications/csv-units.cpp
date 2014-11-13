@@ -220,8 +220,7 @@ namespace units {
                                                , seconds
                                                , seconds
                                                , fraction
-                                               , fraction
-    }};
+                                               , fraction }};
 
     /// Retrieve a human readable canonical name for the given number. Supports
     /// the extra two internal numbers (count and invalid) for diagnostics.
