@@ -1,2 +1,0 @@
-echo "{called ignored1/test}" >&2
-echo 'result="ignored1 result"'
