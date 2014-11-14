@@ -1,0 +1,5 @@
+This test is VERY resource-hungry, in particular, it consumes almost all
+available process ids. Do not attempt to run anything in parallel with this
+test. You may also have limited success in attempting to kill it by Ctrl-C.
+Just wait for the test to complete, or forcefully end the terminal session
+where it is running.
