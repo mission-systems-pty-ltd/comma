@@ -1,0 +1,43 @@
+#!/bin/bash
+
+[[ -z "$comma_test_util_include_guard_" ]] || return
+readonly comma_test_util_include_guard_=1
+
+# a helper to write tests in the comma-test-run style
+#
+# take line by line on stdin: <test name>="<command>"
+#
+# e.g:
+#
+# my_basic_test[0]/for/something="echo 1 | csv-units --scale 2"
+#
+# expect that <command> will output not more than 1 line
+#
+# output:
+#     <test name>/output="<output>"
+#     <test name>/status="<status>"
+#
+# e.g:
+# 
+# source $( which comma-test-util )
+# echo "my_basic_test[0]/for/something=\"echo 1 | csv-units --scale 2\"" | comma_test_commands
+# my_basic_test[0]/for/something/output="2"
+# my_basic_test[0]/for/something/output=0
+#
+function comma_test_commands()
+{
+    local key
+    local value
+    local status
+    local output    
+    while IFS='=' read key value ; do
+        value="${value/#\"}"
+        value="${value/%\"}"
+        output="$( eval "$value" 2>/dev/null || exit 1 )"
+        status="$?"
+        echo "$key/output=\"$output\""
+        echo "$key/status=$status"
+    done < <( grep '=' ; grep -v '^#' )
+}
+
+#export -f comma_test_commands
