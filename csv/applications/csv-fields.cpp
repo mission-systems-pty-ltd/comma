@@ -56,15 +56,31 @@ static void usage()
     std::cerr << "                        to keep it consistent with linux cut utility" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    clear: clear some of the field values" << std::endl;
-    std::cerr << "        --keep,--except=<fields>: keep given fields, e.g: echo a,b,c | csv-fields clear --keep=a,c outputs a,,c" << std::endl;
-    std::cerr << "        --mask=<fields>: keep given fields by position, e.g: echo a,b,c | csv-fields clear --keep=x,,y outputs a,,c" << std::endl;
+    std::cerr << "        --keep,--except=<fields>: keep given fields by name" << std::endl;
+    std::cerr << "        --mask=<fields>: keep given fields by position" << std::endl;
+    std::cerr << "        --remove=<fields>: remove given fields by name, opposite of --keep" << std::endl;
+    std::cerr << "        --inverted-mask,--complement-mask,--unmask,--unmasked=<fields>: remove given fields by position, opposite of --mask" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
-    std::cerr << "    echo \"hello,,,,world\" | csv-fields" << std::endl;
-    std::cerr << "    1,5" << std::endl;
+    std::cerr << "    numbers" << std::endl;
+    std::cerr << "        echo \"hello,,,,world\" | csv-fields" << std::endl;
+    std::cerr << "        1,5" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    echo 1,2,3 | cut -d, -f$( echo ,,world | csv-fields )" << std::endl;
-    std::cerr << "    1,5" << std::endl;
+    std::cerr << "        echo 1,2,3 | cut -d, -f$( echo ,,world | csv-fields )" << std::endl;
+    std::cerr << "        3" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    clear" << std::endl;
+    std::cerr << "        mask/unmask first and third field:" << std::endl;
+    std::cerr << "        echo a,b,c,d | csv-fields clear --mask X,,Y" << std::endl;
+    std::cerr << "        echo a,,c" << std::endl;
+    std::cerr << "        echo a,b,c,d | csv-fields clear --unmask X,,Y" << std::endl;
+    std::cerr << "        echo ,b,,d" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "        clear fields by name:" << std::endl;
+    std::cerr << "        echo a,b,c,d | csv-fields clear --except a,b" << std::endl;
+    std::cerr << "        echo a,b,," << std::endl;
+    std::cerr << "        echo a,b,c,d | csv-fields clear --remove a,b" << std::endl;
+    std::cerr << "        echo ,,c,d" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -97,12 +113,14 @@ int main( int ac, char** av )
         }
         else if( operation == "clear" )
         {
-            options.assert_mutually_exclusive( "--except,--keep,--mask" );
+            options.assert_mutually_exclusive( "--except,--keep,--mask,--remove,--inverted-mask,--complement-mask,--unmask,--unmasked" );
             std::string keep = options.value< std::string >( "--keep,--except", "" );
+            std::string remove = options.value< std::string >( "--remove", "" );
             std::string mask = options.value< std::string >( "--mask", "" );
-            if( !keep.empty() )
+            std::string unmasked = options.value< std::string >( "--inverted-mask,--complement-mask,--unmask,--unmasked", "" );
+            if( !keep.empty() || !remove.empty() )
             {
-                const std::vector< std::string >& k = comma::split( keep, ',' );
+                const std::vector< std::string >& k = comma::split( keep.empty() ? remove : keep, ',' );
                 std::set< std::string > keys;
                 for( unsigned int i = 0; i < k.size(); ++i ) { if( !k[i].empty() ) { keys.insert( k[i] ); } }
                 const std::vector< std::string >& v = comma::split( line, ',' );
@@ -110,25 +128,26 @@ int main( int ac, char** av )
                 for( unsigned int i = 0; i < v.size(); ++i )
                 {
                     std::cout << comma;
-                    if( !v[i].empty() && keys.find( v[i] ) != keys.end() ) { std::cout << v[i]; }
+                    if( !v[i].empty() && keep.empty() != ( keys.find( v[i] ) != keys.end() ) ) { std::cout << v[i]; }
                     comma = ",";
                 }
             }
-            else if( !mask.empty() )
+            else if( !mask.empty() || !unmasked.empty() )
             {
-                const std::vector< std::string >& k = comma::split( mask, ',' );
+                const std::vector< std::string >& k = comma::split( mask.empty() ? unmasked : mask, ',' );
                 const std::vector< std::string >& v = comma::split( line, ',' );
                 std::string comma;
                 for( unsigned int i = 0; i < v.size() && i < k.size(); ++i )
                 {
                     std::cout << comma;
-                    if( !k[i].empty() ) { std::cout << v[i]; }
+                    if( mask.empty() == k[i].empty() ) { std::cout << v[i]; }
                     comma = ",";
                 }
+                for( unsigned int i = k.size(); i < v.size(); ++i ) { std::cout << comma << v[i]; }
             }
             else
             {
-                std::cerr << "csv-fields: for clear, please specify --keep or --mask" << std::endl;
+                std::cerr << "csv-fields: for clear, please specify --keep, --mask, or --fields" << std::endl;
                 return 1;
             }
         }
