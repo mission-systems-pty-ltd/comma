@@ -56,15 +56,15 @@
 static void usage( bool more )
 {
     std::cerr << std::endl;
-    std::cerr << "join two csv files or streams by one or several keys (integer only for now)" << std::endl;
+    std::cerr << "Join two csv files or streams by one or several keys" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "usage: cat something.csv csv-join \"something_else.csv[,options]\" [<options>]" << std::endl;
+    std::cerr << "Usage: cat something.csv csv-join \"something_else.csv[,options]\" [<options>]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    fields:" << std::endl;
     std::cerr << "        block: block number" << std::endl;
     std::cerr << "        any other field names: keys" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "options:" << std::endl;
+    std::cerr << "Options:" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
     std::cerr << "    --first-matching: output only the first matching record (a bit of hack for now, but we needed it)" << std::endl;
     std::cerr << "    --not-matching: not matching records as read from stdin, no join performed" << std::endl;
