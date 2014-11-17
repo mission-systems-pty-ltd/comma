@@ -7,6 +7,9 @@ function usage()
     echo >&2
     echo "usage: data.csv | name-value-from-csv <fields> [<options>]" >&2
     echo >&2
+    echo "limitations: currently, white spaces, semicolons, and unescaped line breaks" >&2
+    echo "             in values are not supported" >&2
+    echo >&2
     echo "options" >&2
     echo "    --output-line-number,--line-number,-n: output line numbers (see examples)" >&2
     echo "    --no-brackets: use with --line-number option above, it does not output line numbers in square brackets." >&2
