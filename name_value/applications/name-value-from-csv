@@ -7,7 +7,7 @@ function usage()
     echo >&2
     echo "usage: data.csv | name-value-from-csv <fields> [<options>]" >&2
     echo >&2
-    echo "limitations: currently, white spaces, semicolons, and unescaped line breaks" >&2
+    echo "limitations: currently, white spaces and unescaped line breaks" >&2
     echo "             in values are not supported" >&2
     echo >&2
     echo "options" >&2
