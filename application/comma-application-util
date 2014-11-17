@@ -236,11 +236,11 @@ export -f comma_trap_bye_impl
 #     echo $blah__hello__world
 function comma_path_value_to_var()
 {
-    local prefix
+    local prefix=""
     local delimiter="_"
-    local export_variable
-    local null_ok
-    local no_quotes
+    local export_variable=""
+    local null_ok=""
+    local no_quotes=""
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -255,9 +255,9 @@ function comma_path_value_to_var()
 
     if [ ! -z "$prefix" ] ; then prefix="$prefix$delimiter" ; fi
 
-    local path
-    local value
-    local name
+    local path=""
+    local value=""
+    local name=""
     while IFS='=' read path value ; do
         if [[ "$path" == "" ]] ; then continue ; fi
         if [[ "$path" =~ "#" ]] ; then continue ; fi
@@ -288,10 +288,10 @@ export -f comma_path_value_to_var
 function comma_path_value_from_var()
 {
     local prefix=$1
-    local path
-    local value
-    local default_value
-    local name
+    local path=""
+    local value=""
+    local default_value=""
+    local name=""
     local delimiter="_"
     if [ ! -z $2 ] ; then delimiter="$2" ; fi
     if [ ! -z $1 ] ; then prefix="$1$delimiter" ; fi
