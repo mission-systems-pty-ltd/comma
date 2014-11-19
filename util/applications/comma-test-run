@@ -400,10 +400,12 @@ export -f terminate_run_and_match_test
 # finally echoes the result of comma-test-match and the status of the match
 function run_and_match_test()
 {
-    local test_output test_failed match_output
+    local test_output test_failed match_output error_files
     test_output=$( if [ -f ./input ] ; then cat ./input ; fi \
         | comma_progress_named "$our_stats_progress" "$dir" "$test_exec" "$path" "$verbose" $options_test_option )
     test_failed=$?
+    error_files="$( find . -name out_of_shared_memory )"
+    [[ -n "$error_files" ]] && return 1
     if [[ $test_failed == 0 && -f "./expected" ]]; then
         match_output=$( echo "$test_output" | comma-test-match ./expected 2>&1 )
         if [[ -n "$match_output" ]]; then
@@ -422,8 +424,8 @@ function run_test_with_timeout()
     export -f comma_progress_named
     export our_stats_progress dir test_exec path verbose
     # Note: timeout option '-k' is missing in RHEL6, remove '-k 10' if need be
-    timeout -k 10 -s TERM $max_run_time bash -c run_and_match_test &
-    local test_pgid=$!
+    local test_pgid
+    timeout -k 10 -s TERM $max_run_time bash -c run_and_match_test & test_pgid=$!
     wait $test_pgid
     local rv=$?
     unset test_pgid
@@ -537,8 +539,7 @@ function run_single_test()
                     find . -name out_of_shared_memory | xargs rm -f
                     # run this test on the background under a separate group id provided by the timeout command
                     # wait for the period of max_run_time, and, if still running, kill the group and fail the test
-                    run_test_with_timeout &
-                    test_pid=$!
+                    run_test_with_timeout & test_pid=$!
                     wait $test_pid
                     test_failed=$?
                     comma_locked "$comma_test_run_resources_flock" comma_release_resources "$request" "$comma_test_run_resources_counter" "$worker_id"
@@ -624,8 +625,8 @@ function process_tests_parallel()
     setup_signal_handler terminate_tests_parallel
     comma_test_run_xargs_pipe="$comma_test_run_unique_dir/xargs.pipe"
     mkfifo -m 600 "$comma_test_run_xargs_pipe"
-    xargs -P $max_parallel -I{} bash -c run_single_test\ "'$options_path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$test_scripts_count'"\ {} < "$comma_test_run_xargs_pipe" &
-    local xargs_pid=$!
+    local xargs_pid
+    xargs -P $max_parallel -I{} bash -c run_single_test\ "'$options_path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$test_scripts_count'"\ {} < "$comma_test_run_xargs_pipe" & xargs_pid=$!
     xargs -n2 > "$comma_test_run_xargs_pipe"
     wait "$xargs_pid"
     (( $? != 0 )) && result=1
