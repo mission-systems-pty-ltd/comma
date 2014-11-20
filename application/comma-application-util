@@ -112,11 +112,11 @@ export -f kill_children
 #
 function comma_trap()
 {
-    local cleanup_command
+    local cleanup_command=""
     local signal_list=()
     local kill_option="--kill-recursive"
     local exit_code=1
-    local script_name
+    local script_name=""
     local original_args="$*"
     while [[ $# -ne 0 ]]; do
         case $1 in
