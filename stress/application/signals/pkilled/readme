@@ -3,3 +3,9 @@ available process ids. Do not attempt to run anything in parallel with this
 test. You may also have limited success in attempting to kill it by Ctrl-C.
 Just wait for the test to complete, or forcefully end the terminal session
 where it is running.
+
+This test verifies the validity of one possible approach to setting traps and
+terminating scripts by signals. The approach is based on (recursive) usage of
+"kill -P" command. It was considered for implementation in comma_trap, but
+never got past the design and prototyping stage. For this reason, and given the
+severe load this test puts on the system, disable it by default.
