@@ -4,11 +4,12 @@ SET( dir ${SOURCE_CODE_BASE_DIR}/${PROJECT} )
 
 FILE( GLOB source ${dir}/*.cpp )
 FILE( GLOB includes ${dir}/*.h )
+FILE( GLOB impl_source ${dir}/impl/*.cpp )
 FILE( GLOB impl_includes ${dir}/impl/*.h )
 
 SOURCE_GROUP( ${TARGET_NAME} FILES ${source} ${includes} ${impl_includes} )
 
-ADD_LIBRARY( ${TARGET_NAME} ${source} ${includes} ${impl_includes} )
+ADD_LIBRARY( ${TARGET_NAME} ${source} ${includes} ${impl_source} ${impl_includes} )
 SET_TARGET_PROPERTIES( ${TARGET_NAME} PROPERTIES ${comma_LIBRARY_PROPERTIES} )
 TARGET_LINK_LIBRARIES( ${TARGET_NAME} comma_application ${comma_ALL_EXTERNAL_LIBRARIES} )
 
