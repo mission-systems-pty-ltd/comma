@@ -30,67 +30,53 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-/// @author vsevolod vlaskine
 
-#ifndef COMMA_CSV_IMPL_FIELDWISE_H_
-#define COMMA_CSV_IMPL_FIELDWISE_H_
+#include <gtest/gtest.h>
+#include <comma/csv/ascii.h>
+#include <comma/csv/impl/fieldwise.h>
 
-#include <vector>
-#include <boost/optional.hpp>
-#include <comma/csv/names.h>
-#include <comma/csv/options.h>
-
-namespace comma { namespace csv {
-
-class fieldwise
+TEST( fieldwise, non_typed_ascii )
 {
-    public:
-        class ascii_t
-        {
-            public:
-                bool equal( const std::string& lhs, const std::string& rhs ) const;
-                
-            private:
-                friend class fieldwise;
-                ascii_t( const fieldwise* f ) : f_( f ) {}
-                const fieldwise* f_;
-        };
-        
-        class binary_t
-        {
-            public:
-                bool equal( const char* lhs, const char* rhs ) const;
-            private:
-                friend class fieldwise;
-                binary_t( const fieldwise* f ) : f_( f ) {}
-                const fieldwise* f_;
-        };
-        
-        fieldwise( const csv::options& o );
-        
-        template < typename T >
-        fieldwise( const csv::options& o, const T& sample );
-        
-        fieldwise( const std::string& fields, char delimiter = ',' );
-        
-        const ascii_t& ascii() const { return ascii_; }
-        
-        const binary_t& binary() const { return binary_; }
-        
-    private:
-        friend class ascii_t;
-        friend class binary_t;
-        std::vector< unsigned int > indices_;
-        boost::optional< csv::format > format_;
-        char delimiter_;
-        void init_( const csv::options& o, const std::vector< std::string >& fields );
-        ascii_t ascii_;
-        binary_t binary_;
+    EXPECT_TRUE( comma::csv::fieldwise( "" ).ascii().equal( "", "" ) );
+    EXPECT_TRUE( comma::csv::fieldwise( "" ).ascii().equal( "a,b", "c,d" ) );
+    EXPECT_FALSE( comma::csv::fieldwise( "a" ).ascii().equal( "a,b", "c,b" ) );
+    EXPECT_FALSE( comma::csv::fieldwise( ",b" ).ascii().equal( "a,c", "a,d" ) );
+    EXPECT_TRUE( comma::csv::fieldwise( "a,b" ).ascii().equal( "a,b", "a,b" ) );
+    EXPECT_FALSE( comma::csv::fieldwise( "a,b" ).ascii().equal( "a,c", "a,d" ) );
+}
+
+// todo
+
+namespace comma { namespace csv { namespace fieldwise_test {
+    
+struct test_struct
+{
+    int x;
+    int y;
+    test_struct() : x( 0 ), y( 0 ) {}
 };
 
-template < typename T >
-inline fieldwise::fieldwise( const csv::options& o, const T& sample ) : ascii_( this ), binary_( this ) { init_( o, csv::names( o.fields, o.full_xpath, sample ) ); }
+} } } // namespace comma { namespace csv { namespace ascii_test {
 
-} } // namespace comma { namespace csv {
+namespace comma { namespace visiting {
 
-#endif // COMMA_CSV_IMPL_FIELDWISE_H_
+template <> struct traits< comma::csv::fieldwise_test::test_struct >
+{
+    template < typename Key, class Visitor > static void visit( const Key&, const comma::csv::fieldwise_test::test_struct& p, Visitor& v )
+    {
+        v.apply( "x", p.x );
+        v.apply( "y", p.y );
+    }
+
+    template < typename Key, class Visitor > static void visit( const Key&, comma::csv::fieldwise_test::test_struct& p, Visitor& v )
+    {
+        v.apply( "x", p.x );
+        v.apply( "y", p.y );
+    }
+};
+
+// todo
+
+} } // namespace comma { namespace visiting {
+
+   

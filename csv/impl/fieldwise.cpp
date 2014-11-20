@@ -38,7 +38,17 @@
 
 namespace comma { namespace csv {
 
-fieldwise::fieldwise( const csv::options& o ) { init_( o, split( o.fields, ',' ) ); }
+fieldwise::fieldwise( const csv::options& o ) : ascii_( this ), binary_( this ) { init_( o, split( o.fields, ',' ) ); }
+
+fieldwise::fieldwise( const std::string& fields, char delimiter )
+    : ascii_( this )
+    , binary_( this )
+{
+    csv::options o;
+    o.fields = fields;
+    o.delimiter = delimiter;
+    init_( o, split( fields, ',' ) );
+}
 
 void fieldwise::init_( const csv::options& o, const std::vector< std::string >& fields )
 {
@@ -47,21 +57,21 @@ void fieldwise::init_( const csv::options& o, const std::vector< std::string >& 
     for( unsigned int i = 0; i < fields.size(); ++i ) { if( !fields[i].empty() ) { indices_.push_back( i ); } }
 }
 
-bool fieldwise::equal( const std::string& lhs, const std::string& rhs ) const
+bool fieldwise::ascii_t::equal( const std::string& lhs, const std::string& rhs ) const
 {
-    if( format_ ) { COMMA_THROW( comma::exception, "is binary, but asked compare ascii data" ); } // unnecessary limiting, but semantically consistent
-    const std::vector< std::string >& left = comma::split( lhs, delimiter_ );
-    const std::vector< std::string >& right = comma::split( rhs, delimiter_ );
-    for( unsigned int i = 0; i < indices_.size(); ++i ) { if( left[i] != right[i] ) { return false; } }
+    if( f_->format_ ) { COMMA_THROW( comma::exception, "is binary, but asked compare ascii data" ); } // unnecessary limiting, but semantically consistent
+    const std::vector< std::string >& left = comma::split( lhs, f_->delimiter_ );
+    const std::vector< std::string >& right = comma::split( rhs, f_->delimiter_ );
+    for( unsigned int i = 0; i < f_->indices_.size(); ++i ) { if( left[ f_->indices_[i] ] != right[ f_->indices_[i] ] ) { return false; } }
     return true;
 }
 
-bool fieldwise::equal( const char* lhs, const char* rhs ) const
+bool fieldwise::binary_t::equal( const char* lhs, const char* rhs ) const
 {
-    if( !format_ ) { COMMA_THROW( comma::exception, "is ascii, but asked compare binary data" ); }
-    for( unsigned int i = 0; i < indices_.size(); ++i )
+    if( !f_->format_ ) { COMMA_THROW( comma::exception, "is ascii, but asked compare binary data" ); }
+    for( unsigned int i = 0; i < f_->indices_.size(); ++i )
     {
-        const csv::format::element& e = format_->offset( i );
+        const csv::format::element& e = f_->format_->offset( f_->indices_[i] );
         if( ::memcmp( lhs + e.offset, rhs + e.offset, e.size ) != 0 ) { return false; }
     }
     return true;
