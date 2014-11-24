@@ -406,6 +406,9 @@ function run_and_match_test()
     test_failed=$?
     error_files="$( find . -name out_of_shared_memory )"
     [[ -n "$error_files" ]] && return 1
+    if [[ $test_failed == 1 && -n "$test_output" ]]; then
+        echo "test exit with non-zero status, output '$test_output'" >&2
+    fi
     if [[ $test_failed == 0 && -f "./expected" ]]; then
         match_output=$( echo "$test_output" | comma-test-match ./expected 2>&1 )
         if [[ -n "$match_output" ]]; then
