@@ -68,10 +68,13 @@ class fieldwise
         
         fieldwise( const csv::options& o );
         
-        template < typename T >
-        fieldwise( const csv::options& o, const T& sample );
-        
         fieldwise( const std::string& fields, char delimiter = ',' );
+        
+        template < typename T >
+        fieldwise( const T& sample, const csv::options& o );
+        
+        template < typename T >
+        fieldwise( const T& sample, const std::string& fields, char delimiter = ',', bool full_xpath = true );
         
         const ascii_t& ascii() const { return ascii_; }
         
@@ -89,7 +92,25 @@ class fieldwise
 };
 
 template < typename T >
-inline fieldwise::fieldwise( const csv::options& o, const T& sample ) : ascii_( this ), binary_( this ) { init_( o, csv::names( o.fields, o.full_xpath, sample ) ); }
+inline fieldwise::fieldwise( const T& sample, const csv::options& o )
+    : ascii_( this )
+    , binary_( this )
+{
+    init_( o, csv::names( o.fields, o.full_xpath, sample ) );
+}
+
+template < typename T >
+inline fieldwise::fieldwise( const T& sample, const std::string& fields, char delimiter, bool full_xpath )
+    : delimiter_( delimiter )
+    , ascii_( this )
+    , binary_( this )
+{
+    csv::options o;
+    o.fields = fields;
+    o.full_xpath = full_xpath;
+    o.delimiter = delimiter;
+    init_( o, csv::names( fields, full_xpath, sample ) );
+}
 
 } } // namespace comma { namespace csv {
 

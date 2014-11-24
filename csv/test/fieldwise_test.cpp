@@ -43,40 +43,79 @@ TEST( fieldwise, non_typed_ascii )
     EXPECT_FALSE( comma::csv::fieldwise( ",b" ).ascii().equal( "a,c", "a,d" ) );
     EXPECT_TRUE( comma::csv::fieldwise( "a,b" ).ascii().equal( "a,b", "a,b" ) );
     EXPECT_FALSE( comma::csv::fieldwise( "a,b" ).ascii().equal( "a,c", "a,d" ) );
+    EXPECT_TRUE( comma::csv::fieldwise( "x" ).ascii().equal( "a,b,c", "a,x,x" ) );
+    EXPECT_TRUE( comma::csv::fieldwise( ",x" ).ascii().equal( "a,b,c", "x,b,x" ) );
+    EXPECT_TRUE( comma::csv::fieldwise( ",,x" ).ascii().equal( "a,b,c", "x,x,c" ) );
+    EXPECT_FALSE( comma::csv::fieldwise( "x" ).ascii().equal( "a,b,c", "x,x,x" ) );
+    EXPECT_FALSE( comma::csv::fieldwise( ",x" ).ascii().equal( "a,b,c", "x,x,x" ) );
+    EXPECT_FALSE( comma::csv::fieldwise( ",,x" ).ascii().equal( "a,b,c", "x,x,x" ) );
 }
-
-// todo
 
 namespace comma { namespace csv { namespace fieldwise_test {
     
-struct test_struct
+struct basic
 {
     int x;
     int y;
-    test_struct() : x( 0 ), y( 0 ) {}
+    basic() : x( 0 ), y( 0 ) {}
 };
 
-} } } // namespace comma { namespace csv { namespace ascii_test {
+struct nested
+{
+    int a;
+    basic b;
+    nested() : a( 0 ) {}
+};
+
+} } } // namespace comma { namespace csv { namespace fieldwise_test {
 
 namespace comma { namespace visiting {
 
-template <> struct traits< comma::csv::fieldwise_test::test_struct >
+template <> struct traits< comma::csv::fieldwise_test::basic >
 {
-    template < typename Key, class Visitor > static void visit( const Key&, const comma::csv::fieldwise_test::test_struct& p, Visitor& v )
+    template < typename Key, class Visitor > static void visit( const Key&, const comma::csv::fieldwise_test::basic& p, Visitor& v )
     {
         v.apply( "x", p.x );
         v.apply( "y", p.y );
     }
 
-    template < typename Key, class Visitor > static void visit( const Key&, comma::csv::fieldwise_test::test_struct& p, Visitor& v )
+    template < typename Key, class Visitor > static void visit( const Key&, comma::csv::fieldwise_test::basic& p, Visitor& v )
     {
         v.apply( "x", p.x );
         v.apply( "y", p.y );
     }
 };
 
-// todo
+template <> struct traits< comma::csv::fieldwise_test::nested >
+{
+    template < typename Key, class Visitor > static void visit( const Key&, const comma::csv::fieldwise_test::nested& p, Visitor& v )
+    {
+        v.apply( "a", p.a );
+        v.apply( "b", p.b );
+    }
+
+    template < typename Key, class Visitor > static void visit( const Key&, comma::csv::fieldwise_test::nested& p, Visitor& v )
+    {
+        v.apply( "a", p.a );
+        v.apply( "b", p.b );
+    }
+};
 
 } } // namespace comma { namespace visiting {
 
-   
+TEST( fieldwise, typed_ascii )
+{
+    comma::csv::fieldwise_test::nested n;
+    EXPECT_FALSE( comma::csv::fieldwise( n, "" ).ascii().equal( "a,x,y", "v,v,v" ) );
+    EXPECT_TRUE( comma::csv::fieldwise( n, "" ).ascii().equal( "a,x,y", "a,x,y" ) );
+    EXPECT_TRUE( comma::csv::fieldwise( n, "a,x,y", ',', false ).ascii().equal( "a,x,y", "a,x,y" ) );
+    EXPECT_FALSE( comma::csv::fieldwise( n, "a,x,y", ',', false ).ascii().equal( "a,x,y", "a,x,z" ) );
+    EXPECT_TRUE( comma::csv::fieldwise( n, "a,b/x,b/y" ).ascii().equal( "a,x,y", "a,x,y" ) );
+    EXPECT_FALSE( comma::csv::fieldwise( n, "a,b/x,b/y" ).ascii().equal( "a,x,y", "a,x,z" ) );
+    EXPECT_TRUE( comma::csv::fieldwise( n, "a,b" ).ascii().equal( "a,x,y", "a,x,y" ) );
+    EXPECT_FALSE( comma::csv::fieldwise( n, "a,b" ).ascii().equal( "a,x,y", "a,x,z" ) );
+    EXPECT_TRUE( comma::csv::fieldwise( n, "b" ).ascii().equal( "a,x,y", "a,x,z" ) );
+    EXPECT_FALSE( comma::csv::fieldwise( n, "b" ).ascii().equal( "a,x,y", "a,z,z" ) );
+}
+
+// todo: test binary
