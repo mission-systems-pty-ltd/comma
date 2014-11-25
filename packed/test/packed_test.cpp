@@ -39,14 +39,17 @@
 #include <gtest/gtest.h>
 #include <boost/array.hpp>
 #include <comma/packed/packed.h>
+#include <comma/math/compare.h>
 
-struct test_packed_struct_t : public comma::packed::packed_struct< test_packed_struct_t, 16 >
+struct test_packed_struct_t : public comma::packed::packed_struct< test_packed_struct_t, 28 >
 {
     comma::packed::string< 4 > hello;
     comma::packed::string< 5 > world;
     comma::packed::net_uint16 int16;
     comma::packed::net_uint32 int32;
     comma::packed::byte byte;
+    comma::packed::net_float32 f;
+    comma::packed::net_float64 d;
 };
 
 TEST( packed_struct, test_packed_struct )
@@ -61,15 +64,21 @@ TEST( packed_struct, test_packed_struct )
     EXPECT_EQ( s.world == std::string( "WORLD" ), true );
     EXPECT_EQ( s.int16 == 0, true );
     EXPECT_EQ( s.int32 == 0, true );
+    EXPECT_EQ( s.f == 0, true );
+    EXPECT_EQ( s.d == 0, true );    
     s.int16 = 1;
     s.int32 = 2;
     s.byte = 3;
+    s.f = 0.123456789012345e-10;
+    s.d= 0.123456789012345e+123;
     EXPECT_EQ( s.int16 == 1, true );
     EXPECT_EQ( s.int32 == 2, true );
     EXPECT_EQ( s.byte == 3, true );
     EXPECT_EQ( s.int16(), 1 );
     EXPECT_EQ( s.int32(), 2 );
     EXPECT_EQ( s.byte(), 3 );
+    EXPECT_EQ( comma::math::equal( s.f(), 0.123456789012345e-10 ), true );
+    EXPECT_EQ( comma::math::equal( s.d(), 0.123456789012345e+123 ), true );
 }
 
 template < typename T >
@@ -101,6 +110,21 @@ TEST( test_packed_struct_test, test_big_endian )
     test_packed_int< comma::packed::net_uint32 >( 1234 );
 }
 
+template < typename T >
+void test_packed_net_float( double value )
+{
+    T t;
+    EXPECT_EQ( comma::math::equal( t(), 0 ), true );
+    t = value;
+    EXPECT_EQ( comma::math::equal( t(), value ), true );
+}
+
+TEST( test_packed_struct_test, test_big_endian_float )
+{
+    test_packed_net_float< comma::packed::net_float32 >( 0.123456789012345e-10 );
+    test_packed_net_float< comma::packed::net_float64 >( 0.123456789012345e+123 );
+}
+
 static void test_int24_byte_order( int value, char byte0, char byte1, char byte2 )
 {
     comma::packed::int24 a;
@@ -123,6 +147,44 @@ TEST( test_packed_struct_test, test_int24_byte_order )
     test_int24_byte_order( -32768, 0x00, 0x80, 0xff );
     test_int24_byte_order( -8388607, 0x01, 0x00, 0x80 );
     test_int24_byte_order( -8388608, 0x00, 0x00, 0x80 );
+}
+
+template< typename T >
+static void test_float32_byte_order( float value, char byte0, char byte1, char byte2, char byte3 )
+{
+    T a;
+    a = value;
+    EXPECT_EQ( ( 0xff & a.data()[0] ), ( 0xff & byte0 ) );
+    EXPECT_EQ( ( 0xff & a.data()[1] ), ( 0xff & byte1 ) );
+    EXPECT_EQ( ( 0xff & a.data()[2] ), ( 0xff & byte2 ) );
+    EXPECT_EQ( ( 0xff & a.data()[3] ), ( 0xff & byte3 ) );
+}
+
+TEST( test_packed_struct_test, test_float32_byte_order )
+{
+    //test_float32_byte_order< comma::packed::float32 >( 5.2, 0x66, 0x66, 0xA6, 0x40 );
+    test_float32_byte_order< comma::packed::net_float32 >( 5.2, 0x40, 0xA6, 0x66, 0x66 );
+}
+
+template< typename T >
+static void test_float64_byte_order( double value, char byte0, char byte1, char byte2, char byte3, char byte4, char byte5, char byte6, char byte7 )
+{
+    T a;
+    a = value;
+    EXPECT_EQ( ( 0xff & a.data()[0] ), ( 0xff & byte0 ) );
+    EXPECT_EQ( ( 0xff & a.data()[1] ), ( 0xff & byte1 ) );
+    EXPECT_EQ( ( 0xff & a.data()[2] ), ( 0xff & byte2 ) );
+    EXPECT_EQ( ( 0xff & a.data()[3] ), ( 0xff & byte3 ) );
+    EXPECT_EQ( ( 0xff & a.data()[4] ), ( 0xff & byte4 ) );
+    EXPECT_EQ( ( 0xff & a.data()[5] ), ( 0xff & byte5 ) );
+    EXPECT_EQ( ( 0xff & a.data()[6] ), ( 0xff & byte6 ) );
+    EXPECT_EQ( ( 0xff & a.data()[7] ), ( 0xff & byte7 ) );
+}
+
+TEST( test_packed_struct_test, test_float64_byte_order )
+{
+    //test_float64_byte_order< comma::packed::float64 >( 5.2, 0xCD, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0x14, 0x40 );
+    test_float64_byte_order< comma::packed::net_float64 >( 5.2, 0x40, 0x14, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCD );
 }
 
 static boost::array< std::string, 16 > hex_digits_u = { { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F" } };
