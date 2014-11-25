@@ -38,6 +38,7 @@
 #define COMMA_PACKED_LITTLEENDIAN_H_
 
 #include <boost/static_assert.hpp>
+#include <comma/base/exception.h>
 #include <comma/base/types.h>
 #include <comma/packed/field.h>
 
@@ -56,12 +57,12 @@ template <> struct little_endian_traits< 3, false > { typedef comma::uint32 type
 template <> struct little_endian_traits< 4, true > { typedef comma::int32 type; };
 template <> struct little_endian_traits< 4, false > { typedef comma::uint32 type; };
 template <> struct little_endian_traits< 8, true > { typedef comma::int64 type; };
-template <> struct little_endian_traits< 8, false > { typedef comma::uint64 type; };
-template <> struct little_endian_traits< 4, true, true > { typedef float type; };
-template <> struct little_endian_traits< 8, true, true > { typedef double type; };
+template <> struct little_endian_traits< 8, false > { typedef comma::uint64 type; }; // typedef comma::uint64 int_of_same_size; };
+template <> struct little_endian_traits< 4, true, true > { typedef float type; }; // typedef comma::uint32 int_of_same_size; };
+template <> struct little_endian_traits< 8, true, true > { typedef double type; }; //typedef comma::uint64 int_of_same_size; };
     
 template < unsigned int Size, bool Signed, bool Floating = false >
-struct little_endian_int : public packed::field< little_endian_int< Size, Signed >, typename little_endian_traits< Size, Signed, Floating >::type, Size >
+struct little_endian : public packed::field< little_endian< Size, Signed, Floating >, typename little_endian_traits< Size, Signed, Floating >::type, Size >
 {
     static const unsigned int size = Size;
 
@@ -69,16 +70,19 @@ struct little_endian_int : public packed::field< little_endian_int< Size, Signed
     
     BOOST_STATIC_ASSERT( size <= sizeof( type ) );
 
-    typedef packed::field< little_endian_int< Size, Signed >, typename little_endian_traits< Size, Signed, Floating >::type, Size > base_type;
+    typedef packed::field< little_endian< Size, Signed, Floating >, typename little_endian_traits< Size, Signed, Floating >::type, Size > base_type;
 
     static type default_value() { return 0; }
 
     static void pack( char* storage, type value )
     {
+        if( Floating ) { COMMA_THROW( comma::exception, "not implemented; todo, although semantics of little endian floating point number is unclear" ); }
+        //typename little_endian_traits< size, Signed, Floating >::int_of_same_size& p = reinterpret_cast< typename little_endian_traits< size, Signed, Floating >::int_of_same_size& >( &value );
+        //for( unsigned int i = 0; i < size; ++i, p >>= 8 ) { storage[i] = p & 0xff; }
         for( unsigned int i = 0; i < size; ++i, value >>= 8 ) { storage[i] = value & 0xff; }
     }
 
-    static type unpack( const char* storage )
+    static type unpack( const char* storage ) // for floats it is a real hack, since there is no standard
     {
         type v = 0;
         int shift = 0;
@@ -94,31 +98,31 @@ struct little_endian_int : public packed::field< little_endian_int< Size, Signed
         return v;
     }
 
-    const little_endian_int& operator=( const little_endian_int& rhs ) { return base_type::operator=( rhs ); }
+    const little_endian& operator=( const little_endian& rhs ) { return this->base_type::operator=( rhs ); }
 
-    const little_endian_int& operator=( type rhs ) { return base_type::operator=( rhs ); }
+    const little_endian& operator=( const type& rhs ) { return this->base_type::operator=( rhs ); }
 };
 
 } // namespace detail {
 
 /// packed little endian 16-bit integers
-typedef detail::little_endian_int< 2, true > little_endian_int16;
-typedef detail::little_endian_int< 2, false > little_endian_uint16;
-typedef little_endian_int16 int16;
+typedef detail::little_endian< 2, true > little_endian16;
+typedef detail::little_endian< 2, false > little_endian_uint16;
+typedef little_endian16 int16;
 typedef little_endian_uint16 uint16;
 /// packed little endian 24-bit integers (strangely, there are protocols using it)
-typedef detail::little_endian_int< 3, true > little_endian_int24;
-typedef detail::little_endian_int< 3, false > little_endian_uint24;
-typedef little_endian_int24 int24;
+typedef detail::little_endian< 3, true > little_endian24;
+typedef detail::little_endian< 3, false > little_endian_uint24;
+typedef little_endian24 int24;
 typedef little_endian_uint24 uint24;
 /// packed little endian 32-bit integers
-typedef detail::little_endian_int< 4, true > little_endian_int32;
-typedef detail::little_endian_int< 4, false > little_endian_uint32;
-typedef little_endian_int32 int32;
+typedef detail::little_endian< 4, true > little_endian32;
+typedef detail::little_endian< 4, false > little_endian_uint32;
+typedef little_endian32 int32;
 typedef little_endian_uint32 uint32;
 /// packed floating point number (does it even make sense?)
-typedef detail::little_endian_int< 4, true, true > little_endian_float32;
-typedef detail::little_endian_int< 8, true, true > little_endian_float64;
+typedef detail::little_endian< 4, true, true > little_endian_float32;
+typedef detail::little_endian< 8, true, true > little_endian_float64;
 typedef little_endian_float32 float32;
 typedef little_endian_float64 float64;
 
