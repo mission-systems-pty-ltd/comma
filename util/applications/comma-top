@@ -94,7 +94,7 @@ function parser()
         [[ -z "$line" ]] && break
         [[ "$first" == "true" ]] && {
             timestamp=$( date +%Y%m%dT%H%M%S )
-            shared=$( df --block-size=1024 --local | grep '/shm$' | awk '{ print $3 }' )
+            shared=$( df --block-size=1024 --local 2>&1 | grep -v ": Permission denied" | grep '/shm$' | awk '{ print $3 }' )
             echo -n "$timestamp"
             first="false"
         }
