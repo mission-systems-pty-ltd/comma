@@ -59,18 +59,31 @@ inline boost::program_options::options_description program_options::description(
         ( "binary,b", boost::program_options::value< std::string >(), "csv binary format" )
         ( "delimiter,d", boost::program_options::value< char >()->default_value( ',' ), "csv delimiter" )
         ( "full-xpath", "expect full xpaths as field names" )
-        ( "precision", boost::program_options::value< unsigned int >()->default_value( 12 ), "floating point precision" );
+        ( "precision", boost::program_options::value< unsigned int >()->default_value( 12 ), "floating point precision" )
+        ( "quote", boost::program_options::value< char >()->default_value( '"' ), "quote sign to quote strings (ascii only)" )
+        ( "flush", "flush output stream after each record" );
     return d;
 }
 
 inline csv::options program_options::get( const boost::program_options::variables_map& vm, const csv::options& default_csv )
 {
     csv::options csv = default_csv;
-    if( vm.count("fields") ) { csv.fields = vm[ "fields" ].as< std::string >(); }
-    if( vm.count("delimiter") ) { csv.delimiter = vm[ "delimiter" ].as< char >(); }
-    if( vm.count("precision") ) { csv.precision = vm[ "precision" ].as< unsigned int >(); }
-    if( vm.count("binary") ) { csv.format( vm[ "binary" ].as< std::string >() ); }
-    if( vm.count( "full-xpath" ) ) { csv.full_xpath = true; }
+    if( vm.count( "fields" ) ) { csv.fields = vm[ "fields" ].as< std::string >(); }
+    if( vm.count( "delimiter ") ) { csv.delimiter = vm[ "delimiter" ].as< char >(); }
+    if( vm.count( "precision" ) ) { csv.precision = vm[ "precision" ].as< unsigned int >(); }
+    if( vm.count( "binary" ) ) { csv.format( vm[ "binary" ].as< std::string >() ); }
+    csv.full_xpath = vm.count( "full-xpath" ) > 0;
+    csv.flush = vm.count( "flush" ) > 0;
+    if( vm.count( "quote" ) )
+    {
+        std::string quote_character = vm[ "quote" ].as< std::string >();
+        switch( quote_character.size() )
+        {
+            case 0: csv.quote.reset(); break;
+            case 1: csv.quote = quote_character[0]; break;
+            case 2: COMMA_THROW( comma::exception, "expected a quote character, got \"" << quote_character << "\"" );
+        }
+    }
     return csv;
 }
 

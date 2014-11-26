@@ -48,6 +48,7 @@
 #include <comma/application/signal_flag.h>
 #include <comma/base/types.h>
 #include <comma/csv/stream.h>
+#include <comma/csv/traits.h>
 #include <comma/io/stream.h>
 #include <comma/name_value/parser.h>
 #include <comma/string/string.h>

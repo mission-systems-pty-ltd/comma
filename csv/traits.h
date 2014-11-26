@@ -32,76 +32,53 @@
 
 /// @author vsevolod vlaskine
 
-#ifndef COMMA_CSV_OPTIONS_H_
-#define COMMA_CSV_OPTIONS_H_
+#ifndef COMMA_CSV_TRAITS_H_
+#define COMMA_CSV_TRAITS_H_
 
-#include <boost/optional.hpp>
-#include <comma/application/command_line_options.h>
-#include "./format.h"
+#include <comma/csv/options.h>
+#include <comma/visiting/traits.h>
 
-namespace comma { namespace csv {
+namespace comma { namespace visiting {
 
-/// a helper class to extract csv-related command line options
-class options
+template <> struct traits< comma::csv::options >
 {
-    public:
-        /// constructor
-        options();
-
-        /// constructor
-        options( int argc, char** argv, const std::string& defaultFields = "" );
-
-        /// constructor
-        options( const comma::command_line_options& options, const std::string& defaultFields = "" );
-
-        /// return usage to incorporate into application usage
-        static std::string usage( const std::string& default_fields = "" );
-
-        /// filename (optional)
-        std::string filename;
-
-        /// if true, expect full xpaths as field names;
-        /// e.g. "point/scalar" rather than "scalar"
-        bool full_xpath;
-
-        /// field (column) names
-        std::string fields;
-
-        /// csv delimiter
-        char delimiter;
-
-        /// precision
-        unsigned int precision;
+    template < typename Key, class Visitor >
+    static void visit( const Key&, const comma::csv::options& p, Visitor& v )
+    {
+        v.apply( "filename", p.filename );
+        v.apply( "delimiter", p.delimiter );
+        v.apply( "fields", p.fields );
+        v.apply( "full-xpath", p.full_xpath );
+        v.apply( "precision", p.precision );
+        v.apply( "quote", p.quote ? std::string( 1, *p.quote ) : std::string() );
+        v.apply( "flush", p.flush );
+        if( p.binary() ) { v.apply( "binary", p.format().string() ); }
         
-        /// quote sign for strings
-        boost::optional< char > quote;
-        
-        /// if true, flush output stream after each record
-        bool flush;
+    }
 
-        /// return format
-        const csv::format& format() const;
-
-        /// return format
-        csv::format& format();
-
-        /// set format
-        void format( const std::string& s );
-
-        /// set format
-        void format( const csv::format& f );
-
-        /// true, if --binary specified
-        bool binary() const;
-
-        /// return true, if fields have given field (convenience function, slow)
-        /// @param field comma-separated fields, e.g. "x,y,z"
-        bool has_field( const std::string& field ) const;
-
-    private:
-        boost::optional< csv::format > format_;
+    template < typename Key, class Visitor >
+    static void visit( Key, comma::csv::options& p, Visitor& v )
+    {
+        v.apply( "filename", p.filename );
+        v.apply( "delimiter", p.delimiter );
+        v.apply( "fields", p.fields );
+        v.apply( "full-xpath", p.full_xpath );
+        v.apply( "precision", p.precision );
+        std::string quote = p.quote ? std::string( 1, *p.quote ) : std::string();
+        v.apply( "quote", p.quote );
+        switch( quote.size() )
+        {
+            case 0: p.quote.reset(); break;
+            case 1: p.quote = quote[0]; break;
+            case 2: COMMA_THROW( comma::exception, "expected a quote character, got \"" << quote << "\"" );
+        }
+        v.apply( "flush", p.flush );
+        std::string s;
+        v.apply( "binary", s );
+        if( s != "" ) { p.format( s ); }
+    }
 };
 
-} } // namespace comma { namespace csv {
+} } // namespace comma { namespace visiting {
 
-#endif /*COMMA_CSV_OPTIONS_H_*/
+#endif // COMMA_CSV_TRAITS_H_

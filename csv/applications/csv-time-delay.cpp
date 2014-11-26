@@ -52,9 +52,7 @@ static void usage()
     std::cerr << "usage: cat a.csv | csv-time-delay <seconds> [<options>]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "<options>" << std::endl;
-    std::cerr << "    --binary,-b <format>: binary format" << std::endl;
-    std::cerr << "    --delimiter,-d <delimiter>: ascii only; default ','" << std::endl;
-    std::cerr << "    --fields,-f <fields>: input fields; default: t" << std::endl;
+    std::cerr << comma::csv::options::usage( "t" ) << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -83,12 +81,14 @@ int main( int ac, char** av )
     try
     {
         comma::command_line_options options( ac, av );
-        if( options.exists( "--help" ) || options.exists( "-h" ) || ac == 1 ) { usage(); }        
-        double d = boost::lexical_cast< double >( options.unnamed( "", "--binary,-b,--delimiter,-d,--fields,-f" )[0] );
+        if( options.exists( "--help" ) || options.exists( "-h" ) || ac == 1 ) { usage(); }
+        const std::vector< std::string >& v = options.unnamed( "--flush", "-.*" );
+        if( v.empty() ) { std::cerr << "csv-time-delay: expected time delay, got none" << std::endl; return 1; }
+        double d = boost::lexical_cast< double >( v[0] );
         int sign = d < 0 ? -1 : 1;
-        int minutes = int( std::floor( std::abs( d )/60 ) );
-        int seconds = int( std::floor( std::abs( d ) - double(minutes) * 60 ) );
-        int microseconds = int( ( std::abs( d ) - ( double(minutes) * 60 + seconds ) ) * 1000000 );
+        int minutes = int( std::floor( std::abs( d ) / 60 ) );
+        int seconds = int( std::floor( std::abs( d ) - double( minutes ) * 60 ) );
+        int microseconds = int( ( std::abs( d ) - ( double( minutes ) * 60 + seconds ) ) * 1000000 );
         minutes *= sign;
         seconds *= sign;
         microseconds *= sign;
