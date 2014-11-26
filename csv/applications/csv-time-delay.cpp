@@ -82,7 +82,7 @@ int main( int ac, char** av )
     {
         comma::command_line_options options( ac, av );
         if( options.exists( "--help" ) || options.exists( "-h" ) || ac == 1 ) { usage(); }
-        const std::vector< std::string >& v = options.unnamed( "--flush", "-.*" );
+        const std::vector< std::string >& v = options.unnamed( "--flush", "--binary,-b,--delimiter,-d,--fields,-f,--full-xpath,--precision,--quote" );
         if( v.empty() ) { std::cerr << "csv-time-delay: expected time delay, got none" << std::endl; return 1; }
         double d = boost::lexical_cast< double >( v[0] );
         int sign = d < 0 ? -1 : 1;
