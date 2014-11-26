@@ -60,7 +60,7 @@ inline boost::program_options::options_description program_options::description(
         ( "delimiter,d", boost::program_options::value< char >()->default_value( ',' ), "csv delimiter" )
         ( "full-xpath", "expect full xpaths as field names" )
         ( "precision", boost::program_options::value< unsigned int >()->default_value( 12 ), "floating point precision" )
-        ( "quote", boost::program_options::value< char >()->default_value( '"' ), "quote sign to quote strings (ascii only)" )
+        ( "quote", boost::program_options::value< std::string >()->default_value( "\"" ), "quote sign to quote strings (ascii only)" )
         ( "flush", "flush output stream after each record" );
     return d;
 }
