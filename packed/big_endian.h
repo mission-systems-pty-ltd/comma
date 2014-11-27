@@ -51,53 +51,64 @@ template < typename T > struct net_traits {};
 
 template <> struct net_traits< comma::uint16 >
 {
-    BOOST_STATIC_ASSERT( sizeof( comma::uint16 ) == 2 );
     static comma::uint16 hton( comma::uint16 v ) { return htons( v ); }
     static comma::uint16 ntoh( comma::uint16 v ) { return ntohs( v ); }
 };
 
 template <> struct net_traits< comma::int16 >
 {
-    BOOST_STATIC_ASSERT( sizeof( comma::int16 ) == 2 );
     static comma::int16 hton( comma::int16 v ) { return htons( v ); }
     static comma::int16 ntoh( comma::int16 v ) { return ntohs( v ); }
 };
 
 template <> struct net_traits< comma::uint32 >
 {
-    BOOST_STATIC_ASSERT( sizeof( comma::uint32 ) == 4 );
     static comma::uint32 hton( comma::uint32 v ) { return htonl( v ); }
     static comma::uint32 ntoh( comma::uint32 v ) { return ntohl( v ); }
 };
 
 template <> struct net_traits< comma::int32 >
 {
-    BOOST_STATIC_ASSERT( sizeof( comma::int32 ) == 4 );
     static comma::int32 hton( comma::int32 v ) { return htonl( v ); }
     static comma::int32 ntoh( comma::int32 v ) { return ntohl( v ); }
 };
 
-template< typename T >
-inline T reverse( T v )
-{ 
-    static bool is_big_endian = comma::uint16( 0xab ) == htons( comma::uint16( 0xab ) );
-    if( is_big_endian ) { COMMA_THROW( comma::exception, "don't know how to deal with floating point in big endian architectures" ); } //if( is_big_endian ) { return v; }
-    char* p = reinterpret_cast< char* >( &v ); std::reverse( p, p + sizeof( T ) );
-    return v;
+BOOST_STATIC_ASSERT( sizeof( float ) == 4 );
+BOOST_STATIC_ASSERT( sizeof( double ) == 8 );
+
+template < typename type, typename uint_of_same_size >
+inline type pack_float( type value )
+{
+    char storage[sizeof(type)];
+    uint_of_same_size* p = reinterpret_cast< uint_of_same_size* >( &value );
+    for( unsigned int i = 0; i < sizeof( type ); ++i, *p >>= 8 ) { storage[sizeof(type)-i-1] = *p & 0xff; } 
+    const type* result = reinterpret_cast< const type* >( &storage );
+    return *result;
+}
+
+template< typename type, typename uint_of_same_size >
+inline type unpack_float( type value ) 
+{
+    char* storage = reinterpret_cast< char* >( &value ); 
+    uint_of_same_size v = 0;
+    unsigned int shift = 0;
+    for( unsigned int i = 0; i < sizeof( type ); ++i, shift += 8 ) { v += static_cast< uint_of_same_size >( ( unsigned char )( storage[sizeof(type)-i-1] ) ) << shift; }
+    const type* result = reinterpret_cast< const type* >( &v );
+    return *result;
 }
 
 template <> struct net_traits< float >
 {
-    BOOST_STATIC_ASSERT( sizeof( float ) == 4 );
-    static float hton( float v ) { return reverse< float >( v ); }
-    static float ntoh( float v ) { return reverse< float >( v ); }
+    typedef comma::uint32 uint_of_same_size;
+    static float hton( float value ) { return pack_float< float, uint_of_same_size >( value ); }
+    static float ntoh( float value ) { return unpack_float< float, uint_of_same_size >( value ); }
 };
 
 template <> struct net_traits< double >
 {
-    BOOST_STATIC_ASSERT( sizeof( double ) == 8 );
-    static double hton( double v ) { return reverse< double >( v ); }
-    static double ntoh( double v ) { return reverse< double >( v ); }
+    typedef comma::uint64 uint_of_same_size;
+    static double hton( double value ) { return pack_float< double, uint_of_same_size >( value ); }
+    static double ntoh( double value ) { return unpack_float< double, uint_of_same_size >( value ); }
 };
 
 template < typename T >

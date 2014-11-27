@@ -49,18 +49,12 @@ namespace detail {
 BOOST_STATIC_ASSERT( sizeof( float ) == 4 );
 BOOST_STATIC_ASSERT( sizeof( double ) == 8 );
     
-template < unsigned int Size, bool Signed, bool Floating = false > struct little_endian_traits { typedef void type; };
-template <> struct little_endian_traits< 2, true > { typedef comma::int16 type; };
-template <> struct little_endian_traits< 2, false > { typedef comma::uint16 type; };
-template <> struct little_endian_traits< 3, true > { typedef comma::int32 type; };
-template <> struct little_endian_traits< 3, false > { typedef comma::uint32 type; };
-template <> struct little_endian_traits< 4, true > { typedef comma::int32 type; };
-template <> struct little_endian_traits< 4, false > { typedef comma::uint32 type; };
-template <> struct little_endian_traits< 8, true > { typedef comma::int64 type; };
-template <> struct little_endian_traits< 8, false > { typedef comma::uint64 type; }; // typedef comma::uint64 int_of_same_size; };
-template <> struct little_endian_traits< 4, true, true > { typedef float type; }; // typedef comma::uint32 int_of_same_size; };
-template <> struct little_endian_traits< 8, true, true > { typedef double type; }; //typedef comma::uint64 int_of_same_size; };
-    
+template < unsigned int Size, bool Signed, bool Floating = false > struct little_endian_traits { typedef typename comma::integer< Size, Signed >::type type; typedef typename comma::integer< Size, false >::type uint_of_same_size; };
+template <> struct little_endian_traits< 3, true > { typedef comma::int32 type; typedef comma::uint32 uint_of_same_size; };
+template <> struct little_endian_traits< 3, false > { typedef comma::uint32 type; typedef comma::uint32 uint_of_same_size; };
+template <> struct little_endian_traits< 4, true, true > { typedef float type; typedef comma::uint32 uint_of_same_size; };
+template <> struct little_endian_traits< 8, true, true > { typedef double type; typedef comma::uint64 uint_of_same_size; };
+
 template < unsigned int Size, bool Signed, bool Floating = false >
 struct little_endian : public packed::field< little_endian< Size, Signed, Floating >, typename little_endian_traits< Size, Signed, Floating >::type, Size >
 {
@@ -74,33 +68,34 @@ struct little_endian : public packed::field< little_endian< Size, Signed, Floati
 
     static type default_value() { return 0; }
 
+    typedef typename little_endian_traits< size, Signed, Floating >::uint_of_same_size uint_of_same_size;
+    
     static void pack( char* storage, type value )
     {
-        if( Floating ) { COMMA_THROW( comma::exception, "not implemented; todo, although semantics of little endian floating point number is unclear" ); }
-        //typename little_endian_traits< size, Signed, Floating >::int_of_same_size& p = reinterpret_cast< typename little_endian_traits< size, Signed, Floating >::int_of_same_size& >( &value );
-        //for( unsigned int i = 0; i < size; ++i, p >>= 8 ) { storage[i] = p & 0xff; }
-        for( unsigned int i = 0; i < size; ++i, value >>= 8 ) { storage[i] = value & 0xff; }
+        uint_of_same_size* p = reinterpret_cast< uint_of_same_size* >( &value );
+        for( unsigned int i = 0; i < size; ++i, *p >>= 8 ) { storage[i] = *p & 0xff; }
     }
 
     static type unpack( const char* storage ) // for floats it is a real hack, since there is no standard
     {
-        type v = 0;
-        int shift = 0;
+        uint_of_same_size v = 0;
+        unsigned int shift = 0;
         unsigned int i = 0;
         for( ; i < size; ++i, shift += 8 )
         {
-            v += ( unsigned char )( storage[i] ) << shift;
+            v += static_cast< uint_of_same_size >( ( unsigned char )( storage[i] ) ) << shift;
         }
-        if( storage[ size - 1 ] & 0x80 )
-        {
-            for( ; i < sizeof( type ); ++i, shift += 8 ) { v += 0xff << shift; }
+        if( !Floating && Signed && ( storage[ size - 1 ] & 0x80 ) )
+        {            
+            for( ; i < sizeof( type ); ++i, shift += 8 ) { v +=  static_cast< uint_of_same_size >( 0xff ) << shift; } 
         }
-        return v;
+        const type* result = reinterpret_cast< const type* >( &v );
+        return *result;
     }
 
-    const little_endian& operator=( const little_endian& rhs ) { return this->base_type::operator=( rhs ); }
+    const little_endian& operator=( const little_endian& rhs ) { return base_type::operator=( rhs ); }
 
-    const little_endian& operator=( const type& rhs ) { return this->base_type::operator=( rhs ); }
+    const little_endian& operator=( const type& rhs ) { return base_type::operator=( rhs ); }
 };
 
 } // namespace detail {
@@ -120,6 +115,11 @@ typedef detail::little_endian< 4, true > little_endian32;
 typedef detail::little_endian< 4, false > little_endian_uint32;
 typedef little_endian32 int32;
 typedef little_endian_uint32 uint32;
+/// packed little endian 32-bit integers
+typedef detail::little_endian< 8, true > little_endian64;
+typedef detail::little_endian< 8, false > little_endian_uint64;
+typedef little_endian64 int64;
+typedef little_endian_uint64 uint64;
 /// packed floating point number (does it even make sense?)
 typedef detail::little_endian< 4, true, true > little_endian_float32;
 typedef detail::little_endian< 8, true, true > little_endian_float64;
