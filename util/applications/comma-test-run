@@ -412,6 +412,7 @@ function run_and_match_test()
     if [[ $test_failed == 0 && -f "./expected" ]]; then
         match_output=$( echo "$test_output" | comma-test-match ./expected 2>&1 )
         if [[ -n "$match_output" ]]; then
+            echo -e "test output:\n${test_output}\ndoes not match the expected" >&2
             echo "$match_output" >&2
             test_failed=1
         fi
