@@ -284,7 +284,8 @@ export -f closest_test_in_path
 # "dirname" with multiple arguments allowed (since some versions of "dirname" don't allow them)
 function get_dirnames()
 {
-    for i in $*; do dirname $i; done
+    local i
+    for i in $@; do dirname "$i" ; done
 }
 
 function stats_init()
@@ -760,7 +761,7 @@ function test_directories()
         options_black_list="^(\./)?($( sed 's#\./##' <$options_black_list | grep -v ^# | tr \\n '|' | sed 's/|$//' ))"; 
     fi
 
-    test_script_dirs_all=( $( exclude_generic_tests $( get_dirnames $( find . -name "test" -or -name "input" -or -name "expected" | grep -v "/\." ) 2> /dev/null | sort -u  | apply_white_black_list ) ) )
+    test_script_dirs_all=( $( exclude_generic_tests $( get_dirnames $( find . -name "test" -or -name "input" -or -name "expected" | grep -v "/\." ) 2>/dev/null | sort -u | apply_white_black_list ) ) )
     [[ -n "$options_from" || -n "$options_to" || -n "$options_end" ]] || { echo ${test_script_dirs_all[@]} ; return ; }
     [[ -z "$options_from" ]] || { local from="${options_from#\.\/}" ; }
     [[ -z "$options_to" ]] || { local to="${options_to#\.\/}" ; }
