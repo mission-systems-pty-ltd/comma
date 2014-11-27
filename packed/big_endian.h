@@ -89,7 +89,7 @@ inline type pack_float( type value )
 template< typename type, typename uint_of_same_size >
 inline type unpack_float( type value ) 
 {
-    char* storage = reinterpret_cast< char* >( &value ); 
+    const char* storage = reinterpret_cast< const char* >( &value ); 
     uint_of_same_size v = 0;
     unsigned int shift = 0;
     for( unsigned int i = 0; i < sizeof( type ); ++i, shift += 8 ) { v += static_cast< uint_of_same_size >( ( unsigned char )( storage[sizeof(type)-i-1] ) ) << shift; }
