@@ -65,21 +65,22 @@ inline static void init( comma::csv::options& csv_options, const comma::command_
     }
     csv_options.precision = options.value< unsigned int >( "--precision", 12 );
     csv_options.delimiter = options.exists( "--delimiter" ) ? options.value( "--delimiter", ',' ) : options.value( "-d", ',' );
-    boost::optional< std::string > quote_sign = options.optional< std::string >( "--quote" );
-    if( quote_sign )
+    boost::optional< std::string > quote_character = options.optional< std::string >( "--quote" );
+    if( quote_character )
     {
-        switch( quote_sign->size() )
+        switch( quote_character->size() )
         {
             case 0: csv_options.quote.reset(); break;
-            case 1: csv_options.quote = ( *quote_sign )[0]; break;
-            case 2: COMMA_THROW( comma::exception, "expected a quote sign, got \"" << *quote_sign << "\"" );
+            case 1: csv_options.quote = ( *quote_character )[0]; break;
+            case 2: COMMA_THROW( comma::exception, "expected a quote character, got \"" << *quote_character << "\"" );
         }
     }
+    csv_options.flush = options.exists( "--flush" );
 }
 
 } // namespace impl {
 
-options::options() : full_xpath( false ), delimiter( ',' ), precision( 12 ), quote( '"' ) {}
+options::options() : full_xpath( false ), delimiter( ',' ), precision( 12 ), quote( '"' ), flush( false ) {}
 
 options::options( int argc, char** argv, const std::string& defaultFields )
 {
@@ -91,17 +92,20 @@ options::options( const comma::command_line_options& options, const std::string&
     impl::init( *this, options, defaultFields );
 }
 
-std::string options::usage()
+std::string options::usage( const std::string& default_fields )
 {
     std::ostringstream oss;
-    oss << "    --binary,-b <format> : use binary format" << std::endl;
-    oss << "    --delimiter,-d <delimiter> : default: ','" << std::endl;
-    oss << "    --fields,-f <names> : field names, e.g. t,,x,y,z" << std::endl;
-    oss << "    --full-xpath : expect full xpaths as field names; default: false" << std::endl;
-    oss << "                   default false was a wrong choice, but changing it" << std::endl;
-    oss << "                   to true now may break too many things" << std::endl;
-    oss << "    --precision <precision> : floating point precision; default: 12" << std::endl;
-    oss << "    --quote=[<quote_sign>] : quote sign to quote strings (ascii only); default: '\"'" << std::endl;
+    oss << "    --binary,-b <format>: use binary format" << std::endl;
+    oss << "    --delimiter,-d <delimiter>: default: ','" << std::endl;
+    oss << "    --fields,-f <names>: comma-separated field names";
+    if( !default_fields.empty() ) { oss << "; default: " << default_fields; }
+    oss << std::endl;
+    oss << "    --full-xpath: expect full xpaths as field names; default: false" << std::endl;
+    oss << "                  default false was a wrong choice, but changing it" << std::endl;
+    oss << "                  to true now may break too many things" << std::endl;
+    oss << "    --precision <precision>: floating point precision; default: 12" << std::endl;
+    oss << "    --quote=[<quote_character>]: quote sign to quote strings (ascii only); default: '\"'" << std::endl;
+    oss << "    --flush: if present, flush output stream after each record" << std::endl;
     oss << format::usage();
     return oss.str();
 }

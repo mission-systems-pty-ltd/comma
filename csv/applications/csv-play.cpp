@@ -45,6 +45,7 @@
 #include <comma/application/signal_flag.h>
 #include <comma/csv/options.h>
 #include <comma/csv/stream.h>
+#include <comma/csv/traits.h>
 #include <comma/name_value/parser.h>
 #include <comma/csv/applications/play/play.h>
 #include <comma/csv/applications/play/multiplay.h>
@@ -117,7 +118,7 @@ int main( int argc, char** argv )
         std::string to = options.value< std::string>( "--to", "" );
         bool quiet =  options.exists( "--quiet" );
         bool flush =  !options.exists( "--no-flush" );
-        std::vector< std::string > configstrings = options.unnamed("--quiet,--no-flush","--slow,--slowdown,--speed,--precision,--binary,--fields,--clients,--from,--to");
+        std::vector< std::string > configstrings = options.unnamed("--quiet,--flush,--no-flush","--slow,--slowdown,--speed,--precision,--binary,--fields,--clients,--from,--to");
         if( configstrings.empty() ) { configstrings.push_back( "-;-" ); }
         comma::csv::options csvoptions( argc, argv );
         comma::name_value::parser nameValue("filename,output", ';', '=', false );
@@ -128,20 +129,11 @@ int main( int argc, char** argv )
             sourceConfigs[i] = nameValue.get< comma::Multiplay::SourceConfig >( configstrings[i], defaultConfig );
         }
         boost::posix_time::ptime fromtime;
-        if( !from.empty() )
-        {
-            fromtime = boost::posix_time::from_iso_string( from );
-        }
+        if( !from.empty() ) { fromtime = boost::posix_time::from_iso_string( from ); }
         boost::posix_time::ptime totime;
-        if( !to.empty() )
-        {
-            totime = boost::posix_time::from_iso_string( to );
-        }
+        if( !to.empty() ) { totime = boost::posix_time::from_iso_string( to ); }
         multiPlay.reset( new comma::Multiplay( sourceConfigs, 1.0 / speed, quiet, boost::posix_time::milliseconds(precision), fromtime, totime, flush ) );
-        while( multiPlay->read() && !shutdownFlag && std::cout.good() && !std::cout.bad() &&!std::cout.eof() )
-        {
-
-        }
+        while( multiPlay->read() && !shutdownFlag && std::cout.good() && !std::cout.bad() &&!std::cout.eof() );
         multiPlay->close();
         multiPlay.reset();
         if( shutdownFlag ) { std::cerr << "csv-play: interrupted by signal" << std::endl; return -1; }

@@ -227,6 +227,7 @@ class binary_output_stream : public boost::noncopyable
         //const char* end_;
         //char* cur_;
         std::vector< std::string > fields_;
+        bool flush_;
 };
 
 /// trivial generic csv input stream wrapper, less optimized, but more convenient
@@ -485,6 +486,7 @@ inline binary_output_stream< S >::binary_output_stream( std::ostream& os, const 
     //, end_( begin_ + size_ )
     //, cur_( begin_ )
     , fields_( split( column_names, ',' ) )
+    , flush_( false )
 {
     #ifdef WIN32
     if( &os == &std::cout ) { _setmode( _fileno( stdout ), _O_BINARY ); }
@@ -502,6 +504,7 @@ inline binary_output_stream< S >::binary_output_stream( std::ostream& os, const 
 //     , end_( begin_ + size_ )
 //     , cur_( begin_ )
     , fields_( split( o.fields, ',' ) )
+    , flush_( o.flush )
 {
     #ifdef WIN32
     if( &os == &std::cout ) { _setmode( _fileno( stdout ), _O_BINARY ); }
@@ -527,6 +530,7 @@ inline void binary_output_stream< S >::write( const S& s )
 //     binary_.put( s, cur_ );
 //     cur_ += binary_.format().size();
 //     if( cur_ == end_ ) { flush(); }
+    if( flush_ ) { m_os.flush(); }
 }
 
 template < typename S >
@@ -536,6 +540,7 @@ inline void binary_output_stream< S >::write( const S& s, const char* buf )
     write( s );
 //     ::memcpy( cur_, buf, binary_.format().size() );
 //     write( s );
+    if( flush_ ) { m_os.flush(); }
 }
 
 template < typename S >
