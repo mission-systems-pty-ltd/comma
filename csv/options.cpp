@@ -95,7 +95,6 @@ options::options( const comma::command_line_options& options, const std::string&
 std::string options::usage( const std::string& default_fields )
 {
     std::ostringstream oss;
-    oss << "    --binary,-b <format>: use binary format" << std::endl;
     oss << "    --delimiter,-d <delimiter>: default: ','" << std::endl;
     oss << "    --fields,-f <names>: comma-separated field names";
     if( !default_fields.empty() ) { oss << "; default: " << default_fields; }
@@ -106,6 +105,7 @@ std::string options::usage( const std::string& default_fields )
     oss << "    --precision <precision>: floating point precision; default: 12" << std::endl;
     oss << "    --quote=[<quote_character>]: quote sign to quote strings (ascii only); default: '\"'" << std::endl;
     oss << "    --flush: if present, flush output stream after each record" << std::endl;
+    oss << "    --binary,-b <format>: use binary format" << std::endl;
     oss << format::usage();
     return oss.str();
 }
