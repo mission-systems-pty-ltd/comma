@@ -27,9 +27,9 @@ function get_children()
     done
 
     if (( is_recursive )); then
-        ps -eo ppid:1,pid:1 | awk '
+        ps -eo ppid:1,pid:1 | gawk '
             { child[$1, ++num_children[$1]] = $2; }
-            # idosyncracy of awk: local function variables must be defined as (unused) function arguments
+            # idosyncracy of gawk: local function variables must be defined as (unused) function arguments
             function print_children(parent, local_n) \
             {
                 for (local_n = 1;local_n <= num_children[parent];local_n++)

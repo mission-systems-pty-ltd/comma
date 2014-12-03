@@ -73,7 +73,7 @@ function process_python_errors()
     local err_line_num=$( cat $err_file | grep ', line [0-9]' | head -1 | sed 's/.*, line //g; s/[^0-9].*//g' )
     if [[ -n "$err_line_num" ]]; then
         # find the original source line number (input file includes lines like: "# SRCLINE <number> ...")
-        line_num=$( cat "$input_file" | awk '
+        line_num=$( cat "$input_file" | gawk '
             NR > '"$err_line_num"' { exit; }  # still does END part
             $1 == "#" && $2 == "SRCLINE" { last_line_num = $3; }
             END { print last_line_num; }' )
@@ -85,7 +85,7 @@ function process_python_errors()
         local var_name=$( echo $desc | cut -d' ' -f3 )
         echo "NameError: \""$( demangle_name "$var_name" )"\" undefined$extra_info"
     else echo "$desc$extra_info"; fi ) |
-    awk 'NR > 1 { printf "... "; } { print $0; }'   # (if multiple lines, indicate continuation)
+    gawk 'NR > 1 { printf "... "; } { print $0; }'   # (if multiple lines, indicate continuation)
 }
 
 function clean_up()

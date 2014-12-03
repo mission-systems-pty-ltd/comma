@@ -7,4 +7,4 @@ format_index=$( echo $options | fmt -1 | grep -n -- '--binary' | cut -d: -f1 )
 input_format="${args[$format_index]}"
 [[ -z "$output_format" ]] && output_format=$input_format
 
-csv-to-bin $input_format | csv-interval $options | csv-from-bin $output_format | awk '{ printf( "interval[%d]=%s\n", NR, $0 ); }'
+csv-to-bin $input_format | csv-interval $options | csv-from-bin $output_format | gawk '{ printf( "interval[%d]=%s\n", NR, $0 ); }'

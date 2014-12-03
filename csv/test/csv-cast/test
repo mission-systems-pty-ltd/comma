@@ -2,4 +2,4 @@
 
 { read input_format; read output_format; } < options
 
-csv-to-bin $input_format | csv-cast $input_format $output_format --force | csv-from-bin $output_format | awk '{ printf( "output[%d]=%s\n", NR, $0 ); }'
+csv-to-bin $input_format | csv-cast $input_format $output_format --force | csv-from-bin $output_format | gawk '{ printf( "output[%d]=%s\n", NR, $0 ); }'

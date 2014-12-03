@@ -467,8 +467,8 @@ export -f terminate_run_single_test
 function random_sleep()
 {
     local max_nap=$1
-    local sleep_time=$( echo $RANDOM | awk -v max_nap=$max_nap '{ print $1 * $max_nap / 32768 }' )
-    wait_time=$( echo $wait_time $sleep_time | awk '{ print $1 + $2 }' )
+    local sleep_time=$( echo $RANDOM | gawk -v max_nap=$max_nap '{ print $1 * $max_nap / 32768 }' )
+    wait_time=$( echo $wait_time $sleep_time | gawk '{ print $1 + $2 }' )
     sleep ${sleep_time}s &
     test_pid=$!
     wait $test_pid
@@ -570,7 +570,7 @@ function run_single_test()
                     if [[ "$outcome" == "wait" ]] ; then
                         report_waiting "waiting for resources"
                         [[ "$max_wait_time" != "forever" ]] && {
-                            if awk '{ a=$1 > $2; exit !a }' < <( echo $wait_time $max_wait_time ) ; then
+                            if gawk '{ a=$1 > $2; exit !a }' < <( echo $wait_time $max_wait_time ) ; then
                                 echo "$name: in '$dir', could not get $parallel CPUs for ${wait_time}s, failed to run" >&2
                                 result=1
                                 break
