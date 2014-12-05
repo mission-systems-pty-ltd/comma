@@ -39,6 +39,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <set>
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -490,12 +491,23 @@ inline boost::property_tree::ptree property_tree::from_path_value_string( const 
 {
     boost::property_tree::ptree ptree;
     std::vector< std::string > v = comma::split( s, delimiter );
+    std::set< std::string > unique;
+    class checker {
+        public:
+            checker( const std::pair< std::set< std::string >::iterator, bool > & result_of_insert ) : result_( result_of_insert ) {}
+            const std::string & value() const { return *( result_.first ); }
+            ~checker() {
+                if ( !result_.second ) { std::cerr << "warning: input path " << *( result_.first ) << " is not unique" << std::endl; }
+            }
+        private:
+            std::pair< std::set< std::string >::iterator, bool > result_;
+    };
     for( std::size_t i = 0; i < v.size(); ++i )
     {
         if( v[i].empty() ) { continue; }
         std::string::size_type p = v[i].find_first_of( equal_sign );
         if( p == std::string::npos ) { COMMA_THROW( comma::exception, "expected '" << delimiter << "'-separated xpath" << equal_sign << "value pairs; got \"" << v[i] << "\"" ); }
-        ptree.put( boost::property_tree::ptree::path_type( comma::strip( v[i].substr( 0, p ), '"' ), '/' ), comma::strip( v[i].substr( p + 1, std::string::npos ), '"' ) );
+        ptree.put( boost::property_tree::ptree::path_type( checker( unique.insert( comma::strip( v[i].substr( 0, p ), '"' ) ) ).value(), '/' ), comma::strip( v[i].substr( p + 1, std::string::npos ), '"' ) );
     }
     return ptree;
 }
