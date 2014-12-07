@@ -341,9 +341,15 @@ EOF
 }
 export -f default_requirements
 
+function take_last_path_value()
+{
+    tac | sort -u -t= -k1,1 -s
+}
+export -f take_last_path_value
+
 function get_required_resources()
 {
-    ( default_requirements; [[ -f ./config ]] && cat ./config; ) | name-value-convert --from path-value --to json
+    ( default_requirements; [[ -f ./config ]] && cat ./config; ) | take_last_path_value | name-value-convert --from path-value --to json
 }
 export -f get_required_resources
 
