@@ -75,7 +75,7 @@ struct property_tree // quick and dirty
     static void to_path_value( std::ostream& os, const boost::property_tree::ptree& ptree, property_tree::path_mode indices_mode=property_tree::disabled, char equal_sign = '=', char delimiter = ',', const comma::xpath& root = comma::xpath() );
 
     /// read as path-value from string
-    static boost::property_tree::ptree from_path_value_string( const std::string& s, char equal_sign = '=', char delimiter = ',' );
+    static boost::property_tree::ptree from_path_value_string( const std::string& s, char equal_sign = '=', char delimiter = ',', bool enforce_unique = false );
 
     /// convert boost parameter tree into path=value-style string (equal sign and delimiter have to be escaped)
     static std::string to_path_value_string( const boost::property_tree::ptree& ptree, property_tree::path_mode mode=property_tree::disabled, char equal_sign = '=', char delimiter = ',' );
@@ -487,27 +487,35 @@ inline boost::property_tree::ptree property_tree::from_name_value_string( const 
     return ptree;
 }
 
-inline boost::property_tree::ptree property_tree::from_path_value_string( const std::string& s, char equal_sign, char delimiter )
+inline boost::property_tree::ptree property_tree::from_path_value_string( const std::string& s, char equal_sign, char delimiter, bool enforce_unique )
 {
     boost::property_tree::ptree ptree;
     std::vector< std::string > v = comma::split( s, delimiter );
-    std::set< std::string > unique;
-    class checker {
-        public:
-            checker( const std::pair< std::set< std::string >::iterator, bool > & result_of_insert ) : result_( result_of_insert ) {}
-            const std::string & value() const { return *( result_.first ); }
-            ~checker() {
-                if ( !result_.second ) { std::cerr << "warning: input path " << *( result_.first ) << " is not unique" << std::endl; }
-            }
-        private:
-            std::pair< std::set< std::string >::iterator, bool > result_;
+    struct speaker {
+        speaker( const std::pair< std::set< std::string >::iterator, bool > & result_of_insert ) : result_( result_of_insert ) {}
+        ~speaker() {
+            if ( !result_.second ) { std::cerr << "from_path_value_string: warning: input path '" << *( result_.first ) << "' is not unique" << std::endl; }
+        }
+        std::pair< std::set< std::string >::const_iterator, bool > result_;
     };
+    struct checker {
+        const std::string & check( const std::string & s ) { speaker( unique.insert( s ) ); return s; }
+        const std::string & no_check( const std::string & s ) { return s; }
+        std::set< std::string > unique;
+    };
+    checker c;
+    const std::string & (checker::*path_checker)( const std::string & s ) = ( enforce_unique ? &checker::check : &checker::no_check );
+
+    //template < bool Check > struct checker { const std::string& operator()( const std::string& s ) { return s } };
+
+    //template <> struct checker< true > { ... };
+
     for( std::size_t i = 0; i < v.size(); ++i )
     {
         if( v[i].empty() ) { continue; }
         std::string::size_type p = v[i].find_first_of( equal_sign );
         if( p == std::string::npos ) { COMMA_THROW( comma::exception, "expected '" << delimiter << "'-separated xpath" << equal_sign << "value pairs; got \"" << v[i] << "\"" ); }
-        ptree.put( boost::property_tree::ptree::path_type( checker( unique.insert( comma::strip( v[i].substr( 0, p ), '"' ) ) ).value(), '/' ), comma::strip( v[i].substr( p + 1, std::string::npos ), '"' ) );
+        ptree.put( boost::property_tree::ptree::path_type( ( c.*path_checker )( comma::strip( v[i].substr( 0, p ), '"' ) ), '/' ), comma::strip( v[i].substr( p + 1, std::string::npos ), '"' ) );
     }
     return ptree;
 }
