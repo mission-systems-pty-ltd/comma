@@ -157,6 +157,14 @@ function comma_total_system_resources()
 }
 export -f comma_total_system_resources
 
+# Leave only the last of path=value lines with identical paths
+# No arguments, stdin to stdout
+function take_last_path_value()
+{
+    tac | sort -u -t= -k1,1 -s
+}
+export -f take_last_path_value
+
 # Initialize a json file listing the occupied system resources (initially zeros)
 # and lists of processes waiting for resources and using resources.
 #
@@ -179,7 +187,7 @@ function comma_initialize_resources()
         sed 's/=.*$/="0"/'
         echo "$path=\"[]\""
         echo "$users=\"[]\""
-    ) | name-value-convert --from path-value --to json > "$counter"
+    ) | take_last_path_value | name-value-convert --from path-value --to json > "$counter"
 }
 export -f comma_initialize_resources
 
