@@ -75,6 +75,8 @@ static void usage()
     std::cerr << "    --delimiter,-d=<delimiter>: default ','" << std::endl;
     std::cerr << "    --show-path-indices,--indices: show indices for array items e.g. y[0]/x/z[1]=\"a\"" << std::endl;
     std::cerr << "    --no-brackets: use with --show-path-indices - above, show indices as path elements e.g. y/0/x/z/1=\"a\"" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "path-value options:" << std::endl;
     std::cerr << "    --take-last: if paths are repeated, take last path=value" << std::endl;
     std::cerr << "    --verify-unique: ensure that all paths are unique (takes precedence over --take-last)" << std::endl;
     std::cerr << "warning: if paths are repeated, output value selected from these inputs in not deterministic" << std::endl;
@@ -93,6 +95,7 @@ static char delimiter;
 static bool linewise;
 typedef comma::property_tree::path_mode path_mode;
 static path_mode indices_mode = comma::property_tree::disabled;
+static comma::property_tree::check_repeated_paths check_type( comma::property_tree::no_check );
 
 enum Types { ini, info, json, xml, name_value, path_value };
 
@@ -131,7 +134,6 @@ template <> struct traits< name_value >
 
 template <> struct traits< path_value > // quick and dirty
 {
-    template< enum comma::property_tree::check_repeated_paths check_type >
     static void input( std::istream& is, boost::property_tree::ptree& ptree )
     {
         std::string s;
@@ -150,7 +152,7 @@ template <> struct traits< path_value > // quick and dirty
                 s += t + delimiter;
             }
         }
-        ptree = comma::property_tree::from_path_value_string< check_type >::parse( s, equal_sign, delimiter );
+        ptree = comma::property_tree::from_path_value_string( s, equal_sign, delimiter, check_type );
     }
     static void output( std::ostream& os, boost::property_tree::ptree& ptree, path_mode mode) { comma::property_tree::to_path_value( os, ptree, mode, equal_sign, delimiter ); if( delimiter == '\n' ) { os << std::endl; } }
 };
@@ -165,7 +167,6 @@ int main( int ac, char** av )
         std::string to = options.value< std::string >( "--to", "name-value" );
         equal_sign = options.value( "--equal-sign,-e", '=' );
         linewise = options.exists( "--linewise,-l" );
-        comma::property_tree::check_repeated_paths check_type = comma::property_tree::no_check;
         if ( options.exists( "--take-last" ) ) check_type = comma::property_tree::take_last;
         if ( options.exists( "--verify-unique" ) ) check_type = comma::property_tree::verify_unique;
         char default_delimiter = ( to == "path-value" || from == "path-value" ) && !linewise ? '\n' : ',';
@@ -176,13 +177,7 @@ int main( int ac, char** av )
         else if( from == "info" ) { input = &traits< info >::input; }
         else if( from == "json" ) { input = &traits< json >::input; }
         else if( from == "xml" ) { input = &traits< xml >::input; }
-        else if( from == "path-value" ) {
-            switch ( check_type ) {
-                case comma::property_tree::take_last: input = &traits< path_value >::input< comma::property_tree::take_last >; break;
-                case comma::property_tree::verify_unique: input = &traits< path_value >::input< comma::property_tree::verify_unique >; break;
-                default: input = &traits< path_value >::input< comma::property_tree::no_check >;
-            }
-        }
+        else if( from == "path-value" ) { input = &traits< path_value >::input; }
         else { input = &traits< name_value >::input; }
         if( to == "ini" ) { output = &traits< ini >::output; }
         else if( to == "info" ) { output = &traits< info >::output; }

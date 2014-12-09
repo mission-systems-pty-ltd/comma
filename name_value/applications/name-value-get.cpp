@@ -69,12 +69,17 @@ static void usage()
     std::cerr << "        xml: xml data" << std::endl;
     std::cerr << "        default: --from: name-value; --to: same as --from" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "name-value options:" << std::endl;
+    std::cerr << "name/path-value options:" << std::endl;
     std::cerr << "    --equal-sign,-e=<equal sign>: default '='" << std::endl;
     std::cerr << "    --delimiter,-d=<delimiter>: default ','" << std::endl;
     std::cerr << "    --output-path: if path-value, output path (for regex)" << std::endl;
     std::cerr << "    --show-path-indices,--indices: show indices for array items e.g. y[0]/x/z[1]=\"a\"" << std::endl;
     std::cerr << "    --no-brackets: use with --show-path-indices - above, show indices as path elements e.g. y/0/x/z/1=\"a\"" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "path-value options:" << std::endl;
+    std::cerr << "    --take-last: if paths are repeated, take last path=value" << std::endl;
+    std::cerr << "    --verify-unique: ensure that all paths are unique (takes precedence over --take-last)" << std::endl;
+    std::cerr << "warning: if paths are repeated, output value selected from these inputs in not deterministic" << std::endl;
     std::cerr << std::endl;
     std::cerr << "data flow options:" << std::endl;
     std::cerr << "    --linewise,-l: if present, treat each input line as a record" << std::endl;
@@ -91,6 +96,7 @@ static bool linewise;
 static bool output_path;
 typedef comma::property_tree::path_mode path_mode;
 static path_mode indices_mode = comma::property_tree::disabled;
+static comma::property_tree::check_repeated_paths check_type( comma::property_tree::no_check );
 
 enum Types { ini, info, json, xml, name_value, path_value };
 
@@ -147,7 +153,7 @@ template <> struct traits< path_value > // quick and dirty
                 s += t + delimiter;
             }
         }
-        ptree = comma::property_tree::from_path_value_string< comma::property_tree::no_check >::parse( s, equal_sign, delimiter );
+        ptree = comma::property_tree::from_path_value_string( s, equal_sign, delimiter, check_type );
     }
     static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const std::string& path )
     { 
@@ -253,6 +259,8 @@ int main( int ac, char** av )
         equal_sign = options.value( "--equal-sign,-e", '=' );
         delimiter = options.value( "--delimiter,-d", from == "path-value" || to == "path-value" ? '\n' : ',' );
         linewise = options.exists( "--linewise,-l" );
+        if ( options.exists( "--take-last" ) ) check_type = comma::property_tree::take_last;
+        if ( options.exists( "--verify-unique" ) ) check_type = comma::property_tree::verify_unique;
         output_path = options.exists( "--output-path" );
         if( from == "ini" ) { input = &traits< ini >::input; output = &traits< ini >::output; }
         else if( from == "info" ) { input = &traits< info >::input; output = &traits< info >::output; }

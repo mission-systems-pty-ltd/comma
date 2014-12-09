@@ -75,9 +75,9 @@ struct property_tree // quick and dirty
     /// write as path-value to output stream
     static void to_path_value( std::ostream& os, const boost::property_tree::ptree& ptree, property_tree::path_mode indices_mode=property_tree::disabled, char equal_sign = '=', char delimiter = ',', const comma::xpath& root = comma::xpath() );
 
-    /// read as path-value from string
-    enum check_repeated_paths { no_check, take_last, verify_unique };  // how to treat repeated paths
-    template < check_repeated_paths check_type > struct from_path_value_string;
+    /// read as path-value from string; enum specifies how to treat repeated paths (foo="bar"; foo="blah";)
+    enum check_repeated_paths { no_check, take_last, verify_unique };
+    static boost::property_tree::ptree from_path_value_string( const std::string& s, char equal_sign = '=', char delimiter = ',', check_repeated_paths check_type = no_check );
 
     /// convert boost parameter tree into path=value-style string (equal sign and delimiter have to be escaped)
     static std::string to_path_value_string( const boost::property_tree::ptree& ptree, property_tree::path_mode mode=property_tree::disabled, char equal_sign = '=', char delimiter = ',' );
@@ -424,6 +424,24 @@ template <> struct path_filter< property_tree::take_last > {
     boost::property_tree::ptree & ptree_;
 };
 
+template < property_tree::check_repeated_paths check_type > struct from_path_value_string {
+    static inline boost::property_tree::ptree parse( const std::string& s, char equal_sign, char delimiter )
+    {
+        boost::property_tree::ptree ptree;
+        std::vector< std::string > v = comma::split( s, delimiter );
+        Impl::path_filter< check_type > c( ptree );
+
+        for( std::size_t i = 0; i < v.size(); ++i )
+        {
+            if( v[i].empty() ) { continue; }
+            std::string::size_type p = v[i].find_first_of( equal_sign );
+            if( p == std::string::npos ) { COMMA_THROW( comma::exception, "expected '" << delimiter << "'-separated xpath" << equal_sign << "value pairs; got \"" << v[i] << "\"" ); }
+            c.put( boost::property_tree::ptree::path_type( comma::strip( v[i].substr( 0, p ), '"' ), '/' ), comma::strip( v[i].substr( p + 1, std::string::npos ), '"' ) );
+        }
+        return ptree;
+    }
+};
+
 } // namespace Impl {
 
 inline void property_tree::to_name_value( std::ostream& os, const boost::property_tree::ptree& ptree, bool indented, char equal_sign, char delimiter )
@@ -520,23 +538,14 @@ inline boost::property_tree::ptree property_tree::from_name_value_string( const 
     return ptree;
 }
 
-template < property_tree::check_repeated_paths check_type > struct property_tree::from_path_value_string {
-    static inline boost::property_tree::ptree parse( const std::string& s, char equal_sign = '=', char delimiter = ',' )
-    {
-        boost::property_tree::ptree ptree;
-        std::vector< std::string > v = comma::split( s, delimiter );
-        Impl::path_filter< check_type > c( ptree );
-
-        for( std::size_t i = 0; i < v.size(); ++i )
-        {
-            if( v[i].empty() ) { continue; }
-            std::string::size_type p = v[i].find_first_of( equal_sign );
-            if( p == std::string::npos ) { COMMA_THROW( comma::exception, "expected '" << delimiter << "'-separated xpath" << equal_sign << "value pairs; got \"" << v[i] << "\"" ); }
-            c.put( boost::property_tree::ptree::path_type( comma::strip( v[i].substr( 0, p ), '"' ), '/' ), comma::strip( v[i].substr( p + 1, std::string::npos ), '"' ) );
-        }
-        return ptree;
+inline boost::property_tree::ptree property_tree::from_path_value_string( const std::string& s, char equal_sign, char delimiter, check_repeated_paths check_type )
+{
+    switch ( check_type ) {
+        case comma::property_tree::take_last     : return Impl::from_path_value_string< comma::property_tree::take_last >::parse( s, equal_sign, delimiter );
+        case comma::property_tree::verify_unique : return Impl::from_path_value_string< comma::property_tree::verify_unique >::parse( s, equal_sign, delimiter );
+        default                                  : return Impl::from_path_value_string< comma::property_tree::no_check >::parse( s, equal_sign, delimiter );
     }
-};
+}
 
 } // namespace comma {
 
