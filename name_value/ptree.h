@@ -43,8 +43,6 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/info_parser.hpp>
-#include <boost/unordered_set.hpp>
-#include <boost/unordered_map.hpp>
 #include <comma/base/exception.h>
 #include <comma/base/types.h>
 #include <comma/string/string.h>
@@ -78,7 +76,7 @@ struct property_tree // quick and dirty
     static void to_path_value( std::ostream& os, const boost::property_tree::ptree& ptree, property_tree::path_mode indices_mode=property_tree::disabled, char equal_sign = '=', char delimiter = ',', const comma::xpath& root = comma::xpath() );
 
     /// read as path-value from string
-    enum check_repeated_paths { no_check, take_last, enforce_unique };  // how to treat repeated paths
+    enum check_repeated_paths { no_check, take_last, verify_unique };  // how to treat repeated paths
     template < check_repeated_paths check_type > struct from_path_value_string;
 
     /// convert boost parameter tree into path=value-style string (equal sign and delimiter have to be escaped)
@@ -395,19 +393,35 @@ inline static void ptree_to_path_value_string_impl( std::ostream& os, boost::pro
     }
 }
 
-template< property_tree::check_repeated_paths check_type > struct path_checker;
+template< property_tree::check_repeated_paths check_type > struct path_filter;
 
-template <> struct path_checker< property_tree::no_check > {
-    const std::string & check( const std::string & s ) { return s; }
+template <> struct path_filter< property_tree::no_check > {
+    path_filter( boost::property_tree::ptree & ptree ) : ptree_( ptree ) {}
+    void put( const boost::property_tree::ptree::path_type & p, const std::string & v ) { ptree_.put( p, v ); }
+    boost::property_tree::ptree & ptree_;
 };
 
-template <> struct path_checker< property_tree::enforce_unique > {
-    const std::string & check( const std::string & s ) {
-        std::pair< boost::unordered_set< std::string >::iterator, bool > result = paths.insert( s );
-        if ( !result.second ) { COMMA_THROW( comma::exception, "input path '" << *( result.first ) << "' is not unique" ); }
-        return s;
+template <> struct path_filter< property_tree::verify_unique > {
+    path_filter( boost::property_tree::ptree & ptree ) : ptree_( ptree ) {}
+    void put( const boost::property_tree::ptree::path_type & p, const std::string & v ) {
+        boost::optional< std::string > old_v = ptree_.get_optional< std::string >( p );
+        if ( old_v ) { COMMA_THROW( comma::exception, "input path '" << p.dump() << "' is not unique" ); }
+        ptree_.put( p, v );
     }
-    boost::unordered_set< std::string > paths;
+    boost::property_tree::ptree & ptree_;
+};
+
+template <> struct path_filter< property_tree::take_last > {
+    path_filter( boost::property_tree::ptree & ptree ) : ptree_( ptree ) {}
+    void put( const boost::property_tree::ptree::path_type & p, const std::string & v ) {
+        boost::optional< boost::property_tree::ptree & > old_child = ptree_.get_child_optional( p );
+        if ( old_child ) {
+            old_child->put_value< std::string >( v );
+        } else {
+            ptree_.put( p, v );
+        }
+    }
+    boost::property_tree::ptree & ptree_;
 };
 
 } // namespace Impl {
@@ -511,39 +525,14 @@ template < property_tree::check_repeated_paths check_type > struct property_tree
     {
         boost::property_tree::ptree ptree;
         std::vector< std::string > v = comma::split( s, delimiter );
-        Impl::path_checker< check_type > c;
+        Impl::path_filter< check_type > c( ptree );
 
         for( std::size_t i = 0; i < v.size(); ++i )
         {
             if( v[i].empty() ) { continue; }
             std::string::size_type p = v[i].find_first_of( equal_sign );
             if( p == std::string::npos ) { COMMA_THROW( comma::exception, "expected '" << delimiter << "'-separated xpath" << equal_sign << "value pairs; got \"" << v[i] << "\"" ); }
-            ptree.put( boost::property_tree::ptree::path_type( c.check( comma::strip( v[i].substr( 0, p ), '"' ) ), '/' ), comma::strip( v[i].substr( p + 1, std::string::npos ), '"' ) );
-        }
-        return ptree;
-    }
-};
-
-template <> struct property_tree::from_path_value_string< property_tree::take_last > {
-    static inline boost::property_tree::ptree parse( const std::string& s, char equal_sign = '=', char delimiter = ',' )
-    {
-        boost::property_tree::ptree ptree;
-        std::vector< std::string > v = comma::split( s, delimiter );
-
-        typedef boost::unordered_map< std::string, std::string > unique_map;
-        unique_map pv;
-
-        for( std::size_t i = 0; i < v.size(); ++i )
-        {
-            if( v[i].empty() ) { continue; }
-            std::string::size_type p = v[i].find_first_of( equal_sign );
-            if( p == std::string::npos ) { COMMA_THROW( comma::exception, "expected '" << delimiter << "'-separated xpath" << equal_sign << "value pairs; got \"" << v[i] << "\"" ); }
-            pv.insert( std::make_pair( comma::strip( v[i].substr( 0, p ), '"' ), comma::strip( v[i].substr( p + 1, std::string::npos ), '"' ) ) );
-        }
-
-        for( unique_map::const_iterator it = pv.begin(); it != pv.end(); ++it )
-        {
-            ptree.put( boost::property_tree::ptree::path_type( it->first, '/' ), it->second );
+            c.put( boost::property_tree::ptree::path_type( comma::strip( v[i].substr( 0, p ), '"' ), '/' ), comma::strip( v[i].substr( p + 1, std::string::npos ), '"' ) );
         }
         return ptree;
     }

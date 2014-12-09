@@ -76,7 +76,7 @@ static void usage()
     std::cerr << "    --show-path-indices,--indices: show indices for array items e.g. y[0]/x/z[1]=\"a\"" << std::endl;
     std::cerr << "    --no-brackets: use with --show-path-indices - above, show indices as path elements e.g. y/0/x/z/1=\"a\"" << std::endl;
     std::cerr << "    --take-last: if paths are repeated, take last path=value" << std::endl;
-    std::cerr << "    --enforce-unique: ensure that all paths are unique (takes precedence over --take-last)" << std::endl;
+    std::cerr << "    --verify-unique: ensure that all paths are unique (takes precedence over --take-last)" << std::endl;
     std::cerr << "warning: if paths are repeated, output value selected from these inputs in not deterministic" << std::endl;
     std::cerr << std::endl;
     std::cerr << "data flow options:" << std::endl;
@@ -167,7 +167,7 @@ int main( int ac, char** av )
         linewise = options.exists( "--linewise,-l" );
         comma::property_tree::check_repeated_paths check_type = comma::property_tree::no_check;
         if ( options.exists( "--take-last" ) ) check_type = comma::property_tree::take_last;
-        if ( options.exists( "--enforce-unique" ) ) check_type = comma::property_tree::enforce_unique;
+        if ( options.exists( "--verify-unique" ) ) check_type = comma::property_tree::verify_unique;
         char default_delimiter = ( to == "path-value" || from == "path-value" ) && !linewise ? '\n' : ',';
         delimiter = options.value( "--delimiter,-d", default_delimiter );
         void ( * input )( std::istream& is, boost::property_tree::ptree& ptree );
@@ -179,7 +179,7 @@ int main( int ac, char** av )
         else if( from == "path-value" ) {
             switch ( check_type ) {
                 case comma::property_tree::take_last: input = &traits< path_value >::input< comma::property_tree::take_last >; break;
-                case comma::property_tree::enforce_unique: input = &traits< path_value >::input< comma::property_tree::enforce_unique >; break;
+                case comma::property_tree::verify_unique: input = &traits< path_value >::input< comma::property_tree::verify_unique >; break;
                 default: input = &traits< path_value >::input< comma::property_tree::no_check >;
             }
         }
