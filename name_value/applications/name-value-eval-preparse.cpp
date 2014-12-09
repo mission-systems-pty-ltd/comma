@@ -285,6 +285,11 @@ std::string quote(const std::string &str, char quote_char)
     return result;
 }
 
+bool is_quoted(const std::string &str)
+{
+    return str.length() != 0 && (str[0] == '\'' || str[0] == '"');
+}
+
 char next_nonblank_char(const std::string &line, size_t pos)
 {
     while (pos < line.length() && isspace(line[pos])) { ++pos; }
@@ -526,7 +531,7 @@ void transform_special_tokens(std::vector<Token> &tokens, const std::string &fil
 }
 
 // to prevent confusion, if the rhs is quoted then do a string comparison, not numeric
-// (for option --test only; option --assign already handles this by unquoting numbers on the rhs)
+// (for option --test only)
 void force_string_comparison_if_quoted(std::vector<Token> &tokens)
 {
     if (tokens.size() == 0) { return; }
@@ -601,12 +606,16 @@ void tokenise(const std::string &line, const std::string &filename, int line_num
 
         if (opt.assign && found_assign_op)
         {
-            // treat the rest of the line as one long string
-            pos = len;
-            tok_str = quote(trim_spaces(line.substr(tok_start, pos - tok_start)), '\'');
-            std::string unquoted_tok_str = tok_str.substr(1, tok_str.length() - 2);
-            if (is_number(unquoted_tok_str)) { tok_str = unquoted_tok_str; }
             type = t_string;
+            pos = len;
+            tok_str = trim_spaces(line.substr(tok_start, pos - tok_start));
+            if (is_quoted(tok_str))
+            {
+                // make sure quotes are of the right type
+                std::string unquoted_tok_str = tok_str.substr(1, tok_str.length() - 2);
+                tok_str = quote(unquoted_tok_str, '\'');
+            }
+            else if (!is_number(tok_str)) { tok_str = quote(tok_str, '\''); }
         }
         else
         if (is_start_of_id(ch))
