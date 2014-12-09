@@ -1,0 +1,17 @@
+#!/bin/bash
+
+function generate_repeated()
+{
+    cat <<EOF
+a/b=2
+c/d=3
+a/b=1
+EOF
+}
+
+generate_repeated | name-value-convert --from path-value --to path-value --take-last | sed 's@^@last/@'
+
+output=$( generate_repeated | name-value-convert --from path-value --to path-value --verify-unique 2>/dev/null )
+status=$?
+echo "enforced/output=\"$output\""
+echo "enforced/status=\"$status\""
