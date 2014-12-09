@@ -147,7 +147,7 @@ template <> struct traits< path_value > // quick and dirty
                 s += t + delimiter;
             }
         }
-        ptree = comma::property_tree::from_path_value_string( s, equal_sign, delimiter );
+        ptree = comma::property_tree::from_path_value_string< comma::property_tree::no_check >::parse( s, equal_sign, delimiter );
     }
     static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const std::string& path )
     { 

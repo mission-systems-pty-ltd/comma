@@ -126,6 +126,8 @@ template <> struct traits< name_value >
     static void output( std::ostream& os, boost::property_tree::ptree& ptree, path_mode ) { comma::property_tree::to_name_value( os, ptree, !linewise, equal_sign, delimiter ); }
 };
 
+bool strict = false;
+
 template <> struct traits< path_value > // quick and dirty
 {
     static void input( std::istream& is, boost::property_tree::ptree& ptree )
@@ -146,7 +148,7 @@ template <> struct traits< path_value > // quick and dirty
                 s += t + delimiter;
             }
         }
-        ptree = comma::property_tree::from_path_value_string( s, equal_sign, delimiter );
+        ptree = comma::property_tree::from_path_value_string< comma::property_tree::no_check >::parse( s, equal_sign, delimiter );
     }
     static void output( std::ostream& os, boost::property_tree::ptree& ptree, path_mode mode) { comma::property_tree::to_path_value( os, ptree, mode, equal_sign, delimiter ); if( delimiter == '\n' ) { os << std::endl; } }
 };
