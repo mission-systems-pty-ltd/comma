@@ -608,6 +608,13 @@ void tokenise(const std::string &line, const std::string &filename, int line_num
         {
             type = t_string;
             pos = len;
+
+            tok_str = quote(trim_spaces(line.substr(tok_start, pos - tok_start)), '\'');
+            std::string unquoted_tok_str = tok_str.substr(1, tok_str.length() - 2);
+            if (is_number(unquoted_tok_str)) { tok_str = unquoted_tok_str; }
+
+            // TODO: restore the code below after regression tests have been updated
+            /*
             tok_str = trim_spaces(line.substr(tok_start, pos - tok_start));
             if (is_quoted(tok_str))
             {
@@ -616,6 +623,7 @@ void tokenise(const std::string &line, const std::string &filename, int line_num
                 tok_str = quote(unquoted_tok_str, '\'');
             }
             else if (!is_number(tok_str)) { tok_str = quote(tok_str, '\''); }
+            */
         }
         else
         if (is_start_of_id(ch))
