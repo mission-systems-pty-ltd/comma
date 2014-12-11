@@ -365,3 +365,11 @@ function comma_status_ok()
     return 0
 }
 export -f comma_status_ok
+
+# Leave only the last of path=value lines with identical paths
+# No arguments, stdin to stdout
+function comma_take_last_path_value()
+{
+    tac | sort -u -t= -k1,1 -s
+}
+export -f comma_take_last_path_value
