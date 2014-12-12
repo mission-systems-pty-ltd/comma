@@ -76,7 +76,7 @@ static void usage()
     std::cerr << std::endl;
     std::cerr << "path-value options:" << std::endl;
     std::cerr << "    --take-last: if paths are repeated, take last path=value" << std::endl;
-    std::cerr << "    --verify-unique: ensure that all input paths are unique (takes precedence over --take-last)" << std::endl;
+    std::cerr << "    --verify-unique,--unique-input: ensure that all input paths are unique (takes precedence over --take-last)" << std::endl;
     std::cerr << "warning: if paths are repeated, output value selected from these inputs in not deterministic" << std::endl;
     std::cerr << std::endl;
     std::cerr << "data flow options:" << std::endl;
@@ -166,7 +166,7 @@ int main( int ac, char** av )
         equal_sign = options.value( "--equal-sign,-e", '=' );
         linewise = options.exists( "--linewise,-l" );
         if ( options.exists( "--take-last" ) ) check_type = comma::property_tree::take_last;
-        if ( options.exists( "--verify-unique" ) ) check_type = comma::property_tree::unique_input;
+        if ( options.exists( "--verify-unique,--unique-input" ) ) check_type = comma::property_tree::unique_input;
         char default_delimiter = ( to == "path-value" || from == "path-value" ) && !linewise ? '\n' : ',';
         delimiter = options.value( "--delimiter,-d", default_delimiter );
         void ( * input )( std::istream& is, boost::property_tree::ptree& ptree );
