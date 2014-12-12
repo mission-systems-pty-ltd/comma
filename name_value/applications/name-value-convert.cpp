@@ -56,8 +56,6 @@ static void usage()
     std::cerr << std::endl;
     std::cerr << "usage: cat data.xml | name-value-convert <from> [<options>]" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "<path>: x-path, e.g. \"command/type\"" << std::endl;
-    std::cerr << std::endl;
     std::cerr << "data options" << std::endl;
     std::cerr << "    --from <format>: input format; default name-value" << std::endl;
     std::cerr << "    --to <format>: output format; default name-value" << std::endl;
