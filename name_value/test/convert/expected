@@ -1,4 +1,4 @@
 last/a/b="1"
 last/c/d="3"
 enforced/output=""
-enforced/status=1
+enforced/status="1"
