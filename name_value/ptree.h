@@ -43,6 +43,7 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/info_parser.hpp>
+#include <boost/unordered_set.hpp>
 #include <comma/base/exception.h>
 #include <comma/base/types.h>
 #include <comma/string/string.h>
@@ -76,7 +77,7 @@ struct property_tree // quick and dirty
     static void to_path_value( std::ostream& os, const boost::property_tree::ptree& ptree, property_tree::path_mode indices_mode=property_tree::disabled, char equal_sign = '=', char delimiter = ',', const comma::xpath& root = comma::xpath() );
 
     /// read as path-value from string; enum specifies how to treat repeated paths (foo="bar"; foo="blah";)
-    enum check_repeated_paths { no_check, take_last, verify_unique };
+    enum check_repeated_paths { no_check, take_last, unique_input, no_overwrite };
     static boost::property_tree::ptree from_path_value_string( const std::string& s, char equal_sign = '=', char delimiter = ',', check_repeated_paths check_type = no_check );
     static boost::property_tree::ptree& from_path_value_string( boost::property_tree::ptree& ptree, const std::string& s, char equal_sign, char delimiter, check_repeated_paths check_type = no_check );
 
@@ -402,11 +403,11 @@ template <> struct path_filter< property_tree::no_check > {
     boost::property_tree::ptree& ptree_;
 };
 
-template <> struct path_filter< property_tree::verify_unique > {
+template <> struct path_filter< property_tree::no_overwrite > {
     path_filter( boost::property_tree::ptree& ptree ) : ptree_( ptree ) {}
     void put( const boost::property_tree::ptree::path_type & p, const std::string & v ) {
         boost::optional< std::string > old_v = ptree_.get_optional< std::string >( p );
-        if ( old_v ) { COMMA_THROW( comma::exception, "input path '" << p.dump() << "' is not unique" ); }
+        if ( old_v ) { COMMA_THROW( comma::exception, "input path '" << p.dump() << "' already in the tree" ); }
         ptree_.put( p, v );
     }
     boost::property_tree::ptree& ptree_;
@@ -423,6 +424,20 @@ template <> struct path_filter< property_tree::take_last > {
         }
     }
     boost::property_tree::ptree& ptree_;
+};
+
+template <> struct path_filter< property_tree::unique_input > {
+    path_filter( boost::property_tree::ptree& ptree ) : ptree_( ptree ) {}
+    void put( const boost::property_tree::ptree::path_type & p, const std::string & v ) {
+        typedef std::pair< path_set::iterator, bool > result_of_insert;
+        result_of_insert result = unique_.insert( p.dump() );
+        if ( !result.second ) { COMMA_THROW( comma::exception, "input path '" << p.dump() << "' is not unique" ); }
+        ptree_.put( p, v );
+    }
+    boost::property_tree::ptree& ptree_;
+private:
+    typedef boost::unordered_set< std::string > path_set;
+    path_set unique_;
 };
 
 template < property_tree::check_repeated_paths check_type > struct from_path_value_string {
@@ -542,7 +557,8 @@ inline boost::property_tree::ptree& property_tree::from_path_value_string( boost
 {
     switch ( check_type ) {
         case comma::property_tree::take_last         : return Impl::from_path_value_string< comma::property_tree::take_last >::parse( ptree, s, equal_sign, delimiter );
-        case comma::property_tree::verify_unique     : return Impl::from_path_value_string< comma::property_tree::verify_unique >::parse( ptree, s, equal_sign, delimiter );
+        case comma::property_tree::unique_input      : return Impl::from_path_value_string< comma::property_tree::unique_input >::parse( ptree, s, equal_sign, delimiter );
+        case comma::property_tree::no_overwrite      : return Impl::from_path_value_string< comma::property_tree::no_overwrite >::parse( ptree, s, equal_sign, delimiter );
         case comma::property_tree::no_check: default : return Impl::from_path_value_string< comma::property_tree::no_check >::parse( ptree, s, equal_sign, delimiter );
     }
     return ptree;

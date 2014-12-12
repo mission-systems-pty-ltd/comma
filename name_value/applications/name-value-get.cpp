@@ -78,7 +78,7 @@ static void usage()
     std::cerr << std::endl;
     std::cerr << "path-value options:" << std::endl;
     std::cerr << "    --take-last: if paths are repeated, take last path=value" << std::endl;
-    std::cerr << "    --verify-unique: ensure that all paths are unique (takes precedence over --take-last)" << std::endl;
+    std::cerr << "    --verify-unique: ensure that all input paths are unique (takes precedence over --take-last)" << std::endl;
     std::cerr << "warning: if paths are repeated, output value selected from these inputs in not deterministic" << std::endl;
     std::cerr << std::endl;
     std::cerr << "data flow options:" << std::endl;
@@ -260,7 +260,7 @@ int main( int ac, char** av )
         delimiter = options.value( "--delimiter,-d", from == "path-value" || to == "path-value" ? '\n' : ',' );
         linewise = options.exists( "--linewise,-l" );
         if ( options.exists( "--take-last" ) ) check_type = comma::property_tree::take_last;
-        if ( options.exists( "--verify-unique" ) ) check_type = comma::property_tree::verify_unique;
+        if ( options.exists( "--verify-unique" ) ) check_type = comma::property_tree::unique_input;
         output_path = options.exists( "--output-path" );
         if( from == "ini" ) { input = &traits< ini >::input; output = &traits< ini >::output; }
         else if( from == "info" ) { input = &traits< info >::input; output = &traits< info >::output; }
