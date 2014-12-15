@@ -108,6 +108,8 @@ ENDIF( APPLE )
 OPTION( BUILD_TESTS "build unit tests" OFF )
 SET( comma_BUILD_TESTS ${BUILD_TESTS} )
 
+OPTION( BUILD_PYTHON_PACKAGES "install comma python packages" OFF )
+
 OPTION( BUILD_APPLICATIONS "build applications" ON )
 SET( comma_BUILD_APPLICATIONS ${BUILD_APPLICATIONS} )
 
@@ -216,6 +218,11 @@ if( comma_BUILD_XML )
 endif( comma_BUILD_XML )
 add_subdirectory( xpath )
 
+if( BUILD_PYTHON_PACKAGES )
+    message( "python installation: todo" )
+    #find_package( PythonInterp REQUIRED )
+    #find_package( PythonLibs REQUIRED )
+endif( BUILD_PYTHON_PACKAGES )
 
 #in future, may need to add third party dlls somehow, if they are linked as dlls. Not needed for statically linking to boost.
 #if we set them up to install to bin they might be packaged through, e.g. roughly (using GLOB):
