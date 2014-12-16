@@ -220,6 +220,7 @@ static void XMLCALL usage(bool verbose)
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --block=P; default 1000; to output just P elements per block" << std::endl
+              << "    --default-namespace: specify a namespace to assume" << std::endl
               << "    --discard-namespace: (todo) discard namespace in the directory name" << std::endl
               << "                         e.g. both tags gml:id and id will be output to" << std::endl
               << "                         a directory called \"id\"" << std::endl

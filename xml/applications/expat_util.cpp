@@ -39,7 +39,7 @@
 
 #include "./expat_util.h"
 
-static unsigned const BUFFY_SIZE = 1 * 1024 * 1024;
+static unsigned const BUFFY_SIZE = 1 * 1024; // * 1024;
 
 // ~~~~~~~~~~~~~~~~~~
 // SAX HANDLERS
@@ -111,12 +111,8 @@ simple_expat_application::run(std::string const & filename)
         return 1;
     }
 
-    XML_SetElementHandler(parser, handler_element_start, handler_element_end);
-    XML_SetDefaultHandler(parser, handler_default);
-    XML_SetCommentHandler(parser, handler_comment);
+    set_handlers();
     
-    XML_SetUserData(parser, this);
-
     bool ok = false;
     if (filename.empty())
     {
@@ -129,6 +125,8 @@ simple_expat_application::run(std::string const & filename)
         if (infile.good())
         {
             ok = parse_as_blocks(infile);
+            if (! ok)
+                std::cerr << command_name << ": Error: Parsing Buffer. Abort!" << std::endl;
             infile.close();
         }
         else
@@ -146,11 +144,53 @@ simple_expat_application::run(std::string const & filename)
     return ok ? 0 : 1;
 }
 
+void
+simple_expat_application::set_handlers()
+{
+    XML_SetElementHandler(parser, handler_element_start, handler_element_end);
+    XML_SetDefaultHandler(parser, handler_default);
+    XML_SetCommentHandler(parser, handler_comment);
+    
+    XML_SetUserData(parser, this);
+}
+
+bool
+simple_expat_application::parse_retry_block(char const * const ptr, unsigned const size, bool const at_end)
+{
+    assert(NULL != ptr);
+    assert('\0' != *ptr);
+    assert(size > 0);
+    
+    long long byte_index = XML_GetCurrentByteIndex(parser);
+
+    unsigned curr = 0;
+    while (curr < size)
+    {
+        XML_ParserReset(parser, NULL);
+        set_handlers();
+        
+        if (XML_STATUS_OK == XML_Parse(parser, ptr + curr, size - curr, at_end))
+            return true;
+        
+        std::cerr << command_name << ": parse_retry_block " << XML_GetCurrentLineNumber(parser)
+                << " (" << XML_GetCurrentColumnNumber(parser)
+                << ")/" << XML_GetCurrentByteIndex(parser)
+                << ": " << XML_ErrorString(XML_GetErrorCode(parser)) << std::endl;
+        if (XML_ERROR_JUNK_AFTER_DOC_ELEMENT != XML_GetErrorCode(parser))
+            return false;
+        
+        curr += XML_GetCurrentByteIndex(parser) - byte_index;
+        byte_index = XML_GetCurrentByteIndex(parser);
+    }
+    return true;
+}
+
 bool
 simple_expat_application::parse_as_blocks(std::istream & infile)
 {
     assert(infile.good());
-
+ 
+    long long read_byte_count = 0;
     for (;;)
     {
         void * const buffy = XML_GetBuffer(parser, BUFFY_SIZE);
@@ -161,14 +201,24 @@ simple_expat_application::parse_as_blocks(std::istream & infile)
         }
 
         infile.read(reinterpret_cast<char *>(buffy), BUFFY_SIZE);
-        if (infile.gcount() > 0)
+        std::streamsize const gcount = infile.gcount();
+        if (gcount > 0)
         {
-            if (XML_STATUS_OK != XML_ParseBuffer(parser, infile.gcount(), infile.gcount() < BUFFY_SIZE))
+            if (XML_STATUS_OK != XML_ParseBuffer(parser, gcount, gcount < BUFFY_SIZE))
             {
-                std::cerr << command_name << ": " << XML_ErrorString(XML_GetErrorCode(parser)) << std::endl;
-                std::cerr << command_name << ": Error: Parsing Buffer. Abort!" << std::endl;
-                return false;
+                std::cerr << command_name << ": parse_as_blocks " << XML_GetCurrentLineNumber(parser)
+                        << " (" << XML_GetCurrentColumnNumber(parser)
+                        << ")/" << XML_GetCurrentByteIndex(parser)
+                        << ": " << XML_ErrorString(XML_GetErrorCode(parser)) << std::endl;
+                if (XML_ERROR_JUNK_AFTER_DOC_ELEMENT != XML_GetErrorCode(parser))
+                    return false;
+
+                // only if we are trying to parse an xml stream
+                long long const offset = XML_GetCurrentByteIndex(parser) - read_byte_count;
+                if (! parse_retry_block(reinterpret_cast<char *>(buffy) + offset, gcount - offset, gcount < BUFFY_SIZE))
+                    return false;
             }
+            read_byte_count += infile.gcount();
         }
 
         if (infile.eof())
@@ -179,7 +229,16 @@ simple_expat_application::parse_as_blocks(std::istream & infile)
             std::cerr << command_name << ": Error: Could not read. Abort!" << std::endl;
             return false;
         }
-
+        
+        XML_ParsingStatus status; 
+        XML_GetParsingStatus(parser, &status);
+        
+        if (XML_FINISHED == status.parsing)
+        {
+            if (XML_GetCurrentByteIndex(parser) != read_byte_count)
+                std::cerr << command_name << ": Error, Finished Parsing but there is more data!" << std::endl;
+            return false;
+        }
     }
 }
 

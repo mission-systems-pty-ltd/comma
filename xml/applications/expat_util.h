@@ -83,6 +83,12 @@ protected:
     do_element_end(char const * const element) {;}
 
 private:
+    void
+    set_handlers();
+    
+    bool
+    parse_retry_block(char const * const ptr, unsigned const size, bool const at_end);
+
     bool
     parse_as_blocks(std::istream & infile);
 
