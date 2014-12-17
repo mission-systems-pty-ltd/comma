@@ -172,12 +172,15 @@ simple_expat_application::parse_retry_block(char const * const ptr, unsigned con
         if (XML_STATUS_OK == XML_Parse(parser, ptr + curr, size - curr, at_end))
             return true;
         
-        std::cerr << command_name << ": parse_retry_block " << XML_GetCurrentLineNumber(parser)
-                << " (" << XML_GetCurrentColumnNumber(parser)
-                << ")/" << XML_GetCurrentByteIndex(parser)
-                << ": " << XML_ErrorString(XML_GetErrorCode(parser)) << std::endl;
+        std::cerr << command_name << ": parse_retry_block L=" << XML_GetCurrentLineNumber(parser)
+                << " C=" << XML_GetCurrentColumnNumber(parser)
+                << " B=" << XML_GetCurrentByteIndex(parser);
         if (XML_ERROR_JUNK_AFTER_DOC_ELEMENT != XML_GetErrorCode(parser))
+        {
+            std::cerr << ": " << XML_ErrorString(XML_GetErrorCode(parser)) << std::endl;
             return false;
+        }
+        std::cerr << ": New Document Started" << std::endl;
         
         curr += XML_GetCurrentByteIndex(parser) - byte_index;
         byte_index = XML_GetCurrentByteIndex(parser);
@@ -206,12 +209,15 @@ simple_expat_application::parse_as_blocks(std::istream & infile)
         {
             if (XML_STATUS_OK != XML_ParseBuffer(parser, gcount, gcount < BUFFY_SIZE))
             {
-                std::cerr << command_name << ": parse_as_blocks " << XML_GetCurrentLineNumber(parser)
-                        << " (" << XML_GetCurrentColumnNumber(parser)
-                        << ")/" << XML_GetCurrentByteIndex(parser)
-                        << ": " << XML_ErrorString(XML_GetErrorCode(parser)) << std::endl;
+                std::cerr << command_name << ": parse_as_blocks L=" << XML_GetCurrentLineNumber(parser)
+                        << " C=" << XML_GetCurrentColumnNumber(parser)
+                        << " B=" << XML_GetCurrentByteIndex(parser);
                 if (XML_ERROR_JUNK_AFTER_DOC_ELEMENT != XML_GetErrorCode(parser))
+                {
+                    std::cerr << ": " << XML_ErrorString(XML_GetErrorCode(parser)) << std::endl;
                     return false;
+                }
+                std::cerr << ": New Document Started" << std::endl;
 
                 // only if we are trying to parse an xml stream
                 long long const offset = XML_GetCurrentByteIndex(parser) - read_byte_count;
@@ -227,16 +233,6 @@ simple_expat_application::parse_as_blocks(std::istream & infile)
         if (infile.bad())
         {
             std::cerr << command_name << ": Error: Could not read. Abort!" << std::endl;
-            return false;
-        }
-        
-        XML_ParsingStatus status; 
-        XML_GetParsingStatus(parser, &status);
-        
-        if (XML_FINISHED == status.parsing)
-        {
-            if (XML_GetCurrentByteIndex(parser) != read_byte_count)
-                std::cerr << command_name << ": Error, Finished Parsing but there is more data!" << std::endl;
             return false;
         }
     }
