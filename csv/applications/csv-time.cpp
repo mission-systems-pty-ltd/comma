@@ -69,7 +69,7 @@ static void usage()
     exit( -1 );
 }
 
-enum what_t { iso, seconds, sql };
+enum what_t { iso, seconds, sql, aixm };
 
 static what_t what( const std::string& option, const comma::command_line_options& options )
 {
@@ -77,12 +77,14 @@ static what_t what( const std::string& option, const comma::command_line_options
     if( s == "seconds" ) { return seconds; }
     if( s == "sql" ) { return sql; }
     if( s == "iso" ) { return iso; }
+    if( s == "aixm" ) { return aixm; }
     std::cerr << "csv-time: expected seconds, sql, or iso; got: \"" << s << "\"" << std::endl;
     exit( 1 );
 }
 
 boost::posix_time::ptime from_string( const std::string& s, what_t w )
 {
+    if ( s.empty() ) COMMA_THROW( comma::exception, "no input" );
     switch( w )
     {
         case iso:
@@ -98,6 +100,16 @@ boost::posix_time::ptime from_string( const std::string& s, what_t w )
 
         case sql:
             return s == "NULL" || s == "null" || s.empty() ? boost::posix_time::ptime() : boost::posix_time::time_from_string( s );
+
+        case aixm: // 2014-03-05T23:00:00.000Z
+        {
+            std::string t( s );
+            size_t const idx_t = t.find( 'T' );
+            if ( std::string::npos != idx_t ) t[idx_t] = ' ';
+            size_t const idx_z = t.size() - 1;
+            if ( 'Z' == t[idx_z] ) t.erase( idx_z );
+            return boost::posix_time::time_from_string( t );
+        }
     }
     COMMA_THROW( comma::exception, "never here" );
 }
@@ -129,6 +141,9 @@ std::string to_string( const boost::posix_time::ptime& t, what_t w )
 
         case sql:
             return t.is_not_a_date_time() ? std::string( "NULL" ) : comma::split( boost::replace_all_copy( boost::posix_time::to_iso_extended_string( t ), "T", " " ), '.' )[0];
+
+        case aixm: // 2014-03-05T23:00:00.000Z
+            return boost::posix_time::to_iso_extended_string( t );
     }
     COMMA_THROW( comma::exception, "never here" );
 }
