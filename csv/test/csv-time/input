@@ -1,0 +1,8 @@
+test[0]="echo 2014-03-05T23:00:00.000Z | csv-time --from aixm --to iso"
+test[1]="echo 20140305T230000 | csv-time --from iso --to aixm"
+test[2]="echo 2014-03-05T23:00:00 | csv-time --from aixm --to seconds"
+test[3]="echo 1394060400 | csv-time --from seconds --to aixm"
+test[4]="echo 20140305T230000 | csv-time --from iso --to seconds"
+test[5]="echo 1394060400 | csv-time --from seconds --to iso"
+
+chain[0]="echo 2014-03-05T23:00:00.000Z | csv-time --from aixm --to iso | csv-time --from iso --to aixm | csv-time --from aixm --to seconds"
