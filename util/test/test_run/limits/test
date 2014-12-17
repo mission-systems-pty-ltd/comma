@@ -14,14 +14,14 @@ trap 'handle' EXIT
 output_dir="output"
 rm -rf "$output_dir" || exit 1
 mkdir -p "$output_dir" || exit 1
-output_dir=$( realpath "$output_dir" )
+output_dir=$( readlink -f "$output_dir" )
 
 tarball="../../data/limits.tar"
 [[ -f "$tarball" ]] || {
     echo "$name: file '$tarball' not found" >&2
     exit 1
 }
-tarball=$( realpath "$tarball" )
+tarball=$( readlink -f "$tarball" )
 
 workdir=$( mktemp --directory )
 cd "$workdir"
