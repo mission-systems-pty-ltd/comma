@@ -62,6 +62,7 @@ function description()
 --path=[<dir>]; data-storage directory for tests, default: none, let the tests define it
 --parallel; run tests in parallel
 --quiet,-q; minimize output
+--run-optional,--optional; run tests having file called "optional" (same logic as for "disabled")
 --test-option=[<option>]; extra command line argument(s) pass to "test" script
 --to=[<dir>]; run tests up to a given test, the latter included, where test directories are ordered lexicographically
 --until-first-failure; exit after the first failure (works only when tests run serially)
@@ -118,6 +119,11 @@ $( description | sed 's/^/    /g' )
 Disabling tests:
     to disable tests in a directory and all its subdirectories
     create an empty file named ${brown}disabled${none} in that directory
+    
+Optional tests:
+    you may not want to run some tests by default (e.g. stress tests, very long tests, etc)
+    to make tests optional in a directory and all its subdirectories
+    create an empty file named ${brown}optional${none} in that directory
 
 Running tests in parallel:
     (a) If none of '--parallel' and '--max-parallel' options is given, tests are run sequentially.
@@ -164,8 +170,8 @@ function error_()
         echo -e "$1" >&2
     else
         tput bold
-        high="\033[1;31m"
-        normal="\033[0m"
+        local high="\033[1;31m"
+        local normal="\033[0m"
         echo -e "$high$1$normal" >&2
         tput sgr0
     fi
@@ -197,20 +203,23 @@ function warning_()
     if [[ "$options_no_ansiterm_control_characters" == "1" ]] ; then
         echo -e "$1" >&2
     else
-        tput bold
-        echo -e "${brown}$1${none}" >&2
-        tput sgr0
+        local high="\033[1;33m"
+        local normal="\033[0m"
+        echo -e "$high$1$normal" >&2
     fi
 }
 export -f warning_
 
 function disabled_()
 {
-    if [[ "$options_force" == "1" ]]; then return 1; fi
-    if [[ -f "$1/disabled" ]] ; then return 0 ; fi
-    d=$( dirname $1 )
-    if [[ "$d" == "$1" ]] ; then return 1 ; fi
-    disabled_ $d
+    local name=$1
+    local dir=$2
+    local force=$3
+    if [[ "$force" == "1" ]]; then return 1; fi
+    if [[ -f "$dir/$name" ]] ; then return 0 ; fi
+    local d=$( dirname $dir )
+    if [[ "$d" == "$dir" ]] ; then return 1 ; fi
+    disabled_ $name $d $force
     return $?
 }
 export -f disabled_
@@ -523,8 +532,10 @@ function run_single_test()
     local result=0
     local request="$comma_test_run_unique_dir/request.${worker_id}.json"
 
-    if disabled_ "$dir" ; then
+    if disabled_ "disabled" "$dir" "$options_force" ; then
         warning_ "$name: test $counter: $dir: disabled"
+    elif disabled_ "optional" "$dir" "$options_run_optional" ; then
+        warning_ "$name: test $counter: $dir: optional, skipped"
     else
         test_exec=$( closest_test_in_path "$dir" )
         if [[ -z "$test_exec" ]]; then
