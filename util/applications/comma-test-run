@@ -1,5 +1,37 @@
 #!/bin/bash
 
+# This file is part of comma, a generic and flexible library
+# Copyright (c) 2011 The University of Sydney
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. All advertising materials mentioning features or use of this software
+#    must display the following acknowledgement:
+#    This product includes software developed by the The University of Sydney.
+# 4. Neither the name of the The University of Sydney nor the
+#    names of its contributors may be used to endorse or promote products
+#    derived from this software without specific prior written permission.
+#
+# NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+# GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+# HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+# BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 name=$( basename $0 )
 
 source $( which comma-application-util ) || { echo "$name: cannot source 'comma-application-util'" >&2; exit 1; }
@@ -48,45 +80,46 @@ EOF
 function description()
 {
     cat <<EOF
---help,-h; show this help
+--help,-h; show this help, --help --verbose for more help
+--black-list=[<file>]; do not run these tests mentioned in <file>, e.g. a lists of sub-directories in white list to be excluded. Format - see --white-list above.
 --debug; much more debug output
 --end=[<dir>]; run tests up to a given test, the latter excluded, where test directories are ordered lexicographically
---force,-f; include disabled tests
 --from,--begin=[<dir>]; run tests starting from a given test, where test directories are ordered lexicographically
 --max-parallel=[<N>]; run up to N tests in parallel; default: $max_parallel
 --max-memory-main=[<N>]; limit on main memory, in MB; default: $max_memory_main
 --max-memory-shared=[<N>]; limit on shared memory, in MB; default: $max_memory_shared
 --max-wait-time=[<time>]; maximal time to wait for available CPUs before failing a test, default: ${max_wait_time}
 --max-run-time=[<time>]; maximal time to wait for a test completion before failing it by force, default: ${max_run_time}
+--no-ansiterm-control-characters,--no-control-characters,--raw; unstyled output (no ANSIterm control characters)
 --output-directories,--dry-run,--dry; output list of test directories intended to run and exit
 --path=[<dir>]; data-storage directory for tests, default: none, let the tests define it
 --parallel; run tests in parallel
 --quiet,-q; minimize output
---run-optional,--optional; run tests having file called "optional" (same logic as for "disabled")
+--run-disabled; run disabled tests
+--run-optional,--optional; run tests having file called "optional" (same logic as for --run-disabled)
 --test-option=[<option>]; extra command line argument(s) pass to "test" script
 --to=[<dir>]; run tests up to a given test, the latter included, where test directories are ordered lexicographically
 --until-first-failure; exit after the first failure (works only when tests run serially)
---no-ansiterm-control-characters,--no-control-characters,--raw; unstyled output (no ANSIterm control characters)
---white-list=[<file>]; only run these tests mentioned in the <file>, this is applied first before black list. Comment lines starting with # are ignored. Each entry in the list matches to sub directory or directories name using pattern ^<subdir>   
---black-list=[<file>]; do not run these tests mentioned in <file>, e.g. a lists of sub-directories in white list to be excluded. Format - see --white-list above.
+--verbose,-v; more output
+--white-list=[<file>]; only run these tests mentioned in the <file>, applied first before black list. Comment lines starting with # ignored. Each entry in the list matches to sub directory or directories name using pattern ^<subdir>   
 EOF
 }
 
-# put into a separate function to avoid using echo -e on each line
-function raw_usage_()
+function usage_()
 {
-    cat <<EOF
+echo -e "
 
-Searches for and executes tests under the current directory.
+Search for and execute tests under the current directory.
 
-Usage: comma-test-run [<options>]
-
-Find subdirectories containing the files ${brown}test${none}, ${brown}input${none} or ${brown}expected${none}. Execute 'test', then either:
+Find subdirectories containing the files ${brown}test${none}, ${brown}input${none}, or ${brown}expected${none}. Execute 'test', then either:
     (a) if 'expected' exists, compare its contents to the output of 'test' ("path=value" format)
     (b) otherwise the success of the test depends on the exit status of the 'test' script.
 
+Return 0 if all tests succeed, or non-zero if any of the tests fail.
+
+Usage: comma-test-run [<options>]
     
-A quick tutorial
+${brown}A quick tutorial${none}
 
     mkdir success
     echo "hello=\"world\"" > success/input
@@ -104,28 +137,32 @@ A quick tutorial
 
     comma-test-run
 
-    
-File 'input', if exists, is fed to the stdin of the test script.
-
-If there is an 'input' or 'expected' file but no 'test' in the same directory, the 'test' script in the
-closest parent directory is used. If there is a 'test' by itself with no 'input' or 'expected' file,
-it is only executed if there is no subdirectory containing 'input', 'expected' or 'test'.
-
-Returns 0 if all tests succeed, or non-zero if any of the tests fail.
-
-Options:
+${brown}Options:${none}
 $( description | sed 's/^/    /g' )
 
-Disabling tests:
+"
+
+[[ -n "$1" ]] || { echo -e "${brown}For more help use: comma-test-run --help --verbose${none}\\n" ; exit 0 ; }
+
+echo -e "
+
+${brown}Input, test, and expected files${none}
+    File 'input', if exists, is fed to the stdin of the test script.
+
+    If there is an 'input' or 'expected' file but no 'test' in the same directory, the 'test' script in the
+    closest parent directory is used. If there is a 'test' by itself with no 'input' or 'expected' file,
+    it is only executed if there is no subdirectory containing 'input', 'expected' or 'test'.
+
+${brown}Disabling tests${none}
     to disable tests in a directory and all its subdirectories
     create an empty file named ${brown}disabled${none} in that directory
     
-Optional tests:
+${brown}Optional tests${none}
     you may not want to run some tests by default (e.g. stress tests, very long tests, etc)
     to make tests optional in a directory and all its subdirectories
     create an empty file named ${brown}optional${none} in that directory
 
-Running tests in parallel:
+${brown}Running tests in parallel${none}
     (a) If none of '--parallel' and '--max-parallel' options is given, tests are run sequentially.
     (b) If '--max-parallel' is given, e.g., as in '--max-parallel=4', up to 4 tests are run at once;
         but see below for load-balancing.
@@ -133,10 +170,10 @@ Running tests in parallel:
         as are available on the system. This is ${red}not recommended${none} for resource-heavy tests
         unless additional configuration files are provided as explained below.
 
-Load-balancing and serializing tests:
+${brown}Load-balancing and serializing tests${none}
     to describe a resourse-heavy test, create a file named ${brown}config${none} in the test directory
     and specify the number of CPUs and the amount of shared memory to be used by the test;
-    may also specify 'serial="true"' to serialize the test.
+    may also specify 'serial=\"true\"' to serialize the test.
 
     Examples of config files:
 
@@ -146,7 +183,7 @@ Load-balancing and serializing tests:
     Will not run until at least 4 or all CPUs (out of '--max-parallel' number) are available. Will
     not run until 3200 MB of shared memory (counted out of '--max-memory-shared' total) is available.
 
-        resources/serial="true"
+        resources/serial=\"true\"
 
     Will run only when no other test is running.
 
@@ -159,10 +196,9 @@ Load-balancing and serializing tests:
     No test shall take longer than the period specified by '--max-run-time'. If a test does not complete
     within this time, it is forcefully terminated and marked as failed.
 
-EOF
+"
+    exit 0
 }
-
-function usage_() { echo -e "$( raw_usage_ )\n" >&2 ; exit 1 ; }
 
 function error_()
 {
@@ -532,7 +568,7 @@ function run_single_test()
     local result=0
     local request="$comma_test_run_unique_dir/request.${worker_id}.json"
 
-    if disabled_ "disabled" "$dir" "$options_force" ; then
+    if disabled_ "disabled" "$dir" "$options_run_disabled" ; then
         warning_ "$name: test $counter: $dir: disabled"
     elif disabled_ "optional" "$dir" "$options_run_optional" ; then
         warning_ "$name: test $counter: $dir: optional, skipped"
@@ -713,7 +749,9 @@ function final_words()
 }
 
 # process command line...
-if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then usage_ ; fi
+if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then
+    if (( $( comma_options_has --verbose $@ ) || $( comma_options_has -v $@ ) )) ; then usage_ --verbose ; else usage_ ; fi
+fi
 comma_path_value_to_var  --prefix=options < <( default_options )
 comma_path_value_to_var --prefix=options < <( description | comma-options-to-name-value $@ )
 # and perform sanity check
