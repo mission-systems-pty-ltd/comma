@@ -32,15 +32,21 @@
 
 
 /// @author vsevolod vlaskine
+/// @author mathew hounsell
 
+#include <algorithm>
 #include <string.h>
 #include <iostream>
 #include <string>
 #include <vector>
 #include <boost/lexical_cast.hpp>
+
 #include <comma/application/contact_info.h>
 #include <comma/application/command_line_options.h>
 #include <comma/base/exception.h>
+#include <comma/csv/stream.h>
+#include <comma/visiting/traits.h>
+
 #include <comma/base/types.h>
 #include <comma/string/string.h>
 #include <comma/csv/impl/epoch.h>
@@ -70,6 +76,8 @@ static void usage()
 }
 
 enum what_t { iso, seconds, sql, aixm };
+static what_t from = iso;
+static what_t to = iso;
 
 static what_t what( const std::string& option, const comma::command_line_options& options )
 {
@@ -148,41 +156,124 @@ std::string to_string( const boost::posix_time::ptime& t, what_t w )
     COMMA_THROW( comma::exception, "never here" );
 }
 
+struct input_t { std::vector< std::string > values; };
+
+namespace comma { namespace visiting {
+
+template <> struct traits< input_t >
+{
+    template < typename K, typename V > static void visit( const K&, const input_t& p, V& v )
+    {
+        v.apply( "values", p.values );
+    }
+
+    template < typename K, typename V > static void visit( const K&, input_t& p, V& v )
+    {
+        v.apply( "values", p.values );
+    }
+};
+
+} } // namespace comma { namespace visiting {
+
+static bool verbose;
+static comma::csv::options csv;
+static input_t input;
+
+static void init_input()
+{
+    const std::vector< std::string >& original_names = comma::split( csv.fields, ',' );
+
+    std::vector< std::string > names;
+    names.reserve( original_names.size() );
+    for( unsigned i = 0; i < original_names.size(); ++i )
+        names.push_back( comma::strip( original_names[i], ' ' ) );
+    
+    std::vector< bool > keep;
+    
+    bool legacy = true;
+    for( unsigned i = 0; i < names.size() && legacy; ++i )
+    {
+        if( names[i].empty() )
+        {
+            legacy = false;
+            break;
+        }
+        try {
+            const unsigned idx = boost::lexical_cast< unsigned >( names[i] );
+            if ( keep.size() < idx ) keep.resize(idx, false);
+            keep[idx - 1] = true;
+        } catch( ... ) {
+            legacy = false;
+        }
+    }
+    
+    std::string fields;
+    std::string comma;
+    unsigned size = 0;
+    if ( legacy )
+    {
+        for( unsigned i = 0; i < keep.size(); ++i )
+        {
+            fields += comma;
+            comma = ",";
+            if( keep[i] )
+                fields += "values[" + boost::lexical_cast< std::string >( size++ ) + "]";
+        }
+    }
+    else
+    {
+        for( unsigned i = 0; i < names.size(); ++i )
+        {
+            fields += comma;
+            comma = ",";
+
+            if( ! names[i].empty() )
+                fields += "values[" + boost::lexical_cast< std::string >( size++ ) + "]";
+        }
+    }
+
+    csv.fields = fields;
+    csv.full_xpath = true;
+    input.values.resize( size );
+}
+
+static int run()
+{
+    comma::csv::input_stream< input_t > istream( std::cin, csv, input );
+    comma::csv::output_stream< input_t > ostream( std::cout, csv, input );
+
+    while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
+    {
+        const input_t* p = istream.read();
+        if( !p ) { break; }
+        input_t output = *p;
+        for( unsigned int i = 0; i < output.values.size(); ++i )
+            output.values[i] = to_string( from_string( output.values[i], from ), to );
+
+        ostream.write( output, istream );
+    }
+    return 0;
+}
+
 int main( int ac, char** av )
 {
     try
     {
         comma::command_line_options options( ac, av );
         if( options.exists( "--help" ) || options.exists( "-h" ) || ac == 1 ) { usage(); }
-        options.assert_mutually_exclusive( "--to-seconds,--to-iso-string,--seconds,--sec,--iso,-s,-i,--from" );
-        options.assert_mutually_exclusive( "--to-seconds,--to-iso-string,--seconds,--sec,--iso,-s,-i,--to" );
-        what_t from;
-        what_t to;
+        verbose = options.exists( "--verbose,-v" );
+        csv = comma::csv::options( options );
+        if( csv.fields.empty() ) { csv.fields="a"; }
+        init_input();
+
+        options.assert_mutually_exclusive( "--to-seconds,--to-iso-string,--seconds,--sec,--iso,--aixm,-s,-i,--from" );
+        options.assert_mutually_exclusive( "--to-seconds,--to-iso-string,--seconds,--sec,--iso,--aixm,-s,-i,--to" );
+
         if( options.exists( "--to-iso-string,--iso,-i" ) ) { from = seconds; to = iso; }
         else if ( options.exists( "--to-seconds,--sec,-s" ) ) { from = iso; to = seconds; }
         else { from = what( "--from", options ); to = what( "--to", options ); }
-        char delimiter = options.value( "--delimiter,-d", ',' );
-        std::vector< std::string > fields = comma::split( options.value< std::string >( "--fields", "1" ), ',' );
-        std::vector< std::size_t > indices( fields.size() );
-        unsigned int min_size = 0;
-        for( unsigned int i = 0; i < fields.size(); ++i )
-        {
-            unsigned int v = boost::lexical_cast< unsigned int >( fields[i] );
-            if( v > min_size ) { min_size = v; }
-            indices[i] = v - 1;
-        }
-        while( std::cin.good() && !std::cin.eof() )
-        {
-            std::string s;
-            std::getline( std::cin, s );
-            if( !s.empty() && *s.rbegin() == '\r' ) { s = s.substr( 0, s.length() - 1 ); } // windows... sigh...
-            if( s.length() == 0 ) { continue; }
-            std::vector< std::string > v = comma::split( s, delimiter );
-            if( v.size() < min_size ) { std::cerr << "expected at least " << min_size << " '" << delimiter << "'-separated values; got: \"" << s << "\"" << std::endl; return 1; }
-            for( unsigned int i = 0; i < indices.size(); v[ indices[i] ] = to_string( from_string( v[ indices[i] ], from ), to ), ++i );
-            std::cout << comma::join( v, delimiter ) << std::endl;
-        }
-        return 0;
+
+        return run();
     }
     catch( std::exception& ex ) { std::cerr << "csv-time: " << ex.what() << std::endl; }
     catch( ... ) { std::cerr << "csv-time: unknown exception" << std::endl; }

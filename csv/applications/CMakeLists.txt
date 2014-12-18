@@ -42,7 +42,7 @@ target_link_libraries ( csv-join ${comma_ALL_EXTERNAL_LIBRARIES} comma_applicati
 target_link_libraries ( csv-select ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_xpath comma_string )
 target_link_libraries ( csv-paste ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv comma_io )
 #target_link_libraries ( csv-make-blocks ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_xpath comma_string )
-target_link_libraries ( csv-time ${comma_ALL_EXTERNAL_LIBRARIES} comma_application )
+target_link_libraries ( csv-time ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_io comma_xpath comma_string )
 target_link_libraries ( csv-time-delay ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_string comma_xpath )
 target_link_libraries ( csv-time-join ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_io comma_string comma_xpath )
 target_link_libraries ( csv-time-stamp ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_string )
