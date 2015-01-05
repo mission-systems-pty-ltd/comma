@@ -100,3 +100,24 @@ _csv_update() { _simple _csv_update_opts ; }
 complete -F _comma_test_run comma-test-run
 complete -F _csv_units csv-units
 complete -F _csv_update csv-update
+
+# todo
+#     - add license
+#     - add --bash-completion to csv-units, csv-update, comma-test-_comma_test_run
+#     - git mv util/bash_completion.d etc/bash_completion.d
+#     - move installation logic to util/bash_completion.d/CMakeLists.txt?
+#     - install in the installation directory, if possible (if not, /etc is OK)
+#     - use something like code below
+# _comma_autocomplete()
+# {
+#     local cur prev opts
+#     COMPREPLY=()
+#     cur="${COMP_WORDS[COMP_CWORD]}"
+#     prev="${COMP_WORDS[COMP_CWORD-1]}"
+#     opts=$( $( ${COMP_WORDS[0]} --bash-completion ) )
+#     COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
+#     complete -F 
+# }
+# 
+# complete -F _comma_autocomplete csv-units
+# complete -F _comma_autocomplete csv-update
