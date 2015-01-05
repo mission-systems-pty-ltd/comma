@@ -26,7 +26,7 @@ ENDIF()
 
 #-----------------------------------------------------------------------------
 IF (UNIX AND NOT APPLE)
-    OPTION( BASH_COMPLETION "Install the BASH completion scripts." ON )
+    OPTION( BASH_COMPLETION "Install the BASH completion scripts." OFF )
     IF( BASH_COMPLETION )
         INSTALL(FILES util/bash_completion.d/comma DESTINATION /etc/bash_completion.d )
     ENDIF()
