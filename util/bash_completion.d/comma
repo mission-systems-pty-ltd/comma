@@ -1,5 +1,27 @@
 #!/bin/bash
 
+_comma_opts()
+{
+    cat <<EOF
+-b
+-d
+-f
+-o
+-v
+--binary
+--delimiter
+--fields
+--flush
+--full-xpath
+--help
+--output-fields
+--precision
+--quote
+--verbose
+EOF
+#--output
+}
+
 _comma_test_run_opts() 
 {
     cat <<EOF
@@ -33,6 +55,36 @@ _comma_test_run_opts()
 EOF
 }
 
+_csv_time_opts()
+{
+    cat <<EOF
+-d
+-i
+-s
+--delimiter
+--fields
+--from
+--iso
+--sec
+--to
+--to-iso-string
+--to-seconds
+aixm
+iso
+seconds
+sql
+EOF
+}
+
+_csv_shuffle_opts()
+{
+_comma_opts
+    cat <<EOF
+append
+remove
+swap
+EOF
+}
 
 _csv_units_opts()
 {
@@ -94,9 +146,13 @@ _simple()
 }
 
 _comma_test_run() { _simple _comma_test_run_opts ; }
+_csv_shuffle() { _simple _csv_shuffle_opts ; }
+_csv_time() { _simple _csv_time_opts ; }
 _csv_units() { _simple _csv_units_opts ; }
 _csv_update() { _simple _csv_update_opts ; }
 
 complete -F _comma_test_run comma-test-run
+complete -F _csv_shuffle csv-shuffle
+complete -F _csv_time csv-time
 complete -F _csv_units csv-units
 complete -F _csv_update csv-update
