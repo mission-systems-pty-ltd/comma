@@ -1,0 +1,102 @@
+#!/bin/bash
+
+_comma_test_run_opts() 
+{
+    cat <<EOF
+--begin
+--black-list
+--debug
+--dry-run
+--end
+--from
+--help
+--max-memory-main
+--max-memory-shared
+--max-parallel
+--max-run-time
+--max-wait-time
+--no-ansiterm-control-characters
+--no-control-characters
+--optional
+--output-directories
+--parallel
+--path
+--quiet
+--raw
+--run-disabled
+--run-optional
+--test-option
+--to
+--until-first-failure
+--verbose
+--white-list
+EOF
+}
+
+
+_csv_units_opts()
+{
+    cat <<EOF
+--from
+--to
+--scale
+celsius
+degrees
+fahrenheit
+feet
+kelvin
+kilograms
+knots
+meters
+meters-per-second
+miles
+nautical-miles
+pounds
+radians
+statute-miles
+hours
+minutes
+seconds
+percent
+fraction
+EOF
+}
+
+_csv_update_opts()
+{
+    cat <<EOF
+--empty
+--erase
+--format
+--help
+--last
+--last-only
+--matched-only
+--remove
+--reset
+--unset
+--update-non-empty-fields
+--verbose
+ascii
+binary
+EOF
+}
+
+_simple()
+{
+    local cur prev opts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    opts=$( $1 )
+ 
+    COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
+}
+
+_comma_test_run() { _simple _comma_test_run_opts ; }
+_csv_units() { _simple _csv_units_opts ; }
+_csv_update() { _simple _csv_update_opts ; }
+
+complete -F _comma_test_run comma-test-run
+complete -F _csv_units csv-units
+complete -F _csv_update csv-update

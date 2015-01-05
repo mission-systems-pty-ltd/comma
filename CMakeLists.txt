@@ -23,6 +23,15 @@ IF (UNIX AND NOT APPLE)
 ELSE() # Probably windows; gets hardcoded patch version
 	SET ( COMMITDATE 1 ) 
 ENDIF()
+
+#-----------------------------------------------------------------------------
+IF (UNIX AND NOT APPLE)
+    OPTION( BASH_COMPLETION "Install the BASH completion scripts." ON )
+    IF( BASH_COMPLETION )
+        INSTALL(FILES util/bash_completion.d/comma DESTINATION /etc/bash_completion.d )
+    ENDIF()
+ENDIF()
+
 # ---------------------------------------------------------------------------
 # set compiler and linker flags and variables
 
