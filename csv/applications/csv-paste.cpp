@@ -67,8 +67,10 @@ static void usage()
     std::cerr << "usage: csv-paste [<options>] <file> <file>..." << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples:" << std::endl;
-    std::cerr << "    csv-paste \"file1.bin;binary=%d%d\" \"file2.bin;size=5\" value=1,2;binary=ui,d" << std::endl;
+    std::cerr << "    csv-paste \"file1.bin;binary=%d%d\" \"file2.bin;size=5\" \"value=1,2;binary=ui,d\"" << std::endl;
     std::cerr << "    csv-paste \"file1.csv\" \"file2.csv\" value=1,2,3" << std::endl;
+    std::cerr << "    cat file1.csv | csv-paste - line-number" << std::endl;
+    std::cerr << "    cat file1.bin | csv-paste \"-;binary=d,d\" \"value=0;binary=ui\"" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options:" << std::endl;
     std::cerr << "    --delimiter,-d <delimiter> : default ','" << std::endl;
