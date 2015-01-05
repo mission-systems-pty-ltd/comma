@@ -24,14 +24,6 @@ ELSE() # Probably windows; gets hardcoded patch version
 	SET ( COMMITDATE 1 ) 
 ENDIF()
 
-#-----------------------------------------------------------------------------
-IF (UNIX)
-    OPTION( BASH_COMPLETION "Install the BASH completion scripts." OFF )
-    IF( BASH_COMPLETION )
-        INSTALL(FILES util/bash_completion.d/comma DESTINATION /etc/bash_completion.d )
-    ENDIF()
-ENDIF()
-
 # ---------------------------------------------------------------------------
 # set compiler and linker flags and variables
 
@@ -226,6 +218,8 @@ if( comma_BUILD_XML )
     add_subdirectory( xml )
 endif( comma_BUILD_XML )
 add_subdirectory( xpath )
+
+ADD_SUBDIRECTORY( etc/bash_completion.d )
 
 if( BUILD_PYTHON_PACKAGES )
     message( "python installation: todo" )

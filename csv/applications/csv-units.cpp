@@ -276,6 +276,7 @@ namespace units {
             map["lbs"] = pounds;
             map["meters"] = metres;
             map["meters-per-second"] = metres_per_second;
+            map["metres-per-second"] = metres_per_second;
             map["metres"] = metres;
             map["miles"] = statute_miles;
             map["mi"] = statute_miles;
@@ -354,6 +355,16 @@ namespace units {
     
     /// Test if the conversion between two measurement units is supported.
     bool can_convert( const et from, const et to ) { return NULL != cast_lookup(from, to); }
+}
+
+static void bash_completion( unsigned const ac, char const * const * av )
+{
+    static char const * const arguments = "--from --to --scale";
+    std::cout << arguments;
+    for( unsigned i = 0; i < units::count; ++i )
+        std::cout << ' ' << units::name(units::et(i));
+    std::cout << std::endl;
+    exit( 0 );
 }
 
 /// Support reading the data from a file.
@@ -507,7 +518,9 @@ int main( int ac, char** av )
     try
     {
         comma::command_line_options options( ac, av );
-        if( options.exists( "--help,-h" ) ) { usage(); }
+        if( options.exists( "--bash-completion" ) ) bash_completion( ac, av );
+        
+        if( options.exists( "--help,-h" ) ) usage();
         verbose = options.exists( "--verbose,-v" );
         csv = comma::csv::options( options );
         if( csv.fields.empty() ) { csv.fields="a"; }
