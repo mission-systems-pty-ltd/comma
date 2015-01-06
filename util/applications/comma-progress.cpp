@@ -32,10 +32,11 @@
 
 #include <boost/date_time/posix_time/ptime.hpp>
 #include <vector>
-#include <unordered_map>
+#include <boost/unordered_map.hpp>
 #include <deque>
-#include <unordered_set>
+#include <boost/unordered_set.hpp>
 #include <functional>
+#include <boost/functional.hpp>
 #include <boost/math/special_functions/round.hpp>
 #include <comma/csv/stream.h>
 #include <comma/visiting/traits.h>
@@ -181,14 +182,14 @@ static const std::string elapsed_end("/elapsed");
 /// add_mean_key: adds '/mean' when sum combine '<path>/elapsed'
 /// add_count_key: adds '/count' when sum combine '<path>/elapsed'
 void merge_elapsed( boost::property_tree::ptree& tree, 
-                    std::unordered_set< std::string >& leaf_keys, 
+                    boost::unordered_set< std::string >& leaf_keys, 
                     bool add_mean_key, bool add_count_key )
 {
     using boost::property_tree::ptree;
     
     std::string line;
     // counts the number of times a key is used for 'mean' value calculation e.g. for flight-prm
-    std::unordered_map< std::string, int > key_counts;    
+    boost::unordered_map< std::string, int > key_counts;    
     while( std::cin.good() && !std::cin.eof() )
     {
         std::getline( std::cin, line );
@@ -322,7 +323,8 @@ int main( int ac, char** av )
             
             typedef boost::property_tree::ptree::path_type ptree_path_type;
             boost::property_tree::ptree ptree; 
-            std::unordered_set< std::string > leaf_keys;
+            typedef boost::unordered_set< std::string > leaf_keys_t;
+            boost::unordered_set< std::string > leaf_keys;
             merge_elapsed( ptree, leaf_keys, options.exists( "--mean" ), options.exists( "--count" ) );
             
             if( options.exists( "--ratio" ) )  
@@ -359,8 +361,9 @@ int main( int ac, char** av )
                 
                 const bool show_percentage = options.exists( "-P,--percentage" );
                 // Now make ratio tree
-                for( const auto& key_str : leaf_keys )
+                for( leaf_keys_t::const_iterator ikeystr=leaf_keys.cbegin(); ikeystr!=leaf_keys.cend(); ++ikeystr )
                 {
+                    const std::string& key_str = *ikeystr;
                     // Only if the key is '*/elapsed', do not make ratio key for other keys
                     if( key_str.size() < elapsed_end.size() || key_str.substr( key_str.size() - elapsed_end.size() ) != elapsed_end ) { continue; } 
                     
@@ -382,8 +385,8 @@ int main( int ac, char** av )
         }
         else if( options.exists( "--elapsed" ) )
         {
-            std::function< void( const impl_::log&, const impl_::log&, const std::string&) > outputting( &output_elapsed );
-            std::function< const impl_::log*() > extractor( &get_log );
+            boost::function< void( const impl_::log&, const impl_::log&, const std::string&) > outputting( &output_elapsed );
+            boost::function< const impl_::log*() > extractor( &get_log );
             if( options.exists( "--from-path-value,--from-pv" ) )
             {
                 extractor = &get_log_path_value;
@@ -394,8 +397,8 @@ int main( int ac, char** av )
         }
         else
         {
-            std::function< const impl_::log*() > extractor( &get_log );
-            std::function< void( const impl_::log&, const impl_::log&, const std::string&) > outputting( &output );
+            boost::function< const impl_::log*() > extractor( &get_log );
+            boost::function< void( const impl_::log&, const impl_::log&, const std::string&) > outputting( &output );
             impl_::process_begin_end< impl_::log >( extractor , outputting );
             
             return 0;
