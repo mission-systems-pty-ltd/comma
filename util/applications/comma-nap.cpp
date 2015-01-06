@@ -31,7 +31,7 @@
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <stdio.h>
-#include <unistd.h>
+#include <boost/thread/thread.hpp>
 #include <stdlib.h>
 #include <string.h>
 
@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
         usage( argv[0], 1 );
         return 1;
     }
-    sleep( d );
+    boost::this_thread::sleep( boost::posix_time::seconds( d ) );
     fprintf(stdout, "%s: normal exit from slumber\n", argv[0]);
     return 0;
 }
