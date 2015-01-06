@@ -163,9 +163,8 @@ _comma_bash_completion()
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    opts=$( $( ${COMP_WORDS[0]} --bash-completion ) )
+    opts=$( ${COMP_WORDS[0]} --bash-completion )
     COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
-    complete -F 
 }
 
 complete -F _comma_bash_completion csv-units
