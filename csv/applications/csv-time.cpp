@@ -53,26 +53,32 @@
 
 static void usage()
 {
-    std::cerr << std::endl;
-    std::cerr << "convert between a couple of common time representations:" << std::endl;
-    std::cerr << "    - iso string, e.g: 20140101T001122.333" << std::endl;
-    std::cerr << "    - seconds since epoch as double" << std::endl;
-    std::cerr << "    - sql time format, e.g: 2014-01-01 00:11:22" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "usage: cat log.csv | csv-time <options> > converted.csv" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "options" << std::endl;
-    std::cerr << "    --from <what>: input format: iso, seconds, sql; default iso" << std::endl;
-    std::cerr << "    --to <what>: output format: iso, seconds, sql; default iso" << std::endl;
-    std::cerr << "    --to-seconds,--sec,-s: iso input expected; deprecated, use --from, --to" << std::endl;
-    std::cerr << "    --to-iso-string,--iso,-i: input as seconds expected; deprecated, use --from, --to" << std::endl;
-    std::cerr << "    --delimiter,-d <delimiter> : default: ','" << std::endl;
-    std::cerr << "    --fields <fields> : time field numbers as in \"cut\"" << std::endl;
-    std::cerr << "                        e.g. \"1,5,7\"; default: 1" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
-    std::cerr << std::endl;
-    exit( -1 );
+    static char const * const msg_general =
+        "\n"
+        "\nConvert between a couple of common time representations:"
+        "\n    - iso string, e.g: 20140101T001122.333"
+        "\n    - seconds since epoch as double"
+        "\n    - sql time format, e.g: 2014-01-01 00:11:22"
+        "\n    - aixm format, e.g: 2014-12-25T00:00:00.000Z"
+        "\n"
+        "\nUsage:"
+        "\n    cat log.csv | csv-time <options> > converted.csv"
+        "\n"
+        "\nOptions"
+        "\n    --from <what>: input format: iso, seconds, sql, aixm; default iso"
+        "\n    --to <what>: output format: iso, seconds, sql, aixm; default iso"
+        "\n    --delimiter,-d <delimiter> : default: ','"
+        "\n    --fields <fields> : time field names or field numbers as in \"cut\""
+        "\n                        e.g. \"1,5,7\" or \"a,b,,d\""
+        "\n                        n.b. use field names to skip transforming a field"
+        "\n"
+        "\nDeprecated Options:"
+        "\n    --to-seconds,--sec,-s: iso input expected; use --from, --to"
+        "\n    --to-iso-string,--iso,-i: input as seconds expected; use --from, --to"
+        "\n"
+        "\n";
+    std::cerr << msg_general << comma::contact_info << '\n' << std::endl;
+    exit( 1 );
 }
 
 enum what_t { iso, seconds, sql, aixm };
