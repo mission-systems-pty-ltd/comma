@@ -55,11 +55,7 @@ static void usage()
 {
     static char const * const msg_general =
         "\n"
-        "\nConvert between a couple of common time representations:"
-        "\n    - iso string, e.g: 20140101T001122.333"
-        "\n    - seconds since epoch as double"
-        "\n    - sql time format, e.g: 2014-01-01 00:11:22"
-        "\n    - aixm format, e.g: 2014-12-25T00:00:00.000Z"
+        "\nConvert between a couple of common time representation"
         "\n"
         "\nUsage:"
         "\n    cat log.csv | csv-time <options> > converted.csv"
@@ -71,6 +67,17 @@ static void usage()
         "\n    --fields <fields> : time field names or field numbers as in \"cut\""
         "\n                        e.g. \"1,5,7\" or \"a,b,,d\""
         "\n                        n.b. use field names to skip transforming a field"
+        "\n"
+        "\nTime formats"
+        "\n    - iso, iso-8601-basic"
+        "\n            YYYYMMDDTHHMMSS.FFFFFF, e.g. 20140101T001122.333"
+        "\n    - sql, posix, ieee-std-1003.1"
+        "\n            e.g. 2014-01-01 00:11:22"
+        "\n    - xsd, iso-8601-extended"
+        "\n            used in xsd:dateTime, xs:dateTime, gml and derivatives"
+        "\n            e.g. 2014-12-25T00:00:00.000Z"
+        "\n    - seconds"
+        "\n            seconds since UNIX epoch as double"
         "\n"
         "\nDeprecated Options:"
         "\n    --to-seconds,--sec,-s: iso input expected; use --from, --to"
@@ -88,10 +95,29 @@ static what_t to = iso;
 static what_t what( const std::string& option, const comma::command_line_options& options )
 {
     std::string s = options.value< std::string >( option, "iso" );
-    if( s == "seconds" ) { return seconds; }
-    if( s == "sql" ) { return sql; }
-    if( s == "iso" ) { return iso; }
-    if( s == "aixm" ) { return aixm; }
+    if(! s.empty() )
+    {
+        if( 'i' == s[0] )
+        {
+            if( "iso" == s ) return iso;
+            if( "iso-8601-basic" == s ) return iso;
+            if( "iso-8601-extended" == s ) { return aixm; }
+            if( "ieee-std-1003.1" == s ) return sql;
+        }
+        else if( 'p' == s[0] )
+        {
+            if( "posix" == s ) return sql;
+        }
+        else if( 's' == s[0] )
+        {
+            if( "sql" == s ) return sql;
+            if( "seconds" == s ) return seconds;
+        }
+        else if( 'x' == s[0] )
+        {
+            if( "xsd" == s ) { return aixm; }
+        }
+    }
     std::cerr << "csv-time: expected seconds, sql, or iso; got: \"" << s << "\"" << std::endl;
     exit( 1 );
 }
