@@ -63,11 +63,13 @@ export -f comma_urandom
 # This function a scaled random number round-down to an integer.
 # Can be used to simulate memory size, number of CPUs, and other
 # integer values. Argument is the desired scale: output values
-# are from zero to $1.
+# are from zero (inclusive) to $1 (exclusive): [0, $1).
 function comma_round_random()
 {
     local scale=$1
-    echo "$scale * $( comma_urandom )" | bc | sed 's/^\./0\./;s/\..*//'
+    local random=$RANDOM
+    (( random %= scale ))
+    echo $random
 }
 export -f comma_round_random
 
