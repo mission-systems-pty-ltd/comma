@@ -287,7 +287,7 @@ function exclude_generic_tests()
             if [[ -f "$dir/test" ]]; then
                 local pattern="^$( escape_special_chars "$dir" )/."
                 if echo $dir_list | fmt -1 | grep -q "$pattern"; then
-                    if [[ "$options_debug" != "0" ]] ; then echo "Excluding generic test '$dir/test'" >&2; fi
+                    if [[ "$options_debug" != "0" ]] ; then echo "excluding generic test '$dir/test'" >&2; fi
                     continue
                 fi
             fi
@@ -566,7 +566,8 @@ function run_single_test()
     local request="$comma_test_run_unique_dir/request.${worker_id}.json"
 
     if disabled_ "disabled" "$dir" "$options_run_disabled" ; then
-        warning_ "$name: test $counter: $dir: disabled"
+        if [[ -s $dir/disabled ]] ; then warning_ "$name: test $counter: $dir: disabled:" ; cat $dir/disabled | sed 's/^/    /' >&2
+        else error_ "$name: test $counter: $dir: disabled (with no explanation)" ; fi
     elif disabled_ "optional" "$dir" "$options_run_optional" ; then
         warning_ "$name: test $counter: $dir: optional, skipped"
     else
