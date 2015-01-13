@@ -249,7 +249,7 @@ function disabled_()
     local dir=$2
     local force=$3
     if [[ "$force" == "1" ]]; then return 1; fi
-    if [[ -f "$dir/$name" ]] ; then return 0 ; fi
+    if [[ -f "$dir/$name" ]] ; then disabled_file_path=$( readlink -e "$dir/$name" ); return 0 ; fi
     local d=$( dirname $dir )
     if [[ "$d" == "$dir" ]] ; then return 1 ; fi
     disabled_ $name $d $force
@@ -566,7 +566,7 @@ function run_single_test()
     local request="$comma_test_run_unique_dir/request.${worker_id}.json"
 
     if disabled_ "disabled" "$dir" "$options_run_disabled" ; then
-        if [[ -s $dir/disabled ]] ; then warning_ "$name: test $counter: $dir: disabled:" ; cat $dir/disabled | sed 's/^/    /' >&2
+        if [[ -s $disabled_file_path ]] ; then warning_ "$name: test $counter: $dir: disabled:" ; cat $disabled_file_path | sed 's/^/    /' >&2
         else error_ "$name: test $counter: $dir: disabled (with no explanation)" ; fi
     elif disabled_ "optional" "$dir" "$options_run_optional" ; then
         warning_ "$name: test $counter: $dir: optional, skipped"
