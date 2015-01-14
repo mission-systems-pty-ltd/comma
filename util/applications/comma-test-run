@@ -245,14 +245,21 @@ export -f warning_
 
 function disabled_()
 {
-    local name=$1
+    local filename=$1   # "disabled" or "optional"
     local dir=$2
     local force=$3
+    local verbose=$4
     if [[ "$force" == "1" ]]; then return 1; fi
-    if [[ -f "$dir/$name" ]] ; then disabled_file_path=$( readlink -e "$dir/$name" ); return 0 ; fi
+    if [[ -f "$dir/$filename" ]] ; then
+        if [[ "$verbose" == "--verbose" ]]; then
+            if [[ -s $dir/$filename ]] ; then warning_ "$name: test $counter: $dir: $filename:" ; cat $dir/$filename | sed 's/^/    /' >&2
+            else error_ "$name: test $counter: $dir: $filename (with no explanation)" ; fi
+        fi
+        return 0
+    fi
     local d=$( dirname $dir )
     if [[ "$d" == "$dir" ]] ; then return 1 ; fi
-    disabled_ $name $d $force
+    disabled_ "$filename" "$d" "$force" "$verbose"
     return $?
 }
 export -f disabled_
@@ -565,9 +572,8 @@ function run_single_test()
     local result=0
     local request="$comma_test_run_unique_dir/request.${worker_id}.json"
 
-    if disabled_ "disabled" "$dir" "$options_run_disabled" ; then
-        if [[ -s $disabled_file_path ]] ; then warning_ "$name: test $counter: $dir: disabled:" ; cat $disabled_file_path | sed 's/^/    /' >&2
-        else error_ "$name: test $counter: $dir: disabled (with no explanation)" ; fi
+    if disabled_ "disabled" "$dir" "$options_run_disabled" --verbose; then
+        :   # message already printed
     elif disabled_ "optional" "$dir" "$options_run_optional" ; then
         warning_ "$name: test $counter: $dir: optional, skipped"
     else
