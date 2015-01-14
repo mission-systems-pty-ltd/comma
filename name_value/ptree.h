@@ -372,13 +372,7 @@ inline static void ptree_to_path_value_string_impl( std::ostream& os, boost::pro
         if( v ) // quick and dirty
         {
             const std::string& stripped = comma::strip( *v );
-            if( !stripped.empty() ) 
-            { 
-                
-                std::cerr << "value check: " << (path).to_string() << std::endl;
-                ptree_output_value_( os, stripped, is_begin, display_path, equal_sign, delimiter, root ); 
-                
-            }
+            if( !stripped.empty() )  { ptree_output_value_( os, stripped, is_begin, display_path, equal_sign, delimiter, root );  }
         }
         
         comma::uint32 index=0;
