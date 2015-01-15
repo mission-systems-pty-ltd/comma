@@ -911,7 +911,7 @@ void process_test(std::vector<Token> &tokens, const std::string &original_line,
 
     std::cout << "# SRCLINE " << line_num << " " << input_line_prefix << input_line << '\n'
         << spaces(leading_spaces) << "_result_ = (" << tokens << ")\n"
-        << spaces(leading_spaces) << "if type(_result_) != bool: err_expr_not_bool()\n"
+        << spaces(leading_spaces) << "if __builtin__.type(_result_) != bool: err_expr_not_bool()\n"
         << spaces(leading_spaces) << "elif not _result_:\n";
 
     if (vars.size() != 0)
@@ -937,7 +937,7 @@ void process_test(std::vector<Token> &tokens, const std::string &original_line,
                 << spaces(leading_spaces)
                 << "    sys.stdout.write('" << i->first << "/actual=\"')\n"
                 << spaces(leading_spaces)
-                << "    if type(" << i->second << ") == type({}): print dict_str(" << i->second << ")+'\"'\n"
+                << "    if __builtin__.type(" << i->second << ") == __builtin__.type({}): print dict_str(" << i->second << ")+'\"'\n"
                 << spaces(leading_spaces)
                 // use a Python trick to force repr() to use double quotes instead of single
                 // (for an explanation, see: http://www.gossamer-threads.com/lists/python/python/157285
@@ -975,7 +975,7 @@ void process_command(const std::vector<Token> &tokens, Varmap &assigned_vars, co
 void print_header()
 {
     std::cout
-        << "import sys, re, inspect, math\n"
+        << "import sys, re, inspect, math, __builtin__\n"
         << "def near(x, y, eps): return abs(x - y) <= eps\n"
         << "def near_percent(x, y, percent): return abs(x - y) <= abs(x) * percent * 0.01\n"
         << "def max_index(dict) : return max(dict.keys())\n"
