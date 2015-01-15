@@ -73,6 +73,8 @@ static void usage(char const * const txt = "")
         "\n    --to   <unit>   : unit converting to; default: metric, unless units specified in --fields"
         "\n    --scale <factor> : scale value by given factor instead of unit conversion"
         "\n                       a convenience option, probably somewhat misplaced"
+        "\n    --offset <value> : offset each value by a given <value> instead of unit conversion"
+        "\n                       a convenience option, probably somewhat misplaced"
         "\n"
         "\nSupported Units:"
         "\n    metres / feet / statute-miles / nautical-miles "
@@ -140,9 +142,9 @@ double cast( double input )
     return static_cast< to_quantity_t >( from_quantity_t( input * From() ) ).value();
 }
 
-double scale( double input, double factor ) { return input * factor; }
+static double scale( double input, double factor ) { return input * factor; }
 
-double null_cast( double input ) { return input; }
+static double null_cast( double input ) { return input; }
 template double cast< imperial_us_mass_t, mass_t >( double );
 template double cast< mass_t, imperial_us_mass_t >( double );
 template double cast< imperial_us_length_t, nautical_mile_t >( double );
@@ -463,7 +465,7 @@ static void init_input()
     input.values.resize( input_fields.size() ); //input.values.resize( size );
 }
 
-static int scale( double factor )
+static int scale_and_offset( double factor, double offset )
 {
     comma::csv::input_stream< input_t > istream( std::cin, csv, input );
     comma::csv::output_stream< input_t > ostream( std::cout, csv, input );
@@ -523,7 +525,8 @@ int main( int ac, char** av )
         if( csv.fields.empty() ) { csv.fields="a"; }
         init_input();
         boost::optional< double > scale_factor = options.optional< double >( "--scale" );
-        if( scale_factor ) { return scale( *scale_factor ); }
+        boost::optional< double > offset = options.optional< double >( "--offset" );
+        if( scale_factor || offset ) { return scale_and_offset( scale_factor ? *scale_factor : 1, offset ? *offset : 0 ); }
         units::et from = units::metres; // quick and dirty: to avoid compilation warning
         units::et to = units::metres; // quick and dirty: to avoid compilation warning
         if( csv.fields.find( "/units" ) == std::string::npos )
