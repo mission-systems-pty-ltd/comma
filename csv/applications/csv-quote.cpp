@@ -48,6 +48,12 @@ static void usage( bool verbose )
     std::cerr << "    --quote=<quote sign>; default: double quote" << std::endl;
     std::cerr << "    --unquote; remove quotes" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "example" << std::endl;
+    std::cerr << "    echo -e \"x=hi there\\ny=34\" | csv-quote --delimiter = --fields ,x" << std::endl;
+    std::cerr << "  output:" << std::endl;
+    std::cerr << "    x=\"hi there\"" << std::endl;
+    std::cerr << "    y=34" << std::endl;
+    std::cerr << std::endl;
     exit( 1 );
 }
 
