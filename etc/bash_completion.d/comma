@@ -160,8 +160,15 @@ _comma_bash_completion()
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    opts=$( ${COMP_WORDS[0]} --bash-completion )
-    COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
+    # These tests are necessary because bash will attempt completion on
+    # ./name if there is a name in its completion list
+    # even if ./name does not exist 
+    if [[ -x "${COMP_WORDS[0]}" ]] ; then
+        opts=$( "${COMP_WORDS[0]}" --bash-completion )
+    elif which "${COMP_WORDS[0]}" > /dev/null ; then
+        opts=$( "${COMP_WORDS[0]}" --bash-completion )
+    fi
+    COMPREPLY=( $( compgen -f -d -W "${opts}" -- ${cur}) )
 }
 
 complete -F _comma_bash_completion csv-units
