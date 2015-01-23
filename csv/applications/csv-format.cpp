@@ -71,8 +71,8 @@ int main( int ac, char** av )
         while ( std::getline( std::cin, line ) )
         {
             comma::csv::format format( line );
-            if( operation == "expand" )        { std::cout << format.expanded().string() << std::endl; }
-            else if( operation == "collapse" ) { std::cout << format.collapsed().string() << std::endl; }
+            if( operation == "expand" )        { std::cout << format.expanded_string() << std::endl; }
+            else if( operation == "collapse" ) { std::cout << format.collapsed_string() << std::endl; }
             else
             {
                 std::cerr << app_name << ": unknown operation \"" << operation << "\"" << std::endl;

@@ -407,7 +407,7 @@ format::element format::offset( std::size_t ind ) const
                   , elements_[ i.first ].type );
 }
 
-format format::expanded() const
+std::string format::expanded_string() const
 {
     format result;
     for ( unsigned int i = 0; i < elements_.size(); ++i )
@@ -415,12 +415,13 @@ format format::expanded() const
         for ( unsigned int n = 0; n < elements_[ i ].count; ++n )
         { result += format::to_format( elements_[ i ].type, elements_[ i ].size ); }
     }
-    return result;
+    return result.string();
 }
 
-format format::collapsed() const
+std::string format::collapsed_string() const
 {
     COMMA_THROW( comma::exception, "format::collapsed(): not implemented" );
+    return "";
 }
 
 boost::posix_time::ptime format::traits< boost::posix_time::ptime, format::long_time >::from_bin( const char* buf, std::size_t size )

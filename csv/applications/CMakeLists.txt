@@ -10,6 +10,7 @@ target_link_libraries( csv-quote ${comma_ALL_EXTERNAL_LIBRARIES} comma_applicati
 install( TARGETS csv-quote RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
 
 add_executable( csv-fields ${dir}/csv-fields.cpp )
+add_executable( csv-format ${dir}/csv-format.cpp )
 add_executable( csv-size ${dir}/csv-size.cpp )
 add_executable( csv-select ${dir}/csv-select.cpp )
 add_executable( csv-bin-cut ${dir}/csv-bin-cut.cpp )
@@ -34,6 +35,7 @@ add_executable( csv-analyse ${dir}/csv-analyse.cpp )
 add_executable( csv-to-sql ${dir}/csv-to-sql.cpp )
 
 target_link_libraries ( csv-fields ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
+target_link_libraries ( csv-format ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
 target_link_libraries ( csv-size ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
 target_link_libraries ( csv-bin-cut ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv comma_xpath )
 target_link_libraries ( csv-split comma_csv comma_application comma_string comma_xpath ${comma_ALL_EXTERNAL_LIBRARIES} )
@@ -59,6 +61,7 @@ target_link_libraries ( csv-to-sql ${comma_ALL_EXTERNAL_LIBRARIES} comma_applica
 
 install( TARGETS csv-bin-cut
                  csv-fields
+                 csv-format
                  csv-join
                  csv-from-columns
                  csv-paste
