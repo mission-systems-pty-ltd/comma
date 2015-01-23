@@ -131,6 +131,12 @@ class format
 
         /// return as string
         const std::string& string() const;
+
+        /// return fully expanded format, e.g. "2d,3f" -> "d,d,f,f,f"
+        format expanded() const;
+
+        /// return minimal format, e.g. "d,d,f,f,f" -> "2d,3f"
+        format collapsed() const;
         
         /// return format usage
         static std::string usage();

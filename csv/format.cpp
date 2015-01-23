@@ -407,6 +407,22 @@ format::element format::offset( std::size_t ind ) const
                   , elements_[ i.first ].type );
 }
 
+format format::expanded() const
+{
+    format result;
+    for ( unsigned int i = 0; i < elements_.size(); ++i )
+    {
+        for ( unsigned int n = 0; n < elements_[ i ].count; ++n )
+        { result += format::to_format( elements_[ i ].type, elements_[ i ].size ); }
+    }
+    return result;
+}
+
+format format::collapsed() const
+{
+    COMMA_THROW( comma::exception, "format::collapsed(): not implemented" );
+}
+
 boost::posix_time::ptime format::traits< boost::posix_time::ptime, format::long_time >::from_bin( const char* buf, std::size_t size )
 {
     //comma::int64 seconds; // todo: due to bug in boost, will be casted down to int32, but for the dates we use seconds will never overflow, thus, leave it like this now
