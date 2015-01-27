@@ -222,9 +222,7 @@ add_subdirectory( xpath )
 ADD_SUBDIRECTORY( etc/bash_completion.d )
 
 if( BUILD_PYTHON_PACKAGES )
-    message( "python installation: todo" )
-    #find_package( PythonInterp REQUIRED )
-    #find_package( PythonLibs REQUIRED )
+    ADD_SUBDIRECTORY( python )
 endif( BUILD_PYTHON_PACKAGES )
 
 #in future, may need to add third party dlls somehow, if they are linked as dlls. Not needed for statically linking to boost.
