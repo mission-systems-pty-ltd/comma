@@ -143,6 +143,9 @@ int main( int ac, char** av )
         if( options.exists( "--bound" ) ) { bound = boost::posix_time::microseconds( options.value< double >( "--bound" ) * 1000000 ); }
         comma::csv::options stdin_csv( options, "t" );
         comma::csv::input_stream< Point > stdin_stream( std::cin, stdin_csv );
+        #ifdef WIN32
+        if( stdin_csv.binary() ) { _setmode( _fileno( stdout ), _O_BINARY ); }
+        #endif // #ifdef WIN32
         std::vector< std::string > unnamed = options.unnamed( "--by-lower,--by-upper,--nearest,--timestamp-only,--time-only,--no-discard,--discard-bounding", "--binary,-b,--delimiter,-d,--fields,-f,--bound,--buffer" );
         std::string properties;
         bool bounded_first = true;
@@ -163,10 +166,10 @@ int main( int ac, char** av )
                 std::cerr << "csv-time-join: expected either '- <bounding>' or '<bounding> -'; got : " << comma::join( unnamed, ' ' ) << std::endl;
                 return 1;
         }
-        comma::io::istream is( comma::split( properties, ';' )[0] );
         comma::name_value::parser parser( "filename" );
         comma::csv::options csv = parser.get< comma::csv::options >( properties );
         if( csv.fields.empty() ) { csv.fields = "t"; }
+        comma::io::istream is( comma::split( properties, ';' )[0], csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii );
         comma::csv::input_stream< Point > istream( *is, csv );
         typedef std::pair< boost::posix_time::ptime, std::string > timestring_t;
         std::deque<timestring_t> bounding_queue;
