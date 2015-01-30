@@ -46,7 +46,7 @@ static void usage( bool verbose )
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
-    std::cerr << "    --fields,-f <fields>: input fields" << std::endl;
+    std::cerr << "    --fields,-f,--input-fields <fields>: input fields" << std::endl;
     std::cerr << "    --output-fields,--output,-o <fields>: output fields" << std::endl;
     std::cerr << "        semantics of outputting trailing fields:" << std::endl;
     std::cerr << "            \"--output-fields=x,y\": do not output trailing fields" << std::endl;
@@ -93,6 +93,8 @@ int main( int ac, char** av )
         bool verbose = options.exists( "--verbose,-v" );
         if( options.exists( "--help,-h" ) ) { usage( verbose ); }
         comma::csv::options csv( options );
+        std::string f = options.value< std::string >( "--input-fields", "" );
+        if( !f.empty() ) { csv.fields = f; }
         std::vector< std::string > input_fields = comma::split( csv.fields, ',' );
         std::vector< std::string > output_fields = comma::split( options.value< std::string >( "--output-fields,--output,-o" ), ',' );
         bool output_trailing_fields = output_fields.back() == "...";
