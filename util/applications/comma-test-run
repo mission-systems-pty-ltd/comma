@@ -562,6 +562,10 @@ function run_single_test()
     # if running tests in parallel, create a unique file for redirecting all output
     # will append to the main output at the end
     [[ "$options_parallel" == "0" ]] || {
+        (
+            flock -x 9
+            message_ "$name: taking on test $counter in $dir..."
+        ) 9>>"$comma_test_run_output_flock"
         local our_stdout_log="$comma_test_run_unique_dir/stdout_log.$( mktemp -u XXXXXX )"
         exec 3>&1 4>&2 1>"$our_stdout_log" 2>&1
     }
