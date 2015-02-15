@@ -91,8 +91,8 @@ while read line ; do
     if [[ "$line" == "" ]] ; then continue ; fi
     if [[ "$output_line_numbers" != "" ]] ; then 
         if (( $no_brackets )) ; then pv_prefix="${prefix}${count}/"; else pv_prefix="${prefix}[${count}]/" ; fi
-    else 
-        pv_prefix=$prefix/
+    else
+        [[ $prefix == "" ]] || pv_prefix=$prefix/
     fi
     values=( $( echo $line | sed "s/$delimiter/\n/g" | sed 's/^/"/g' | sed 's/$/"/g' ) )
     i=0
