@@ -6,10 +6,10 @@ ENABLE_TESTING()
 
 IF (UNIX AND NOT APPLE)
   # May also fail on BSD as it assumes GNU date rather than BSD date command
-	# Get the date of the last commit (for use by CPack)
 	# Check if Git is installed
 	find_package(Git)
 	IF(GIT_FOUND)
+		# Get the date of the last commit (for use by CPack)
 		EXECUTE_PROCESS(
 		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 		COMMAND git log -n1 --format=%ci
@@ -17,11 +17,20 @@ IF (UNIX AND NOT APPLE)
 		OUTPUT_VARIABLE COMMITDATE
 		OUTPUT_STRIP_TRAILING_WHITESPACE
 		)
+		# And also the hash.
+		EXECUTE_PROCESS(
+		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+		COMMAND git rev-parse HEAD
+		OUTPUT_VARIABLE COMMITHASH
+		OUTPUT_STRIP_TRAILING_WHITESPACE
+	)
 	ELSE()
 		SET ( COMMITDATE 1 )
+		SET ( COMMITHASH "abc" )
 	ENDIF()
 ELSE() # Probably windows; gets hardcoded patch version
 	SET ( COMMITDATE 1 ) 
+	SET ( COMMITHASH "abc" )
 ENDIF()
 
 # ---------------------------------------------------------------------------
@@ -234,8 +243,8 @@ SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Command line utilities to manipulate vari
 SET(CPACK_PACKAGE_VENDOR "Australian Centre for Field Robotics")
 SET(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/COPYING")
 SET(CPACK_PACKAGE_VERSION_MAJOR "1")
-SET(CPACK_PACKAGE_VERSION_MINOR "0")
-SET(CPACK_PACKAGE_VERSION_PATCH ${COMMITDATE})
+SET(CPACK_PACKAGE_VERSION_MINOR ${COMMITDATE})
+SET(CPACK_PACKAGE_VERSION_PATCH ${COMMITHASH})
 SET(CPACK_PACKAGE_CONTACT "t.teo@acfr.usyd.edu.au")
 SET(CPACK_RPM_PACKAGE_REQUIRES "boost-thread")
 
