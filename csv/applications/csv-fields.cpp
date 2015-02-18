@@ -93,20 +93,24 @@ int main( int ac, char** av )
         std::string operation = "numbers";
         const std::vector< std::string > unnamed = options.unnamed( "--help,-h", "-.*" );
         if( !unnamed.empty() ) { operation = unnamed[0]; }
-        std::string line;
-        std::getline( std::cin, line );
-        if( line.empty() ) { std::cerr << "csv-fields: expected fields on stdin, got nothing" << std::endl; return 1; }
         if( operation == "numbers" )
         {
             int from = options.value( "--from", 1 );
-            const std::vector< std::string >& v = comma::split( line, ',' );
-            std::string comma;
-            for( unsigned int i = 0; i < v.size(); ++i )
+            while( std::cin.good() )
             {
-                if( v[i].empty() ) { continue; }
-                std::cout << comma << ( i + from );
-                comma = ",";
+                std::string line;
+                std::getline( std::cin, line );
+                if( line.empty() ) { break; }
+                const std::vector< std::string >& v = comma::split( line, ',' );
+                std::string comma;
+                for( unsigned int i = 0; i < v.size(); ++i )
+                {
+                    if( v[i].empty() ) { continue; }
+                    std::cout << comma << ( i + from );
+                    comma = ",";
+                }
             }
+            std::cout << std::endl;
         }
         else if( operation == "clear" )
         {
@@ -115,37 +119,51 @@ int main( int ac, char** av )
             std::string remove = options.value< std::string >( "--remove", "" );
             std::string mask = options.value< std::string >( "--mask", "" );
             std::string unmasked = options.value< std::string >( "--inverted-mask,--complement-mask,--unmask,--unmasked", "" );
-            if( !keep.empty() || !remove.empty() )
+            while( std::cin.good() )
             {
-                const std::vector< std::string >& k = comma::split( keep.empty() ? remove : keep, ',' );
-                std::set< std::string > keys;
-                for( unsigned int i = 0; i < k.size(); ++i ) { if( !k[i].empty() ) { keys.insert( k[i] ); } }
-                const std::vector< std::string >& v = comma::split( line, ',' );
-                std::string comma;
-                for( unsigned int i = 0; i < v.size(); ++i )
+                std::string line;
+                std::getline( std::cin, line );
+                if( line.empty() ) { break; }
+                if( !keep.empty() || !remove.empty() )
                 {
-                    std::cout << comma;
-                    if( !v[i].empty() && keep.empty() != ( keys.find( v[i] ) != keys.end() ) ) { std::cout << v[i]; }
-                    comma = ",";
+                    // todo: quick and dirty, refactor, don't do it for each line
+                    const std::vector< std::string >& k = comma::split( keep.empty() ? remove : keep, ',' );
+                    std::set< std::string > keys;
+                    for( unsigned int i = 0; i < k.size(); ++i ) { if( !k[i].empty() ) { keys.insert( k[i] ); } }
+                    const std::vector< std::string >& v = comma::split( line, ',' );
+                    std::string comma;
+                    for( unsigned int i = 0; i < v.size(); ++i )
+                    {
+                        std::cout << comma;
+                        if( !v[i].empty() && keep.empty() != ( keys.find( v[i] ) != keys.end() ) ) { std::cout << v[i]; }
+                        comma = ",";
+                    }
                 }
-            }
-            else if( !mask.empty() || !unmasked.empty() )
-            {
-                const std::vector< std::string >& k = comma::split( mask.empty() ? unmasked : mask, ',' );
-                const std::vector< std::string >& v = comma::split( line, ',' );
-                std::string comma;
-                for( unsigned int i = 0; i < v.size() && i < k.size(); ++i )
+                else if( !mask.empty() || !unmasked.empty() )
                 {
-                    std::cout << comma;
-                    if( mask.empty() == k[i].empty() ) { std::cout << v[i]; }
-                    comma = ",";
+                    // todo: quick and dirty, refactor, don't do it for each line
+                    const std::vector< std::string >& k = comma::split( mask.empty() ? unmasked : mask, ',' );
+                    const std::vector< std::string >& v = comma::split( line, ',' );
+                    std::string comma;
+                    for( unsigned int i = 0; i < v.size() && i < k.size(); ++i )
+                    {
+                        std::cout << comma;
+                        if( mask.empty() == k[i].empty() ) { std::cout << v[i]; }
+                        comma = ",";
+                    }
+                    for( unsigned int i = k.size(); i < v.size(); ++i )
+                    { 
+                        std::cout << comma;
+                        if( mask.empty() ) { std::cout << v[i]; }
+                        comma = ",";
+                    }
                 }
-                for( unsigned int i = k.size(); i < v.size(); ++i ) { std::cout << comma << v[i]; }
-            }
-            else
-            {
-                std::cerr << "csv-fields: for clear, please specify --keep, --mask, or --fields" << std::endl;
-                return 1;
+                else
+                {
+                    std::cerr << "csv-fields: for clear, please specify --keep, --mask, or --fields" << std::endl;
+                    return 1;
+                }
+                std::cout << std::endl;
             }
         }
         else
@@ -153,7 +171,6 @@ int main( int ac, char** av )
             std::cerr << "csv-fields: expected operation, got: \"" << operation << "\"" << std::endl;
             return 1;
         }
-        std::cout << std::endl;
         return 0;
     }
     catch( std::exception& ex ) { std::cerr << "csv-fields: " << ex.what() << std::endl; }
