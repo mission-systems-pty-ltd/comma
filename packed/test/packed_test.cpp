@@ -37,6 +37,7 @@
 #include <boost/array.hpp>
 #include <comma/packed/packed.h>
 #include <comma/math/compare.h>
+#include <comma/packed/bits.h>
 
 struct test_packed_struct_t : public comma::packed::packed_struct< test_packed_struct_t, 16 >
 {
@@ -521,6 +522,194 @@ TEST( test_packed_ascii_hex, test_throw_unexpected_hexadecimal_digit )
 TEST( test_packed_ascii_hex, test_throw_unexpected_decimal_digit )
 {
     ASSERT_THROW( comma::packed::hex_from_int< comma::uint16 >( 16 ), comma::exception);
+}
+
+TEST( test_packed_bits, test_reverse_bits_in_byte )
+{
+    unsigned char x = 0;
+    unsigned char expected = 0;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );
+    
+           x = 0b00000001;
+    expected = 0b10000000;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );
+
+           x = 0b10000000;
+    expected = 0b00000001;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );
+    
+           x = 0b00010000;
+    expected = 0b00001000;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );    
+    
+           x = 0b11111111;
+    expected = 0b11111111;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );    
+    
+           x = 0b11111110;
+    expected = 0b01111111;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );        
+    
+           x = 0b01111111;
+    expected = 0b11111110;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );        
+    
+           x = 0b11101111;
+    expected = 0b11110111;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );    
+    
+           x = 0b01010101;
+    expected = 0b10101010;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );
+    
+           x = 0b10101010;
+    expected = 0b01010101;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );    
+    
+           x = 0b10011011;
+    expected = 0b11011001;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );    
+    
+           x = 0b01000110;
+    expected = 0b01100010;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );
+    
+           x = 0b01000111;
+    expected = 0b11100010;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );
+
+           x = 0b11010110;
+    expected = 0b01101011;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );
+    
+}
+
+TEST( test_packed_bits, test_reverse_bits_in_uint16 )
+{
+    comma::uint16 x = 0;
+    comma::uint16 expected = 0;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );
+    
+           x = 0x1;
+    expected = 0x8000;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );
+
+           x = 0x8000;
+    expected = 0x1;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );
+    
+           x = 0xffff;
+    expected = 0xffff;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );    
+    
+           x = 0x1234;
+    expected = 0x2c48;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );
+}
+
+TEST( test_packed_bits, test_reverse_bits_in_uint32 )
+{
+    comma::uint32 x = 0;
+    comma::uint32 expected = 0;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );
+    
+           x = 0x1;
+    expected = 0x80000000;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );
+
+           x = 0x80000000;
+    expected = 0x1;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );
+    
+           x = 0xffffffff;
+    expected = 0xffffffff;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );    
+    
+           x = 0x1234abcd;
+    expected = 0xb3d52c48;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );
+}
+
+TEST( test_packed_bits, test_reverse_bits_in_uint64 )
+{
+    comma::uint64 x = 0;
+    comma::uint64 expected = 0;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );
+    
+           x = 0x1;
+    expected = 0x8000000000000000;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );
+
+           x = 0x8000000000000000;
+    expected = 0x1;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );
+    
+           x = 0xffffffffffffffff;
+    expected = 0xffffffffffffffff;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );
+    
+           x = 0xffffffff00000000;
+    expected = 0x00000000ffffffff;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );
+    
+           x = 0xfffffffffffffffe;
+    expected = 0x7fffffffffffffff;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );     
+    
+           x = 0x7fffffffffffffff;
+    expected = 0xfffffffffffffffe;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );
+    
+           x = 0xffffdfffffffffff;
+    expected = 0xfffffffffffbffff;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );    
+    
+           x = 0x12345678abcdef01;
+    expected = 0x80f7b3d51e6a2c48;
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );
+}
+
+
+TEST( test_packed_bits, test_packed_double_reversion )
+{
+    comma::uint64 x = 0x89a3f724e89b7214;
+    comma::uint64 expected = x;
+    comma::packed::reverse_bits( x );
+    comma::packed::reverse_bits( x );
+    EXPECT_EQ( expected, x );    
 }
 
 int main( int argc, char *argv[] )

@@ -34,9 +34,11 @@
 #ifndef COMMA_PACKED_BITS_HEADER_H_
 #define COMMA_PACKED_BITS_HEADER_H_
 
+#include <limits>
 #include <string.h>
 #include <boost/static_assert.hpp>
 #include <comma/packed/field.h>
+#include <boost/type_traits.hpp>
 
 namespace comma { namespace packed {
 
@@ -71,6 +73,22 @@ struct bits : public packed::field< bits< B, Default >, B, sizeof( unsigned char
     
     const type& fields() const { return *( reinterpret_cast< const type* >( this ) ); }
 };
+
+template< typename T >
+inline void reverse_bits( T& v )
+{
+    BOOST_STATIC_ASSERT( boost::is_unsigned< T >::value );
+    unsigned int s = std::numeric_limits< T >::digits - 1;
+    T r = v;
+    for( v >>= 1; v; v >>= 1 )
+    {   
+        r <<= 1;
+        r |= v & 1;
+        s--;
+    }
+    r <<= s;
+    v = r;
+}
 
 } } // namespace comma { namespace packed {
 
