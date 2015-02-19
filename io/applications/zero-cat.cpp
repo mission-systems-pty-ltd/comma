@@ -129,6 +129,8 @@ static std::string get_endl()
 
 static const std::string endl = get_endl();
 
+static bool quiet_interrupt = false;
+
 int main(int argc, char* argv[])
 {
     try
@@ -149,6 +151,7 @@ int main(int argc, char* argv[])
             ( "buffer,b", boost::program_options::value< std::size_t >( &hwm )->default_value( 1024 ), "set buffer size in packets (high water mark in zmq)" )
             ( "server", boost::program_options::value< std::string >( &server ), "in subscribe mode, republish the data on a socket, eg tcp:1234" )
             ( "wait-after-connect,conwait", boost::program_options::value< double >( &wait_after_connect ), "time to wait, in seconds, after initial connection before attempting to read or write" )
+            ( "quiet-interrupt", "suppress error messages due to interrupt" )
             ( "verbose,v", "more output" );
 
         boost::program_options::variables_map vm;
@@ -163,6 +166,7 @@ int main(int argc, char* argv[])
         const std::vector< std::string >& endpoints = boost::program_options::collect_unrecognized( parsed.options, boost::program_options::include_positional );
         if( endpoints.empty() ) { std::cerr << "zero-cat: please provide at least one endpoint" << std::endl; return 1; }
         bool binary = vm.count( "size" );
+        quiet_interrupt = vm.count( "quiet-interrupt" );
         comma::signal_flag is_shutdown;
         zmq::context_t context( 1 );
         const bool is_request = vm.count( "request" );
@@ -330,7 +334,7 @@ int main(int argc, char* argv[])
     }
     catch ( zmq::error_t& e )
     {
-        std::cerr << argv[0] << ": zeromq error: " << e.what() << std::endl;
+        if( !quiet_interrupt || e.num() != EINTR ) { std::cerr << argv[0] << ": zeromq error: (" << e.num() << ") " << e.what() << std::endl; }
     }
     catch ( std::exception& e )
     {
