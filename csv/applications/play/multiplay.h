@@ -38,7 +38,7 @@
 #include <comma/csv/options.h>
 #include <comma/csv/stream.h>
 #include <comma/io/publisher.h>
-#include "./play.h"
+#include "play.h"
 
 namespace comma {
 

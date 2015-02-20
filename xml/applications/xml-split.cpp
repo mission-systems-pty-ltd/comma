@@ -44,7 +44,7 @@
 
 #include <comma/application/command_line_options.h>
 #include <comma/xpath/xpath.h>
-#include "./expat_util.h"
+#include "expat_util.h"
 
 namespace FS = boost::filesystem;
 

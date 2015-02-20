@@ -41,7 +41,7 @@
 #include <comma/base/types.h>
 #include <comma/string/string.h>
 #include <comma/csv/format.h>
-#include "./impl/epoch.h"
+#include "impl/epoch.h"
 
 namespace comma { namespace csv {
 

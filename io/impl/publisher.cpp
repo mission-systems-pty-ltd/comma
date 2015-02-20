@@ -45,7 +45,7 @@
 #include <comma/base/exception.h>
 #include <comma/io/file_descriptor.h>
 #include <comma/string/string.h>
-#include "./publisher.h"
+#include "publisher.h"
 
 namespace comma { namespace io { namespace impl {
 

@@ -41,8 +41,8 @@
 #include <expat.h>
 
 #include <comma/application/command_line_options.h>
-#include "./expat_util.h"
-#include "./stream_util.h"
+#include "expat_util.h"
+#include "stream_util.h"
 
 #define CMDNAME "xml-grep"
 

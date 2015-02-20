@@ -38,7 +38,7 @@
 #include <algorithm>
 #include <iterator>
 
-#include "./stream_util.h"
+#include "stream_util.h"
 
 // Retrieves the next character sequence in the stream if it is a newline.
 // stream '\n.' => true leaves '.'

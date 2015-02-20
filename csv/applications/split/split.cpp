@@ -43,7 +43,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/thread/thread_time.hpp>
 #include <comma/base/exception.h>
-#include "./split.h"
+#include "split.h"
 
 namespace comma { namespace csv { namespace applications {
 

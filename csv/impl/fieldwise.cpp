@@ -31,7 +31,7 @@
 
 #include <comma/base/exception.h>
 #include <comma/string/string.h>
-#include "./fieldwise.h"
+#include "fieldwise.h"
 
 namespace comma { namespace csv {
 

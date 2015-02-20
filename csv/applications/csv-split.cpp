@@ -42,7 +42,7 @@
 #include <comma/application/contact_info.h>
 #include <comma/csv/impl/program_options.h>
 #include <comma/csv/traits.h>
-#include "./split/split.h"
+#include "split/split.h"
 
 comma::csv::options csv;
 boost::optional< boost::posix_time::time_duration > duration;

@@ -33,7 +33,7 @@
 #include <sstream>
 #include <boost/thread/thread.hpp>
 #include <comma/string/string.h>
-#include "./multiplay.h"
+#include "multiplay.h"
 
 namespace comma {
 

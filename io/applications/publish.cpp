@@ -41,7 +41,7 @@
 
 #include <comma/base/last_error.h>
 #include <comma/io/file_descriptor.h>
-#include "./publish.h"
+#include "publish.h"
 
 namespace comma { namespace io { namespace applications {
 

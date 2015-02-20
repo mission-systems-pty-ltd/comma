@@ -46,7 +46,7 @@
 #include <comma/string/string.h>
 #include <comma/visiting/visit.h>
 #include <comma/visiting/while.h>
-#include "./static_cast.h"
+#include "static_cast.h"
 
 namespace comma { namespace csv { namespace impl {
     

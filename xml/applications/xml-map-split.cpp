@@ -43,7 +43,7 @@
 
 #include <cstring>
 
-#include "./stream_util.h"
+#include "stream_util.h"
 
 using comma::io::punct;
 

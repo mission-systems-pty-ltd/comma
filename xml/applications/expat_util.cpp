@@ -34,7 +34,7 @@
 #include <iostream>
 #include <fstream>
 
-#include "./expat_util.h"
+#include "expat_util.h"
 
 static unsigned const BUFFY_SIZE = 1 * 1024; // * 1024;
 

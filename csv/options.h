@@ -34,7 +34,7 @@
 
 #include <boost/optional.hpp>
 #include <comma/application/command_line_options.h>
-#include "./format.h"
+#include "format.h"
 
 namespace comma { namespace csv {
 

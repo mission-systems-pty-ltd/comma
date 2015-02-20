@@ -48,7 +48,7 @@
 #include <comma/application/signal_flag.h>
 #include <comma/base/last_error.h>
 #include <comma/string/string.h>
-#include "./publish.h"
+#include "publish.h"
 
 //#include <google/profiler.h>
 

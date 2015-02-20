@@ -32,7 +32,7 @@
 
 #include <boost/thread/thread.hpp>
 #include <boost/thread/thread_time.hpp>
-#include "./play.h"
+#include "play.h"
 
 namespace comma { namespace csv { namespace impl {
     
