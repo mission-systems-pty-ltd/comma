@@ -94,6 +94,7 @@ function description()
 --quiet,-q; minimize output
 --run-disabled; run disabled tests
 --run-optional,--optional; run tests having file called "optional" (same logic as for --run-disabled)
+--stdin; read paths from stdin e.g. run test in hello/world: echo hello/world | comma-test-run --stdin
 --test-option=[<option>]; extra command line argument(s) pass to "test" script
 --to=[<dir>]; run tests up to a given test, the latter included, where test directories are ordered lexicographically
 --until-first-failure; exit after the first failure (works only when tests run serially)
@@ -159,6 +160,10 @@ ${brown}Optional tests${none}
     to make tests optional in a directory and all its subdirectories
     create an empty file named ${brown}optional${none} in that directory
 
+${brown}Reading test directories from stdin${none}
+    convenient for test filtering and reordering, e.g:
+        comma-test-run --dry-run | grep 'some/topic' | comma-test-run --stdin
+    
 ${brown}Running tests in parallel${none}
     (a) If none of '--parallel' and '--max-parallel' options is given, tests are run sequentially.
     (b) If '--max-parallel' is given, e.g., as in '--max-parallel=4', up to 4 tests are run at once;
@@ -843,7 +848,14 @@ function test_directories()
     done
 }
 
-test_script_dirs=( $( test_directories ) )
+if [[ -z "$options_stdin" ]] ; then
+    test_script_dirs=( $( test_directories ) )
+else
+    while read line ; do
+        [[ -d "$line" ]] || { echo "comma-test-run: directory not found: \"$line\"" >&2 ; exit 1 ; }
+        test_script_dirs+=( "$line" )
+    done
+fi
 [[ -z "$options_output_directories" ]] || { trap "clean_working_dir" EXIT ; echo ${test_script_dirs[@]} | tr ' ' '\n' ; exit ; }
 test_scripts_count=${#test_script_dirs[@]}
 count=0
