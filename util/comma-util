@@ -27,12 +27,12 @@ export -f comma_elapsed
 #        where <name> is an arbitrary name of user's choice that will be put in the log
 function comma_progress_named()
 {
-    local output_file=$1
-    local name=$2
-    echo "$( date +%Y%m%dT%H%M%S.%N | cut -b1-22 ),$name,begin" >> $output_file
+    local -r comma_progress_output_file_=$1
+    local -r comma_progress_name_=$2
+    echo "$( date +%Y%m%dT%H%M%S.%N | cut -b1-22 ),$comma_progress_name_,begin" >> $comma_progress_output_file_
     ${@:3}
-    local exit_code=$?
-    echo "$( date +%Y%m%dT%H%M%S.%N | cut -b1-22 ),$name,end" >> $output_file
+    local -r exit_code=$?
+    echo "$( date +%Y%m%dT%H%M%S.%N | cut -b1-22 ),$comma_progress_name_,end" >> $comma_progress_output_file_
     return $exit_code
 }
 export -f comma_progress_named
