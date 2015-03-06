@@ -133,6 +133,8 @@ static const std::string name_value =
     
 static const std::string name_value_root = "root={" +  name_value + "}";
 
+static const std::string corrupted = "< = {";
+
 void test_config( const config& c )
 {
     EXPECT_EQ( "dummy", c.name );
@@ -165,38 +167,28 @@ void test_interface( std::istringstream& iss, const char *root )
 
 TEST ( name_value_read, read_json )
 {
-    {
-        std::istringstream iss( json );
-        test_interface( iss );
-    }
-    {
-        std::istringstream iss( json_root );
-        test_interface( iss, "root" );
-    }
+    { std::istringstream iss( json ); test_interface( iss ); }
+    { std::istringstream iss( json_root ); test_interface( iss, "root" ); }
 }
 
 TEST ( name_value_read, read_xml )
 {
-    {
-        std::istringstream iss( xml );
-        test_interface( iss );
-    }
-    {
-        std::istringstream iss( xml_root );
-        test_interface( iss, "root" );
-    }
+    { std::istringstream iss( xml ); test_interface( iss ); }
+    { std::istringstream iss( xml_root ); test_interface( iss, "root" ); }
 }
 
 TEST ( name_value_read, read_name_value )
 {
-    {
-        std::istringstream iss( name_value );
-        test_interface( iss );
-    }
-    {
-        std::istringstream iss( name_value_root );
-        test_interface( iss, "root" );
-    }
+    { std::istringstream iss( name_value ); test_interface( iss ); }
+    { std::istringstream iss( name_value_root ); test_interface( iss, "root" ); }
 }
+
+TEST ( name_value_read, read_corrupted )
+{
+    std::istringstream iss( corrupted );
+    config c; 
+    ASSERT_THROW( comma::read< config >( c, iss ), comma::exception );
+}
+
 
 } } } // namespace comma { namespace test { namespace read {
