@@ -266,6 +266,14 @@ template < typename T > inline void write_xml( const T& t, std::ostream& stream,
 template < typename T > inline void write_xml( const T& t, std::ostream& stream ) { write_xml( t, stream, xpath() ); }
 
 
+template < typename T > inline void read_name_value( T& t, std::istream& stream, const xpath& root, bool permissive )
+{
+    boost::property_tree::ptree p;
+    comma::property_tree::from_name_value( stream, p );
+    comma::from_ptree from_ptree( p, root, permissive );
+    comma::visiting::apply( from_ptree ).to( t );
+}
+
 template < typename T > inline void read( T& t, std::istream& stream, const xpath& root, bool permissive )
 {
     try 
@@ -282,6 +290,15 @@ template < typename T > inline void read( T& t, std::istream& stream, const xpat
         stream.clear();
         stream.seekg( 0, std::ios::beg );
         read_xml< T >( t, stream, root, permissive );
+        return;
+    }
+    catch( const boost::property_tree::ptree_error&  ex ) {}
+    catch(...) { throw; }
+    try 
+    {
+        stream.clear();
+        stream.seekg( 0, std::ios::beg );
+        read_name_value< T >( t, stream, root, permissive );
         return;
     }
     catch( const boost::property_tree::ptree_error&  ex ) {}

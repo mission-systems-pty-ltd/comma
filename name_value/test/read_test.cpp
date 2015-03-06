@@ -121,6 +121,18 @@ static const std::string xml =
     
 static const std::string xml_root =  "<root> " + xml + " </root>";
 
+static const std::string name_value =
+    " name=dummy "
+    " size=10 "
+    " nest={"
+    "        name=nested "
+    "        number=20 "
+    "      } "
+    " alpha=1.5 "
+    " beta=2.5 ";
+    
+static const std::string name_value_root = "root={" +  name_value + "}";
+
 void test_config( const config& c )
 {
     EXPECT_EQ( "dummy", c.name );
@@ -171,6 +183,18 @@ TEST ( name_value_read, read_xml )
     }
     {
         std::istringstream iss( xml_root );
+        test_interface( iss, "root" );
+    }
+}
+
+TEST ( name_value_read, read_name_value )
+{
+    {
+        std::istringstream iss( name_value );
+        test_interface( iss );
+    }
+    {
+        std::istringstream iss( name_value_root );
         test_interface( iss, "root" );
     }
 }
