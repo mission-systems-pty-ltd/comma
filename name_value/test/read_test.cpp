@@ -107,7 +107,7 @@ static const std::string json =
     " \"beta\": \"2.5\" "
     "}";
     
-static const std::string json_root = "{ \"root\": " +  json + "}";
+static const std::string json_root = "{ \"root\": { \"item\": " +  json + " } }";
 
 static const std::string xml = 
     " <name>dummy</name> "
@@ -119,7 +119,7 @@ static const std::string xml =
     " <alpha>1.5</alpha> "
     " <beta>2.5</beta> ";
     
-static const std::string xml_root =  "<root> " + xml + " </root>";
+static const std::string xml_root =  "<root> <item> " + xml + " </item> </root>";
 
 static const std::string name_value =
     " name=dummy "
@@ -131,7 +131,7 @@ static const std::string name_value =
     " alpha=1.5 "
     " beta=2.5 ";
     
-static const std::string name_value_root = "root={" +  name_value + "}";
+static const std::string name_value_root = "root={ item={ " +  name_value + " } }";
 
 static const std::string corrupted = "< = {";
 
@@ -147,43 +147,86 @@ void test_config( const config& c )
 
 void test_interface( std::istringstream& iss )
 {
-    { config c; comma::read< config >( c, iss ); test_config( c ); }
-    { config c; comma::read< config >( c, iss, true ); test_config( c ); }
-    { config c = comma::read< config >( iss ); test_config( c ); }
-    { config c = comma::read< config >( iss, true ); test_config( c ); }
+    { 
+        config c; 
+        comma::read< config >( c, iss ); 
+        SCOPED_TRACE( "comma::read< config >( c, iss )" ); 
+        test_config( c ); 
+    }
+    { 
+        config c; 
+        comma::read< config >( c, iss, true ); 
+        SCOPED_TRACE( "comma::read< config >( c, iss, true )" ); 
+        test_config( c );
+    }
+    { 
+        config c = comma::read< config >( iss ); 
+        SCOPED_TRACE( "comma::read< config >( iss )" ); 
+        test_config( c ); 
+    }
+    { 
+        config c = comma::read< config >( iss, true ); 
+        SCOPED_TRACE( "comma::read< config >( iss, true )" ); 
+        test_config( c ); 
+    }
 }
 
 void test_interface( std::istringstream& iss, const char *root )
 {
-    { config c; comma::read< config >( c, iss, root ); test_config( c ); }
-    { config c; comma::read< config >( c, iss, root, true ); test_config( c ); }
-    { config c; comma::read< config >( c, iss, xpath( root ) ); test_config( c ); }
-    { config c; comma::read< config >( c, iss, xpath( root ), true ); test_config( c ); }
-    { config c = comma::read< config >( iss, root ); test_config( c ); }
-    { config c = comma::read< config >( iss, root, true ); test_config( c ); }
-    { config c = comma::read< config >( iss, xpath( root ) ); test_config( c ); }
-    { config c = comma::read< config >( iss, xpath( root ), true ); test_config( c ); }
+    { 
+        config c; 
+        comma::read< config >( c, iss, root ); 
+        SCOPED_TRACE( "comma::read< config >( c, iss, root )" ); 
+        test_config( c ); 
+    }
+    {
+        config c; 
+        comma::read< config >( c, iss, root, true ); 
+        SCOPED_TRACE( "comma::read< config >( c, iss, root, true )" ); 
+        test_config( c ); 
+    }
+    { 
+        config c; 
+        comma::read< config >( c, iss, xpath( root ) ); 
+        SCOPED_TRACE( "comma::read< config >( c, iss, xpath( root ) )" ); 
+        test_config( c );
+    }
+    { 
+        config c; 
+        comma::read< config >( c, iss, xpath( root ), true ); 
+        SCOPED_TRACE( "comma::read< config >( c, iss, xpath( root ), true )" ); 
+        test_config( c ); 
+    }
+    { 
+        config c = comma::read< config >( iss, root ); 
+        SCOPED_TRACE( "comma::read< config >( iss, root )" ); 
+        test_config( c ); 
+    }
+    { 
+        config c = comma::read< config >( iss, root, true ); 
+        SCOPED_TRACE( "comma::read< config >( iss, root, true )" );
+        test_config( c );
+    }
+    { 
+        config c = comma::read< config >( iss, xpath( root ) ); 
+        SCOPED_TRACE( "comma::read< config >( iss, xpath( root ) )" ); 
+        test_config( c );
+    }
+    { 
+        config c = comma::read< config >( iss, xpath( root ), true ); 
+        SCOPED_TRACE( "comma::read< config >( iss, xpath( root ), true )" ); 
+        test_config( c );
+    }
 }
 
-TEST ( name_value_read, read_json )
-{
-    { std::istringstream iss( json ); test_interface( iss ); }
-    { std::istringstream iss( json_root ); test_interface( iss, "root" ); }
-}
+TEST( read, json ) { std::istringstream iss( json ); test_interface( iss ); }
+TEST( read, json_root ) { std::istringstream iss( json_root ); test_interface( iss, "root/item" ); }
+TEST( read, xml ) { std::istringstream iss( xml ); test_interface( iss ); }
+TEST( read, xml_root ) { std::istringstream iss( xml_root ); test_interface( iss, "root/item" ); }
+TEST( read, name_value ) { std::istringstream iss( name_value ); test_interface( iss ); }
+TEST( read, name_value_root ) { std::istringstream iss( name_value_root ); test_interface( iss, "root/item" ); }
 
-TEST ( name_value_read, read_xml )
-{
-    { std::istringstream iss( xml ); test_interface( iss ); }
-    { std::istringstream iss( xml_root ); test_interface( iss, "root" ); }
-}
-
-TEST ( name_value_read, read_name_value )
-{
-    { std::istringstream iss( name_value ); test_interface( iss ); }
-    { std::istringstream iss( name_value_root ); test_interface( iss, "root" ); }
-}
-
-TEST ( name_value_read, read_corrupted )
+TEST ( read, corrupted )
 {
     std::istringstream iss( corrupted );
     config c; 
