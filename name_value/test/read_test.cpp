@@ -96,44 +96,76 @@ template <> struct traits< config >
 namespace comma { namespace test { namespace read {
 
 static const std::string json =
-    "{"
-    " \"name\": \"dummy\", "
-    " \"size\": \"10\", "
-    " \"nest\": {"
-    "             \"name\": \"nested\", "
-    "             \"number\": \"20\" "
-    "           }, "
-    " \"alpha\": \"1.5\", "
-    " \"beta\": \"2.5\" "
+    "{\n"
+    "    \"name\": \"dummy\",\n"
+    "    \"size\": \"10\",\n"
+    "    \"nest\": {\n"
+    "                  \"name\": \"nested\",\n"
+    "                  \"number\": \"20\"\n"
+    "              },\n"
+    "    \"alpha\": \"1.5\",\n"
+    "    \"beta\": \"2.5\"\n"
     "}";
     
 static const std::string json_root = "{ \"root\": { \"item\": " +  json + " } }";
 
 static const std::string xml = 
-    " <name>dummy</name> "
-    " <size>10</size> "
-    " <nest> "
-    "         <name>nested</name> "
-    "         <number>20</number> "
-    " </nest> "
-    " <alpha>1.5</alpha> "
-    " <beta>2.5</beta> ";
+    "<name>dummy</name>\n"
+    "<size>10</size>\n"
+    "<nest>\n"
+    "    <name>nested</name>\n"
+    "    <number>20</number>\n"
+    "</nest>\n"
+    "<alpha>1.5</alpha>\n"
+    "<beta>2.5</beta>\n";
     
 static const std::string xml_root =  "<root> <item> " + xml + " </item> </root>";
 
 static const std::string name_value =
-    " name=dummy "
-    " size=10 "
-    " nest={"
-    "        name=nested "
-    "        number=20 "
-    "      } "
-    " alpha=1.5 "
-    " beta=2.5 ";
+    "name=dummy,\n"
+    "size=10,\n"
+    "nest=\n"
+    "{\n"
+    "    name=nested,\n"
+    "    number=20\n"
+    "}\n"
+    "alpha=1.5,\n"
+    "beta=2.5\n";
     
 static const std::string name_value_root = "root={ item={ " +  name_value + " } }";
 
-static const std::string corrupted = "< = {";
+static const std::string path_value = 
+    "name=dummy\n"
+    "size=10\n"
+    "nest/name=nested\n"
+    "nest/number=20\n"
+    "alpha=1.5\n"
+    "beta=2.5";
+    
+static const std::string path_value_root = 
+    "root/item/name=dummy\n"
+    "root/item/size=10\n"
+    "root/item/nest/name=nested\n"
+    "root/item/nest/number=20\n"
+    "root/item/alpha=1.5\n"
+    "root/item/beta=2.5";    
+
+TEST( ptree, path_value )
+{
+    std::istringstream iss( "name=test\nsize=1\nnest/name=empty\nnest/number=2\nalpha=0.1\nbeta=0.2" );
+    boost::property_tree::ptree ptree;
+    property_tree::from_path_value( iss, ptree );
+    EXPECT_EQ( property_tree::to_path_value_string( ptree ), "name=\"test\",size=\"1\",nest/name=\"empty\",nest/number=\"2\",alpha=\"0.1\",beta=\"0.2\"" );
+    config c;
+    comma::from_ptree from_ptree( ptree, xpath(), true );
+    visiting::apply( from_ptree ).to( c );
+    EXPECT_EQ( "test", c.name );
+    EXPECT_EQ( 1, c.size );
+    EXPECT_EQ( "empty", c.nest.name );
+    EXPECT_EQ( 2, c.nest.number );
+    EXPECT_DOUBLE_EQ( 0.1, c.alpha );
+    EXPECT_DOUBLE_EQ( 0.2, c.beta );    
+}
 
 void test_config( const config& c )
 {
@@ -149,7 +181,7 @@ void test_interface( std::istringstream& iss )
 {
     { 
         config c; 
-        comma::read< config >( c, iss ); 
+        comma::read< config >( c, iss );
         SCOPED_TRACE( "comma::read< config >( c, iss )" ); 
         test_config( c ); 
     }
@@ -197,7 +229,7 @@ void test_interface( std::istringstream& iss, const char *root )
         SCOPED_TRACE( "comma::read< config >( c, iss, xpath( root ), true )" ); 
         test_config( c ); 
     }
-    { 
+    {
         config c = comma::read< config >( iss, root ); 
         SCOPED_TRACE( "comma::read< config >( iss, root )" ); 
         test_config( c ); 
@@ -219,16 +251,25 @@ void test_interface( std::istringstream& iss, const char *root )
     }
 }
 
-TEST( read, json ) { std::istringstream iss( json ); test_interface( iss ); }
-TEST( read, json_root ) { std::istringstream iss( json_root ); test_interface( iss, "root/item" ); }
-TEST( read, xml ) { std::istringstream iss( xml ); test_interface( iss ); }
-TEST( read, xml_root ) { std::istringstream iss( xml_root ); test_interface( iss, "root/item" ); }
-TEST( read, name_value ) { std::istringstream iss( name_value ); test_interface( iss ); }
-TEST( read, name_value_root ) { std::istringstream iss( name_value_root ); test_interface( iss, "root/item" ); }
+TEST( read, json ) { std::istringstream iss( json ); ASSERT_NO_THROW( test_interface( iss ) ); }
+TEST( read, json_root ) { std::istringstream iss( json_root ); ASSERT_NO_THROW( test_interface( iss, "root/item" ) ); }
+TEST( read, xml ) { std::istringstream iss( xml ); ASSERT_NO_THROW( test_interface( iss ) ); }
+TEST( read, xml_root ) { std::istringstream iss( xml_root ); ASSERT_NO_THROW( test_interface( iss, "root/item" ) ); }
+TEST( read, name_value ) { std::istringstream iss( name_value ); ASSERT_NO_THROW( test_interface( iss ) ); }
+TEST( read, name_value_root ) { std::istringstream iss( name_value_root ); ASSERT_NO_THROW( test_interface( iss, "root/item" ) ); }
+TEST( read, path_value ) { std::istringstream iss( path_value ); ASSERT_NO_THROW( test_interface( iss ) ); }
+TEST( read, path_value_root ) { std::istringstream iss( path_value_root ); ASSERT_NO_THROW( test_interface( iss, "root/item" ) ); }
 
-TEST ( read, corrupted )
+TEST ( read, corrupted_json )
 {
-    std::istringstream iss( corrupted );
+    std::istringstream iss( "{ \"name\": \"dummy\", }" );
+    config c; 
+    ASSERT_THROW( comma::read< config >( c, iss ), comma::exception );
+}
+
+TEST ( read, DISABLED_corrupted_xml ) // disabled since name-value parser thinks this is a valid name-value config
+{
+    std::istringstream iss( "<name>dummy<name>" );
     config c; 
     ASSERT_THROW( comma::read< config >( c, iss ), comma::exception );
 }

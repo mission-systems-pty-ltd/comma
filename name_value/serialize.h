@@ -274,38 +274,74 @@ template < typename T > inline void read_name_value( T& t, std::istream& stream,
     comma::visiting::apply( from_ptree ).to( t );
 }
 
+template < typename T > inline void read_path_value( T& t, std::istream& stream, const xpath& root, bool permissive )
+{
+    boost::property_tree::ptree p;
+    comma::property_tree::from_path_value( stream, p );
+//    std::cerr << "to_string--->" << comma::property_tree::to_path_value_string( p ) << std::endl;
+    comma::from_ptree from_ptree( p, root, permissive );
+    comma::visiting::apply( from_ptree ).to( t );
+//    std::cerr << " t.name: " << t.name << std::endl;
+}
+
 template < typename T > inline void read( T& t, std::istream& stream, const xpath& root, bool permissive )
 {
     try 
     {
+        std::cerr << "try json" << std::endl;
         stream.clear();
         stream.seekg( 0, std::ios::beg );
         read_json< T >( t, stream, root, permissive ); 
+        std::cerr << "json ok" << std::endl;
         return;
     } 
-    catch( const boost::property_tree::ptree_error&  ex ) {}
+    catch( const boost::property_tree::ptree_error&  ex ) { std::cerr << "json throws" << std::endl; }
+    catch( const comma::exception&  ex ) { std::cerr << "path value throws comma exception" << std::endl; }
     catch(...) { throw; }
+    
     try 
     {
+        std::cerr << "try xml" << std::endl;
         stream.clear();
         stream.seekg( 0, std::ios::beg );
         read_xml< T >( t, stream, root, permissive );
+        std::cerr << "xml ok" << std::endl;
         return;
-    }
-    catch( const boost::property_tree::ptree_error&  ex ) {}
+    }    
+    catch( const boost::property_tree::ptree_error&  ex ) { std::cerr << "xml throws" << std::endl;  }
+    catch( const comma::exception&  ex ) { std::cerr << "path value throws comma exception" << std::endl; }
     catch(...) { throw; }
+    
     try 
     {
+        std::cerr << "try path value" << std::endl;
+        stream.clear();
+        stream.seekg( 0, std::ios::beg );
+        read_path_value< T >( t, stream, root, permissive );
+        std::cerr << "path value ok" << std::endl;
+        return;
+    }
+    catch( const boost::property_tree::ptree_error&  ex ) { std::cerr << "path value throws ptree exception" << std::endl; }
+    catch( const comma::exception&  ex ) { std::cerr << "path value throws comma exception" << std::endl; }
+    catch(...) { throw; }
+    
+    try 
+    {
+        std::cerr << "try name value" << std::endl;
         stream.clear();
         stream.seekg( 0, std::ios::beg );
         read_name_value< T >( t, stream, root, permissive );
+        std::cerr << "name value ok" << std::endl;
         return;
     }
-    catch( const boost::property_tree::ptree_error&  ex ) {}
+    catch( const boost::property_tree::ptree_error&  ex ) { std::cerr << "name value throws ptree exception" << std::endl;  }
+    catch( const comma::exception&  ex ) { std::cerr << "name value throws comma exception" << std::endl; }
     catch(...) { throw; }
+
     // TODO: add more custom readers
     COMMA_THROW( comma::exception, "failed to guess format" );
 }
+
 template < typename T > inline void read( T& t, const std::string& filename, const xpath& root, bool permissive )
 {
     std::ifstream stream( &filename[0] );
