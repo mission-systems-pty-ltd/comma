@@ -439,13 +439,11 @@ private:
 template < property_tree::check_repeated_paths check_type > struct from_path_value_string {
     static inline boost::property_tree::ptree& parse( boost::property_tree::ptree& ptree, const std::string& s, char equal_sign, char delimiter )
     {
-//        std::cerr << "from_path_value_string.parse s--->" << s << std::endl;
         const std::vector< std::string >& v = comma::split( s, delimiter );
         Impl::path_filter< check_type > c( ptree );
 
         for( std::size_t i = 0; i < v.size(); ++i )
         {
-//            std::cerr << "from_path_value_string.parse v[i]--->" << v[i] << std::endl;
             if( v[i].empty() ) { continue; }
             std::string::size_type p = v[i].find_first_of( equal_sign );
             if( p == std::string::npos ) { COMMA_THROW( comma::exception, "expected '" << delimiter << "'-separated xpath" << equal_sign << "value pairs; got \"" << v[i] << "\"" ); }
@@ -505,7 +503,6 @@ inline void property_tree::from_path_value( std::istream& is, boost::property_tr
         if( pos == std::string::npos || line[pos] == '#' ) { continue; }
         s += line + delimiter;
     }
-//    std::cerr << "--->" <<  s << std::endl;
     ptree = comma::property_tree::from_path_value_string( s, equal_sign, delimiter, check_type );
 }
 

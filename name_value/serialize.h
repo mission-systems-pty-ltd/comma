@@ -278,10 +278,8 @@ template < typename T > inline void read_path_value( T& t, std::istream& stream,
 {
     boost::property_tree::ptree p;
     comma::property_tree::from_path_value( stream, p );
-//    std::cerr << "to_string--->" << comma::property_tree::to_path_value_string( p ) << std::endl;
     comma::from_ptree from_ptree( p, root, permissive );
     comma::visiting::apply( from_ptree ).to( t );
-//    std::cerr << " t.name: " << t.name << std::endl;
 }
 
 template < typename T > inline void read( T& t, std::istream& stream, const xpath& root, bool permissive )
