@@ -7,6 +7,7 @@ function format_tests_per_directory()
     # mangle the log to print a list of which test script was invoked in a given directory
     # directory name becomes the path and the script name the value in path=value format
     # brief explanation of all the sed actions:
+    # - remove all lines starting with 'comma-test-run' and ending with 'started...'
     # - delete the comma-test-run prefix
     # - for lines ending with 'running...' join the next line
     # - delete all up to the first ':' and a bit more (leading './')
@@ -16,6 +17,7 @@ function format_tests_per_directory()
     #   we bomb out earlier)
     # - one of the test needs a suffix, just to please comma-test-match
     sed 's@^comma-test-run: @@' | \
+        sed '/started...$/d' | \
         sed '/running...$/N;s@^[^:]*: ./@@;s@:.*{called @="@;s@}$@"@' | \
         sed '/succeeded/d' | \
         sed 's@dir5/subdir3=@dir5/subdir3/here=@'
