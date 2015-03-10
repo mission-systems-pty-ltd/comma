@@ -49,6 +49,14 @@ struct config
     double beta;
 };
 
+struct ini
+{
+    ini() : size(0), alpha(0), beta(0) {}
+    int size;
+    double alpha;
+    double beta;
+};
+
 namespace comma { namespace visiting {
 
 template <> struct traits< nested >
@@ -88,6 +96,25 @@ template <> struct traits< config >
         v.apply( "nest", config.nest );
         v.apply( "alpha", config.alpha );
         v.apply( "beta", config.beta );
+    }
+};
+
+template <> struct traits< ini >
+{
+    template < typename Key, class Visitor >
+    static void visit( Key, ini& ini, Visitor& v )
+    {
+        v.apply( "size", ini.size );
+        v.apply( "alpha", ini.alpha );
+        v.apply( "beta", ini.beta );
+    }
+
+    template < typename Key, class Visitor >
+    static void visit( Key, const ini& ini, Visitor& v )
+    {
+        v.apply( "size", ini.size );
+        v.apply( "alpha", ini.alpha );
+        v.apply( "beta", ini.beta );
     }
 };
 
@@ -148,8 +175,8 @@ static const std::string path_value_root =
     "root/item/nest/name=nested\n"
     "root/item/nest/number=20\n"
     "root/item/alpha=1.5\n"
-    "root/item/beta=2.5";    
-
+    "root/item/beta=2.5";
+    
 TEST( ptree, path_value )
 {
     std::istringstream iss( "name=test\nsize=1\nnest/name=empty\nnest/number=2\nalpha=0.1\nbeta=0.2" );
@@ -259,6 +286,28 @@ TEST( read, name_value ) { std::istringstream iss( name_value ); ASSERT_NO_THROW
 TEST( read, name_value_root ) { std::istringstream iss( name_value_root ); ASSERT_NO_THROW( test_interface( iss, "root/item" ) ); }
 TEST( read, path_value ) { std::istringstream iss( path_value ); ASSERT_NO_THROW( test_interface( iss ) ); }
 TEST( read, path_value_root ) { std::istringstream iss( path_value_root ); ASSERT_NO_THROW( test_interface( iss, "root/item" ) ); }
+
+void test_ini( std::istringstream& iss )
+{
+    std::cerr << "in test_ini" << std::endl;
+    ini c = comma::read< ini >( iss );
+    EXPECT_EQ( 2, c.size );
+    EXPECT_DOUBLE_EQ( 0.5, c.alpha );
+    EXPECT_DOUBLE_EQ( 0.6, c.beta );
+}
+
+TEST( read, ini ) 
+{
+    std::string init =
+    "[one]\n"
+    "size=2\n"
+    "; comment"
+    "[two]\n"
+    "alpha=0.5\n"
+    "beta=0.6";
+    std::istringstream iss( init ); 
+    ASSERT_NO_THROW( test_ini( iss ) ); 
+}
 
 TEST ( read, corrupted_json )
 {
