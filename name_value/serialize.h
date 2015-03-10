@@ -45,6 +45,33 @@
 
 namespace comma {
 
+/// guess format and read object from file or stream
+/// convenience wrappers for comma::property_tree boiler-plate code
+template < typename T > T read( const std::string& filename, const xpath& root, bool permissive );
+template < typename T > T read( const std::string& filename, const char* root, bool permissive );
+template < typename T > T read( const std::string& filename, const xpath& root );
+template < typename T > T read( const std::string& filename, const char* root );
+template < typename T > T read( const std::string& filename, bool permissive );
+template < typename T > T read( const std::string& filename );
+template < typename T > void read( T& t, const std::string& filename, const xpath& root, bool permissive );
+template < typename T > void read( T& t, const std::string& filename, const char* root, bool permissive );
+template < typename T > void read( T& t, const std::string& filename, const xpath& root );
+template < typename T > void read( T& t, const std::string& filename, const char* root );
+template < typename T > void read( T& t, const std::string& filename, bool permissive );
+template < typename T > void read( T& t, const std::string& filename );
+template < typename T > T read( std::istream& stream, const xpath& root, bool permissive );
+template < typename T > T read( std::istream& stream, const char* root, bool permissive );
+template < typename T > T read( std::istream& stream, const xpath& root );
+template < typename T > T read( std::istream& stream, const char* root );
+template < typename T > T read( std::istream& stream, bool permissive );
+template < typename T > T read( std::istream& stream );
+template < typename T > void read( T& t, std::istream& stream, const xpath& root, bool permissive );
+template < typename T > void read( T& t, std::istream& stream, const char* root, bool permissive );
+template < typename T > void read( T& t, std::istream& stream, const xpath& root );
+template < typename T > void read( T& t, std::istream& stream, const char* root );
+template < typename T > void read( T& t, std::istream& stream, bool permissive );
+template < typename T > void read( T& t, std::istream& stream );
+
 /// read object from json file or stream
 /// convenience wrappers for comma::property_tree boiler-plate code
 template < typename T > T read_json( const std::string& filename, const xpath& root, bool permissive );
@@ -99,32 +126,86 @@ template < typename T > void read_xml( T& t, std::istream& stream, const char* r
 template < typename T > void read_xml( T& t, std::istream& stream, bool permissive );
 template < typename T > void read_xml( T& t, std::istream& stream );
 
-/// guess format and read object from file or stream
+/// read object from path-value file or stream
 /// convenience wrappers for comma::property_tree boiler-plate code
-template < typename T > T read( const std::string& filename, const xpath& root, bool permissive );
-template < typename T > T read( const std::string& filename, const char* root, bool permissive );
-template < typename T > T read( const std::string& filename, const xpath& root );
-template < typename T > T read( const std::string& filename, const char* root );
-template < typename T > T read( const std::string& filename, bool permissive );
-template < typename T > T read( const std::string& filename );
-template < typename T > void read( T& t, const std::string& filename, const xpath& root, bool permissive );
-template < typename T > void read( T& t, const std::string& filename, const char* root, bool permissive );
-template < typename T > void read( T& t, const std::string& filename, const xpath& root );
-template < typename T > void read( T& t, const std::string& filename, const char* root );
-template < typename T > void read( T& t, const std::string& filename, bool permissive );
-template < typename T > void read( T& t, const std::string& filename );
-template < typename T > T read( std::istream& stream, const xpath& root, bool permissive );
-template < typename T > T read( std::istream& stream, const char* root, bool permissive );
-template < typename T > T read( std::istream& stream, const xpath& root );
-template < typename T > T read( std::istream& stream, const char* root );
-template < typename T > T read( std::istream& stream, bool permissive );
-template < typename T > T read( std::istream& stream );
-template < typename T > void read( T& t, std::istream& stream, const xpath& root, bool permissive );
-template < typename T > void read( T& t, std::istream& stream, const char* root, bool permissive );
-template < typename T > void read( T& t, std::istream& stream, const xpath& root );
-template < typename T > void read( T& t, std::istream& stream, const char* root );
-template < typename T > void read( T& t, std::istream& stream, bool permissive );
-template < typename T > void read( T& t, std::istream& stream );
+template < typename T > T read_path_value( const std::string& filename, const xpath& root, bool permissive );
+template < typename T > T read_path_value( const std::string& filename, const char* root, bool permissive );
+template < typename T > T read_path_value( const std::string& filename, const xpath& root );
+template < typename T > T read_path_value( const std::string& filename, const char* root );
+template < typename T > T read_path_value( const std::string& filename, bool permissive );
+template < typename T > T read_path_value( const std::string& filename );
+template < typename T > void read_path_value( T& t, const std::string& filename, const xpath& root, bool permissive );
+template < typename T > void read_path_value( T& t, const std::string& filename, const char* root, bool permissive );
+template < typename T > void read_path_value( T& t, const std::string& filename, const xpath& root );
+template < typename T > void read_path_value( T& t, const std::string& filename, const char* root );
+template < typename T > void read_path_value( T& t, const std::string& filename, bool permissive );
+template < typename T > void read_path_value( T& t, const std::string& filename );
+template < typename T > T read_path_value( std::istream& stream, const xpath& root, bool permissive );
+template < typename T > T read_path_value( std::istream& stream, const char* root, bool permissive );
+template < typename T > T read_path_value( std::istream& stream, const xpath& root );
+template < typename T > T read_path_value( std::istream& stream, const char* root );
+template < typename T > T read_path_value( std::istream& stream, bool permissive );
+template < typename T > T read_path_value( std::istream& stream );
+template < typename T > void read_path_value( T& t, std::istream& stream, const xpath& root, bool permissive );
+template < typename T > void read_path_value( T& t, std::istream& stream, const char* root, bool permissive );
+template < typename T > void read_path_value( T& t, std::istream& stream, const xpath& root );
+template < typename T > void read_path_value( T& t, std::istream& stream, const char* root );
+template < typename T > void read_path_value( T& t, std::istream& stream, bool permissive );
+template < typename T > void read_path_value( T& t, std::istream& stream );
+
+/// read object from name-value file or stream
+/// convenience wrappers for comma::property_tree boiler-plate code
+template < typename T > T read_name_value( const std::string& filename, const xpath& root, bool permissive );
+template < typename T > T read_name_value( const std::string& filename, const char* root, bool permissive );
+template < typename T > T read_name_value( const std::string& filename, const xpath& root );
+template < typename T > T read_name_value( const std::string& filename, const char* root );
+template < typename T > T read_name_value( const std::string& filename, bool permissive );
+template < typename T > T read_name_value( const std::string& filename );
+template < typename T > void read_name_value( T& t, const std::string& filename, const xpath& root, bool permissive );
+template < typename T > void read_name_value( T& t, const std::string& filename, const char* root, bool permissive );
+template < typename T > void read_name_value( T& t, const std::string& filename, const xpath& root );
+template < typename T > void read_name_value( T& t, const std::string& filename, const char* root );
+template < typename T > void read_name_value( T& t, const std::string& filename, bool permissive );
+template < typename T > void read_name_value( T& t, const std::string& filename );
+template < typename T > T read_name_value( std::istream& stream, const xpath& root, bool permissive );
+template < typename T > T read_name_value( std::istream& stream, const char* root, bool permissive );
+template < typename T > T read_name_value( std::istream& stream, const xpath& root );
+template < typename T > T read_name_value( std::istream& stream, const char* root );
+template < typename T > T read_name_value( std::istream& stream, bool permissive );
+template < typename T > T read_name_value( std::istream& stream );
+template < typename T > void read_name_value( T& t, std::istream& stream, const xpath& root, bool permissive );
+template < typename T > void read_name_value( T& t, std::istream& stream, const char* root, bool permissive );
+template < typename T > void read_name_value( T& t, std::istream& stream, const xpath& root );
+template < typename T > void read_name_value( T& t, std::istream& stream, const char* root );
+template < typename T > void read_name_value( T& t, std::istream& stream, bool permissive );
+template < typename T > void read_name_value( T& t, std::istream& stream );
+
+/// read object from ini file or stream
+/// convenience wrappers for comma::property_tree boiler-plate code
+template < typename T > T read_ini( const std::string& filename, const xpath& root, bool permissive );
+template < typename T > T read_ini( const std::string& filename, const char* root, bool permissive );
+template < typename T > T read_ini( const std::string& filename, const xpath& root );
+template < typename T > T read_ini( const std::string& filename, const char* root );
+template < typename T > T read_ini( const std::string& filename, bool permissive );
+template < typename T > T read_ini( const std::string& filename );
+template < typename T > void read_ini( T& t, const std::string& filename, const xpath& root, bool permissive );
+template < typename T > void read_ini( T& t, const std::string& filename, const char* root, bool permissive );
+template < typename T > void read_ini( T& t, const std::string& filename, const xpath& root );
+template < typename T > void read_ini( T& t, const std::string& filename, const char* root );
+template < typename T > void read_ini( T& t, const std::string& filename, bool permissive );
+template < typename T > void read_ini( T& t, const std::string& filename );
+template < typename T > T read_ini( std::istream& stream, const xpath& root, bool permissive );
+template < typename T > T read_ini( std::istream& stream, const char* root, bool permissive );
+template < typename T > T read_ini( std::istream& stream, const xpath& root );
+template < typename T > T read_ini( std::istream& stream, const char* root );
+template < typename T > T read_ini( std::istream& stream, bool permissive );
+template < typename T > T read_ini( std::istream& stream );
+template < typename T > void read_ini( T& t, std::istream& stream, const xpath& root, bool permissive );
+template < typename T > void read_ini( T& t, std::istream& stream, const char* root, bool permissive );
+template < typename T > void read_ini( T& t, std::istream& stream, const xpath& root );
+template < typename T > void read_ini( T& t, std::istream& stream, const char* root );
+template < typename T > void read_ini( T& t, std::istream& stream, bool permissive );
+template < typename T > void read_ini( T& t, std::istream& stream );
 
 /// write json object to file or stream
 /// convenience wrappers for comma::property_tree boiler-plate code
@@ -143,6 +224,33 @@ template < typename T > void write_xml( const T& t, const std::string& filename 
 template < typename T > void write_xml( const T& t, std::ostream& stream, const xpath& root );
 template < typename T > void write_xml( const T& t, std::ostream& stream, const char* root );
 template < typename T > void write_xml( const T& t, std::ostream& stream );
+
+/// write path-value object to file or stream
+/// convenience wrappers for comma::property_tree boiler-plate code
+template < typename T > void write_path_value( const T& t, const std::string& filename, const xpath& root );
+template < typename T > void write_path_value( const T& t, const std::string& filename, const char* root );
+template < typename T > void write_path_value( const T& t, const std::string& filename );
+template < typename T > void write_path_value( const T& t, std::ostream& stream, const xpath& root );
+template < typename T > void write_path_value( const T& t, std::ostream& stream, const char* root );
+template < typename T > void write_path_value( const T& t, std::ostream& stream );
+
+/// write name-value object to file or stream
+/// convenience wrappers for comma::property_tree boiler-plate code
+template < typename T > void write_name_value( const T& t, const std::string& filename, const xpath& root );
+template < typename T > void write_name_value( const T& t, const std::string& filename, const char* root );
+template < typename T > void write_name_value( const T& t, const std::string& filename );
+template < typename T > void write_name_value( const T& t, std::ostream& stream, const xpath& root );
+template < typename T > void write_name_value( const T& t, std::ostream& stream, const char* root );
+template < typename T > void write_name_value( const T& t, std::ostream& stream );
+
+/// write ini object to file or stream
+/// convenience wrappers for comma::property_tree boiler-plate code
+template < typename T > void write_ini( const T& t, const std::string& filename, const xpath& root );
+template < typename T > void write_ini( const T& t, const std::string& filename, const char* root );
+template < typename T > void write_ini( const T& t, const std::string& filename );
+template < typename T > void write_ini( const T& t, std::ostream& stream, const xpath& root );
+template < typename T > void write_ini( const T& t, std::ostream& stream, const char* root );
+template < typename T > void write_ini( const T& t, std::ostream& stream );
 
 
 template < typename T > inline void read_json( T& t, const std::string& filename, const xpath& root, bool permissive )
@@ -223,6 +331,124 @@ template < typename T > inline void read_xml( T& t, std::istream& stream, const 
 template < typename T > inline void read_xml( T& t, std::istream& stream, bool permissive ) { read_xml< T >( t, stream, xpath(), permissive ); }
 template < typename T > inline void read_xml( T& t, std::istream& stream ) { read_xml< T >( t, stream, xpath(), true ); }
 
+template < typename T > inline void read_path_value( T& t, std::istream& stream, const xpath& root, bool permissive )
+{
+    boost::property_tree::ptree p;
+    comma::property_tree::from_path_value( stream, p, comma::property_tree::no_check, '=', '\n' );
+    comma::from_ptree from_ptree( p, root, permissive );
+    comma::visiting::apply( from_ptree ).to( t );
+}
+
+template < typename T > inline void read_path_value( T& t, const std::string& filename, const xpath& root, bool permissive )
+{
+    std::ifstream ifs( &filename[0] );
+    if( !ifs.is_open() ) { COMMA_THROW( comma::exception, "failed to open \"" << filename << "\"" ); }
+    read_path_value< T >( t, ifs, root, permissive );
+    ifs.close();
+}
+
+template < typename T > inline T read_path_value( const std::string& filename, const xpath& root, bool permissive ) { T t; read_path_value< T >( t, filename, root, permissive ); return t; }
+template < typename T > inline T read_path_value( const std::string& filename, const char* root, bool permissive ) { return root ? read_path_value< T >( filename, xpath( root ), permissive ) : read_path_value< T >( filename, permissive ); }
+template < typename T > inline T read_path_value( const std::string& filename, const xpath& root ) { return read_path_value< T >( filename, root, true ); }
+template < typename T > inline T read_path_value( const std::string& filename, const char* root ) { return root ? read_path_value< T >( filename, xpath( root ), true ) : read_path_value< T >( filename, true ); }
+template < typename T > inline T read_path_value( const std::string& filename, bool permissive ) { return read_path_value< T >( filename, xpath(), permissive ); }
+template < typename T > inline T read_path_value( const std::string& filename ) { return read_path_value< T >( filename, xpath(), true ); }
+template < typename T > inline T read_path_value( std::istream& stream, const xpath& root, bool permissive ) { T t; read_path_value< T >( t, stream, root, permissive ); return t; }
+template < typename T > inline T read_path_value( std::istream& stream, const char* root, bool permissive ) { return root ? read_path_value< T >( stream, xpath( root ), permissive ) : read_path_value< T >( stream, permissive ); }
+template < typename T > inline T read_path_value( std::istream& stream, const xpath& root ) { return read_path_value< T >( stream, root, true ); }
+template < typename T > inline T read_path_value( std::istream& stream, const char* root ) { return root ? read_path_value< T >( stream, xpath( root ), true ) : read_path_value< T >( stream, true ); }
+template < typename T > inline T read_path_value( std::istream& stream, bool permissive ) { return read_path_value< T >( stream, xpath(), permissive ); }
+template < typename T > inline T read_path_value( std::istream& stream ) { return read_path_value< T >( stream, xpath(), true ); }
+template < typename T > inline void read_path_value( T& t, const std::string& filename, const char* root, bool permissive ) { if( root ) { read_path_value< T >( t, filename, xpath( root ), permissive ); } else { read_path_value< T >( t, filename, permissive ); } }
+template < typename T > inline void read_path_value( T& t, const std::string& filename, const xpath& root ) { read_path_value< T >( t, filename, root, true ); }
+template < typename T > inline void read_path_value( T& t, const std::string& filename, const char* root ) { if( root ) { read_path_value< T >( t, filename, xpath( root ), true ); } else { read_path_value< T >( t, filename, true ); } }
+template < typename T > inline void read_path_value( T& t, const std::string& filename, bool permissive ) { read_path_value< T >( t, filename, xpath(), permissive ); }
+template < typename T > inline void read_path_value( T& t, const std::string& filename ) { return read_path_value< T >( t, filename, xpath(), true ); }
+template < typename T > inline void read_path_value( T& t, std::istream& stream, const char* root, bool permissive ) { if( root ) { read_path_value< T >( t, stream, xpath( root ), permissive ); } else { read_path_value< T >( t, stream, permissive ); } }
+template < typename T > inline void read_path_value( T& t, std::istream& stream, const xpath& root ) { read_path_value< T >( t, stream, root, true ); }
+template < typename T > inline void read_path_value( T& t, std::istream& stream, const char* root ) { if( root ) { read_path_value< T >( t, stream, xpath( root ), true ); } else { read_path_value< T >( t, stream, true ); } }
+template < typename T > inline void read_path_value( T& t, std::istream& stream, bool permissive ) { read_path_value< T >( t, stream, xpath(), permissive ); }
+template < typename T > inline void read_path_value( T& t, std::istream& stream ) { read_path_value< T >( t, stream, xpath(), true ); }
+
+template < typename T > inline void read_name_value( T& t, std::istream& stream, const xpath& root, bool permissive )
+{
+    boost::property_tree::ptree p;
+    comma::property_tree::from_name_value( stream, p );
+    //std::cerr << property_tree::to_name_value_string( p ) << std::endl;
+    comma::from_ptree from_ptree( p, root, permissive );
+    comma::visiting::apply( from_ptree ).to( t );
+}
+
+template < typename T > inline void read_name_value( T& t, const std::string& filename, const xpath& root, bool permissive )
+{
+    std::ifstream ifs( &filename[0] );
+    if( !ifs.is_open() ) { COMMA_THROW( comma::exception, "failed to open \"" << filename << "\"" ); }
+    read_name_value< T >( t, ifs, root, permissive );
+    ifs.close();
+}
+
+template < typename T > inline T read_name_value( const std::string& filename, const xpath& root, bool permissive ) { T t; read_name_value< T >( t, filename, root, permissive ); return t; }
+template < typename T > inline T read_name_value( const std::string& filename, const char* root, bool permissive ) { return root ? read_name_value< T >( filename, xpath( root ), permissive ) : read_name_value< T >( filename, permissive ); }
+template < typename T > inline T read_name_value( const std::string& filename, const xpath& root ) { return read_name_value< T >( filename, root, true ); }
+template < typename T > inline T read_name_value( const std::string& filename, const char* root ) { return root ? read_name_value< T >( filename, xpath( root ), true ) : read_name_value< T >( filename, true ); }
+template < typename T > inline T read_name_value( const std::string& filename, bool permissive ) { return read_name_value< T >( filename, xpath(), permissive ); }
+template < typename T > inline T read_name_value( const std::string& filename ) { return read_name_value< T >( filename, xpath(), true ); }
+template < typename T > inline T read_name_value( std::istream& stream, const xpath& root, bool permissive ) { T t; read_name_value< T >( t, stream, root, permissive ); return t; }
+template < typename T > inline T read_name_value( std::istream& stream, const char* root, bool permissive ) { return root ? read_name_value< T >( stream, xpath( root ), permissive ) : read_name_value< T >( stream, permissive ); }
+template < typename T > inline T read_name_value( std::istream& stream, const xpath& root ) { return read_name_value< T >( stream, root, true ); }
+template < typename T > inline T read_name_value( std::istream& stream, const char* root ) { return root ? read_name_value< T >( stream, xpath( root ), true ) : read_name_value< T >( stream, true ); }
+template < typename T > inline T read_name_value( std::istream& stream, bool permissive ) { return read_name_value< T >( stream, xpath(), permissive ); }
+template < typename T > inline T read_name_value( std::istream& stream ) { return read_name_value< T >( stream, xpath(), true ); }
+template < typename T > inline void read_name_value( T& t, const std::string& filename, const char* root, bool permissive ) { if( root ) { read_name_value< T >( t, filename, xpath( root ), permissive ); } else { read_name_value< T >( t, filename, permissive ); } }
+template < typename T > inline void read_name_value( T& t, const std::string& filename, const xpath& root ) { read_name_value< T >( t, filename, root, true ); }
+template < typename T > inline void read_name_value( T& t, const std::string& filename, const char* root ) { if( root ) { read_name_value< T >( t, filename, xpath( root ), true ); } else { read_name_value< T >( t, filename, true ); } }
+template < typename T > inline void read_name_value( T& t, const std::string& filename, bool permissive ) { read_name_value< T >( t, filename, xpath(), permissive ); }
+template < typename T > inline void read_name_value( T& t, const std::string& filename ) { return read_name_value< T >( t, filename, xpath(), true ); }
+template < typename T > inline void read_name_value( T& t, std::istream& stream, const char* root, bool permissive ) { if( root ) { read_name_value< T >( t, stream, xpath( root ), permissive ); } else { read_name_value< T >( t, stream, permissive ); } }
+template < typename T > inline void read_name_value( T& t, std::istream& stream, const xpath& root ) { read_name_value< T >( t, stream, root, true ); }
+template < typename T > inline void read_name_value( T& t, std::istream& stream, const char* root ) { if( root ) { read_name_value< T >( t, stream, xpath( root ), true ); } else { read_name_value< T >( t, stream, true ); } }
+template < typename T > inline void read_name_value( T& t, std::istream& stream, bool permissive ) { read_name_value< T >( t, stream, xpath(), permissive ); }
+template < typename T > inline void read_name_value( T& t, std::istream& stream ) { read_name_value< T >( t, stream, xpath(), true ); }
+
+template < typename T > inline void read_ini( T& t, std::istream& stream, const xpath& root, bool permissive )
+{
+    boost::property_tree::ptree p;
+    boost::property_tree::read_ini( stream, p );
+    //std::cerr << property_tree::to_name_value_string( p ) << std::endl;
+    comma::from_ptree from_ptree( p, root, permissive );
+    comma::visiting::apply( from_ptree ).to( t );
+}
+
+template < typename T > inline void read_ini( T& t, const std::string& filename, const xpath& root, bool permissive )
+{
+    std::ifstream ifs( &filename[0] );
+    if( !ifs.is_open() ) { COMMA_THROW( comma::exception, "failed to open \"" << filename << "\"" ); }
+    read_ini< T >( t, ifs, root, permissive );
+    ifs.close();
+}
+
+template < typename T > inline T read_ini( const std::string& filename, const xpath& root, bool permissive ) { T t; read_ini< T >( t, filename, root, permissive ); return t; }
+template < typename T > inline T read_ini( const std::string& filename, const char* root, bool permissive ) { return root ? read_ini< T >( filename, xpath( root ), permissive ) : read_ini< T >( filename, permissive ); }
+template < typename T > inline T read_ini( const std::string& filename, const xpath& root ) { return read_ini< T >( filename, root, true ); }
+template < typename T > inline T read_ini( const std::string& filename, const char* root ) { return root ? read_ini< T >( filename, xpath( root ), true ) : read_ini< T >( filename, true ); }
+template < typename T > inline T read_ini( const std::string& filename, bool permissive ) { return read_ini< T >( filename, xpath(), permissive ); }
+template < typename T > inline T read_ini( const std::string& filename ) { return read_ini< T >( filename, xpath(), true ); }
+template < typename T > inline T read_ini( std::istream& stream, const xpath& root, bool permissive ) { T t; read_ini< T >( t, stream, root, permissive ); return t; }
+template < typename T > inline T read_ini( std::istream& stream, const char* root, bool permissive ) { return root ? read_ini< T >( stream, xpath( root ), permissive ) : read_ini< T >( stream, permissive ); }
+template < typename T > inline T read_ini( std::istream& stream, const xpath& root ) { return read_ini< T >( stream, root, true ); }
+template < typename T > inline T read_ini( std::istream& stream, const char* root ) { return root ? read_ini< T >( stream, xpath( root ), true ) : read_ini< T >( stream, true ); }
+template < typename T > inline T read_ini( std::istream& stream, bool permissive ) { return read_ini< T >( stream, xpath(), permissive ); }
+template < typename T > inline T read_ini( std::istream& stream ) { return read_ini< T >( stream, xpath(), true ); }
+template < typename T > inline void read_ini( T& t, const std::string& filename, const char* root, bool permissive ) { if( root ) { read_ini< T >( t, filename, xpath( root ), permissive ); } else { read_ini< T >( t, filename, permissive ); } }
+template < typename T > inline void read_ini( T& t, const std::string& filename, const xpath& root ) { read_ini< T >( t, filename, root, true ); }
+template < typename T > inline void read_ini( T& t, const std::string& filename, const char* root ) { if( root ) { read_ini< T >( t, filename, xpath( root ), true ); } else { read_ini< T >( t, filename, true ); } }
+template < typename T > inline void read_ini( T& t, const std::string& filename, bool permissive ) { read_ini< T >( t, filename, xpath(), permissive ); }
+template < typename T > inline void read_ini( T& t, const std::string& filename ) { return read_ini< T >( t, filename, xpath(), true ); }
+template < typename T > inline void read_ini( T& t, std::istream& stream, const char* root, bool permissive ) { if( root ) { read_ini< T >( t, stream, xpath( root ), permissive ); } else { read_ini< T >( t, stream, permissive ); } }
+template < typename T > inline void read_ini( T& t, std::istream& stream, const xpath& root ) { read_ini< T >( t, stream, root, true ); }
+template < typename T > inline void read_ini( T& t, std::istream& stream, const char* root ) { if( root ) { read_ini< T >( t, stream, xpath( root ), true ); } else { read_ini< T >( t, stream, true ); } }
+template < typename T > inline void read_ini( T& t, std::istream& stream, bool permissive ) { read_ini< T >( t, stream, xpath(), permissive ); }
+template < typename T > inline void read_ini( T& t, std::istream& stream ) { read_ini< T >( t, stream, xpath(), true ); }
 
 template < typename T > inline void write_json( const T& t, const std::string& filename, const xpath& root )
 {
@@ -266,31 +492,68 @@ template < typename T > inline void write_xml( const T& t, const std::string& fi
 template < typename T > inline void write_xml( const T& t, std::ostream& stream, const char* root ) { write_xml( t, stream, xpath( root ) ); }
 template < typename T > inline void write_xml( const T& t, std::ostream& stream ) { write_xml( t, stream, xpath() ); }
 
-
-template < typename T > inline void read_name_value( T& t, std::istream& stream, const xpath& root, bool permissive )
+template < typename T > inline void write_path_value( const T& t, std::ostream& stream, const xpath& root )
 {
     boost::property_tree::ptree p;
-    comma::property_tree::from_name_value( stream, p );
-    comma::from_ptree from_ptree( p, root, permissive );
-    comma::visiting::apply( from_ptree ).to( t );
+    comma::to_ptree to_ptree( p, root );
+    comma::visiting::apply( to_ptree ).to( t );
+    comma::property_tree::to_path_value( stream, p, comma::property_tree::disabled, '=', '\n' );
 }
 
-template < typename T > inline void read_path_value( T& t, std::istream& stream, const xpath& root, bool permissive )
+template < typename T > inline void write_path_value( const T& t, const std::string& filename, const xpath& root )
 {
-    boost::property_tree::ptree p;
-    comma::property_tree::from_path_value( stream, p );
-    comma::from_ptree from_ptree( p, root, permissive );
-    comma::visiting::apply( from_ptree ).to( t );
+    std::ofstream ofs( &filename[0] );
+    if( !ofs.is_open() ) { COMMA_THROW( comma::exception, "failed to open \"" << filename << "\"" ); }
+    write_path_value< T >( t, ofs, root );
+    ofs.close();
 }
 
-template < typename T > inline void read_ini( T& t, std::istream& stream, const xpath& root, bool permissive )
+template < typename T > inline void write_path_value( const T& t, const std::string& filename, const char* root ) { write_path_value( t, filename, xpath( root ) ); }
+template < typename T > inline void write_path_value( const T& t, const std::string& filename ) { write_path_value( t, filename, xpath() ); }
+template < typename T > inline void write_path_value( const T& t, std::ostream& stream, const char* root ) { write_path_value( t, stream, xpath( root ) ); }
+template < typename T > inline void write_path_value( const T& t, std::ostream& stream ) { write_path_value( t, stream, xpath() ); }
+
+template < typename T > inline void write_name_value( const T& t, std::ostream& stream, const xpath& root )
 {
     boost::property_tree::ptree p;
-    boost::property_tree::read_ini( stream, p );
-    std::cerr << "--->" << comma::property_tree::to_path_value_string( p ) << std::endl;
-    comma::from_ptree from_ptree( p, root, permissive );
-    comma::visiting::apply( from_ptree ).to( t );
+    comma::to_ptree to_ptree( p, root );
+    comma::visiting::apply( to_ptree ).to( t );
+    comma::property_tree::to_name_value( stream, p );
 }
+
+template < typename T > inline void write_name_value( const T& t, const std::string& filename, const xpath& root )
+{
+    std::ofstream ofs( &filename[0] );
+    if( !ofs.is_open() ) { COMMA_THROW( comma::exception, "failed to open \"" << filename << "\"" ); }
+    write_name_value< T >( t, ofs, root );
+    ofs.close();
+}
+
+template < typename T > inline void write_name_value( const T& t, const std::string& filename, const char* root ) { write_name_value( t, filename, xpath( root ) ); }
+template < typename T > inline void write_name_value( const T& t, const std::string& filename ) { write_name_value( t, filename, xpath() ); }
+template < typename T > inline void write_name_value( const T& t, std::ostream& stream, const char* root ) { write_name_value( t, stream, xpath( root ) ); }
+template < typename T > inline void write_name_value( const T& t, std::ostream& stream ) { write_name_value( t, stream, xpath() ); }
+
+template < typename T > inline void write_ini( const T& t, std::ostream& stream, const xpath& root )
+{
+    boost::property_tree::ptree p;
+    comma::to_ptree to_ptree( p, root );
+    comma::visiting::apply( to_ptree ).to( t );
+    boost::property_tree::write_ini( stream, p );
+}
+
+template < typename T > inline void write_ini( const T& t, const std::string& filename, const xpath& root )
+{
+    std::ofstream ofs( &filename[0] );
+    if( !ofs.is_open() ) { COMMA_THROW( comma::exception, "failed to open \"" << filename << "\"" ); }
+    write_ini< T >( t, ofs, root );
+    ofs.close();
+}
+
+template < typename T > inline void write_ini( const T& t, const std::string& filename, const char* root ) { write_ini( t, filename, xpath( root ) ); }
+template < typename T > inline void write_ini( const T& t, const std::string& filename ) { write_ini( t, filename, xpath() ); }
+template < typename T > inline void write_ini( const T& t, std::ostream& stream, const char* root ) { write_ini( t, stream, xpath( root ) ); }
+template < typename T > inline void write_ini( const T& t, std::ostream& stream ) { write_ini( t, stream, xpath() ); }
 
 template < typename T > inline void read( T& t, std::istream& stream, const xpath& root, bool permissive )
 {
@@ -318,44 +581,17 @@ template < typename T > inline void read( T& t, std::istream& stream, const xpat
 
     try
     {
-        std::cerr  << "try path_value" << std::endl;
+//        std::cerr  << "try path_value" << std::endl;
         stream.clear();
         stream.seekg( 0, std::ios::beg );
         read_path_value< T >( t, stream, root, permissive );
-        std::cerr  << "path_value ok" << std::endl;
+//        std::cerr  << "path_value ok" << std::endl;
         return;
     }
-    catch( const boost::property_tree::ptree_error&  ex ) { std::cerr  << "path_value throws boost ex" << std::endl; }
-    catch( const comma::exception&  ex ) { std::cerr  << "path_value throws comma ex" << std::endl; }
+    catch( const boost::property_tree::ptree_error&  ex ) {} //std::cerr  << "path_value throws boost ex" << std::endl; }
+    catch( const comma::exception&  ex ) {} //std::cerr  << "path_value throws comma ex" << std::endl; }
     catch(...) { throw; }
 
-    try
-    {
-        std::cerr  << "try name_value" << std::endl;
-        stream.clear();
-        stream.seekg( 0, std::ios::beg );
-        read_name_value< T >( t, stream, root, permissive );
-        std::cerr  << "name_value ok" << std::endl;
-        return;
-    }
-    catch( const boost::property_tree::ptree_error&  ex ) { std::cerr  << "name_value throws boost ex" << std::endl; }
-    catch( const comma::exception&  ex ) { std::cerr  << "name_value throws comma ex" << std::endl; }
-    catch(...) { throw; }
-
-    try
-    {
-        std::cerr  << "try ini" << std::endl;
-        stream.clear();
-        stream.seekg( 0, std::ios::beg );
-        read_ini< T >( t, stream, root, permissive );
-        std::cerr  << "ini ok" << std::endl;
-        return;
-    }
-    catch( const boost::property_tree::ptree_error&  ex ) { std::cerr  << "ini throws boost ex" << std::endl; }
-    catch( const comma::exception&  ex ) { std::cerr  << "ini throws comma ex" << std::endl;}
-    catch(...) { throw; }
-
-    // TODO: add more custom readers
     COMMA_THROW( comma::exception, "failed to guess format" );
 }
 
