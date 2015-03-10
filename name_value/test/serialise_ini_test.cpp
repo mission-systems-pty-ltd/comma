@@ -118,15 +118,6 @@ template <> struct traits< ini >
 
 namespace comma { namespace test { namespace serialise {
 
-void test_ini_simple( std::istringstream& iss )
-{
-    section_two c;
-    comma::read_ini< section_two >( c, iss );
-    EXPECT_EQ( 10, c.size );
-    EXPECT_DOUBLE_EQ( 0.5, c.alpha );
-    EXPECT_DOUBLE_EQ( 0.6, c.beta );
-}
-
 TEST( serialise_ini, simple )
 {
     std::string ini =
@@ -177,18 +168,131 @@ TEST( serialise_ini, defaults )
     EXPECT_DOUBLE_EQ( 1.6, c.two.beta );
 }
 
-TEST( serialise, ini )
+TEST( serialise_ini, add_section )
 {
     std::stringstream ss;
-    ini d( 15, section_one( -5 ), section_two( -10, -0.1, -0.2 ) );
-    comma::write_ini< ini >( d, ss );
-    ini c = comma::read_ini< ini >( ss );
-    EXPECT_EQ( 15, c.size );
-    EXPECT_EQ( -5, c.one.size );
-    EXPECT_EQ( -10, c.two.size );
-    EXPECT_DOUBLE_EQ( -0.1, c.two.alpha );
-    EXPECT_DOUBLE_EQ( -0.2, c.two.beta );
+    section_two two( -10, -0.1, -0.2 );
+    comma::write_ini< section_two >( two, ss, "two" );
+    section_two t = comma::read_ini< section_two >( ss, "two" );
+    EXPECT_EQ( -10, t.size );
+    EXPECT_DOUBLE_EQ( -0.1, t.alpha );
+    EXPECT_DOUBLE_EQ( -0.2, t.beta );
 }
 
+TEST( serialise_ini, throw_on_nested_sections )
+{
+    {
+        std::stringstream ss;
+        ini d( 15, section_one( -5 ), section_two( -10, -0.1, -0.2 ) );
+        ASSERT_THROW( comma::write_ini< ini >( d, ss, "root" ), boost::property_tree::ptree_error );
+    }
+    {
+        std::stringstream ss;
+        section_two two( -10, -0.1, -0.2 );
+        ASSERT_THROW( comma::write_ini< section_two >( two, ss, "root/item" ), boost::property_tree::ptree_error );
+    }
+}
+
+
+static const section_two sample_section_two( -10, -0.1, -0.2 );
+static const ini sample_ini( 15, section_one( -5 ), sample_section_two );
+
+void test_section_two( const section_two& t )
+{
+    EXPECT_EQ( -10, t.size );
+    EXPECT_DOUBLE_EQ( -0.1, t.alpha );
+    EXPECT_DOUBLE_EQ( -0.2, t.beta );
+}
+
+void test_ini( const ini& i )
+{
+    EXPECT_EQ( 15, i.size );
+    EXPECT_EQ( -5, i.one.size );
+    test_section_two( i.two );
+}
+
+TEST( serialise, ini )
+{
+    {
+        std::stringstream ss;
+        comma::write_ini< ini >( sample_ini, ss );
+        ini i = comma::read_ini< ini >( ss );
+        test_ini( i );
+    }
+    {
+        std::stringstream ss;
+        comma::write_ini< ini >( sample_ini, ss );
+        ini i;
+        comma::read_ini< ini >( i, ss );
+        test_ini( i );
+    }
+    {
+        std::stringstream ss;
+        comma::write_ini< ini >( sample_ini, ss );
+        ini i = comma::read_ini< ini >( ss, true );
+        test_ini( i );
+    }
+    {
+        std::stringstream ss;
+        comma::write_ini< ini >( sample_ini, ss );
+        ini i;
+        comma::read_ini< ini >( i, ss, true );
+        test_ini( i );
+    }
+
+    {
+        std::stringstream ss;
+        comma::write_ini< section_two >( sample_section_two, ss, "two" );
+        section_two two = comma::read_ini< section_two >( ss, "two" );
+        test_section_two( two );
+    }
+    {
+        std::stringstream ss;
+        comma::write_ini< section_two >( sample_section_two, ss, comma::xpath( "two" ) );
+        section_two two = comma::read_ini< section_two >( ss, comma::xpath( "two" ) );
+        test_section_two( two );
+    }
+    {
+        std::stringstream ss;
+        comma::write_ini< section_two >( sample_section_two, ss, "two" );
+        section_two two = comma::read_ini< section_two >( ss, "two", true );
+        test_section_two( two );
+    }
+    {
+        std::stringstream ss;
+        comma::write_ini< section_two >( sample_section_two, ss, comma::xpath( "two" ) );
+        section_two two = comma::read_ini< section_two >( ss, comma::xpath( "two" ), true );
+        test_section_two( two );
+    }
+
+    {
+        std::stringstream ss;
+        comma::write_ini< section_two >( sample_section_two, ss, "two" );
+        section_two two;
+        comma::read_ini< section_two >( two, ss, "two" );
+        test_section_two( two );
+    }
+    {
+        std::stringstream ss;
+        comma::write_ini< section_two >( sample_section_two, ss, comma::xpath( "two" ) );
+        section_two two;
+        comma::read_ini< section_two >( two, ss, comma::xpath( "two" ) );
+        test_section_two( two );
+    }
+    {
+        std::stringstream ss;
+        comma::write_ini< section_two >( sample_section_two, ss, "two" );
+        section_two two;
+        comma::read_ini< section_two >( two, ss, "two", true );
+        test_section_two( two );
+    }
+    {
+        std::stringstream ss;
+        comma::write_ini< section_two >( sample_section_two, ss, comma::xpath( "two" ) );
+        section_two two;
+        comma::read_ini< section_two >( two, ss, comma::xpath( "two" ), true );
+        test_section_two( two );
+    }
+}
 
 } } } // namespace comma { namespace test { namespace serialise {

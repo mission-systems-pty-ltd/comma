@@ -111,34 +111,334 @@ void test_config( const config& c )
 
 TEST( serialise, json )
 {
-    std::stringstream ss;
-    comma::write_json< config >( d, ss, "root/item" );
-    config c = comma::read_json< config >( ss, "root/item" );
-    test_config( c );
+    {
+        std::stringstream ss;
+        comma::write_json< config >( d, ss );
+        config c = comma::read_json< config >( ss );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_json< config >( d, ss );
+        config c;
+        comma::read_json< config >( c, ss );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_json< config >( d, ss, "root/item" );
+        config c = comma::read_json< config >( ss, "root/item" );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_json< config >( d, ss, "root/item" );
+        config c;
+        comma::read_json< config >( c, ss, "root/item" );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_json< config >( d, ss, comma::xpath( "root/item" ) );
+        config c = comma::read_json< config >( ss, comma::xpath( "root/item" ) );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_json< config >( d, ss, comma::xpath( "root/item" ) );
+        config c;
+        comma::read_json< config >( c, ss, comma::xpath( "root/item" ) );
+        test_config( c );
+    }
+
+    {
+        std::stringstream ss;
+        comma::write_json< config >( d, ss );
+        config c = comma::read_json< config >( ss, true );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_json< config >( d, ss );
+        config c;
+        comma::read_json< config >( c, ss, true );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_json< config >( d, ss, "root/item" );
+        config c = comma::read_json< config >( ss, "root/item", true );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_json< config >( d, ss, "root/item" );
+        config c;
+        comma::read_json< config >( c, ss, "root/item", true );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_json< config >( d, ss, comma::xpath( "root/item" ) );
+        config c = comma::read_json< config >( ss, comma::xpath( "root/item" ), true );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_json< config >( d, ss, comma::xpath( "root/item" ) );
+        config c;
+        comma::read_json< config >( c, ss, comma::xpath( "root/item" ), true );
+        test_config( c );
+    }
 }
 
 TEST( serialise, xml )
 {
-    std::stringstream ss;
-    comma::write_xml< config >( d, ss, "root/item" );
-    config c = comma::read_xml< config >( ss, "root/item" );
-    test_config( c );
+    {
+        std::stringstream ss;
+        comma::write_xml< config >( d, ss );
+        config c = comma::read_xml< config >( ss );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_xml< config >( d, ss );
+        config c;
+        comma::read_xml< config >( c, ss );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_xml< config >( d, ss, "root/item" );
+        config c = comma::read_xml< config >( ss, "root/item" );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_xml< config >( d, ss, "root/item" );
+        config c;
+        comma::read_xml< config >( c, ss, "root/item" );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_xml< config >( d, ss, comma::xpath( "root/item" ) );
+        config c = comma::read_xml< config >( ss, comma::xpath( "root/item" ) );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_xml< config >( d, ss, comma::xpath( "root/item" ) );
+        config c;
+        comma::read_xml< config >( c, ss, comma::xpath( "root/item" ) );
+        test_config( c );
+    }
+
+    {
+        std::stringstream ss;
+        comma::write_xml< config >( d, ss );
+        config c = comma::read_xml< config >( ss, true );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_xml< config >( d, ss );
+        config c;
+        comma::read_xml< config >( c, ss, true );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_xml< config >( d, ss, "root/item" );
+        config c = comma::read_xml< config >( ss, "root/item", true );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_xml< config >( d, ss, "root/item" );
+        config c;
+        comma::read_xml< config >( c, ss, "root/item", true );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_xml< config >( d, ss, comma::xpath( "root/item" ) );
+        config c = comma::read_xml< config >( ss, comma::xpath( "root/item" ), true );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_xml< config >( d, ss, comma::xpath( "root/item" ) );
+        config c;
+        comma::read_xml< config >( c, ss, comma::xpath( "root/item" ), true );
+        test_config( c );
+    }
 }
 
 TEST( serialise, path_value )
 {
-    std::stringstream ss;
-    comma::write_path_value< config >( d, ss, "root/item" );
-    config c = comma::read_path_value< config >( ss, "root/item" );
-    test_config( c );
+    {
+        std::stringstream ss;
+        comma::write_path_value< config >( d, ss );
+        config c = comma::read_path_value< config >( ss );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_path_value< config >( d, ss );
+        config c;
+        comma::read_path_value< config >( c, ss );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_path_value< config >( d, ss, "root/item" );
+        config c = comma::read_path_value< config >( ss, "root/item" );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_path_value< config >( d, ss, "root/item" );
+        config c;
+        comma::read_path_value< config >( c, ss, "root/item" );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_path_value< config >( d, ss, comma::xpath( "root/item" ) );
+        config c = comma::read_path_value< config >( ss, comma::xpath( "root/item" ) );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_path_value< config >( d, ss, comma::xpath( "root/item" ) );
+        config c;
+        comma::read_path_value< config >( c, ss, comma::xpath( "root/item" ) );
+        test_config( c );
+    }
+
+    {
+        std::stringstream ss;
+        comma::write_path_value< config >( d, ss );
+        config c = comma::read_path_value< config >( ss, true );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_path_value< config >( d, ss );
+        config c;
+        comma::read_path_value< config >( c, ss, true );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_path_value< config >( d, ss, "root/item" );
+        config c = comma::read_path_value< config >( ss, "root/item", true );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_path_value< config >( d, ss, "root/item" );
+        config c;
+        comma::read_path_value< config >( c, ss, "root/item", true );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_path_value< config >( d, ss, comma::xpath( "root/item" ) );
+        config c = comma::read_path_value< config >( ss, comma::xpath( "root/item" ), true );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_path_value< config >( d, ss, comma::xpath( "root/item" ) );
+        config c;
+        comma::read_path_value< config >( c, ss, comma::xpath( "root/item" ), true );
+        test_config( c );
+    }
 }
 
 TEST( serialise, name_value )
 {
-    std::stringstream ss;
-    comma::write_name_value< config >( d, ss, "root/item" );
-    config c = comma::read_name_value< config >( ss, "root/item" );
-    test_config( c );
+    {
+        std::stringstream ss;
+        comma::write_name_value< config >( d, ss );
+        config c = comma::read_name_value< config >( ss );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_name_value< config >( d, ss );
+        config c;
+        comma::read_name_value< config >( c, ss );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_name_value< config >( d, ss, "root/item" );
+        config c = comma::read_name_value< config >( ss, "root/item" );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_name_value< config >( d, ss, "root/item" );
+        config c;
+        comma::read_name_value< config >( c, ss, "root/item" );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_name_value< config >( d, ss, comma::xpath( "root/item" ) );
+        config c = comma::read_name_value< config >( ss, comma::xpath( "root/item" ) );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_name_value< config >( d, ss, comma::xpath( "root/item" ) );
+        config c;
+        comma::read_name_value< config >( c, ss, comma::xpath( "root/item" ) );
+        test_config( c );
+    }
+
+    {
+        std::stringstream ss;
+        comma::write_name_value< config >( d, ss );
+        config c = comma::read_name_value< config >( ss, true );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_name_value< config >( d, ss );
+        config c;
+        comma::read_name_value< config >( c, ss, true );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_name_value< config >( d, ss, "root/item" );
+        config c = comma::read_name_value< config >( ss, "root/item", true );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_name_value< config >( d, ss, "root/item" );
+        config c;
+        comma::read_name_value< config >( c, ss, "root/item", true );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_name_value< config >( d, ss, comma::xpath( "root/item" ) );
+        config c = comma::read_name_value< config >( ss, comma::xpath( "root/item" ), true );
+        test_config( c );
+    }
+    {
+        std::stringstream ss;
+        comma::write_name_value< config >( d, ss, comma::xpath( "root/item" ) );
+        config c;
+        comma::read_name_value< config >( c, ss, comma::xpath( "root/item" ), true );
+        test_config( c );
+    }
 }
 
 } } } // namespace comma { namespace test { namespace serialise {

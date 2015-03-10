@@ -453,6 +453,17 @@ TEST( ptree, array )
         EXPECT_EQ( array[0], "hello" );
         EXPECT_EQ( array[1], "world" );
     }
+    {
+        boost::property_tree::ptree ptree;
+        std::string s = "root/0=hello\nroot/1=world";
+        std::istringstream iss( s );
+        property_tree::from_path_value( iss, ptree, comma::property_tree::no_check, '=', '\n' );
+        from_ptree from_ptree( ptree, "root" );
+        boost::array< std::string, 2 > array;
+        visiting::apply( from_ptree, array );
+        EXPECT_EQ( array[0], "hello" );
+        EXPECT_EQ( array[1], "world" );
+    }
 }
 
 TEST( ptree, name_value_string )
