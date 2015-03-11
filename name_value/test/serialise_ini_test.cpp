@@ -116,7 +116,7 @@ template <> struct traits< ini >
 
 } } // namespace comma  { namespace visiting {
 
-namespace comma { namespace test { namespace serialise {
+namespace comma { namespace test { namespace serialise_ini {
 
 TEST( serialise_ini, simple )
 {
@@ -295,4 +295,4 @@ TEST( serialise, ini )
     }
 }
 
-} } } // namespace comma { namespace test { namespace serialise {
+} } } // namespace comma { namespace test { namespace serialise_ini {

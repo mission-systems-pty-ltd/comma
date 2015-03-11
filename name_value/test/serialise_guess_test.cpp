@@ -245,4 +245,17 @@ TEST ( serialise, guess_corrupted_xml )
     ASSERT_THROW( comma::read< config >( c, iss ), comma::exception );
 }
 
+TEST ( serialise, guess_corrupted_path_value )
+{
+    std::istringstream iss( "name/" );
+    config c; 
+    ASSERT_THROW( comma::read< config >( c, iss ), comma::exception );
+}
+
+TEST ( serialise, guess_nonseekable_stream )
+{
+    config c; 
+    ASSERT_THROW( comma::read< config >( c, std::cin ), comma::exception );
+}
+
 } } } // namespace comma { namespace test { namespace serialise_guess {
