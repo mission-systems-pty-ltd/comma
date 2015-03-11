@@ -227,6 +227,7 @@ template < typename T > void write_xml( const T& t, std::ostream& stream );
 
 /// write path-value object to file or stream
 /// convenience wrappers for comma::property_tree boiler-plate code
+/// @todo parametrize on equality sign and delimiter?
 template < typename T > void write_path_value( const T& t, const std::string& filename, const xpath& root );
 template < typename T > void write_path_value( const T& t, const std::string& filename, const char* root );
 template < typename T > void write_path_value( const T& t, const std::string& filename );
