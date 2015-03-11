@@ -31,6 +31,7 @@
 #include <gtest/gtest.h>
 #include <comma/name_value/serialize.h>
 #include <comma/visiting/traits.h>
+#include <comma/xpath/xpath.h>
 
 struct nested
 {
@@ -64,10 +65,10 @@ template <> struct traits< nested >
     static void visit( Key, const nested& nest, Visitor& v )
     {
         v.apply( "name", nest.name );
-        v.apply( "number", nest.number );        
+        v.apply( "number", nest.number );
     }
-};    
-    
+};
+
 template <> struct traits< config >
 {
     template < typename Key, class Visitor >
@@ -93,11 +94,11 @@ template <> struct traits< config >
 
 } } // namespace comma { namespace visiting {
 
-namespace comma { namespace test { namespace read {
+namespace comma { namespace test { namespace serialise_guess {
 
 static const std::string json =
     "{\n"
-    "    \"name\": \"dummy\",\n"
+    "    \"name\": \"dummy\", // comment\n"
     "    \"size\": \"10\",\n"
     "    \"nest\": {\n"
     "                  \"name\": \"nested\",\n"
@@ -106,7 +107,7 @@ static const std::string json =
     "    \"alpha\": \"1.5\",\n"
     "    \"beta\": \"2.5\"\n"
     "}";
-    
+
 static const std::string json_root = "{ \"root\": { \"item\": " +  json + " } }";
 
 static const std::string xml = 
@@ -118,54 +119,26 @@ static const std::string xml =
     "</nest>\n"
     "<alpha>1.5</alpha>\n"
     "<beta>2.5</beta>\n";
-    
-static const std::string xml_root =  "<root> <item> " + xml + " </item> </root>";
 
-static const std::string name_value =
-    "name=dummy,\n"
-    "size=10,\n"
-    "nest=\n"
-    "{\n"
-    "    name=nested,\n"
-    "    number=20\n"
-    "}\n"
-    "alpha=1.5,\n"
-    "beta=2.5\n";
-    
-static const std::string name_value_root = "root={ item={ " +  name_value + " } }";
+static const std::string xml_root =  "<root> <item> " + xml + " </item> </root>";
 
 static const std::string path_value = 
     "name=dummy\n"
     "size=10\n"
+    "# comment\n"
     "nest/name=nested\n"
     "nest/number=20\n"
     "alpha=1.5\n"
     "beta=2.5";
-    
+
 static const std::string path_value_root = 
     "root/item/name=dummy\n"
     "root/item/size=10\n"
+    "# comment\n"
     "root/item/nest/name=nested\n"
     "root/item/nest/number=20\n"
     "root/item/alpha=1.5\n"
-    "root/item/beta=2.5";    
-
-TEST( ptree, path_value )
-{
-    std::istringstream iss( "name=test\nsize=1\nnest/name=empty\nnest/number=2\nalpha=0.1\nbeta=0.2" );
-    boost::property_tree::ptree ptree;
-    property_tree::from_path_value( iss, ptree );
-    EXPECT_EQ( property_tree::to_path_value_string( ptree ), "name=\"test\",size=\"1\",nest/name=\"empty\",nest/number=\"2\",alpha=\"0.1\",beta=\"0.2\"" );
-    config c;
-    comma::from_ptree from_ptree( ptree, xpath(), true );
-    visiting::apply( from_ptree ).to( c );
-    EXPECT_EQ( "test", c.name );
-    EXPECT_EQ( 1, c.size );
-    EXPECT_EQ( "empty", c.nest.name );
-    EXPECT_EQ( 2, c.nest.number );
-    EXPECT_DOUBLE_EQ( 0.1, c.alpha );
-    EXPECT_DOUBLE_EQ( 0.2, c.beta );    
-}
+    "root/item/beta=2.5";
 
 void test_config( const config& c )
 {
@@ -251,28 +224,25 @@ void test_interface( std::istringstream& iss, const char *root )
     }
 }
 
-TEST( read, json ) { std::istringstream iss( json ); ASSERT_NO_THROW( test_interface( iss ) ); }
-TEST( read, json_root ) { std::istringstream iss( json_root ); ASSERT_NO_THROW( test_interface( iss, "root/item" ) ); }
-TEST( read, xml ) { std::istringstream iss( xml ); ASSERT_NO_THROW( test_interface( iss ) ); }
-TEST( read, xml_root ) { std::istringstream iss( xml_root ); ASSERT_NO_THROW( test_interface( iss, "root/item" ) ); }
-TEST( read, name_value ) { std::istringstream iss( name_value ); ASSERT_NO_THROW( test_interface( iss ) ); }
-TEST( read, name_value_root ) { std::istringstream iss( name_value_root ); ASSERT_NO_THROW( test_interface( iss, "root/item" ) ); }
-TEST( read, path_value ) { std::istringstream iss( path_value ); ASSERT_NO_THROW( test_interface( iss ) ); }
-TEST( read, path_value_root ) { std::istringstream iss( path_value_root ); ASSERT_NO_THROW( test_interface( iss, "root/item" ) ); }
+TEST( serialise, guess_json ) { std::istringstream iss( json ); ASSERT_NO_THROW( test_interface( iss ) ); }
+TEST( serialise, guess_json_root ) { std::istringstream iss( json_root ); ASSERT_NO_THROW( test_interface( iss, "root/item" ) ); }
+TEST( serialise, guess_xml ) { std::istringstream iss( xml ); ASSERT_NO_THROW( test_interface( iss ) ); }
+TEST( serialise, guess_xml_root ) { std::istringstream iss( xml_root ); ASSERT_NO_THROW( test_interface( iss, "root/item" ) ); }
+TEST( serialise, guess_path_value ) { std::istringstream iss( path_value ); ASSERT_NO_THROW( test_interface( iss ) ); }
+TEST( serialise, guess_path_value_root ) { std::istringstream iss( path_value_root ); ASSERT_NO_THROW( test_interface( iss, "root/item" ) ); }
 
-TEST ( read, corrupted_json )
+TEST ( serialise, guess_corrupted_json )
 {
     std::istringstream iss( "{ \"name\": \"dummy\", }" );
     config c; 
     ASSERT_THROW( comma::read< config >( c, iss ), comma::exception );
 }
 
-TEST ( read, DISABLED_corrupted_xml ) // disabled since name-value parser thinks this is a valid name-value config
+TEST ( serialise, guess_corrupted_xml )
 {
     std::istringstream iss( "<name>dummy<name>" );
     config c; 
     ASSERT_THROW( comma::read< config >( c, iss ), comma::exception );
 }
 
-
-} } } // namespace comma { namespace test { namespace read {
+} } } // namespace comma { namespace test { namespace serialise_guess {

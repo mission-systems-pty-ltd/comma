@@ -66,25 +66,25 @@ struct property_tree // quick and dirty
 
     /// convert boost parameter tree into name=value-style string
     static std::string to_name_value_string( const boost::property_tree::ptree& ptree, bool indented = true, char equal_sign = '=', char delimiter = ',' );
-    
+
     /// disabled: do not show path indices for array items, with_brackets: x[0]/y/z[0]=1 and without_brackets: e.g. x/0/y/z/1=1
     enum path_mode { disabled, with_brackets, without_brackets  };
-        
+
     /// write as path-value to output stream
     static void to_path_value( std::ostream& os, const boost::property_tree::ptree& ptree, path_mode indices_mode = disabled, char equal_sign = '=', char delimiter = ',', const xpath& root = xpath() );
-    
+
     /// convert boost parameter tree into path=value-style string (equal sign and delimiter have to be escaped)
     static std::string to_path_value_string( const boost::property_tree::ptree& ptree, path_mode mode=disabled, char equal_sign = '=', char delimiter = ',' );
 
     /// read as path-value from string; enum specifies how to treat repeated paths (foo="bar"; foo="blah";)
     enum check_repeated_paths { no_check, take_last, unique_input, no_overwrite };
-    
+
     /// convert path-value-style string into boost parameter tree
     static boost::property_tree::ptree from_path_value_string( const std::string& s, char equal_sign = '=', char delimiter = ',', check_repeated_paths check_type = no_check );
     static boost::property_tree::ptree& from_path_value_string( boost::property_tree::ptree& ptree, const std::string& s, char equal_sign, char delimiter, check_repeated_paths check_type = no_check );
 
     /// read as path-value from input stream
-    static void from_path_value( std::istream& is, boost::property_tree::ptree& ptree, char equal_sign = '=', char delimiter = '\n', check_repeated_paths check_type = no_check );
+    static void from_path_value( std::istream& is, boost::property_tree::ptree& ptree,  check_repeated_paths check_type = no_check, char equal_sign = '=', char delimiter = ',' );
 
     template < template < typename > class Traits = comma::visiting::traits >
     class from
@@ -492,7 +492,7 @@ inline void property_tree::from_name_value( std::istream& is, boost::property_tr
     ptree = from_name_value_string( oss.str(), equal_sign, delimiter );
 }
 
-inline void property_tree::from_path_value( std::istream& is, boost::property_tree::ptree& ptree, char equal_sign, char delimiter, check_repeated_paths check_type )
+inline void property_tree::from_path_value( std::istream& is, boost::property_tree::ptree& ptree, check_repeated_paths check_type, char equal_sign, char delimiter )
 {
     std::string s;
     while( is.good() && !is.eof() ) // quick and dirty: read to the end of file

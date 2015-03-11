@@ -286,6 +286,45 @@ TEST( ptree, basics )
     }
 }
 
+TEST( ptree, from_path_value )
+{
+    {
+        boost::property_tree::ptree ptree;
+        std::string s = "a/4/hello=4,a/4/nested/moon=1,a/4/nested/value=hello,a/6/hello=6,a/6/nested/moon=2,a/6/nested/value=world";
+        std::istringstream iss( s );
+        property_tree::from_path_value( iss, ptree );
+        //std::cerr << property_tree::to_name_value_string( ptree ) << std::endl;
+        from_ptree from_ptree( ptree, "a" );
+        std::map< unsigned int, test_type > m;
+        visiting::apply( from_ptree, m );
+        EXPECT_EQ( 2u, m.size() );
+        EXPECT_EQ( 4, m[4].hello );
+        EXPECT_EQ( 1, m[4].nested->moon );
+        EXPECT_EQ( "hello", *m[4].nested->value );
+        EXPECT_EQ( 6, m[6].hello );
+        EXPECT_EQ( 2, m[6].nested->moon );
+        EXPECT_EQ( "world",  *m[6].nested->value );
+    }
+    {
+        boost::property_tree::ptree ptree;
+        std::string s = "a/4/hello=4\na/4/nested/moon=1\na/4/nested/value=hello\na/6/hello=6\na/6/nested/moon=2\na/6/nested/value=world";
+        std::istringstream iss( s );
+        property_tree::from_path_value( iss, ptree, comma::property_tree::no_check, '=', '\n' );
+        //std::cerr << property_tree::to_name_value_string( ptree ) << std::endl;
+        from_ptree from_ptree( ptree, "a" );
+        std::map< unsigned int, test_type > m;
+        visiting::apply( from_ptree, m );
+        EXPECT_EQ( 2u, m.size() );
+        EXPECT_EQ( 4, m[4].hello );
+        EXPECT_EQ( 1, m[4].nested->moon );
+        EXPECT_EQ( "hello", *m[4].nested->value );
+        EXPECT_EQ( 6, m[6].hello );
+        EXPECT_EQ( 2, m[6].nested->moon );
+        EXPECT_EQ( "world",  *m[6].nested->value );
+    }
+
+}
+
 TEST( ptree, permissive_visiting )
 {
     {
@@ -408,6 +447,17 @@ TEST( ptree, array )
         std::istringstream iss( s );
         property_tree::from_name_value( iss, ptree );
         //property_tree::to_name_value( std::cerr, ptree );
+        from_ptree from_ptree( ptree, "root" );
+        boost::array< std::string, 2 > array;
+        visiting::apply( from_ptree, array );
+        EXPECT_EQ( array[0], "hello" );
+        EXPECT_EQ( array[1], "world" );
+    }
+    {
+        boost::property_tree::ptree ptree;
+        std::string s = "root/0=hello\nroot/1=world";
+        std::istringstream iss( s );
+        property_tree::from_path_value( iss, ptree, comma::property_tree::no_check, '=', '\n' );
         from_ptree from_ptree( ptree, "root" );
         boost::array< std::string, 2 > array;
         visiting::apply( from_ptree, array );
