@@ -27,6 +27,7 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+
 /// @author vsevolod vlaskine
 
 #include <string.h>
@@ -38,17 +39,14 @@
 #include <boost/array.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/optional.hpp>
 #include <boost/unordered_map.hpp>
 #include <comma/application/command_line_options.h>
 #include <comma/application/contact_info.h>
 #include <comma/application/signal_flag.h>
-#include <comma/base/exception.h>
 #include <comma/base/types.h>
 #include <comma/csv/stream.h>
 #include <comma/csv/traits.h>
 #include <comma/io/stream.h>
-#include <comma/math/compare.h>
 #include <comma/name_value/parser.h>
 #include <comma/string/string.h>
 #include <comma/visiting/traits.h>
@@ -71,7 +69,6 @@ static void usage( bool more )
     std::cerr << "    --string,-s: keys are strings; a quick and dirty option to support strings" << std::endl;
     std::cerr << "                 default: integers" << std::endl;
     std::cerr << "    --strict: fail, if id on stdin is not found" << std::endl;
-    std::cerr << "    --tolerance,--epsilon=<value>; compare keys with given tolerance" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
     if( more )
     {
@@ -103,17 +100,6 @@ static void usage( bool more )
     exit( -1 );
 }
 
-static bool verbose;
-static bool first_matching;
-static bool strict;
-static bool not_matching;
-static comma::csv::options stdin_csv;
-static comma::csv::options filter_csv;
-boost::scoped_ptr< comma::io::istream > filter_transport;
-comma::signal_flag is_shutdown;
-static comma::uint32 block = 0;
-static boost::optional< double > tolerance;
-
 template < typename K >
 struct input
 {
@@ -131,8 +117,8 @@ struct input
 
     bool operator<( const input& rhs ) const
     {
-        if( keys.size() > 1 ) { COMMA_THROW( comma::exception, "if --tolerance given, expected one key, got: " << keys.size() ); }
-        return comma::math::less( keys[0], rhs.keys[0], *tolerance );
+        for( std::size_t i = 0; i < keys.size(); ++i ) { if( keys[i] < rhs.keys[i] ) { return true; } }
+        return false;
     }
 
     struct hash : public std::unary_function< input, std::size_t >
@@ -145,32 +131,7 @@ struct input
         }
     };
 
-    typedef boost::unordered_map< input, std::vector< std::string >, hash > unordered_map;
-    typedef std::map< input, std::vector< std::string > > map;
-};
-
-template < typename K, bool Strict = true > struct traits
-{
-    typedef typename input< K >::unordered_map map;
-    typedef std::pair< typename map::const_iterator, typename map::const_iterator > pair;
-    static pair find( const map& m, const input< K >& k )
-    {
-        typename map::const_iterator it = m.find( k );
-        if( it == m.end() ) { return std::make_pair( it, it ); }
-        typename map::const_iterator end = it;
-        ++end;
-        return std::make_pair( it, end );
-    }
-};
-
-template < typename K > struct traits< K, false >
-{
-    typedef typename input< K >::map map;
-    typedef std::pair< typename map::const_iterator, typename map::const_iterator > pair;
-    static pair find( const map& m, const input< K >& k )
-    {
-        return std::make_pair( m.lower_bound( k ), m.upper_bound( k ) );
-    }
+    typedef boost::unordered_map< input, std::vector< std::string >, hash > filter_map;
 };
 
 namespace comma { namespace visiting {
@@ -191,9 +152,19 @@ template < typename T > struct traits< input< T > >
 
 } } // namespace comma { namespace visiting {
 
-template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
+static bool verbose;
+static bool first_matching;
+static bool strict;
+static bool not_matching;
+static comma::csv::options stdin_csv;
+static comma::csv::options filter_csv;
+boost::scoped_ptr< comma::io::istream > filter_transport;
+comma::signal_flag is_shutdown;
+static comma::uint32 block = 0;
+
+template < typename K > struct join_impl_ // quick and dirty
 {
-    static typename traits< K, Strict >::map filter_map;
+    static typename input< K >::filter_map filter_map;
     static input< K > default_input;
 
     static void read_filter_block()
@@ -208,7 +179,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
         {
             if( filter_stream.is_binary() )
             {
-                typename traits< K, Strict >::map::mapped_type& d = filter_map[ *last ];
+                typename input< K >::filter_map::mapped_type& d = filter_map[ *last ];
                 d.push_back( std::string() );
                 d.back().resize( filter_csv.format().size() );
                 ::memcpy( &d.back()[0], filter_stream.binary().last(), filter_csv.format().size() );
@@ -255,79 +226,71 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
             const input< K >* p = stdin_stream.read();
             if( !p ) { break; }
             if( block != p->block ) { read_filter_block(); }
-            typename traits< K, Strict >::pair pair = traits< K, Strict >::find( filter_map, *p );
-            for( typename traits< K, Strict >::map::const_iterator it = pair.first; it != pair.second; ++it )
+            typename input< K >::filter_map::const_iterator it = filter_map.find( *p );
+            if( it == filter_map.end() || it->second.empty() )
             {
-                if( it == filter_map.end() || it->second.empty() )
+                if( not_matching )
                 {
-                    if( not_matching )
-                    {
-                        if( stdin_stream.is_binary() ) { std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() ); }
-                        else { std::cout << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << std::endl; }
-                        continue;
-                    }
-                    if( !strict ) { ++discarded; continue; }
-                    std::string s;
-                    comma::csv::options c;
-                    c.fields = "keys";
-                    std::cerr << "csv-join: match not found for key(s): " << comma::csv::ascii< input< K > >( c, default_input ).put( *p, s ) << ", block: " << block << std::endl;
-                    return 1;
+                    if( stdin_stream.is_binary() ) { std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() ); }
+                    else { std::cout << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << std::endl; }
+                    continue;
                 }
-                if( not_matching ) { continue; }
-                if( stdin_stream.is_binary() )
+                if( !strict ) { ++discarded; continue; }
+                std::string s;
+                comma::csv::options c;
+                c.fields = "keys";
+                std::cerr << "csv-join: match not found for key(s): " << comma::csv::ascii< input< K > >( c, default_input ).put( *p, s ) << ", block: " << block << std::endl;
+                return 1;
+            }
+            if( not_matching ) { continue; }
+            if( stdin_stream.is_binary() )
+            {
+                for( std::size_t i = 0; i < ( first_matching ? 1 : it->second.size() ); ++i )
                 {
-                    for( std::size_t i = 0; i < ( first_matching ? 1 : it->second.size() ); ++i )
-                    {
-                        std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() );
-                        std::cout.write( &( it->second[i][0] ), filter_csv.format().size() );
-                        std::cout.flush();
-                    }
+                    std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() );
+                    std::cout.write( &( it->second[i][0] ), filter_csv.format().size() );
                     std::cout.flush();
                 }
-                else
-                {
-                    for( std::size_t i = 0; i < ( first_matching ? 1 : it->second.size() ); ++i )
-                    {
-                        std::cout << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << stdin_csv.delimiter;
-                        std::cout << ( filter_csv.binary()
-                                    ? filter_csv.format().bin_to_csv( &it->second[i][0], stdin_csv.delimiter )
-                                    : it->second[i] ) << std::endl;
-                    }
-                }
-                if( first_matching ) { filter_map.erase( it->first ); } // quick and dirty for now
+                std::cout.flush();
             }
+            else
+            {
+                for( std::size_t i = 0; i < ( first_matching ? 1 : it->second.size() ); ++i )
+                {
+                    std::cout << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << stdin_csv.delimiter;
+                    std::cout << ( filter_csv.binary()
+                                 ? filter_csv.format().bin_to_csv( &it->second[i][0], stdin_csv.delimiter )
+                                 : it->second[i] ) << std::endl;
+                }
+            }
+            if( first_matching ) { filter_map.erase( it->first ); } // quick and dirty for now
         }
         if( verbose ) { std::cerr << "csv-join: discarded " << discarded << " entrie[s] with no matches" << std::endl; }
         return 0;
     }
 };
 
-template < typename K, bool Strict > typename traits< K, Strict >::map join_impl_< K, Strict >::filter_map;
-template < typename K, bool Strict > input< K > join_impl_< K, Strict >::default_input;
+template < typename K > typename input< K >::filter_map join_impl_< K >::filter_map;
+template < typename K > input< K > join_impl_< K >::default_input;
 
 int main( int ac, char** av )
 {
     try
     {
-        comma::command_line_options options( ac, av, usage );
+        comma::command_line_options options( ac, av );
         verbose = options.exists( "--verbose,-v" );
+        if( options.exists( "--help,-h" ) ) { usage( verbose ); }
         first_matching = options.exists( "--first-matching" );
         strict = options.exists( "--strict" );
         not_matching = options.exists( "--not-matching" );
-        tolerance = options.optional< double >( "--tolerance,--epsilon" );
-        options.assert_mutually_exclusive( "--tolerance,--epsilon,--string,-s" );
         stdin_csv = comma::csv::options( options );
-        std::vector< std::string > unnamed = options.unnamed( "--verbose,-v,--first-matching,--not-matching,--string,-s,--strict", "-.*" );
+        std::vector< std::string > unnamed = options.unnamed( "--verbose,-v,--first-matching,--not-matching,--string,-s,--strict", "--binary,-b,--delimiter,-d,--fields,-f" );
         if( unnamed.empty() ) { std::cerr << "csv-join: please specify the second source" << std::endl; return 1; }
         if( unnamed.size() > 1 ) { std::cerr << "csv-join: expected one file or stream to join, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         comma::name_value::parser parser( "filename", ';', '=', false );
         filter_csv = parser.get< comma::csv::options >( unnamed[0] );
         if( stdin_csv.binary() && !filter_csv.binary() ) { std::cerr << "csv-join: stdin stream binary and filter stream ascii: this combination is not supported" << std::endl; return 1; }
-        return   options.exists( "--string,-s" )
-               ? join_impl_< std::string, true >::run( options )
-               : tolerance
-               ? join_impl_< double, false >::run( options )
-               : join_impl_< comma::int64, true >::run( options );
+        return options.exists( "--string,-s" ) ? join_impl_< std::string >::run( options ) : join_impl_< comma::int64 >::run( options );
     }
     catch( std::exception& ex )
     {
