@@ -45,10 +45,6 @@
 
 namespace comma {
 
-/// guess format and read boost property tree from file or stream connected to a file (pipe or terminal input is not accepted)
-void ptree_from_stream( std::istream& stream, boost::property_tree::ptree& p
-    , comma::property_tree::check_repeated_paths check_type = comma::property_tree::no_check, char equal_sign = '=', char delimiter = ','  );
-
 /// guess format and read object from file or stream connected to a file (pipe or terminal input is not accepted)
 /// convenience wrappers for comma::property_tree boiler-plate code
 template < typename T > T read( const std::string& filename, const xpath& root, bool permissive );
@@ -560,46 +556,11 @@ template < typename T > inline void write_ini( const T& t, const std::string& fi
 template < typename T > inline void write_ini( const T& t, std::ostream& stream, const char* root ) { write_ini( t, stream, xpath( root ) ); }
 template < typename T > inline void write_ini( const T& t, std::ostream& stream ) { write_ini( t, stream, xpath() ); }
 
-inline void ptree_from_stream( std::istream& stream, boost::property_tree::ptree& p, comma::property_tree::check_repeated_paths check_type, char equal_sign, char delimiter)
-{
-    if( !stream.seekg( 1, std::ios::beg ).good() ) { COMMA_THROW( comma::exception, "input stream is not seekable, e.g. if a pipe or terminal input are used" ) }
-    try
-    {
-        stream.clear();
-        stream.seekg( 0, std::ios::beg );
-        if( !stream.good() ) { COMMA_THROW( comma::exception, "failed to reset stream" ) }
-        boost::property_tree::read_json( stream, p );
-        return;
-    }
-    catch( const boost::property_tree::ptree_error&  ex ) {}
-    catch(...) { throw; }
-    try
-    {
-        stream.clear();
-        stream.seekg( 0, std::ios::beg );
-        if( !stream.good() ) { COMMA_THROW( comma::exception, "failed to reset stream" ) }
-        boost::property_tree::read_xml( stream, p );
-        return;
-    }
-    catch( const boost::property_tree::ptree_error&  ex ) {}
-    catch(...) { throw; }
-    try
-    {
-        stream.clear();
-        stream.seekg( 0, std::ios::beg );
-        if( !stream.good() ) { COMMA_THROW( comma::exception, "failed to reset stream" ) }
-        comma::property_tree::from_path_value( stream, p, check_type, equal_sign, delimiter );
-        return;
-    }
-    catch( const boost::property_tree::ptree_error&  ex ) {}
-    catch( const comma::exception&  ex ) {}
-    catch(...) { throw; }
-    COMMA_THROW( comma::exception, "failed to guess format" );
-}
+
 template < typename T > inline void read( T& t, std::istream& stream, const xpath& root, bool permissive )
 {
     boost::property_tree::ptree p;
-    ptree_from_stream( stream, p );
+    comma::property_tree::from_unknown( stream, p );
     comma::from_ptree from_ptree( p, root, permissive );
     comma::visiting::apply( from_ptree ).to( t );
 }

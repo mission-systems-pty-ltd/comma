@@ -105,10 +105,10 @@ template <> struct traits< void_t >
 {
     static void input( std::istream& is, boost::property_tree::ptree& ptree ) 
     {
-        if( !use_buffer ) { comma::ptree_from_stream( is, ptree, check_type, equal_sign, path_value_delimiter  ); return; }
+        if( !use_buffer ) { comma::property_tree::from_unknown( is, ptree, check_type, equal_sign, path_value_delimiter  ); return; }
         std::stringstream buffer;
         buffer << is.rdbuf(); // backing up input stream is required if reading from pipe or terminal
-        comma::ptree_from_stream( buffer, ptree, check_type, equal_sign, path_value_delimiter  );
+        comma::property_tree::from_unknown( buffer, ptree, check_type, equal_sign, path_value_delimiter  );
     }
 };
 
