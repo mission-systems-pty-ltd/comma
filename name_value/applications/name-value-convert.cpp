@@ -46,7 +46,7 @@
 #include <comma/name_value/serialize.h>
 #include <comma/xpath/xpath.h>
 
-static void usage( bool verbose )
+static void usage( bool verbose = false )
 {
     std::cerr << std::endl;
     std::cerr << "take a stream of name-value style input on stdin," << std::endl;
@@ -55,7 +55,7 @@ static void usage( bool verbose )
     std::cerr << "usage: cat data.xml | name-value-convert [<options>]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "data options" << std::endl;
-    std::cerr << "    --from <format>: input format; if no format is specified, it will be guessed from the input (only for json, xml, and path-value)" << std::endl;
+    std::cerr << "    --from <format>: input format; if this options is omitted, input format will be guessed (only for json, xml, and path-value)" << std::endl;
     std::cerr << "    --to <format>: output format; default name-value" << std::endl;
     std::cerr << std::endl;
     std::cerr << "formats" << std::endl;
@@ -89,8 +89,8 @@ static void usage( bool verbose )
 }
 
 static char equal_sign;
-static char delimiter_name_value;
-static char delimiter_path_value;
+static char name_value_delimiter;
+static char path_value_delimiter;
 static bool linewise;
 static bool use_buffer;
 typedef comma::property_tree::path_mode path_mode;
@@ -105,59 +105,62 @@ template <> struct traits< void_t >
 {
     static void input( std::istream& is, boost::property_tree::ptree& ptree ) 
     {
-        if( !use_buffer ) { comma::ptree_from_stream( is, ptree, check_type, equal_sign, delimiter_path_value  ); return; }
+        if( !use_buffer ) { comma::ptree_from_stream( is, ptree, check_type, equal_sign, path_value_delimiter  ); return; }
         std::stringstream buffer;
         buffer << is.rdbuf(); // backing up input stream is required if reading from pipe or terminal
-        comma::ptree_from_stream( buffer, ptree, check_type, equal_sign, delimiter_path_value  );
+        comma::ptree_from_stream( buffer, ptree, check_type, equal_sign, path_value_delimiter  );
     }
 };
 
 template <> struct traits< ini >
 {
     static void input( std::istream& is, boost::property_tree::ptree& ptree ) { boost::property_tree::read_ini( is, ptree ); }
-    static void output( std::ostream& os, boost::property_tree::ptree& ptree, path_mode ) { boost::property_tree::write_ini( os, ptree ); }
+    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode ) { boost::property_tree::write_ini( os, ptree ); }
 };
 
 template <> struct traits< info >
 {
     static void input( std::istream& is, boost::property_tree::ptree& ptree ) { boost::property_tree::read_info( is, ptree ); }
-    static void output( std::ostream& os, boost::property_tree::ptree& ptree, path_mode ) { boost::property_tree::write_info( os, ptree ); }
+    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode ) { boost::property_tree::write_info( os, ptree ); }
 };
 
 template <> struct traits< json >
 {
     static void input( std::istream& is, boost::property_tree::ptree& ptree ) { boost::property_tree::read_json( is, ptree ); }
-    static void output( std::ostream& os, boost::property_tree::ptree& ptree, path_mode ) { boost::property_tree::write_json( os, ptree ); }
+    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode ) { boost::property_tree::write_json( os, ptree ); }
 };
 
 template <> struct traits< xml >
 {
     static void input( std::istream& is, boost::property_tree::ptree& ptree ) { boost::property_tree::read_xml( is, ptree ); }
-    static void output( std::ostream& os, boost::property_tree::ptree& ptree, path_mode ) { boost::property_tree::write_xml( os, ptree ); }
+    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode ) { boost::property_tree::write_xml( os, ptree ); }
 };
 
 template <> struct traits< name_value >
 {
     // todo: handle indented input (quick and dirty: use exceptions)
-    static void input( std::istream& is, boost::property_tree::ptree& ptree ) { comma::property_tree::from_name_value( is, ptree, equal_sign, delimiter_name_value ); }
-    static void output( std::ostream& os, boost::property_tree::ptree& ptree, path_mode ) { comma::property_tree::to_name_value( os, ptree, !linewise, equal_sign, delimiter_name_value ); }
+    static void input( std::istream& is, boost::property_tree::ptree& ptree ) { comma::property_tree::from_name_value( is, ptree, equal_sign, name_value_delimiter ); }
+    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode ) { comma::property_tree::to_name_value( os, ptree, !linewise, equal_sign, name_value_delimiter ); }
 };
 
 template <> struct traits< path_value > // quick and dirty
 {
     static void input( std::istream& is, boost::property_tree::ptree& ptree )
     {
-        if( !linewise ) { comma::property_tree::from_path_value( is, ptree, check_type, equal_sign, delimiter_path_value ); return; }
+        if( !linewise ) { comma::property_tree::from_path_value( is, ptree, check_type, equal_sign, path_value_delimiter ); return; }
         std::string line;
         std::getline( is, line );
-        ptree = comma::property_tree::from_path_value_string( line, equal_sign, delimiter_path_value, check_type );
+        ptree = comma::property_tree::from_path_value_string( line, equal_sign, path_value_delimiter, check_type );
     }
-    static void output( std::ostream& os, boost::property_tree::ptree& ptree, path_mode mode) 
+    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode mode ) 
     {
-        comma::property_tree::to_path_value( os, ptree, mode, equal_sign, delimiter_path_value ); 
-        if( delimiter_path_value == '\n' ) { os << std::endl; } 
+        comma::property_tree::to_path_value( os, ptree, mode, equal_sign, path_value_delimiter ); 
+        if( path_value_delimiter == '\n' ) { os << std::endl; } 
     }
 };
+
+void ( * input )( std::istream& is, boost::property_tree::ptree& ptree );
+void ( * output )( std::ostream& is, const boost::property_tree::ptree& ptree, const path_mode );
 
 int main( int ac, char** av )
 {
@@ -172,10 +175,8 @@ int main( int ac, char** av )
         if ( options.exists( "--take-last" ) ) check_type = comma::property_tree::take_last;
         if ( options.exists( "--verify-unique,--unique-input" ) ) check_type = comma::property_tree::unique_input;
         boost::optional< char > delimiter = options.optional< char >( "--delimiter,-d" );
-        delimiter_name_value = delimiter ? *delimiter : ',';
-        delimiter_path_value = delimiter ? *delimiter : ( linewise ? ',' : '\n' );
-        void ( * input )( std::istream& is, boost::property_tree::ptree& ptree );
-        void ( * output )( std::ostream& is, boost::property_tree::ptree& ptree, path_mode );
+        name_value_delimiter = delimiter ? *delimiter : ',';
+        path_value_delimiter = delimiter ? *delimiter : ( linewise ? ',' : '\n' );
         if( from )
         {
             if( *from == "ini" ) { input = &traits< ini >::input; }
