@@ -43,9 +43,10 @@
 #include <comma/application/command_line_options.h>
 #include <comma/application/signal_flag.h>
 #include <comma/name_value/ptree.h>
+#include <comma/name_value/serialize.h>
 #include <comma/xpath/xpath.h>
 
-static void usage()
+static void usage( bool verbose = false )
 {
     std::cerr << std::endl;
     std::cerr << "take a stream of name-value style input on stdin," << std::endl;
@@ -56,15 +57,15 @@ static void usage()
     std::cerr << "<paths>: x-path, e.g. \"command/type\" or posix regular expressions" << std::endl;
     std::cerr << std::endl;
     std::cerr << "data options" << std::endl;
-    std::cerr << "    --from <what>" << std::endl;
-    std::cerr << "    --to <what>" << std::endl;
-    std::cerr << "      <what>" << std::endl;
-    std::cerr << "        info: info data (see boost::property_tree)" << std::endl;
-    std::cerr << "        ini: ini data" << std::endl;
-    std::cerr << "        json: json data" << std::endl;
-    std::cerr << "        name-value: name=value-style data; e.g. x={a=1,b=2},y=3" << std::endl;
-    std::cerr << "        xml: xml data" << std::endl;
-    std::cerr << "        default: --from: name-value; --to: same as --from" << std::endl;
+    std::cerr << "    --from <format>: input format; if this option is omitted, input format will be guessed (only for json, xml, and path-value)" << std::endl;
+    std::cerr << "    --to <format>: output format; default: name-value" << std::endl;
+    std::cerr << "formats" << std::endl;
+    std::cerr << "    info: info data (see boost::property_tree)" << std::endl;
+    std::cerr << "    ini: ini data" << std::endl;
+    std::cerr << "    json: json data" << std::endl;
+    std::cerr << "    name-value: name=value-style data; e.g. x={a=1,b=2},y=3" << std::endl;
+    std::cerr << "    path-value: path=value-style data; e.g. x/a=1,x/b=2,y=3" << std::endl;
+    std::cerr << "    xml: xml data" << std::endl;
     std::cerr << std::endl;
     std::cerr << "name/path-value options:" << std::endl;
     std::cerr << "    --equal-sign,-e=<equal sign>: default '='" << std::endl;
@@ -81,6 +82,7 @@ static void usage()
     std::cerr << "data flow options:" << std::endl;
     std::cerr << "    --linewise,-l: if present, treat each input line as a record" << std::endl;
     std::cerr << "                   if absent, treat all of the input as one record" << std::endl;
+    std::cerr << "    --use-buffer: buffers input before guessing format (needed for non-seekable streams, e.g. pipe or terminal, but may reduce performance)" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -88,16 +90,29 @@ static void usage()
 }
 
 static char equal_sign;
-static char delimiter;
+static char name_value_delimiter;
+static char path_value_delimiter;
 static bool linewise;
+static bool use_buffer;
 static bool output_path;
 typedef comma::property_tree::path_mode path_mode;
 static path_mode indices_mode = comma::property_tree::disabled;
 static comma::property_tree::check_repeated_paths check_type( comma::property_tree::no_check );
 
-enum Types { ini, info, json, xml, name_value, path_value };
+enum Types { ini, info, json, xml, name_value, path_value, void_t };
 
 template < Types Type > struct traits {};
+
+template <> struct traits< void_t >
+{
+    static void input( std::istream& is, boost::property_tree::ptree& ptree ) 
+    {
+        if( !use_buffer ) { comma::ptree_from_stream( is, ptree, check_type, equal_sign, path_value_delimiter  ); return; }
+        std::stringstream buffer;
+        buffer << is.rdbuf(); // backing up input stream is required if reading from pipe or terminal
+        comma::ptree_from_stream( buffer, ptree, check_type, equal_sign, path_value_delimiter  );
+    }
+};
 
 template <> struct traits< ini >
 {
@@ -126,38 +141,25 @@ template <> struct traits< xml >
 template <> struct traits< name_value >
 {
     // todo: handle indented input (quick and dirty: use exceptions)
-    static void input( std::istream& is, boost::property_tree::ptree& ptree ) { comma::property_tree::from_name_value( is, ptree, equal_sign, delimiter ); }
-    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const std::string& ) { comma::property_tree::to_name_value( os, ptree, !linewise, equal_sign, delimiter ); }
+    static void input( std::istream& is, boost::property_tree::ptree& ptree ) { comma::property_tree::from_name_value( is, ptree, equal_sign, name_value_delimiter ); }
+    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const std::string& ) { comma::property_tree::to_name_value( os, ptree, !linewise, equal_sign, name_value_delimiter ); }
 };
 
 template <> struct traits< path_value > // quick and dirty
 {
     static void input( std::istream& is, boost::property_tree::ptree& ptree )
     {
-        std::string s;
-        if( linewise )
-        {
-            std::getline( is, s );
-        }
-        else
-        {
-            while( is.good() && !is.eof() ) // quick and dirty: read to the end of file
-            {
-                std::string t;
-                std::getline( is, t );
-                std::string::size_type pos = t.find_first_not_of( ' ' );
-                if( pos == std::string::npos || t[pos] == '#' ) { continue; }
-                s += t + delimiter;
-            }
-        }
-        ptree = comma::property_tree::from_path_value_string( s, equal_sign, delimiter, check_type );
+        if( !linewise ) { comma::property_tree::from_path_value( is, ptree, check_type, equal_sign, path_value_delimiter ); return; }
+        std::string line;
+        std::getline( is, line );
+        ptree = comma::property_tree::from_path_value_string( line, equal_sign, path_value_delimiter, check_type );
     }
     static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const std::string& path )
     { 
         static bool first = true; // todo: will not work linewise, fix
-        if( !first ) { std::cout << delimiter; }
+        if( !first ) { std::cout << path_value_delimiter; }
         first = false;
-        comma::property_tree::to_path_value( os, ptree, indices_mode, equal_sign, delimiter, output_path ? path : std::string() );
+        comma::property_tree::to_path_value( os, ptree, indices_mode, equal_sign, path_value_delimiter, output_path ? path : std::string() );
     }
 };
 
@@ -229,9 +231,8 @@ int main( int ac, char** av )
 {
     try
     {
-        comma::command_line_options options( ac, av );
-        if( options.exists( "--help,-h" ) ) { usage(); }
-        path_strings = options.unnamed( "--linewise,-l,--output-path", "--from,--to,--equal-sign,-e,--delimiter,-d" );
+        comma::command_line_options options( ac, av, usage );
+        path_strings = options.unnamed( "--linewise,-l,--output-path,--use-buffer", "--from,--to,--equal-sign,-e,--delimiter,-d" );
         if( path_strings.empty() ) { std::cerr << std::endl << "name-value-get: xpath missing" << std::endl; usage(); }
         path_regex.resize( path_strings.size() );
         paths.resize( path_strings.size() );
@@ -251,20 +252,32 @@ int main( int ac, char** av )
             }
             if( !path_regex[i] ) { paths[i] = boost::property_tree::ptree::path_type( path_strings[i], '/' ); }
         }
-        std::string from = options.value< std::string >( "--from", "name-value" );
+        boost::optional< std::string > from = options.optional< std::string >( "--from" );
         std::string to = options.value< std::string >( "--to", "name-value" );
         equal_sign = options.value( "--equal-sign,-e", '=' );
-        delimiter = options.value( "--delimiter,-d", from == "path-value" || to == "path-value" ? '\n' : ',' );
         linewise = options.exists( "--linewise,-l" );
+        use_buffer = options.exists( "--use-buffer" );
         if ( options.exists( "--take-last" ) ) check_type = comma::property_tree::take_last;
         if ( options.exists( "--verify-unique,--unique-input" ) ) check_type = comma::property_tree::unique_input;
+        boost::optional< char > delimiter = options.optional< char >( "--delimiter,-d" );
+        name_value_delimiter = delimiter ? *delimiter : ',';
+        path_value_delimiter = delimiter ? *delimiter : ( linewise ? ',' : '\n' );
         output_path = options.exists( "--output-path" );
-        if( from == "ini" ) { input = &traits< ini >::input; output = &traits< ini >::output; }
-        else if( from == "info" ) { input = &traits< info >::input; output = &traits< info >::output; }
-        else if( from == "json" ) { input = &traits< json >::input; output = &traits< json >::output; }
-        else if( from == "xml" ) { input = &traits< xml >::input; output = &traits< xml >::output; }
-        else if( from == "path-value" ) { input = &traits< path_value >::input; }
-        else { input = &traits< name_value >::input; output = &traits< name_value >::output; }
+        if( from )
+        {
+            if( *from == "ini" ) { input = &traits< ini >::input; }
+            else if( *from == "info" ) { input = &traits< info >::input; }
+            else if( *from == "json" ) { input = &traits< json >::input; }
+            else if( *from == "xml" ) { input = &traits< xml >::input; }
+            else if( *from == "path-value" ) { input = &traits< path_value >::input; }
+            else if( *from == "name-value" ){ input = &traits< name_value >::input; }
+            else { std::cerr << "name-value-get: expected --from format to be ini, info, json, xml, path-value, or name-value, got " << *from << std::endl; return 1; }
+        }
+        else
+        {
+            if( linewise ) {  std::cerr << "name-value-get: if --linewise is specified, --from must be given" << std::endl; return 1; }
+            input = &traits< void_t >::input;
+        }
         if( to == "ini" ) { output = &traits< ini >::output; }
         else if( to == "info" ) { output = &traits< info >::output; }
         else if( to == "json" ) { output = &traits< json >::output; }
