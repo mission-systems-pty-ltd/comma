@@ -1,0 +1,5 @@
+#!/bin/bash
+
+source $( which comma-application-util ) || exit 1
+
+comma_execute_and_wait "sleep 10" >/dev/null
