@@ -38,6 +38,30 @@ function test03()
     comma_execute_and_wait --signals="TERM,USR1" "comma-nap 10" >/dev/null
 }
 
-test01 ; echo "test[1]/exit/status=$?"
-test02 ; echo "test[2]/exit/status=$?"
-test03 ; echo "test[3]/exit/status=$?"
+function test04_to_execute()
+{
+    local nap_time=$1
+    local output_file=$2
+    { comma-nap $nap_time && echo "OK" ; } > $output_file
+}
+export -f test04_to_execute
+
+function test04()
+{
+    export output_file="$output_dir/test04.log"
+    export nap_time=5
+    comma_execute_and_wait "bash -c test04_to_execute $nap_time $output_file" >/dev/null
+}
+
+function test05()
+{
+    export output_file="$output_dir/test05.log"
+    export nap_time=10
+    comma_execute_and_wait --timeout=5 "bash -c test04_to_execute $nap_time $output_file" >/dev/null
+}
+
+#test01 ; echo "test[1]/exit/status=$?"
+#test02 ; echo "test[2]/exit/status=$?"
+#test03 ; echo "test[3]/exit/status=$?"
+test04 ; echo "test[4]/exit/status=$?" ; echo "test[4]/output=\""$( tail -n 1 "$output_dir"/test04.log )"\""
+test05 ; echo "test[5]/exit/status=$?" ; echo "test[5]/output=\""$( tail -n 1 "$output_dir"/test05.log )"\""
