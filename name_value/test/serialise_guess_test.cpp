@@ -255,7 +255,7 @@ TEST ( serialise, guess_corrupted_path_value )
 TEST ( serialise, guess_nonseekable_stream )
 {
     config c; 
-    ASSERT_THROW( comma::read< config >( c, std::cin ), comma::exception );
+    ASSERT_THROW( comma::read< config >( c, std::cin ), std::istream::failure );
 }
 
 } } } // namespace comma { namespace test { namespace serialise_guess {

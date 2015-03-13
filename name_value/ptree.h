@@ -589,12 +589,11 @@ inline boost::property_tree::ptree property_tree::from_path_value_string( const 
 
 inline void property_tree::from_unknown( std::istream& stream, boost::property_tree::ptree& ptree, check_repeated_paths check_type, char equal_sign, char delimiter)
 {
-    if( !stream.seekg( 1, std::ios::beg ).good() ) { COMMA_THROW( comma::exception, "input stream is not seekable, e.g. if a pipe or terminal input are used" ) }
+    stream.exceptions( std::istream::failbit | std::istream::badbit );
     try
     {
         stream.clear();
         stream.seekg( 0, std::ios::beg );
-        if( !stream.good() ) { COMMA_THROW( comma::exception, "failed to reset stream" ) }
         boost::property_tree::read_json( stream, ptree );
         return;
     }
@@ -604,7 +603,6 @@ inline void property_tree::from_unknown( std::istream& stream, boost::property_t
     {
         stream.clear();
         stream.seekg( 0, std::ios::beg );
-        if( !stream.good() ) { COMMA_THROW( comma::exception, "failed to reset stream" ) }
         boost::property_tree::read_xml( stream, ptree );
         return;
     }
@@ -614,7 +612,6 @@ inline void property_tree::from_unknown( std::istream& stream, boost::property_t
     {
         stream.clear();
         stream.seekg( 0, std::ios::beg );
-        if( !stream.good() ) { COMMA_THROW( comma::exception, "failed to reset stream" ) }
         comma::property_tree::from_path_value( stream, ptree, check_type, equal_sign, delimiter );
         return;
     }
