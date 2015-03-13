@@ -2,4 +2,30 @@
 
 source $( which comma-application-util ) || exit 1
 
-comma_execute_and_wait "sleep 10" >/dev/null
+export output_dir="output"
+rm -rf "$output_dir" || exit 1
+mkdir -p "$output_dir" || exit 1
+
+# Tests to consider:
+#
+# - run a verbose utility like "comma-nap" to completion
+#   verify that the test program indeed was executed
+# - same with a bash function
+# - same with passing arguments and variables to a bash function
+#
+# - run comma-nap and terminate by timeout; verify that the command-to-execute
+#   was terminated, and that that expected status is returned
+# - run comma-nap and kill comma_execute_and_wait; verify that command being
+#   executed is killed, and that the expected exit status is returned
+#
+# - set up handlers, then run comma_execute_and_wait, and kill by a signal;
+#   verify that control is returned to the original handler
+#
+# - specify different signal list: trap a custom signal and report
+
+function test01()
+{
+    comma_execute_and_wait "comma-nap 10" >/dev/null
+}
+
+test01
