@@ -231,28 +231,42 @@ TEST( serialise, guess_xml_root ) { std::istringstream iss( xml_root ); ASSERT_N
 TEST( serialise, guess_path_value ) { std::istringstream iss( path_value ); ASSERT_NO_THROW( test_interface( iss ) ); }
 TEST( serialise, guess_path_value_root ) { std::istringstream iss( path_value_root ); ASSERT_NO_THROW( test_interface( iss, "root/item" ) ); }
 
-TEST ( serialise, guess_corrupted_json )
+TEST( serialise, guess_corrupted_json )
 {
     std::istringstream iss( "{ \"name\": \"dummy\", }" );
     config c; 
     ASSERT_THROW( comma::read< config >( c, iss ), comma::exception );
 }
 
-TEST ( serialise, guess_corrupted_xml )
+TEST( serialise, guess_corrupted_xml )
 {
     std::istringstream iss( "<name>dummy<name>" );
     config c; 
     ASSERT_THROW( comma::read< config >( c, iss ), comma::exception );
 }
 
-TEST ( serialise, guess_corrupted_path_value )
+TEST( serialise, guess_corrupted_path_value )
 {
+    config c;
     std::istringstream iss( "name/" );
-    config c; 
     ASSERT_THROW( comma::read< config >( c, iss ), comma::exception );
 }
 
-TEST ( serialise, guess_nonseekable_stream )
+TEST( serialise, DISABLED_path_value_confused_with_ini_section )
+{
+    config c;
+    std::istringstream iss( "[section=2]" );
+    ASSERT_THROW( comma::read< config >( c, iss ), comma::exception );
+}
+
+TEST( serialise, DISABLED_path_value_confused_with_ini_comments )
+{
+    config c;
+    std::istringstream iss( ";comment=2" );
+    ASSERT_THROW( comma::read< config >( c, iss ), comma::exception );
+}
+
+TEST( serialise, guess_nonseekable_stream )
 {
     config c; 
     ASSERT_THROW( comma::read< config >( c, std::cin ), std::istream::failure );

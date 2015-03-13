@@ -618,6 +618,7 @@ inline void property_tree::from_unknown( std::istream& stream, boost::property_t
     catch( const boost::property_tree::ptree_error&  ex ) {}
     catch( const comma::exception&  ex ) {}
     catch(...) { throw; }
+    // TODO: add try for ini format (currently the problem is that path-value treats ini sections and comments as valid entries; possible solution: make path-value parser stricter)
     COMMA_THROW( comma::exception, "failed to guess format" );
 }
 
