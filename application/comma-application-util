@@ -161,32 +161,48 @@ export -f terminate_comma_execute_and_wait
 function comma_execute_and_wait()
 {
     local saved_traps
-    # store all traps in a variable
+    # store existing traps for restoring on exit
     saved_traps=$( trap )
+
+    # defaults
+    local signal_list="TERM,INT,HUP"
+    local command_to_execute=""
+    # timeout default is very long time, essentially, forever
+    local execute_and_wait_timeout="4294967296d"
+
+    # process arguments
+    local original_args="$@"
+    while [[ $# -ne 0 ]]; do
+        case $1 in
+            --signals=*|--signal-list=*) signal_list=${1#*=};;
+            --max-wait=*|--timeout=*)    execute_and_wait_timeout=${1#*=};;
+            -*) echo "comma_execute_and_wait: unknown option '$1' (called: comma_execute_and_wait $original_args)" >&2; return 1;;
+            *)  [[ -n "$command_to_execute" ]] && { echo "comma_execute_and_wait: command to execute given twice (called: comma_trap $original_args)" >&2; return 1; }
+                command_to_execute="$1";;
+        esac
+        shift
+    done
 
     # set up a new signal handler / trap that:
     # - determines the signal being sent so that the same signal can be re-raised
     # - if the command-to-execute is running, kill its process group
     # - restores the traps
     # - re-sends the trapped signal to itself
-    local signal_to_handle signal_list
-    signal_list="TERM,INT,HUP"
+    local signal_to_handle
     for signal_to_handle in ${signal_list//,/ } ; do
         trap 'terminate_comma_execute_and_wait $signal_to_handle' $signal_to_handle
     done
 
-    # select the timeout period: either the second argument, or very long time
-    local execute_and_wait_timeout="4294967296d"
-
-    # runs the command-to-execute as a background job in its own process group and under timeout
-    local command_to_execute command_to_execute_pgid command_to_execute_status
-    command_to_execute=$1
+    # run the command-to-execute as a background job in its own process group and under timeout
+    local command_to_execute_pgid command_to_execute_status
     timeout -k 10 -s TERM $execute_and_wait_timeout $command_to_execute & command_to_execute_pgid=$!
-    # waits for the completion of the subprocess
+    # wait for the completion of the subprocess
     wait $command_to_execute_pgid
     command_to_execute_status=$?
     unset command_to_execute_pgid
-    # returns the wait outcome
+    # restore traps
+    eval "$saved_traps"
+    # return the wait outcome
     return $command_to_execute_status
 }
 export -f comma_execute_and_wait
