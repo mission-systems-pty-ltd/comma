@@ -589,7 +589,7 @@ inline boost::property_tree::ptree property_tree::from_path_value_string( const 
 
 inline void property_tree::from_unknown( std::istream& stream, boost::property_tree::ptree& ptree, check_repeated_paths check_type, char equal_sign, char delimiter)
 {
-    stream.exceptions( std::istream::failbit | std::istream::badbit );
+    if( !stream.seekg( 0, std::ios::beg ) ) { COMMA_THROW( comma::exception, "input stream is not seekable" ); }
     try
     {
         stream.clear();

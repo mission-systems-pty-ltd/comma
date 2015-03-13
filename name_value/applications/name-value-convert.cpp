@@ -114,7 +114,7 @@ template <> struct traits< void_t >
         }
         else
         {
-            if( !is.seekg( 0, std::ios::beg ) ) { COMMA_THROW( comma::exception, "input stream is not seekable, e.g. if pipe or terminal input is used; see option --use-buffer" ); };
+            if( !is.seekg( 0, std::ios::beg ) ) { COMMA_THROW( comma::exception, "for pipe or terminal input, use option --use-buffer" ); };
             comma::property_tree::from_unknown( is, ptree, check_type, equal_sign, path_value_delimiter  );
         }
     }
