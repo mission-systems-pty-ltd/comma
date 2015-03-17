@@ -136,8 +136,6 @@ EOF
 }
 
 output_dir="output"
-rm -rf "$output_dir" || exit 1
-mkdir -p "$output_dir" || exit 1
 
 # later will override
 random_seed=123

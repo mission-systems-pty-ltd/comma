@@ -6,9 +6,6 @@ source $( which comma-resources-util ) || exit 1
 source "$( dirname $0 )/../resources-test-util" || exit 1
 
 output="output"
-rm -rf "$output" || exit 1
-mkdir -p "$output" || exit 1
-
 # initialize
 counter="$output/counter.json"
 cat <<EOF | comma_initialize_resources "$counter"

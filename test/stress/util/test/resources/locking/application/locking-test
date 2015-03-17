@@ -131,8 +131,6 @@ RANDOM=$random_seed
 
 # Keep the source directory clean.
 output="output"
-rm -rf "$output" || exit 1
-mkdir -p "$output" || exit 1
 
 # Create a lock file, resource limits file (fudge), and initialize resource counter.
 lock="$output/lock"

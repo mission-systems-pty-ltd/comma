@@ -24,8 +24,6 @@ function count()
 export -f count
 
 output="output"
-rm -rf "$output" || exit 1
-mkdir -p "$output" || exit 1
 export output
 
 # initialize

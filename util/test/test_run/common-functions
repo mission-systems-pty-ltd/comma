@@ -18,8 +18,8 @@ function format_tests_per_directory()
     # - one of the test needs a suffix, just to please comma-test-match
     sed 's@^comma-test-run: @@' | \
         sed '/started...$/d' | \
-        sed '/running...$/N;s@^[^:]*: ./@@;s@:.*{called @="@;s@}$@"@' | \
         sed '/succeeded/d' | \
+        sed '/running...$/s@^[^:]*: ./@@;s@:.*@=running@' | \
         sed 's@dir5/subdir3=@dir5/subdir3/here=@'
 }
 export -f format_tests_per_directory
