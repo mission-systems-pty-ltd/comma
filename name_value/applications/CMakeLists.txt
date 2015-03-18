@@ -6,9 +6,9 @@ ADD_EXECUTABLE( name-value-convert ${dir}/name-value-convert.cpp )
 ADD_EXECUTABLE( name-value-get ${dir}/name-value-get.cpp )
 ADD_EXECUTABLE( name-value-eval-preparse ${dir}/name-value-eval-preparse.cpp )
 
-TARGET_LINK_LIBRARIES( name-value-convert ${comma_EXTERNAL_ALL_LIBRARIES} comma_application comma_string comma_xpath )
-TARGET_LINK_LIBRARIES( name-value-get ${comma_EXTERNAL_ALL_LIBRARIES} comma_application comma_string comma_xpath )
-TARGET_LINK_LIBRARIES( name-value-eval-preparse ${comma_EXTERNAL_ALL_LIBRARIES} comma_application )
+TARGET_LINK_LIBRARIES( name-value-convert ${comma_EXTERNAL_ALL_LIBRARIES} comma_application comma_string comma_xpath comma_name_value )
+TARGET_LINK_LIBRARIES( name-value-get ${comma_EXTERNAL_ALL_LIBRARIES} comma_application comma_string comma_xpath comma_name_value )
+TARGET_LINK_LIBRARIES( name-value-eval-preparse ${comma_EXTERNAL_ALL_LIBRARIES} comma_application comma_name_value )
 
 INSTALL( TARGETS name-value-convert name-value-get name-value-eval-preparse
          RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR}

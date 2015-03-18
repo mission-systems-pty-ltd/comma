@@ -1,5 +1,5 @@
 add_executable( comma-progress comma-progress.cpp )
-target_link_libraries(comma-progress ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath)
+target_link_libraries(comma-progress ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_name_value )
 INSTALL( TARGETS comma-progress RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
 
 add_executable(comma-nap comma-nap.cpp )
