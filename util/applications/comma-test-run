@@ -472,13 +472,7 @@ function run_and_match_test()
     
     echo "${test_output}" > "output/stdout.log"
     
-    if [[ $test_failed != 0 ]]; then
-        echo "test exit with non-zero status: $test_failed" >&2
-        if [[ -z $options_log_dir ]]; then
-            echo "test output:" >&2
-            echo ${test_output} >&2
-        fi
-    fi   
+    if [[ $test_failed != 0 ]]; then echo "test exit with non-zero status: $test_failed" >&2; fi
     
     if [[ $test_failed == 0 && -f "./expected" ]]; then
         match_output=$( echo "$test_output" | comma-test-match ./expected 2>&1 )
@@ -798,7 +792,7 @@ max_memory_main=$(( $options_max_memory_main * 1024 * 1024 ))
 max_memory_shared=$(( $options_max_memory_shared * 1024 * 1024 ))
 max_wait_time=$options_max_wait_time
 max_run_time=$options_max_run_time
-export max_parallel max_memory_main max_memory_shared max_wait_time max_run_time options_debug options_quiet options_path test_output_dir options_until_first_failure options_test_option options_parallel options_no_ansiterm_control_characters options_force
+export max_parallel max_memory_main max_memory_shared max_wait_time max_run_time options_debug options_quiet options_path options_until_first_failure options_test_option options_parallel options_no_ansiterm_control_characters options_force
 
 # keep all plumbing under a common directory
 temp_dir=$( dirname "$( mktemp -d -u )" )
