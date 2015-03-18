@@ -48,7 +48,7 @@
 #include <comma/visiting/visit.h>
 #include <comma/visiting/while.h>
 
-#include <comma/name_value/ptree.h>
+#include "ptree.h"
 
 #define TEST_UNIQUE 1
 
