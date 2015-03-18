@@ -6,8 +6,6 @@ app="./app"
 [[ -x "$app" ]] || { echo "$name: application '$app' not found" >&2; exit 1; }
 
 outdir="output"
-rm -rf "$outdir" || exit 1
-mkdir -p "$outdir" || exit 1
 
 for n in $( seq 10 ) ; do
     log="$outdir/$n.log"

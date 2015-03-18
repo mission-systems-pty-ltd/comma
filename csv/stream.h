@@ -205,6 +205,12 @@ class binary_output_stream : public boost::noncopyable
 
         /// substitute corresponding fields in the buffer and write
         void write( const S& s, const char* buf );
+        
+        void write_buf(const char* buf, size_t size)
+        {
+            m_os.write(buf,size);
+            if( flush_ ) { m_os.flush(); }
+        }
 
         /// flush
         void flush();
@@ -257,7 +263,7 @@ class input_stream : public boost::noncopyable
         const binary_input_stream< S >& binary() const { return *binary_; }
         ascii_input_stream< S >& ascii() { return *ascii_; }
         binary_input_stream< S >& binary() { return *binary_; }
-        bool is_binary() const { return binary_; }
+        bool is_binary() const { return (bool)binary_; }
         bool ready() const { return binary_ ? binary_->ready() : ascii_->ready(); }
 
     private:
@@ -281,7 +287,29 @@ class output_stream : public boost::noncopyable
 
         /// construct from csv options
         output_stream( std::ostream& os, const csv::options& o, const S& sample = S() );
+        
+        output_stream( std::ostream& os, bool binary, const S& sample = S() );
 
+        /// write with input data
+        template<typename T>
+        void write_pluse( input_stream<T>& is, const S& s )
+        {
+            if( binary_)
+            {
+                binary_->write_buf( is.binary().last(), is.binary().size() );
+                write(s);
+                /*std::vector< char > buf( binary.format().size() );
+                binary.put( d, &buf[0] );
+                std::cout.write( &buf[0], buf.size() );*/
+            }
+            else
+            {
+                std::string sbuf;
+                ascii_->ascii().put( s, sbuf );
+                std::cout << comma::join( is.ascii().last(), ascii_->ascii().delimiter() ) << ascii_->ascii().delimiter() << sbuf << std::endl;
+            }
+        }
+        
         /// write
         void write( const S& s ) { if( ascii_ ) { ascii_->write( s ); } else { binary_->write( s ); } }
 
@@ -304,7 +332,7 @@ class output_stream : public boost::noncopyable
         const binary_output_stream< S >& binary() const { return *binary_; }
         ascii_output_stream< S >& ascii() { return *ascii_; }
         binary_output_stream< S >& binary() { return *binary_; }
-        bool is_binary() const { return binary_; }
+        bool is_binary() const { return (bool)binary_; }
 
     private:
         boost::scoped_ptr< ascii_output_stream< S > > ascii_;
@@ -588,6 +616,14 @@ inline output_stream< S >::output_stream( std::ostream& os, const csv::options& 
     if( o.binary() ) { binary_.reset( new binary_output_stream< S >( os, o, sample ) ); }
     else { ascii_.reset( new ascii_output_stream< S >( os, o, sample ) ); }
 }
+
+template < typename S >
+inline output_stream< S >::output_stream( std::ostream& os, bool binary, const S& sample )
+{
+    if( binary ) { binary_.reset( new binary_output_stream< S >( os, "", "", false, sample ) ); }
+    else { ascii_.reset( new ascii_output_stream< S >( os, sample ) ); }
+}
+
 
 template < typename S >
 inline output_stream< S >::output_stream( std::ostream& os, const S& sample )

@@ -114,6 +114,7 @@ Find subdirectories containing the files ${brown}test${none}, ${brown}input${non
     (b) otherwise the success of the test depends on the exit status of the 'test' script.
 
 Return 0 if all tests succeed, or non-zero if any of the tests fail.
+Output of the test scripts is recorded in ${brown}output/stderr.log${none} and ${brown}output/stdout.log${brown}.
 
 Usage: comma-test-run [<options>]
     
@@ -144,12 +145,15 @@ $( description | sed 's/^/    /g' )
 
 echo -e "
 
-${brown}Input, test, and expected files${none}
+${brown}Input, test, output, and expected files${none}
     File 'input', if exists, is fed to the stdin of the test script.
 
     If there is an 'input' or 'expected' file but no 'test' in the same directory, the 'test' script in the
     closest parent directory is used. If there is a 'test' by itself with no 'input' or 'expected' file,
     it is only executed if there is no subdirectory containing 'input', 'expected' or 'test'.
+    
+    Test output will be put into the subdirectory 'output'. This will contain standard error log 'output/stderr.log'
+    and output log 'output/stdout.log'. 'output/stdout.log' is the same data that is matched to the 'expected' file.
 
 ${brown}Disabling tests${none}
     to disable tests in a directory and all its subdirectories
@@ -456,23 +460,31 @@ export -f terminate_run_and_match_test
 function run_and_match_test()
 {
     local test_output test_failed match_output error_files
+    
+    rm -rf output
+    mkdir -p output
+    
     test_output=$( if [ -f ./input ] ; then cat ./input ; fi \
-        | comma_progress_named "$our_stats_progress" "$dir" "$test_exec" "$path" "$verbose" $options_test_option )
+        | comma_progress_named "$our_stats_progress" "$dir" "$test_exec" "$path" "$verbose" $options_test_option 2> "output/stderr.log" )
     test_failed=$?
     error_files="$( find . -name out_of_shared_memory )"
     [[ -n "$error_files" ]] && return 1
-    # TODO save $test_output to a file; find a unique name
-    if [[ $test_failed != 0 && -n "$test_output" ]]; then
-        echo "test exit with non-zero status, output '$test_output'" >&2
-    fi
+    
+    echo "${test_output}" > "output/stdout.log"
+    
+    if [[ $test_failed != 0 ]]; then
+        echo "test exit with non-zero status: $test_failed" >&2
+        if [[ -z $options_log_dir ]]; then
+            echo "test output:" >&2
+            echo ${test_output} >&2
+        fi
+    fi   
+    
     if [[ $test_failed == 0 && -f "./expected" ]]; then
         match_output=$( echo "$test_output" | comma-test-match ./expected 2>&1 )
         if [[ -n "$match_output" ]]; then
-            error_ "comma-test-run: test output:"
-            echo >&2
-            echo "${test_output}" >&2
-            echo >&2
-            error_ "does not match the expected:\n"
+            error_ "comma-test-run: test output does not match expected:\n"
+            echo "expected output:" >&2
             echo "$match_output" >&2
             echo >&2
             test_failed=1
@@ -515,7 +527,7 @@ function terminate_run_single_test()
     ) 9>>"$comma_test_run_output_flock"
 
     rm -f "$our_stats_progress"
-    rm -f "$our_stderrout_log" # TODO rename instead; find a unique name
+    rm -f "$our_stderrout_log"
     # a process that exits in response to SIGINT should kill itself with SIGINT
     # see http://www.cons.org/cracauer/sigint.html
     [[ "$1" == "SIGINT" ]] && { trap - INT ; kill -s INT $BASHPID ; }
@@ -665,7 +677,7 @@ function run_single_test()
     ) 9>>"$comma_test_run_output_flock"
 
     rm -f "$our_stats_progress"
-    rm -f "$our_stderrout_log"  # TODO: save instead; find a unique name
+    rm -f "$our_stderrout_log"
 
     return $result
 }
@@ -779,13 +791,14 @@ have_max_parallel=$( comma_options_has --max-parallel=$options_max_parallel $@ )
     (( $options_max_wait_time < 1 )) && { error_ "$name: wait time $options_max_wait_time < 1s or not a number"; exit 1; }
 }
 (( $options_max_run_time < 1 )) && { error_ "$name: timeout run time $options_max_run_time < 1s or not a number"; exit 1; }
+
 # and convert to bytes and export for everyone to use
 max_parallel=$options_max_parallel
 max_memory_main=$(( $options_max_memory_main * 1024 * 1024 ))
 max_memory_shared=$(( $options_max_memory_shared * 1024 * 1024 ))
 max_wait_time=$options_max_wait_time
 max_run_time=$options_max_run_time
-export max_parallel max_memory_main max_memory_shared max_wait_time max_run_time options_debug options_quiet options_path options_until_first_failure options_test_option options_parallel options_no_ansiterm_control_characters options_force
+export max_parallel max_memory_main max_memory_shared max_wait_time max_run_time options_debug options_quiet options_path test_output_dir options_until_first_failure options_test_option options_parallel options_no_ansiterm_control_characters options_force
 
 # keep all plumbing under a common directory
 temp_dir=$( dirname "$( mktemp -d -u )" )

@@ -7,9 +7,6 @@ app="long-running-app"
 export app
 
 outdir="output"
-log="test.log"
-rm -rf "$outdir" || exit 1
-mkdir -p "$outdir" || exit 1
 
 export PATH="$( pwd ):$PATH"
 cd "$outdir"

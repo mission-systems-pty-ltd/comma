@@ -12,8 +12,6 @@ function handle()
 trap 'handle' EXIT
 
 output_dir="output"
-rm -rf "$output_dir" || exit 1
-mkdir -p "$output_dir" || exit 1
 output_dir=$( readlink -f "$output_dir" )
 
 tarball="../data/sample.tar"
