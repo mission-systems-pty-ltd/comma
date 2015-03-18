@@ -266,10 +266,4 @@ TEST( serialise, DISABLED_path_value_confused_with_ini_comments )
     ASSERT_THROW( comma::read< config >( c, iss ), comma::exception );
 }
 
-TEST( serialise, guess_nonseekable_stream )
-{
-    config c; 
-    ASSERT_THROW( comma::read< config >( c, std::cin ), comma::exception );
-}
-
 } } } // namespace comma { namespace test { namespace serialise_guess {

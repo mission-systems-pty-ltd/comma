@@ -89,8 +89,11 @@ struct property_tree // quick and dirty
     /// read as path-value from input stream
     static void from_path_value( std::istream& is, boost::property_tree::ptree& ptree,  check_repeated_paths check_type = no_check, char equal_sign = '=', char delimiter = ',' );
 
-    /// guess format and read boost property tree from file or stream connected to a file (pipe or terminal input is not accepted)
+    /// guess format and read boost property tree from stream (a wrapper for from_unknown_seekable that buffers input from a non-seekable stream in stringstream)
     static void from_unknown( std::istream& stream, boost::property_tree::ptree& ptree, check_repeated_paths check_type = no_check, char equal_sign = '=', char delimiter = ','  );
+
+    /// guess format and read boost property tree from a seekable stream (pipe or terminal input is not accepted)
+    static void from_unknown_seekable( std::istream& stream, boost::property_tree::ptree& ptree, check_repeated_paths check_type = no_check, char equal_sign = '=', char delimiter = ','  );
 
     template < template < typename > class Traits = comma::visiting::traits >
     class from
@@ -587,9 +590,25 @@ inline boost::property_tree::ptree property_tree::from_path_value_string( const 
     return ptree;
 }
 
+inline bool seekable( std::istream& stream ) { return stream.seekg( 0, std::ios::beg ); }
+
 inline void property_tree::from_unknown( std::istream& stream, boost::property_tree::ptree& ptree, check_repeated_paths check_type, char equal_sign, char delimiter)
 {
-    if( !stream.seekg( 0, std::ios::beg ) ) { COMMA_THROW( comma::exception, "input stream is not seekable" ); }
+    if( seekable( stream ) ) 
+    {
+        from_unknown_seekable( stream, ptree, check_type, equal_sign, delimiter); 
+    }
+    else 
+    {
+        std::stringstream buffer;
+        buffer << stream.rdbuf();
+        from_unknown_seekable( buffer, ptree, check_type, equal_sign, delimiter);
+    }
+}
+
+inline void property_tree::from_unknown_seekable( std::istream& stream, boost::property_tree::ptree& ptree, check_repeated_paths check_type, char equal_sign, char delimiter)
+{
+    if( !seekable( stream ) ) { COMMA_THROW( comma::exception, "input stream is not seekable" ); }
     try
     {
         stream.clear();
@@ -621,6 +640,7 @@ inline void property_tree::from_unknown( std::istream& stream, boost::property_t
     // TODO: add try for ini format (currently the problem is that path-value treats ini sections and comments as valid entries; possible solution: make path-value parser stricter)
     COMMA_THROW( comma::exception, "failed to guess format" );
 }
+
 
 } // namespace comma {
 

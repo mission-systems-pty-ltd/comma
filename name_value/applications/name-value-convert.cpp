@@ -49,8 +49,7 @@
 static void usage( bool verbose = false )
 {
     std::cerr << std::endl;
-    std::cerr << "take a stream of name-value style input on stdin," << std::endl;
-    std::cerr << "output value at given path on stdout" << std::endl;
+    std::cerr << "take json, xml, or path-value formatted data on stdin and output in name-value or another format on stdout" << std::endl;
     std::cerr << std::endl;
     std::cerr << "usage: cat data.xml | name-value-convert [<options>]" << std::endl;
     std::cerr << std::endl;
@@ -80,8 +79,6 @@ static void usage( bool verbose = false )
     std::cerr << "data flow options:" << std::endl;
     std::cerr << "    --linewise,-l: if present, treat each input line as a record" << std::endl;
     std::cerr << "                   if absent, treat all of the input as one record" << std::endl;
-    std::cerr << "                   note: if --linewise is given, then --from must be given too" << std::endl;
-    std::cerr << "    --use-buffer: buffers input before guessing format (needed for non-seekable streams, e.g. pipe or terminal, but may reduce performance)" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -92,7 +89,6 @@ static char equal_sign;
 static char name_value_delimiter;
 static char path_value_delimiter;
 static bool linewise;
-static bool use_buffer;
 typedef comma::property_tree::path_mode path_mode;
 static path_mode indices_mode = comma::property_tree::disabled;
 static comma::property_tree::check_repeated_paths check_type( comma::property_tree::no_check );
@@ -103,21 +99,7 @@ template < Types Type > struct traits {};
 
 template <> struct traits< void_t >
 {
-    static void input( std::istream& is, boost::property_tree::ptree& ptree ) 
-    {
-        if( use_buffer )
-        {
-            // buffering input stream is required if reading from pipe or terminal
-            std::stringstream buffer;
-            buffer << is.rdbuf();
-            comma::property_tree::from_unknown( buffer, ptree, check_type, equal_sign, path_value_delimiter  );
-        }
-        else
-        {
-            if( !is.seekg( 0, std::ios::beg ) ) { COMMA_THROW( comma::exception, "for pipe or terminal input, use option --use-buffer" ); };
-            comma::property_tree::from_unknown( is, ptree, check_type, equal_sign, path_value_delimiter  );
-        }
-    }
+    static void input( std::istream& is, boost::property_tree::ptree& ptree ) { comma::property_tree::from_unknown( is, ptree, check_type, equal_sign, path_value_delimiter  ); }
 };
 
 template <> struct traits< ini >
@@ -179,7 +161,6 @@ int main( int ac, char** av )
         std::string to = options.value< std::string >( "--to", "name-value" );
         equal_sign = options.value( "--equal-sign,-e", '=' );
         linewise = options.exists( "--linewise,-l" );
-        use_buffer = options.exists( "--use-buffer" );
         if ( options.exists( "--take-last" ) ) check_type = comma::property_tree::take_last;
         if ( options.exists( "--verify-unique,--unique-input" ) ) check_type = comma::property_tree::unique_input;
         boost::optional< char > delimiter = options.optional< char >( "--delimiter,-d" );
@@ -197,7 +178,7 @@ int main( int ac, char** av )
         }
         else
         {
-            if( linewise ) {  std::cerr << "name-value-convert: if --linewise is specified, --from must be given" << std::endl; return 1; }
+            if( linewise ) {  std::cerr << "name-value-convert: if --linewise is present, --from must be given" << std::endl; return 1; }
             input = &traits< void_t >::input;
         }
         if( to == "ini" ) { output = &traits< ini >::output; }
