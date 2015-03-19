@@ -205,11 +205,7 @@ function comma_execute_and_wait()
     command_to_execute_status=$?
     unset command_to_execute_pgid
     # restore traps
-    if [[ -z "$saved_traps" ]] ; then
-        trap - ${signal_list//,/ }
-    else
-        eval "$saved_traps"
-    fi
+    trap - ${signal_list//,/ } ; eval "$saved_traps"
     # return the wait outcome
     return $command_to_execute_status
 }
