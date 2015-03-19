@@ -1,0 +1,5 @@
+test[1]/exit/status=0
+test[1]/traps/start=test[1]/traps/end
+test[1]/traps/SIGUSR1=1
+test[2]/exit/status=124
+test[2]/output="killed by TERM"

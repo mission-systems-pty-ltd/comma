@@ -1,0 +1,72 @@
+#!/bin/bash
+
+source $( which comma-application-util ) || exit 1
+
+export output_dir="output"
+rm -rf "$output_dir" || exit 1
+mkdir -p "$output_dir" || exit 1
+
+# Tests to consider:
+#
+# - set up signal handlers, then run comma_execute_and_wait, and kill by a signal;
+#   verify that control is returned to the original handler
+#
+# - specify different signal list: trap a custom signal and report
+
+# set up signal handler; run comma-execute and wait; verify that original
+# handler has been restored
+function test01_trap()
+{
+    exit 1
+}
+export -f test01_trap
+
+function test01()
+{
+    # work in a subprocess to prevent setting traps in the script itself
+    (
+        trap 'test01_trap' SIGUSR1
+        start_traps=$( trap )
+        comma_execute_and_wait "comma-nap 5" >/dev/null
+        end_traps=$( trap )
+        echo "test[1]/traps/start=\"$start_traps\""
+        echo "test[1]/traps/end=\"$end_traps\""
+        echo "test[1]/traps/SIGUSR1=$( echo "$start_traps" | grep -q SIGUSR1 && echo 1 || echo 0 )"
+    )
+}
+test01 ; echo "test[1]/exit/status=$?"
+
+# kill the process running comma_execute_and_wait; verify that command being
+# executed is killed, and that the expected exit status is returned
+function test02_trap()
+{
+    echo "killed by $1"
+    exit 11
+}
+export -f test02_trap
+
+function test02_to_execute()
+{
+    trap 'test02_trap TERM' SIGTERM
+    trap 'test02_trap HUP'  SIGHUP
+    trap 'test02_trap PIPE' SIGPIPE
+    trap 'test02_trap INT'  SIGINT
+    comma-nap 10 &
+    wait $!
+}
+export -f test02_to_execute
+
+function test02_to_be_killed()
+{
+    comma_execute_and_wait "bash -c test02_to_execute" > $output_file
+}
+export -f test02_to_be_killed
+
+function test02()
+{
+    export output_file="$output_dir/test02.log"
+    # will kill the function by timer (which is shorter than expected run-time)
+    timeout -k 10 -s TERM 5 bash -c test02_to_be_killed &
+    wait $!
+}
+test02 ; echo "test[2]/exit/status=$?" ; echo "test[2]/output=\""$( tail -n 1 "$output_dir"/test02.log )"\""
