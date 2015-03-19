@@ -125,7 +125,7 @@ function terminate_comma_execute_and_wait()
     local received_signal=$1
     # kill the command being executed
     if [[ -n "$command_to_execute_pgid" ]] ; then
-        kill -s TERM -- -$command_to_execute_pgid
+        kill -s $received_signal -- -$command_to_execute_pgid
         wait $command_to_execute_pgid
         unset command_to_execute_pgid
     fi
@@ -144,22 +144,24 @@ export -f terminate_comma_execute_and_wait
 # - if some variables are used within a function / script, those variables shall be exported
 # - if it is a function, it shall be prepended with "bash -c" (or "sh -c", or "zsh -c")
 #   and shall not take arguments (pass through global variables instead); space-separated
-#   arguments are incorrectly split
+#   arguments are incorrectly split when passing to timeout; if your function needs arguments,
+#   provide a wrapper that takes arguments from the environment and calls your function
 # - command shall not contain output redirection and such (better pass the output file name
-#   into the function / script being executed and redirect inside
+#   into the function / script being executed and redirect inside)
 # - etc.
 #
 # The '--signals' option specifies signals to wait for. Default is INT,HUP,TERM (signals are
 # given as comma-separated list of names).
 #
 # If any of the specified signals arrives, the command (process group) being executed is killed
-# by SIGTERM, the traps are restored to their state prior to the entry into comma_execute_and_wait,
-# and the same signal is re-raised (sent to itself), possibly triggering one of the restored traps.
+# by the same signal, the signal traps are restored to their state prior to the entry into
+# comma_execute_and_wait, and the same signal is re-raised (sent to itself), possibly triggering
+# one of the restored traps.
 #
 # If the custom timeout is provided (in time units and format understood by timeout (1) utility)
 # and the command-to-execute takes longer, it is terminated by SIGTERM, traps are restored, and
 # the function returns 1. The default timeout is 4294967296 days (about 10 million years),
-# effectively wait forever.
+# effectively infinite.
 function comma_execute_and_wait()
 {
     local saved_traps
