@@ -7,3 +7,5 @@ test[3]/exit/status=124
 test[3]/output="killed by TERM"
 test[4]/exit/status=124
 test[4]/output="handle HUP"
+test[5]/exit/status=124
+test[5]/output="killed by USR1"

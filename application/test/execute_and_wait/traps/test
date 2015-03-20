@@ -6,10 +6,6 @@ export output_dir="output"
 rm -rf "$output_dir" || exit 1
 mkdir -p "$output_dir" || exit 1
 
-# Tests to consider:
-#
-# - specify different signal list: trap a custom signal and report
-
 # set up signal handler; run comma-execute and wait; verify that original
 # handler has been restored
 function test01_trap()
@@ -48,6 +44,7 @@ function test02_to_execute()
     trap 'test02_trap HUP'  SIGHUP
     trap 'test02_trap PIPE' SIGPIPE
     trap 'test02_trap INT'  SIGINT
+    trap 'test02_trap USR1' SIGUSR1
     comma-nap 10 &
     wait $!
 }
@@ -126,3 +123,18 @@ function test04()
     )
 }
 test04 ; echo "test[4]/exit/status=$?" ; echo "test[4]/output=\""$( cat "$output_dir"/test04.log )"\""
+
+# similar to test03, but specify a custom signal
+function test05()
+{
+    (
+        scriptdir=$( dirname "$0" )/private
+        script="$scriptdir"/test05-script
+        [[ -x "$script" ]] || exit 1
+        export output_file="$output_dir/test05.log"
+        # will kill the function by timer (which is shorter than expected run-time)
+        timeout -k 10 -s USR1 5 "$script" &
+        wait $!
+    )
+}
+test05 ; echo "test[5]/exit/status=$?" ; echo "test[5]/output=\""$( cat "$output_dir"/test05.log )"\""
