@@ -134,11 +134,13 @@ function terminate_comma_execute_and_wait()
 }
 export -f terminate_comma_execute_and_wait
 
-# Usage: comma_execute_and_wait command [--signals=signal1,signal2,...] [--max-wait=max_wait]
+# Usage:
+#   comma_execute_and_wait command [--signals=signal1,signal2,...] [--max-wait=max_wait]
 #
 # The function executes the given command (non-option argument) in a background process
 # and waits for its completion (or timeout, see below).
-# The command must be a self-contained string that can be used "as-is":
+#
+# The command to be executed must be a self-contained string that can be used "as-is":
 # - if it is a bash function, this function shall be 'export -f'-ed
 # - if the string contains variables, those variables shall be exported
 # - if some variables are used within a function / script, those variables shall be exported
@@ -181,7 +183,7 @@ function comma_execute_and_wait()
             --signals=*|--signal-list=*) signal_list=${1#*=};;
             --max-wait=*|--timeout=*)    execute_and_wait_timeout=${1#*=};;
             -*)                          echo "comma_execute_and_wait: unknown option '$1' (called: comma_execute_and_wait $original_args)" >&2; return 1;;
-            *)                           [[ -n "$command_to_execute" ]] && { echo "comma_execute_and_wait: command to execute given twice (called: comma_trap $original_args)" >&2; return 1; }
+            *)                           [[ -n "$command_to_execute" ]] && { echo "comma_execute_and_wait: command to execute given twice (called: comma_execute_and_wait $original_args)" >&2; return 1; }
                                          command_to_execute="$1" ;;
         esac
         shift
