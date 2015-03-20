@@ -5,5 +5,6 @@ trap 'test02_trap TERM' SIGTERM
 trap 'test02_trap HUP'  SIGHUP
 trap 'test02_trap PIPE' SIGPIPE
 trap 'test02_trap INT'  SIGINT
-comma-nap 10 &
+
+comma_execute_and_wait "comma-nap 10"
 wait $!
