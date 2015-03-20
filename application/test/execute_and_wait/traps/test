@@ -73,6 +73,11 @@ function test02()
 }
 test02 ; echo "test[2]/exit/status=$?" ; echo "test[2]/output=\""$( cat "$output_dir"/test02.log )"\""
 
+# similar to test02, but use an external script
+# note the critical difference:
+# - in the bash function case (test 2), it is killed by HUP, which is sent by bash itself
+#   in responce to receiving TERM
+# - in the case of a script, the script is killed by TERM sent from timeout
 function test03()
 {
     (
