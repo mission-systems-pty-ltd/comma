@@ -64,10 +64,12 @@ export -f test02_to_be_killed
 
 function test02()
 {
-    export output_file="$output_dir/test02.log"
-    # will kill the function by timer (which is shorter than expected run-time)
-    timeout -k 10 -s TERM 5 bash -c test02_to_be_killed &
-    wait $!
+    (
+        export output_file="$output_dir/test02.log"
+        # will kill the function by timer (which is shorter than expected run-time)
+        timeout -k 10 -s TERM 5 bash -c test02_to_be_killed &
+        wait $!
+    )
 }
 test02 ; echo "test[2]/exit/status=$?" ; echo "test[2]/output=\""$( tail -n 1 "$output_dir"/test02.log )"\""
 
