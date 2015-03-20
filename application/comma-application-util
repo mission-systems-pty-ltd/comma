@@ -164,6 +164,11 @@ export -f terminate_comma_execute_and_wait
 # and the command-to-execute takes longer, it is terminated by SIGTERM, traps are restored, and
 # the function returns 1. The default timeout is 4294967296 days (about 10 million years),
 # effectively infinite.
+#
+# If multiple commands have to be started in parallel, use comma_execute_and_wait in
+# combination with xargs. The unit test in "parallel" directory provides a code template.
+# As too many details may differ on case-by-case basis (how to accumulate exit statuses,
+# which arguments pass to xargs, etc.), no generic implementation is provided.
 function comma_execute_and_wait()
 {
     local saved_traps

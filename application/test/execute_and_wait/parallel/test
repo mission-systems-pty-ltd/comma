@@ -11,13 +11,15 @@ export script=$( dirname "$0" )/private/tester
 
 commandlist=( "$script 10 $output_dir/log1" "$script 5 $output_dir/log2" )
 
-for c in "${commandlist[@]}" ; do echo $c ; done | ## execute in parallel...
+# This is a template for running multiple background commands in parallel
+for c in "${commandlist[@]}" ; do echo $c ; done |
    (
        xargs -I{} --max-procs 0 bash -c '
           {
               comma_execute_and_wait "{}"
           }' 
    )
+# end of template
 
 [[ -s "$output_dir/log1" ]] || exit 1
 [[ -s "$output_dir/log2" ]] || exit 1
