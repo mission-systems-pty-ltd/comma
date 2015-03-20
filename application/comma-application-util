@@ -118,6 +118,106 @@ function kill_children()
 }
 export -f kill_children
 
+# This is a signal handler used by comma_execute_and_wait. See that function for detail.
+function terminate_comma_execute_and_wait()
+{
+    trap '' ${signal_list//,/ }        # temporarily ignore signals
+    local received_signal=$1
+    # kill the command being executed
+    if [[ -n "$command_to_execute_pgid" ]] ; then
+        kill -s $received_signal -- -$command_to_execute_pgid
+        wait $command_to_execute_pgid
+        unset command_to_execute_pgid
+    fi
+    eval "$saved_traps"                # use old handlers
+    kill -s $received_signal $BASHPID  # relinguish control
+}
+export -f terminate_comma_execute_and_wait
+
+# Usage:
+#   comma_execute_and_wait command [--signals=signal1,signal2,...] [--max-wait=max_wait]
+#
+# The function executes the given command (non-option argument) in a background process
+# and waits for its completion (or timeout, see below).
+#
+# The command to be executed must be a self-contained string that can be used "as-is":
+# - if it is a bash function, this function shall be 'export -f'-ed
+# - if the string contains variables, those variables shall be exported
+# - if some variables are used within a function / script, those variables shall be exported
+# - if it is a function, it shall be prepended with "bash -c" (or "sh -c", or "zsh -c")
+#   and shall not take arguments (pass through global variables instead); space-separated
+#   arguments are incorrectly split when passing to timeout; if your function needs arguments,
+#   provide a wrapper that takes arguments from the environment and calls your function
+# - command shall not contain output redirection and such (better pass the output file name
+#   into the function / script being executed and redirect inside)
+# - etc.
+#
+# The '--signals' option specifies signals to wait for. Default is INT,HUP,TERM (signals are
+# given as comma-separated list of names).
+#
+# If any of the specified signals arrives, the command (process group) being executed is killed
+# by the same signal, the signal traps are restored to their state prior to the entry into
+# comma_execute_and_wait, and the same signal is re-raised (sent to itself), possibly triggering
+# one of the restored traps.
+#
+# If the custom timeout is provided (in time units and format understood by timeout (1) utility)
+# and the command-to-execute takes longer, it is terminated by SIGTERM, traps are restored, and
+# the function returns 1. The default timeout is 4294967296 days (about 10 million years),
+# effectively infinite.
+#
+# If multiple commands have to be started in parallel, use comma_execute_and_wait in
+# combination with xargs. The unit test in "parallel" directory provides a code template.
+# As too many details may differ on case-by-case basis (how to accumulate exit statuses,
+# which arguments pass to xargs, etc.), no generic implementation is provided.
+function comma_execute_and_wait()
+{
+    local saved_traps
+    # store existing traps for restoring on exit
+    saved_traps=$( trap )
+
+    # defaults
+    local signal_list="TERM,INT,HUP"
+    local command_to_execute=""
+    # timeout default is very long time, essentially, forever
+    local execute_and_wait_timeout="4294967296d"
+
+    # process arguments
+    local original_args="$@"
+    while [[ $# -ne 0 ]]; do
+        case $1 in
+            --signals=*|--signal-list=*) signal_list=${1#*=};;
+            --max-wait=*|--timeout=*)    execute_and_wait_timeout=${1#*=};;
+            -*)                          echo "comma_execute_and_wait: unknown option '$1' (called: comma_execute_and_wait $original_args)" >&2; return 1;;
+            *)                           [[ -n "$command_to_execute" ]] && { echo "comma_execute_and_wait: command to execute given twice (called: comma_execute_and_wait $original_args)" >&2; return 1; }
+                                         command_to_execute="$1" ;;
+        esac
+        shift
+    done
+
+    # set up a new signal handler / trap that:
+    # - determines the signal being sent so that the same signal can be re-raised
+    # - if the command-to-execute is running, kill its process group
+    # - restores the traps
+    # - re-sends the trapped signal to itself
+    local signal_to_handle
+    for signal_to_handle in ${signal_list//,/ } ; do
+        trap 'terminate_comma_execute_and_wait $signal_to_handle' $signal_to_handle
+    done
+
+    # run the command-to-execute as a background job in its own process group and under timeout
+    local command_to_execute_pgid command_to_execute_status
+    timeout -k 10 -s TERM $execute_and_wait_timeout $command_to_execute & command_to_execute_pgid=$!
+    # wait for the completion of the subprocess
+    wait $command_to_execute_pgid
+    command_to_execute_status=$?
+    unset command_to_execute_pgid
+    # restore traps
+    trap - ${signal_list//,/ } ; eval "$saved_traps"
+    # return the wait outcome
+    return $command_to_execute_status
+}
+export -f comma_execute_and_wait
+
 # usage: comma_trap [<"cleanup" command>] [<signal list> ...] [--exit[=]<exit code>] [--kill-children|--no-kill-children|--kill-recursive] (default = --kill-recursive)
 # Trap termination signals.
 # Order of arguments does not matter; arguments starting with "SIG" are assumed to be signal names.

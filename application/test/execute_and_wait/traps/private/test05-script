@@ -1,0 +1,4 @@
+#!/bin/bash
+
+exec 2>&1 > "$output_file"
+comma_execute_and_wait "bash -c test02_to_execute" --signals=TERM,HUP,USR1
