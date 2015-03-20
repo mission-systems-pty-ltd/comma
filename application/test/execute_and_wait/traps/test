@@ -70,3 +70,17 @@ function test02()
     wait $!
 }
 test02 ; echo "test[2]/exit/status=$?" ; echo "test[2]/output=\""$( tail -n 1 "$output_dir"/test02.log )"\""
+
+function test03()
+{
+    (
+        scriptdir=$( dirname "$0" )/private
+        script="$scriptdir"/test03-script
+        [[ -x "$script" ]] || exit 1
+        export output_file="$output_dir/test03.log"
+        # will kill the function by timer (which is shorter than expected run-time)
+        timeout -k 10 -s TERM 5 "$script" &
+        wait $!
+    )
+}
+test03 ; echo "test[3]/exit/status=$?" ; echo "test[3]/output=\""$( tail -n 1 "$output_dir"/test03.log )"\""
