@@ -78,7 +78,7 @@ function description()
 {
     cat <<EOF
 --help,-h; show this help, --help --verbose for more help
---black-list=[<file>]; do not run these tests mentioned in <file>, e.g. a lists of sub-directories in white list to be excluded. Format - see --white-list above.
+--black-list=[<file>]; do not run these tests mentioned in <file>, e.g. a lists of sub-directories in white list to be excluded. Format - see --white-list below.
 --debug; much more debug output
 --end=[<dir>]; run tests up to a given test, the latter excluded, where test directories are ordered lexicographically
 --from,--begin=[<dir>]; run tests starting from a given test, where test directories are ordered lexicographically
@@ -465,12 +465,10 @@ function run_and_match_test()
     mkdir -p output
     
     test_output=$( if [ -f ./input ] ; then cat ./input ; fi \
-        | comma_progress_named "$our_stats_progress" "$dir" "$test_exec" "$path" "$verbose" $options_test_option 2> "output/stderr.log" )
+        | comma_progress_named "$our_stats_progress" "$dir" "$test_exec" "$path" "$verbose" $options_test_option 2> "output/stderr.log" | tee "output/stdout.log" )
     test_failed=$?
     error_files="$( find . -name out_of_shared_memory )"
     [[ -n "$error_files" ]] && return 1
-    
-    echo "${test_output}" > "output/stdout.log"
     
     if [[ $test_failed != 0 ]]; then echo "test exit with non-zero status: $test_failed" >&2; fi
     
