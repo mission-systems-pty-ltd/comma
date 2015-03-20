@@ -5,3 +5,5 @@ test[2]/exit/status=124
 test[2]/output="killed by HUP"
 test[3]/exit/status=124
 test[3]/output="killed by TERM"
+test[4]/exit/status=124
+test[4]/output="handle HUP"

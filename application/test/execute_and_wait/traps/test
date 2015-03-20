@@ -8,9 +8,6 @@ mkdir -p "$output_dir" || exit 1
 
 # Tests to consider:
 #
-# - set up signal handlers, then run comma_execute_and_wait, and kill by a signal;
-#   verify that control is returned to the original handler
-#
 # - specify different signal list: trap a custom signal and report
 
 # set up signal handler; run comma-execute and wait; verify that original
@@ -91,3 +88,41 @@ function test03()
     )
 }
 test03 ; echo "test[3]/exit/status=$?" ; echo "test[3]/output=\""$( cat "$output_dir"/test03.log )"\""
+
+function test04_outer_handler()
+{
+    echo "handle $1"
+    exit 0
+}
+export -f test04_outer_handler
+
+function test04_to_execute()
+{
+    comma-nap 10 &
+    wait $!
+}
+export -f test04_to_execute
+
+function test04_to_be_killed()
+{
+    trap 'test04_outer_handler TERM' SIGTERM
+    trap 'test04_outer_handler HUP'  SIGHUP
+    trap 'test04_outer_handler PIPE' SIGPIPE
+    trap 'test04_outer_handler INT'  SIGINT
+    #
+    comma_execute_and_wait "bash -c test04_to_execute" > $output_file
+}
+export -f test04_to_be_killed
+
+# set up signal handlers, then run comma_execute_and_wait, and kill by a signal;
+# after terminating the background job, control is returned to the original signal handler
+function test04()
+{
+    (
+        export output_file="$output_dir/test04.log"
+        # will kill the function by timer (which is shorter than expected run-time)
+        timeout -k 10 -s TERM 5 bash -c test04_to_be_killed &
+        wait $!
+    )
+}
+test04 ; echo "test[4]/exit/status=$?" ; echo "test[4]/output=\""$( cat "$output_dir"/test04.log )"\""
