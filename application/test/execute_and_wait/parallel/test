@@ -1,0 +1,32 @@
+#!/bin/bash
+
+source $( which comma-application-util ) || exit 1
+
+export output_dir="output"
+rm -rf "$output_dir" || exit 1
+mkdir -p "$output_dir" || exit 1
+
+export script=$( dirname "$0" )/private/tester
+[[ -x "$script" ]] || exit 1
+
+commandlist=( "$script 10 $output_dir/log1" "$script 5 $output_dir/log2" )
+
+for c in "${commandlist[@]}" ; do echo $c ; done | ## execute in parallel...
+   (
+       xargs -I{} --max-procs 0 bash -c '
+          {
+              comma_execute_and_wait "{}"
+          }' 
+   )
+
+[[ -s "$output_dir/log1" ]] || exit 1
+[[ -s "$output_dir/log2" ]] || exit 1
+
+# check that the process were run in parallel:
+# - cat files in their time order (oldest first)
+original=$( cd output; cat $( ls -t --reverse ) )
+# - sort output messages by timestamps
+reordered=$( echo "$original" | sort )
+# - if were in parallel, the overall order shall differ from the original
+is_parallel=$( [[ "$original" == "$reordered" ]] && echo 0 || echo 1 )
+echo "parallel=$is_parallel"
