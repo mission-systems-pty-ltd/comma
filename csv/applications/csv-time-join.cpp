@@ -180,7 +180,7 @@ int main( int ac, char** av )
         select.read().add(is.fd());
         istream_select.read().add(is.fd());
         #endif // #ifndef WIN32
-        const Point* p;
+        const Point* p = NULL;
         bool next=true;
 
         bool bounding_data_available;

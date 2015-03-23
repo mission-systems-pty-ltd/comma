@@ -53,6 +53,11 @@ namespace comma { namespace csv {
 /// @todo document
 namespace detail { void unsyncronize_with_stdio(); }
 
+template < typename S > class output_stream;
+template < typename S > class input_stream;
+template < typename S, typename T > class tied;
+
+
 /// ascii csv input stream
 template < typename S >
 class ascii_input_stream : public boost::noncopyable
@@ -89,6 +94,12 @@ class ascii_input_stream : public boost::noncopyable
         /// debug purposes only
         bool ready() const;
 
+    protected:
+        friend class input_stream<S>;
+        template < typename W, typename T >
+        friend class tied;
+        std::ostream& is(){return is_;}
+        
     private:
         std::istream& is_;
         csv::ascii< S > ascii_;
@@ -137,6 +148,12 @@ class ascii_output_stream : public boost::noncopyable
         /// return fields
         const std::vector< std::string >& fields() const { return fields_; }
 
+    protected:
+        friend class output_stream<S>;
+        template < typename W, typename T>
+        friend class tied;
+        std::ostream& os(){return m_os;}
+        
     private:
         std::ostream& m_os;
         csv::ascii< S > ascii_;
@@ -176,6 +193,12 @@ class binary_input_stream : public boost::noncopyable
         /// return true, if read will not block
         bool ready() const;
 
+    protected:
+        friend class input_stream<S>;
+        template < typename W, typename T>
+        friend class tied;
+        std::ostream& is(){return is_;}
+        
     private:
         std::istream& is_;
         csv::binary< S > binary_;
@@ -206,12 +229,6 @@ class binary_output_stream : public boost::noncopyable
         /// substitute corresponding fields in the buffer and write
         void write( const S& s, const char* buf );
         
-        void write_buf(const char* buf, size_t size)
-        {
-            m_os.write(buf,size);
-            if( flush_ ) { m_os.flush(); }
-        }
-
         /// flush
         void flush();
 
@@ -221,6 +238,12 @@ class binary_output_stream : public boost::noncopyable
         /// return fields
         const std::vector< std::string >& fields() const { return fields_; }
 
+    protected:
+        template < typename W, typename T>
+        friend class tied;
+        friend class output_stream<S>;
+        std::ostream& os(){return m_os;}
+        
     private:
         std::ostream& m_os;
         csv::binary< S > binary_;
@@ -290,26 +313,6 @@ class output_stream : public boost::noncopyable
         
         output_stream( std::ostream& os, bool binary, const S& sample = S() );
 
-        /// write with input data
-        template<typename T>
-        void write_pluse( input_stream<T>& is, const S& s )
-        {
-            if( binary_)
-            {
-                binary_->write_buf( is.binary().last(), is.binary().size() );
-                write(s);
-                /*std::vector< char > buf( binary.format().size() );
-                binary.put( d, &buf[0] );
-                std::cout.write( &buf[0], buf.size() );*/
-            }
-            else
-            {
-                std::string sbuf;
-                ascii_->ascii().put( s, sbuf );
-                std::cout << comma::join( is.ascii().last(), ascii_->ascii().delimiter() ) << ascii_->ascii().delimiter() << sbuf << std::endl;
-            }
-        }
-        
         /// write
         void write( const S& s ) { if( ascii_ ) { ascii_->write( s ); } else { binary_->write( s ); } }
 
@@ -324,7 +327,7 @@ class output_stream : public boost::noncopyable
 
         /// write, substituting corresponding fields in the last record read from the input
         void write( const S& s, const input_stream< S >& istream ) { if( binary_ ) { binary_->write( s, istream.binary().last() ); } else { ascii_->write( s, istream.ascii().last() ); } }
-
+        
         /// flush
         void flush() { if( ascii_ ) { ascii_->flush(); } else { binary_->flush(); } }
 
@@ -339,6 +342,34 @@ class output_stream : public boost::noncopyable
         boost::scoped_ptr< binary_output_stream< S > > binary_;
 };
 
+/// use this class to append a columns of output to last record of input to write to output stream
+template < typename S, typename T >
+class tied
+{
+    public:
+        tied( const input_stream< S >& is, output_stream< T >& os ) : is_( is ), os_( os ) { }
+        
+        /// append record s to last record from input stream and and write them to output
+        void append( const T& data )
+        {
+            if( is_.is_binary())
+            {
+                os_.binary().os().write( is_.binary().last(), is_.binary().size() );
+                os_.write(data);
+            }
+            else
+            {
+                std::string sbuf;
+                os_.ascii().ascii().put( data, sbuf );
+                os_.ascii().os()<< comma::join( is_.ascii().last(), os_.ascii().ascii().delimiter() ) << os_.ascii().ascii().delimiter() << sbuf << std::endl;
+            }
+        }
+        
+    private:
+        const input_stream< S >& is_;
+        output_stream< T >& os_;
+        
+};
 
 template < typename S >
 inline ascii_input_stream< S >::ascii_input_stream( std::istream& is, const std::string& column_names, char delimiter, bool full_path_as_name, const S& sample )
@@ -630,6 +661,22 @@ inline output_stream< S >::output_stream( std::ostream& os, const S& sample )
     : ascii_( new ascii_output_stream< S >( os, sample ) )
 {
 }
+
+/*template< typename S > template<typename T >
+inline void output_stream< S >::append_output( input_stream< T >& is, const S& s )
+{
+    if( binary_)
+    {
+        binary_->os().write( is.binary().last(), is.binary().size() );
+        write(s);
+    }
+    else
+    {
+        std::string sbuf;
+        ascii_->ascii().put( s, sbuf );
+        ascii_->os()<< comma::join( is.ascii().last(), ascii_->ascii().delimiter() ) << ascii_->ascii().delimiter() << sbuf << std::endl;
+    }
+}*/
 
 } } // namespace comma { namespace csv {
 

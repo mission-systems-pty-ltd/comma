@@ -1,0 +1,9 @@
+test[1]/exit/status=0
+test[1]/output="normal exit"
+test[2]/exit/status=124
+test[3]/exit/status=0
+test[3]/output="normal exit"
+test[4]/exit/status=0
+test[4]/output="OK"
+test[5]/exit/status=124
+test[5]/output=""
