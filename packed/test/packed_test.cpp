@@ -786,86 +786,98 @@ TEST( test_packed_bits, test_bits_operators )
     }
 }
 
-struct status_reversed_bits32
+struct status_bits32
 {
     comma::uint32 a: 1, b: 3, : 6, c: 12, : 1, d: 9;
 };
 
 TEST( test_packed_bits, reversed_bits32 )
 {
-    comma::packed::reversed_bits32< status_reversed_bits32 > s;
-    EXPECT_EQ( 0, s().a );
-    EXPECT_EQ( 0, s().b );
-    EXPECT_EQ( 0, s().c );
-    EXPECT_EQ( 0, s().d );
-    s = 0b10000000000000000000000000000000UL;
-    EXPECT_EQ( 0b1UL, s().a );
-    s = 0b01110000000000000000000000000000UL;
-    EXPECT_EQ( 0b111UL, s().b );
-    s = 0b00000000001111111110110000000000UL;
-    EXPECT_EQ( 0b110111111111UL, s().c );
-    s = 0b00000000000000000000000101111111UL;
-    EXPECT_EQ( 0b111111101UL, s().d );
+    comma::packed::reversed_bits32< status_bits32 > packed_status;
+    EXPECT_EQ( 0, packed_status.fields().a );
+    EXPECT_EQ( 0, packed_status.fields().b );
+    EXPECT_EQ( 0, packed_status.fields().c );
+    EXPECT_EQ( 0, packed_status.fields().d );
+    packed_status = 0b10000000000000000000000000000000UL;
+    EXPECT_EQ( 0b1UL, packed_status.fields().a );
+    packed_status = 0b00110000000000000000000000000000UL;
+    EXPECT_EQ( 0b110UL, packed_status.fields().b );
+    packed_status = 0b00000000001111111110110000000000UL;
+    EXPECT_EQ( 0b110111111111UL, packed_status.fields().c );
+    packed_status = 0b00000000000000000000000101111001UL;
+    EXPECT_EQ( 0b100111101UL, packed_status.fields().d );
+}
+
+TEST( test_packed_bits, reversed_bits32_data )
+{
+    comma::packed::reversed_bits32< status_bits32 > packed_status;
+    packed_status = 0b10000001101011111111110000001001UL;
+    EXPECT_EQ(      0b10000001101011111111110000001001UL, packed_status.value() );
+    EXPECT_EQ( 0b1U, packed_status().a );
+    EXPECT_EQ( 0b100U, packed_status().b );
+    EXPECT_EQ( 0b101111111111UL, packed_status().c );
+    EXPECT_EQ( 0b100000011UL, packed_status().d );
+}
+
+TEST( test_packed_bits, reversed_bits32_fields )
+{
+    comma::packed::reversed_bits32< status_bits32 > packed_status;
+    packed_status.fields().a = 0b1U;
+    packed_status.fields().b = 0b100U;
+    packed_status.fields().c = 0b101111111111UL;
+    packed_status.fields().d = 0b100000011UL;
+    EXPECT_EQ( 0b10010000001111111111010110000001UL, packed_status.value() );
+    EXPECT_EQ( 0b1U, packed_status.fields().a );
+    EXPECT_EQ( 0b100U, packed_status.fields().b );
+    EXPECT_EQ( 0b101111111111UL, packed_status.fields().c );
+    EXPECT_EQ( 0b100000011UL, packed_status.fields().d );
 }
 
 TEST( test_packed_bits, test_reversed_bits32_default )
 {
-    static const comma::uint32 d = 0b11101111111111111111011111111101UL;
-    comma::packed::reversed_bits32< status_reversed_bits32, d > packed_status;
-    EXPECT_EQ( 0b1UL, packed_status().a );
-    EXPECT_EQ( 0b011UL, packed_status().b );
-    EXPECT_EQ( 0b101111111111UL, packed_status().c );
-    EXPECT_EQ( 0b101111111UL, packed_status().d );
-    packed_status.fields().a = 0;
-    packed_status.fields().b = 1;
-    packed_status.fields().c = 2;
-    packed_status.fields().d = 3;
-    EXPECT_EQ( 0, packed_status().a );
-    EXPECT_EQ( 1, packed_status().b );
-    EXPECT_EQ( 2, packed_status().c );
-    EXPECT_EQ( 3, packed_status().d );
-    status_reversed_bits32 default_status = packed_status.default_value();
-    EXPECT_EQ( 0b1UL, default_status.a );
-    EXPECT_EQ( 0b011UL, default_status.b );
-    EXPECT_EQ( 0b101111111111UL, default_status.c );
-    EXPECT_EQ( 0b101111111UL, default_status.d );
+    static const comma::uint32 d = 0b11101111111111111110010100001111UL;
+    comma::packed::reversed_bits32< status_bits32, d > packed_status;
+    EXPECT_EQ( 0b1UL, packed_status.fields().a );
+    EXPECT_EQ( 0b011UL, packed_status.fields().b );
+    EXPECT_EQ( 0b100111111111UL, packed_status.fields().c );
+    EXPECT_EQ( 0b111100001UL, packed_status.fields().d );
 }
 
 TEST( test_packed_bits, test_reversed_bits32_operators )
 {
     {
-        comma::packed::reversed_bits32< status_reversed_bits32 > packed_status;
+        comma::packed::reversed_bits32< status_bits32 > packed_status;
         packed_status.fields().a = 1;
         packed_status.fields().b = 2;
         packed_status.fields().c = 3;
         packed_status.fields().d = 4;
-        comma::packed::reversed_bits32< status_reversed_bits32 > s;
-        EXPECT_EQ( 0, s().a );
-        EXPECT_EQ( 0, s().b );
-        EXPECT_EQ( 0, s().c );
-        EXPECT_EQ( 0, s().d );
-        s = packed_status;
-        EXPECT_EQ( packed_status().a, s().a );
-        EXPECT_EQ( packed_status().b, s().b );
-        EXPECT_EQ( packed_status().c, s().c );
-        EXPECT_EQ( packed_status().d, s().d );
+        comma::packed::reversed_bits32< status_bits32 > another_packed_status;
+        EXPECT_EQ( 0, another_packed_status.fields().a );
+        EXPECT_EQ( 0, another_packed_status.fields().b );
+        EXPECT_EQ( 0, another_packed_status.fields().c );
+        EXPECT_EQ( 0, another_packed_status.fields().d );
+        another_packed_status = packed_status;
+        EXPECT_EQ( packed_status.fields().b, another_packed_status.fields().b );
+        EXPECT_EQ( packed_status.fields().a, another_packed_status.fields().a );
+        EXPECT_EQ( packed_status.fields().c, another_packed_status.fields().c );
+        EXPECT_EQ( packed_status.fields().d, another_packed_status.fields().d );
     }
     {
-        status_reversed_bits32 status;
+        status_bits32 status;
         status.a = 1;
         status.b = 2;
         status.c = 3;
         status.d = 4;
-        comma::packed::reversed_bits32< status_reversed_bits32 > s;
-        EXPECT_EQ( 0, s().a );
-        EXPECT_EQ( 0, s().b );
-        EXPECT_EQ( 0, s().c );
-        EXPECT_EQ( 0, s().d );
-        s = status;
-        EXPECT_EQ( status.a, s().a );
-        EXPECT_EQ( status.b, s().b );
-        EXPECT_EQ( status.c, s().c );
-        EXPECT_EQ( status.d, s().d );
+        comma::packed::reversed_bits32< status_bits32 > packed_status;
+        EXPECT_EQ( 0, packed_status().a );
+        EXPECT_EQ( 0, packed_status().b );
+        EXPECT_EQ( 0, packed_status().c );
+        EXPECT_EQ( 0, packed_status().d );
+        packed_status = status;
+        EXPECT_EQ( status.a, packed_status().a );
+        EXPECT_EQ( status.b, packed_status().b );
+        EXPECT_EQ( status.c, packed_status().c );
+        EXPECT_EQ( status.d, packed_status().d );
     }
 }
 

@@ -90,8 +90,6 @@ template< typename T > inline void reverse_bits( T& v )
     v = r;
 }
 
-template< typename T > inline T get_reversed_bits( T v ) { reverse_bits( v ); return v; }
-
 /// packed reversed 32-bit-field structure
 template < typename B, comma::uint32 Default = 0 >
 struct reversed_bits32 : public packed::field< reversed_bits32< B, Default >, B, sizeof( comma::uint32 ) >
@@ -106,21 +104,24 @@ struct reversed_bits32 : public packed::field< reversed_bits32< B, Default >, B,
 
     typedef packed::field< reversed_bits32< B, Default >, B, size > base_type;
 
-    static type default_value() { static const comma::uint32 d = get_reversed_bits( Default ); type t; ::memcpy( &t, &d, size ); return t; }
+    static type default_value() { static const comma::uint32 d = Default; type t; ::memcpy( &t, &d, size ); return t; }
 
-    static void pack( char* storage, type value ) { ::memcpy( storage, &value, size ); }
+    static void pack( char* storage, type value ) { comma::uint32 v; ::memcpy( &v, &value, size ); reverse_bits( v ); ::memcpy( storage, &v, size ); }
 
-    static type unpack( const char* storage ) { type t; ::memcpy( &t, storage, size ); return t; }
+    static type unpack( const char* storage ) { comma::uint32 v; ::memcpy( &v, storage, size ); reverse_bits( v ); type t; ::memcpy( &t, &v, size ); return t; }
 
     const reversed_bits32& operator=( const reversed_bits32& rhs ) { return base_type::operator=( rhs ); }
 
     const reversed_bits32& operator=( type rhs ) { return base_type::operator=( rhs ); }
 
-    const reversed_bits32& operator=( comma::uint32 rhs ) { reverse_bits( rhs ); type value; ::memcpy( &value, &rhs, size ); return base_type::operator=( value ); }
+    const reversed_bits32& operator=( comma::uint32 rhs ) { type value; ::memcpy( &value, &rhs, size ); return base_type::operator=( value ); }
 
-    type& fields() { return *( reinterpret_cast< type* >( this ) ); }
+    type& fields() { return *reinterpret_cast< type* >( this ); }
 
-    const type& fields() const { return *( reinterpret_cast< const type* >( this ) ); }
+    const type& fields() const { return *reinterpret_cast< const type* >( this ); }
+
+    comma::uint32 value() const { comma::uint32 v = *reinterpret_cast< const comma::uint32* >( this->data() );  reverse_bits( v ); return v; }
+
 };
 
 
