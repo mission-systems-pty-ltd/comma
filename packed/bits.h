@@ -38,6 +38,7 @@
 #include <string.h>
 #include <boost/static_assert.hpp>
 #include <comma/packed/field.h>
+#include <comma/base/types.h>
 #include <boost/type_traits.hpp>
 
 namespace comma { namespace packed {
@@ -50,7 +51,7 @@ struct bits : public packed::field< bits< B, Default >, B, sizeof( unsigned char
     enum { size = sizeof( unsigned char ) };
 
     BOOST_STATIC_ASSERT( size == 1 );
-    
+
     BOOST_STATIC_ASSERT( sizeof( B ) == 1 );
 
     typedef B type;
@@ -66,22 +67,21 @@ struct bits : public packed::field< bits< B, Default >, B, sizeof( unsigned char
     const bits& operator=( const bits& rhs ) { return base_type::operator=( rhs ); }
 
     const bits& operator=( type rhs ) { return base_type::operator=( rhs ); }
-    
+
     const bits& operator=( unsigned char rhs ) { type t; ::memcpy( &t, &rhs, 1 ); return base_type::operator=( t ); }
-    
+
     type& fields() { return *( reinterpret_cast< type* >( this ) ); }
-    
+
     const type& fields() const { return *( reinterpret_cast< const type* >( this ) ); }
 };
 
-template< typename T >
-inline void reverse_bits( T& v )
+template< typename T > inline void reverse_bits( T& v )
 {
     BOOST_STATIC_ASSERT( boost::is_unsigned< T >::value );
     unsigned int s = std::numeric_limits< T >::digits - 1;
     T r = v;
     for( v >>= 1; v; v >>= 1 )
-    {   
+    {
         r <<= 1;
         r |= v & 1;
         s--;
@@ -89,6 +89,40 @@ inline void reverse_bits( T& v )
     r <<= s;
     v = r;
 }
+
+template< typename T > inline T get_reversed_bits( T v ) { reverse_bits( v ); return v; }
+
+/// packed reversed 32-bit-field structure
+template < typename B, comma::uint32 Default = 0 >
+struct reversed_bits32 : public packed::field< reversed_bits32< B, Default >, B, sizeof( comma::uint32 ) >
+{
+    enum { size = sizeof( comma::uint32 ) };
+
+    BOOST_STATIC_ASSERT( size == 4 );
+
+    BOOST_STATIC_ASSERT( sizeof( B ) == size );
+
+    typedef B type;
+
+    typedef packed::field< reversed_bits32< B, Default >, B, size > base_type;
+
+    static type default_value() { static const comma::uint32 d = get_reversed_bits( Default ); type t; ::memcpy( &t, &d, size ); return t; }
+
+    static void pack( char* storage, type value ) { ::memcpy( storage, &value, size ); }
+
+    static type unpack( const char* storage ) { type t; ::memcpy( &t, storage, size ); return t; }
+
+    const reversed_bits32& operator=( const reversed_bits32& rhs ) { return base_type::operator=( rhs ); }
+
+    const reversed_bits32& operator=( type rhs ) { return base_type::operator=( rhs ); }
+
+    const reversed_bits32& operator=( comma::uint32 rhs ) { reverse_bits( rhs ); type value; ::memcpy( &value, &rhs, size ); return base_type::operator=( value ); }
+
+    type& fields() { return *( reinterpret_cast< type* >( this ) ); }
+
+    const type& fields() const { return *( reinterpret_cast< const type* >( this ) ); }
+};
+
 
 } } // namespace comma { namespace packed {
 
