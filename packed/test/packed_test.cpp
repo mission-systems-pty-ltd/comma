@@ -199,7 +199,7 @@ TEST( test_packed_struct_test, test_int24_byte_order )
 struct test_packed_struct_floats_t : public comma::packed::packed_struct< test_packed_struct_floats_t, 24 >
 {
     comma::packed::float32 f32;
-    comma::packed::float64 f64;    
+    comma::packed::float64 f64;
     comma::packed::net_float32 nf32;
     comma::packed::net_float64 nf64;
 };
@@ -208,7 +208,7 @@ TEST( packed_struct, test_packed_struct_floats )
 {
     test_packed_struct_floats_t s;
     EXPECT_FLOAT_EQ( true, s.f32 == 0 );
-    EXPECT_DOUBLE_EQ( true, s.f64 == 0 );    
+    EXPECT_DOUBLE_EQ( true, s.f64 == 0 );
     s.f32 = 1.2345;
     s.f64 = 1.23456789;
     EXPECT_FLOAT_EQ( 1.2345, s.f32() );
@@ -219,11 +219,11 @@ TEST( packed_struct, test_packed_struct_net_floats )
 {
     test_packed_struct_floats_t s;
     EXPECT_FLOAT_EQ( true, s.nf32 == 0 );
-    EXPECT_DOUBLE_EQ( true, s.nf64 == 0 );            
+    EXPECT_DOUBLE_EQ( true, s.nf64 == 0 );
     s.nf32 = 1.2345;
     s.nf64 = 1.23456789;
     EXPECT_FLOAT_EQ( 1.2345, s.nf32() );
-    EXPECT_DOUBLE_EQ( 1.23456789, s.nf64() );    
+    EXPECT_DOUBLE_EQ( 1.23456789, s.nf64() );
 }
 
 TEST( test_packed_struct_test, test_little_endian_floats )
@@ -791,94 +791,122 @@ struct status_bits32
     comma::uint32 a: 1, b: 3, : 6, c: 12, : 1, d: 9;
 };
 
-TEST( test_packed_bits, reversed_bits32 )
-{
-    comma::packed::reversed_bits32< status_bits32 > packed_status;
-    EXPECT_EQ( 0, packed_status.fields().a );
-    EXPECT_EQ( 0, packed_status.fields().b );
-    EXPECT_EQ( 0, packed_status.fields().c );
-    EXPECT_EQ( 0, packed_status.fields().d );
-    packed_status = 0b10000000000000000000000000000000UL;
-    EXPECT_EQ( 0b1UL, packed_status.fields().a );
-    packed_status = 0b00110000000000000000000000000000UL;
-    EXPECT_EQ( 0b110UL, packed_status.fields().b );
-    packed_status = 0b00000000001111111110110000000000UL;
-    EXPECT_EQ( 0b110111111111UL, packed_status.fields().c );
-    packed_status = 0b00000000000000000000000101111001UL;
-    EXPECT_EQ( 0b100111101UL, packed_status.fields().d );
-}
 
-TEST( test_packed_bits, reversed_bits32_unpacked_struct )
-{
-    comma::packed::reversed_bits32< status_bits32 > packed_status;
-    packed_status = 0b10000001101011111111110000001001UL;
-    EXPECT_EQ(      0b10000001101011111111110000001001UL, packed_status.value() );
-    EXPECT_EQ( 0b1U, packed_status().a );
-    EXPECT_EQ( 0b100U, packed_status().b );
-    EXPECT_EQ( 0b101111111111UL, packed_status().c );
-    EXPECT_EQ( 0b100000011UL, packed_status().d );
-}
-
-TEST( test_packed_bits, reversed_bits32_fields_assignment )
-{
-    comma::packed::reversed_bits32< status_bits32 > packed_status;
-    packed_status.fields().a = 0b1U;
-    packed_status.fields().b = 0b100U;
-    packed_status.fields().c = 0b101111111111UL;
-    packed_status.fields().d = 0b100000011UL;
-    EXPECT_EQ( 0b10010000001111111111010110000001UL, packed_status.value() );
-    EXPECT_EQ( 0b1U, packed_status.fields().a );
-    EXPECT_EQ( 0b100U, packed_status.fields().b );
-    EXPECT_EQ( 0b101111111111UL, packed_status.fields().c );
-    EXPECT_EQ( 0b100000011UL, packed_status.fields().d );
-}
-
-TEST( test_packed_bits, test_reversed_bits32_default )
-{
-    static const comma::uint32 d = 0b11101111111111111110010100001111UL;
-    comma::packed::reversed_bits32< status_bits32, d > packed_status;
-    EXPECT_EQ( 0b1UL, packed_status.fields().a );
-    EXPECT_EQ( 0b011UL, packed_status.fields().b );
-    EXPECT_EQ( 0b100111111111UL, packed_status.fields().c );
-    EXPECT_EQ( 0b111100001UL, packed_status.fields().d );
-}
-
-TEST( test_packed_bits, test_reversed_bits32_operators )
+TEST( test_packed_bits, reversed_bits_contructor )
 {
     {
-        comma::packed::reversed_bits32< status_bits32 > packed_status;
-        packed_status.fields().a = 1;
-        packed_status.fields().b = 2;
-        packed_status.fields().c = 3;
-        packed_status.fields().d = 4;
-        comma::packed::reversed_bits32< status_bits32 > another_packed_status;
-        EXPECT_EQ( 0, another_packed_status.fields().a );
-        EXPECT_EQ( 0, another_packed_status.fields().b );
-        EXPECT_EQ( 0, another_packed_status.fields().c );
-        EXPECT_EQ( 0, another_packed_status.fields().d );
-        another_packed_status = packed_status;
-        EXPECT_EQ( packed_status.fields().b, another_packed_status.fields().b );
-        EXPECT_EQ( packed_status.fields().a, another_packed_status.fields().a );
-        EXPECT_EQ( packed_status.fields().c, another_packed_status.fields().c );
-        EXPECT_EQ( packed_status.fields().d, another_packed_status.fields().d );
+        status_bits32 expected_status;
+        expected_status.a = 0b1;
+        expected_status.b = 0b100;
+        expected_status.c = 0b101111111111;
+        expected_status.d = 0b100000011;
+        comma::packed::reversed_bits< status_bits32 > packed_status( expected_status );
+        status_bits32 status = packed_status();
+        EXPECT_EQ( expected_status.a, status.a );
+        EXPECT_EQ( expected_status.b, status.b );
+        EXPECT_EQ( expected_status.c, status.c );
+        EXPECT_EQ( expected_status.d, status.d );
     }
     {
-        status_bits32 status;
-        status.a = 1;
-        status.b = 2;
-        status.c = 3;
-        status.d = 4;
-        comma::packed::reversed_bits32< status_bits32 > packed_status;
-        EXPECT_EQ( 0, packed_status().a );
-        EXPECT_EQ( 0, packed_status().b );
-        EXPECT_EQ( 0, packed_status().c );
-        EXPECT_EQ( 0, packed_status().d );
-        packed_status = status;
-        EXPECT_EQ( status.a, packed_status().a );
-        EXPECT_EQ( status.b, packed_status().b );
-        EXPECT_EQ( status.c, packed_status().c );
-        EXPECT_EQ( status.d, packed_status().d );
+        status_bits32 expected_status;
+        expected_status.a = 0b1;
+        expected_status.b = 0b100;
+        expected_status.c = 0b101111111111;
+        expected_status.d = 0b100000011;
+        comma::uint32* p = reinterpret_cast< comma::uint32* >( &expected_status );
+        comma::uint32 struct_as_integer = *p;
+        comma::packed::reversed_bits< status_bits32 > packed_status( struct_as_integer );
+        status_bits32 status = packed_status();
+        EXPECT_EQ( expected_status.a, status.a );
+        EXPECT_EQ( expected_status.b, status.b );
+        EXPECT_EQ( expected_status.c, status.c );
+        EXPECT_EQ( expected_status.d, status.d );
     }
+}
+
+TEST( test_packed_bits, test_reversed_bits_get )
+{
+    comma::uint32 value = 0b10010000001111111111010110000001UL;
+    comma::packed::reversed_bits< status_bits32 > packed_status = *reinterpret_cast< comma::packed::reversed_bits< status_bits32 >* >( &value );
+    status_bits32 status = packed_status();
+    EXPECT_EQ( 0b1, status.a );
+    EXPECT_EQ( 0b100, status.b );
+    EXPECT_EQ( 0b101111111111, status.c );
+    EXPECT_EQ( 0b100000011, status.d );
+}
+
+TEST( test_packed_bits, test_reversed_bits_set_from_struct )
+{
+    status_bits32 status;
+    status.a = 0b1;
+    status.b = 0b100;
+    status.c = 0b101111111111;
+    status.d = 0b100000011;
+    comma::packed::reversed_bits< status_bits32 > packed_status;
+    packed_status = status;
+    comma::uint32 value = *reinterpret_cast< comma::uint32* >( packed_status.data() );
+    EXPECT_EQ( 0b10010000001111111111010110000001UL, value );
+}
+
+TEST( test_packed_bits, test_reversed_bits_set_from_integer )
+{
+    status_bits32 status;
+    status.a = 0b1;
+    status.b = 0b100;
+    status.c = 0b101111111111;
+    status.d = 0b100000011;
+    comma::uint32* p = reinterpret_cast< comma::uint32* >( &status );
+    comma::packed::reversed_bits< status_bits32 > packed_status( *p );
+    comma::uint32 value = *reinterpret_cast< comma::uint32* >( packed_status.data() );
+    EXPECT_EQ( 0b10010000001111111111010110000001UL, value );
+    EXPECT_EQ( *p, comma::packed::get_reversed_bits( value ) );
+}
+
+TEST( test_packed_bits, test_reversed_bits_default )
+{
+    {
+        comma::packed::reversed_bits< status_bits32 > packed_status;
+        status_bits32 status = packed_status();
+        EXPECT_EQ( 0, status.a );
+        EXPECT_EQ( 0, status.b );
+        EXPECT_EQ( 0, status.c );
+        EXPECT_EQ( 0, status.d );
+    }
+    {
+        static const comma::uint32 default_struct_as_integer = 0b10000001101011111111110000001001UL;
+        status_bits32 default_status;
+        default_status.a = 0b1;
+        default_status.b = 0b100;
+        default_status.c = 0b101111111111;
+        default_status.d = 0b100000011;
+        comma::uint32* p = reinterpret_cast< comma::uint32* >( &default_status );
+        ASSERT_EQ( default_struct_as_integer, *p );
+
+        comma::packed::reversed_bits< status_bits32, default_struct_as_integer > packed_status;
+        status_bits32 status = packed_status();
+        EXPECT_EQ( default_status.a, status.a );
+        EXPECT_EQ( default_status.b, status.b );
+        EXPECT_EQ( default_status.c, status.c );
+        EXPECT_EQ( default_status.d, status.d );
+    }
+}
+
+TEST( test_packed_bits, test_reversed_bits_set_from_packed )
+{
+    status_bits32 status1;
+    status1.a = 0b1;
+    status1.b = 0b100;
+    status1.c = 0b101111111111;
+    status1.d = 0b100000011;
+    comma::packed::reversed_bits< status_bits32 > packed_status1;
+    comma::packed::reversed_bits< status_bits32 > packed_status2;
+    packed_status1 = status1;
+    packed_status2 = packed_status1;
+    status_bits32 status2 = packed_status2();
+    EXPECT_EQ( status1.a, status2.a );
+    EXPECT_EQ( status1.b, status2.b );
+    EXPECT_EQ( status1.c, status2.c );
+    EXPECT_EQ( status1.d, status2.d );
 }
 
 int main( int argc, char *argv[] )

@@ -90,40 +90,37 @@ template< typename T > inline void reverse_bits( T& v )
     v = r;
 }
 
-/// packed reversed 32-bit-field structure
-template < typename B, comma::uint32 Default = 0 >
-struct reversed_bits32 : public packed::field< reversed_bits32< B, Default >, B, sizeof( comma::uint32 ) >
+template< typename T > inline T get_reversed_bits( T v ) { reverse_bits( v ); return v; }
+
+/// packed reversed bit-field structure
+template < typename B, typename comma::integer< sizeof( B ), false >::type Default = 0  >
+struct reversed_bits : public packed::field< reversed_bits< B, Default >, B, sizeof( typename comma::integer< sizeof( B ), false >::type ) >
 {
-    enum { size = sizeof( comma::uint32 ) };
+    typedef typename comma::integer< sizeof( B ), false >::type integer_type;
 
-    BOOST_STATIC_ASSERT( size == 4 );
-
-    BOOST_STATIC_ASSERT( sizeof( B ) == size );
+    enum { size = sizeof( B ) };
 
     typedef B type;
 
-    typedef packed::field< reversed_bits32< B, Default >, B, size > base_type;
+    typedef packed::field< reversed_bits< B, Default >, B, size > base_type;
 
-    static type default_value() { static const comma::uint32 d = Default; type t; ::memcpy( &t, &d, size ); return t; }
+    reversed_bits() {}
+    reversed_bits( integer_type v ) { operator=( v ); }
+    reversed_bits( type t ) : base_type( t ) {}
 
-    static void pack( char* storage, type t ) { comma::uint32 v; ::memcpy( &v, &t, size ); reverse_bits( v ); ::memcpy( storage, &v, size ); }
+    static type default_value() { static const integer_type d = Default; type t; ::memcpy( &t, &d, size ); return t; }
 
-    static type unpack( const char* storage ) { comma::uint32 v; ::memcpy( &v, storage, size ); reverse_bits( v ); type t; ::memcpy( &t, &v, size ); return t; }
+    static void pack( char* storage, type t ) { integer_type v; ::memcpy( &v, &t, size ); reverse_bits( v ); ::memcpy( storage, &v, size ); }
 
-    const reversed_bits32& operator=( const reversed_bits32& rhs ) { return base_type::operator=( rhs ); }
+    static type unpack( const char* storage ) { integer_type v; ::memcpy( &v, storage, size ); reverse_bits( v ); type t; ::memcpy( &t, &v, size ); return t; }
 
-    const reversed_bits32& operator=( type rhs ) { return base_type::operator=( rhs ); }
+    const reversed_bits& operator=( const reversed_bits& rhs ) { return base_type::operator=( rhs ); }
 
-    const reversed_bits32& operator=( comma::uint32 rhs ) { type t; ::memcpy( &t, &rhs, size ); return base_type::operator=( t ); }
+    const reversed_bits& operator=( type rhs ) { return base_type::operator=( rhs ); }
 
-    type& fields() { return *reinterpret_cast< type* >( this ); }
-
-    const type& fields() const { return *reinterpret_cast< const type* >( this ); }
-
-    comma::uint32 value() const { type t = unpack( this->data() ); comma::uint32 value; ::memcpy( &value, &t, size ); return value; }
+    const reversed_bits& operator=( integer_type rhs ) { type t; ::memcpy( &t, &rhs, size ); return base_type::operator=( t ); }
 
 };
-
 
 } } // namespace comma { namespace packed {
 
