@@ -106,7 +106,7 @@ struct reversed_bits32 : public packed::field< reversed_bits32< B, Default >, B,
 
     static type default_value() { static const comma::uint32 d = Default; type t; ::memcpy( &t, &d, size ); return t; }
 
-    static void pack( char* storage, type value ) { comma::uint32 v; ::memcpy( &v, &value, size ); reverse_bits( v ); ::memcpy( storage, &v, size ); }
+    static void pack( char* storage, type t ) { comma::uint32 v; ::memcpy( &v, &t, size ); reverse_bits( v ); ::memcpy( storage, &v, size ); }
 
     static type unpack( const char* storage ) { comma::uint32 v; ::memcpy( &v, storage, size ); reverse_bits( v ); type t; ::memcpy( &t, &v, size ); return t; }
 
@@ -114,13 +114,13 @@ struct reversed_bits32 : public packed::field< reversed_bits32< B, Default >, B,
 
     const reversed_bits32& operator=( type rhs ) { return base_type::operator=( rhs ); }
 
-    const reversed_bits32& operator=( comma::uint32 rhs ) { type value; ::memcpy( &value, &rhs, size ); return base_type::operator=( value ); }
+    const reversed_bits32& operator=( comma::uint32 rhs ) { type t; ::memcpy( &t, &rhs, size ); return base_type::operator=( t ); }
 
     type& fields() { return *reinterpret_cast< type* >( this ); }
 
     const type& fields() const { return *reinterpret_cast< const type* >( this ); }
 
-    comma::uint32 value() const { comma::uint32 v = *reinterpret_cast< const comma::uint32* >( this->data() );  reverse_bits( v ); return v; }
+    comma::uint32 value() const { type t = unpack( this->data() ); comma::uint32 value; ::memcpy( &value, &t, size ); return value; }
 
 };
 
