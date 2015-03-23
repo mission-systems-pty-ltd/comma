@@ -6,6 +6,12 @@ export output_dir="output"
 rm -rf "$output_dir" || exit 1
 mkdir -p "$output_dir" || exit 1
 
+function grab()
+{
+    sed --regexp-extended -n 's@.*(normal exit).*@\1@p'
+}
+export -f grab
+
 # run multiple instances of comma_execute_and_wait in parallel
 # can be used as a template for user code
 function test01()
@@ -35,7 +41,55 @@ function test01()
     reordered=$( echo "$original" | sort )
     # - if were in parallel, the overall order shall differ from the original
     is_parallel=$( [[ "$original" == "$reordered" ]] && echo 0 || echo 1 )
-    echo "parallel=$is_parallel"
+    echo "test[1]/parallel=$is_parallel"
 }
 
-test01
+test01 ; echo "test[1]/exit/status=$?"
+
+# run multiple background task (in parallel) under comma_execute_and_wait
+# in test02 all terminate normally (self-check), in test03 killed by a signal
+function test02_handler()
+{
+    echo "killed by $1"
+    exit 1
+}
+export -f test02_handler
+
+function test02_worker()
+{
+    trap 'test02_handler HUP'  SIGHUP
+    trap 'test02_handler INT'  SIGINT
+    trap 'test02_handler TERM' SIGTERM
+    trap 'test02_handler PIPE' SIGPIPE
+    trap 'test02_handler USR1' SIGUSR1
+    local duration=$1
+    comma-nap $duration | grab
+}
+export -f test02_worker
+
+function test02_to_execute()
+{
+    local arg args
+    args=${@}
+    pids=()
+    for arg in $args ; do
+        test02_worker $arg  >> "$output_file" 2>/dev/null & pids+=( $! )
+    done
+    wait ${pids[@]}
+}
+export -f test02_to_execute
+
+export output_file="$output_dir/test02.log"
+function test02()
+{
+    comma_execute_and_wait --max-wait=10 "bash -c test02_to_execute 5 4"
+}
+test02 ; echo "test[2]/exit/status=$?" ; [[ -f "$output_file" ]] && cat "$output_file" | uniq -c | sed 's@^ *@test[2]/output="@;s@$@"@'
+
+# see description of test02
+export output_file="$output_dir/test03.log"
+function test03()
+{
+    comma_execute_and_wait --max-wait=5 "bash -c test02_to_execute 9 10"
+}
+test03 ; echo "test[3]/exit/status=$?" ; [[ -f "$output_file" ]] && cat "$output_file" | uniq -c | sed 's@^ *@test[3]/output="@;s@$@"@'
