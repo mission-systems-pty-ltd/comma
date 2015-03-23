@@ -808,7 +808,7 @@ TEST( test_packed_bits, reversed_bits32 )
     EXPECT_EQ( 0b100111101UL, packed_status.fields().d );
 }
 
-TEST( test_packed_bits, reversed_bits32_data )
+TEST( test_packed_bits, reversed_bits32_unpacked_struct )
 {
     comma::packed::reversed_bits32< status_bits32 > packed_status;
     packed_status = 0b10000001101011111111110000001001UL;
@@ -819,7 +819,7 @@ TEST( test_packed_bits, reversed_bits32_data )
     EXPECT_EQ( 0b100000011UL, packed_status().d );
 }
 
-TEST( test_packed_bits, reversed_bits32_fields )
+TEST( test_packed_bits, reversed_bits32_fields_assignment )
 {
     comma::packed::reversed_bits32< status_bits32 > packed_status;
     packed_status.fields().a = 0b1U;
