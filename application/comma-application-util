@@ -118,6 +118,17 @@ function kill_children()
 }
 export -f kill_children
 
+# Trim leading and trailing whitespaces
+# Usage:
+#    var=$( comma_trim "$var" )
+function comma_trim()
+{
+    (
+        shopt -s extglob ; a=$1 ; b=${a%%*( )} ; b=${b##*( )} ; echo "$b"
+    )
+}
+export -f comma_trim
+
 # This is a signal handler used by comma_execute_and_wait. See that function for detail.
 function terminate_comma_execute_and_wait()
 {
@@ -204,9 +215,21 @@ function comma_execute_and_wait()
         trap 'terminate_comma_execute_and_wait $signal_to_handle' $signal_to_handle
     done
 
+    # shell functions require special handling due to quote spaces
+    command_to_execute=$( comma_trim "$command_to_execute" )
+    local cmd=$( shopt -s extglob ; cmd=${command_to_execute##bash*( )-c*( )}; echo "$cmd" )
+    if [[ "$cmd" != "$command_to_execute" ]] ; then
+        shellfcn="true"
+        command_to_execute="$cmd"
+    fi
+
     # run the command-to-execute as a background job in its own process group and under timeout
     local command_to_execute_pgid command_to_execute_status
-    timeout -k 10 -s TERM $execute_and_wait_timeout $command_to_execute & command_to_execute_pgid=$!
+    if [[ "$shellfcn" == "true" ]] ; then
+        timeout -k 10 -s TERM $execute_and_wait_timeout bash -c "$command_to_execute" & command_to_execute_pgid=$!
+    else
+        timeout -k 10 -s TERM $execute_and_wait_timeout $command_to_execute & command_to_execute_pgid=$!
+    fi
     # wait for the completion of the subprocess
     wait $command_to_execute_pgid
     command_to_execute_status=$?
