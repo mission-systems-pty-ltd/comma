@@ -788,7 +788,7 @@ TEST( test_packed_bits, test_bits_operators )
 
 struct status_bits32
 {
-    comma::uint32 a: 1, b: 3, : 6, c: 12, : 1, d: 9;
+    comma::uint32 a: 1, b: 3, unused1: 6, c: 12, unused2: 1, d: 9;
 };
 
 
@@ -855,6 +855,8 @@ TEST( test_packed_bits, test_reversed_bits_set_from_integer )
     status.b = 0b100;
     status.c = 0b101111111111;
     status.d = 0b100000011;
+    status.unused1 = 0;
+    status.unused2 = 0;
     comma::uint32* p = reinterpret_cast< comma::uint32* >( &status );
     comma::packed::reversed_bits< status_bits32 > packed_status( *p );
     comma::uint32 value = *reinterpret_cast< comma::uint32* >( packed_status.data() );
