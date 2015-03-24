@@ -137,21 +137,25 @@ function terminate_comma_execute_and_wait()
     local killsign="-"
     [[ "$usepg" == "false" ]] && killsign=""
     local received_signal=$2
-    # kill the command being executed
-    if [[ -n "$command_to_execute_pgid" ]] ; then
-        kill -s $received_signal -- ${killsign}${command_to_execute_pgid}
-        wait $command_to_execute_pgid
-        unset command_to_execute_pgid
-    fi
+    # kill the command(s) being executed
+    local command_to_execute_index
+    for command_to_execute_index in ${!commands_to_execute_pgid[@]} ; do
+        if [[ -n "${commands_to_execute_pgid[$command_to_execute_index]}" ]] ; then
+            kill -s $received_signal -- ${killsign}${commands_to_execute_pgid[$command_to_execute_index]}
+            wait ${commands_to_execute_pgid[$command_to_execute_index]}
+            commands_to_execute_pgid[$command_to_execute_index]=""
+        fi
+    done
     eval "$saved_traps"                # use old handlers
     kill -s $received_signal $BASHPID  # relinguish control
 }
 export -f terminate_comma_execute_and_wait
 
 # Usage:
-#   comma_execute_and_wait command [--signals=signal1,signal2,...] [--max-wait=max_wait] [--process|--group]
+#   comma_execute_and_wait command[,command2[,command3]] [--signals=signal1,signal2,...] \
+#                          [--max-wait=max_wait] [--process|--group] [--any|--all]
 #
-# The function executes the given command (non-option argument) in a background process
+# The function executes the given command(s) (non-option argument) in a background process(es)
 # and waits for its completion (or timeout, see below).
 #
 # Usually the command is executed in a separate process group. As such, it inherits from
@@ -172,7 +176,7 @@ export -f terminate_comma_execute_and_wait
 # If so, it would have all shell variables accessible. However, the command may need to provide
 # more elaborate signal handling so that a signal sent to a single process would terminate
 # the entire process tree. Use '--process' to run the command without creating a new process
-# group ('--group', the default).
+# group ('--group', the default). Do not prepend bash functions with 'bash -c' in this mode.
 #
 # The '--signals' option specifies signals to wait for. Default is INT,HUP,TERM (signals are
 # given as comma-separated list of names).
@@ -188,10 +192,15 @@ export -f terminate_comma_execute_and_wait
 # effectively infinite. The timeout option is available only in '--group' mode. This option is
 # incompatible with '--process' mode.
 #
-# If multiple commands have to be started in parallel, use comma_execute_and_wait in
-# combination with xargs. The unit test in "parallel" directory provides a code template.
-# As too many details may differ on case-by-case basis (how to accumulate exit statuses,
-# which arguments pass to xargs, etc.), no generic implementation is provided.
+# If multiple commands are given, they are all started in parallel. To avoid system overload,
+# the user may write custom script to invoke comma_execute_and_wait in combination with xargs.
+# The unit test in "parallel" directory provides a code template.
+#
+# The exit code of comma_execute_and_wait equals the exit code of the command-to-execute
+# (accounting for possible signal handling). If multiple commands are given, the exit code
+# by default is zero if all commands succeed, and 1 if any fails. This can be explicitly
+# enforced by '--all' option. If '--any' option is given, however, the exit code is zero
+# if at least one command succeeded, and 1 if all fail.
 function comma_execute_and_wait()
 {
     local saved_traps
@@ -200,7 +209,7 @@ function comma_execute_and_wait()
 
     # defaults
     local signal_list="TERM,INT,HUP"
-    local command_to_execute=""
+    local commands_to_execute=()
     # timeout default is very long time, essentially, forever
     local execute_and_wait_timeout="4294967296d"
     local timeout_given="false"
@@ -208,15 +217,17 @@ function comma_execute_and_wait()
     # process arguments
     local original_args="$@"
     local usepg="true"
+    local statusall="true"
     while [[ $# -ne 0 ]]; do
         case $1 in
             --signals=*|--signal-list=*) signal_list=${1#*=};;
             --max-wait=*|--timeout=*)    execute_and_wait_timeout=${1#*=} ; timeout_given="true";;
             --group)                     usepg="true";;
             --process)                   usepg="false";;
+            --all)                       statusall="true";;
+            --any)                       statusall="false";;
             -*)                          echo "comma_execute_and_wait: unknown option '$1' (called: comma_execute_and_wait $original_args)" >&2; return 1;;
-            *)                           [[ -n "$command_to_execute" ]] && { echo "comma_execute_and_wait: command to execute given twice (called: comma_execute_and_wait $original_args)" >&2; return 1; }
-                                         command_to_execute="$1" ;;
+            *)                           commands_to_execute+=( "$1" );;
         esac
         shift
     done
@@ -235,37 +246,57 @@ function comma_execute_and_wait()
         trap 'terminate_comma_execute_and_wait $usepg $signal_to_handle' $signal_to_handle
     done
 
-    # shell functions require special handling due to quote spaces
-    command_to_execute=$( comma_trim "$command_to_execute" )
-    local cmd=$( shopt -s extglob ; cmd=${command_to_execute##bash*( )-c*( )}; echo "$cmd" )
-    if [[ "$cmd" != "$command_to_execute" ]] ; then
-        shellfcn="true"
-        command_to_execute="$cmd"
-    fi
+    local commands_to_execute_pgid=()
+    local commands_to_execute_status=0
+    [[ "$statusall" == "false" ]] && commands_to_execute_status=1
+    local command_to_execute cmd shellfcn
 
-    # run the command-to-execute as a background job in its own process group and under timeout
-    local command_to_execute_pgid command_to_execute_status
-    if [[ "$usepg" == "true" ]] ; then
-        if [[ "$shellfcn" == "true" ]] ; then
-            timeout -k 10 -s TERM $execute_and_wait_timeout bash -c "$command_to_execute" & command_to_execute_pgid=$!
-        else
-            timeout -k 10 -s TERM $execute_and_wait_timeout $command_to_execute & command_to_execute_pgid=$!
+    for command_to_execute in "${commands_to_execute[@]}" ; do
+        # shell functions require special handling due to quote spaces
+        command_to_execute=$( comma_trim "$command_to_execute" )
+        cmd=$( shopt -s extglob ; cmd=${command_to_execute##bash*( )-c*( )}; echo "$cmd" )
+        if [[ "$cmd" != "$command_to_execute" ]] ; then
+            shellfcn="true"
+            command_to_execute="$cmd"
         fi
-    else
-        if [[ "$shellfcn" == "true" ]] ; then
-            bash -c "$command_to_execute" & command_to_execute_pgid=$!
+
+        # run the command-to-execute as a background process or as a background job in
+        # its own process group and under timeout
+        if [[ "$usepg" == "true" ]] ; then
+            if [[ "$shellfcn" == "true" ]] ; then
+                timeout -k 10 -s TERM $execute_and_wait_timeout bash -c "$command_to_execute" & commands_to_execute_pgid+=( $! )
+            else
+                timeout -k 10 -s TERM $execute_and_wait_timeout $command_to_execute & commands_to_execute_pgid+=( $! )
+            fi
         else
-            $command_to_execute & command_to_execute_pgid=$!
+            if [[ "$shellfcn" == "true" ]] ; then
+                bash -c "$command_to_execute" & commands_to_execute_pgid+=( $! )
+            else
+                $command_to_execute & commands_to_execute_pgid+=( $! )
+            fi
         fi
-    fi
-    # wait for the completion of the subprocess
-    wait $command_to_execute_pgid
-    command_to_execute_status=$?
-    unset command_to_execute_pgid
+    done
+
+    # wait for the completion of the subprocess(es)
+    local command_to_execute_status command_to_execute_index
+    for command_to_execute_index in ${!commands_to_execute_pgid[@]} ; do
+        wait ${commands_to_execute_pgid[$command_to_execute_index]} ; command_to_execute_status=$? ; commands_to_execute_pgid[$command_to_execute_index]=""
+        if (( ${#commands_to_execute[@]} == 1 )) ; then
+            # use as-is
+            commands_to_execute_status=$command_to_execute_status
+        else
+            # accumulate
+            if [[ "$statusall" == "true" ]] ; then
+                (( $command_to_execute_status == 0 )) || commands_to_execute_status=1
+            else
+                (( $command_to_execute_status == 0 )) && commands_to_execute_status=0
+            fi
+        fi
+    done
     # restore traps
     trap - ${signal_list//,/ } ; eval "$saved_traps"
     # return the wait outcome
-    return $command_to_execute_status
+    return $commands_to_execute_status
 }
 export -f comma_execute_and_wait
 

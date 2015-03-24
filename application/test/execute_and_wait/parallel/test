@@ -12,12 +12,30 @@ function grab()
 }
 export -f grab
 
+function verify_parallel()
+{
+    local location=$1
+    local original reordered
+    # check that the process were run in parallel:
+    # - cat files in their time order (oldest first)
+    original=$( cd "$location"; cat $( ls -t --reverse ) )
+    # - sort output messages by timestamps
+    reordered=$( echo "$original" | sort )
+    # - if were in parallel, the overall order shall differ from the original
+    [[ "$original" == "$reordered" ]] && echo 0 || echo 1
+}
+export verify_parallel
+
 # run multiple instances of comma_execute_and_wait in parallel
 # can be used as a template for user code
 function test01()
 {
     export script=$( dirname "$0" )/private/tester
     [[ -x "$script" ]] || exit 1
+
+    local output_dir="$output_dir/test01"
+    rm -rf "$output_dir" || exit 1
+    mkdir -p "$output_dir" || exit 1
 
     commandlist=( "$script 10 $output_dir/log1" "$script 5 $output_dir/log2" )
 
@@ -34,16 +52,9 @@ function test01()
     [[ -s "$output_dir/log1" ]] || exit 1
     [[ -s "$output_dir/log2" ]] || exit 1
 
-    # check that the process were run in parallel:
-    # - cat files in their time order (oldest first)
-    original=$( cd output; cat $( ls -t --reverse ) )
-    # - sort output messages by timestamps
-    reordered=$( echo "$original" | sort )
-    # - if were in parallel, the overall order shall differ from the original
-    is_parallel=$( [[ "$original" == "$reordered" ]] && echo 0 || echo 1 )
+    is_parallel=$( verify_parallel "$output_dir" )
     echo "test[1]/parallel=$is_parallel"
 }
-
 test01 ; echo "test[1]/exit/status=$?"
 
 # run multiple background task (in parallel) under comma_execute_and_wait
@@ -93,3 +104,65 @@ function test03()
     comma_execute_and_wait --max-wait=5 "bash -c test02_to_execute 9 10"
 }
 test03 ; echo "test[3]/exit/status=$?" ; [[ -f "$output_file" ]] && cat "$output_file" | uniq -c | sed 's@^ *@test[3]/output="@;s@$@"@'
+
+# run multiple commands under comma_execute_and_wait
+# in test04 run to completion and verify that the commands were run in parallel
+# in test05 kill by a signal (timeout) and check that all have been killed
+function test04()
+{
+    export script=$( dirname "$0" )/private/tester
+    [[ -x "$script" ]] || exit 1
+
+    local output_dir="$output_dir/test04"
+    rm -rf "$output_dir" || exit 1
+    mkdir -p "$output_dir" || exit 1
+
+    comma_execute_and_wait "$script 10 $output_dir/log1" "$script 5 $output_dir/log2"
+
+    [[ -s "$output_dir/log1" ]] || exit 1
+    [[ -s "$output_dir/log2" ]] || exit 1
+
+    is_parallel=$( verify_parallel "$output_dir" )
+    echo "test[4]/parallel=$is_parallel"
+}
+test04 ; echo "test[4]/exit/status=$?"
+
+function test05()
+{
+    export script=$( dirname "$0" )/private/tester
+    [[ -x "$script" ]] || exit 1
+
+    local output_dir="$output_dir/test05"
+    rm -rf "$output_dir" || exit 1
+    mkdir -p "$output_dir" || exit 1
+
+    comma_execute_and_wait "$script 10 $output_dir/log1" "$script 8 $output_dir/log2" --timeout=5
+    local exit_code=$?
+
+    [[ -s "$output_dir/log1" ]] || exit 1
+    [[ -s "$output_dir/log2" ]] || exit 1
+
+    is_parallel=$( verify_parallel "$output_dir" )
+    echo "test[5]/parallel=$is_parallel"
+    return $exit_code
+}
+test05 ; echo "test[5]/exit/status=$?"
+
+# run multiple commands in parallel, some exiting with error
+# verify that the logic of '--all' / '--any' works
+function test06()
+{
+    local exit1=$1
+    local exit2=$2
+    local options=$3
+
+    export script=$( dirname "$0" )/private/sleep-and-exit
+    [[ -x "$script" ]] || exit 1
+
+    comma_execute_and_wait "$script 3 $exit1" "$script 2 $exit2" $options
+}
+test06 0 0       ; echo "test[6]/zero/zero/default/exit/status=$?"
+test06 1 0       ; echo "test[6]/one/zero/default/exit/status=$?"
+test06 1 0 --all ; echo "test[6]/one/zero/all/exit/status=$?"
+test06 1 0 --any ; echo "test[6]/one/zero/any/exit/status=$?"
+test06 1 1 --any ; echo "test[6]/one/one/any/exit/status=$?"
