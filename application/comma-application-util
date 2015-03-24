@@ -159,17 +159,14 @@ export -f terminate_comma_execute_and_wait
 # and waits for its completion (or timeout, see below).
 #
 # Usually the command is executed in a separate process group. As such, it inherits from
-# the original process its the environment variables but not the shell variables. In such
-# cases, the command to be executed must be a self-contained string that can be used "as-is":
+# the original process its environment variables but not the shell variables. In this usage
+# mode, the command to be executed must be a self-contained string that can be used "as-is":
 # - if it is a bash function, this function shall be 'export -f'-ed
-# - if the string contains variables, those variables shall be exported
 # - if some variables are used within a function / script, those variables shall be exported
-# - if it is a function, it shall be prepended with "bash -c" (or "sh -c", or "zsh -c")
-#   and shall not take arguments (pass through global variables instead); space-separated
-#   arguments are incorrectly split when passing to timeout; if your function needs arguments,
-#   provide a wrapper that takes arguments from the environment and calls your function
-# - command shall not contain output redirection and such (better pass the output file name
-#   into the function / script being executed and redirect inside)
+# - if it is a function, it shall be prepended with "bash -c"
+# - command shall not contain pipes, output redirection and such; wrap pipelines into functions
+#   or scripts; pass the output file name into the function / script being executed and redirect
+#   inside
 # - etc.
 #
 # Alternatively, the command may be executed as a background process in the same process group.
@@ -179,12 +176,10 @@ export -f terminate_comma_execute_and_wait
 # group ('--group', the default). Do not prepend bash functions with 'bash -c' in this mode.
 #
 # The '--signals' option specifies signals to wait for. Default is INT,HUP,TERM (signals are
-# given as comma-separated list of names).
-#
-# If any of the specified signals arrives, the command (process group) being executed is killed
-# by the same signal, the signal traps are restored to their state prior to the entry into
-# comma_execute_and_wait, and the same signal is re-raised (sent to itself), possibly triggering
-# one of the restored traps.
+# given as comma-separated list of names). If any of the specified signals arrives, the command
+# (process or process group) being executed is killed by the same signal, the signal traps are
+# restored to their state prior to the entry into comma_execute_and_wait, and the same signal is
+# re-raised (sent to itself), possibly triggering one of the restored traps.
 #
 # If the custom timeout is provided (in time units and format understood by timeout (1) utility)
 # and the command-to-execute takes longer, it is terminated by SIGTERM, traps are restored, and
@@ -193,14 +188,15 @@ export -f terminate_comma_execute_and_wait
 # incompatible with '--process' mode.
 #
 # If multiple commands are given, they are all started in parallel. To avoid system overload,
-# the user may write custom script to invoke comma_execute_and_wait in combination with xargs.
-# The unit test in "parallel" directory provides a code template.
+# the user may write a custom script to invoke comma_execute_and_wait in combination with xargs.
+# The unit test in "parallel" directory provides a code template. You shall provide a way to
+# distribute signals to all instances to comma_execute_and_wait that are used in this fashion.
 #
 # The exit code of comma_execute_and_wait equals the exit code of the command-to-execute
-# (accounting for possible signal handling). If multiple commands are given, the exit code
-# by default is zero if all commands succeed, and 1 if any fails. This can be explicitly
+# accounting for possible signal handling. If multiple commands are given, the exit code
+# by default is zero if all commands succeed, and one if any fails. This can be explicitly
 # enforced by '--all' option. If '--any' option is given, however, the exit code is zero
-# if at least one command succeeded, and 1 if all fail.
+# if at least one command succeeded, and one if all of them fail.
 function comma_execute_and_wait()
 {
     local saved_traps
