@@ -715,7 +715,8 @@ TEST( test_packed_bits, test_packed_double_reversion )
 
 struct status_bits
 {
-    unsigned char a: 1, b:2, :3, c:2;
+    status_bits() : a( 0 ), b( 0 ), unused( 0 ), c( 0 ) {}
+    unsigned char a: 1, b: 2, unused: 3, c: 2;
 };
 
 
@@ -788,6 +789,7 @@ TEST( test_packed_bits, test_bits_operators )
 
 struct status_bits32
 {
+    status_bits32() : a( 0 ), b( 0 ), unused1( 0 ), c( 0 ), unused2( 0 ), d( 0 ) {}
     comma::uint32 a: 1, b: 3, unused1: 6, c: 12, unused2: 1, d: 9;
 };
 
@@ -855,8 +857,6 @@ TEST( test_packed_bits, test_reversed_bits_set_from_integer )
     status.b = 0b100;
     status.c = 0b101111111111;
     status.d = 0b100000011;
-    status.unused1 = 0;
-    status.unused2 = 0;
     comma::uint32* p = reinterpret_cast< comma::uint32* >( &status );
     comma::packed::reversed_bits< status_bits32 > packed_status( *p );
     comma::uint32 value = *reinterpret_cast< comma::uint32* >( packed_status.data() );
