@@ -39,6 +39,9 @@
 #include <comma/math/compare.h>
 #include <comma/packed/bits.h>
 #include <comma/base/types.h>
+#include <comma/visiting/traits.h>
+#include <comma/csv/stream.h>
+#include <comma/csv/options.h>
 
 struct test_packed_struct_t : public comma::packed::packed_struct< test_packed_struct_t, 16 >
 {
@@ -793,6 +796,23 @@ struct status_bits32
     comma::uint32 a: 1, b: 3, unused1: 6, c: 12, unused2: 1, d: 9;
 };
 
+TEST( test_packed_bits, reversed_bits_basic_usage )
+{
+    status_bits32 expected_status;
+    expected_status.a = 0b1;
+    expected_status.b = 0b100;
+    expected_status.c = 0b101111111111;
+    expected_status.d = 0b100000011;
+    comma::packed::reversed_bits< status_bits32 > packed_status( expected_status );
+    std::stringstream ss;
+    ss.write( packed_status.data(), sizeof( packed_status ) );
+    ss.read( packed_status.data(), sizeof( packed_status ) );
+    status_bits32 status = packed_status();
+    EXPECT_EQ( expected_status.a, status.a );
+    EXPECT_EQ( expected_status.b, status.b );
+    EXPECT_EQ( expected_status.c, status.c );
+    EXPECT_EQ( expected_status.d, status.d );
+}
 
 TEST( test_packed_bits, reversed_bits_contructor )
 {
