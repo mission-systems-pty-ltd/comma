@@ -108,8 +108,8 @@ function extract_cpus()
 function extract_mem()
 {
     local input=$1
-    local used=${input%% used, *}
-    used=${used##* total, *( )}
+    local used=${input%% used*}
+    used=${used##* *( )}
     echo -n ",$used"
 }
 
@@ -127,10 +127,10 @@ function parser()
             echo -n "$timestamp"
             first="false"
         }
-        [[ "$line" = "%Cpu(s):"* ]]  && extract_cpus "$line"
-        [[ "$line" = "KiB Mem:"* ]]  && { extract_mem  "$line" ; echo -n ",$shared" ; }
+        [[ "$line" = "%Cpu(s)"* ]]  && extract_cpus "$line"
+        [[ "$line" = "KiB Mem"* ]]  && { extract_mem  "$line" ; echo -n ",$shared" ; }
         # swap is last, finish the line
-        [[ "$line" = "KiB Swap:"* ]] && { extract_mem  "$line" ; echo ; }
+        [[ "$line" = "KiB Swap"* ]] && { extract_mem  "$line" ; echo ; }
         [[ "$line" = "--" ]] && first="true"
     done
 }
