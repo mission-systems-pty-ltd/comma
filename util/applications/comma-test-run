@@ -64,7 +64,6 @@ parallel=0
 quiet=0
 debug=0
 until_first_failure=0
-force=0
 max_parallel=$max_parallel
 max_memory_main=$max_memory_main
 max_memory_shared=$max_memory_shared
