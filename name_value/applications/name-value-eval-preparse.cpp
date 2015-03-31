@@ -118,7 +118,7 @@ void usage()
 "  - both of the above produce Python code to test the expressions in \"expected.txt\",\n"
 "    which is expected to contain one boolean expression per line (or if the file starts with\n"
 "    \"#python\", arbitrary Python code with some lines starting with the word \"expect\" -- see\n"
-"    the main help). The Python code only print nothing if all of the expressions are true.\n"
+"    the main help). The Python code only prints nothing if all of the expressions are true.\n"
 "\n"
 "( " << exec_name << " --assign variables.txt\n"
 "  cat expected.txt | " << exec_name << " --test ) | python\n"
