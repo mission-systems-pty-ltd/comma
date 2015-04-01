@@ -91,6 +91,14 @@ void usage()
 bool matches( const std::string& value, const boost::regex& r ) { return boost::regex_match( value, r ); }
 template < typename T > bool matches( const T& value, const boost::regex& r ) { COMMA_THROW( comma::exception, "regex implemented only for strings" ); }
 
+template < typename T > static boost::optional< T > get_optional_( const comma::command_line_options& options, const std::string& what ) { return options.optional< T >( what ); }
+template <> boost::optional< boost::posix_time::ptime > get_optional_< boost::posix_time::ptime >( const comma::command_line_options& options, const std::string& what )
+{
+    const boost::optional< std::string >& s = options.optional< std::string >( what );
+    if( !s ) { return boost::none; }
+    return boost::posix_time::from_iso_string( *s );
+}
+
 template < typename T >
 struct constraints
 {
@@ -109,13 +117,13 @@ struct constraints
 
     constraints( const comma::command_line_options& options ) // quick and dirty
     {
-        equals = options.optional< T >( "--equals" );
-        not_equal = options.optional< T >( "--not-equal" );
-        from = options.optional< T >( "--from,--greater-or-equal,--ge" );
-        to = options.optional< T >( "--to,--less-or-equal,--le" );
-        less = options.optional< T >( "--less" );
-        greater = options.optional< T >( "--greater" );
-        regex = options.optional< std::string >( "--regex" );
+        equals = get_optional_< T >( options, "--equals" );
+        not_equal = get_optional_< T >( options, "--not-equal" );
+        from = get_optional_< T >( options, "--from,--greater-or-equal,--ge" );
+        to = get_optional_< T >( options, "--to,--less-or-equal,--le" );
+        less = get_optional_< T >( options, "--less" );
+        greater = get_optional_< T >( options, "--greater" );
+        regex = get_optional_< std::string >( options, "--regex" );
         sorted = options.exists( "--sorted" );
     }
 
