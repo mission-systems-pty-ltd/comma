@@ -48,7 +48,7 @@ struct signal_flag : public boost::noncopyable
         #ifdef WIN32
             enum signals { sigint = SIGINT, sigterm = SIGBREAK };
         #else
-            enum signals { sigint = SIGINT, sigterm = SIGTERM, sigpipe = SIGPIPE /* etc */ };
+            enum signals { sigint = SIGINT, sigterm = SIGTERM, sigpipe = SIGPIPE, sighup = SIGHUP /* etc */ };
         #endif
 
         enum sigtype { soft = 0, hard = 1 };

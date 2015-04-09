@@ -43,7 +43,7 @@ signal_flag::signal_flag(signal_flag::sigtype stype)
 #ifdef WIN32
     boost::array< signals, 2 > signals = { { sigint, sigterm } };
 #else
-    boost::array< signals, 3 > signals = { { sigint, sigterm, sigpipe } };
+    boost::array< signals, 4 > signals = { { sigint, sigterm, sigpipe, sighup } };
 #endif 
     init_( signals );
 }
