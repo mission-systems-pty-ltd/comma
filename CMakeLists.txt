@@ -230,6 +230,7 @@ if( comma_BUILD_XML )
     add_subdirectory( xml )
 endif( comma_BUILD_XML )
 add_subdirectory( xpath )
+add_subdirectory(web)
 
 ADD_SUBDIRECTORY( etc/bash_completion.d )
 
@@ -256,4 +257,5 @@ INCLUDE( InstallRequiredSystemLibraries )
 
 #this line does all the work. Actually, even if this is the only line, you get all but the dlls...
 INCLUDE( CPack )
+
 
