@@ -181,6 +181,11 @@ export -f terminate_comma_execute_and_wait
 # restored to their state prior to the entry into comma_execute_and_wait, and the same signal is
 # re-raised (sent to itself), possibly triggering one of the restored traps.
 #
+# Note that if any of your functions is invoked under bash you may not receive the signal you
+# expect (the one you sent earlier to terminate the function being executed). Bash may (likely
+# will) intercept the original signal and sent HUP to the process running under it. Thus, your
+# code shall be always prepared to handle HUP.
+#
 # If the custom timeout is provided (in time units and format understood by timeout (1) utility)
 # and the command-to-execute takes longer, it is terminated by SIGTERM, traps are restored, and
 # the function returns 1. The default timeout is 4294967296 days (about 10 million years),
