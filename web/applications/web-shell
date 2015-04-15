@@ -5,6 +5,7 @@ have
 multiline
 comment"""
 
+
 #######################################################################
 #imports
 import http
@@ -50,88 +51,6 @@ def drill_(cmds,left,right):
                 break
         lst.insert(0,s)
     return lst
-
-#######################################################################
-class web_shell_config:
-    #configuration class for ibis web service
-    class function:
-        name_=""
-        commands_=[]
-        shell_=True
-        def __init__(self,name="",commands=[],shell=True):
-            debug_log("debug function(%s, %s, %s)"%(name,commands,shell))
-            self.name_=name
-            self.commands_=commands
-            self.shell_=bool(shell)
-        def deserialize(self,map):
-            self.name_=map["name"]
-            self.commands_=map["commands"]
-            self.shell_=bool(map.get("shell",True))
-            return self
-        def filter(self,cmd):
-            if self.commands_==["*"]:
-                return True
-            seperators=[";", "|", "&&", "&", "$("]
-            #simple parse
-            lst=[cmd]
-            for sep in seperators:
-                lst=split_(lst,sep)
-            lst=drill_(lst,"`","`")
-            debug_log("filter %s" % lst)
-            for s in lst:
-                #debug_log("web_shell_config#1 - s: %s" % s)
-                #0 get one word; remove whitespace
-                first=s.strip().partition(" ")[0].strip(" ()")
-                if first=="":
-                    continue
-                debug_log("web_shell_config#2 - first: %s" % first)
-                #2 check against list
-                if first not in self.commands_:
-                    debug_log("web_shell_config#3 return False- first: %s" % first)
-                    return False
-            #debug_log("web_shell_config#4 return True")
-            return True
-    funcs=[]
-    #list of class funcs
-    def add(self,name,commands,shell=True):
-        f1=web_shell_config.function(name,commands,shell);
-        self.funcs.append(f1)
-    def to_json(self):
-        return web_shell_config.config_encoder(indent=4).encode(self)
-    def deserialize(self,map):
-        for item in map["service"]:
-            debug_log("debug %s" %item)
-            self.funcs.append(web_shell_config.function().deserialize(item))
-        return self
-    def from_json(self,s):
-        map=json.JSONDecoder().decode(s)
-        return self.deserialize(map["web_shell_config"])
-    class config_encoder(json.JSONEncoder):
-        def default(self, obj):
-            if isinstance(obj, web_shell_config):
-                return  {"web_shell_config":{"service":obj.funcs}}
-            if isinstance(obj, web_shell_config.function):
-                return {"name":obj.name_, "commands":obj.commands_, "shell":obj.shell_}
-            # Let the base class default method raise the TypeError
-            return json.JSONEncoder.default(self, obj)
-    def filter(self,path,cmd):
-        for f in self.funcs:
-            if path=="/"+f.name_:
-                return f.filter(cmd)
-    def shell(self,path):
-        for f in self.funcs:
-            if path=="/"+f.name_:
-                return f.shell_
-
-def sample_dump():
-    sample=web_shell_config()
-    sample.add("run_shell",["ls","echo"])
-    sample.add("help",["man"])
-    return sample.to_json()
-
-def sample_load(s):
-    return web_shell_config().from_json(s)
-    
 #######################################################################
 #utility functions
 def parse_name_value(s):
@@ -148,6 +67,12 @@ verbose=False
 #generic application functions
 def log(s):
     print("%s: %s" % (my_name, s))
+    
+#show error message and exit
+def error(s, code=1):
+    #show error message and exit
+    log("Error: %s" % s)
+    exit(code)
     
 def chatter(s):
     if verbose:
@@ -186,6 +111,111 @@ def parse_handle_options(map1,map2):
         if arg != my_name:
             map1.get(arg,arg_etc(map2,arg))()
 
+#######################################################################
+class web_shell_config:
+    #configuration class for web shell
+    class function:
+        name_=""
+        filter_=[]
+        shell_=True
+        command_=None
+        def __init__(self,name="",filter=[],shell=True):
+            debug_log("debug function(%s, %s, %s)"%(name,filter,shell))
+            self.name_=name
+            self.filter_=filter
+            self.shell_=bool(shell)
+        def deserialize(self,map):
+            self.name_=map["name"]
+            if "command" in map:
+                self.command_=map["command"]
+                if "filter" in map:
+                    error("command and filter cannot be both speified in a service")
+            if "filter" in map:
+                self.filter_=map["filter"]
+            self.shell_=bool(map.get("shell",True))
+            return self
+        def filter(self,cmd):
+            if self.command_ is not None:
+                return cmd == self.command_ or cmd == "";
+            if self.filter_==["*"]:
+                return True
+            seperators=[";", "|", "&&", "&", "$("]
+            #simple parse
+            lst=[cmd]
+            for sep in seperators:
+                lst=split_(lst,sep)
+            lst=drill_(lst,"`","`")
+            debug_log("filter %s" % lst)
+            for s in lst:
+                #debug_log("web_shell_config#1 - s: %s" % s)
+                #0 get one word; remove whitespace
+                first=s.strip().partition(" ")[0].strip(" ()")
+                if first=="":
+                    continue
+                debug_log("web_shell_config#2 - first: %s" % first)
+                #2 check against list
+                if first not in self.filter_:
+                    debug_log("web_shell_config#3 return False- first: %s" % first)
+                    return False
+            #debug_log("web_shell_config#4 return True")
+            return True
+        def make_script(self,script,args):
+            if script == "":
+                script=self.command_
+            if args !="":
+                script=script + " " + args
+            return script
+        def shell(self):
+            return self.shell_
+    funcs=[]
+    #list of class funcs
+    def add(self,name,filter,shell=True):
+        f1=web_shell_config.function(name,filter,shell);
+        self.funcs.append(f1)
+    def to_json(self):
+        return web_shell_config.config_encoder(indent=4).encode(self)
+    def deserialize(self,map):
+        for item in map["service"]:
+            debug_log("debug %s" %item)
+            self.funcs.append(web_shell_config.function().deserialize(item))
+        return self
+    def from_json(self,s):
+        map=json.JSONDecoder().decode(s)
+        return self.deserialize(map["web_shell_config"])
+    class config_encoder(json.JSONEncoder):
+        def default(self, obj):
+            if isinstance(obj, web_shell_config):
+                return  {"web_shell_config":{"service":obj.funcs}}
+            if isinstance(obj, web_shell_config.function):
+                return {"name":obj.name_, "filter":obj.filter_, "shell":obj.shell_}
+            # Let the base class default method raise the TypeError
+            return json.JSONEncoder.default(self, obj)
+    def get_func(self,path):
+        for f in self.funcs:
+            if path=="/"+f.name_:
+                return f
+    """def filter(self,path,cmd):
+        for f in self.funcs:
+            if path=="/"+f.name_:
+                return f.filter(cmd)
+    def shell(self,path):
+        for f in self.funcs:
+            if path=="/"+f.name_:
+                return f.shell_"""
+
+def sample_dump():
+    sample=web_shell_config()
+    sample.add("run_shell",["ls","echo"])
+    sample.add("man",["man"])
+    f=web_shell_config.function("myhelp",None,False)
+    f.command_="web-shell --help"
+    sample.funcs.append(f)
+    return sample.to_json()
+
+def sample_load(s):
+    return web_shell_config().from_json(s)
+    
+
     
 ########################################################################
 #application implementation
@@ -195,7 +225,7 @@ default_config="""{
     "web_shell_config": {
         "service": [
             {
-                "commands": [
+                "filter": [
                     "*"
                 ], 
                 "name": "run_shell",
@@ -208,7 +238,7 @@ sample_config="""{
     "web_shell_config": {
         "service": [
             {
-                "commands": [
+                "filter": [
                     "ls", 
                     "echo"
                 ], 
@@ -216,11 +246,16 @@ sample_config="""{
                 "shell":true
             }, 
             {
-                "commands": [
+                "filter": [
                     "man"
                 ], 
-                "name": "help",
+                "name": "man",
                 "shell":false
+            },
+            {
+                "command": "web-shell --help",
+                "name": "myhelp",
+                "shell": false
             }
         ]
     }
@@ -230,12 +265,6 @@ def set_config(filename):
     global config_filename
     config_filename=filename
     debug_log("set_config(%s)"%filename)
-
-force_default_config=False
-def set_force():
-    global force_default_config
-    force_default_config=True
-    debug_log("set_force()")
 
 show_help=False
 def set_show_help():
@@ -247,32 +276,50 @@ def help():
         return
     print("""   usage:
             
-        ibis-web-shell --config=<filename> [options]
-        ibis-web-shell --force [options]
+        web-shell --config=<filename> [options]
+        web-shell [options]
         
         Runs an HTTP server and handles incoming POST and GET requests and executes the command if they pass the config filter
         
         The request format is:
         
-            command=<command argv>
+            command=<command>
+                    script or executable name; this is optional if its specified in config
+                    
+            arg=<argv>
+                    list of arguments to pass to command (this can be included in command if shell is true)
+                    
             [stdin=<data>]
+                    data to be passed as stdin to the command/script
         
     Options:
         --verbose           print more information while working
         --help              show this help
         --port=n            listen on port n; default: %d
-        --force             run without config (service path is /run_shell; allow any command)
-        --config=<file>     use config file to filter what commands are allowed in each path
+        --config=<file>     use config file to filter what commands are allowed in each path;
+                                        when not specified runs with default config (service path is /run_shell; allow any command)
 
     config file:
         Format is json with a single "web_shell_config" element containing a "service" list; 
         each service has following fields:
-            commands    A list of allowed commands (exact match); with special case of ["*"] for allowing any command
-            name        The http path (without /) to this service; eg "name":"run_shell" then client will call 'http://<server>:<port>/run_shell'
-            shell       true/false (case sensitive); true: allow script execution and environment parameter expansion, false: the first argument is the executable, the rest are passed to it as a string
+        
+            filter
+                A list of allowed commands (exact match); with special case of ["*"] for allowing any command
+                filter and command cannot be both specified
+                
+            command (optional)
+                a script or executable name to be run; this is optional as clients may pass command in the request; 
+                if specified in config the client shouldn't specify command in request or it should match this
+                
+            name
+                The http path (without /) to this service; eg "name":"run_shell" then client will call 'http://<server>:<port>/run_shell'
+                
+            shell
+                true/false (case sensitive); true: allow script execution and environment parameter expansion, false: the first argument is the executable, the rest are passed to it as a string
+                
 """ % server_port)
     if verbose:
-        print("    default config (used with --force):\n\n%s\n" % default_config)
+        print("    default config:\n\n%s\n" % default_config)
         print("    sample config:\n\n%s\n" % sample_config)
     exit(0)
 
@@ -284,24 +331,16 @@ def set_port(arg):
 def load_config():
     global config
     global config_filename
-    global force_default_config
-    if force_default_config and config_filename:
-        log("Error: only one of --froce or --config= can be specified.")
-        exit(5)
-    if force_default_config:
-        config.from_json(default_config)
-    elif config_filename!="":
+    if config_filename!="":
         if os.path.isfile(config_filename):
             with open(config_filename, "r") as file:
                 config.from_json(file.read())
+            debug_log("load_config(%s)"%config_filename)
         else:
-            log("Error: config file not found: %s"%config_filename)
-            exit(4)
+            error("config file not found: %s"%config_filename, 4)
     else:
-        log("Error: no config file has been specified.")
-        exit(6)
-    debug_log("load_config(%s)"%config_filename)
-
+        config.from_json(default_config)
+        debug_log("load_config default")
 
 class web_shell_http_request_handler(http.server.BaseHTTPRequestHandler):
     """/*def __init__(self, request_text):
@@ -338,9 +377,9 @@ class web_shell_http_request_handler(http.server.BaseHTTPRequestHandler):
         self.run_shell(self.path,line)
         #self.wfile.close()
     def run_shell(self,path,req):
-        if type(req) is bytearray:
-            debug_log("converting bytearray to str")
-            req=req.decode("utf-8")
+#        if type(req) is bytearray:
+#            debug_log("converting bytearray to str")
+#            req=req.decode("utf-8")
         if type(req) is bytes:
             debug_log("converting bytes to str")
             req=req.decode("utf-8")
@@ -348,28 +387,35 @@ class web_shell_http_request_handler(http.server.BaseHTTPRequestHandler):
         script=""
         cmd=""
         infile=""
+        args=""
         debug_log("run_shell#1")
         for s in req.split("&"):
             nv=parse_name_value(s)
             if nv[0]=="command":
                 script=urllib.parse.unquote_plus(nv[1])
-                chatter("post - script: %s"%script)
+                chatter("run_shell - script: %s"%script)
                 cmd=s
             elif nv[0]=="stdin":
                 infile=urllib.parse.unquote_plus(nv[1])
-                chatter("post - stdin: %s"%infile)
+                chatter("run_shell - stdin: %s"%infile)
                 #create a temporary file, write infile and pass it on
-            else:
+            elif nv[0]=="args":
+                args=urllib.parse.unquote_plus(nv[1])
+                chatter("run_shell - agrs: %s" % args)
+            elif nv[0]!="":
                 err="invalid input field - a: %s; b: %s" % (nv[0],nv[1])
                 chatter(err)
                 self.send_error(400,err);
         out_str=""
         debug_log("run_shell#2")
-        if config.filter(path,script):
+        func=config.get_func(path)
+        if func is not None and func.filter(script):
             debug_log("run_shell#3")
-            sh=config.shell(path)
-            debug_log("run - path: %s script: %s shell: %s" % (path, script, sh));
-            if not bool(sh):
+            sh=func.shell()
+            debug_log("run - path: %s; script: %s; agrs: %s; shell: %s" % (path, script, args, sh));
+            script = func.make_script(script,args)
+            chatter("run - path: %s; script: %s; shell: %s" % (path,script,sh))
+            if not sh:
                 script=script.split()
             try:
                 #if infile=="":
@@ -386,7 +432,10 @@ class web_shell_http_request_handler(http.server.BaseHTTPRequestHandler):
                 #out_str=
         else:
             err="command failed filter pass: %s, %s"%(path,script)
-            chatter(err)
+            if func is None:
+                chatter("path not found in config: %s" % path)
+            else:
+                chatter(err)
             self.send_error(400,err)
         debug_log("run_shell#5 out_str: %s" % out_str)
         if out_str=="":
@@ -395,10 +444,10 @@ class web_shell_http_request_handler(http.server.BaseHTTPRequestHandler):
         debug_log("run_shell#6")
 
 try:
-    parse_handle_options({"--help": set_show_help, "--force":set_force},{"--port":set_port,"--config":set_config})
+    parse_handle_options({"--help": set_show_help},{"--port":set_port,"--config":set_config})
     help()
     load_config()
-    chatter("Starting ibis web service")
+    chatter("Starting web-shell")
     
     server = http.server.HTTPServer
 
