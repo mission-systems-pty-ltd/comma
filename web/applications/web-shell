@@ -329,7 +329,11 @@ def help():
                 The http path (without /) to this service; eg "name":"run_shell" then client will call 'http://<server>:<port>/run_shell'
                 
             shell
-                true/false (case sensitive); true: allow script execution and environment parameter expansion, false: the first argument is the executable, the rest are passed to it as a string
+                true/false (case sensitive); 
+                    true: allow script execution and environment parameter expansion, 
+                    false: the first argument is the executable, the rest are passed to it as a string
+                    
+            WARNING: when running with shell=true, it can be potentially a security vulnerability; because it would allow shell scripts to be executed remotely
                 
 """ % server_port)
     if verbose:
