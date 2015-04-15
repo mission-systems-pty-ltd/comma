@@ -94,7 +94,7 @@ def set_verbose():
     
 def arg_not_found(arg):
     def arg_not_found_(value):
-        log("option not supported: %s" % arg)
+        error("option not supported: %s" % arg)
     return arg_not_found_
 
 def arg_etc(map2,s):
@@ -119,11 +119,13 @@ class web_shell_config:
         filter_=[]
         shell_=True
         command_=None
+        
         def __init__(self,name="",filter=[],shell=True):
             debug_log("debug function(%s, %s, %s)"%(name,filter,shell))
             self.name_=name
             self.filter_=filter
             self.shell_=bool(shell)
+            
         def deserialize(self,map):
             self.name_=map["name"]
             if "command" in map:
@@ -134,6 +136,7 @@ class web_shell_config:
                 self.filter_=map["filter"]
             self.shell_=bool(map.get("shell",True))
             return self
+        
         def filter(self,cmd):
             if self.command_ is not None:
                 return cmd == self.command_ or cmd == "";
@@ -159,37 +162,48 @@ class web_shell_config:
                     return False
             #debug_log("web_shell_config#4 return True")
             return True
+        
         def make_script(self,script,args):
-            if script == "":
+            if script.strip() == "":
                 script=self.command_
             if args !="":
                 script=script + " " + args
             return script
+        
         def shell(self):
             return self.shell_
+        
     funcs=[]
     #list of class funcs
     def add(self,name,filter,shell=True):
         f1=web_shell_config.function(name,filter,shell);
         self.funcs.append(f1)
+        
     def to_json(self):
         return web_shell_config.config_encoder(indent=4).encode(self)
+    
     def deserialize(self,map):
         for item in map["service"]:
             debug_log("debug %s" %item)
             self.funcs.append(web_shell_config.function().deserialize(item))
         return self
+    
     def from_json(self,s):
         map=json.JSONDecoder().decode(s)
         return self.deserialize(map["web_shell_config"])
+    
     class config_encoder(json.JSONEncoder):
         def default(self, obj):
             if isinstance(obj, web_shell_config):
                 return  {"web_shell_config":{"service":obj.funcs}}
             if isinstance(obj, web_shell_config.function):
-                return {"name":obj.name_, "filter":obj.filter_, "shell":obj.shell_}
+                if obj.command_ is not None:
+                    return {"name":obj.name_, "command":obj.command_, "shell":obj.shell_}
+                else:
+                    return {"name":obj.name_, "filter":obj.filter_, "shell":obj.shell_}
             # Let the base class default method raise the TypeError
             return json.JSONEncoder.default(self, obj)
+        
     def get_func(self,path):
         for f in self.funcs:
             if path=="/"+f.name_:
@@ -303,7 +317,7 @@ def help():
         Format is json with a single "web_shell_config" element containing a "service" list; 
         each service has following fields:
         
-            filter
+            filter (optional)
                 A list of allowed commands (exact match); with special case of ["*"] for allowing any command
                 filter and command cannot be both specified
                 
