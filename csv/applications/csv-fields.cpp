@@ -160,8 +160,7 @@ int main( int ac, char** av )
                 }
                 else
                 {
-                    std::cerr << "csv-fields: for clear, please specify --keep, --mask, or --fields" << std::endl;
-                    return 1;
+                    std::cout << std::string( comma::split( line, ',' ).size() - 1, ',' );
                 }
                 std::cout << std::endl;
             }
