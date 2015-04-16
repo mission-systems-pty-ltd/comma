@@ -1,0 +1,16 @@
+test[0]/status=0
+test[1]/status=0
+test[1]/colour="blue"
+test[2]/status=1
+test[2]/immutable="true"
+test[3]/status=127
+test[4]/status=0
+test[4]/hole="true; echo hole=exists"
+test[5]/status=0
+test[5]/color1="red"
+test[5]/color2="green"
+test[6]/status=0
+test[6]/color3="yellow"
+test[7]/status=0
+test[6]/color4="white"
+test[6]/color5="black"

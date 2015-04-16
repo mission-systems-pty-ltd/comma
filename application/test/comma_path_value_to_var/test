@@ -1,0 +1,35 @@
+#!/bin/bash
+
+scriptname="comma_application_util_test"
+
+source $( which comma-application-util ) || { printf "%s could not source comma-application-util" $scriptname >&2 ; exit 1 ; } 
+
+comma_path_value_to_var <<< '' ; printf "test[0]/status=%d\n" $?
+
+comma_path_value_to_var <<< 'colour=blue' ; printf "test[1]/status=%d\n" $?
+printf "test[1]/colour=\"%s\"\n" "$colour"
+
+readonly immutable="true"
+comma_path_value_to_var <<< 'immutable=false' ; printf "test[2]/status=%d\n" $?
+printf "test[2]/immutable=\"%s\"\n" "$immutable"
+
+comma_path_value_to_var <<< 'imp@ssible=true' ; printf "test[3]/status=%d\n" $?
+
+comma_path_value_to_var <<< 'hole=true; echo hole=exists' ; printf "test[4]/status=%d\n" $?
+printf "test[4]/hole=\"%s\"\n" "$hole"
+
+comma_path_value_to_var <<< 'color1=red
+color2=green' ; printf "test[5]/status=%d\n" $?
+printf "test[5]/color1=\"%s\"\n" "$color1"
+printf "test[5]/color2=\"%s\"\n" "$color2"
+
+comma_path_value_to_var <<< 'color3=cyan
+color3=yellow' ; printf "test[6]/status=%d\n" $?
+printf "test[6]/color3=\"%s\"\n" "$color3"
+
+comma_path_value_to_var <<< 'color4=white
+color@=boom
+color5=black' ; printf "test[7]/status=%d\n" $?
+printf "test[6]/color4=\"%s\"\n" "$color4"
+printf "test[6]/color5=\"%s\"\n" "$color5"
+
