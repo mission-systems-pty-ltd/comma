@@ -384,8 +384,6 @@ template < property_tree::path_value::check_repeated_paths check_type > struct f
 
 boost::property_tree::ptree& property_tree::from_path_value_string( boost::property_tree::ptree& ptree, const std::string& s, char equal_sign, char delimiter, property_tree::path_value::check_repeated_paths check_type, bool use_index )
 {
-    std::cerr << "--> a: use_index: " << use_index << std::endl;
-    
     switch ( check_type ) {
         case comma::property_tree::path_value::take_last         : return impl::from_path_value_string< comma::property_tree::path_value::take_last >::parse( ptree, s, equal_sign, delimiter, use_index );
         case comma::property_tree::path_value::unique_input      : return impl::from_path_value_string< comma::property_tree::path_value::unique_input >::parse( ptree, s, equal_sign, delimiter, use_index );
@@ -397,7 +395,6 @@ boost::property_tree::ptree& property_tree::from_path_value_string( boost::prope
 
 boost::property_tree::ptree property_tree::from_path_value_string( const std::string& s, char equal_sign, char delimiter, property_tree::path_value::check_repeated_paths check_type, bool use_index )
 {
-    std::cerr << "--> b: use_index: " << use_index << std::endl;
     boost::property_tree::ptree ptree;
     from_path_value_string( ptree, s, equal_sign, delimiter, check_type, use_index );
     return ptree;
@@ -407,7 +404,6 @@ bool is_seekable( std::istream& stream ) { return stream.seekg( 0, std::ios::beg
 
 void property_tree::from_unknown( std::istream& stream, boost::property_tree::ptree& ptree, property_tree::path_value::check_repeated_paths check_type, char equal_sign, char delimiter, bool use_index )
 {
-    std::cerr << "--> c: use_index: " << use_index << std::endl;
     if( is_seekable( stream ) ) 
     {
         from_unknown_seekable( stream, ptree, check_type, equal_sign, delimiter, use_index ); 
@@ -422,7 +418,6 @@ void property_tree::from_unknown( std::istream& stream, boost::property_tree::pt
 
 void property_tree::from_unknown_seekable( std::istream& stream, boost::property_tree::ptree& ptree, property_tree::path_value::check_repeated_paths check_type, char equal_sign, char delimiter, bool use_index )
 {
-    std::cerr << "--> d: use_index: " << use_index << std::endl;
     if( !is_seekable( stream ) ) { COMMA_THROW( comma::exception, "input stream is not seekable" ); }
     try
     {
