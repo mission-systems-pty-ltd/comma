@@ -72,6 +72,11 @@ static void usage( bool verbose = false )
     std::cerr << "    --no-brackets: use with --show-path-indices - above, show indices as path elements e.g. y/0/x/z/1=\"a\"" << std::endl;
     std::cerr << std::endl;
     std::cerr << "path-value options:" << std::endl;
+    std::cerr << "    --use-index: correcly handle paths like a/b[5]/c/d[7]" << std::endl;
+    std::cerr << "                 path-value to other formats: implemented" << std::endl;
+    std::cerr << "                 todo" << std::endl;
+    std::cerr << "                     - other formats to path-value" << std::endl;
+    std::cerr << "                     - make it default (make sure nothing breaks... everywhere...)" << std::endl;
     std::cerr << "    --take-last: if paths are repeated, take last path=value" << std::endl;
     std::cerr << "    --verify-unique,--unique-input: ensure that all input paths are unique (takes precedence over --take-last)" << std::endl;
     std::cerr << "warning: if paths are repeated, output value selected from these inputs in not deterministic" << std::endl;
@@ -91,7 +96,8 @@ static char path_value_delimiter;
 static bool linewise;
 typedef comma::property_tree::path_mode path_mode;
 static path_mode indices_mode = comma::property_tree::disabled;
-static comma::property_tree::check_repeated_paths check_type( comma::property_tree::no_check );
+static bool use_index = true;
+static comma::property_tree::path_value::check_repeated_paths check_type( comma::property_tree::path_value::no_check );
 
 enum Types { ini, info, json, xml, name_value, path_value, void_t };
 
@@ -161,8 +167,9 @@ int main( int ac, char** av )
         std::string to = options.value< std::string >( "--to", "name-value" );
         equal_sign = options.value( "--equal-sign,-e", '=' );
         linewise = options.exists( "--linewise,-l" );
-        if ( options.exists( "--take-last" ) ) check_type = comma::property_tree::take_last;
-        if ( options.exists( "--verify-unique,--unique-input" ) ) check_type = comma::property_tree::unique_input;
+        if ( options.exists( "--take-last" ) ) check_type = comma::property_tree::path_value::take_last;
+        if ( options.exists( "--verify-unique,--unique-input" ) ) check_type = comma::property_tree::path_value::unique_input;
+        // todo: bool use_index = options.exists( "--use-index" );
         boost::optional< char > delimiter = options.optional< char >( "--delimiter,-d" );
         name_value_delimiter = delimiter ? *delimiter : ',';
         path_value_delimiter = delimiter ? *delimiter : ( linewise ? ',' : '\n' );

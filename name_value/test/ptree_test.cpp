@@ -309,7 +309,7 @@ TEST( ptree, from_path_value )
         boost::property_tree::ptree ptree;
         std::string s = "a/4/hello=4\na/4/nested/moon=1\na/4/nested/value=hello\na/6/hello=6\na/6/nested/moon=2\na/6/nested/value=world";
         std::istringstream iss( s );
-        property_tree::from_path_value( iss, ptree, comma::property_tree::no_check, '=', '\n' );
+        property_tree::from_path_value( iss, ptree, comma::property_tree::path_value::no_check, '=', '\n' );
         //std::cerr << property_tree::to_name_value_string( ptree ) << std::endl;
         from_ptree from_ptree( ptree, "a" );
         std::map< unsigned int, test_type > m;
@@ -457,7 +457,7 @@ TEST( ptree, array )
         boost::property_tree::ptree ptree;
         std::string s = "root/0=hello\nroot/1=world";
         std::istringstream iss( s );
-        property_tree::from_path_value( iss, ptree, comma::property_tree::no_check, '=', '\n' );
+        property_tree::from_path_value( iss, ptree, comma::property_tree::path_value::no_check, '=', '\n' );
         from_ptree from_ptree( ptree, "root" );
         boost::array< std::string, 2 > array;
         visiting::apply( from_ptree, array );

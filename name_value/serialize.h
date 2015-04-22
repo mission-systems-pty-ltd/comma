@@ -336,7 +336,7 @@ template < typename T > inline void read_xml( T& t, std::istream& stream ) { rea
 template < typename T > inline void read_path_value( T& t, std::istream& stream, const xpath& root, bool permissive )
 {
     boost::property_tree::ptree p;
-    comma::property_tree::from_path_value( stream, p, comma::property_tree::no_check, '=', '\n' );
+    comma::property_tree::from_path_value( stream, p, comma::property_tree::path_value::no_check, '=', '\n' );
     comma::from_ptree from_ptree( p, root, permissive );
     comma::visiting::apply( from_ptree ).to( t );
 }

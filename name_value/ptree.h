@@ -83,21 +83,35 @@ struct property_tree // quick and dirty
     /// get value as string from an xpath like a/b[5]/c/d[3]=4 on ptree
     static boost::optional< std::string > get( boost::property_tree::ptree& ptree, const xpath& path );
 
+    /// for path-value strings only
     /// read as path-value from string; enum specifies how to treat repeated paths (foo="bar"; foo="blah";)
-    enum check_repeated_paths { no_check, take_last, unique_input, no_overwrite };
+    struct path_value
+    {
+        enum check_repeated_paths
+        { 
+            /// no check at all
+              no_check
+            /// if multiple entries with the same path, take the last entry
+            , take_last
+            /// expect unique paths on input, can overwrite existing values in ptree
+            , unique_input
+            /// expect unique paths on input, cannot overwrite existing values in ptree
+            , no_overwrite
+        };
+    };
 
     /// convert path-value-style string into boost parameter tree
-    static boost::property_tree::ptree from_path_value_string( const std::string& s, char equal_sign = '=', char delimiter = ',', check_repeated_paths check_type = no_check );
-    static boost::property_tree::ptree& from_path_value_string( boost::property_tree::ptree& ptree, const std::string& s, char equal_sign, char delimiter, check_repeated_paths check_type = no_check );
+    static boost::property_tree::ptree from_path_value_string( const std::string& s, char equal_sign = '=', char delimiter = ',', path_value::check_repeated_paths check_type = path_value::no_check );
+    static boost::property_tree::ptree& from_path_value_string( boost::property_tree::ptree& ptree, const std::string& s, char equal_sign, char delimiter, path_value::check_repeated_paths check_type = path_value::no_check );
 
     /// read as path-value from input stream
-    static void from_path_value( std::istream& is, boost::property_tree::ptree& ptree,  check_repeated_paths check_type = no_check, char equal_sign = '=', char delimiter = ',' );
+    static void from_path_value( std::istream& is, boost::property_tree::ptree& ptree,  path_value::check_repeated_paths check_type = path_value::no_check, char equal_sign = '=', char delimiter = ',' );
 
     /// guess format and read boost property tree from stream (a wrapper for from_unknown_seekable that buffers input from a non-seekable stream)
-    static void from_unknown( std::istream& stream, boost::property_tree::ptree& ptree, check_repeated_paths check_type = no_check, char equal_sign = '=', char delimiter = ','  );
+    static void from_unknown( std::istream& stream, boost::property_tree::ptree& ptree, path_value::check_repeated_paths check_type = path_value::no_check, char equal_sign = '=', char delimiter = ','  );
 
     /// guess format and read boost property tree from a seekable stream (pipe or terminal input is not accepted)
-    static void from_unknown_seekable( std::istream& stream, boost::property_tree::ptree& ptree, check_repeated_paths check_type = no_check, char equal_sign = '=', char delimiter = ','  );
+    static void from_unknown_seekable( std::istream& stream, boost::property_tree::ptree& ptree, path_value::check_repeated_paths check_type = path_value::no_check, char equal_sign = '=', char delimiter = ','  );
 
     template < template < typename > class Traits = comma::visiting::traits >
     class from
@@ -335,71 +349,5 @@ class to_ptree
 };
 
 } // namespace comma
-
-namespace comma { namespace impl {
-
-template< property_tree::check_repeated_paths check_type > struct path_filter;
-
-template <> struct path_filter< property_tree::no_check > {
-    path_filter( boost::property_tree::ptree& ptree ) : ptree_( ptree ) {}
-    void put( const boost::property_tree::ptree::path_type & p, const std::string & v ) { ptree_.put( p, v ); }
-    boost::property_tree::ptree& ptree_;
-};
-
-template <> struct path_filter< property_tree::no_overwrite > {
-    path_filter( boost::property_tree::ptree& ptree ) : ptree_( ptree ) {}
-    void put( const boost::property_tree::ptree::path_type & p, const std::string & v ) {
-        boost::optional< std::string > old_v = ptree_.get_optional< std::string >( p );
-        if ( old_v ) { COMMA_THROW( comma::exception, "input path '" << p.dump() << "' already in the tree" ); }
-        ptree_.put( p, v );
-    }
-    boost::property_tree::ptree& ptree_;
-};
-
-template <> struct path_filter< property_tree::take_last > {
-    path_filter( boost::property_tree::ptree& ptree ) : ptree_( ptree ) {}
-    void put( const boost::property_tree::ptree::path_type & p, const std::string & v ) {
-        boost::optional< boost::property_tree::ptree& > old_child = ptree_.get_child_optional( p );
-        if ( old_child ) {
-            old_child->put_value< std::string >( v );
-        } else {
-            ptree_.put( p, v );
-        }
-    }
-    boost::property_tree::ptree& ptree_;
-};
-
-template <> struct path_filter< property_tree::unique_input > {
-    path_filter( boost::property_tree::ptree& ptree ) : ptree_( ptree ) {}
-    void put( const boost::property_tree::ptree::path_type & p, const std::string & v ) {
-        typedef std::pair< path_set::iterator, bool > result_of_insert;
-        result_of_insert result = unique_.insert( p.dump() );
-        if ( !result.second ) { COMMA_THROW( comma::exception, "input path '" << p.dump() << "' is not unique" ); }
-        ptree_.put( p, v );
-    }
-    boost::property_tree::ptree& ptree_;
-private:
-    typedef boost::unordered_set< std::string > path_set;
-    path_set unique_;
-};
-
-template < property_tree::check_repeated_paths check_type > struct from_path_value_string {
-    static inline boost::property_tree::ptree& parse( boost::property_tree::ptree& ptree, const std::string& s, char equal_sign, char delimiter )
-    {
-        const std::vector< std::string >& v = comma::split( s, delimiter );
-        impl::path_filter< check_type > c( ptree );
-
-        for( std::size_t i = 0; i < v.size(); ++i )
-        {
-            if( v[i].empty() ) { continue; }
-            std::string::size_type p = v[i].find_first_of( equal_sign );
-            if( p == std::string::npos ) { COMMA_THROW( comma::exception, "expected '" << delimiter << "'-separated xpath" << equal_sign << "value pairs; got \"" << v[i] << "\"" ); }
-            c.put( boost::property_tree::ptree::path_type( comma::strip( v[i].substr( 0, p ), '"' ), '/' ), comma::strip( v[i].substr( p + 1, std::string::npos ), '"' ) );
-        }
-        return ptree;
-    }
-};
-
-} } // namespace comma { namespace impl {
 
 #endif /*COMMA_NAME_VALUE_PTREE_H_*/

@@ -94,7 +94,7 @@ static bool linewise;
 static bool output_path;
 typedef comma::property_tree::path_mode path_mode;
 static path_mode indices_mode = comma::property_tree::disabled;
-static comma::property_tree::check_repeated_paths check_type( comma::property_tree::no_check );
+static comma::property_tree::path_value::check_repeated_paths check_type( comma::property_tree::path_value::no_check );
 
 enum Types { ini, info, json, xml, name_value, path_value, void_t };
 
@@ -247,8 +247,8 @@ int main( int ac, char** av )
         std::string to = options.value< std::string >( "--to", "name-value" );
         equal_sign = options.value( "--equal-sign,-e", '=' );
         linewise = options.exists( "--linewise,-l" );
-        if ( options.exists( "--take-last" ) ) check_type = comma::property_tree::take_last;
-        if ( options.exists( "--verify-unique,--unique-input" ) ) check_type = comma::property_tree::unique_input;
+        if ( options.exists( "--take-last" ) ) check_type = comma::property_tree::path_value::take_last;
+        if ( options.exists( "--verify-unique,--unique-input" ) ) check_type = comma::property_tree::path_value::unique_input;
         boost::optional< char > delimiter = options.optional< char >( "--delimiter,-d" );
         name_value_delimiter = delimiter ? *delimiter : ',';
         path_value_delimiter = delimiter ? *delimiter : ( linewise ? ',' : '\n' );
