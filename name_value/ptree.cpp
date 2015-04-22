@@ -230,7 +230,7 @@ void property_tree::from_name_value( std::istream& is, boost::property_tree::ptr
     ptree = from_name_value_string( oss.str(), equal_sign, delimiter );
 }
 
-void property_tree::from_path_value( std::istream& is, boost::property_tree::ptree& ptree, property_tree::path_value::check_repeated_paths check_type, char equal_sign, char delimiter )
+void property_tree::from_path_value( std::istream& is, boost::property_tree::ptree& ptree, property_tree::path_value::check_repeated_paths check_type, char equal_sign, char delimiter, bool use_index )
 {
     std::string s;
     while( is.good() && !is.eof() ) // quick and dirty: read to the end of file
@@ -241,7 +241,7 @@ void property_tree::from_path_value( std::istream& is, boost::property_tree::ptr
         if( pos == std::string::npos || line[pos] == '#' ) { continue; }
         s += line + delimiter;
     }
-    ptree = comma::property_tree::from_path_value_string( s, equal_sign, delimiter, check_type );
+    ptree = comma::property_tree::from_path_value_string( s, equal_sign, delimiter, check_type, use_index );
 }
 
 std::string property_tree::to_name_value_string( const boost::property_tree::ptree& ptree, bool indented, char equal_sign, char delimiter )
@@ -307,49 +307,49 @@ template< property_tree::path_value::check_repeated_paths check_type > struct pa
 
 template <> struct path_filter< property_tree::path_value::no_check >
 {
-    path_filter( boost::property_tree::ptree& ptree ) : ptree_( ptree ) {}
-    void put( const boost::property_tree::ptree::path_type & p, const std::string & v ) { ptree_.put( p, v ); }
-    boost::property_tree::ptree& ptree_;
+    path_filter( boost::property_tree::ptree& ptree ) {}
+    bool put_allowed( const std::string&, bool ) const { return true; }
 };
 
 template <> struct path_filter< property_tree::path_value::no_overwrite >
 {
     path_filter( boost::property_tree::ptree& ptree ) : ptree_( ptree ) {}
-    void put( const boost::property_tree::ptree::path_type & p, const std::string & v ) {
-        boost::optional< std::string > old_v = ptree_.get_optional< std::string >( p );
-        if ( old_v ) { COMMA_THROW( comma::exception, "input path '" << p.dump() << "' already in the tree" ); }
-        ptree_.put( p, v );
+    bool put_allowed( const std::string& p, bool use_index ) const
+    {
+        if( use_index )
+        { 
+            if( property_tree::get( ptree_, p ) ) { COMMA_THROW( comma::exception, "input path '" << p << "' already in the tree" ); }
+        }
+        else
+        {
+            boost::optional< std::string > old_v = ptree_.get_optional< std::string >( boost::property_tree::ptree::path_type( p, '/' ) );
+            if( old_v ) { COMMA_THROW( comma::exception, "input path '" << p << "' already in the tree" ); }
+        }
+        return true;
     }
     boost::property_tree::ptree& ptree_;
 };
 
 template <> struct path_filter< property_tree::path_value::take_last >
 {
-    path_filter( boost::property_tree::ptree& ptree ) : ptree_( ptree ) {}
-    void put( const boost::property_tree::ptree::path_type & p, const std::string & v ) {
-        boost::optional< boost::property_tree::ptree& > old_child = ptree_.get_child_optional( p );
-        if ( old_child ) {
-            old_child->put_value< std::string >( v );
-        } else {
-            ptree_.put( p, v );
-        }
-    }
-    boost::property_tree::ptree& ptree_;
+    path_filter( boost::property_tree::ptree& ptree ) {}
+    bool put_allowed( const std::string&, bool ) const { return true; }
 };
 
 template <> struct path_filter< property_tree::path_value::unique_input >
 {
     path_filter( boost::property_tree::ptree& ptree ) : ptree_( ptree ) {}
-    void put( const boost::property_tree::ptree::path_type & p, const std::string & v ) {
+    bool put_allowed( const std::string& p, bool use_index ) const
+    {
         typedef std::pair< path_set::iterator, bool > result_of_insert;
-        result_of_insert result = unique_.insert( p.dump() );
-        if ( !result.second ) { COMMA_THROW( comma::exception, "input path '" << p.dump() << "' is not unique" ); }
-        ptree_.put( p, v );
+        result_of_insert result = unique_.insert( p );
+        if( !result.second ) { COMMA_THROW( comma::exception, "input path '" << p << "' is not unique" ); }
+        return true;
     }
     boost::property_tree::ptree& ptree_;
 private:
     typedef boost::unordered_set< std::string > path_set;
-    path_set unique_;
+    mutable path_set unique_;
 };
 
 template < property_tree::path_value::check_repeated_paths check_type > struct from_path_value_string
@@ -357,7 +357,8 @@ template < property_tree::path_value::check_repeated_paths check_type > struct f
     static inline boost::property_tree::ptree& parse( boost::property_tree::ptree& ptree
                                                     , const std::string& s
                                                     , char equal_sign
-                                                    , char delimiter )
+                                                    , char delimiter
+                                                    , bool use_index ) // todo? make using index default?
     {
         const std::vector< std::string >& v = comma::split( s, delimiter );
         impl::path_filter< check_type > c( ptree );
@@ -369,7 +370,11 @@ template < property_tree::path_value::check_repeated_paths check_type > struct f
             if( p == std::string::npos ) { COMMA_THROW( comma::exception, "expected '" << delimiter << "'-separated xpath" << equal_sign << "value pairs; got \"" << v[i] << "\"" ); }
             const std::string& path = comma::strip( v[i].substr( 0, p ), '"' );
             const std::string& value = comma::strip( v[i].substr( p + 1, std::string::npos ), '"' );
-            c.put( boost::property_tree::ptree::path_type( path, '/' ), value );
+            if( c.put_allowed( path, use_index ) )
+            {
+                if( use_index ) { property_tree::put( ptree, path, value ); } // quick and dirty
+                else { ptree.put( boost::property_tree::ptree::path_type( path, '/' ), value ); }
+            }
         }
         return ptree;
     }
@@ -377,42 +382,47 @@ template < property_tree::path_value::check_repeated_paths check_type > struct f
 
 } // namespace impl {
 
-boost::property_tree::ptree& property_tree::from_path_value_string( boost::property_tree::ptree& ptree, const std::string& s, char equal_sign, char delimiter, property_tree::path_value::check_repeated_paths check_type )
+boost::property_tree::ptree& property_tree::from_path_value_string( boost::property_tree::ptree& ptree, const std::string& s, char equal_sign, char delimiter, property_tree::path_value::check_repeated_paths check_type, bool use_index )
 {
+    std::cerr << "--> a: use_index: " << use_index << std::endl;
+    
     switch ( check_type ) {
-        case comma::property_tree::path_value::take_last         : return impl::from_path_value_string< comma::property_tree::path_value::take_last >::parse( ptree, s, equal_sign, delimiter );
-        case comma::property_tree::path_value::unique_input      : return impl::from_path_value_string< comma::property_tree::path_value::unique_input >::parse( ptree, s, equal_sign, delimiter );
-        case comma::property_tree::path_value::no_overwrite      : return impl::from_path_value_string< comma::property_tree::path_value::no_overwrite >::parse( ptree, s, equal_sign, delimiter );
-        case comma::property_tree::path_value::no_check: default : return impl::from_path_value_string< comma::property_tree::path_value::no_check >::parse( ptree, s, equal_sign, delimiter );
+        case comma::property_tree::path_value::take_last         : return impl::from_path_value_string< comma::property_tree::path_value::take_last >::parse( ptree, s, equal_sign, delimiter, use_index );
+        case comma::property_tree::path_value::unique_input      : return impl::from_path_value_string< comma::property_tree::path_value::unique_input >::parse( ptree, s, equal_sign, delimiter, use_index );
+        case comma::property_tree::path_value::no_overwrite      : return impl::from_path_value_string< comma::property_tree::path_value::no_overwrite >::parse( ptree, s, equal_sign, delimiter, use_index );
+        case comma::property_tree::path_value::no_check: default : return impl::from_path_value_string< comma::property_tree::path_value::no_check >::parse( ptree, s, equal_sign, delimiter, use_index );
     }
     return ptree;
 }
 
-boost::property_tree::ptree property_tree::from_path_value_string( const std::string& s, char equal_sign, char delimiter, property_tree::path_value::check_repeated_paths check_type )
+boost::property_tree::ptree property_tree::from_path_value_string( const std::string& s, char equal_sign, char delimiter, property_tree::path_value::check_repeated_paths check_type, bool use_index )
 {
+    std::cerr << "--> b: use_index: " << use_index << std::endl;
     boost::property_tree::ptree ptree;
-    from_path_value_string( ptree, s, equal_sign, delimiter, check_type );
+    from_path_value_string( ptree, s, equal_sign, delimiter, check_type, use_index );
     return ptree;
 }
 
 bool is_seekable( std::istream& stream ) { return stream.seekg( 0, std::ios::beg ); }
 
-void property_tree::from_unknown( std::istream& stream, boost::property_tree::ptree& ptree, property_tree::path_value::check_repeated_paths check_type, char equal_sign, char delimiter )
+void property_tree::from_unknown( std::istream& stream, boost::property_tree::ptree& ptree, property_tree::path_value::check_repeated_paths check_type, char equal_sign, char delimiter, bool use_index )
 {
+    std::cerr << "--> c: use_index: " << use_index << std::endl;
     if( is_seekable( stream ) ) 
     {
-        from_unknown_seekable( stream, ptree, check_type, equal_sign, delimiter); 
+        from_unknown_seekable( stream, ptree, check_type, equal_sign, delimiter, use_index ); 
     }
     else 
     {
         std::stringstream buffer;
         buffer << stream.rdbuf();
-        from_unknown_seekable( buffer, ptree, check_type, equal_sign, delimiter);
+        from_unknown_seekable( buffer, ptree, check_type, equal_sign, delimiter, use_index );
     }
 }
 
-void property_tree::from_unknown_seekable( std::istream& stream, boost::property_tree::ptree& ptree, property_tree::path_value::check_repeated_paths check_type, char equal_sign, char delimiter )
+void property_tree::from_unknown_seekable( std::istream& stream, boost::property_tree::ptree& ptree, property_tree::path_value::check_repeated_paths check_type, char equal_sign, char delimiter, bool use_index )
 {
+    std::cerr << "--> d: use_index: " << use_index << std::endl;
     if( !is_seekable( stream ) ) { COMMA_THROW( comma::exception, "input stream is not seekable" ); }
     try
     {
@@ -436,7 +446,7 @@ void property_tree::from_unknown_seekable( std::istream& stream, boost::property
     {
         stream.clear();
         stream.seekg( 0, std::ios::beg );
-        comma::property_tree::from_path_value( stream, ptree, check_type, equal_sign, delimiter );
+        comma::property_tree::from_path_value( stream, ptree, check_type, equal_sign, delimiter, use_index );
         return;
     }
     catch( const boost::property_tree::ptree_error&  ex ) {}

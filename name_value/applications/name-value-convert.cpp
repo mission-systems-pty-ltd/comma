@@ -79,7 +79,12 @@ static void usage( bool verbose = false )
     std::cerr << "                     - make it default (make sure nothing breaks... everywhere...)" << std::endl;
     std::cerr << "    --take-last: if paths are repeated, take last path=value" << std::endl;
     std::cerr << "    --verify-unique,--unique-input: ensure that all input paths are unique (takes precedence over --take-last)" << std::endl;
-    std::cerr << "warning: if paths are repeated, output value selected from these inputs in not deterministic" << std::endl;
+    std::cerr << std::endl;
+    std::cerr <<      "warning: if paths are repeated, output value selected from these inputs in not deterministic" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "xml options" << std::endl;
+    std::cerr << "    --indented: if present, output indented xml" << std::endl;
+    std::cerr << "    --indent=<indent>: if present, output indented xml; default: 4" << std::endl;
     std::cerr << std::endl;
     std::cerr << "data flow options:" << std::endl;
     std::cerr << "    --linewise,-l: if present, treat each input line as a record" << std::endl;
@@ -94,6 +99,7 @@ static char equal_sign;
 static char name_value_delimiter;
 static char path_value_delimiter;
 static bool linewise;
+static boost::property_tree::xml_parser::xml_writer_settings< char > xml_writer_settings;
 typedef comma::property_tree::path_mode path_mode;
 static path_mode indices_mode = comma::property_tree::disabled;
 static bool use_index = true;
@@ -105,7 +111,7 @@ template < Types Type > struct traits {};
 
 template <> struct traits< void_t >
 {
-    static void input( std::istream& is, boost::property_tree::ptree& ptree ) { comma::property_tree::from_unknown( is, ptree, check_type, equal_sign, path_value_delimiter  ); }
+    static void input( std::istream& is, boost::property_tree::ptree& ptree ) { comma::property_tree::from_unknown( is, ptree, check_type, equal_sign, path_value_delimiter, use_index  ); }
 };
 
 template <> struct traits< ini >
@@ -129,7 +135,7 @@ template <> struct traits< json >
 template <> struct traits< xml >
 {
     static void input( std::istream& is, boost::property_tree::ptree& ptree ) { boost::property_tree::read_xml( is, ptree ); }
-    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode ) { boost::property_tree::write_xml( os, ptree ); }
+    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode ) { boost::property_tree::write_xml( os, ptree, xml_writer_settings ); }
 };
 
 template <> struct traits< name_value >
@@ -143,10 +149,10 @@ template <> struct traits< path_value > // quick and dirty
 {
     static void input( std::istream& is, boost::property_tree::ptree& ptree )
     {
-        if( !linewise ) { comma::property_tree::from_path_value( is, ptree, check_type, equal_sign, path_value_delimiter ); return; }
+        if( !linewise ) { comma::property_tree::from_path_value( is, ptree, check_type, equal_sign, path_value_delimiter, use_index ); return; }
         std::string line;
         std::getline( is, line );
-        ptree = comma::property_tree::from_path_value_string( line, equal_sign, path_value_delimiter, check_type );
+        ptree = comma::property_tree::from_path_value_string( line, equal_sign, path_value_delimiter, check_type, use_index );
     }
     static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode mode ) 
     {
@@ -169,7 +175,8 @@ int main( int ac, char** av )
         linewise = options.exists( "--linewise,-l" );
         if ( options.exists( "--take-last" ) ) check_type = comma::property_tree::path_value::take_last;
         if ( options.exists( "--verify-unique,--unique-input" ) ) check_type = comma::property_tree::path_value::unique_input;
-        // todo: bool use_index = options.exists( "--use-index" );
+        use_index = options.exists( "--use-index" );
+        xml_writer_settings.indent_count = options.value( "--indent", options.exists( "--indented" ) ? 4 : 0 );
         boost::optional< char > delimiter = options.optional< char >( "--delimiter,-d" );
         name_value_delimiter = delimiter ? *delimiter : ',';
         path_value_delimiter = delimiter ? *delimiter : ( linewise ? ',' : '\n' );
