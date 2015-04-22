@@ -50,9 +50,75 @@
 
 #include "ptree.h"
 
-#define TEST_UNIQUE 1
+namespace comma {
+    
+//void property_tree::put( boost::property_tree::ptree& ptree, const std::string& path, const std::string& value, char delimiter ) { comma::property_tree::put( ptree, xpath( path, delimiter ), value ); }
 
-namespace comma { namespace Impl {
+void property_tree::put( boost::property_tree::ptree& ptree, const xpath& path, const std::string& value )
+{
+    boost::property_tree::ptree* t = &ptree;
+    for( unsigned int i = 0; i < path.elements.size(); ++i )
+    {
+        boost::optional< boost::property_tree::ptree& > child = t->get_child_optional( path.elements[i].name );
+        if( path.elements[i].index )
+        {
+            unsigned int size = 0;
+            if( child ) // quick and dirty, because some parts of boost::property_tree suck
+            {
+                bool found = false;
+                for( boost::property_tree::ptree::assoc_iterator j = t->ordered_begin(); j != t->not_found(); ++j )
+                {
+                    if( j->first != path.elements[i].name ) { if( found ) { break; } else { continue; } }
+                    ++size;
+                    if( *path.elements[i].index < size ) { t = &( j->second ); break; }
+                    found = true;
+                }
+            }
+            if( *path.elements[i].index > size ) { COMMA_THROW( comma::exception, "expected index not greater than " << size << "; got " << path.elements[i].index << " in " << path.to_string() ); }
+            if( *path.elements[i].index == size ) { t = &( t->add_child( path.elements[i].name, boost::property_tree::ptree() ) ); }                
+        }
+        else
+        {
+            t = child ? &( *child ) : &t->add_child( path.elements[i].name, boost::property_tree::ptree() );
+        }
+    }
+    t->put_value( value );
+}
+
+boost::optional< std::string > property_tree::get( boost::property_tree::ptree& ptree, const xpath& path )
+{
+    boost::property_tree::ptree* t = &ptree;
+    for( unsigned int i = 0; i < path.elements.size(); ++i )
+    {
+        boost::optional< boost::property_tree::ptree& > child = t->get_child_optional( path.elements[i].name );
+        if( path.elements[i].index )
+        {
+            unsigned int size = 0;
+            if( child ) // quick and dirty, because some parts of boost::property_tree suck
+            {
+                bool found = false;
+                for( boost::property_tree::ptree::assoc_iterator j = t->ordered_begin(); j != t->not_found(); ++j )
+                {
+                    if( j->first != path.elements[i].name ) { if( found ) { break; } else { continue; } }
+                    ++size;
+                    if( *path.elements[i].index < size ) { t = &( j->second ); break; }
+                    found = true;
+                }
+            }
+            if( *path.elements[i].index >= size ) { return boost::none; }
+        }
+        else
+        {
+            if( !child ) { return boost::none; }
+            t = &( *child );
+        }
+    }
+    return t->get_value_optional< std::string >();
+}
+    
+} // namespace comma {
+
+namespace comma { namespace impl {
 
 static void ptree_to_name_value_string_impl( std::ostream& os, boost::property_tree::ptree::const_iterator i, bool is_begin, bool indented, unsigned int indent, char equal_sign, char delimiter )
 {
@@ -122,7 +188,7 @@ static void ptree_to_path_value_string_impl( std::ostream& os, boost::property_t
     }
 }
 
-} } // namespace { namespace Impl {
+} } // namespace { namespace impl {
 
 
 namespace comma {
@@ -131,7 +197,7 @@ void property_tree::to_name_value( std::ostream& os, const boost::property_tree:
 {
     for( boost::property_tree::ptree::const_iterator i = ptree.begin(); i != ptree.end(); ++i )
     {
-        Impl::ptree_to_name_value_string_impl( os, i, i == ptree.begin(), indented, 0, equal_sign, delimiter );
+        impl::ptree_to_name_value_string_impl( os, i, i == ptree.begin(), indented, 0, equal_sign, delimiter );
     }
     if( indented ) { os << std::endl; } // quick and dirty
 }
@@ -147,7 +213,7 @@ void property_tree::to_path_value( std::ostream& os, const boost::property_tree:
         //         If a node has both named and unnamed child nodes, it cannot be mapped to a JSON representation."
         // http://www.boost.org/doc/libs/1_41_0/doc/html/boost_propertytree/parsers.html#boost_propertytree.parsers.json_parser
         xpath display_path;
-        Impl::ptree_to_path_value_string_impl( os, i, i == ptree.begin(), path, display_path, mode, equal_sign, delimiter, root.to_string() ); // quick and dirty
+        impl::ptree_to_path_value_string_impl( os, i, i == ptree.begin(), path, display_path, mode, equal_sign, delimiter, root.to_string() ); // quick and dirty
     }
 }
 
@@ -238,10 +304,10 @@ boost::property_tree::ptree property_tree::from_name_value_string( const std::st
 boost::property_tree::ptree& property_tree::from_path_value_string( boost::property_tree::ptree& ptree, const std::string& s, char equal_sign, char delimiter, check_repeated_paths check_type )
 {
     switch ( check_type ) {
-        case comma::property_tree::take_last         : return Impl::from_path_value_string< comma::property_tree::take_last >::parse( ptree, s, equal_sign, delimiter );
-        case comma::property_tree::unique_input      : return Impl::from_path_value_string< comma::property_tree::unique_input >::parse( ptree, s, equal_sign, delimiter );
-        case comma::property_tree::no_overwrite      : return Impl::from_path_value_string< comma::property_tree::no_overwrite >::parse( ptree, s, equal_sign, delimiter );
-        case comma::property_tree::no_check: default : return Impl::from_path_value_string< comma::property_tree::no_check >::parse( ptree, s, equal_sign, delimiter );
+        case comma::property_tree::take_last         : return impl::from_path_value_string< comma::property_tree::take_last >::parse( ptree, s, equal_sign, delimiter );
+        case comma::property_tree::unique_input      : return impl::from_path_value_string< comma::property_tree::unique_input >::parse( ptree, s, equal_sign, delimiter );
+        case comma::property_tree::no_overwrite      : return impl::from_path_value_string< comma::property_tree::no_overwrite >::parse( ptree, s, equal_sign, delimiter );
+        case comma::property_tree::no_check: default : return impl::from_path_value_string< comma::property_tree::no_check >::parse( ptree, s, equal_sign, delimiter );
     }
     return ptree;
 }

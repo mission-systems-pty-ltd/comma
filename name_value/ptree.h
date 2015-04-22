@@ -51,8 +51,6 @@
 #include <comma/visiting/visit.h>
 #include <comma/visiting/while.h>
 
-#define TEST_UNIQUE 1
-
 namespace comma {
 
 struct property_tree // quick and dirty
@@ -78,6 +76,12 @@ struct property_tree // quick and dirty
 
     /// convert boost parameter tree into path=value-style string (equal sign and delimiter have to be escaped)
     static std::string to_path_value_string( const boost::property_tree::ptree& ptree, path_mode mode=disabled, char equal_sign = '=', char delimiter = ',' );
+    
+    /// put an xpath like a/b[5]/c/d[3]=4 into ptree
+    static void put( boost::property_tree::ptree& ptree, const xpath& path, const std::string& value );
+    
+    /// get value as string from an xpath like a/b[5]/c/d[3]=4 on ptree
+    static boost::optional< std::string > get( boost::property_tree::ptree& ptree, const xpath& path );
 
     /// read as path-value from string; enum specifies how to treat repeated paths (foo="bar"; foo="blah";)
     enum check_repeated_paths { no_check, take_last, unique_input, no_overwrite };
@@ -295,12 +299,12 @@ class to_ptree
         void apply( const K& name, const T& value )
         {
             if( !( path_ <= branch_ ) ) { return; } // visit, only if on the branch
-            std::string s = boost::lexical_cast< std::string >( name );
-            append_( s.c_str() );
+            const std::string& s = boost::lexical_cast< std::string >( name );
+            append_( &s[0] );
             visiting::do_while<    !boost::is_fundamental< T >::value
                                 && !boost::is_same< T, boost::posix_time::ptime >::value
                                 && !boost::is_same< T, std::string >::value >::visit( name, value, *this );
-            trim_( s.c_str() );
+            trim_( &s[0] );
         }
 
         /// apply to non-leaf elements
@@ -332,8 +336,7 @@ class to_ptree
 
 } // namespace comma
 
-
-namespace comma { namespace Impl {
+namespace comma { namespace impl {
 
 template< property_tree::check_repeated_paths check_type > struct path_filter;
 
@@ -384,7 +387,7 @@ template < property_tree::check_repeated_paths check_type > struct from_path_val
     static inline boost::property_tree::ptree& parse( boost::property_tree::ptree& ptree, const std::string& s, char equal_sign, char delimiter )
     {
         const std::vector< std::string >& v = comma::split( s, delimiter );
-        Impl::path_filter< check_type > c( ptree );
+        impl::path_filter< check_type > c( ptree );
 
         for( std::size_t i = 0; i < v.size(); ++i )
         {
@@ -397,6 +400,6 @@ template < property_tree::check_repeated_paths check_type > struct from_path_val
     }
 };
 
-} } // namespace comma { namespace Impl {
+} } // namespace comma { namespace impl {
 
 #endif /*COMMA_NAME_VALUE_PTREE_H_*/

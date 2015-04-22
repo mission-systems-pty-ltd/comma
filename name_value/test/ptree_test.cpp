@@ -682,4 +682,27 @@ TEST ( name_value_ptree, vector_at_the_root )
     }
 }
 
+static void test_put_( boost::property_tree::ptree& p, const std::string& path, const std::string& value )
+{
+    property_tree::put( p, path, value );
+    EXPECT_EQ( value, property_tree::get( p, path ) );
+}
+
+TEST ( name_value_ptree, put )
+{
+    boost::property_tree::ptree p;
+    test_put_( p, "a/b/c", "0" );
+    test_put_( p, "a/b/d[0]", "1" );
+    test_put_( p, "a/b/d[1]", "2" );
+    test_put_( p, "a/e[0]/x", "3" );
+    test_put_( p, "a/e[1]/y", "4" );
+    test_put_( p, "a/e[1]/z[0]", "5" );
+    test_put_( p, "a/e[1]/z[1]", "6" );
+    test_put_( p, "a/e[1]/f[0]/k", "7" );
+    test_put_( p, "a/e[1]/f[1]/m", "8" );
+    EXPECT_FALSE( property_tree::get( p, "x/y/z" ) );
+    EXPECT_FALSE( property_tree::get( p, "a/b/x" ) );
+    EXPECT_FALSE( property_tree::get( p, "a/e[0]/z" ) );
+}
+
 } } // namespace comma { namespace test {
