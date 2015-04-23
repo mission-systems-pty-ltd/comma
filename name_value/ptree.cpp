@@ -206,12 +206,12 @@ void property_tree::to_path_value( std::ostream& os, const boost::property_tree:
 {
     for( boost::property_tree::ptree::const_iterator i = ptree.begin(); i != ptree.end(); ++i )
     {
-        xpath path;
-        // display_path is the modified key path showing array indices, if array exists within e.g flight_levels[0]/levels[0]
-        // But the actual path to the value is many empty keys under flight_levels and flight_levels/levels
+        // display_path is the modified key path showing array indices, if array exists within e.g abc[0]/xyz[0]
+        // But the actual path to the value is many empty keys under abc and abc/xyz
         // Boost: "JSON arrays are mapped to nodes. Each element is a child node with an empty name. 
         //         If a node has both named and unnamed child nodes, it cannot be mapped to a JSON representation."
         // http://www.boost.org/doc/libs/1_41_0/doc/html/boost_propertytree/parsers.html#boost_propertytree.parsers.json_parser
+        xpath path;
         xpath display_path;
         impl::ptree_to_path_value_string_impl( os, i, i == ptree.begin(), path, display_path, mode, equal_sign, delimiter, root.to_string() ); // quick and dirty
     }

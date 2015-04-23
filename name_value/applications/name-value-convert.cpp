@@ -68,15 +68,10 @@ static void usage( bool verbose = false )
     std::cerr << "name/path-value options:" << std::endl;
     std::cerr << "    --equal-sign,-e=<equal sign>: default '='" << std::endl;
     std::cerr << "    --delimiter,-d=<delimiter>: default ','" << std::endl;
-    std::cerr << "    --show-path-indices,--indices: show indices for array items e.g. y[0]/x/z[1]=\"a\"" << std::endl;
+    std::cerr << "    --use-index,--use-indices,--show-path-indices,--indices: show indices for array items e.g. y[0]/x/z[1]=\"a\"" << std::endl;
     std::cerr << "    --no-brackets: use with --show-path-indices - above, show indices as path elements e.g. y/0/x/z/1=\"a\"" << std::endl;
     std::cerr << std::endl;
     std::cerr << "path-value options:" << std::endl;
-    std::cerr << "    --use-index: correcly handle paths like a/b[5]/c/d[7]" << std::endl;
-    std::cerr << "                 path-value to other formats: implemented" << std::endl;
-    std::cerr << "                 todo" << std::endl;
-    std::cerr << "                     - other formats to path-value" << std::endl;
-    std::cerr << "                     - make it default (make sure nothing breaks... everywhere...)" << std::endl;
     std::cerr << "    --take-last: if paths are repeated, take last path=value" << std::endl;
     std::cerr << "    --verify-unique,--unique-input: ensure that all input paths are unique (takes precedence over --take-last)" << std::endl;
     std::cerr << std::endl;
@@ -175,7 +170,7 @@ int main( int ac, char** av )
         linewise = options.exists( "--linewise,-l" );
         if ( options.exists( "--take-last" ) ) check_type = comma::property_tree::path_value::take_last;
         if ( options.exists( "--verify-unique,--unique-input" ) ) check_type = comma::property_tree::path_value::unique_input;
-        use_index = options.exists( "--use-index" );
+        use_index = options.exists( "--use-index,--use-indices,--show-path-indices,--indices" );
         xml_writer_settings.indent_count = options.value( "--indent", options.exists( "--indented" ) ? 4 : 0 );
         boost::optional< char > delimiter = options.optional< char >( "--delimiter,-d" );
         name_value_delimiter = delimiter ? *delimiter : ',';
@@ -201,7 +196,7 @@ int main( int ac, char** av )
         else if( to == "xml" ) { output = &traits< xml >::output; }
         else if( to == "path-value" ) { output = &traits< path_value >::output; }
         else { output = &traits< name_value >::output; }
-        if( options.exists( "--show-path-indices,--indices" ) ) 
+        if( use_index ) 
         {
             if( options.exists( "--no-brackets" ) ) { indices_mode = comma::property_tree::without_brackets; }
             else { indices_mode = comma::property_tree::with_brackets; }
