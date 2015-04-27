@@ -38,6 +38,7 @@
 #include <fcntl.h>
 #include <io.h>
 #include <sys/types.h>
+#include <sys/ioctl.h>
 #endif
 
 #include <fcntl.h>
@@ -217,6 +218,16 @@ comma::io::file_descriptor stream< S >::fd() const
     }
     #endif // #ifdef WIN32
     return fd_;
+}
+
+template < typename S >
+int stream< S >::count() const
+{
+    int count = 0;
+#ifndef WIN32
+    ioctl( fd_, FIONREAD, &count );
+#endif
+    return count;
 }
 
 template < typename S > const std::string& stream< S >::name() const { return name_; }
