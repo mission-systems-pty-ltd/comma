@@ -358,21 +358,20 @@ function stats_init()
 
 function junit_finalize() # quick and dirty
 {
-    ( echo "<testsuite tests=\"$( cat $stats_elapsed_path_value | wc -l )\">"
-      cat $stats_elapsed_path_value \
-          | while IFS='=' read key elapsed ; do
-                path="$( dirname $key )"
-                echo "    <testcase classname=\"testcase\" name=\"$path\">"
-                echo "        <time>$elapsed</time>"
-                if [[ -f $path/output/failure ]] ; then
-                    echo "        <failure>"
-                    cat $path/output/failure
-                    echo "        </failure>"
-                fi
-                echo "    <testcase/>"
-             done
+    echo "<testsuite tests=\"$( cat $stats_elapsed_path_value | wc -l )\">"
+    cat $stats_elapsed_path_value \
+        | while IFS='=' read key elapsed ; do
+              path="$( dirname $key )"
+              echo "    <testcase classname=\"testcase\" name=\"$path\">"
+              echo "        <time>$elapsed</time>"
+              if [[ -f $path/output/failure ]] ; then
+                  echo "        <failure>"
+                  cat $path/output/failure
+                  echo "        </failure>"
+              fi
+              echo "    <testcase/>"
+           done
       echo "</testsuite>"
-    ) > $stats/junit.xml
 }
 
 function stats_finalize()
@@ -606,7 +605,10 @@ function run_single_test()
     # if running tests in parallel, create a unique file for redirecting all output
     # will append to the main output at the end
     local our_stderrout_log="$comma_test_run_unique_dir/stdout_log.$( mktemp -u XXXXXX )"
-    exec 3>&1 4>&2 1>"$our_stderrout_log" 2>&1
+    # todo? or output junit <testcase> tags as we go, but that would require refactoring of this function:
+    #       instead of equilibristics with stderr redirection, test output should have various output modes,
+    #       e.g: text, csv, junit, etc
+    if [[ -z "$options_junit" ]] ; then exec 3>&1 4>&2 1>"$our_stderrout_log" 2>&1 ; else exec 3>&1 4>&2 1>"$our_stderrout_log" ; fi
 
     local test_exec basedir
     # must save pid of any background process in this variable, so that it is killed by signal handler
