@@ -120,35 +120,6 @@ boost::optional< std::string > property_tree::get( boost::property_tree::ptree& 
 
 namespace comma { namespace impl {
 
-static void ptree_to_name_value_string_impl( std::ostream& os, boost::property_tree::ptree::const_iterator i, bool is_begin, bool indented, unsigned int indent, char equal_sign, char delimiter )
-{
-    if( !is_begin && !( indented && ( delimiter == ' ' || delimiter == '\t' ) ) ) { os << delimiter; }
-    if( indented ) { os << std::endl << std::string( indent, ' ' ); }
-    os << i->first << equal_sign;
-    if( i->second.begin() == i->second.end() )
-    {
-        //std::string value = i->second.get_value< std::string >();
-        //bool quoted =    value.empty() // real quick and dirty
-        //              || value.find_first_of( '\\' ) != std::string::npos
-        //              || value.find_first_of( '"' ) != std::string::npos;
-        //if( quoted ) { os << '"'; }
-        //os << value;
-        //if( quoted ) { os << '"'; }
-        os << '"' << i->second.get_value< std::string >() << '"';
-    }
-    else
-    {
-        if( indented ) { os << std::endl << std::string( indent, ' ' ); }
-        os << "{";
-        for( boost::property_tree::ptree::const_iterator j = i->second.begin(); j != i->second.end(); ++j )
-        {
-            ptree_to_name_value_string_impl( os, j, j == i->second.begin(), indented, indent + 4, equal_sign, delimiter );
-        }
-        if( indented ) { os << std::endl << std::string( indent, ' ' ); }
-        os << '}';
-    }
-}
-
 static void ptree_output_value_( std::ostream& os, const std::string& value, bool is_begin, const xpath& path, char equal_sign, char delimiter, const std::string& root )
 {
     if( !is_begin ) { os << delimiter; }
@@ -193,15 +164,6 @@ static void ptree_to_path_value_string_impl( std::ostream& os, boost::property_t
 
 namespace comma {
 
-void property_tree::to_name_value( std::ostream& os, const boost::property_tree::ptree& ptree, bool indented, char equal_sign, char delimiter )
-{
-    for( boost::property_tree::ptree::const_iterator i = ptree.begin(); i != ptree.end(); ++i )
-    {
-        impl::ptree_to_name_value_string_impl( os, i, i == ptree.begin(), indented, 0, equal_sign, delimiter );
-    }
-    if( indented ) { os << std::endl; } // quick and dirty
-}
-
 void property_tree::to_path_value( std::ostream& os, const boost::property_tree::ptree& ptree, path_mode mode, char equal_sign, char delimiter, const xpath& root )
 {
     for( boost::property_tree::ptree::const_iterator i = ptree.begin(); i != ptree.end(); ++i )
@@ -215,19 +177,6 @@ void property_tree::to_path_value( std::ostream& os, const boost::property_tree:
         xpath display_path;
         impl::ptree_to_path_value_string_impl( os, i, i == ptree.begin(), path, display_path, mode, equal_sign, delimiter, root.to_string() ); // quick and dirty
     }
-}
-
-void property_tree::from_name_value( std::istream& is, boost::property_tree::ptree& ptree, char equal_sign, char delimiter )
-{
-    // quick and dirty, worry about performance, once needed
-    std::ostringstream oss;
-    while( is.good() && !is.eof() )
-    {
-        std::string line;
-        std::getline( is, line );
-        if( !line.empty() && line.at( 0 ) != '#' ) { oss << line; } // quick and dirty: allow comment lines
-    }
-    ptree = from_name_value_string( oss.str(), equal_sign, delimiter );
 }
 
 void property_tree::from_path_value( std::istream& is, boost::property_tree::ptree& ptree, property_tree::path_value::check_repeated_paths check_type, char equal_sign, char delimiter, bool use_index )
@@ -244,61 +193,11 @@ void property_tree::from_path_value( std::istream& is, boost::property_tree::ptr
     ptree = comma::property_tree::from_path_value_string( s, equal_sign, delimiter, check_type, use_index );
 }
 
-std::string property_tree::to_name_value_string( const boost::property_tree::ptree& ptree, bool indented, char equal_sign, char delimiter )
-{
-    std::ostringstream oss;
-    to_name_value( oss, ptree, indented, equal_sign, delimiter );
-    return oss.str();
-}
-
 std::string property_tree::to_path_value_string( const boost::property_tree::ptree& ptree, property_tree::path_mode mode, char equal_sign, char delimiter )
 {
     std::ostringstream oss;
     to_path_value( oss, ptree, mode, equal_sign, delimiter );
     return oss.str();
-}
-
-boost::property_tree::ptree property_tree::from_name_value_string( const std::string& s, char equal_sign, char delimiter )
-{
-    boost::property_tree::ptree ptree;
-    bool escaped = false;
-    bool quoted = false;
-    std::ostringstream oss;
-    for( std::size_t i = 0; i < s.length(); ++i )
-    {
-        char c = s[i];
-        bool space = false;
-        if( escaped )
-        {
-            escaped = false;
-        }
-        else
-        {
-            switch( c )
-            {
-                case '\\':
-                    escaped = true;
-                    break;
-                case '"':
-                    quoted = !quoted;
-                    break;
-                case '{':
-                case '}':
-                    space = !quoted;
-                default:
-                    if( quoted ) { break; }
-                    if( c == equal_sign ) { c = ' '; }
-                    else if( c == delimiter ) { c = ' '; }
-                    break;
-            }
-        }
-        if( space ) { oss << ' '; }
-        oss << c;
-        if( space ) { oss << ' '; }
-    }
-    std::istringstream iss( oss.str() );
-    boost::property_tree::read_info( iss, ptree );
-    return ptree;
 }
 
 namespace impl {

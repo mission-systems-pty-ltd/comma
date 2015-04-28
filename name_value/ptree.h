@@ -55,19 +55,6 @@ namespace comma {
 
 struct property_tree // quick and dirty
 {
-    /// read as name-value from input stream
-    /// @todo currently only line-based input supported
-    static void from_name_value( std::istream& is, boost::property_tree::ptree& ptree, char equal_sign = '=', char delimiter = ',' );
-
-    /// write as name-value to output stream
-    static void to_name_value( std::ostream& os, const boost::property_tree::ptree& ptree, bool indented = true, char equal_sign = '=', char delimiter = ',' );
-
-    /// convert name=value-style string into boost parameter tree
-    static boost::property_tree::ptree from_name_value_string( const std::string& s, char equal_sign = '=', char delimiter = ',' );
-
-    /// convert boost parameter tree into name=value-style string
-    static std::string to_name_value_string( const boost::property_tree::ptree& ptree, bool indented = true, char equal_sign = '=', char delimiter = ',' );
-
     /// disabled: do not show path indices for array items, with_brackets: x[0]/y/z[0]=1 and without_brackets: e.g. x/0/y/z/1=1
     enum path_mode { disabled, with_brackets, without_brackets  };
 
