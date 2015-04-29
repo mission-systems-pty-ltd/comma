@@ -25,3 +25,17 @@ sql[2]="echo '2014-03-05 23:00:00' | csv-time --from 'ieee-std-1003.1' --to seco
 
 xsd[0]="echo '2014-03-05T23:00:00.000Z' | csv-time --from xsd --to seconds"
 xsd[1]="echo '2014-03-05T23:00:00.000Z' | csv-time --from 'iso-8601-extended' --to seconds"
+
+any[0]="echo 2014-03-05T23:00:00.000Z | csv-time --from any --to iso"
+any[1]="echo 20140305T230000 | csv-time --from any --to iso"
+any[2]="echo 2014-03-05T23:00:00 | csv-time --from any --to iso"
+any[3]="echo 1394060400 | csv-time --from any --to iso"
+
+any[4]="echo 2014-03-05T23:00:00.000Z | csv-time --from guess --to seconds"
+any[5]="echo 20140305T230000 | csv-time --from guess --to seconds"
+any[6]="echo 2014-03-05T23:00:00 | csv-time --from guess --to seconds"
+any[7]="echo 1394060400 | csv-time --from guess --to seconds"
+
+lines[0]="echo -e \"20140305T230000\\n20140305T230000\" | csv-time --from iso --to seconds | tr '\\n' '#'"
+lines[0]="echo -e \"20140305T230000\\n2014-03-05T23:00:00\" | csv-time --from any --to seconds | tr '\\n' '#'"
+

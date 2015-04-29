@@ -235,7 +235,7 @@ int main( int ac, char** av )
             if( !path_regex[i] ) { paths[i] = boost::property_tree::ptree::path_type( path_strings[i], '/' ); }
         }
         boost::optional< std::string > from = options.optional< std::string >( "--from" );
-        std::string to = options.value< std::string >( "--to", "name-value" );
+        std::string to = options.value< std::string >( "--to", "path-value" );
         equal_sign = options.value( "--equal-sign,-e", '=' );
         linewise = options.exists( "--linewise,-l" );
         if ( options.exists( "--take-last" ) ) check_type = comma::property_tree::path_value::take_last;
@@ -250,7 +250,7 @@ int main( int ac, char** av )
             else if( *from == "json" ) { input = &traits< json >::input; }
             else if( *from == "xml" ) { input = &traits< xml >::input; }
             else if( *from == "path-value" ) { input = &traits< path_value >::input; }
-            else { std::cerr << "name-value-get: expected --from format to be ini, info, json, xml, path-value, or name-value, got " << *from << std::endl; return 1; }
+            else { std::cerr << "name-value-get: expected --from format to be ini, info, json, xml, or path-value, got " << *from << std::endl; return 1; }
         }
         else
         {
@@ -262,6 +262,7 @@ int main( int ac, char** av )
         else if( to == "json" ) { output = &traits< json >::output; }
         else if( to == "xml" ) { output = &traits< xml >::output; }
         else if( to == "path-value" ) { output = &traits< path_value >::output; }
+        else { std::cerr << "name-value-get: expected --to format to be ini, info, json, xml, or path-value, got " << to << std::endl; return 1; }
         if( options.exists( "--show-path-indices,--indices" ) ) 
         {
             if( options.exists( "--no-brackets" ) ) { indices_mode = comma::property_tree::without_brackets; }

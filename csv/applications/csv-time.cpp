@@ -58,7 +58,7 @@ static void usage()
         "\n    cat log.csv | csv-time <options> > converted.csv"
         "\n"
         "\nOptions"
-        "\n    --from <what>: input format: iso, seconds, sql, aixm; default iso"
+        "\n    --from <what>: input format: any, iso, seconds, sql, aixm; default iso"
         "\n    --to <what>: output format: iso, seconds, sql, aixm; default iso"
         "\n    --delimiter,-d <delimiter> : default: ','"
         "\n    --fields <fields> : time field names or field numbers as in \"cut\""
@@ -75,6 +75,9 @@ static void usage()
         "\n            e.g. 2014-12-25T00:00:00.000Z"
         "\n    - seconds"
         "\n            seconds since UNIX epoch as double"
+        "\n    - any, guess"
+        "\n            a special input format - try to convert from all those supported,"
+        "\n            default input format, will be slower"
         "\n"
         "\nDeprecated Options:"
         "\n    --to-seconds,--sec,-s: iso input expected; use --from, --to"
@@ -85,9 +88,11 @@ static void usage()
     exit( 1 );
 }
 
-enum what_t { iso, seconds, sql, aixm };
-static what_t from = iso;
+enum what_t { guess, iso, seconds, sql, aixm };
+static what_t from = guess;
 static what_t to = iso;
+
+std::string to_string( const boost::posix_time::ptime& t, what_t w );
 
 static what_t what( const std::string& option, const comma::command_line_options& options )
 {
@@ -114,29 +119,48 @@ static what_t what( const std::string& option, const comma::command_line_options
         {
             if( "xsd" == s ) { return aixm; }
         }
+        else if( 'g' == s[0] )
+        {
+            if( "guess" == s ) { return guess; }
+        }
+        else if( 'a' == s[0] )
+        {
+            if( "any" == s ) { return guess; }
+        }
     }
     std::cerr << "csv-time: expected seconds, sql, or iso; got: \"" << s << "\"" << std::endl;
     exit( 1 );
 }
 
-boost::posix_time::ptime from_string( const std::string& s, what_t w )
+bool from_string_actual( const std::string& s, const what_t w, boost::posix_time::ptime & out_time )
 {
-    if ( s.empty() ) COMMA_THROW( comma::exception, "no input" );
     switch( w )
     {
         case iso:
-            return s == boost::posix_time::to_iso_string( boost::posix_time::ptime() ) ? boost::posix_time::ptime() : boost::posix_time::from_iso_string( s );
+        {
+            if( s == boost::posix_time::to_iso_string( boost::posix_time::ptime() ) )
+                return false;
+                
+            out_time = boost::posix_time::from_iso_string( s );
+            return ! out_time.is_not_a_date_time();
+        }
 
         case seconds:
         {
             double d = boost::lexical_cast< double >( s );
             long long seconds = d;
             int microseconds = ( d - seconds ) * 1000000;
-            return boost::posix_time::ptime( comma::csv::impl::epoch, boost::posix_time::seconds( seconds ) + boost::posix_time::microseconds( microseconds ) );
+            out_time = boost::posix_time::ptime( comma::csv::impl::epoch, boost::posix_time::seconds( seconds ) + boost::posix_time::microseconds( microseconds ) );
+            return ! out_time.is_not_a_date_time();
         }
 
         case sql:
-            return s == "NULL" || s == "null" || s.empty() ? boost::posix_time::ptime() : boost::posix_time::time_from_string( s );
+        {
+            if( s == "NULL" || s == "null" )
+                return false;
+            out_time = boost::posix_time::time_from_string( s );
+            return ! out_time.is_not_a_date_time();
+        }
 
         case aixm: // 2014-03-05T23:00:00.000Z
         {
@@ -145,10 +169,39 @@ boost::posix_time::ptime from_string( const std::string& s, what_t w )
             if ( std::string::npos != idx_t ) t[idx_t] = ' ';
             size_t const idx_z = t.size() - 1;
             if ( 'Z' == t[idx_z] ) t.erase( idx_z );
-            return boost::posix_time::time_from_string( t );
+            out_time = boost::posix_time::time_from_string( t );
+            return ! out_time.is_not_a_date_time();
         }
+        
+        case guess:
+            COMMA_THROW( comma::exception, "never guess" );
     }
     COMMA_THROW( comma::exception, "never here" );
+}
+
+bool from_string_forgiving( const std::string& s, const what_t w, boost::posix_time::ptime & out_time )
+{
+    try {
+        from_string_actual( s, w, out_time );
+        // std::cerr << "Decoded '" << s << "' as ISO '" << to_string( out_time, iso ) << '\'' << std::endl;
+        return true;
+    } catch (...) { }
+    return false;
+}
+
+bool from_string( const std::string& s, const what_t w, boost::posix_time::ptime & out_time  )
+{
+    if ( s.empty() ) COMMA_THROW( comma::exception, "no input" );
+
+    if ( guess != w )
+        return from_string_actual( s, w, out_time );
+
+    // order is important
+    if ( from_string_forgiving( s, iso, out_time ) ) return true;
+    if ( from_string_forgiving( s, aixm, out_time ) ) return true;
+    if ( from_string_forgiving( s, sql, out_time ) ) return true;
+    if ( from_string_forgiving( s, seconds, out_time ) ) return true;
+    return false;
 }
 
 std::string to_string( const boost::posix_time::ptime& t, what_t w )
@@ -181,6 +234,9 @@ std::string to_string( const boost::posix_time::ptime& t, what_t w )
 
         case aixm: // 2014-03-05T23:00:00.000Z
             return boost::posix_time::to_iso_extended_string( t );
+
+        case guess:
+            COMMA_THROW( comma::exception, "never guess" );
     }
     COMMA_THROW( comma::exception, "never here" );
 }
@@ -271,13 +327,24 @@ static int run()
     comma::csv::input_stream< input_t > istream( std::cin, csv, input );
     comma::csv::output_stream< input_t > ostream( std::cout, csv, input );
 
+    std::string const failed_text( to_string( boost::posix_time::ptime(), to ) );
+    
     while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
     {
         const input_t* p = istream.read();
         if( !p ) { break; }
         input_t output = *p;
+        
         for( unsigned int i = 0; i < output.values.size(); ++i )
-            output.values[i] = to_string( from_string( output.values[i], from ), to );
+        {
+            boost::posix_time::ptime t( boost::posix_time::not_a_date_time );
+            if( ! from_string( output.values[i], from, t ) )
+                output.values[i] = failed_text;
+            else if( t.is_not_a_date_time() )
+                output.values[i] = failed_text;
+            else
+                output.values[i] = to_string( t, to );
+        }
 
         ostream.write( output, istream );
     }
@@ -301,6 +368,8 @@ int main( int ac, char** av )
         if( options.exists( "--to-iso-string,--iso,-i" ) ) { from = seconds; to = iso; }
         else if ( options.exists( "--to-seconds,--sec,-s" ) ) { from = iso; to = seconds; }
         else { from = what( "--from", options ); to = what( "--to", options ); }
+        
+        if( guess == to ) { std::cerr << "csv-time: spqcify an actual output format; not any." << std::endl; return 1; }
 
         return run();
     }
