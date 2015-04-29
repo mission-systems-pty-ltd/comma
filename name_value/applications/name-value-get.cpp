@@ -262,7 +262,7 @@ int main( int ac, char** av )
         else if( to == "json" ) { output = &traits< json >::output; }
         else if( to == "xml" ) { output = &traits< xml >::output; }
         else if( to == "path-value" ) { output = &traits< path_value >::output; }
-        else { std::cerr << "name-value-get: expected --to format to be ini, info, json, xml, or path-value, got " << *to << std::endl; return 1; }
+        else { std::cerr << "name-value-get: expected --to format to be ini, info, json, xml, or path-value, got " << to << std::endl; return 1; }
         if( options.exists( "--show-path-indices,--indices" ) ) 
         {
             if( options.exists( "--no-brackets" ) ) { indices_mode = comma::property_tree::without_brackets; }
