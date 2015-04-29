@@ -62,9 +62,8 @@ static void usage( bool verbose = false )
     std::cerr << "    info: info data (see boost::property_tree)" << std::endl;
     std::cerr << "    ini: ini data" << std::endl;
     std::cerr << "    json: json data" << std::endl;
-    std::cerr << "    name-value: name=value-style data; e.g. x={a=1,b=2},y=3" << std::endl;
-    std::cerr << "    path-value: path=value-style data; e.g. x/a=1,x/b=2,y=3" << std::endl;
     std::cerr << "    xml: xml data" << std::endl;
+    std::cerr << "    path-value: path=value-style data; e.g. x/a=1,x/b=2,y=3" << std::endl;
     std::cerr << std::endl;
     std::cerr << "name/path-value options:" << std::endl;
     std::cerr << "    --equal-sign,-e=<equal sign>: default '='" << std::endl;
@@ -88,7 +87,6 @@ static void usage( bool verbose = false )
 }
 
 static char equal_sign;
-static char name_value_delimiter;
 static char path_value_delimiter;
 static bool linewise;
 static bool output_path;
@@ -96,7 +94,7 @@ typedef comma::property_tree::path_mode path_mode;
 static path_mode indices_mode = comma::property_tree::disabled;
 static comma::property_tree::path_value::check_repeated_paths check_type( comma::property_tree::path_value::no_check );
 
-enum Types { ini, info, json, xml, name_value, path_value, void_t };
+enum Types { ini, info, json, xml, path_value, void_t };
 
 template < Types Type > struct traits {};
 
@@ -127,13 +125,6 @@ template <> struct traits< xml >
 {
     static void input( std::istream& is, boost::property_tree::ptree& ptree ) { boost::property_tree::read_xml( is, ptree ); }
     static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const std::string& ) { boost::property_tree::write_xml( os, ptree ); }
-};
-
-template <> struct traits< name_value >
-{
-    // todo: handle indented input (quick and dirty: use exceptions)
-    static void input( std::istream& is, boost::property_tree::ptree& ptree ) { comma::property_tree::from_name_value( is, ptree, equal_sign, name_value_delimiter ); }
-    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const std::string& ) { comma::property_tree::to_name_value( os, ptree, !linewise, equal_sign, name_value_delimiter ); }
 };
 
 template <> struct traits< path_value > // quick and dirty
@@ -250,7 +241,6 @@ int main( int ac, char** av )
         if ( options.exists( "--take-last" ) ) check_type = comma::property_tree::path_value::take_last;
         if ( options.exists( "--verify-unique,--unique-input" ) ) check_type = comma::property_tree::path_value::unique_input;
         boost::optional< char > delimiter = options.optional< char >( "--delimiter,-d" );
-        name_value_delimiter = delimiter ? *delimiter : ',';
         path_value_delimiter = delimiter ? *delimiter : ( linewise ? ',' : '\n' );
         output_path = options.exists( "--output-path" );
         if( from )
@@ -260,7 +250,6 @@ int main( int ac, char** av )
             else if( *from == "json" ) { input = &traits< json >::input; }
             else if( *from == "xml" ) { input = &traits< xml >::input; }
             else if( *from == "path-value" ) { input = &traits< path_value >::input; }
-            else if( *from == "name-value" ){ input = &traits< name_value >::input; }
             else { std::cerr << "name-value-get: expected --from format to be ini, info, json, xml, path-value, or name-value, got " << *from << std::endl; return 1; }
         }
         else
@@ -273,7 +262,6 @@ int main( int ac, char** av )
         else if( to == "json" ) { output = &traits< json >::output; }
         else if( to == "xml" ) { output = &traits< xml >::output; }
         else if( to == "path-value" ) { output = &traits< path_value >::output; }
-        else if( to == "name-value" ) { output = &traits< name_value >::output; }
         if( options.exists( "--show-path-indices,--indices" ) ) 
         {
             if( options.exists( "--no-brackets" ) ) { indices_mode = comma::property_tree::without_brackets; }

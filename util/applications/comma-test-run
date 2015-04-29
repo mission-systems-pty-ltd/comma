@@ -81,6 +81,7 @@ function description()
 --debug; much more debug output
 --end=[<dir>]; run tests up to a given test, the latter excluded, where test directories are ordered lexicographically
 --from,--begin=[<dir>]; run tests starting from a given test, where test directories are ordered lexicographically
+--junit; output to stdout junit record compatible with jenkins for each test
 --max-parallel=[<N>]; run up to N tests in parallel; default: $max_parallel
 --max-memory-main=[<N>]; limit on main memory, in MB; default: $max_memory_main
 --max-memory-shared=[<N>]; limit on shared memory, in MB; default: $max_memory_shared
@@ -347,7 +348,7 @@ function get_dirnames()
 
 function stats_init()
 {
-    stats="$(pwd)/stats"
+    stats="$( pwd )/stats"
     stats_progress_csv="$stats/progress.csv"
     stats_elapsed_path_value="$stats/elapsed.csv"
     rm -rf $stats
@@ -355,9 +356,29 @@ function stats_init()
     touch "$stats_progress_csv"
 }
 
+function junit_finalize() # quick and dirty
+{
+    echo "<testsuite tests=\"$( cat $stats_elapsed_path_value | wc -l )\">"
+    cat $stats_elapsed_path_value \
+        | while IFS='=' read key elapsed ; do
+              path="$( dirname $key )"
+              echo "    <testcase classname=\"testcase\" name=\"$path\">"
+              echo "        <time>$elapsed</time>"
+              if [[ -f $path/output/failure ]] ; then
+                  echo "        <failure>"
+                  cat $path/output/failure
+                  echo "        </failure>"
+              fi
+              echo "    <testcase/>"
+           done
+      echo "</testsuite>"
+}
+
 function stats_finalize()
 {
-    if [[ -f $stats_progress_csv ]] ; then cat $stats_progress_csv | comma-progress --elapsed > $stats_elapsed_path_value ; fi
+    [[ -f $stats_progress_csv ]] || return
+    cat $stats_progress_csv | comma-progress --elapsed > $stats_elapsed_path_value
+    [[ -z "$options_junit" ]] || junit_finalize
 }
 
 function resources_limits()
@@ -483,6 +504,12 @@ function run_and_match_test()
             test_failed=1
         fi
     fi
+    
+    if [[ -n "$options_junit" ]] ; then
+        rm -rf output/failure
+        [[ $test_failed == 0 ]] || echo "$match_output" > output/failure
+    fi
+    
     return $test_failed
 }
 export -f run_and_match_test
@@ -578,7 +605,10 @@ function run_single_test()
     # if running tests in parallel, create a unique file for redirecting all output
     # will append to the main output at the end
     local our_stderrout_log="$comma_test_run_unique_dir/stdout_log.$( mktemp -u XXXXXX )"
-    exec 3>&1 4>&2 1>"$our_stderrout_log" 2>&1
+    # todo? or output junit <testcase> tags as we go, but that would require refactoring of this function:
+    #       instead of equilibristics with stderr redirection, test output should have various output modes,
+    #       e.g: text, csv, junit, etc
+    if [[ -z "$options_junit" ]] ; then exec 3>&1 4>&2 1>"$our_stderrout_log" 2>&1 ; else exec 3>&1 4>&2 1>"$our_stderrout_log" ; fi
 
     local test_exec basedir
     # must save pid of any background process in this variable, so that it is killed by signal handler
@@ -751,10 +781,7 @@ function count_failures()
 }
 export -f count_failures
 
-function clean_working_dir()
-{
-    rm -fr "$comma_test_run_unique_dir"
-}
+function clean_working_dir() { rm -fr "$comma_test_run_unique_dir" ; }
 
 function final_words()
 {
@@ -772,6 +799,7 @@ if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then
 fi
 comma_path_value_to_var  --prefix=options < <( default_options )
 comma_path_value_to_var --prefix=options < <( description | comma-options-to-name-value $@ )
+
 # and perform sanity check
 [[ -n "$options_path" && ! -d "$options_path" ]] && { error_ "$name: directory '$options_path' not found"; exit 1; }
 have_max_parallel=$( comma_options_has --max-parallel=$options_max_parallel $@ )
@@ -791,7 +819,7 @@ max_memory_main=$(( $options_max_memory_main * 1024 * 1024 ))
 max_memory_shared=$(( $options_max_memory_shared * 1024 * 1024 ))
 max_wait_time=$options_max_wait_time
 max_run_time=$options_max_run_time
-export max_parallel max_memory_main max_memory_shared max_wait_time max_run_time options_debug options_quiet options_path options_until_first_failure options_test_option options_parallel options_no_ansiterm_control_characters options_run_disabled options_run_optional
+export max_parallel max_memory_main max_memory_shared max_wait_time max_run_time options_debug options_quiet options_path options_until_first_failure options_test_option options_parallel options_no_ansiterm_control_characters options_run_disabled options_run_optional options_junit
 
 # keep all plumbing under a common directory
 temp_dir=$( dirname "$( mktemp -d -u )" )
