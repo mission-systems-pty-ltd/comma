@@ -1,0 +1,3 @@
+#!/bin/bash
+
+cat | name-value-convert --to path-value --use-index

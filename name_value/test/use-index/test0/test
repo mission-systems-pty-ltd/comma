@@ -1,0 +1,3 @@
+#!/bin/bash
+cat | name-value-convert --from path-value --to json --use-index >output/json
+diff -w output/json expected-json

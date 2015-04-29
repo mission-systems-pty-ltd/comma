@@ -49,21 +49,20 @@
 static void usage( bool verbose = false )
 {
     std::cerr << std::endl;
-    std::cerr << "take json, xml, or path-value formatted data on stdin and output in name-value or another format on stdout" << std::endl;
+    std::cerr << "take json, xml, or path-value formatted data on stdin and output in path-value or another format on stdout" << std::endl;
     std::cerr << std::endl;
     std::cerr << "usage: cat data.xml | name-value-convert [<options>]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "data options" << std::endl;
     std::cerr << "    --from <format>: input format; if this options is omitted, input format will be guessed (only for json, xml, and path-value)" << std::endl;
-    std::cerr << "    --to <format>: output format; default name-value" << std::endl;
+    std::cerr << "    --to <format>: output format; default path-value" << std::endl;
     std::cerr << std::endl;
     std::cerr << "formats" << std::endl;
     std::cerr << "    info: info data (see boost::property_tree)" << std::endl;
     std::cerr << "    ini: ini data" << std::endl;
     std::cerr << "    json: json data" << std::endl;
-    std::cerr << "    name-value: name=value-style data; e.g. x={a=1,b=2},y=3" << std::endl;
-    std::cerr << "    path-value: path=value-style data; e.g. x/a=1,x/b=2,y=3" << std::endl;
     std::cerr << "    xml: xml data" << std::endl;
+    std::cerr << "    path-value: path=value-style data; e.g. x/a=1,x/b=2,y=3" << std::endl;
     std::cerr << std::endl;
     std::cerr << "name/path-value options:" << std::endl;
     std::cerr << "    --equal-sign,-e=<equal sign>: default '='" << std::endl;
@@ -91,7 +90,6 @@ static void usage( bool verbose = false )
 }
 
 static char equal_sign;
-static char name_value_delimiter;
 static char path_value_delimiter;
 static bool linewise;
 static boost::property_tree::xml_parser::xml_writer_settings< char > xml_writer_settings;
@@ -100,9 +98,30 @@ static path_mode indices_mode = comma::property_tree::disabled;
 static bool use_index = true;
 static comma::property_tree::path_value::check_repeated_paths check_type( comma::property_tree::path_value::no_check );
 
-enum Types { ini, info, json, xml, name_value, path_value, void_t };
+enum Types { ini, info, json, xml, path_value, void_t };
 
 template < Types Type > struct traits {};
+
+boost::property_tree::ptree json_to_xml_ptree_(const boost::property_tree::ptree& ptree)
+{
+    boost::property_tree::ptree out= boost::property_tree::ptree();
+    //copy all children
+    for (boost::property_tree::ptree::const_assoc_iterator i=ptree.ordered_begin(); i != ptree.not_found(); i++ )
+    {
+        if(i->second.find("") != i->second.not_found())
+        {
+            //colapse array
+            for (boost::property_tree::ptree::const_assoc_iterator j=i->second.ordered_begin(); j != i->second.not_found(); j++ )
+            {
+                out.add_child(i->first, json_to_xml_ptree_(j->second));
+            }
+        }
+        else
+            out.add_child(i->first, json_to_xml_ptree_(i->second));
+    }
+    out.put_value(ptree.get_value<std::string>());
+    return out;
+}
 
 template <> struct traits< void_t >
 {
@@ -130,14 +149,11 @@ template <> struct traits< json >
 template <> struct traits< xml >
 {
     static void input( std::istream& is, boost::property_tree::ptree& ptree ) { boost::property_tree::read_xml( is, ptree ); }
-    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode ) { boost::property_tree::write_xml( os, ptree, xml_writer_settings ); }
-};
-
-template <> struct traits< name_value >
-{
-    // todo: handle indented input (quick and dirty: use exceptions)
-    static void input( std::istream& is, boost::property_tree::ptree& ptree ) { comma::property_tree::from_name_value( is, ptree, equal_sign, name_value_delimiter ); }
-    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode ) { comma::property_tree::to_name_value( os, ptree, !linewise, equal_sign, name_value_delimiter ); }
+    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode ) 
+    { 
+        boost::property_tree::ptree out=json_to_xml_ptree_(ptree);
+        boost::property_tree::write_xml( os, out, xml_writer_settings ); 
+    }
 };
 
 template <> struct traits< path_value > // quick and dirty
@@ -165,7 +181,7 @@ int main( int ac, char** av )
     {
         comma::command_line_options options( ac, av, usage );
         boost::optional< std::string > from = options.optional< std::string >( "--from" );
-        std::string to = options.value< std::string >( "--to", "name-value" );
+        std::string to = options.value< std::string >( "--to", "path-value" );
         equal_sign = options.value( "--equal-sign,-e", '=' );
         linewise = options.exists( "--linewise,-l" );
         if ( options.exists( "--take-last" ) ) check_type = comma::property_tree::path_value::take_last;
@@ -173,7 +189,6 @@ int main( int ac, char** av )
         use_index = options.exists( "--use-index,--use-indices,--show-path-indices,--indices" );
         xml_writer_settings.indent_count = options.value( "--indent", options.exists( "--indented" ) ? 4 : 0 );
         boost::optional< char > delimiter = options.optional< char >( "--delimiter,-d" );
-        name_value_delimiter = delimiter ? *delimiter : ',';
         path_value_delimiter = delimiter ? *delimiter : ( linewise ? ',' : '\n' );
         if( from )
         {
@@ -182,8 +197,7 @@ int main( int ac, char** av )
             else if( *from == "json" ) { input = &traits< json >::input; }
             else if( *from == "xml" ) { input = &traits< xml >::input; }
             else if( *from == "path-value" ) { input = &traits< path_value >::input; }
-            else if( *from == "name-value" ){ input = &traits< name_value >::input; }
-            else { std::cerr << "name-value-convert: expected --from format to be ini, info, json, xml, path-value, or name-value, got " << *from << std::endl; return 1; }
+            else { std::cerr << "name-value-convert: expected --from format to be ini, info, json, xml, or path-value, got " << *from << std::endl; return 1; }
         }
         else
         {
@@ -194,8 +208,7 @@ int main( int ac, char** av )
         else if( to == "info" ) { output = &traits< info >::output; }
         else if( to == "json" ) { output = &traits< json >::output; }
         else if( to == "xml" ) { output = &traits< xml >::output; }
-        else if( to == "path-value" ) { output = &traits< path_value >::output; }
-        else { output = &traits< name_value >::output; }
+        else { output = &traits< path_value >::output; }
         if( use_index ) 
         {
             if( options.exists( "--no-brackets" ) ) { indices_mode = comma::property_tree::without_brackets; }
