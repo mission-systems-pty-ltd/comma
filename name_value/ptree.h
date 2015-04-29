@@ -65,10 +65,10 @@ struct property_tree // quick and dirty
     static std::string to_path_value_string( const boost::property_tree::ptree& ptree, path_mode mode=disabled, char equal_sign = '=', char delimiter = ',' );
     
     /// put an xpath like a/b[5]/c/d[3]=4 into ptree
-    static void put( boost::property_tree::ptree& ptree, const xpath& path, const std::string& value );
+    static void put( boost::property_tree::ptree& ptree, const xpath& path, const std::string& value, bool use_index = true );
     
     /// get value as string from an xpath like a/b[5]/c/d[3]=4 on ptree
-    static boost::optional< std::string > get( boost::property_tree::ptree& ptree, const xpath& path );
+    static boost::optional< std::string > get( boost::property_tree::ptree& ptree, const xpath& path, bool use_index = true );
 
     /// for path-value strings only
     /// read as path-value from string; enum specifies how to treat repeated paths (foo="bar"; foo="blah";)

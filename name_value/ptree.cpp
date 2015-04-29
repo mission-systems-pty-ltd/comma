@@ -54,7 +54,7 @@ namespace comma {
     
 //void property_tree::put( boost::property_tree::ptree& ptree, const std::string& path, const std::string& value, char delimiter ) { comma::property_tree::put( ptree, xpath( path, delimiter ), value ); }
 
-void property_tree::put( boost::property_tree::ptree& ptree, const xpath& path, const std::string& value )
+void property_tree::put( boost::property_tree::ptree& ptree, const xpath& path, const std::string& value, bool use_index )
 {
     boost::property_tree::ptree* t = &ptree;
     for( unsigned int i = 0; i < path.elements.size(); ++i )
@@ -62,21 +62,26 @@ void property_tree::put( boost::property_tree::ptree& ptree, const xpath& path, 
         boost::optional< boost::property_tree::ptree& > child = t->get_child_optional( path.elements[i].name );
         if( path.elements[i].index )
         {
+            std::string name = use_index ? "" : path.elements[i].name;
             unsigned int size = 0;
             if( child ) // quick and dirty, because some parts of boost::property_tree suck
             {
                 bool found = false;
+                if(use_index)
+                        t = &(*child);
                 for( boost::property_tree::ptree::assoc_iterator j = t->ordered_begin(); j != t->not_found(); ++j )
                 {
-                    if( j->first != path.elements[i].name ) { if( found ) { break; } else { continue; } }
+                    if( j->first != name ) { if( found ) { break; } else { continue; } }
                     ++size;
                     if( *path.elements[i].index < size ) { t = &( j->second ); break; }
                     found = true;
                 }
             }
+            else if (use_index)
+                t= &(t->add_child( path.elements[i].name, boost::property_tree::ptree() ) );
             if( *path.elements[i].index > size ) { COMMA_THROW( comma::exception, "expected index not greater than " << size << "; got " << path.elements[i].index << " in " << path.to_string() ); }
-            if( *path.elements[i].index == size ) { t = &( t->add_child( path.elements[i].name, boost::property_tree::ptree() ) ); }                
-        }
+            if( *path.elements[i].index == size ) { t = &( t->add_child( name, boost::property_tree::ptree() ) ); }
+    }
         else
         {
             t = child ? &( *child ) : &t->add_child( path.elements[i].name, boost::property_tree::ptree() );
@@ -85,7 +90,7 @@ void property_tree::put( boost::property_tree::ptree& ptree, const xpath& path, 
     t->put_value( value );
 }
 
-boost::optional< std::string > property_tree::get( boost::property_tree::ptree& ptree, const xpath& path )
+boost::optional< std::string > property_tree::get( boost::property_tree::ptree& ptree, const xpath& path, bool use_index )
 {
     boost::property_tree::ptree* t = &ptree;
     for( unsigned int i = 0; i < path.elements.size(); ++i )
@@ -93,13 +98,16 @@ boost::optional< std::string > property_tree::get( boost::property_tree::ptree& 
         boost::optional< boost::property_tree::ptree& > child = t->get_child_optional( path.elements[i].name );
         if( path.elements[i].index )
         {
+            std::string name = use_index ? "" : path.elements[i].name;
             unsigned int size = 0;
             if( child ) // quick and dirty, because some parts of boost::property_tree suck
             {
+                if(use_index)
+                    t = &( *child );
                 bool found = false;
                 for( boost::property_tree::ptree::assoc_iterator j = t->ordered_begin(); j != t->not_found(); ++j )
                 {
-                    if( j->first != path.elements[i].name ) { if( found ) { break; } else { continue; } }
+                    if( j->first != name ) { if( found ) { break; } else { continue; } }
                     ++size;
                     if( *path.elements[i].index < size ) { t = &( j->second ); break; }
                     found = true;
@@ -217,7 +225,7 @@ template <> struct path_filter< property_tree::path_value::no_overwrite >
     {
         if( use_index )
         { 
-            if( property_tree::get( ptree_, p ) ) { COMMA_THROW( comma::exception, "input path '" << p << "' already in the tree" ); }
+            if( property_tree::get( ptree_, p, use_index ) ) { COMMA_THROW( comma::exception, "input path '" << p << "' already in the tree" ); }
         }
         else
         {
@@ -271,7 +279,7 @@ template < property_tree::path_value::check_repeated_paths check_type > struct f
             const std::string& value = comma::strip( v[i].substr( p + 1, std::string::npos ), '"' );
             if( c.put_allowed( path, use_index ) )
             {
-                if( use_index ) { property_tree::put( ptree, path, value ); } // quick and dirty
+                if( use_index ) { property_tree::put( ptree, path, value, use_index ); } // quick and dirty
                 else { ptree.put( boost::property_tree::ptree::path_type( path, '/' ), value ); }
             }
         }
