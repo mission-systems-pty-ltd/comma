@@ -153,4 +153,4 @@ feeder_opts=""
 [[ -n "$top_options" ]] && feeder_opts="$feeder_opts $top_options"
 [[ -n "$num_samples" ]] && (( ++num_samples )) # first line will be ignored, leaving num_samples lines
 
-feeder $num_samples "$feeder_opts" | parser | sed -u -n '1!p'
+feeder "$num_samples" "$feeder_opts" | parser | sed -u -n '1!p'
