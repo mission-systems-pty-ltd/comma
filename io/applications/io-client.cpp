@@ -43,27 +43,36 @@ static const char* name() { return "io-client"; }
 void usage( bool verbose = false )
 {
     std::cerr << std::endl;
-    std::cerr << "read from a socket and output to stdout" << std::endl;
+    std::cerr << "read from address and output to stdout" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "usage: " << name() << " <socket address>" << std::endl;
+    std::cerr << "usage: " << name() << " <address> [<options>]" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "supported sockets: tcp, udp, local (unix) socket, zmq local socket, zmq tcp" << std::endl;
+    std::cerr << "options: " << std::endl;
+    std::cerr << "    --unbuffered,-u: flush output" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "supported address types: tcp, udp, local (unix) socket, zmq local socket, zmq tcp, named pipe, file" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples: " << std::endl;
-    std::cerr << "    read from tcp port 12345 on localhost and output to stdout: " << std::endl;
-    std::cerr << "    " << name() << " tcp:localhost:12345" << std::endl;
+    std::cerr << "    read from tcp port 12345 on localhost and output to stdout: " << name() << " tcp:localhost:12345" << std::endl;
+    std::cerr << "    read udp packets on port 12345 and output to stdout: " << name() << " udp:12345" << std::endl;
+    std::cerr << "    read from unix socket at /tmp/socket and output to stdout: " << name() << " local:/tmp/socket" << std::endl;
+    std::cerr << "    read from zero mq socket at /tmp/socket and output to stdout: " << name() << " zmq-local:/tmp/socket" << std::endl;
+    std::cerr << "    read from tcp zero mq socket at /tmp/socket and output to stdout: " << name() << " zmq-tcp:/tmp/socket" << std::endl;
+    std::cerr << "    read from named pipe /tmp/pipe and output to stdout: " << name() << " /tmp/pipe" << std::endl;
+    std::cerr << "    read from file /tmp/file and output to stdout: " << name() << " /tmp/file" << std::endl;
     std::cerr << std::endl;
     exit( 1 );
 }
 
-static const int buffer_size = 16384;
+static const unsigned int buffer_size = 16384;
 
 int main( int argc, char** argv )
 {
     if( argc < 2 ) { usage(); }
     comma::command_line_options options( argc, argv, usage );
-    const std::vector< std::string >& unnamed = options.unnamed( "", "" );
+    const std::vector< std::string >& unnamed = options.unnamed( "--unbuffered,-u", "" );
     if( unnamed.size() != 1 ) { std::cerr << name() << " : address is not given" << std::endl; return 1; }
+    bool unbuffered = options.exists( "--unbuffered,-u" );
     std::vector< std::string > input = comma::split( unnamed[0], ':' );
     comma::signal_flag is_shutdown;
     if( input[0] == "udp" )
@@ -88,7 +97,7 @@ int main( int argc, char** argv )
             std::size_t size = socket.receive( boost::asio::buffer( packet ), 0, error );
             if( error || size == 0 ) { break; }
             std::cout.write( &packet[0], size );
-            std::cout.flush();
+            if ( unbuffered ) { std::cout.flush(); }
         }
         return 0;
     }
@@ -107,11 +116,11 @@ int main( int argc, char** argv )
             select.check();
             if( select.read().ready( fd ) )
             {
-                int count = istream.count();
-                int size = std::min( count, buffer_size );
+                unsigned int size = std::min( istream.count(), buffer_size );
+                std::cerr << size << std::endl;
                 istream->read( &buffer[0], size );
                 std::cout.write( &buffer[0], size );
-                std::cout.flush();
+                if ( unbuffered ) { std::cout.flush(); }
             }
         }
         return 0;

@@ -221,13 +221,13 @@ comma::io::file_descriptor stream< S >::fd() const
 }
 
 template < typename S >
-int stream< S >::count() const
+unsigned int stream< S >::count() const
 {
     int count = 0;
 #ifndef WIN32
-    ioctl( fd_, FIONREAD, &count );
+    ::ioctl( fd_, FIONREAD, &count );
 #endif
-    return count;
+    return std::max( count, 0 );
 }
 
 template < typename S > const std::string& stream< S >::name() const { return name_; }

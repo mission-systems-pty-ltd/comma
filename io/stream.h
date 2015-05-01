@@ -76,7 +76,7 @@ class stream : boost::noncopyable
         comma::io::file_descriptor fd() const;
 
         /// return the number of characters available for reading
-        int count() const;
+        unsigned int count() const;
 
         /// return stream name
         const std::string& name() const;
