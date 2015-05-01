@@ -768,7 +768,7 @@ function process_tests_serial()
         run_single_test "$options_path" "$stats_progress_csv" "$verbose" "$test_scripts_count" $line & comma_test_run_test_pid=$!
         wait $comma_test_run_test_pid
         rv=$?
-        unset $comma_test_run_test_pid
+        unset comma_test_run_test_pid
         (( $rv == 0 )) || {
             result=1
             [[ "$options_until_first_failure" == "1" ]] && return 1
