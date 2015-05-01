@@ -463,9 +463,10 @@ function terminate_run_and_match_test()
 {
     trap '' SIGINT SIGTERM SIGHUP SIGPIPE
     echo "terminating test in $( pwd )..." >&2
-    if [[ -n "$test_pgid" ]] ; then
-        kill -s TERM -- -$test_pgid 2>/dev/null
-        wait $test_pgid
+    if [[ -n "$comma_test_run_test_pgid" ]] ; then
+        kill -s TERM -- -$comma_test_run_test_pgid
+        wait $comma_test_run_test_pgid
+        unset comma_test_run_test_pgid
     fi
     # a process that exits in response to SIGINT should kill itself with SIGINT
     # see http://www.cons.org/cracauer/sigint.html
@@ -481,8 +482,8 @@ function run_and_match_test()
 {
     local test_output test_failed match_output error_files
     
-    rm -rf output
-    mkdir -p output
+    rm -rf output || exit 1
+    mkdir -p output || exit 1
     
     test_output=$( if [ -f ./input ] ; then cat ./input ; fi \
         | comma_progress_named "$our_stats_progress" "$dir" "$test_exec" "$path" "$verbose" $options_test_option 2> "output/stderr.log" )
@@ -521,11 +522,11 @@ function run_test_with_timeout()
     export -f comma_progress_named
     export our_stats_progress dir test_exec path verbose
     # Note: timeout option '-k' is missing in RHEL6, remove '-k 10' if need be
-    local test_pgid
-    timeout -k 10 -s TERM $max_run_time bash -c run_and_match_test & test_pgid=$!
-    wait $test_pgid
-    local rv=$?
-    unset test_pgid
+    local rv
+    timeout -k 10 -s TERM $max_run_time bash -c run_and_match_test & comma_test_run_test_pgid=$!
+    wait $comma_test_run_test_pgid
+    rv=$?
+    unset comma_test_run_test_pgid
     return $rv
 }
 export -f run_test_with_timeout
@@ -534,9 +535,10 @@ function terminate_run_single_test()
 {
     trap '' SIGINT SIGTERM SIGHUP SIGPIPE
     echo "test run terminated by $1..." >&2
-    if [[ -n "$test_pid" ]] ; then
-        kill -s TERM -- $test_pid 2>/dev/null
-        wait $test_pid
+    if [[ -n "$comma_test_run_test_pid" ]] ; then
+        kill -s TERM -- $comma_test_run_test_pid
+        wait $comma_test_run_test_pid
+        unset comma_test_run_test_pid
     fi
     # serialize all access to global resources: stats file, stdout/err
     (
@@ -561,9 +563,9 @@ function random_sleep()
     local max_nap=$1
     local sleep_time=$( echo $RANDOM | gawk -v max_nap=$max_nap '{ print $1 * $max_nap / 32768 }' )
     wait_time=$( echo $wait_time $sleep_time | gawk '{ print $1 + $2 }' )
-    sleep ${sleep_time}s &
-    test_pid=$!
-    wait $test_pid
+    sleep ${sleep_time}s & comma_test_run_test_pid=$!
+    wait $comma_test_run_test_pid
+    unset comma_test_run_test_pid
 }
 export -f random_sleep
 
@@ -612,7 +614,7 @@ function run_single_test()
 
     local test_exec basedir
     # must save pid of any background process in this variable, so that it is killed by signal handler
-    local test_pid outcome
+    local outcome
     local result=0
     local request="$comma_test_run_unique_dir/request.${worker_id}.json"
 
@@ -644,9 +646,10 @@ function run_single_test()
                     find . -name out_of_shared_memory | xargs rm -f
                     # run this test on the background under a separate group id provided by the timeout command
                     # wait for the period of max_run_time, and, if still running, kill the group and fail the test
-                    run_test_with_timeout & test_pid=$!
-                    wait $test_pid
+                    run_test_with_timeout & comma_test_run_test_pid=$!
+                    wait $comma_test_run_test_pid
                     test_failed=$?
+                    unset comma_test_run_test_pid
                     comma_locked "$comma_test_run_resources_flock" comma_release_resources "$request" "$comma_test_run_resources_counter" "$worker_id"
                     (( $? == 0 )) || {
                         echo "$name::worker $worker_id: cannot release resources" >&2
@@ -710,12 +713,13 @@ function terminate_tests_parallel()
 {
     trap '' SIGINT SIGTERM SIGHUP SIGPIPE
     echo "parallel test run terminated by $1..." >&2
-    if [[ -n "$xargs_pid" ]] ; then
-        kill -s STOP -- $xargs_pid 2>/dev/null
-        pkill --signal TERM -P $xargs_pid 2>/dev/null
-        kill -s TERM -- $xargs_pid 2>/dev/null
-        kill -s CONT -- $xargs_pid 2>/dev/null
-        wait $xargs_pid
+    if [[ -n "$comma_test_run_xargs_pid" ]] ; then
+        kill -s STOP -- $comma_test_run_xargs_pid
+        pkill --signal TERM -P $comma_test_run_xargs_pid
+        kill -s TERM -- $comma_test_run_xargs_pid
+        kill -s CONT -- $comma_test_run_xargs_pid
+        wait $comma_test_run_xargs_pid
+        unset comma_test_run_xargs_pid
     fi
     rm -f "$comma_test_run_xargs_pipe"
     is_killed=true
@@ -730,11 +734,11 @@ function process_tests_parallel()
     setup_signal_handler terminate_tests_parallel
     comma_test_run_xargs_pipe="$comma_test_run_unique_dir/xargs.pipe"
     mkfifo -m 600 "$comma_test_run_xargs_pipe"
-    local xargs_pid
-    xargs -P $max_parallel -I{} bash -c run_single_test\ "'$options_path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$test_scripts_count'"\ {} < "$comma_test_run_xargs_pipe" & xargs_pid=$!
+    xargs -P $max_parallel -I{} bash -c run_single_test\ "'$options_path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$test_scripts_count'"\ {} < "$comma_test_run_xargs_pipe" & comma_test_run_xargs_pid=$!
     xargs -n2 > "$comma_test_run_xargs_pipe"
-    wait "$xargs_pid"
+    wait $comma_test_run_xargs_pid
     (( $? != 0 )) && result=1
+    unset comma_test_run_xargs_pid
     rm -f "$comma_test_run_xargs_pipe"
     unset comma_test_run_xargs_pipe
 }
@@ -743,9 +747,9 @@ function terminate_tests_serial()
 {
     trap '' SIGINT SIGTERM SIGHUP SIGPIPE
     echo "serial test run terminated by $1..." >&2
-    if [[ -n "$test_pid" ]] ; then
-        kill -s TERM -- $test_pid 2>/dev/null
-        wait $test_pid
+    if [[ -n "$comma_test_run_test_pid" ]] ; then
+        kill -s TERM -- $comma_test_run_test_pid 2>/dev/null
+        wait $comma_test_run_test_pid
     fi
     is_killed=true
     # a process that exits in response to SIGINT should kill itself with SIGINT
@@ -757,14 +761,15 @@ function terminate_tests_serial()
 function process_tests_serial()
 {
     setup_signal_handler terminate_tests_serial
-    local test_pid line
+    local line rv
     while true; do
         read line
         [[ -z "$line" ]] && break
-        run_single_test "$options_path" "$stats_progress_csv" "$verbose" "$test_scripts_count" $line &
-        test_pid=$!
-        wait $test_pid
-        (( $? == 0 )) || {
+        run_single_test "$options_path" "$stats_progress_csv" "$verbose" "$test_scripts_count" $line & comma_test_run_test_pid=$!
+        wait $comma_test_run_test_pid
+        rv=$?
+        unset comma_test_run_test_pid
+        (( $rv == 0 )) || {
             result=1
             [[ "$options_until_first_failure" == "1" ]] && return 1
         }

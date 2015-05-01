@@ -38,6 +38,7 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/regex.hpp>
+#include <boost/version.hpp>
 #include <comma/base/exception.h>
 #include <comma/application/contact_info.h>
 #include <comma/application/command_line_options.h>
@@ -89,10 +90,17 @@ static void usage( bool verbose = false )
     exit( 1 );
 }
 
+// The signature of boost::property_tree::xml_parser::write_xml() changed in Boost 1.56
+#if (BOOST_VERSION >= 105600)
+  typedef boost::property_tree::xml_writer_settings< std::string > xml_writer_settings_type;
+#else
+  typedef boost::property_tree::xml_writer_settings< char > xml_writer_settings_type;
+#endif
+static xml_writer_settings_type xml_writer_settings;
+
 static char equal_sign;
 static char path_value_delimiter;
 static bool linewise;
-static boost::property_tree::xml_parser::xml_writer_settings< char > xml_writer_settings;
 typedef comma::property_tree::path_mode path_mode;
 static path_mode indices_mode = comma::property_tree::disabled;
 static bool use_index = true;
@@ -149,10 +157,10 @@ template <> struct traits< json >
 template <> struct traits< xml >
 {
     static void input( std::istream& is, boost::property_tree::ptree& ptree ) { boost::property_tree::read_xml( is, ptree ); }
-    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode ) 
-    { 
+    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode )
+    {
         boost::property_tree::ptree out=json_to_xml_ptree_(ptree);
-        boost::property_tree::write_xml( os, out, xml_writer_settings ); 
+        boost::property_tree::write_xml( os, out, xml_writer_settings );
     }
 };
 
@@ -165,10 +173,10 @@ template <> struct traits< path_value > // quick and dirty
         std::getline( is, line );
         ptree = comma::property_tree::from_path_value_string( line, equal_sign, path_value_delimiter, check_type, use_index );
     }
-    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode mode ) 
+    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode mode )
     {
-        comma::property_tree::to_path_value( os, ptree, mode, equal_sign, path_value_delimiter ); 
-        if( path_value_delimiter == '\n' ) { os << std::endl; } 
+        comma::property_tree::to_path_value( os, ptree, mode, equal_sign, path_value_delimiter );
+        if( path_value_delimiter == '\n' ) { os << std::endl; }
     }
 };
 
@@ -209,7 +217,7 @@ int main( int ac, char** av )
         else if( to == "json" ) { output = &traits< json >::output; }
         else if( to == "xml" ) { output = &traits< xml >::output; }
         else { output = &traits< path_value >::output; }
-        if( use_index ) 
+        if( use_index )
         {
             if( options.exists( "--no-brackets" ) ) { indices_mode = comma::property_tree::without_brackets; }
             else { indices_mode = comma::property_tree::with_brackets; }

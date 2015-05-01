@@ -173,8 +173,11 @@ function comma_total_system_resources()
     (( $? == 0 && $cpus > 0 )) || { echo "$name: cannot grep '/proc/cpuinfo' for the number of processors" >&2; return 1; }
     #
     # ipcs -ml was found to return weird values on many systems
-    memory_shared=$( df --block-size=1 --local 2>&1 | grep -v ": Permission denied" | grep '/shm$' | head -n 1 | gawk '{ print $2 }' ; comma_status_ok && exit 0 || exit 1 )
-    (( $? == 0 && $memory_shared > 0 )) || { echo "$name: cannot determine shared memory size" >&2; return 1; }
+    memory_shared=$( df --block-size=1 --local 2>&1 | grep -v ": Permission denied" | grep '/shm$' | head -n 1 | gawk '{ print $2 }' )
+    # do not check error status because occasionally df would return 1, e.g., if some network share is not
+    # properly mounted, if no-one is loggen in (gvfs not readable), etc.; just check that the returned value
+    # is a positive integer
+    (( $memory_shared > 0 )) || { echo "$name: cannot determine shared memory size" >&2; return 1; }
     #
     memory_main=$( cat /proc/meminfo | sed -n --regexp-extended "s/^MemTotal: *(.*) .*$/\1/p" )
     (( $? == 0 && $memory_main > 0 )) || { echo "$name: cannot determine total memory size" >&2; exit 1; }
