@@ -482,8 +482,8 @@ function run_and_match_test()
 {
     local test_output test_failed match_output error_files
     
-    rm -rf output
-    mkdir -p output
+    rm -rf output || exit 1
+    mkdir -p output || exit 1
     
     test_output=$( if [ -f ./input ] ; then cat ./input ; fi \
         | comma_progress_named "$our_stats_progress" "$dir" "$test_exec" "$path" "$verbose" $options_test_option 2> "output/stderr.log" )
