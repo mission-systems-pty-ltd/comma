@@ -75,9 +75,12 @@ class stream : boost::noncopyable
         /// return file descriptor (to use in select)
         comma::io::file_descriptor fd() const;
 
+        /// return the number of characters available for reading
+        unsigned int count() const;
+
         /// return stream name
         const std::string& name() const;
-        
+
     protected:
         stream( const std::string& name, mode::value mode, mode::blocking_value blocking );
         template < typename T >
