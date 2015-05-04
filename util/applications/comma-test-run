@@ -100,6 +100,7 @@ function description()
 --until-first-failure; exit after the first failure (works only when tests run serially)
 --verbose,-v; more output
 --white-list=[<file>]; only run these tests mentioned in the <file>, applied first before black list. Comment lines starting with # ignored. Each entry in the list matches to sub directory or directories name using pattern ^<subdir>   
+--estimate-resources; in serial mode, accumulates performance data using comma-top and prints increments of maximal resource usage during the time of the test
 EOF
 }
 
@@ -540,6 +541,11 @@ function terminate_run_single_test()
         wait $comma_test_run_test_pid
         unset comma_test_run_test_pid
     fi
+    if [[ -n "comma_top_pgid" ]] ; then
+        kill -s TERM -- -$comma_top_pgid
+        wait $comma_top_pgid
+        unset comma_top_pgid
+    fi
     # serialize all access to global resources: stats file, stdout/err
     (
         flock -x 9
@@ -568,6 +574,44 @@ function random_sleep()
     unset comma_test_run_test_pid
 }
 export -f random_sleep
+
+function comma_top_wrapper()
+{
+    trap - SIGINT SIGTERM SIGHUP SIGPIPE  # default handler
+    local log=$1
+    comma-top --sampling-interval=0.5 > "$log"
+}
+export -f comma_top_wrapper
+
+function report_performance()
+{
+    local performance_log=$1
+    local shared_max=0
+    local shared_min=0
+    local main_max=0
+    local main_min=0
+    local cpus_max=0
+    local cpus_min=0
+    if [[ -s "$performance_log" ]] ; then
+        shared_max=$( cat "$performance_log" | csv-calc --fields ,,,,,shared, max --format t,d,d,d,i,i,i )
+        shared_min=$( cat "$performance_log" | csv-calc --fields ,,,,,shared, min --format t,d,d,d,i,i,i )
+        main_max=$( cat "$performance_log" | csv-calc --fields ,,,,ram,, max --format t,d,d,d,i,i,i )
+        main_min=$( cat "$performance_log" | csv-calc --fields ,,,,ram,, min --format t,d,d,d,i,i,i )
+        cpus_max=$( cat "$performance_log" | csv-calc --fields ,,,cpu,,, max --format t,d,d,d,i,i,i )
+        cpus_min=$( cat "$performance_log" | csv-calc --fields ,,,cpu,,, min --format t,d,d,d,i,i,i )
+    fi
+    local shared_usage main_usage cpus_usage
+    shared_usage=$(( shared_max - shared_min ))
+    shared_usage=${shared_usage#-} # for the lack of abs
+    echo "$dir/resources/memory/shared=$shared_usage kB"
+    main_usage=$(( main_max - main_min - shared_usage ))
+    main_usage=${main_usage#-} # for the lack of abs
+    echo "$dir/resources/memory/main=$main_usage kB"
+    cpus_usage=$( echo "( $cpus_max - $cpus_min ) / 100" | bc -l )
+    cpus_usage=$( printf %0.f $cpus_usage ) # rounds to the nearest integer, e.g., 5.6 -> 6, 5.4 -> 5
+    echo "$dir/resources/cpus=$cpus_usage"
+}
+export -f report_performance
 
 # this function runs the actual test; must be run as a background process
 # arguments:
@@ -607,6 +651,10 @@ function run_single_test()
     # if running tests in parallel, create a unique file for redirecting all output
     # will append to the main output at the end
     local our_stderrout_log="$comma_test_run_unique_dir/stdout_log.$( mktemp -u XXXXXX )"
+    if [[ "$options_estimate_resources" == "1" ]] ; then
+        local our_performance_log="$comma_test_run_unique_dir/performance_log.$( mktemp -u XXXXXX )"
+        timeout -k 10 -s TERM $max_run_time bash -c comma_top_wrapper\ "$our_performance_log" & comma_top_pgid=$!
+    fi
     # todo? or output junit <testcase> tags as we go, but that would require refactoring of this function:
     #       instead of equilibristics with stderr redirection, test output should have various output modes,
     #       e.g: text, csv, junit, etc
@@ -690,6 +738,13 @@ function run_single_test()
             done
             cd $basedir
         fi
+    fi
+    if [[ "$options_estimate_resources" == "1" ]] ; then
+        kill -s TERM -- -$comma_top_pgid
+        wait $comma_top_pgid
+        unset comma_top_pgid
+        report_performance "$our_performance_log"
+        rm -f "$our_performance_log"
     fi
 
     # serialize all access to global resources: stats file, stdout/err
@@ -817,6 +872,7 @@ have_max_parallel=$( comma_options_has --max-parallel=$options_max_parallel $@ )
     (( $options_max_wait_time < 1 )) && { error_ "$name: wait time $options_max_wait_time < 1s or not a number"; exit 1; }
 }
 (( $options_max_run_time < 1 )) && { error_ "$name: timeout run time $options_max_run_time < 1s or not a number"; exit 1; }
+[[ "$options_parallel" != "0" && "$options_estimate_resources" == "1" ]] && { error_ "$name: resource estimation shall be serial"; exit 1; }
 
 # and convert to bytes and export for everyone to use
 max_parallel=$options_max_parallel
@@ -824,7 +880,7 @@ max_memory_main=$(( $options_max_memory_main * 1024 * 1024 ))
 max_memory_shared=$(( $options_max_memory_shared * 1024 * 1024 ))
 max_wait_time=$options_max_wait_time
 max_run_time=$options_max_run_time
-export max_parallel max_memory_main max_memory_shared max_wait_time max_run_time options_debug options_quiet options_path options_until_first_failure options_test_option options_parallel options_no_ansiterm_control_characters options_run_disabled options_run_optional options_junit
+export max_parallel max_memory_main max_memory_shared max_wait_time max_run_time options_debug options_quiet options_path options_until_first_failure options_test_option options_parallel options_no_ansiterm_control_characters options_run_disabled options_run_optional options_junit options_estimate_resources
 
 # keep all plumbing under a common directory
 temp_dir=$( dirname "$( mktemp -d -u )" )
