@@ -30,7 +30,7 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 name=$( basename $0 )
-. $( which comma-application-util )
+source $( which comma-application-util ) || exit 1
 
 function description()
 {
@@ -106,11 +106,11 @@ if [[ $output_fields == "1" ]] ; then
 fi
 
 if [[ $graph == "1" ]] ; then
-    temp=$(mktemp)
+    temp=$( mktemp --dry-run )
+    trap "rm -f $temp" EXIT
     echo $fields > $temp
     cat >> $temp
     echo -e "set key outside \nset key autotitle columnheader\nset style data histogram\nset style histogram rowstacked\nset ylabel \"Time (seconds)\"\nset style fill pattern border\nset samples 11\nset xtics nomirror rotate by -20 scale 0 font \",8\"\nset datafile separator \",\"\nset terminal postscript color \nplot for [i=2:8] \"$temp\" using i:xtic(1)" | gnuplot | ps2pdf -
-    rm $temp    
     exit 0
 fi
 
@@ -120,5 +120,3 @@ for i in ${files[@]} ; do
     if [[ ! -s $filename ]] ; then continue; fi
     echo "\"$filename\",$(stats_to_record $filename)"
 done
-
-
