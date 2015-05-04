@@ -643,7 +643,7 @@ function run_single_test()
     local counter="$count of $total"
 
     # create a unique file for local comma_progress output; will append to the main output at the end
-    local our_stats_progress="$comma_test_run_unique_dir/stats_progress.$(mktemp -u XXXXXX)"
+    local our_stats_progress="$comma_test_run_unique_dir/stats_progress.$( mktemp --dry-run XXXXXX )"
     >"$our_stats_progress"
 
     # say something so that the user is not guessing what is going on
@@ -653,9 +653,9 @@ function run_single_test()
     ) 9>>"$comma_test_run_output_flock"
     # if running tests in parallel, create a unique file for redirecting all output
     # will append to the main output at the end
-    local our_stderrout_log="$comma_test_run_unique_dir/stdout_log.$( mktemp -u XXXXXX )"
+    local our_stderrout_log="$comma_test_run_unique_dir/stdout_log.$( mktemp --dry-run XXXXXX )"
     if [[ "$options_estimate_resources" == "1" ]] ; then
-        local our_performance_log="$comma_test_run_unique_dir/performance_log.$( mktemp -u XXXXXX )"
+        local our_performance_log="$comma_test_run_unique_dir/performance_log.$( mktemp --dry-run XXXXXX )"
         timeout -k 10 -s TERM $max_run_time bash -c comma_top_wrapper\ "$our_performance_log" & comma_top_pgid=$!
     fi
     # todo? or output junit <testcase> tags as we go, but that would require refactoring of this function:
@@ -889,8 +889,8 @@ trap 'stats_finalize; final_words' EXIT
 stats_init || { error_ "$name: could not initialize stats"; exit 1; }
 
 # keep all plumbing under a common directory
-temp_dir=$( dirname "$( mktemp -d -u )" )
-comma_test_run_unique_dir=$( mktemp -d --tmpdir="$temp_dir" comma-test-run.XXXXXX )
+temp_dir=$( readlink -e "stats" )
+comma_test_run_unique_dir=$( mktemp --directory --tmpdir="$temp_dir" comma-test-run.XXXXXX ) || { error_ "$name: cannot create unique working directory"; exit 1; }
 export comma_test_run_unique_dir
 # to run tests in parallel, we need to lock stats_progress_csv and/or stdout/stderr
 # this is the global flock name
