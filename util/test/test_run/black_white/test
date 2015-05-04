@@ -21,7 +21,7 @@ tarball="../data/sample.tar"
 }
 tarball=$( readlink -f "$tarball" )
 
-workdir=$( mktemp --directory )
+workdir=$( mktemp --directory --tmpdir="$output_dir" )
 cd "$workdir"
 tar xf "$tarball" || exit 1
 cd sample || exit 1
