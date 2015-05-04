@@ -592,6 +592,9 @@ function report_performance()
     local main_min=0
     local cpus_max=0
     local cpus_min=0
+    local total_cpus
+    total_cpus=$( comma_total_system_resources | grep cpus | cut -d= -f2 )
+    total_cpus=${total_cpus//\"/}
     if [[ -s "$performance_log" ]] ; then
         shared_max=$( cat "$performance_log" | csv-calc --fields ,,,,,shared, max --format t,d,d,d,i,i,i )
         shared_min=$( cat "$performance_log" | csv-calc --fields ,,,,,shared, min --format t,d,d,d,i,i,i )
@@ -607,7 +610,7 @@ function report_performance()
     main_usage=$(( main_max - main_min - shared_usage ))
     main_usage=${main_usage#-} # for the lack of abs
     echo "$dir/resources/memory/main=$main_usage kB"
-    cpus_usage=$( echo "( $cpus_max - $cpus_min ) / 100" | bc -l )
+    cpus_usage=$( echo "( $cpus_max - $cpus_min ) * $total_cpus / 100" | bc -l )
     cpus_usage=$( printf %0.f $cpus_usage ) # rounds to the nearest integer, e.g., 5.6 -> 6, 5.4 -> 5
     echo "$dir/resources/cpus=$cpus_usage"
 }
