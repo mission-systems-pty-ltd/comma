@@ -900,9 +900,6 @@ export comma_test_run_output_flock
 # store the currently occupied resources (number of CPUs, amount of memory)
 # in a global file name; access serialized via flocks
 comma_test_run_initialize_resources
-basedir=$( pwd )
-result=0
-
 
 function apply_white_list()
 {
@@ -959,6 +956,7 @@ count=0
 failed_count=0
 if [[ "$options_debug" != "0" ]] ; then verbose="--verbose" ; fi
 
+result=0
 run_tests="process_tests_parallel"
 [[ "$options_parallel" == "0" ]] && run_tests="process_tests_serial"
 
