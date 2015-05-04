@@ -352,8 +352,8 @@ function stats_init()
     stats="$( pwd )/stats"
     stats_progress_csv="$stats/progress.csv"
     stats_elapsed_path_value="$stats/elapsed.csv"
-    rm -rf $stats
-    mkdir $stats
+    rm -rf "$stats" || return 1
+    mkdir "$stats" || return 1
     touch "$stats_progress_csv"
 }
 
@@ -377,8 +377,8 @@ function junit_finalize() # quick and dirty
 
 function stats_finalize()
 {
-    [[ -f $stats_progress_csv ]] || return
-    cat $stats_progress_csv | comma-progress --elapsed > $stats_elapsed_path_value
+    [[ -f "$stats_progress_csv" ]] || return
+    cat "$stats_progress_csv" | comma-progress --elapsed > "$stats_elapsed_path_value"
     [[ -z "$options_junit" ]] || junit_finalize
 }
 
@@ -885,6 +885,9 @@ max_wait_time=$options_max_wait_time
 max_run_time=$options_max_run_time
 export max_parallel max_memory_main max_memory_shared max_wait_time max_run_time options_debug options_quiet options_path options_until_first_failure options_test_option options_parallel options_no_ansiterm_control_characters options_run_disabled options_run_optional options_junit options_estimate_resources
 
+trap 'stats_finalize; final_words' EXIT
+stats_init || { error_ "$name: could not initialize stats"; exit 1; }
+
 # keep all plumbing under a common directory
 temp_dir=$( dirname "$( mktemp -d -u )" )
 comma_test_run_unique_dir=$( mktemp -d --tmpdir="$temp_dir" comma-test-run.XXXXXX )
@@ -897,13 +900,9 @@ export comma_test_run_output_flock
 # store the currently occupied resources (number of CPUs, amount of memory)
 # in a global file name; access serialized via flocks
 comma_test_run_initialize_resources
-
-trap 'stats_finalize; final_words' EXIT
-
 basedir=$( pwd )
 result=0
 
-stats_init
 
 function apply_white_list()
 {
