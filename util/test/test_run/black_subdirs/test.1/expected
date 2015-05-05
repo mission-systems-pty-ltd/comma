@@ -1,0 +1,10 @@
+#python
+import os.path
+
+expect len(expected) == 9
+expect len(expected) == len(output)
+expect len(expected) == len(stdout_log)
+
+for n in range( 1, number_of( expected ) ):
+    expect os.path.dirname( expected[n] ) == os.path.dirname( output[n] )
+    expect os.path.dirname( stdout_log[n] ) == output[n]
