@@ -1,0 +1,14 @@
+#!/bin/bash
+
+[ -n "$comma_util_test_test_run_black_subdirs_handler_include_guard_" ] && return || readonly comma_util_test_test_run_black_subdirs_handler_include_guard_=1
+
+# this is EXIT handler; shall never leave all those test subdirs behind
+function post_test()
+{
+    trap '' INT TERM PIPE QUIT HUP
+    local dir="sample"
+    [[ -d "$dir" ]] && rm -rf "$dir"
+}
+export -f post_test
+
+trap "post_test" EXIT

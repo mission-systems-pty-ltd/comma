@@ -16,9 +16,9 @@ function run_test()
 
 # === main ===
 
-functs="../functions"
-[[ -f "$functs" ]] || { echo "$scriptname: cannot find functions '$functs'" >&2; exit 1; }
-source "$functs" || { echo "$scriptname: cannot source functions '$functs'" >&2; exit 1; }
+handler="../handler"
+[[ -f "$handler" ]] || { echo "$scriptname: cannot find functions '$handler'" >&2; exit 1; }
+source "$handler" || { echo "$scriptname: cannot source functions '$handler'" >&2; exit 1; }
 
 tarball="../data/sample.tar"
 [[ -f "$tarball" ]] || { echo "$scriptname: cannot find tarball '$tarball'" >&2; exit 1; }
@@ -30,7 +30,6 @@ mkdir -p "$output_dir"
 cat blacklist | sort | cat -n | sed 's@^ *@blacklisted[@;s@\t@]="@;s@$@"@'
 
 cd "$output_dir"
-trap "post_test sample" EXIT
 tar xf "../$tarball" || { echo "$scriptname: could not unpack tarball '../$tarball'" >&2; exit 1; }
 
 ( cd sample && run_test "../comma-test-run.log" )
