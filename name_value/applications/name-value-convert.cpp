@@ -90,13 +90,7 @@ static void usage( bool verbose = false )
     exit( 1 );
 }
 
-// The signature of boost::property_tree::xml_parser::write_xml() changed in Boost 1.56
-#if (BOOST_VERSION >= 105600)
-  typedef boost::property_tree::xml_writer_settings< std::string > xml_writer_settings_type;
-#else
-  typedef boost::property_tree::xml_writer_settings< char > xml_writer_settings_type;
-#endif
-static xml_writer_settings_type xml_writer_settings;
+static comma::property_tree::xml_writer_settings_t xml_writer_settings;
 
 static char equal_sign;
 static char path_value_delimiter;
@@ -109,27 +103,6 @@ static comma::property_tree::path_value::check_repeated_paths check_type( comma:
 enum Types { ini, info, json, xml, path_value, void_t };
 
 template < Types Type > struct traits {};
-
-boost::property_tree::ptree json_to_xml_ptree_(const boost::property_tree::ptree& ptree)
-{
-    boost::property_tree::ptree out= boost::property_tree::ptree();
-    //copy all children
-    for (boost::property_tree::ptree::const_assoc_iterator i=ptree.ordered_begin(); i != ptree.not_found(); i++ )
-    {
-        if(i->second.find("") != i->second.not_found())
-        {
-            //colapse array
-            for (boost::property_tree::ptree::const_assoc_iterator j=i->second.ordered_begin(); j != i->second.not_found(); j++ )
-            {
-                out.add_child(i->first, json_to_xml_ptree_(j->second));
-            }
-        }
-        else
-            out.add_child(i->first, json_to_xml_ptree_(i->second));
-    }
-    out.put_value(ptree.get_value<std::string>());
-    return out;
-}
 
 template <> struct traits< void_t >
 {
@@ -156,11 +129,13 @@ template <> struct traits< json >
 
 template <> struct traits< xml >
 {
-    static void input( std::istream& is, boost::property_tree::ptree& ptree ) { boost::property_tree::read_xml( is, ptree ); }
+    static void input( std::istream& is, boost::property_tree::ptree& ptree ) 
+    { 
+        comma::property_tree::read_xml( is, ptree ); 
+    }
     static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode )
     {
-        boost::property_tree::ptree out=json_to_xml_ptree_(ptree);
-        boost::property_tree::write_xml( os, out, xml_writer_settings );
+        comma::property_tree::write_xml( os, ptree, xml_writer_settings);
     }
 };
 

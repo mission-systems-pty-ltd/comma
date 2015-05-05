@@ -55,6 +55,13 @@ namespace comma {
 
 struct property_tree // quick and dirty
 {
+    // The signature of boost::property_tree::xml_parser::write_xml() changed in Boost 1.56
+    #if (BOOST_VERSION >= 105600)
+    typedef boost::property_tree::xml_writer_settings< std::string > xml_writer_settings_t;
+    #else
+    typedef boost::property_tree::xml_writer_settings< char > xml_writer_settings_t;
+    #endif
+
     /// disabled: do not show path indices for array items, with_brackets: x[0]/y/z[0]=1 and without_brackets: e.g. x/0/y/z/1=1
     enum path_mode { disabled, with_brackets, without_brackets  };
 
@@ -91,6 +98,9 @@ struct property_tree // quick and dirty
     static boost::property_tree::ptree from_path_value_string( const std::string& s, char equal_sign = '=', char delimiter = ',', path_value::check_repeated_paths check_type = path_value::no_check, bool use_index = false );
     static boost::property_tree::ptree& from_path_value_string( boost::property_tree::ptree& ptree, const std::string& s, char equal_sign, char delimiter, path_value::check_repeated_paths check_type = path_value::no_check, bool use_index = false );
 
+    static void read_xml( std::istream& is, boost::property_tree::ptree& ptree );
+    static void write_xml( std::ostream& os, const boost::property_tree::ptree& ptree, const xml_writer_settings_t& xml_writer_settings);
+    
     /// read as path-value from input stream
     static void from_path_value( std::istream& is, boost::property_tree::ptree& ptree,  path_value::check_repeated_paths check_type = path_value::no_check, char equal_sign = '=', char delimiter = ',', bool use_index = false );
 
