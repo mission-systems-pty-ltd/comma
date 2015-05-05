@@ -312,7 +312,7 @@ function exclude_generic_tests()
         result_list+=( $dir )
     done
 
-    echo "${result_list[@]}"
+    echo "${result_list[@]}" | tr ' ' '\n'
 }
 
 # find "test" file inside a path, checking in each subdirectory (starting from the full path)
@@ -927,7 +927,7 @@ function test_directories()
         options_black_list="^(\./)?($( sed 's#\./##' <$options_black_list | grep -v ^# | tr \\n '|' | sed 's/|$//' ))"; 
     fi
 
-    test_script_dirs_all=( $( exclude_generic_tests $( get_dirnames $( find . -name "test" -or -name "input" -or -name "expected" | grep -v "/\." ) 2>/dev/null | sort -u | apply_white_black_list ) ) )
+    test_script_dirs_all=( $( exclude_generic_tests $( get_dirnames $( find . -name "test" -or -name "input" -or -name "expected" | grep -v "/\." ) 2>/dev/null | sort -u ) | apply_white_black_list ) )
     [[ -n "$options_from" || -n "$options_to" || -n "$options_end" ]] || { echo ${test_script_dirs_all[@]} ; return ; }
     [[ -z "$options_from" ]] || { local from="${options_from#\.\/}" ; }
     [[ -z "$options_to" ]] || { local to="${options_to#\.\/}" ; }
