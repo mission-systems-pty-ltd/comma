@@ -14,7 +14,7 @@ function run_test()
 
 # === main ===
 
-functs="../common/functions"
+functs="../functions"
 [[ -f "$functs" ]] || { echo "$scriptname: cannot find functions '$functs'" >&2; exit 1; }
 source "$functs" || { echo "$scriptname: cannot source functions '$functs'" >&2; exit 1; }
 
