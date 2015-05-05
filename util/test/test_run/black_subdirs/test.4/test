@@ -1,0 +1,36 @@
+#!/bin/bash
+
+dirname=$( dirname "$0" )
+scriptname=$( basename "$dirname" )/$( basename "$0" )
+
+function run_test()
+{
+    logfile=$1
+    blacklist="../../blacklist"
+    [[ -f "$blacklist" ]] || { echo "$scriptname: file '$blacklist' not found in $( pwd )" >&2; exit 1; }
+    comma-test-run --black-list="$blacklist" > "$logfile" 2>&1 || { echo "$scriptname: comma-test-run failed" >&2; exit 1; }
+    find . -name expected -and -type f   | sort | cat -n | sed 's@^ *@expected[@;s@\t@]="@;s@$@"@'
+    find . -name output -and -type d     | sort | cat -n | sed 's@^ *@output[@;s@\t@]="@;s@$@"@'
+    find . -name stdout.log -and -type f | sort | cat -n | sed 's@^ *@stdout_log[@;s@\t@]="@;s@$@"@'
+}
+
+# === main ===
+
+functs="../common/functions"
+[[ -f "$functs" ]] || { echo "$scriptname: cannot find functions '$functs'" >&2; exit 1; }
+source "$functs" || { echo "$scriptname: cannot source functions '$functs'" >&2; exit 1; }
+
+tarball="../data/sample.tar"
+[[ -f "$tarball" ]] || { echo "$scriptname: cannot find tarball '$tarball'" >&2; exit 1; }
+
+output_dir="output"
+mkdir -p "$output_dir"
+
+[[ -f "blacklist" ]] || { echo "$scriptname: file 'blacklist' not found" >&2; exit 1; }
+cat blacklist | sort | cat -n | sed 's@^ *@blacklisted[@;s@\t@]="@;s@$@"@'
+
+cd "$output_dir"
+trap "post_test sample" EXIT
+tar xf "../$tarball" || { echo "$scriptname: could not unpack tarball '../$tarball'" >&2; exit 1; }
+
+( cd sample && run_test "../comma-test-run.log" )
