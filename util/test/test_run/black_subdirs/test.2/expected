@@ -1,5 +1,5 @@
 #python
 
 expect len(expected) == 9
-expect len(output) = 0
-expect len(stdout_log) = 0
+expect len(output) == 0
+expect len(stdout_log) == 0
