@@ -541,7 +541,7 @@ function terminate_run_single_test()
         wait $comma_test_run_test_pid
         unset comma_test_run_test_pid
     fi
-    if [[ -n "comma_top_pgid" ]] ; then
+    if [[ -n "$comma_top_pgid" ]] ; then
         kill -s TERM -- -$comma_top_pgid
         wait $comma_top_pgid
         unset comma_top_pgid
