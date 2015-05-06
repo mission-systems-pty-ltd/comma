@@ -117,7 +117,6 @@ int main( int argc, char** argv )
             if( select.read().ready( fd ) )
             {
                 unsigned int size = std::min( istream.count(), buffer_size );
-                std::cerr << size << std::endl;
                 istream->read( &buffer[0], size );
                 std::cout.write( &buffer[0], size );
                 if ( unbuffered ) { std::cout.flush(); }
