@@ -47,7 +47,6 @@
 #include <comma/xpath/xpath.h>
 #include <comma/visiting/visit.h>
 #include <comma/visiting/while.h>
-#include <cassert>
 
 #include "ptree.h"
 
@@ -371,7 +370,7 @@ static boost::property_tree::ptree xml_to_json_ptree_( boost::property_tree::ptr
         {
             if(unnamed_array.size()!=0)
             {
-                assert((i-1)->first==i->first);
+                //assert((i-1)->first==i->first);
                 //the last of duplicated name
                 unnamed_array.add_child("", xml_to_json_ptree_(i->second) );
                 out.add_child(i->first,unnamed_array);
