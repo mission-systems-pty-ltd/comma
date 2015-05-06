@@ -1,4 +1,4 @@
 #!/bin/bash
-cat | name-value-convert --from xml --to path-value --use-index --indented
+ name-value-convert --from xml --to path-value --use-index --indented
 
 

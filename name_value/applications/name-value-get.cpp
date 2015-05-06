@@ -46,6 +46,8 @@
 #include <comma/name_value/serialize.h>
 #include <comma/xpath/xpath.h>
 
+static const std::string regex_characters_ =  ".{}()\\*+?|^$";
+
 static void usage( bool verbose = false )
 {
     std::cerr << std::endl;
@@ -54,10 +56,12 @@ static void usage( bool verbose = false )
     std::cerr << "usage: cat data.xml | name-value-get <paths> [<options>]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "<paths>: x-path, e.g. \"command/type\" or posix regular expressions" << std::endl;
+    std::cerr << "    if <paths> doesn't contain any of regex characters: \"" << regex_characters_ << "\" it will be treated as x-path" << std::endl;
     std::cerr << std::endl;
     std::cerr << "data options" << std::endl;
     std::cerr << "    --from <format>: input format; if this option is omitted, input format will be guessed (only for json, xml, and path-value)" << std::endl;
     std::cerr << "    --to <format>: output format; default: name-value" << std::endl;
+    std::cerr << "    --regex: add square brackets \"[]\" to regex characters; when not specified indexed path can be used e.g. x/y[0]" << std::endl;
     std::cerr << "formats" << std::endl;
     std::cerr << "    info: info data (see boost::property_tree)" << std::endl;
     std::cerr << "    ini: ini data" << std::endl;
@@ -89,6 +93,7 @@ static void usage( bool verbose = false )
 static char equal_sign;
 static char path_value_delimiter;
 static bool linewise;
+static bool option_regex;
 static bool output_path;
 typedef comma::property_tree::path_mode path_mode;
 static path_mode indices_mode = comma::property_tree::disabled;
@@ -209,30 +214,40 @@ void match_regex_( std::ostream& os, const boost::property_tree::ptree& ptree )
     }
 }
 
+static bool is_regex_(const std::string& s)
+{
+    //static const std::string regex_characters = ".[]{}()\\*+?|^$";
+    std::string regex_characters = regex_characters_;
+    if (option_regex) { regex_characters += "[]"; }
+    for( unsigned int k = 0; k < regex_characters.size(); ++k )
+    { 
+        if( s.find_first_of( regex_characters[k] ) != std::string::npos ) { return true; }
+    }
+    return false;
+}
+
 int main( int ac, char** av )
 {
     try
     {
         comma::command_line_options options( ac, av, usage );
-        path_strings = options.unnamed( "--linewise,-l,--output-path,--use-buffer", "--from,--to,--equal-sign,-e,--delimiter,-d" );
+        path_strings = options.unnamed( "--linewise,-l,--output-path,--use-buffer,--regex", "--from,--to,--equal-sign,-e,--delimiter,-d" );
         if( path_strings.empty() ) { std::cerr << std::endl << "name-value-get: xpath missing" << std::endl; usage(); }
         path_regex.resize( path_strings.size() );
         paths.resize( path_strings.size() );
         bool has_regex = false;
+        option_regex = options.exists( "--regex" );
         for( std::size_t i = 0; i < path_strings.size(); ++i )
         {
-            // todo: add vector support
-            static const std::string regex_characters = ".[]{}()\\*+?|^$";
-            for( unsigned int k = 0; k < regex_characters.size(); ++k )
-            { 
-                if( path_strings[i].find_first_of( regex_characters[k] ) != std::string::npos )
-                {
-                    path_regex[i] = boost::regex( path_strings[i], boost::regex::extended );
-                    has_regex = true;
-                    break;
-                }
+            if ( is_regex_(path_strings[i]) )
+            {
+                path_regex[i] = boost::regex( path_strings[i], boost::regex::extended );
+                has_regex = true;
             }
-            if( !path_regex[i] ) { paths[i] = boost::property_tree::ptree::path_type( path_strings[i], '/' ); }
+            else
+            { 
+                paths[i] = boost::property_tree::ptree::path_type( path_strings[i], '/' ); 
+            }
         }
         boost::optional< std::string > from = options.optional< std::string >( "--from" );
         std::string to = options.value< std::string >( "--to", "path-value" );

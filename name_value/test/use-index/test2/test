@@ -1,4 +1,4 @@
 #!/bin/bash
-cat | name-value-convert --from json --to xml --use-index --indented >output/xml
+name-value-convert --from json --to xml --use-index --indented >output/xml
 diff -w output/xml expected-xml
 

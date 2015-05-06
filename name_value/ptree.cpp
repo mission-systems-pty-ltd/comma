@@ -47,7 +47,6 @@
 #include <comma/xpath/xpath.h>
 #include <comma/visiting/visit.h>
 #include <comma/visiting/while.h>
-#include <cassert>
 
 #include "ptree.h"
 
@@ -324,7 +323,7 @@ void property_tree::from_unknown( std::istream& stream, boost::property_tree::pt
     }
 }
 
-static boost::property_tree::ptree json_to_xml_ptree_(const boost::property_tree::ptree& ptree)
+static boost::property_tree::ptree ptree_to_xml_(const boost::property_tree::ptree& ptree)
 {
     boost::property_tree::ptree out= boost::property_tree::ptree();
     //copy all children
@@ -335,11 +334,11 @@ static boost::property_tree::ptree json_to_xml_ptree_(const boost::property_tree
             //colapse array
             for (boost::property_tree::ptree::const_assoc_iterator j=i->second.ordered_begin(); j != i->second.not_found(); j++ )
             {
-                out.add_child(i->first, json_to_xml_ptree_(j->second));
+                out.add_child(i->first, ptree_to_xml_(j->second));
             }
         }
         else
-            out.add_child(i->first, json_to_xml_ptree_(i->second));
+            out.add_child(i->first, ptree_to_xml_(i->second));
     }
     out.put_value(ptree.get_value<std::string>());
     return out;
@@ -354,7 +353,7 @@ std::string trim(const std::string& s)
     return out;
 }
 
-static boost::property_tree::ptree xml_to_json_ptree_( boost::property_tree::ptree& ptree)
+static boost::property_tree::ptree xml_to_ptree_( boost::property_tree::ptree& ptree)
 {
     boost::property_tree::ptree out= boost::property_tree::ptree();
     boost::property_tree::ptree unnamed_array= boost::property_tree::ptree();
@@ -365,20 +364,20 @@ static boost::property_tree::ptree xml_to_json_ptree_( boost::property_tree::ptr
         if ( ++lah != ptree.end() && i->first == lah->first )
         {
             //add to unnamed array
-            unnamed_array.add_child("", xml_to_json_ptree_(i->second) );
+            unnamed_array.add_child("", xml_to_ptree_(i->second) );
         }
         else
         {
             if(unnamed_array.size()!=0)
             {
-                assert((i-1)->first==i->first);
+                //assert((i-1)->first==i->first);
                 //the last of duplicated name
-                unnamed_array.add_child("", xml_to_json_ptree_(i->second) );
+                unnamed_array.add_child("", xml_to_ptree_(i->second) );
                 out.add_child(i->first,unnamed_array);
                 unnamed_array= boost::property_tree::ptree();
             }
             else
-                out.add_child(i->first, xml_to_json_ptree_(i->second) );
+                out.add_child(i->first, xml_to_ptree_(i->second) );
         }
     }
     out.put_value( trim( ptree.get_value<std::string>() ) );
@@ -388,13 +387,12 @@ static boost::property_tree::ptree xml_to_json_ptree_( boost::property_tree::ptr
 void property_tree::read_xml( std::istream& is, boost::property_tree::ptree& ptree )
 {
         boost::property_tree::read_xml( is, ptree ); 
-        ptree=xml_to_json_ptree_(ptree);
+        ptree=xml_to_ptree_(ptree);
 }
 
 void property_tree::write_xml( std::ostream& os, const boost::property_tree::ptree& ptree, const xml_writer_settings_t& xml_writer_settings)
 {
-        boost::property_tree::ptree out=json_to_xml_ptree_(ptree);
-        boost::property_tree::write_xml( os, out, xml_writer_settings );
+        boost::property_tree::write_xml( os, ptree_to_xml_(ptree), xml_writer_settings );
 }
 
 void property_tree::from_unknown_seekable( std::istream& stream, boost::property_tree::ptree& ptree, property_tree::path_value::check_repeated_paths check_type, char equal_sign, char delimiter, bool use_index )
@@ -413,9 +411,7 @@ void property_tree::from_unknown_seekable( std::istream& stream, boost::property
     {
         stream.clear();
         stream.seekg( 0, std::ios::beg );
-        boost::property_tree::ptree p;
-        boost::property_tree::read_xml( stream, p );
-        ptree = xml_to_json_ptree_( p );
+        comma::property_tree::read_xml( stream, ptree );
         return;
     }
     catch( const boost::property_tree::ptree_error&  ex ) {}
