@@ -68,8 +68,8 @@ static void usage( bool verbose = false )
     std::cerr << "name/path-value options:" << std::endl;
     std::cerr << "    --equal-sign,-e=<equal sign>: default '='" << std::endl;
     std::cerr << "    --delimiter,-d=<delimiter>: default ','" << std::endl;
-    std::cerr << "    --use-index,--use-indices,--show-path-indices,--indices: show indices for array items e.g. y[0]/x/z[1]=\"a\"" << std::endl;
-    std::cerr << "    --no-brackets: use with --show-path-indices - above, show indices as path elements e.g. y/0/x/z/1=\"a\"" << std::endl;
+    std::cerr << "    --no-brackets: show indices as path elements e.g. y/0/x/z/1=\"a\"" << std::endl;
+    std::cerr << "          by default array items will be shown with index e.g. y[0]/x/z[1]=\"a\"" << std::endl;
     std::cerr << std::endl;
     std::cerr << "path-value options:" << std::endl;
     std::cerr << "    --take-last: if paths are repeated, take last path=value" << std::endl;
@@ -169,7 +169,6 @@ int main( int ac, char** av )
         linewise = options.exists( "--linewise,-l" );
         if ( options.exists( "--take-last" ) ) check_type = comma::property_tree::path_value::take_last;
         if ( options.exists( "--verify-unique,--unique-input" ) ) check_type = comma::property_tree::path_value::unique_input;
-        use_index = options.exists( "--use-index,--use-indices,--show-path-indices,--indices" );
         xml_writer_settings.indent_count = options.value( "--indent", options.exists( "--indented" ) ? 4 : 0 );
         boost::optional< char > delimiter = options.optional< char >( "--delimiter,-d" );
         path_value_delimiter = delimiter ? *delimiter : ( linewise ? ',' : '\n' );

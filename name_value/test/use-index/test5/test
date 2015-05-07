@@ -1,2 +1,2 @@
 #!/bin/bash
- name-value-convert --from path-value --to path-value --use-index
+ name-value-convert --from path-value --to path-value

@@ -57,6 +57,9 @@ static void usage( bool verbose = false )
     std::cerr << std::endl;
     std::cerr << "<paths>: x-path, e.g. \"command/type\" or posix regular expressions" << std::endl;
     std::cerr << "    if <paths> doesn't contain any of regex characters: \"" << regex_characters_ << "\" it will be treated as x-path" << std::endl;
+    std::cerr << "    x-path may contain array index e.g. y[0]/x/z[1]=\"a\"" << std::endl;
+    std::cerr << "    if you want to force using regular expressions, use --regex option (see below)" << std::endl;
+    std::cerr << "    rationale: there is no way to tell whether a[12] is the 12th element of array or a regular expression" << std::endl;
     std::cerr << std::endl;
     std::cerr << "data options" << std::endl;
     std::cerr << "    --from <format>: input format; if this option is omitted, input format will be guessed (only for json, xml, and path-value)" << std::endl;
@@ -73,8 +76,8 @@ static void usage( bool verbose = false )
     std::cerr << "    --equal-sign,-e=<equal sign>: default '='" << std::endl;
     std::cerr << "    --delimiter,-d=<delimiter>: default ','" << std::endl;
     std::cerr << "    --output-path: if path-value, output path (for regex)" << std::endl;
-    std::cerr << "    --show-path-indices,--indices: show indices for array items e.g. y[0]/x/z[1]=\"a\"" << std::endl;
-    std::cerr << "    --no-brackets: use with --show-path-indices - above, show indices as path elements e.g. y/0/x/z/1=\"a\"" << std::endl;
+    std::cerr << "    --no-brackets: show indices as path elements e.g. y/0/x/z/1=\"a\"" << std::endl;
+    std::cerr << "          by default array items will be shown with index e.g. y[0]/x/z[1]=\"a\"" << std::endl;
     std::cerr << std::endl;
     std::cerr << "path-value options:" << std::endl;
     std::cerr << "    --take-last: if paths are repeated, take last path=value" << std::endl;
@@ -216,7 +219,6 @@ void match_regex_( std::ostream& os, const boost::property_tree::ptree& ptree )
 
 static bool is_regex_(const std::string& s)
 {
-    //static const std::string regex_characters = ".[]{}()\\*+?|^$";
     std::string regex_characters = regex_characters_;
     if (option_regex) { regex_characters += "[]"; }
     for( unsigned int k = 0; k < regex_characters.size(); ++k )
@@ -278,11 +280,7 @@ int main( int ac, char** av )
         else if( to == "xml" ) { output = &traits< xml >::output; }
         else if( to == "path-value" ) { output = &traits< path_value >::output; }
         else { std::cerr << "name-value-get: expected --to format to be ini, info, json, xml, or path-value, got " << to << std::endl; return 1; }
-        if( options.exists( "--show-path-indices,--indices" ) ) 
-        {
-            if( options.exists( "--no-brackets" ) ) { indices_mode = comma::property_tree::without_brackets; }
-            else { indices_mode = comma::property_tree::with_brackets; }
-        }
+        indices_mode = options.exists( "--no-brackets" ) ? comma::property_tree::without_brackets : comma::property_tree::with_brackets;
         if( linewise )
         {
             comma::signal_flag is_shutdown;

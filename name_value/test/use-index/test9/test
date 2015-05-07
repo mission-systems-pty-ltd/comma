@@ -1,4 +1,2 @@
 #!/bin/bash
- name-value-convert --to path-value --use-index --indented
-
-
+ name-value-convert --to path-value --indented
