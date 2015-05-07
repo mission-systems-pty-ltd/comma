@@ -458,6 +458,47 @@ function setup_signal_handler()
 }
 export -f setup_signal_handler
 
+function comma_top_wrapper()
+{
+    trap - SIGINT SIGTERM SIGHUP SIGPIPE  # default handler
+    local log=$1
+    comma-top --sampling-interval=0.5 > "$log"
+}
+export -f comma_top_wrapper
+
+function report_performance()
+{
+    local performance_log=$1
+    local shared_max=0
+    local shared_min=0
+    local main_max=0
+    local main_min=0
+    local cpus_max=0
+    local cpus_min=0
+    local total_cpus
+    total_cpus=$( comma_total_system_resources | grep cpus | cut -d= -f2 )
+    total_cpus=${total_cpus//\"/}
+    if [[ -s "$performance_log" ]] ; then
+        shared_max=$( cat "$performance_log" | csv-calc --fields ,,,,,shared, max --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
+        shared_min=$( cat "$performance_log" | csv-calc --fields ,,,,,shared, min --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
+        main_max=$( cat "$performance_log" | csv-calc --fields ,,,,ram,, max --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
+        main_min=$( cat "$performance_log" | csv-calc --fields ,,,,ram,, min --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
+        cpus_max=$( cat "$performance_log" | csv-calc --fields ,,,cpu,,, max --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
+        cpus_min=$( cat "$performance_log" | csv-calc --fields ,,,cpu,,, min --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
+    fi
+    local shared_usage main_usage cpus_usage
+    shared_usage=$(( shared_max - shared_min ))
+    shared_usage=${shared_usage#-} # for the lack of abs
+    echo "$dir/resources/memory/shared=$shared_usage kB"
+    main_usage=$(( main_max - main_min - shared_usage ))
+    main_usage=${main_usage#-} # for the lack of abs
+    echo "$dir/resources/memory/main=$main_usage kB"
+    cpus_usage=$( echo "( $cpus_max - $cpus_min ) * $total_cpus / 100" | bc -l )
+    cpus_usage=$( printf %0.f $cpus_usage ) # rounds to the nearest integer, e.g., 5.6 -> 6, 5.4 -> 5
+    echo "$dir/resources/cpus=$cpus_usage"
+}
+export -f report_performance
+
 # this functions terminates a currently running test using its group id
 # the test running under the timeout command will have its own group id
 function terminate_run_and_match_test()
@@ -468,6 +509,11 @@ function terminate_run_and_match_test()
         kill -s TERM -- -$comma_test_run_test_pgid
         wait $comma_test_run_test_pgid
         unset comma_test_run_test_pgid
+    fi
+    if [[ -n "$comma_top_pgid" ]] ; then
+        kill -s TERM -- -$comma_top_pgid
+        wait $comma_top_pgid
+        unset comma_top_pgid
     fi
     # a process that exits in response to SIGINT should kill itself with SIGINT
     # see http://www.cons.org/cracauer/sigint.html
@@ -522,12 +568,23 @@ function run_test_with_timeout()
     setup_signal_handler terminate_run_and_match_test
     export -f comma_progress_named
     export our_stats_progress dir test_exec path verbose
+    if [[ "$options_estimate_resources" == "1" ]] ; then
+        local our_performance_log="$comma_test_run_unique_dir/performance_log.$( mktemp --dry-run XXXXXX )"
+        timeout -k 10 -s TERM $max_run_time bash -c comma_top_wrapper\ "$our_performance_log" & comma_top_pgid=$!
+    fi
     # Note: timeout option '-k' is missing in RHEL6, remove '-k 10' if need be
     local rv
     timeout -k 10 -s TERM $max_run_time bash -c run_and_match_test & comma_test_run_test_pgid=$!
     wait $comma_test_run_test_pgid
     rv=$?
     unset comma_test_run_test_pgid
+    if [[ "$options_estimate_resources" == "1" ]] ; then
+        kill -s TERM -- -$comma_top_pgid
+        wait $comma_top_pgid
+        unset comma_top_pgid
+        report_performance "$our_performance_log"
+        mv -f "$our_performance_log" "output/performance.csv"
+    fi
     return $rv
 }
 export -f run_test_with_timeout
@@ -540,11 +597,6 @@ function terminate_run_single_test()
         kill -s TERM -- $comma_test_run_test_pid
         wait $comma_test_run_test_pid
         unset comma_test_run_test_pid
-    fi
-    if [[ -n "$comma_top_pgid" ]] ; then
-        kill -s TERM -- -$comma_top_pgid
-        wait $comma_top_pgid
-        unset comma_top_pgid
     fi
     # serialize all access to global resources: stats file, stdout/err
     (
@@ -574,47 +626,6 @@ function random_sleep()
     unset comma_test_run_test_pid
 }
 export -f random_sleep
-
-function comma_top_wrapper()
-{
-    trap - SIGINT SIGTERM SIGHUP SIGPIPE  # default handler
-    local log=$1
-    comma-top --sampling-interval=0.5 > "$log"
-}
-export -f comma_top_wrapper
-
-function report_performance()
-{
-    local performance_log=$1
-    local shared_max=0
-    local shared_min=0
-    local main_max=0
-    local main_min=0
-    local cpus_max=0
-    local cpus_min=0
-    local total_cpus
-    total_cpus=$( comma_total_system_resources | grep cpus | cut -d= -f2 )
-    total_cpus=${total_cpus//\"/}
-    if [[ -s "$performance_log" ]] ; then
-        shared_max=$( cat "$performance_log" | csv-calc --fields ,,,,,shared, max --format t,d,d,d,i,i,i )
-        shared_min=$( cat "$performance_log" | csv-calc --fields ,,,,,shared, min --format t,d,d,d,i,i,i )
-        main_max=$( cat "$performance_log" | csv-calc --fields ,,,,ram,, max --format t,d,d,d,i,i,i )
-        main_min=$( cat "$performance_log" | csv-calc --fields ,,,,ram,, min --format t,d,d,d,i,i,i )
-        cpus_max=$( cat "$performance_log" | csv-calc --fields ,,,cpu,,, max --format t,d,d,d,i,i,i )
-        cpus_min=$( cat "$performance_log" | csv-calc --fields ,,,cpu,,, min --format t,d,d,d,i,i,i )
-    fi
-    local shared_usage main_usage cpus_usage
-    shared_usage=$(( shared_max - shared_min ))
-    shared_usage=${shared_usage#-} # for the lack of abs
-    echo "$dir/resources/memory/shared=$shared_usage kB"
-    main_usage=$(( main_max - main_min - shared_usage ))
-    main_usage=${main_usage#-} # for the lack of abs
-    echo "$dir/resources/memory/main=$main_usage kB"
-    cpus_usage=$( echo "( $cpus_max - $cpus_min ) * $total_cpus / 100" | bc -l )
-    cpus_usage=$( printf %0.f $cpus_usage ) # rounds to the nearest integer, e.g., 5.6 -> 6, 5.4 -> 5
-    echo "$dir/resources/cpus=$cpus_usage"
-}
-export -f report_performance
 
 # this function runs the actual test; must be run as a background process
 # arguments:
@@ -654,10 +665,6 @@ function run_single_test()
     # if running tests in parallel, create a unique file for redirecting all output
     # will append to the main output at the end
     local our_stderrout_log="$comma_test_run_unique_dir/stdout_log.$( mktemp --dry-run XXXXXX )"
-    if [[ "$options_estimate_resources" == "1" ]] ; then
-        local our_performance_log="$comma_test_run_unique_dir/performance_log.$( mktemp --dry-run XXXXXX )"
-        timeout -k 10 -s TERM $max_run_time bash -c comma_top_wrapper\ "$our_performance_log" & comma_top_pgid=$!
-    fi
     # todo? or output junit <testcase> tags as we go, but that would require refactoring of this function:
     #       instead of equilibristics with stderr redirection, test output should have various output modes,
     #       e.g: text, csv, junit, etc
@@ -741,13 +748,6 @@ function run_single_test()
             done
             cd $basedir
         fi
-    fi
-    if [[ "$options_estimate_resources" == "1" ]] ; then
-        kill -s TERM -- -$comma_top_pgid
-        wait $comma_top_pgid
-        unset comma_top_pgid
-        report_performance "$our_performance_log"
-        rm -f "$our_performance_log"
     fi
 
     # serialize all access to global resources: stats file, stdout/err
