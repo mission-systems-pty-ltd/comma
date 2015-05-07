@@ -76,9 +76,7 @@ void property_tree::put( boost::property_tree::ptree& ptree, const xpath& path, 
             }
             else if( use_index ) { t = &( t->add_child( path.elements[i].name, boost::property_tree::ptree() ) ); }
             if( *path.elements[i].index > size ) { COMMA_THROW( comma::exception, "expected index not greater than " << size << "; got " << path.elements[i].index << " in " << path.to_string() ); }
-            if( *path.elements[i].index == size )
-            { 
-                t = &( name.empty() ? t->push_back( std::make_pair( name, boost::property_tree::ptree() ) )->second : t->add_child( name, boost::property_tree::ptree() ) ); }
+            if( *path.elements[i].index == size ) { t = &( name.empty() ? t->push_back( std::make_pair( name, boost::property_tree::ptree() ) )->second : t->add_child( name, boost::property_tree::ptree() ) ); }
         }
         else
         {
@@ -362,7 +360,7 @@ static boost::property_tree::ptree xml_to_ptree_( boost::property_tree::ptree& p
         if ( ++lah != ptree.end() && i->first == lah->first )
         {
             //add to unnamed array
-            unnamed_array.add_child("", xml_to_ptree_(i->second) );
+            unnamed_array.push_back( std::make_pair( "", xml_to_ptree_( i->second ) ) );
         }
         else
         {
@@ -370,12 +368,14 @@ static boost::property_tree::ptree xml_to_ptree_( boost::property_tree::ptree& p
             {
                 //assert((i-1)->first==i->first);
                 //the last of duplicated name
-                unnamed_array.add_child("", xml_to_ptree_(i->second) );
+                unnamed_array.push_back( std::make_pair( "", xml_to_ptree_( i->second ) ) );
                 out.add_child(i->first,unnamed_array);
                 unnamed_array= boost::property_tree::ptree();
             }
             else
+            {
                 out.add_child(i->first, xml_to_ptree_(i->second) );
+            }
         }
     }
     out.put_value( trim( ptree.get_value<std::string>() ) );
