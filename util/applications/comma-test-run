@@ -584,6 +584,11 @@ function run_test_with_timeout()
         unset comma_top_pgid
         report_performance "$our_performance_log"
         mv -f "$our_performance_log" "output/performance.csv"
+        [[ -f "config" ]] && {
+            cat "config" | sed "s@^@$dir/current/@"
+        } || {
+            echo "$dir: no resource file"
+        }
     fi
     return $rv
 }
