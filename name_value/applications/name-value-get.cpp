@@ -60,6 +60,7 @@ static void usage( bool verbose = false )
     std::cerr << "    x-path may contain array index e.g. y[0]/x/z[1]=\"a\"" << std::endl;
     std::cerr << "    if you want to force using regular expressions, use --regex option (see below)" << std::endl;
     std::cerr << "    rationale: there is no way to tell whether a[12] is the 12th element of array or a regular expression" << std::endl;
+    std::cerr << "    warning: regular expression matching does not work very well with indexed names; use grep instead" << std::endl;
     std::cerr << std::endl;
     std::cerr << "data options" << std::endl;
     std::cerr << "    --from <format>: input format; if this option is omitted, input format will be guessed (only for json, xml, and path-value)" << std::endl;
