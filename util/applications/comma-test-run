@@ -154,7 +154,7 @@ ${brown}Input, test, output, and expected files${none}
     it is only executed if there is no subdirectory containing 'input', 'expected' or 'test'.
     
     Test output will be put into the subdirectory 'output'. This will contain standard error log 'output/stderr.log'
-    and output log 'output/stdout.log'. 'output/stdout.log' is the same data that is matched to the 'expected' file.
+    and output log 'output/stdout.log'. The contents of 'output/stdout.log' is matched to the 'expected' file.
 
 ${brown}Disabling tests${none}
     to disable tests in a directory and all its subdirectories
