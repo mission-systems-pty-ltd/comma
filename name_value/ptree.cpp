@@ -52,8 +52,6 @@
 
 namespace comma {
     
-//void property_tree::put( boost::property_tree::ptree& ptree, const std::string& path, const std::string& value, char delimiter ) { comma::property_tree::put( ptree, xpath( path, delimiter ), value ); }
-
 void property_tree::put( boost::property_tree::ptree& ptree, const xpath& path, const std::string& value, bool use_index )
 {
     boost::property_tree::ptree* t = &ptree;
@@ -66,9 +64,8 @@ void property_tree::put( boost::property_tree::ptree& ptree, const xpath& path, 
             unsigned int size = 0;
             if( child ) // quick and dirty, because some parts of boost::property_tree suck
             {
+                if( use_index ) { t = &(*child); }
                 bool found = false;
-                if(use_index)
-                        t = &(*child);
                 for( boost::property_tree::ptree::assoc_iterator j = t->ordered_begin(); j != t->not_found(); ++j )
                 {
                     if( j->first != name ) { if( found ) { break; } else { continue; } }
@@ -77,11 +74,12 @@ void property_tree::put( boost::property_tree::ptree& ptree, const xpath& path, 
                     found = true;
                 }
             }
-            else if (use_index)
-                t= &(t->add_child( path.elements[i].name, boost::property_tree::ptree() ) );
+            else if( use_index ) { t = &( t->add_child( path.elements[i].name, boost::property_tree::ptree() ) ); }
             if( *path.elements[i].index > size ) { COMMA_THROW( comma::exception, "expected index not greater than " << size << "; got " << path.elements[i].index << " in " << path.to_string() ); }
-            if( *path.elements[i].index == size ) { t = &( t->add_child( name, boost::property_tree::ptree() ) ); }
-    }
+            if( *path.elements[i].index == size )
+            { 
+                t = &( name.empty() ? t->push_back( std::make_pair( name, boost::property_tree::ptree() ) )->second : t->add_child( name, boost::property_tree::ptree() ) ); }
+        }
         else
         {
             t = child ? &( *child ) : &t->add_child( path.elements[i].name, boost::property_tree::ptree() );
