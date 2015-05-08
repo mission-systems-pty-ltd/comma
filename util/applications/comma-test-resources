@@ -1,0 +1,324 @@
+#!/bin/bash
+
+# This file is part of comma, a generic and flexible library
+# Copyright (c) 2014 The University of Sydney
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of the University of Sydney nor the
+#    names of its contributors may be used to endorse or promote products
+#    derived from this software without specific prior written permission.
+#
+# NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+# GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+# HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+# BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+scriptname=$( basename "$0" )
+
+source $( which comma-application-util ) || { echo "$scriptname: cannot source 'comma-application-util'" >&2; exit 1; }
+source $( which comma-resources-util ) || { echo "$scriptname: cannot source 'comma-resources-util'" >&2; exit 1; }
+source $( which comma-util ) || { echo "$scriptname: cannot source 'comma-util'" >&2; exit 1; }
+
+function default_options()
+{
+    cat <<EOF
+threshold/shared=$(( 200000 * 1024 ))
+threshold/main=$(( 200000 * 1024 ))
+threshold/cpus=2
+threshold/mismatch=0.3
+performance_log="output/performance.csv"
+EOF
+}
+
+function zero_resources()
+{
+    cat <<EOF
+resources/memory/shared=0
+resources/memory/main=0
+resources/cpus=0
+resources/serial=\"false\"
+EOF
+}
+
+function description()
+{
+    comma_path_value_to_var --prefix=default < <( default_options )
+    cat <<EOF
+--help,-h; show this help
+--verbose; much more output
+--use-cpus-max; use the maximum (peak) CPU load for recommending CPU resources; default: use mean CPU load
+--threshold-shared=[<num>]; ignore shared memory usage below the threshold; default: $default_threshold_shared
+--threshold-main=[<num>]; ignore main memory usage below the threshold, bytes; default: $default_threshold_main
+--threshold-cpus=[<num>]; ignore CPU usage (count) below the threshold, bytes; default: $default_threshold_cpus
+--threshold-mismatch=[<value>]; flag for review if relative mismatch of current and recommended values exceeds limit; default: $default_threshold_mismatch
+--performance-log=[<name>]; look for performance logs named <name>; default: '$default_performance_log'
+--human-readable; output memory values in kB or MB instead of bytes
+EOF
+}
+
+function usage()
+{
+    cat >&2 <<EOF
+Based on performance measurements accumulated earlier by 'comma-test-run --estimate-resources',
+estimate the CPU and memory resources consumed by a given test and outputs them in the format
+suitable for comma-test-run configuration files.
+
+The script reads on stdin the directory where comma-test-run would run a test (if not given,
+uses current directory). Use
+
+    comma-test --dry-run
+
+to list all the directories of interest; $scriptname would skip disabled tests.
+
+Usage:
+
+    echo "test/dir" | ${scriptname} <action> <options> [ > directory/config ]
+
+where action is one of:
+    recommend  - produce recommended resources from performance logs
+    analyse    - check if a resources config file (named config) exists, compare recommended values
+                 with configured values, flag out mis-configurations
+
+Options:
+EOF
+    description | sed 's/^/    /g' >&2
+    cat >&2 <<EOF
+
+Tutorial:
+
+    Collect data:
+
+        cd test/dir; comma-test-run --estimate-resources
+
+    Produce a resources configuration file automatically (in the same test/dir):
+
+        echo test/dir | comma-test-resources recommend | sed 's@^recommended/@@' > test/dir/config
+
+    (Note that recommended values are prefixed; comma-test-run would not use prefixed values.)
+
+    Calculate recommended resources, and, if an earlier-created configuration file is found,
+    compare the two and make recommendations for merging:
+
+        echo test/dir | comma-test-resources analyse --human-readable
+
+    This mode assumes that the user would manually act on the produced report.
+EOF
+    exit 0
+}
+
+function round_up_to()
+{
+    local value=$1
+    local to=$2
+    local ratio
+    ratio=$( echo "$value / $to + 0.5" | bc -l ) || return 1
+    ratio=$( printf %0.f $ratio )
+    echo $(( ratio * to ))
+}
+
+function round_kb_up_to_100_mb()
+{
+    local value_kb=$1
+    local value_mb=$( round_up_to $value_kb 100000 )
+    echo $(( value_mb / 1000 ))
+}
+
+function mismatch_exceed_threshold()
+{
+    local current=$1
+    local recommended=$2
+    local threshold=$3
+    local delta outcome max
+    delta=$(( current - recommended ))
+    delta=${delta#-} # for the lack of abs
+    current=${current#-}
+    # assume max = max(abs())
+    threshold=${threshold#-}
+    recommended=${recommended#-}
+    (( current > recommended )) && max=$current || max=$recommended
+    outcome=$( echo "$max * $threshold < $delta" | bc )
+    return $outcome
+}
+
+function recommend()
+{
+    local test_dir=$1
+
+    (( options_verbose > 0 )) && echo "$scriptname: recommend for '$test_dir'" >&2
+    local performance_log="$test_dir/$options_performance_log"
+    [[ ! -f "$performance_log" ]] && {
+        echo "$scriptname: log file '$performance_log' not found" >&2
+        return 1
+    }
+    [[ ! -s "$performance_log" ]] && {
+        echo "$scriptname: log file '$performance_log' empty" >&2
+        echo "recommended/resources/cpus=0"
+        return 0
+    }
+
+    # calculate the limits
+    local shared_max=0
+    local shared_min=0
+    local main_max=0
+    local main_min=0
+    local cpus_max=0
+    local cpus_mean=0
+    local cpus_min=0
+    local total_resources_memory_shared total_resources_memory_main total_resources_cpus
+    comma_path_value_to_var --prefix=total < <( comma_total_system_resources )
+    shared_max=$( cat "$performance_log" | csv-calc --fields ,,,,,shared, max --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
+    shared_min=$( cat "$performance_log" | csv-calc --fields ,,,,,shared, min --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
+    main_max=$( cat "$performance_log" | csv-calc --fields ,,,,ram,, max --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
+    main_min=$( cat "$performance_log" | csv-calc --fields ,,,,ram,, min --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
+    cpus_max=$( cat "$performance_log" | csv-calc --fields ,,,cpu,,, max --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
+    cpus_mean=$( cat "$performance_log" | csv-calc --fields ,,,cpu,,, mean --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
+    cpus_min=$( cat "$performance_log" | csv-calc --fields ,,,cpu,,, min --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
+
+    # calculate the usage; round the memory usage up to 100s MB, CPU usage to the nearest integer
+    local shared_usage main_usage cpus_max_usage cpus_mean_usage cpus_usage
+    shared_usage=$(( shared_max - shared_min ))
+    shared_usage=${shared_usage#-} # for the lack of abs
+    (( options_verbose > 0 )) && echo "measured resources usage:" >&2
+    (( options_verbose > 0 )) && echo "resources/memory/shared=$shared_usage kB" >&2
+    shared_usage=$( round_kb_up_to_100_mb $shared_usage )
+    (( options_verbose > 0 )) && echo "resources/memory/shared=$shared_usage MB (rounded)" >&2
+    main_usage=$(( main_max - main_min - shared_usage ))
+    main_usage=${main_usage#-} # for the lack of abs
+    (( options_verbose > 0 )) && echo "resources/memory/main=$main_usage kB" >&2
+    main_usage=$( round_kb_up_to_100_mb $main_usage )
+    (( options_verbose > 0 )) && echo "resources/memory/main=$main_usage MB (rounded)" >&2
+    shared_usage=$(( shared_usage * 1024 * 1024 ))
+    main_usage=$(( main_usage * 1024 * 1024 ))
+    cpus_max_usage=$( echo "( $cpus_max - $cpus_min ) * $total_resources_cpus / 100" | bc -l )
+    cpus_mean_usage=$( echo "( $cpus_mean - $cpus_min ) * $total_resources_cpus / 100" | bc -l )
+    cpus_max_usage=$( printf %0.f $cpus_max_usage ) # rounds to the nearest integer, e.g., 5.6 -> 6, 5.4 -> 5
+    cpus_mean_usage=$( printf %0.f $cpus_mean_usage )
+    (( options_verbose > 0 )) && echo "resources/cpus/max=$cpus_max_usage" >&2
+    (( options_verbose > 0 )) && echo "resources/cpus/mean=$cpus_mean_usage" >&2
+    [[ "$options_use_cpus_max" == 1 ]] && cpus_usage=$cpus_max_usage || cpus_usage=$cpus_mean_usage
+
+    local recommend_memory_shared=$( (( shared_usage >= options_threshold_shared )) && echo $shared_usage )
+    local recommend_memory_main=$( (( main_usage >= options_threshold_main )) && echo $main_usage )
+    local recommend_cpus=$( (( cpus_usage >= options_threshold_cpus )) && echo $cpus_usage )
+    local recommendations=$(
+                             [[ -n "$recommend_memory_shared" ]] && echo "resources/memory/shared=$recommend_memory_shared"
+                             [[ -n "$recommend_memory_main" ]] && echo "resources/memory/main=$recommend_memory_main"
+                             [[ -n "$recommend_cpus" ]] && echo "resources/memory/cpus=$recommend_cpus"
+                           )
+    [[ -n "$recommendations" ]] && {
+        (( options_verbose > 0 )) && echo "$scriptname: recommendations for '$test_dir':" >&2
+        echo "$recommendations" | $storage_converter | sed 's@^@recommended/@'
+    }
+    return 0
+}
+
+# Summary of analysis:
+# - get automatic recommendations
+# - read local config file, if available
+# - if the test is already marked as serial, preserve this setting
+# - if recommended resource usage exceeds threshold, and the current setting is absent or much lower, recommend increased resource usage
+# - if recommended resource usage is much less than current settings, recommend decreased resource usage
+function analyse()
+{
+    local test_dir=$1
+    (( options_verbose > 0 )) && echo "$scriptname: analyse '$test_dir'" >&2
+
+    local recommended
+    recommended=$( recommend "$test_dir" | grep -v ^# )
+    (( $? == 0 )) || { echo "$scriptname: automatic resource recommendation failed" >&2; return 1; }
+
+    local config="$test_dir/config"
+    # possible special case
+    if [[ ! -s "$config" ]] ; then
+        if [[ -n "$recommended" ]] ; then
+            echo "$scriptname: attention, add resource management in '$test_dir'" >&2
+            echo "$recommended"
+        else
+            echo "$scriptname: no resource management needed in '$test_dir'" >&2
+        fi
+        return 0
+    fi
+
+    local current_resources_memory_shared current_resources_memory_main current_resources_cpus current_resources_serial
+    local recommended_resources_memory_shared recommended_resources_memory_main recommended_resources_cpus recommended_resources_serial
+    comma_path_value_to_var --prefix=current < <( zero_resources )
+    (( options_verbose > 0 )) && cat "$config" | sed "s@^@current/@" >&2
+    comma_path_value_to_var --prefix current < <( cat "$config" | comma_storage_to_bytes )
+
+    # special case
+    [[ "$current_resources_serial" == "true" ]] && {
+        (( options_verbose > 0 )) && echo "test already marked as serial" >&2
+        recommended_resources_serial="true"
+    } || {
+        # not serial (human-marked) and lightweight
+        [[ -n "$recommended" ]] || {
+            echo "$scriptname: attention, may remove resource management in '$test_dir'" >&2
+            return 0
+        }
+    }
+
+    # compare recommendations with current settings; suggest review if diverge too much
+    local review=0
+    comma_path_value_to_var --prefix=recommended < <( zero_resources )
+    comma_path_value_to_var < <( echo "$recommended" | comma_storage_to_bytes )  # already has the prefix
+    if mismatch_exceed_threshold $current_resources_memory_shared $recommended_resources_memory_shared $options_threshold_mismatch ; then
+        review=1
+        echo "$scriptname: attention, review shared memory usage in '$test_dir'" >&2
+    fi
+    if mismatch_exceed_threshold $current_resources_memory_main $recommended_resources_memory_main $options_threshold_mismatch ; then
+        review=1
+        echo "$scriptname: attention, review main memory usage in '$test_dir'" >&2
+    fi
+    if mismatch_exceed_threshold $current_resources_cpus $recommended_resources_cpus $options_threshold_mismatch ; then
+        review=1
+        echo "$scriptname: attention, review cpus usage in '$test_dir'" >&2
+    fi
+    (( review == 1 )) && {
+        echo "$recommended"
+        cat "$config" | $storage_converter | sed "s@^@current/@"
+    }
+}
+
+# Handle command line
+if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then usage ; exit 0 ; fi
+comma_path_value_to_var --prefix=options < <( default_options )
+comma_path_value_to_var --prefix=options < <( description | comma-options-to-name-value $@ )
+
+action="$1"
+[[ "$action" == "recommend" || "$action" == "analyse" ]] || { echo "$scriptname: unknown action '$action'" >&2; exit 1; }
+
+storage_converter="cat"
+(( options_human_readable > 0 )) && storage_converter="comma_storage_to_human_readable" || storage_converter="comma_storage_to_bytes"
+
+# A short wrapper checking directory and invoking the actual action
+function act()
+{
+    local test_dir exit_status
+    exit_status=0
+    while read test_dir ; do
+        [[ -d "$test_dir" ]] || { echo "$scriptname: input must be a test directory, not '$test_dir'" >&2; exit 1; }
+        [[ -f "$test_dir/disabled" ]] && { echo "$scriptname: test '$test_dir' disabled" >&2; exit 0; }
+        $action "$test_dir"
+        (( $? == 0 )) || exit_status=1
+    done
+    return $exit_status
+}
+
+# main: either read stdin or process current directory
+[[ ! -t 0 ]] && { act; } || { echo "." | act; }
