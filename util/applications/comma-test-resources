@@ -58,7 +58,7 @@ EOF
 
 function description()
 {
-    comma_path_value_to_var --prefix=default < <( default_options )
+    comma_path_value_to_var --prefix="default" < <( default_options )
     cat <<EOF
 --help,-h; show this help
 --verbose; much more output
@@ -199,7 +199,7 @@ function recommend()
     local cpus_mean=0
     local cpus_min=0
     local total_resources_memory_shared total_resources_memory_main total_resources_cpus
-    comma_path_value_to_var --prefix=total < <( comma_total_system_resources )
+    comma_path_value_to_var --prefix="total" < <( comma_total_system_resources )
     shared_max=$( cat "$performance_log" | csv-calc --fields ,,,,,shared, max --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
     shared_min=$( cat "$performance_log" | csv-calc --fields ,,,,,shared, min --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
     main_max=$( cat "$performance_log" | csv-calc --fields ,,,,ram,, max --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
@@ -275,9 +275,9 @@ function analyse()
 
     local current_resources_memory_shared current_resources_memory_main current_resources_cpus current_resources_serial
     local recommended_resources_memory_shared recommended_resources_memory_main recommended_resources_cpus recommended_resources_serial
-    comma_path_value_to_var --prefix=current < <( zero_resources )
+    comma_path_value_to_var --prefix="current" < <( zero_resources )
     (( options_verbose > 0 )) && cat "$config" | sed "s@^@current/@" >&2
-    comma_path_value_to_var --prefix current < <( cat "$config" | comma_storage_to_bytes )
+    comma_path_value_to_var --prefix="current" < <( cat "$config" | comma_storage_to_bytes )
 
     # special case
     [[ "$current_resources_serial" == "true" ]] && {
@@ -293,7 +293,7 @@ function analyse()
 
     # compare recommendations with current settings; suggest review if diverge too much
     local review=0
-    comma_path_value_to_var --prefix=recommended < <( zero_resources )
+    comma_path_value_to_var --prefix="recommended" < <( zero_resources )
     comma_path_value_to_var < <( echo "$recommended" | comma_storage_to_bytes )  # already has the prefix
     if mismatch_exceed_threshold $current_resources_memory_shared $recommended_resources_memory_shared $options_threshold_mismatch ; then
         review=1
@@ -315,8 +315,8 @@ function analyse()
 
 # Handle command line
 if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then usage ; exit 0 ; fi
-comma_path_value_to_var --prefix=options < <( default_options )
-comma_path_value_to_var --prefix=options < <( description | comma-options-to-name-value $@ )
+comma_path_value_to_var --prefix="options" < <( default_options )
+comma_path_value_to_var --prefix="options" < <( description | comma-options-to-name-value $@ )
 
 action="$1"
 [[ "$action" == "recommend" || "$action" == "analyse" ]] || { echo "$scriptname: unknown action '$action'" >&2; exit 1; }
