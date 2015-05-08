@@ -123,17 +123,17 @@ Examples (more advanced):
 
     Find test directories that are missing resources management:
 
-        comma-test-run --dry-run \
-            | comma-test-resources analyse 2>&1 \
+        comma-test-run --dry-run \\
+            | comma-test-resources analyse 2>&1 \\
             | grep 'add resources management'
 
     Find test directories that very incorrectly describe the needed shared memory and print
     more detailed information about them (in a second call):
 
-        comma-test-run --dry-run \
-            | comma-test-resources analyse --threshold-mismatch=0.7 2>&1 \
-            | grep 'review shared memory usage' \
-            | sed 's@.* usage in @@;'"s@'@@g" \
+        comma-test-run --dry-run \\
+            | comma-test-resources analyse --threshold-mismatch=0.7 2>&1 \\
+            | grep 'review shared memory usage' \\
+            | sed 's@.* usage in @@;'"s@'@@g" \\
             | comma-test-resources analyse --verbose --human-readable --threshold-mismatch=0.7
 
 EOF
