@@ -240,7 +240,11 @@ function recommend()
                              [[ -n "$recommend_cpus" ]] && echo "resources/cpus=$recommend_cpus"
                            )
     [[ -n "$recommendations" ]] && {
-        (( options_verbose > 0 )) && echo "$scriptname: recommendations for '$test_dir':" >&2
+        (( options_verbose > 0 )) && {
+            echo "$scriptname: recommendations for '$test_dir':" >&2
+            # if not the action, the stdout output would be captured elsewhere and not shown here
+            [[ "$action" != "recommend" ]] && echo "$recommendations" | $storage_converter | sed 's@^@recommended/@' >&2
+        }
         echo "$recommendations" | $storage_converter | sed 's@^@recommended/@'
     }
     return 0
@@ -276,7 +280,10 @@ function analyse()
     local current_resources_memory_shared current_resources_memory_main current_resources_cpus current_resources_serial
     local recommended_resources_memory_shared recommended_resources_memory_main recommended_resources_cpus recommended_resources_serial
     comma_path_value_to_var --prefix="current" < <( zero_resources )
-    (( options_verbose > 0 )) && cat "$config" | sed "s@^@current/@" >&2
+    (( options_verbose > 0 )) && {
+        echo "$scriptname: current settings in '$test_dir':" >&2
+        cat "$config" | sed "s@^@current/@" >&2
+    }
     comma_path_value_to_var --prefix="current" < <( cat "$config" | comma_storage_to_bytes )
 
     # special case
@@ -310,6 +317,8 @@ function analyse()
     (( review == 1 )) && {
         echo "$recommended"
         cat "$config" | $storage_converter | sed "s@^@current/@"
+    } || {
+        echo "$scriptname: current settings are fine" >&2
     }
 }
 
@@ -330,7 +339,7 @@ function act()
     local test_dir exit_status
     exit_status=0
     while read test_dir ; do
-        echo "$scriptname: process '$test_dir'..." >&2
+        echo "$scriptname: process '$test_dir'" >&2
         [[ -d "$test_dir" ]] || { echo "$scriptname: input must be a test directory, not '$test_dir'" >&2; exit 1; }
         [[ -f "$test_dir/disabled" ]] && { echo "$scriptname: test '$test_dir' disabled" >&2; exit 0; }
         $action "$test_dir"
