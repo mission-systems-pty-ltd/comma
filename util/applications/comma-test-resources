@@ -237,7 +237,7 @@ function recommend()
     local recommendations=$(
                              [[ -n "$recommend_memory_shared" ]] && echo "resources/memory/shared=$recommend_memory_shared"
                              [[ -n "$recommend_memory_main" ]] && echo "resources/memory/main=$recommend_memory_main"
-                             [[ -n "$recommend_cpus" ]] && echo "resources/memory/cpus=$recommend_cpus"
+                             [[ -n "$recommend_cpus" ]] && echo "resources/cpus=$recommend_cpus"
                            )
     [[ -n "$recommendations" ]] && {
         (( options_verbose > 0 )) && echo "$scriptname: recommendations for '$test_dir':" >&2
