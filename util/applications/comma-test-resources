@@ -118,6 +118,24 @@ Tutorial:
         echo test/dir | comma-test-resources analyse --human-readable
 
     This mode assumes that the user would manually act on the produced report.
+
+Examples (more advanced):
+
+    Find test directories that are missing resources management:
+
+        comma-test-run --dry-run \
+            | comma-test-resources analyse 2>&1 \
+            | grep 'add resources management'
+
+    Find test directories that very incorrectly describe the needed shared memory and print
+    more detailed information about them (in a second call):
+
+        comma-test-run --dry-run \
+            | comma-test-resources analyse --threshold-mismatch=0.7 2>&1 \
+            | grep 'review shared memory usage' \
+            | sed 's@.* usage in @@;'"s@'@@g" \
+            | comma-test-resources analyse --verbose --human-readable --threshold-mismatch=0.7
+
 EOF
     exit 0
 }
@@ -241,16 +259,16 @@ function analyse()
 
     local recommended
     recommended=$( recommend "$test_dir" | grep -v ^# )
-    (( $? == 0 )) || { echo "$scriptname: automatic resource recommendation failed" >&2; return 1; }
+    (( $? == 0 )) || { echo "$scriptname: automatic resources recommendation failed" >&2; return 1; }
 
     local config="$test_dir/config"
     # possible special case
     if [[ ! -s "$config" ]] ; then
         if [[ -n "$recommended" ]] ; then
-            echo "$scriptname: attention, add resource management in '$test_dir'" >&2
+            echo "$scriptname: attention, add resources management in '$test_dir'" >&2
             echo "$recommended"
         else
-            echo "$scriptname: no resource management needed in '$test_dir'" >&2
+            echo "$scriptname: no resources management needed in '$test_dir'" >&2
         fi
         return 0
     fi
@@ -268,7 +286,7 @@ function analyse()
     } || {
         # not serial (human-marked) and lightweight
         [[ -n "$recommended" ]] || {
-            echo "$scriptname: attention, may remove resource management in '$test_dir'" >&2
+            echo "$scriptname: attention, may remove resources management in '$test_dir'" >&2
             return 0
         }
     }
@@ -312,6 +330,7 @@ function act()
     local test_dir exit_status
     exit_status=0
     while read test_dir ; do
+        echo "$scriptname: process '$test_dir'..." >&2
         [[ -d "$test_dir" ]] || { echo "$scriptname: input must be a test directory, not '$test_dir'" >&2; exit 1; }
         [[ -f "$test_dir/disabled" ]] && { echo "$scriptname: test '$test_dir' disabled" >&2; exit 0; }
         $action "$test_dir"
