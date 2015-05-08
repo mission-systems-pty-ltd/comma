@@ -118,7 +118,7 @@ function comma_storage_to_human_readable()
     local line path value suffix
     local numeric_regex='^[0-9]+$'
     while read line ; do
-        [[ $line != *memory* ]] && continue
+        [[ $line != *memory* ]] && { echo "$line"; continue; }
         suffix=""
         value=${line#*=}
         if [[ "$value" =~ $numeric_regex ]] ; then
