@@ -170,7 +170,7 @@ function mismatch_exceed_threshold()
     threshold=${threshold#-}
     recommended=${recommended#-}
     (( current > recommended )) && max=$current || max=$recommended
-    outcome=$( echo "$max * $threshold < $delta" | bc )
+    outcome=$( echo "$delta <= $max * $threshold" | bc ) # would be zero if delta is small
     return $outcome
 }
 
