@@ -146,8 +146,9 @@ function terminate_comma_execute_and_wait()
             commands_to_execute_pgid[$command_to_execute_index]=""
         fi
     done
-    eval "$saved_traps"                # use old handlers
-    kill -s $received_signal $BASHPID  # relinguish control
+    eval "$comma_execute_and_wait_saved_traps"  # use old handlers
+    unset comma_execute_and_wait_saved_traps
+    kill -s $received_signal $BASHPID           # relinguish control
 }
 export -f terminate_comma_execute_and_wait
 
@@ -204,9 +205,8 @@ export -f terminate_comma_execute_and_wait
 # if at least one command succeeded, and one if all of them fail.
 function comma_execute_and_wait()
 {
-    local saved_traps
     # store existing traps for restoring on exit
-    saved_traps=$( trap )
+    comma_execute_and_wait_saved_traps=$( trap )
 
     # defaults
     local signal_list="TERM,INT,HUP"
@@ -295,7 +295,7 @@ function comma_execute_and_wait()
         fi
     done
     # restore traps
-    trap - ${signal_list//,/ } ; eval "$saved_traps"
+    trap - ${signal_list//,/ } ; eval "$comma_execute_and_wait_saved_traps"; unset comma_execute_and_wait_saved_traps
     # return the wait outcome
     return $commands_to_execute_status
 }

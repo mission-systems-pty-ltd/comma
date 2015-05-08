@@ -100,6 +100,7 @@ function description()
 --until-first-failure; exit after the first failure (works only when tests run serially)
 --verbose,-v; more output
 --white-list=[<file>]; only run these tests mentioned in the <file>, applied first before black list. Comment lines starting with # ignored. Each entry in the list matches to sub directory or directories name using pattern ^<subdir>   
+--estimate-resources; in serial mode, accumulates performance data using comma-top and prints increments of maximal resource usage during the time of the test
 EOF
 }
 
@@ -153,7 +154,7 @@ ${brown}Input, test, output, and expected files${none}
     it is only executed if there is no subdirectory containing 'input', 'expected' or 'test'.
     
     Test output will be put into the subdirectory 'output'. This will contain standard error log 'output/stderr.log'
-    and output log 'output/stdout.log'. 'output/stdout.log' is the same data that is matched to the 'expected' file.
+    and output log 'output/stdout.log'. The contents of 'output/stdout.log' is matched to the 'expected' file.
 
 ${brown}Disabling tests${none}
     to disable tests in a directory and all its subdirectories
@@ -311,7 +312,7 @@ function exclude_generic_tests()
         result_list+=( $dir )
     done
 
-    echo "${result_list[@]}"
+    echo "${result_list[@]}" | tr ' ' '\n'
 }
 
 # find "test" file inside a path, checking in each subdirectory (starting from the full path)
@@ -351,8 +352,8 @@ function stats_init()
     stats="$( pwd )/stats"
     stats_progress_csv="$stats/progress.csv"
     stats_elapsed_path_value="$stats/elapsed.csv"
-    rm -rf $stats
-    mkdir $stats
+    rm -rf "$stats" || return 1
+    mkdir "$stats" || return 1
     touch "$stats_progress_csv"
 }
 
@@ -376,8 +377,8 @@ function junit_finalize() # quick and dirty
 
 function stats_finalize()
 {
-    [[ -f $stats_progress_csv ]] || return
-    cat $stats_progress_csv | comma-progress --elapsed > $stats_elapsed_path_value
+    [[ -f "$stats_progress_csv" ]] || return
+    cat "$stats_progress_csv" | comma-progress --elapsed > "$stats_elapsed_path_value"
     [[ -z "$options_junit" ]] || junit_finalize
 }
 
@@ -457,6 +458,47 @@ function setup_signal_handler()
 }
 export -f setup_signal_handler
 
+function comma_top_wrapper()
+{
+    trap - SIGINT SIGTERM SIGHUP SIGPIPE  # default handler
+    local log=$1
+    comma-top --sampling-interval=0.5 > "$log"
+}
+export -f comma_top_wrapper
+
+function report_performance()
+{
+    local performance_log=$1
+    local shared_max=0
+    local shared_min=0
+    local main_max=0
+    local main_min=0
+    local cpus_max=0
+    local cpus_min=0
+    local total_cpus
+    total_cpus=$( comma_total_system_resources | grep cpus | cut -d= -f2 )
+    total_cpus=${total_cpus//\"/}
+    if [[ -s "$performance_log" ]] ; then
+        shared_max=$( cat "$performance_log" | csv-calc --fields ,,,,,shared, max --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
+        shared_min=$( cat "$performance_log" | csv-calc --fields ,,,,,shared, min --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
+        main_max=$( cat "$performance_log" | csv-calc --fields ,,,,ram,, max --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
+        main_min=$( cat "$performance_log" | csv-calc --fields ,,,,ram,, min --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
+        cpus_max=$( cat "$performance_log" | csv-calc --fields ,,,cpu,,, max --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
+        cpus_min=$( cat "$performance_log" | csv-calc --fields ,,,cpu,,, min --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
+    fi
+    local shared_usage main_usage cpus_usage
+    shared_usage=$(( shared_max - shared_min ))
+    shared_usage=${shared_usage#-} # for the lack of abs
+    echo "$dir/resources/memory/shared=$shared_usage kB"
+    main_usage=$(( main_max - main_min - shared_usage ))
+    main_usage=${main_usage#-} # for the lack of abs
+    echo "$dir/resources/memory/main=$main_usage kB"
+    cpus_usage=$( echo "( $cpus_max - $cpus_min ) * $total_cpus / 100" | bc -l )
+    cpus_usage=$( printf %0.f $cpus_usage ) # rounds to the nearest integer, e.g., 5.6 -> 6, 5.4 -> 5
+    echo "$dir/resources/cpus=$cpus_usage"
+}
+export -f report_performance
+
 # this functions terminates a currently running test using its group id
 # the test running under the timeout command will have its own group id
 function terminate_run_and_match_test()
@@ -467,6 +509,11 @@ function terminate_run_and_match_test()
         kill -s TERM -- -$comma_test_run_test_pgid
         wait $comma_test_run_test_pgid
         unset comma_test_run_test_pgid
+    fi
+    if [[ -n "$comma_top_pgid" ]] ; then
+        kill -s TERM -- -$comma_top_pgid
+        wait $comma_top_pgid
+        unset comma_top_pgid
     fi
     # a process that exits in response to SIGINT should kill itself with SIGINT
     # see http://www.cons.org/cracauer/sigint.html
@@ -521,12 +568,28 @@ function run_test_with_timeout()
     setup_signal_handler terminate_run_and_match_test
     export -f comma_progress_named
     export our_stats_progress dir test_exec path verbose
+    if [[ "$options_estimate_resources" == "1" ]] ; then
+        local our_performance_log="$comma_test_run_unique_dir/performance_log.$( mktemp --dry-run XXXXXX )"
+        timeout -k 10 -s TERM $max_run_time bash -c comma_top_wrapper\ "$our_performance_log" & comma_top_pgid=$!
+    fi
     # Note: timeout option '-k' is missing in RHEL6, remove '-k 10' if need be
     local rv
     timeout -k 10 -s TERM $max_run_time bash -c run_and_match_test & comma_test_run_test_pgid=$!
     wait $comma_test_run_test_pgid
     rv=$?
     unset comma_test_run_test_pgid
+    if [[ "$options_estimate_resources" == "1" ]] ; then
+        kill -s TERM -- -$comma_top_pgid
+        wait $comma_top_pgid
+        unset comma_top_pgid
+        report_performance "$our_performance_log"
+        mv -f "$our_performance_log" "output/performance.csv"
+        [[ -f "config" ]] && {
+            cat "config" | sed "s@^@$dir/current/@"
+        } || {
+            echo "$dir: no resource file"
+        }
+    fi
     return $rv
 }
 export -f run_test_with_timeout
@@ -596,7 +659,7 @@ function run_single_test()
     local counter="$count of $total"
 
     # create a unique file for local comma_progress output; will append to the main output at the end
-    local our_stats_progress="$comma_test_run_unique_dir/stats_progress.$(mktemp -u XXXXXX)"
+    local our_stats_progress="$comma_test_run_unique_dir/stats_progress.$( mktemp --dry-run XXXXXX )"
     >"$our_stats_progress"
 
     # say something so that the user is not guessing what is going on
@@ -606,7 +669,7 @@ function run_single_test()
     ) 9>>"$comma_test_run_output_flock"
     # if running tests in parallel, create a unique file for redirecting all output
     # will append to the main output at the end
-    local our_stderrout_log="$comma_test_run_unique_dir/stdout_log.$( mktemp -u XXXXXX )"
+    local our_stderrout_log="$comma_test_run_unique_dir/stdout_log.$( mktemp --dry-run XXXXXX )"
     # todo? or output junit <testcase> tags as we go, but that would require refactoring of this function:
     #       instead of equilibristics with stderr redirection, test output should have various output modes,
     #       e.g: text, csv, junit, etc
@@ -817,6 +880,7 @@ have_max_parallel=$( comma_options_has --max-parallel=$options_max_parallel $@ )
     (( $options_max_wait_time < 1 )) && { error_ "$name: wait time $options_max_wait_time < 1s or not a number"; exit 1; }
 }
 (( $options_max_run_time < 1 )) && { error_ "$name: timeout run time $options_max_run_time < 1s or not a number"; exit 1; }
+[[ "$options_parallel" != "0" && "$options_estimate_resources" == "1" ]] && { error_ "$name: resource estimation shall be serial"; exit 1; }
 
 # and convert to bytes and export for everyone to use
 max_parallel=$options_max_parallel
@@ -824,11 +888,14 @@ max_memory_main=$(( $options_max_memory_main * 1024 * 1024 ))
 max_memory_shared=$(( $options_max_memory_shared * 1024 * 1024 ))
 max_wait_time=$options_max_wait_time
 max_run_time=$options_max_run_time
-export max_parallel max_memory_main max_memory_shared max_wait_time max_run_time options_debug options_quiet options_path options_until_first_failure options_test_option options_parallel options_no_ansiterm_control_characters options_run_disabled options_run_optional options_junit
+export max_parallel max_memory_main max_memory_shared max_wait_time max_run_time options_debug options_quiet options_path options_until_first_failure options_test_option options_parallel options_no_ansiterm_control_characters options_run_disabled options_run_optional options_junit options_estimate_resources
+
+trap 'stats_finalize; final_words' EXIT
+stats_init || { error_ "$name: could not initialize stats"; exit 1; }
 
 # keep all plumbing under a common directory
-temp_dir=$( dirname "$( mktemp -d -u )" )
-comma_test_run_unique_dir=$( mktemp -d --tmpdir="$temp_dir" comma-test-run.XXXXXX )
+temp_dir=$( readlink -e "stats" )
+comma_test_run_unique_dir=$( mktemp --directory --tmpdir="$temp_dir" comma-test-run.XXXXXX ) || { error_ "$name: cannot create unique working directory"; exit 1; }
 export comma_test_run_unique_dir
 # to run tests in parallel, we need to lock stats_progress_csv and/or stdout/stderr
 # this is the global flock name
@@ -838,13 +905,6 @@ export comma_test_run_output_flock
 # store the currently occupied resources (number of CPUs, amount of memory)
 # in a global file name; access serialized via flocks
 comma_test_run_initialize_resources
-
-trap 'stats_finalize; final_words' EXIT
-
-basedir=$( pwd )
-result=0
-
-stats_init
 
 function apply_white_list()
 {
@@ -872,7 +932,7 @@ function test_directories()
         options_black_list="^(\./)?($( sed 's#\./##' <$options_black_list | grep -v ^# | tr \\n '|' | sed 's/|$//' ))"; 
     fi
 
-    test_script_dirs_all=( $( exclude_generic_tests $( get_dirnames $( find . -name "test" -or -name "input" -or -name "expected" | grep -v "/\." ) 2>/dev/null | sort -u | apply_white_black_list ) ) )
+    test_script_dirs_all=( $( exclude_generic_tests $( get_dirnames $( find . -name "test" -or -name "input" -or -name "expected" | grep -v "/\." ) 2>/dev/null | sort -u ) | apply_white_black_list ) )
     [[ -n "$options_from" || -n "$options_to" || -n "$options_end" ]] || { echo ${test_script_dirs_all[@]} ; return ; }
     [[ -z "$options_from" ]] || { local from="${options_from#\.\/}" ; }
     [[ -z "$options_to" ]] || { local to="${options_to#\.\/}" ; }
@@ -901,6 +961,7 @@ count=0
 failed_count=0
 if [[ "$options_debug" != "0" ]] ; then verbose="--verbose" ; fi
 
+result=0
 run_tests="process_tests_parallel"
 [[ "$options_parallel" == "0" ]] && run_tests="process_tests_serial"
 

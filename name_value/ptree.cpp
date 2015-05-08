@@ -52,8 +52,6 @@
 
 namespace comma {
     
-//void property_tree::put( boost::property_tree::ptree& ptree, const std::string& path, const std::string& value, char delimiter ) { comma::property_tree::put( ptree, xpath( path, delimiter ), value ); }
-
 void property_tree::put( boost::property_tree::ptree& ptree, const xpath& path, const std::string& value, bool use_index )
 {
     boost::property_tree::ptree* t = &ptree;
@@ -66,9 +64,8 @@ void property_tree::put( boost::property_tree::ptree& ptree, const xpath& path, 
             unsigned int size = 0;
             if( child ) // quick and dirty, because some parts of boost::property_tree suck
             {
+                if( use_index ) { t = &(*child); }
                 bool found = false;
-                if(use_index)
-                        t = &(*child);
                 for( boost::property_tree::ptree::assoc_iterator j = t->ordered_begin(); j != t->not_found(); ++j )
                 {
                     if( j->first != name ) { if( found ) { break; } else { continue; } }
@@ -77,11 +74,10 @@ void property_tree::put( boost::property_tree::ptree& ptree, const xpath& path, 
                     found = true;
                 }
             }
-            else if (use_index)
-                t= &(t->add_child( path.elements[i].name, boost::property_tree::ptree() ) );
+            else if( use_index ) { t = &( t->add_child( path.elements[i].name, boost::property_tree::ptree() ) ); }
             if( *path.elements[i].index > size ) { COMMA_THROW( comma::exception, "expected index not greater than " << size << "; got " << path.elements[i].index << " in " << path.to_string() ); }
-            if( *path.elements[i].index == size ) { t = &( t->add_child( name, boost::property_tree::ptree() ) ); }
-    }
+            if( *path.elements[i].index == size ) { t = &( name.empty() ? t->push_back( std::make_pair( name, boost::property_tree::ptree() ) )->second : t->add_child( name, boost::property_tree::ptree() ) ); }
+        }
         else
         {
             t = child ? &( *child ) : &t->add_child( path.elements[i].name, boost::property_tree::ptree() );
@@ -323,6 +319,80 @@ void property_tree::from_unknown( std::istream& stream, boost::property_tree::pt
     }
 }
 
+static boost::property_tree::ptree ptree_to_xml_(const boost::property_tree::ptree& ptree)
+{
+    boost::property_tree::ptree out= boost::property_tree::ptree();
+    //copy all children
+    for (boost::property_tree::ptree::const_assoc_iterator i=ptree.ordered_begin(); i != ptree.not_found(); i++ )
+    {
+        if(i->second.find("") != i->second.not_found())
+        {
+            //colapse array
+            for (boost::property_tree::ptree::const_assoc_iterator j=i->second.ordered_begin(); j != i->second.not_found(); j++ )
+            {
+                out.add_child(i->first, ptree_to_xml_(j->second));
+            }
+        }
+        else
+            out.add_child(i->first, ptree_to_xml_(i->second));
+    }
+    out.put_value(ptree.get_value<std::string>());
+    return out;
+}
+
+std::string trim(const std::string& s)
+{
+    std::string out="";
+    for(std::string::const_iterator i=s.begin();i!=s.end();i++)
+        if(!std::isspace(*i))
+            out+=*i;
+    return out;
+}
+
+static boost::property_tree::ptree xml_to_ptree_( boost::property_tree::ptree& ptree)
+{
+    boost::property_tree::ptree out= boost::property_tree::ptree();
+    boost::property_tree::ptree unnamed_array= boost::property_tree::ptree();
+    for ( boost::property_tree::ptree::iterator i=ptree.begin(); i!=ptree.end(); i++ )
+    {
+        //look ahead for duplicate name
+        boost::property_tree::ptree::iterator lah = i;
+        if ( ++lah != ptree.end() && i->first == lah->first )
+        {
+            //add to unnamed array
+            unnamed_array.push_back( std::make_pair( "", xml_to_ptree_( i->second ) ) );
+        }
+        else
+        {
+            if(unnamed_array.size()!=0)
+            {
+                //assert((i-1)->first==i->first);
+                //the last of duplicated name
+                unnamed_array.push_back( std::make_pair( "", xml_to_ptree_( i->second ) ) );
+                out.add_child(i->first,unnamed_array);
+                unnamed_array= boost::property_tree::ptree();
+            }
+            else
+            {
+                out.add_child(i->first, xml_to_ptree_(i->second) );
+            }
+        }
+    }
+    out.put_value( trim( ptree.get_value<std::string>() ) );
+    return out;
+}
+
+void property_tree::read_xml( std::istream& is, boost::property_tree::ptree& ptree )
+{
+        boost::property_tree::read_xml( is, ptree ); 
+        ptree=xml_to_ptree_(ptree);
+}
+
+void property_tree::write_xml( std::ostream& os, const boost::property_tree::ptree& ptree, const xml_writer_settings_t& xml_writer_settings)
+{
+        boost::property_tree::write_xml( os, ptree_to_xml_(ptree), xml_writer_settings );
+}
+
 void property_tree::from_unknown_seekable( std::istream& stream, boost::property_tree::ptree& ptree, property_tree::path_value::check_repeated_paths check_type, char equal_sign, char delimiter, bool use_index )
 {
     if( !is_seekable( stream ) ) { COMMA_THROW( comma::exception, "input stream is not seekable" ); }
@@ -339,7 +409,7 @@ void property_tree::from_unknown_seekable( std::istream& stream, boost::property
     {
         stream.clear();
         stream.seekg( 0, std::ios::beg );
-        boost::property_tree::read_xml( stream, ptree );
+        comma::property_tree::read_xml( stream, ptree );
         return;
     }
     catch( const boost::property_tree::ptree_error&  ex ) {}

@@ -1,0 +1,2 @@
+#!/bin/bash
+ name-value-convert --from xml --to path-value --indented

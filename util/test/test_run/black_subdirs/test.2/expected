@@ -1,0 +1,5 @@
+#python
+
+expect len(expected) == 9
+expect locals().has_key('output') == False
+expect locals().has_key('stdout_log') == False

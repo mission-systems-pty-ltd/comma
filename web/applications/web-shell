@@ -19,6 +19,7 @@ import sys
 import traceback
 import urllib.parse
 import json
+import socketserver
 
 def split_(cmds,sep):
     #split a list of strings using seperators
@@ -461,13 +462,15 @@ class web_shell_http_request_handler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(bytes(out_str, 'utf-8'))
         debug_log("run_shell#6")
 
+class MultithreadedHttpServer(socketserver.ThreadingMixIn, http.server.HTTPServer):pass
+
 try:
     parse_handle_options({"--help": set_show_help},{"--port":set_port,"--config":set_config})
     help()
     load_config()
     chatter("Starting web-shell")
     
-    server = http.server.HTTPServer
+    server = MultithreadedHttpServer
 
     handler = web_shell_http_request_handler
     server_address = ("", server_port)
