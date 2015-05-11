@@ -82,7 +82,7 @@ suitable for comma-test-run configuration files.
 The script reads on stdin the directory where comma-test-run would run a test (if not given,
 uses current directory). Use
 
-    comma-test --dry-run
+    comma-test-run --dry-run
 
 to list all the directories of interest; $scriptname would skip disabled tests.
 
@@ -93,7 +93,7 @@ Usage:
 where action is one of:
     recommend  - produce recommended resources from performance logs
     analyse    - check if a resources config file (named config) exists, compare recommended values
-                 with configured values, flag out mis-configurations
+                 with configured values, flag out mis-configurations.
 
 Options:
 EOF
@@ -110,7 +110,8 @@ Tutorial:
 
         echo test/dir | comma-test-resources recommend | sed 's@^recommended/@@' > test/dir/config
 
-    (Note that recommended values are prefixed; comma-test-run would not use prefixed values.)
+    (Note that recommended values are prefixed; comma-test-run would not use prefixed values, thus,
+    the sed part above.)
 
     Calculate recommended resources, and, if an earlier-created configuration file is found,
     compare the two and make recommendations for merging:
