@@ -100,7 +100,7 @@ function description()
 --until-first-failure; exit after the first failure (works only when tests run serially)
 --verbose,-v; more output
 --white-list=[<file>]; only run these tests mentioned in the <file>, applied first before black list. Comment lines starting with # ignored. Each entry in the list matches to sub directory or directories name using pattern ^<subdir>   
---estimate-resources; in serial mode, accumulates performance data using comma-top and prints increments of maximal resource usage during the time of the test
+--estimate-resources; in serial mode, accumulates performance data using comma-top into 'output/performance.csv' files; note: file may be empty for very short tests
 EOF
 }
 
@@ -466,39 +466,6 @@ function comma_top_wrapper()
 }
 export -f comma_top_wrapper
 
-function report_performance()
-{
-    local performance_log=$1
-    local shared_max=0
-    local shared_min=0
-    local main_max=0
-    local main_min=0
-    local cpus_max=0
-    local cpus_min=0
-    local total_cpus
-    total_cpus=$( comma_total_system_resources | grep cpus | cut -d= -f2 )
-    total_cpus=${total_cpus//\"/}
-    if [[ -s "$performance_log" ]] ; then
-        shared_max=$( cat "$performance_log" | csv-calc --fields ,,,,,shared, max --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
-        shared_min=$( cat "$performance_log" | csv-calc --fields ,,,,,shared, min --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
-        main_max=$( cat "$performance_log" | csv-calc --fields ,,,,ram,, max --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
-        main_min=$( cat "$performance_log" | csv-calc --fields ,,,,ram,, min --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
-        cpus_max=$( cat "$performance_log" | csv-calc --fields ,,,cpu,,, max --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
-        cpus_min=$( cat "$performance_log" | csv-calc --fields ,,,cpu,,, min --format t,d,d,d,i,i,i ) || { echo "csv-calc failed" >&2; cat "$performance_log" >&2 ; }
-    fi
-    local shared_usage main_usage cpus_usage
-    shared_usage=$(( shared_max - shared_min ))
-    shared_usage=${shared_usage#-} # for the lack of abs
-    echo "$dir/resources/memory/shared=$shared_usage kB"
-    main_usage=$(( main_max - main_min - shared_usage ))
-    main_usage=${main_usage#-} # for the lack of abs
-    echo "$dir/resources/memory/main=$main_usage kB"
-    cpus_usage=$( echo "( $cpus_max - $cpus_min ) * $total_cpus / 100" | bc -l )
-    cpus_usage=$( printf %0.f $cpus_usage ) # rounds to the nearest integer, e.g., 5.6 -> 6, 5.4 -> 5
-    echo "$dir/resources/cpus=$cpus_usage"
-}
-export -f report_performance
-
 # this functions terminates a currently running test using its group id
 # the test running under the timeout command will have its own group id
 function terminate_run_and_match_test()
@@ -582,13 +549,7 @@ function run_test_with_timeout()
         kill -s TERM -- -$comma_top_pgid
         wait $comma_top_pgid
         unset comma_top_pgid
-        report_performance "$our_performance_log"
         mv -f "$our_performance_log" "output/performance.csv"
-        [[ -f "config" ]] && {
-            cat "config" | sed "s@^@$dir/current/@"
-        } || {
-            echo "$dir: no resource file"
-        }
     fi
     return $rv
 }

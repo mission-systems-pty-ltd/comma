@@ -116,19 +116,19 @@ def parse_handle_options(map1,map2):
 class web_shell_config:
     #configuration class for web shell
     class function:
-        name_=""
+        path_=""
         filter_=[]
         shell_=True
         command_=None
         
-        def __init__(self,name="",filter=[],shell=True):
-            debug_log("debug function(%s, %s, %s)"%(name,filter,shell))
-            self.name_=name
+        def __init__(self,path="",filter=[],shell=True):
+            debug_log("debug function(%s, %s, %s)"%(path,filter,shell))
+            self.path_=path
             self.filter_=filter
             self.shell_=bool(shell)
             
         def deserialize(self,map):
-            self.name_=map["name"]
+            self.path_=map["path"]
             if "command" in map:
                 self.command_=map["command"]
                 if "filter" in map:
@@ -176,8 +176,8 @@ class web_shell_config:
         
     funcs=[]
     #list of class funcs
-    def add(self,name,filter,shell=True):
-        f1=web_shell_config.function(name,filter,shell);
+    def add(self,path,filter,shell=True):
+        f1=web_shell_config.function(path,filter,shell);
         self.funcs.append(f1)
         
     def to_json(self):
@@ -199,23 +199,23 @@ class web_shell_config:
                 return  {"web_shell_config":{"service":obj.funcs}}
             if isinstance(obj, web_shell_config.function):
                 if obj.command_ is not None:
-                    return {"name":obj.name_, "command":obj.command_, "shell":obj.shell_}
+                    return {"path":obj.path_, "command":obj.command_, "shell":obj.shell_}
                 else:
-                    return {"name":obj.name_, "filter":obj.filter_, "shell":obj.shell_}
+                    return {"path":obj.path_, "filter":obj.filter_, "shell":obj.shell_}
             # Let the base class default method raise the TypeError
             return json.JSONEncoder.default(self, obj)
         
     def get_func(self,path):
         for f in self.funcs:
-            if path=="/"+f.name_:
+            if path=="/"+f.path_:
                 return f
     """def filter(self,path,cmd):
         for f in self.funcs:
-            if path=="/"+f.name_:
+            if path=="/"+f.path_:
                 return f.filter(cmd)
     def shell(self,path):
         for f in self.funcs:
-            if path=="/"+f.name_:
+            if path=="/"+f.path_:
                 return f.shell_"""
 
 def sample_dump():
@@ -243,7 +243,7 @@ default_config="""{
                 "filter": [
                     "*"
                 ], 
-                "name": "run_shell",
+                "path": "run_shell",
                 "shell":true
             }
         ]
@@ -257,19 +257,19 @@ sample_config="""{
                     "ls", 
                     "echo"
                 ], 
-                "name": "run_shell",
+                "path": "run_shell",
                 "shell":true
             }, 
             {
                 "filter": [
                     "man"
                 ], 
-                "name": "man",
+                "path": "man",
                 "shell":false
             },
             {
                 "command": "web-shell --help",
-                "name": "myhelp",
+                "path": "myhelp",
                 "shell": false
             }
         ]
@@ -326,8 +326,8 @@ def help():
                 a script or executable name to be run; this is optional as clients may pass command in the request; 
                 if specified in config the client shouldn't specify command in request or it should match this
                 
-            name
-                The http path (without /) to this service; eg "name":"run_shell" then client will call 'http://<server>:<port>/run_shell'
+            path
+                The http path (without /) to this service; eg "path":"run_shell" then client will call 'http://<server>:<port>/run_shell'
                 
             shell
                 true/false (case sensitive); 
@@ -407,6 +407,7 @@ class web_shell_http_request_handler(http.server.BaseHTTPRequestHandler):
         cmd=""
         infile=""
         args=""
+        arg_options=""
         debug_log("run_shell#1")
         for s in req.split("&"):
             nv=parse_name_value(s)
@@ -422,17 +423,20 @@ class web_shell_http_request_handler(http.server.BaseHTTPRequestHandler):
                 args=urllib.parse.unquote_plus(nv[1])
                 chatter("run_shell - agrs: %s" % args)
             elif nv[0]!="":
-                err="invalid input field - a: %s; b: %s" % (nv[0],nv[1])
-                chatter(err)
-                self.send_error(400,err);
+                arg_options+=" --"+nv[0]
+                if nv[1]!="":
+                    arg_options+="="+nv[1]
+                #err="invalid input field - a: %s; b: %s" % (nv[0],nv[1])
+                #chatter(err)
+                #self.send_error(400,err);
         out_str=""
         debug_log("run_shell#2")
         func=config.get_func(path)
         if func is not None and func.filter(script):
             debug_log("run_shell#3")
             sh=func.shell()
-            debug_log("run - path: %s; script: %s; agrs: %s; shell: %s" % (path, script, args, sh));
-            script = func.make_script(script,args)
+            debug_log("run - path: %s; script: %s; agrs: %s; shell: %s; arg_options: %s" % (path, script, args, sh, arg_options));
+            script = func.make_script(script,args+arg_options)
             chatter("run - path: %s; script: %s; shell: %s" % (path,script,sh))
             if not sh:
                 script=script.split()

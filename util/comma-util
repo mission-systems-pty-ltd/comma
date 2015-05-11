@@ -110,3 +110,26 @@ function comma_storage_to_bytes()
     done
 }
 export -f comma_storage_to_bytes
+
+# Auxiliary function opposite to comma_storage_to_bytes.
+# Round-trip conversion to-from-bytes (or from-to) does not produce identical output.
+function comma_storage_to_human_readable()
+{
+    local line path value suffix
+    local numeric_regex='^[0-9]+$'
+    while read line ; do
+        [[ $line != *memory* ]] && { echo "$line"; continue; }
+        suffix=""
+        value=${line#*=}
+        if [[ "$value" =~ $numeric_regex ]] ; then
+            (( value > 10 * 1024 )) && { value=$(( value / 1024 )); suffix=" kB"; }
+            (( value > 10 * 1024 )) && { value=$(( value / 1024 )); suffix=" MB"; }
+            (( value > 10 * 1024 )) && { value=$(( value / 1024 )); suffix=" GB"; }
+            path=${line%%=*}
+            echo "$path=${value}${suffix}"
+        else
+            echo "$line"
+        fi
+    done
+}
+export -f comma_storage_to_human_readable
