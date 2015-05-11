@@ -187,7 +187,7 @@ function recommend()
     }
     [[ ! -s "$performance_log" ]] && {
         echo "$scriptname: log file '$performance_log' empty" >&2
-        echo "recommended/resources/cpus=0"
+        echo "$test_dir/recommended/resources/cpus=0"
         return 0
     }
 
@@ -244,9 +244,9 @@ function recommend()
         (( options_verbose > 0 )) && {
             echo "$scriptname: recommendations for '$test_dir':" >&2
             # if not the action, the stdout output would be captured elsewhere and not shown here
-            [[ "$action" != "recommend" ]] && echo "$recommendations" | $storage_converter | sed 's@^@recommended/@' >&2
+            [[ "$action" != "recommend" ]] && echo "$recommendations" | $storage_converter | sed "s@^@$test_dir/recommended/@" >&2
         }
-        echo "$recommendations" | $storage_converter | sed 's@^@recommended/@'
+        echo "$recommendations" | $storage_converter | sed "s@^@$test_dir/recommended/@"
     }
     return 0
 }
@@ -283,7 +283,7 @@ function analyse()
     comma_path_value_to_var --prefix="current" < <( zero_resources )
     (( options_verbose > 0 )) && {
         echo "$scriptname: current settings in '$test_dir':" >&2
-        cat "$config" | sed "s@^@current/@" >&2
+        cat "$config" | sed "s@^@$test_dir/current/@" >&2
     }
     comma_path_value_to_var --prefix="current" < <( cat "$config" | comma_storage_to_bytes )
 
@@ -302,7 +302,7 @@ function analyse()
     # compare recommendations with current settings; suggest review if diverge too much
     local review=0
     comma_path_value_to_var --prefix="recommended" < <( zero_resources )
-    comma_path_value_to_var < <( echo "$recommended" | comma_storage_to_bytes )  # already has the prefix
+    comma_path_value_to_var < <( echo "$recommended" | sed "s@$test_dir/@@" | comma_storage_to_bytes )  # already has the 'recommended' prefix
     if mismatch_exceed_threshold $current_resources_memory_shared $recommended_resources_memory_shared $options_threshold_mismatch ; then
         review=1
         echo "$scriptname: attention, review shared memory usage in '$test_dir'" >&2
@@ -317,7 +317,7 @@ function analyse()
     fi
     (( review == 1 )) && {
         echo "$recommended"
-        cat "$config" | $storage_converter | sed "s@^@current/@"
+        cat "$config" | $storage_converter | sed "s@^@$test_dir/current/@"
     } || {
         echo "$scriptname: current settings are fine" >&2
     }
