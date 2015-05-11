@@ -108,7 +108,7 @@ Tutorial:
 
     Produce a resources configuration file automatically (in the same test/dir):
 
-        echo test/dir | comma-test-resources recommend | sed 's@^recommended/@@' > test/dir/config
+        echo test/dir | comma-test-resources recommend | sed 's@^.recommended/@@' > test/dir/config
 
     (Note that recommended values are prefixed; comma-test-run would not use prefixed values, thus,
     the sed part above.)
