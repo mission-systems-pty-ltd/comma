@@ -57,8 +57,10 @@ struct log {
     std::string name;
     bool is_begin;     // true for begin, false for end
     boost::posix_time::ptime timestamp;
-    operator std::string() const { return name; }
 };
+
+// strangely, if this operator is put in global namespace, it does not compile on some versions of gcc
+static std::ostream& operator<<( std::ostream& os, const impl_::log& l ) { os << l.name; return os; }
 
 } // namespace impl_ {
 

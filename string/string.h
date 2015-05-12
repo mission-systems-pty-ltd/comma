@@ -60,8 +60,8 @@ inline std::string join( const A& a, std::size_t size, char delimiter )
 {
     if( size == 0 ) { return ""; }
     std::ostringstream oss;
-    oss << static_cast< std::string >( a[0] );
-    for( std::size_t i = 1; i < size; ++i ) { oss << delimiter << static_cast< std::string >( a[i] ); }
+    oss << a[0];
+    for( std::size_t i = 1; i < size; ++i ) { oss << delimiter << a[i]; }
     return oss.str();
 }
 
@@ -70,8 +70,8 @@ inline std::string join( It begin, It end, char delimiter )
 {
     if( begin == end ) { return ""; }
     std::ostringstream oss;
-    oss << static_cast< std::string >( *begin );
-    for( It i = begin + 1; i != end; ++i ) { oss << delimiter << static_cast< std::string >( *i ); }
+    oss << *begin;
+    for( It i = begin + 1; i != end; ++i ) { oss << delimiter << *i; }
     return oss.str();
 }
 
