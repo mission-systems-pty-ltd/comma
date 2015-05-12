@@ -57,14 +57,11 @@ struct log {
     std::string name;
     bool is_begin;     // true for begin, false for end
     boost::posix_time::ptime timestamp;
+    operator std::string() const { return name; }
 };
 
 } // namespace impl_ {
 
-/// serialiser so comma::join will work, output name only
-std::ostream& operator<<( std::ostream& os, const impl_::log& l ) { os << l.name; return os; }
-
-    
 namespace comma { namespace visiting {
     
 template < > struct traits< impl_::log > {
