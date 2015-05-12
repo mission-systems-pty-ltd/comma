@@ -123,7 +123,8 @@ struct constraints
         to = get_optional_< T >( options, "--to,--less-or-equal,--le" );
         less = get_optional_< T >( options, "--less" );
         greater = get_optional_< T >( options, "--greater" );
-        regex = get_optional_< std::string >( options, "--regex" );
+        const boost::optional< std::string >& s = get_optional_< std::string >( options, "--regex" );
+        if( s ) { regex = boost::regex( *s ); }
         sorted = options.exists( "--sorted" );
     }
 
