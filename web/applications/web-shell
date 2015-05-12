@@ -446,7 +446,7 @@ class web_shell_http_request_handler(http.server.BaseHTTPRequestHandler):
                 #    out_str=subprocess.check_output(script, stderr=subprocess.STDOUT,shell=sh)
                 #else:
                 debug_log("run_shell#4.2")
-                out_str=subprocess.check_output(script, stderr=subprocess.STDOUT, universal_newlines=True, input=infile ,shell=sh)
+                out_str=subprocess.check_output(script, stderr=subprocess.STDOUT, universal_newlines=True, input=infile ,shell=sh,bufsize=-1)
                 #use Popen.communicate(input) -> (out,err)
             except subprocess.CalledProcessError as e:
                 err=str(e)
@@ -463,6 +463,10 @@ class web_shell_http_request_handler(http.server.BaseHTTPRequestHandler):
         debug_log("run_shell#5 out_str: %s" % out_str)
         if out_str=="":
             out_str=" "
+        self.send_response(200)
+        #self.send_header("Content-Type", func.out_type) #application/octet-stream
+        self.send_header("Content-Length", len(out_str))
+        self.end_headers()
         self.wfile.write(bytes(out_str, 'utf-8'))
         debug_log("run_shell#6")
 
@@ -481,6 +485,7 @@ try:
 
     httpd = server(server_address, handler)
     log("Running on port %d" % server_address[1])
+    httpd.socket.listen(100)
     httpd.serve_forever()
 
 except KeyboardInterrupt:
