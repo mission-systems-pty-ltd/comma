@@ -810,7 +810,7 @@ function count_failures()
 }
 export -f count_failures
 
-function clean_working_dir() { rm -fr "$comma_test_run_unique_dir" ; }
+function clean_working_dir() { [[ -n "$comma_test_run_unique_dir" ]] && rm -fr "$comma_test_run_unique_dir" ; }
 
 function final_words()
 {
@@ -818,8 +818,7 @@ function final_words()
     local afterword=
     [[ "$is_killed" == "true" ]] && afterword=" (before killed)"
     if [[ "$failed_count" == 0 ]] ; then message_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): succeeded${afterword}" ; else error_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): $failed_count test[s] out of $test_scripts_count failed${afterword}" ; fi
-    [[ "$options_debug" != "0" ]] && { echo "$name: detailed breakdown:" >&2 ; cat "$comma_test_run_output_flock" >&2; }
-    clean_working_dir
+    [[ "$options_debug" != "0" && -n "$comma_test_run_output_flock" ]] && { echo "$name: detailed breakdown:" >&2 ; cat "$comma_test_run_output_flock" >&2; }
 }
 
 # process command line...
@@ -842,6 +841,7 @@ have_max_parallel=$( comma_options_has --max-parallel=$options_max_parallel $@ )
 }
 (( $options_max_run_time < 1 )) && { error_ "$name: timeout run time $options_max_run_time < 1s or not a number"; exit 1; }
 [[ "$options_parallel" != "0" && "$options_estimate_resources" == "1" ]] && { error_ "$name: resource estimation shall be serial"; exit 1; }
+if [[ "$options_debug" != "0" ]] ; then verbose="--verbose" ; fi
 
 # and convert to bytes and export for everyone to use
 max_parallel=$options_max_parallel
@@ -850,22 +850,6 @@ max_memory_shared=$(( $options_max_memory_shared * 1024 * 1024 ))
 max_wait_time=$options_max_wait_time
 max_run_time=$options_max_run_time
 export max_parallel max_memory_main max_memory_shared max_wait_time max_run_time options_debug options_quiet options_path options_until_first_failure options_test_option options_parallel options_no_ansiterm_control_characters options_run_disabled options_run_optional options_junit options_estimate_resources
-
-trap 'stats_finalize; final_words' EXIT
-stats_init || { error_ "$name: could not initialize stats"; exit 1; }
-
-# keep all plumbing under a common directory
-temp_dir=$( readlink -e "stats" )
-comma_test_run_unique_dir=$( mktemp --directory --tmpdir="$temp_dir" comma-test-run.XXXXXX ) || { error_ "$name: cannot create unique working directory"; exit 1; }
-export comma_test_run_unique_dir
-# to run tests in parallel, we need to lock stats_progress_csv and/or stdout/stderr
-# this is the global flock name
-comma_test_run_output_flock="$comma_test_run_unique_dir/output_flock"
-export comma_test_run_output_flock
-
-# store the currently occupied resources (number of CPUs, amount of memory)
-# in a global file name; access serialized via flocks
-comma_test_run_initialize_resources
 
 function apply_white_list()
 {
@@ -916,16 +900,33 @@ else
         test_script_dirs+=( "$line" )
     done
 fi
-[[ -z "$options_output_directories" ]] || { trap "clean_working_dir" EXIT ; echo ${test_script_dirs[@]} | tr ' ' '\n' ; exit ; }
+[[ -z "$options_output_directories" ]] || { echo ${test_script_dirs[@]} | tr ' ' '\n' ; exit 0 ; }
 test_scripts_count=${#test_script_dirs[@]}
-count=0
 failed_count=0
-if [[ "$options_debug" != "0" ]] ; then verbose="--verbose" ; fi
+
+export comma_test_run_unique_dir=
+export comma_test_run_output_flock=
+trap 'stats_finalize; final_words; clean_working_dir' EXIT
+stats_init || { error_ "$name: could not initialize stats"; exit 1; }
+
+# keep all plumbing under a common directory
+temp_dir=$( readlink -e "stats" )
+comma_test_run_unique_dir=$( mktemp --directory --tmpdir="$temp_dir" comma-test-run.XXXXXX ) || { error_ "$name: cannot create unique working directory"; exit 1; }
+export comma_test_run_unique_dir
+# to run tests in parallel, we need to lock stats_progress_csv and/or stdout/stderr
+# this is the global flock name
+comma_test_run_output_flock="$comma_test_run_unique_dir/output_flock"
+export comma_test_run_output_flock
+
+# store the currently occupied resources (number of CPUs, amount of memory)
+# in a global file name; access serialized via flocks
+comma_test_run_initialize_resources
 
 result=0
 run_tests="process_tests_parallel"
 [[ "$options_parallel" == "0" ]] && run_tests="process_tests_serial"
 
+count=0
 if (( $test_scripts_count > 0 )) ; then
     message_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): running..."
     $run_tests < <( for dir in ${test_script_dirs[@]} ; do
