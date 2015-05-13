@@ -468,13 +468,16 @@ function comma_path_value_to_var()
     [[ -z "$prefix" ]] || prefix="$prefix$delimiter"
 
     local path name value
+    local -i ret_code=0
     while IFS='=' read path value ; do
         [[ -n "$path" && ! "$path" =~ ^[#\"] ]] || continue
         [[ -n "$value" || -n "$null_ok" ]] || continue
         name=$prefix${path//\//$delimiter}
         name=${name//-/$delimiter}
-        eval $export_variable $name="$quote$value$quote"
+        eval "$export_variable $name=$quote$value$quote" \
+            || { echo "comma-application-util: comma_path_value_to_var: '$name=$quote$value$quote'" >&2 ; ret_code=1 ; }
     done
+    return $ret_code
 }
 export -f comma_path_value_to_var
 

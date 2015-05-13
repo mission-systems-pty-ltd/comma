@@ -30,6 +30,6 @@ printf "test[6]/color3=\"%s\"\n" "$color3"
 comma_path_value_to_var <<< 'color4=white
 color@=boom
 color5=black' ; printf "test[7]/status=%d\n" $?
-printf "test[6]/color4=\"%s\"\n" "$color4"
-printf "test[6]/color5=\"%s\"\n" "$color5"
+printf "test[7]/color4=\"%s\"\n" "$color4"
+printf "test[7]/color5=\"%s\"\n" "$color5"
 
