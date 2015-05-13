@@ -99,7 +99,7 @@ function description()
 --to=[<dir>]; run tests up to a given test, the latter included, where test directories are ordered lexicographically
 --until-first-failure; exit after the first failure (works only when tests run serially)
 --verbose,-v; more output
---white-list=[<file>]; only run these tests mentioned in the <file>, applied first before black list. Comment lines starting with # ignored. Each entry in the list matches to sub directory or directories name using pattern ^<subdir>   
+--white-list=[<file>]; only run these tests mentioned in the <file>, applied first before black list. Comment lines starting with # ignored. Each entry in the list matches to sub directory or directories name using pattern ^<subdir>
 --estimate-resources; in serial mode, accumulates performance data using comma-top into 'output/performance.csv' files; note: file may be empty for very short tests
 EOF
 }
@@ -118,7 +118,7 @@ Return 0 if all tests succeed, or non-zero if any of the tests fail.
 Output of the test scripts is recorded in ${brown}output/stderr.log${none} and ${brown}output/stdout.log${brown}.
 
 Usage: comma-test-run [<options>]
-    
+
 ${brown}A quick tutorial${none}
 
     mkdir success
@@ -152,14 +152,14 @@ ${brown}Input, test, output, and expected files${none}
     If there is an 'input' or 'expected' file but no 'test' in the same directory, the 'test' script in the
     closest parent directory is used. If there is a 'test' by itself with no 'input' or 'expected' file,
     it is only executed if there is no subdirectory containing 'input', 'expected' or 'test'.
-    
+
     Test output will be put into the subdirectory 'output'. This will contain standard error log 'output/stderr.log'
     and output log 'output/stdout.log'. The contents of 'output/stdout.log' is matched to the 'expected' file.
 
 ${brown}Disabling tests${none}
     to disable tests in a directory and all its subdirectories
     create an empty file named ${brown}disabled${none} in that directory
-    
+
 ${brown}Optional tests${none}
     you may not want to run some tests by default (e.g. stress tests, very long tests, etc)
     to make tests optional in a directory and all its subdirectories
@@ -168,7 +168,7 @@ ${brown}Optional tests${none}
 ${brown}Reading test directories from stdin${none}
     convenient for test filtering and reordering, e.g:
         comma-test-run --dry-run | grep 'some/topic' | comma-test-run --stdin
-    
+
 ${brown}Running tests in parallel${none}
     (a) If none of '--parallel' and '--max-parallel' options is given, tests are run sequentially.
     (b) If '--max-parallel' is given, e.g., as in '--max-parallel=4', up to 4 tests are run at once;
@@ -495,20 +495,20 @@ export -f terminate_run_and_match_test
 function run_and_match_test()
 {
     local test_output test_failed match_output error_files
-    
+
     rm -rf output || exit 1
     mkdir -p output || exit 1
-    
+
     test_output=$( if [ -f ./input ] ; then cat ./input ; fi \
         | comma_progress_named "$our_stats_progress" "$dir" "$test_exec" "$path" "$verbose" $options_test_option 2> "output/stderr.log" )
     test_failed=$?
     error_files="$( find . -name out_of_shared_memory )"
     [[ -n "$error_files" ]] && return 1
-    
+
     echo "$test_output" > "output/stdout.log"
-    
+
     if [[ $test_failed != 0 ]]; then echo "test exit with non-zero status: $test_failed" >&2; fi
-    
+
     if [[ $test_failed == 0 && -f "./expected" ]]; then
         match_output=$( echo "$test_output" | comma-test-match ./expected 2>&1 )
         if [[ -n "$match_output" ]]; then
@@ -519,12 +519,12 @@ function run_and_match_test()
             test_failed=1
         fi
     fi
-    
+
     if [[ -n "$options_junit" ]] ; then
         rm -rf output/failure
         [[ $test_failed == 0 ]] || echo "$match_output" > output/failure
     fi
-    
+
     return $test_failed
 }
 export -f run_and_match_test
@@ -868,11 +868,11 @@ function apply_white_black_list()
 # if "test" is absent, use the "test" in the closest parent directory
 function test_directories()
 {
-    if [[ -n "$options_white_list" && -f "$options_white_list" ]]; then 
+    if [[ -n "$options_white_list" && -f "$options_white_list" ]]; then
         echo "$name: applying white list from file '$options_white_list'">&2
         options_white_list="^(\./)?($( sed 's#\./##' <$options_white_list | grep -v ^# | tr \\n '|' | sed 's/|$//'  ))"; 
     fi
-    if [[ -n "$options_black_list" && -f "$options_black_list" ]]; then 
+    if [[ -n "$options_black_list" && -f "$options_black_list" ]]; then
         echo "$name: applying black list from file '$options_black_list'">&2
         options_black_list="^(\./)?($( sed 's#\./##' <$options_black_list | grep -v ^# | tr \\n '|' | sed 's/|$//' ))"; 
     fi
