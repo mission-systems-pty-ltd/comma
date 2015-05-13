@@ -869,11 +869,11 @@ function apply_white_black_list()
 function test_directories()
 {
     if [[ -n "$options_white_list" && -f "$options_white_list" ]]; then
-        echo "$name: applying white list from file '$options_white_list'">&2
+        message_ "$name: applying white list from file '$options_white_list'">&2
         options_white_list="^(\./)?($( sed 's#\./##' <$options_white_list | grep -v ^# | grep -v ^$ | tr \\n '|' | sed 's/|$//'  ))";
     fi
     if [[ -n "$options_black_list" && -f "$options_black_list" ]]; then
-        echo "$name: applying black list from file '$options_black_list'">&2
+        message_ "$name: applying black list from file '$options_black_list'">&2
         options_black_list="^(\./)?($( sed 's#\./##' <$options_black_list | grep -v ^# | grep -v ^$ | tr \\n '|' | sed 's/|$//' ))";
     fi
 
