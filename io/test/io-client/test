@@ -1,14 +1,27 @@
 #!/bin/bash
 
 port=9123
-if netstat -ltun | grep $port &>/dev/null; then echo "port $port is not available (remedy: free this port or change port numner in the test)" >&2; exit 1; fi
+if netstat -ltun | grep $port &>/dev/null; then echo "port $port is not available (remedy: free this port or change port number in the test)" >&2; exit 1; fi
 timeout=1
 
-echo "tcp_message" | socat -u - tcp-listen:$port,reuseaddr &
-output=$( timeout -k 1 -s TERM $timeout io-client tcp:localhost:$port )
+echo -e "tcp_message1\ntcp_message2" | socat -u - tcp-listen:$port,reuseaddr &
+output=$( timeout -k 1 -s TERM $timeout io-client tcp:localhost:$port | tail -n1 )
 echo "tcp/output=\"$output\""
 
-{ sleep 0.1 && echo "udp_message" | socat - udp-sendto:localhost:$port; } &
-output=$( timeout -k 1 -s TERM $timeout io-client udp:$port )
+{ sleep 0.1 && echo -e "udp_message2\nudp_message2" | socat - udp-sendto:localhost:$port; } &
+output=$( timeout -k 1 -s TERM $timeout io-client udp:$port | tail -n1 )
 echo "udp/output=\"$output\""
 
+file=input_file
+echo -e "file_message1\nfile_message2" > $file
+output=$( timeout -k 1 -s TERM $timeout io-client $file | tail -n1 )
+count=$( timeout -k 1 -s TERM $timeout io-client $file | wc -l )
+echo "file/output=\"$output\""
+echo "file/count=\"$count\""
+
+pipe=input_pipe
+rm -f $pipe
+mkfifo $pipe
+{ sleep 0.1 && echo -e "pipe_message1\npipe_message2" > $pipe; } &
+output=$( timeout -k 1 -s TERM $timeout io-client $pipe )
+echo "pipe/output=\"$output\""
