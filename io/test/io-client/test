@@ -5,23 +5,34 @@ if netstat -ltun | grep $port &>/dev/null; then echo "port $port is not availabl
 timeout=1
 
 echo -e "tcp_message1\ntcp_message2" | socat -u - tcp-listen:$port,reuseaddr &
-output=$( timeout -k 1 -s TERM $timeout io-client tcp:localhost:$port | tail -n1 )
+output=$( timeout -k 1 -s TERM $timeout io-client -u tcp:localhost:$port | tail -n1 )
 echo "tcp/output=\"$output\""
 
 { sleep 0.1 && echo -e "udp_message2\nudp_message2" | socat - udp-sendto:localhost:$port; } &
-output=$( timeout -k 1 -s TERM $timeout io-client udp:$port | tail -n1 )
+output=$( timeout -k 1 -s TERM $timeout io-client -u udp:$port | tail -n1 )
 echo "udp/output=\"$output\""
 
+socket=/tmp/input_socket
+rm -f $socket
+echo -e "local_message1\nlocal_message2" | socat -u - unix-listen:$socket &
+for((i=0; i<10; i++ )); do [[ -S $socket ]] && break || sleep 0.1; done
+output=$( timeout -k 1 -s TERM $timeout io-client -u local:$socket | tail -n1 )
+echo "local/output=\"$output\""
+rm -f $socket
+
 file=input_file
+rm -f $file
 echo -e "file_message1\nfile_message2" > $file
-output=$( timeout -k 1 -s TERM $timeout io-client $file | tail -n1 )
-count=$( timeout -k 1 -s TERM $timeout io-client $file | wc -l )
+output=$( timeout -k 1 -s TERM $timeout io-client -u $file | tail -n1 )
+count=$( timeout -k 1 -s TERM $timeout io-client -u $file | wc -l )
 echo "file/output=\"$output\""
 echo "file/count=\"$count\""
+rm -f $file
 
 pipe=input_pipe
 rm -f $pipe
 mkfifo $pipe
 { sleep 0.1 && echo -e "pipe_message1\npipe_message2" > $pipe; } &
-output=$( timeout -k 1 -s TERM $timeout io-client $pipe )
+output=$( timeout -k 1 -s TERM $timeout io-client -u $pipe )
 echo "pipe/output=\"$output\""
+rm -f $pipe
