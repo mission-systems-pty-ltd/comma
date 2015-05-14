@@ -53,13 +53,13 @@ void usage( bool verbose = false )
     std::cerr << "supported address types: tcp, udp, local (unix) socket, zmq local socket, zmq tcp, named pipe, file" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples: " << std::endl;
-    std::cerr << "    read from tcp port 12345 on localhost and output to stdout: " << name() << " tcp:localhost:12345" << std::endl;
-    std::cerr << "    read udp packets on port 12345 and output to stdout: " << name() << " udp:12345" << std::endl;
-    std::cerr << "    read from unix socket at /tmp/socket and output to stdout: " << name() << " local:/tmp/socket" << std::endl;
-    std::cerr << "    read from zero mq socket at /tmp/socket and output to stdout: " << name() << " zmq-local:/tmp/socket" << std::endl;
-    std::cerr << "    read from tcp zero mq socket at /tmp/socket and output to stdout: " << name() << " zmq-tcp:/tmp/socket" << std::endl;
-    std::cerr << "    read from named pipe /tmp/pipe and output to stdout: " << name() << " /tmp/pipe" << std::endl;
-    std::cerr << "    read from file /tmp/file and output to stdout: " << name() << " /tmp/file" << std::endl;
+    std::cerr << "    " << name() << " tcp:localhost:12345" << std::endl;
+    std::cerr << "    " << name() << " udp:12345" << std::endl;
+    std::cerr << "    " << name() << " local:/tmp/socket" << std::endl;
+    std::cerr << "    " << name() << " zmq-local:/tmp/socket" << std::endl;
+    std::cerr << "    " << name() << " zmq-tcp:/tmp/socket" << std::endl;
+    std::cerr << "    " << name() << " /tmp/pipe" << std::endl;
+    std::cerr << "    " << name() << " /tmp/file" << std::endl;
     std::cerr << std::endl;
     exit( 1 );
 }
@@ -107,7 +107,7 @@ int main( int argc, char** argv )
         std::cerr << name() " : not implemented" << std::endl; return 1;
 #else
         comma::io::istream istream( unnamed[0], comma::io::mode::binary, comma::io::mode::non_blocking );
-        int fd = istream.fd();
+        comma::io::file_descriptor fd = istream.fd();
         comma::io::select select;
         select.read().add( fd );
         std::vector< char > buffer( buffer_size );
