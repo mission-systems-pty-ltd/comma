@@ -60,6 +60,7 @@ function comma_test_commands()
     local status
     local output    
     while IFS='=' read key value ; do
+        [[ -n "$key" && ! "$key" =~ \#.* ]] || continue
         value="${value/#\"}"
         value="${value/%\"}"
         output="$( eval "$value" 2>/dev/null || exit 1 )"
