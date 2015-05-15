@@ -66,16 +66,23 @@ function usage()
     exit 1
 }
 
+unset prefix
+left_bracket='['
+right_bracket=']'
 delimiter=","
 end_of_line=$'\n'
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -h|--help) usage ;;
         --delimiter|-d) shift ; delimiter=$1 ;;
+        --delimiter=*|-d=*) delimiter=${1#*=} ;;
         --end-of-line|--eol) shift ; end_of_line=$1 ;;
+        --end-of-line=*|--eol=*) end_of_line=${1#*=} ;;
         --prefix|-p) shift ; prefix=${1} ;;
-        --no-brackets) no_brackets=1 ;;
+        --prefix=*|-p=*) prefix=${1#*=} ;;
+        --no-brackets) unset left_bracket right_bracket ;;
         --fields|-f) shift ; fields=$1 ;;
+        --fields=*|-f=*) shift ; fields=${1#*=} ;;
         --output-line-number|--line-number|-n) output_line_numbers="true" ;;
         -*) echo "name-value-from-csv: unrecognized option '$1'" >&2 ; exit 1 ;;
         *) fields=$1 ;;
@@ -84,18 +91,21 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "$fields" == "" ]] ; then echo "name-value-from-csv: expected fields, got none" >&2 ; exit 1 ; fi
-paths=$( echo "$fields" | sed 's/,/ /g' )
-
+paths=( $( echo "$fields" | tr ',' $'\n' ) )
+[[ -z "$prefix" || ( -n "$left_bracket" && -n "$output_line_numbers" ) ]] || prefix="$prefix/"
 count=0
-while read line ; do
-    if [[ "$line" == "" ]] ; then continue ; fi
-    if [[ "$output_line_numbers" != "" ]] ; then 
-        if (( $no_brackets )) ; then pv_prefix="${prefix}${count}/"; else pv_prefix="${prefix}[${count}]/" ; fi
-    else
-        [[ $prefix == "" ]] || pv_prefix=$prefix/
-    fi
-    values=( $( echo $line | sed "s/$delimiter/\n/g" | sed 's/^/"/g' | sed 's/$/"/g' ) )
-    i=0
-    for path in $paths ; do echo ${pv_prefix}$path=${values[$i]}$end_of_line ; (( ++i )) ; done
-    (( ++count ))
-done
+# otherwise, if last line does not have end of line, it gets missed
+{ cat ; echo ; } \
+| while read line ; do
+      [[ -n "$line" ]] || continue
+      unset index
+      [[ -z "$output_line_numbers" ]] || index="${left_bracket}${count}${right_bracket}/"
+      i=0
+      echo $line \
+          | tr "$delimiter" $'\n' \
+          | while read value ; do
+                echo -n "${prefix}${index}${paths[$i]}=\"${value}\"$end_of_line"
+                (( ++i ))
+            done
+      (( ++count ))
+  done
