@@ -1,6 +1,7 @@
 tcp/output="tcp_message2"
 udp/output="udp_message2"
-local/output="local_message2"
+socket/output="local_message2"
+zmq_socket/output="zmq_local_message2"
 file/output="file_message2"
 file/count="2"
 pipe/output="pipe_message2"
