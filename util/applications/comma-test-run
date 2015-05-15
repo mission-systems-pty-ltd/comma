@@ -814,7 +814,7 @@ function clean_working_dir() { [[ -n "$comma_test_run_unique_dir" ]] && rm -fr "
 
 function final_words()
 {
-    failed_count=$( count_failures )
+    local failed_count=$( count_failures )
     local afterword=
     [[ "$is_killed" == "true" ]] && afterword=" (before killed)"
     if [[ "$failed_count" == 0 ]] ; then message_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): succeeded${afterword}" ; else error_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): $failed_count test[s] out of $test_scripts_count failed${afterword}" ; fi
@@ -902,7 +902,6 @@ else
 fi
 [[ -z "$options_output_directories" ]] || { echo ${test_script_dirs[@]} | tr ' ' '\n' ; exit 0 ; }
 test_scripts_count=${#test_script_dirs[@]}
-failed_count=0
 
 export comma_test_run_unique_dir=
 export comma_test_run_output_flock=
