@@ -8,7 +8,7 @@ pipe=/tmp/io-client_input_pipe
 
 if netstat -ln | grep $port &>/dev/null; then echo "port $port is not available (remedy: free this port or change port number in the test)" >&2; exit 1; fi
 
-function wait_for_condition
+function wait_for_success
 {
     reps=10
     dt=0.1
@@ -21,6 +21,7 @@ function wait_for_condition
 
 function bye
 {
+    pkill -P $$
     rm -f $socket $file $pipe
     kill -9 $tcp_pid $udp_pid $local_pid &>/dev/null
     exit 1
@@ -29,19 +30,19 @@ function bye
 trap bye INT TERM HUP
 
 echo -e "tcp_message1\ntcp_message2" | socat -u - tcp-listen:$port,reuseaddr & tcp_pid=$!
-output=$( wait_for_condition "netstat -ltn | grep $port &>/dev/null" && timeout -k 1 -s TERM $timeout io-client -u tcp:localhost:$port | tail -n1 )
+output=$( wait_for_success "netstat -ltn | grep $port &>/dev/null" && timeout -k 1 -s TERM $timeout io-client -u tcp:localhost:$port | tail -n1 )
 echo "tcp/output=\"$output\""
 kill $tcp_pid &>/dev/null
 wait $tcp_pid
 
-{ wait_for_condition "netstat -lun | grep $port &>/dev/null" && echo -e "udp_message1\nudp_message2" | socat - udp-sendto:localhost:$port; } & udp_pid=$!
+wait_for_success "netstat -lun | grep $port &>/dev/null" && echo -e "udp_message1\nudp_message2" | socat - udp-sendto:localhost:$port & udp_pid=$!
 output=$( timeout -k 1 -s TERM $timeout io-client -u udp:$port | tail -n1 )
 echo "udp/output=\"$output\""
 wait $udp_pid
 
 rm -f $socket
 echo -e "local_message1\nlocal_message2" | socat -u - unix-listen:$socket & local_pid=$!
-output=$( wait_for_condition "test -S $socket" && timeout -k 1 -s TERM $timeout io-client -u local:$socket | tail -n1 )
+output=$( wait_for_success "test -S $socket" && timeout -k 1 -s TERM $timeout io-client -u local:$socket | tail -n1 )
 echo "local/output=\"$output\""
 rm -f $socket
 kill $local_pid &>/dev/null
