@@ -676,7 +676,7 @@ function run_single_test()
                     unset comma_test_run_test_pid
                     comma_locked "$comma_test_run_resources_flock" comma_release_resources "$request" "$comma_test_run_resources_counter" "$worker_id"
                     (( $? == 0 )) || {
-                        echo "$name::worker $worker_id: cannot release resources" >&2
+                        error_ "$name: test $counter: $dir: failed on release_resources, request '$( cat $request )'"
                         result=1
                         break
                     }
@@ -706,7 +706,7 @@ function run_single_test()
                         random_sleep 2 # make a configuration parameter
                         continue
                     else
-                        echo "$name::worker $worker_id: unknown error in comma_acquire_resources '$outcome'" >&2
+                        error_ "$name: test $counter: $dir: failed on acquire_resources, outcome '$outcome', request '$( cat $request )'"
                         result=1
                         break
                     fi
