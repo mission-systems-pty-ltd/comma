@@ -19,3 +19,7 @@ index[2]="echo 1,2,3 | name-value-from-csv a,b,c/d --eol ';' --line-number --pre
 index[3]="echo 1,2,3 | name-value-from-csv a,b,c/d --eol ';' --line-number --prefix x --no-brackets ; echo"
 index[4]="echo 1,2,3 | name-value-from-csv a,b,c/d --eol ';' --prefix x ; echo"
 index[5]="echo 1,2,3 | name-value-from-csv a,b,c/d --eol ';' --prefix x --no-brackets ; echo"
+
+empty_fields[0]="echo '1,2,3' | name-value-from-csv ,b,c/d --eol ';' ; echo"
+empty_fields[1]="echo '1,2,3' | name-value-from-csv a,,c/d --eol ';' ; echo"
+empty_fields[2]="echo '1,2,3' | name-value-from-csv a,b, --eol ';' --force ; echo"

@@ -19,3 +19,7 @@ index[2]/output='x[0]/a="1";x[0]/b="2";x[0]/c/d="3";'
 index[3]/output='x/0/a="1";x/0/b="2";x/0/c/d="3";'
 index[4]/output='x/a="1";x/b="2";x/c/d="3";'
 index[5]/output='x/a="1";x/b="2";x/c/d="3";'
+
+empty_fields[0]/output='b="2";c/d="3";'
+empty_fields[1]/output='a="1";c/d="3";'
+empty_fields[2]/output='a="1";b="2";'

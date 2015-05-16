@@ -44,6 +44,7 @@ function usage()
     echo "    --no-brackets: use with --line-number option above, it does not output line numbers in square brackets." >&2
     echo "    --delimiter,-d <delimiter>: default: ," >&2
     echo "    --fields,-f <fields>: csv of field names" >&2
+    echo "    --force: accept lines with more fields than expected" >&2
     echo "    --prefix,-p <prefix>: append this prefix to all paths" >&2
     echo "    --end-of-line,--eol <delimiter>: end of line output delimiter; default: end of line" >&2
     echo >&2
@@ -67,6 +68,7 @@ function usage()
 }
 
 unset prefix
+force=0
 left_bracket='['
 right_bracket=']'
 delimiter=","
@@ -81,6 +83,7 @@ while [[ $# -gt 0 ]]; do
         --prefix|-p) shift ; prefix=${1} ;;
         --prefix=*|-p=*) prefix=${1#*=} ;;
         --no-brackets) unset left_bracket right_bracket ;;
+        --force) force=1 ;;
         --fields|-f) shift ; fields=$1 ;;
         --fields=*|-f=*) shift ; fields=${1#*=} ;;
         --output-line-number|--line-number|-n) output_line_numbers="true" ;;
@@ -91,7 +94,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "$fields" == "" ]] ; then echo "name-value-from-csv: expected fields, got none" >&2 ; exit 1 ; fi
-paths=( $( echo "$fields" | tr ',' $'\n' ) )
+paths=()
+i=0
+while read path ; do paths[$i]="$path" ; (( ++i )) ; done < <( echo "$fields" | tr ',' $'\n' )
 [[ -z "$prefix" || ( -n "$left_bracket" && -n "$output_line_numbers" ) ]] || prefix="$prefix/"
 count=0
 # otherwise, if last line does not have end of line, it gets missed
@@ -104,7 +109,8 @@ count=0
       echo $line \
           | tr "$delimiter" $'\n' \
           | while read value ; do
-                echo -n "${prefix}${index}${paths[$i]}=\"${value}\"$end_of_line"
+                (( i < ${#paths[@]} || $force )) || { echo "name-value-from-csv: on line $count has more than ${#path[@]} fields; use --force" >&2 ; exit 1 ; }
+                [[ -z ${paths[$i]} ]] || echo -n "${prefix}${index}${paths[$i]}=\"${value}\"$end_of_line"
                 (( ++i ))
             done
       (( ++count ))
