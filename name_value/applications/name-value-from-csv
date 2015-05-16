@@ -110,6 +110,7 @@ count=0
           | tr "$delimiter" $'\n' \
           | while read value ; do
                 (( i < ${#paths[@]} || $force )) || { echo "name-value-from-csv: on line $count has more than ${#path[@]} fields; use --force" >&2 ; exit 1 ; }
+                value="$( echo $value | sed -e 's/^"//' -e 's/"$//' )"
                 [[ -z ${paths[$i]} ]] || echo -n "${prefix}${index}${paths[$i]}=\"${value}\"$end_of_line"
                 (( ++i ))
             done

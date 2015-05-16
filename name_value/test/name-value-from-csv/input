@@ -23,3 +23,7 @@ index[5]="echo 1,2,3 | name-value-from-csv a,b,c/d --eol ';' --prefix x --no-bra
 empty_fields[0]="echo '1,2,3' | name-value-from-csv ,b,c/d --eol ';' ; echo"
 empty_fields[1]="echo '1,2,3' | name-value-from-csv a,,c/d --eol ';' ; echo"
 empty_fields[2]="echo '1,2,3' | name-value-from-csv a,b, --eol ';' --force ; echo"
+
+quoted[0]="echo '"x",2,3' | name-value-from-csv a,, --eol ';' ; echo"
+quoted[1]="echo '1,"y",3' | name-value-from-csv ,b, --eol ';' ; echo"
+quoted[2]="echo '1,2,"z"' | name-value-from-csv ,,c --eol ';' ; echo"
