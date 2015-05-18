@@ -111,13 +111,14 @@ int main( int argc, char** argv )
         comma::io::select select;
         select.read().add( fd );
         std::vector< char > buffer( buffer_size );
-        while( !is_shutdown && istream->good() && std::cout.good() )
+        while( !is_shutdown && std::cout.good() )
         {
             select.check();
             if( select.read().ready( fd ) )
             {
                 unsigned int size = std::min( istream.count(), buffer_size );
                 istream->read( &buffer[0], size );
+                if( istream->gcount() != size ) { break; }
                 std::cout.write( &buffer[0], size );
                 if ( unbuffered ) { std::cout.flush(); }
             }

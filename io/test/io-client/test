@@ -16,17 +16,7 @@ function bye
 
 trap bye INT TERM HUP
 
-function find_free_port
-{
-    local -i start=${1:-1024}
-    local -i end=${2:-65535}
-    if (( start < 1024 )); then echo "$FUNCNAME: expected start port to be from 1024 to 65535, got $start" >&2; return; fi
-    if (( end > 65535 )); then echo "$FUNCNAME: expected end port to be from 1024 to 65535, got $end" >&2; return; fi
-    if (( start > end )); then echo "$FUNCNAME: expected start <= end, got start = $start and end = $end" >&2; return; fi
-    for(( port=start; port <= end; port++ )); do
-        if ! netstat -ltun | grep $port &>/dev/null; then echo $port && return; fi
-    done
-}
+function find_free_port { for(( port=1024; port < 65536; port++ )); do ! netstat -ltun | grep $port &>/dev/null && echo $port && return; done; }
 
 function wait_for_success
 {
@@ -79,7 +69,7 @@ function test_zmq_socket
     local socket=$dir/${prefix}_zmq_socket
     files[zmq_socket]=$socket
     rm -f $socket
-    exec 3> >( zero-cat --publish ipc://$socket ) && wait_for_success "test -S $socket" && sleep 0.1 && echo -e "$message" >&3 && exec 3<&- &
+    exec 3> >( zero-cat --publish ipc://$socket ) && wait_for_success "test -S $socket" && sleep 0.1 && echo -e "$message" >&3 && sleep $timeout && exec 3<&- &
     output=$( timeout -k 1 -s TERM $timeout io-client -u zmq-local:$socket | tail -n1 )
     echo "zmq_socket/output=\"$output\""
     rm -f $socket
@@ -111,8 +101,8 @@ function test_pipe
     files[pipe]=$pipe
     rm -f $pipe
     mkfifo $pipe
-    echo -e "$message" > $pipe &
-    output=$( timeout -k 1 -s TERM $timeout io-client -u $pipe )
+    exec 3> >( cat > $pipe ) && wait_for_success "test -p $pipe" && echo -e "$message" >&3 && sleep $timeout && exec 3<&- &
+    output=$( timeout -k 1 -s TERM $timeout io-client -u $pipe | tail -n1 )
     echo "pipe/output=\"$output\""
     rm -f $pipe
 }
