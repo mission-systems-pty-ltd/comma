@@ -224,8 +224,11 @@ template < typename S >
 unsigned int stream< S >::count() const
 {
     int count = 0;
-#ifndef WIN32
-    ::ioctl( fd_, FIONREAD, &count );
+#ifdef WIN32
+    COMMA_THROW( comma::exception, "not implemented" );
+#else
+    int error = ::ioctl( fd_, FIONREAD, &count );
+    if( error != 0 ) { COMMA_THROW( comma::exception, "ioctl failed with error code: \"" << error << "\"" ); }
 #endif
     return std::max( count, 0 );
 }
