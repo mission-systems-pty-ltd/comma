@@ -122,8 +122,8 @@ if [[ -z "$port" ]]; then echo "failed to find a free port" >&2; exit 1; fi
 
 test_tcp "tcp_message1\ntcp_message2"
 test_udp "udp_message1\nudp_message2"
-test_socket "local_message1\nlocal_message2"
-test_zmq_socket "zmq_local_message1\nzmq_local_message2"
+test_socket "socket_message1\nsocket_message2"
+test_zmq_socket "zmq_socket_message1\nzmq_socket_message2"
 test_zmq_tcp
 test_file "file_message1\nfile_message2"
 test_pipe "pipe_message1\npipe_message2"
