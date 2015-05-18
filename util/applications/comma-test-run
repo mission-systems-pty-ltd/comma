@@ -676,7 +676,7 @@ function run_single_test()
                     unset comma_test_run_test_pid
                     comma_locked "$comma_test_run_resources_flock" comma_release_resources "$request" "$comma_test_run_resources_counter" "$worker_id"
                     (( $? == 0 )) || {
-                        echo "$name::worker $worker_id: cannot release resources" >&2
+                        error_ "$name: test $counter: $dir: failed on release_resources, request '$( cat $request )'"
                         result=1
                         break
                     }
@@ -706,7 +706,7 @@ function run_single_test()
                         random_sleep 2 # make a configuration parameter
                         continue
                     else
-                        echo "$name::worker $worker_id: unknown error in comma_acquire_resources '$outcome'" >&2
+                        error_ "$name: test $counter: $dir: failed on acquire_resources, outcome '$outcome', request '$( cat $request )'"
                         result=1
                         break
                     fi
@@ -814,7 +814,7 @@ function clean_working_dir() { [[ -n "$comma_test_run_unique_dir" ]] && rm -fr "
 
 function final_words()
 {
-    failed_count=$( count_failures )
+    local failed_count=$( count_failures )
     local afterword=
     [[ "$is_killed" == "true" ]] && afterword=" (before killed)"
     if [[ "$failed_count" == 0 ]] ; then message_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): succeeded${afterword}" ; else error_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): $failed_count test[s] out of $test_scripts_count failed${afterword}" ; fi
@@ -902,7 +902,6 @@ else
 fi
 [[ -z "$options_output_directories" ]] || { echo ${test_script_dirs[@]} | tr ' ' '\n' ; exit 0 ; }
 test_scripts_count=${#test_script_dirs[@]}
-failed_count=0
 
 export comma_test_run_unique_dir=
 export comma_test_run_output_flock=

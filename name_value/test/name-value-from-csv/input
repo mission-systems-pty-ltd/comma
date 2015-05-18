@@ -1,0 +1,29 @@
+basics[0]="echo 1,2,3 | name-value-from-csv a,b,c --eol ';' ; echo"
+basics[1]="echo 1,2,3 | name-value-from-csv a,b,c/d --eol ';' ; echo"
+
+last_line[0]="echo -n 1,2,3 | name-value-from-csv a,b,c/d --eol ';' ; echo"
+
+white_space[0]="echo '1,2,   3' | name-value-from-csv a,b,c/d --eol ';' ; echo"
+white_space[1]="echo '1,2,   3    ' | name-value-from-csv a,b,c/d --eol ';' ; echo"
+white_space[2]="echo '1,2,3 4' | name-value-from-csv a,b,c/d --eol ';' ; echo"
+white_space[3]="echo '1,2  ,3' | name-value-from-csv a,b,c/d --eol ';' ; echo"
+white_space[4]="echo '1, 2  ,3' | name-value-from-csv a,b,c/d --eol ';' ; echo"
+white_space[5]="echo '1, 2 4 ,3' | name-value-from-csv a,b,c/d --eol ';' ; echo"
+white_space[6]="echo '  1,2,3' | name-value-from-csv a,b,c/d --eol ';' ; echo"
+white_space[7]="echo '  1  ,2,3' | name-value-from-csv a,b,c/d --eol ';' ; echo"
+white_space[8]="echo '1 4,2,3' | name-value-from-csv a,b,c/d --eol ';' ; echo"
+
+index[0]="echo 1,2,3 | name-value-from-csv a,b,c/d --eol ';' --line-number ; echo"
+index[1]="echo 1,2,3 | name-value-from-csv a,b,c/d --eol ';' --line-number --no-brackets ; echo"
+index[2]="echo 1,2,3 | name-value-from-csv a,b,c/d --eol ';' --line-number --prefix x ; echo"
+index[3]="echo 1,2,3 | name-value-from-csv a,b,c/d --eol ';' --line-number --prefix x --no-brackets ; echo"
+index[4]="echo 1,2,3 | name-value-from-csv a,b,c/d --eol ';' --prefix x ; echo"
+index[5]="echo 1,2,3 | name-value-from-csv a,b,c/d --eol ';' --prefix x --no-brackets ; echo"
+
+empty_fields[0]="echo '1,2,3' | name-value-from-csv ,b,c/d --eol ';' ; echo"
+empty_fields[1]="echo '1,2,3' | name-value-from-csv a,,c/d --eol ';' ; echo"
+empty_fields[2]="echo '1,2,3' | name-value-from-csv a,b, --eol ';' --force ; echo"
+
+quoted[0]="echo '"x",2,3' | name-value-from-csv a,, --eol ';' ; echo"
+quoted[1]="echo '1,"y",3' | name-value-from-csv ,b, --eol ';' ; echo"
+quoted[2]="echo '1,2,"z"' | name-value-from-csv ,,c --eol ';' ; echo"
