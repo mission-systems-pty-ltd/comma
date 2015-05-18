@@ -20,8 +20,8 @@ function find_free_port { for(( port=1024; port < 65536; port++ )); do ! netstat
 
 function wait_for_success
 {
-    reps=10
-    dt=0.1
+    local reps=10
+    local dt=0.1
     for(( i=0; i<$reps; i++ )); do
         eval "$1" && return 0 || sleep $dt
     done
@@ -33,7 +33,7 @@ function test_tcp
 {
     local message="$1"
     echo -e "$message" | socat -u - tcp-listen:$port,reuseaddr & pids[tcp]=$!
-    output=$( wait_for_success "netstat -ltn | grep $port &>/dev/null" && timeout -k 1 -s TERM $timeout io-client -u tcp:localhost:$port | tail -n1 )
+    local output=$( wait_for_success "netstat -ltn | grep $port &>/dev/null" && timeout -k 1 -s TERM $timeout io-client -u tcp:localhost:$port | tail -n1 )
     echo "tcp/output=\"$output\""
     kill ${pids[tcp]} &>/dev/null
     wait ${pids[tcp]}
@@ -43,7 +43,7 @@ function test_udp
 {
     local message="$1"
     wait_for_success "netstat -lun | grep $port &>/dev/null" && echo -e "$message" | socat - udp-sendto:localhost:$port & pids[udp]=$!
-    output=$( timeout -k 1 -s TERM $timeout io-client -u udp:$port | tail -n1 )
+    local output=$( timeout -k 1 -s TERM $timeout io-client -u udp:$port | tail -n1 )
     echo "udp/output=\"$output\""
     kill ${pids[udp]} &>/dev/null
     wait ${pids[udp]}
@@ -56,7 +56,7 @@ function test_socket
     files[socket]=$socket
     rm -f $socket
     echo -e "$message" | socat -u - unix-listen:$socket & pids[socket]=$!
-    output=$( wait_for_success "test -S $socket" && timeout -k 1 -s TERM $timeout io-client -u local:$socket | tail -n1 )
+    local output=$( wait_for_success "test -S $socket" && timeout -k 1 -s TERM $timeout io-client -u local:$socket | tail -n1 )
     echo "socket/output=\"$output\""
     kill ${pids[socket]} &>/dev/null
     wait ${pids[socket]}
@@ -70,7 +70,7 @@ function test_zmq_socket
     files[zmq_socket]=$socket
     rm -f $socket
     exec 3> >( zero-cat --wait-after-connect=0.5 --publish ipc://$socket ) && wait_for_success "test -S $socket" && echo -e "$message" >&3 && sleep $timeout && exec 3<&- &
-    output=$( timeout -k 1 -s TERM $timeout io-client -u zmq-local:$socket | tail -n1 )
+    local output=$( timeout -k 1 -s TERM $timeout io-client -u zmq-local:$socket | tail -n1 )
     echo "zmq_socket/output=\"$output\""
     rm -f $socket
 }
@@ -87,8 +87,8 @@ function test_file
     local file=$dir/${prefix}_file
     files[file]=$file
     echo -e "$message" > $file
-    output=$( timeout -k 1 -s TERM $timeout io-client -u $file | tail -n1 )
-    count=$( timeout -k 1 -s TERM $timeout io-client -u $file | wc -l )
+    local output=$( timeout -k 1 -s TERM $timeout io-client -u $file | tail -n1 )
+    local count=$( timeout -k 1 -s TERM $timeout io-client -u $file | wc -l )
     echo "file/output=\"$output\""
     echo "file/count=\"$count\""
     rm -f $file
@@ -102,7 +102,7 @@ function test_pipe
     rm -f $pipe
     mkfifo $pipe
     exec 3> >( cat > $pipe ) && wait_for_success "test -p $pipe" && echo -e "$message" >&3 && sleep $timeout && exec 3<&- &
-    output=$( timeout -k 1 -s TERM $timeout io-client -u $pipe | tail -n1 )
+    local output=$( timeout -k 1 -s TERM $timeout io-client -u $pipe | tail -n1 )
     echo "pipe/output=\"$output\""
     rm -f $pipe
 }
