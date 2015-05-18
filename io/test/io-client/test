@@ -1,6 +1,5 @@
 #!/bin/bash
 
-port=9123
 timeout=1
 dir=/tmp
 prefix=io-client
@@ -16,6 +15,18 @@ function bye
 }
 
 trap bye INT TERM HUP
+
+function find_free_port
+{
+    local -i start=${1:-1024}
+    local -i end=${2:-65535}
+    if (( start < 1024 )); then echo "$FUNCNAME: expected start port to be from 1024 to 65535, got $start" >&2; return; fi
+    if (( end > 65535 )); then echo "$FUNCNAME: expected end port to be from 1024 to 65535, got $end" >&2; return; fi
+    if (( start > end )); then echo "$FUNCNAME: expected start <= end, got start = $start and end = $end" >&2; return; fi
+    for(( port=start; port <= end; port++ )); do
+        if ! netstat -ltun | grep $port &>/dev/null; then echo $port && return; fi
+    done
+}
 
 function wait_for_success
 {
@@ -70,16 +81,16 @@ function test_zmq_socket
     local message="zmq_local_message1\nzmq_local_message2"
     local condition="test -S ${files[zmq_socket]}"
     rm -f ${files[zmq_socket]}
-    {
-        exec 3> >( zero-cat --publish ipc://${files[zmq_socket]} )
-        sleep 0.5
-        echo -e "$message" >&3
-    } &
+    exec 3> >( zero-cat --publish ipc://${files[zmq_socket]} ) && wait_for_success "$condition" && echo -e "$message" >&3 && exec 3<&- &
     output=$( timeout -k 1 -s TERM $timeout io-client -u zmq-local:${files[zmq_socket]} | tail -n1 )
     echo "zmq_socket/output=\"$output\""
-    kill ${pids[zmq_socket]} &>/dev/null
-    wait ${pids[zmq_socket]}
     rm -f ${files[zmq_socket]}
+}
+
+function test_zmq_tcp
+{
+    # todo
+    echo "$FUNCNAME is not implemented" >&2
 }
 
 function test_file
@@ -106,11 +117,13 @@ function test_pipe
     rm -f ${files[pipe]}
 }
 
-if netstat -ln | grep $port &>/dev/null; then echo "port $port is not available (remedy: free this port or change port number in the test)" >&2; exit 1; fi
+port=$( find_free_port )
+if [[ -z "$port" ]]; then echo "failed to find a free port" >&2; exit 1; fi
 
 test_tcp
 test_udp
 test_socket
 test_zmq_socket
+test_zmq_tcp
 test_file
 test_pipe
