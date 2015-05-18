@@ -68,7 +68,7 @@ function usage()
 }
 
 unset prefix
-force=1 # todo: set to 0, once tests pass
+force=0
 left_bracket='['
 right_bracket=']'
 delimiter=","
