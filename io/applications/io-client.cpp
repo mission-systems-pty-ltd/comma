@@ -75,7 +75,12 @@ int main( int argc, char** argv )
     bool unbuffered = options.exists( "--unbuffered,-u" );
     std::vector< std::string > input = comma::split( unnamed[0], ':' );
     comma::signal_flag is_shutdown;
-    if( input[0] == "udp" )
+    if( input[0] == "zmq-local" || input[0] == "zero-local" || input[0] == "zmq-tcp" || input[0] == "zero-tcp" )
+    {
+        std::cerr << name() << ": not implemented" << std::endl;
+        return 1;
+    }
+    else if( input[0] == "udp" )
     {
         if( input.size() != 2 ) { std::cerr << name() << " : expected udp:<port>, e.g. udp:12345, got" << unnamed[0] << std::endl; return 1; }
         unsigned short port = boost::lexical_cast< unsigned short >( input[1] );
@@ -104,7 +109,8 @@ int main( int argc, char** argv )
     else
     {
 #ifdef WIN32
-        std::cerr << name() " : not implemented" << std::endl; return 1;
+        std::cerr << name() ": not implemented" << std::endl;
+        return 1;
 #else
         comma::io::istream istream( unnamed[0], comma::io::mode::binary, comma::io::mode::non_blocking );
         comma::io::file_descriptor fd = istream.fd();
