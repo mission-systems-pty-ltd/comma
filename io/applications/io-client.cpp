@@ -75,6 +75,7 @@ int main( int argc, char** argv )
     bool unbuffered = options.exists( "--unbuffered,-u" );
     std::vector< std::string > input = comma::split( unnamed[0], ':' );
     comma::signal_flag is_shutdown;
+    std::vector< char > buffer( buffer_size );
     if( input[0] == "zmq-local" || input[0] == "zero-local" || input[0] == "zmq-tcp" || input[0] == "zero-tcp" )
     {
         std::cerr << name() << ": not implemented" << std::endl;
@@ -84,7 +85,6 @@ int main( int argc, char** argv )
     {
         if( input.size() != 2 ) { std::cerr << name() << " : expected udp:<port>, e.g. udp:12345, got" << unnamed[0] << std::endl; return 1; }
         unsigned short port = boost::lexical_cast< unsigned short >( input[1] );
-        std::vector< char > packet( buffer_size );
         boost::asio::io_service service;
         boost::asio::ip::udp::socket socket( service );
         socket.open( boost::asio::ip::udp::v4() );
@@ -99,9 +99,9 @@ int main( int argc, char** argv )
         while( !is_shutdown && std::cout.good() )
         {
             boost::system::error_code error;
-            std::size_t size = socket.receive( boost::asio::buffer( packet ), 0, error );
+            std::size_t size = socket.receive( boost::asio::buffer( buffer ), 0, error );
             if( error || size == 0 ) { break; }
-            std::cout.write( &packet[0], size );
+            std::cout.write( &buffer[0], size );
             if ( unbuffered ) { std::cout.flush(); }
         }
         return 0;
@@ -116,7 +116,6 @@ int main( int argc, char** argv )
         comma::io::file_descriptor fd = istream.fd();
         comma::io::select select;
         select.read().add( fd );
-        std::vector< char > buffer( buffer_size );
         while( !is_shutdown && std::cout.good() )
         {
             select.check();
