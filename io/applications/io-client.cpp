@@ -50,16 +50,16 @@ void usage( bool verbose = false )
     std::cerr << "options: " << std::endl;
     std::cerr << "    --unbuffered,-u: flush output" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "supported address types: tcp, udp, local (unix) socket, zmq local socket, zmq tcp, named pipe, file" << std::endl;
+    std::cerr << "supported address types: tcp socket, udp socket, local (unix) socket, named pipe, file (todo: add zmq local socket, zmq tcp)" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples: " << std::endl;
     std::cerr << "    " << name() << " tcp:localhost:12345" << std::endl;
     std::cerr << "    " << name() << " udp:12345" << std::endl;
     std::cerr << "    " << name() << " local:/tmp/socket" << std::endl;
-    std::cerr << "    " << name() << " zmq-local:/tmp/socket" << std::endl;
-    std::cerr << "    " << name() << " zmq-tcp:/tmp/socket" << std::endl;
     std::cerr << "    " << name() << " /tmp/pipe" << std::endl;
     std::cerr << "    " << name() << " /tmp/file" << std::endl;
+    std::cerr << "    " << name() << " zmq-local:/tmp/socket (not implemented)" << std::endl;
+    std::cerr << "    " << name() << " zmq-tcp:localhost:12345 (not implemented)" << std::endl;
     std::cerr << std::endl;
     exit( 1 );
 }
