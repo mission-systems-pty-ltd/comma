@@ -203,6 +203,7 @@ int main( int ac, char** av )
                 }
                 std::cout << std::endl;
             }
+            return 0;
         }
         std::cerr << "csv-fields: expected operation, got: \"" << operation << "\"" << std::endl;
         return 1;
