@@ -6,6 +6,7 @@ numbers[2]/output="4,5"
 numbers[2]/status=0
 numbers[3]/output=""
 numbers[3]/status=0
+
 clear/keep[0]/output=",,,"
 clear/keep[0]/status=0
 clear/keep[1]/output="a,,,"
@@ -36,3 +37,12 @@ clear/mask[3]/output=",,,d"
 clear/mask[3]/status=0
 clear/mask[4]/output="a,,,d"
 clear/mask[4]/status=0
+
+prefix[0]/output="x/a,x/b,x/c"
+prefix[1]/output=",x/b,x/c"
+prefix[2]/output="x/a,,x/c"
+prefix[3]/output="x/a,x/b,"
+prefix[4]/output="x/a,,x/c"
+prefix[5]/output=",x/b,"
+prefix[6]/output=",x/b,"
+prefix[7]/output="x/a,,x/c"

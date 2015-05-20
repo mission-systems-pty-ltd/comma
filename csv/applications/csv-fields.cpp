@@ -58,6 +58,11 @@ static void usage()
     std::cerr << "        --remove=<fields>: remove given fields by name, opposite of --keep" << std::endl;
     std::cerr << "        --inverted-mask,--complement-mask,--unmask,--unmasked=<fields>: remove given fields by position, opposite of --mask" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "    prefix: prefix all non-empty field names" << std::endl;
+    std::cerr << "        --except=<fields>: don't prefix given fields" << std::endl;
+    std::cerr << "        --fields=<fields>: prefix only given fields" << std::endl;
+    std::cerr << "        --path=<prefix>: path to add as a prefix" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << "    numbers" << std::endl;
     std::cerr << "        echo \"hello,,,,world\" | csv-fields" << std::endl;
@@ -69,15 +74,19 @@ static void usage()
     std::cerr << "    clear" << std::endl;
     std::cerr << "        mask/unmask first and third field:" << std::endl;
     std::cerr << "        echo a,b,c,d | csv-fields clear --mask X,,Y" << std::endl;
-    std::cerr << "        echo a,,c" << std::endl;
+    std::cerr << "        a,,c" << std::endl;
     std::cerr << "        echo a,b,c,d | csv-fields clear --unmask X,,Y" << std::endl;
-    std::cerr << "        echo ,b,,d" << std::endl;
+    std::cerr << "        ,b,,d" << std::endl;
     std::cerr << std::endl;
     std::cerr << "        clear fields by name:" << std::endl;
     std::cerr << "        echo a,b,c,d | csv-fields clear --except a,b" << std::endl;
-    std::cerr << "        echo a,b,," << std::endl;
+    std::cerr << "        a,b,," << std::endl;
     std::cerr << "        echo a,b,c,d | csv-fields clear --remove a,b" << std::endl;
-    std::cerr << "        echo ,,c,d" << std::endl;
+    std::cerr << "        ,,c,d" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "        prefix non-empty fields:" << std::endl;
+    std::cerr << "        echo a,,,d | csv-fields prefix --path \"hello/world\"" << std::endl;
+    std::cerr << "        hello/world/a,,,hello/world/d" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -111,8 +120,9 @@ int main( int ac, char** av )
                 }
             }
             std::cout << std::endl;
+            return 0;
         }
-        else if( operation == "clear" )
+        if( operation == "clear" )
         {
             options.assert_mutually_exclusive( "--except,--keep,--mask,--remove,--inverted-mask,--complement-mask,--unmask,--unmasked" );
             std::string keep = options.value< std::string >( "--keep,--except", "" );
@@ -164,13 +174,38 @@ int main( int ac, char** av )
                 }
                 std::cout << std::endl;
             }
+            return 0;
         }
-        else
+        if( operation == "prefix" )
         {
-            std::cerr << "csv-fields: expected operation, got: \"" << operation << "\"" << std::endl;
-            return 1;
+            options.assert_mutually_exclusive( "--fields,--except" );
+            const std::string& e = options.value< std::string >( "--except", "" );
+            const std::string& f = options.value< std::string >( "--fields", "" );
+            const std::string& path = options.value< std::string >( "--path" );
+            bool except = !e.empty();
+            std::vector< std::string > g;
+            if( !e.empty() ) { g = comma::split( e, ',' ); }
+            else if( !f.empty() ) { g = comma::split( f, ',' ); }
+            std::set< std::string > fields;
+            for( unsigned int i = 0; i < g.size(); ++i ) { fields.insert( g[i] ); }
+            while( std::cin.good() )
+            {
+                std::string line;
+                std::string comma;
+                std::getline( std::cin, line );
+                if( line.empty() ) { break; }
+                const std::vector< std::string >& v = comma::split( line, ',' );
+                for( unsigned int i = 0; i < v.size(); ++i )
+                {
+                    if( v[i].empty() || ( !fields.empty() && except == ( fields.find( v[i] ) != fields.end() ) ) ) { std::cout << comma; }
+                    else { std::cout << comma << path << '/' << v[i]; }
+                    comma = ",";
+                }
+                std::cout << std::endl;
+            }
         }
-        return 0;
+        std::cerr << "csv-fields: expected operation, got: \"" << operation << "\"" << std::endl;
+        return 1;
     }
     catch( std::exception& ex ) { std::cerr << "csv-fields: " << ex.what() << std::endl; }
     catch( ... ) { std::cerr << "csv-fields: unknown exception" << std::endl; }
