@@ -181,7 +181,7 @@ int main( int ac, char** av )
             options.assert_mutually_exclusive( "--fields,--except" );
             const std::string& e = options.value< std::string >( "--except", "" );
             const std::string& f = options.value< std::string >( "--fields", "" );
-            const std::string& path = options.value< std::string >( "--path" );
+            const std::string& path = options.value< std::string >( "--path" ) + '/';
             bool except = !e.empty();
             std::vector< std::string > g;
             if( !e.empty() ) { g = comma::split( e, ',' ); }
@@ -197,8 +197,7 @@ int main( int ac, char** av )
                 const std::vector< std::string >& v = comma::split( line, ',' );
                 for( unsigned int i = 0; i < v.size(); ++i )
                 {
-                    if( v[i].empty() || ( !fields.empty() && except == ( fields.find( v[i] ) != fields.end() ) ) ) { std::cout << comma; }
-                    else { std::cout << comma << path << '/' << v[i]; }
+                    std::cout << comma << ( ( v[i].empty() || ( !fields.empty() && except == ( fields.find( v[i] ) != fields.end() ) ) ) ? "" : path ) << v[i];
                     comma = ",";
                 }
                 std::cout << std::endl;
