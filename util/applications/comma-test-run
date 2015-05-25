@@ -370,7 +370,7 @@ function junit_finalize() # quick and dirty
                   cat $path/output/failure
                   echo "        </failure>"
               fi
-              echo "    <testcase/>"
+              echo "    </testcase>"
            done
       echo "</testsuite>"
 }
