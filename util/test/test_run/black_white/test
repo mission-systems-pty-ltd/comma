@@ -2,8 +2,6 @@
 
 name=$( basename $0 )
 
-source "../common-functions" || exit 1
-
 function handle()
 {
     [[ -n "$workdir" ]] && rm -rf "$workdir"
@@ -25,8 +23,9 @@ workdir=$( mktemp --directory --tmpdir="$output_dir" )
 cd "$workdir"
 tar xf "$tarball" || exit 1
 cd sample || exit 1
-comma-test-run --raw --white-list=white.list --black-list=black.list $@ > "$output_dir/log" 2>&1
+comma-test-run --raw --white-list=white.list --black-list=black.list $@ > "$output_dir/log" 2>"$output_dir/log2"
 (( $? == 0 )) || exit 1
 
-cat "$output_dir/log" | sed '1,3d;$d' | format_tests_per_directory
-exit $?
+elapsed="stats/elapsed.csv"
+[[ -r "$elapsed" ]] || exit 1
+cat "$elapsed" | sed 's@^\./@@'

@@ -28,7 +28,7 @@ cd "$workdir"
 tar xf "$tarball" || exit 1
 cd limits || exit 1
 
-comma-test-run --dry $options $@ > "$output_dir/log" 2>&1
+comma-test-run --dry $options $@ > "$output_dir/log"
 (( $? == 0 )) || exit 1
 
 echo "directories=\"$( cat "$output_dir/log" | tr '\n' ' ' | sed 's/[ ]$//g' )\""
