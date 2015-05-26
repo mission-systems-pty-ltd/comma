@@ -842,6 +842,7 @@ have_max_parallel=$( comma_options_has --max-parallel=$options_max_parallel $@ )
 (( $options_max_run_time < 1 )) && { error_ "$name: timeout run time $options_max_run_time < 1s or not a number"; exit 1; }
 [[ "$options_parallel" != "0" && "$options_estimate_resources" == "1" ]] && { error_ "$name: resource estimation shall be serial"; exit 1; }
 if [[ "$options_debug" != "0" ]] ; then verbose="--verbose" ; fi
+(( options_verbose )) && verbose="--verbose"
 
 # and convert to bytes and export for everyone to use
 max_parallel=$options_max_parallel
