@@ -363,14 +363,16 @@ function junit_finalize() # quick and dirty
     cat $stats_elapsed_path_value \
         | while IFS='=' read key elapsed ; do
               path="$( dirname $key )"
-              echo "    <testcase classname=\"testcase\" name=\"$path\">"
-              echo "        <time>$elapsed</time>"
+              local attributes="classname=\"testcase\" name=\"$( echo $path | sed "s#^\./##" )\" time=\"$elapsed\""
               if [[ -f $path/output/failure ]] ; then
+                  echo "    <testcase $attributes >"
                   echo "        <failure>"
                   cat $path/output/failure
                   echo "        </failure>"
+                  echo "    </testcase>"
+              else
+                  echo "    <testcase $attributes />"
               fi
-              echo "    </testcase>"
            done
       echo "</testsuite>"
 }
