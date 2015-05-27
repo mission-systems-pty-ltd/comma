@@ -153,11 +153,24 @@ export -f comma_trim
 # If a variable is not set in the parent environment, it is not set. Set a variable
 # to an empty string if it shall be present.
 #
+# All the default and user-specified variables are exported.
+#
 # The options of comma_env must be given first. It does not search for them in the
 # entire command line, assuming options in other positions belong to <your-command>.
 #
 # To see the resulting environment without running any commands in it, give '-'
 # (a single minus character) as <your-command>.
+#
+# If you need to call (or use) a bash function, add it to the --import list, such
+# as in:
+#   function foo(){ ls --reverse; }
+#   comma_env --import=foo foo
+#
+# All the listed functions are "export -f"-ed.
+#
+# Exit status of comma_env is defined by env (1). See
+#   info coreutils 'env invocation'
+# for details.
 function comma_env()
 {
     local comma_env_show_help="false"
@@ -175,7 +188,7 @@ EOF
     return $(( $# == 0 ))
     }
 
-    local comma_env_default_list="HOME,HOSTNAME,LANG,LANGUAGE,LD_LIBRARY_PATH,LOGNAME,PATH,UID,USER"
+    local comma_env_default_list="HOME,HOSTNAME,LANG,LANGUAGE,LD_LIBRARY_PATH,LOGNAME,USER" # PATH handled separately
     [[ "$1" == "--default-imports" ]] && { echo "$comma_env_default_list" ; return 0 ; }
 
     local comma_env_variables_list=$comma_env_default_list
@@ -190,13 +203,24 @@ EOF
     comma_env_variables_list=$( echo "$comma_env_variables_list" | tr ',' '\n' | sort -u )
     comma_env_variables_list=$( echo $comma_env_variables_list )  # convert newlines to spaces
 
-    local comma_env_command_line="env -i"
-    [[ "$*" == "-" ]] && { comma_env_command_line+=" -" ; shift ; }
-    local comma_env_variable_name
-    for comma_env_variable_name in $comma_env_variables_list ; do
-        [[ -v $comma_env_variable_name ]] && comma_env_command_line+=" $comma_env_variable_name=\"$( eval echo \$$comma_env_variable_name )\""
-    done
-    eval $comma_env_command_line $@
+    # work in a subshell to use a custom EXIT trap
+    (
+        comma_env_temp_file=$( mktemp --dry-run -t comma-env.XXXXXXXX )
+        trap "rm -f \"$comma_env_temp_file\"" EXIT
+        local comma_env_command_to_execute=""
+        [[ "$*" == "-" ]] && { comma_env_command_to_execute="set" ; shift ; }
+        local comma_env_variable_name
+        for comma_env_variable_name in $comma_env_variables_list ; do
+            if type "$comma_env_variable_name" 2>/dev/null | head -n 1 | grep -q "is a function" ; then
+                type "$comma_env_variable_name" | tail -n +2 >> "$comma_env_temp_file"
+                echo "export -f $comma_env_variable_name" >> "$comma_env_temp_file"
+            else
+                [[ -v $comma_env_variable_name ]] && echo "export $comma_env_variable_name=\"$( eval echo \$$comma_env_variable_name )\"" >> "$comma_env_temp_file"
+            fi
+        done
+        # handle PATH explicitly
+        env -i PATH="$PATH" comma-env-helper "$comma_env_temp_file" $comma_env_command_to_execute $@ # do not quote the second argument to helper
+    )
 }
 
 # This is a signal handler used by comma_execute_and_wait. See that function for detail.
