@@ -160,10 +160,10 @@ export -f comma_trim
 # (a single minus character) as <your-command>.
 function comma_env()
 {
-    local show_help="false"
-    (( $# == 0 )) && show_help="true"
-    [[ "$1" == "--help" ]] && show_help="true"
-    [[ "$show_help" == "true" ]] && {
+    local comma_env_show_help="false"
+    (( $# == 0 )) && comma_env_show_help="true"
+    [[ "$1" == "--help" ]] && comma_env_show_help="true"
+    [[ "$comma_env_show_help" == "true" ]] && {
     cat >&2 <<EOF
 Usage:
     comma_env --import=<list,of,variable,names> your-command arg1 arg2
@@ -175,28 +175,28 @@ EOF
     return $(( $# == 0 ))
     }
 
-    local default_list="HOME,HOSTNAME,LANG,LANGUAGE,LD_LIBRARY_PATH,LOGNAME,PATH,UID,USER"
-    [[ "$1" == "--default-imports" ]] && { echo "$default_list" ; return 0 ; }
+    local comma_env_default_list="HOME,HOSTNAME,LANG,LANGUAGE,LD_LIBRARY_PATH,LOGNAME,PATH,UID,USER"
+    [[ "$1" == "--default-imports" ]] && { echo "$comma_env_default_list" ; return 0 ; }
 
-    local variables_list=$default_list
+    local comma_env_variables_list=$comma_env_default_list
     case "$1" in
-        --import)    shift ; variables_list="$default_list,$1" ; shift ;;
-        --import=*)  variables_list="$default_list,${1#*=}" ; shift ;;
+        --import)    shift ; comma_env_variables_list="$comma_env_default_list,$1" ; shift ;;
+        --import=*)  comma_env_variables_list="$comma_env_default_list,${1#*=}" ; shift ;;
         --default)   shift ;;
         *)           echo "comma_env: first argument must be '--import' or '--default', not '$1'" >&2 ; return 1 ;;
     esac
 
     # remove possible repetitions
-    variables_list=$( echo "$variables_list" | tr ',' '\n' | sort -u )
-    variables_list=$( echo $variables_list )  # convert newlines to spaces
+    comma_env_variables_list=$( echo "$comma_env_variables_list" | tr ',' '\n' | sort -u )
+    comma_env_variables_list=$( echo $comma_env_variables_list )  # convert newlines to spaces
 
-    local env_command_line="env -i"
-    [[ "$*" == "-" ]] && { env_command_line+=" -" ; shift ; }
-    local import_variable_name
-    for import_variable_name in $variables_list ; do
-        [[ -v $import_variable_name ]] && { env_command_line+=" $import_variable_name=\"$( eval echo \$$import_variable_name )\"" ; }
+    local comma_env_command_line="env -i"
+    [[ "$*" == "-" ]] && { comma_env_command_line+=" -" ; shift ; }
+    local comma_env_variable_name
+    for comma_env_variable_name in $comma_env_variables_list ; do
+        [[ -v $comma_env_variable_name ]] && comma_env_command_line+=" $comma_env_variable_name=\"$( eval echo \$$comma_env_variable_name )\""
     done
-    $env_command_line $@
+    $comma_env_command_line $@
 }
 
 # This is a signal handler used by comma_execute_and_wait. See that function for detail.
