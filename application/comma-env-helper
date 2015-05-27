@@ -1,0 +1,18 @@
+#!/bin/bash
+
+scriptname=$( basename "$0" )
+
+function nonusage()
+{
+    cat >&2 <<EOF
+$scriptname: shall be used from comma_env, do not call directly.
+EOF
+    exit 1
+}
+
+(( $# < 2 )) && nonusage
+[[ "$1" == "-h" || "$1" == "--help" ]] && nonusage
+
+[[ -r "$1" ]] && source "$1"
+shift
+$@
