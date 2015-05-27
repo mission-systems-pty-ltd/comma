@@ -129,6 +129,76 @@ function comma_trim()
 }
 export -f comma_trim
 
+# Run commands in a minimal environment.
+#
+# Usage:
+#   comma_env --default your-command arg1 arg2 ...
+#
+# run <your-command> with the given argument in a clean environment with the minimal
+# number of variables inherited from the parent environment.
+#
+#   comma_env --default-imports
+#
+# list the default variables to be imported and return.
+#
+#   comma_env --import=FOO,BAR,LICENSE,MYENV your-command arg1 arg2 ...
+#
+# run <your-command> with the provided arguments in the shell environment that inherit
+# only the default and the explicitly listed variables from the parent environment.
+#
+# Variables shall be given as a comma-separated list.
+#
+# Both --import=<list> and --import <list> forms are supported.
+#
+# If a variable is not set in the parent environment, it is not set. Set a variable
+# to an empty string if it shall be present.
+#
+# The options of comma_env must be given first. It does not search for them in the
+# entire command line, assuming options in other positions belong to <your-command>.
+#
+# To see the resulting environment without running any commands in it, give '-'
+# (a single minus character) as <your-command>.
+function comma_env()
+{
+    local show_help="false"
+    (( $# == 0 )) && show_help="true"
+    [[ "$1" == "--help" ]] && show_help="true"
+    [[ "$show_help" == "true" ]] && {
+    cat >&2 <<EOF
+Usage:
+    comma_env --import=<list,of,variable,names> your-command arg1 arg2
+    comma_env --import <list,of,variable,names> your-command arg1 arg2
+    comma_env --default your-command arg1 arg1
+    comma_env --default-imports
+    comma_env --help
+EOF
+    return $(( $# == 0 ))
+    }
+
+    local default_list="HOME,HOSTNAME,LANG,LANGUAGE,LD_LIBRARY_PATH,LOGNAME,PATH,UID,USER"
+    [[ "$1" == "--default-imports" ]] && { echo "$default_list" ; return 0 ; }
+
+    local variables_list=$default_list
+    case "$1" in
+        --import)    shift ; variables_list="$default_list,$1" ; shift ;;
+        --import=*)  variables_list="$default_list,${1#*=}" ; shift ;;
+        --default)   shift ;;
+        *)           echo "comma_env: first argument must be '--import' or '--default', not '$1'" >&2 ; return 1 ;;
+    esac
+
+    # remove possible repetitions
+    variables_list=$( echo "$variables_list" | tr ',' '\n' | sort -u )
+    variables_list=$( echo $variables_list )  # convert newlines to spaces
+
+    local env_command_line="env -i"
+    [[ "$*" == "-" ]] && { env_command_line+=" -" ; shift ; }
+    local import_variable_name
+    for import_variable_name in $variables_list ; do
+        [[ -v $import_variable_name ]] && { env_command_line+=" $import_variable_name=\"$( eval echo \$$import_variable_name )\"" ; }
+    done
+    $env_command_line $@
+}
+
 # This is a signal handler used by comma_execute_and_wait. See that function for detail.
 function terminate_comma_execute_and_wait()
 {
