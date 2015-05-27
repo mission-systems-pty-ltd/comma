@@ -196,7 +196,7 @@ EOF
     for comma_env_variable_name in $comma_env_variables_list ; do
         [[ -v $comma_env_variable_name ]] && comma_env_command_line+=" $comma_env_variable_name=\"$( eval echo \$$comma_env_variable_name )\""
     done
-    $comma_env_command_line $@
+    eval $comma_env_command_line $@
 }
 
 # This is a signal handler used by comma_execute_and_wait. See that function for detail.
