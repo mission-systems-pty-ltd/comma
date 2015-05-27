@@ -222,6 +222,7 @@ EOF
         env -i PATH="$PATH" comma-env-helper "$comma_env_temp_file" $comma_env_command_to_execute $@ # do not quote the second argument to helper
     )
 }
+export -f comma_env
 
 # This is a signal handler used by comma_execute_and_wait. See that function for detail.
 function terminate_comma_execute_and_wait()
