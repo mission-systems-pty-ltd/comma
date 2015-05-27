@@ -500,7 +500,7 @@ function run_and_match_test()
     mkdir -p output || exit 1
 
     test_output=$( if [ -f ./input ] ; then cat ./input ; fi \
-        | comma_progress_named "$our_stats_progress" "$dir" "$test_exec" "$path" "$verbose" $options_test_option 2> "output/stderr.log" )
+        | comma_progress_named "$our_stats_progress" "$dir" comma_env --default "$test_exec" "$path" "$verbose" $options_test_option 2>"output/stderr.log" )
     test_failed=$?
     error_files="$( find . -name out_of_shared_memory )"
     [[ -n "$error_files" ]] && return 1
