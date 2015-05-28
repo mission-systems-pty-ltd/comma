@@ -189,7 +189,7 @@ EOF
     }
 
     local comma_env_default_list="HOME,HOSTNAME,LANG,LANGUAGE,LD_LIBRARY_PATH,LOGNAME,USER" # PATH handled separately
-    [[ "$1" == "--default-imports" ]] && { echo "$comma_env_default_list" ; return 0 ; }
+    [[ "$1" == "--default-imports" ]] && { echo "$comma_env_default_list,PATH" ; return 0 ; }
 
     local comma_env_variables_list=$comma_env_default_list
     case "$1" in
