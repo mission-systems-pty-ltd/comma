@@ -1,0 +1,16 @@
+#!/bin/bash
+
+testdir=$( dirname "$0" )
+scriptname=$( basename "$testdir" )/$( basename "$0" )
+
+source $( which comma-application-util ) || exit 1
+
+export foo="my_foo"
+export bar="my_bar"
+export baz="my_baz"
+
+tester="$testdir/aux/vars-print-env"
+[[ -x "$tester" ]] || { echo "$scriptname: cannot find auxiliary script '$tester'" >&2; exit 1; }
+
+export PATH="$testdir/aux:$PATH"
+comma_env --import=foo,bar $( basename "$tester" )

@@ -1,0 +1,7 @@
+#!/bin/bash
+
+allvars="foo bar baz"
+for varname in $allvars ; do
+    echo -n "$varname/defined="
+    [[ -v $varname ]] && echo '"yes"' || echo '"no"'
+done

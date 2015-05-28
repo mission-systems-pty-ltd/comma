@@ -1,0 +1,10 @@
+printenv/count <= 16
+set/count <= 50
+
+HOME/defined="yes"
+HOSTNAME/defined="yes"
+LANG/defined="yes"
+LANGUAGE/defined="yes"
+LOGNAME/defined="yes"
+USER/defined="yes"
+PATH/defined="yes"
