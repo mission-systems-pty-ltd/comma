@@ -37,7 +37,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <comma/string/split.h>
+#include "split.h"
 
 namespace comma {
 

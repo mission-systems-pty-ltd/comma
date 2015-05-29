@@ -39,10 +39,17 @@
 namespace comma {
 
 /// split string into tokens (a quick implementation); always contains at least one element
-std::vector< std::string > split( const std::string& s, const char* separators = " " );
+std::vector< std::string > split( const std::string & s, const char * const separators = " " );
 
 /// split string into tokens (a quick implementation); always contains at least one element
-std::vector< std::string > split( const std::string& s, char separator );
+std::vector< std::string > split( const std::string & s, char const separator );
+
+/// split string into tokens; always contains at least one element;
+/// skips backslash escaped seperator 
+std::vector< std::string > split_escaped( const std::string & s, const char * const separators = " ", const char escape = '\\', const char * const quotes = "\"" );
+/// split string into tokens; always contains at least one element;
+/// skips backslash escaped seperator 
+std::vector< std::string > split_escaped( const std::string & s, char const separator, const char escape, const char quote );
 
 } // namespace comma {
 
