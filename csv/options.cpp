@@ -30,9 +30,10 @@
 
 /// @author vsevolod vlaskine
 
-#include <comma/base/exception.h>
-#include <comma/csv/options.h>
-#include <comma/string/string.h>
+#include "../string/split.h"
+#include "../base/exception.h"
+#include "../csv/options.h"
+#include "../string/string.h"
 
 namespace comma { namespace csv {
 
@@ -109,8 +110,8 @@ std::string options::usage( const std::string& default_fields )
 
 bool options::has_field( const std::string& field ) const
 {
-    const std::vector< std::string >& v = split( fields, ',' );
-    const std::vector< std::string >& f = split( field, ',' );
+    const std::vector< std::string >& v = ::comma::split_escaped( fields, ",", '\\', "\'\"" );
+    const std::vector< std::string >& f = ::comma::split_escaped( field, ",", '\\', "\'\"" );
     for( unsigned int i = 0; i < f.size(); ++i ) { if( std::find( v.begin(), v.end(), f[i] ) == v.end() ) { return false; } }
     return true;
 }

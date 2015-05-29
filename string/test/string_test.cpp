@@ -91,7 +91,9 @@ TEST( string, split_escaped )
         for( unsigned int i = 0; i < 4; ++i ) { EXPECT_TRUE( v.at(i) == "" ); }
     }
     {
-        EXPECT_THROW( split_escaped( "abc\\", ":" ), comma::exception );
+        std::vector< std::string > v( split_escaped( "abc\\", ":" ) );
+        EXPECT_TRUE( v.size() == 1 );
+        EXPECT_TRUE( v.at(0) == "abc\\" );
     }
     {
         std::vector< std::string > v( split_escaped( ":::", ":" ) );
@@ -117,7 +119,7 @@ TEST( string, split_escaped )
         std::vector< std::string > v( split_escaped( "hello:\\world:/moon", "/:" ) );
         EXPECT_TRUE( v.size() == 4 );
         EXPECT_TRUE( v.at(0) == "hello" );
-        EXPECT_TRUE( v.at(1) == "world" );
+        EXPECT_TRUE( v.at(1) == "\\world" );
         EXPECT_TRUE( v.at(2) == "" );
         EXPECT_TRUE( v.at(3) == "moon" );
     }

@@ -44,11 +44,22 @@ std::vector< std::string > split( const std::string & s, const char * const sepa
 /// split string into tokens (a quick implementation); always contains at least one element
 std::vector< std::string > split( const std::string & s, char const separator );
 
-/// split string into tokens; always contains at least one element;
-/// skips backslash escaped seperator 
+/// Split string into tokens; always contains at least one element;
+/// skips backslash escaped seperator, handle boolean quotes;
+/// exceptions trown on errors.
+///
+/// A quote must be at start of string or after a delimiter.
+/// A quote must be at end of string or before a delimiter.
+/// A quoted string must be closed. Each start quoted must be paired with an end quote.
+/// Quotes don't nest and can not be mixed; e.g. a ' must be escaped in a " quoted string.
+/// An escape character will only escape a delimiter, quote or escape character;
+/// escaping any other character will result in both being kept;
+/// e.g. c:\windows\ will be kept as c:\windows\ with the trailing backslash
+/// An escape character can be anywhere in the string.
+/// An escape character at end of string.will be kept.
 std::vector< std::string > split_escaped( const std::string & s, const char * const separators = " ", const char escape = '\\', const char * const quotes = "\"" );
 /// split string into tokens; always contains at least one element;
-/// skips backslash escaped seperator 
+/// skips backslash escaped seperator, handle boolean quotes 
 std::vector< std::string > split_escaped( const std::string & s, char const separator, const char escape, const char quote );
 
 } // namespace comma {

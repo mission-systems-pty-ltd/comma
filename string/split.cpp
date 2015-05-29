@@ -77,7 +77,8 @@ std::vector< std::string > split_escaped( const std::string & s, const char * co
         if( escape == *p )
         {
             ++p;
-            if( end == p ) COMMA_THROW( comma::exception, "comma::split_escaped - line can not end in an escape character" );
+            if( end == p ) { v.back() += escape; break; }
+            if( ! ( escape == *p || is_one_of( *p, separators ) || is_one_of( *p, quotes ) ) ) v.back() += escape;
             v.back() += *p;
         }
         else if( is_one_of( *p, quotes ) )

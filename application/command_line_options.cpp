@@ -30,6 +30,9 @@
 
 /// @author vsevolod vlaskine
 
+#include "../string/split.h"
+#include "../application/command_line_options.h"
+#include "../base/exception.h"
 #include <sstream>
 #include <set>
 #include <boost/bind.hpp>
@@ -38,9 +41,6 @@
 #include <boost/regex.hpp>
 #include <boost/spirit/include/qi.hpp>
 #include <boost/unordered_set.hpp>
-#include <comma/application/command_line_options.h>
-#include <comma/base/exception.h>
-#include <comma/string/split.h>
 
 #include <algorithm>
 
@@ -86,7 +86,7 @@ const std::vector< std::string >& command_line_options::argv() const { return ar
 
 bool command_line_options::exists( const std::string& name ) const
 {
-    std::vector< std::string > names = comma::split( name, ',' );
+    std::vector< std::string > names = comma::split_escaped( name, ",", '\\', "\'\"" );
     for( std::size_t i = 0; i < names.size(); ++i )
     {
         if( map_.find( names[i] ) != map_.end() ) { return true; }
@@ -96,8 +96,8 @@ bool command_line_options::exists( const std::string& name ) const
 
 std::vector< std::string > command_line_options::unnamed( const std::string& valueless_options, const std::string& options_with_values ) const
 {
-    std::vector< std::string > valueless = split( valueless_options, ',' );
-    std::vector< std::string > valued = split( options_with_values, ',' );
+    std::vector< std::string > valueless = split_escaped( valueless_options, ",", '\\', "\'\"" );
+    std::vector< std::string > valued = split_escaped( options_with_values, ",", '\\', "\'\"" );
     std::vector< std::string > w;
     for( unsigned int i = 1; i < argv_.size(); ++i )
     {
@@ -165,7 +165,7 @@ void command_line_options::fill_map_( const std::vector< std::string >& v )
 
 void command_line_options::assert_mutually_exclusive( const std::string& names ) const
 {
-    std::vector< std::string > v = comma::split( names, ',' );
+    std::vector< std::string > v = comma::split_escaped( names, ",", '\\', "\'\"" );
     std::size_t count = 0;
     for( std::size_t i = 0; i < v.size(); ++i )
     {
