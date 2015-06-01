@@ -211,7 +211,7 @@ function comma_initialize_resources()
         sed 's/=.*$/="0"/'
         echo "$path=\"[]\""
         echo "$users=\"[]\""
-    ) | comma_take_last_path_value | name-value-convert --from path-value --to json > "$counter"
+    ) | comma_path_value_take_last | name-value-convert --from path-value --to json > "$counter"
 }
 export -f comma_initialize_resources
 
