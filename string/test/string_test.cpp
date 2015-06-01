@@ -78,6 +78,43 @@ TEST( string, split )
     }
 }
 
+TEST( string, escape )
+{
+    EXPECT_EQ( "ab", escape( "ab" ) );
+    EXPECT_EQ( "ab\\\\", escape( "ab\\" ) );
+    EXPECT_EQ( "\\\\ab", escape( "\\ab" ) );
+    EXPECT_EQ( "a\\\\b", escape( "a\\b" ) );
+    EXPECT_EQ( "a\\'b", escape( "a'b" ) );
+    EXPECT_EQ( "a\\b", escape( "a\\b", '~' ) );
+    EXPECT_EQ( "a~~b", escape( "a~b", '~' ) );
+    EXPECT_EQ( "a~\'b", escape( "a\'b", '~' ) );
+    EXPECT_EQ( "a~\"b", escape( "a\"b", '~', '\"' ) );
+    EXPECT_EQ( "a~\'b~\'c", escape( "a\'b\'c", '~' ) );
+    EXPECT_EQ( "a~\"b~\"c", escape( "a\"b\"c", '~', '\"' ) );
+    EXPECT_EQ( "a~\"b\'c", escape( "a\"b\'c", '~', '\"' ) );
+    EXPECT_EQ( "a~\"b;", escape( "a\"b;", '~', '\"' ) );
+    EXPECT_EQ( "a~\"b~;", escape( "a\"b;", '~', '\"', ';' ) );
+    EXPECT_EQ( "ab~1~2~34", escape( "ab1234", '~', "123" ) );
+}
+
+TEST( string, unescape )
+{
+    EXPECT_EQ( "ab", unescape( "ab" ) );
+    EXPECT_EQ( "ab\\", unescape( "ab\\\\" ) );
+    EXPECT_EQ( "\\ab", unescape( "\\\\ab" ) );
+    EXPECT_EQ( "a\\b", unescape( "a\\\\b" ) );
+    EXPECT_EQ( "a\\b", unescape( "a\\b" ) );
+    EXPECT_EQ( "ab\\", unescape( "ab\\" ) );
+    EXPECT_EQ( "a'b", unescape( "a\\'b" ) );
+    EXPECT_THROW( unescape( "a'b" ), comma::exception );
+    EXPECT_EQ( "a\\\\b", unescape( "a\\\\b", '~' ) );
+    EXPECT_EQ( "a~b", unescape( "a~~b", '~' ) );
+    EXPECT_EQ( "a\"b", unescape( "a~\"b", '~', '\"' ) );
+    EXPECT_THROW( unescape( "a\"b;", '~', '\"' ), comma::exception );
+    EXPECT_THROW( unescape( "a\"b\';", '~', "\"\'" ), comma::exception );
+    EXPECT_EQ( "ab1234", unescape( "ab~1~2~34", '~', "123" ) );
+}
+
 TEST( string, split_escaped )
 {
     {
@@ -124,9 +161,9 @@ TEST( string, split_escaped )
         EXPECT_TRUE( v.at(3) == "moon" );
     }
     {
-        std::vector< std::string > v( split_escaped( "\\\"hello\\\" world:moon", ":" ) );
+        std::vector< std::string > v( split_escaped( "\\\'hello\\\' world:moon", ":" ) );
         EXPECT_TRUE( v.size() == 2 );
-        EXPECT_TRUE( v.at(0) == "\"hello\" world" );
+        EXPECT_TRUE( v.at(0) == "\'hello\' world" );
         EXPECT_TRUE( v.at(1) == "moon" );
     }
     {
@@ -145,11 +182,12 @@ TEST( string, split_escaped_quoted )
         EXPECT_TRUE( v.at(0) == "abc" );
     }
     {
+        //EXPECT_THROW( split_escaped( "a\"bc\"", ":", '\\', "\"" ), comma::exception );
+        //EXPECT_THROW( split_escaped( "abc\"\"", ":", '\\', "\"" ), comma::exception );
+        //EXPECT_THROW( split_escaped( "ab:cd\"\":ef", ":", '\\', "\"" ), comma::exception );
+        //EXPECT_THROW( split_escaped( "abc\"\":def", ":", '\\', "\"" ), comma::exception );
+        //EXPECT_THROW( split_escaped( "abc:\"\"def", ":", '\\', "\"" ), comma::exception );
         EXPECT_THROW( split_escaped( "a\"bc", ":", '\\', "\"" ), comma::exception );
-        EXPECT_THROW( split_escaped( "abc\"", ":", '\\', "\"" ), comma::exception );
-        EXPECT_THROW( split_escaped( "ab:cd\":ef", ":", '\\', "\"" ), comma::exception );
-        EXPECT_THROW( split_escaped( "abc\":def", ":", '\\', "\"" ), comma::exception );
-        EXPECT_THROW( split_escaped( "abc:\"def", ":", '\\', "\"" ), comma::exception );
         EXPECT_THROW( split_escaped( "\"abc\"\":def", ":", '\\', "\"" ), comma::exception );
     }
     {
