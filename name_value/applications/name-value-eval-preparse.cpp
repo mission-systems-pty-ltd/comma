@@ -359,7 +359,7 @@ bool is_number(const std::string &str)
 // check if a string is a Python keyword
 bool is_keyword(const std::string &str)
 {
-    const char *python_keyword[] =
+    static const char *python_keyword[] =
     {
         "and", "assert", "break", "class", "continue", "def", "del", "elif", "else", "except", "exec",
         "finally", "for", "from", "global", "if", "import", "in", "is", "lambda", "not", "or", "pass",
@@ -369,6 +369,19 @@ bool is_keyword(const std::string &str)
     for (size_t n = 0;python_keyword[n];++n) { if (str == python_keyword[n]) return true; }
     return false;
 }
+
+static const char *keyword_allowed_as_id[] =
+{
+    "except", "from", "global", "lambda", "pass", "print", "raise", "return", "yield", 0
+};
+
+// Python keywords that are unlikely to appear in an expression, and so are allowed as ids (will be mangled)
+bool is_keyword_allowed_as_id(const std::string &str)
+{
+    for (size_t n = 0;keyword_allowed_as_id[n];++n) { if (str == keyword_allowed_as_id[n]) return true; }
+    return false;
+}
+
 
 bool is_comparison_operator(const std::string &op)
 {
@@ -618,6 +631,7 @@ void tokenise(const std::string &line, const std::string &filename, int line_num
     size_t pos = 0;
     size_t len = line.length();
     bool found_assign_op = false;
+    bool ids_can_be_keywords = opt.assign || (opt.test && !test_is_raw_python);
 
     while (pos < len)
     {
@@ -654,7 +668,7 @@ void tokenise(const std::string &line, const std::string &filename, int line_num
             while (is_id(char_at(line, pos))) { ++pos; }
             std::string id = line.substr(tok_start, pos - tok_start);
             check_transform_id(id);
-            if (is_keyword(id)) { tok_str = id; type = t_keyword; }
+            if (is_keyword(id) && !(ids_can_be_keywords && is_keyword_allowed_as_id(id))) { tok_str = id; type = t_keyword; }
             else if (id != kwd_expect && next_nonblank_char(line, pos) == '(') { tok_str = id; type = t_function; }
             else { tok_str = (opt.demangle ? demangle_id(id, true) : mangle_id(id)); type = t_id; }
         }
@@ -821,16 +835,18 @@ void process_assign(const std::vector<Token> &tokens, const std::string &input_l
 {
     if (tokens.size() != 0)
     {
+        if (tokens[0].type == t_keyword)
+        {
+            print_error_prefix(filename, line_num);
+            std::cerr << "illegal name \"" << tokens[0].str << "\" (Python keyword); the only keywords allowed as ids are:";
+            for (size_t n = 0;keyword_allowed_as_id[n];++n) { std::cerr << ' ' << keyword_allowed_as_id[n]; }
+            std::cerr << "\n";
+        }
+        else
         if (tokens.size() != 3 || tokens[1].str != "=" || tokens[0].type != t_id)
         {
             print_error_prefix(filename, line_num);
             std::cerr << "expected \"name=value\"; got: \"" << input_line << "\"\n";
-        }
-        else
-        if (tokens[0].type == t_keyword)
-        {
-            print_error_prefix(filename, line_num);
-            std::cerr << "illegal name \"" << tokens[0].str << "\" (Python keyword)\n";
         }
         else
         {
