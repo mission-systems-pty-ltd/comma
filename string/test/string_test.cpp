@@ -172,6 +172,13 @@ TEST( string, split_escaped )
         EXPECT_TRUE( v.at(0) == "filename" );
         EXPECT_TRUE( v.at(1) == "delimiter=;" );
     }
+    {
+        std::vector< std::string > v( split_escaped( "filename;delimiter=\\;;fields=a,b,c", ";" ) );
+        EXPECT_TRUE( v.size() == 3 );
+        EXPECT_TRUE( v.at(0) == "filename" );
+        EXPECT_TRUE( v.at(1) == "delimiter=;" );
+        EXPECT_TRUE( v.at(2) == "fields=a,b,c" );
+    }
 }
 
 TEST( string, split_escaped_quoted )
@@ -207,6 +214,19 @@ TEST( string, split_escaped_quoted )
         EXPECT_TRUE( v.size() == 2 );
         EXPECT_TRUE( v.at(0) == "hello\\:\'world" );
         EXPECT_TRUE( v.at(1) == "moon" );
+    }
+    {
+        std::vector< std::string > v( split_escaped( "filename;delimiter=\';\'", ";" ) );
+        EXPECT_TRUE( v.size() == 2 );
+        EXPECT_TRUE( v.at(0) == "filename" );
+        EXPECT_TRUE( v.at(1) == "delimiter=;" );
+    }
+    {
+        std::vector< std::string > v( split_escaped( "filename;delimiter=\';\';fields=a,b,c", ";" ) );
+        EXPECT_TRUE( v.size() == 3 );
+        EXPECT_TRUE( v.at(0) == "filename" );
+        EXPECT_TRUE( v.at(1) == "delimiter=;" );
+        EXPECT_TRUE( v.at(2) == "fields=a,b,c" );
     }
 }
 
