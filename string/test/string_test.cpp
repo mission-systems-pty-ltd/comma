@@ -228,6 +228,14 @@ TEST( string, split_escaped_quoted )
         EXPECT_TRUE( v.at(1) == "delimiter=;" );
         EXPECT_TRUE( v.at(2) == "fields=a,b,c" );
     }
+    {
+        std::vector< std::string > v( split_escaped( "b='y';c/d=\\z;e=\\;;a='x;'", ';', '\\', '\'' ) );
+        EXPECT_TRUE( v.size() == 4 );
+        EXPECT_TRUE( v.at(0) == "b=y" );
+        EXPECT_TRUE( v.at(1) == "c/d=\\z" );
+        EXPECT_TRUE( v.at(2) == "e=;" );
+        EXPECT_TRUE( v.at(3) == "a=x;" );
+    }
 }
 
 TEST( string, strip )

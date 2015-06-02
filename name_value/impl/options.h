@@ -33,8 +33,8 @@
 #ifndef COMMA_APPLICATION_NAME_VALUE_OPTIONS_H
 #define COMMA_APPLICATION_NAME_VALUE_OPTIONS_H
 
-#include <comma/string/string.h>
-#include <comma/xpath/xpath.h>
+#include "../../string/string.h"
+#include "../../xpath/xpath.h"
 
 namespace comma
 {
@@ -46,27 +46,33 @@ namespace impl
 /// name_value options
 struct options
 {
-    options( char delimiter = ';', char value_delimiter = '=', bool full_path_as_name = true );
-    options( const std::string& fields, char delimiter = ';', char value_delimiter = '=', bool full_path_as_name = true );
+    options( char delimiter = ';', char value_delimiter = '=', bool full_path_as_name = true, char escape = '\\', char quote = '\'' );
+    options( const std::string& fields, char delimiter = ';', char value_delimiter = '=', bool full_path_as_name = true, char escape = '\\', char quote = '\'' );
     
     char m_delimiter;
     char m_value_delimiter;
     bool m_full_path_as_name;
+    char m_escape;
+    char m_quote;
     std::vector< std::string > m_names; /// names for unnamed values
 };
 
 
-inline options::options( char delimiter, char value_delimiter, bool full_path_as_name ):
-    m_delimiter( delimiter ),
-    m_value_delimiter( value_delimiter ),
-    m_full_path_as_name( full_path_as_name )
-{
-}
-
-inline options::options( const std::string& fields, char delimiter, char value_delimiter, bool full_path_as_name ):
+inline options::options( char delimiter, char value_delimiter, bool full_path_as_name, char escape, char quote ):
     m_delimiter( delimiter ),
     m_value_delimiter( value_delimiter ),
     m_full_path_as_name( full_path_as_name ),
+    m_escape( escape ),
+    m_quote( quote )
+{
+}
+
+inline options::options( const std::string& fields, char delimiter, char value_delimiter, bool full_path_as_name, char escape, char quote ):
+    m_delimiter( delimiter ),
+    m_value_delimiter( value_delimiter ),
+    m_full_path_as_name( full_path_as_name ),
+    m_escape( escape ),
+    m_quote( quote ),
     m_names( split( fields, ',' ) )
 {
     if( fields.empty() ) { COMMA_THROW( comma::exception, "expected fields, got empty string" ); }
