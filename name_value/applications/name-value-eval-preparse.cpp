@@ -866,7 +866,7 @@ size_t count_starting_spaces(const std::string &s)
 }
 
 void process_test(std::vector<Token> &tokens, const std::string &original_line,
-    const std::string &filename, int line_num, bool *raw_python)
+    const std::string &filename, int line_num, bool *raw_python, Varmap &test_vars)
 {
     std::string input_line;
     size_t leading_spaces = 0;
@@ -921,7 +921,9 @@ void process_test(std::vector<Token> &tokens, const std::string &original_line,
         if (tokens[n].type == t_id)
         {
             std::string id = tokens[n].str;
-            vars[demangle_id(id, true)] = id;
+            std::string demangled = demangle_id(id, true);
+            vars[demangled] = id;
+            test_vars[id] = demangled;
         }
     }
 
@@ -1016,6 +1018,7 @@ void print_header()
         << "    return 6366.70702 * 2.0 * math.atan2(math.sqrt(res_val), math.sqrt(1.0 - res_val))\n"
         << "def sphere_distance_nm(lat1, lon1, lat2, lon2): return km_to_nm(sphere_distance_km(lat1, lon1, lat2, lon2))\n"
         << "def err_expr_not_bool(): print >> sys.stderr, 'File \"?\", line ' + str(inspect.currentframe().f_back.f_lineno) + '\\nTypeError: expected a true or false expression'\n"
+        << "def err_var_is_obj(v_name): print >> sys.stderr, 'TypeError: variable \"' + v_name + '\" is used in an expression but is an object (example: \"a/b = 3; a < 0\")'\n"
         << "def dict_str(d): return \"<array of size \" + str(len(d.keys())) + \">\"\n";
         // note: err_expr_not_bool() imitates standard Python error printing:
         // 'File "name", line n' on one line, followed by the error message
@@ -1032,6 +1035,19 @@ void print_assigned_variables(const Varmap &assigned_vars)
         // (repr() puts single quotes around strings; replace with double quotes)
         std::cout << "print '" << i->first << "='+repr(" << i->second << ").replace(\"'\", '\"')\n";
     }
+}
+
+// make sure no variables of type "OBJ" are used in any expressions (for option --test)
+// (for example, if a/b=3, it is illegal to say "a < 0"; some versions of Python do not treat this as an error)
+void validate_test_variables(Varmap &test_vars)
+{
+    if (test_vars.size() == 0) { return; }
+    Varmap::const_iterator i = test_vars.begin();
+    Varmap::const_iterator end = test_vars.end();
+
+    // "OBJ" will be undefined if no variables contain "/", in which case do nothing
+    std::cout << "if valid('OBJ'):\n";
+    for ( ;i != end;++i) { std::cout << "    if isinstance(" << i->first << ", OBJ): err_var_is_obj('" << i->second << "')\n"; }
 }
 
 // tokenise the input file (or stdin if filename is empty), outputing the appropriate Python code
@@ -1056,6 +1072,10 @@ void process(const std::string &filename, const Options &opt, const std::set<std
 
     // set of "seen" variable names (e.g. "a", "a.b", "a.b["); only used for --assign
     Varset variable_hierarchy;
+    
+    // variables that appear in expressions (other than as arguments to function calls); only used for --test
+    // (key = mangled id, value = demangled id)
+    Varmap test_vars;
 
     // with the input to --test is raw python code (vs just being a list of boolean expressions, one per line)
     bool test_is_raw_python = false;
@@ -1086,11 +1106,12 @@ void process(const std::string &filename, const Options &opt, const std::set<std
         // debug_tokens(tokens);
 
         if (opt.assign) { process_assign(tokens, line, filename, actual_line_num, variable_hierarchy); }
-        else if (opt.test) { process_test(tokens, line, filename, actual_line_num, &test_is_raw_python); }
+        else if (opt.test) { process_test(tokens, line, filename, actual_line_num, &test_is_raw_python, test_vars); }
         else { process_command(tokens, assigned_vars, opt, restrict_vars); }
     }
 
     if (opt.command) { print_assigned_variables(assigned_vars); }
+    if (opt.test && !test_is_raw_python) { validate_test_variables(test_vars); }
 }
 
 void read_restrict_vars(const std::string &filename, std::set<std::string> &restrict_vars)
