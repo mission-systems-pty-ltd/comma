@@ -115,6 +115,7 @@ function comma_path_value_to_var()
         [[ -n "$value" || -n "$null_ok" ]] || continue
         name=$prefix${path//\//$delimiter}
         name=${name//-/$delimiter}
+        value=${value#\"}; value=${value%\"} # Strip quotes
         eval "$export_variable $name=$quote$value$quote" \
             || { echo "comma-application-util: comma_path_value_to_var failed '$export_variable $name=$quote$value$quote'" >&2 ; ret_code=1 ; }
     done
