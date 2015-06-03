@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # this script is designed to be included in another script directly, for example:
 # source $( which comma-sync )
