@@ -27,7 +27,7 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-/// @author vsevolod vlaskine
+/// @author matthew imhoff
 
 #include <string.h>
 #include <iostream>
@@ -58,11 +58,22 @@ static void usage( bool more )
     std::cerr << std::endl;
     std::cerr << "Options:" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
-    std::cerr << "    --order=<fields>: order in which to sort fields" << std::endl;
+    std::cerr << "    --order <fields>: order in which to sort fields" << std::endl;
     std::cerr << "    --string,-s: keys are strings; a quick and dirty option to support strings" << std::endl;
     std::cerr << "                 default: double" << std::endl;
-    std::cerr << "    --revers,-r: sort in reverse order" << std::endl;
+    std::cerr << "    --reverse,-r: sort in reverse order" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "examples" << std::endl;
+    std::cerr << "    sort by first field:" << std::endl;
+    std::cerr << "        echo -e \"2\\n1\\n3\" | csv-sort --fields=a" << std::endl;
+    std::cerr << "    sort by second field:" << std::endl;
+    std::cerr << "        echo -e \"2,3\\n1,1\\n3,2\" | csv-sort --fields=,b" << std::endl;
+    std::cerr << "    sort by second field then first field:" << std::endl;
+    std::cerr << "        echo -e \"2,3\\n3,1\\n1,1\\n2,2\\n1,3\" | csv-sort --fields=a,b --order=b,a" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << comma::contact_info << std::endl;
+    std::cerr << std::endl;
     if( more )
     {
         std::cerr << std::endl;
