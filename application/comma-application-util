@@ -227,11 +227,12 @@ export -f comma_env
 # This is a signal handler used by comma_execute_and_wait. See that function for detail.
 function terminate_comma_execute_and_wait()
 {
-    trap '' ${signal_list//,/ }        # temporarily ignore signals
+    trap '' SIGTERM SIGINT SIGHUP SIGPIPE SIGQUIT      # temporarily ignore signals
     local usepg=$1
     local killsign="-"
     [[ "$usepg" == "false" ]] && killsign=""
     local received_signal=$2
+    echo "comma_execute_and_wait: interrupted by $received_signal, killsign='$killsign'" >&2
     # kill the command(s) being executed
     local command_to_execute_index
     for command_to_execute_index in ${!commands_to_execute_pgid[@]} ; do
@@ -243,6 +244,7 @@ function terminate_comma_execute_and_wait()
     done
     eval "$comma_execute_and_wait_saved_traps"  # use old handlers
     unset comma_execute_and_wait_saved_traps
+    echo "comma_execute_and_wait: re-raise $received_signal" >&2
     kill -s $received_signal $BASHPID           # relinguish control
 }
 export -f terminate_comma_execute_and_wait
