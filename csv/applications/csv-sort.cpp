@@ -38,7 +38,6 @@
 #include <boost/lexical_cast.hpp>
 #include <comma/application/command_line_options.h>
 #include <comma/application/contact_info.h>
-#include <comma/application/signal_flag.h>
 #include <comma/base/exception.h>
 #include <comma/base/types.h>
 #include <comma/csv/stream.h>
@@ -58,7 +57,7 @@ static void usage( bool more )
     std::cerr << std::endl;
     std::cerr << "Options:" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
-    std::cerr << "    --order <fields>: order in which to sort fields" << std::endl;
+    std::cerr << "    --order <fields>: order in which to sort fields; default is input field order" << std::endl;
     std::cerr << "    --string,-s: keys are strings; a quick and dirty option to support strings" << std::endl;
     std::cerr << "                 default: double" << std::endl;
     std::cerr << "    --reverse,-r: sort in reverse order" << std::endl;
@@ -85,7 +84,6 @@ static void usage( bool more )
 
 static bool verbose;
 static comma::csv::options stdin_csv;
-comma::signal_flag is_shutdown;
 
 template < typename K >
 struct input
@@ -127,13 +125,25 @@ template < typename T > struct traits< input< T > >
 
 } } // namespace comma { namespace visiting {
 
+template < typename It > static void output_( It it, It end )
+{
+    for( ; it != end; ++it )
+    {
+        for( std::size_t i = 0; i < it->second.size() ; ++i )
+        {
+            std::cout.write( &( it->second[i][0] ), stdin_csv.binary() ? stdin_csv.format().size() : it->second[i].length() );
+            if( stdin_csv.flush ) { std::cout.flush(); }
+        }
+    }
+}
+
+
 template < typename K > struct sort_ // quick and dirty
 {
-    static typename input< K >::map sorted_map;
-    static input< K > default_input;
-
     static int run( const comma::command_line_options& options )
     {
+        typename input< K >::map sorted_map;
+        input< K > default_input;
         std::vector< std::string > v = comma::split( stdin_csv.fields, ',' );
         std::vector< std::string > order = options.exists("--order") ? comma::split( options.value< std::string >( "--order" ), ',' ) : v;
         std::vector< std::string > w (v.size());
@@ -161,7 +171,7 @@ template < typename K > struct sort_ // quick and dirty
         #ifdef WIN32
         if( stdin_stream.is_binary() ) { _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
-        while( !is_shutdown && std::cin.good() && !std::cin.eof() )
+        while( stdin_stream.ready() || ( std::cin.good() && !std::cin.eof() ) )
         {
             const input< K >* p = stdin_stream.read();
             if( !p ) { break; }
@@ -174,60 +184,16 @@ template < typename K > struct sort_ // quick and dirty
             }
             else
             {
-                sorted_map[*p].push_back( comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) );
+                sorted_map[*p].push_back( comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) + "\n" );
             }
         }
         
-        if (!options.exists("--reverse,-r"))
-        {
-            for( typename input< K >::map::const_iterator it = sorted_map.begin(); it != sorted_map.end(); ++it )
-            {
-                if( stdin_stream.is_binary() )
-                {
-                    for( std::size_t i = 0; i < it->second.size() ; ++i )
-                    {
-                        std::cout.write( &( it->second[i][0] ), stdin_csv.format().size() );
-                        std::cout.flush();
-                    }
-                    std::cout.flush();
-                }
-                else
-                {
-                    for( std::size_t i = 0; i < it->second.size() ; ++i )
-                    {
-                        std::cout << ( it->second[i] ) << std::endl;
-                    }
-                } 
-            }
-        } 
-        else
-        {
-            for( typename input< K >::map::const_reverse_iterator it = sorted_map.rbegin(); it != sorted_map.rend(); ++it )
-            {
-                if( stdin_stream.is_binary() )
-                {
-                    for( std::size_t i = 0; i < it->second.size() ; ++i )
-                    {
-                        std::cout.write( &( it->second[i][0] ), stdin_csv.format().size() );
-                        std::cout.flush();
-                    }
-                    std::cout.flush();
-                }
-                else
-                {
-                    for( std::size_t i = 0; i < it->second.size() ; ++i )
-                    {
-                        std::cout << ( it->second[i] ) << std::endl;
-                    }
-                } 
-            }
-        }
+        if( options.exists( "--reverse,-r" ) ) { output_( sorted_map.rbegin(), sorted_map.rend() ); }
+        else { output_( sorted_map.begin(), sorted_map.end() ); }
+        
         return 0;
     }
 };
-
-template < typename K > input< K > sort_< K >::default_input;
-template < typename K > typename input< K >::map sort_< K >::sorted_map;
 
 int main( int ac, char** av )
 {
