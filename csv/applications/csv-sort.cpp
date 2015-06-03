@@ -53,7 +53,7 @@ static void usage( bool more )
     std::cerr << std::endl;
     std::cerr << "Sort a csv file using one or several keys" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "Usage: cat something.csv csv-sort [<options>]" << std::endl;
+    std::cerr << "Usage: cat something.csv | csv-sort [<options>]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "Options:" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
@@ -138,62 +138,59 @@ template < typename It > static void output_( It it, It end )
 }
 
 
-template < typename K > struct sort_ // quick and dirty
+template < typename K > static int sort( const comma::command_line_options& options )
 {
-    static int run( const comma::command_line_options& options )
+    typename input< K >::map sorted_map;
+    input< K > default_input;
+    std::vector< std::string > v = comma::split( stdin_csv.fields, ',' );
+    std::vector< std::string > order = options.exists("--order") ? comma::split( options.value< std::string >( "--order" ), ',' ) : v;
+    std::vector< std::string > w (v.size());
+    for( std::size_t i = 0; i < order.size(); ++i ) // quick and dirty, wasteful, but who cares
     {
-        typename input< K >::map sorted_map;
-        input< K > default_input;
-        std::vector< std::string > v = comma::split( stdin_csv.fields, ',' );
-        std::vector< std::string > order = options.exists("--order") ? comma::split( options.value< std::string >( "--order" ), ',' ) : v;
-        std::vector< std::string > w (v.size());
-        for( std::size_t i = 0; i < order.size(); ++i ) // quick and dirty, wasteful, but who cares
+        if (order[i].empty()) continue;
+        for( std::size_t k = 0; k < v.size(); ++k )
         {
-            if (order[i].empty()) continue;
-            for( std::size_t k = 0; k < v.size(); ++k )
-            {
-                if( v[k].empty() || v[k] != order[i] ) 
+            if( v[k].empty() || v[k] != order[i] ) 
+            { 
+                if ( k + 1 == v.size()) 
                 { 
-                    if ( k + 1 == v.size()) 
-                    { 
-                        std::cerr << "csv-sort: order field name \"" << order[i] << "\" not found in input fields \"" << stdin_csv.fields << "\"" << std::endl;
-                        return 1;
-                    }
-                    continue; 
+                    std::cerr << "csv-sort: order field name \"" << order[i] << "\" not found in input fields \"" << stdin_csv.fields << "\"" << std::endl;
+                    return 1;
                 }
-                w[k] = "keys[" + boost::lexical_cast< std::string >( default_input.keys.size() ) + "]";
-                default_input.keys.resize( default_input.keys.size() + 1 ); // quick and dirty
-                break;
-           }
-        }
-        stdin_csv.fields = comma::join( w, ',' );
-        comma::csv::input_stream< input< K > > stdin_stream( std::cin, stdin_csv, default_input );
-        #ifdef WIN32
-        if( stdin_stream.is_binary() ) { _setmode( _fileno( stdout ), _O_BINARY ); }
-        #endif
-        while( stdin_stream.ready() || ( std::cin.good() && !std::cin.eof() ) )
-        {
-            const input< K >* p = stdin_stream.read();
-            if( !p ) { break; }
-            if( stdin_stream.is_binary() )
-            {
-                typename input< K >::map::mapped_type& d = sorted_map[ *p ];
-                d.push_back( std::string() );
-                d.back().resize( stdin_csv.format().size() );
-                ::memcpy( &d.back()[0], stdin_stream.binary().last(), stdin_csv.format().size() );
+                continue; 
             }
-            else
-            {
-                sorted_map[*p].push_back( comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) + "\n" );
-            }
+            w[k] = "keys[" + boost::lexical_cast< std::string >( default_input.keys.size() ) + "]";
+            default_input.keys.resize( default_input.keys.size() + 1 ); // quick and dirty
+            break;
         }
-        
-        if( options.exists( "--reverse,-r" ) ) { output_( sorted_map.rbegin(), sorted_map.rend() ); }
-        else { output_( sorted_map.begin(), sorted_map.end() ); }
-        
-        return 0;
     }
-};
+    stdin_csv.fields = comma::join( w, ',' );
+    comma::csv::input_stream< input< K > > stdin_stream( std::cin, stdin_csv, default_input );
+    #ifdef WIN32
+    if( stdin_stream.is_binary() ) { _setmode( _fileno( stdout ), _O_BINARY ); }
+    #endif
+    while( stdin_stream.ready() || ( std::cin.good() && !std::cin.eof() ) )
+    {
+        const input< K >* p = stdin_stream.read();
+        if( !p ) { break; }
+        if( stdin_stream.is_binary() )
+        {
+            typename input< K >::map::mapped_type& d = sorted_map[ *p ];
+            d.push_back( std::string() );
+            d.back().resize( stdin_csv.format().size() );
+            ::memcpy( &d.back()[0], stdin_stream.binary().last(), stdin_csv.format().size() );
+        }
+        else
+        {
+            sorted_map[*p].push_back( comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) + "\n" );
+        }
+    }
+    
+    if( options.exists( "--reverse,-r" ) ) { output_( sorted_map.rbegin(), sorted_map.rend() ); }
+    else { output_( sorted_map.begin(), sorted_map.end() ); }
+    
+    return 0;
+}
 
 int main( int ac, char** av )
 {
@@ -203,8 +200,8 @@ int main( int ac, char** av )
         verbose = options.exists( "--verbose,-v" );
         stdin_csv = comma::csv::options( options );
         return   options.exists( "--string,-s" )
-               ? sort_< std::string >::run( options )
-               : sort_< double >::run( options );
+               ? sort< std::string >( options )
+               : sort< double >( options );
     }
     catch( std::exception& ex )
     {
