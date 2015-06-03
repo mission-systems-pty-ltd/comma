@@ -700,7 +700,7 @@ function run_single_test()
                         report_waiting "waiting for resources"
                         [[ "$max_wait_time" != "forever" ]] && {
                             if gawk '{ a=$1 > $2; exit !a }' < <( echo $wait_time $max_wait_time ) ; then
-                                echo "$name: in '$dir', could not get $parallel CPUs for ${wait_time}s, failed to run" >&2
+                                echo "$name: in '$dir', could not get requested resources for ${wait_time}s, failed to run" >&2
                                 result=1
                                 break
                             fi
