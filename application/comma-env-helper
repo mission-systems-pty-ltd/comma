@@ -13,6 +13,6 @@ EOF
 (( $# < 2 )) && nonusage
 [[ "$1" == "-h" || "$1" == "--help" ]] && nonusage
 
-[[ -r "$1" ]] && source "$1"
+[[ -f "$1" && $( basename "$1" ) == comma-env.* ]] && { source "$1" && rm -f "$1"; }
 shift
 $@
