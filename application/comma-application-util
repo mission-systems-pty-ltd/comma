@@ -35,6 +35,8 @@
 [[ -n "$comma_application_util_include_guard_" ]] && return
 readonly comma_application_util_include_guard_=1
 
+source $( which comma-name-value-util ) || { echo "comma-application-util: comma-name-value-util not found" >&2 ; exit 1 ; } # for backward compatibility
+
 # usage: get_children [<pid>] [--recursive]
 # output the process ids of all children of a process (space separated); by default, just direct children,
 # not descendants
@@ -520,100 +522,6 @@ function comma_trap_bye_impl()
 }
 export -f comma_trap_bye_impl
 
-# take path-value pairs, assign the values to corresponding bash variables
-# in the variable name slashes will be replaced with given delimiter
-#
-# delimiter: default '_'
-# dash '-': replaced with '_'
-# lines starting with '#' ignored
-# empty lines ignored
-#
-# [--export] : variables created export
-# [--null-ok]: null variables are defined, otherwise ignored
-# [--prefix="<prefix>"]: prefix used for defining variables
-# [--delimiter="<delimiter>"]: delimiter used for replacing '/'
-# [--no-quotes]: don't quote the values
-#
-# examples (try them):
-#     comma_path_value_to_var < <( echo hello=world )
-#     echo $hello
-#
-#     comma_path_value_to_var < <( echo hello/world=bye )
-#     echo $hello__world
-#
-#     comma_path_value_to_var blah < <( echo hello/world=bye )
-#     echo $blah__hello__world
-function comma_path_value_to_var()
-{
-    local prefix=""
-    local delimiter="_"
-    local export_variable=""
-    local null_ok=""
-    local quote="\""
-
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-        --export) export_variable="export" ;;
-        --null-ok) null_ok="true" ;;
-        --prefix=*) prefix="${1#*=}" ;;
-        --delimiter=*) delimiter="${1#*=}" ;;
-        --no-quotes) quote="" ;;
-        esac
-        shift
-    done
-
-    [[ -z "$prefix" ]] || prefix="$prefix$delimiter"
-
-    local path name value
-    local -i ret_code=0
-    while IFS='=' read path value ; do
-        [[ -n "$path" && ! "$path" =~ ^[#\"] ]] || continue
-        [[ -n "$value" || -n "$null_ok" ]] || continue
-        name=$prefix${path//\//$delimiter}
-        name=${name//-/$delimiter}
-        eval "$export_variable $name=$quote$value$quote" \
-            || { echo "comma-application-util: comma_path_value_to_var failed '$export_variable $name=$quote$value$quote'" >&2 ; ret_code=1 ; }
-    done
-    return $ret_code
-}
-export -f comma_path_value_to_var
-
-# take path-value pairs, output the values of corresponding bash variables
-# in the variable name slashes will be replaced with given delimiter
-#
-# delimiter: default '_'
-# dash '-': replaced with '_'
-# lines starting with '#' ignored
-# empty lines ignored
-#
-# usage: comma_path_value_from_var [--export] [<prefix>] [<slash replacement>]
-#     <prefix>: variable name prefix
-#     <slash replacement>: slash replacement; default: _
-#     --export: if present, export variables
-#
-# examples (try them):
-#     todo
-function comma_path_value_from_var()
-{
-    local prefix=$1
-    local path=""
-    local value=""
-    local default_value=""
-    local name=""
-    local delimiter="_"
-    if [ ! -z $2 ] ; then delimiter="$2" ; fi
-    if [ ! -z $1 ] ; then prefix="$1$delimiter" ; fi
-    while IFS='=' read path default_value ; do
-        if [[ "$path" == "" ]] ; then continue ; fi
-        if [[ "$path" =~ "#" ]] ; then continue ; fi
-        name=$prefix$( echo $path | sed "s/\//$delimiter/g" | sed "s/-/_/g" )
-        eval value=\$$name
-        [[ "$value" == "" && "$default_value" != "" ]] && value=$default_value
-        [[ "$value" != "" ]] && echo "$path=$value"
-    done
-}
-export -f comma_path_value_from_var
-
 # usage: my_options=( $( cat name-value-pairs | comma_options_from_name_value [<options>] ) )
 #
 # options
@@ -660,24 +568,16 @@ export -f comma_options_has
 # if ! status_ok ; then echo "failed"; else echo "ok"; fi
 
 # define this value once to avoid calling subprocesses inside status_ok
-SIGPIPE_EXIT_STATUS=$( expr 128 \+ $( kill -l SIGPIPE ) )
-export SIGPIPE_EXIT_STATUS
+comma_sigpipe_exit_status_=$( expr 128 \+ $( kill -l SIGPIPE ) )
+export comma_sigpipe_exit_status_
 
 function comma_status_ok()
 {
     pipestatus_copy_status_ok=("${PIPESTATUS[@]}")  # make a safe copy
     local outcome_status_ok=""
     for outcome_status_ok in "${pipestatus_copy_status_ok[@]}" ; do
-        (( outcome_status_ok == 0 || outcome_status_ok == SIGPIPE_EXIT_STATUS )) || return 1
+        (( outcome_status_ok == 0 || outcome_status_ok == comma_sigpipe_exit_status_ )) || return 1
     done
     return 0
 }
 export -f comma_status_ok
-
-# Leave only the last of path=value lines with identical paths
-# No arguments, stdin to stdout
-function comma_take_last_path_value()
-{
-    tac | sort -u -t= -k1,1 -s
-}
-export -f comma_take_last_path_value
