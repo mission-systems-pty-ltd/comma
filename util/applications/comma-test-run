@@ -473,7 +473,7 @@ export -f comma_top_wrapper
 function terminate_run_and_match_test()
 {
     trap '' SIGINT SIGTERM SIGHUP SIGPIPE
-    echo "terminating test in $( pwd )..." >&2
+    echo "$name: terminating test in $( pwd )..." >&2
     if [[ -n "$comma_test_run_test_pgid" ]] ; then
         kill -s TERM -- -$comma_test_run_test_pgid
         wait $comma_test_run_test_pgid
@@ -514,7 +514,7 @@ function run_and_match_test()
     if [[ $test_failed == 0 && -f "./expected" ]]; then
         match_output=$( echo "$test_output" | comma-test-match ./expected 2>&1 )
         if [[ -n "$match_output" ]]; then
-            error_ "comma-test-run: test output does not match expected:\n"
+            error_ "$name: test output does not match expected:\n"
             echo "expected output:" >&2
             echo "$match_output" >&2
             echo >&2
@@ -560,7 +560,7 @@ export -f run_test_with_timeout
 function terminate_run_single_test()
 {
     trap '' SIGINT SIGTERM SIGHUP SIGPIPE
-    echo "test run terminated by $1..." >&2
+    echo "$name: single test run terminated by $1..." >&2
     if [[ -n "$comma_test_run_test_pid" ]] ; then
         kill -s TERM -- $comma_test_run_test_pid
         wait $comma_test_run_test_pid
@@ -738,7 +738,7 @@ export -f run_single_test
 function terminate_tests_parallel()
 {
     trap '' SIGINT SIGTERM SIGHUP SIGPIPE
-    echo "parallel test run terminated by $1..." >&2
+    echo "$name: parallel test run terminated by $1..." >&2
     if [[ -n "$comma_test_run_xargs_pid" ]] ; then
         kill -s STOP -- $comma_test_run_xargs_pid
         pkill --signal TERM -P $comma_test_run_xargs_pid
@@ -772,7 +772,7 @@ function process_tests_parallel()
 function terminate_tests_serial()
 {
     trap '' SIGINT SIGTERM SIGHUP SIGPIPE
-    echo "serial test run terminated by $1..." >&2
+    echo "$name: serial test run terminated by $1..." >&2
     if [[ -n "$comma_test_run_test_pid" ]] ; then
         kill -s TERM -- $comma_test_run_test_pid 2>/dev/null
         wait $comma_test_run_test_pid
@@ -899,7 +899,7 @@ if [[ -z "$options_stdin" ]] ; then
     test_script_dirs=( $( test_directories ) )
 else
     while read line ; do
-        [[ -d "$line" ]] || { echo "comma-test-run: directory not found: \"$line\"" >&2 ; exit 1 ; }
+        [[ -d "$line" ]] || { echo "$name: directory not found: \"$line\"" >&2 ; exit 1 ; }
         test_script_dirs+=( "$line" )
     done
 fi
