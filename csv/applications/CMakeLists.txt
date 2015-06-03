@@ -16,6 +16,7 @@ add_executable( csv-select ${dir}/csv-select.cpp )
 add_executable( csv-bin-cut ${dir}/csv-bin-cut.cpp )
 add_executable( csv-from-columns ${dir}/csv-from-columns.cpp )
 add_executable( csv-join ${dir}/csv-join.cpp )
+add_executable( csv-sort ${dir}/csv-sort.cpp )
 add_executable( csv-paste ${dir}/csv-paste.cpp )
 #add_executable( csv-make-blocks ${dir}/csv-make-blocks.cpp )
 add_executable( csv-split ${dir}/csv-split.cpp ${dir}/split/split.cpp ${dir}/split/split.h )
@@ -41,6 +42,7 @@ target_link_libraries ( csv-bin-cut ${comma_ALL_EXTERNAL_LIBRARIES} comma_applic
 target_link_libraries ( csv-split comma_csv comma_application comma_string comma_xpath ${comma_ALL_EXTERNAL_LIBRARIES} )
 target_link_libraries ( csv-from-columns ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io comma_string )
 target_link_libraries ( csv-join ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_io comma_xpath comma_string )
+target_link_libraries ( csv-sort ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_io comma_xpath comma_string )
 target_link_libraries ( csv-select ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_xpath comma_string )
 target_link_libraries ( csv-paste ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv comma_io )
 #target_link_libraries ( csv-make-blocks ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_xpath comma_string )
@@ -63,6 +65,7 @@ install( TARGETS csv-bin-cut
                  csv-fields
                  csv-format
                  csv-join
+                 csv-sort
                  csv-from-columns
                  csv-paste
                  #csv-make-blocks
