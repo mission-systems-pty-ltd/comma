@@ -474,10 +474,10 @@ function terminate_run_and_match_test()
 {
     trap '' SIGINT SIGTERM SIGHUP SIGPIPE
     echo "$name: terminating test in $( pwd )..." >&2
-    if [[ -n "$comma_test_run_test_pgid" ]] ; then
-        kill -s TERM -- -$comma_test_run_test_pgid
-        wait $comma_test_run_test_pgid
-        unset comma_test_run_test_pgid
+    if [[ -n "$comma_test_run_and_match_test_pgid" ]] ; then
+        kill -s TERM -- -$comma_test_run_and_match_test_pgid
+        wait $comma_test_run_and_match_test_pgid
+        unset comma_test_run_and_match_test_pgid
     fi
     if [[ -n "$comma_top_pgid" ]] ; then
         kill -s TERM -- -$comma_top_pgid
@@ -543,10 +543,10 @@ function run_test_with_timeout()
     fi
     # Note: timeout option '-k' is missing in RHEL6, remove '-k 10' if need be
     local rv
-    timeout -k 10 -s TERM $max_run_time bash -c run_and_match_test & comma_test_run_test_pgid=$!
-    wait $comma_test_run_test_pgid
+    timeout -k 10 -s TERM $max_run_time bash -c run_and_match_test & comma_test_run_and_match_test_pgid=$!
+    wait $comma_test_run_and_match_test_pgid
     rv=$?
-    unset comma_test_run_test_pgid
+    unset comma_test_run_and_match_test_pgid
     if [[ "$options_estimate_resources" == "1" ]] ; then
         kill -s TERM -- -$comma_top_pgid
         wait $comma_top_pgid
@@ -638,9 +638,10 @@ function run_single_test()
     #       e.g: text, csv, junit, etc
     if [[ -z "$options_junit" ]] ; then exec 3>&1 4>&2 1>"$our_stderrout_log" 2>&1 ; else exec 3>&1 4>&2 1>"$our_stderrout_log" ; fi
 
-    local test_exec basedir
     # must save pid of any background process in this variable, so that it is killed by signal handler
-    local outcome
+    local comma_test_run_test_pid
+
+    local test_exec basedir outcome
     local result=0
     local request="$comma_test_run_unique_dir/request.${worker_id}.json"
 
@@ -773,9 +774,10 @@ function terminate_tests_serial()
 {
     trap '' SIGINT SIGTERM SIGHUP SIGPIPE
     echo "$name: serial test run terminated by $1..." >&2
-    if [[ -n "$comma_test_run_test_pid" ]] ; then
-        kill -s TERM -- $comma_test_run_test_pid 2>/dev/null
-        wait $comma_test_run_test_pid
+    if [[ -n "$comma_test_run_single_test_pid" ]] ; then
+        kill -s TERM -- $comma_test_run_single_test_pid 2>/dev/null
+        wait $comma_test_run_single_test_pid
+        unset comma_test_run_single_test_pid
     fi
     is_killed=true
     # a process that exits in response to SIGINT should kill itself with SIGINT
@@ -791,10 +793,10 @@ function process_tests_serial()
     while true; do
         read line
         [[ -z "$line" ]] && break
-        run_single_test "$options_path" "$stats_progress_csv" "$verbose" "$test_scripts_count" $line & comma_test_run_test_pid=$!
-        wait $comma_test_run_test_pid
+        run_single_test "$options_path" "$stats_progress_csv" "$verbose" "$test_scripts_count" $line & comma_test_run_single_test_pid=$!
+        wait $comma_test_run_single_test_pid
         rv=$?
-        unset comma_test_run_test_pid
+        unset comma_test_run_single_test_pid
         (( $rv == 0 )) || {
             result=1
             [[ "$options_until_first_failure" == "1" ]] && return 1
