@@ -78,15 +78,10 @@ class stream
 {
     public:
         stream( const std::string address ) : address_( address ) {}
-        
         virtual ~stream() {}
-        
-        virtual unsigned int read( std::vector< char >& buffer ) = 0;
-        
+        virtual unsigned int read_available( std::vector< char >& buffer ) = 0;
         virtual comma::io::file_descriptor fd() const = 0;
-        
         virtual bool eof() const = 0;
-        
         const std::string& address() const { return address_; }
         
     private:
@@ -113,7 +108,7 @@ class udp_stream : public stream
         
         comma::io::file_descriptor fd() const { return socket_.native_handle(); }
         
-        unsigned int read( std::vector< char >& buffer )
+        unsigned int read_available( std::vector< char >& buffer )
         {
             boost::system::error_code error;
             std::size_t size = socket_.receive( boost::asio::buffer( buffer ), 0, error );
@@ -138,11 +133,11 @@ class any_stream : public stream
         
         comma::io::file_descriptor fd() const { return istream_.fd(); }
         
-        unsigned int read( std::vector< char >& buffer )
+        unsigned int read_available( std::vector< char >& buffer )
         {
+            unsigned int available = istream_.available();
             if( binary_ )
             {
-                unsigned int available = istream_.available();
                 unsigned int size = std::min( std::size_t( size_ ? ( available / size_ ) * size_ : available ), buffer.size() );
                 if( size == 0 ) { return 0; }
                 istream_->read( &buffer[0], size );
@@ -150,11 +145,13 @@ class any_stream : public stream
             }
             else
             {
+                if( !available ) { return 0; }
                 std::string line; // quick and dirty, no-one expects ascii to be fast
                 std::getline( *istream_, line );
                 if( line.empty() ) { return 0; }
-                if( line.size() > buffer.size() ) { buffer.resize( line.size() ); }
+                if( line.size() >= buffer.size() ) { buffer.resize( line.size() + 1 ); }
                 ::memcpy( &buffer[0], &line[0], line.size() );
+                buffer.back() = '\n';
                 return line.size();
             }
         }
@@ -177,45 +174,52 @@ stream* make_stream( const std::string& address, unsigned int size, bool binary 
 
 int main( int argc, char** argv )
 {
-    #ifdef WIN32
-    std::cerr << "io-cat: not implemented on windows" << std::endl;
-    return 1;
-    #endif
-    if( argc < 2 ) { usage(); }
-    comma::command_line_options options( argc, argv, usage );
-    unsigned int size = options.value( "--size,-s", 0 );
-    bool unbuffered = options.exists( "--unbuffered,-u" );
-    const std::vector< std::string >& unnamed = options.unnamed( "--unbuffered,-u", "-.+" );
-    #ifdef WIN32
-    if( size || unnamed.size() == 1 ) { _setmode( _fileno( stdout ), _O_BINARY ); }
-    #endif
-    if( unnamed.empty() ) { std::cerr << "io-cat: please specify at least one source" << std::endl; return 1; }
-    boost::ptr_vector< stream > streams;
-    comma::io::select select;
-    for( unsigned int i = 0; i < unnamed.size(); ++i )
-    { 
-        streams.push_back( make_stream( unnamed[i], size, size || unnamed.size() == 1 ) );
-        select.read().add( streams.back() );
-    }
-    std::vector< char > buffer( 65536 );
-    comma::signal_flag is_shutdown;
-    while( !is_shutdown )
+    try
     {
-        bool done = true;
-        for( unsigned int i = 0; i < streams.size() && done; done = streams[i].eof(), ++i );
-        if( done ) { break; }
-        select.wait( boost::posix_time::seconds( 1 ) );
-        for( unsigned int i = 0; i < streams.size(); ++i )
+        #ifdef WIN32
+        std::cerr << "io-cat: not implemented on windows" << std::endl;
+        return 1;
+        #endif
+        if( argc < 2 ) { usage(); }
+        comma::command_line_options options( argc, argv, usage );
+        unsigned int size = options.value( "--size,-s", 0 );
+        bool unbuffered = options.exists( "--unbuffered,-u" );
+        const std::vector< std::string >& unnamed = options.unnamed( "--unbuffered,-u", "-.+" );
+        #ifdef WIN32
+        if( size || unnamed.size() == 1 ) { _setmode( _fileno( stdout ), _O_BINARY ); }
+        #endif
+        if( unnamed.empty() ) { std::cerr << "io-cat: please specify at least one source" << std::endl; return 1; }
+        boost::ptr_vector< stream > streams;
+        comma::io::select select;
+        for( unsigned int i = 0; i < unnamed.size(); ++i )
+        { 
+            streams.push_back( make_stream( unnamed[i], size, size || unnamed.size() == 1 ) );
+            select.read().add( streams.back() );
+        }
+        std::vector< char > buffer( 65536 );
+        comma::signal_flag is_shutdown;
+        for( bool done = false; !is_shutdown && !done; )
         {
-            if( streams[i].eof() || !select.read().ready( streams[i].fd() ) ) { continue; }
-            while( !is_shutdown && !streams[i].eof() )
+            if( select.wait( boost::posix_time::seconds( 1 ) ) == 0 ) { continue; }
+            done = true;
+            for( unsigned int i = 0; i < streams.size(); ++i )
             {
-                unsigned int count = streams[i].read( buffer );
-                if( count == 0 ) { break; }
-                if( size && count % size != 0 ) { std::cerr << "io-cat: expected " << size << " byte(s), got only " << ( count % size ) << " on " << streams[i].address() << std::endl; return 1; }
-                std::cout.write( &buffer[0], count );
-                if( unbuffered ) { std::cout.flush(); }
+                if( streams[i].eof() ) { continue; }
+                if( !select.read().ready( streams[i].fd() ) ) { done = false; continue; }
+                while( !is_shutdown && !streams[i].eof() )
+                {
+                    unsigned int count = streams[i].read_available( buffer );
+                    if( count == 0 ) { break; }
+                    done = false;
+                    if( size && count % size != 0 ) { std::cerr << "io-cat: expected " << size << " byte(s), got only " << ( count % size ) << " on " << streams[i].address() << std::endl; return 1; }
+                    std::cout.write( &buffer[0], count );
+                    if( unbuffered ) { std::cout.flush(); }
+                }
             }
         }
+        return 0;
     }
+    catch( std::exception& ex ) { std::cerr << "io-cat: " << ex.what() << std::endl; }
+    catch( ... ) { std::cerr << "io-cat: unknown exception" << std::endl; }
+    return 1;
 }
