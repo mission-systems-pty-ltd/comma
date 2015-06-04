@@ -268,15 +268,9 @@ int main( int ac, char** av )
             }
         }
     }
-    catch( std::exception& ex )
-    {
-        std::cerr << "csv-paste: " << ex.what() << std::endl;
-    }
-    catch( ... )
-    {
-        std::cerr << "csv-paste: unknown exception" << std::endl;
-    }
-    if( show_usage ) { usage(); }
+    catch( std::exception& ex ) { std::cerr << "csv-paste: " << ex.what() << std::endl; }
+    catch( ... ) { std::cerr << "csv-paste: unknown exception" << std::endl; }
+    return 1;
 }
 
 
