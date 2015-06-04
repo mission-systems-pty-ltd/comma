@@ -50,7 +50,12 @@ void usage( bool verbose = false )
     std::cerr << std::endl;
     std::cerr << "usage: io-cat <address> [<address>] ... [<options>]" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "options: " << std::endl;
+    std::cerr << "options" << std::endl;
+    std::cerr << "    --round-robin=[<number of packets>]: todo: only for multiple inputs: read not more" << std::endl;
+    std::cerr << "                                         than <number of packets> from an input at once," << std::endl;
+    std::cerr << "                                         before checking other inputs" << std::endl;
+    std::cerr << "                                         if not specified, read from each input" << std::endl;
+    std::cerr << "                                         all available data" << std::endl;
     std::cerr << "    --size,-s=[<size>]: packet size, if multiple sources" << std::endl;
     std::cerr << "    --unbuffered,-u: flush output" << std::endl;
     std::cerr << std::endl;
@@ -69,7 +74,12 @@ void usage( bool verbose = false )
     std::cerr << "        echo hello | io-cat -" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    multiple streams" << std::endl;
-    std::cerr << "        todo" << std::endl;
+    std::cerr << "        merge line-based input" << std::endl;
+    std::cerr << "            io-cat tcp:localhost:55555 tcp:localhost:88888" << std::endl;
+    std::cerr << "        merge binary input with packet size 100 bytes" << std::endl;
+    std::cerr << "            io-cat tcp:localhost:55555 tcp:localhost:88888 --size 100" << std::endl;
+    std::cerr << "        merge line-based input with stdin" << std::endl;
+    std::cerr << "            echo hello | io-cat tcp:localhost:55555 -" << std::endl;
     std::cerr << std::endl;
     exit( 1 );
 }
