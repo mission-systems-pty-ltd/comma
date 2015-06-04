@@ -103,7 +103,3 @@ install( TARGETS csv-interval RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPO
 add_executable( csv-cast ${dir}/csv-cast.cpp )
 target_link_libraries ( csv-cast ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv )
 install( TARGETS csv-cast RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
-
-add_executable( csv-merge ${dir}/csv-merge.cpp )
-target_link_libraries ( csv-merge ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io comma_string comma_xpath comma_csv )
-install( TARGETS csv-merge RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
