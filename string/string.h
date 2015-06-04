@@ -47,26 +47,15 @@ std::string strip( const std::string& s, const char* characters = " \t\r\n" );
 /// strip given character from the beginning and end
 std::string strip( const std::string& s, char character );
 
-// Escape any quote, escape or delimiter characters by preceding them with esc
-std::string escape( const std::string & s, char esc = '\\', char quote = '\'' );
-std::string escape( const std::string & s, char esc, char quote, char delimiter );
-std::string escape( const std::string & s, char esc, const char* characters );
-/// Transform the string and remove any quotes and escape characters.
-/// It would not be safe to unescape with delimiters, so split first.
-///
-/// An escape character can be anywhere in the string.
-/// An escape character at end of string.will be kept.
-/// An escape character will only escape a delimiter, quote or escape character;
-/// escaping any other character will result in both being kept;
-/// e.g. c:\windows\ will be kept as c:\windows\ with the trailing backslash
-/// e.g. fname;delimiter=\\;field=a,b will be kept as fname;delimiter=\;field=a,b 
-///
-/// A quote may be anywhere in a string. Quotes must be closed; i.e Each start
-/// quote must be paired with an end quote, or an exception is thrown.
-/// Quotes don't nest and can not be mixed; e.g. a ' will not close a " quoted string.
-/// However "'" and '"' are perfectly legal strings of ' and "
-std::string unescape( const std::string & s, char esc = '\\', char quote = '\'' );
-std::string unescape( const std::string & s, char esc, const char* quotes );
+// Escape given character and escape characters by preceding them with escape charcter.
+std::string escape( const std::string & s, char character = '\'', char esc = '\\' );
+// Escape any of the given characters and escape character by preceding them with escape character
+std::string escape( const std::string & s, const char* characters, char esc = '\\' );
+
+// Escape given character and escape characters by preceding them with escape charcter.
+std::string unescape( const std::string & s, char character = '\'', char esc = '\\' );
+// Escape any of the given characters and escape character by preceding them with escape character
+std::string unescape( const std::string & s, const char* characters, char esc = '\\' );
 
 /// join array elements into a string with given delimiter
 template < typename A >

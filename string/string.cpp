@@ -47,41 +47,67 @@ std::string strip( const std::string& s, char character )
 
 std::string strip( const std::string& s, const char* characters )
 {
-    if( s.empty() ) { return s; }
-    std::size_t begin = 0;
-    while( begin < s.length() && is_one_of( s.at( begin ), characters ) ) { ++begin; }
-    std::size_t end = s.length() - 1;
-    while( end > begin && is_one_of( s.at( end ), characters ) ) { --end; }
+    if( s.empty() ) return s;
+    
+    const std::string::size_type begin = s.find_first_not_of( characters );
+    if( std::string::npos == begin ) return std::string();
+
+    const std::string::size_type end = s.find_last_not_of( characters );
+    // end can't be npos
     return s.substr( begin, end + 1 - begin );
 }
 
-std::string escape( const std::string & s, char esc, const char * characters )
+std::string escape( const std::string & s, const char * characters, char esc )
 {
     std::string v;
     const char* begin( &s[0] );
     const char* const end( begin + s.length() );
     for( const char* p = begin; p < end; ++p )
     {        
-        if( esc == *p || is_one_of( *p, characters ) )
+        if( esc == *p || string::is_one_of( *p, characters ) )
             v.push_back( esc );
         v.push_back( *p );
     }
     return v;
 }
 
-std::string escape( const std::string & s, char esc, char quote )
+std::string escape( const std::string & s, char character, char esc )
 {
-    char characters[] = { quote, 0 };
-    return escape(s, esc, characters );
+    char characters[] = { character, 0 };
+    return escape(s, characters, esc );
 }
 
-std::string escape( const std::string & s, char esc, char quote, char delimiter )
+std::string unescape( const std::string & s, const char * characters, char esc )
 {
-    char characters[] = { quote, delimiter, 0 };
-    return escape(s, esc, characters );
+    std::string v;
+    const char* begin( &s[0] );
+    const char* const end( begin + s.length() );
+    for( const char* p = begin; p < end; ++p )
+    {
+        if( esc == *p )
+        {
+            const char* const next = p + 1;
+            if( next == end )
+            {
+                v.push_back( esc );
+                return v;
+            }
+            if ( *next != esc && ! string::is_one_of( *next, characters ) ) v.push_back( esc );
+            ++p;
+        }
+        v.push_back( *p );
+    }
+    return v;
 }
 
-std::string unescape( const std::string & s, char esc, const char* quotes )
+std::string unescape( const std::string & s, char character, char esc )
+{
+    char characters[] = { character, 0 };
+    return unescape(s, characters, esc );
+}
+
+// for reference see split
+std::string unescape_and_unquote( const std::string & s, char esc, const char* quotes )
 {
     std::string v;
     const char* begin( &s[0] );
@@ -93,14 +119,14 @@ std::string unescape( const std::string & s, char esc, const char* quotes )
         {
             ++p;
             if( end == p ) { v.push_back( esc ); break; }
-            if( ! ( esc == *p || is_one_of( *p, quotes ) ) ) v.push_back( esc );
+            if( ! ( esc == *p || string::is_one_of( *p, quotes ) ) ) v.push_back( esc );
             v.push_back( *p );
         }
         else if( quoted == *p )
         {
             quoted = boost::none;
         }
-        else if( ! quoted && is_one_of( *p, quotes ) )
+        else if( ! quoted && string::is_one_of( *p, quotes ) )
         {
             quoted = *p;
         }
@@ -111,12 +137,6 @@ std::string unescape( const std::string & s, char esc, const char* quotes )
     }
     if( quoted ) COMMA_THROW( comma::exception, "comma::unescape - quote not closed before end of string" );
     return v;
-}
-
-std::string unescape( const std::string & s, char esc, char quote )
-{
-    char quotes[] = { quote, 0 };
-    return unescape(s, esc, quotes );
 }
 
 } // namespace comma {

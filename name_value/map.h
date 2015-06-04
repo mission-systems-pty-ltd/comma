@@ -104,7 +104,7 @@ inline map::map(const std::string& line, const comma::name_value::impl::options&
 
 inline void map::init( const comma::name_value::impl::options& options )
 {
-    std::vector< std::string > named_values = split_escaped( m_line, options.m_delimiter, options.m_escape, options.m_quote );
+    std::vector< std::string > named_values = split_escaped( m_line, options.m_delimiter, options.m_quotes.c_str(), options.m_escape );
     for( std::size_t i = 0; i < options.m_names.size() && i < named_values.size(); ++i )
     {
         if( options.m_names[i].empty() ) { continue; }

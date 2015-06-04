@@ -39,9 +39,9 @@
 
 namespace comma {
 
-bool is_one_of( char c, const char * characters )
+bool string::is_one_of( char c, const char * characters )
 {
-    for( const char * s = characters; *s; ++s ) { if( c == *s ) return true; }
+    for( const char * s = characters; 0 != *s; ++s ) { if( c == *s ) return true; }
     return false;
 }
 
@@ -53,7 +53,7 @@ std::vector< std::string > split( const std::string & s, const char * separators
     v.push_back( std::string() );
     for( const char* p = begin; p < end; ++p )
     {
-        if( is_one_of( *p, separators ) )
+        if( string::is_one_of( *p, separators ) )
             v.push_back( std::string() );
         else
             v.back() += *p;
@@ -67,7 +67,7 @@ std::vector< std::string > split( const std::string & s, char separator )
     return split( s, separators );
 }
 
-std::vector< std::string > split_escaped( const std::string & s, const char * separators, char escape, const char * quotes )
+std::vector< std::string > split_escaped( const std::string & s, const char * separators, const char * quotes, char escape )
 {
     std::vector< std::string > v;
     const char* begin( &s[0] );
@@ -80,18 +80,18 @@ std::vector< std::string > split_escaped( const std::string & s, const char * se
         {
             ++p;
             if( end == p ) { v.back() += escape; break; }
-            if( ! ( escape == *p || is_one_of( *p, separators ) || is_one_of( *p, quotes ) ) ) v.back() += escape;
+            if( ! ( escape == *p || string::is_one_of( *p, separators ) || string::is_one_of( *p, quotes ) ) ) v.back() += escape;
             v.back() += *p;
         }
         else if( quoted == *p )
         {
             quoted = boost::none;
         }
-        else if( ! quoted && is_one_of( *p, quotes ) )
+        else if( ! quoted && string::is_one_of( *p, quotes ) )
         {
             quoted = *p;
         }
-        else if( ! quoted && is_one_of( *p, separators ) )
+        else if( ! quoted && string::is_one_of( *p, separators ) )
         {
             v.push_back( std::string() );
         }
@@ -104,11 +104,10 @@ std::vector< std::string > split_escaped( const std::string & s, const char * se
     return v;
 }
 
-std::vector< std::string > split_escaped( const std::string & s, char separator, char escape, char quote )
+std::vector< std::string > split_escaped( const std::string & s, char separator, const char * quotes, char escape )
 {
     const char separators[] = { separator, 0 };
-    const char quotes[] = { quote, 0 };
-    return split_escaped( s, separators, escape, quotes );
+    return split_escaped( s, separators, quotes, escape );
 }
 
 } // namespace comma {

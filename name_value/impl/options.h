@@ -46,33 +46,33 @@ namespace impl
 /// name_value options
 struct options
 {
-    options( char delimiter = ';', char value_delimiter = '=', bool full_path_as_name = true, char escape = '\\', char quote = '\'' );
-    options( const std::string& fields, char delimiter = ';', char value_delimiter = '=', bool full_path_as_name = true, char escape = '\\', char quote = '\'' );
+    options( char delimiter = ';', char value_delimiter = '=', bool full_path_as_name = true, const char * quotes = "\'\"", char escape = '\\' );
+    options( const std::string& fields, char delimiter = ';', char value_delimiter = '=', bool full_path_as_name = true, const char * quotes = "\'\"", char escape = '\\' );
     
     char m_delimiter;
     char m_value_delimiter;
     bool m_full_path_as_name;
     char m_escape;
-    char m_quote;
+    std::string m_quotes;
     std::vector< std::string > m_names; /// names for unnamed values
 };
 
 
-inline options::options( char delimiter, char value_delimiter, bool full_path_as_name, char escape, char quote ):
+inline options::options( char delimiter, char value_delimiter, bool full_path_as_name, const char * quotes, char escape ):
     m_delimiter( delimiter ),
     m_value_delimiter( value_delimiter ),
     m_full_path_as_name( full_path_as_name ),
     m_escape( escape ),
-    m_quote( quote )
+    m_quotes( quotes )
 {
 }
 
-inline options::options( const std::string& fields, char delimiter, char value_delimiter, bool full_path_as_name, char escape, char quote ):
+inline options::options( const std::string& fields, char delimiter, char value_delimiter, bool full_path_as_name, const char * quotes, char escape ):
     m_delimiter( delimiter ),
     m_value_delimiter( value_delimiter ),
     m_full_path_as_name( full_path_as_name ),
     m_escape( escape ),
-    m_quote( quote ),
+    m_quotes( quotes ),
     m_names( split( fields, ',' ) )
 {
     if( fields.empty() ) { COMMA_THROW( comma::exception, "expected fields, got empty string" ); }
