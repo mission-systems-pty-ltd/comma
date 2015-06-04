@@ -134,31 +134,25 @@ export -f comma_trim
 # Run commands in a minimal environment.
 #
 # Usage:
+#
+# To run <your-command> with the given arguments in a clean environment with
+# the minimal number of variables inherited from the parent environment:
 #   comma_env --default your-command arg1 arg2 ...
 #
-# run <your-command> with the given argument in a clean environment with the minimal
-# number of variables inherited from the parent environment.
-#
+# To list the default variables to be imported and return:
 #   comma_env --default-imports
 #
-# list the default variables to be imported and return.
-#
+# To run <your-command> with the provided arguments in the shell environment that
+# inherit the default and the explicitly listed variables from the parent environment:
 #   comma_env --import=FOO,BAR,LICENSE,MYENV your-command arg1 arg2 ...
-#
-# run <your-command> with the provided arguments in the shell environment that inherit
-# only the default and the explicitly listed variables from the parent environment.
-#
-# Variables shall be given as a comma-separated list.
-#
-# Both --import=<list> and --import <list> forms are supported.
-#
-# If a variable is not set in the parent environment, it is not set. Set a variable
-# to an empty string if it shall be present.
-#
-# All the default and user-specified variables are exported.
 #
 # The options of comma_env must be given first. It does not search for them in the
 # entire command line, assuming options in other positions belong to <your-command>.
+#
+# Variables shall be given as a comma-separated list. Both --import=<list> and
+# --import <list> forms are supported. If a variable is not set in the parent
+# environment, it is not set. Set a variable to an empty string if it shall be present.
+# All the default and user-specified variables are exported.
 #
 # To see the resulting environment without running any commands in it, give '-'
 # (a single minus character) as <your-command>.
@@ -170,8 +164,7 @@ export -f comma_trim
 #
 # All the listed functions are "export -f"-ed.
 #
-# Exit status of comma_env is defined by env (1). See
-#   info coreutils 'env invocation'
+# Exit status of comma_env is defined by env (1). See "info coreutils 'env invocation'"
 # for details.
 function comma_env()
 {
