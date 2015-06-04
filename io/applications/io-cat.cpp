@@ -57,6 +57,7 @@ void usage( bool verbose = false )
     std::cerr << "supported address types: tcp, udp, local (unix) sockets, named pipes, files, zmq (todo)" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "    single stream" << std::endl;
     std::cerr << "        io-cat tcp:localhost:12345" << std::endl;
     std::cerr << "        io-cat udp:12345" << std::endl;
@@ -65,6 +66,8 @@ void usage( bool verbose = false )
     std::cerr << "        io-cat some/file" << std::endl;
     std::cerr << "        io-cat zmq-local:/tmp/socket (not implemented)" << std::endl;
     std::cerr << "        io-cat zmq-tcp:localhost:12345 (not implemented)" << std::endl;
+    std::cerr << "        echo hello | io-cat -" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "    multiple streams" << std::endl;
     std::cerr << "        todo" << std::endl;
     std::cerr << std::endl;
@@ -125,11 +128,11 @@ class udp_stream : public stream
 class any_stream : public stream
 {
     public:
-        any_stream( const std::string& address, unsigned int size )
+        any_stream( const std::string& address, unsigned int size, bool binary )
             : stream( address )
             , istream_( address, comma::io::mode::binary, comma::io::mode::non_blocking )
             , size_( size )
-            , binary_( size > 0 )
+            , binary_( binary )
         {
         }
         
@@ -151,12 +154,12 @@ class any_stream : public stream
                 std::getline( *istream_, line );
                 if( line.empty() ) { return 0; }
                 if( line.size() > buffer.size() ) { buffer.resize( line.size() ); }
-                ::memcpy( &line[0], &buffer[0], line.size() );
+                ::memcpy( &buffer[0], &line[0], line.size() );
                 return line.size();
             }
         }
         
-        bool eof() const { return !istream_->good() || istream_->eof(); std::cin.good(); }
+        bool eof() const { return !istream_->good() || istream_->eof(); }
         
     private:
         comma::io::istream istream_;
@@ -164,12 +167,12 @@ class any_stream : public stream
         bool binary_;
 };
 
-stream* make_stream( const std::string& address, unsigned int size )
+stream* make_stream( const std::string& address, unsigned int size, bool binary )
 {
     const std::vector< std::string >& v = comma::split( address, ':' );
     if( v[0] == "udp" ) { return new udp_stream( address ); }
     if( v[0] == "zmq-local" || v[0] == "zero-local" || v[0] == "zmq-tcp" || v[0] == "zero-tcp" ) { COMMA_THROW( comma::exception, "io-cat: zmq support not implemented" ); }
-    return new any_stream( address, size );
+    return new any_stream( address, size, binary );
 }
 
 int main( int argc, char** argv )
@@ -182,7 +185,7 @@ int main( int argc, char** argv )
     comma::command_line_options options( argc, argv, usage );
     unsigned int size = options.value( "--size,-s", 0 );
     bool unbuffered = options.exists( "--unbuffered,-u" );
-    const std::vector< std::string >& unnamed = options.unnamed( "--unbuffered,-u", "-.*" );
+    const std::vector< std::string >& unnamed = options.unnamed( "--unbuffered,-u", "-.+" );
     #ifdef WIN32
     if( size || unnamed.size() == 1 ) { _setmode( _fileno( stdout ), _O_BINARY ); }
     #endif
@@ -191,7 +194,7 @@ int main( int argc, char** argv )
     comma::io::select select;
     for( unsigned int i = 0; i < unnamed.size(); ++i )
     { 
-        streams.push_back( make_stream( unnamed[i], size ) );
+        streams.push_back( make_stream( unnamed[i], size, size || unnamed.size() == 1 ) );
         select.read().add( streams.back() );
     }
     std::vector< char > buffer( 65536 );
@@ -201,8 +204,8 @@ int main( int argc, char** argv )
         bool done = true;
         for( unsigned int i = 0; i < streams.size() && done; done = streams[i].eof(), ++i );
         if( done ) { break; }
-        select.wait( 1 );
-        for( unsigned int i = 0; i < streams.size() && done; ++i )
+        select.wait( boost::posix_time::seconds( 1 ) );
+        for( unsigned int i = 0; i < streams.size(); ++i )
         {
             if( streams[i].eof() || !select.read().ready( streams[i].fd() ) ) { continue; }
             while( !is_shutdown && !streams[i].eof() )
