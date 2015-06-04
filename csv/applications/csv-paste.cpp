@@ -79,7 +79,7 @@ static void usage()
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
-    exit( -1 );
+    exit( 0 );
 }
 
 class source
@@ -174,7 +174,6 @@ class line_number : public source
 
 int main( int ac, char** av )
 {
-    bool show_usage = true;
     try
     {
         comma::command_line_options options( ac, av );
@@ -223,8 +222,7 @@ int main( int ac, char** av )
             }
             sources.push_back( s );
         }
-        if( sources.empty() ) { usage(); }
-        show_usage = false;
+        if( sources.empty() ) { std::cerr << "csv-paste: expected at least one input, got none" << std::endl; return 1; }
         if( is_binary )
         {
             #ifdef WIN32
@@ -267,16 +265,11 @@ int main( int ac, char** av )
                 std::cout << oss.str() << std::endl;
             }
         }
+        return 0;
     }
-    catch( std::exception& ex )
-    {
-        std::cerr << "csv-paste: " << ex.what() << std::endl;
-    }
-    catch( ... )
-    {
-        std::cerr << "csv-paste: unknown exception" << std::endl;
-    }
-    if( show_usage ) { usage(); }
+    catch( std::exception& ex ) { std::cerr << "csv-paste: " << ex.what() << std::endl; }
+    catch( ... ) { std::cerr << "csv-paste: unknown exception" << std::endl; }
+    return 1;
 }
 
 
