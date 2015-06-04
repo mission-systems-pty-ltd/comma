@@ -478,13 +478,17 @@ function terminate_run_and_match_test()
     if [[ -n "$comma_test_run_and_match_test_pgid" ]] ; then
         kill -s TERM -- -$comma_test_run_and_match_test_pgid
         wait $comma_test_run_and_match_test_pgid
-        wait_for_process_group "$name" "$comma_test_run_and_match_test_pgid"
+        wait_for_process_group "$name" "$comma_test_run_and_match_test_pgid" 60
+        (( $? == 0 )) || {
+            echo "$name: kill -9 process group $comma_test_run_and_match_test_pgid" >&2
+            kill -s KILL -- -"$comma_test_run_and_match_test_pgid"
+        }
         unset comma_test_run_and_match_test_pgid
     fi
     if [[ -n "$comma_top_pgid" ]] ; then
         kill -s TERM -- -$comma_top_pgid
         wait $comma_top_pgid
-        wait_for_process_group "$name" "$comma_top_pgid"
+        wait_for_process_group "$name" "$comma_top_pgid" 10
         unset comma_top_pgid
     fi
     # a process that exits in response to SIGINT should kill itself with SIGINT
