@@ -3,7 +3,7 @@
 testdir=$( dirname "$0" )
 scriptname=$( basename "$testdir" )/$( basename "$0" )
 
-source $( which comma-application-util ) || exit 1
+source $( which comma-env ) || exit 1
 
 tester="$testdir/aux/default-print-env"
 [[ -x "$tester" ]] || { echo "$scriptname: cannot find auxiliary script '$tester'" >&2; exit 1; }

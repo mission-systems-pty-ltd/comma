@@ -35,6 +35,7 @@ source $( which comma-application-util ) || { echo "$name: cannot source 'comma-
 source $( which comma-util ) || { echo "$name: cannot source 'comma-util'" >&2; exit 1; }
 source $( which comma-resources-util ) || { echo "$name: cannot source 'comma-resources-util'" >&2; exit 1; }
 source $( which comma-sync ) || { echo "$name: cannot source 'comma-sync'" >&2; exit 1; }
+source $( which comma-env ) || { echo "$name: cannot source 'comma-env'" >&2; exit 1; }
 
 name_offset="${name//?/ } "
 export name name_offset

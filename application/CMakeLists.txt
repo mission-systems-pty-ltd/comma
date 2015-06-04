@@ -19,7 +19,6 @@ INSTALL(
 )
 
 INSTALL( PROGRAMS comma-application-util DESTINATION ${comma_INSTALL_BIN_DIR} )
-INSTALL( PROGRAMS comma-env-helper DESTINATION ${comma_INSTALL_BIN_DIR} )
 
 ADD_SUBDIRECTORY( applications )
 

@@ -1,5 +1,5 @@
 #!/bin/bash
 
-source $( which comma-application-util ) || exit 1
+source $( which comma-env ) || exit 1
 
 comma_env --help
