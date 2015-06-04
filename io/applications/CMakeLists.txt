@@ -3,16 +3,6 @@ FILE( GLOB source   ${dir}/*.cpp)
 FILE( GLOB includes ${dir}/*.h)
 SOURCE_GROUP( ${TARGET_NAME} FILES ${source} ${includes} )
 
-ADD_EXECUTABLE( io-publish ${dir}/io-publish.cpp ${dir}/publish.h ${dir}/publish.cpp )
-TARGET_LINK_LIBRARIES ( io-publish ${comma_EXTERNAL_ALL_LIBRARIES} comma_base comma_io comma_application ) # profiler )
-
-IF( NOT WIN32 )
-ADD_EXECUTABLE( udp-client ${dir}/udp-client.cpp )
-ADD_EXECUTABLE( io-client ${dir}/io-client.cpp )
-TARGET_LINK_LIBRARIES ( udp-client comma_application comma_io comma_csv comma_base ${comma_EXTERNAL_ALL_LIBRARIES} ) # profiler )
-TARGET_LINK_LIBRARIES ( io-client comma_application comma_io comma_csv comma_base ${comma_EXTERNAL_ALL_LIBRARIES} ) # profiler )
-ENDIF( NOT WIN32 )
-
 IF( comma_BUILD_ZEROMQ )
 ADD_EXECUTABLE( zero-cat ${dir}/zero-cat.cpp )
 TARGET_LINK_LIBRARIES ( zero-cat ${ZeroMQ_LIBRARY} comma_io comma_application ${comma_ALL_EXTERNAL_LIBRARIES} )
@@ -21,17 +11,19 @@ INSTALL( TARGETS zero-cat
          COMPONENT Runtime )
 ENDIF( comma_BUILD_ZEROMQ )
 
-IF( NOT WIN32 )
-INSTALL( TARGETS udp-client io-client
-         RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR}
-         COMPONENT Runtime )
-ENDIF( NOT WIN32 )
+if( NOT WIN32 )
+    add_executable( io-client ${dir}/io-client.cpp )
+    target_link_libraries( io-client comma_application comma_io comma_csv comma_base ${comma_EXTERNAL_ALL_LIBRARIES} ) # profiler )
+    install( TARGETS io-client RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
 
-IF(NOT WIN32) # io-publish uses select on stdin and would throw on windows
-INSTALL( TARGETS io-publish
-         RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR}
-         COMPONENT Runtime )
-ENDIF(NOT WIN32)
+    add_executable( udp-client ${dir}/udp-client.cpp )
+    target_link_libraries( udp-client comma_application comma_io comma_csv comma_base ${comma_EXTERNAL_ALL_LIBRARIES} ) # profiler )
+    install( TARGETS udp-client RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
+    
+    add_executable( io-publish ${dir}/io-publish.cpp ${dir}/publish.h ${dir}/publish.cpp )
+    target_link_libraries( io-publish ${comma_EXTERNAL_ALL_LIBRARIES} comma_base comma_io comma_application ) # profiler )
+    install( TARGETS io-publish RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
+endif( NOT WIN32 )
 
-INSTALL ( PROGRAMS zero-publish DESTINATION ${comma_INSTALL_BIN_DIR})
+install( PROGRAMS zero-publish DESTINATION ${comma_INSTALL_BIN_DIR})
 
