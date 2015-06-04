@@ -64,6 +64,24 @@ function comma_path_value_mangle()
 }
 export -f comma_path_value_mangle
 
+# similar to comma_path_value_mangle, takes only the paths and converts
+# to variable names; use it if you need, for example, to export only the
+# variables that will be used by some script
+function comma_path_mangle()
+{
+    local delimiter="$1"
+    [[ -n "$delimiter" ]] || delimiter="_"
+    local path name mangled
+    while IFS='=' read path _ ; do
+        [[ -n "$path" && ! "$path" =~ ^[#\"] ]] || continue
+        name=$prefix${path//\//$delimiter}
+        name=${name//-/$delimiter}
+        mangled+="$name\n"
+    done
+    echo -e -n $mangled
+}
+export -f comma_path_mangle
+
 # take path-value pairs, assign the values to corresponding bash variables
 # in the variable name slashes will be replaced with given delimiter
 #
