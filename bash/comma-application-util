@@ -35,7 +35,7 @@
 [[ -n "$comma_application_util_include_guard_" ]] && return
 readonly comma_application_util_include_guard_=1
 
-source $( which comma-name-value-util ) || { echo "comma-application-util: comma-name-value-util not found" >&2 ; exit 1 ; } # for backward compatibility
+source $( which comma-name-value-util ) # do not exit on error, could be imported earlier
 
 # usage: comma_stacktrace <any message>
 # print the stacktrace, the list of lines and script names that were passed

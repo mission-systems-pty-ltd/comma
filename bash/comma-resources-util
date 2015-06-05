@@ -38,6 +38,8 @@
 [[ -n "$comma_resources_util_include_guard_" ]] && return
 readonly comma_resources_util_include_guard_=1
 
+source $( which comma-name-value-util ) # do not exit on error, could be imported earlier
+
 # Read a json file as text stream on stdin and in the given path (2nd argument)
 # append the pid (1st argument) to the end of []-enclosed list (insert into
 # the list if empty); output the resulting json to stdout. Path argument is
