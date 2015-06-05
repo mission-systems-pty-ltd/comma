@@ -6,6 +6,8 @@ scale[0]="echo 1 | csv-units --scale 2"
 scale[1]="echo 1,2 | csv-units --scale 2"
 scale[2]="echo 1,2 | csv-units --scale 2 --fields a,b"
 
+offset[0]="echo 1 | csv-units --offset 2"
+
 units_fields[0]="echo test,1,1,kelvin | csv-units --from=celsius --to=kelvin --fields=,x,y/value,y/units"
 units_fields[1]="echo test,1,1,celsius | csv-units --from=celsius --to=kelvin --fields=,x,y/value,y/units"
 units_fields[2]="echo test,1,1,fahrenheit | csv-units --from=celsius --to=kelvin --fields=,x,y/value,y/units"
