@@ -68,68 +68,74 @@ static const unsigned int buffer_size = 16384;
 
 int main( int argc, char** argv )
 {
-    if( argc < 2 ) { usage(); }
-    comma::command_line_options options( argc, argv, usage );
-    const std::vector< std::string >& unnamed = options.unnamed( "--unbuffered,-u", "" );
-    if( unnamed.size() != 1 ) { std::cerr << name() << " : address is not given" << std::endl; return 1; }
-    bool unbuffered = options.exists( "--unbuffered,-u" );
-    std::vector< std::string > input = comma::split( unnamed[0], ':' );
-    comma::signal_flag is_shutdown;
-    std::vector< char > buffer( buffer_size );
-    if( input[0] == "zmq-local" || input[0] == "zero-local" || input[0] == "zmq-tcp" || input[0] == "zero-tcp" )
+    try
     {
-        std::cerr << name() << ": not implemented" << std::endl;
-        return 1;
-    }
-    else if( input[0] == "udp" )
-    {
-        if( input.size() != 2 ) { std::cerr << name() << " : expected udp:<port>, e.g. udp:12345, got" << unnamed[0] << std::endl; return 1; }
-        unsigned short port = boost::lexical_cast< unsigned short >( input[1] );
-        boost::asio::io_service service;
-        boost::asio::ip::udp::socket socket( service );
-        socket.open( boost::asio::ip::udp::v4() );
-        boost::system::error_code error;
-        socket.set_option( boost::asio::ip::udp::socket::broadcast( true ), error );
-        if( error ) { std::cerr << name() << " : udp failed to set broadcast option on port " << port << std::endl; return 1; }
-        socket.bind( boost::asio::ip::udp::endpoint( boost::asio::ip::udp::v4(), port ), error );
-        if( error ) { std::cerr << name() << " : udp failed to bind port " << port << std::endl; return 1; }
-#ifdef WIN32
-        _setmode( _fileno( stdout ), _O_BINARY );
-#endif
-        while( !is_shutdown && std::cout.good() )
+        if( argc < 2 ) { usage(); }
+        comma::command_line_options options( argc, argv, usage );
+        const std::vector< std::string >& unnamed = options.unnamed( "--unbuffered,-u", "" );
+        if( unnamed.size() != 1 ) { std::cerr << name() << " : address is not given" << std::endl; return 1; }
+        bool unbuffered = options.exists( "--unbuffered,-u" );
+        std::vector< std::string > input = comma::split( unnamed[0], ':' );
+        comma::signal_flag is_shutdown;
+        std::vector< char > buffer( buffer_size );
+        if( input[0] == "zmq-local" || input[0] == "zero-local" || input[0] == "zmq-tcp" || input[0] == "zero-tcp" )
         {
-            boost::system::error_code error;
-            std::size_t size = socket.receive( boost::asio::buffer( buffer ), 0, error );
-            if( error || size == 0 ) { break; }
-            std::cout.write( &buffer[0], size );
-            if ( unbuffered ) { std::cout.flush(); }
+            std::cerr << name() << ": not implemented" << std::endl;
+            return 1;
         }
-        return 0;
-    }
-    else
-    {
-#ifdef WIN32
-        std::cerr << name() ": not implemented" << std::endl;
-        return 1;
-#else
-        comma::io::istream istream( unnamed[0], comma::io::mode::binary, comma::io::mode::non_blocking );
-        comma::io::file_descriptor fd = istream.fd();
-        comma::io::select select;
-        select.read().add( fd );
-        while( !is_shutdown && std::cout.good() )
+        else if( input[0] == "udp" )
         {
-            select.check();
-            if( select.read().ready( fd ) )
+            if( input.size() != 2 ) { std::cerr << name() << " : expected udp:<port>, e.g. udp:12345, got" << unnamed[0] << std::endl; return 1; }
+            unsigned short port = boost::lexical_cast< unsigned short >( input[1] );
+            boost::asio::io_service service;
+            boost::asio::ip::udp::socket socket( service );
+            socket.open( boost::asio::ip::udp::v4() );
+            boost::system::error_code error;
+            socket.set_option( boost::asio::ip::udp::socket::broadcast( true ), error );
+            if( error ) { std::cerr << name() << " : udp failed to set broadcast option on port " << port << std::endl; return 1; }
+            socket.bind( boost::asio::ip::udp::endpoint( boost::asio::ip::udp::v4(), port ), error );
+            if( error ) { std::cerr << name() << " : udp failed to bind port " << port << std::endl; return 1; }
+#ifdef WIN32
+            _setmode( _fileno( stdout ), _O_BINARY );
+#endif
+            while( !is_shutdown && std::cout.good() )
             {
-                unsigned int size = std::min( istream.count(), buffer_size );
-                if( size == 0 ) { break; }
-                istream->read( &buffer[0], size );
-                if( istream->gcount() != size ) { break; }
+                boost::system::error_code error;
+                std::size_t size = socket.receive( boost::asio::buffer( buffer ), 0, error );
+                if( error || size == 0 ) { break; }
                 std::cout.write( &buffer[0], size );
                 if ( unbuffered ) { std::cout.flush(); }
             }
+            return 0;
         }
-        return 0;
+        else
+        {
+#ifdef WIN32
+            std::cerr << name() ": not implemented" << std::endl;
+            return 1;
+#else
+            comma::io::istream istream( unnamed[0], comma::io::mode::binary, comma::io::mode::non_blocking );
+            comma::io::file_descriptor fd = istream.fd();
+            comma::io::select select;
+            select.read().add( fd );
+            while( !is_shutdown && std::cout.good() )
+            {
+                select.wait( boost::posix_time::seconds( 1 ) );
+                if( select.read().ready( fd ) )
+                {
+                    unsigned int size = std::min( istream.count(), buffer_size );
+                    if( size == 0 ) { break; }
+                    istream->read( &buffer[0], size );
+                    if( istream->gcount() != size ) { break; }
+                    std::cout.write( &buffer[0], size );
+                    if ( unbuffered ) { std::cout.flush(); }
+                }
+            }
+            return 0;
 #endif
+        }
     }
+    catch( std::exception& ex ) { std::cerr << name() << ": " << ex.what() << std::endl; }
+    catch( ... ) { std::cerr << name() << ": unknown exception" << std::endl; }
+    return 1;
 }
