@@ -83,6 +83,7 @@ ownpgid=$( echo $ownpgid ) # get rid of spaces for PIDs < 10000
 for iter in $( seq 100 ) ; do
     mkdir -p "$iter" || exit 1
     cd "$iter"
+    export log="run_once.log"
     run_once
     (( $? == 0 )) || { echo "$name: iteration $iter failed, see the logs in '$outdir/$iter'" >&2; exit 1; }
     cd ..
