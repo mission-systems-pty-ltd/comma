@@ -474,7 +474,7 @@ static int scale_and_offset( double factor, double offset )
         const input_t* p = istream.read();
         if( !p ) { break; }
         input_t output = *p;
-        for( unsigned int i = 0; i < output.values.size(); output.values[i].value = output.values[i].value * factor, ++i );
+        for( unsigned int i = 0; i < output.values.size(); output.values[i].value = output.values[i].value * factor + offset, ++i );
         ostream.write( output, istream );
     }
     return 0;
