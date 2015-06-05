@@ -123,7 +123,7 @@ int main( int argc, char** argv )
                 select.wait( boost::posix_time::seconds( 1 ) );
                 if( select.read().ready( fd ) )
                 {
-                    unsigned int size = std::min( istream.count(), buffer_size );
+                    unsigned int size = std::min( istream.available(), buffer_size );
                     if( size == 0 ) { break; }
                     istream->read( &buffer[0], size );
                     if( istream->gcount() != size ) { break; }

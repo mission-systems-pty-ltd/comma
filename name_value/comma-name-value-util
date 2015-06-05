@@ -76,7 +76,6 @@ export -f comma_path_value_mangle
 # [--null-ok]: null variables are defined, otherwise ignored
 # [--prefix="<prefix>"]: prefix used for defining variables
 # [--delimiter="<delimiter>"]: delimiter used for replacing '/'
-# [--no-quotes]: don't quote the values
 #
 # examples (try them):
 #     comma_path_value_to_var < <( echo hello=world )
@@ -93,7 +92,6 @@ function comma_path_value_to_var()
     local delimiter="_"
     local export_variable=""
     local null_ok=""
-    local quote="\""
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -101,7 +99,6 @@ function comma_path_value_to_var()
         --null-ok) null_ok="true" ;;
         --prefix=*) prefix="${1#*=}" ;;
         --delimiter=*) delimiter="${1#*=}" ;;
-        --no-quotes) quote="" ;;
         esac
         shift
     done
@@ -115,9 +112,11 @@ function comma_path_value_to_var()
         [[ -n "$value" || -n "$null_ok" ]] || continue
         name=$prefix${path//\//$delimiter}
         name=${name//-/$delimiter}
-        value=${value#\"}; value=${value%\"} # Strip quotes
-        eval "$export_variable $name=$quote$value$quote" \
-            || { echo "comma-application-util: comma_path_value_to_var failed '$export_variable $name=$quote$value$quote'" >&2 ; ret_code=1 ; }
+        # Strip quotes then add them back. This ensures consistent behaviour.
+        value=${value#\"}
+        value=\"${value%\"}\"
+        eval "$export_variable $name=$value" \
+            || { echo "comma-application-util: comma_path_value_to_var failed '$export_variable $name=$value'" >&2 ; ret_code=1 ; }
     done
     return $ret_code
 }
