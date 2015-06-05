@@ -47,6 +47,7 @@ function test02_to_execute()
     trap 'test02_trap USR1' SIGUSR1
     comma-nap 10 &
     wait $!
+    echo "$FUNCNAME: woken up"
 }
 export -f test02_to_execute
 

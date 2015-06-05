@@ -1,6 +1,6 @@
 #!/bin/bash
 
-exec 2>&1 > "$output_file"
+exec 1> "$output_file"
 trap 'test02_trap TERM' SIGTERM
 trap 'test02_trap HUP'  SIGHUP
 trap 'test02_trap PIPE' SIGPIPE
