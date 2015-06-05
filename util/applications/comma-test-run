@@ -475,7 +475,7 @@ function terminate_run_and_match_test()
     if [[ -n "$comma_test_run_and_match_test_pgid" ]] ; then
         kill -s TERM -- -$comma_test_run_and_match_test_pgid
         wait $comma_test_run_and_match_test_pgid
-        comma_wait_for_process_group "$name" "$comma_test_run_and_match_test_pgid" 60
+        comma_wait_for_process_group "$name" "$comma_test_run_and_match_test_pgid" 10
         unset comma_test_run_and_match_test_pgid
     fi
     if [[ -n "$comma_top_pgid" ]] ; then
@@ -546,7 +546,7 @@ function run_test_with_timeout()
     timeout -k 10 -s TERM $max_run_time bash -c run_and_match_test & comma_test_run_and_match_test_pgid=$!
     wait $comma_test_run_and_match_test_pgid
     rv=$?
-    comma_wait_for_process_group "$name" "$comma_test_run_and_match_test_pgid" 60
+    comma_wait_for_process_group "$name" "$comma_test_run_and_match_test_pgid" 10
     unset comma_test_run_and_match_test_pgid
     if [[ "$options_estimate_resources" == "1" ]] ; then
         kill -s TERM -- -$comma_top_pgid
