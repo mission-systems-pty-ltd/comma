@@ -29,6 +29,11 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# this script provides functions to be used in testing suites
+
+# this script is designed to be included in another script directly, for example:
+# source $( which comma-test-util )
+
 [[ -z "$comma_test_util_include_guard_" ]] || return
 readonly comma_test_util_include_guard_=1
 

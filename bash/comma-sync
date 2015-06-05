@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# this script provides functions for interprocess syncronisation in bash
+
 # this script is designed to be included in another script directly, for example:
 # source $( which comma-sync )
 

@@ -6,7 +6,6 @@ add_executable(comma-nap comma-nap.cpp )
 target_link_libraries(comma-nap ${comma_ALL_EXTERNAL_LIBRARIES} )
 INSTALL( TARGETS comma-nap RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
 
-INSTALL( PROGRAMS comma-env-detail DESTINATION ${comma_INSTALL_BIN_DIR} )
 INSTALL( PROGRAMS comma-profile-graph DESTINATION ${comma_INSTALL_BIN_DIR} )
 INSTALL( PROGRAMS comma-stats DESTINATION ${comma_INSTALL_BIN_DIR} )
 install( PROGRAMS comma-test-match DESTINATION ${comma_INSTALL_BIN_DIR} )
