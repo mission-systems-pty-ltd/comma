@@ -31,6 +31,7 @@ exit 0
 # report indicates escapees.
 
 source $( which comma-application-util ) || exit 1
+source $( which comma-trap ) || exit 1
 
 function clean_up()
 {

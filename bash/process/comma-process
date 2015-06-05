@@ -226,7 +226,7 @@ function comma_wait_for_process_group()
     local leftovers
     while true ; do
         leftovers=$( ps --no-headers -u $USER -o pgid | grep "$process_group_id" | wc -l )
-        [[ -n "$leftovers" ]] && { echo "$caller_name: waited ${iter}s for $process_group_id, still $leftovers processes left" >&2; sleep 1; } || { return 0; }
+        (( leftovers > 0 )) && { echo "$caller_name: waited ${iter}s for $process_group_id, still $leftovers processes left" >&2; sleep 1; } || { return 0; }
         (( ++iter ))
         if [[ "$max_wait_time" != "forever" ]] ; then
             (( iter > max_wait_time )) && {
