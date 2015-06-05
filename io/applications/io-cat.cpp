@@ -47,22 +47,29 @@
 void usage( bool verbose = false )
 {
     std::cerr << std::endl;
-    std::cerr << "read from a few sources, merge, and output to stdout" << std::endl;
+    std::cerr << "read from one or a few sources, merge, and output to stdout" << std::endl;
     std::cerr << std::endl;
     std::cerr << "usage: io-cat <address> [<address>] ... [<options>]" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "<address>" << std::endl;
+    std::cerr << "    local:<path>: local socket" << std::endl;
+    std::cerr << "    tcp:<host>:<port>: tcp socket" << std::endl;
+    std::cerr << "    udp:<port>: udp socket" << std::endl;
+    std::cerr << "    zmp-<protocol>:<address>: zmq (todo)" << std::endl;
+    std::cerr << "    <filename>: file" << std::endl;
+    std::cerr << "    <fifo>: named pipe" << std::endl;
+    std::cerr << "    -: stdin" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "options" << std::endl;
+    std::cerr << "    --flush,unbuffered,-u: flush output" << std::endl;
     std::cerr << "    --round-robin=[<number of packets>]: todo: only for multiple inputs: read not more" << std::endl;
     std::cerr << "                                         than <number of packets> from an input at once," << std::endl;
     std::cerr << "                                         before checking other inputs" << std::endl;
-    std::cerr << std::endl;
     std::cerr << "                                         if not specified, read from each input" << std::endl;
     std::cerr << "                                         all available data" << std::endl;
-    std::cerr << std::endl;
     std::cerr << "                                         ignored for udp streams, where one full udp" << std::endl;
     std::cerr << "                                         packet at a time is always read" << std::endl;
-    std::cerr << "    --size,-s=[<size>]: packet size, if multiple sources" << std::endl;
-    std::cerr << "    --unbuffered,-u: flush output" << std::endl;
+    std::cerr << "    --size,-s=[<size>]: packet size, if binary data (required only for multiple sources)" << std::endl;
     std::cerr << std::endl;
     std::cerr << "supported address types: tcp, udp, local (unix) sockets, named pipes, files, zmq (todo)" << std::endl;
     std::cerr << std::endl;
@@ -169,7 +176,7 @@ class any_stream : public stream
                 if( line.empty() ) { return 0; }
                 if( line.size() >= buffer.size() ) { buffer.resize( line.size() + 1 ); }
                 ::memcpy( &buffer[0], &line[0], line.size() );
-                buffer.back() = '\n';
+                buffer[ line.size() ] = '\n';
                 return line.size() + 1;
             }
         }
@@ -201,8 +208,8 @@ int main( int argc, char** argv )
         if( argc < 2 ) { usage(); }
         comma::command_line_options options( argc, argv, usage );
         unsigned int size = options.value( "--size,-s", 0 );
-        bool unbuffered = options.exists( "--unbuffered,-u" );
-        const std::vector< std::string >& unnamed = options.unnamed( "--unbuffered,-u", "-.+" );
+        bool unbuffered = options.exists( "--flush,--unbuffered,-u" );
+        const std::vector< std::string >& unnamed = options.unnamed( "--flush,--unbuffered,-u", "-.+" );
         #ifdef WIN32
         if( size || unnamed.size() == 1 ) { _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
