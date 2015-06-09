@@ -8,7 +8,7 @@ source $( which comma-env-util ) || exit 1
 tester="$testdir/detail/default-print-env"
 [[ -x "$tester" ]] || { echo "$scriptname: cannot find auxiliary script '$tester'" >&2; exit 1; }
 
-[[ -v LANGUAGE ]] || { LANGUAGE=$LANG }
+[[ -v LANGUAGE ]] || { LANGUAGE=$LANG; }
 
 export PATH="$testdir/detail:$PATH"
 comma_env --default $( basename "$tester" )
