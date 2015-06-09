@@ -9,8 +9,8 @@ export foo="my_foo"
 export bar="my_bar"
 export baz="my_baz"
 
-tester="$testdir/aux/vars-print-env"
+tester="$testdir/detail/vars-print-env"
 [[ -x "$tester" ]] || { echo "$scriptname: cannot find auxiliary script '$tester'" >&2; exit 1; }
 
-export PATH="$testdir/aux:$PATH"
+export PATH="$testdir/detail:$PATH"
 comma_env --import=foo,bar $( basename "$tester" )
