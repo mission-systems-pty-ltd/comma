@@ -29,26 +29,33 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# this script provides functions for interprocess syncronisation in bash
+
 # this script is designed to be included in another script directly, for example:
-# source $( which comma-string )
+# source $( which comma-sync-util )
 
-[[ -n "$comma_string_include_guard_" ]] && return
-readonly comma_string_include_guard_=1
+[[ -n "$comma_sync_util_include_guard_" ]] && return
+readonly comma_sync_util_include_guard_=1
 
-# Trim leading and trailing whitespaces
-# Usage:
-#    var=$( comma_trim "$var" )
-function comma_trim()
+# General synchronization function. Takes on input a lock file name to be used
+# in a flock call (this file will be truncated to zero size) and the command to be
+# executed with all the arguments. Example:
+#
+#     comma_locked /tmp/mylock myfcn --option1 "$value1" "$arg1" ...
+#
+# Note: do not re-direct output of the function being protected. Do all writes
+# within a function while it is protected by the serialization lock.
+#
+# Note: internally, this function uses file descriptor 8. Avoid re-using it
+# in your code that invokes (or invoked under) comma_locked.
+
+function comma_locked()
 {
+    local lock=$1
+    shift
     (
-        shopt -s extglob ; a=$1 ; b=${a%%*( )} ; b=${b##*( )} ; echo "$b"
-    )
+        flock -x 8
+        $@
+    ) 8>"$lock"
 }
-export -f comma_trim
-
-# return a string with "\" before any characters that are special in regular expressions
-function comma_escape_special_chars()
-{
-    echo $* | sed 's/[].*|&^$[]/\\&/g'
-}
-export -f comma_escape_special_chars
+export -f comma_locked

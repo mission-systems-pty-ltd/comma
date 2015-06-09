@@ -12,7 +12,7 @@ scriptname=$( basename "$testdir" )/$( basename "$0" )
 function protect_main_env()
 {
     (
-        source $( which comma-env ) || exit 1
+        source $( which comma-env-util ) || exit 1
         allvars=$( comma_env --default-imports ) || {
             echo "$scriptname: 'comma_env --default-imports' failed" >&2
             exit 1

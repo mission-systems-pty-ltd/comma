@@ -30,10 +30,10 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # this script is designed to be included in another script directly, for example:
-# source $( which comma-trap )
+# source $( which comma-trap-util )
 
-[[ -n "$comma_trap_include_guard_" ]] && return
-readonly comma_trap_include_guard_=1
+[[ -n "$comma_trap_util_include_guard_" ]] && return
+readonly comma_trap_util_include_guard_=1
 
 # usage: comma_get_children [<pid>] [--recursive]
 # output the process ids of all children of a process (space separated); by default, just direct children,

@@ -33,30 +33,10 @@
 # more clearly defined categories
 
 # this script is designed to be included in another script directly, for example:
-# source $( which comma-util )
+# source $( which comma-storage-util )
 
-[[ -n "$comma_util_include_guard_" ]] && return
-readonly comma_util_include_guard_=1
-
-# Auxiliary function: random value uniformly distributed in [0, 1].
-function comma_urandom()
-{
-    echo "$RANDOM / 32767" | bc -l
-}
-export -f comma_urandom
-
-# This function a scaled random number round-down to an integer.
-# Can be used to simulate memory size, number of CPUs, and other
-# integer values. Argument is the desired scale: output values
-# are from zero (inclusive) to $1 (exclusive): [0, $1).
-function comma_round_random()
-{
-    local scale=$1
-    local random=$RANDOM
-    (( random %= scale ))
-    echo $random
-}
-export -f comma_round_random
+[[ -n "$comma_storage_util_include_guard_" ]] && return
+readonly comma_storage_util_include_guard_=1
 
 # Auxiliary function to convert various storage units to bytes.
 # Search for regular expressions [0-9]+unit (where space-separation is optional

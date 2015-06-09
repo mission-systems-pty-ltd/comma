@@ -32,13 +32,14 @@
 name=$( basename $0 )
 
 source $( which comma-application-util ) || { echo "$name: cannot source 'comma-application-util'" >&2; exit 1; }
-source $( which comma-util ) || { echo "$name: cannot source 'comma-util'" >&2; exit 1; }
+source $( which comma-random-util ) || { echo "$name: cannot source 'comma-random-util'" >&2; exit 1; }
+source $( which comma-storage-util ) || { echo "$name: cannot source 'comma-storage-util'" >&2; exit 1; }
 source $( which comma-resources-util ) || { echo "$name: cannot source 'comma-resources-util'" >&2; exit 1; }
 source $( which comma-progress-util ) || { echo "$name: cannot source 'comma-progress-util'" >&2; exit 1; }
-source $( which comma-sync ) || { echo "$name: cannot source 'comma-sync'" >&2; exit 1; }
-source $( which comma-env ) || { echo "$name: cannot source 'comma-env'" >&2; exit 1; }
-source $( which comma-string ) || { echo "$name: cannot source 'comma-string'" >&2; exit 1; }
-source $( which comma-process ) || { echo "$name: cannot source 'comma-process'" >&2; exit 1; }
+source $( which comma-sync-util ) || { echo "$name: cannot source 'comma-sync-util'" >&2; exit 1; }
+source $( which comma-env-util ) || { echo "$name: cannot source 'comma-env-util'" >&2; exit 1; }
+source $( which comma-string-util ) || { echo "$name: cannot source 'comma-string-util'" >&2; exit 1; }
+source $( which comma-process-util ) || { echo "$name: cannot source 'comma-process-util'" >&2; exit 1; }
 
 name_offset="${name//?/ } "
 export name name_offset
