@@ -36,7 +36,8 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time/posix_time/ptime.hpp>
 #include <boost/date_time/posix_time/time_parsers.hpp>
-#include <comma/name_value/impl/options.h>
+
+#include "impl/options.h"
 
 namespace comma
 {
@@ -103,7 +104,7 @@ inline map::map(const std::string& line, const comma::name_value::impl::options&
 
 inline void map::init( const comma::name_value::impl::options& options )
 {
-    std::vector< std::string > named_values = split( m_line, options.m_delimiter );
+    std::vector< std::string > named_values = split_escaped( m_line, options.m_delimiter, options.m_quotes.c_str(), options.m_escape );
     for( std::size_t i = 0; i < options.m_names.size() && i < named_values.size(); ++i )
     {
         if( options.m_names[i].empty() ) { continue; }

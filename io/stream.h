@@ -71,12 +71,21 @@ class stream : boost::noncopyable
 
         /// return pointer to stream
         S* operator->();
+        
+        /// return pointer to stream
+        const S* operator()() const;
+
+        /// return reference to stream
+        const S& operator*() const;
+
+        /// return pointer to stream
+        const S* operator->() const;
 
         /// return file descriptor (to use in select)
         comma::io::file_descriptor fd() const;
 
         /// return the number of characters available for reading
-        unsigned int count() const;
+        unsigned int available() const;
 
         /// return stream name
         const std::string& name() const;
@@ -96,11 +105,12 @@ class stream : boost::noncopyable
         ~stream();
         std::string name_;
         mode::value mode_;
-        S* stream_;
-        boost::function< void() > close_;
+        mutable S* stream_;
+        mutable boost::function< void() > close_;
         comma::io::file_descriptor fd_;
         bool close_d;
         bool blocking_;
+        S* lazily_make_stream_();
 };
     
 /// input stream owner

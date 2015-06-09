@@ -29,16 +29,15 @@
 
 
 /// @author vsevolod vlaskine
+/// @author mathew hounsell
 
-#include <comma/string/string.h>
+#include <boost/optional.hpp>
+
+// Don't use <> foc comma as that requires the code to be installed first.
+#include "../base/exception.h"
+#include "string.h"
 
 namespace comma {
-
-static bool is_in( char c, const char* characters )
-{
-    for( const char* s = characters; *s; ++s ) { if( c == *s ) { return true; } }
-    return false;
-}
 
 std::string strip( const std::string& s, char character )
 {
@@ -48,12 +47,96 @@ std::string strip( const std::string& s, char character )
 
 std::string strip( const std::string& s, const char* characters )
 {
-    if( s.empty() ) { return s; }
-    std::size_t begin = 0;
-    while( begin < s.length() && is_in( s.at( begin ), characters ) ) { ++begin; }
-    std::size_t end = s.length() - 1;
-    while( end > begin && is_in( s.at( end ), characters ) ) { --end; }
+    if( s.empty() ) return s;
+    
+    const std::string::size_type begin = s.find_first_not_of( characters );
+    if( std::string::npos == begin ) return std::string();
+
+    const std::string::size_type end = s.find_last_not_of( characters );
+    // end can't be npos
     return s.substr( begin, end + 1 - begin );
+}
+
+std::string escape( const std::string & s, const char * characters, char esc )
+{
+    std::string v;
+    const char* begin( &s[0] );
+    const char* const end( begin + s.length() );
+    for( const char* p = begin; p < end; ++p )
+    {        
+        if( esc == *p || string::is_one_of( *p, characters ) )
+            v.push_back( esc );
+        v.push_back( *p );
+    }
+    return v;
+}
+
+std::string escape( const std::string & s, char character, char esc )
+{
+    char characters[] = { character, 0 };
+    return escape(s, characters, esc );
+}
+
+std::string unescape( const std::string & s, const char * characters, char esc )
+{
+    std::string v;
+    const char* begin( &s[0] );
+    const char* const end( begin + s.length() );
+    for( const char* p = begin; p < end; ++p )
+    {
+        if( esc == *p )
+        {
+            const char* const next = p + 1;
+            if( next == end )
+            {
+                v.push_back( esc );
+                return v;
+            }
+            if ( *next != esc && ! string::is_one_of( *next, characters ) ) v.push_back( esc );
+            ++p;
+        }
+        v.push_back( *p );
+    }
+    return v;
+}
+
+std::string unescape( const std::string & s, char character, char esc )
+{
+    char characters[] = { character, 0 };
+    return unescape(s, characters, esc );
+}
+
+// for reference see split
+std::string unescape_and_unquote( const std::string & s, char esc, const char* quotes )
+{
+    std::string v;
+    const char* begin( &s[0] );
+    const char* const end( begin + s.length() );
+    boost::optional<char> quoted;
+    for( const char* p = begin; p < end; ++p )
+    {
+        if( esc == *p )
+        {
+            ++p;
+            if( end == p ) { v.push_back( esc ); break; }
+            if( ! ( esc == *p || string::is_one_of( *p, quotes ) ) ) v.push_back( esc );
+            v.push_back( *p );
+        }
+        else if( quoted == *p )
+        {
+            quoted = boost::none;
+        }
+        else if( ! quoted && string::is_one_of( *p, quotes ) )
+        {
+            quoted = *p;
+        }
+        else
+        {
+            v.push_back( *p );
+        }
+    }
+    if( quoted ) COMMA_THROW( comma::exception, "comma::unescape - quote not closed before end of string" );
+    return v;
 }
 
 } // namespace comma {

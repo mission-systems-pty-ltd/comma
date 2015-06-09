@@ -323,13 +323,13 @@ static std::size_t bin_to_csv( std::ostringstream& oss, const char* buf, format:
 
 } // namespace impl {
 
-void format::csv_to_bin( std::ostream& os, const std::string& csv, char delimiter ) const
+void format::csv_to_bin( std::ostream& os, const std::string& csv, char delimiter, bool flush ) const
 {
     const std::vector< std::string >& v = comma::split( csv, delimiter );
     csv_to_bin( os, v );
 }
 
-void format::csv_to_bin( std::ostream& os, const std::vector< std::string >& v ) const
+void format::csv_to_bin( std::ostream& os, const std::vector< std::string >& v, bool flush ) const
 {
     if( v.size() != count_ ) { COMMA_THROW( comma::exception, "expected csv string with " << count_ << " elements, got [" << comma::join( v, ',' ) << "]" ); }
     std::vector< char > buf( size_ ); //char buf[ size_ ]; // stupid Windows
@@ -349,6 +349,7 @@ void format::csv_to_bin( std::ostream& os, const std::vector< std::string >& v )
         }
     }
     os.write( &buf[0], size_ );
+    if( flush ) { os.flush(); }
 }
 
 std::string format::csv_to_bin( const std::string& csv, char delimiter ) const

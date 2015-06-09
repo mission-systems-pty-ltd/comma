@@ -28,7 +28,9 @@
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-#include <comma/string/string.h>
+#include <comma/base/exception.h>
+#include "../string.h"
+#include "../split.h"
 #include <gtest/gtest.h>
 
 namespace comma {
@@ -38,43 +40,198 @@ TEST( string, split )
     {
         std::vector< std::string > v( split( "" ) );
         EXPECT_TRUE( v.size() == 1 );
-        EXPECT_TRUE( v[0] == "" );
+        EXPECT_TRUE( v.at(0) == "" );
     }
     {
         std::vector< std::string > v( split( ":::", ":" ) );
         EXPECT_TRUE( v.size() == 4 );
-        for( unsigned int i = 0; i < 4; ++i ) { EXPECT_TRUE( v[i] == "" ); }
+        for( unsigned int i = 0; i < 4; ++i ) { EXPECT_TRUE( v.at(i) == "" ); }
     }
     {
         std::vector< std::string > v( split( "hello:world::moon", ":" ) );
         EXPECT_TRUE( v.size() == 4 );
-        EXPECT_TRUE( v[0] == "hello" );
-        EXPECT_TRUE( v[1] == "world" );
-        EXPECT_TRUE( v[2] == "" );
-        EXPECT_TRUE( v[3] == "moon" );
+        EXPECT_TRUE( v.at(0) == "hello" );
+        EXPECT_TRUE( v.at(1) == "world" );
+        EXPECT_TRUE( v.at(2) == "" );
+        EXPECT_TRUE( v.at(3) == "moon" );
     }
     {
-        {
-            std::vector< std::string > v( split( "hello:world:/moon", ":/" ) );
-            EXPECT_TRUE( v.size() == 4 );
-            EXPECT_TRUE( v[0] == "hello" );
-            EXPECT_TRUE( v[1] == "world" );
-            EXPECT_TRUE( v[2] == "" );
-            EXPECT_TRUE( v[3] == "moon" );
-        }
-        {
-            std::vector< std::string > v( split( "hello:world:/moon", "/:" ) );
-            EXPECT_TRUE( v.size() == 4 );
-            EXPECT_TRUE( v[0] == "hello" );
-            EXPECT_TRUE( v[1] == "world" );
-            EXPECT_TRUE( v[2] == "" );
-            EXPECT_TRUE( v[3] == "moon" );
-        }
+        std::vector< std::string > v( split( "hello:world:/moon", ":/" ) );
+        EXPECT_TRUE( v.size() == 4 );
+        EXPECT_TRUE( v.at(0) == "hello" );
+        EXPECT_TRUE( v.at(1) == "world" );
+        EXPECT_TRUE( v.at(2) == "" );
+        EXPECT_TRUE( v.at(3) == "moon" );
+    }
+    {
+        std::vector< std::string > v( split( "hello:world:/moon", "/:" ) );
+        EXPECT_TRUE( v.size() == 4 );
+        EXPECT_TRUE( v.at(0) == "hello" );
+        EXPECT_TRUE( v.at(1) == "world" );
+        EXPECT_TRUE( v.at(2) == "" );
+        EXPECT_TRUE( v.at(3) == "moon" );
     }
     {
         std::vector< std::string > v( split( ":,:", ":," ) );
         EXPECT_TRUE( v.size() == 4 );
-        for( unsigned int i = 0; i < 4; ++i ) { EXPECT_TRUE( v[i] == "" ); }
+        for( unsigned int i = 0; i < 4; ++i ) { EXPECT_TRUE( v.at(i) == "" ); }
+    }
+}
+
+TEST( string, escape )
+{
+    EXPECT_EQ( "ab", escape( "ab" ) );
+    EXPECT_EQ( "ab\\\\", escape( "ab\\" ) );
+    EXPECT_EQ( "\\\\ab", escape( "\\ab" ) );
+    EXPECT_EQ( "a\\\\b", escape( "a\\b" ) );
+    EXPECT_EQ( "a\\'b", escape( "a'b" ) );
+    EXPECT_EQ( "a\\b", escape( "a\\b", "", '~' ) );
+    EXPECT_EQ( "a~~b", escape( "a~b", "", '~' ) );
+    EXPECT_EQ( "a\\\'b", escape( "a\'b" ) );
+    EXPECT_EQ( "a~\"b", escape( "a\"b", "\"", '~' ) );
+    EXPECT_EQ( "a~\'b~\'c", escape( "a\'b\'c", "\'", '~' ) );
+    EXPECT_EQ( "a~\"b~\"c", escape( "a\"b\"c", "\"", '~' ) );
+    EXPECT_EQ( "a~\"b\'c", escape( "a\"b\'c", "\"", '~' ) );
+    EXPECT_EQ( "a~\"b;", escape( "a\"b;", "\"", '~' ) );
+    EXPECT_EQ( "a~\"b~;", escape( "a\"b;", "\";", '~' ) );
+    EXPECT_EQ( "ab~1~2~34~~5", escape( "ab1234~5", "123", '~' ) );
+}
+
+TEST( string, unescape )
+{
+    EXPECT_EQ( "ab", unescape( "ab" ) );
+    EXPECT_EQ( "ab\\", unescape( "ab\\\\" ) );
+    EXPECT_EQ( "\\ab", unescape( "\\\\ab", "" ) );
+    EXPECT_EQ( "a\\b", unescape( "a\\\\b", "" ) );
+    EXPECT_EQ( "a\\b", unescape( "a\\b" ) );
+    EXPECT_EQ( "ab\\", unescape( "ab\\" ) );
+    EXPECT_EQ( "a'b", unescape( "a\\'b" ) );
+    EXPECT_EQ( "a'b", unescape( "a'b" ) );
+    EXPECT_EQ( "a\\\\b", unescape( "a\\\\b", "", '~' ) );
+    EXPECT_EQ( "a~b", unescape( "a~~b", "", '~' ) );
+    EXPECT_EQ( "a\"b", unescape( "a~\"b", "\"", '~' ) );
+    EXPECT_EQ( "a\"b;", unescape( "a\"b;", "\"", '~' ) );
+    EXPECT_EQ( "a\"b\';", unescape( "a\"b\';", "\"\'", '~' ) );
+    EXPECT_EQ( "ab1234~5", unescape( "ab~1~2~34~~5", "123", '~' ) );
+
+    EXPECT_EQ( "ab1234~5", unescape( escape( "ab1234~5", "123", '~' ), "123", '~' ) );    
+}
+
+TEST( string, split_escaped )
+{
+    {
+        std::vector< std::string > v( split_escaped( "" ) );
+        EXPECT_TRUE( v.size() == 1 );
+        EXPECT_TRUE( v.at(0) == "" );
+    }
+    {
+        std::vector< std::string > v( split_escaped( ":,:", ":," ) );
+        EXPECT_TRUE( v.size() == 4 );
+        for( unsigned int i = 0; i < 4; ++i ) { EXPECT_TRUE( v.at(i) == "" ); }
+    }
+    {
+        std::vector< std::string > v( split_escaped( "abc\\", ":" ) );
+        EXPECT_TRUE( v.size() == 1 );
+        EXPECT_TRUE( v.at(0) == "abc\\" );
+    }
+    {
+        std::vector< std::string > v( split_escaped( ":::", ":" ) );
+        EXPECT_TRUE( v.size() == 4 );
+        for( unsigned int i = 0; i < 4; ++i ) { EXPECT_TRUE( v.at(i) == "" ); }
+    }
+    {
+        std::vector< std::string > v( split_escaped( "hello\\:world::moon", ":" ) );
+        EXPECT_TRUE( v.size() == 3 );
+        EXPECT_TRUE( v.at(0) == "hello:world" );
+        EXPECT_TRUE( v.at(1) == "" );
+        EXPECT_TRUE( v.at(2) == "moon" );
+    }
+    {
+        std::vector< std::string > v( split_escaped( "hello\\\\:world:/moon", ":/" ) );
+        EXPECT_TRUE( v.size() == 4 );
+        EXPECT_TRUE( v.at(0) == "hello\\" );
+        EXPECT_TRUE( v.at(1) == "world" );
+        EXPECT_TRUE( v.at(2) == "" );
+        EXPECT_TRUE( v.at(3) == "moon" );
+    }
+    {
+        std::vector< std::string > v( split_escaped( "hello:\\world:/moon", "/:" ) );
+        EXPECT_TRUE( v.size() == 4 );
+        EXPECT_TRUE( v.at(0) == "hello" );
+        EXPECT_TRUE( v.at(1) == "\\world" );
+        EXPECT_TRUE( v.at(2) == "" );
+        EXPECT_TRUE( v.at(3) == "moon" );
+    }
+    {
+        std::vector< std::string > v( split_escaped( "\\\'hello\\\' world:moon", ":" ) );
+        EXPECT_TRUE( v.size() == 2 );
+        EXPECT_TRUE( v.at(0) == "\'hello\' world" );
+        EXPECT_TRUE( v.at(1) == "moon" );
+    }
+    {
+        std::vector< std::string > v( split_escaped( "filename;delimiter=\\;", ";" ) );
+        EXPECT_TRUE( v.size() == 2 );
+        EXPECT_TRUE( v.at(0) == "filename" );
+        EXPECT_TRUE( v.at(1) == "delimiter=;" );
+    }
+    {
+        std::vector< std::string > v( split_escaped( "filename;delimiter=\\;;fields=a,b,c", ";" ) );
+        EXPECT_TRUE( v.size() == 3 );
+        EXPECT_TRUE( v.at(0) == "filename" );
+        EXPECT_TRUE( v.at(1) == "delimiter=;" );
+        EXPECT_TRUE( v.at(2) == "fields=a,b,c" );
+    }
+}
+
+TEST( string, split_escaped_quoted )
+{
+    {
+        std::vector< std::string > v( split_escaped( "\"abc\"", ':', "\"", '\\' ) );
+        EXPECT_TRUE( v.size() == 1 );
+        EXPECT_TRUE( v.at(0) == "abc" );
+    }
+    {
+        EXPECT_THROW( split_escaped( "a\"bc", ":", "\"", '\\' ), comma::exception );
+        EXPECT_THROW( split_escaped( "\"abc\"\":def", ":", "\"", '\\' ), comma::exception );
+    }
+    {
+        std::vector< std::string > v( split_escaped( "\"hello:world\":moon", ':', "\"", '\\' ) );
+        EXPECT_TRUE( v.size() == 2 );
+        EXPECT_TRUE( v.at(0) == "hello:world" );
+        EXPECT_TRUE( v.at(1) == "moon" );
+    }
+    {
+        std::vector< std::string > v( split_escaped( "\"hello\\\\:\\\"world\":moon", ':', "\"", '\\' ) );
+        EXPECT_TRUE( v.size() == 2 );
+        EXPECT_TRUE( v.at(0) == "hello\\:\"world" );
+        EXPECT_TRUE( v.at(1) == "moon" );
+    }
+    {
+        std::vector< std::string > v( split_escaped( "\'hello\\\\:\\\'world\':moon", ':', "\'", '\\') );
+        EXPECT_TRUE( v.size() == 2 );
+        EXPECT_TRUE( v.at(0) == "hello\\:\'world" );
+        EXPECT_TRUE( v.at(1) == "moon" );
+    }
+    {
+        std::vector< std::string > v( split_escaped( "filename;delimiter=\';\'", ";" ) );
+        EXPECT_TRUE( v.size() == 2 );
+        EXPECT_TRUE( v.at(0) == "filename" );
+        EXPECT_TRUE( v.at(1) == "delimiter=;" );
+    }
+    {
+        std::vector< std::string > v( split_escaped( "filename;delimiter=\';\';fields=a,b,c", ";" ) );
+        EXPECT_TRUE( v.size() == 3 );
+        EXPECT_TRUE( v.at(0) == "filename" );
+        EXPECT_TRUE( v.at(1) == "delimiter=;" );
+        EXPECT_TRUE( v.at(2) == "fields=a,b,c" );
+    }
+    {
+        std::vector< std::string > v( split_escaped( "b='y';c/d=\\z;e=\\;;a='x;'", ';', "\'", '\\') );
+        EXPECT_TRUE( v.size() == 4 );
+        EXPECT_TRUE( v.at(0) == "b=y" );
+        EXPECT_TRUE( v.at(1) == "c/d=\\z" );
+        EXPECT_TRUE( v.at(2) == "e=;" );
+        EXPECT_TRUE( v.at(3) == "a=x;" );
     }
 }
 

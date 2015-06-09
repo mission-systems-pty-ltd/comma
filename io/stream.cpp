@@ -167,25 +167,10 @@ stream< S >::~stream()
     close_ = NULL;
 }
 
-template < typename S > void stream< S >::close() { close_d = true; if( close_ ) { close_(); } }
-
-template < typename S > S* stream< S >::operator()() { return this->operator->(); }
-
-template < typename S > S& stream< S >::operator*() { return *this->operator->(); }
-
-static void set_non_blocking_flags_( io::file_descriptor fd )
-{
-#ifndef WIN32
-    std::size_t flags = ::fcntl( fd, F_GETFL, 0 );
-    flags = flags & ( ~O_NONBLOCK );
-    ::fcntl( fd, F_SETFL, flags );
-#endif // #ifndef WIN32
-}
-
 template < typename S >
-S* stream< S >::operator->()
+S* stream< S >::lazily_make_stream_()
 {
-#ifndef WIN32
+    #ifndef WIN32
     if( stream_ == NULL ) // quick and dirty: if fstream, cannot open on construction, as pipe might block
     {
         if( !boost::filesystem::is_regular_file( name_ ) && !blocking_ ) // quick and dirty
@@ -201,8 +186,31 @@ S* stream< S >::operator->()
         stream_ = s;
         close_ = boost::bind( &impl::close_file_stream< S >, s, fd_ );
     }
-#endif // #ifndef WIN32
+    #endif // #ifndef WIN32
     return stream_;
+}
+
+template < typename S > void stream< S >::close() { close_d = true; if( close_ ) { close_(); } }
+
+template < typename S > S* stream< S >::operator()() { return this->operator->(); }
+
+template < typename S > S& stream< S >::operator*() { return *this->operator->(); }
+
+template < typename S > const S* stream< S >::operator()() const { return this->operator->(); }
+
+template < typename S > const S& stream< S >::operator*() const { return *this->operator->(); }
+
+template < typename S > S* stream< S >::operator->() { return lazily_make_stream_(); }
+
+template < typename S > const S* stream< S >::operator->() const { return const_cast< stream< S >& >( *this ).lazily_make_stream_(); }
+
+static void set_non_blocking_flags_( io::file_descriptor fd )
+{
+#ifndef WIN32
+    std::size_t flags = ::fcntl( fd, F_GETFL, 0 );
+    flags = flags & ( ~O_NONBLOCK );
+    ::fcntl( fd, F_SETFL, flags );
+#endif // #ifndef WIN32
 }
 
 template < typename S >
@@ -221,7 +229,7 @@ comma::io::file_descriptor stream< S >::fd() const
 }
 
 template < typename S >
-unsigned int stream< S >::count() const
+unsigned int stream< S >::available() const
 {
     int count = 0;
 #ifdef WIN32

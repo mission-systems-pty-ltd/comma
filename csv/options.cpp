@@ -30,9 +30,10 @@
 
 /// @author vsevolod vlaskine
 
-#include <comma/base/exception.h>
-#include <comma/csv/options.h>
-#include <comma/string/string.h>
+#include "../string/split.h"
+#include "../base/exception.h"
+#include "../csv/options.h"
+#include "../string/string.h"
 
 namespace comma { namespace csv {
 

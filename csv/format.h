@@ -118,8 +118,8 @@ class format
         static std::size_t size_of( types_enum type );
         
         /// take csv string, write to the given stream
-        void csv_to_bin( std::ostream& os, const std::string& csv, char delimiter = ',' ) const;
-        void csv_to_bin( std::ostream& os, const std::vector< std::string >& csv ) const;
+        void csv_to_bin( std::ostream& os, const std::string& csv, char delimiter = ',', bool flush = false ) const;
+        void csv_to_bin( std::ostream& os, const std::vector< std::string >& csv, bool flush = false ) const;
         std::string csv_to_bin( const std::string& csv, char delimiter = ',' ) const;
         std::string csv_to_bin( const std::vector< std::string >& csv ) const;
         
