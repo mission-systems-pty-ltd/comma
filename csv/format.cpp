@@ -326,7 +326,7 @@ static std::size_t bin_to_csv( std::ostringstream& oss, const char* buf, format:
 void format::csv_to_bin( std::ostream& os, const std::string& csv, char delimiter, bool flush ) const
 {
     const std::vector< std::string >& v = comma::split( csv, delimiter );
-    csv_to_bin( os, v );
+    csv_to_bin( os, v, flush );
 }
 
 void format::csv_to_bin( std::ostream& os, const std::vector< std::string >& v, bool flush ) const
