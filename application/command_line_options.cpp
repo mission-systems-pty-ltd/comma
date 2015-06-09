@@ -30,6 +30,9 @@
 
 /// @author vsevolod vlaskine
 
+#include "../string/split.h"
+#include "../application/command_line_options.h"
+#include "../base/exception.h"
 #include <sstream>
 #include <set>
 #include <boost/bind.hpp>
@@ -38,9 +41,6 @@
 #include <boost/regex.hpp>
 #include <boost/spirit/include/qi.hpp>
 #include <boost/unordered_set.hpp>
-#include <comma/application/command_line_options.h>
-#include <comma/base/exception.h>
-#include <comma/string/split.h>
 
 #include <algorithm>
 

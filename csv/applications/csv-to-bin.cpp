@@ -46,16 +46,20 @@
 
 using namespace comma;
 
-static void usage()
+static void usage( bool )
 {
     std::cerr << std::endl;
-    std::cerr << "Usage: cat blah.csv | csv-to-bin <format> [--delimiter=<delimiter>] > blah.bin" << std::endl;
+    std::cerr << "usage: cat blah.csv | csv-to-bin <format> [options] > blah.bin" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "options" << std::endl;
+    std::cerr << "    --delimiter=[<delimiter>]; default: , (comma)" << std::endl;
+    std::cerr << "    --flush; flush stdout after each record" << std::endl;
     std::cerr << std::endl;
     std::cerr << csv::format::usage() << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
-    exit( -1 );
+    exit( 0 );
 }
 
 int main( int ac, char** av )
@@ -64,21 +68,20 @@ int main( int ac, char** av )
     _setmode( _fileno( stdout ), _O_BINARY ); /// @todo move to a library
     #endif
     std::string line;
-    line.reserve(4000);
+    line.reserve( 4000 );
     try
     {        
-        signal_flag shutdownFlag;
-        command_line_options options( ac, av );
-        if( ac < 2 || options.exists( "--help" ) || options.exists( "-h" ) ) { usage(); }
+        signal_flag is_shutdown;
+        command_line_options options( ac, av, usage );
         char delimiter = options.value( "--delimiter", ',' );
+        bool flush = options.exists( "--flush" );
         comma::csv::format format( av[1] );
         while( std::cin.good() && !std::cin.eof() )
         {
-            if( shutdownFlag ) { std::cerr << "csv-to-bin: interrupted by signal" << std::endl; return -1; }
+            if( is_shutdown ) { std::cerr << "csv-to-bin: interrupted by signal" << std::endl; return -1; }
             std::getline( std::cin, line );
             if( !line.empty() && *line.rbegin() == '\r' ) { line = line.substr( 0, line.length() - 1 ); } // windows... sigh...
-            if( line.length() == 0 ) { continue; }
-            format.csv_to_bin( std::cout, line, delimiter );
+            if( !line.empty() ) { format.csv_to_bin( std::cout, line, delimiter, flush ); }
         }
         return 0;
     }
@@ -93,5 +96,5 @@ int main( int ac, char** av )
     {
         std::cerr << "csv-to-bin: unknown exception" << std::endl;
     }
-    usage();
+    return 1;
 }

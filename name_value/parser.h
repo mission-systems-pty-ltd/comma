@@ -35,12 +35,12 @@
 
 #include <map>
 
-#include <comma/base/exception.h>
-#include <comma/visiting/apply.h>
-#include <comma/name_value/map.h>
-#include <comma/name_value/impl/options.h>
-#include <comma/name_value/impl/from_name_value.h>
-#include <comma/name_value/impl/to_name_value.h>
+#include "../base/exception.h"
+#include "../visiting/apply.h"
+#include "../name_value/map.h"
+#include "../name_value/impl/options.h"
+#include "../name_value/impl/from_name_value.h"
+#include "../name_value/impl/to_name_value.h"
 
 namespace comma
 {

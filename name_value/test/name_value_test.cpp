@@ -29,7 +29,7 @@
 
 
 #include <gtest/gtest.h>
-#include <comma/name_value/parser.h>
+#include "../../name_value/parser.h"
 
 struct nested
 {
@@ -235,6 +235,26 @@ TEST( name_value, map )
     }
     {
         EXPECT_EQ( map( ";a=1" ).value< int >( "a" ), 1 );
+    }
+}
+
+TEST( name_value, map_escaped )
+{
+    {
+        map m( "" );
+        EXPECT_TRUE( !m.exists( "a" ) );
+    }
+    {
+        map m( "b='y';c/d=\\z;e=\\;;a='x;'" );
+        EXPECT_TRUE( m.exists( "a" ) );
+        EXPECT_TRUE( m.exists( "b" ) );
+        EXPECT_TRUE( m.exists( "c/d" ) );
+        EXPECT_TRUE( m.exists( "e" ) );
+        EXPECT_TRUE( !m.exists( "r" ) );
+        EXPECT_EQ( m.value< std::string >( "a" ), "x;" );
+        EXPECT_EQ( m.value< std::string >( "b" ), "y" );
+        EXPECT_EQ( m.value< std::string >( "c/d" ), "\\z" );
+        EXPECT_EQ( m.value< std::string >( "e" ), ";" );
     }
 }
 
