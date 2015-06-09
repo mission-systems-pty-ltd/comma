@@ -1,3 +1,2 @@
 INSTALL( PROGRAMS comma-random-util DESTINATION ${comma_INSTALL_BIN_DIR} )
-INSTALL( PROGRAMS comma-storage-util DESTINATION ${comma_INSTALL_BIN_DIR} )
 INSTALL( PROGRAMS comma-string-util DESTINATION ${comma_INSTALL_BIN_DIR} )

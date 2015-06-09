@@ -30,7 +30,7 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # this script is designed to be included in another script directly, for example:
-# source $( which comma-application-util )
+# source $( which comma-name-value-util )
 
 [[ -z "$comma_name_value_util_include_guard_" ]] || return
 readonly comma_name_value_util_include_guard_=1
