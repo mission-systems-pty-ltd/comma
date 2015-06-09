@@ -222,7 +222,7 @@ int main( int argc, char** argv )
             streams.push_back( make_stream( unnamed[i], size, size || unnamed.size() == 1 ) );
             select.read().add( streams.back() );
         }
-        std::vector< char > buffer( std::max( size, 65536u ) );
+        std::vector< char > buffer( std::max( size, size ? 65536u - 65536u % size : 65536u ) );
         comma::signal_flag is_shutdown;
         for( bool done = false; !is_shutdown && !done; )
         {
