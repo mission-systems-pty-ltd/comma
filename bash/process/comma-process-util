@@ -1,0 +1,241 @@
+#!/bin/bash
+
+# This file is part of comma, a generic and flexible library
+# Copyright (c) 2011 The University of Sydney
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of the University of Sydney nor the
+#    names of its contributors may be used to endorse or promote products
+#    derived from this software without specific prior written permission.
+#
+# NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+# GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+# HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+# BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# this script is designed to be included in another script directly, for example:
+# source $( which comma-process-util )
+
+[[ -n "$comma_process_util_include_guard_" ]] && return
+readonly comma_process_util_include_guard_=1
+
+source $( which comma-string-util ) # do not exit on error, could be imported earlier
+
+# This is a signal handler used by comma_execute_and_wait. See that function for detail.
+function terminate_comma_execute_and_wait()
+{
+    trap '' SIGTERM SIGINT SIGHUP SIGPIPE SIGQUIT      # temporarily ignore signals
+    local usepg=$1
+    local killsign="-"
+    [[ "$usepg" == "false" ]] && killsign=""
+    local received_signal=$2
+    echo "comma_execute_and_wait: interrupted by $received_signal, killsign='$killsign'" >&2
+    # kill the command(s) being executed
+    local command_to_execute_index
+    for command_to_execute_index in ${!commands_to_execute_pgid[@]} ; do
+        if [[ -n "${commands_to_execute_pgid[$command_to_execute_index]}" ]] ; then
+            kill -s $received_signal -- ${killsign}${commands_to_execute_pgid[$command_to_execute_index]}
+            wait ${commands_to_execute_pgid[$command_to_execute_index]}
+            commands_to_execute_pgid[$command_to_execute_index]=""
+        fi
+    done
+    eval "$comma_execute_and_wait_saved_traps"  # use old handlers
+    unset comma_execute_and_wait_saved_traps
+    echo "comma_execute_and_wait: re-raise $received_signal" >&2
+    kill -s $received_signal $BASHPID           # relinguish control
+}
+export -f terminate_comma_execute_and_wait
+
+# Usage:
+#   comma_execute_and_wait command[,command2[,command3]] [--signals=signal1,signal2,...] \
+#                          [--max-wait=max_wait] [--process|--group] [--any|--all]
+#
+# The function executes the given command(s) (non-option argument) in a background process(es)
+# and waits for its completion (or timeout, see below).
+#
+# Usually the command is executed in a separate process group. As such, it inherits from
+# the original process its environment variables but not the shell variables. In this usage
+# mode, the command to be executed must be a self-contained string that can be used "as-is":
+# - if it is a bash function, this function shall be 'export -f'-ed
+# - if some variables are used within a function / script, those variables shall be exported
+# - if it is a function, it shall be prepended with "bash -c"
+# - command shall not contain pipes, output redirection and such; wrap pipelines into functions
+#   or scripts; pass the output file name into the function / script being executed and redirect
+#   inside
+# - etc.
+#
+# Alternatively, the command may be executed as a background process in the same process group.
+# If so, it would have all shell variables accessible. However, the command may need to provide
+# more elaborate signal handling so that a signal sent to a single process would terminate
+# the entire process tree. Use '--process' to run the command without creating a new process
+# group ('--group', the default). Do not prepend bash functions with 'bash -c' in this mode.
+#
+# The '--signals' option specifies signals to wait for. Default is INT,HUP,TERM (signals are
+# given as comma-separated list of names). If any of the specified signals arrives, the command
+# (process or process group) being executed is killed by the same signal, the signal traps are
+# restored to their state prior to the entry into comma_execute_and_wait, and the same signal is
+# re-raised (sent to itself), possibly triggering one of the restored traps.
+#
+# Note that if any of your functions is invoked under bash you may not receive the signal you
+# expect (the one you sent earlier to terminate the function being executed). Bash may (likely
+# will) intercept the original signal and sent HUP to the process running under it. Thus, your
+# code shall be always prepared to handle HUP.
+#
+# If the custom timeout is provided (in time units and format understood by timeout (1) utility)
+# and the command-to-execute takes longer, it is terminated by SIGTERM, traps are restored, and
+# the function returns 1. The default timeout is 4294967296 days (about 10 million years),
+# effectively infinite. The timeout option is available only in '--group' mode. This option is
+# incompatible with '--process' mode.
+#
+# If multiple commands are given, they are all started in parallel. To avoid system overload,
+# the user may write a custom script to invoke comma_execute_and_wait in combination with xargs.
+# The unit test in "parallel" directory provides a code template. You shall provide a way to
+# distribute signals to all instances to comma_execute_and_wait that are used in this fashion.
+#
+# The exit code of comma_execute_and_wait equals the exit code of the command-to-execute
+# accounting for possible signal handling. If multiple commands are given, the exit code
+# by default is zero if all commands succeed, and one if any fails. This can be explicitly
+# enforced by '--all' option. If '--any' option is given, however, the exit code is zero
+# if at least one command succeeded, and one if all of them fail.
+function comma_execute_and_wait()
+{
+    # store existing traps for restoring on exit
+    comma_execute_and_wait_saved_traps=$( trap )
+
+    # defaults
+    local signal_list="TERM,INT,HUP"
+    local commands_to_execute=()
+    # timeout default is very long time, essentially, forever
+    local execute_and_wait_timeout="4294967296d"
+    local timeout_given="false"
+
+    # process arguments
+    local original_args="$@"
+    local usepg="true"
+    local statusall="true"
+    while [[ $# -ne 0 ]]; do
+        case $1 in
+            --signals=*|--signal-list=*) signal_list=${1#*=};;
+            --max-wait=*|--timeout=*)    execute_and_wait_timeout=${1#*=} ; timeout_given="true";;
+            --group)                     usepg="true";;
+            --process)                   usepg="false";;
+            --all)                       statusall="true";;
+            --any)                       statusall="false";;
+            -*)                          echo "comma_execute_and_wait: unknown option '$1' (called: comma_execute_and_wait $original_args)" >&2; return 1;;
+            *)                           commands_to_execute+=( "$1" );;
+        esac
+        shift
+    done
+    if [[ "$usepg" == "false" && "$timeout_given" == "true" ]] ; then
+        echo "comma_execute_and_wait: conflicting timeout and process options (called: comma_execute_and_wait $original_args)" >&2
+        return 1
+    fi
+
+    # set up a new signal handler / trap that:
+    # - determines the signal being sent so that the same signal can be re-raised
+    # - if the command-to-execute is running, kill its process group
+    # - restores the traps
+    # - re-sends the trapped signal to itself
+    local signal_to_handle
+    for signal_to_handle in ${signal_list//,/ } ; do
+        trap 'terminate_comma_execute_and_wait $usepg $signal_to_handle' $signal_to_handle
+    done
+
+    local commands_to_execute_pgid=()
+    local commands_to_execute_status=0
+    [[ "$statusall" == "false" ]] && commands_to_execute_status=1
+    local command_to_execute cmd shellfcn
+
+    for command_to_execute in "${commands_to_execute[@]}" ; do
+        # shell functions require special handling due to quote spaces
+        command_to_execute=$( comma_trim "$command_to_execute" )
+        cmd=$( shopt -s extglob ; cmd=${command_to_execute##bash*( )-c*( )}; echo "$cmd" )
+        if [[ "$cmd" != "$command_to_execute" ]] ; then
+            shellfcn="true"
+            command_to_execute="$cmd"
+        fi
+
+        # run the command-to-execute as a background process or as a background job in
+        # its own process group and under timeout
+        if [[ "$usepg" == "true" ]] ; then
+            if [[ "$shellfcn" == "true" ]] ; then
+                timeout -k 10 -s TERM $execute_and_wait_timeout bash -c "$command_to_execute" & commands_to_execute_pgid+=( $! )
+            else
+                timeout -k 10 -s TERM $execute_and_wait_timeout $command_to_execute & commands_to_execute_pgid+=( $! )
+            fi
+        else
+            if [[ "$shellfcn" == "true" ]] ; then
+                bash -c "$command_to_execute" & commands_to_execute_pgid+=( $! )
+            else
+                $command_to_execute & commands_to_execute_pgid+=( $! )
+            fi
+        fi
+    done
+
+    # wait for the completion of the subprocess(es)
+    local command_to_execute_status command_to_execute_index
+    for command_to_execute_index in ${!commands_to_execute_pgid[@]} ; do
+        wait ${commands_to_execute_pgid[$command_to_execute_index]} ; command_to_execute_status=$? ; commands_to_execute_pgid[$command_to_execute_index]=""
+        if (( ${#commands_to_execute[@]} == 1 )) ; then
+            # use as-is
+            commands_to_execute_status=$command_to_execute_status
+        else
+            # accumulate
+            if [[ "$statusall" == "true" ]] ; then
+                (( $command_to_execute_status == 0 )) || commands_to_execute_status=1
+            else
+                (( $command_to_execute_status == 0 )) && commands_to_execute_status=0
+            fi
+        fi
+    done
+    # restore traps
+    trap - ${signal_list//,/ } ; eval "$comma_execute_and_wait_saved_traps"; unset comma_execute_and_wait_saved_traps
+    # return the wait outcome
+    return $commands_to_execute_status
+}
+export -f comma_execute_and_wait
+
+# likely a workaround for a problem encountered in bash-4.3 series:
+# the builtin "wait" failed to wait for all processes in a (killed) process group to terminate
+# poll the process list for the given time (or forever) until no processes left in a group
+# if the timeout is reached, kill -9 the entire group
+# return 0 if processes ended and 1 if kill-9-ed
+function comma_wait_for_process_group()
+{
+    local caller_name=$1
+    local process_group_id=$2
+    local max_wait_time=$3
+    [[ -n "$max_wait_time" ]] || max_wait_time="forever"
+    local iter=0
+    local leftovers
+    while true ; do
+        leftovers=$( ps --no-headers -u $USER -o pgid | grep "$process_group_id" | wc -l )
+        (( leftovers > 0 )) && { echo "$caller_name: waited ${iter}s for $process_group_id, still $leftovers processes left" >&2; sleep 1; } || { return 0; }
+        (( ++iter ))
+        if [[ "$max_wait_time" != "forever" ]] ; then
+            (( iter > max_wait_time )) && {
+                echo "$caller_name: exceeded ${max_wait_time}s timeout in waiting for $process_group_id" >&2
+                echo "$name: kill -9 process group $process_group_id" >&2
+                kill -s KILL -- -"$process_group_id"
+                return 1
+            }
+        fi
+    done
+}
+export -f comma_wait_for_process_group

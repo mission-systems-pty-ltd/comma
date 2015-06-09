@@ -6,7 +6,7 @@ scriptname=$( basename "$dirname" )/$( basename "$0" )
 function run_test()
 {
     logfile=$1
-    comma-test-run > $logfile 2>&1 || { echo "$scriptname: comma-test-run failed" >&2; exit 1; }
+    comma-test-run --no-ansiterm-control-characters > $logfile 2>&1 || { echo "$scriptname: comma-test-run failed" >&2; exit 1; }
     find . -name expected -and -type f   | sort | cat -n | sed 's@^ *@expected[@;s@\t@]="@;s@$@"@'
     find . -name output -and -type d     | sort | cat -n | sed 's@^ *@output[@;s@\t@]="@;s@$@"@'
     find . -name stdout.log -and -type f | sort | cat -n | sed 's@^ *@stdout_log[@;s@\t@]="@;s@$@"@'

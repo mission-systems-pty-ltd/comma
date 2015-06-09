@@ -1,5 +1,0 @@
-#!/bin/bash
-
-source $( which comma-env ) || exit 1
-
-comma_env --help

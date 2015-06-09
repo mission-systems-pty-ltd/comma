@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# assume a reasonably empty environment
+printenv >&2
+echo "printenv/count=$( printenv | wc -l )"
+set >&2
+echo "set/count=$( set | wc -l )"
+
+testdir=$( dirname "$0" )
+scriptname=$( basename "$testdir" )/$( basename "$0" )
+
+function protect_main_env()
+{
+    (
+        source $( which comma-env-util ) || exit 1
+        allvars=$( comma_env --default-imports ) || {
+            echo "$scriptname: 'comma_env --default-imports' failed" >&2
+            exit 1
+        }
+        echo "$allvars"
+    )
+}
+
+allvars=$( protect_main_env ) || exit 1
+for varname in ${allvars//,/ } PATH ; do
+    echo -n "$varname/defined="
+    [[ -v $varname ]] && echo '"yes"' || echo '"no"'
+done

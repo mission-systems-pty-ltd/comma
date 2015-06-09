@@ -1,0 +1,2 @@
+scripts in this directory help managing processes: run tasks on background,
+kill tasks, run tasks in a restricted environment, etc.

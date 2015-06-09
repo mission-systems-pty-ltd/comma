@@ -1,0 +1,1 @@
+INSTALL( PROGRAMS comma-env-detail DESTINATION ${comma_INSTALL_BIN_DIR} )

@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# This file is part of comma, a generic and flexible library
+# Copyright (c) 2011 The University of Sydney
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of the University of Sydney nor the
+#    names of its contributors may be used to endorse or promote products
+#    derived from this software without specific prior written permission.
+#
+# NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+# GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+# HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+# BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# this script provides functions for interprocess syncronisation in bash
+
+# this script is designed to be included in another script directly, for example:
+# source $( which comma-sync-util )
+
+[[ -n "$comma_sync_util_include_guard_" ]] && return
+readonly comma_sync_util_include_guard_=1
+
+# General synchronization function. Takes on input a lock file name to be used
+# in a flock call (this file will be truncated to zero size) and the command to be
+# executed with all the arguments. Example:
+#
+#     comma_locked /tmp/mylock myfcn --option1 "$value1" "$arg1" ...
+#
+# Note: do not re-direct output of the function being protected. Do all writes
+# within a function while it is protected by the serialization lock.
+#
+# Note: internally, this function uses file descriptor 8. Avoid re-using it
+# in your code that invokes (or invoked under) comma_locked.
+
+function comma_locked()
+{
+    local lock=$1
+    shift
+    (
+        flock -x 8
+        $@
+    ) 8>"$lock"
+}
+export -f comma_locked

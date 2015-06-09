@@ -1,5 +1,0 @@
-#!/bin/bash
-
-source $( which comma-util ) || exit 1
-
-comma_storage_to_bytes

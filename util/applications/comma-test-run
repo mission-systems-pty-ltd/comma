@@ -32,10 +32,14 @@
 name=$( basename $0 )
 
 source $( which comma-application-util ) || { echo "$name: cannot source 'comma-application-util'" >&2; exit 1; }
-source $( which comma-util ) || { echo "$name: cannot source 'comma-util'" >&2; exit 1; }
+source $( which comma-random-util ) || { echo "$name: cannot source 'comma-random-util'" >&2; exit 1; }
+source $( which comma-storage-util ) || { echo "$name: cannot source 'comma-storage-util'" >&2; exit 1; }
 source $( which comma-resources-util ) || { echo "$name: cannot source 'comma-resources-util'" >&2; exit 1; }
-source $( which comma-sync ) || { echo "$name: cannot source 'comma-sync'" >&2; exit 1; }
-source $( which comma-env ) || { echo "$name: cannot source 'comma-env'" >&2; exit 1; }
+source $( which comma-progress-util ) || { echo "$name: cannot source 'comma-progress-util'" >&2; exit 1; }
+source $( which comma-sync-util ) || { echo "$name: cannot source 'comma-sync-util'" >&2; exit 1; }
+source $( which comma-env-util ) || { echo "$name: cannot source 'comma-env-util'" >&2; exit 1; }
+source $( which comma-string-util ) || { echo "$name: cannot source 'comma-string-util'" >&2; exit 1; }
+source $( which comma-process-util ) || { echo "$name: cannot source 'comma-process-util'" >&2; exit 1; }
 
 name_offset="${name//?/ } "
 export name name_offset
@@ -282,12 +286,6 @@ function fail_on_output()
 }
 export -f fail_on_output
 
-# return a string with "\" before any characters that are special in regular expressions
-function escape_special_chars()
-{
-    echo $* | sed 's/[].*|&^$[]/\\&/g'
-}
-
 # arguments: a list of directories containing "test", "input" and "expected" files
 # Outputs the same list, excluding any directories that
 # (1) contain only "test" (no "expected" or "input" file), and
@@ -303,7 +301,7 @@ function exclude_generic_tests()
         if [[ ! -f "$dir/input" && ! -f "$dir/expected" && ! -f "$dir/disabled" ]]; then
             if [[ -d "$dir/test" ]]; then continue; fi
             if [[ -f "$dir/test" ]]; then
-                local pattern="^$( escape_special_chars "$dir" )/."
+                local pattern="^$( comma_escape_special_chars "$dir" )/."
                 if echo $dir_list | fmt -1 | grep -q "$pattern"; then
                     if [[ "$options_debug" != "0" ]] ; then echo "excluding generic test '$dir/test'" >&2; fi
                     continue
@@ -478,13 +476,13 @@ function terminate_run_and_match_test()
     if [[ -n "$comma_test_run_and_match_test_pgid" ]] ; then
         kill -s TERM -- -$comma_test_run_and_match_test_pgid
         wait $comma_test_run_and_match_test_pgid
-        wait_for_process_group "$name" "$comma_test_run_and_match_test_pgid" 60
+        comma_wait_for_process_group "$name" "$comma_test_run_and_match_test_pgid" 10
         unset comma_test_run_and_match_test_pgid
     fi
     if [[ -n "$comma_top_pgid" ]] ; then
         kill -s TERM -- -$comma_top_pgid
         wait $comma_top_pgid
-        wait_for_process_group "$name" "$comma_top_pgid" 10
+        comma_wait_for_process_group "$name" "$comma_top_pgid" 10
         unset comma_top_pgid
     fi
     # a process that exits in response to SIGINT should kill itself with SIGINT
@@ -549,12 +547,12 @@ function run_test_with_timeout()
     timeout -k 10 -s TERM $max_run_time bash -c run_and_match_test & comma_test_run_and_match_test_pgid=$!
     wait $comma_test_run_and_match_test_pgid
     rv=$?
-    wait_for_process_group "$name" "$comma_test_run_and_match_test_pgid" 60
+    comma_wait_for_process_group "$name" "$comma_test_run_and_match_test_pgid" 10
     unset comma_test_run_and_match_test_pgid
     if [[ "$options_estimate_resources" == "1" ]] ; then
         kill -s TERM -- -$comma_top_pgid
         wait $comma_top_pgid
-        wait_for_process_group "$name" "$comma_top_pgid" 10
+        comma_wait_for_process_group "$name" "$comma_top_pgid" 10
         unset comma_top_pgid
         mv -f "$our_performance_log" "output/performance.csv"
     fi

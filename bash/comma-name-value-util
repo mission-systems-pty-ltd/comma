@@ -1,0 +1,182 @@
+#!/bin/bash
+
+# This file is part of comma, a generic and flexible library
+# Copyright (c) 2011 The University of Sydney
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of the University of Sydney nor the
+#    names of its contributors may be used to endorse or promote products
+#    derived from this software without specific prior written permission.
+#
+# NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+# GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+# HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+# BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# this script is designed to be included in another script directly, for example:
+# source $( which comma-name-value-util )
+
+[[ -z "$comma_name_value_util_include_guard_" ]] || return
+readonly comma_name_value_util_include_guard_=1
+
+# take path-value pairs, mangle path to turn them into bash
+# expressions, e.g:
+# echo hello/world=5 | comma_path_value_mangle
+# hello_world="5"
+#
+# use it, for example, if you need to define variables as local,
+# since it is impossible to do it with comma_path_value_to_var
+#
+# e.g:
+# eval "$( echo hello/world=5 | comma_path_value_mangle | sed "s#^#local #" )"
+# is equivalent of:
+# local hello_world="5"
+function comma_path_value_mangle()
+{
+    local delimiter="$1"
+    [[ -n "$delimiter" ]] || delimiter="_"
+    local path name value mangled
+    while IFS='=' read path value ; do
+        [[ -n "$path" && ! "$path" =~ ^[#\"] ]] || continue
+        name=$prefix${path//\//$delimiter}
+        name=${name//-/$delimiter}
+        value=${value#\"}
+        value=${value%\"}
+        mangled+="$name='$value'\n"
+    done
+    echo -e -n $mangled
+}
+export -f comma_path_value_mangle
+
+# similar to comma_path_value_mangle, takes only the paths and converts
+# to variable names; use it if you need, for example, to export only the
+# variables that will be used by some script
+function comma_path_mangle()
+{
+    local delimiter="$1"
+    [[ -n "$delimiter" ]] || delimiter="_"
+    local path name mangled
+    while IFS='=' read path _ ; do
+        [[ -n "$path" && ! "$path" =~ ^[#\"] ]] || continue
+        name=$prefix${path//\//$delimiter}
+        name=${name//-/$delimiter}
+        mangled+="$name\n"
+    done
+    echo -e -n $mangled
+}
+export -f comma_path_mangle
+
+# take path-value pairs, assign the values to corresponding bash variables
+# in the variable name slashes will be replaced with given delimiter
+#
+# delimiter: default '_'
+# dash '-': replaced with '_'
+# lines starting with '#' ignored
+# empty lines ignored
+#
+# [--export] : variables created export
+# [--null-ok]: null variables are defined, otherwise ignored
+# [--prefix="<prefix>"]: prefix used for defining variables
+# [--delimiter="<delimiter>"]: delimiter used for replacing '/'
+#
+# examples (try them):
+#     comma_path_value_to_var < <( echo hello=world )
+#     echo $hello
+#
+#     comma_path_value_to_var < <( echo hello/world=bye )
+#     echo $hello__world
+#
+#     comma_path_value_to_var blah < <( echo hello/world=bye )
+#     echo $blah__hello__world
+function comma_path_value_to_var()
+{
+    local prefix=""
+    local delimiter="_"
+    local export_variable=""
+    local null_ok=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+        --export) export_variable="export" ;;
+        --null-ok) null_ok="true" ;;
+        --prefix=*) prefix="${1#*=}" ;;
+        --delimiter=*) delimiter="${1#*=}" ;;
+        esac
+        shift
+    done
+
+    [[ -z "$prefix" ]] || prefix="$prefix$delimiter"
+
+    local path name value
+    local -i ret_code=0
+    while IFS='=' read path value ; do
+        [[ -n "$path" && ! "$path" =~ ^[#\"] ]] || continue
+        [[ -n "$value" || -n "$null_ok" ]] || continue
+        name=$prefix${path//\//$delimiter}
+        name=${name//-/$delimiter}
+        # Strip quotes then add them back. This ensures consistent behaviour.
+        value=${value#\"}
+        value=\"${value%\"}\"
+        eval "$export_variable $name=$value" \
+            || { echo "comma-application-util: comma_path_value_to_var failed '$export_variable $name=$value'" >&2 ; ret_code=1 ; }
+    done
+    return $ret_code
+}
+export -f comma_path_value_to_var
+
+# take path-value pairs, output the values of corresponding bash variables
+# in the variable name slashes will be replaced with given delimiter
+#
+# delimiter: default '_'
+# dash '-': replaced with '_'
+# lines starting with '#' ignored
+# empty lines ignored
+#
+# usage: comma_path_value_from_var [--export] [<prefix>] [<slash replacement>]
+#     <prefix>: variable name prefix
+#     <slash replacement>: slash replacement; default: _
+#     --export: if present, export variables
+#
+# examples (try them):
+#     todo
+function comma_path_value_from_var()
+{
+    local prefix=$1
+    local path=""
+    local value=""
+    local default_value=""
+    local name=""
+    local delimiter="_"
+    if [ ! -z $2 ] ; then delimiter="$2" ; fi
+    if [ ! -z $1 ] ; then prefix="$1$delimiter" ; fi
+    while IFS='=' read path default_value ; do
+        if [[ "$path" == "" ]] ; then continue ; fi
+        if [[ "$path" =~ "#" ]] ; then continue ; fi
+        name=$prefix$( echo $path | sed "s/\//$delimiter/g" | sed "s/-/_/g" )
+        eval value=\$$name
+        [[ "$value" == "" && "$default_value" != "" ]] && value=$default_value
+        [[ "$value" != "" ]] && echo "$path=$value"
+    done
+}
+export -f comma_path_value_from_var
+
+# Leave only the last of path=value lines with identical paths
+# No arguments, stdin to stdout
+function comma_path_value_take_last() { tac | sort -u -t= -k1,1 -s ; }
+export -f comma_path_value_take_last

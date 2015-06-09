@@ -1,0 +1,114 @@
+#!/bin/bash
+
+# This file is part of comma, a generic and flexible library
+# Copyright (c) 2011 The University of Sydney
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of the University of Sydney nor the
+#    names of its contributors may be used to endorse or promote products
+#    derived from this software without specific prior written permission.
+#
+# NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+# GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+# HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+# BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# this script is designed to be included in another script directly, for example:
+# source $( which comma-application-util )
+
+[[ -n "$comma_application_util_include_guard_" ]] && return
+readonly comma_application_util_include_guard_=1
+
+source $( which comma-name-value-util ) # do not exit on error, could be imported earlier
+
+# usage: comma_stacktrace <any message>
+# print the stacktrace, the list of lines and script names that were passed
+# through on the way to the currently executed line of the script
+# finally prints the supplied arguments, if any
+function comma_stacktrace()
+{
+    local frame=0
+
+    while caller $frame; do
+        ((frame++));
+    done
+
+    echo "$*"
+}
+export -f comma_stacktrace
+
+# usage: my_options=( $( cat name-value-pairs | comma_options_from_name_value [<options>] ) )
+#
+# options
+#     --use-equal-sign: options set as --file=foo.txt; default --file foo.txt
+#
+# todo: there still may be trouble with option values with spaces inside; check and test it... later...
+#
+# example (try it)
+#      echo -e hello=\"\\\"world\\\"\"\\nverbose=\"true\" | comma_options_from_path_value
+function comma_options_from_name_value()
+{
+    local delimiter='\n'
+    if [[ "$1" == "--use-equal-sign" ]] ; then delimiter='=' ; fi
+    sed 's/^/--/g' \
+        | sed 's/="true"$//g' \
+        | sed 's/="false"$//g' \
+        | sed 's/="/=/g' \
+        | sed 's/"$//g' \
+        | sed 's/\\"/"/g' \
+        | tr '=' "$delimiter"
+}
+export -f comma_options_from_name_value
+
+# usage: comma_options_has <what> $@
+# example:
+#     if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then usage ; fi
+function comma_options_has()
+{
+    for a in ${@:2} ; do if [[ "$1" == "$a" || "$a" =~ ${1}= ]] ; then echo 1 ; exit ; fi ; done
+    echo 0
+}
+export -f comma_options_has
+
+# verify the overall exit status of a pipeline ($? reports only the status of the last step
+# in a pipeline); ignore termination by SIGPIPE
+#
+# rationale for ignoring SIGPIPE: if in a pipeline " A | B " the process "B" may exit before A,
+# so that A (pipe writer) has no reader, then A is killed by SIGPIPE and has non-zero exit status
+# however, this may be (and likely is) not an error overall, as B has simply finished
+# processing and terminated
+#
+# example
+# A | B | C | D
+# if ! status_ok ; then echo "failed"; else echo "ok"; fi
+
+# define this value once to avoid calling subprocesses inside status_ok
+comma_sigpipe_exit_status_=$( expr 128 \+ $( kill -l SIGPIPE ) )
+export comma_sigpipe_exit_status_
+
+function comma_status_ok()
+{
+    pipestatus_copy_status_ok=("${PIPESTATUS[@]}")  # make a safe copy
+    local outcome_status_ok=""
+    for outcome_status_ok in "${pipestatus_copy_status_ok[@]}" ; do
+        (( outcome_status_ok == 0 || outcome_status_ok == comma_sigpipe_exit_status_ )) || return 1
+    done
+    return 0
+}
+export -f comma_status_ok
