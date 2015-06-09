@@ -165,7 +165,8 @@ class any_stream : public stream
             {
                 unsigned int count = size_ ? available / size_ : 0;
                 if( max_count && count > max_count ) { count = max_count; }
-                unsigned int size = std::min( std::size_t( size_ ? count * size_ : available ), buffer.size() );
+                if( count == 0 ) { count = 1; } // read at least one packet
+                unsigned int size = size_ ? count * size_ : available;
                 istream_->read( &buffer[0], size );
                 return istream_->gcount() <= 0 ? 0 : istream_->gcount();
             }
@@ -214,7 +215,6 @@ int main( int argc, char** argv )
         if( size || unnamed.size() == 1 ) { _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
         if( unnamed.empty() ) { std::cerr << "io-cat: please specify at least one source" << std::endl; return 1; }
-        unsigned int round_robin_count = unnamed.size() > 1 ? options.value( "--round-robin", 0 ) : 0;
         boost::ptr_vector< stream > streams;
         comma::io::select select;
         for( unsigned int i = 0; i < unnamed.size(); ++i )
@@ -222,7 +222,9 @@ int main( int argc, char** argv )
             streams.push_back( make_stream( unnamed[i], size, size || unnamed.size() == 1 ) );
             select.read().add( streams.back() );
         }
-        std::vector< char > buffer( std::max( size, size ? 65536u - 65536u % size : 65536u ) );
+        const unsigned int max_count = size ? ( size > 65536u ? 1 : 65536u / size ) : 0;
+        std::vector< char > buffer( size ? size * max_count : 65536u );
+        unsigned int round_robin_count = unnamed.size() > 1 ? options.value( "--round-robin", 0 ) : 0;
         comma::signal_flag is_shutdown;
         for( bool done = false; !is_shutdown && !done; )
         {
@@ -232,10 +234,10 @@ int main( int argc, char** argv )
             {
                 if( streams[i].eof() ) { continue; }
                 if( !select.read().ready( streams[i].fd() ) ) { done = false; continue; }
-                unsigned int max_count = round_robin_count;
+                unsigned int countdown = round_robin_count;
                 while( !is_shutdown && !streams[i].eof() )
                 {
-                    unsigned int bytes_read = streams[i].read_available( buffer, max_count );
+                    unsigned int bytes_read = streams[i].read_available( buffer, countdown ? countdown : max_count );
                     if( bytes_read == 0 ) { break; }
                     done = false;
                     if( size && bytes_read % size != 0 ) { std::cerr << "io-cat: expected " << size << " byte(s), got only " << ( bytes_read % size ) << " on " << streams[i].address() << std::endl; return 1; }
@@ -243,8 +245,8 @@ int main( int argc, char** argv )
                     if( unbuffered ) { std::cout.flush(); }
                     if( round_robin_count )
                     {
-                        max_count -= ( size ? bytes_read / size : 1 );
-                        if( max_count == 0 ) { break; }
+                        countdown -= ( size ? bytes_read / size : 1 );
+                        if( countdown == 0 ) { break; }
                     }
                 }
             }
