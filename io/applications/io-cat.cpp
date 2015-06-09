@@ -27,6 +27,8 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+/// @author vsevolod vlaskine
+
 #ifndef WIN32
 #include <stdlib.h>
 #include <sys/ioctl.h>
