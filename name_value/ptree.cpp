@@ -181,6 +181,7 @@ void property_tree::to_path_value( std::ostream& os, const boost::property_tree:
         xpath display_path;
         impl::ptree_to_path_value_string_impl( os, i, i == ptree.begin(), path, display_path, mode, equal_sign, delimiter, root.to_string() ); // quick and dirty
     }
+    if( delimiter == '\n' ) { os << delimiter; }
 }
 
 void property_tree::from_path_value( std::istream& is, boost::property_tree::ptree& ptree, property_tree::path_value::check_repeated_paths check_type, char equal_sign, char delimiter, bool use_index )
