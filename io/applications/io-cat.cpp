@@ -161,14 +161,14 @@ class any_stream : public stream
         
         unsigned int read_available( std::vector< char >& buffer, unsigned int max_count )
         {
-            unsigned int available = istream_.available();
+            std::size_t available = istream_.available();
             if( !available ) { return 0; }
             if( binary_ )
             {
                 unsigned int count = size_ ? available / size_ : 0;
                 if( max_count && count > max_count ) { count = max_count; }
                 if( count == 0 ) { count = 1; } // read at least one packet
-                unsigned int size = size_ ? count * size_ : available;
+                unsigned int size = size_ ? count * size_ : std::min( available, buffer.size() );
                 istream_->read( &buffer[0], size );
                 return istream_->gcount() <= 0 ? 0 : istream_->gcount();
             }
