@@ -32,7 +32,7 @@
 # this script is designed to be included in another script directly, for example:
 # source $( which comma-name-value-util )
 
-[[ -z "$comma_name_value_util_include_guard_" ]] || return
+[[ -z "$comma_name_value_util_include_guard_" ]] || return 0
 readonly comma_name_value_util_include_guard_=1
 
 # take path-value pairs, mangle path to turn them into bash

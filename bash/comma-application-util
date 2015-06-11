@@ -32,7 +32,7 @@
 # this script is designed to be included in another script directly, for example:
 # source $( which comma-application-util )
 
-[[ -n "$comma_application_util_include_guard_" ]] && return
+[[ -n "$comma_application_util_include_guard_" ]] && return 0
 readonly comma_application_util_include_guard_=1
 
 source $( which comma-name-value-util ) # do not exit on error, could be imported earlier

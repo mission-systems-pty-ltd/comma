@@ -32,7 +32,7 @@
 # this script is designed to be included in another script directly, for example:
 # source $( which comma-string-util )
 
-[[ -n "$comma_string_util_include_guard_" ]] && return
+[[ -n "$comma_string_util_include_guard_" ]] && return 0
 readonly comma_string_util_include_guard_=1
 
 # Trim leading and trailing whitespaces

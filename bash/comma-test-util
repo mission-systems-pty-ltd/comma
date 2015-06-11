@@ -34,7 +34,7 @@
 # this script is designed to be included in another script directly, for example:
 # source $( which comma-test-util )
 
-[[ -z "$comma_test_util_include_guard_" ]] || return
+[[ -z "$comma_test_util_include_guard_" ]] || return 0
 readonly comma_test_util_include_guard_=1
 
 # a helper to write tests in the comma-test-run style

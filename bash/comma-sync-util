@@ -34,7 +34,7 @@
 # this script is designed to be included in another script directly, for example:
 # source $( which comma-sync-util )
 
-[[ -n "$comma_sync_util_include_guard_" ]] && return
+[[ -n "$comma_sync_util_include_guard_" ]] && return 0
 readonly comma_sync_util_include_guard_=1
 
 # General synchronization function. Takes on input a lock file name to be used
