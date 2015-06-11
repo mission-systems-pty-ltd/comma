@@ -35,7 +35,7 @@
 [[ -n "$comma_process_util_include_guard_" ]] && return 0
 readonly comma_process_util_include_guard_=1
 
-source $( which comma-string-util ) || { echo "$name: cannot source 'comma-string-util'" >&2; exit 1; }
+source $( type -p comma-string-util ) || { echo "$name: cannot source 'comma-string-util'" >&2; exit 1; }
 
 # This is a signal handler used by comma_execute_and_wait. See that function for detail.
 function terminate_comma_execute_and_wait()
