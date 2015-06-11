@@ -33,7 +33,7 @@
 # resources usage across a pool of workers (processes).
 
 # This script is designed to be included in another script directly, for example:
-# source $( which comma-resources-util )
+# source $( type -p comma-resources-util )
 
 [[ -n "$comma_resources_util_include_guard_" ]] && return 0
 readonly comma_resources_util_include_guard_=1
