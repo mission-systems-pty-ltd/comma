@@ -409,6 +409,8 @@ std::string mangle_id(const std::string &id)
 
         result += ch;
 
+        if (ch == '.' && std::isdigit(id[n+1])) result += '_';
+        
         /*
         if (ch == '/')      { result += "_S"; }
         else if (ch == '[') { result += "_L"; }
@@ -435,7 +437,11 @@ std::string demangle_id(const std::string &id, bool restore_slashes)
     for (size_t n = 0;n < len;++n)
     {
         char ch = id[n];
-        if (ch == '.' || ch == '/') { start_pos = n + 1; }
+        if (ch == '.' || ch == '/') 
+        { 
+            start_pos = n + 1; 
+            if (id[n+1] == '_') start_pos++; //remove leading underscore
+        }
 
         if (ch == '.' && restore_slashes) { ch = '/'; }
         else if (ch == '_' && (n + 1 == len || id[n + 1] == '.' || id[n + 1] == '/'))

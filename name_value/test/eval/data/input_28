@@ -1,0 +1,4 @@
+test/0=1
+test/1="hello"
+test/2/12[123]="array test"
+timestamp/20150612T143500="14:35 June 12 2015"
