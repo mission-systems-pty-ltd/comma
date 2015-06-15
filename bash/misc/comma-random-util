@@ -33,9 +33,9 @@
 # more clearly defined categories
 
 # this script is designed to be included in another script directly, for example:
-# source $( which comma-random-util )
+# source $( type -p comma-random-util )
 
-[[ -n "$comma_random_util_include_guard_" ]] && return
+[[ -n "$comma_random_util_include_guard_" ]] && return 0
 readonly comma_random_util_include_guard_=1
 
 # Auxiliary function: random value uniformly distributed in [0, 1].

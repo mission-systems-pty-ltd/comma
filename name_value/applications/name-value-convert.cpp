@@ -151,7 +151,7 @@ template <> struct traits< path_value > // quick and dirty
     static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode mode )
     {
         comma::property_tree::to_path_value( os, ptree, mode, equal_sign, path_value_delimiter );
-        if( path_value_delimiter == '\n' ) { os << std::endl; }
+        if( path_value_delimiter == '\n' ) { os << path_value_delimiter; }
     }
 };
 

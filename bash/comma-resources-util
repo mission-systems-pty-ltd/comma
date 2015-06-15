@@ -33,12 +33,12 @@
 # resources usage across a pool of workers (processes).
 
 # This script is designed to be included in another script directly, for example:
-# source $( which comma-resources-util )
+# source $( type -p comma-resources-util )
 
-[[ -n "$comma_resources_util_include_guard_" ]] && return
+[[ -n "$comma_resources_util_include_guard_" ]] && return 0
 readonly comma_resources_util_include_guard_=1
 
-source $( which comma-name-value-util ) # do not exit on error, could be imported earlier
+source $( type -p comma-name-value-util ) || { echo "$name: cannot source 'comma-name-value-util'" >&2; exit 1; }
 
 # Read a json file as text stream on stdin and in the given path (2nd argument)
 # append the pid (1st argument) to the end of []-enclosed list (insert into
@@ -165,15 +165,28 @@ function comma_queue_is_empty_infile()
 }
 export -f comma_queue_is_empty_infile
 
+# Extract cpu count, cores and sockets from lscpu
+function comma_cpu_resources()
+{
+    local lscpu=$( lscpu --parse )
+    local fields=$( echo "$lscpu" | grep '^#' | tail -1 | sed 's/^[# ]*//' )
+    {
+        # lscpu --parse gives us zero-based indexes. Add one to get the count
+        echo "$lscpu" | tail -1 | csv-shuffle --fields $fields --output CPU,Core,Socket
+        echo "1,1,1"
+    } | csv-calc sum --format 3i | name-value-from-csv --fields cpu,core,socket --prefix cpu
+}
+
 # Output the most commonly used system resources: number of CPUs, total RAM,
 # size, total shared memory size. No arguments. Does not read stdin.
 function comma_total_system_resources()
 {
     local cpus memory_main memory_shared memory_limits
     local name="comma_total_system_resources"
-    cpus=$( grep -c '^processor' /proc/cpuinfo )
-    (( $? == 0 && $cpus > 0 )) || { echo "$name: cannot grep '/proc/cpuinfo' for the number of processors" >&2; return 1; }
-    #
+
+    cpus=$( comma_cpu_resources | name-value-get cpu/cpu --from path-value )
+    (( cpus > 0 )) || { echo "$name: cannot determine number of processors" >&2; return 1; }
+
     # ipcs -ml was found to return weird values on many systems
     memory_shared=$( df --block-size=1 --local 2>&1 | grep -v ": Permission denied" | grep '/shm$' | head -n 1 | gawk '{ print $2 }' )
     # do not check error status because occasionally df would return 1, e.g., if some network share is not

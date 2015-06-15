@@ -16,10 +16,6 @@ if( NOT WIN32 )
     target_link_libraries( io-cat comma_application comma_io comma_csv comma_base ${comma_EXTERNAL_ALL_LIBRARIES} ) # profiler )
     install( TARGETS io-cat RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
     
-    add_executable( io-client ${dir}/io-client.cpp )
-    target_link_libraries( io-client comma_application comma_io comma_csv comma_base ${comma_EXTERNAL_ALL_LIBRARIES} ) # profiler )
-    install( TARGETS io-client RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
-
     add_executable( udp-client ${dir}/udp-client.cpp )
     target_link_libraries( udp-client comma_application comma_io comma_csv comma_base ${comma_EXTERNAL_ALL_LIBRARIES} ) # profiler )
     install( TARGETS udp-client RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )

@@ -33,9 +33,9 @@
 # more clearly defined categories
 
 # this script is designed to be included in another script directly, for example:
-# source $( which comma-units-util )
+# source $( type -p comma-units-util )
 
-[[ -n "$comma_units_util_include_guard_" ]] && return
+[[ -n "$comma_units_util_include_guard_" ]] && return 0
 readonly comma_units_util_include_guard_=1
 
 # Auxiliary function to convert various storage units to bytes.

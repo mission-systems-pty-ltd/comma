@@ -32,9 +32,9 @@
 # this script provides utilities for logging run-time of executed commands
 
 # this script is designed to be included in another script directly, for example:
-# source $( which comma-progress-util )
+# source $( type -p comma-progress-util )
 
-[[ -n "$comma_progress_util_include_guard_" ]] && return
+[[ -n "$comma_progress_util_include_guard_" ]] && return 0
 readonly comma_progress_util_include_guard_=1
 
 # a coarse elapsed time estimate of <command> execution appended to <file>
