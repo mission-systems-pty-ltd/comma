@@ -55,7 +55,7 @@ static void usage()
     std::cerr << std::endl;
     std::cerr << "simplified, but similar as Linux cut utility, but for \"binary csv\"" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "usage: cat blah.bin | csv-bin-cut <format> --fields=<fields> [--complement]" << std::endl;
+    std::cerr << "usage: cat blah.bin | csv-bin-cut <format> --fields=<fields> [--complement] [--flush]" << std::endl;
     std::cerr << "    <fields>: field numbers, starting from 1 (to keep" << std::endl;
     std::cerr << "              consistent with the standard cut utility)" << std::endl;
     std::cerr << std::endl;
@@ -78,6 +78,7 @@ int main( int ac, char** av )
         command_line_options options( ac, av );
         if( ac < 2 || options.exists( "--help" ) || options.exists( "-h" ) ) { usage(); }
         comma::csv::format format( av[1] );
+        bool flush = options.exists( "--flush" );
         if( !options.exists( "--fields" ) ) { std::cerr << "csv-bin-cut: please specify --fields" << std::endl; return 1; }
         std::vector< std::string > v = comma::split( options.value< std::string >( "--fields" ), ',' );
         std::vector< comma::csv::format::element > offsets;
@@ -127,6 +128,7 @@ int main( int ac, char** av )
             for( unsigned int i = 0; i < offsets.size(); ++i )
             {
                 std::cout.write( &buf[0] + offsets[i].offset, offsets[i].size );
+                if( flush ) { std::cout.flush(); }
             }
         }
         return 0;

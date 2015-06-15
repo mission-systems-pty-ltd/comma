@@ -59,6 +59,7 @@ static void usage()
     std::cerr << "        --inverted-mask,--complement-mask,--unmask,--unmasked=<fields>: remove given fields by position, opposite of --mask" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    prefix: prefix all non-empty field names" << std::endl;
+    std::cerr << "        --basename: remove prefix of given fields" << std::endl;
     std::cerr << "        --except=<fields>: don't prefix given fields" << std::endl;
     std::cerr << "        --fields=<fields>: prefix only given fields" << std::endl;
     std::cerr << "        --path=<prefix>: path to add as a prefix" << std::endl;
@@ -179,9 +180,12 @@ int main( int ac, char** av )
         if( operation == "prefix" )
         {
             options.assert_mutually_exclusive( "--fields,--except" );
+            options.assert_mutually_exclusive( "--path,--basename" );
             const std::string& e = options.value< std::string >( "--except", "" );
             const std::string& f = options.value< std::string >( "--fields", "" );
-            const std::string& path = options.value< std::string >( "--path" ) + '/';
+            const std::string& path = options.value< std::string >( "--path", "" ) + '/';
+            bool basename = options.exists( "--basename" );
+            if( !basename && path == "/" ) { std::cerr << "csv-fields: please specify --path or --basename" << std::endl; return 1; }
             bool except = !e.empty();
             std::vector< std::string > g;
             if( !e.empty() ) { g = comma::split( e, ',' ); }
@@ -197,8 +201,11 @@ int main( int ac, char** av )
                 const std::vector< std::string >& v = comma::split( line, ',' );
                 for( unsigned int i = 0; i < v.size(); ++i )
                 {
-                    std::cout << comma << ( ( v[i].empty() || ( !fields.empty() && except == ( fields.find( v[i] ) != fields.end() ) ) ) ? "" : path ) << v[i];
+                    std::cout << comma;
                     comma = ",";
+                    if( ( v[i].empty() || ( !fields.empty() && except == ( fields.find( v[i] ) != fields.end() ) ) ) ) { std::cout << v[i]; }
+                    else if( basename ) { std::string::size_type p = v[i].find_last_of( '/' ); std::cout << ( p == std::string::npos ? v[i] : v[i].substr( p + 1 ) ); }
+                    else { std::cout << path << v[i]; }
                 }
                 std::cout << std::endl;
             }
