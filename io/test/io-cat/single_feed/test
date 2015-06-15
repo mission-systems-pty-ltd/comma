@@ -63,22 +63,20 @@ function test_socket
     rm -f $socket
 }
 
-# commented, because zmq support is not implemented in io-cat, yet
-# uncomment and fix, once zmq support added
-# function test_zmq_socket
-# {
-#     echo "$FUNCNAME uses zero-cat in place of io-cat" >&2 # todo: remove once io-cat is enabled in the test (see comment below)
-#     local message="$1"
-#     local socket=$dir/${prefix}_zmq_socket
-#     files[zmq_socket]=$socket
-#     rm -f $socket
-#     exec 3> >( zero-cat --wait-after-connect=0.5 --publish ipc://$socket ) && echo -e "$message" >&3 && sleep $timeout && exec 3<&- &
-#     # todo: umcomment the line below and remove the following line once zeromq is implemented in io-cat
-#     #local output=$( timeout -k 1 -s TERM $timeout io-cat -u zmq-local://$socket | tail -n1 )
-#     local output=$( timeout -k 1 -s TERM $timeout zero-cat ipc://$socket 2>/dev/null | tail -n1 )
-#     echo "zmq_socket/output=\"$output\""
-#     rm -f $socket
-# }
+function test_zmq_socket
+{
+    echo "$FUNCNAME uses zero-cat in place of io-cat" >&2 # todo: remove once io-cat is enabled in the test (see comment below)
+    local message="$1"
+    local socket=$dir/${prefix}_zmq_socket
+    files[zmq_socket]=$socket
+    rm -f $socket
+    exec 3> >( zero-cat --wait-after-connect=0.5 --publish ipc://$socket ) && echo -e "$message" >&3 && sleep $timeout && exec 3<&- &
+    # todo: umcomment the line below and remove the following line once zeromq is implemented in io-cat
+    #local output=$( timeout -k 1 -s TERM $timeout io-cat -u zmq-local://$socket | tail -n1 )
+    local output=$( timeout -k 1 -s TERM $timeout zero-cat ipc://$socket 2>/dev/null | tail -n1 )
+    echo "zmq_socket/output=\"$output\""
+    rm -f $socket
+}
 
 function test_zmq_tcp
 {
@@ -118,7 +116,9 @@ if [[ -z "$port" ]]; then echo "failed to find a free port" >&2; exit 1; fi
 test_tcp "tcp_message1\ntcp_message2"
 test_udp "udp_message1\nudp_message2"
 test_socket "socket_message1\nsocket_message2"
-test_zmq_socket "zmq_socket_message1\nzmq_socket_message2"
-test_zmq_tcp
+# commented, because zmq support is not implemented in io-cat, yet
+# uncomment and fix, once zmq support added
+#test_zmq_socket "zmq_socket_message1\nzmq_socket_message2"
+#test_zmq_tcp
 test_file "file_message1\nfile_message2"
 test_pipe "pipe_message1\npipe_message2"
