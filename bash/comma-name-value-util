@@ -82,6 +82,44 @@ function comma_path_mangle()
 }
 export -f comma_path_mangle
 
+# select only the fields given via the argument
+# if the first argument is not an option it will be treated as a file/pipe name
+#
+# [--fields]: only accept paths listed in the comma separated paths list
+# [--paths]: only accept paths listed in the comma separated paths list
+# 
+# examples
+#   comma_path_value_select <( echo hello ) < <( echo hello=world ; echo goodbye=world)
+#   echo "hello='$hello'" "goodbye='$goodbye'"
+#
+#   comma_path_value_select field-list.txt < <( echo hello=world ; echo goodbye=world)
+#   echo "hello='$hello'" "goodbye='$goodbye'"
+#
+#   comma_path_value_select --paths=hello,hola < <( echo hello=world ; echo goodbye=world)
+#   echo "hello='$hello'" "goodbye='$goodbye'"
+function comma_path_value_select()
+{
+    local ok_paths=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+        --fields=*) ok_paths="${1#*=}" ;;
+        --paths=*) ok_paths="${1#*=}" ;;
+        *) break ;;
+        esac
+        shift
+    done
+    
+    {
+        if (( "${#ok_paths}" > 0 )) ; then
+            csv-join --delimiter=\= --fields path,value <( tr ',' '\n' <<< "$ok_paths" )";fields=path" --string
+        else
+            csv-join --delimiter=\= --fields path,value "$1;fields=path" --string
+        fi
+    } | cut -d = -f 1-2
+}
+export -f comma_path_value_select
+
 # take path-value pairs, assign the values to corresponding bash variables
 # in the variable name slashes will be replaced with given delimiter
 #

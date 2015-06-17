@@ -1,0 +1,49 @@
+#!/bin/bash
+
+scriptname="comma_application_util_test"
+
+source $( which comma-application-util ) || { printf "%s could not source comma-application-util" $scriptname >&2 ; exit 1 ; } 
+
+result=$( comma_path_value_select <<< '' )
+printf "test[0]/code=%d\n" $? 
+
+result=$( comma_path_value_select <<< 'colour=blue' )
+printf "test[1]/code=%d\n" $?
+printf "test[1]/result=\"%s\"\n" $( tr '\n' @ <<< "$result" )
+
+result=$( comma_path_value_select --paths=color6,color7,color8 <<< 'color6=brown
+color7=magenta
+color8=violet' )
+printf "test[2]/code=%d\n" $?
+printf "test[2]/result=\"%s\"\n" $( tr '\n' @ <<< "$result" )
+
+result=$( comma_path_value_select --paths=color6,color8 <<< 'color6=brown
+color7=magenta
+color8=violet' )
+printf "test[3]/code=%d\n" $?
+printf "test[3]/result=\"%s\"\n" $( tr '\n' @ <<< "$result" )
+
+result=$( comma_path_value_select --paths=color5,color6,color7,color8 <<< 'color6=brown
+color7=magenta
+color8=violet' )
+printf "test[4]/code=%d\n" $?
+printf "test[4]/result=\"%s\"\n" $( tr '\n' @ <<< "$result" )
+
+result=$( comma_path_value_select <( echo -e "color6\ncolor8" ) <<< 'color6=brown
+color7=magenta
+color8=violet' )
+printf "test[5]/code=%d\n" $?
+printf "test[5]/result=\"%s\"\n" $( tr '\n' @ <<< "$result" )
+
+result=$( comma_path_value_select <( echo -e "color8\ncolor6" ) <<< 'color6=brown
+color7=magenta
+color8=violet' )
+printf "test[6]/code=%d\n" $?
+printf "test[6]/result=\"%s\"\n" $( tr '\n' @ <<< "$result" )
+
+result=$( comma_path_value_select --paths=color8,color6 <<< 'color6=brown
+color7=magenta
+color8=violet' )
+printf "test[7]/code=%d\n" $?
+printf "test[7]/result=\"%s\"\n" $( tr '\n' @ <<< "$result" )
+

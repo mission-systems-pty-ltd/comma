@@ -1,0 +1,15 @@
+test[0]/code=0
+test[1]/code=0
+test[1]/result="@"
+test[2]/code=0
+test[2]/result="color6=brown@color7=magenta@color8=violet@"
+test[3]/code=0
+test[3]/result="color6=brown@color8=violet@"
+test[4]/code=0
+test[4]/result="color6=brown@color7=magenta@color8=violet@"
+test[5]/code=0
+test[5]/result="color6=brown@color8=violet@"
+test[6]/code=0
+test[6]/result="color6=brown@color8=violet@"
+test[7]/code=0
+test[7]/result="color6=brown@color8=violet@"
