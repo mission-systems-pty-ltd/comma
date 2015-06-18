@@ -50,6 +50,8 @@ static void usage( bool verbose = false )
     std::cerr << "    --output-line-number,--line-number,-n: output line numbers (see examples)" << std::endl;
     std::cerr << "    --prefix,-p <prefix>: append this prefix to all paths" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "todo: support escaped strings (e.g. currently string values cannot have <delimiter> in them)" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << "    echo 1,2,3 | name-value-from-csv a,b,c/d -d ," << std::endl;
     std::cerr << "    a=1,b=2,c/d=3" << std::endl;
@@ -73,11 +75,12 @@ static void usage( bool verbose = false )
 
 int main( int ac, char** av )
 {
+    std::string line;
     try
     {
         comma::command_line_options options( ac, av, usage );
-        char delimiter = options.value( "--delimiter,-d", ',' );
-        char end_of_line = options.value( "--end-of-line,--eol", '\n' );
+        char delimiter = options.value< char >( "--delimiter,-d", ',' );
+        char end_of_line = options.value< char >( "--end-of-line,--eol", '\n' );
         std::string fields = options.value< std::string >( "--fields,-f", "" );
         bool force = options.exists( "--force" );
         bool no_brackets = options.exists( "--no-brackets" );
@@ -86,6 +89,7 @@ int main( int ac, char** av )
         if( !prefix.empty() && ( no_brackets || !output_line_numbers ) ) { prefix += '/'; }
         std::string left_bracket, right_bracket;
         if( !no_brackets ) { left_bracket = "["; right_bracket = "]"; }
+        
         if( fields.empty() )
         { 
             const std::vector< std::string >& unnamed = options.unnamed( "--force,--no-brackets,--output-line-number,--line-number,-n", "-.*" );
@@ -95,23 +99,29 @@ int main( int ac, char** av )
         const std::vector< std::string >& paths = comma::split( fields, ',' );
         for( unsigned int i = 0; std::cin.good() && !std::cin.eof(); ++i )
         {
-            std::string line;
             std::getline( std::cin, line );
             if( line.empty() || line[0] == '\r' ) { continue; } // quick and dirty: windows...
-            const std::vector< std::string >& values = comma::split_escaped( line, delimiter );
+            //const std::vector< std::string >& values = comma::split_escaped( line, delimiter );
+            const std::vector< std::string >& values = comma::split( line, delimiter );
             std::string index = output_line_numbers ? left_bracket + boost::lexical_cast< std::string >( i ) + right_bracket + "/" : "";
             for( unsigned int k = 0; k < values.size(); ++k )
             {
                 bool overshot = k >= paths.size();
                 if( overshot && !force ) { std::cerr << "name-value-from-csv: line " << i << ": expected not more than " << paths.size() << " value[s], got " << values.size() << "; use --force to override" << std::endl; return 1; }
                 if( overshot || paths[k].empty() ) { continue; }
-                std::cout << prefix << index << paths[k] << "=\"" << comma::strip( values[k], ' ' ) << "\"" << end_of_line;
+                std::cout << prefix << index << paths[k] << "=\"" << comma::strip( comma::strip( values[k], '"' ), ' ' ) << "\"" << end_of_line;
                 std::cout.flush();
             }
         }
         return 0;
     }
-    catch( std::exception& ex ) { std::cerr << "name-value-from-csv: " << ex.what() << std::endl; }
-    catch( ... ) { std::cerr << "name-value-from-csv: unknown exception" << std::endl; }
+    catch( std::exception& ex )
+    { 
+        std::cerr << "name-value-from-csv: " << ex.what() << std::endl;
+    }
+    catch( ... )
+    { 
+        std::cerr << "name-value-from-csv: unknown exception" << std::endl;
+    }
     return 1;
 }
