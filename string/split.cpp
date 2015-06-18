@@ -100,7 +100,7 @@ std::vector< std::string > split_escaped( const std::string & s, const char * se
             v.back() += *p;
         }
     }
-    if( quoted ) COMMA_THROW( comma::exception, "comma::split_escaped - quote not closed before end of string" );
+    if( quoted ) { COMMA_THROW( comma::exception, "quote not closed before end of string: " << s ); }
     return v;
 }
 
