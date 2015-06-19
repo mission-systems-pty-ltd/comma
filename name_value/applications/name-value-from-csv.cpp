@@ -45,7 +45,7 @@ static void usage( bool verbose = false )
     std::cerr << "    --delimiter,-d <delimiter>: default: ," << std::endl;
     std::cerr << "    --end-of-line,--eol <delimiter>: end of line output delimiter; default: end of line" << std::endl;
     std::cerr << "    --fields,-f <fields>: comma-separated field names, same as unnamed parameter for backward compatibility" << std::endl;
-    std::cerr << "    --force: accept lines with more fields than expected" << std::endl;
+    std::cerr << "    --strict: don't accept lines with more fields than expected" << std::endl;
     std::cerr << "    --no-brackets: use with --line-number option above, it does not output line numbers in square brackets." << std::endl;
     std::cerr << "    --output-line-number,--line-number,-n: output line numbers (see examples)" << std::endl;
     std::cerr << "    --prefix,-p <prefix>: append this prefix to all paths" << std::endl;
@@ -82,7 +82,7 @@ int main( int ac, char** av )
         char delimiter = options.value< char >( "--delimiter,-d", ',' );
         char end_of_line = options.value< char >( "--end-of-line,--eol", '\n' );
         std::string fields = options.value< std::string >( "--fields,-f", "" );
-        bool force = options.exists( "--force" );
+        bool strict = options.exists( "--strict" );
         bool no_brackets = options.exists( "--no-brackets" );
         bool output_line_numbers = options.exists( "--output-line-number,--line-number,-n" );
         std::string prefix = options.value< std::string >( "--prefix,-p", "" );
@@ -92,7 +92,7 @@ int main( int ac, char** av )
         
         if( fields.empty() )
         { 
-            const std::vector< std::string >& unnamed = options.unnamed( "--force,--no-brackets,--output-line-number,--line-number,-n", "-.*" );
+            const std::vector< std::string >& unnamed = options.unnamed( "--strict,--no-brackets,--output-line-number,--line-number,-n", "-.*" );
             if( unnamed.empty() || unnamed[0].empty() ) { std::cerr << "name-value-from-csv: please specify fields" << std::endl; return 1; }
             fields = unnamed[0];
         }
@@ -107,7 +107,7 @@ int main( int ac, char** av )
             for( unsigned int k = 0; k < values.size(); ++k )
             {
                 bool overshot = k >= paths.size();
-                if( overshot && !force ) { std::cerr << "name-value-from-csv: line " << i << ": expected not more than " << paths.size() << " value[s], got " << values.size() << "; use --force to override" << std::endl; return 1; }
+                if( overshot && strict ) { std::cerr << "name-value-from-csv: line " << i << ": expected not more than " << paths.size() << " value[s], got " << values.size() << std::endl; return 1; }
                 if( overshot || paths[k].empty() ) { continue; }
                 std::cout << prefix << index << paths[k] << "=\"" << comma::strip( comma::strip( values[k], '"' ), ' ' ) << "\"" << end_of_line;
                 std::cout.flush();
