@@ -124,13 +124,11 @@ function comma_path_value_select()
         shift
     done
     
-    {
-        if (( "${#ok_paths}" > 0 )) ; then
-            csv-join --delimiter=\= --fields path,value <( tr ',' '\n' <<< "$ok_paths" )";fields=path" --string
-        else
-            csv-join --delimiter=\= --fields path,value "$1;fields=path" --string
-        fi
-    } | cut -d = -f 1-2
+    if (( "${#ok_paths}" > 0 )) ; then
+        csv-join --delimiter=\= --fields path,value --string --matching <( tr ',' '\n' <<< "$ok_paths" )";fields=path"
+    else
+        csv-join --delimiter=\= --fields path,value --string --matching "$1;fields=path"
+    fi
 }
 export -f comma_path_value_select
 

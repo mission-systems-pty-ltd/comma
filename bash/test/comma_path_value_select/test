@@ -47,3 +47,16 @@ color8=violet' )
 printf "test[7]/code=%d\n" $?
 printf "test[7]/result=\"%s\"\n" $( tr '\n' @ <<< "$result" )
 
+result=$( comma_path_value_select --paths=color8,color6 <<< 'color6=brown
+color6="red=256"
+color7=magenta
+color8=violet' )
+printf "test[8]/code=%d\n" $?
+printf "test[8]/result=\"%s\"\n" $( tr '\n' @ <<< "$result" )
+
+result=$( comma_path_value_select --paths=color8,color6 <<< 'color6=brown
+color7=magenta
+color8=violet
+color8=blue' )
+printf "test[9]/code=%d\n" $?
+printf "test[9]/result=\"%s\"\n" $( tr '\n' @ <<< "$result" )
