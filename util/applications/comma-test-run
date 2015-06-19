@@ -366,7 +366,7 @@ function junit_finalize() # quick and dirty
               if [[ -f $path/output/failure ]] ; then
                   echo "    <testcase $attributes >"
                   echo "        <failure>"
-                  cat $path/output/failure
+                  cat $path/output/failure | recode ascii..html
                   echo "        </failure>"
                   echo "    </testcase>"
               else
