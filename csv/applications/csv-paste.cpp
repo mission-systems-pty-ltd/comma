@@ -97,6 +97,7 @@ class source
         virtual const std::string* read() = 0;
         virtual const char* read( char* buf ) = 0;
         bool binary() const { return binary_; }
+        virtual const bool is_stream() const { return false; }
         const std::string& properties() const { return properties_; }
         std::size_t size() const { return value_.size(); }
         
@@ -132,6 +133,8 @@ class stream : public source
             stream_->read( buf, value_.size() );
             return stream_->gcount() == int( value_.size() ) ? buf : NULL;
         }
+        
+        const bool is_stream() { return true; }
         
     private:
         comma::io::istream stream_;
@@ -233,14 +236,16 @@ int main( int ac, char** av )
             std::vector< char > buffer( size );
             while( true )
             {
+                unsigned int streams = 0;
                 char* p = &buffer[0];
                 for( unsigned int i = 0; i < sources.size(); p += sources[i].size(), ++i )
                 {
                     if( sources[i].read( p ) == NULL )
                     {
-                        if( i == 0 ) { return 0; }
+                        if( streams == 0 ) { return 0; }
                         std::cerr << "csv-paste: unexpected end of file in " << unnamed[i] << std::endl; return 1;
                     }
+                    if (sources[i].is_stream()) ++streams;
                 }
                 std::cout.write( &buffer[0], buffer.size() );
                 std::cout.flush();
@@ -251,14 +256,16 @@ int main( int ac, char** av )
             while( true )
             {
                 std::ostringstream oss;
+                unsigned int streams = 0;
                 for( unsigned int i = 0; i < sources.size(); ++i )
                 {
                     const std::string* s = sources[i].read();
                     if( s == NULL )
                     {
-                        if( i == 0 ) { return 0; }
+                        if( streams == 0 ) { return 0; }
                         std::cerr << "csv-paste: unexpected end of file in " << unnamed[i] << std::endl; return 1;
                     }
+                    if (sources[i].is_stream()) ++streams;
                     if( i > 0 ) { oss << delimiter; }
                     oss << *s;
                 }
