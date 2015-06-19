@@ -74,6 +74,7 @@ function comma_path_mangle()
     local path name mangled
     while IFS='=' read path _ ; do
         [[ -n "$path" && ! "$path" =~ ^[#\"] ]] || continue
+        # WARNING prefix is not defined
         name=$prefix${path//\//$delimiter}
         name=${name//-/$delimiter}
         mangled+="$name\n"
@@ -81,6 +82,19 @@ function comma_path_mangle()
     echo -e -n $mangled
 }
 export -f comma_path_mangle
+
+# similar to comma_path_value_mangle, takes only the paths and converts
+# to variable names; use it if you need, for example, to export only the
+# variables that will be used by some script
+function comma_path_mangle_sed()
+{
+    local delimiter="$1"
+    [[ -n "$delimiter" ]] || delimiter="_"
+    local path name mangled
+    # sed -e '/^$/d' -e '/^#/d' -e "s/^/$prefix/g" -e "s/[/-]/$delimiter/g"
+    sed -e '/^$/d' -e '/^#/d' -e "s/[/-]/$delimiter/g"
+}
+export -f comma_path_mangle_sed
 
 # select only the fields given via the argument
 # if the first argument is not an option it will be treated as a file/pipe name
