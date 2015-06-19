@@ -58,7 +58,7 @@ static void usage( bool more )
     std::cerr << std::endl;
     std::cerr << "Join two csv files or streams by one or several keys" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "Usage: cat something.csv csv-join \"something_else.csv[,options]\" [<options>]" << std::endl;
+    std::cerr << "Usage: cat something.csv | csv-join \"something_else.csv[,options]\" [<options>]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    fields:" << std::endl;
     std::cerr << "        block: block number" << std::endl;
@@ -68,6 +68,7 @@ static void usage( bool more )
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
     std::cerr << "    --first-matching: output only the first matching record (a bit of hack for now, but we needed it)" << std::endl;
     std::cerr << "    --not-matching: not matching records as read from stdin, no join performed" << std::endl;
+    std::cerr << "    --matching: output only matching records from stdin" << std::endl;
     std::cerr << "    --string,-s: keys are strings; a quick and dirty option to support strings" << std::endl;
     std::cerr << "                 default: integers" << std::endl;
     std::cerr << "    --strict: fail, if id on stdin is not found" << std::endl;
@@ -107,6 +108,7 @@ static bool verbose;
 static bool first_matching;
 static bool strict;
 static bool not_matching;
+static bool matching;
 static comma::csv::options stdin_csv;
 static comma::csv::options filter_csv;
 boost::scoped_ptr< comma::io::istream > filter_transport;
@@ -277,6 +279,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
                     for( std::size_t i = 0; i < ( first_matching ? 1 : it->second.size() ); ++i )
                     {
                         std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() );
+                        if( matching ) { break; }
                         std::cout.write( &( it->second[i][0] ), filter_csv.format().size() );
                         std::cout.flush();
                     }
@@ -286,8 +289,10 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
                 {
                     for( std::size_t i = 0; i < ( first_matching ? 1 : it->second.size() ); ++i )
                     {
-                        std::cout << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << stdin_csv.delimiter;
-                        std::cout << ( filter_csv.binary()
+                        std::cout << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter );
+                        if( matching ) { std::cout << std::endl; break; }
+                        std::cout << stdin_csv.delimiter
+                                  << ( filter_csv.binary()
                                      ? filter_csv.format().bin_to_csv( &it->second[i][0], stdin_csv.delimiter )
                                      : it->second[i] ) << std::endl;
                     }
@@ -313,11 +318,12 @@ int main( int ac, char** av )
         first_matching = options.exists( "--first-matching" );
         strict = options.exists( "--strict" );
         not_matching = options.exists( "--not-matching" );
+        matching = options.exists( "--matching" );
         tolerance = options.optional< double >( "--tolerance,--epsilon" );
         options.assert_mutually_exclusive( "--tolerance,--epsilon,--first-matching" );
         options.assert_mutually_exclusive( "--tolerance,--epsilon,--string,-s" );
         stdin_csv = comma::csv::options( options );
-        std::vector< std::string > unnamed = options.unnamed( "--verbose,-v,--first-matching,--not-matching,--string,-s,--strict", "-.*" );
+        std::vector< std::string > unnamed = options.unnamed( "--verbose,-v,--first-matching,--matching,--not-matching,--string,-s,--strict", "-.*" );
         if( unnamed.empty() ) { std::cerr << "csv-join: please specify the second source" << std::endl; return 1; }
         if( unnamed.size() > 1 ) { std::cerr << "csv-join: expected one file or stream to join, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         comma::name_value::parser parser( "filename", ';', '=', false );
