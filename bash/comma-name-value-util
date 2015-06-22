@@ -83,6 +83,41 @@ function comma_path_mangle()
 }
 export -f comma_path_mangle
 
+function comma_path_mangle_sed_command()
+{
+# if the line is blank or a comment then just delete it
+# if there is no = then just name substitution and GOTO END
+# if there is an = then name substitution before it
+# and then quote if it is not quoted after it
+# try and quote based on the opposite of the found quote
+    cat <<EOF
+/^$/d
+/^#/d
+
+/=/ ! {
+    s/[/-]/$1/g
+    b
+}
+/^\(.*\)=/ {
+    s/[/-]/$1/g
+}
+/=.*$/ {
+    /=['"].*$/ b
+
+    /"/ {
+        /'/ {
+            s/=\(.*\)$/='if you want to keep your values then do your own quotes'/1
+            b
+        }
+        s/=\(.*\)$/='\1'/1
+        b
+    }
+    s/=\(.*\)$/="\1"/1
+}
+EOF
+}
+export -f comma_path_mangle_sed_command
+
 # similar to comma_path_value_mangle, takes only the paths and converts
 # to variable names; use it if you need, for example, to export only the
 # variables that will be used by some script
@@ -92,7 +127,8 @@ function comma_path_mangle_sed()
     [[ -n "$delimiter" ]] || delimiter="_"
     local path name mangled
     # sed -e '/^$/d' -e '/^#/d' -e "s/^/$prefix/g" -e "s/[/-]/$delimiter/g"
-    sed -e '/^$/d' -e '/^#/d' -e "s/[/-]/$delimiter/g"
+    # sed -e '/^$/d' -e '/^#/d' -e "s/[/-]/$delimiter/g"
+    sed -f <( comma_path_mangle_sed_command "$delimiter" )
 }
 export -f comma_path_mangle_sed
 

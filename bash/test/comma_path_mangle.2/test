@@ -6,15 +6,7 @@ source $( which comma-application-util ) || { printf "%s could not source comma-
 
 mkdir -p output
 
-if [[ '--actual-bash' == "$1" ]] ; then
-    the_input="$( cat )"
-    the_output=''
-    for i in 1 2 3 4 5 6 7 8 9 10 ; do
-        the_output+="$( comma_path_mangle <<< "$the_input" || return 1 )" || exit 1
-    done
-    cat <<< "$the_output" > output/results-bash
-    exit 0
-elif [[ '--actual-sed' == "$1" ]] ; then
+if [[ '--actual-sed' == "$1" ]] ; then
     the_input="$( cat )"
     the_output=''
     for i in 1 2 3 4 5 6 7 8 9 10 ; do
@@ -27,13 +19,8 @@ fi
 first_input="$( cat )"
 echo lines=$( wc -l <<< "$first_input" )
 
-TIMEFORMAT='bash/time/real=%R'
-export TIMEFORMAT
-time $0 --actual-bash <<< "$first_input" && echo 'bash/status=1' || echo 'bash/status=0'
-
 TIMEFORMAT='sed/time/real=%R'
 export TIMEFORMAT
 time $0 --actual-sed <<< "$first_input" && echo 'sed/status=1' || echo 'sed/status=0'
 
-diff output/results-bash output/results-sed > output/results.diff
-echo "different=$?"
+sort -u output/results-sed
