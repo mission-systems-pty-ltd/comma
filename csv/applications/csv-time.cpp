@@ -37,6 +37,7 @@
 #include <string>
 #include <vector>
 #include <boost/lexical_cast.hpp>
+#include <boost/date_time/posix_time/posix_time_duration.hpp>
 
 #include <comma/application/contact_info.h>
 #include <comma/application/command_line_options.h>
@@ -132,6 +133,31 @@ static what_t what( const std::string& option, const comma::command_line_options
     exit( 1 );
 }
 
+bool from_string_actual_aixm( const std::string& s, const what_t w, boost::posix_time::ptime & out_time )
+{
+    std::string t( s );
+    size_t const idx_t = t.find( 'T' );
+    if ( std::string::npos != idx_t ) t[idx_t] = ' ';
+    size_t const idx_z = t.size() - 1;
+    if ( 'Z' == t[idx_z] ) t.erase( idx_z );
+    if ( ! ( t.size() > 6 && ( '+' == t[t.size() - 6] || '-' == t[t.size() - 6] ) ) )
+    {
+        out_time = boost::posix_time::time_from_string( t );
+    }
+    else
+    {
+        signed multiple = ( '-' == t[t.size() - 6] ) ? 1 : -1; // multiple is the reverse of the sign
+        signed hrs = multiple * boost::lexical_cast<unsigned>(&t[t.size() - 5], 2);
+        if (hrs < -12 || hrs > 12 ) COMMA_THROW( comma::exception, "hours must be [0..12]" );
+        signed mins = multiple * boost::lexical_cast<unsigned>(&t[t.size() - 2], 2);
+        if (mins < -60 || mins > 60 ) COMMA_THROW( comma::exception, "minutes must be [0..60]" );
+        t.resize( t.size() - 6 );
+        out_time = boost::posix_time::time_from_string( t );
+        out_time += boost::posix_time::hours(hrs) + boost::posix_time::minutes(mins);
+    }
+    return ! out_time.is_not_a_date_time();
+}
+
 bool from_string_actual( const std::string& s, const what_t w, boost::posix_time::ptime & out_time )
 {
     switch( w )
@@ -163,15 +189,7 @@ bool from_string_actual( const std::string& s, const what_t w, boost::posix_time
         }
 
         case aixm: // 2014-03-05T23:00:00.000Z
-        {
-            std::string t( s );
-            size_t const idx_t = t.find( 'T' );
-            if ( std::string::npos != idx_t ) t[idx_t] = ' ';
-            size_t const idx_z = t.size() - 1;
-            if ( 'Z' == t[idx_z] ) t.erase( idx_z );
-            out_time = boost::posix_time::time_from_string( t );
-            return ! out_time.is_not_a_date_time();
-        }
+            return from_string_actual_aixm( s, w, out_time );
         
         case guess:
             COMMA_THROW( comma::exception, "never guess" );
