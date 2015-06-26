@@ -90,8 +90,9 @@ function comma_path_mangle_sed_command()
 # if there is an = then name substitution before it
 # and then quote if it is not quoted after it
 # try and quote based on the opposite of the found quote
+#/^$/d
     cat <<EOF
-/^$/d
+/^[ \t]*$/d
 /^#/d
 
 /=/ ! {
@@ -99,20 +100,25 @@ function comma_path_mangle_sed_command()
     b
 }
 /^\(.*\)=/ {
-    s/[/-]/$1/g
+    :again
+        /^[^/-]*=/ b done
+        s/[/-]/$1/
+        t again
+    :done
 }
 /=.*$/ {
-    /=['"].*$/ b
+    /='.*'$/ b
+    /=\".*\"$/ b
 
     /"/ {
         /'/ {
             s/=\(.*\)$/='if you want to keep your values then do your own quotes'/1
             b
         }
-        s/=\(.*\)$/='\1'/1
+        s/=\(.*\)$/='\1'/
         b
     }
-    s/=\(.*\)$/="\1"/1
+    s/=\(.*\)$/="\1"/
 }
 EOF
 }

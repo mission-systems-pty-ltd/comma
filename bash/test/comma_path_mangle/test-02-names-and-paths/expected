@@ -1,6 +1,9 @@
 sed/status=1
+a_1_really_really_really_really_really_really_really_really_really_long_name="value"
+a_2_really_really_really_really_really_really_really_really_really_long_name="value"
+a_3_really_really_really_really_really_really_really_really_really_long_name="double-quotes"
 name_with_dashes_and_slashes="embedded'quote"
-name_with_dashes='single_quotes'
+name_with_dashes='single-quotes'
 name_with_numbers_99="value"
 name_with_slashes="value"
 name_with_underscores="value"
