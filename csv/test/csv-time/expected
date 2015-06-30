@@ -83,3 +83,14 @@ tz[6]/output="20140305T120000"
 tz[6]/status=0
 tz[7]/output="20140305T120000"
 tz[7]/status=0
+
+empty[0]/output="not-a-date-time,"
+empty[0]/status=0
+empty[1]/output="not-a-date-time,"
+empty[1]/status=0
+empty[2]/output="not-a-date-time,"
+empty[2]/status=0
+empty[3]/output="not-a-date-time,"
+empty[3]/status=0
+empty[4]/output="not-a-date-time,"
+empty[4]/status=0

@@ -48,3 +48,8 @@ tz[5]="echo '2014-03-05T07:45:00.000-04:15' | csv-time --from xsd --to iso"
 tz[6]="echo '2014-03-05T16:15:00.000+04:15' | csv-time --from xsd --to iso"
 tz[7]="echo '2014-03-05T12:00:00.000-00:00' | csv-time --from xsd --to iso"
 
+empty[0]="echo ',' | csv-time --from iso --accept-empty"
+empty[1]="echo ',' | csv-time --from seconds --accept-empty"
+empty[2]="echo ',' | csv-time --from sql --accept-empty"
+empty[3]="echo ',' | csv-time --from xsd --accept-empty"
+empty[4]="echo ',' | csv-time --from any --accept-empty"
