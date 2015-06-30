@@ -74,6 +74,7 @@ static void usage()
         "\n    - xsd, iso-8601-extended"
         "\n            used in xsd:dateTime, xs:dateTime, gml and derivatives"
         "\n            e.g. 2014-12-25T00:00:00.000Z"
+        "\n            e.g. 2014-12-25T00:00:00.000+11:00"
         "\n    - seconds"
         "\n            seconds since UNIX epoch as double"
         "\n    - any, guess"
