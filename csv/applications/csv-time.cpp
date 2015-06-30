@@ -49,7 +49,7 @@
 #include <comma/string/string.h>
 #include <comma/csv/impl/epoch.h>
 
-static void usage()
+static void usage( bool )
 {
     static char const * const msg_general =
         "\n"
@@ -59,12 +59,13 @@ static void usage()
         "\n    cat log.csv | csv-time <options> > converted.csv"
         "\n"
         "\nOptions"
-        "\n    --from <what>: input format: any, iso, seconds, sql, aixm; default iso"
-        "\n    --to <what>: output format: iso, seconds, sql, aixm; default iso"
+        "\n    --from <what>: input format: any, iso, seconds, sql, xsd; default iso"
+        "\n    --to <what>: output format: iso, seconds, sql, xsd; default iso"
         "\n    --delimiter,-d <delimiter> : default: ','"
         "\n    --fields <fields> : time field names or field numbers as in \"cut\""
         "\n                        e.g. \"1,5,7\" or \"a,b,,d\""
         "\n                        n.b. use field names to skip transforming a field"
+        "\n    --empty-as-not-a-date-time,--accept-empty,-e: if time field is empty, consider it as not-a-date-time"
         "\n"
         "\nTime formats"
         "\n    - iso, iso-8601-basic"
@@ -81,20 +82,22 @@ static void usage()
         "\n            a special input format - try to convert from all those supported,"
         "\n            default input format, will be slower"
         "\n"
-        "\nDeprecated Options:"
+        "\nDeprecated options:"
         "\n    --to-seconds,--sec,-s: iso input expected; use --from, --to"
         "\n    --to-iso-string,--iso,-i: input as seconds expected; use --from, --to"
         "\n"
         "\n";
-    std::cerr << msg_general << comma::contact_info << '\n' << std::endl;
-    exit( 1 );
+    std::cerr << msg_general << comma::contact_info << std::endl << std::endl;
+    exit( 0 );
 }
 
-enum what_t { guess, iso, seconds, sql, aixm };
+enum what_t { guess, iso, seconds, sql, xsd };
 static what_t from = guess;
 static what_t to = iso;
+static bool accept_empty;
+static const std::string not_a_date_time_string = boost::posix_time::to_iso_string( boost::posix_time::ptime() );
 
-std::string to_string( const boost::posix_time::ptime& t, what_t w );
+static std::string to_string( const boost::posix_time::ptime& t, what_t w );
 
 static what_t what( const std::string& option, const comma::command_line_options& options )
 {
@@ -105,7 +108,7 @@ static what_t what( const std::string& option, const comma::command_line_options
         {
             if( "iso" == s ) return iso;
             if( "iso-8601-basic" == s ) return iso;
-            if( "iso-8601-extended" == s ) { return aixm; }
+            if( "iso-8601-extended" == s ) { return xsd; }
             if( "ieee-std-1003.1" == s ) return sql;
         }
         else if( 'p' == s[0] )
@@ -119,7 +122,7 @@ static what_t what( const std::string& option, const comma::command_line_options
         }
         else if( 'x' == s[0] )
         {
-            if( "xsd" == s ) { return aixm; }
+            if( "xsd" == s ) { return xsd; }
         }
         else if( 'g' == s[0] )
         {
@@ -134,93 +137,81 @@ static what_t what( const std::string& option, const comma::command_line_options
     exit( 1 );
 }
 
-bool from_string_actual_aixm( const std::string& s, const what_t w, boost::posix_time::ptime & out_time )
+static boost::posix_time::ptime from_string_xsd( const std::string& s )
 {
-    std::string t( s );
+    std::string t = s;
     size_t const idx_t = t.find( 'T' );
     if ( std::string::npos != idx_t ) t[idx_t] = ' ';
     size_t const idx_z = t.size() - 1;
     if ( 'Z' == t[idx_z] ) t.erase( idx_z );
-    if ( ! ( t.size() > 6 && ( '+' == t[t.size() - 6] || '-' == t[t.size() - 6] ) ) )
-    {
-        out_time = boost::posix_time::time_from_string( t );
-    }
-    else
-    {
-        signed multiple = ( '-' == t[t.size() - 6] ) ? 1 : -1; // multiple is the reverse of the sign
-        signed hrs = multiple * boost::lexical_cast<unsigned>(&t[t.size() - 5], 2);
-        if (hrs < -12 || hrs > 12 ) COMMA_THROW( comma::exception, "hours must be [0..12]" );
-        signed mins = multiple * boost::lexical_cast<unsigned>(&t[t.size() - 2], 2);
-        if (mins < -60 || mins > 60 ) COMMA_THROW( comma::exception, "minutes must be [0..60]" );
-        t.resize( t.size() - 6 );
-        out_time = boost::posix_time::time_from_string( t );
-        out_time += boost::posix_time::hours(hrs) + boost::posix_time::minutes(mins);
-    }
-    return ! out_time.is_not_a_date_time();
+    if ( ! ( t.size() > 6 && ( '+' == t[t.size() - 6] || '-' == t[t.size() - 6] ) ) ) { return boost::posix_time::time_from_string( t ); }
+    signed multiple = ( '-' == t[t.size() - 6] ) ? 1 : -1; // multiple is the reverse of the sign
+    signed hrs = multiple * boost::lexical_cast<unsigned>(&t[t.size() - 5], 2);
+    if (hrs < -12 || hrs > 12 ) COMMA_THROW( comma::exception, "hours must be [0..12]" );
+    signed mins = multiple * boost::lexical_cast<unsigned>(&t[t.size() - 2], 2);
+    if (mins < -60 || mins > 60 ) COMMA_THROW( comma::exception, "minutes must be [0..60]" );
+    t.resize( t.size() - 6 );
+    boost::posix_time::ptime result = boost::posix_time::time_from_string( t );
+    result += boost::posix_time::hours(hrs) + boost::posix_time::minutes(mins);
+    return result;
 }
 
-bool from_string_actual( const std::string& s, const what_t w, boost::posix_time::ptime & out_time )
+static boost::posix_time::ptime from_string( const std::string& s, const what_t w )
 {
+    if ( s.empty() )
+    {
+        if( accept_empty ) { return boost::posix_time::not_a_date_time; }
+        COMMA_THROW( comma::exception, "expected non-empty field, got empty; use --accept-empty" );
+    }
     switch( w )
     {
         case iso:
-        {
-            if( s == boost::posix_time::to_iso_string( boost::posix_time::ptime() ) )
-                return false;
-                
-            out_time = boost::posix_time::from_iso_string( s );
-            return ! out_time.is_not_a_date_time();
-        }
+            return s == not_a_date_time_string ? boost::posix_time::not_a_date_time : boost::posix_time::from_iso_string( s );
 
         case seconds:
         {
             double d = boost::lexical_cast< double >( s );
             long long seconds = d;
             int microseconds = ( d - seconds ) * 1000000;
-            out_time = boost::posix_time::ptime( comma::csv::impl::epoch, boost::posix_time::seconds( seconds ) + boost::posix_time::microseconds( microseconds ) );
-            return ! out_time.is_not_a_date_time();
+            return boost::posix_time::ptime( comma::csv::impl::epoch, boost::posix_time::seconds( seconds ) + boost::posix_time::microseconds( microseconds ) );
         }
 
         case sql:
-        {
-            if( s == "NULL" || s == "null" )
-                return false;
-            out_time = boost::posix_time::time_from_string( s );
-            return ! out_time.is_not_a_date_time();
-        }
+            return s == "NULL" || s == "null" ? boost::posix_time::not_a_date_time : boost::posix_time::time_from_string( s );
 
-        case aixm: // 2014-03-05T23:00:00.000Z
-            return from_string_actual_aixm( s, w, out_time );
+        case xsd: // 2014-03-05T23:00:00.000Z
+            return from_string_xsd( s );
         
         case guess:
-            COMMA_THROW( comma::exception, "never guess" );
+            try
+            { 
+                return from_string( s, iso );
+            }
+            catch( ... )
+            {
+                try
+                { 
+                    return from_string( s, xsd );
+                }
+                catch( ... )
+                {
+                    try
+                    { 
+                        return from_string( s, sql );
+                    }
+                    catch( ... )
+                    {
+                        try
+                        { 
+                            return from_string( s, seconds );
+                        }
+                        catch( std::exception& ex ) { COMMA_THROW( comma::exception, "expected time, got: \"" << s << "\"; " << ex.what() ); }
+                        catch( ... ) { COMMA_THROW( comma::exception, "expected time, got: \"" << s << "\"; unknown exception" ); }
+                    }
+                }
+            }
     }
     COMMA_THROW( comma::exception, "never here" );
-}
-
-bool from_string_forgiving( const std::string& s, const what_t w, boost::posix_time::ptime & out_time )
-{
-    try {
-        from_string_actual( s, w, out_time );
-        // std::cerr << "Decoded '" << s << "' as ISO '" << to_string( out_time, iso ) << '\'' << std::endl;
-        return true;
-    } catch (...) { }
-    return false;
-}
-
-bool from_string( const std::string& s, const what_t w, boost::posix_time::ptime & out_time  )
-{
-    if ( s.empty() ) COMMA_THROW( comma::exception, "no input" );
-
-    if ( guess != w )
-        return from_string_actual( s, w, out_time );
-
-    // order is important
-    if ( from_string_forgiving( s, iso, out_time ) ) return true;
-    if ( from_string_forgiving( s, aixm, out_time ) ) return true;
-    if ( from_string_forgiving( s, sql, out_time ) ) return true;
-    if ( from_string_forgiving( s, seconds, out_time ) ) return true;
-    return false;
 }
 
 std::string to_string( const boost::posix_time::ptime& t, what_t w )
@@ -251,11 +242,11 @@ std::string to_string( const boost::posix_time::ptime& t, what_t w )
         case sql:
             return t.is_not_a_date_time() ? std::string( "NULL" ) : comma::split( boost::replace_all_copy( boost::posix_time::to_iso_extended_string( t ), "T", " " ), '.' )[0];
 
-        case aixm: // 2014-03-05T23:00:00.000Z
+        case xsd: // 2014-03-05T23:00:00.000Z
             return boost::posix_time::to_iso_extended_string( t );
 
         case guess:
-            COMMA_THROW( comma::exception, "never guess" );
+            COMMA_THROW( comma::exception, "never here" );
     }
     COMMA_THROW( comma::exception, "never here" );
 }
@@ -279,7 +270,6 @@ template <> struct traits< input_t >
 
 } } // namespace comma { namespace visiting {
 
-static bool verbose;
 static comma::csv::options csv;
 static input_t input;
 
@@ -345,26 +335,12 @@ static int run()
 {
     comma::csv::input_stream< input_t > istream( std::cin, csv, input );
     comma::csv::output_stream< input_t > ostream( std::cout, csv, input );
-
-    std::string const failed_text( to_string( boost::posix_time::ptime(), to ) );
-    
     while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
     {
         const input_t* p = istream.read();
         if( !p ) { break; }
-        input_t output = *p;
-        
-        for( unsigned int i = 0; i < output.values.size(); ++i )
-        {
-            boost::posix_time::ptime t( boost::posix_time::not_a_date_time );
-            if( ! from_string( output.values[i], from, t ) )
-                output.values[i] = failed_text;
-            else if( t.is_not_a_date_time() )
-                output.values[i] = failed_text;
-            else
-                output.values[i] = to_string( t, to );
-        }
-
+        input_t output = *p;        
+        for( unsigned int i = 0; i < output.values.size(); output.values[i] = to_string( from_string( output.values[i], from ), to ), ++i );
         ostream.write( output, istream );
     }
     return 0;
@@ -374,22 +350,18 @@ int main( int ac, char** av )
 {
     try
     {
-        comma::command_line_options options( ac, av );
-        if( options.exists( "--help" ) || options.exists( "-h" ) || ac == 1 ) { usage(); }
-        verbose = options.exists( "--verbose,-v" );
+        comma::command_line_options options( ac, av, usage );
+        accept_empty = options.exists( "--empty-as-not-a-date-time,--accept-empty,-e" );
         csv = comma::csv::options( options );
         if( csv.fields.empty() ) { csv.fields="a"; }
         init_input();
-
-        options.assert_mutually_exclusive( "--to-seconds,--to-iso-string,--seconds,--sec,--iso,--aixm,-s,-i,--from" );
-        options.assert_mutually_exclusive( "--to-seconds,--to-iso-string,--seconds,--sec,--iso,--aixm,-s,-i,--to" );
-
+        options.assert_mutually_exclusive( "--to-seconds,--to-iso-string,--seconds,--sec,--iso,--xsd,-s,-i,--from" );
+        options.assert_mutually_exclusive( "--to-seconds,--to-iso-string,--seconds,--sec,--iso,--xsd,-s,-i,--to" );
+        if( options.exists( "--to-seconds,--to-iso-string,--seconds,--sec,--iso,--xsd,-s,-i" ) ) { std::cerr << "csv-time: one of deprecated options used: --to-seconds,--to-iso-string,--seconds,--sec,--iso,--xsd,-s,-i; please try to use --from and --to instead" << std::endl; }
         if( options.exists( "--to-iso-string,--iso,-i" ) ) { from = seconds; to = iso; }
         else if ( options.exists( "--to-seconds,--sec,-s" ) ) { from = iso; to = seconds; }
         else { from = what( "--from", options ); to = what( "--to", options ); }
-        
-        if( guess == to ) { std::cerr << "csv-time: spqcify an actual output format; not any." << std::endl; return 1; }
-
+        if( guess == to ) { std::cerr << "csv-time: please specify --to" << std::endl; return 1; }
         return run();
     }
     catch( std::exception& ex ) { std::cerr << "csv-time: " << ex.what() << std::endl; }
