@@ -45,7 +45,7 @@ function terminate_comma_execute_and_wait()
     local killsign="-"
     [[ "$usepg" == "false" ]] && killsign=""
     local received_signal=$2
-    echo "comma_execute_and_wait: interrupted by $received_signal, killsign='$killsign'" >&2
+    [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "comma_execute_and_wait: interrupted by $received_signal, killsign='$killsign'" >&2
     # kill the command(s) being executed
     local command_to_execute_index
     for command_to_execute_index in ${!commands_to_execute_pgid[@]} ; do
@@ -57,7 +57,7 @@ function terminate_comma_execute_and_wait()
     done
     eval "$comma_execute_and_wait_saved_traps"  # use old handlers
     unset comma_execute_and_wait_saved_traps
-    echo "comma_execute_and_wait: re-raise $received_signal" >&2
+    [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "comma_execute_and_wait: re-raise $received_signal" >&2
     kill -s $received_signal $BASHPID           # relinguish control
 }
 export -f terminate_comma_execute_and_wait
@@ -129,6 +129,7 @@ function comma_execute_and_wait()
     local original_args="$@"
     local usepg="true"
     local statusall="true"
+    local comma_execute_and_wait_verbose="false"
     while [[ $# -ne 0 ]]; do
         case $1 in
             --signals=*|--signal-list=*) signal_list=${1#*=};;
@@ -137,6 +138,7 @@ function comma_execute_and_wait()
             --process)                   usepg="false";;
             --all)                       statusall="true";;
             --any)                       statusall="false";;
+            --show-debug-messages)       comma_execute_and_wait_verbose="true";;
             -*)                          echo "comma_execute_and_wait: unknown option '$1' (called: comma_execute_and_wait $original_args)" >&2; return 1;;
             *)                           commands_to_execute+=( "$1" );;
         esac
