@@ -388,7 +388,7 @@ int main( int ac, char** av )
         else if ( options.exists( "--to-seconds,--sec,-s" ) ) { from = iso; to = seconds; }
         else { from = what( "--from", options ); to = what( "--to", options ); }
         
-        if( guess == to ) { std::cerr << "csv-time: spqcify an actual output format; not any." << std::endl; return 1; }
+        if( guess == to ) { std::cerr << "csv-time: specify an actual output format; not any." << std::endl; return 1; }
 
         return run();
     }
