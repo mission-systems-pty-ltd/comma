@@ -64,7 +64,7 @@ static void usage( bool )
         "\n    --delimiter,-d <delimiter> : default: ','"
         "\n    --fields <fields> : time field names or field numbers as in \"cut\""
         "\n                        e.g. \"1,5,7\" or \"a,b,,d\""
-        "\n                        n.b. use field names to skip transforming a field"
+        "\n                        defaults to \"a\" (first field only is datetime)"
         "\n    --empty-as-not-a-date-time,--accept-empty,-e: if time field is empty, consider it as not-a-date-time"
         "\n"
         "\nTime formats"
