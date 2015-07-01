@@ -140,8 +140,12 @@ static what_t what( const std::string& option, const comma::command_line_options
 static boost::posix_time::ptime from_string_xsd( const std::string& s )
 {
     std::string t = s;
+
+    // Set the delimiter between date and time to be what time_from_string expects
     size_t const idx_t = t.find( 'T' );
     if ( std::string::npos != idx_t ) t[idx_t] = ' ';
+
+    // Determine the timezone offset
     size_t const idx_z = t.size() - 1;
     if ( 'Z' == t[idx_z] ) t.erase( idx_z );
     if ( ! ( t.size() > 6 && ( '+' == t[t.size() - 6] || '-' == t[t.size() - 6] ) ) ) { return boost::posix_time::time_from_string( t ); }
@@ -151,6 +155,8 @@ static boost::posix_time::ptime from_string_xsd( const std::string& s )
     signed mins = multiple * boost::lexical_cast<unsigned>(&t[t.size() - 2], 2);
     if (mins < -60 || mins > 60 ) COMMA_THROW( comma::exception, "minutes must be [0..60]" );
     t.resize( t.size() - 6 );
+
+    // Construct the time from the string and apply the offset
     boost::posix_time::ptime result = boost::posix_time::time_from_string( t );
     result += boost::posix_time::hours(hrs) + boost::posix_time::minutes(mins);
     return result;
