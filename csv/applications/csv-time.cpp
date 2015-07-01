@@ -64,7 +64,7 @@ static void usage( bool )
         "\n    --delimiter,-d <delimiter> : default: ','"
         "\n    --fields <fields> : time field names or field numbers as in \"cut\""
         "\n                        e.g. \"1,5,7\" or \"a,b,,d\""
-        "\n                        n.b. use field names to skip transforming a field"
+        "\n                        defaults to \"a\" (first field only is datetime)"
         "\n    --empty-as-not-a-date-time,--accept-empty,-e: if time field is empty, consider it as not-a-date-time"
         "\n"
         "\nTime formats"
@@ -75,7 +75,9 @@ static void usage( bool )
         "\n    - xsd, iso-8601-extended"
         "\n            used in xsd:dateTime, xs:dateTime, gml and derivatives"
         "\n            e.g. 2014-12-25T00:00:00.000Z"
-        "\n            e.g. 2014-12-25T00:00:00.000+11:00"
+        "\n                 2014-12-25T00:00:00.000+11:00"
+        "\n                 2014-12-25T00:00:00.000+1100"
+        "\n                 2014-12-25T00:00:00.000+11"
         "\n    - seconds"
         "\n            seconds since UNIX epoch as double"
         "\n    - any, guess"
@@ -140,17 +142,38 @@ static what_t what( const std::string& option, const comma::command_line_options
 static boost::posix_time::ptime from_string_xsd( const std::string& s )
 {
     std::string t = s;
-    size_t const idx_t = t.find( 'T' );
+
+    // Set the delimiter between date and time to be what time_from_string expects
+    const size_t idx_t = t.find( 'T' );
     if ( std::string::npos != idx_t ) t[idx_t] = ' ';
-    size_t const idx_z = t.size() - 1;
-    if ( 'Z' == t[idx_z] ) t.erase( idx_z );
-    if ( ! ( t.size() > 6 && ( '+' == t[t.size() - 6] || '-' == t[t.size() - 6] ) ) ) { return boost::posix_time::time_from_string( t ); }
-    signed multiple = ( '-' == t[t.size() - 6] ) ? 1 : -1; // multiple is the reverse of the sign
-    signed hrs = multiple * boost::lexical_cast<unsigned>(&t[t.size() - 5], 2);
-    if (hrs < -12 || hrs > 12 ) COMMA_THROW( comma::exception, "hours must be [0..12]" );
-    signed mins = multiple * boost::lexical_cast<unsigned>(&t[t.size() - 2], 2);
-    if (mins < -60 || mins > 60 ) COMMA_THROW( comma::exception, "minutes must be [0..60]" );
-    t.resize( t.size() - 6 );
+
+    // Determine the timezone offset. Could be any of Z,+-hh:mm,+-hhmm,+-hh
+    signed hrs = 0;
+    signed mins = 0;
+    const size_t start_of_time = ( idx_t != std::string::npos ? idx_t : 8 );
+    const size_t start_of_timezone = t.find_first_of( "Z+-", start_of_time );
+    if( start_of_timezone != std::string::npos )
+    {
+        if( t[start_of_timezone] != 'Z' ) // No action required for 'Z'
+        {
+            signed multiple = ( t[start_of_timezone] == '+' ? -1 : 1 ); // multiple is the reverse of the sign
+
+            const size_t start_of_offset_hours = start_of_timezone + 1;
+            // Check for the presence of an optional colon, ie, either 11:00 or 1100
+            const bool has_colon_sep = ( t.find_first_of( ":", start_of_offset_hours ) != std::string::npos );
+            const size_t start_of_offset_mins = start_of_timezone + 3 + ( has_colon_sep ? 1 : 0 );
+
+            hrs = multiple * boost::lexical_cast<unsigned>(&t[start_of_offset_hours], 2);
+            if (hrs < -12 || hrs > 12 ) COMMA_THROW( comma::exception, "hours must be [0..12]" );
+            if( start_of_offset_mins != t.length() )
+            {
+                mins = multiple * boost::lexical_cast<unsigned>(&t[start_of_offset_mins], 2);
+                if (mins < -60 || mins > 60 ) COMMA_THROW( comma::exception, "minutes must be [0..60]" );
+            }
+        }
+        t.resize( start_of_timezone );
+    }
+    // Construct the time from the string and apply the offset
     boost::posix_time::ptime result = boost::posix_time::time_from_string( t );
     result += boost::posix_time::hours(hrs) + boost::posix_time::minutes(mins);
     return result;
@@ -361,7 +384,7 @@ int main( int ac, char** av )
         if( options.exists( "--to-iso-string,--iso,-i" ) ) { from = seconds; to = iso; }
         else if ( options.exists( "--to-seconds,--sec,-s" ) ) { from = iso; to = seconds; }
         else { from = what( "--from", options ); to = what( "--to", options ); }
-        if( guess == to ) { std::cerr << "csv-time: please specify --to" << std::endl; return 1; }
+        if( guess == to ) { std::cerr << "csv-time: please specify valid --to" << std::endl; return 1; }
         return run();
     }
     catch( std::exception& ex ) { std::cerr << "csv-time: " << ex.what() << std::endl; }
