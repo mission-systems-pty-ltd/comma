@@ -34,6 +34,9 @@
 # this script is designed to be included in another script directly, for example:
 # source $( type -p comma-sync-util )
 
+# Note: internally, these functions uses file descriptor 8. Avoid re-using it
+# in code that invokes (or is invoked under) any of the following functions.
+
 [[ -n "$comma_sync_util_include_guard_" ]] && return 0
 readonly comma_sync_util_include_guard_=1
 
@@ -43,11 +46,10 @@ readonly comma_sync_util_include_guard_=1
 #
 #     comma_locked /tmp/mylock myfcn --option1 "$value1" "$arg1" ...
 #
+# If the file doesn't exist it will be created. It is not removed on completion.
+#
 # Note: do not re-direct output of the function being protected. Do all writes
 # within a function while it is protected by the serialization lock.
-#
-# Note: internally, this function uses file descriptor 8. Avoid re-using it
-# in your code that invokes (or invoked under) comma_locked.
 
 function comma_locked()
 {
@@ -59,3 +61,96 @@ function comma_locked()
     ) 8>"$lock"
 }
 export -f comma_locked
+
+
+# Attempt to lock a file.
+#
+#     comma_lock_file [options] /tmp/mylock
+#
+# Options:
+#     --no-wait: exit immediately if file can't be locked.
+#
+# If locked, the lock is held until the calling process terminates or it is
+# explicitly unlocked.
+
+function comma_lock_file()
+{
+    local flock_arg="-x"
+    local lock
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --no-wait) flock_arg="-n" ;;
+            -*)        echo "comma_lock_file: unrecognised option $1" >&2; exit 1 ;;
+            *)         lock=$1 ;;
+        esac
+        shift
+    done
+
+    exec 8>$lock
+    flock $flock_arg 8
+}
+
+# Unlock a previously locked file
+#
+#     comma_unlock_file /tmp/mylock
+
+function comma_unlock_file()
+{
+    flock -u $1
+}
+
+
+# comma_set_exit_function exit_function [args]
+#
+# register exit_function to call on exit of main script
+#
+# The two step calling sequence is to ensure that the exit_function is
+# completely detached from the script, so that it is not terminated when the
+# script terminates.
+
+function _comma_set_exit_function_grandchild()
+{
+    local lock=$1
+    shift
+
+    # wait until the main process has grabbed the lock
+    while true ; do
+        [[ -s "$lock" ]] && break
+        echo "comma_set_exit_function_grandchild: waiting for $lock (size $( wc -c < $lock ))" >&2
+        sleep 1
+    done
+    echo "comma_set_exit_function_grandchild: trying to lock $lock (size $( wc -c < $lock ))" >&2
+    comma_locked "$lock" $@
+    rm -f "$lock"
+    echo "comma_set_exit_function_grandchild: terminated" >&2
+}
+export -f _comma_set_exit_function_grandchild
+
+function _comma_set_exit_function_child()
+{
+    local lock=$1
+    shift
+
+    echo "comma_set_exit_function_child ($@) (pid $BASHPID) starting..." >&2
+    setsid bash -c '${0} ${1+"$@"}' _comma_set_exit_function_grandchild $lock $@ &
+    echo "comma_set_exit_function_child...done" >&2
+}
+
+function comma_set_exit_function()
+{
+    local lock=$( mktemp --tmpdir comma_set_exit_function.lock.XXXX )
+    echo "comma_set_exit_function ($@) using lock '$lock'" >&2
+    echo "comma_set_exit_function - spawning child" >&2
+    _comma_set_exit_function_child $lock $@ & wait $!
+    echo "comma_set_exit_function - locking $lock" >&2
+    comma_lock_file --no-wait $lock
+    (( $? == 0 )) || {
+        echo "comma_set_exit_function: unable to acquire lock file $lockfile"
+        exit 1
+    }
+    echo "comma_set_exit_function - locked $lock" >&2
+    # signal the grandchild that the lock has been acquired
+    echo "1" >> "$lock"
+    echo "comma_set_exit_function - exiting" >&2
+}

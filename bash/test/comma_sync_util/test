@@ -1,0 +1,129 @@
+#!/bin/bash
+
+source $( type -p comma-sync-util ) || exit 1
+
+output_dir="output"
+rm -rf "$output_dir" || exit 1
+mkdir -p "$output_dir" || exit 1
+
+lockfile=$( mktemp --tmpdir=$output_dir test_comma_sync_util.lock.XXXX )
+
+function capture_output()
+{
+    nl -ba | sed -r "s#[^0-9]*([0-9]+)[ \t]*(.*)#$1/output/line[\1]=\"\2\"#"
+}
+
+function lock_fn()
+{
+    if [[ $1 =~ [0-9]+ ]]; then
+        local sleep=$1
+        shift
+    fi
+    local note=$@
+    [[ -n $note ]] && note+=" "
+
+    echo "lock_fn ${note}starting"
+    (( sleep )) && sleep $sleep
+    echo "lock_fn ${note}done"
+}
+
+function run_test()
+{
+    local test_name=$1
+    shift
+    local test_fn=$@
+    {
+        echo "test starting"
+        $test_fn
+        local status=$?
+        echo "test finished"
+        return $status
+    } | capture_output $test_name
+    local status=${PIPESTATUS[0]}
+    [[ -f $lockfile ]] && rm $lockfile
+    echo "$test_name/exit_status=$status"
+}
+
+function test_comma_locked_single()
+{
+    comma_locked $lockfile lock_fn 0
+}
+
+# Verify that a second lock waits for the first to release
+function test_comma_locked_double()
+{
+    # The first sleep time must be longer than the second for the test to prove anything
+    local sleep_1=3
+    local sleep_2=1
+    
+    comma_locked $lockfile lock_fn $sleep_1 first &
+    sleep $sleep_2                 # allow time to grab the lock
+    comma_locked $lockfile lock_fn 0 second
+}
+
+run_test comma_locked/single test_comma_locked_single
+run_test comma_locked/double test_comma_locked_double
+
+# Test that the lock is taken by comma_lock_file and held until unlocked
+function test_comma_lock_file_not_locked()
+{
+    local comma_lock_file_arg=$1
+
+    # The lock_fn sleep time must be longer than pause_after_bg for the test to prove anything
+    local lock_fn_sleep=3
+    local pause_after_bg=1
+
+    echo "comma_lock_file/calling"
+    comma_lock_file $comma_lock_file_arg $lockfile &
+    echo "comma_lock_file/status=$?"
+    sleep $pause_after_bg       # allow time to grab the lock
+    echo "comma_locked/calling"
+    comma_locked $lockfile lock_fn $lock_fn_sleep &
+    local pid=$!
+    echo "comma_locked/status=$?"
+    echo "comma_unlock_file/calling"
+    comma_unlock_file $lockfile
+    wait $pid
+}
+
+function test_comma_lock_file_already_locked()
+{
+    local comma_lock_file_arg=$1
+
+    # The lock_fn sleep time must be longer than pause_after_bg for the test to prove anything
+    local lock_fn_sleep=3
+    local pause_after_bg=1
+    
+    echo "comma_locked/calling"
+    comma_locked $lockfile lock_fn $lock_fn_sleep &
+    echo "comma_locked/status=$?"
+    local pid=$!
+    sleep $pause_after_bg       # allow time to grab the lock
+    echo "comma_lock_file/calling"
+    comma_lock_file $comma_lock_file_arg $lockfile
+    echo "comma_lock_file/status=$?"
+    wait $pid
+}
+
+run_test comma_lock_file/already_locked/no_wait test_comma_lock_file_already_locked --no-wait
+run_test comma_lock_file/already_locked/wait    test_comma_lock_file_already_locked
+run_test comma_lock_file/not_locked/no_wait     test_comma_lock_file_not_locked --no-wait
+run_test comma_lock_file/not_locked/wait        test_comma_lock_file_not_locked
+
+function exit_function()
+{
+    local msg="exit_function called"
+    (( $# > 0 )) && msg+=" with args '$@'"
+    echo $msg
+}
+export -f exit_function
+
+function test_comma_set_exit_function()
+{
+    comma_set_exit_function exit_function $@
+}
+
+run_test comma_set_exit_function/no_args       test_comma_set_exit_function
+run_test comma_set_exit_function/multiple_args test_comma_set_exit_function foo bar
+
+exit 0

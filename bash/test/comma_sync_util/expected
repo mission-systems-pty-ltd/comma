@@ -1,0 +1,65 @@
+comma_locked/single/output/line[1]="test starting"
+comma_locked/single/output/line[2]="lock_fn starting"
+comma_locked/single/output/line[3]="lock_fn done"
+comma_locked/single/output/line[4]="test finished"
+comma_locked/single/exit_status=0
+
+comma_locked/double/output/line[1]="test starting"
+comma_locked/double/output/line[2]="lock_fn first starting"
+comma_locked/double/output/line[3]="lock_fn first done"
+comma_locked/double/output/line[4]="lock_fn second starting"
+comma_locked/double/output/line[5]="lock_fn second done"
+comma_locked/double/output/line[6]="test finished"
+comma_locked/double/exit_status=0
+
+comma_lock_file/already_locked/no_wait/output/line[1]="test starting"
+comma_lock_file/already_locked/no_wait/output/line[2]="comma_locked/calling"
+comma_lock_file/already_locked/no_wait/output/line[3]="comma_locked/status=0"
+comma_lock_file/already_locked/no_wait/output/line[4]="lock_fn starting"
+comma_lock_file/already_locked/no_wait/output/line[5]="comma_lock_file/calling"
+comma_lock_file/already_locked/no_wait/output/line[6]="comma_lock_file/status=1"
+comma_lock_file/already_locked/no_wait/output/line[7]="lock_fn done"
+comma_lock_file/already_locked/no_wait/output/line[8]="test finished"
+comma_lock_file/already_locked/no_wait/exit_status=0
+
+comma_lock_file/already_locked/wait/output/line[1]="test starting"
+comma_lock_file/already_locked/wait/output/line[2]="comma_locked/calling"
+comma_lock_file/already_locked/wait/output/line[3]="comma_locked/status=0"
+comma_lock_file/already_locked/wait/output/line[4]="lock_fn starting"
+comma_lock_file/already_locked/wait/output/line[5]="comma_lock_file/calling"
+comma_lock_file/already_locked/wait/output/line[6]="lock_fn done"
+comma_lock_file/already_locked/wait/output/line[7]="comma_lock_file/status=0"
+comma_lock_file/already_locked/wait/output/line[8]="test finished"
+comma_lock_file/already_locked/wait/exit_status=0
+
+comma_lock_file/not_locked/no_wait/output/line[1]="test starting"
+comma_lock_file/not_locked/no_wait/output/line[2]="comma_lock_file/calling"
+comma_lock_file/not_locked/no_wait/output/line[3]="comma_lock_file/status=0"
+comma_lock_file/not_locked/no_wait/output/line[4]="comma_locked/calling"
+comma_lock_file/not_locked/no_wait/output/line[5]="comma_locked/status=0"
+comma_lock_file/not_locked/no_wait/output/line[6]="comma_unlock_file/calling"
+comma_lock_file/not_locked/no_wait/output/line[7]="lock_fn starting"
+comma_lock_file/not_locked/no_wait/output/line[8]="lock_fn done"
+comma_lock_file/not_locked/no_wait/output/line[9]="test finished"
+comma_lock_file/not_locked/no_wait/exit_status=0
+
+comma_lock_file/not_locked/wait/output/line[1]="test starting"
+comma_lock_file/not_locked/wait/output/line[2]="comma_lock_file/calling"
+comma_lock_file/not_locked/wait/output/line[3]="comma_lock_file/status=0"
+comma_lock_file/not_locked/wait/output/line[4]="comma_locked/calling"
+comma_lock_file/not_locked/wait/output/line[5]="comma_locked/status=0"
+comma_lock_file/not_locked/wait/output/line[6]="comma_unlock_file/calling"
+comma_lock_file/not_locked/wait/output/line[7]="lock_fn starting"
+comma_lock_file/not_locked/wait/output/line[8]="lock_fn done"
+comma_lock_file/not_locked/wait/output/line[9]="test finished"
+comma_lock_file/not_locked/wait/exit_status=0
+
+comma_set_exit_function/no_args/output/line[1]="test starting"
+comma_set_exit_function/no_args/output/line[2]="test finished"
+comma_set_exit_function/no_args/output/line[3]="exit_function called"
+comma_set_exit_function/no_args/exit_status=0
+
+comma_set_exit_function/multiple_args/output/line[1]="test starting"
+comma_set_exit_function/multiple_args/output/line[2]="test finished"
+comma_set_exit_function/multiple_args/output/line[3]="exit_function called with args 'foo bar'"
+comma_set_exit_function/multiple_args/exit_status=0
