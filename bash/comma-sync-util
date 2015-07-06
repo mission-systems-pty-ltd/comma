@@ -115,11 +115,16 @@ function _comma_set_exit_function_grandchild()
     shift
 
     # wait until the main process has grabbed the lock
-    while true ; do
+    local timeout=30
+    while (( timeout-- )) ; do
         [[ -s "$lock" ]] && break
         echo "comma_set_exit_function_grandchild: waiting for $lock (size $( wc -c < $lock ))" >&2
         sleep 1
     done
+    (( timeout == 0 )) && {
+        echo "comma_set_exit_function_grandchild: timeout while waiting for $lock" >&2
+        exit 1
+    }
     echo "comma_set_exit_function_grandchild: trying to lock $lock (size $( wc -c < $lock ))" >&2
     comma_locked "$lock" $@
     rm -f "$lock"
