@@ -163,11 +163,11 @@ static boost::posix_time::ptime from_string_xsd( const std::string& s )
             const bool has_colon_sep = ( t.find_first_of( ":", start_of_offset_hours ) != std::string::npos );
             const size_t start_of_offset_mins = start_of_timezone + 3 + ( has_colon_sep ? 1 : 0 );
 
-            hrs = multiple * boost::lexical_cast<unsigned>(&t[start_of_offset_hours], 2);
+            hrs = multiple * boost::lexical_cast<unsigned>( std::string( &t[start_of_offset_hours], 2 ) );
             if (hrs < -12 || hrs > 12 ) COMMA_THROW( comma::exception, "hours must be [0..12]" );
             if( start_of_offset_mins != t.length() )
             {
-                mins = multiple * boost::lexical_cast<unsigned>(&t[start_of_offset_mins], 2);
+                mins = multiple * boost::lexical_cast<unsigned>( std::string( &t[start_of_offset_mins], 2 ) );
                 if (mins < -60 || mins > 60 ) COMMA_THROW( comma::exception, "minutes must be [0..60]" );
             }
         }
