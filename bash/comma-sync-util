@@ -91,15 +91,6 @@ function comma_lock_file()
     flock $flock_arg 8
 }
 
-# Unlock a previously locked file
-#
-#     comma_unlock_file /tmp/mylock
-
-function comma_unlock_file()
-{
-    flock -u $1
-}
-
 
 # comma_set_exit_function exit_function [args]
 #

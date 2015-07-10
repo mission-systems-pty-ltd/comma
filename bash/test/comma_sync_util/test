@@ -64,7 +64,7 @@ function test_comma_locked_double()
 run_test comma_locked/single test_comma_locked_single
 run_test comma_locked/double test_comma_locked_double
 
-# Test that the lock is taken by comma_lock_file and held until unlocked
+# Test that the lock is taken by comma_lock_file and held until unlocked (by exiting function)
 function test_comma_lock_file_not_locked()
 {
     local comma_lock_file_arg=$1
@@ -81,8 +81,6 @@ function test_comma_lock_file_not_locked()
     comma_locked $lockfile lock_fn $lock_fn_sleep &
     local pid=$!
     echo "comma_locked/status=$?"
-    echo "comma_unlock_file/calling"
-    comma_unlock_file $lockfile
     wait $pid
 }
 
