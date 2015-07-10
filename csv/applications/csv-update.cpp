@@ -95,8 +95,9 @@ static void usage( bool more )
     std::cerr << "        e.g: --empty=,,empty,,0: for the 3rd field, \"empty\" indicates it has empty value, for the 5th: 0" << std::endl;
     std::cerr << "    --format=<format>; in ascii mode, a hint of data format, e.g. --format=3ui,2d" << std::endl;
     std::cerr << "    --last-block: for each id, output only the last block" << std::endl;
-    std::cerr << "                  only for single stdin input, will not update, but only fully overwrite previous values" << std::endl;
-    std::cerr << "                  todo" << std::endl;
+    std::cerr << "                  only for single stdin input. if no --update-non-empty given, it fully overwrite previous values" << std::endl;
+    std::cerr << "                  if no --update-non-empty given, it fully overwrite previous values" << std::endl;
+    std::cerr << "                  if --update-non-empty is given, keep values from previous block or previous line, see below" << std::endl;
     std::cerr << "    --last-only,--last: output only the result of the last update" << std::endl;
     std::cerr << "                        only for single stdin input" << std::endl;
     std::cerr << "                        default: output updated line on each update" << std::endl;
@@ -131,6 +132,11 @@ static void usage( bool more )
         std::cerr << "            cat entries.csv | csv-update --fields=id" << std::endl;
         std::cerr << "        output only the results of the last update" << std::endl;
         std::cerr << "            cat entries.csv | csv-update --fields=id --last-only" << std::endl;
+        std::cerr << "    last block option " << std::endl;
+        std::cerr << "        no updating values" << std::endl;
+        std::cerr << "            ( echo 0,1,a,a; echo 0,1,,f; echo 0,2,,b1; echo 0,2,g1, ; echo 0,2,j3,m3 ) | csv-update --fields=id,block --last-block" << std::endl;
+        std::cerr << "        with updating values" << std::endl;
+        std::cerr << "            ( echo 0,1,a,a; echo 0,1,,f; echo 0,2,,b1; echo 0,2,g1, ) | csv-update --fields=id,block --last-block --update-non-empty" << std::endl;
         std::cerr << std::endl;
         std::cerr << "    erasing values" << std::endl;
         std::cerr << "        echo -e 0,1,a,20140101T000000\\\\n0,-1,b,19000101T000000 | csv-update --fields=id -u --erase=,-1,,19000101T000000" << std::endl;
@@ -207,7 +213,6 @@ static comma::csv::impl::unstructured empty;
 static boost::optional< comma::csv::impl::unstructured > erase;
 static map_t::type filter_map;
 static map_t::type unmatched;
-static map_t::type last_value;
 static map_t::type values;
 
 static void output_unmatched_all()
@@ -298,8 +303,16 @@ static void update( const input_t& v, const comma::csv::input_stream< input_t >&
         if( csv.binary() ) { s.resize( csv.format().size() ); ::memcpy( &s[0], istream.binary().last(), csv.format().size() ); }
         else { s = last.empty() ? comma::join( istream.ascii().last(), csv.delimiter ) : last; }
         std::vector< map_t::value_type >& e = values[ v.key ];
-        if( !e.empty() ) { if( e[0].value.block != v.block ) { e.clear(); } }
-        e.push_back( map_t::value_type( index++, v, s ) );
+        
+        input_t current = v;
+        if( !e.empty() ) 
+        { 
+            comma::csv::impl::unstructured prev = e.back().value.value;
+            update( prev, current.value, update_non_empty );
+            if( e.front().value.block != v.block ) {  e.clear();  } 
+            current.value = prev;
+        }
+        e.push_back( map_t::value_type( index++, current, s ) );
     }
     else if( filter_transport )
     {
@@ -362,7 +375,6 @@ int main( int ac, char** av )
         last_only = options.exists( "--last-only,--last" );
         last_block = options.exists( "--last-block" );
         options.assert_mutually_exclusive( "--last-block,--last,--last-only" );
-        options.assert_mutually_exclusive( "--last-block,--update-non-empty-fields,--update-non-empty,-u" );
         options.assert_mutually_exclusive( "--last-block,--matched-only,--matched,-m" );
         options.assert_mutually_exclusive( "--last-block,--remove,--reset,--unset,--erase" );
         options.assert_mutually_exclusive( "--last-block,--empty" );
