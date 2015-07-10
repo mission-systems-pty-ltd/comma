@@ -308,6 +308,7 @@ static void update( const input_t& v, const comma::csv::input_stream< input_t >&
     {
         static unsigned int index = 0;
         if( v.block != block ) { output_and_clear( values, last_only, &ostream ); }
+        block = v.block;
         if( last.empty() )
         {
             std::string s;
