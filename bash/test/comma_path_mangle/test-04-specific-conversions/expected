@@ -1,0 +1,26 @@
+lines=27
+sed/line[1]/text='justaname'
+sed/line[2]/text='just_a_name_with_dashes'
+sed/line[3]/text='just_a_name_with_slashes'
+sed/line[4]/text='just_a_name_with_slashes_and_dashes'
+sed/line[5]/text='smallname=%22value%22'
+sed/line[6]/text='smallname=%22value-with-dashes%22'
+sed/line[7]/text='smallname=%22value/with/slashes%22'
+sed/line[8]/text='smallname=%22value/with/slashes-and-dashes%22'
+sed/line[9]/text='name_with_dashes_and_slashes=%22embedded%27quote%22'
+sed/line[10]/text='name_with_dashes=%27single-quotes%27'
+sed/line[11]/text='name_with_numbers_99=%22value%22'
+sed/line[12]/text='name_with_slashes=%22value%22'
+sed/line[13]/text='name_with_underscores=%22value%22'
+sed/line[14]/text='a_really_really_really_really_really_really_really_really_really_really_long_name=%22double-quotes%22'
+sed/line[15]/text='a_really_really_really_really_really_really_really_really_really_really_long_name=%27embedded%22quote%27'
+sed/line[16]/text='a_really_really_really_really_really_really_really_really_really_really_long_name=%22value%22'
+sed/line[17]/text='a_really_really_really_really_really_really_really_really_really_really_long_name=%22value%22'
+
+sed/line[18]/text='patched_security_hole_1=%221 ; echo pwned%22'
+sed/line[19]/text='patched_security_hole_2=%27%222%22 ; echo pwned%27'
+sed/line[20]/text='patched_security_hole_3=%225 ; echo %27pwned!%27%22'
+sed/line[21]/text='open_security_hole_1=%273%27 ; echo %27pwned!%27'
+sed/line[22]/text='open_security_hole_2=%224%22 ; echo %22pwned!%22'
+
+sed/status=1

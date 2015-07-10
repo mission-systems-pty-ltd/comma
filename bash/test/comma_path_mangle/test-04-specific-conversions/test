@@ -1,0 +1,26 @@
+#!/bin/bash
+
+scriptname="comma_application_path_mangle_test"
+
+source $( which comma-application-util ) || { printf "%s could not source comma-application-util" $scriptname >&2 ; exit 1 ; } 
+
+if [[ '--actual-sed' == "$1" ]] ; then
+    declare the_input  the_output  line  line2
+    the_input="$( cat )"
+    the_output="$( comma_path_mangle_sed <<< "$the_input" || return 1 )" || exit 1
+    declare -i count=0
+    while read -r line ; do
+        (( ++count ))
+        line2="$( sed -e 's/%/%25/g' -e 's/"/%22/g' -e 's/'\''/%27/g' <<< "$line" )"
+        echo "sed/line[$count]/text='$line2'"
+    done <<< "$the_output"
+    exit 0
+fi
+
+first_input="$( cat )"
+echo lines=$( wc -l <<< "$first_input" )
+
+TIMEFORMAT='sed/time/real=%R'
+export TIMEFORMAT
+time $0 --actual-sed <<< "$first_input" && echo 'sed/status=1' || echo 'sed/status=0'
+
