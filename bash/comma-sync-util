@@ -166,4 +166,5 @@ function comma_set_exit_function()
     # signal the grandchild that the lock has been acquired
     echo "1" >> "$lock"
     _comma_set_exit_function_debug "comma_set_exit_function - exiting"
+    return 0
 }
