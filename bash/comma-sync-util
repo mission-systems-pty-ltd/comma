@@ -109,6 +109,14 @@ function comma_unlock_file()
 # completely detached from the script, so that it is not terminated when the
 # script terminates.
 
+export comma_set_exit_function_verbose=0
+
+function _comma_set_exit_function_debug()
+{
+    (( comma_set_exit_function_verbose )) && echo "$*" >&2
+}
+export -f _comma_set_exit_function_debug
+
 function _comma_set_exit_function_grandchild()
 {
     local lock=$1
@@ -118,17 +126,17 @@ function _comma_set_exit_function_grandchild()
     local timeout=30
     while (( timeout-- )) ; do
         [[ -s "$lock" ]] && break
-        echo "comma_set_exit_function_grandchild: waiting for $lock (size $( wc -c < $lock ))" >&2
+        _comma_set_exit_function_debug "comma_set_exit_function_grandchild: waiting for $lock (size $( wc -c < $lock ))"
         sleep 1
     done
     (( timeout == 0 )) && {
-        echo "comma_set_exit_function_grandchild: timeout while waiting for $lock" >&2
+        echo "comma_set_exit_function_grandchild: timeout while waiting for $lock"
         exit 1
     }
-    echo "comma_set_exit_function_grandchild: trying to lock $lock (size $( wc -c < $lock ))" >&2
+    _comma_set_exit_function_debug "comma_set_exit_function_grandchild: trying to lock $lock (size $( wc -c < $lock ))"
     comma_locked "$lock" $@
     rm -f "$lock"
-    echo "comma_set_exit_function_grandchild: terminated" >&2
+    _comma_set_exit_function_debug "comma_set_exit_function_grandchild: terminated"
 }
 export -f _comma_set_exit_function_grandchild
 
@@ -137,25 +145,25 @@ function _comma_set_exit_function_child()
     local lock=$1
     shift
 
-    echo "comma_set_exit_function_child ($@) (pid $BASHPID) starting..." >&2
+    _comma_set_exit_function_debug "comma_set_exit_function_child ($@) (pid $BASHPID) starting..."
     setsid bash -c '${0} ${1+"$@"}' _comma_set_exit_function_grandchild $lock $@ &
-    echo "comma_set_exit_function_child...done" >&2
+    _comma_set_exit_function_debug "comma_set_exit_function_child...done"
 }
 
 function comma_set_exit_function()
 {
     local lock=$( mktemp --tmpdir comma_set_exit_function.lock.XXXX )
-    echo "comma_set_exit_function ($@) using lock '$lock'" >&2
-    echo "comma_set_exit_function - spawning child" >&2
+    _comma_set_exit_function_debug "comma_set_exit_function ($@) using lock '$lock'"
+    _comma_set_exit_function_debug "comma_set_exit_function - spawning child"
     _comma_set_exit_function_child $lock $@ & wait $!
-    echo "comma_set_exit_function - locking $lock" >&2
+    _comma_set_exit_function_debug "comma_set_exit_function - locking $lock"
     comma_lock_file --no-wait $lock
     (( $? == 0 )) || {
         echo "comma_set_exit_function: unable to acquire lock file $lockfile"
         exit 1
     }
-    echo "comma_set_exit_function - locked $lock" >&2
+    _comma_set_exit_function_debug "comma_set_exit_function - locked $lock"
     # signal the grandchild that the lock has been acquired
     echo "1" >> "$lock"
-    echo "comma_set_exit_function - exiting" >&2
+    _comma_set_exit_function_debug "comma_set_exit_function - exiting"
 }
