@@ -94,6 +94,9 @@ static void usage( bool more )
     std::cerr << "        binary: no reasonable default, thus --empty is mandatory" << std::endl;
     std::cerr << "        e.g: --empty=,,empty,,0: for the 3rd field, \"empty\" indicates it has empty value, for the 5th: 0" << std::endl;
     std::cerr << "    --format=<format>; in ascii mode, a hint of data format, e.g. --format=3ui,2d" << std::endl;
+    std::cerr << "    --last-block: for each id, output only the last block" << std::endl;
+    std::cerr << "                  only for single stdin input, will not update, but only fully overwrite previous values" << std::endl;
+    std::cerr << "                  todo" << std::endl;
     std::cerr << "    --last-only,--last: output only the result of the last update" << std::endl;
     std::cerr << "                        only for single stdin input" << std::endl;
     std::cerr << "                        default: output updated line on each update" << std::endl;
@@ -195,6 +198,7 @@ static comma::csv::options csv;
 static boost::scoped_ptr< comma::io::istream > filter_transport;
 static comma::signal_flag is_shutdown;
 static comma::uint32 block = 0;
+static bool last_block = false;
 static bool last_only = false;
 static bool matched_only = false;
 static bool update_non_empty = false;
@@ -203,6 +207,7 @@ static comma::csv::impl::unstructured empty;
 static boost::optional< comma::csv::impl::unstructured > erase;
 static map_t::type filter_map;
 static map_t::type unmatched;
+static map_t::type last_value;
 static map_t::type values;
 
 static void output_unmatched_all()
@@ -226,7 +231,7 @@ static void output_and_clear( map_t::type& map, bool do_output, comma::csv::outp
             for( unsigned int i = 0; i < it->second.size(); m[ it->second[i].index ] = &it->second[i], ++i );
         }
         for( output_map_t::const_iterator it = m.begin(); it != m.end(); ++it )
-        {
+        {   
             if( ostream ) { ostream->write( it->second->value, it->second->string ); }
             else { std::cout << it->second->string; }
         }
@@ -243,21 +248,21 @@ static void read_filter_block()
     if( !last ) { return; }
     block = last->block;
     filter_map.clear();
-    unsigned int index = 0;
+    unsigned int count = 0;
     while( last->block == block && !is_shutdown )
     {
         std::string s;
         if( csv.binary() ) { s.resize( csv.format().size() ); ::memcpy( &s[0], filter_stream.binary().last(), csv.format().size() ); }
         else { s = comma::join( filter_stream.ascii().last(), csv.delimiter ) + '\n'; }
-        filter_map[ last->key ].push_back( map_t::value_type( index++, *last, s ) );
+        filter_map[ last->key ].push_back( map_t::value_type( count++, *last, s ) );
         //if( d.size() > 1 ) {}
-        if( verbose ) { if( index % 10000 == 0 ) { std::cerr << "csv-update: reading block " << block << "; loaded " << index << " point[s]; hash map size: " << filter_map.size() << std::endl; } }
+        if( verbose ) { if( count % 10000 == 0 ) { std::cerr << "csv-update: reading block " << block << "; loaded " << count << " point[s]; hash map size: " << filter_map.size() << std::endl; } }
         //if( ( *filter_transport )->good() && !( *filter_transport )->eof() ) { break; }
         last = filter_stream.read();
         if( !last ) { break; }
     }
     unmatched = filter_map;
-    if( verbose ) { std::cerr << "csv-update: read block " << block << " of " << index << " point[s]; got " << filter_map.size() << " different key(s)" << std::endl; }
+    if( verbose ) { std::cerr << "csv-update: read block " << block << " of " << count << " point[s]; got " << filter_map.size() << " different key(s)" << std::endl; }
 }
 
 static void output_last( const comma::csv::input_stream< input_t >& istream )
@@ -270,7 +275,7 @@ template < typename V > static void update( V& values, const V& updates, const V
 {
     for( std::size_t i = 0; i < values.size(); ++i )
     {
-        if( updates[i] != empty_values[i] ) { values[i] = erase_values.empty() || updates[i] != erase_values[i] ? updates[i] : empty_values[i]; }
+        if( updates[i] != empty_values[i] ) { values[i] = ( erase_values.empty() || updates[i] != erase_values[i] ? updates[i] : empty_values[i] ); }
     }
 }
 
@@ -286,7 +291,17 @@ static void update( comma::csv::impl::unstructured& value, const comma::csv::imp
 
 static void update( const input_t& v, const comma::csv::input_stream< input_t >& istream, comma::csv::output_stream< input_t >& ostream, const std::string& last = std::string() )
 {
-    if( filter_transport )
+    static unsigned int index = 0;
+    if( last_block ) 
+    {
+        std::string s;
+        if( csv.binary() ) { s.resize( csv.format().size() ); ::memcpy( &s[0], istream.binary().last(), csv.format().size() ); }
+        else { s = last.empty() ? comma::join( istream.ascii().last(), csv.delimiter ) : last; }
+        std::vector< map_t::value_type >& e = values[ v.key ];
+        if( !e.empty() ) { if( e[0].value.block != v.block ) { e.clear(); } }
+        e.push_back( map_t::value_type( index++, v, s ) );
+    }
+    else if( filter_transport )
     {
         map_t::type::const_iterator it = filter_map.find( v.key );
         if( it == filter_map.end() || it->second.empty() )
@@ -306,7 +321,6 @@ static void update( const input_t& v, const comma::csv::input_stream< input_t >&
     }
     else
     {
-        static unsigned int index = 0;
         if( v.block != block ) { output_and_clear( values, last_only, &ostream ); }
         block = v.block;
         if( last.empty() )
@@ -346,10 +360,16 @@ int main( int ac, char** av )
         csv.full_xpath = true;
         csv.quote.reset();
         last_only = options.exists( "--last-only,--last" );
+        last_block = options.exists( "--last-block" );
+        options.assert_mutually_exclusive( "--last-block,--last,--last-only" );
+        options.assert_mutually_exclusive( "--last-block,--update-non-empty-fields,--update-non-empty,-u" );
+        options.assert_mutually_exclusive( "--last-block,--matched-only,--matched,-m" );
+        options.assert_mutually_exclusive( "--last-block,--remove,--reset,--unset,--erase" );
+        options.assert_mutually_exclusive( "--last-block,--empty" );
         matched_only = options.exists( "--matched-only,--matched,-m" );
         update_non_empty = options.exists( "--update-non-empty-fields,--update-non-empty,-u" );
         if( csv.binary() && update_non_empty ) { std::cerr << "csv-update: --update-non-empty-fields in binary mode not supported" << std::endl; return 1; }
-        std::vector< std::string > unnamed = options.unnamed( "--last-only,--last,--matched-only,--matched,-m,--string,-s,--update-non-empty-fields,--update-non-empty,-u,--verbose,-v", "-.*" );
+        std::vector< std::string > unnamed = options.unnamed( "--last-block,--last-only,--last,--matched-only,--matched,-m,--string,-s,--update-non-empty-fields,--update-non-empty,-u,--verbose,-v", "-.*" );
         if( unnamed.size() > 1 ) { std::cerr << "csv-update: expected one file or stream to join, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         if( !unnamed.empty() ) { filter_transport.reset( new comma::io::istream( unnamed[0], options.exists( "--binary,-b" ) ? comma::io::mode::binary : comma::io::mode::ascii ) ); }
         std::vector< std::string > v = comma::split( csv.fields, ',' );
@@ -420,7 +440,7 @@ int main( int ac, char** av )
             update( *p, istream, ostream );
         }
         if( filter_transport ) { output_and_clear( unmatched, !matched_only ); }
-        else { output_and_clear( values, last_only, &ostream ); }
+        else { output_and_clear( values, last_only || last_block, &ostream ); }
         return 0;
     }
     catch( std::exception& ex ) { std::cerr << "csv-update: " << ex.what() << std::endl; }
