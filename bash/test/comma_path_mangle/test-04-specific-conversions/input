@@ -1,0 +1,29 @@
+# Ignore comments and Blank Lines and Lines of Whitespace
+
+           
+                         
+justaname
+just-a-name-with-dashes
+just/a/name/with/slashes
+just/a/name/with/slashes-and-dashes
+smallname=value
+smallname=value-with-dashes
+smallname=value/with/slashes
+smallname=value/with/slashes-and-dashes
+name-with-dashes/and/slashes=embedded'quote
+name-with-dashes='single-quotes'
+name_with_numbers_99=value
+name/with/slashes=value
+name_with_underscores=value
+a-really-really-really-really-really-really-really-really-really-really_long_name="double-quotes"
+a-really/really-really/really-really/really-really/really-really/really-long_name=embedded"quote
+a_really_really_really_really_really_really_really_really_really_really_long_name=value
+a/really/really/really/really/really/really/really/really/really/really_long_name=value
+
+patched_security_hole_1=1 ; echo pwned
+patched_security_hole_2="2" ; echo pwned
+patched_security_hole_3=5 ; echo 'pwned!'
+open_security_hole_1='3' ; echo 'pwned!'
+open_security_hole_2="4" ; echo "pwned!"
+
+
