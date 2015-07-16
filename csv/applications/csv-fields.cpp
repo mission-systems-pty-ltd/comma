@@ -38,14 +38,17 @@
 
 using namespace comma;
 
-static void usage()
+static void usage( bool )
 {
     std::cerr << std::endl;
     std::cerr << "various field operations" << std::endl;
     std::cerr << std::endl;
     std::cerr << "usage echo \"hello,,,,world\" | csv-fields [<operation>] [<options>]" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "options and operations" << std::endl;
+    std::cerr << "options" << std::endl;
+    std::cerr << "    --delimiter,-d=<delimiter>; default: , (comma)" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "operations" << std::endl;
     std::cerr << "    numbers (default): convert comma-separated field names to field numbers" << std::endl;
     std::cerr << "                       e.g. for combining with cut or csv-bin-cut" << std::endl;
     std::cerr << std::endl;
@@ -57,6 +60,9 @@ static void usage()
     std::cerr << "        --mask=<fields>: keep given fields by position" << std::endl;
     std::cerr << "        --remove=<fields>: remove given fields by name, opposite of --keep" << std::endl;
     std::cerr << "        --inverted-mask,--complement-mask,--unmask,--unmasked=<fields>: remove given fields by position, opposite of --mask" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    default: set empty fields to default values" << std::endl;
+    std::cerr << "        --values=<default values>: e.g: csv-fields default --values=',,,0,0,not-a-date-time'" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    prefix: prefix all non-empty field names" << std::endl;
     std::cerr << "        --basename: remove prefix of given fields" << std::endl;
@@ -98,10 +104,10 @@ int main( int ac, char** av )
 {
     try
     {
-        command_line_options options( ac, av );
-        if( options.exists( "--help,-h" ) ) { usage(); }
+        command_line_options options( ac, av, usage );
         std::string operation = "numbers";
         const std::vector< std::string > unnamed = options.unnamed( "--help,-h", "-.*" );
+        char delimiter = options.value( "--delimiter,-d", ',' );
         if( !unnamed.empty() ) { operation = unnamed[0]; }
         if( operation == "numbers" )
         {
@@ -117,7 +123,7 @@ int main( int ac, char** av )
                 {
                     if( v[i].empty() ) { continue; }
                     std::cout << comma << ( i + from );
-                    comma = ",";
+                    comma = delimiter;
                 }
             }
             std::cout << std::endl;
@@ -147,7 +153,7 @@ int main( int ac, char** av )
                     {
                         std::cout << comma;
                         if( !v[i].empty() && keep.empty() != ( keys.find( v[i] ) != keys.end() ) ) { std::cout << v[i]; }
-                        comma = ",";
+                        comma = delimiter;
                     }
                 }
                 else if( !mask.empty() || !unmasked.empty() )
@@ -160,19 +166,36 @@ int main( int ac, char** av )
                     {
                         std::cout << comma;
                         if( mask.empty() == k[i].empty() ) { std::cout << v[i]; }
-                        comma = ",";
+                        comma = delimiter;
                     }
                     for( unsigned int i = k.size(); i < v.size(); ++i )
                     { 
                         std::cout << comma;
                         if( mask.empty() ) { std::cout << v[i]; }
-                        comma = ",";
+                        comma = delimiter;
                     }
                 }
                 else
                 {
                     std::cout << std::string( comma::split( line, ',' ).size() - 1, ',' );
                 }
+                std::cout << std::endl;
+            }
+            return 0;
+        }
+        if( operation == "default" )
+        {
+            const std::vector< std::string >& defaults = comma::split( options.value< std::string >( "--values" ), ',' ); // todo: use specified delimiter instead?
+            std::string line;
+            line.reserve( 4000 );
+            while( std::cin.good() && !std::cin.eof() )
+            {
+                std::getline( std::cin, line );
+                if( !line.empty() && *line.rbegin() == '\r' ) { line = line.substr( 0, line.length() - 1 ); } // windows... sigh...
+                if( line.empty() ) { continue; }
+                const std::vector< std::string >& values = comma::split( line, delimiter );
+                std::string d;
+                for( unsigned int i = 0; i < values.size(); d = delimiter, ++i ) { std::cout << d << ( values[i].empty() && i < defaults.size() ? defaults[i] : values[i] ); }
                 std::cout << std::endl;
             }
             return 0;
@@ -202,7 +225,7 @@ int main( int ac, char** av )
                 for( unsigned int i = 0; i < v.size(); ++i )
                 {
                     std::cout << comma;
-                    comma = ",";
+                    comma = delimiter;
                     if( ( v[i].empty() || ( !fields.empty() && except == ( fields.find( v[i] ) != fields.end() ) ) ) ) { std::cout << v[i]; }
                     else if( basename ) { std::string::size_type p = v[i].find_last_of( '/' ); std::cout << ( p == std::string::npos ? v[i] : v[i].substr( p + 1 ) ); }
                     else { std::cout << path << v[i]; }
