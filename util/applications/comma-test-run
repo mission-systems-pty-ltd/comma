@@ -104,7 +104,7 @@ function description()
 --to=[<dir>]; run tests up to a given test, the latter included, where test directories are ordered lexicographically
 --until-first-failure; exit after the first failure (works only when tests run serially)
 --verbose,-v; more output
---white-list=[<file>]; only run these tests mentioned in the <file>, applied first before black list. Comment lines starting with # ignored. Each entry in the list matches to sub directory or directories name using pattern ^<subdir>
+--white-list=[<file>]; only run these tests mentioned in the <file>, applied first before black list. Comment lines starting with # ignored. Each entry in the list matches to sub directory or directories name using pattern ^<subdir>; see examples.
 --estimate-resources; in serial mode, accumulates performance data using comma-top into 'output/performance.csv' files; note: file may be empty for very short tests
 EOF
 }
@@ -208,6 +208,26 @@ ${brown}Load-balancing and serializing tests${none}
     No test shall take longer than the period specified by '--max-run-time'. If a test does not complete
     within this time, it is forcefully terminated and marked as failed.
 
+${brown}White(and black)-listing tests${none}
+    The test names in the white/black list file shall match ${brown}exactly${none} the corresponding
+    names in '--dry-run' output, e.g.
+        comma-test-run --dry-run
+            ./input/test1
+            ./input/test2
+            ./output/test1
+    then
+        echo "./input/test2" > white.list
+        comma-test-run --white-list=white.list
+    Do not remove leading dots or append input file names or anything similar.
+
+${brown}White(and black)-listing pro hint${none}
+    Assume some tests failed:
+        comma-test-run > comma-test-run.log 2>&1 ; echo $?
+        1
+    Create a white list from log file:
+        grep run comma-test-run.log | grep failed | sed 's@.*run: @@;s@:.*@@' > white.list
+    Fix something and re-run only the failed tests:
+        comma-test-run --white-list=white.list
 "
     exit 0
 }
