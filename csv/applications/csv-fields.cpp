@@ -117,13 +117,13 @@ int main( int ac, char** av )
                 std::string line;
                 std::getline( std::cin, line );
                 if( line.empty() ) { break; }
-                const std::vector< std::string >& v = comma::split( line, ',' );
+                const std::vector< std::string >& v = comma::split( line, delimiter );
                 std::string comma;
                 for( unsigned int i = 0; i < v.size(); ++i )
                 {
                     if( v[i].empty() ) { continue; }
                     std::cout << comma << ( i + from );
-                    comma = delimiter;
+                    comma = ',';
                 }
             }
             std::cout << std::endl;
@@ -147,7 +147,7 @@ int main( int ac, char** av )
                     const std::vector< std::string >& k = comma::split( keep.empty() ? remove : keep, ',' );
                     std::set< std::string > keys;
                     for( unsigned int i = 0; i < k.size(); ++i ) { if( !k[i].empty() ) { keys.insert( k[i] ); } }
-                    const std::vector< std::string >& v = comma::split( line, ',' );
+                    const std::vector< std::string >& v = comma::split( line, delimiter );
                     std::string comma;
                     for( unsigned int i = 0; i < v.size(); ++i )
                     {
@@ -160,7 +160,7 @@ int main( int ac, char** av )
                 {
                     // todo: quick and dirty, refactor, don't do it for each line
                     const std::vector< std::string >& k = comma::split( mask.empty() ? unmasked : mask, ',' );
-                    const std::vector< std::string >& v = comma::split( line, ',' );
+                    const std::vector< std::string >& v = comma::split( line, delimiter );
                     std::string comma;
                     for( unsigned int i = 0; i < v.size() && i < k.size(); ++i )
                     {
@@ -177,7 +177,7 @@ int main( int ac, char** av )
                 }
                 else
                 {
-                    std::cout << std::string( comma::split( line, ',' ).size() - 1, ',' );
+                    std::cout << std::string( comma::split( line, delimiter ).size() - 1, delimiter );
                 }
                 std::cout << std::endl;
             }
@@ -221,7 +221,7 @@ int main( int ac, char** av )
                 std::string comma;
                 std::getline( std::cin, line );
                 if( line.empty() ) { break; }
-                const std::vector< std::string >& v = comma::split( line, ',' );
+                const std::vector< std::string >& v = comma::split( line, delimiter );
                 for( unsigned int i = 0; i < v.size(); ++i )
                 {
                     std::cout << comma;
