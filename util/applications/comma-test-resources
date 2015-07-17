@@ -262,7 +262,7 @@ function analyse()
     (( options_verbose > 0 )) && echo "$scriptname: analyse '$test_dir'" >&2
 
     local recommended
-    recommended=$( recommend "$test_dir" | sed '/^#/d' )
+    recommended=$( options_verbose=0; recommend "$test_dir" | sed '/^#/d' )
     (( $? != 1 )) || { echo "$scriptname: automatic resources recommendation failed" >&2; return 1; }
 
     local config="$test_dir/config"
