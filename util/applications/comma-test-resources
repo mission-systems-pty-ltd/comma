@@ -129,7 +129,10 @@ Examples (more advanced):
             | comma-test-resources analyse 2>&1 \\
             | grep 'add resources management'
 
-    Find test directories that very incorrectly describe the needed shared memory and print
+    To-do: the example above still needs to parse stderr. A better way would be to allow arguments
+    to '--report-tests-to-review' which would restrict the reports to a sub-set of causes.
+
+    Find test directories that very incorrectly describe the needed resources and print
     more detailed information about them (in a second call):
 
         comma-test-run --dry-run \\
