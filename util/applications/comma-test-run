@@ -832,7 +832,7 @@ function count_failures()
 {
     (
         flock -x 9
-        grep -c "failed" "$comma_test_run_output_flock"
+        grep -c "\<failed\>" "$comma_test_run_output_flock"
     ) 9>>"$comma_test_run_output_flock"
 }
 export -f count_failures
