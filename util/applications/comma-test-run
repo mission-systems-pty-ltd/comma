@@ -523,7 +523,7 @@ function run_and_match_test()
     mkdir -p output || exit 1
 
     test_output=$( if [ -f ./input ] ; then cat ./input ; fi \
-        | comma_progress_named "$our_stats_progress" "$dir" comma_env --default "$test_exec" "$path" "$verbose" $options_test_option 2>"output/stderr.log" )
+        | comma_progress_named "$our_stats_progress" "$dir" comma_env --default "$test_exec" "$path" "$verbose" "$options_test_option" 2>"output/stderr.log" )
     test_failed=$?
     error_files="$( find . -name out_of_shared_memory )"
     [[ -n "$error_files" ]] && return 1
@@ -853,7 +853,12 @@ if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then
     if (( $( comma_options_has --verbose $@ ) || $( comma_options_has -v $@ ) )) ; then usage_ --verbose ; else usage_ ; fi
 fi
 comma_path_value_to_var  --prefix=options < <( default_options )
-comma_path_value_to_var --prefix=options < <( description | comma-options-to-name-value $@ )
+options_path_value="$( description | comma-options-to-name-value $@ )"
+#echo -e "$name: options_path_value:\n$options_path_value" >&2
+comma_path_value_to_var --prefix=options <<<"$options_path_value"
+
+options_test_option=$( echo "$options_path_value" |  grep "^test-option=" | cut -d'=' -f2- | sed 's#^"##;s#"$##' | tr '\n' ' ' )
+#echo "options_test_option: ${options_test_option}" >&2
 
 # and perform sanity check
 [[ -n "$options_path" && ! -d "$options_path" ]] && { error_ "$name: directory '$options_path' not found"; exit 1; }
