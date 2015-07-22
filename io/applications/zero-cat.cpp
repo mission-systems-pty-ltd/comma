@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
 {
     try
     {
-        unsigned int size = 4096;
+        unsigned int size;
         double wait_after_connect = 0.0;
         std::size_t hwm;
         std::string server;
@@ -187,9 +187,11 @@ int main(int argc, char* argv[])
             else if( is_reply || vm.count( "bind" ) ) { socket.bind( &endpoints[0][0] ); }
             if( is_request )
             {
+                std::string buffer;
+                if( binary ) { buffer.resize( size ); }
                 while( !is_shutdown && std::cin.good() )
                 {
-                    std::string buffer( size, 0 );
+                    
                     if( binary )
                     {
                         std::cin.read( &buffer[0], size );
@@ -218,13 +220,14 @@ int main(int argc, char* argv[])
             }
             else
             {
+                std::string buffer;
+                if( binary ) { buffer.resize( size ); }
                 while( !is_shutdown && std::cin.good() )
                 {
                     zmq::message_t request;
                     if( !socket.recv( &request ) ) { break; }
                     std::cout.write( reinterpret_cast< const char* >( request.data() ), request.size() );
                     if( binary ) { std::cout.flush(); }
-                    std::string buffer( size, 0 );
                     if( binary )
                     {
                         std::cin.read( &buffer[0], size );
@@ -269,14 +272,14 @@ int main(int argc, char* argv[])
                 else { socket.bind( &endpoints[i][0] ); }
             }
             // we convert to milliseconds as converting to second floors the number so 0.99 becomes 0
-            if (wait_after_connect > 0)
-                boost::this_thread::sleep(boost::posix_time::milliseconds(wait_after_connect * 1000.0));
+            if( wait_after_connect > 0 ) { boost::this_thread::sleep(boost::posix_time::milliseconds(wait_after_connect * 1000.0)); }
+            
+            std::string buffer;
+            if( binary ) { buffer.resize( size ); }
             while( !is_shutdown && std::cin.good() && !std::cin.eof() && !std::cin.bad() )
             {
-                std::string buffer;
                 if( binary )
-                {
-                    buffer.resize( size );
+                {                    
                     std::cin.read( &buffer[0], buffer.size() );
                     int count = std::cin.gcount();
                     if( count <= 0 ) { break; }
