@@ -1,0 +1,17 @@
+#!/bin/bash
+
+source $( which comma-process-util )
+
+scriptname=$( basename "$0" )
+
+function usage()
+{
+    cat >&2 <<EOF
+$scriptname: runs comma_execute_and_wait with the provided arguments and options
+EOF
+    exit 1
+}
+
+(( $# == 0 )) && usage
+command="bash -c eval \"$@\""
+comma_execute_and_wait --group "$command"
