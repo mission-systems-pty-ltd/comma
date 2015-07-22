@@ -7,7 +7,7 @@ scriptname=$( basename "$0" )
 function usage()
 {
     cat >&2 <<EOF
-$scriptname: runs comma_execute_and_wait with the provided arguments and options
+$scriptname: runs the provided command under comma_execute_and_wait
 EOF
     exit 1
 }
