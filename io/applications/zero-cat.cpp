@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
 {
     try
     {
-        unsigned int size;
+        unsigned int size = 4096;
         double wait_after_connect = 0.0;
         std::size_t hwm;
         std::string server;
