@@ -7,7 +7,13 @@ scriptname=$( basename "$0" )
 function usage()
 {
     cat >&2 <<EOF
-$scriptname: runs the provided command under comma_execute_and_wait
+
+runs the provided command under comma_execute_and_wait
+
+rationale: to ensure that processes launched by the command are terminated
+
+example: $scriptname comma-nap 1
+
 EOF
     exit 1
 }
