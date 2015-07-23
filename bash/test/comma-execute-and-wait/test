@@ -1,0 +1,27 @@
+#!/bin/bash
+
+source $( which comma-process-util )
+
+dir=output
+mkdir -p $dir
+normal_log=$dir/normal.log
+killed_log=$dir/killed.log
+rm -f $normal_log $killed_log
+
+comma_nap=$( which comma-nap )
+
+comma-execute-and-wait $comma_nap 1 > $normal_log
+status=$?
+output=$( sed -E -n 's=.*(normal exit).*=\1=p' < $normal_log )
+echo "normal/output=\"$output\""
+echo "normal/status=$status"
+
+function allow_comma_execute_and_wait_to_launch { local output_file=$1 sleep_time=$2; while test ! -f $output_file; do sleep 0.01; done; sleep $sleep_time; }
+nap_time=1
+nap_delay=0.5
+comma-execute-and-wait $comma_nap $nap_time > $killed_log & pid=$!
+allow_comma_execute_and_wait_to_launch $killed_log 0.5
+kill $pid &>/dev/null
+wait $pid &>/dev/null
+sleep $( bc -l <<< "$nap_time + $nap_delay" )
+echo "killed/output=\"$( cat $killed_log )\""
