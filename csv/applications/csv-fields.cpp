@@ -61,6 +61,9 @@ static void usage( bool )
     std::cerr << "        --remove=<fields>: remove given fields by name, opposite of --keep" << std::endl;
     std::cerr << "        --inverted-mask,--complement-mask,--unmask,--unmasked=<fields>: remove given fields by position, opposite of --mask" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "    cut: remove fields" << std::endl;
+    std::cerr << "        --fields=<fields>: fields to remove" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "    default: set empty fields to default values" << std::endl;
     std::cerr << "        --values=<default values>: e.g: csv-fields default --values=',,,0,0,not-a-date-time'" << std::endl;
     std::cerr << std::endl;
@@ -94,6 +97,10 @@ static void usage( bool )
     std::cerr << "        prefix non-empty fields:" << std::endl;
     std::cerr << "        echo a,,,d | csv-fields prefix --path \"hello/world\"" << std::endl;
     std::cerr << "        hello/world/a,,,hello/world/d" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "        cut fields:" << std::endl;
+    std::cerr << "        echo a,b,c,d | csv-fields prefix cut --fields b,c" << std::endl;
+    std::cerr << "        a,d" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -229,6 +236,25 @@ int main( int ac, char** av )
                     if( ( v[i].empty() || ( !fields.empty() && except == ( fields.find( v[i] ) != fields.end() ) ) ) ) { std::cout << v[i]; }
                     else if( basename ) { std::string::size_type p = v[i].find_last_of( '/' ); std::cout << ( p == std::string::npos ? v[i] : v[i].substr( p + 1 ) ); }
                     else { std::cout << path << v[i]; }
+                }
+                std::cout << std::endl;
+            }
+            return 0;
+        }
+        if( operation == "cut" )
+        {
+            const std::string& f = options.value< std::string >( "--fields", "" );
+            const std::vector< std::string >& s = comma::split( f, delimiter );
+            while( std::cin.good() )
+            {
+                std::string line;
+                std::string comma;
+                std::getline( std::cin, line );
+                if( line.empty() ) { break; }
+                const std::vector< std::string >& v = comma::split( line, delimiter );
+                for( unsigned int i = 0; i < v.size(); ++i )
+                {
+                    if( v[i].empty() || std::find( s.begin(), s.end(), v[i] ) == s.end() ) { std::cout << comma << v[i]; comma = delimiter; }
                 }
                 std::cout << std::endl;
             }
