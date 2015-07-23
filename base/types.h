@@ -80,6 +80,8 @@ BOOST_STATIC_ASSERT( sizeof( int64 ) == 8 );
 #endif
 
 template < unsigned int Size, bool Signed = true > struct integer {};
+template <> struct integer< 1, true > { typedef char type; };
+template <> struct integer< 1, false > { typedef unsigned char type; };
 template <> struct integer< 2, true > { typedef comma::int16 type; };
 template <> struct integer< 2, false > { typedef comma::uint16 type; };
 template <> struct integer< 4, true > { typedef comma::int32 type; };

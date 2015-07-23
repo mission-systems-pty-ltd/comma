@@ -45,34 +45,38 @@ namespace comma { namespace packed {
 
 /// packed bit-field structure
 /// @note had to use memcpy(), since reinterpret_cast gives a compilation warning
-template < typename B, unsigned char Default = 0 >
-struct bits : public packed::field< bits< B, Default >, B, sizeof( unsigned char ) >
+template < typename B, typename comma::integer< sizeof( B ), false >::type Default = 0 >
+struct bits : public packed::field< bits< B, Default >, B, sizeof( typename comma::integer< sizeof( B ), false >::type ) >
 {
-    enum { size = sizeof( unsigned char ) };
+    enum { size = sizeof( B ) };
 
-    BOOST_STATIC_ASSERT( size == 1 );
-
-    BOOST_STATIC_ASSERT( sizeof( B ) == 1 );
+    typedef typename comma::integer< sizeof( B ), false >::type integer_type;
 
     typedef B type;
 
-    typedef packed::field< bits< B, Default >, B, sizeof( unsigned char ) > base_type;
+    typedef packed::field< bits< B, Default >, B, sizeof( integer_type ) > base_type;
 
-    static type default_value() { static const unsigned char d = Default; type t; ::memcpy( &t, &d, 1 ); return t; }
+    bits() {}
+    bits( integer_type v ) { operator=( v ); }
+    bits( type t ) : base_type( t ) {}
 
-    static void pack( char* storage, type value ) { ::memcpy( storage, &value, 1 ); }
+    static type default_value() { static const integer_type d = Default; type t; ::memcpy( &t, &d, size ); return t; }
 
-    static type unpack( const char* storage ) { type t; ::memcpy( &t, storage, 1 ); return t; }
+    static void pack( char* storage, type value ) { ::memcpy( storage, &value, size ); }
+
+    static type unpack( const char* storage ) { type t; ::memcpy( &t, storage, size ); return t; }
 
     const bits& operator=( const bits& rhs ) { return base_type::operator=( rhs ); }
 
     const bits& operator=( type rhs ) { return base_type::operator=( rhs ); }
 
-    const bits& operator=( unsigned char rhs ) { type t; ::memcpy( &t, &rhs, 1 ); return base_type::operator=( t ); }
+    const bits& operator=( integer_type rhs ) { type t; ::memcpy( &t, &rhs, size ); return base_type::operator=( t ); }
 
     type& fields() { return *( reinterpret_cast< type* >( this ) ); }
 
     const type& fields() const { return *( reinterpret_cast< const type* >( this ) ); }
+
+    integer_type integer_value() const { return *reinterpret_cast< const integer_type* >( base_type::data() ); }
 };
 
 template< typename T > inline void reverse_bits( T& v )
