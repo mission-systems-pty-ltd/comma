@@ -107,16 +107,16 @@ TEST( test_packed_struct_test, test_little_endian )
     test_packed_uint< comma::packed::uint64 >( 4321 );
     test_packed_uint< comma::packed::uint64 >( comma::uint64( std::numeric_limits< comma::uint64 >::max() ) );
     test_packed_uint< comma::packed::uint64 >( comma::uint64( 0x1BCDEF1213141500ULL ) );
-    
+
     test_packed_int< comma::packed::int16 >( 1234 );
     test_packed_int< comma::packed::int24 >( 1235 );
     test_packed_int< comma::packed::int24 >( 8388607 );
-    test_packed_int< comma::packed::int32 >( 8388607 );    
-    test_packed_int< comma::packed::int32 >( 1236 );    
+    test_packed_int< comma::packed::int32 >( 8388607 );
+    test_packed_int< comma::packed::int32 >( 1236 );
     test_packed_int< comma::packed::int16 >( -1231 );
-    test_packed_int< comma::packed::int24 >( -1232 ); 
+    test_packed_int< comma::packed::int24 >( -1232 );
     test_packed_int< comma::packed::int24 >( -8388608 );
-    test_packed_int< comma::packed::int32 >( -1233 );    
+    test_packed_int< comma::packed::int32 >( -1233 );
     test_packed_int< comma::packed::int64 >( -4321 );
     test_packed_int< comma::packed::int64 >( comma::int64( std::numeric_limits< comma::int64 >::min() ) );
 }
@@ -174,7 +174,7 @@ TEST( test_packed_struct_test, test_uint64_byte_order )
     comma::uint64 i = 0xABCDEF1213141500ULL;
     test_uint64_byte_order< comma::packed::uint64 >( i, 0x00, 0x15, 0x14, 0x13, 0x12, 0xEF, 0xCD, 0xAB );
 }
- 
+
 static void test_int24_byte_order( int value, char byte0, char byte1, char byte2 )
 {
     comma::packed::int24 a;
@@ -235,7 +235,7 @@ TEST( test_packed_struct_test, test_little_endian_floats )
     EXPECT_FLOAT_EQ( 0, a() );
     a = 1.2345;
     EXPECT_FLOAT_EQ( 1.2345, a() );
-    
+
     comma::packed::float64 b;
     EXPECT_DOUBLE_EQ( 0, b() );
     b = 1.23456789;
@@ -248,7 +248,7 @@ TEST( test_packed_struct_test, test_net_floats )
     EXPECT_FLOAT_EQ( 0, a() );
     a = 1.2345;
     EXPECT_FLOAT_EQ( 1.2345, a() );
-    
+
     comma::packed::net_float64 b;
     EXPECT_DOUBLE_EQ( 0, b() );
     b = 1.23456789;
@@ -271,7 +271,7 @@ TEST( test_packed_struct_test, test_float32_byte_order )
     test_float32_byte_order< comma::packed::float32 >( 5.2, 0x66, 0x66, 0xA6, 0x40 );
     test_float32_byte_order< comma::packed::float32 >( -5.2, 0x66, 0x66, 0xA6, 0xC0 );
 }
-    
+
 TEST( test_packed_struct_test, test_net_float32_byte_order )
 {
     test_float32_byte_order< comma::packed::net_float32 >( 5.2, 0x40, 0xA6, 0x66, 0x66 );
@@ -300,9 +300,9 @@ TEST( test_packed_struct_test, test_float64_byte_order )
     test_float64_byte_order< comma::packed::float64 >( -1.2e-123, 0x4E, 0x57, 0x04, 0xD1, 0x71, 0x62, 0x69, 0xA6 );
     test_float64_byte_order< comma::packed::float64 >( -1.2e+123, 0x21, 0xBD, 0xC3, 0x60, 0x60, 0x0B, 0x7D, 0xD9 );
 }
-       
+
 TEST( test_packed_struct_test, test_net_float64_byte_order )
-{ 
+{
     test_float64_byte_order< comma::packed::net_float64 >( 5.2, 0x40, 0x14, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCD );
     test_float64_byte_order< comma::packed::net_float64 >( -5.2, 0xC0, 0x14, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCD );
     test_float64_byte_order< comma::packed::net_float64 >( -1.2e-123, 0xA6, 0x69, 0x62, 0x71, 0xD1, 0x04, 0x57, 0x4E );
@@ -379,7 +379,7 @@ template < typename T >
 void test_ascii_hex_unpack_values_size1( const boost::array< std::string, 16 >& hex_digits )
 {
     comma::packed::ascii_hex< T, 1 > a;
-    for( unsigned int i = 0; i < hex_digits.size(); ++i ) 
+    for( unsigned int i = 0; i < hex_digits.size(); ++i )
     {
         std::string hex = hex_digits[i];
         T expected_decimal = i;
@@ -388,12 +388,12 @@ void test_ascii_hex_unpack_values_size1( const boost::array< std::string, 16 >& 
 }
 
 TEST( test_packed_ascii_hex, test_unpack_values_size_1_uppercase )
-{    
+{
     test_ascii_hex_unpack_values_size1< comma::uint16 >( hex_digits_u );
 }
 
 TEST( test_packed_ascii_hex, test_unpack_values_size_1_lowercase )
-{   
+{
     test_ascii_hex_unpack_values_size1< comma::uint16 >( hex_digits_l );
 }
 
@@ -401,7 +401,7 @@ template < typename T >
 void test_ascii_hex_unpack_values_size2( const boost::array< std::string, 16 >& hex_digits )
 {
     comma::packed::ascii_hex< T, 2 > a;
-    for( unsigned int i = 0; i < hex_digits.size(); ++i ) 
+    for( unsigned int i = 0; i < hex_digits.size(); ++i )
     {
         for( unsigned int j = 0; j < hex_digits.size(); ++j )
         {
@@ -409,16 +409,16 @@ void test_ascii_hex_unpack_values_size2( const boost::array< std::string, 16 >& 
             T expected_decimal = i*16 + j;
             EXPECT_EQ( expected_decimal, a.unpack( hex.c_str() ) );
         }
-    }    
+    }
 }
 
 TEST( test_packed_ascii_hex, test_unpack_values_size_2_uppercase )
-{    
+{
     test_ascii_hex_unpack_values_size2< comma::uint16 >( hex_digits_u );
 }
 
 TEST( test_packed_ascii_hex, test_unpack_values_size_2_lowercase )
-{   
+{
     test_ascii_hex_unpack_values_size2< comma::uint16 >( hex_digits_l );
 }
 
@@ -427,7 +427,7 @@ void test_ascii_hex_pack_values_size1( const boost::array< std::string, 16 >& he
 {
     comma::packed::ascii_hex< T, 1 > a;
     char buf[] = "X";
-    for( unsigned int i = 0; i < hex_digits.size(); ++i ) 
+    for( unsigned int i = 0; i < hex_digits.size(); ++i )
     {
         const T decimal = i;
         a.pack( buf, decimal );
@@ -445,7 +445,7 @@ void test_ascii_hex_pack_values_size2( const boost::array< std::string, 16 >& he
 {
     comma::packed::ascii_hex< T, 2, '0' > a;
     char buf[] = "XX";
-    for( unsigned int i = 0; i < hex_digits.size(); ++i ) 
+    for( unsigned int i = 0; i < hex_digits.size(); ++i )
     {
         for( unsigned int j = 0; j < hex_digits.size(); ++j )
         {
@@ -453,7 +453,7 @@ void test_ascii_hex_pack_values_size2( const boost::array< std::string, 16 >& he
             a.pack( buf, decimal );
             EXPECT_EQ( hex_digits[i] + hex_digits[j], std::string( buf, 2 ) );
         }
-    }    
+    }
 }
 
 TEST( test_packed_ascii_hex, test_pack_values_size_2 )
@@ -468,7 +468,7 @@ TEST( test_packed_ascii_hex, test_pack_value_is_too_large )
     comma::packed::ascii_hex< comma::uint16, 1 > a;
     ASSERT_THROW( a.pack( buf1, 16 ), comma::exception );
     ASSERT_THROW( a.pack( buf2, 16 ), comma::exception );
-   
+
     comma::packed::ascii_hex< comma::uint16, 2 > b;
     ASSERT_THROW( b.pack( buf2, 256 ), comma::exception );
 }
@@ -480,13 +480,13 @@ TEST( test_packed_ascii_hex, test_pack_default_padding )
     char hex2[] = "XX";
     a.pack( hex2, 0 ); EXPECT_EQ( " 0", std::string( hex2, 2 ) );
     a.pack( hex2, 15 ); EXPECT_EQ( " f", std::string( hex2, 2 ) );
-    
+
     comma::packed::ascii_hex< comma::uint16, 3 > b;
     char hex3[] = "XXX";
     b.pack( hex3, 0 ); EXPECT_EQ( "  0", std::string( hex3, 3 ) );
     b.pack( hex3, 15 ); EXPECT_EQ( "  f", std::string( hex3, 3 ) );
-    b.pack( hex3, 255 ); EXPECT_EQ( " ff", std::string( hex3, 3 ) );    
-}    
+    b.pack( hex3, 255 ); EXPECT_EQ( " ff", std::string( hex3, 3 ) );
+}
 
 TEST( test_packed_ascii_hex, test_pack_padding )
 {
@@ -509,7 +509,7 @@ TEST( test_packed_ascii_hex, test_values_from_packed_struct )
 {
     std::string hex1 = "       0 ";
     EXPECT_EQ( 0, reinterpret_cast< const ascii_hex_struct* >( &hex1[0] )->value() );
-    
+
     std::string hex2 = " 1234567 ";
     EXPECT_EQ( 19088743, reinterpret_cast< const ascii_hex_struct* >( &hex2[0] )->value() );
 
@@ -534,7 +534,7 @@ TEST( test_packed_bits, test_reverse_bits_in_byte )
     unsigned char expected = 0;
     comma::packed::reverse_bits( x );
     EXPECT_EQ( expected, x );
-    
+
            x = 0b00000001;
     expected = 0b10000000;
     comma::packed::reverse_bits( x );
@@ -544,52 +544,52 @@ TEST( test_packed_bits, test_reverse_bits_in_byte )
     expected = 0b00000001;
     comma::packed::reverse_bits( x );
     EXPECT_EQ( expected, x );
-    
+
            x = 0b00010000;
     expected = 0b00001000;
     comma::packed::reverse_bits( x );
-    EXPECT_EQ( expected, x );    
-    
+    EXPECT_EQ( expected, x );
+
            x = 0b11111111;
     expected = 0b11111111;
     comma::packed::reverse_bits( x );
-    EXPECT_EQ( expected, x );    
-    
+    EXPECT_EQ( expected, x );
+
            x = 0b11111110;
     expected = 0b01111111;
     comma::packed::reverse_bits( x );
-    EXPECT_EQ( expected, x );        
-    
+    EXPECT_EQ( expected, x );
+
            x = 0b01111111;
     expected = 0b11111110;
     comma::packed::reverse_bits( x );
-    EXPECT_EQ( expected, x );        
-    
+    EXPECT_EQ( expected, x );
+
            x = 0b11101111;
     expected = 0b11110111;
     comma::packed::reverse_bits( x );
-    EXPECT_EQ( expected, x );    
-    
+    EXPECT_EQ( expected, x );
+
            x = 0b01010101;
     expected = 0b10101010;
     comma::packed::reverse_bits( x );
     EXPECT_EQ( expected, x );
-    
+
            x = 0b10101010;
     expected = 0b01010101;
     comma::packed::reverse_bits( x );
-    EXPECT_EQ( expected, x );    
-    
+    EXPECT_EQ( expected, x );
+
            x = 0b10011011;
     expected = 0b11011001;
     comma::packed::reverse_bits( x );
-    EXPECT_EQ( expected, x );    
-    
+    EXPECT_EQ( expected, x );
+
            x = 0b01000110;
     expected = 0b01100010;
     comma::packed::reverse_bits( x );
     EXPECT_EQ( expected, x );
-    
+
            x = 0b01000111;
     expected = 0b11100010;
     comma::packed::reverse_bits( x );
@@ -599,7 +599,7 @@ TEST( test_packed_bits, test_reverse_bits_in_byte )
     expected = 0b01101011;
     comma::packed::reverse_bits( x );
     EXPECT_EQ( expected, x );
-    
+
 }
 
 TEST( test_packed_bits, test_reverse_bits_in_uint16 )
@@ -608,7 +608,7 @@ TEST( test_packed_bits, test_reverse_bits_in_uint16 )
     comma::uint16 expected = 0;
     comma::packed::reverse_bits( x );
     EXPECT_EQ( expected, x );
-    
+
            x = 0x1;
     expected = 0x8000;
     comma::packed::reverse_bits( x );
@@ -618,12 +618,12 @@ TEST( test_packed_bits, test_reverse_bits_in_uint16 )
     expected = 0x1;
     comma::packed::reverse_bits( x );
     EXPECT_EQ( expected, x );
-    
+
            x = 0xffff;
     expected = 0xffff;
     comma::packed::reverse_bits( x );
-    EXPECT_EQ( expected, x );    
-    
+    EXPECT_EQ( expected, x );
+
            x = 0x1234;
     expected = 0x2c48;
     comma::packed::reverse_bits( x );
@@ -636,7 +636,7 @@ TEST( test_packed_bits, test_reverse_bits_in_uint32 )
     comma::uint32 expected = 0;
     comma::packed::reverse_bits( x );
     EXPECT_EQ( expected, x );
-    
+
            x = 0x1;
     expected = 0x80000000;
     comma::packed::reverse_bits( x );
@@ -646,12 +646,12 @@ TEST( test_packed_bits, test_reverse_bits_in_uint32 )
     expected = 0x1;
     comma::packed::reverse_bits( x );
     EXPECT_EQ( expected, x );
-    
+
            x = 0xffffffff;
     expected = 0xffffffff;
     comma::packed::reverse_bits( x );
-    EXPECT_EQ( expected, x );    
-    
+    EXPECT_EQ( expected, x );
+
            x = 0x1234abcd;
     expected = 0xb3d52c48;
     comma::packed::reverse_bits( x );
@@ -664,7 +664,7 @@ TEST( test_packed_bits, test_reverse_bits_in_uint64 )
     comma::uint64 expected = 0;
     comma::packed::reverse_bits( x );
     EXPECT_EQ( expected, x );
-    
+
            x = 0x1;
     expected = 0x8000000000000000;
     comma::packed::reverse_bits( x );
@@ -674,32 +674,32 @@ TEST( test_packed_bits, test_reverse_bits_in_uint64 )
     expected = 0x1;
     comma::packed::reverse_bits( x );
     EXPECT_EQ( expected, x );
-    
+
            x = 0xffffffffffffffff;
     expected = 0xffffffffffffffff;
     comma::packed::reverse_bits( x );
     EXPECT_EQ( expected, x );
-    
+
            x = 0xffffffff00000000;
     expected = 0x00000000ffffffff;
     comma::packed::reverse_bits( x );
     EXPECT_EQ( expected, x );
-    
+
            x = 0xfffffffffffffffe;
     expected = 0x7fffffffffffffff;
     comma::packed::reverse_bits( x );
-    EXPECT_EQ( expected, x );     
-    
+    EXPECT_EQ( expected, x );
+
            x = 0x7fffffffffffffff;
     expected = 0xfffffffffffffffe;
     comma::packed::reverse_bits( x );
     EXPECT_EQ( expected, x );
-    
+
            x = 0xffffdfffffffffff;
     expected = 0xfffffffffffbffff;
     comma::packed::reverse_bits( x );
-    EXPECT_EQ( expected, x );    
-    
+    EXPECT_EQ( expected, x );
+
            x = 0x12345678abcdef01;
     expected = 0x80f7b3d51e6a2c48;
     comma::packed::reverse_bits( x );
@@ -713,7 +713,7 @@ TEST( test_packed_bits, test_packed_double_reversion )
     comma::uint64 expected = x;
     comma::packed::reverse_bits( x );
     comma::packed::reverse_bits( x );
-    EXPECT_EQ( expected, x );    
+    EXPECT_EQ( expected, x );
 }
 
 struct status_bits
@@ -787,6 +787,41 @@ TEST( test_packed_bits, test_bits_operators )
         EXPECT_EQ( 0b0U, s().a );
         EXPECT_EQ( 0b01U, s().b );
         EXPECT_EQ( 0b10U, s().c );
+    }
+}
+
+struct status_bits16
+{
+    status_bits16() : a( 0 ), b( 0 ), c( 0 ), d( 0 ) {}
+    comma::uint16 a: 1, b: 2, : 3, c: 2, d: 8;
+};
+
+TEST( test_packed_bits, test_bits16_default )
+{
+    static const comma::uint16 d = 0b1001100111001100U;
+    comma::packed::bits< status_bits16, d > packed_status;
+    EXPECT_EQ( 0b0U, packed_status().a );
+    EXPECT_EQ( 0b10U, packed_status().b );
+    EXPECT_EQ( 0b11U, packed_status().c );
+    EXPECT_EQ( 0b10011001U, packed_status().d );
+}
+
+TEST( test_packed_bits, test_bits16 )
+{
+    {
+        comma::packed::bits< status_bits16 > packed_status = 0b1001100111001100U;
+        EXPECT_EQ( 0b0U, packed_status().a );
+        EXPECT_EQ( 0b10U, packed_status().b );
+        EXPECT_EQ( 0b11U, packed_status().c );
+        EXPECT_EQ( 0b10011001U, packed_status().d );
+        EXPECT_EQ( 0b1001100111001100U, packed_status.integer_value() );
+    }
+    {
+        status_bits16 status = comma::packed::bits< status_bits16 >( 0b1001100111001100U )();
+        EXPECT_EQ( 0b0U, status.a );
+        EXPECT_EQ( 0b10U, status.b );
+        EXPECT_EQ( 0b11U, status.c );
+        EXPECT_EQ( 0b10011001U, status.d );
     }
 }
 
