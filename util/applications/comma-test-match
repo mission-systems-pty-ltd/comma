@@ -33,7 +33,7 @@ name=$( basename $0 )
 
 function simple_usage()
 {
-    echo "Usage: $name [-h|--help] [-v|--variables=<file>] <expected-values-file>" >&2
+    echo "Usage: $name [-h|--help] [-v|--variables=<file>] [--tmp-dir=<dir>] <expected-values-file>" >&2
     if [[ $# != 0 ]]; then exit $1; fi
 }
 
@@ -71,12 +71,14 @@ function empty_apart_from_comments()
 
 variables=
 expr_file=
+tmp_dir=.
 
 while [[ $# -gt 0 ]]; do
     arg="${1#*=}"
     case "$1" in
         -h|--help)          usage 0;;
         -v=*|--variables=*) variables=$arg;;
+        --tmp-dir=*)        tmp_dir=$arg;;
         -*)                 echo "$name: unrecognized option '$1'" >&2; exit 1;;
         *)                  if [[ -z "$expr_file" ]]; then expr_file=$arg
                             else echo "$name: unexpected argument '$1'" >&2; exit 1; fi;;
@@ -86,6 +88,12 @@ done
 
 if [[ -z "$expr_file" ]]; then echo "$name: missing required argument <expected-values-file>" >&2; exit 1; fi
 
+if [[ ! ( -d "$tmp_dir" && -w "$tmp_dir" ) ]]; then
+    if [[ -d "$TMPDIR" && -w "$TMPDIR" ]]; then tmp_dir=$TMPDIR
+    else echo "$name: cannot access temporary directory '$tmp_dir' or \$TMPDIR '$TMPDIR'; please set --tmp-dir to another directory" >&2; exit 1
+    fi
+fi
+
 # if the variables file name is known, pass it to name-value-eval, since it can appear in some error messages
 if [[ -z "$variables" ]]; then
     input="$( cat )"
@@ -93,11 +101,11 @@ if [[ -z "$variables" ]]; then
         if empty_apart_from_comments "$expr_file"; then exit 1  # no variables means it is OK for the input to be empty
         else echo "$name: error: empty input (test script failed?)" >&2; exit 1; fi
     fi
-    echo "$input" | name-value-eval --test "$expr_file"
+    echo "$input" | name-value-eval --test "$expr_file" --tmp-dir=$tmp_dir
 else
     if [[ ! -f "$variables" || ! -s "$variables" ]]; then
         echo "$name: error: empty or non-existent input file '$variables' (test script failed?)" >&2; exit 1
     fi
-    name-value-eval --test "$expr_file" --variables="$variables"
+    name-value-eval --test "$expr_file" --variables="$variables" --tmp-dir=$tmp_dir
 fi
 
