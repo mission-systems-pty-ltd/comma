@@ -177,8 +177,10 @@ if [[ $test_option == 1 && -n "$output_vars_option" ]]; then
     echo "$name: cannot have --test and --output-variables" >&2; exit 1
 fi
 
-if [[ ! ( -d "$tmpdir" && -x "$tmpdir" ) ]]; then
-    echo "$name: cannot access temporary directory '$tmpdir'" >&2; exit 1
+if [[ ! ( -d "$tmpdir" && -w "$tmpdir" ) ]]; then
+    if [[ -d "$TMPDIR" && -w "$TMPDIR" ]]; then tmpdir=$TMPDIR
+    else echo "$name: cannot access temporary directory '$tmpdir' or \$TMPDIR '$TMPDIR'; please set --tmp-dir to another directory" >&2; exit 1
+    fi
 fi
 
 err="$tmpdir/nv_eval_err.$$"
