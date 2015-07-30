@@ -64,7 +64,7 @@ static void usage( bool verbose = false )
     std::cerr << std::endl;
     std::cerr << "data options" << std::endl;
     std::cerr << "    --from <format>: input format; if this option is omitted, input format will be guessed (only for json, xml, and path-value)" << std::endl;
-    std::cerr << "    --to <format>: output format; default: name-value" << std::endl;
+    std::cerr << "    --to <format>: output format; default: path-value" << std::endl;
     std::cerr << "    --regex: add square brackets \"[]\" to regex characters; when not specified indexed path can be used e.g. x/y[0]" << std::endl;
     std::cerr << "formats" << std::endl;
     std::cerr << "    info: info data (see boost::property_tree)" << std::endl;
