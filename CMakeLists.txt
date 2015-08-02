@@ -251,7 +251,7 @@ SET(CPACK_PACKAGE_VERSION_MAJOR "1")
 SET(CPACK_PACKAGE_VERSION_MINOR ${COMMITDATE})
 SET(CPACK_PACKAGE_VERSION_PATCH ${COMMITHASH})
 SET(CPACK_PACKAGE_CONTACT "t.teo@acfr.usyd.edu.au")
-SET(CPACK_RPM_PACKAGE_REQUIRES "boost-thread")
+SET(CPACK_RPM_PACKAGE_REQUIRES "boost-thread recode")
 
 #this line finds the appropriate Visual Studio DLLS in windows. Maybe it would find other dlls if a different build tool were used. Probably should be windows only.
 INCLUDE( InstallRequiredSystemLibraries )
