@@ -68,6 +68,7 @@ void usage()
     std::cerr << std::endl;
     std::cerr << "    --sorted: a hint that the key column is sorted in ascending order" << std::endl;
     std::cerr << "              todo: support descending order" << std::endl;
+    std::cerr << "    --strict: if constraint field is not present among fields, exit with error (added for backward compatibility)" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
     std::cerr << "    --or: uses 'or' expression instead of 'and' (default is 'and')" << std::endl;
     std::cerr << std::endl;
@@ -372,8 +373,22 @@ int main( int ac, char** av )
         csv = comma::csv::options( options );
         fields = comma::split( csv.fields, ',' );
         if( fields.size() == 1 && fields[0].empty() ) { fields.clear(); }
-        std::vector< std::string > unnamed = options.unnamed( "--or,--sorted,--verbose,-v", "-.*" );
-        for( unsigned int i = 0; i < unnamed.size(); constraints_map.insert( std::make_pair( comma::split( unnamed[i], ';' )[0], unnamed[i] ) ), ++i );
+        std::vector< std::string > unnamed = options.unnamed( "--or,--sorted,--strict,--verbose,-v", "-.*" );
+        //for( unsigned int i = 0; i < unnamed.size(); constraints_map.insert( std::make_pair( comma::split( unnamed[i], ';' )[0], unnamed[i] ) ), ++i );
+        bool strict = options.exists( "--strict" );
+        for( unsigned int i = 0; i < unnamed.size(); ++i )
+        {
+            std::string field = comma::split( unnamed[i], ';' )[0];
+            bool found = false;
+            for( unsigned int j = 0; j < fields.size() && !found; found = field == fields[j], ++j );
+            if( !found )
+            {
+                if( strict ) { std::cerr << "csv-select: on constraint: \"" << unnamed[i] << "\" field \"" << field << "\" not found in fields: " << csv.fields << std::endl; return 1; }
+                std::cerr << "csv-select: warning: on constraint: \"" << unnamed[i] << "\" field \"" << field << "\" not found in fields: " << csv.fields << std::endl;
+                continue;
+            }
+            constraints_map.insert( std::make_pair( field, unnamed[i] ) );
+        }
         comma::signal_flag is_shutdown;
         if( csv.binary() )
         {
