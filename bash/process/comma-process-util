@@ -163,11 +163,8 @@ function comma_execute_and_wait()
     local commands_to_execute_pgid=()
     local commands_to_execute_status=0
     [[ "$statusall" == "false" ]] && commands_to_execute_status=1
-    local command_to_execute cmd shellfcn
-    for command_to_execute in "${commands_to_execute[@]}" ; do
-        echo "got command '$command_to_execute'" >&2
-    done
 
+    local command_to_execute cmd shellfcn
     for command_to_execute in "${commands_to_execute[@]}" ; do
         # shell functions require special handling due to quote spaces
         command_to_execute=$( comma_trim "$command_to_execute" )
