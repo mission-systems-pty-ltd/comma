@@ -130,7 +130,7 @@ function comma_execute_and_wait()
     local original_args="$@"
     local usepg="true"
     local statusall="true"
-    local comma_execute_and_wait_verbose="false"
+    local comma_execute_and_wait_verbose="true" # "false"
     while [[ $# -ne 0 ]]; do
         case $1 in
             --signals=*|--signal-list=*) signal_list=${1#*=};;
@@ -166,6 +166,7 @@ function comma_execute_and_wait()
 
     local command_to_execute cmd shellfcn
     for command_to_execute in "${commands_to_execute[@]}" ; do
+        [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "comma_execute_and_wait: got command '$command_to_execute'" >&2
         # shell functions require special handling due to quote spaces
         command_to_execute=$( comma_trim "$command_to_execute" )
         cmd=$( shopt -s extglob ; cmd=${command_to_execute##bash*( )-c*( )}; echo "$cmd" )
