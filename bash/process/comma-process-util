@@ -61,6 +61,7 @@ function terminate_comma_execute_and_wait()
     kill -s $received_signal $BASHPID           # relinguish control
 }
 export -f terminate_comma_execute_and_wait
+declare -r terminate_comma_execute_and_wait
 
 # Usage:
 #   comma_execute_and_wait command[,command2[,command3]] [--signals=signal1,signal2,...] \
@@ -162,8 +163,8 @@ function comma_execute_and_wait()
     local commands_to_execute_pgid=()
     local commands_to_execute_status=0
     [[ "$statusall" == "false" ]] && commands_to_execute_status=1
-    local command_to_execute cmd shellfcn
 
+    local command_to_execute cmd shellfcn
     for command_to_execute in "${commands_to_execute[@]}" ; do
         # shell functions require special handling due to quote spaces
         command_to_execute=$( comma_trim "$command_to_execute" )
@@ -212,12 +213,18 @@ function comma_execute_and_wait()
     return $commands_to_execute_status
 }
 export -f comma_execute_and_wait
+declare -r comma_execute_and_wait
 
 # likely a workaround for a problem encountered in bash-4.3 series:
 # the builtin "wait" failed to wait for all processes in a (killed) process group to terminate
-# poll the process list for the given time (or forever) until no processes left in a group
+# poll the process list for the given time (or forever) until only one process is left in a group
+# this process is mandatory the group session leader; the caller is always given the chance to
+# wait for it and retrieve the exit status; thus, it is not removed from process table and not reused
+# always call this function before waiting for the process group leader
 # if the timeout is reached, kill -9 the entire group
-# return 0 if processes ended and 1 if kill-9-ed
+# return 0 if processes ended (only 1 left) and 1 if kill-9-ed
+# arguments: caller name (used in output messages), process group to watch, and maximal time to wait
+# (careful: forever by default)
 function comma_wait_for_process_group()
 {
     local caller_name=$1
@@ -228,7 +235,7 @@ function comma_wait_for_process_group()
     local leftovers
     while true ; do
         leftovers=$( ps --no-headers -u $USER -o pgid | grep "$process_group_id" | wc -l )
-        (( leftovers > 0 )) && { echo "$caller_name: waited ${iter}s for $process_group_id, still $leftovers processes left" >&2; sleep 1; } || { return 0; }
+        (( leftovers > 1 )) && { echo "$caller_name: waited ${iter}s for $process_group_id, still $leftovers processes left" >&2; sleep 1; } || { return 0; }
         (( ++iter ))
         if [[ "$max_wait_time" != "forever" ]] ; then
             (( iter > max_wait_time )) && {
@@ -241,3 +248,4 @@ function comma_wait_for_process_group()
     done
 }
 export -f comma_wait_for_process_group
+declare -r comma_wait_for_process_group
