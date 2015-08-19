@@ -118,6 +118,7 @@ function comma_execute_and_wait()
 {
     # store existing traps for restoring on exit
     comma_execute_and_wait_saved_traps=$( trap )
+    [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo -e "comma_execute_and_wait: saved traps are:\n${comma_execute_and_wait_saved_traps[@]}" >&2
 
     # defaults
     local signal_list="TERM,INT,HUP"
@@ -157,8 +158,10 @@ function comma_execute_and_wait()
     # - re-sends the trapped signal to itself
     local signal_to_handle
     for signal_to_handle in ${signal_list//,/ } ; do
+        [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "comma_execute_and_wait: in $BASHPID setting trap on '$signal_to_handle'" >&2
         trap 'terminate_comma_execute_and_wait $usepg $signal_to_handle' $signal_to_handle
     done
+    [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo -e "comma_execute_and_wait: newly-set traps are:\n$( trap -p )" >&2
 
     local commands_to_execute_pgid=()
     local commands_to_execute_status=0
