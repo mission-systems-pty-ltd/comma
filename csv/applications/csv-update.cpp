@@ -106,8 +106,7 @@ static void usage( bool more )
     std::cerr << "        e.g: --remove=,,remove,,0: for the 3rd field, \"empty\" indicates it has empty value, for the 5th: 0" << std::endl;
     std::cerr << "        the type of reset values has to be correct: number for numeric fields, time for time fields, etc" << std::endl;
     std::cerr << "    --update-non-empty-fields,--update-non-empty,-u:" << std::endl;
-    std::cerr << "        ascii: if update has empty fields, keep the fields values from stdin" << std::endl;
-    std::cerr << "        binary: todo, since the semantics of an \"empty\" value is unclear" << std::endl;
+    std::cerr << "        if update has empty fields, use the field value from stdin (for binary, empty fields must be defined with --empty)" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
     if( more ) { std::cerr << std::endl << "csv options:" << std::endl << comma::csv::options::usage() << std::endl; }
     std::cerr << std::endl;
@@ -380,7 +379,6 @@ int main( int ac, char** av )
         options.assert_mutually_exclusive( "--last-block,--empty" );
         matched_only = options.exists( "--matched-only,--matched,-m" );
         update_non_empty = options.exists( "--update-non-empty-fields,--update-non-empty,-u" );
-        if( csv.binary() && update_non_empty ) { std::cerr << "csv-update: --update-non-empty-fields in binary mode not supported" << std::endl; return 1; }
         std::vector< std::string > unnamed = options.unnamed( "--last-block,--last-only,--last,--matched-only,--matched,-m,--string,-s,--update-non-empty-fields,--update-non-empty,-u,--verbose,-v", "-.*" );
         if( unnamed.size() > 1 ) { std::cerr << "csv-update: expected one file or stream to join, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         if( !unnamed.empty() ) { filter_transport.reset( new comma::io::istream( unnamed[0], options.exists( "--binary,-b" ) ? comma::io::mode::binary : comma::io::mode::ascii ) ); }
