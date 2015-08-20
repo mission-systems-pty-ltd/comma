@@ -8,11 +8,11 @@ app="./app"
 outdir="output"
 
 for n in $( seq 10 ) ; do
-    log="$outdir/$n.log"
+    log="$outdir/app-$n.log"
     $app "$outdir" > "$log" 2>&1
     (( $? == 0 )) && { echo "$name: application was supposed to fail, but did not, see '$log'" >&2; exit 1; }
     sleep 8 # this is bed_time parameter in app
     nbugs=$( grep -c "Bug" "$log" )
-    (( $nbugs > 0 )) && break
+    (( $nbugs > 0 )) && { echo "$name: cought the bug already, no need for more iterations" >&2; break ; }
 done
 echo "bug/count=$nbugs"
