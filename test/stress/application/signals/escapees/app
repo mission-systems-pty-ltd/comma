@@ -1,6 +1,7 @@
 #!/bin/bash
 
 name=$( basename $0 )
+owndir=$( dirname $0 )
 
 workdir=$1
 [[ "$workdir" == '-h' || "$workdir" == '--help' ]] && {
@@ -31,7 +32,7 @@ exit 0
 # report indicates escapees.
 
 source $( which comma-application-util ) || exit 1
-source $( which comma-trap-util ) || exit 1
+source "$owndir/comma-trap-private" || exit 1
 
 function clean_up()
 {
