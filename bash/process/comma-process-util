@@ -55,9 +55,20 @@ function terminate_comma_execute_and_wait()
             commands_to_execute_pgid[$command_to_execute_index]=""
         fi
     done
-    eval "$comma_execute_and_wait_saved_traps"  # use old handlers
+    # use old handlers
+    [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo -e "comma_execute_and_wait: restore old traps\n$comma_execute_and_wait_saved_traps\n... in $BASHPID" >&2
+    eval "$comma_execute_and_wait_saved_traps"
     unset comma_execute_and_wait_saved_traps
-    [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "comma_execute_and_wait: re-raise $received_signal" >&2
+    # for signals that have no defined old traps, restore the default handlers
+    local current_signal current_trap
+    for current_signal in SIGTERM SIGINT SIGHUP SIGPIPE SIGQUIT ; do
+        current_trap=$( trap -p | grep "$current_signal" | cut -d' ' -f3 )
+        [[ "$current_trap" == "''" ]] && {
+            [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "comma_execute_and_wait: restore default handler for $current_signal in $BASHPID">&2
+            trap '-' $current_signal
+        }
+    done
+    [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "comma_execute_and_wait: re-raise $received_signal in $BASHPID" >&2
     kill -s $received_signal $BASHPID           # relinguish control
 }
 export -f terminate_comma_execute_and_wait
