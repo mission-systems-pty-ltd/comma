@@ -166,7 +166,7 @@ _comma_bash_completion()
     # even if ./name does not exist 
     if [[ -x "${COMP_WORDS[0]}" ]] ; then
         opts=$( "${COMP_WORDS[0]}" --bash-completion )
-    elif which "${COMP_WORDS[0]}" > /dev/null ; then
+    elif type -p "${COMP_WORDS[0]}" > /dev/null 2> /dev/null ; then
         opts=$( "${COMP_WORDS[0]}" --bash-completion )
     fi
     COMPREPLY=( $( compgen -f -d -W "${opts}" -- ${cur}) )
