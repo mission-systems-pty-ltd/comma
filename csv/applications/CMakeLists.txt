@@ -3,6 +3,8 @@ FILE( GLOB source   ${dir}/*.cpp)
 FILE( GLOB includes ${dir}/*.h)
 FILE( GLOB play_source   ${dir}/play/*.cpp)
 FILE( GLOB play_includes ${dir}/play/*.h)
+FILE( GLOB play_source   ${dir}/details/*.cpp)
+FILE( GLOB play_includes ${dir}/details/*.h)
 SOURCE_GROUP( ${TARGET_NAME} FILES ${play_source} ${play_includes} ${source} ${includes} )
 
 add_executable( csv-quote csv-quote.cpp )
@@ -103,3 +105,7 @@ install( TARGETS csv-interval RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPO
 add_executable( csv-cast ${dir}/csv-cast.cpp )
 target_link_libraries ( csv-cast ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv )
 install( TARGETS csv-cast RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
+
+add_executable( csv-block ${dir}/csv-block.cpp )
+target_link_libraries ( csv-block ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io comma_string comma_xpath comma_csv )
+install( TARGETS csv-block RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
