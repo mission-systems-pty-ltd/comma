@@ -69,8 +69,12 @@ static void usage( bool more )
     std::cerr << "index" << std::endl;
     std::cerr << "  cat something.csv | csv-update append --fields=,block --index" << std::endl;
     std::cerr << "      appends block field, and block's indexing fields" << std::endl;
+    std::cerr << "options:" << std::endl;
+    std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
+    std::cerr << "    --no-reverse; use with 'index' operation, output the indices in ascending order instead of descending" << std::endl;
     std::cerr << std::endl;
     std::cerr << std::endl;
+    std::cerr << "contact info: " << comma::contact_info <<std::endl;
 
     exit(0);
 }
@@ -80,7 +84,43 @@ static comma::csv::options csv;
 static comma::signal_flag is_shutdown;
 static comma::uint32 block = 0;
 static input_t default_input;
+static input_t default_output;
+static comma::csv::options csv_out;
+static bool reverse_index = true;
+// All the data for this block
+static std::vector< input_t > block_records;
 
+comma::csv::output_stream< input_t >& get_ostream()
+{
+//     if( verbose ) { std::cerr << name() << "out fields: " << csv_out.fields << std::endl; }
+    static comma::csv::output_stream< input_t > ostream( std::cout, csv_out, default_output );
+    return ostream;
+}
+
+void flush_indexing( std::vector< input_t >& block_records )
+{
+    comma::csv::output_stream< input_t >& ostream = get_ostream();
+    std::size_t size = block_records.size();
+    for( std::size_t i=0; i<size; ++i ) 
+    {
+        input_t record = block_records[i];
+        record.value.longs.push_back( reverse_index ? size - (i+1)  : i );
+        ostream.write( record );
+    }
+    block_records.clear();
+}
+
+void output_with_appened_index( const input_t& v )
+{
+    if( block != v.block )
+    {
+        flush_indexing( block_records );
+    }
+    block = v.block;
+    block_records.push_back( v );
+}
+
+enum op_type { block_indexing, head_read, block_append }; 
 
 int main( int ac, char** av )
 {
@@ -92,8 +132,12 @@ int main( int ac, char** av )
         csv.full_xpath = true;
         csv.quote.reset();
         
+        csv_out = csv;
+        
         std::vector< std::string > unnamed = options.unnamed( "--help,-h,--verbose,-v", "-.*" );
         if( unnamed.size() < 1 ) { std::cerr << name() << "expected one operation, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
+        const std::string  operation = unnamed.front();
+        
         std::vector< std::string > v = comma::split( csv.fields, ',' );
         bool has_value_fields = false;
         for( std::size_t i = 0; !has_value_fields && i < v.size(); has_value_fields = !v[i].empty() && v[i] != "block" &&  v[i] != "id", ++i );
@@ -108,12 +152,13 @@ int main( int ac, char** av )
             f = comma::csv::impl::unstructured::guess_format( first_line, csv.delimiter );
             if( verbose ) { std::cerr << name() << "guessed format: " << f.string() << std::endl; }
         }
+        bool has_block = false;
         unsigned int size = f.count();
         for( std::size_t i = 0; i < size; ++i )
         {
             if( i < v.size() )
             {
-                if( v[i] == "block" ) { continue; }
+                if( v[i] == "block" ) { has_block = true; continue; }
                 if( v[i] == "id" ) { v[i] = "key/" + default_input.key.append( f.offset( i ).type ); continue; }
             }
             if( !has_value_fields || !v[i].empty() )
@@ -122,20 +167,51 @@ int main( int ac, char** av )
                 v[i] = "value/" + default_input.value.append( csv.binary() ? f.offset( i ).type : comma::csv::format::fixed_string ); // quick and dirty
             }
         }
-        if( default_input.key.empty() ) { std::cerr << name() << "please specify at least one id field" << std::endl; return 1; }
+        
+        if( verbose ) { std::cerr << name() << "csv fields: " << csv.fields << std::endl; }
+        
+        op_type type = block_indexing;
+        default_output = default_input;
         csv.fields = comma::join( v, ',' );
         if( verbose ) { std::cerr << name() << "csv fields: " << csv.fields << std::endl; }
+        if( operation == "index" )
+        {
+            if( !has_block ) { std::cerr << name() << "block field is required for blocking indexing mode" << std::endl; exit(1); }
+            csv_out.fields = csv.fields + ',' +  "value/" + default_output.value.append( comma::csv::format::uint32 );
+            if( verbose ) { std::cerr << name() << "out fields: " << csv_out.fields << std::endl; }
+            
+            reverse_index = !options.exists( "--no-reverse" );
+        }
         comma::csv::input_stream< input_t > istream( std::cin, csv, default_input );
-        comma::csv::output_stream< input_t > ostream( std::cout, csv, default_input );
+//         comma::csv::output_stream< input_t > ostream( std::cout, csv_out, default_output );
+//         if( default_input.key.empty() ) { std::cerr << name() << "please specify at least one id field" << std::endl; return 1; }
         
-        if( !first_line.empty() ) { ostream.write( comma::csv::ascii< input_t >( csv, default_input ).get( first_line ) ); }
+        
+        
+        
+        if( !first_line.empty() ) { output_with_appened_index( comma::csv::ascii< input_t >( csv, default_input ).get( first_line ) ); }
         while( !is_shutdown && ( istream.ready() || ( std::cin.good() && !std::cin.eof() ) ) )
         {
             const input_t* p = istream.read();
             if( !p ) { break; }
             
-            ostream.write( *p );
+//             std::cerr << p->key.strings.front() << std::endl;
+            switch( type )
+            {
+                default:
+                    output_with_appened_index( *p );
+                break;
+            }
         }
+        
+        switch( type )
+        {
+            default:
+                flush_indexing( block_records );
+            break;
+        }
+        
+        
         
         return 0;
     }
