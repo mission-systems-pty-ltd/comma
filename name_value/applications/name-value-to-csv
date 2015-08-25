@@ -41,7 +41,7 @@ options:
     --fields=<fields>; path-value fields of each entry
     --prefix=[<prefix>]; optional prefix
     --path=[<path>]; same as --prefix
-    --unbuffered|-u; assume that input stream is sorted by index and use no bufferring
+    --unbuffered|-u; assume that input stream is sorted by index and use no buffering
 
 example 1:
 
@@ -61,7 +61,7 @@ b,20,1
 
 example 2:
 
-    cat <<EOF | sed 's@my/test@[0]@' | $scriptname --fields=name,value,status
+    cat <<EOF | sed 's@^my/test@[0]@' | $scriptname --fields=name,value,status
 my/test/status=0
 my/test/value=10
 my/test/name=a
