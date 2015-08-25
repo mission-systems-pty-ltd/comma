@@ -1,0 +1,5 @@
+#!/bin/bash
+
+name-value-to-csv $( cat options ) | gawk '{ if( $0 ) print "line["NR-1"]=\""$0"\"" }'
+exit ${PIPESTATUS[0]}
+
