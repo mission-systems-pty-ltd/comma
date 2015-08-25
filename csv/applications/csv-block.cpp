@@ -64,7 +64,7 @@ static void usage( bool more )
     std::cerr << "operations" << std::endl;
     std::cerr << std::endl;
     std::cerr << "head" << std::endl;
-    std::cerr << "  cat something.csv | csv-update head --number-of-blocks=1" << std::endl;
+    std::cerr << "  cat something.csv | csv-update head --fields=a,b,c,block --number-of-blocks=1" << std::endl;
     std::cerr << "      reads data to stdout by the number of blocks" << std::endl;
     std::cerr << "      appends indexing field for records in each block" << std::endl;
     std::cerr << "append" << std::endl;
@@ -73,6 +73,10 @@ static void usage( bool more )
     std::cerr << "index" << std::endl;
     std::cerr << "  cat something.csv | csv-update append --fields=,block --index" << std::endl;
     std::cerr << "      appends block field, and block's indexing fields" << std::endl;
+    std::cerr << "increment" << std::endl;
+    std::cerr << "  cat something.csv | csv-update increment --fields=a,b,block" << std::endl;
+    std::cerr << "      reads data to stdout by the number of blocks" << std::endl;
+    std::cerr << "      appends indexing field for records in each block" << std::endl;
     std::cerr << "options:" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
     std::cerr << "    --no-reverse; use with 'index' operation, output the indices in ascending order instead of descending" << std::endl;
@@ -146,7 +150,13 @@ void output_with_appened_block( input_t v )
     get_ostream().write(v);    
 }
 
-enum op_type { block_indexing, head_read, block_append }; 
+void output_incremented_block( input_t v )
+{
+    v.block += 1;
+    get_ostream().write(v);    
+}
+
+enum op_type { block_indexing, head_read, block_append, block_increment }; 
 
 int main( int ac, char** av )
 {
@@ -207,6 +217,12 @@ int main( int ac, char** av )
             
             if( operation == "append" ) { type = block_append; } 
         }
+        else if( operation == "increment" )    // operation is head
+        {
+            type = block_increment;
+            csv_out = csv;
+            if( !has_block ) { std::cerr << name() << "block field is required for blocking increment mode" << std::endl; exit(1); }
+        }
         else if( operation == "head" )    // operation is head
         {
             type = head_read;
@@ -236,6 +252,9 @@ int main( int ac, char** av )
                 case block_append:
                     output_with_appened_block( p );
                     break;
+                case block_increment:
+                    output_incremented_block( p );
+                    break;
                 default:
                     output_with_appened_index( p );
                 break;
@@ -257,6 +276,9 @@ int main( int ac, char** av )
                     break;
                 case block_append:
                     output_with_appened_block( *p );
+                    break;
+                case block_increment:
+                    output_incremented_block( *p );
                     break;
                 default:
                     output_with_appened_index( *p );
