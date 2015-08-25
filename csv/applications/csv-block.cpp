@@ -49,6 +49,7 @@
 #include <comma/io/stream.h>
 #include <comma/string/string.h>
 #include <comma/visiting/traits.h>
+#include <comma/csv/impl/unstructured.h>
 
 #include <stdio.h>
 
@@ -75,6 +76,7 @@ static void usage( bool more )
     std::cerr << "options:" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
     std::cerr << "    --no-reverse; use with 'index' operation, output the indices in ascending order instead of descending" << std::endl;
+    std::cerr << "    --starting-block,--number,-n; use with 'append' operation, the starting block number to use, default is 1" << std::endl;
     std::cerr << std::endl;
     std::cerr << std::endl;
     std::cerr << "contact info: " << comma::contact_info <<std::endl;
@@ -92,6 +94,8 @@ static comma::csv::options csv_out;
 static bool reverse_index = true;
 // All the data for this block
 static std::vector< input_t > block_records;
+static comma::csv::impl::unstructured keys;
+static comma::uint32 current_block = 1;
 
 comma::csv::output_stream< input_t >& get_ostream()
 {
@@ -130,6 +134,16 @@ void output_from_stdin_head( const input_t& v )
 //     std::cerr << "value: " << v.value.strings.front() << std::endl;
 //     if( v.block == 0 ) { std::cin.clear(); fflush( 0 ); exit(0); }
     if( v.block == 0 ) { exit(0); }
+}
+
+void output_with_appened_block( input_t v )
+{
+    
+    if( !(keys == v.key) ) { ++current_block; }
+    
+    keys = v.key;
+    v.value.longs.push_back( current_block );
+    get_ostream().write(v);    
 }
 
 enum op_type { block_indexing, head_read, block_append }; 
@@ -186,25 +200,30 @@ int main( int ac, char** av )
         default_output = default_input;
         csv.fields = comma::join( v, ',' );
         if( verbose ) { std::cerr << name() << "csv fields: " << csv.fields << std::endl; }
-        if( operation == "index" )
+        if( operation == "index" || operation == "append")
         {
-            if( !has_block ) { std::cerr << name() << "block field is required for blocking indexing mode" << std::endl; exit(1); }
             csv_out.fields = csv.fields + ',' +  "value/" + default_output.value.append( comma::csv::format::uint32 );
-            
             reverse_index = !options.exists( "--no-reverse" );
+            
+            if( operation == "append" ) { type = block_append; } 
         }
-        else    // operation is head
+        else if( operation == "head" )    // operation is head
         {
             type = head_read;
             csv_out = csv;
         }
-            if( verbose ) { std::cerr << name() << "out fields: " << csv_out.fields << std::endl; }
+        else { std::cerr << name() << "unrecognised operationL '" << operation << "'" << std::endl; }
+        
+        if( verbose ) { std::cerr << name() << "out fields: " << csv_out.fields << std::endl; }
+        
+        if( type == block_indexing && !has_block ) { std::cerr << name() << "block field is required for blocking indexing mode" << std::endl; exit(1); }
+        if( type == block_append ) 
+        {
+            current_block = options.value< comma::uint32 >( "--starting-block,--number,-n", 1 ); // default is 1
+            if ( default_input.key.empty() ) { std::cerr << name() << "please specify at least one id field" << std::endl; return 1; }
+        }
         
         comma::csv::input_stream< input_t > istream( std::cin, csv, default_input );
-//         comma::csv::output_stream< input_t > ostream( std::cout, csv_out, default_output );
-//         if( default_input.key.empty() ) { std::cerr << name() << "please specify at least one id field" << std::endl; return 1; }
-        
-        
         
         if( !first_line.empty() ) 
         { 
@@ -213,6 +232,10 @@ int main( int ac, char** av )
             {
                 case head_read:
                     output_from_stdin_head( p );
+                    break;
+                case block_append:
+                    output_with_appened_block( p );
+                    break;
                 default:
                     output_with_appened_index( p );
                 break;
@@ -231,6 +254,10 @@ int main( int ac, char** av )
             {
                 case head_read:
                     output_from_stdin_head( *p );
+                    break;
+                case block_append:
+                    output_with_appened_block( *p );
+                    break;
                 default:
                     output_with_appened_index( *p );
                 break;
