@@ -50,6 +50,9 @@
 #include <comma/string/string.h>
 #include <comma/visiting/traits.h>
 
+#include <stdio.h>
+
+
 #include "details/inputs.h"
 
 static const char* name() { return "csv-block: "; }
@@ -120,6 +123,15 @@ void output_with_appened_index( const input_t& v )
     block_records.push_back( v );
 }
 
+void output_from_stdin_head( const input_t& v )
+{
+    static comma::csv::output_stream< input_t> ostream( std::cout, csv, default_input );
+    ostream.write( v );
+//     std::cerr << "value: " << v.value.strings.front() << std::endl;
+//     if( v.block == 0 ) { std::cin.clear(); fflush( 0 ); exit(0); }
+    if( v.block == 0 ) { exit(0); }
+}
+
 enum op_type { block_indexing, head_read, block_append }; 
 
 int main( int ac, char** av )
@@ -178,26 +190,47 @@ int main( int ac, char** av )
         {
             if( !has_block ) { std::cerr << name() << "block field is required for blocking indexing mode" << std::endl; exit(1); }
             csv_out.fields = csv.fields + ',' +  "value/" + default_output.value.append( comma::csv::format::uint32 );
-            if( verbose ) { std::cerr << name() << "out fields: " << csv_out.fields << std::endl; }
             
             reverse_index = !options.exists( "--no-reverse" );
         }
+        else    // operation is head
+        {
+            type = head_read;
+            csv_out = csv;
+        }
+            if( verbose ) { std::cerr << name() << "out fields: " << csv_out.fields << std::endl; }
+        
         comma::csv::input_stream< input_t > istream( std::cin, csv, default_input );
 //         comma::csv::output_stream< input_t > ostream( std::cout, csv_out, default_output );
 //         if( default_input.key.empty() ) { std::cerr << name() << "please specify at least one id field" << std::endl; return 1; }
         
         
         
-        
-        if( !first_line.empty() ) { output_with_appened_index( comma::csv::ascii< input_t >( csv, default_input ).get( first_line ) ); }
+        if( !first_line.empty() ) 
+        { 
+            input_t p = comma::csv::ascii< input_t >( csv, default_input ).get( first_line ); 
+            switch( type )
+            {
+                case head_read:
+                    output_from_stdin_head( p );
+                default:
+                    output_with_appened_index( p );
+                break;
+            }
+        }
         while( !is_shutdown && ( istream.ready() || ( std::cin.good() && !std::cin.eof() ) ) )
         {
             const input_t* p = istream.read();
-            if( !p ) { break; }
+            if( !p ) 
+            { 
+                if( type == head_read ) return 2;
+                break; 
+            }
             
-//             std::cerr << p->key.strings.front() << std::endl;
             switch( type )
             {
+                case head_read:
+                    output_from_stdin_head( *p );
                 default:
                     output_with_appened_index( *p );
                 break;
