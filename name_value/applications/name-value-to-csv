@@ -75,7 +75,12 @@ END
     exit
 }
 
-unbuffered=
+function parse_input
+{
+    sed $option_unbuffered -r -n 's@^'"$option_prefix"'\[([0-9]+)\]/([^=]+)=([^ \t#]*)[ \t]*(#.*)?$@\1 \2 \3@p; $a\' \
+        | if [[ -n "$option_unbuffered" ]]; then cat; else sort -k 1,1 -n; fi
+}
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --help|-h)  usage ;;
@@ -83,7 +88,7 @@ while [[ $# -gt 0 ]]; do
         --fields) shift; option_fields="$1" ;;
         --prefix=*|--path=*) option_prefix="${1#*=}" ;;
         --prefix|--path) shift; option_prefix="$1" ;;
-        --unbuffered|-u) unbuffered=-u ;;
+        --unbuffered|-u) option_unbuffered=-u ;;
     esac
     shift
 done
@@ -91,14 +96,15 @@ done
 if [[ -z "$option_fields" ]]; then echo "$scriptname: fields are not specified" >&2; exit 1; fi
 fields=( $( echo "$option_fields" | tr ',' '\n' ) )
 declare -A csv
-while read line_number field value; do
-    [[ -z "$line_number" ]] && break
-    [[ -z "$current_line_number" ]] && current_line_number=$line_number
-    if (( line_number != current_line_number )); then
-        { for f in ${fields[@]}; do echo ${csv[$f]}; done | paste -sd,; }
+while read index field value; do
+    [[ -z "$index" ]] && break
+    [[ -z "$current_index" ]] && current_index=$index
+    if (( index < current_index )); then echo "$scriptname: expected input sorted by index, but got index $index < previous index of $current_index" >&2; exit 1; fi
+    if (( index > current_index )); then
+        for f in ${fields[@]}; do echo ${csv[$f]}; done | paste -sd,
         csv=()
-        current_line_number=$line_number
+        current_index=$index
     fi
     [[ -n "$field" ]] && csv[$field]=$value
-done < <( sed $unbuffered -r -n 's@^'"$option_prefix"'\[([0-9]+)\]/([^=]+)=([^ \t#]*)[ \t]*(#.*)?$@\1 \2 \3@p; $a\' | if [[ -n "$unbuffered" ]]; then cat; else sort -k 1,1 -n; fi )
-if [[ -n "${csv[@]}" ]]; then { for f in ${fields[@]}; do echo ${csv[$f]}; done | paste -sd,; }; fi
+done < <( parse_input )
+if [[ -n "${csv[@]}" ]]; then for f in ${fields[@]}; do echo ${csv[$f]}; done | paste -sd,; fi
