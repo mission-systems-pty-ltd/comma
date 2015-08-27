@@ -50,7 +50,12 @@ function terminate_comma_execute_and_wait()
     local command_to_execute_index
     for command_to_execute_index in ${!commands_to_execute_pgid[@]} ; do
         if [[ -n "${commands_to_execute_pgid[$command_to_execute_index]}" ]] ; then
+            [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "comma_execute_and_wait: killing ${commands_to_execute_pgid[$command_to_execute_index]} by $received_signal" >&2
             kill -s $received_signal -- ${killsign}${commands_to_execute_pgid[$command_to_execute_index]}
+            [[ "$killsign" == "-" ]] && {
+                [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "comma_execute_and_wait: waiting for group ${commands_to_execute_pgid[$command_to_execute_index]}" >&2
+                comma_wait_for_process_group "comma_execute_and_wait" "${commands_to_execute_pgid[$command_to_execute_index]}" 12
+            }
             wait ${commands_to_execute_pgid[$command_to_execute_index]}
             commands_to_execute_pgid[$command_to_execute_index]=""
         fi
@@ -142,7 +147,7 @@ function comma_execute_and_wait()
     local original_args="$@"
     local usepg="true"
     local statusall="true"
-    local comma_execute_and_wait_verbose="false" # "true"
+    local comma_execute_and_wait_verbose="true" # "false"
     while [[ $# -ne 0 ]]; do
         case $1 in
             --signals=*|--signal-list=*) signal_list=${1#*=};;
