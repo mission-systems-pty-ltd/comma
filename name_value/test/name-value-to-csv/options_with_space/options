@@ -1,1 +1,1 @@
---fields name,value --prefix my/test
+--fields name,value --prefix my/test --delimiter |

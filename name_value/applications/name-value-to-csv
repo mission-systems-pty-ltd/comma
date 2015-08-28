@@ -29,7 +29,8 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-scriptname=$( basename $0 )
+readonly scriptname=$( basename $0 )
+readonly default_delimiter=,
 
 function usage
 {
@@ -38,10 +39,11 @@ function usage
 take indexed path-value entries (with optional prefix) on stdin and output them as csv sorted by index to stdout according to the provided fields
 
 options:
-    --fields=<fields>; path-value fields of each entry
-    --prefix=[<prefix>]; optional prefix
-    --path=[<path>]; same as --prefix
-    --unbuffered|-u; assume that input stream is sorted by index and use no buffering
+    --fields <fields>: path-value fields of each entry
+    --prefix <prefix>: optional prefix
+    --path <path>: same as --prefix
+    --unbuffered,-u: assume that input stream is sorted by index and use no buffering
+    --delimiter,-d <delimiter>: default $default_delimiter
 
 example 1:
 
@@ -81,6 +83,12 @@ function parse_input
         | if [[ -n "$option_unbuffered" ]]; then cat; else sort -k 1,1 -n; fi
 }
 
+function output_line
+{
+    for f in ${fields[@]}; do echo ${csv[$f]}; done | paste -s -d${option_delimiter::1}
+}
+
+option_delimiter=$default_delimiter
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --help|-h)  usage ;;
@@ -88,6 +96,8 @@ while [[ $# -gt 0 ]]; do
         --fields) shift; option_fields="$1" ;;
         --prefix=*|--path=*) option_prefix="${1#*=}" ;;
         --prefix|--path) shift; option_prefix="$1" ;;
+        --delimiter=*|-d=*) option_delimiter="${1#*=}" ;;
+        --delimiter|-d) shift; option_delimiter="$1" ;;
         --unbuffered|-u) option_unbuffered=-u ;;
     esac
     shift
@@ -101,10 +111,10 @@ while read index field value; do
     [[ -z "$current_index" ]] && current_index=$index
     if (( index < current_index )); then echo "$scriptname: expected input sorted by index, but got index $index < previous index of $current_index" >&2; exit 1; fi
     if (( index > current_index )); then
-        for f in ${fields[@]}; do echo ${csv[$f]}; done | paste -sd,
+        output_line
         csv=()
         current_index=$index
     fi
     [[ -n "$field" ]] && csv[$field]=$value
 done < <( parse_input )
-if [[ -n "${csv[@]}" ]]; then for f in ${fields[@]}; do echo ${csv[$f]}; done | paste -sd,; fi
+if [[ -n "$current_index" ]]; then output_line; fi
