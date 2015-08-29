@@ -71,6 +71,7 @@ void usage()
     std::cerr << "    --strict: if constraint field is not present among fields, exit with error (added for backward compatibility)" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
     std::cerr << "    --or: uses 'or' expression instead of 'and' (default is 'and')" << std::endl;
+    std::cerr << "    --first-matching: output the first record matching the expression, then exit" << std::endl;
     std::cerr << std::endl;
     std::cerr << "fields: any non-empty fields will be treated as keys" << std::endl;
     std::cerr << std::endl;
@@ -373,9 +374,10 @@ int main( int ac, char** av )
         csv = comma::csv::options( options );
         fields = comma::split( csv.fields, ',' );
         if( fields.size() == 1 && fields[0].empty() ) { fields.clear(); }
-        std::vector< std::string > unnamed = options.unnamed( "--or,--sorted,--strict,--verbose,-v", "-.*" );
+        std::vector< std::string > unnamed = options.unnamed( "--first-matching,--or,--sorted,--strict,--verbose,-v", "-.*" );
         //for( unsigned int i = 0; i < unnamed.size(); constraints_map.insert( std::make_pair( comma::split( unnamed[i], ';' )[0], unnamed[i] ) ), ++i );
         bool strict = options.exists( "--strict" );
+        bool first_matching = options.exists( "--first-matching" );
         for( unsigned int i = 0; i < unnamed.size(); ++i )
         {
             std::string field = comma::split( unnamed[i], ';' )[0];
@@ -401,7 +403,12 @@ int main( int ac, char** av )
             {
                 const input_t* p = istream.read();
                 if( !p || p->done(is_or) ) { break; }
-                if( p->is_a_match(is_or) ) { std::cout.write( istream.last(), csv.format().size() ); std::cout.flush(); }
+                if( p->is_a_match(is_or) )
+                {
+                    std::cout.write( istream.last(), csv.format().size() );
+                    std::cout.flush();
+                    if ( first_matching ) { break; }
+                }
             }
         }
         else
@@ -424,12 +431,16 @@ int main( int ac, char** av )
             comma::csv::ascii_input_stream< input_t > isstream( iss, csv, input );
             const input_t* p = isstream.read();
             if( !p || p->done( is_or ) ) { return 0; }
-            if( p->is_a_match( is_or ) ) { std::cout << line << std::endl; }
+            if( p->is_a_match( is_or ) ) { std::cout << line << std::endl; if ( first_matching ) return 0; }
             while( !is_shutdown && ( istream.ready() || ( std::cin.good() && !std::cin.eof() ) ) )
             {
                 const input_t* p = istream.read();
                 if( !p || p->done( is_or ) ) { break; }
-                if( p->is_a_match( is_or ) ) { std::cout << comma::join( istream.last(), csv.delimiter ) << std::endl; }
+                if( p->is_a_match( is_or ) )
+                {
+                    std::cout << comma::join( istream.last(), csv.delimiter ) << std::endl;
+                    if ( first_matching ) return 0;
+                }
             }
         }
         return 0;
