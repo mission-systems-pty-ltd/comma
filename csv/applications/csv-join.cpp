@@ -240,7 +240,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
                 default_input.keys.resize( default_input.keys.size() + 1 ); // quick and dirty
             }
         }
-        if( default_input.keys.empty() ) { std::cerr << "csv-join: please specify at least one common key" << std::endl; return 1; }
+        if( default_input.keys.empty() ) { std::cerr << "csv-join: please specify at least one common key; fields: " << stdin_csv.fields << "; filter fields: " << filter_csv.fields << std::endl; return 1; }
         stdin_csv.fields = comma::join( v, ',' );
         filter_csv.fields = comma::join( w, ',' );
         comma::csv::input_stream< input< K > > stdin_stream( std::cin, stdin_csv, default_input );
