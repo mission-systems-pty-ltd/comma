@@ -50,73 +50,82 @@
 #include <comma/string/string.h>
 #include <comma/visiting/traits.h>
 #include <comma/csv/impl/unstructured.h>
-
-#include <stdio.h>
-
-
 #include "details/inputs.h"
 
 static const char* name() { return "csv-blocks: "; }
 
+// todo: tear down details directory; inputs.h code is sufficiently trivial to sit in csv-blocks.csv
+// todo: remove unused includes
+// todo: remove signal_flag (it does not seem used)
+// todo: why do you need unstructured? i don't think it's required at all
+// todo: rename field "increment" to "block"
+// todo: rename field "block_index" to "index"
+// todo: remove --no-reverse; implement --reverse; make ascending order default
+// todo: add a brief description to comma/wiki
+// todo: add a tutorial to comma/wiki
+// todo: rename "append" operation to "group" (for clarity, add aliases, e.g. "make-blocks")
+// todo: block_records: either reserve memory or use a different container; it may be slow on large data, e.g. velodyne feed
+// todo: return 0 or 1; don't return 2 (in head, on end of file return 0)
+// todo: use unstructured only for "append" ("group") operation
+// todo: use comma::csv::tied for appending values
+// todo: optionally (--unbuffered,-u) do: std::cin.rdbuf()->pubsetbuf(0, 0); (hopefully it works)
+// todo: head operation: --lines,-n: implement
 static void usage( bool more )
 {
     std::cerr << std::endl;
     std::cerr << "operations" << std::endl;
+    std::cerr << "    append" << std::endl;
+    std::cerr << "        cat something.csv | csv-blocks append --fields=,id, " << std::endl;
+    std::cerr << "            appends block field base on specified id key or keys" << std::endl;
+    std::cerr << "    index" << std::endl;
+    std::cerr << "        appends an index field counting down the number of records for each block. Use --no-reverse for counting up." << std::endl;
+    std::cerr << "            cat something.csv | csv-blocks index --fields=,block " << std::endl;
+    std::cerr << "    increment" << std::endl;
+    std::cerr << "        increments specified field value, must be uint32 type - any such field can be used as a block:" << std::endl;
+    std::cerr << "            cat something.csv | csv-blocks increment --fields=,,increment" << std::endl;
+    std::cerr << "            cat something.csv | csv-blocks increment --fields=,,block" << std::endl;
+    std::cerr << "    head" << std::endl;
+    std::cerr << "        reads records from first block to stdout" << std::endl;
+    std::cerr << "        requires the block index from 'index' mode in the inputs" << std::endl;
+    std::cerr << "            cat something.csv | csv-blocks index --fields=,block_index " << std::endl;
     std::cerr << std::endl;
-    std::cerr << "append" << std::endl;
-    std::cerr << "  cat something.csv | csv-blocks append --fields=,id, " << std::endl;
-    std::cerr << "      appends block field base on specified id key or keys" << std::endl;
-    std::cerr << "index" << std::endl;
-    std::cerr << "  cat something.csv | csv-blocks index --fields=,block " << std::endl;
-    std::cerr << "      appends an index field counting down the number of records for each block. Use --no-reverse for counting up." << std::endl;
-    std::cerr << "increment" << std::endl;
-    std::cerr << "  cat something.csv | csv-blocks increment --fields=,,increment" << std::endl;
-    std::cerr << "  or" << std::endl;
-    std::cerr << "  cat something.csv | csv-blocks increment --fields=,,block" << std::endl;
-    std::cerr << "      Increments specified field value, must be uint32 type - any such field can be used as a block." << std::endl;
-    std::cerr << "head" << std::endl;
-    std::cerr << "  cat something.csv | csv-blocks index --fields=,block_index " << std::endl;
-    std::cerr << "      Reads records from first block to stdout" << std::endl;
-    std::cerr << "      Requires the block index from 'index' mode in the inputs" << std::endl;
-    std::cerr << "options:" << std::endl;
+    std::cerr << "options" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
     std::cerr << "    --no-reverse; use with 'index' operation, output the indices in ascending order instead of descending" << std::endl;
-    std::cerr << "    --starting-block,--number,-n; use with 'append' operation, the starting block number to use, default is 1" << std::endl;
+    std::cerr << "    --from,--starting-block; use with 'append' operation, the starting block number to use, default is 1" << std::endl;
     std::cerr << "    --step; use with 'increment' operation, the number of increment/decrement for specified field, default is 1" << std::endl;
-    std::cerr << std::endl;
+    if( more ) { std::cerr << comma::csv::options::usage() << std::endl << std::endl; }
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
-    std::cerr << "  block_csv=/tmp/block.csv" << std::endl;
-    std::cerr << "  ( echo \"a,1,2,3\"; echo \"a,4,2,3\"; echo \"b,5,5,6\"; echo \"c,7,5,6\"; echo \"c,7,8,9\"; echo \"c,7,8,9\" ) >$block_csv" << std::endl;
+    std::cerr << "    block_csv=block.csv" << std::endl;
+    std::cerr << "    ( echo \"a,1,2,3\"; echo \"a,4,2,3\"; echo \"b,5,5,6\"; echo \"c,7,5,6\"; echo \"c,7,8,9\"; echo \"c,7,8,9\" ) >$block_csv" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "append" << std::endl;
-    std::cerr << "  cat $block_csv | csv-blocks append --fields=id" << std::endl;
-    std::cerr << "      unique ascending block number are assigned based on one id field" << std::endl;
-    std::cerr << "  cat $block_csv | csv-blocks append --fields=id,,id" << std::endl;
-    std::cerr << "      unique ascending block number are assigned based on two id fields" << std::endl;
+    std::cerr << "    append" << std::endl;
+    std::cerr << "        cat $block_csv | csv-blocks append --fields=id" << std::endl;
+    std::cerr << "            unique ascending block number are assigned based on one id field" << std::endl;
+    std::cerr << "        cat $block_csv | csv-blocks append --fields=id,,id" << std::endl;
+    std::cerr << "            unique ascending block number are assigned based on two id fields" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "index" << std::endl;
-    std::cerr << "  cat $block_csv | csv-blocks append --fields=id | csv-blocks index --fields=,,,,block" << std::endl;
-    std::cerr << "      Append will add block field at the end, 'index' will append how many lines/records are left in the block" << std::endl;
-    std::cerr << "      See 'head operation' below" << std::endl;
+    std::cerr << "    index" << std::endl;
+    std::cerr << "        cat $block_csv | csv-blocks append --fields=id | csv-blocks index --fields=,,,,block" << std::endl;
+    std::cerr << "            Append will add block field at the end, 'index' will append how many lines/records are left in the block" << std::endl;
+    std::cerr << "            See 'head operation' below" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "increment" << std::endl;
-    std::cerr << "  cat $block_csv | csv-blocks increment --fields=,increment " << std::endl;
-    std::cerr << "      Given an integer field (any field), mark it as a block field so the field value is incremented." << std::endl;
-    std::cerr << "      This increments the second field" << std::endl;
+    std::cerr << "    increment" << std::endl;
+    std::cerr << "        cat $block_csv | csv-blocks increment --fields=,increment " << std::endl;
+    std::cerr << "            Given an integer field (any field), mark it as a block field so the field value is incremented." << std::endl;
+    std::cerr << "            This increments the second field" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "head" << std::endl;
-    std::cerr << "  cat $block_csv | csv-blocks append --fields=id | csv-blocks index --fields=,,,,block | csv-blocks head --fields=,,,,,block_index " << std::endl;
-    std::cerr << "      After appending the block field, then the block reverse index field, reading a single block from the input is possible" << std::endl;
+    std::cerr << "    head" << std::endl;
+    std::cerr << "        cat $block_csv | csv-blocks append --fields=id | csv-blocks index --fields=,,,,block | csv-blocks head --fields=,,,,,block_index " << std::endl;
+    std::cerr << "            After appending the block field, then the block reverse index field, reading a single block from the input is possible" << std::endl;
     std::cerr << std::endl;
     std::cerr << "contact info: " << comma::contact_info <<std::endl;
-
     exit(0);
 }
 
 static bool verbose;
 static comma::csv::options csv;
-static comma::signal_flag is_shutdown;
 static comma::uint32 block = 0;
 static input_t default_input;
 static input_t default_output;
@@ -261,7 +270,7 @@ int main( int ac, char** av )
         if( type == block_indexing && !has_block ) { std::cerr << name() << "block field is required for blocking indexing mode" << std::endl; exit(1); }
         if( type == block_append ) 
         {
-            current_block = options.value< comma::uint32 >( "--starting-block,--number,-n", 1 ); // default is 1
+            current_block = options.value< comma::uint32 >( "--starting-block,--from", 1 ); // default is 1
             if ( default_input.key.empty() ) { std::cerr << name() << "please specify at least one id field" << std::endl; return 1; }
         }
         
@@ -286,7 +295,7 @@ int main( int ac, char** av )
                 break;
             }
         }
-        while( !is_shutdown && ( istream.ready() || ( std::cin.good() && !std::cin.eof() ) ) )
+        while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
         {
             const input_t* p = istream.read();
             if( !p ) 
