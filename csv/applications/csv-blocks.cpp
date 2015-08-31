@@ -29,6 +29,7 @@
 
 /// @author dewey nguyen
 
+#include <stdio.h>
 #include <string.h>
 #include <iostream>
 #include <map>
