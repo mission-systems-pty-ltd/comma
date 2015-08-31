@@ -252,10 +252,12 @@ function comma_wait_for_process_group()
     local max_wait_time=$3
     [[ -n "$max_wait_time" ]] || max_wait_time="forever"
     local iter=0
-    local leftovers
+    local leftovers leftovers_count
     while true ; do
-        leftovers=$( ps --no-headers -u $USER -o pgid | grep "$process_group_id" | wc -l )
-        (( leftovers > 0 )) && { echo "$caller_name: waited ${iter}s for $process_group_id, still $leftovers processes left" >&2; sleep 1; } || { return 0; }
+        leftovers=$( ps --no-headers -u $USER -o pgid,pid,comm | grep "$process_group_id " )
+        leftovers_count=$( echo "$leftovers" | sed '/^$/d' | wc -l )
+        leftovers=$( echo -n "$leftovers" | tr '\n' ',' )
+        (( leftovers_count > 0 )) && { echo "$caller_name: waited ${iter}s for $process_group_id, still $leftovers_count processes left ('$leftovers')" >&2; sleep 1; } || { return 0; }
         (( ++iter ))
         if [[ "$max_wait_time" != "forever" ]] ; then
             (( iter > max_wait_time )) && {
