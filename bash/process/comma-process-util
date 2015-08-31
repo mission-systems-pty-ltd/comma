@@ -46,13 +46,14 @@ function terminate_comma_execute_and_wait()
     [[ "$usepg" == "false" ]] && killsign=""
     local received_signal=$2
     local cew_funcname="comma_execute_and_wait ($BASHPID)"
+    local termination_signal="TERM"
     [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: interrupted by $received_signal, killsign='$killsign'" >&2
     # kill the command(s) being executed
     local command_to_execute_index
     for command_to_execute_index in ${!commands_to_execute_pgid[@]} ; do
         if [[ -n "${commands_to_execute_pgid[$command_to_execute_index]}" ]] ; then
-            [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: killing ${commands_to_execute_pgid[$command_to_execute_index]} by $received_signal" >&2
-            kill -s $received_signal -- ${killsign}${commands_to_execute_pgid[$command_to_execute_index]}
+            [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: killing ${commands_to_execute_pgid[$command_to_execute_index]} by $termination_signal" >&2
+            kill -s $termination_signal -- ${killsign}${commands_to_execute_pgid[$command_to_execute_index]}
             [[ "$killsign" == "-" ]] && {
                 [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: waiting for group ${commands_to_execute_pgid[$command_to_execute_index]}" >&2
                 comma_wait_for_process_group "$cew_funcname" "${commands_to_execute_pgid[$command_to_execute_index]}" 12
