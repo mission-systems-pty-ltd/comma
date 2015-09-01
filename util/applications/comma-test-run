@@ -836,7 +836,7 @@ function count_failures()
 }
 export -f count_failures
 
-function clean_working_dir() { [[ -n "$comma_test_run_unique_dir" ]] && rm -fr "$comma_test_run_unique_dir" ; }
+function clean_working_dir() { [[ "$options_debug" == "0" && -n "$comma_test_run_unique_dir" ]] && rm -fr "$comma_test_run_unique_dir" ; }
 
 function final_words()
 {

@@ -45,23 +45,26 @@ function terminate_comma_execute_and_wait()
     local killsign="-"
     [[ "$usepg" == "false" ]] && killsign=""
     local received_signal=$2
-    [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "comma_execute_and_wait: interrupted by $received_signal, killsign='$killsign'" >&2
+    local cew_funcname="comma_execute_and_wait ($BASHPID)"
+    local termination_signal="TERM"
+    [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: interrupted by $received_signal, killsign='$killsign'" >&2
     # kill the command(s) being executed
     local command_to_execute_index
     for command_to_execute_index in ${!commands_to_execute_pgid[@]} ; do
         if [[ -n "${commands_to_execute_pgid[$command_to_execute_index]}" ]] ; then
-            [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "comma_execute_and_wait: killing ${commands_to_execute_pgid[$command_to_execute_index]} by $received_signal" >&2
-            kill -s $received_signal -- ${killsign}${commands_to_execute_pgid[$command_to_execute_index]}
+            [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: killing ${commands_to_execute_pgid[$command_to_execute_index]} by $termination_signal" >&2
+            kill -s $termination_signal -- ${killsign}${commands_to_execute_pgid[$command_to_execute_index]}
             [[ "$killsign" == "-" ]] && {
-                [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "comma_execute_and_wait: waiting for group ${commands_to_execute_pgid[$command_to_execute_index]}" >&2
-                comma_wait_for_process_group "comma_execute_and_wait" "${commands_to_execute_pgid[$command_to_execute_index]}" 12
+                [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: waiting for group ${commands_to_execute_pgid[$command_to_execute_index]}" >&2
+                comma_wait_for_process_group "$cew_funcname" "${commands_to_execute_pgid[$command_to_execute_index]}" 12
             }
             wait ${commands_to_execute_pgid[$command_to_execute_index]}
+            [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: group ${commands_to_execute_pgid[$command_to_execute_index]} was terminated" >&2
             commands_to_execute_pgid[$command_to_execute_index]=""
         fi
     done
     # use old handlers
-    [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo -e "comma_execute_and_wait: restore old traps\n$comma_execute_and_wait_saved_traps\n... in $BASHPID" >&2
+    [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo -e "$cew_funcname: restore old traps\n$comma_execute_and_wait_saved_traps\n" >&2
     eval "$comma_execute_and_wait_saved_traps"
     unset comma_execute_and_wait_saved_traps
     # for signals that have no defined old traps, restore the default handlers
@@ -69,11 +72,11 @@ function terminate_comma_execute_and_wait()
     for current_signal in SIGTERM SIGINT SIGHUP SIGPIPE SIGQUIT ; do
         current_trap=$( trap -p | grep "$current_signal" | cut -d' ' -f3 )
         [[ "$current_trap" == "''" ]] && {
-            [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "comma_execute_and_wait: restore default handler for $current_signal in $BASHPID">&2
+            [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: restore default handler for $current_signal">&2
             trap '-' $current_signal
         }
     done
-    [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "comma_execute_and_wait: re-raise $received_signal in $BASHPID" >&2
+    [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: re-raise $received_signal" >&2
     kill -s $received_signal $BASHPID           # relinguish control
 }
 export -f terminate_comma_execute_and_wait
@@ -134,7 +137,8 @@ function comma_execute_and_wait()
 {
     # store existing traps for restoring on exit
     comma_execute_and_wait_saved_traps=$( trap )
-    [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo -e "comma_execute_and_wait: saved traps are:\n${comma_execute_and_wait_saved_traps[@]}" >&2
+    local cew_funcname="comma_execute_and_wait ($BASHPID)"
+    [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo -e "$cew_funcname: saved traps are:\n${comma_execute_and_wait_saved_traps[@]}" >&2
 
     # defaults
     local signal_list="TERM,INT,HUP"
@@ -157,13 +161,13 @@ function comma_execute_and_wait()
             --all)                       statusall="true";;
             --any)                       statusall="false";;
             --show-debug-messages)       comma_execute_and_wait_verbose="true";;
-            -*)                          echo "comma_execute_and_wait: unknown option '$1' (called: comma_execute_and_wait $original_args)" >&2; return 1;;
+            -*)                          echo "$cew_funcname: unknown option '$1' (called: comma_execute_and_wait $original_args)" >&2; return 1;;
             *)                           commands_to_execute+=( "$1" );;
         esac
         shift
     done
     if [[ "$usepg" == "false" && "$timeout_given" == "true" ]] ; then
-        echo "comma_execute_and_wait: conflicting timeout and process options (called: comma_execute_and_wait $original_args)" >&2
+        echo "$cew_funcname: conflicting timeout and process options (called: comma_execute_and_wait $original_args)" >&2
         return 1
     fi
 
@@ -174,10 +178,10 @@ function comma_execute_and_wait()
     # - re-sends the trapped signal to itself
     local signal_to_handle
     for signal_to_handle in ${signal_list//,/ } ; do
-        [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "comma_execute_and_wait: in $BASHPID setting trap on '$signal_to_handle'" >&2
+        [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: setting trap on '$signal_to_handle'" >&2
         trap 'terminate_comma_execute_and_wait $usepg $signal_to_handle' $signal_to_handle
     done
-    [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo -e "comma_execute_and_wait: newly-set traps are:\n$( trap -p )" >&2
+    [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo -e "$cew_funcname: newly-set traps are:\n$( trap -p )" >&2
 
     local commands_to_execute_pgid=()
     local commands_to_execute_status=0
@@ -185,7 +189,7 @@ function comma_execute_and_wait()
 
     local command_to_execute cmd shellfcn
     for command_to_execute in "${commands_to_execute[@]}" ; do
-        [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "comma_execute_and_wait: got command '$command_to_execute'" >&2
+        [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: got command '$command_to_execute'" >&2
         # shell functions require special handling due to quote spaces
         command_to_execute=$( comma_trim "$command_to_execute" )
         cmd=$( shopt -s extglob ; cmd=${command_to_execute##bash*( )-c*( )}; echo "$cmd" )
@@ -215,6 +219,7 @@ function comma_execute_and_wait()
     local command_to_execute_status command_to_execute_index
     for command_to_execute_index in ${!commands_to_execute_pgid[@]} ; do
         wait ${commands_to_execute_pgid[$command_to_execute_index]} ; command_to_execute_status=$? ; commands_to_execute_pgid[$command_to_execute_index]=""
+        [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: group ${commands_to_execute_pgid[$command_to_execute_index]} finished execution" >&2
         if (( ${#commands_to_execute[@]} == 1 )) ; then
             # use as-is
             commands_to_execute_status=$command_to_execute_status
@@ -252,11 +257,8 @@ function comma_wait_for_process_group()
     local max_wait_time=$3
     [[ -n "$max_wait_time" ]] || max_wait_time="forever"
     local iter=0
-    local leftovers
+    local leftovers leftovers_count leftovers_rv
     while true ; do
-        leftovers=$( ps --no-headers -u $USER -o pgid | grep "$process_group_id" | wc -l )
-        (( leftovers > 0 )) && { echo "$caller_name: waited ${iter}s for $process_group_id, still $leftovers processes left" >&2; sleep 1; } || { return 0; }
-        (( ++iter ))
         if [[ "$max_wait_time" != "forever" ]] ; then
             (( iter > max_wait_time )) && {
                 echo "$caller_name: exceeded ${max_wait_time}s timeout in waiting for $process_group_id" >&2
@@ -265,6 +267,14 @@ function comma_wait_for_process_group()
                 return 1
             }
         fi
+        # occasionally observed ps hanging here indefinitely
+        leftovers=$( timeout -k 10 -s TERM 10 bash -c "ps --no-headers -u $USER -o pgid,pid,comm | grep \"^ *$process_group_id \" | grep -v '<defunct>'" )
+        leftovers_rv=$?
+        (( leftovers_rv >= 126 )) && { echo "$caller_name: could not list processes in group $process_group_id (status '$leftovers_rv')" >&2; (( ++iter )); sleep 1; continue; }
+        leftovers_count=$( echo "$leftovers" | sed '/^$/d' | wc -l )
+        leftovers=$( echo -n "$leftovers" | tr '\n' ',' )
+        (( leftovers_count > 0 )) && { echo "$caller_name: waited ${iter}s for $process_group_id, still $leftovers_count processes left ('$leftovers')" >&2; sleep 1; } || { return 0; }
+        (( ++iter ))
     done
 }
 export -f comma_wait_for_process_group
