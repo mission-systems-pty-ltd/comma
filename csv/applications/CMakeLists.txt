@@ -3,8 +3,6 @@ FILE( GLOB source   ${dir}/*.cpp)
 FILE( GLOB includes ${dir}/*.h)
 FILE( GLOB play_source   ${dir}/play/*.cpp)
 FILE( GLOB play_includes ${dir}/play/*.h)
-FILE( GLOB play_source   ${dir}/details/*.cpp)
-FILE( GLOB play_includes ${dir}/details/*.h)
 SOURCE_GROUP( ${TARGET_NAME} FILES ${play_source} ${play_includes} ${source} ${includes} )
 
 add_executable( csv-quote csv-quote.cpp )

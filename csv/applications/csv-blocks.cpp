@@ -35,24 +35,50 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <boost/array.hpp>
-#include <boost/functional/hash.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/unordered_map.hpp>
-#include <boost/graph/graph_concepts.hpp>
 #include <comma/application/command_line_options.h>
 #include <comma/application/contact_info.h>
-#include <comma/application/signal_flag.h>
 #include <comma/base/types.h>
 #include <comma/csv/stream.h>
 #include <comma/csv/impl/unstructured.h>
 #include <comma/io/stream.h>
 #include <comma/string/string.h>
 #include <comma/visiting/traits.h>
-#include <comma/csv/impl/unstructured.h>
-#include "details/inputs.h"
 
 static const char* name() { return "csv-blocks: "; }
+
+struct input_t
+{
+    comma::csv::impl::unstructured key;
+    comma::csv::impl::unstructured value;
+    comma::uint32 block;
+
+    input_t() : block( 0 ) {}
+    input_t( comma::csv::impl::unstructured key, comma::csv::impl::unstructured value, comma::uint32 block ): key( key ), value( value ), block( block ) {}
+
+    typedef comma::csv::input_stream< input_t > input_stream_t;
+};
+
+namespace comma { namespace visiting {
+
+template <> struct traits< input_t >
+{
+    template < typename K, typename V > static void visit( const K&, const input_t& p, V& v )
+    {
+        v.apply( "key", p.key );
+        v.apply( "value", p.value );
+        v.apply( "block", p.block );
+    }
+    template < typename K, typename V > static void visit( const K&, input_t& p, V& v )
+    {
+        v.apply( "key", p.key );
+        v.apply( "value", p.value );
+        v.apply( "block", p.block );
+    }
+};
+
+} } // namespace comma { namespace visiting {
 
 // todo: tear down details directory; inputs.h code is sufficiently trivial to sit in csv-blocks.csv
 // todo: remove unused includes
@@ -74,15 +100,14 @@ static void usage( bool more )
 {
     std::cerr << std::endl;
     std::cerr << "operations" << std::endl;
-    std::cerr << "    append" << std::endl;
-    std::cerr << "        cat something.csv | csv-blocks append --fields=,id, " << std::endl;
-    std::cerr << "            appends block field base on specified id key or keys" << std::endl;
+    std::cerr << "    group|make-blocks" << std::endl;
+    std::cerr << "        cat something.csv | csv-blocks group --fields=,id, " << std::endl;
+    std::cerr << "            appends group's block field base on specified id key or keys" << std::endl;
     std::cerr << "    index" << std::endl;
     std::cerr << "        appends an index field counting down the number of records for each block. Use --no-reverse for counting up." << std::endl;
     std::cerr << "            cat something.csv | csv-blocks index --fields=,block " << std::endl;
     std::cerr << "    increment" << std::endl;
     std::cerr << "        increments specified field value, must be uint32 type - any such field can be used as a block:" << std::endl;
-    std::cerr << "            cat something.csv | csv-blocks increment --fields=,,increment" << std::endl;
     std::cerr << "            cat something.csv | csv-blocks increment --fields=,,block" << std::endl;
     std::cerr << "    head" << std::endl;
     std::cerr << "        reads records from first block to stdout" << std::endl;
@@ -91,19 +116,20 @@ static void usage( bool more )
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
-    std::cerr << "    --no-reverse; use with 'index' operation, output the indices in ascending order instead of descending" << std::endl;
+    std::cerr << "    --reverse; use with 'index' operation, output the indices in descending order instead of ascending" << std::endl;
     std::cerr << "    --from,--starting-block; use with 'append' operation, the starting block number to use, default is 1" << std::endl;
     std::cerr << "    --step; use with 'increment' operation, the number of increment/decrement for specified field, default is 1" << std::endl;
+    std::cerr << "    --max-group-size,--max-hint; use with 'index' operation, set the maximum records a group can have to internally reserve memory for storage, default is 50." << std::endl;
     if( more ) { std::cerr << comma::csv::options::usage() << std::endl << std::endl; }
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << "    block_csv=block.csv" << std::endl;
     std::cerr << "    ( echo \"a,1,2,3\"; echo \"a,4,2,3\"; echo \"b,5,5,6\"; echo \"c,7,5,6\"; echo \"c,7,8,9\"; echo \"c,7,8,9\" ) >$block_csv" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    append" << std::endl;
-    std::cerr << "        cat $block_csv | csv-blocks append --fields=id" << std::endl;
+    std::cerr << "    group|make-blocks" << std::endl;
+    std::cerr << "        cat $block_csv | csv-blocks group --fields=id" << std::endl;
     std::cerr << "            unique ascending block number are assigned based on one id field" << std::endl;
-    std::cerr << "        cat $block_csv | csv-blocks append --fields=id,,id" << std::endl;
+    std::cerr << "        cat $block_csv | csv-blocks group --fields=id,,id" << std::endl;
     std::cerr << "            unique ascending block number are assigned based on two id fields" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    index" << std::endl;
@@ -112,7 +138,7 @@ static void usage( bool more )
     std::cerr << "            See 'head operation' below" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    increment" << std::endl;
-    std::cerr << "        cat $block_csv | csv-blocks increment --fields=,increment " << std::endl;
+    std::cerr << "        cat $block_csv | csv-blocks increment --fields=,block " << std::endl;
     std::cerr << "            Given an integer field (any field), mark it as a block field so the field value is incremented." << std::endl;
     std::cerr << "            This increments the second field" << std::endl;
     std::cerr << std::endl;
@@ -130,7 +156,7 @@ static comma::uint32 block = 0;
 static input_t default_input;
 static input_t default_output;
 static comma::csv::options csv_out;
-static bool reverse_index = true;
+static bool reverse_index = false;
 // All the data for this block
 static std::vector< input_t > block_records;
 static comma::csv::impl::unstructured keys;
@@ -213,7 +239,7 @@ int main( int ac, char** av )
         bool has_value_fields = false;
         // block has many aliases
         for( std::size_t i = 0; !has_value_fields && i < v.size(); 
-                has_value_fields = !v[i].empty() && v[i] != "block" && v[i] != "block_index" && v[i] != "increment" &&  v[i] != "id", ++i );
+                has_value_fields = !v[i].empty() && v[i] != "block" && v[i] != "index" &&  v[i] != "id", ++i );
         std::string first_line;
         comma::csv::format f;
         if( csv.binary() ) { f = csv.format(); }
@@ -231,7 +257,7 @@ int main( int ac, char** av )
         {
             if( i < v.size() )
             {
-                if( v[i] == "block" ||  v[i] == "block_index" || v[i] == "increment" ) { v[i] = "block"; has_block = true; continue; }
+                if( v[i] == "block" ||  v[i] == "index" ) { v[i] = "block"; has_block = true; continue; }
                 if( v[i] == "block" ) { has_block = true; continue; }
                 if( v[i] == "id" ) { v[i] = "key/" + default_input.key.append( f.offset( i ).type ); continue; }
             }
@@ -249,12 +275,13 @@ int main( int ac, char** av )
         csv.fields = comma::join( v, ',' );
         csv_out = csv;
         if( verbose ) { std::cerr << name() << "csv fields: " << csv.fields << std::endl; }
-        if( operation == "index" || operation == "append")
+        if( operation == "index" || operation == "group" || operation == "make-blocks" )
         {
             csv_out.fields = csv.fields + ',' +  "value/" + default_output.value.append( comma::csv::format::uint32 );
-            reverse_index = !options.exists( "--no-reverse" );
+            reverse_index = options.exists( "--reverse" );
             
-            if( operation == "append" ) { type = block_append; } 
+            if( operation == "group" || operation == "make-blocks" ) { type = block_append; } 
+            else { block_records.reserve( options.value< comma::uint32 >( "--max-group-size,--max-hint", 50 ) ); }
         }
         else if( operation == "increment" )    // operation is head
         {
@@ -298,11 +325,7 @@ int main( int ac, char** av )
         while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
         {
             const input_t* p = istream.read();
-            if( !p ) 
-            { 
-                if( type == head_read ) return 2;
-                break; 
-            }
+            if( !p ) { break; }
             
             switch( type )
             {
@@ -327,8 +350,6 @@ int main( int ac, char** av )
                 flush_indexing( block_records );
             break;
         }
-        
-        
         
         return 0;
     }
