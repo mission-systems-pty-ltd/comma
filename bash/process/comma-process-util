@@ -218,8 +218,10 @@ function comma_execute_and_wait()
     # wait for the completion of the subprocess(es)
     local command_to_execute_status command_to_execute_index
     for command_to_execute_index in ${!commands_to_execute_pgid[@]} ; do
-        wait ${commands_to_execute_pgid[$command_to_execute_index]} ; command_to_execute_status=$? ; commands_to_execute_pgid[$command_to_execute_index]=""
+        wait ${commands_to_execute_pgid[$command_to_execute_index]}
+        command_to_execute_status=$?
         [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: group ${commands_to_execute_pgid[$command_to_execute_index]} finished execution" >&2
+        commands_to_execute_pgid[$command_to_execute_index]=""
         if (( ${#commands_to_execute[@]} == 1 )) ; then
             # use as-is
             commands_to_execute_status=$command_to_execute_status
