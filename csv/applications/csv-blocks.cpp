@@ -61,6 +61,11 @@ struct input_t
     typedef comma::csv::input_stream< input_t > input_stream_t;
 };
 
+struct input_with_block
+{
+    comma::uint32 block;
+};
+
 struct appended_column
 {
     comma::uint32 value;
@@ -80,6 +85,18 @@ template <> struct traits< input_t >
     {
         v.apply( "key", p.key );
         v.apply( "value", p.value );
+        v.apply( "block", p.block );
+    }
+};
+
+template <> struct traits< input_with_block >
+{
+    template < typename K, typename V > static void visit( const K&, const input_with_block& p, V& v )
+    {
+        v.apply( "block", p.block );
+    }
+    template < typename K, typename V > static void visit( const K&, input_with_block& p, V& v )
+    {
         v.apply( "block", p.block );
     }
 };
@@ -170,16 +187,17 @@ static void usage( bool more )
 
 static bool verbose;
 static comma::csv::options csv;
-static comma::uint32 block = 0;
 static input_t default_input;
 static input_t default_output;
 static comma::csv::options csv_out;
 static bool reverse_index = false;
 // All the data for this block
-static std::vector< input_t > block_records;
+static std::vector< std::string > block_records;
 static comma::csv::impl::unstructured keys;
 static comma::uint32 current_block = 1;
 static comma::int32 increment_step = 1;
+
+typedef comma::csv::tied< input_with_block, appended_column > tied_type;
 
 comma::csv::output_stream< input_t >& get_ostream()
 {
@@ -188,36 +206,25 @@ comma::csv::output_stream< input_t >& get_ostream()
     return ostream;
 }
 
-void flush_indexing( std::vector< input_t >& block_records )
+void flush_indexing( std::vector< std::string >& block_records, bool is_binary, char delimiter )
 {
-    comma::csv::output_stream< input_t >& ostream = get_ostream();
     std::size_t size = block_records.size();
     for( std::size_t i=0; i<size; ++i ) 
     {
-        input_t record = block_records[i];
-        record.value.longs.push_back( reverse_index ? size - (i+1)  : i );
-        ostream.write( record );
+        const std::string& input = block_records[i];
+        comma::uint32 index = reverse_index ? size - (i+1) : i ;
+        
+        if( is_binary ) 
+        { 
+            std::cout.write( input.c_str(), input.size() );
+            std::cout.write( (const char *) &index, sizeof(comma::uint32)); 
+        }
+        else 
+        { 
+            std::cout << input << delimiter << index << std::endl; 
+        }
     }
     block_records.clear();
-}
-
-void output_with_appened_index( const input_t& v )
-{
-    if( block != v.block )
-    {
-        flush_indexing( block_records );
-    }
-    block = v.block;
-    block_records.push_back( v );
-}
-
-void output_from_stdin_head( const input_t& v )
-{
-    static comma::csv::output_stream< input_t> ostream( std::cout, csv, default_input );
-    ostream.write( v );
-//     std::cerr << "value: " << v.value.strings.front() << std::endl;
-//     if( v.block == 0 ) { std::cin.clear(); fflush( 0 ); exit(0); }
-    if( v.block == 0 ) { exit(0); }
 }
 
 void output_with_appened_block( input_t v )
@@ -227,12 +234,6 @@ void output_with_appened_block( input_t v )
     
     keys = v.key;
     v.value.longs.push_back( current_block );
-    get_ostream().write(v);    
-}
-
-void output_incremented_block( input_t v )
-{
-    v.block += increment_step;
     get_ostream().write(v);    
 }
 
@@ -270,9 +271,7 @@ bool make_blocks_setup( const comma::command_line_options& options, std::string&
             v[i] = "value/" + default_input.value.append( csv.binary() ? f.offset( i ).type : comma::csv::format::fixed_string ); // quick and dirty
         }
     }
-    default_output = default_input;
     csv.fields = comma::join( v, ',' );
-    csv_out = csv;
     
     return has_block;
 }
@@ -291,93 +290,110 @@ int main( int ac, char** av )
         if( unnamed.size() < 1 ) { std::cerr << name() << "expected one operation, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         const std::string  operation = unnamed.front();
         
-        op_type type = block_indexing;
         if( verbose ) { std::cerr << name() << "csv fields: " << csv.fields << std::endl; }
-        
-        std::string first_line;
-        bool has_block = make_blocks_setup( options, first_line );
         
         if( operation == "group" || operation == "make-blocks" )
         {
+            current_block = options.value< comma::uint32 >( "--starting-block,--from", 1 ); // default is 1
+            
+            std::string first_line;
+            make_blocks_setup( options, first_line );
+            default_output = default_input;
+            csv_out = csv;
             csv_out.fields = csv.fields + ',' +  "value/" + default_output.value.append( comma::csv::format::uint32 );
-            type = block_append;
+            if( verbose ) { std::cerr << name() << "csv fields: " << csv_out.fields << std::endl; }
+            
+            if ( default_input.key.empty() ) { std::cerr << name() << "please specify at least one id field" << std::endl; return 1; }
+            
+            comma::csv::input_stream< input_t > istream( std::cin, csv, default_input );
+            
+            if( !first_line.empty() ) 
+            { 
+                input_t p = comma::csv::ascii< input_t >( csv, default_input ).get( first_line ); 
+                output_with_appened_block( p );
+            }
+            while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
+            {
+                const input_t* p = istream.read();
+                if( !p ) { break; }
+                output_with_appened_block( *p );
+            }
+            
+            return 0;
+        }
+        else if( operation == "head" )
+        {
+            comma::csv::input_stream< input_with_block > istream( std::cin, csv );
+            while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
+            {
+                const input_with_block* p = istream.read();
+                if( !p ) { break; }
+                
+                if( istream.is_binary() ) { std::cout.write( istream.binary().last(), istream.binary().size() ); }
+                else { std::cout << comma::join( istream.ascii().last(), istream.ascii().ascii().delimiter() ) << std::endl; }
+                
+                if( p->block == 0 ) { break; }
+            }
+            
+            return 0;
         }
         else if( operation == "index" )
         {
-            csv_out.fields = csv.fields + ',' +  "value/" + default_output.value.append( comma::csv::format::uint32 );
-            reverse_index = options.exists( "--reverse" );
-            
             block_records.reserve( options.value< comma::uint32 >( "--max-group-size,--max-hint", 50 ) );
+            reverse_index = options.exists("--reverse");
+            
+            comma::csv::input_stream< input_with_block > istream( std::cin, csv );
+            
+            char delimiter = istream.is_binary() ? ',' : istream.ascii().ascii().delimiter();
+            comma::uint32 block = 0;
+            std::string buffer;
+            if( istream.is_binary() ) { buffer.resize( istream.binary().size() ); }
+            
+            while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
+            {
+                const input_with_block* p = istream.read();
+                if( !p ) { break; }
+                
+                if( block != p->block && !block_records.empty() ) { flush_indexing( block_records, istream.is_binary(), delimiter  ); }
+                block = p->block;
+                
+                // Put the input into the buffer
+                if( istream.is_binary() )  
+                { 
+                    memcpy( &buffer[0], istream.binary().last(),  istream.binary().size() ); 
+                    block_records.push_back( buffer );
+                }
+                else { block_records.push_back( comma::join( istream.ascii().last(), delimiter ) ); }
+            }
+            
+            // flushes the last block
+            flush_indexing( block_records, istream.is_binary(), delimiter  );
+            
+            return 0;
         }
         else if( operation == "increment" )    // operation is head
         {
-            type = block_increment;
             increment_step = options.value< comma::int32 >( "--step", 1 );
-            if( !has_block ) { std::cerr << name() << "block field is required for blocking increment mode" << std::endl; exit(1); }
+            
+            comma::csv::input_stream< input_with_block > istream( std::cin, csv );
+            comma::csv::output_stream< appended_column > ostream( std::cout );
+            comma::csv::tied< input_with_block, appended_column > tied( istream, ostream );
+            
+            appended_column incremented;
+            while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
+            {
+                const input_with_block* p = istream.read();
+                if( !p ) { break; }
+                
+                incremented.value = p->block + increment_step;
+                tied.append( incremented );
+            }
+            
+            return 0;
         }
-        else if( operation == "head" ) { type = head_read; }   // operation is head
         else { std::cerr << name() << "unrecognised operation '" << operation << "'" << std::endl; }
         
-        if( verbose ) { std::cerr << name() << "out fields: " << csv_out.fields << std::endl; }
-        
-        if( type == block_indexing && !has_block ) { std::cerr << name() << "block field is required for blocking indexing mode" << std::endl; exit(1); }
-        if( type == block_append ) 
-        {
-            current_block = options.value< comma::uint32 >( "--starting-block,--from", 1 ); // default is 1
-            if ( default_input.key.empty() ) { std::cerr << name() << "please specify at least one id field" << std::endl; return 1; }
-        }
-        
-        comma::csv::input_stream< input_t > istream( std::cin, csv, default_input );
-        
-        if( !first_line.empty() ) 
-        { 
-            input_t p = comma::csv::ascii< input_t >( csv, default_input ).get( first_line ); 
-            switch( type )
-            {
-                case head_read:
-                    output_from_stdin_head( p );
-                    break;
-                case block_append:
-                    output_with_appened_block( p );
-                    break;
-                case block_increment:
-                    output_incremented_block( p );
-                    break;
-                default:
-                    output_with_appened_index( p );
-                break;
-            }
-        }
-        while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
-        {
-            const input_t* p = istream.read();
-            if( !p ) { break; }
-            
-            switch( type )
-            {
-                case head_read:
-                    output_from_stdin_head( *p );
-                    break;
-                case block_append:
-                    output_with_appened_block( *p );
-                    break;
-                case block_increment:
-                    output_incremented_block( *p );
-                    break;
-                default:
-                    output_with_appened_index( *p );
-                break;
-            }
-        }
-        
-        switch( type )
-        {
-            default:
-                flush_indexing( block_records );
-            break;
-        }
-        
-        return 0;
+        return 1;
     }
     catch( std::exception& ex ) { std::cerr << name() << ex.what() << std::endl; }
     catch( ... ) { std::cerr << name() << "unknown exception" << std::endl; }
