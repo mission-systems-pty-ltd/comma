@@ -61,6 +61,11 @@ struct input_t
     typedef comma::csv::input_stream< input_t > input_stream_t;
 };
 
+struct appended_column
+{
+    comma::uint32 value;
+};
+
 namespace comma { namespace visiting {
 
 template <> struct traits< input_t >
@@ -76,6 +81,18 @@ template <> struct traits< input_t >
         v.apply( "key", p.key );
         v.apply( "value", p.value );
         v.apply( "block", p.block );
+    }
+};
+
+template <> struct traits< appended_column >
+{
+    template < typename K, typename V > static void visit( const K&, const appended_column& p, V& v )
+    {
+        v.apply( "value", p.value );
+    }
+    template < typename K, typename V > static void visit( const K&, appended_column& p, V& v )
+    {
+        v.apply( "value", p.value );
     }
 };
 
@@ -221,6 +238,45 @@ void output_incremented_block( input_t v )
 
 enum op_type { block_indexing, head_read, block_append, block_increment }; 
 
+bool make_blocks_setup( const comma::command_line_options& options, std::string& first_line )
+{
+    std::vector< std::string > v = comma::split( csv.fields, ',' );
+    bool has_value_fields = false;
+    // block has many aliases
+    for( std::size_t i = 0; !has_value_fields && i < v.size(); 
+            has_value_fields = !v[i].empty() && v[i] != "block" &&  v[i] != "id", ++i );
+    comma::csv::format f;
+    if( csv.binary() ) { f = csv.format(); }
+    else if( options.exists( "--format" ) ) { f = comma::csv::format( options.value< std::string >( "--format" ) ); }
+    else
+    {
+        while( std::cin.good() && first_line.empty() ) { std::getline( std::cin, first_line ); }
+        if( first_line.empty() ) { std::cerr << name() << "--format= is missing however the first line is empty" ; exit( 1 ); }
+        f = comma::csv::impl::unstructured::guess_format( first_line, csv.delimiter );
+        if( verbose ) { std::cerr << name() << "guessed format: " << f.string() << std::endl; }
+    }
+    bool has_block = false;
+    unsigned int size = f.count();
+    for( std::size_t i = 0; i < size; ++i )
+    {
+        if( i < v.size() )
+        {
+            if( v[i] == "block" ) { has_block = true; continue; }
+            if( v[i] == "id" ) { v[i] = "key/" + default_input.key.append( f.offset( i ).type ); continue; }
+        }
+        if( !has_value_fields || !v[i].empty() )
+        {
+            v.resize( size );
+            v[i] = "value/" + default_input.value.append( csv.binary() ? f.offset( i ).type : comma::csv::format::fixed_string ); // quick and dirty
+        }
+    }
+    default_output = default_input;
+    csv.fields = comma::join( v, ',' );
+    csv_out = csv;
+    
+    return has_block;
+}
+
 int main( int ac, char** av )
 {
     try
@@ -231,63 +287,32 @@ int main( int ac, char** av )
         csv.full_xpath = true;
         csv.quote.reset();
         
-        
         std::vector< std::string > unnamed = options.unnamed( "--help,-h,--verbose,-v", "-.*" );
         if( unnamed.size() < 1 ) { std::cerr << name() << "expected one operation, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         const std::string  operation = unnamed.front();
         
-        std::vector< std::string > v = comma::split( csv.fields, ',' );
-        bool has_value_fields = false;
-        // block has many aliases
-        for( std::size_t i = 0; !has_value_fields && i < v.size(); 
-                has_value_fields = !v[i].empty() && v[i] != "block" && v[i] != "index" &&  v[i] != "id", ++i );
-        std::string first_line;
-        comma::csv::format f;
-        if( csv.binary() ) { f = csv.format(); }
-        else if( options.exists( "--format" ) ) { f = comma::csv::format( options.value< std::string >( "--format" ) ); }
-        else
-        {
-            while( std::cin.good() && first_line.empty() ) { std::getline( std::cin, first_line ); }
-            if( first_line.empty() ) { std::cerr << name() << "--format= is missing however the first line is empty" ; return 1; }
-            f = comma::csv::impl::unstructured::guess_format( first_line, csv.delimiter );
-            if( verbose ) { std::cerr << name() << "guessed format: " << f.string() << std::endl; }
-        }
-        bool has_block = false;
-        unsigned int size = f.count();
-        for( std::size_t i = 0; i < size; ++i )
-        {
-            if( i < v.size() )
-            {
-                if( v[i] == "block" ||  v[i] == "index" ) { v[i] = "block"; has_block = true; continue; }
-                if( v[i] == "block" ) { has_block = true; continue; }
-                if( v[i] == "id" ) { v[i] = "key/" + default_input.key.append( f.offset( i ).type ); continue; }
-            }
-            if( !has_value_fields || !v[i].empty() )
-            {
-                v.resize( size );
-                v[i] = "value/" + default_input.value.append( csv.binary() ? f.offset( i ).type : comma::csv::format::fixed_string ); // quick and dirty
-            }
-        }
-        
-        if( verbose ) { std::cerr << name() << "csv fields: " << csv.fields << std::endl; }
-        
         op_type type = block_indexing;
-        default_output = default_input;
-        csv.fields = comma::join( v, ',' );
-        csv_out = csv;
         if( verbose ) { std::cerr << name() << "csv fields: " << csv.fields << std::endl; }
-        if( operation == "index" || operation == "group" || operation == "make-blocks" )
+        
+        std::string first_line;
+        bool has_block = make_blocks_setup( options, first_line );
+        
+        if( operation == "group" || operation == "make-blocks" )
+        {
+            csv_out.fields = csv.fields + ',' +  "value/" + default_output.value.append( comma::csv::format::uint32 );
+            type = block_append;
+        }
+        else if( operation == "index" )
         {
             csv_out.fields = csv.fields + ',' +  "value/" + default_output.value.append( comma::csv::format::uint32 );
             reverse_index = options.exists( "--reverse" );
             
-            if( operation == "group" || operation == "make-blocks" ) { type = block_append; } 
-            else { block_records.reserve( options.value< comma::uint32 >( "--max-group-size,--max-hint", 50 ) ); }
+            block_records.reserve( options.value< comma::uint32 >( "--max-group-size,--max-hint", 50 ) );
         }
         else if( operation == "increment" )    // operation is head
         {
-            increment_step = options.value< comma::int32 >( "--step", 1 );
             type = block_increment;
+            increment_step = options.value< comma::int32 >( "--step", 1 );
             if( !has_block ) { std::cerr << name() << "block field is required for blocking increment mode" << std::endl; exit(1); }
         }
         else if( operation == "head" ) { type = head_read; }   // operation is head
