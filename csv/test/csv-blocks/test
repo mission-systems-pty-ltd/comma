@@ -33,11 +33,12 @@ function run_command()
 #               (( ++size ))
 #           done
     while read line ; do
-        echo "$( dirname "$key" )/output/line[$size]=\"$line\""
+        echo "$key/output/line[$size]=\"$line\""
+        #echo "$( dirname "$key" )/output/line[$size]=\"$line\""
         unset none
         (( ++size ))
     done < <( for i in ${input[@]} ; do echo "$i" ; done | $command $update_file  )
-    echo "$( dirname "$key" )/output/size=$size"
+    echo "$key/output/size=$size"
     echo
 }
 
@@ -46,14 +47,22 @@ while IFS='=' read key value ; do
     [[ -n "$key" && "${key:0:1}" != "#" ]] || continue
     value="${value/#\"}"
     value="${value/%\"}"
-    case "$( basename $key )" in
-        input|input\[*\]) input+=( "$value" ) ;;
-        update|update\[*\]) update+=( "$value" ) ;;
-        command)
+    key_basename=$(basename $key)
+    case "$key_basename" in
+        input|input\[*\]) 
+            if [[ "$prev_basename" == command* ]] ; then reset ; fi
+            input+=( "$value" )
+            ;;
+        update|update\[*\]) 
+            if [[ "$prev_basename" == command* ]] ; then reset ; fi
+            update+=( "$value" ) 
+            ;;
+        command|command\[*\])
             command="$value"
             make_update
+            if [[ $key_basename == command ]] ; then key=$(dirname $key) ; fi
             run_command "$key"
-            reset
             ;;
     esac
+    prev_basename=$key_basename
 done

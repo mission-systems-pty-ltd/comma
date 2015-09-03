@@ -139,13 +139,15 @@ static void usage( bool more )
     std::cerr << "        cat something.csv | csv-blocks group --fields=,id, " << std::endl;
     std::cerr << "            appends group's block field base on specified id key or keys" << std::endl;
     std::cerr << "    index" << std::endl;
-    std::cerr << "        appends an index field counting down the number of records for each block. Use --no-reverse for counting up." << std::endl;
+    std::cerr << "        appends an index field counting the number of records for each block. Use --reverse for count down." << std::endl;
     std::cerr << "            cat something.csv | csv-blocks index --fields=,block " << std::endl;
     std::cerr << "    increment" << std::endl;
     std::cerr << "        increments specified field value, must be uint32 type - any such field can be used as a block:" << std::endl;
     std::cerr << "            cat something.csv | csv-blocks increment --fields=,,block" << std::endl;
+    std::cerr << "            cat something.csv | csv-blocks increment --fields=,,block --step 2" << std::endl;
+    std::cerr << "            cat something.csv | csv-blocks increment --fields=,,block --step -1" << std::endl;
     std::cerr << "    head" << std::endl;
-    std::cerr << "        reads records from first block to stdout" << std::endl;
+    std::cerr << "        reads records from first block to stdout, if --num-of-blocks=<num> specified, read more than one blocks" << std::endl;
     std::cerr << "        requires the block index from 'index' mode in the inputs" << std::endl;
     std::cerr << "            cat something.csv | csv-blocks index --fields=,block_index " << std::endl;
     std::cerr << std::endl;
@@ -154,6 +156,7 @@ static void usage( bool more )
     std::cerr << "    --reverse; use with 'index' operation, output the indices in descending order instead of ascending" << std::endl;
     std::cerr << "    --from,--starting-block; use with 'append' operation, the starting block number to use, default is 1" << std::endl;
     std::cerr << "    --step; use with 'increment' operation, the number of increment/decrement for specified field, default is 1" << std::endl;
+    std::cerr << "    --lines,--num-of-blocks,-n; use with 'head' operation, outputs only the first specified number of blocks, default is 1" << std::endl;
     std::cerr << "    --max-group-size,--max-hint; use with 'index' operation, set the maximum records a group can have to internally reserve memory for storage, default is 50." << std::endl;
     if( more ) { std::cerr << comma::csv::options::usage() << std::endl << std::endl; }
     std::cerr << std::endl;
@@ -294,6 +297,8 @@ int main( int ac, char** av )
         
         if( operation == "group" || operation == "make-blocks" )
         {
+            std::cin.rdbuf()->pubsetbuf(0,0);
+            
             current_block = options.value< comma::uint32 >( "--starting-block,--from", 1 ); // default is 1
             
             std::string first_line;
@@ -323,6 +328,7 @@ int main( int ac, char** av )
         }
         else if( operation == "head" )
         {
+            comma::uint32 num_of_blocks = options.value< comma::uint32 >( "--lines,-n", 1 );
             comma::csv::input_stream< input_with_block > istream( std::cin, csv );
             while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
             {
@@ -332,7 +338,7 @@ int main( int ac, char** av )
                 if( istream.is_binary() ) { std::cout.write( istream.binary().last(), istream.binary().size() ); }
                 else { std::cout << comma::join( istream.ascii().last(), istream.ascii().ascii().delimiter() ) << std::endl; }
                 
-                if( p->block == 0 ) { break; }
+                if( p->block == 0 ) { --num_of_blocks; if ( num_of_blocks == 0 ) { break; } }
             }
             
             return 0;
