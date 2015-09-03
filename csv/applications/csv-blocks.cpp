@@ -29,21 +29,14 @@
 
 /// @author dewey nguyen
 
-#include <stdio.h>
-#include <string.h>
+#include <memory.h>
 #include <iostream>
-#include <map>
-#include <sstream>
-#include <string>
 #include <vector>
-#include <boost/lexical_cast.hpp>
-#include <boost/unordered_map.hpp>
 #include <comma/application/command_line_options.h>
 #include <comma/application/contact_info.h>
 #include <comma/base/types.h>
 #include <comma/csv/stream.h>
 #include <comma/csv/impl/unstructured.h>
-#include <comma/io/stream.h>
 #include <comma/string/string.h>
 #include <comma/visiting/traits.h>
 
@@ -115,21 +108,13 @@ template <> struct traits< appended_column >
 
 } } // namespace comma { namespace visiting {
 
-// todo: tear down details directory; inputs.h code is sufficiently trivial to sit in csv-blocks.csv
-// todo: remove unused includes
-// todo: remove signal_flag (it does not seem used)
-// todo: why do you need unstructured? i don't think it's required at all
-// todo: rename field "increment" to "block"
-// todo: rename field "block_index" to "index"
-// todo: remove --no-reverse; implement --reverse; make ascending order default
+// todo: tear down values
 // todo: add a brief description to comma/wiki
-// todo: add a tutorial to comma/wiki
-// todo: rename "append" operation to "group" (for clarity, add aliases, e.g. "make-blocks")
-// todo: block_records: either reserve memory or use a different container; it may be slow on large data, e.g. velodyne feed
-// todo: return 0 or 1; don't return 2 (in head, on end of file return 0)
-// todo: use unstructured only for "append" ("group") operation
+// todo: block_records: use std::deque< std::string > instead
+// todo: "group" operation: use tied<> for output
 // todo: use comma::csv::tied for appending values
 // todo: optionally (--unbuffered,-u) do: std::cin.rdbuf()->pubsetbuf(0, 0); (hopefully it works)
+// todo: --unbuffered,-u: document in --help
 // todo: head operation: --lines,-n: implement
 static void usage( bool more )
 {
@@ -149,12 +134,12 @@ static void usage( bool more )
     std::cerr << "    head" << std::endl;
     std::cerr << "        reads records from first block to stdout, if --num-of-blocks=<num> specified, read more than one blocks" << std::endl;
     std::cerr << "        requires the block index from 'index' mode in the inputs" << std::endl;
-    std::cerr << "            cat something.csv | csv-blocks index --fields=,block_index " << std::endl;
+    std::cerr << "            cat something.csv | csv-blocks index --fields=,index " << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
     std::cerr << "    --reverse; use with 'index' operation, output the indices in descending order instead of ascending" << std::endl;
-    std::cerr << "    --from,--starting-block; use with 'append' operation, the starting block number to use, default is 1" << std::endl;
+    std::cerr << "    --from,--starting-block; use with 'group' operation, the starting block number to use, default is 1" << std::endl;
     std::cerr << "    --step; use with 'increment' operation, the number of increment/decrement for specified field, default is 1" << std::endl;
     std::cerr << "    --lines,--num-of-blocks,-n; use with 'head' operation, outputs only the first specified number of blocks, default is 1" << std::endl;
     std::cerr << "    --max-group-size,--max-hint; use with 'index' operation, set the maximum records a group can have to internally reserve memory for storage, default is 50." << std::endl;
@@ -181,7 +166,7 @@ static void usage( bool more )
     std::cerr << "            This increments the second field" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    head" << std::endl;
-    std::cerr << "        cat $block_csv | csv-blocks append --fields=id | csv-blocks index --fields=,,,,block | csv-blocks head --fields=,,,,,block_index " << std::endl;
+    std::cerr << "        cat $block_csv | csv-blocks append --fields=id | csv-blocks index --fields=,,,,block | csv-blocks head --fields=,,,,,index " << std::endl;
     std::cerr << "            After appending the block field, then the block reverse index field, reading a single block from the input is possible" << std::endl;
     std::cerr << std::endl;
     std::cerr << "contact info: " << comma::contact_info <<std::endl;
@@ -289,16 +274,16 @@ int main( int ac, char** av )
         csv.full_xpath = true;
         csv.quote.reset();
         
-        std::vector< std::string > unnamed = options.unnamed( "--help,-h,--verbose,-v", "-.*" );
+        std::vector< std::string > unnamed = options.unnamed( "--help,-h,--unbuffered,-u,--verbose,-v", "-.*" );
         if( unnamed.size() < 1 ) { std::cerr << name() << "expected one operation, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         const std::string  operation = unnamed.front();
         
         if( verbose ) { std::cerr << name() << "csv fields: " << csv.fields << std::endl; }
         
+        if( options.exists( "--unbuffered,-u" ) ) { std::cin.rdbuf()->pubsetbuf(0,0); }
+        
         if( operation == "group" || operation == "make-blocks" )
         {
-            std::cin.rdbuf()->pubsetbuf(0,0);
-            
             current_block = options.value< comma::uint32 >( "--starting-block,--from", 1 ); // default is 1
             
             std::string first_line;
