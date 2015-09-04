@@ -29,9 +29,10 @@
 
 /// @author dewey nguyen
 
+#include <stdio.h>
 #include <memory.h>
 #include <iostream>
-#include <vector>
+#include <deque>
 #include <comma/application/command_line_options.h>
 #include <comma/application/contact_info.h>
 #include <comma/base/types.h>
@@ -39,6 +40,7 @@
 #include <comma/csv/impl/unstructured.h>
 #include <comma/string/string.h>
 #include <comma/visiting/traits.h>
+
 
 static const char* name() { return "csv-blocks: "; }
 
@@ -142,7 +144,7 @@ static void usage( bool more )
     std::cerr << "    --from,--starting-block; use with 'group' operation, the starting block number to use, default is 1" << std::endl;
     std::cerr << "    --step; use with 'increment' operation, the number of increment/decrement for specified field, default is 1" << std::endl;
     std::cerr << "    --lines,--num-of-blocks,-n; use with 'head' operation, outputs only the first specified number of blocks, default is 1" << std::endl;
-    std::cerr << "    --max-group-size,--max-hint; use with 'index' operation, set the maximum records a group can have to internally reserve memory for storage, default is 50." << std::endl;
+    std::cerr << "    --unbuffered,-u; use with 'head' operation, do not buffer input data from stdin" << std::endl;
     if( more ) { std::cerr << comma::csv::options::usage() << std::endl << std::endl; }
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
@@ -180,7 +182,7 @@ static input_t default_output;
 static comma::csv::options csv_out;
 static bool reverse_index = false;
 // All the data for this block
-static std::vector< std::string > block_records;
+static std::deque< std::string > block_records;
 static comma::csv::impl::unstructured keys;
 static comma::uint32 current_block = 1;
 static comma::int32 increment_step = 1;
@@ -194,7 +196,7 @@ comma::csv::output_stream< input_t >& get_ostream()
     return ostream;
 }
 
-void flush_indexing( std::vector< std::string >& block_records, bool is_binary, char delimiter )
+void flush_indexing( std::deque< std::string >& block_records, bool is_binary, char delimiter )
 {
     std::size_t size = block_records.size();
     for( std::size_t i=0; i<size; ++i ) 
@@ -274,13 +276,12 @@ int main( int ac, char** av )
         csv.full_xpath = true;
         csv.quote.reset();
         
-        std::vector< std::string > unnamed = options.unnamed( "--help,-h,--unbuffered,-u,--verbose,-v", "-.*" );
+        std::vector< std::string > unnamed = options.unnamed( "--help,-h,--unbuffered,-u,--reverse,--verbose,-v", "-.*" );
         if( unnamed.size() < 1 ) { std::cerr << name() << "expected one operation, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         const std::string  operation = unnamed.front();
         
         if( verbose ) { std::cerr << name() << "csv fields: " << csv.fields << std::endl; }
         
-        if( options.exists( "--unbuffered,-u" ) ) { std::cin.rdbuf()->pubsetbuf(0,0); }
         
         if( operation == "group" || operation == "make-blocks" )
         {
@@ -313,8 +314,28 @@ int main( int ac, char** av )
         }
         else if( operation == "head" )
         {
+            std::string  buffer;
+            std::stringstream sstream;
+            std::istream* pis = &std::cin;
+            std::size_t buffer_size = 0;
+            bool is_unbuffered = options.exists( "--unbuffered,-u" );
+            if( is_unbuffered ) 
+            { 
+                if( !csv.binary() ) { std::cerr << name() << "--unbuffered,-u can only be used in binary mode, --binary <format> required" << std::endl; return 1; } 
+                setvbuf( stdin, (char *)NULL, _IONBF, 0 );
+                buffer_size = csv.format().size();
+                buffer.resize( buffer_size );
+                
+                pis = &sstream;
+                
+                fread( &buffer[0], 1, buffer_size, stdin );
+                if( feof( stdin ) ) { return 0; } 
+                sstream.write( buffer.c_str(), buffer_size );
+                
+            }
             comma::uint32 num_of_blocks = options.value< comma::uint32 >( "--lines,-n", 1 );
-            comma::csv::input_stream< input_with_block > istream( std::cin, csv );
+            
+            comma::csv::input_stream< input_with_block > istream( *pis, csv );
             while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
             {
                 const input_with_block* p = istream.read();
@@ -324,13 +345,20 @@ int main( int ac, char** av )
                 else { std::cout << comma::join( istream.ascii().last(), istream.ascii().ascii().delimiter() ) << std::endl; }
                 
                 if( p->block == 0 ) { --num_of_blocks; if ( num_of_blocks == 0 ) { break; } }
+                
+                // read more data
+                if( is_unbuffered )
+                {    
+                    fread( &buffer[0], 1, buffer_size, stdin );
+                    if( feof( stdin ) ) { return 0; } 
+                    sstream.write( buffer.c_str(), buffer_size );
+                }
             }
             
             return 0;
         }
         else if( operation == "index" )
         {
-            block_records.reserve( options.value< comma::uint32 >( "--max-group-size,--max-hint", 50 ) );
             reverse_index = options.exists("--reverse");
             
             comma::csv::input_stream< input_with_block > istream( std::cin, csv );
