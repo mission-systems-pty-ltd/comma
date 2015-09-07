@@ -50,10 +50,8 @@ struct input_t
     input_t( comma::csv::impl::unstructured key ): key( key ) {}
 };
 
-struct input_with_block
-{
-    comma::uint32 block;
-};
+struct input_with_block { comma::uint32 block; };
+struct input_with_index { comma::uint32 index; };
 
 struct appended_column
 {
@@ -86,6 +84,18 @@ template <> struct traits< input_with_block >
     template < typename K, typename V > static void visit( const K&, input_with_block& p, V& v )
     {
         v.apply( "block", p.block );
+    }
+};
+
+template <> struct traits< input_with_index >
+{
+    template < typename K, typename V > static void visit( const K&, const input_with_index& p, V& v )
+    {
+        v.apply( "index", p.index );
+    }
+    template < typename K, typename V > static void visit( const K&, input_with_index& p, V& v )
+    {
+        v.apply( "index", p.index );
     }
 };
 
@@ -132,7 +142,6 @@ static void usage( bool more )
     std::cerr << "    --from,--starting-block; use with 'group' operation, the starting block number to use, default is 1" << std::endl;
     std::cerr << "    --step; use with 'increment' operation, the number of increment/decrement for specified field, default is 1" << std::endl;
     std::cerr << "    --lines,--num-of-blocks,-n; use with 'head' operation, outputs only the first specified number of blocks, default is 1" << std::endl;
-    std::cerr << "    --unbuffered,-u; use with 'head' operation and binary mode (--binary needed), do not buffer input data from stdin" << std::endl;
     if( more ) { std::cerr << comma::csv::options::usage() << std::endl << std::endl; }
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
@@ -230,7 +239,7 @@ int main( int ac, char** av )
         csv.full_xpath = true;
         csv.quote.reset();
         
-        std::vector< std::string > unnamed = options.unnamed( "--help,-h,--unbuffered,-u,--reverse,--verbose,-v", "-.*" );
+        std::vector< std::string > unnamed = options.unnamed( "--help,-h,--reverse,--verbose,-v", "-.*" );
         if( unnamed.size() < 1 ) { std::cerr << name() << "expected one operation, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         const std::string  operation = unnamed.front();
         
@@ -276,42 +285,45 @@ int main( int ac, char** av )
         {
             std::string  buffer;
             std::stringstream sstream;
-            std::istream* pis = &std::cin;
-            std::size_t buffer_size = 0;
-            bool is_unbuffered = options.exists( "--unbuffered,-u" );
-            if( is_unbuffered ) 
-            { 
-                if( !csv.binary() ) { std::cerr << name() << "--unbuffered,-u can only be used in binary mode, --binary <format> required" << std::endl; return 1; } 
-                setvbuf( stdin, (char *)NULL, _IONBF, 0 );
-                buffer_size = csv.format().size();
-                buffer.resize( buffer_size );
-                
-                pis = &sstream;
-                
-                if( fread( &buffer[0], 1, buffer_size, stdin ) != buffer_size ) { return 1; }
-                if( feof( stdin ) ) { return 0; } 
-                sstream.write( buffer.c_str(), buffer_size );
-            }
+            std::size_t buffer_size = 0; 
+            if( !csv.binary() ) { std::cerr << name() << "--unbuffered,-u can only be used in binary mode, --binary <format> required" << std::endl; return 1; } 
+            ::setvbuf( stdin, (char *)NULL, _IONBF, 0 );
+            buffer_size = csv.format().size();
+            buffer.resize( buffer_size );            
             comma::uint32 num_of_blocks = options.value< comma::uint32 >( "--lines,-n", 1 );
-            
-            comma::csv::input_stream< input_with_block > istream( *pis, csv );
-            while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
+            comma::csv::input_stream< input_with_block > istream( sstream, csv );
+            while( num_of_blocks > 0 )
             {
+                if( csv.binary() )
+                {
+                    
+                    
+                    // todo: reassemble buffer
+                    
+                    
+                    if( fread( &buffer[0], 1, buffer_size, stdin ) != buffer_size ) { return 1; }
+                    if( feof( stdin ) ) { return 0; } 
+                    sstream.write( &buffer[0], buffer_size );
+                }
+                else
+                {
+                    
+                    
+                    // todo: implement
+                    
+                    
+                    
+                }
                 const input_with_block* p = istream.read();
                 if( !p ) { break; }
-                
                 if( istream.is_binary() ) { std::cout.write( istream.binary().last(), istream.binary().size() ); }
                 else { std::cout << comma::join( istream.ascii().last(), istream.ascii().ascii().delimiter() ) << std::endl; }
                 
-                if( p->block == 0 ) { --num_of_blocks; if ( num_of_blocks == 0 ) { break; } }
                 
-                // read more data
-                if( is_unbuffered )
-                {    
-                    if( fread( &buffer[0], 1, buffer_size, stdin ) != buffer_size ) { return 1; }
-                    if( feof( stdin ) ) { return 0; } 
-                    sstream.write( buffer.c_str(), buffer_size );
-                }
+                // todo: use p->index
+                
+                
+                if( p->block == 0 ) { --num_of_blocks; }
             }
             
             return 0;
