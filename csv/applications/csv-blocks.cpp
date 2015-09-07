@@ -333,9 +333,19 @@ int main( int ac, char** av )
                 else
                 {
                     // getline also returns the end of line character
-                    ssize_t bytes_read = getline( &memory.buffer, &line_length, stdin );
-                    if ( bytes_read <= 0 ) { break; } 
-                    sstream.write( memory.buffer, bytes_read );
+                    bool has_end_of_line = false;
+                    do
+                    {
+                        ssize_t bytes_read = getline( &memory.buffer, &line_length, stdin );
+                        if ( bytes_read <= 0 ) { break; } 
+                        
+                        sstream.write( memory.buffer, bytes_read );
+                        has_end_of_line = memory.buffer[bytes_read-1] == '\n';
+#ifdef WIN32
+                        has_end_of_line = ( has_end_of_line bytes_read > 1 &&  && memory.buffer[bytes_read-2] == '\r' );
+#endif
+                    }
+                    while( !has_end_of_line && !feof(stdin) );
                 }
                 const input_with_index* p = istream.read();
                 if( !p ) { break; }
