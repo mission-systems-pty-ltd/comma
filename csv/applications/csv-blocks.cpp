@@ -114,9 +114,6 @@ template <> struct traits< appended_column >
 
 } } // namespace comma { namespace visiting {
 
-// todo: comma/wiki: tutorial to a separate page
-// todo: unbuffered in binary mode: implement packet reassembly
-// todo: unbuffered in ascii mode: implement
 static void usage( bool more )
 {
     std::cerr << std::endl;
@@ -305,16 +302,16 @@ int main( int ac, char** av )
         }
         else if( operation == "head" )
         {
-            std::string  buffer;
             std::stringstream sstream;
             ::setvbuf( stdin, (char *)NULL, _IONBF, 0 );
-            const std::size_t buffer_size = csv.format().size();
-            buffer.resize( buffer_size );            
+            #ifdef WIN32
+                if( csv.binary() ) { _setmode( _fileno( stdin ), _O_BINARY ); }
+            #endif
+            std::string buffer( csv.binary() ? csv.format().size() : 0, 0 );
             comma::uint32 num_of_blocks = options.value< comma::uint32 >( "--lines,--num-of-blocks,-n", 1 );
             comma::csv::input_stream< input_with_index > istream( sstream, csv );
-            
             memory_buffer memory;
-            size_t line_length = options.value< comma::uint32 >( "--max-line-length,--max-length,-L", 1024 );
+            size_t line_length = 1024;
             if( !csv.binary() ) { memory.allocate( line_length ); }
             while( num_of_blocks > 0 )
             {
@@ -324,19 +321,26 @@ int main( int ac, char** av )
                     //  It should blocks and keep reading until we have the entire message,
                     //  This is to reassemble the message if it is broken into pieces (e.g. TCP input piped into stdin)
                     size_t bytes_read = 0;
-                    do { bytes_read +=  fread( &buffer[bytes_read], 1, buffer_size-bytes_read, stdin ); }
-                    while ( bytes_read < buffer_size && !feof( stdin ) && !ferror(stdin) );
-                    
-                    if ( bytes_read == 0 ) { break; } 
-                    sstream.write( &buffer[0], buffer_size );
+                    while ( bytes_read < buffer.size() && !feof( stdin ) && !ferror(stdin) )
+                    {
+                        bytes_read +=  ::fread( &buffer[bytes_read], 1, buffer.size() - bytes_read, stdin );
+                    }
+                    if ( bytes_read == 0 ) { return 0; } 
+                    if ( bytes_read < buffer.size() ) { std::cerr << "csv-blocks: expected " << buffer.size() << " bytes; got only: " << bytes_read << std::endl; return 1; } 
+                    sstream.write( &buffer[0], buffer.size() );
                 }
                 else
                 {
-                    // getline also returns the end of line character
+                    
+                    
+                    // todo: if line is empty, read next line
+                    
+                    
+                    
                     bool has_end_of_line = false;
-                    do
+                    while( !has_end_of_line && !feof(stdin) )
                     {
-                        ssize_t bytes_read = getline( &memory.buffer, &line_length, stdin );
+                        ssize_t bytes_read = ::getline( &memory.buffer, &line_length, stdin );
                         if ( bytes_read <= 0 ) { break; } 
                         
                         sstream.write( memory.buffer, bytes_read );
@@ -347,7 +351,6 @@ int main( int ac, char** av )
                                             && memory.buffer[bytes_read-1] == '\n' );
 #endif
                     }
-                    while( !has_end_of_line && !feof(stdin) );
                 }
                 const input_with_index* p = istream.read();
                 if( !p ) { break; }
