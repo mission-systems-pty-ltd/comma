@@ -376,7 +376,7 @@ int main( int ac, char** av )
         options.assert_mutually_exclusive( "--last-block,--last,--last-only" );
         options.assert_mutually_exclusive( "--last-block,--matched-only,--matched,-m" );
         options.assert_mutually_exclusive( "--last-block,--remove,--reset,--unset,--erase" );
-        options.assert_mutually_exclusive( "--last-block,--empty" );
+        //options.assert_mutually_exclusive( "--last-block,--empty" );
         matched_only = options.exists( "--matched-only,--matched,-m" );
         update_non_empty = options.exists( "--update-non-empty-fields,--update-non-empty,-u" );
         std::vector< std::string > unnamed = options.unnamed( "--last-block,--last-only,--last,--matched-only,--matched,-m,--string,-s,--update-non-empty-fields,--update-non-empty,-u,--verbose,-v", "-.*" );
