@@ -103,14 +103,9 @@ template <> struct traits< appended_column >
 
 } } // namespace comma { namespace visiting {
 
-// todo: tear down values
-// todo: add a brief description to comma/wiki
-// todo: block_records: use std::deque< std::string > instead
-// todo: "group" operation: use tied<> for output
-// todo: use comma::csv::tied for appending values
-// todo: optionally (--unbuffered,-u) do: std::cin.rdbuf()->pubsetbuf(0, 0); (hopefully it works)
-// todo: --unbuffered,-u: document in --help
-// todo: head operation: --lines,-n: implement
+// todo: comma/wiki: tutorial to a separate page
+// todo: unbuffered in binary mode: implement packet reassembly
+// todo: unbuffered in ascii mode: implement
 static void usage( bool more )
 {
     std::cerr << std::endl;
@@ -296,7 +291,6 @@ int main( int ac, char** av )
                 if( fread( &buffer[0], 1, buffer_size, stdin ) != buffer_size ) { return 1; }
                 if( feof( stdin ) ) { return 0; } 
                 sstream.write( buffer.c_str(), buffer_size );
-                
             }
             comma::uint32 num_of_blocks = options.value< comma::uint32 >( "--lines,-n", 1 );
             
