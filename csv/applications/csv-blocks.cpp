@@ -340,9 +340,11 @@ int main( int ac, char** av )
                         if ( bytes_read <= 0 ) { break; } 
                         
                         sstream.write( memory.buffer, bytes_read );
-                        has_end_of_line = memory.buffer[bytes_read-1] == '\n';
-#ifdef WIN32
-                        has_end_of_line = ( has_end_of_line bytes_read > 1 &&  && memory.buffer[bytes_read-2] == '\r' );
+#ifndef WIN32
+                        has_end_of_line = ( memory.buffer[bytes_read-1] == '\n' );
+#else
+                        has_end_of_line = ( bytes_read > 1 && memory.buffer[bytes_read-2] == '\r' 
+                                            && memory.buffer[bytes_read-1] == '\n' );
 #endif
                     }
                     while( !has_end_of_line && !feof(stdin) );
