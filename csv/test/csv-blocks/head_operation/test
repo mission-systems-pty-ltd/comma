@@ -1,0 +1,31 @@
+#!/bin/bash
+
+output_dir=output
+
+[[ -d "$output_dir"  ]] || mkdir $output_dir
+cd $output_dir 
+
+cat >test.csv
+csv-to-bin 's[1],4ui' <test.csv >test.bin
+
+# Closes file descriptor 3
+function clean()
+{
+    exec 3>&-
+}
+trap clean EXIT
+exec 3<> test.csv
+
+for i in {1..5} ; do
+    csv-blocks head --fields=,,,,index <&3 \
+        | sed 's#\(.*\)#"\1"#'";s#^#ascii/run[$i]=#;"
+done | gawk '{ print "line["NR"]/"$0; }'
+exec 3>&-
+
+exec 3<> test.bin
+for i in {1..5} ; do
+    csv-blocks head --fields=,,,,index  --binary 's[1],4ui' <&3 \
+        | csv-from-bin 's[1],4ui' \
+        | sed 's#\(.*\)#"\1"#'";s#^#binary/run[$i]=#"
+done | gawk '{ print "line["NR"]/"$0; }'
+exec 3>&-
