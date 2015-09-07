@@ -30,6 +30,7 @@
 /// @author dewey nguyen
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <memory.h>
 #include <iostream>
 #include <deque>
@@ -133,7 +134,7 @@ static void usage( bool more )
     std::cerr << "            cat something.csv | csv-blocks increment --fields=,,block --step -1" << std::endl;
     std::cerr << "    head" << std::endl;
     std::cerr << "        reads records from first block to stdout, if --num-of-blocks=<num> specified, read more than one blocks" << std::endl;
-    std::cerr << "        requires the block index from 'index' mode in the inputs" << std::endl;
+    std::cerr << "        requires the index from 'index' mode in the inputs" << std::endl;
     std::cerr << "            cat something.csv | csv-blocks index --fields=,index " << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
@@ -165,7 +166,7 @@ static void usage( bool more )
     std::cerr << "            This increments the second field" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    head" << std::endl;
-    std::cerr << "        cat $block_csv | csv-blocks append --fields=id | csv-blocks index --fields=,,,,block | csv-blocks head --fields=,,,,,index " << std::endl;
+    std::cerr << "        cat $block_csv | csv-blocks group --fields=id | csv-blocks index --fields=,,,,index | csv-blocks head --fields=,,,,,index " << std::endl;
     std::cerr << "            After appending the block field, then the block reverse index field, reading a single block from the input is possible" << std::endl;
     std::cerr << std::endl;
     std::cerr << "contact info: " << comma::contact_info <<std::endl;
@@ -229,6 +230,27 @@ void make_blocks_setup( const comma::command_line_options& options, std::string&
     csv.fields = comma::join( v, ',' );
 }
 
+struct memory_buffer
+{
+    char* buffer;
+    memory_buffer();
+    ~memory_buffer();
+    
+    void allocate( size_t size );
+};
+memory_buffer::memory_buffer() : buffer(NULL) {}
+memory_buffer::~memory_buffer()
+{
+    if( buffer != NULL ) { free( (void*) buffer ); }
+}
+
+void memory_buffer::allocate(size_t size)
+{
+    buffer = (char*) ::malloc( size );
+    if( buffer == NULL ) { std::cerr << name() << "failed to allocate memory buffer of size: " << size << std::endl; exit(1); }
+}
+
+
 int main( int ac, char** av )
 {
     try
@@ -285,45 +307,42 @@ int main( int ac, char** av )
         {
             std::string  buffer;
             std::stringstream sstream;
-            std::size_t buffer_size = 0; 
-            if( !csv.binary() ) { std::cerr << name() << "--unbuffered,-u can only be used in binary mode, --binary <format> required" << std::endl; return 1; } 
             ::setvbuf( stdin, (char *)NULL, _IONBF, 0 );
-            buffer_size = csv.format().size();
+            const std::size_t buffer_size = csv.format().size();
             buffer.resize( buffer_size );            
-            comma::uint32 num_of_blocks = options.value< comma::uint32 >( "--lines,-n", 1 );
-            comma::csv::input_stream< input_with_block > istream( sstream, csv );
+            comma::uint32 num_of_blocks = options.value< comma::uint32 >( "--lines,--num-of-blocks,-n", 1 );
+            comma::csv::input_stream< input_with_index > istream( sstream, csv );
+            
+            memory_buffer memory;
+            size_t line_length = options.value< comma::uint32 >( "--max-line-length,--max-length,-L", 1024 );
+            if( !csv.binary() ) { memory.allocate( line_length ); }
             while( num_of_blocks > 0 )
             {
                 if( csv.binary() )
                 {
+                    // Reads from stdin, the exact number of bytes in buffer.size()
+                    //  It should blocks and keep reading until we have the entire message,
+                    //  This is to reassemble the message if it is broken into pieces (e.g. TCP input piped into stdin)
+                    size_t bytes_read = 0;
+                    do { bytes_read +=  fread( &buffer[bytes_read], 1, buffer_size-bytes_read, stdin ); }
+                    while ( bytes_read < buffer_size && !feof( stdin ) && !ferror(stdin) );
                     
-                    
-                    // todo: reassemble buffer
-                    
-                    
-                    if( fread( &buffer[0], 1, buffer_size, stdin ) != buffer_size ) { return 1; }
-                    if( feof( stdin ) ) { return 0; } 
+                    if ( bytes_read == 0 ) { break; } 
                     sstream.write( &buffer[0], buffer_size );
                 }
                 else
                 {
-                    
-                    
-                    // todo: implement
-                    
-                    
-                    
+                    // getline also returns the end of line character
+                    ssize_t bytes_read = getline( &memory.buffer, &line_length, stdin );
+                    if ( bytes_read <= 0 ) { break; } 
+                    sstream.write( memory.buffer, bytes_read );
                 }
-                const input_with_block* p = istream.read();
+                const input_with_index* p = istream.read();
                 if( !p ) { break; }
                 if( istream.is_binary() ) { std::cout.write( istream.binary().last(), istream.binary().size() ); }
                 else { std::cout << comma::join( istream.ascii().last(), istream.ascii().ascii().delimiter() ) << std::endl; }
                 
-                
-                // todo: use p->index
-                
-                
-                if( p->block == 0 ) { --num_of_blocks; }
+                if( p->index == 0 ) { --num_of_blocks; }
             }
             
             return 0;
