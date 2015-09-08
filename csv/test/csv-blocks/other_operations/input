@@ -15,6 +15,8 @@ block_indexing/reverse/test[0]/command[0]="csv-blocks --fields=d,a,block index -
 block_indexing/reverse/test[1]/command[1]="csv-blocks --fields=d,a,block index --verbose --reverse"
 # No reverse order
 block_indexing/reverse/test[2]/command[3]="csv-blocks --fields=d,a,block index --verbose"
+# No reverse order
+block_indexing/reverse/test[3]/command[4]="csv-to-bin s[1],2ui  | csv-blocks index --fields=d,a,block --binary s[1],ui,ui --reverse | csv-from-bin s[1],3ui"
 
 # Testing appending uint32 block number based on one ID field (1st column)
 block_append/test[0]/input[0]="a,1,2"
@@ -34,6 +36,8 @@ block_append/test[0]/command[0]="csv-blocks --fields=id, group --starting-block 
 block_append/test[1]/command[1]="csv-blocks --fields=id,,id make-blocks --from 801"
 # Testing appending uint32 block number based on two IDs field, numbering starting from 1 (default)
 block_append/test[2]/command[2]="csv-blocks --fields=id,,id make-blocks "
+# Test using binary input
+block_append/test[2]/command[3]="csv-to-bin s[1],2ui  | csv-blocks group --fields=id,,id --binary s[1],ui,ui | csv-from-bin s[1],3ui"
 
 # The specified block field is incremented
 block_increment/test[0]/input[0]="a,1,2"
@@ -55,3 +59,5 @@ block_increment/test[1]/command[1]="csv-blocks increment --fields=,block --forma
 block_increment/test[2]/command[2]="csv-blocks increment --fields=,block --step 2 --format=s[1],ui,ui"
 # The specified block field is decreased by 1
 block_increment/test[3]/command[3]="csv-blocks increment --fields=,block --step -1 --format=s[1],ui,ui"
+# Test using binary input
+block_increment/test[3]/command[4]="csv-to-bin s[1],2ui  | csv-blocks increment --fields=,,block --binary s[1],ui,ui  | csv-from-bin s[1],3ui"

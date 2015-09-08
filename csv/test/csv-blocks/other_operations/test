@@ -25,19 +25,13 @@ function run_command()
 {
     local size=0
     local key="$1"
-#     for i in ${input[@]} ; do echo "$i" ; done \
-#         | $command $update_file \
-#         | while read line ; do
-#               echo "$( dirname "$key" )/output/line[$size]=\"$line\""
-#               unset none
-#               (( ++size ))
-#           done
+    echo "Now running '$command'" >&2
     while read line ; do
         echo "$key/output/line[$size]=\"$line\""
         #echo "$( dirname "$key" )/output/line[$size]=\"$line\""
         unset none
         (( ++size ))
-    done < <( for i in ${input[@]} ; do echo "$i" ; done | $command $update_file  )
+    done < <( for i in ${input[@]} ; do echo "$i" ; done | eval "$command $update_file"  )
     echo "$key/output/size=$size"
     echo
 }

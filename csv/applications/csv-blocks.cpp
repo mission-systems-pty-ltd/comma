@@ -207,7 +207,7 @@ void make_blocks_setup( const comma::command_line_options& options, std::string&
     std::vector< std::string > v = comma::split( csv.fields, ',' );
     comma::csv::format f;
     if( csv.binary() ) { f = csv.format(); }
-    else if( options.exists( "--format" ) ) { f = comma::csv::format( options.value< std::string >( "--format" ) ); }
+    else if( options.exists( "--format,--binary" ) ) { f = comma::csv::format( options.value< std::string >( "--format,--binary" ) ); }
     else
     {
         while( std::cin.good() && first_line.empty() ) { std::getline( std::cin, first_line ); }
@@ -317,6 +317,9 @@ int main( int ac, char** av )
         csv.full_xpath = true;
         csv.quote.reset();
         
+        comma::csv::options csv_out;
+        if( csv.binary() ) { csv_out.format( comma::csv::format("ui") ); }
+        
         std::vector< std::string > unnamed = options.unnamed( "--help,-h,--reverse,--verbose,-v", "-.*" );
         if( unnamed.size() < 1 ) { std::cerr << name() << "expected one operation, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         const std::string  operation = unnamed.front();
@@ -334,7 +337,7 @@ int main( int ac, char** av )
             if ( default_input.key.empty() ) { std::cerr << name() << "please specify at least one id field" << std::endl; return 1; }
             
             comma::csv::input_stream< input_t > istream( std::cin, csv, default_input );
-            comma::csv::output_stream< appended_column > ostream( std::cout );
+            comma::csv::output_stream< appended_column > ostream( std::cout, csv_out );
             comma::csv::tied< input_t, appended_column > tied( istream, ostream );
             
             if( !first_line.empty() ) 
@@ -421,7 +424,7 @@ int main( int ac, char** av )
             increment_step = options.value< comma::int32 >( "--step", 1 );
             
             comma::csv::input_stream< input_with_block > istream( std::cin, csv );
-            comma::csv::output_stream< appended_column > ostream( std::cout );
+            comma::csv::output_stream< appended_column > ostream( std::cout, csv_out );
             comma::csv::tied< input_with_block, appended_column > tied( istream, ostream );
             
             appended_column incremented;
