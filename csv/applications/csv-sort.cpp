@@ -61,6 +61,7 @@ static void usage( bool more )
     std::cerr << "    --string,-s: keys are strings; a quick and dirty option to support strings" << std::endl;
     std::cerr << "                 default: double" << std::endl;
     std::cerr << "    --reverse,-r: sort in reverse order" << std::endl;
+    std::cerr << "    --unique,-u: only outputs first line matching a given key" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
@@ -107,6 +108,7 @@ struct input
     }
     
     typedef std::map< input, std::vector< std::string > > map;
+    
 };
 
 namespace comma { namespace visiting {
@@ -145,6 +147,7 @@ template < typename K > static int sort( const comma::command_line_options& opti
     std::vector< std::string > v = comma::split( stdin_csv.fields, ',' );
     std::vector< std::string > order = options.exists("--order") ? comma::split( options.value< std::string >( "--order" ), ',' ) : v;
     std::vector< std::string > w (v.size());
+    bool unique = options.exists("--unique,-u");
     for( std::size_t i = 0; i < order.size(); ++i ) // quick and dirty, wasteful, but who cares
     {
         if (order[i].empty()) continue;
@@ -176,13 +179,16 @@ template < typename K > static int sort( const comma::command_line_options& opti
         if( stdin_stream.is_binary() )
         {
             typename input< K >::map::mapped_type& d = sorted_map[ *p ];
+            if (unique && !d.empty()) continue;
             d.push_back( std::string() );
             d.back().resize( stdin_csv.format().size() );
             ::memcpy( &d.back()[0], stdin_stream.binary().last(), stdin_csv.format().size() );
         }
         else
         {
-            sorted_map[*p].push_back( comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) + "\n" );
+            typename input< K >::map::mapped_type& d = sorted_map[ *p ];
+            if (unique && !d.empty()) continue;
+            d.push_back( comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) + "\n" );
         }
     }
     
