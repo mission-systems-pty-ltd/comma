@@ -230,23 +230,82 @@ void make_blocks_setup( const comma::command_line_options& options, std::string&
 struct memory_buffer
 {
     char* buffer;
+    size_t size;
     memory_buffer();
     ~memory_buffer();
     
     void allocate( size_t size );
 };
-memory_buffer::memory_buffer() : buffer(NULL) {}
+memory_buffer::memory_buffer() : buffer(NULL), size(0) {}
 memory_buffer::~memory_buffer()
 {
-    if( buffer != NULL ) { free( (void*) buffer ); }
+    if( buffer != NULL ) {  
+//         std::cerr  << "freeing head ascii memory, size: " << size << std::endl;
+        free( (void*) buffer ); 
+    }
 }
 
 void memory_buffer::allocate(size_t size)
 {
+    this->size = size;
     buffer = (char*) ::malloc( size );
     if( buffer == NULL ) { std::cerr << name() << "failed to allocate memory buffer of size: " << size << std::endl; exit(1); }
 }
 
+/// Read a record and  fills out param 'record', the binary data is immediately send to stdout
+void read_and_write_binary_record( input_with_index& record, memory_buffer& memory )
+{
+    static comma::csv::binary< input_with_index > binary( csv );
+    // Reads from stdin, the exact number of bytes to be memory.size
+    //  It should blocks and keep reading until we have the entire message,
+    //  This is to reassemble the message if it is broken into pieces (e.g. TCP input piped into stdin)
+    size_t bytes_read = 0;
+    while ( bytes_read < memory.size && !::feof( stdin ) && !::ferror(stdin) )
+    {
+        bytes_read +=  ::fread( &memory.buffer[bytes_read], 1, memory.size - bytes_read, stdin );
+    }
+    if ( bytes_read == 0 ) { exit( 0 ); } 
+    if ( bytes_read < memory.size ) { std::cerr << "csv-blocks: expected " << memory.size << " bytes; got only: " << bytes_read << std::endl; exit( 1 ); } 
+    
+    // fill 'record' param
+    binary.get( record, memory.buffer );
+    // send data to stdout
+    std::cout.write( memory.buffer, memory.size );
+}
+
+/// Read a record and  fills out param 'record', the binary data is immediately send to stdout
+// when return value is false, 'record' is not filled because line read is empty
+bool read_and_write_ascii_record( input_with_index& record, memory_buffer& memory )
+{
+    static comma::csv::ascii< input_with_index > ascii( csv );
+    
+    std::stringstream sstream;
+    bool has_end_of_line = false;
+    while( !has_end_of_line && !::feof(stdin) )
+    {
+        // getline may actually changes the buffer with realloc and extend the size
+        ssize_t bytes_read = ::getline( &memory.buffer, &memory.size, stdin );
+        if ( bytes_read <= 0 ) { exit( 0 ); }  // We are done
+#ifndef WIN32
+        has_end_of_line = ( memory.buffer[bytes_read-1] == '\n' );
+        sstream.write( memory.buffer, has_end_of_line ? bytes_read-1 : bytes_read );
+#else
+        has_end_of_line = ( bytes_read > 1 
+                            && memory.buffer[bytes_read-2] == '\r' 
+                            && memory.buffer[bytes_read-1] == '\n' );
+        sstream.write( memory.buffer, has_end_of_line ? bytes_read-2 : bytes_read );
+#endif
+    }
+                    
+    std::string line = sstream.str();
+    if( line.empty() ) { return false; }
+    
+    // filling 'record' param
+    ascii.get( record, line );
+    // send line to stdout
+    std::cout << line << std::endl;
+    return true; // 'record' filled
+}
 
 int main( int ac, char** av )
 {
@@ -302,62 +361,24 @@ int main( int ac, char** av )
         }
         else if( operation == "head" )
         {
-            std::stringstream sstream;
             ::setvbuf( stdin, (char *)NULL, _IONBF, 0 );
             #ifdef WIN32
                 if( csv.binary() ) { _setmode( _fileno( stdin ), _O_BINARY ); }
             #endif
-            std::string buffer( csv.binary() ? csv.format().size() : 0, 0 );
             comma::uint32 num_of_blocks = options.value< comma::uint32 >( "--lines,--num-of-blocks,-n", 1 );
-            comma::csv::input_stream< input_with_index > istream( sstream, csv );
+            
+            input_with_index record;
             memory_buffer memory;
-            size_t line_length = 1024;
-            if( !csv.binary() ) { memory.allocate( line_length ); }
+            const size_t max_line_length = 1024;
+            if( !csv.binary() ) { memory.allocate( max_line_length ); }
+            else { memory.allocate( csv.format().size() ); }
+            
             while( num_of_blocks > 0 )
             {
-                if( csv.binary() )
-                {
-                    // Reads from stdin, the exact number of bytes in buffer.size()
-                    //  It should blocks and keep reading until we have the entire message,
-                    //  This is to reassemble the message if it is broken into pieces (e.g. TCP input piped into stdin)
-                    size_t bytes_read = 0;
-                    while ( bytes_read < buffer.size() && !feof( stdin ) && !ferror(stdin) )
-                    {
-                        bytes_read +=  ::fread( &buffer[bytes_read], 1, buffer.size() - bytes_read, stdin );
-                    }
-                    if ( bytes_read == 0 ) { return 0; } 
-                    if ( bytes_read < buffer.size() ) { std::cerr << "csv-blocks: expected " << buffer.size() << " bytes; got only: " << bytes_read << std::endl; return 1; } 
-                    sstream.write( &buffer[0], buffer.size() );
-                }
-                else
-                {
-                    
-                    
-                    // todo: if line is empty, read next line
-                    
-                    
-                    
-                    bool has_end_of_line = false;
-                    while( !has_end_of_line && !feof(stdin) )
-                    {
-                        ssize_t bytes_read = ::getline( &memory.buffer, &line_length, stdin );
-                        if ( bytes_read <= 0 ) { break; } 
-                        
-                        sstream.write( memory.buffer, bytes_read );
-#ifndef WIN32
-                        has_end_of_line = ( memory.buffer[bytes_read-1] == '\n' );
-#else
-                        has_end_of_line = ( bytes_read > 1 && memory.buffer[bytes_read-2] == '\r' 
-                                            && memory.buffer[bytes_read-1] == '\n' );
-#endif
-                    }
-                }
-                const input_with_index* p = istream.read();
-                if( !p ) { break; }
-                if( istream.is_binary() ) { std::cout.write( istream.binary().last(), istream.binary().size() ); }
-                else { std::cout << comma::join( istream.ascii().last(), istream.ascii().ascii().delimiter() ) << std::endl; }
+                if( csv.binary() ) { read_and_write_binary_record( record, memory ); }
+                else { if( !read_and_write_ascii_record( record, memory ) ) { continue; } }
                 
-                if( p->index == 0 ) { --num_of_blocks; }
+                if( record.index == 0 ) { --num_of_blocks; }
             }
             
             return 0;
