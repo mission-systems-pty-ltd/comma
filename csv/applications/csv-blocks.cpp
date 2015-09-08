@@ -256,7 +256,7 @@ void memory_buffer::allocate(size_t size)
 /// Read a record and  fills out param 'record', the binary data is immediately send to stdout
 static comma::uint32 read_and_write_binary_record()
 {
-    memory_buffer memory( csv.format().size() );
+    static memory_buffer memory( csv.format().size() );
     static comma::csv::binary< input_with_index > binary( csv );
     // Reads from stdin, the exact number of bytes to be memory.size
     //  It should blocks and keep reading until we have the entire message,
