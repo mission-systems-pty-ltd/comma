@@ -1,0 +1,23 @@
+#python
+
+class interval( object ):
+    def __init__( self, data ):
+        object.__init__( self )
+        self.begin = data.begin.time
+        self.end = data.end.time
+    def overlaps( self, other ):
+        return ( ( self.begin <= other.begin and self.end >= other.begin ) or ( self.begin <= other.end and self.end >= other.end ) )
+
+intervals = []
+for i in range( len( test ) ):
+    intervals.append( interval( test[i] ) )
+
+max_overlaps = 0
+for i in range( len( intervals ) ):
+    overlaps = 0
+    for j in range( len( intervals ) ):
+        if intervals[i].overlaps( intervals[j] ):
+            overlaps = overlaps + 1
+    max_overlaps = max( max_overlaps, overlaps )
+
+expect max_overlaps == 5
