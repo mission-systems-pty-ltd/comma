@@ -56,11 +56,11 @@ static void usage( bool verbose = false )
     std::cerr << "    echo 1,2,3 | name-value-from-csv a,b,c/d -d ," << std::endl;
     std::cerr << "    a=1,b=2,c/d=3" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    echo -e \"1,2,3\n4,5,6\" | name-value-from-csv a,b,c/d -d , --line-number" << std::endl;
+    std::cerr << "    echo -e \"1,2,3\\n4,5,6\" | name-value-from-csv a,b,c/d -d , --line-number" << std::endl;
     std::cerr << "    [0]/a=1,[0]/b=2,[0]/c/d=3" << std::endl;
     std::cerr << "    [1]/a=4,[1]/b=5,[1]/c/d=6" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    echo -e \"1,2,3\n4,5,6\" | name-value-from-csv --prefix letters/ a,b,c/d  --line-number --no-brackets" << std::endl;
+    std::cerr << "    echo -e \"1,2,3\\n4,5,6\" | name-value-from-csv --prefix letters/ a,b,c/d  --line-number --no-brackets" << std::endl;
     std::cerr << "    letters/0/a=1" << std::endl;
     std::cerr << "    letters/0/b=2" << std::endl;
     std::cerr << "    letters/0/c/d=3" << std::endl;
