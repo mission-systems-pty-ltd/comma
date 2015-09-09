@@ -124,8 +124,9 @@ int main( int ac, char** av )
             const std::vector< std::string >& values = comma::split( line, delimiter );
             std::string index = output_line_numbers ? left_bracket + boost::lexical_cast< std::string >( i ) + right_bracket + "/" : "";
             if ( !indices.empty() ) {
-                for ( unsigned int i = 0; i < indices.size(); ++i ) {
-                    index += ( no_brackets ? values[indices[i]] : paths[ indices[i] ] + "[" + values[indices[i]] + "]" ) + "/";
+                for ( unsigned int j = 0; j < indices.size(); ++j ) {
+                    if ( indices[j] >= values.size() ) { std::cerr << "name-value-from-csv: line " << i << ": no value for index '" << paths[ indices[j] ] << "'" << std::endl; return 1; }
+                    index += ( no_brackets ? values[indices[j]] : paths[ indices[j] ] + "[" + values[indices[j]] + "]" ) + "/";
                 }
             }
             for( unsigned int k = 0; k < values.size(); ++k )
