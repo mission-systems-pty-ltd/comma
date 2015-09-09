@@ -49,6 +49,7 @@ static void usage( bool verbose = false )
     std::cerr << "    --no-brackets: use with --line-number option above, it does not output line numbers in square brackets." << std::endl;
     std::cerr << "    --output-line-number,--line-number,-n: output line numbers (see examples)" << std::endl;
     std::cerr << "    --prefix,-p <prefix>: append this prefix to all paths" << std::endl;
+    std::cerr << "    --indices=<fields>: comma-separated list of fields to use as indices (see examples)" << std::endl;
     std::cerr << std::endl;
     std::cerr << "todo: support escaped strings (e.g. currently string values cannot have <delimiter> in them)" << std::endl;
     std::cerr << std::endl;
@@ -67,6 +68,14 @@ static void usage( bool verbose = false )
     std::cerr << "    letters/1/a=4" << std::endl;
     std::cerr << "    letters/1/b=5" << std::endl;
     std::cerr << "    letters/1/c/d=6" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    echo -e \"1,2,3\\n4,5,6\" | name-value-from-csv --indices=a,c a,b,c" << std::endl;
+    std::cerr << "    a[1]/c[3]/b=2" << std::endl;
+    std::cerr << "    a[4]/c[6]/b=5" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    echo -e \"1,2,3\\n4,5,6\" | name-value-from-csv --indices=a,c --line-number --no-brackets a,b,c" << std::endl;
+    std::cerr << "    0/1/3/b=2" << std::endl;
+    std::cerr << "    1/4/6/b=5" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -92,11 +101,21 @@ int main( int ac, char** av )
         
         if( fields.empty() )
         { 
-            const std::vector< std::string >& unnamed = options.unnamed( "--strict,--no-brackets,--output-line-number,--line-number,-n", "-.*" );
+            const std::vector< std::string >& unnamed = options.unnamed( "--strict,--no-brackets,--output-line-number,--line-number,-n,--indices", "-.*" );
             if( unnamed.empty() || unnamed[0].empty() ) { std::cerr << "name-value-from-csv: please specify fields" << std::endl; return 1; }
             fields = unnamed[0];
         }
         const std::vector< std::string >& paths = comma::split( fields, ',' );
+        std::vector< unsigned int > indices;
+        if ( options.exists( "--indices" ) ) {
+            const std::vector< std::string > & index_names = comma::split( options.value< std::string >( "--indices", "" ), delimiter );
+            for ( unsigned int i = 0; i < index_names.size(); ++i ) {
+                if ( index_names[i].empty() ) continue;
+                std::vector< std::string >::const_iterator position = std::find( paths.begin(), paths.end(), index_names[i] );
+                if ( position == paths.end() ) { std::cerr << "name-value-from-csv: index '" << index_names[i] << "' not in fields list" << std::endl; return 1; }
+                indices.push_back( position - paths.begin() );
+            }
+        }
         for( unsigned int i = 0; std::cin.good() && !std::cin.eof(); ++i )
         {
             std::getline( std::cin, line );
@@ -104,11 +123,17 @@ int main( int ac, char** av )
             //const std::vector< std::string >& values = comma::split_escaped( line, delimiter );
             const std::vector< std::string >& values = comma::split( line, delimiter );
             std::string index = output_line_numbers ? left_bracket + boost::lexical_cast< std::string >( i ) + right_bracket + "/" : "";
+            if ( !indices.empty() ) {
+                for ( unsigned int i = 0; i < indices.size(); ++i ) {
+                    index += ( no_brackets ? values[indices[i]] : paths[ indices[i] ] + "[" + values[indices[i]] + "]" ) + "/";
+                }
+            }
             for( unsigned int k = 0; k < values.size(); ++k )
             {
                 bool overshot = k >= paths.size();
                 if( overshot && strict ) { std::cerr << "name-value-from-csv: line " << i << ": expected not more than " << paths.size() << " value[s], got " << values.size() << std::endl; return 1; }
                 if( overshot || paths[k].empty() ) { continue; }
+                if ( std::find( indices.begin(), indices.end(), k ) != indices.end() ) continue;
                 std::cout << prefix << index << paths[k] << "=\"" << comma::strip( comma::strip( values[k], '"' ), ' ' ) << "\"" << end_of_line;
                 std::cout.flush();
             }
