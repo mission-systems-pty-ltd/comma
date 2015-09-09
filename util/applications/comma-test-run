@@ -711,6 +711,7 @@ function run_single_test()
                     } || {
                         result=1
                         error_ "$name: $dir: failed$( (( $test_failed == 124 )) && echo ' (likely timed out)' )"
+                        [[ -n "options_junit" ]] && echo "likely timed out" > "output/junit.failure.log"
                     }
                     break
                 else
@@ -732,6 +733,7 @@ function run_single_test()
                     fi
                 fi
             done
+            [[ -n "options_junit" && $result != 0 && ! -f "output/junit.failure.log" ]] && echo "internal error, see detailed log" > "output/junit.failure.log"
             cd "$basedir"
         fi
     fi
