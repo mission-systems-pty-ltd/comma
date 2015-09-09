@@ -597,7 +597,7 @@ function terminate_run_single_test()
     ) 9>>"$comma_test_run_output_flock"
 
     rm -f "$our_stats_progress"
-    rm -f "$our_stderrout_log"
+    (( options_debug )) || rm -f "$our_stderrout_log"
     # a process that exits in response to SIGINT should kill itself with SIGINT
     # see http://www.cons.org/cracauer/sigint.html
     [[ "$1" == "SIGINT" ]] && { trap - INT ; kill -s INT $BASHPID ; }
@@ -752,7 +752,7 @@ function run_single_test()
     ) 9>>"$comma_test_run_output_flock"
 
     rm -f "$our_stats_progress"
-    rm -f "$our_stderrout_log"
+    (( options_debug )) || rm -f "$our_stderrout_log"
 
     return $result
 }
