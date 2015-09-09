@@ -86,7 +86,7 @@ function description()
 --debug; much more debug output
 --end=[<dir>]; run tests up to a given test, the latter excluded, where test directories are ordered lexicographically
 --from,--begin=[<dir>]; run tests starting from a given test, where test directories are ordered lexicographically
---junit; output to stdout junit record compatible with jenkins for each test
+--junit=[<file>]; output to file junit record compatible with jenkins for each test
 --max-parallel=[<N>]; run up to N tests in parallel; default: $max_parallel
 --max-memory-main=[<N>]; limit on main memory, in MB; default: $max_memory_main
 --max-memory-shared=[<N>]; limit on shared memory, in MB; default: $max_memory_shared
@@ -383,10 +383,10 @@ function junit_finalize() # quick and dirty
         | while IFS='=' read key elapsed ; do
               path="$( dirname $key )"
               local attributes="classname=\"testcase\" name=\"$( echo $path | sed "s#^\./##" )\" time=\"$elapsed\""
-              if [[ -f $path/output/failure ]] ; then
+              if [[ -f $path/output/junit.failure.log ]] ; then
                   echo "    <testcase $attributes >"
                   echo "        <failure>"
-                  cat $path/output/failure | recode ascii..html
+                  cat $path/output/junit.failure.log | recode ascii..html
                   echo "        </failure>"
                   echo "    </testcase>"
               else
@@ -400,7 +400,7 @@ function stats_finalize()
 {
     [[ -f "$stats_progress_csv" ]] || return
     cat "$stats_progress_csv" | comma-progress --elapsed > "$stats_elapsed_path_value"
-    [[ -z "$options_junit" ]] || junit_finalize
+    [[ -z "$options_junit" ]] || junit_finalize > "$options_junit"
 }
 
 function resources_limits()
@@ -543,10 +543,7 @@ function run_and_match_test()
         fi
     fi
 
-    if [[ -n "$options_junit" ]] ; then
-        rm -rf output/failure
-        [[ $test_failed == 0 ]] || echo "$match_output" > output/failure
-    fi
+    [[ -n "$options_junit" && $test_failed != 0 ]] && echo "$match_output" > output/junit.failure.log
 
     return $test_failed
 }
@@ -655,10 +652,8 @@ function run_single_test()
     # if running tests in parallel, create a unique file for redirecting all output
     # will append to the main output at the end
     local our_stderrout_log="$comma_test_run_unique_dir/stdout_log.$( mktemp --dry-run XXXXXX )"
-    # todo? or output junit <testcase> tags as we go, but that would require refactoring of this function:
-    #       instead of equilibristics with stderr redirection, test output should have various output modes,
-    #       e.g: text, csv, junit, etc
-    if [[ -z "$options_junit" ]] ; then exec 3>&1 4>&2 1>"$our_stderrout_log" 2>&1 ; else exec 3>&1 4>&2 1>"$our_stderrout_log" ; fi
+    # do not touch this equilibristics with file descriptors
+    exec 3>&1 4>&2 1>"$our_stderrout_log" 2>&1
 
     # must save pid of any background process in this variable, so that it is killed by signal handler
     local comma_test_run_test_pid
@@ -737,7 +732,7 @@ function run_single_test()
                     fi
                 fi
             done
-            cd $basedir
+            cd "$basedir"
         fi
     fi
 
@@ -873,6 +868,7 @@ have_max_parallel=$( comma_options_has --max-parallel=$options_max_parallel $@ )
 [[ "$options_parallel" != "0" && "$options_estimate_resources" == "1" ]] && { error_ "$name: resource estimation shall be serial"; exit 1; }
 if [[ "$options_debug" != "0" ]] ; then verbose="--verbose" ; fi
 (( options_verbose )) && verbose="--verbose"
+[[ -n "$options_junit" ]] && rm -f "$options_junit"
 
 # and convert to bytes and export for everyone to use
 max_parallel=$options_max_parallel
