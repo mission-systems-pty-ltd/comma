@@ -77,6 +77,10 @@ static void usage( bool verbose = false )
     std::cerr << "    0/1/3/b=2" << std::endl;
     std::cerr << "    1/4/6/b=5" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "    echo -e '1,\"aa\",3\\n4,\"bb\",6' | name-value-from-csv --indices=a,foo/bar/baz a,foo/bar/baz,c" << std::endl;
+    std::cerr << "    a[1]/foo/bar/baz[\"aa\"]/c=3" << std::endl;
+    std::cerr << "    a[4]/foo/bar/baz[\"bb\"]/c=6" << std::endl;
+    std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 0 );
