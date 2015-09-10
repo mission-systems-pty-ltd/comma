@@ -3,6 +3,8 @@
 #include <cstdio>   // for popen()
 #include <cstdlib>
 #include <string>
+#include <cstring>  // for strerror()
+#include <cerrno>   // for errno
 #include <iostream>
 #include <boost/array.hpp>
 #include <boost/optional.hpp>
@@ -130,7 +132,9 @@ int main( int ac, char **av )
                 ::fflush( pipe );
             }
         }
-        ::pclose( pipe );
+        int result = ::pclose( pipe );
+        if ( result == -1 ) { std::cerr << app_name << ": pipe error: " << std::strerror( errno ) << "; command was: " << command << std::endl; exit( 1 ); }
+        else if ( result != 0 ) { std::cerr << app_name << ": command failed: " << command << std::endl; return 1; }
         return 0;
     }
     catch( std::exception& ex ) { std::cerr << app_name << ": " << ex.what() << std::endl; }

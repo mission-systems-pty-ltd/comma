@@ -1,0 +1,94 @@
+#!/bin/bash
+
+function create_input()
+{
+    cat <<EOF
+one
+two
+three
+
+one two
+one three
+one two three
+two three
+EOF
+}
+
+function example_function()
+{
+    pattern_1=$1
+    pattern_2=$2
+    echo "test: example_function: pattern_1=\"$pattern_1\" pattern_2=\"$pattern_2\"" >&2
+    grep "$pattern_1" | grep -v "$pattern_2"
+    return 0  # don't fail if grep finds nothing
+}
+export -f example_function  # so io-tee can see it
+
+function run_test()
+{
+    local -r options=$1
+    local -r test_name=$2
+    local -r input=$3
+    local -r expected=$4
+    shift; shift; shift; shift
+
+    local dashdash
+    if [[ -n "$options" ]]; then dashdash="--"; else dashdash=""; fi
+    local -r tee_file="$test_name.tee.out"
+    local -r stdout_file="$test_name.stdout.out"
+    local -r expected_file="$test_name.expected"
+    if [[ -z "$expected" ]]; then > $expected_file; else echo -e "$expected" > $expected_file; fi
+    echo "test: $test_name: command is: $@" >&2
+    cat $input | io-tee $options $tee_file $dashdash "$@" > $stdout_file
+    if [[ $? != 0 ]]; then
+        echo "test: io-tee call failed" >&2
+        echo "$test_name/io_tee/status_ok=\"false\""
+        return
+    else
+        echo "$test_name/io_tee/status_ok=\"true\""
+    fi
+    if cmp --quiet "$expected_file" "$tee_file"; then
+        echo "$test_name/io_tee/matches=\"true\""
+        echo "test: $test_name: OK" >&2
+    else
+        echo "$test_name/io_tee/matches=\"false\""
+        echo "test: $test_name: io-tee output does not match" >&2
+        echo "test: $test_name: diff $expected_file $tee_file" >&2
+        diff "$expected_file" "$tee_file" >&2
+    fi
+    if cmp --quiet "$input" "$stdout_file" >&2; then echo "$test_name/stdout/matches=\"true\""; else echo "$test_name/stdout/matches=\"false\""; fi
+
+    if [[ -n "$options" ]]; then
+        # try arguments in a different order
+        local tee_file2="${tee_file}2"
+        cat $input | io-tee $tee_file2 $options $dashdash "$@" > /dev/null
+        if [[ $? != 0 ]]; then
+            echo "test: io-tee call #2 failed: io-tee $tee_file2 $options $dashdash $@" >&2
+            echo "$test_name/io_tee/status2_ok=\"false\""
+        else
+            echo "$test_name/io_tee/status2_ok=\"true\""
+            if cmp --quiet $tee_file $tee_file2; then
+                echo "test: io-tee call #2 OK" >&2
+                echo "$test_name/io_tee2/matches=\"true\""
+            else
+                echo "$test_name/io_tee2/matches=\"false\""
+                echo "test: io-tee call #2 does not match output of call #1; diff $tee_file $tee_file2:" >&2
+                diff $tee_file $tee_file2 >&2
+            fi
+        fi
+    fi
+    echo >&2
+}
+
+input_data="input.txt"
+cd output
+create_input > $input_data
+
+#         options           test name                input          expected output            command
+run_test  ""              "basic_test"             "$input_data"  "one two\none two three"    grep "one two"
+run_test  ""              "empty_test"             "$input_data"  ""                          grep "a string not in the input"
+run_test  ""              "function_call_test"     "$input_data"  "two three"                 example_function "two " "one"
+run_test  "--unbuffered"  "unbuffered_test"        "$input_data"  "one two\none two three"    grep "one two"
+run_test  "--unbuffered"  "unbuffered_empty_test"  "$input_data"  ""                          grep "a string not in the input"
+run_test  "--unbuffered"  "unbuffered_fn_test"     "$input_data"  "two three"                 example_function "two " "one"
+
