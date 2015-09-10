@@ -3,7 +3,11 @@
 #include <cstdio>   // for popen()
 #include <cstdlib>
 #include <string>
+#include <iostream>
 #include <boost/array.hpp>
+#include <boost/optional.hpp>
+#include "../../io/select.h"
+#include "../../io/stream.h"
 
 static const char *app_name = "io-tee";
 
@@ -19,6 +23,13 @@ static void show_help( bool verbose )
         << std::endl
         << "Similar to \"tee >( command ... > file )\" in bash, but ensures that the command is complete before continuing." << std::endl
         << std::endl
+        << std::cerr << "usage: cat something | io-tee <output filename> [<options>] <command>" << std::endl
+        << std::endl
+        << "options" << std::endl
+        << "    --dry-run,--dry: print command that will be piped and exit, debug option" << std::endl
+        << "    --unbuffered,-u: unbuffered input and output" << std::endl
+        << "    --verbose,-v: more output" << std::endl
+        << std::endl
         << "Note that only single commands are supported; to run multiple commands (or a pipeline), put them inside a bash function:" << std::endl
         << "*** IMPORTANT *** use \"export -f function_name\" to make the function visible to " << app_name << "." << std::endl
         << "Remember that " << app_name << " will not have access to the unexported variables, so pass any required values as function arguments." << std::endl
@@ -26,17 +37,17 @@ static void show_help( bool verbose )
         << "If any options are used (such as --unbuffered), \"--\" must precede the command." << std::endl
         << std::endl
         << "Example 1:" << std::endl
-        << "    cat input | io-tee outfile grep \"one two\" | grep \"three\" > outfile2" << std::endl
+        << "    ( echo one two ; echo three ) | io-tee outfile grep \"one two\" | grep \"three\" > outfile2" << std::endl
         << std::endl
         << "    - which is equivalent to:" << std::endl
         << std::endl
-        << "    cat input | grep \"one two\" > outfile" << std::endl
-        << "    cat input | grep \"three\" > outfile2" << std::endl
+        << "    ( echo one two ; echo three ) | grep \"one two\" > outfile" << std::endl
+        << "    ( echo one two ; echo three ) | grep \"three\" > outfile2" << std::endl
         << std::endl
         << "Example 2:" << std::endl
         << "    function do_something() { local pattern=$1; grep \"$pattern\"; }" << std::endl
         << "    export -f do_something" << std::endl
-        << "    cat input | io-tee outfile do_something \"one two\" | grep \"three\" > outfile2" << std::endl
+        << "    ( echo one two ; echo three ) | io-tee outfile do_something \"one two\" | grep \"three\" > outfile2" << std::endl
         << std::endl
         << "    - exactly the same as Example 1, but using a function (note the \"export -f\")." << std::endl
         << std::endl;
@@ -44,7 +55,7 @@ static void show_help( bool verbose )
 
 static bool file_is_writable( const std::string &filename )
 {
-    FILE *file = fopen( filename.c_str(), "w" );
+    FILE *file = fopen( &filename[0], "w" );
     if ( file == NULL ) { return false; }
     fclose( file );
     return true;
@@ -62,94 +73,69 @@ static std::string escape_quotes( const char *s )
     return result;
 }
 
-int main( int argc, char **argv )
+int main( int ac, char **av )
 {
+    FILE *pipe = NULL;
     try
     {
-        int dashdash_pos = -1;
-        for ( int n = 1; n < argc; ++n ) { if ( std::string( argv[n] ) == "--" ) { dashdash_pos = n; break; } }
-        int end_of_options = ( dashdash_pos == -1 ? std::min( argc, 2 ) : dashdash_pos );
-
-        // if "--" is present, options must precede it
-        comma::command_line_options options( end_of_options, argv, show_help );
-        if ( argc < 3 ) { show_usage(); exit( 1 ); }
-
-        bool unbuffered = false;
-        std::string outfile;
-        if ( dashdash_pos == -1 )
-        {
-            outfile = argv[1];
-            if ( outfile[0] == '-' ) { std::cerr << app_name << ": \"--\" must be present in order to use options; found: " << outfile << std::endl; exit( 1 ); }
-        }
-        else
-        {
-            static const char *valueless_options = "--unbuffered,-u";
-            static const char *options_with_values = "";
-            const std::vector< std::string >& unnamed = options.unnamed( valueless_options, options_with_values );
-            if ( unnamed.size() != 1 )
-            {
-                std::cerr << app_name << ": expected a single filename somewhere before \"--\", but found " << ( unnamed.size() == 0 ? "none" : "more than one:" );
-                for ( size_t n = 0; n < unnamed.size(); ++n ) { std::cerr << ' ' << unnamed[n]; }
-                std::cerr << std::endl;
-                exit( 1 );
-            }
-            outfile = unnamed[0];
-            if ( outfile[0] == '-' ) { std::cerr << app_name << ": unexpected option " << outfile << std::endl; exit( 1 ); }
-            unbuffered = options.exists( "--unbuffered,-u" );
-            if ( unbuffered ) { std::cerr << app_name << ": --unbuffered: not implemented yet" << std::endl; exit( 1 ); }
-        }
-
-        if ( !file_is_writable( outfile ) ) { std::cerr << app_name << ": cannot write to " << outfile << std::endl; exit( 1 ); }
-
+        if( ac < 3 ) { show_usage(); return 1; }
+        unsigned int command_offset = 2;
+        for( int i = 1; i < ac; ++i ) { if( av[i] == std::string( "--" ) ) { command_offset = i + 1; break; } }
+        if( command_offset == ( unsigned int )( ac ) ) { show_usage(); return 1; }
+        comma::command_line_options options( command_offset > 2 ? command_offset - 1 : 2, av, show_help );
+        const std::vector< std::string >& unnamed = options.unnamed( "--unbuffered,-u,--verbose,-v,--dry-run,--dry", "-.*" );
+        if( unnamed.empty() ) { std::cerr << "io-tee: please specify output file name" << std::endl; return 1; }
+        if( unnamed.size() > 1 ) { std::cerr << "io-tee: expected one output filename, got: " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
+        std::string outfile = unnamed[0];
         // bash -c only takes a single argument, so put the whole command in single quotes, then double quote each individual argument
-        std::string command = "bash -c '" + escape_quotes( argv[2] );
-        for ( int n = 3; n < argc; ++n ) { command += " \""; command += escape_quotes( argv[n] ); command += "\""; }
+        std::string command = "bash -c '" + escape_quotes( av[command_offset] );
+        for( int i = command_offset + 1; i < ac; ++i ) { command += " \""; command += escape_quotes( av[i] ); command += "\""; }
         command += " > ";
         command += outfile;
         command += "'";
-        // TODO: remove this debugging once everything is working
-        std::cerr << app_name << ": command: " << command << std::endl;
-
-        FILE *pipe = popen( &command[0], "w" );
-        if ( pipe == NULL ) { std::cerr << app_name << ": failed to open pipe; command: " << command << std::endl; exit( 1 ); }
-        int ch;
-        
-        // TODO: io-tee in comma/io/applications; cmake: build it only for linux (io-cat can be a good hint)
-        // TODO: by default, do buffered reading (64K)
-        // TODO: --unbuffered,-u
-        // TODO: if options present, expect -- before the command
-        // TODO: use std::cin, std::cout by default
-        // TODO: add result of reading from stdin
-        // TODO: add result of reading from stdin
-        
+        bool unbuffered = options.exists( "--unbuffered,-u" );
+        bool verbose = options.exists( "--verbose,-v" );
+        if( !file_is_writable( outfile ) ) { std::cerr << app_name << ": cannot write to " << outfile << std::endl; exit( 1 ); }
+        if( options.exists( "--dry-run,--dry" ) ) { std::cout << command << std::endl; return 0; }
+        if( verbose ) { std::cerr << app_name << ": will run command: " << command << std::endl; }
+        pipe = ::popen( &command[0], "w" );
+        if( pipe == NULL ) { std::cerr << app_name << ": failed to open pipe; command: " << command << std::endl; return 1; }
         boost::array< char, 0xffff > buffer;
-        if( unbuffered )
-        {
-            // TODO: comma::io::select::wait() with timeout (git grep select in comma and/or snark for an example)
-            // TODO: check how many bytes are available (git grep io-cat for an example)
-            // TODO: read minimum of exactly that number of bytes or 64K
-            return 1;
-        }
+        comma::io::select stdin_select;
+        if( unbuffered ) { stdin_select.read().add( 0 ); }
+        comma::io::istream is( "-", comma::io::mode::binary );
         while( std::cin.good() )
         {
-            std::cin.read( &buffer[0], buffer.size() );
+            std::size_t bytes_to_read = buffer.size();
+            if( unbuffered )
+            {
+                if( stdin_select.wait( boost::posix_time::seconds( 1 ) ) == 0 ) { continue; }
+                std::size_t available = is.available();
+                bytes_to_read = std::min( available, buffer.size() );
+            }
+            std::cin.read( &buffer[0], bytes_to_read );
             if( std::cin.gcount() <= 0 ) { break; }
             std::cout.write( &buffer[0], std::size_t( std::cin.gcount() ) );
             //int r = ::fwrite( pipe, &buffer[0], std::size_t( std::cin.gcount() ) );
             int r = ::fwrite( &buffer[0], sizeof( char ), ::size_t( std::cin.gcount() ), pipe );
-            if( r >= 0 ) { continue; } // TODO: check what ::write actually returns
-            std::cerr << app_name << ": error on pipe: error " << r << std::endl; // TODO: output text for the error
+            if( r < 0 ) // TODO: check what ::write actually returns
+            { 
+                std::cerr << app_name << ": error on pipe: error " << r << std::endl; // TODO: output text for the error
+                ::pclose( pipe );
+                return 1;
+            }
+            if( unbuffered )
+            { 
+                std::cout.flush();
+                ::fflush( pipe );
+            }
         }
-        // TODO: output error code and its textual description ::perror( result )
-        if ( pclose( pipe ) != 0 ) { std::cerr << app_name << ": command failed: " << command << std::endl; exit( 1 ); }
-        return 0;
-        
-        while ( ( ch = getc( stdin ) ) != EOF ) { putc( ch, stdout ); putc( ch, pipe ); }
-        if ( pclose( pipe ) != 0 ) { std::cerr << app_name << ": command failed: " << command << std::endl; exit( 1 ); }
+        ::pclose( pipe );
         return 0;
     }
     catch( std::exception& ex ) { std::cerr << app_name << ": " << ex.what() << std::endl; }
     catch( ... ) { std::cerr << app_name << ": unknown exception" << std::endl; }
+    if( pipe ) { ::pclose( pipe ); }
     return 1;
 }
 
