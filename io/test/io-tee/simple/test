@@ -39,6 +39,7 @@ function run_test()
     local -r expected_file="$test_name.expected"
     if [[ -z "$expected" ]]; then > $expected_file; else echo -e "$expected" > $expected_file; fi
     echo "test: $test_name: command is: $@" >&2
+    echo "$test_name/command=\"$( io-tee --dry $options out -- "$@" | sed 's/"/(DQUOTE)/g'"; s/'/(SQUOTE)/g" )\""
     cat $input | io-tee $options $tee_file $dashdash "$@" > $stdout_file
     if [[ $? != 0 ]]; then
         echo "test: io-tee call failed" >&2
@@ -91,4 +92,5 @@ run_test  ""              "function_call_test"     "$input_data"  "two three"   
 run_test  "--unbuffered"  "unbuffered_test"        "$input_data"  "one two\none two three"    grep "one two"
 run_test  "--unbuffered"  "unbuffered_empty_test"  "$input_data"  ""                          cat /dev/null
 run_test  "--unbuffered"  "unbuffered_fn_test"     "$input_data"  "two three"                 example_function "two " "one"
+run_test  ""              "pipeline"               "$input_data"  "two"                       "grep '^t' | grep \"o\$\""
 
