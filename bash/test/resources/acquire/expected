@@ -10,14 +10,14 @@ first/request/resources/memory/shared = 400000
 first/request/processes/queue = "[]"
 first/request/processes/users = "[123]"
 
-second/request/outcome = "wait"
+second/request/outcome = "wait,0"
 second/request/resources/cpus = 4
 second/request/resources/memory/main = 600000
 second/request/resources/memory/shared = 400000
 second/request/processes/queue = "[456]"
 second/request/processes/users = "[123]"
 
-third/request/outcome = "wait"
+third/request/outcome = "wait,1"
 third/request/resources/cpus = 4
 third/request/resources/memory/main = 600000
 third/request/resources/memory/shared = 400000
@@ -30,7 +30,7 @@ first/released/resources/memory/shared = 0
 first/released/processes/queue = "[456,789]"
 first/released/processes/users = "[]"
 
-third/request/repeated/outcome = "wait"
+third/request/repeated/outcome = "wait,1"
 third/request/repeated/resources/cpus = 0
 third/request/repeated/resources/memory/main = 0
 third/request/repeated/resources/memory/shared = 0

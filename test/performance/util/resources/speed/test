@@ -4,6 +4,7 @@ name=$( basename $0 )
 
 source $( which comma-application-util ) || exit 1
 source $( which comma-resources-util ) || exit 1
+source $( which comma-process-util ) || exit 1
 
 function handler()
 {
@@ -42,9 +43,8 @@ resources/memory/shared="1"
 EOF
 cat "$limits" | name-value-convert --from json --to path-value | comma_initialize_resources "$counter"
 
-timeout -k 10 -s TERM 10 bash -c count &
-count_pid=$!
-wait $count_pid
+export output
+comma_execute_and_wait --group --max-wait=10 "bash -c count"
 rv=$?
 
 (( rv == 124 )) && exit 0  # normally killed by timeout

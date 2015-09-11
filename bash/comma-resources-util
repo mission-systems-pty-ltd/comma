@@ -243,12 +243,15 @@ export -f comma_initialize_resources
 # No output is produced.
 #
 # If the ID is already in the waiting list, but not at the first position, do not
-# modify any files, output "wait" to stdout, and return 1.
+# modify any files, output "wait,$position" to stdout (where '$position' is the ID
+# position in the list, counted from 0), and return 1.
 #
 # If the request plus the already allocated resources exceed the limits, or if
 # the waiting list is not empty and our ID is not on the list, append the ID to the
-# list of waiting processes kept in the counter file, output "wait" to stdout and
-# return 1.
+# list of waiting processes kept in the counter file, output "wait,$position" to
+# stdout and return 1. Here '$position' >=0 is the place in the list; position
+# equal to 0 means that the ID is the first in the queue, but available resources
+# are insufficient.
 #
 # If the requested resources alone exceed (or equal to) the limits, overwrite
 # the requested file and set all its values to the maximal allowed.
@@ -318,16 +321,18 @@ function comma_acquire_resources()
                 echo "$next" > "$counter"
                 return 0
             else                                      # otherwise just keep waiting
-                echo "wait"
+                echo "wait,0"
                 return 1
             fi
         else
             if [[ $position == -1 ]] ; then           # but if we are not in the queue, append
                 next=$( cat "$counter" | comma_enqueue_pid "$pid" "$path" )
                 (( $? == 0 )) || { echo "$name: cannot enqueue for waiting" >&2; return 1; }
+                position=$( echo "$next" | comma_check_pid_position "$pid" "$path" )
+                (( $? == 0 )) || { echo "$name: cannot check newly-added pid position" >&2; return 1; }
                 echo "$next" > "$counter"
             fi
-            echo "wait"
+            echo "wait,$position"
             return 1
         fi
     else                                              # if no-one is waiting
@@ -340,7 +345,7 @@ function comma_acquire_resources()
             next=$( cat "$counter" | comma_enqueue_pid "$pid" "$path" )
             (( $? == 0 )) || { echo "$name: cannot enqueue for waiting" >&2; return 1; }
             echo "$next" > "$counter"
-            echo "wait"
+            echo "wait,0"
             return 1
         fi
     fi
