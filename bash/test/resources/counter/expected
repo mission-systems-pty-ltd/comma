@@ -25,11 +25,11 @@ two/small/resources/memory/shared = 200000
 two/small/processes/queue = "[]"
 two/small/processes/users = "[123,234]"
 
-first/large/request/outcome = "wait"
+first/large/request/outcome = "wait,0"
 first/large/request/processes/queue = "[345]"
 first/large/request/processes/users = "[123,234]"
 
-second/large/request/outcome = "wait"
+second/large/request/outcome = "wait,1"
 second/large/request/processes/queue = "[345,456]"
 second/large/request/processes/users = "[123,234]"
 
@@ -39,7 +39,7 @@ large/waiting/resources/memory/shared = 0
 large/waiting/processes/queue = "[345,456]"
 large/waiting/processes/users = "[]"
 
-third/large/request/outcome = "wait"
+third/large/request/outcome = "wait,1"
 third/large/request/processes/queue = "[345,456]"
 third/large/request/processes/users = "[]"
 

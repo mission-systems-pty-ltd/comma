@@ -715,7 +715,7 @@ function run_single_test()
                     }
                     break
                 else
-                    if [[ "$outcome" == "wait" ]] ; then
+                    if [[ "$outcome" == wait* ]] ; then
                         report_waiting "waiting for resources"
                         [[ "$max_wait_time" != "forever" ]] && {
                             if gawk '{ a=$1 > $2; exit !a }' < <( echo $wait_time $max_wait_time ) ; then

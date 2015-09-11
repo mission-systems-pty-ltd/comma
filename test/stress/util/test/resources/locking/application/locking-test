@@ -86,7 +86,7 @@ function worker()
                 }
                 break
             else
-                if [[ "$outcome" == "wait" ]] ; then
+                if [[ "$outcome" == wait* ]] ; then
                     sleep "$waittime"
                     waittotal=$( echo "$waittotal + $waittime" | bc -l )
                 else
