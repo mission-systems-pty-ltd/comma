@@ -15,19 +15,17 @@ static const char *app_name = "io-tee";
 
 static void show_usage()
 {
-    std::cerr << "Usage: " << app_name << " <output file> [-u|--unbuffered --] <command ...>\n";
+    std::cerr << "Usage: " << app_name << " <output file> [options ... --] <command ...>\n";
 }
 
-static void show_help( bool verbose )
+static void show_help( bool verbose = false )
 {
     show_usage();
     std::cerr
         << std::endl
         << "Similar to \"tee >( command ... > file )\" in bash, but ensures that the command is complete before continuing." << std::endl
         << std::endl
-        << std::cerr << "usage: cat something | io-tee <output filename> [<options>] <command>" << std::endl
-        << std::endl
-        << "options" << std::endl
+        << "Options:" << std::endl
         << "    --dry-run,--dry: print command that will be piped and exit, debug option" << std::endl
         << "    --unbuffered,-u: unbuffered input and output" << std::endl
         << "    --verbose,-v: more output" << std::endl
@@ -37,6 +35,9 @@ static void show_help( bool verbose )
         << "Remember that " << app_name << " will not have access to the unexported variables, so pass any required values as function arguments." << std::endl
         << std::endl
         << "If any options are used (such as --unbuffered), \"--\" must precede the command." << std::endl
+        << std::endl
+        << "A note about using \"grep\": be aware grep returns 1 if the pattern is not found, which will make " << app_name << " think the command failed." << std::endl
+        << "To avoid this, call grep inside a function like this: grep (pattern) || true." << std::endl
         << std::endl
         << "Example 1:" << std::endl
         << "    ( echo one two ; echo three ) | io-tee outfile grep \"one two\" | grep \"three\" > outfile2" << std::endl
@@ -80,7 +81,12 @@ int main( int ac, char **av )
     FILE *pipe = NULL;
     try
     {
-        if( ac < 3 ) { show_usage(); return 1; }
+        if( ac < 3 )
+        {
+            comma::command_line_options options( ac, av );
+            if( options.exists( "--help,-h" ) ) { show_help(); return 0; }
+            else { show_usage(); return 1; }
+        }
         unsigned int command_offset = 2;
         for( int i = 1; i < ac; ++i ) { if( av[i] == std::string( "--" ) ) { command_offset = i + 1; break; } }
         if( command_offset == ( unsigned int )( ac ) ) { show_usage(); return 1; }
