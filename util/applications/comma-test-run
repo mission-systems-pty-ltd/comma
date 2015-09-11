@@ -724,7 +724,10 @@ function run_single_test()
                                 break
                             fi
                         }
-                        random_sleep 2 # make a configuration parameter
+                        local position=$( echo "$outcome" | cut -d, -f2 )
+                        position=${position:-"0"}
+                        local positional_delay=1  # make a configuration parameter
+                        random_sleep $( echo "1 + $positional_delay * $position" | bc )
                         continue
                     else
                         error_ "$name: test $counter: $dir: failed on acquire_resources, outcome '$outcome', request '$( cat $request )'"
