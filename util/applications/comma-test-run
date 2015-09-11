@@ -606,7 +606,7 @@ export -f terminate_run_single_test
 function random_sleep()
 {
     local max_nap=$1
-    local sleep_time=$( echo $RANDOM | gawk -v max_nap=$max_nap '{ print $1 * $max_nap / 32768 }' )
+    local sleep_time=$( echo $RANDOM | gawk -v max_nap=$max_nap '{ print $1 * max_nap / 32768 }' )
     wait_time=$( echo $wait_time $sleep_time | gawk '{ print $1 + $2 }' )
     sleep ${sleep_time}s & comma_test_run_test_pid=$!
     wait $comma_test_run_test_pid
