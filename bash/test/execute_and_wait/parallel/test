@@ -60,6 +60,8 @@ test01 ; echo "test[1]/exit/status=$?"
 # in test02 all terminate normally (self-check), in test03 killed by a signal
 function test02_handler()
 {
+    trap '' SIGINT SIGTERM SIGHUP SIGPIPE SIGUSR1
+    sleep 2
     echo "killed by $1"
     exit 1
 }
