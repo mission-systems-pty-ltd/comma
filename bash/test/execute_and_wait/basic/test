@@ -9,7 +9,6 @@ function grab()
 export -f grab
 
 export output_dir="output"
-rm -rf "$output_dir" || exit 1
 mkdir -p "$output_dir" || exit 1
 
 # run a verbose utility to completion; check that all went smoothly

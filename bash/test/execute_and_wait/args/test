@@ -3,7 +3,6 @@
 source $( which comma-process-util ) || exit 1
 
 export output_dir="output"
-rm -rf "$output_dir" || exit 1
 mkdir -p "$output_dir" || exit 1
 
 # check that can run a bash function to completion and pass arguments through

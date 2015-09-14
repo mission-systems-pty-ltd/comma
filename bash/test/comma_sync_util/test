@@ -3,7 +3,6 @@
 source $( type -p comma-sync-util ) || exit 1
 
 output_dir="output"
-rm -rf "$output_dir" || exit 1
 mkdir -p "$output_dir" || exit 1
 
 lockfile=$( mktemp --tmpdir=$output_dir test_comma_sync_util.lock.XXXX )
