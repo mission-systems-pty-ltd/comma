@@ -425,6 +425,7 @@ int main( int ac, char** av )
             std::string s = options.value< std::string >( "--empty" ) + std::string( f.count(), ',' );
             std::istringstream iss( s );
             comma::csv::options c;
+            c.full_xpath = true;
             c.fields = csv.fields;
             comma::csv::input_stream< input_t > isstream( iss, c, default_input );
             empty = ( isstream.read() )->value;
@@ -436,6 +437,7 @@ int main( int ac, char** av )
             std::string s = options.value< std::string >( "--remove,--reset,--unset,--erase" ) + std::string( f.count(), ',' );
             std::istringstream iss( s );
             comma::csv::options c;
+            c.full_xpath = true;
             c.fields = csv.fields;
             comma::csv::input_stream< input_t > isstream( iss, c, default_input );
             erase = ( isstream.read() )->value;

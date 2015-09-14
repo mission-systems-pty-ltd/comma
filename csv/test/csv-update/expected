@@ -79,9 +79,9 @@ erase/test[1]/output/line[2]="0,2,b,20140101T000000,3"
 erase/test[1]/output/line[3]="0,,x,,4"
 erase/test[1]/output/size=4
 
-#erase/test[2]/output/line[0]="a,id"
-#erase/test[2]/output/line[1]=",id"
-#erase/test[2]/output/size=2
+erase/test[2]/output/line[0]="a,id"
+erase/test[2]/output/line[1]=",id"
+erase/test[2]/output/size=2
 
 empty/test[0]/output/line[0]="0,1,a,20140101T000000,1"
 empty/test[0]/output/line[1]="0,1,a,20140101T000000,2"
@@ -92,9 +92,9 @@ empty/test[1]/output/line[1]="0,-1,a,19000101T000000,2"
 empty/test[1]/output/line[2]="0,-1,a,19000101T000000,3"
 empty/test[1]/output/size=3
 
-#empty/test[2]/output/line[0]="a,id"
-#empty/test[2]/output/line[1]="a,id"
-#empty/test[2]/output/size=2
+empty/test[2]/output/line[0]="a,id"
+empty/test[2]/output/line[1]="a,id"
+empty/test[2]/output/size=2
 
 fields/test[0]/output/line[0]="0,0,a"
 fields/test[0]/output/line[1]="0,0,"
