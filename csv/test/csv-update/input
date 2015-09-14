@@ -102,6 +102,10 @@ erase/test[1]/input[2]="0,2,b,20140101T000000,3"
 erase/test[1]/input[3]="0,-1,x,19000101T000000,4"
 erase/test[1]/command="csv-update --fields=id -u --erase=,-1,,19000101T000000"
 
+erase/test[2]/input[0]="a,id"
+erase/test[2]/input[1]="b,id"
+erase/test[2]/command="csv-update --fields=,id -u --erase=b,"
+
 empty/test[0]/input[0]="0,1,a,20140101T000000,1"
 empty/test[0]/input[1]="0,-1,,19000101T000000,2"
 empty/test[0]/command="csv-update --fields=id -u --empty=,-1,,19000101T000000"
@@ -110,6 +114,10 @@ empty/test[1]/input[0]="0,1,a,20140101T000000,1"
 empty/test[1]/input[1]="0,-1,,19000101T000000,2"
 empty/test[1]/input[1]="0,,,,3"
 empty/test[1]/command="csv-update --fields=id -u --empty=,,,"
+
+empty/test[2]/input[0]="a,id"
+empty/test[2]/input[1]="b,id"
+empty/test[2]/command="csv-update --fields=,id -u --empty=b,"
 
 fields/test[0]/input[0]="0,0,a"
 fields/test[0]/input[1]="0,,"
