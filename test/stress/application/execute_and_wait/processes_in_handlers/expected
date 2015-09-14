@@ -1,0 +1,2 @@
+len( test/size ) == 1
+test/size[1] == reference/size

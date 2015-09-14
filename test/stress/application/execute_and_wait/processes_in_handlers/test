@@ -1,0 +1,47 @@
+#!/bin/bash
+
+function handler()
+{
+    trap '' INT TERM HUP
+    local n=$1
+    comma-nap 2 > "output/logs/$n"
+}
+export -f handler
+
+function missile()
+{
+    local n=$1
+    trap "handler $n" INT TERM HUP
+    sleep $time_sleep
+}
+export -f missile
+
+function launcher()
+{
+    for n in $( seq $repetitions ) ; do
+        missile $n &
+    done
+    wait
+}
+export -f launcher
+
+size=$( comma-nap 0 | wc -c )
+echo "reference/size=$size"
+
+source $( which comma-process-util ) || exit 1
+source $( which comma-application-util ) || exit 1
+
+mkdir -p output/logs || exit 1
+
+# defaults
+repetitions=500
+time_sleep=10
+time_kill=5
+[[ ! -t 0 ]] && comma_path_value_to_var
+export repetitions time_sleep time_kill
+
+comma_execute_and_wait --max-wait=$time_kill "bash -c launcher" >output/comma_execute_and_wait.log 2>&1
+
+ps -o pid,pgid,ppid,comm >output/ps.log
+
+ls -l output/logs/[0-9]* | cut -d' ' -f 5 | sed '/^$/d' | sort -u | cat -n | sed 's@^ *@test/size[@;s@\t@]=@'
