@@ -711,7 +711,7 @@ function run_single_test()
                     } || {
                         result=1
                         error_ "$name: $dir: failed$( (( $test_failed == 124 )) && echo ' (likely timed out)' )"
-                        [[ -n "options_junit" ]] && echo "likely timed out" > "output/junit.failure.log"
+                        [[ -n "options_junit" && $test_failed == 124 ]] && echo "likely timed out" > "output/junit.failure.log"
                     }
                     break
                 else
