@@ -1,2 +1,2 @@
---fields=a --string
+--fields=a 
 s[10]

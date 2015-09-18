@@ -2,5 +2,5 @@
 
 { read options; read format; } < options
 
-cat input | csv-sort $options | gawk '{ printf( "ascii[%d]=%s\n", NR, $0 ); }'
+cat input | csv-sort $options --format $format | gawk '{ printf( "ascii[%d]=%s\n", NR, $0 ); }'
 cat input | csv-to-bin $format | csv-sort $options --binary $format | csv-from-bin $format | gawk '{ printf( "binary[%d]=%s\n", NR, $0 ); }'
