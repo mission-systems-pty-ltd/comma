@@ -79,7 +79,7 @@ END
 
 function parse_input
 {
-    sed $option_unbuffered -r -n 's@^'"$option_prefix"'\[([0-9]+)\]/([^=]+)=([^ \t#]*)[ \t]*(#.*)?$@\1 \2 \3@p; $a\' \
+    sed $option_unbuffered -r -n 's@^'"$option_prefix"'\[([0-9]+)\]/([^=]+)=([^#]*)[[:space:]]*(#.*)?$@\1 \2 \3@p; $a\' \
         | if [[ -n "$option_unbuffered" ]]; then cat; else sort -k 1,1 -n; fi
 }
 

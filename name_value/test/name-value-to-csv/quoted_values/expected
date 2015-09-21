@@ -1,3 +1,8 @@
 line[0]="a,\"one\""
 line[1]="b,\"two\""
+line[2]="c,'three'"
+line[3]="d,\"a d\""
+line[4]="e,\" a e \""
+line[5]="f,'a f'"
+line[6]="g,' a g '"
 status=0
