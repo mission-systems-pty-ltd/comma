@@ -1,0 +1,12 @@
+ascii[1]=0
+ascii[2]=1
+ascii[3]=127
+ascii[4]=128
+ascii[5]=200
+ascii[6]=255
+binary[1]=0
+binary[2]=1
+binary[3]=127
+binary[4]=128
+binary[5]=200
+binary[6]=255

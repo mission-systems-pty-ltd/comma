@@ -1,0 +1,2 @@
+--fields a,b,c --order b,a,c
+t,s[1],i

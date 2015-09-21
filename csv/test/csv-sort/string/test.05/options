@@ -1,2 +1,2 @@
---fields=a --string --reverse
+--fields=a  --reverse
 s[20]

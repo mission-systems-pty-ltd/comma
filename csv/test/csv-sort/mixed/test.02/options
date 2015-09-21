@@ -1,2 +1,2 @@
 --fields=a,b --order=b,a
-d,d
+s[10],i

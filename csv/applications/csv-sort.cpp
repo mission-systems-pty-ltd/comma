@@ -47,6 +47,7 @@
 #include <comma/name_value/parser.h>
 #include <comma/string/string.h>
 #include <comma/visiting/traits.h>
+#include <comma/csv/impl/unstructured.h>
 
 static void usage( bool more )
 {
@@ -86,40 +87,88 @@ static void usage( bool more )
 static bool verbose;
 static comma::csv::options stdin_csv;
 
-template < typename K >
-struct input
+struct ordering_t
 {
-    std::vector< K > keys;
+    enum types {
+        str_type,
+        long_type,
+        double_type,
+        time_type
+    };
+    
+    types type;
+    int   index;
+};
 
-    bool operator==( const input& rhs ) const
+std::vector< ordering_t > ordering;
+
+struct input_t
+{
+    comma::csv::impl::unstructured keys;
+
+    bool operator==( const input_t& rhs ) const
     {
-        for( std::size_t i = 0; i < keys.size(); ++i ) { if( keys[i] != rhs.keys[i] ) { return false; } }
+        for( std::size_t i = 0; i < ordering.size(); ++i )
+        { 
+            switch (ordering[i].type)
+            {
+                case ordering_t::str_type:
+                    if (keys.strings[ordering[i].index] != rhs.keys.strings[ ordering[i].index ]) { return false; }
+                    break;
+                case ordering_t::long_type:
+                    if (keys.longs[ordering[i].index] != rhs.keys.longs[ ordering[i].index ]) { return false; }
+                    break;
+                case ordering_t::double_type:
+                    if (keys.doubles[ordering[i].index] != rhs.keys.doubles[ ordering[i].index ]) { return false; }
+                    break;
+                case ordering_t::time_type:
+                    if (keys.time[ordering[i].index] != rhs.keys.time[ ordering[i].index ]) { return false; }
+                    break;
+            }
+        }
         return true;
     }
 
-    bool operator<( const input& rhs ) const
+    bool operator<( const input_t& rhs ) const
     {
-        for( std::size_t i = 0; i < keys.size(); ++i ) 
+        for( std::size_t i = 0; i < ordering.size(); ++i ) 
         { 
-            if( keys[i] < rhs.keys[i] ) { return true; } 
-            if( rhs.keys[i] < keys[i] ) { return false; } 
+            switch (ordering[i].type)
+            {
+                case ordering_t::str_type:
+                    if (keys.strings[ordering[i].index] < rhs.keys.strings[ ordering[i].index ]) { return true; }
+                    if (keys.strings[ordering[i].index] > rhs.keys.strings[ ordering[i].index ]) { return false; }
+                    break;
+                case ordering_t::long_type:
+                    if (keys.longs[ordering[i].index] < rhs.keys.longs[ ordering[i].index ]) { return true; }
+                    if (keys.longs[ordering[i].index] > rhs.keys.longs[ ordering[i].index ]) { return false; }
+                    break;
+                case ordering_t::double_type:
+                    if (keys.doubles[ordering[i].index] < rhs.keys.doubles[ ordering[i].index ]) { return true; }
+                    if (keys.doubles[ordering[i].index] > rhs.keys.doubles[ ordering[i].index ]) { return false; }
+                    break;
+                case ordering_t::time_type:
+                    if (keys.time[ordering[i].index] < rhs.keys.time[ ordering[i].index ]) { return true; }
+                    if (keys.time[ordering[i].index] > rhs.keys.time[ ordering[i].index ]) { return false; }
+                    break;
+            }
         }
         return false;
     }
     
-    typedef std::map< input, std::vector< std::string > > map;
+    typedef std::map< input_t, std::vector< std::string > > map;
     
 };
 
 namespace comma { namespace visiting {
 
-template < typename T > struct traits< input< T > >
+template <> struct traits< input_t >
 {
-    template < typename K, typename V > static void visit( const K&, const input< T >& p, V& v )
+    template < typename K, typename V > static void visit( const K&, const input_t& p, V& v )
     {
         v.apply( "keys", p.keys );
     }
-    template < typename K, typename V > static void visit( const K&, input< T >& p, V& v )
+    template < typename K, typename V > static void visit( const K&, input_t& p, V& v )
     {
         v.apply( "keys", p.keys );
     }
@@ -140,14 +189,26 @@ template < typename It > static void output_( It it, It end )
 }
 
 
-template < typename K > static int sort( const comma::command_line_options& options )
+int sort( const comma::command_line_options& options )
 {
-    typename input< K >::map sorted_map;
-    input< K > default_input;
+    typename input_t::map sorted_map;
+    input_t default_input;
     std::vector< std::string > v = comma::split( stdin_csv.fields, ',' );
     std::vector< std::string > order = options.exists("--order") ? comma::split( options.value< std::string >( "--order" ), ',' ) : v;
     std::vector< std::string > w (v.size());
     bool unique = options.exists("--unique,-u");
+    
+    std::string first_line;
+    comma::csv::format f;
+    if( stdin_csv.binary() ) { f = stdin_csv.format(); }
+    else if( options.exists( "--format" ) ) { f = comma::csv::format( options.value< std::string >( "--format" ) ); }
+    else
+    {
+        while( std::cin.good() && first_line.empty() ) { std::getline( std::cin, first_line ); }
+        if( first_line.empty() ) { return 0; }
+        f = comma::csv::impl::unstructured::guess_format( first_line, stdin_csv.delimiter );
+        if( verbose ) { std::cerr << "csv-sort: guessed format: " << f.string() << std::endl; }
+    }
     for( std::size_t i = 0; i < order.size(); ++i ) // quick and dirty, wasteful, but who cares
     {
         if (order[i].empty()) continue;
@@ -162,23 +223,41 @@ template < typename K > static int sort( const comma::command_line_options& opti
                 }
                 continue; 
             }
-            w[k] = "keys[" + boost::lexical_cast< std::string >( default_input.keys.size() ) + "]";
-            default_input.keys.resize( default_input.keys.size() + 1 ); // quick and dirty
+            std::string type = default_input.keys.append( f.offset( k ).type );
+            w[k] = "keys/" + type;
+            
+            ordering_t o;
+            if ( type[0] == 's' ) { o.type = ordering_t::str_type; o.index = default_input.keys.strings.size() - 1; }
+            else if ( type[0] == 'l' ) { o.type = ordering_t::long_type; o.index = default_input.keys.longs.size() - 1; }
+            else if ( type[0] == 'd' ) { o.type = ordering_t::double_type; o.index = default_input.keys.doubles.size() - 1; }
+            else if ( type[0] == 't' ) { o.type = ordering_t::time_type; o.index = default_input.keys.time.size() - 1; }
+            else { std::cerr << "csv-sort: cannot sort on field " << v[k] << " of type \"" << type << "\"" << std::endl; return 1; }
+            
+            ordering.push_back(o);
+            
             break;
         }
     }
     stdin_csv.fields = comma::join( w, ',' );
-    comma::csv::input_stream< input< K > > stdin_stream( std::cin, stdin_csv, default_input );
+    if ( verbose ) { std::cerr << "csv-sort: fields: " << stdin_csv.fields << std::endl; }
+    comma::csv::input_stream< input_t > stdin_stream( std::cin, stdin_csv, default_input );
     #ifdef WIN32
     if( stdin_stream.is_binary() ) { _setmode( _fileno( stdout ), _O_BINARY ); }
     #endif
+    
+    if (!first_line.empty()) 
+    { 
+        typename input_t::map::mapped_type& d = sorted_map[ comma::csv::ascii< input_t >(stdin_csv,default_input).get(first_line) ];
+        d.push_back( first_line + "\n" );
+    }
+    
     while( stdin_stream.ready() || ( std::cin.good() && !std::cin.eof() ) )
     {
-        const input< K >* p = stdin_stream.read();
+        const input_t* p = stdin_stream.read();
         if( !p ) { break; }
         if( stdin_stream.is_binary() )
         {
-            typename input< K >::map::mapped_type& d = sorted_map[ *p ];
+            typename input_t::map::mapped_type& d = sorted_map[ *p ];
             if (unique && !d.empty()) continue;
             d.push_back( std::string() );
             d.back().resize( stdin_csv.format().size() );
@@ -186,7 +265,7 @@ template < typename K > static int sort( const comma::command_line_options& opti
         }
         else
         {
-            typename input< K >::map::mapped_type& d = sorted_map[ *p ];
+            typename input_t::map::mapped_type& d = sorted_map[ *p ];
             if (unique && !d.empty()) continue;
             d.push_back( comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) + "\n" );
         }
@@ -200,18 +279,16 @@ template < typename K > static int sort( const comma::command_line_options& opti
 
 int main( int ac, char** av )
 {
+    comma::command_line_options options( ac, av, usage );
     try
     {
-        comma::command_line_options options( ac, av, usage );
         verbose = options.exists( "--verbose,-v" );
         stdin_csv = comma::csv::options( options );
-        return   options.exists( "--string,-s" )
-               ? sort< std::string >( options )
-               : sort< double >( options );
+        return sort( options );
     }
     catch( std::exception& ex )
     {
-        std::cerr << "csv-sort: " << ex.what() << std::endl;
+        std::cerr << "csv-sort: " << ex.what() << std::endl << comma::join(options.argv(), ' ') << std::endl;
     }
     catch( ... )
     {
