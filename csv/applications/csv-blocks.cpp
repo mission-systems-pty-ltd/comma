@@ -41,6 +41,7 @@
 #include <comma/csv/impl/unstructured.h>
 #include <comma/string/string.h>
 #include <comma/visiting/traits.h>
+#include <sysexits.h>
 
 static const char* name() { return "csv-blocks: "; }
 
@@ -267,7 +268,7 @@ static comma::uint32 read_and_write_binary_record()
     {
         bytes_read +=  ::fread( &memory.buffer[bytes_read], 1, memory.size - bytes_read, stdin );
     }
-    if ( bytes_read == 0 ) { exit( 0 ); } 
+    if ( bytes_read == 0 ) { exit( EX_NOINPUT ); } 
     if ( bytes_read < memory.size ) { std::cerr << "csv-blocks: expected " << memory.size << " bytes; got only: " << bytes_read << std::endl; exit( 1 ); } 
     
     // fill 'record' param
@@ -292,7 +293,7 @@ static comma::uint32 read_and_write_ascii_record()
         {
             // getline may actually changes the buffer with realloc and extend the size
             ssize_t bytes_read = ::getline( &memory.buffer, &memory.size, stdin );
-            if ( bytes_read <= 0 ) { exit( 0 ); }  // We are done
+            if ( bytes_read <= 0 ) { exit( EX_NOINPUT ); }  // We are done
 #ifndef WIN32
             has_end_of_line = ( memory.buffer[bytes_read-1] == '\n' );
             sstream.write( memory.buffer, has_end_of_line ? bytes_read-1 : bytes_read );
