@@ -1,3 +1,9 @@
+no_id/each/test[0]/input[0]=",,"
+no_id/each/test[0]/input[1]="1,,"
+no_id/each/test[0]/input[2]=",2,"
+no_id/each/test[0]/input[3]=",,3"
+no_id/each/test[0]/command="csv-update -u"
+
 single_input/each/test[0]/input[0]="0,,,"
 single_input/each/test[0]/input[1]="0,1,,"
 single_input/each/test[0]/input[2]="0,,2,"

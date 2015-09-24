@@ -1,3 +1,9 @@
+no_id/each/test[0]/output/line[0]=",,"
+no_id/each/test[0]/output/line[1]="1,,"
+no_id/each/test[0]/output/line[2]="1,2,"
+no_id/each/test[0]/output/line[3]="1,2,3"
+no_id/each/test[0]/output/size=4
+
 single_input/each/test[0]/output/line[0]="0,,,"
 single_input/each/test[0]/output/line[1]="0,1,,"
 single_input/each/test[0]/output/line[2]="0,1,2,"

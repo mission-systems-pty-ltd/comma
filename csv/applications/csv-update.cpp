@@ -410,7 +410,7 @@ int main( int ac, char** av )
                 v[i] = "value/" + default_input.value.append( csv.binary() ? f.offset( i ).type : comma::csv::format::fixed_string ); // quick and dirty
             }
         }
-        if( default_input.key.empty() ) { std::cerr << "csv-update: please specify at least one id field" << std::endl; return 1; }
+        //if( default_input.key.empty() ) { std::cerr << "csv-update: please specify at least one id field" << std::endl; return 1; }
         csv.fields = comma::join( v, ',' );
         if( verbose ) { std::cerr << "csv-update: csv fields: " << csv.fields << std::endl; }
         comma::csv::input_stream< input_t > istream( std::cin, csv, default_input );
