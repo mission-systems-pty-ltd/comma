@@ -55,7 +55,7 @@ void usage()
     std::cerr << std::endl;
     std::cerr << "usage: cat a.csv | csv-select <options> [<key properties>]" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "options" << std::endl;
+    std::cerr << "operation options" << std::endl;
     std::cerr << "    --equals=<value>: equals to <value>" << std::endl;
     std::cerr << "    --not-equal=<value>: not equal to <value>" << std::endl;
     std::cerr << "    --greater=<value>: greater than <value>" << std::endl;
@@ -65,8 +65,10 @@ void usage()
     std::cerr << "    --regex=<regex>: posix regular expression, string fields only" << std::endl;
     std::cerr << std::endl;
     std::cerr << "      todo: implement a simple boolean expression grammar" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "    --sorted: a hint that the key column is sorted in ascending order" << std::endl;
+    std::cerr << "input/output control options" << std::endl;
+    std::cerr << "    --not-matching: output only not matching records" << std::endl;
+    std::cerr << "    --output-all,--all: output all records, append 1 to matching, 0 to not matching; if binary, format of the additional field is 'b'" << std::endl;
+    std::cerr << "    --sorted,--input-sorted: a hint that the key column is sorted in ascending order" << std::endl;
     std::cerr << "              todo: support descending order" << std::endl;
     std::cerr << "    --strict: if constraint field is not present among fields, exit with error (added for backward compatibility)" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
@@ -127,7 +129,7 @@ struct constraints
         greater = get_optional_< T >( options, "--greater" );
         const boost::optional< std::string >& s = get_optional_< std::string >( options, "--regex" );
         if( s ) { regex = boost::regex( *s ); }
-        sorted = options.exists( "--sorted" );
+        sorted = options.exists( "--sorted,--input-sorted" );
     }
 
     constraints( const std::string& options )
@@ -374,10 +376,12 @@ int main( int ac, char** av )
         csv = comma::csv::options( options );
         fields = comma::split( csv.fields, ',' );
         if( fields.size() == 1 && fields[0].empty() ) { fields.clear(); }
-        std::vector< std::string > unnamed = options.unnamed( "--first-matching,--or,--sorted,--strict,--verbose,-v", "-.*" );
+        std::vector< std::string > unnamed = options.unnamed( "--first-matching,--or,--sorted,--input-sorted,--not-matching,--output-all,--all,--strict,--verbose,-v", "-.*" );
         //for( unsigned int i = 0; i < unnamed.size(); constraints_map.insert( std::make_pair( comma::split( unnamed[i], ';' )[0], unnamed[i] ) ), ++i );
         bool strict = options.exists( "--strict" );
         bool first_matching = options.exists( "--first-matching" );
+        bool not_matching = options.exists( "--not-matching" );
+        bool all = options.exists( "--output-all,--all" );
         for( unsigned int i = 0; i < unnamed.size(); ++i )
         {
             std::string field = comma::split( unnamed[i], ';' )[0];
@@ -402,12 +406,14 @@ int main( int ac, char** av )
             while( !is_shutdown && ( istream.ready() || ( std::cin.good() && !std::cin.eof() ) ) )
             {
                 const input_t* p = istream.read();
-                if( !p || p->done(is_or) ) { break; }
-                if( p->is_a_match(is_or) )
+                if( !p || p->done( is_or ) ) { break; }
+                char match = ( p->is_a_match( is_or ) == !not_matching ) ? 1 : 0;
+                if( match || all )
                 {
                     std::cout.write( istream.last(), csv.format().size() );
-                    std::cout.flush();
-                    if ( first_matching ) { break; }
+                    if( all ) { std::cout.write( &match, 1 ); }
+                    if( csv.flush ) { std::cout.flush(); }
+                    if( first_matching ) { break; }
                 }
             }
         }
@@ -431,27 +437,31 @@ int main( int ac, char** av )
             comma::csv::ascii_input_stream< input_t > isstream( iss, csv, input );
             const input_t* p = isstream.read();
             if( !p || p->done( is_or ) ) { return 0; }
-            if( p->is_a_match( is_or ) ) { std::cout << line << std::endl; if ( first_matching ) return 0; }
+            bool match = p->is_a_match( is_or ) == !not_matching;
+            if( match || all )
+            {
+                std::cout << line;
+                if( all ) { std::cout << csv.delimiter << match; }
+                std::cout << std::endl;
+                if( first_matching ) { return 0; }
+            }
             while( !is_shutdown && ( istream.ready() || ( std::cin.good() && !std::cin.eof() ) ) )
             {
                 const input_t* p = istream.read();
                 if( !p || p->done( is_or ) ) { break; }
-                if( p->is_a_match( is_or ) )
+                bool match = p->is_a_match( is_or ) == !not_matching;
+                if( match || all )
                 {
-                    std::cout << comma::join( istream.last(), csv.delimiter ) << std::endl;
-                    if ( first_matching ) return 0;
+                    std::cout << comma::join( istream.last(), csv.delimiter );
+                    if( all ) { std::cout << csv.delimiter << match; }
+                    std::cout << std::endl;
+                    if( first_matching ) { return 0; }
                 }
             }
         }
         return 0;
     }
-    catch( std::exception& ex )
-    {
-        std::cerr << "csv-select: caught: " << ex.what() << std::endl;
-    }
-    catch( ... )
-    {
-        std::cerr << "csv-select: unknown exception" << std::endl;
-    }
+    catch( std::exception& ex ) { std::cerr << "csv-select: caught: " << ex.what() << std::endl; }
+    catch( ... ) { std::cerr << "csv-select: unknown exception" << std::endl; }
     return 1;
 }
