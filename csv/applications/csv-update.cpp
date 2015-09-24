@@ -105,6 +105,7 @@ static void usage( bool more )
     std::cerr << "    --remove,--reset,--unset,--erase=<field values>; what field value indicates that previous value should be replaced with empty value" << std::endl;
     std::cerr << "        e.g: --remove=,,remove,,0: for the 3rd field, \"empty\" indicates it has empty value, for the 5th: 0" << std::endl;
     std::cerr << "        the type of reset values has to be correct: number for numeric fields, time for time fields, etc" << std::endl;
+    std::cerr << "    --update-line,--line=[<line>]; a one-line update (see examples); a convenience option" << std::endl;
     std::cerr << "    --update-non-empty-fields,--update-non-empty,-u:" << std::endl;
     std::cerr << "        if update has empty fields, use the field value from stdin (for binary, empty fields must be defined with --empty)" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
@@ -125,6 +126,12 @@ static void usage( bool more )
         std::cerr << "        update only non-empty fields in update.csv" << std::endl;
         std::cerr << "        e.g. if an entry in update.csv is: 0,,1 only the 1st and 3rd fields will be updated" << std::endl;
         std::cerr << "            cat entries.csv | csv-update updates.csv --fields=id --update-non-empty-fields" << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "    using update line; same semantics as for using update file" << std::endl;
+        std::cerr << "        update 1st, 2nd, and 5th fields in all records from entries.csv" << std::endl;
+        std::cerr << "            cat entries.csv | csv-update -u --line=1,2,,,3" << std::endl;
+        std::cerr << "        update 2nd, and 5th fields in records with 1st column equals 111 from entries.csv" << std::endl;
+        std::cerr << "            cat entries.csv | csv-update -u --line=111,2,,,3 --fields=id" << std::endl;
         std::cerr << std::endl;
         std::cerr << "    without update file" << std::endl;
         std::cerr << "        single key" << std::endl;
@@ -201,6 +208,8 @@ template <> struct traits< input_t >
 static bool verbose;
 static comma::csv::options csv;
 static boost::scoped_ptr< comma::io::istream > filter_transport;
+static std::string filter_line;
+static bool has_filter;
 static comma::signal_flag is_shutdown;
 static comma::uint32 block = 0;
 static bool last_block = false;
@@ -243,12 +252,23 @@ static void output_and_clear( map_t::type& map, bool do_output, comma::csv::outp
     map.clear();
 }
 
+static input_t::input_stream_t* make_filter_stream()
+{
+    if( filter_transport ) { return new input_t::input_stream_t( **filter_transport, csv, default_input ); }
+    if( filter_line.empty() ) { return NULL; }
+    comma::csv::options c;
+    c.full_xpath = true;
+    c.fields = csv.fields;
+    static std::istringstream iss( filter_line );
+    return new input_t::input_stream_t( iss, c, default_input );
+}
+
 static void read_filter_block()
 {
-    if( !filter_transport ) { return; }
+    if( !has_filter ) { return; }
     output_and_clear( unmatched, !matched_only );
-    static input_t::input_stream_t filter_stream( **filter_transport, csv, default_input );
-    static const input_t* last = filter_stream.read();
+    static boost::scoped_ptr< input_t::input_stream_t > filter_stream( make_filter_stream() );
+    static const input_t* last = filter_stream->read();
     if( !last ) { return; }
     block = last->block;
     filter_map.clear();
@@ -256,13 +276,12 @@ static void read_filter_block()
     while( last->block == block && !is_shutdown )
     {
         std::string s;
-        if( csv.binary() ) { s.resize( csv.format().size() ); ::memcpy( &s[0], filter_stream.binary().last(), csv.format().size() ); }
-        else { s = comma::join( filter_stream.ascii().last(), csv.delimiter ) + '\n'; }
+        if( csv.binary() ) { s.resize( csv.format().size() ); ::memcpy( &s[0], filter_stream->binary().last(), csv.format().size() ); }
+        else { s = comma::join( filter_stream->ascii().last(), csv.delimiter ) + '\n'; }
         filter_map[ last->key ].push_back( map_t::value_type( count++, *last, s ) );
         //if( d.size() > 1 ) {}
         if( verbose ) { if( count % 10000 == 0 ) { std::cerr << "csv-update: reading block " << block << "; loaded " << count << " point[s]; hash map size: " << filter_map.size() << std::endl; } }
-        //if( ( *filter_transport )->good() && !( *filter_transport )->eof() ) { break; }
-        last = filter_stream.read();
+        last = filter_stream->read();
         if( !last ) { break; }
     }
     unmatched = filter_map;
@@ -313,7 +332,7 @@ static void update( const input_t& v, const comma::csv::input_stream< input_t >&
         }
         e.push_back( map_t::value_type( index++, current, s ) );
     }
-    else if( filter_transport )
+    else if( has_filter )
     {
         map_t::type::const_iterator it = filter_map.find( v.key );
         if( it == filter_map.end() || it->second.empty() )
@@ -382,6 +401,8 @@ int main( int ac, char** av )
         std::vector< std::string > unnamed = options.unnamed( "--last-block,--last-only,--last,--matched-only,--matched,-m,--string,-s,--update-non-empty-fields,--update-non-empty,-u,--verbose,-v", "-.*" );
         if( unnamed.size() > 1 ) { std::cerr << "csv-update: expected one file or stream to join, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         if( !unnamed.empty() ) { filter_transport.reset( new comma::io::istream( unnamed[0], options.exists( "--binary,-b" ) ? comma::io::mode::binary : comma::io::mode::ascii ) ); }
+        filter_line = options.value< std::string >( "--update-line,--line", "" );
+        has_filter = filter_transport || !filter_line.empty();
         std::vector< std::string > v = comma::split( csv.fields, ',' );
         bool has_value_fields = false;
         for( std::size_t i = 0; !has_value_fields && i < v.size(); has_value_fields = !v[i].empty() && v[i] != "block" &&  v[i] != "id", ++i );
@@ -451,7 +472,7 @@ int main( int ac, char** av )
             if( block != p->block ) { read_filter_block(); }
             update( *p, istream, ostream );
         }
-        if( filter_transport ) { output_and_clear( unmatched, !matched_only ); }
+        if( has_filter ) { output_and_clear( unmatched, !matched_only ); }
         else { output_and_clear( values, last_only || last_block, &ostream ); }
         return 0;
     }

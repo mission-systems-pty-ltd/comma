@@ -42,6 +42,14 @@ last_block/update_non_empty/test[0]/output/line[0]="0,2,a,b1"
 last_block/update_non_empty/test[0]/output/line[1]="0,2,g1,b1"
 last_block/update_non_empty/test[0]/output/size=2
 
+line_update/non_empty/test[0]/output/line[0]="0,1,,"
+line_update/non_empty/test[0]/output/size=1
+
+line_update/non_empty/test[1]/output/line[0]="0,,2,"
+line_update/non_empty/test[1]/output/size=1
+
+line_update/non_empty/test[2]/output/line[0]="0,,,3"
+line_update/non_empty/test[2]/output/size=1
 
 update/all/test[0]/output/line[0]="0,1,,"
 update/all/test[0]/output/line[1]="0,,2,"
