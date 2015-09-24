@@ -36,7 +36,8 @@ function run_command()
         echo "$( dirname "$key" )/output/line[$size]=\"$line\""
         unset none
         (( ++size ))
-    done < <( for i in ${input[@]} ; do echo "$i" ; done | $command $update_file  )
+    done < <( for i in ${input[@]} ; do echo "$i" ; done | eval "$command $update_file" )
+    #done < <( for i in ${input[@]} ; do echo "$i" ; done | $command $update_file )
     echo "$( dirname "$key" )/output/size=$size"
     echo
 }

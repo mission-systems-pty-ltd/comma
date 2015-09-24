@@ -106,6 +106,7 @@ static void usage( bool more )
     std::cerr << "        e.g: --remove=,,remove,,0: for the 3rd field, \"empty\" indicates it has empty value, for the 5th: 0" << std::endl;
     std::cerr << "        the type of reset values has to be correct: number for numeric fields, time for time fields, etc" << std::endl;
     std::cerr << "    --update-line,--line=[<line>]; a one-line update (see examples); a convenience option" << std::endl;
+    std::cerr << "        does not output unmatched lines, i.e. behaves as if --matched-only specified" << std::endl;
     std::cerr << "    --update-non-empty-fields,--update-non-empty,-u:" << std::endl;
     std::cerr << "        if update has empty fields, use the field value from stdin (for binary, empty fields must be defined with --empty)" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
@@ -276,8 +277,11 @@ static void read_filter_block()
     while( last->block == block && !is_shutdown )
     {
         std::string s;
-        if( csv.binary() ) { s.resize( csv.format().size() ); ::memcpy( &s[0], filter_stream->binary().last(), csv.format().size() ); }
-        else { s = comma::join( filter_stream->ascii().last(), csv.delimiter ) + '\n'; }
+        if( filter_line.empty() ) // super quick and dirty
+        {
+            if( csv.binary() ) { s.resize( csv.format().size() ); ::memcpy( &s[0], filter_stream->binary().last(), csv.format().size() ); }
+            else { s = comma::join( filter_stream->ascii().last(), csv.delimiter ) + '\n'; }
+        }
         filter_map[ last->key ].push_back( map_t::value_type( count++, *last, s ) );
         //if( d.size() > 1 ) {}
         if( verbose ) { if( count % 10000 == 0 ) { std::cerr << "csv-update: reading block " << block << "; loaded " << count << " point[s]; hash map size: " << filter_map.size() << std::endl; } }
