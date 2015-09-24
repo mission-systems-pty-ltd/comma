@@ -396,13 +396,13 @@ int main( int ac, char** av )
         options.assert_mutually_exclusive( "--last-block,--matched-only,--matched,-m" );
         options.assert_mutually_exclusive( "--last-block,--remove,--reset,--unset,--erase" );
         //options.assert_mutually_exclusive( "--last-block,--empty" );
-        matched_only = options.exists( "--matched-only,--matched,-m" );
         update_non_empty = options.exists( "--update-non-empty-fields,--update-non-empty,-u" );
         std::vector< std::string > unnamed = options.unnamed( "--last-block,--last-only,--last,--matched-only,--matched,-m,--string,-s,--update-non-empty-fields,--update-non-empty,-u,--verbose,-v", "-.*" );
         if( unnamed.size() > 1 ) { std::cerr << "csv-update: expected one file or stream to join, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         if( !unnamed.empty() ) { filter_transport.reset( new comma::io::istream( unnamed[0], options.exists( "--binary,-b" ) ? comma::io::mode::binary : comma::io::mode::ascii ) ); }
         filter_line = options.value< std::string >( "--update-line,--line", "" );
         has_filter = filter_transport || !filter_line.empty();
+        matched_only = options.exists( "--matched-only,--matched,-m" ) || !filter_line.empty();
         std::vector< std::string > v = comma::split( csv.fields, ',' );
         bool has_value_fields = false;
         for( std::size_t i = 0; !has_value_fields && i < v.size(); has_value_fields = !v[i].empty() && v[i] != "block" &&  v[i] != "id", ++i );
