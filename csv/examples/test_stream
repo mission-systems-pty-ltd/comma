@@ -1,0 +1,12 @@
+#!/usr/bin/python
+
+from comma.csv.fields import *
+from numpy import *
+
+point = struct( 'x,y,z', float64, float64, float64 )
+timestamped_point = struct( 't,point', 'datetime64[us]', point )
+
+s = stream( timestamped_point )
+for i in s.read( size=2 ):
+  i.point.x = -10
+  s.write(i)
