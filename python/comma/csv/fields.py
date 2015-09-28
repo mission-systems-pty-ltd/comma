@@ -35,7 +35,9 @@ class stream:
     self.format = format if format else struct.format
     self.dtype = numpy.dtype( self.format )
     self.flush = flush
-    if self.fields != struct.fields:
+    if self.fields == struct.fields:
+      self.reshaped_dtype = None
+    else:
       names = map( lambda _: 'f' + str( self.fields.split(',').index( _ ) ), struct.fields.split(',') )
       formats = [ self.dtype.fields[name][0] for name in names ]
       offsets = [ self.dtype.fields[name][1] for name in names ]
@@ -45,6 +47,7 @@ class stream:
       #print >> sys.stderr, "init: offsets: ", offsets
       #print >> sys.stderr, "init: dtype: ", self.dtype
       #print >> sys.stderr, "init: reshaped_dtype: ", self.reshaped_dtype
+      #print >> sys.stderr, ""
 
   def iter( self, size=1, recarray=True  ):
     while True:
@@ -61,10 +64,11 @@ class stream:
     #print >> sys.stderr, "self.struct.dtype: ", self.struct.dtype
     #print >> sys.stderr, "self.struct.format: ", self.struct.format
     #print >> sys.stderr, "data: ", data
-    #print >> sys.stderr, "ndarray: ", numpy.ndarray( data.shape, self.reshaped_dtype, data )[0]
-    #print >> sys.stderr, "tuple: ", tuple( numpy.ndarray( data.shape, self.reshaped_dtype, data )[0] )
-    #print >> sys.stderr, "array: ", numpy.array( tuple( numpy.ndarray( data.shape, self.reshaped_dtype, data )[0] ), dtype=self.struct.format )
-    s = numpy.array( tuple( numpy.ndarray( data.shape, self.reshaped_dtype, data )[0] ), dtype=self.struct.format ).view( self.struct ) if self.reshaped_dtype else data.view( self.struct )
+    #print >> sys.stderr, "ndarray: ", numpy.ndarray( data.shape, self.reshaped_dtype, data )[:]
+    #print >> sys.stderr, "tuple: ", [ tuple(_) for _ in numpy.ndarray( data.shape, self.reshaped_dtype, data )[:] ]
+    #print >> sys.stderr, "array: ", numpy.array( [ tuple(_) for _ in numpy.ndarray( data.shape, self.reshaped_dtype, data )[:] ], dtype=self.struct.format )
+    #print >> sys.stderr, ""
+    s = numpy.array( map( tuple, numpy.ndarray( data.shape, self.reshaped_dtype, data )[:] ), dtype=self.struct.format ).view( self.struct ) if self.reshaped_dtype else data.view( self.struct )
     return s.view( numpy.recarray ) if recarray else s
 
   def write( self, s ):
