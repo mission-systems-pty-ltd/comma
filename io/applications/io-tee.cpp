@@ -152,12 +152,12 @@ int main( int ac, char **av )
             }
             std::cin.read( &buffer[0], bytes_to_read );
             if( std::cin.gcount() <= 0 ) { break; }
-            std::cout.write( &buffer[0], std::size_t( std::cin.gcount() ) );
-            //int r = ::fwrite( pipe, &buffer[0], std::size_t( std::cin.gcount() ) );
-            int r = ::fwrite( &buffer[0], sizeof( char ), ::size_t( std::cin.gcount() ), pipe );
-            if( r < 0 ) // TODO: check what ::write actually returns
+            std::size_t gcount = std::cin.gcount();
+            std::cout.write( &buffer[0], gcount );
+            int r = ::fwrite( &buffer[0], sizeof( char ), gcount, pipe );
+            if( r != (int) gcount )
             { 
-                std::cerr << app_name << ": error on pipe: error " << r << std::endl; // TODO: output text for the error
+                std::cerr << app_name << ": error on pipe: " << std::strerror( errno ) <<  std::endl;
                 ::pclose( pipe );
                 return 1;
             }
