@@ -25,7 +25,7 @@ class struct:
         items.extend( struct.get( what, dtype, path + name + '/' ) )
       else:
         if what == 'fields': items.append( path + name )
-        elif what == 'format': items.append( dtype.name )
+        elif what == 'format': items.append( dtype.str )
     return items
 
 class stream:
@@ -34,7 +34,9 @@ class stream:
     self.fields = fields if fields else struct.fields
     self.format = format if format else struct.format
     self.dtype = numpy.dtype( self.format )
+    self.struct_dtype = numpy.dtype( self.struct.format )
     self.flush = flush
+    self.default_size = max( 1, 65536 / self.dtype.itemsize )
     if self.fields == struct.fields:
       self.reshaped_dtype = None
     else:
@@ -43,16 +45,17 @@ class stream:
       offsets = [ self.dtype.fields[name][1] for name in names ]
       self.reshaped_dtype = numpy.dtype( dict( names=names, formats=formats, offsets=offsets ) )
 
-  def iter( self, size=1, recarray=True  ):
+  def iter( self, size=None, recarray=True  ):
+    size = self.default_size if size is None else size
     while True:
       s = self.read( size, recarray )
       if s is None: break
       yield s
 
-  def read( self, size=1, recarray=True ):
-    data = numpy.fromfile( sys.stdin, dtype=self.format, count=size )
+  def read( self, size=None, recarray=True ):
+    data = numpy.fromfile( sys.stdin, dtype=self.format, count=self.default_size if size is None else size )
     if data.size == 0: return None
-    s = numpy.array( map( tuple, numpy.ndarray( data.shape, self.reshaped_dtype, data )[:] ), dtype=self.struct.format ).view( self.struct ) if self.reshaped_dtype else data.view( self.struct )
+    s = numpy.array( map( tuple, numpy.ndarray( data.shape, self.reshaped_dtype, data )[:] ), dtype=self.struct_dtype ).view( self.struct ) if self.reshaped_dtype else data.view( self.struct )
     return s.view( numpy.recarray ) if recarray else s
 
   def write( self, s ):
