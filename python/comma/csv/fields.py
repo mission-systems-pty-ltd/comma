@@ -42,12 +42,6 @@ class stream:
       formats = [ self.dtype.fields[name][0] for name in names ]
       offsets = [ self.dtype.fields[name][1] for name in names ]
       self.reshaped_dtype = numpy.dtype( dict( names=names, formats=formats, offsets=offsets ) )
-      #print >> sys.stderr, "init: names: ", names
-      #print >> sys.stderr, "init: formats: ", formats
-      #print >> sys.stderr, "init: offsets: ", offsets
-      #print >> sys.stderr, "init: dtype: ", self.dtype
-      #print >> sys.stderr, "init: reshaped_dtype: ", self.reshaped_dtype
-      #print >> sys.stderr, ""
 
   def iter( self, size=1, recarray=True  ):
     while True:
@@ -58,16 +52,6 @@ class stream:
   def read( self, size=1, recarray=True ):
     data = numpy.fromfile( sys.stdin, dtype=self.format, count=size )
     if data.size == 0: return None
-    #print >> sys.stderr, "data.dtype: ", data.dtype
-    #print >> sys.stderr, "self.dtype: ", self.dtype
-    #print >> sys.stderr, "self.reshaped_dtype: ", self.reshaped_dtype
-    #print >> sys.stderr, "self.struct.dtype: ", self.struct.dtype
-    #print >> sys.stderr, "self.struct.format: ", self.struct.format
-    #print >> sys.stderr, "data: ", data
-    #print >> sys.stderr, "ndarray: ", numpy.ndarray( data.shape, self.reshaped_dtype, data )[:]
-    #print >> sys.stderr, "tuple: ", [ tuple(_) for _ in numpy.ndarray( data.shape, self.reshaped_dtype, data )[:] ]
-    #print >> sys.stderr, "array: ", numpy.array( [ tuple(_) for _ in numpy.ndarray( data.shape, self.reshaped_dtype, data )[:] ], dtype=self.struct.format )
-    #print >> sys.stderr, ""
     s = numpy.array( map( tuple, numpy.ndarray( data.shape, self.reshaped_dtype, data )[:] ), dtype=self.struct.format ).view( self.struct ) if self.reshaped_dtype else data.view( self.struct )
     return s.view( numpy.recarray ) if recarray else s
 
