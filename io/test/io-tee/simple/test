@@ -90,7 +90,7 @@ run_test  ""              "basic_test"             "$input_data"  "one two\none 
 run_test  ""              "empty_test"             "$input_data"  ""                          cat /dev/null
 run_test  ""              "function_call_test"     "$input_data"  "two three"                 example_function "two " "one"
 run_test  "--unbuffered"  "unbuffered_test"        "$input_data"  "one two\none two three"    grep "one two"
-run_test  "--unbuffered"  "unbuffered_empty_test"  "$input_data"  ""                          cat /dev/null
+run_test  "--unbuffered --debug"  "unbuffered_empty_test"  "$input_data"  ""                          cat /dev/null
 run_test  "--unbuffered"  "unbuffered_fn_test"     "$input_data"  "two three"                 example_function "two " "one"
 run_test  ""              "pipeline"               "$input_data"  "two"                       "grep '^t' | grep \"o\$\""
 
