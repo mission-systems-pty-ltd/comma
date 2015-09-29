@@ -2,7 +2,7 @@ FIND_PROGRAM( PYTHON "python" )
 
 IF( PYTHON )
 
-    SET( PYTHON_PACKAGE_INSTALL_PREFIX "" CACHE STRING "install prefix for python packages, leave empty for python default prefix" )
+    SET( PYTHON_PACKAGE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX} CACHE STRING "install prefix for python packages, leave empty for python default prefix" )
 
     SET( INSTALL_PREFIX_OPTION "" )
     IF( PYTHON_PACKAGE_INSTALL_PREFIX )
