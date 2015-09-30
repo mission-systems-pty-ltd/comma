@@ -2,13 +2,10 @@
 
 import numpy
 import sys
-
-def from_dictionary( p, d ):
-    for n, v in d.iteritems() : exec( "p." + n + " = " + str( v ) )
-
-def to_dictionary( p, d ):
-    for n, v in d.iteritems() : exec( "d[n] = p." + n )
-
+from StringIO import StringIO
+import itertools
+import io
+import warnings
 
 class struct:
   def __init__( self, fields, *types ):
@@ -29,18 +26,25 @@ class struct:
     return items
 
 class stream:
-  def __init__( self, struct, fields=None, format=None, flush=False ):
+  def __init__( self, struct, fields=None, format=None, binary=False, delimiter=',', flush=False ):
     self.struct = struct
-    self.fields = fields if fields else struct.fields
-    self.format = format if format else struct.format
-    self.dtype = numpy.dtype( self.format )
-    self.struct_dtype = numpy.dtype( self.struct.format )
+    self.fields = fields if fields else self.struct.fields
+    self.binary = binary or format is not None
+    self.delimiter= delimiter
     self.flush = flush
+    if format is None:
+      if self.fields == self.struct.fields:
+        format = self.struct.format
+      else:
+        struct_format_of_field = dict( zip( self.struct.fields.split(','), self.struct.format.split(',') ) )
+        format = ','.join( struct_format_of_field.get( name ) or 'S' for name in self.fields.split(',') )
+    self.dtype = numpy.dtype( format )
     self.default_size = max( 1, 65536 / self.dtype.itemsize )
-    if self.fields == struct.fields:
-      self.reshaped_dtype = None
+    self.struct_dtype = numpy.dtype( self.struct.format )
+    if self.fields == self.struct.fields:
+        self.reshaped_dtype = None
     else:
-      names = map( lambda _: 'f' + str( self.fields.split(',').index( _ ) ), struct.fields.split(',') )
+      names = map( lambda _: 'f' + str( self.fields.split(',').index( _ ) ), self.struct.fields.split(',') )
       formats = [ self.dtype.fields[name][0] for name in names ]
       offsets = [ self.dtype.fields[name][1] for name in names ]
       self.reshaped_dtype = numpy.dtype( dict( names=names, formats=formats, offsets=offsets ) )
@@ -53,11 +57,24 @@ class stream:
       yield s
 
   def read( self, size=None, recarray=True ):
-    data = numpy.fromfile( sys.stdin, dtype=self.format, count=self.default_size if size is None else size )
+    if self.binary:
+      data = numpy.fromfile( sys.stdin, dtype=self.dtype, count=self.default_size if size is None else size )
+    else:
+      with warnings.catch_warnings():
+        warnings.simplefilter( 'ignore' )
+        data = numpy.loadtxt( StringIO( ''.join( itertools.islice( sys.stdin, size ) ) ), dtype=self.dtype , delimiter=self.delimiter )
+      names = map( lambda _: 'f' + str( self.fields.split(',').index( _ ) ), self.struct.fields.split(',') )
+      formats = [ data.dtype.fields[name][0] for name in names ]
+      offsets = [ data.dtype.fields[name][1] for name in names ]
+      self.reshaped_dtype = numpy.dtype( dict( names=names, formats=formats, offsets=offsets ) )
     if data.size == 0: return None
     s = numpy.array( map( tuple, numpy.ndarray( data.shape, self.reshaped_dtype, data )[:] ), dtype=self.struct_dtype ).view( self.struct ) if self.reshaped_dtype else data.view( self.struct )
     return s.view( numpy.recarray ) if recarray else s
 
   def write( self, s ):
-    if s.dtype == self.struct: s.tofile( sys.stdout )
+    if self.binary:
+      s.tofile( sys.stdout )
+    else:
+      for _ in s.view( self.struct_dtype ):
+        print ','.join( map( str, _ ) )
     if self.flush: sys.stdout.flush()
