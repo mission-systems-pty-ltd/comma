@@ -47,7 +47,7 @@ def get_numpy_time( comma_time_string ):
   return numpy.datetime64( ''.join( v ), 'us' )
 
 class stream:
-  def __init__( self, struct, fields=None, format=None, binary=False, delimiter=',', flush=False, is_numpy_format=False ):
+  def __init__( self, struct, fields=None, format=None, binary=False, delimiter=',', flush=False, is_comma_format=False ):
     self.struct = struct
     self.fields = fields if fields else self.struct.fields
     self.binary = binary or format is not None
@@ -60,7 +60,7 @@ class stream:
         struct_format_of_field = dict( zip( self.struct.fields.split(','), self.struct.format.split(',') ) )
         self.format = ','.join( struct_format_of_field.get( name ) or 'S' for name in self.fields.split(',') )
     else:
-      self.format = format if is_numpy_format else get_numpy_format( format )
+      self.format = get_numpy_format( format ) if is_comma_format else format
     self.dtype = numpy.dtype( self.format )
     self.default_size = max( 1, 65536 / self.dtype.itemsize )
     if not self.binary:
