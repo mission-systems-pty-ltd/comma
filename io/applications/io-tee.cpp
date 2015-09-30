@@ -57,6 +57,7 @@ static void show_help( bool verbose = false )
         << "Options:" << std::endl
         << "    --dry-run,--dry: print command that will be piped and exit, debug option" << std::endl
         << "    --unbuffered,-u: unbuffered input and output" << std::endl
+        << "    --debug: extra debug output (not for normal use)" << std::endl
         << "    --verbose,-v: more output" << std::endl
         << std::endl
         << "Note that only single commands are supported; to run multiple commands (or a pipeline), put them inside a bash function:" << std::endl
@@ -110,19 +111,30 @@ int main( int ac, char **av )
     FILE *pipe = NULL;
     try
     {
-        if( ac < 3 )
+        // command line handling is tricky because we don't want to confuse the pipeline command options
+        // with io-tee's options (which must all coma before "--", except for "--help|-h")
+        bool debug = false;
+        int dashdash_pos = -1;
+        for ( int n = 1; n < ac; ++n )
         {
-            comma::command_line_options options( ac, av );
-            if( options.exists( "--help,-h" ) ) { show_help(); return 0; }
-            else { show_usage(); return 1; }
+            if ( av[n] == std::string( "--" ) ) { dashdash_pos = n; break; }
+            else if ( av[n] == std::string( "--debug" ) ) { debug = true; }
+            else if ( av[n] == std::string( "--help" ) || av[n] == std::string( "-h" ) ) { show_help(); exit( 0 ); }
         }
-        unsigned int command_offset = 2;
-        for( int i = 1; i < ac; ++i ) { if( av[i] == std::string( "--" ) ) { command_offset = i + 1; break; } }
-        if( command_offset == ( unsigned int )( ac ) ) { show_usage(); return 1; }
-        comma::command_line_options options( command_offset > 2 ? command_offset - 1 : 2, av, show_help );
-        const std::vector< std::string >& unnamed = options.unnamed( "--unbuffered,-u,--verbose,-v,--dry-run,--dry", "-.*" );
-        if( unnamed.empty() ) { std::cerr << "io-tee: please specify output file name" << std::endl; return 1; }
-        if( unnamed.size() > 1 ) { std::cerr << "io-tee: expected one output filename, got: " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
+        int command_offset = ( dashdash_pos == -1 ? 2 : dashdash_pos + 1 );
+        if ( command_offset >= ac ) { std::cerr << app_name << ": missing command; "; show_usage(); exit( 1 ); }
+        // if there is no "--", there can be no command line options, just the output filename
+        int options_ac = ( dashdash_pos == -1 ? 2 : dashdash_pos );
+        if ( debug )
+        {
+            std::cerr << app_name << ": options_ac=" << options_ac << "; command line: " << app_name;
+            for ( int m = 1; m < ac; ++m ) { std::cerr << ' ' << av[m]; }
+            std::cerr << std::endl;
+        }
+        comma::command_line_options options( options_ac, av );
+        const std::vector< std::string >& unnamed = options.unnamed( "--unbuffered,-u,--verbose,-v,--debug,--dry-run,--dry", "-.*" );
+        if( unnamed.empty() ) { std::cerr << app_name << ": please specify output file name" << std::endl; return 1; }
+        if( unnamed.size() > 1 ) { std::cerr << app_name << ": expected one output filename, got: " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         std::string outfile = unnamed[0];
         // bash -c only takes a single argument, so put the whole command in single quotes, then double quote each individual argument
         std::string command = "bash -c '" + escape_quotes( av[command_offset] );
@@ -132,29 +144,42 @@ int main( int ac, char **av )
         command += "'";
         bool unbuffered = options.exists( "--unbuffered,-u" );
         bool verbose = options.exists( "--verbose,-v" );
+        if ( debug ) { verbose = true; }
         if( !file_is_writable( outfile ) ) { std::cerr << app_name << ": cannot write to " << outfile << std::endl; exit( 1 ); }
         if( options.exists( "--dry-run,--dry" ) ) { std::cout << command << std::endl; return 0; }
         if( verbose ) { std::cerr << app_name << ": will run command: " << command << std::endl; }
         pipe = ::popen( &command[0], "w" );
         if( pipe == NULL ) { std::cerr << app_name << ": failed to open pipe; command: " << command << std::endl; return 1; }
         boost::array< char, 0xffff > buffer;
+        if ( debug ) { std::cerr << app_name << ": created buffer" << std::endl; }
         comma::io::select stdin_select;
-        if( unbuffered ) { stdin_select.read().add( 0 ); }
+        if ( debug ) { std::cerr << app_name << ": constructed comma::io::select" << std::endl; }
+        if( unbuffered ) { stdin_select.read().add( 0 ); if ( debug ) { std::cerr << app_name << ": did initial unbuffered read" << std::endl; } }
         comma::io::istream is( "-", comma::io::mode::binary );
+        if ( debug ) { std::cerr << app_name << ": opened input stream" << std::endl; }
         while( std::cin.good() )
         {
+            if ( debug ) { std::cerr << app_name << ": loop" << std::endl; }
             std::size_t bytes_to_read = buffer.size();
             if( unbuffered )
             {
+                if ( debug ) { std::cerr << app_name << ": calling stdin_select.wait(1)" << std::endl; }
                 if( stdin_select.wait( boost::posix_time::seconds( 1 ) ) == 0 ) { continue; }
+                if ( debug ) { std::cerr << app_name << ": after stdin_select.wait" << std::endl; }
                 std::size_t available = is.available();
+                if ( debug ) { std::cerr << app_name << ": " << available << " bytes available" << std::endl; }
                 bytes_to_read = std::min( available, buffer.size() );
             }
+            if ( debug ) { std::cerr << app_name << ": bytes_to_read = " << bytes_to_read << std::endl; }
             std::cin.read( &buffer[0], bytes_to_read );
+            if ( debug ) { std::cerr << app_name << ": cin.gcount is " << std::cin.gcount() << std::endl; }
             if( std::cin.gcount() <= 0 ) { break; }
             std::size_t gcount = std::cin.gcount();
+            if ( debug ) { std::cerr << app_name << ": writing " << gcount << " bytes to stdout" << std::endl; }
             std::cout.write( &buffer[0], gcount );
+            if ( debug ) { std::cerr << app_name << ": writing " << gcount << " bytes to pipe" << std::endl; }
             int r = ::fwrite( &buffer[0], sizeof( char ), gcount, pipe );
+            if ( debug ) { std::cerr << app_name << ": fwrite to pipe returned " << r << std::endl; }
             if( r != (int) gcount )
             { 
                 std::cerr << app_name << ": error on pipe: " << std::strerror( errno ) <<  std::endl;
@@ -163,8 +188,10 @@ int main( int ac, char **av )
             }
             if( unbuffered )
             { 
+                if ( debug ) { std::cerr << app_name << ": flushing stdout and pipe " << std::endl; }
                 std::cout.flush();
                 ::fflush( pipe );
+                if ( debug ) { std::cerr << app_name << ": flushed stdout and pipe " << std::endl; }
             }
         }
         int result = ::pclose( pipe );
