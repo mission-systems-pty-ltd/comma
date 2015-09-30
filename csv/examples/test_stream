@@ -8,7 +8,7 @@ point = comma.csv.fields.struct( 'x,y,z', 'float64', 'float64', 'float64' )
 timestamped_point = comma.csv.fields.struct( 't,point', 'datetime64[us]', point )
 data = comma.csv.fields.struct( 'designator,attributes', 'S3', timestamped_point )
 
-#s = comma.csv.fields.stream( data, fields=',attributes/point/z,attributes/point/y,,,attributes/t,attributes/point/x,designator', format='i4,d,d,u1,u1,datetime64[us],d,S3' )
+#s = comma.csv.fields.stream( data, fields=',attributes/point/z,attributes/point/y,,,attributes/t,attributes/point/x,designator', format='i,d,d,ub,ub,t,d,s[3]' )
 s = comma.csv.fields.stream( data, fields=',attributes/point/z,attributes/point/y,,,attributes/t,attributes/point/x,designator' )
 
 j = 0
