@@ -33,6 +33,7 @@
 
 #include <algorithm>
 #include <string.h>
+#include <cmath>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -42,12 +43,11 @@
 #include <comma/application/contact_info.h>
 #include <comma/application/command_line_options.h>
 #include <comma/base/exception.h>
-#include <comma/csv/stream.h>
-#include <comma/visiting/traits.h>
-
 #include <comma/base/types.h>
-#include <comma/string/string.h>
+#include <comma/csv/stream.h>
 #include <comma/csv/impl/epoch.h>
+#include <comma/string/string.h>
+#include <comma/visiting/traits.h>
 
 static void usage( bool )
 {
@@ -193,9 +193,10 @@ static boost::posix_time::ptime from_string( const std::string& s, const what_t 
 
         case seconds:
         {
+            std::cerr.precision( 20 );
             double d = boost::lexical_cast< double >( s );
             long long seconds = d;
-            int microseconds = ( d - seconds ) * 1000000;
+            int microseconds = ::round( ( d - seconds ) * 1000000 ); // although ::round() is slow, have to round, since lexical cast has floating point jitter, e.g. try: boost::lexical_cast< double >( "1369179610.752231000" );
             return boost::posix_time::ptime( comma::csv::impl::epoch, boost::posix_time::seconds( seconds ) + boost::posix_time::microseconds( microseconds ) );
         }
 
@@ -280,15 +281,9 @@ namespace comma { namespace visiting {
 
 template <> struct traits< input_t >
 {
-    template < typename K, typename V > static void visit( const K&, const input_t& p, V& v )
-    {
-        v.apply( "values", p.values );
-    }
+    template < typename K, typename V > static void visit( const K&, const input_t& p, V& v ) { v.apply( "values", p.values ); }
 
-    template < typename K, typename V > static void visit( const K&, input_t& p, V& v )
-    {
-        v.apply( "values", p.values );
-    }
+    template < typename K, typename V > static void visit( const K&, input_t& p, V& v ) { v.apply( "values", p.values ); }
 };
 
 } } // namespace comma { namespace visiting {
@@ -376,6 +371,7 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av, usage );
         accept_empty = options.exists( "--empty-as-not-a-date-time,--accept-empty,-e" );
         csv = comma::csv::options( options );
+        csv.precision = 16;
         if( csv.fields.empty() ) { csv.fields="a"; }
         init_input();
         options.assert_mutually_exclusive( "--to-seconds,--to-iso-string,--seconds,--sec,--iso,--xsd,-s,-i,--from" );
