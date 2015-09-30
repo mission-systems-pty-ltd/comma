@@ -87,7 +87,7 @@ class stream:
     else:
       with warnings.catch_warnings():
         warnings.simplefilter( 'ignore' )
-        data = numpy.loadtxt( StringIO( ''.join( itertools.islice( sys.stdin, size ) ) ), dtype=self.dtype , delimiter=self.delimiter, converters=self.converters )
+        data = numpy.loadtxt( StringIO( ''.join( itertools.islice( sys.stdin, size ) ) ), dtype=self.dtype , delimiter=self.delimiter, converters=self.converters, ndmin=1 )
     if data.size == 0: return None
     s = numpy.array( map( tuple, numpy.ndarray( data.shape, self.reshaped_dtype, data )[:] ), dtype=self.struct_dtype ).view( self.struct ) if self.reshaped_dtype else data.view( self.struct )
     return s.view( numpy.recarray ) if recarray else s
