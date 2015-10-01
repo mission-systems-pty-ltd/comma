@@ -1,6 +1,7 @@
 #!/bin/bash
 
 function format_incorrect_name { python -c "import comma; point = comma.csv.struct( 'x', 'invalid' )"; }
+function format_empty_name { python -c "import comma; point = comma.csv.struct( 'x', '' )"; }
 function format_incorrect_number { python -c "import comma; point = comma.csv.struct( 'x,y', 'float64' )"; }
 
 function basic
@@ -11,6 +12,8 @@ function basic
     python -c "import comma; point = comma.csv.struct( 't', 'datetime64[us]' )"
     python -c "import comma; point = comma.csv.struct( 'name', 'S10' )"
 }
+
+function format_None { python -c "import comma; point = comma.csv.struct( 'x', None ); print point.format"; }
 
 function record
 {
@@ -40,14 +43,17 @@ END
 )"
 }
 
-basic
-echo "basic/status=$?"
 
-format_incorrect_name
-echo "format_incorrect_name/status=$?"
+format_incorrect_name; echo "format_incorrect_name/status=$?"
+format_empty_name; echo "format_empty_name/status=$?"
+format_incorrect_number; echo "format_incorrect_number/status=$?"
 
-format_incorrect_number
-echo "format_incorrect_number/status=$?"
+basic; echo "basic/status=$?"
+
+output=$( format_None )
+status=$?
+echo "format_None/output=$output"
+echo "format_None/status=$status"
 
 for what in fields format; do
     output=$( record $what )
