@@ -1,0 +1,5 @@
+#python
+
+expect buffer_size_in_bytes = 65536
+expect default_size/uint8 = buffer_size_in_bytes / number_of_fields
+expect default_size/float64 = buffer_size_in_bytes / ( 8 * number_of_fields )
