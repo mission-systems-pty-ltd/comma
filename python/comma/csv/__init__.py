@@ -52,9 +52,12 @@ class stream:
   buffer_size_in_bytes = 65536
   def __init__( self, struct, fields=None, format=None, binary=False, delimiter=',', flush=False ):
     self.struct = struct
-    for field in self.struct.fields.split(','):
-      if not field in fields.split(','): raise Exception( "expected field '{}' is not found in fields '{}'".format( field, fields ) )
-    self.fields = fields if fields else self.struct.fields
+    if fields is None:
+      self.fields = self.struct.fields
+    else:
+      for field in self.struct.fields.split(','):
+        if not field in fields.split(','): raise Exception( "expected field '{}' is not found in fields '{}'".format( field, fields ) )
+      self.fields = fields
     self.binary = binary or format is not None
     self.delimiter = delimiter if not self.binary else None
     self.flush = flush
