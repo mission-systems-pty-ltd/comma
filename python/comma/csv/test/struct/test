@@ -1,0 +1,64 @@
+#!/bin/bash
+
+function format_incorrect_name { python -c "import comma; point = comma.csv.struct( 'x', 'invalid' )"; }
+function format_incorrect_number { python -c "import comma; point = comma.csv.struct( 'x,y', 'float64' )"; }
+
+function basic
+{
+    python -c "import numpy, comma; point = comma.csv.struct( 'x', numpy.float64, numpy.uint32 )"
+    python -c "import comma; point = comma.csv.struct( 'x,id', 'float64', 'uint32' )"
+    python -c "import comma; point = comma.csv.struct( 'x,id', 'f8', 'u4' )"
+    python -c "import comma; point = comma.csv.struct( 't', 'datetime64[us]' )"
+    python -c "import comma; point = comma.csv.struct( 'name', 'S10' )"
+}
+
+function record
+{
+    local what=$1
+    python -c "$( cat <<END
+import comma
+
+point = comma.csv.struct( 'x,y,z', 'float64', 'float64', 'float64' )
+timestamped_point = comma.csv.struct( 't,coordinates', 'datetime64[us]', point )
+record = comma.csv.struct( 'observer,event', 'S3', timestamped_point )
+comma.csv.struct.get( 'fields', record.dtype, 'root/' )
+print record.$what
+END
+)"
+}
+
+function struct_get
+{
+    what=$1
+    local what=$1
+    python -c "$( cat <<END
+import comma
+
+point = comma.csv.struct( 'x,y,z', 'float64', 'float64', 'float64' )
+timestamped_point = comma.csv.struct( 't,coordinates', 'datetime64[us]', point )
+record = comma.csv.struct( 'observer,event,id', 'S3', timestamped_point, 'uint32' )
+print ','.join( comma.csv.struct.get( '$1', record.dtype, 'root/' ) )
+END
+)"
+}
+
+basic
+echo "basic/status=$?"
+
+format_incorrect_name
+echo "format_incorrect_name/status=$?"
+
+format_incorrect_number
+echo "format_incorrect_number/status=$?"
+
+for what in fields format; do
+    output=$( record $what )
+    status=$?
+    echo "record/$what/output=$output"
+    echo "record/$what/status=$status"
+
+    output=$( struct_get $what )
+    status=$?
+    echo "struct_get/$what/output=$output"
+    echo "struct_get/$what/status=$status"
+done

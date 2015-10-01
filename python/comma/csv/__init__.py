@@ -9,6 +9,7 @@ import re
 
 class struct:
   def __init__( self, fields, *types ):
+    if len( fields.split(',') ) != len( types ): raise Exception( "expected {} types for fields '{}', got {} type(s)".format( len( fields.split(',') ), fields, len( types )) )
     self.dtype = numpy.dtype( zip( fields.split(','), types ) )
     self.fields = ','.join( struct.get( 'fields', self.dtype ) )
     self.format = ','.join( struct.get( 'format', self.dtype ) )
