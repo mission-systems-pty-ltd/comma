@@ -1,19 +1,25 @@
 #!/bin/bash
 
-function format_incorrect_name { python -c "import comma; point = comma.csv.struct( 'x', 'invalid' )"; }
-function format_empty_name { python -c "import comma; point = comma.csv.struct( 'x', '' )"; }
-function format_incorrect_number { python -c "import comma; point = comma.csv.struct( 'x,y', 'float64' )"; }
+function format_incorrect_name { python -c "import comma; point_t = comma.csv.struct( 'x', 'invalid' )"; }
+function format_empty_name { python -c "import comma; point_t = comma.csv.struct( 'x', '' )"; }
+function format_incorrect_number { python -c "import comma; point_t = comma.csv.struct( 'x,y', 'float64' )"; }
 
 function basic
 {
-    python -c "import numpy, comma; point = comma.csv.struct( 'x', numpy.float64, numpy.uint32 )"
-    python -c "import comma; point = comma.csv.struct( 'x,id', 'float64', 'uint32' )"
-    python -c "import comma; point = comma.csv.struct( 'x,id', 'f8', 'u4' )"
-    python -c "import comma; point = comma.csv.struct( 't', 'datetime64[us]' )"
-    python -c "import comma; point = comma.csv.struct( 'name', 'S10' )"
+    python -c "$( cat <<END
+import numpy
+import comma
+
+data_t = comma.csv.struct( 'x,id', numpy.float64, numpy.uint32 )
+data_t = comma.csv.struct( 'x,id', 'float64', 'uint32' )
+data_t = comma.csv.struct( 'x,id', 'f8', 'u4' )
+data_t = comma.csv.struct( 't', 'datetime64[us]' )
+data_t = comma.csv.struct( 'name', 'S10' )
+END
+)"
 }
 
-function format_None { python -c "import comma; point = comma.csv.struct( 'x', None ); print point.format"; }
+function format_None { python -c "import comma; point_t = comma.csv.struct( 'x', None ); print point_t.format"; }
 
 function record
 {
@@ -21,10 +27,10 @@ function record
     python -c "$( cat <<END
 import comma
 
-point = comma.csv.struct( 'x,y,z', 'float64', 'float64', 'float64' )
-timestamped_point = comma.csv.struct( 't,coordinates', 'datetime64[us]', point )
-record = comma.csv.struct( 'observer,event', 'S3', timestamped_point )
-print record.$what
+point_t = comma.csv.struct( 'x,y,z', 'float64', 'float64', 'float64' )
+timestamped_point_t = comma.csv.struct( 't,coordinates', 'datetime64[us]', point_t )
+record_t = comma.csv.struct( 'observer,event', 'S3', timestamped_point_t )
+print record_t.$what
 END
 )"
 }
@@ -35,10 +41,10 @@ function struct_get
     python -c "$( cat <<END
 import comma
 
-point = comma.csv.struct( 'x,y,z', 'float64', 'float64', 'float64' )
-timestamped_point = comma.csv.struct( 't,coordinates', 'datetime64[us]', point )
-record = comma.csv.struct( 'observer,event,id', 'S3', timestamped_point, 'uint32' )
-print ','.join( comma.csv.struct.get( '$1', record.dtype, 'root/' ) )
+point_t = comma.csv.struct( 'x,y,z', 'float64', 'float64', 'float64' )
+timestamped_point_t = comma.csv.struct( 't,coordinates', 'datetime64[us]', point_t )
+record_t = comma.csv.struct( 'observer,event,id', 'S3', timestamped_point_t, 'uint32' )
+print ','.join( comma.csv.struct.get( '$1', record_t.dtype, 'root/' ) )
 END
 )"
 }
