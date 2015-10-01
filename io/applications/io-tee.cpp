@@ -34,6 +34,7 @@
 #include <cstring>  // for strerror()
 #include <cerrno>   // for errno
 #include <iostream>
+#include <csignal>
 #include <boost/array.hpp>
 #include <boost/optional.hpp>
 #include "../../application/command_line_options.h"
@@ -106,9 +107,17 @@ static std::string escape_quotes( const char *s )
     return result;
 }
 
+void signal_handler( int signal )
+{
+    std::cerr << app_name << ": received signal " << signal << std::endl;
+    exit( 1 );
+}
+
 int main( int ac, char **av )
 {
     FILE *pipe = NULL;
+    signal( SIGSEGV, signal_handler );
+    signal( SIGABRT, signal_handler );
     try
     {
         // command line handling is tricky because we don't want to confuse the pipeline command options
@@ -188,8 +197,9 @@ int main( int ac, char **av )
             }
             if( unbuffered )
             { 
-                if ( debug ) { std::cerr << app_name << ": flushing stdout and pipe " << std::endl; }
+                if ( debug ) { std::cerr << app_name << ": flushing stdout" << std::endl; }
                 std::cout.flush();
+                if ( debug ) { std::cerr << app_name << ": flushing pipe" << std::endl; }
                 ::fflush( pipe );
                 if ( debug ) { std::cerr << app_name << ": flushed stdout and pipe " << std::endl; }
             }
