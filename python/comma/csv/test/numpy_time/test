@@ -1,0 +1,21 @@
+#!/bin/bash
+
+function comma_time_roundabout {
+    python -c "$( cat <<END
+import numpy
+import comma
+
+comma_time = '$@'
+numpy_time = comma.csv.numpy_time_from_comma( comma_time )
+if isinstance( numpy_time, numpy.datetime64 ):
+  print comma.csv.numpy_time_to_comma( numpy_time )
+END
+)"
+}
+
+while read name time; do
+    output=$( comma_time_roundabout $time )
+    status=$?
+    echo "$name/output=$output"
+    echo "$name/status=$status"
+done
