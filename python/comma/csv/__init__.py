@@ -1,5 +1,3 @@
-#!/bin/python
-
 import numpy
 import sys
 from StringIO import StringIO
