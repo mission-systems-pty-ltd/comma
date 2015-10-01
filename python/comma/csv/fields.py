@@ -27,7 +27,7 @@ class struct:
         elif what == 'format': items.append( dtype.str )
     return items
 
-def get_numpy_format( comma_format ):
+def numpy_format_from_comma( comma_format ):
   numpy_types_dict = dict( b='int8', ub='uint8', w='int16', uw='uint16', i='int32', ui='uint32', l='int64', ul='uint64', f='float32', d='float64', t='datetime64[us]' )
   def numpy_string_type( comma_string_type ):
     match = re.match( '^s\[(\d+)\]$', comma_string_type )
@@ -39,19 +39,23 @@ def get_numpy_format( comma_format ):
     numpy_types.append( numpy_type )
   return ','.join( numpy_types )
 
-def get_numpy_time( comma_time_string ):
+def numpy_time_from_comma( comma_time_string ):
   v = list( comma_time_string )
   if len( v ) < 15: raise Exception( "ascii time string '{}' is not recognised".format( comma_time_string ) )
   for i in [13,11]: v.insert( i, ':' )
   for i in [6,4]: v.insert( i, '-' )
   return numpy.datetime64( ''.join( v ), 'us' )
 
+def numpy_time_to_comma( numpy_time ):
+  return numpy_time.item().isoformat().translate( None, '-:' )
+
 class stream:
-  def __init__( self, struct, fields=None, format=None, binary=False, delimiter=',', flush=False, is_comma_format=False ):
+  buffer_size_in_bytes = 65536
+  def __init__( self, struct, fields=None, format=None, binary=False, delimiter=',', flush=False ):
     self.struct = struct
     self.fields = fields if fields else self.struct.fields
     self.binary = binary or format is not None
-    self.delimiter= delimiter
+    self.delimiter = delimiter if not self.binary else None
     self.flush = flush
     if format is None:
       if self.fields == self.struct.fields:
@@ -60,12 +64,16 @@ class stream:
         struct_format_of_field = dict( zip( self.struct.fields.split(','), self.struct.format.split(',') ) )
         self.format = ','.join( struct_format_of_field.get( name ) or 'S' for name in self.fields.split(',') )
     else:
-      self.format = get_numpy_format( format ) if is_comma_format else format
+      try:
+        numpy.dtype( format )
+        self.format = format
+      except TypeError:
+        self.format = numpy_format_from_comma( format )
     self.dtype = numpy.dtype( self.format )
-    self.default_size = max( 1, 65536 / self.dtype.itemsize )
+    self.default_size = max( 1, stream.buffer_size_in_bytes / self.dtype.itemsize )
     if not self.binary:
-      self.converters = { i:get_numpy_time for i in numpy.where( numpy.array( self.format.split(',') ) == numpy.dtype('datetime64[us]').str )[0] }
-    self.struct_dtype = numpy.dtype( self.struct.format )
+      self.converters = { i:numpy_time_from_comma for i in numpy.where( numpy.array( self.format.split(',') ) == numpy.dtype('datetime64[us]').str )[0] }
+    self.struct_flat_dtype = numpy.dtype( self.struct.format )
     if self.fields == self.struct.fields:
         self.reshaped_dtype = None
     else:
@@ -89,14 +97,14 @@ class stream:
         warnings.simplefilter( 'ignore' )
         data = numpy.loadtxt( StringIO( ''.join( itertools.islice( sys.stdin, size ) ) ), dtype=self.dtype , delimiter=self.delimiter, converters=self.converters, ndmin=1 )
     if data.size == 0: return None
-    s = numpy.array( map( tuple, numpy.ndarray( data.shape, self.reshaped_dtype, data )[:] ), dtype=self.struct_dtype ).view( self.struct ) if self.reshaped_dtype else data.view( self.struct )
+    s = numpy.array( map( tuple, numpy.ndarray( data.shape, self.reshaped_dtype, data )[:] ), dtype=self.struct_flat_dtype ).view( self.struct ) if self.reshaped_dtype else data.view( self.struct )
     return s.view( numpy.recarray ) if recarray else s
 
   def write( self, s ):
     if self.binary:
       s.tofile( sys.stdout )
     else:
-      to_string = lambda _: _.item().isoformat().translate( None, '-:' ) if isinstance( _, numpy.datetime64 ) else str( _.item() )
-      for _ in s.view( self.struct_dtype ):
-        print ','.join( map( to_string, _ ) )
+      to_string = lambda _: numpy_time_to_comma( _ ) if isinstance( _, numpy.datetime64 ) else str( _ )
+      for _ in s.view( self.struct_flat_dtype ):
+        print self.delimiter.join( map( to_string, _ ) )
     if self.flush: sys.stdout.flush()
