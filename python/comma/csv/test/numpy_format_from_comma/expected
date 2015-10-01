@@ -1,0 +1,14 @@
+int/output="int8,uint8,int16,uint16,int32,uint32,int64,uint64"
+int/status=0
+float/output="float32,float64"
+float/status=0
+time/output="datetime64[us]"
+time/status=0
+string/output="S1,S2,S10,S123"
+string/status=0
+mixed/output="int32,datetime64[us],float64,float64,float64,S3"
+mixed/status=0
+invalid/output=""
+invalid/status=1
+empty/output=""
+empty/status=1

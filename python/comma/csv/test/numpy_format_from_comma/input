@@ -1,0 +1,7 @@
+int b,ub,w,uw,i,ui,l,ul
+float f,d
+time t
+string s[1],s[2],s[10],s[123]
+mixed i,t,d,d,d,s[3]
+invalid t,d,invalid,i
+empty t,d,,i
