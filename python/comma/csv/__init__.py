@@ -5,7 +5,7 @@ import itertools
 import io
 import warnings
 import operator
-import re
+import types
 
 class struct:
   def __init__( self, fields, *types ):
@@ -26,32 +26,11 @@ class struct:
         elif what == 'format': items.append( dtype.str )
     return items
 
-def numpy_format_from_comma( comma_format ):
-  numpy_types_dict = dict( b='int8', ub='uint8', w='int16', uw='uint16', i='int32', ui='uint32', l='int64', ul='uint64', f='float32', d='float64', t='datetime64[us]' )
-  def numpy_string_type( comma_string_type ):
-    match = re.match( r'^s\[(\d+)\]$', comma_string_type )
-    if match: return 'S' + match.group(1)
-  numpy_types = []
-  for comma_type in comma_format.split(','):
-    numpy_type = numpy_types_dict.get( comma_type ) or numpy_string_type( comma_type )
-    if numpy_type is None: raise Exception( "format string '{}' contains unrecongnised type '{}'".format( comma_format, comma_type ) )
-    numpy_types.append( numpy_type )
-  return ','.join( numpy_types )
-
-def numpy_time_from_comma( comma_time_string ):
-  v = list( comma_time_string )
-  if len( v ) < 15: raise Exception( "ascii time string '{}' is not recognised".format( comma_time_string ) )
-  for i in [13,11]: v.insert( i, ':' )
-  for i in [6,4]: v.insert( i, '-' )
-  return numpy.datetime64( ''.join( v ), 'us' )
-
-def numpy_time_to_comma( numpy_time ):
-  return re.sub( r'(\.0{6})?\+\d{4}$', '',  str( numpy_time ) ).translate( None, ':-' )
-
 class stream:
   buffer_size_in_bytes = 65536
-  def __init__( self, struct, fields=None, format=None, binary=False, delimiter=',', flush=False ):
-    self.struct = struct
+  def __init__( self, s, fields=None, format=None, binary=False, delimiter=',', flush=False ):
+    if not isinstance( s, struct ): raise Exception( "expected '{}', got '{}'".format( str( struct ), repr( s ) ) )
+    self.struct = s
     if fields is None:
       self.fields = self.struct.fields
     else:
@@ -72,11 +51,13 @@ class stream:
         numpy.dtype( format )
         self.format = format
       except TypeError:
-        self.format = numpy_format_from_comma( format )
+        self.format = types.format_to_numpy( format )
+      if len( self.fields.split(',') ) != len( self.format.split(',') ):
+        raise Exception( "expected same number of fields and format types, got {} fields and {} format types".format( len( self.fields.split(',') ), len( self.format.split(',') ) ) )
     self.dtype = numpy.dtype( self.format )
     self.size = max( 1, stream.buffer_size_in_bytes / self.dtype.itemsize )
     if not self.binary:
-      self.converters = { i:numpy_time_from_comma for i in numpy.where( numpy.array( self.format.split(',') ) == numpy.dtype('datetime64[us]').str )[0] }
+      self.converters = { i: types.time_to_numpy for i in numpy.where( numpy.array( self.format.split(',') ) == numpy.dtype('datetime64[us]').str )[0] }
     self.struct_flat_dtype = numpy.dtype( self.struct.format )
     if self.fields == self.struct.fields:
         self.reshaped_dtype = None
@@ -111,7 +92,7 @@ class stream:
     if self.binary:
       s.tofile( sys.stdout )
     else:
-      to_string = lambda _: numpy_time_to_comma( _ ) if isinstance( _, numpy.datetime64 ) else str( _ )
+      to_string = lambda _: types.time_from_numpy( _ ) if isinstance( _, numpy.datetime64 ) else str( _ )
       for _ in s.view( self.struct_flat_dtype ):
         print self.delimiter.join( map( to_string, _ ) )
     flush = self.flush if flush is None else flush
