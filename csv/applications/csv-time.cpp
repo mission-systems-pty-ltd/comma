@@ -196,7 +196,8 @@ static boost::posix_time::ptime from_string( const std::string& s, const what_t 
             std::cerr.precision( 20 );
             double d = boost::lexical_cast< double >( s );
             long long seconds = d;
-            int microseconds = ::round( ( d - seconds ) * 1000000 ); // although ::round() is slow, have to round, since lexical cast has floating point jitter, e.g. try: boost::lexical_cast< double >( "1369179610.752231000" );
+            // ::round() does not compile on windows for c++03
+            int microseconds = ::ceil( ( d - seconds ) * 1000000 - 0.5 ); //int microseconds = ::round( ( d - seconds ) * 1000000 ); // although ::round() is slow, have to round, since lexical cast has floating point jitter, e.g. try: boost::lexical_cast< double >( "1369179610.752231000" );
             return boost::posix_time::ptime( comma::csv::impl::epoch, boost::posix_time::seconds( seconds ) + boost::posix_time::microseconds( microseconds ) );
         }
 

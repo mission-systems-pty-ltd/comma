@@ -258,6 +258,7 @@ void memory_buffer::allocate(size_t size)
     if( buffer == NULL ) { std::cerr << name() << "failed to allocate memory buffer of size: " << size << std::endl; exit(1); }
 }
 
+#ifndef WIN32
 /// Read a record and  fills out param 'record', the binary data is immediately send to stdout
 static comma::uint32 read_and_write_binary_record()
 {
@@ -317,6 +318,8 @@ static comma::uint32 read_and_write_ascii_record()
         return record.index; // 'record' filled
     }
 }
+
+#endif // #ifndef WIN32
 
 int main( int ac, char** av )
 {
