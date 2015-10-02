@@ -34,6 +34,11 @@
 #include <memory.h>
 #include <iostream>
 #include <deque>
+
+#ifndef WIN32
+#include <sysexits.h>
+#endif
+
 #include <comma/application/command_line_options.h>
 #include <comma/application/contact_info.h>
 #include <comma/base/types.h>
@@ -41,7 +46,6 @@
 #include <comma/csv/impl/unstructured.h>
 #include <comma/string/string.h>
 #include <comma/visiting/traits.h>
-#include <sysexits.h>
 
 static const char* name() { return "csv-blocks: "; }
 
@@ -371,6 +375,9 @@ int main( int ac, char** av )
         }
         else if( operation == "head" )
         {
+#ifdef WIN32
+            std::cerr << "csv-blocks: not implemented on windows" << std::endl; return 1;
+#else // #ifdef WIN32
             ::setvbuf( stdin, (char *)NULL, _IONBF, 0 );
             #ifdef WIN32
                 if( csv.binary() ) { _setmode( _fileno( stdin ), _O_BINARY ); }
@@ -382,6 +389,7 @@ int main( int ac, char** av )
                 if( index == 0 ) { --num_of_blocks; }
             }
             return 0;
+#endif // #ifdef WIN32
         }
         else if( operation == "index" )
         {
@@ -405,7 +413,7 @@ int main( int ac, char** av )
                 // Put the input into the buffer
                 if( istream.is_binary() )  
                 { 
-                    memcpy( &buffer[0], istream.binary().last(),  istream.binary().size() ); 
+                    ::memcpy( &buffer[0], istream.binary().last(),  istream.binary().size() ); 
                     block_records.push_back( buffer );
                 }
                 else { block_records.push_back( comma::join( istream.ascii().last(), delimiter ) ); }

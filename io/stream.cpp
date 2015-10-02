@@ -33,12 +33,12 @@
 #include <sys/stat.h>
 #ifndef WIN32
 #include <signal.h>
+#include <sys/ioctl.h>
 #else
 #include <stdio.h>
 #include <fcntl.h>
 #include <io.h>
 #include <sys/types.h>
-#include <sys/ioctl.h>
 #endif
 
 #include <fcntl.h>
