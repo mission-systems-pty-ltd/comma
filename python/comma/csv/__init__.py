@@ -53,7 +53,7 @@ class stream:
       except TypeError:
         self.format = types.format_to_numpy( format )
       if len( self.fields.split(',') ) != len( self.format.split(',') ):
-        raise Exception( "expected same number of fields and format types, got '{}' and '{}'".format( self.fields, self.format ) )
+        raise Exception( "expected same number of fields and format types, got '{}' and '{}'".format( self.fields, format ) )
     self.dtype = numpy.dtype( self.format )
     self.size = max( 1, stream.buffer_size_in_bytes / self.dtype.itemsize )
     if not self.binary:
