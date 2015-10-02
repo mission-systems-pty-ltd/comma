@@ -1,0 +1,31 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+read options
+
+function handle()
+{
+    [[ -n "$workdir" ]] && rm -rf "$workdir"
+}
+
+trap 'handle' EXIT
+
+output_dir="output"
+mkdir -p "$output_dir" || exit 1
+output_dir=$( readlink -f "$output_dir" )
+
+tarball="../../data/expectations.tar"
+[[ -f "$tarball" ]] || {
+    echo "$name: file '$tarball' not found" >&2
+    exit 1
+}
+tarball=$( readlink -f "$tarball" )
+
+workdir=$( mktemp --directory --tmpdir="$output_dir" )
+cd "$workdir"
+tar xf "$tarball" || exit 1
+cd expectations || exit 1
+
+comma-test-run --no-ansiterm-control-characters $options $@ > "$output_dir/log"
+echo "status=$?"

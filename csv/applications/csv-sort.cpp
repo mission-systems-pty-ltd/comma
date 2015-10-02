@@ -191,7 +191,7 @@ template < typename It > static void output_( It it, It end )
 
 int sort( const comma::command_line_options& options )
 {
-    typename input_t::map sorted_map;
+    input_t::map sorted_map;
     input_t default_input;
     std::vector< std::string > v = comma::split( stdin_csv.fields, ',' );
     std::vector< std::string > order = options.exists("--order") ? comma::split( options.value< std::string >( "--order" ), ',' ) : v;
@@ -247,7 +247,7 @@ int sort( const comma::command_line_options& options )
     
     if (!first_line.empty()) 
     { 
-        typename input_t::map::mapped_type& d = sorted_map[ comma::csv::ascii< input_t >(stdin_csv,default_input).get(first_line) ];
+        input_t::map::mapped_type& d = sorted_map[ comma::csv::ascii< input_t >(stdin_csv,default_input).get(first_line) ];
         d.push_back( first_line + "\n" );
     }
     
@@ -257,7 +257,7 @@ int sort( const comma::command_line_options& options )
         if( !p ) { break; }
         if( stdin_stream.is_binary() )
         {
-            typename input_t::map::mapped_type& d = sorted_map[ *p ];
+            input_t::map::mapped_type& d = sorted_map[ *p ];
             if (unique && !d.empty()) continue;
             d.push_back( std::string() );
             d.back().resize( stdin_csv.format().size() );
@@ -265,7 +265,7 @@ int sort( const comma::command_line_options& options )
         }
         else
         {
-            typename input_t::map::mapped_type& d = sorted_map[ *p ];
+            input_t::map::mapped_type& d = sorted_map[ *p ];
             if (unique && !d.empty()) continue;
             d.push_back( comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) + "\n" );
         }
