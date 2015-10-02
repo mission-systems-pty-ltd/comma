@@ -101,7 +101,10 @@ class stream:
         warnings.simplefilter( 'ignore' )
         data = numpy.loadtxt( StringIO( ''.join( itertools.islice( sys.stdin, size ) ) ), dtype=self.dtype , delimiter=self.delimiter, converters=self.converters, ndmin=1 )
     if data.size == 0: return None
-    s = numpy.array( map( tuple, numpy.ndarray( data.shape, self.reshaped_dtype, data )[:] ), dtype=self.struct_flat_dtype ).view( self.struct ) if self.reshaped_dtype else data.view( self.struct )
+    if self.reshaped_dtype:
+      s = numpy.array( map( tuple, numpy.ndarray( data.shape, self.reshaped_dtype, data, strides=data.itemsize )[:] ), dtype=self.struct_flat_dtype ).view( self.struct )
+    else:
+      s = data.view( self.struct )
     return s.view( numpy.recarray ) if recarray else s
 
   def write( self, s, flush=None ):
