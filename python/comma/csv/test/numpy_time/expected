@@ -1,13 +1,12 @@
-basic/output="20141231T140203"
+basic/output="20150101T010203"
 basic/status=0
-dot/output="20141231T140203"
+dot/output="20150101T010203"
 dot/status=0
-incomplete/output="20141231T140203.123000"
+incomplete/output="20150101T010203.123000"
 incomplete/status=0
-microseconds/output="20131231T140203.123456"
+microseconds/output="20140101T010203.123456"
 microseconds/status=0
 invalid_month/output=""
 invalid_month/status=1
 invalid_format/output=""
 invalid_format/status=1
-

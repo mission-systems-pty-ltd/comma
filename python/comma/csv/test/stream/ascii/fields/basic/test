@@ -14,6 +14,7 @@ record_stream = comma.csv.stream( record_t, fields=',event/coordinates/y,event/c
 for i,r in enumerate( record_stream.iter(), start=1 ):
   r['observer'] = numpy.char.upper( r['observer'] )
   r['event']['time'] += numpy.timedelta64( i, 's' )
+  r['event']['coordinates']['x'] += i
   record_stream.write( r )
 END
 )"

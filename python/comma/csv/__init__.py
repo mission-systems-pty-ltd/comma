@@ -29,7 +29,7 @@ class struct:
 def numpy_format_from_comma( comma_format ):
   numpy_types_dict = dict( b='int8', ub='uint8', w='int16', uw='uint16', i='int32', ui='uint32', l='int64', ul='uint64', f='float32', d='float64', t='datetime64[us]' )
   def numpy_string_type( comma_string_type ):
-    match = re.match( '^s\[(\d+)\]$', comma_string_type )
+    match = re.match( r'^s\[(\d+)\]$', comma_string_type )
     if match: return 'S' + match.group(1)
   numpy_types = []
   for comma_type in comma_format.split(','):
@@ -46,7 +46,7 @@ def numpy_time_from_comma( comma_time_string ):
   return numpy.datetime64( ''.join( v ), 'us' )
 
 def numpy_time_to_comma( numpy_time ):
-  return numpy_time.item().isoformat().translate( None, '-:' )
+  return re.sub( r'(\.0{6})?\+\d{4}$', '',  str( numpy_time ) ).translate( None, ':-' )
 
 class stream:
   buffer_size_in_bytes = 65536
