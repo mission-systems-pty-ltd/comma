@@ -53,7 +53,7 @@ class stream:
       except TypeError:
         self.format = types.format_to_numpy( format )
       if len( self.fields.split(',') ) != len( self.format.split(',') ):
-        raise Exception( "expected same number of fields and format types, got {} fields and {} format types".format( len( self.fields.split(',') ), len( self.format.split(',') ) ) )
+        raise Exception( "expected same number of fields and format types, got '{}' and '{}'".format( self.fields, self.format ) )
     self.dtype = numpy.dtype( self.format )
     self.size = max( 1, stream.buffer_size_in_bytes / self.dtype.itemsize )
     if not self.binary:
@@ -83,7 +83,7 @@ class stream:
         data = numpy.loadtxt( StringIO( ''.join( itertools.islice( sys.stdin, size ) ) ), dtype=self.dtype , delimiter=self.delimiter, converters=self.converters, ndmin=1 )
     if data.size == 0: return None
     if self.reshaped_dtype:
-      s = numpy.array( map( tuple, numpy.ndarray( data.shape, self.reshaped_dtype, data, strides=data.itemsize )[:] ), dtype=self.struct_flat_dtype ).view( self.struct )
+      s = numpy.array( map( tuple, numpy.ndarray( data.shape, self.reshaped_dtype, data, strides=data.itemsize ) ), dtype=self.struct_flat_dtype ).view( self.struct )
     else:
       s = data.view( self.struct )
     return s.view( numpy.recarray ) if recarray else s
