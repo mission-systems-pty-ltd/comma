@@ -1,0 +1,29 @@
+#!/bin/bash
+
+function process_records
+{
+    python -c "$( cat <<END
+import comma
+import numpy
+
+point_t = comma.csv.struct( 'x,y,z', 'float64', 'float64', 'float64' )
+timestamped_point_t = comma.csv.struct( 'time,coordinates', 'datetime64[us]', point_t )
+record_t = comma.csv.struct( 'observer,event', 'S3', timestamped_point_t )
+
+fields = ',event/coordinates/y,event/coordinates/z,observer,,event/time,event/coordinates/x,,'
+format = 'int32,float64,float64,S3,S7,datetime64[us],float64,uint32,uint32'
+record_stream = comma.csv.stream( record_t, fields=fields, format=format )
+
+for i,r in enumerate( record_stream.iter(), start=1 ):
+  r['observer'] = numpy.char.upper( r['observer'] )
+  r['event']['time'] += numpy.timedelta64( i, 's' )
+  r['event']['coordinates']['x'] += i
+  record_stream.write( r )
+END
+)"
+}
+
+output="$( csv-to-bin i,2d,s[3],s[7],t,d,2ui | process_records | csv-from-bin s[3],t,3d )"
+status=$?
+echo "$output" | csv-paste value="line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'
+echo "status=$status"
