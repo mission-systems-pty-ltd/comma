@@ -20,7 +20,7 @@ class struct:
     items = []
     for name in nested_dtype.names:
       dtype = nested_dtype.fields[name][0]
-      if dtype.type == numpy.void:
+      if dtype.type == numpy.void and not dtype.subdtype:
         items.extend( struct.get( what, dtype, path + name + '/' ) )
       else:
         if what == 'fields': items.append( path + name )
@@ -48,13 +48,9 @@ class stream:
         struct_format_of_field = dict( zip( self.struct.fields.split(','), self.struct.format.split(',') ) )
         self.format = ','.join( struct_format_of_field.get( name ) or 'S' for name in self.fields.split(',') )
     else:
-      try:
-        numpy.dtype( format )
-        self.format = format
-      except TypeError:
-        self.format = types.format_to_numpy( format )
-      if len( self.fields.split(',') ) != len( self.format.split(',') ):
+      if len( self.fields.split(',') ) != len( format.split(',') ):
         raise Exception( "expected same number of fields and format types, got '{}' and '{}'".format( self.fields, format ) )
+      self.format = format
     self.dtype = numpy.dtype( self.format )
     self.size = max( 1, stream.buffer_size_in_bytes / self.dtype.itemsize )
     if not self.binary:
