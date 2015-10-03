@@ -42,13 +42,15 @@ def format_from_numpy( numpy_format ):
   return ','.join( comma_types )
 
 def time_to_numpy( comma_time_string ):
+  if comma_time_string == 'not-a-date-time': return numpy.datetime64()
   v = list( comma_time_string )
-  if len( v ) < 15: raise Exception( "expected time string in comma iso format, got '{}'".format( comma_time_string ) )
+  if len( v ) < 15: raise Exception( "expected time string in comma format, e.g. 20150101T000000, got '{}'".format( comma_time_string ) )
   for i in [13,11]: v.insert( i, ':' )
   for i in [6,4]: v.insert( i, '-' )
   return numpy.datetime64( ''.join( v ), 'us' )
 
-def time_from_numpy( numpy_time_object ):
-  if not isinstance( numpy_time_object, numpy.datetime64 ):
-    raise Exception( "expected '{}', got '{}'".format( numpy.dtype('datetime64[us]').type, repr( numpy_time_object ) ) )
-  return re.sub( r'(\.0{6})?\+\d{4}$', '',  str( numpy_time_object ) ).translate( None, ':-' )
+def time_from_numpy( numpy_time ):
+  if numpy_time == numpy.datetime64(): return 'not-a-date-time'
+  if numpy_time.dtype != numpy.dtype('datetime64[us]'):
+    raise Exception( "expected time of type 'datetime64[us]', got '{}'".format( repr( numpy_time ) ) )
+  else: return re.sub( r'(\.0{6})?[-+]\d{4}$', '',  str( numpy_time ) ).translate( None, ':-' )

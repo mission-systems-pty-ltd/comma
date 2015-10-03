@@ -4,3 +4,4 @@ incomplete 20150101T010203.123
 microseconds 20140101T010203.123456
 invalid_month 20150001T000000
 invalid_format 20150101T0000
+not_a_date_time not-a-date-time
