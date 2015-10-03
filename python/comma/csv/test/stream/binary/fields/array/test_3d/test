@@ -1,0 +1,30 @@
+#!/bin/bash
+
+source $( which comma-application-util )
+
+function process_records
+{
+    python -c "$( cat <<END
+import comma
+import numpy
+
+event_t = comma.csv.struct( 'time,signal', 'datetime64[us]', '(2,3,4)f8' )
+record_t = comma.csv.struct( 'observer,event', 'S3', event_t )
+
+fields = ',event/signal,observer,,event/time,,'
+format = 'i4,(2,3,4)f8,S3,S7,datetime64[us],u4,u4'
+record_stream = comma.csv.stream( record_t, fields=fields, format=format )
+
+for i,r in enumerate( record_stream.iter( size=1 ), start=1 ):
+  r['observer'] = numpy.char.upper( r['observer'] )
+  r['event']['time'] += numpy.timedelta64( i, 's' )
+  r['event']['signal'] += [ [ [i,-1,-2,-3], [-4,-5,-6,-7], [-8,-9,-10,-11] ], [ [-12,-13,-14,-15], [-16,-17,-18,-19], [-20,-21,-22,-23] ] ]
+  record_stream.write( r )
+END
+)"
+}
+
+output="$( csv-to-bin i,24d,s[3],s[7],t,2ui | process_records | csv-from-bin s[3],t,24d; comma_status_ok )"
+status=$?
+echo "$output" | csv-paste value="line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'
+echo "status=$status"

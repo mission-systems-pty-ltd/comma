@@ -1,8 +1,8 @@
 #!/bin/bash
 
-function format_incorrect_name { python -c "import comma; point_t = comma.csv.struct( 'x', 'invalid' )"; }
-function format_empty_name { python -c "import comma; point_t = comma.csv.struct( 'x', '' )"; }
-function format_incorrect_number { python -c "import comma; point_t = comma.csv.struct( 'x,y', 'float64' )"; }
+function types_incorrect_name { python -c "import comma; point_t = comma.csv.struct( 'x', 'invalid' )"; }
+function types_empty_name { python -c "import comma; point_t = comma.csv.struct( 'x', '' )"; }
+function types_incorrect_number { python -c "import comma; point_t = comma.csv.struct( 'x,y', 'float64' )"; }
 
 function basic
 {
@@ -19,7 +19,7 @@ END
 )"
 }
 
-function format_None { python -c "import comma; point_t = comma.csv.struct( 'x', None ); print point_t.format"; }
+function types_None { python -c "import comma; point_t = comma.csv.struct( 'x', None ); print ','.join( point_t.types )"; }
 
 function record
 {
@@ -30,7 +30,7 @@ import comma
 point_t = comma.csv.struct( 'x,y,z', 'float64', 'float64', 'float64' )
 timestamped_point_t = comma.csv.struct( 't,coordinates', 'datetime64[us]', point_t )
 record_t = comma.csv.struct( 'observer,event', 'S3', timestamped_point_t )
-print record_t.$what
+print ','.join( record_t.$what )
 END
 )"
 }
@@ -50,25 +50,25 @@ END
 }
 
 
-format_incorrect_name; echo "format_incorrect_name/status=$?"
-format_empty_name; echo "format_empty_name/status=$?"
-format_incorrect_number; echo "format_incorrect_number/status=$?"
+types_incorrect_name; echo "types_incorrect_name/status=$?"
+types_empty_name; echo "types_empty_name/status=$?"
+types_incorrect_number; echo "types_incorrect_number/status=$?"
 
 basic; echo "basic/status=$?"
 
-output=$( format_None )
+output=$( types_None )
 status=$?
-echo "format_None/output=$output"
-echo "format_None/status=$status"
+echo "types_None/output=$output"
+echo "types_None/status=$status"
 
-for what in fields format; do
+for what in fields types; do
     output=$( record $what )
     status=$?
     echo "record/$what/output=$output"
     echo "record/$what/status=$status"
 done
 
-for what in fields format; do
+for what in fields types; do
     output=$( struct_get $what )
     status=$?
     echo "struct_get/$what/output=$output"
