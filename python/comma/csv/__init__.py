@@ -14,6 +14,7 @@ class struct:
     self.dtype = numpy.dtype( zip( fields.split(','), types ) )
     self.fields = struct.get( 'fields', self.dtype )
     self.types = struct.get( 'types', self.dtype )
+    self.flat_dtype = numpy.dtype( ','.join( self.types ) )
 
   @staticmethod
   def get( what, parent_dtype, path='' ):
@@ -46,7 +47,7 @@ class stream:
       self.dtype = numpy.dtype( format )
     else:
       if self.fields == self.struct.fields:
-        self.dtype = numpy.dtype( ','.join( self.struct.types ) )
+        self.dtype = self.struct.flat_dtype
       else:
         struct_type_of_field = dict( zip( self.struct.fields, self.struct.types ) )
         self.dtype = numpy.dtype( ','.join( struct_type_of_field.get( name ) or 'S' for name in self.fields ) )
@@ -55,7 +56,6 @@ class stream:
     self.size = max( 1, stream.buffer_size_in_bytes / self.dtype.itemsize )
     if not self.binary:
       self.converters = { index: types.time_to_numpy for index in numpy.where( numpy.array( struct.get( 'types', self.dtype ) ) == numpy.dtype('datetime64[us]').str )[0] }
-    self.struct_flat_dtype = numpy.dtype( ','.join( self.struct.types ) )
     if self.fields == self.struct.fields:
         self.reshaped_dtype = None
     else:
@@ -80,7 +80,7 @@ class stream:
         data = numpy.loadtxt( StringIO( ''.join( itertools.islice( sys.stdin, size ) ) ), dtype=self.dtype , delimiter=self.delimiter, converters=self.converters, ndmin=1 )
     if data.size == 0: return None
     if self.reshaped_dtype:
-      s = numpy.array( map( tuple, numpy.ndarray( data.shape, self.reshaped_dtype, data, strides=data.itemsize ) ), dtype=self.struct_flat_dtype ).view( self.struct )
+      s = numpy.array( map( tuple, numpy.ndarray( data.shape, self.reshaped_dtype, data, strides=data.itemsize ) ), dtype=self.struct.flat_dtype ).view( self.struct )
     else:
       s = data.view( self.struct )
     return s.view( numpy.recarray ) if recarray else s
@@ -90,7 +90,7 @@ class stream:
       s.tofile( sys.stdout )
     else:
       to_string = lambda _: types.time_from_numpy( _ ) if isinstance( _, numpy.datetime64 ) else str( _ )
-      for _ in s.view( self.struct_flat_dtype ):
+      for _ in s.view( self.struct.flat_dtype ):
         print self.delimiter.join( map( to_string, _ ) )
     flush = self.flush if flush is None else flush
     if flush: sys.stdout.flush()
