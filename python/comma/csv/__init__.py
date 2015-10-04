@@ -71,9 +71,9 @@ class stream:
       if s is None: break
       yield s
 
-  def read( self, size=None, recarray=True ):
+  def read( self, size, recarray=False ):
     if self.binary:
-      data = numpy.fromfile( sys.stdin, dtype=self.dtype, count=self.size if size is None else size )
+      data = numpy.fromfile( sys.stdin, dtype=self.dtype, count=size )
     else:
       with warnings.catch_warnings():
         warnings.simplefilter( 'ignore' )
