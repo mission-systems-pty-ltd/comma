@@ -104,7 +104,7 @@ class stream:
 
   def write( self, s ):
     if s.dtype != self.struct.dtype:
-      raise Exception( "expected object of dtype '{}', got '{}'".format( str( struct.dtype ), repr( s.dtype ) ) )
+      raise Exception( "expected object of dtype '{}', got '{}'".format( str( self.struct.dtype ), repr( s.dtype ) ) )
     if self.binary:
       s.tofile( self.target )
     else:
