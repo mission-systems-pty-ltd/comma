@@ -1,0 +1,23 @@
+#!/bin/bash
+
+function process_records
+{
+    python -c "$( cat <<END
+import comma
+import numpy
+
+point_t = comma.csv.struct( 'x', 'float64' )
+record_stream = comma.csv.stream( point_t )
+
+for i,r in enumerate( record_stream.iter(), start=1 ):
+  r['x'] += i
+  record_stream.write( r )
+END
+)"
+}
+
+output="$( process_records )"
+status=$?
+echo "$output" | csv-paste value="line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'
+echo "status=$status"
+

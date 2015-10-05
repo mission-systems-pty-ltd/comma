@@ -19,8 +19,6 @@ END
 )"
 }
 
-function types_None { python -c "import comma; point_t = comma.csv.struct( 'x', None ); print ','.join( point_t.types )"; }
-
 function record
 {
     local what=$1
@@ -35,42 +33,15 @@ END
 )"
 }
 
-function struct_get
-{
-    local what=$1
-    python -c "$( cat <<END
-import comma
-
-point_t = comma.csv.struct( 'x,y,z', 'float64', 'float64', 'float64' )
-timestamped_point_t = comma.csv.struct( 't,coordinates', 'datetime64[us]', point_t )
-record_t = comma.csv.struct( 'observer,event,id', 'S3', timestamped_point_t, 'uint32' )
-print ','.join( comma.csv.struct.get( '$1', record_t.dtype, 'root/' ) )
-END
-)"
-}
-
-
 types_incorrect_name; echo "types_incorrect_name/status=$?"
 types_empty_name; echo "types_empty_name/status=$?"
 types_incorrect_number; echo "types_incorrect_number/status=$?"
 
 basic; echo "basic/status=$?"
 
-output=$( types_None )
-status=$?
-echo "types_None/output=$output"
-echo "types_None/status=$status"
-
 for what in fields types; do
     output=$( record $what )
     status=$?
     echo "record/$what/output=$output"
     echo "record/$what/status=$status"
-done
-
-for what in fields types; do
-    output=$( struct_get $what )
-    status=$?
-    echo "struct_get/$what/output=$output"
-    echo "struct_get/$what/status=$status"
 done

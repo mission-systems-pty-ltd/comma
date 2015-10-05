@@ -33,7 +33,7 @@ def format_to_numpy( comma_format ):
   return ','.join( numpy_types )
 
 def format_from_numpy( numpy_format ):
-  d = dict( reversed(_) for _ in dictionary( processed=True ).items() )
+  d = dict( reversed( _ ) for _ in dictionary( processed=True ).items() )
   comma_types = []
   for numpy_type in numpy_format.split(','):
     comma_type = d.get( numpy_type ) or string_from_numpy( numpy_type )
@@ -54,3 +54,7 @@ def time_from_numpy( numpy_time ):
   if numpy_time.dtype != numpy.dtype('datetime64[us]'):
     raise Exception( "expected time of type 'datetime64[us]', got '{}'".format( repr( numpy_time ) ) )
   else: return re.sub( r'(\.0{6})?[-+]\d{4}$', '',  str( numpy_time ) ).translate( None, ':-' )
+
+def ascii_time_converters( types ):
+  return { i: time_to_numpy for i in numpy.where( numpy.array( types ) == numpy.dtype('datetime64[us]') )[0] }
+  

@@ -2,14 +2,7 @@ types_incorrect_name/status=1
 types_empty_name/status=1
 types_incorrect_number/status=1
 basic/status=0
-types_None/output="<f8"
-types_None/status=0
 record/fields/output="observer,event/t,event/coordinates/x,event/coordinates/y,event/coordinates/z"
 record/fields/status=0
-record/types/output="|S3,<M8[us],<f8,<f8,<f8"
+record/types/output="S3,datetime64[us],float64,float64,float64"
 record/types/status=0
-struct_get/fields/output="root/observer,root/event/t,root/event/coordinates/x,root/event/coordinates/y,root/event/coordinates/z,root/id"
-struct_get/fields/status=0
-struct_get/types/output="|S3,<M8[us],<f8,<f8,<f8,<u4"
-struct_get/types/status=0
-
