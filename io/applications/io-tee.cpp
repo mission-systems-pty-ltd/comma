@@ -107,17 +107,10 @@ static std::string escape_quotes( const char *s )
     return result;
 }
 
-void signal_handler( int signal )
-{
-    std::cerr << app_name << ": received signal " << signal << std::endl;
-    exit( 1 );
-}
-
 int main( int ac, char **av )
 {
     FILE *pipe = NULL;
-    signal( SIGSEGV, signal_handler );
-    signal( SIGABRT, signal_handler );
+    signal( SIGPIPE, SIG_IGN );  // we detect pipe errors a different way, e.g. the return value of fflush(pipe)
     try
     {
         // command line handling is tricky because we don't want to confuse the pipeline command options
@@ -157,6 +150,7 @@ int main( int ac, char **av )
         if( !file_is_writable( outfile ) ) { std::cerr << app_name << ": cannot write to " << outfile << std::endl; exit( 1 ); }
         if( options.exists( "--dry-run,--dry" ) ) { std::cout << command << std::endl; return 0; }
         if( verbose ) { std::cerr << app_name << ": will run command: " << command << std::endl; }
+        std::cout.flush();
         pipe = ::popen( &command[0], "w" );
         if( pipe == NULL ) { std::cerr << app_name << ": failed to open pipe; command: " << command << std::endl; return 1; }
         boost::array< char, 0xffff > buffer;
@@ -200,7 +194,12 @@ int main( int ac, char **av )
                 if ( debug ) { std::cerr << app_name << ": flushing stdout" << std::endl; }
                 std::cout.flush();
                 if ( debug ) { std::cerr << app_name << ": flushing pipe" << std::endl; }
-                ::fflush( pipe );
+                if ( ::fflush( pipe ) != 0 )
+                {
+                     std::cerr << app_name << ": flushing pipe failed: " << std::strerror( errno )
+                        << "; command was: " << command << std::endl;
+                     exit( 1 );
+                }
                 if ( debug ) { std::cerr << app_name << ": flushed stdout and pipe " << std::endl; }
             }
         }
