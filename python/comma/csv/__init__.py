@@ -2,7 +2,6 @@ import numpy
 import sys
 from StringIO import StringIO
 import itertools
-import io
 import warnings
 import operator
 import re
@@ -39,7 +38,7 @@ class struct:
 
 class stream:
   buffer_size_in_bytes = 65536
-  def __init__( self, s, fields=None, format=None, binary=False, delimiter=',', flush=False, source=sys.stdin, target=sys.stdout, recarray=False ):
+  def __init__( self, s, fields=None, format=None, binary=False, delimiter=',', flush=False, source=sys.stdin, target=sys.stdout ):
     if not isinstance( s, struct ): raise Exception( "expected '{}', got '{}'".format( str( struct ), repr( s ) ) )
     self.struct = s
     if fields:
@@ -54,7 +53,6 @@ class stream:
     self.flush = flush
     self.source = source
     self.target = target
-    self.recarray = recarray
     if format:
       self.dtype = numpy.dtype( format )
     else:
@@ -97,10 +95,9 @@ class stream:
         data = numpy.loadtxt( StringIO( ''.join( itertools.islice( self.source, size ) ) ), dtype=self.dtype , delimiter=self.delimiter, converters=self.converters, ndmin=1 )
     if data.size == 0: return None
     if self.reshaped_dtype:
-      s = numpy.array( map( tuple, numpy.ndarray( data.shape, self.reshaped_dtype, data, strides=data.itemsize ) ), dtype=self.struct.flat_dtype ).view( self.struct )
+      return numpy.array( map( tuple, numpy.ndarray( data.shape, self.reshaped_dtype, data, strides=data.itemsize ) ), dtype=self.struct.flat_dtype ).view( self.struct )
     else:
-      s = data.view( self.struct )
-    return s.view( numpy.recarray ) if self.recarray else s
+      return data.view( self.struct )
 
   def write( self, s ):
     if s.dtype != self.struct.dtype:
