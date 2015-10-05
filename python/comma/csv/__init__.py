@@ -39,7 +39,7 @@ class struct:
 
 class stream:
   buffer_size_in_bytes = 65536
-  def __init__( self, s, fields=None, format=None, binary=False, delimiter=',', flush=False ):
+  def __init__( self, s, fields=None, format=None, binary=False, delimiter=',', flush=False, source=sys.stdin, target=sys.stdout, recarray=False ):
     if not isinstance( s, struct ): raise Exception( "expected '{}', got '{}'".format( str( struct ), repr( s ) ) )
     self.struct = s
     if fields:
@@ -52,6 +52,9 @@ class stream:
     self.binary = binary or format is not None
     self.delimiter = delimiter if not self.binary else None
     self.flush = flush
+    self.source = source
+    self.target = target
+    self.recarray = recarray
     if format:
       self.dtype = numpy.dtype( format )
     else:
@@ -78,30 +81,33 @@ class stream:
   def iter( self, size=None, recarray=False  ):
     size = self.size if size is None else size
     while True:
-      s = self.read( size, recarray )
+      s = self.read( size )
       if s is None: break
       yield s
 
-  def read( self, size, recarray=False ):
+  def read( self, size=None ):
+    size = self.size if size is None else size
+    if size <= 0:
+      if self.source == sys.stdin: raise Exception( "expected positive size when stream source is stdin, got {}".format( size ) )
+      size = -1 if self.binary else None
     if self.binary:
-      data = numpy.fromfile( sys.stdin, dtype=self.dtype, count=size )
+      data = numpy.fromfile( self.source, dtype=self.dtype, count=size )
     else:
       with warnings.catch_warnings():
         warnings.simplefilter( 'ignore' )
-        data = numpy.loadtxt( StringIO( ''.join( itertools.islice( sys.stdin, size ) ) ), dtype=self.dtype , delimiter=self.delimiter, converters=self.converters, ndmin=1 )
+        data = numpy.loadtxt( StringIO( ''.join( itertools.islice( self.source, size ) ) ), dtype=self.dtype , delimiter=self.delimiter, converters=self.converters, ndmin=1 )
     if data.size == 0: return None
     if self.reshaped_dtype:
       s = numpy.array( map( tuple, numpy.ndarray( data.shape, self.reshaped_dtype, data, strides=data.itemsize ) ), dtype=self.struct.flat_dtype ).view( self.struct )
     else:
       s = data.view( self.struct )
-    return s.view( numpy.recarray ) if recarray else s
+    return s.view( numpy.recarray ) if self.recarray else s
 
-  def write( self, s, flush=None ):
+  def write( self, s ):
     if self.binary:
-      s.tofile( sys.stdout )
+      s.tofile( self.target )
     else:
       to_string = lambda _: time.from_numpy( _ ) if isinstance( _, numpy.datetime64 ) else str( _ )
       for _ in s.view( self.struct.unrolled_flat_dtype ):
-        print self.delimiter.join( map( to_string, _ ) )
-    flush = self.flush if flush is None else flush
-    if flush: sys.stdout.flush()
+        print >> self.target, self.delimiter.join( map( to_string, _ ) )
+    if self.flush: self.target.flush()
