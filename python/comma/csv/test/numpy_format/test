@@ -6,9 +6,9 @@ function comma_format_roundabout
 import comma
 import numpy
 
-numpy_format = comma.csv.types.format_to_numpy( '$1' )
+numpy_format = comma.csv.format.to_numpy( '$1' )
 numpy.dtype( numpy_format )
-print comma.csv.types.format_from_numpy( numpy_format )
+print comma.csv.format.from_numpy( numpy_format )
 END
 )"
 }

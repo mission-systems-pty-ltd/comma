@@ -6,7 +6,8 @@ import io
 import warnings
 import operator
 import re
-import comma.csv.types
+import comma.csv.format
+import comma.csv.time
 
 def shape_unrolled_types_of_flat_dtype( dtype ):
   shape_unrolled_types = []
@@ -59,13 +60,13 @@ class stream:
       else:
         struct_type_of_field = dict( zip( self.struct.fields, self.struct.types ) )
         names = [ 'f' + str( i ) for i in range( len( self.fields ) ) ]
-        types_ = [ struct_type_of_field.get( name ) or 'S' for name in self.fields ]
-        self.dtype = numpy.dtype( zip( names, types_ ) )
+        types = [ struct_type_of_field.get( name ) or 'S' for name in self.fields ]
+        self.dtype = numpy.dtype( zip( names, types ) )
     if format and len( self.fields ) != len( self.dtype.names ):
       raise Exception( "expected same number of fields and format types, got '{}' and '{}'".format( self.fields, format ) )    
     self.size = max( 1, stream.buffer_size_in_bytes / self.dtype.itemsize )
     if not self.binary:
-      self.converters = types.ascii_time_converters( shape_unrolled_types_of_flat_dtype( self.dtype ) )
+      self.converters = time.ascii_converters( shape_unrolled_types_of_flat_dtype( self.dtype ) )
     if self.fields == self.struct.fields:
         self.reshaped_dtype = None
     else:
@@ -99,7 +100,7 @@ class stream:
     if self.binary:
       s.tofile( sys.stdout )
     else:
-      to_string = lambda _: types.time_from_numpy( _ ) if isinstance( _, numpy.datetime64 ) else str( _ )
+      to_string = lambda _: time.from_numpy( _ ) if isinstance( _, numpy.datetime64 ) else str( _ )
       for _ in s.view( self.struct.unrolled_flat_dtype ):
         print self.delimiter.join( map( to_string, _ ) )
     flush = self.flush if flush is None else flush

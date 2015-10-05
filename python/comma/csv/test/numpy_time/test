@@ -6,9 +6,9 @@ import numpy
 import comma
 
 comma_time = '$@'
-numpy_time = comma.csv.types.time_to_numpy( comma_time )
+numpy_time = comma.csv.time.to_numpy( comma_time )
 if isinstance( numpy_time, numpy.datetime64 ):
-  print comma.csv.types.time_from_numpy( numpy_time )
+  print comma.csv.time.from_numpy( numpy_time )
 END
 )"
 }
