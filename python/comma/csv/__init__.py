@@ -78,8 +78,7 @@ class stream:
       offsets = [ self.dtype.fields[name][1] for name in names ]
       self.reshaped_dtype = numpy.dtype( dict( names=names, formats=formats, offsets=offsets ) )
 
-  def iter( self, size=None, recarray=False  ):
-    size = self.size if size is None else size
+  def iter( self, size=None ):
     while True:
       s = self.read( size )
       if s is None: break
@@ -104,6 +103,8 @@ class stream:
     return s.view( numpy.recarray ) if self.recarray else s
 
   def write( self, s ):
+    if s.dtype != self.struct.dtype:
+      raise Exception( "expected object of dtype '{}', got '{}'".format( str( struct.dtype ), repr( s.dtype ) ) )
     if self.binary:
       s.tofile( self.target )
     else:
