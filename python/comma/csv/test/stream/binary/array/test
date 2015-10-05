@@ -8,7 +8,7 @@ function process_records
 import comma
 import numpy
 
-event_t = comma.csv.struct( 'point,time', '3f8', 'datetime64[us]' )
+event_t = comma.csv.struct( 'point,time', '(3,)f8', '(2,)datetime64[us]' )
 record_t = comma.csv.struct( 'observer,event', 'S3', event_t )
 
 record_stream = comma.csv.stream( record_t, binary=True )
@@ -22,7 +22,7 @@ END
 )"
 }
 
-output="$( csv-to-bin s[3],3d,t | process_records | csv-from-bin s[3],3d,t; comma_status_ok )"
+output="$( csv-to-bin s[3],3d,2t | process_records | csv-from-bin s[3],3d,2t; comma_status_ok )"
 status=$?
 echo "$output" | csv-paste value="line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'
 echo "status=$status"

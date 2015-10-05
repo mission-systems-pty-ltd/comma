@@ -34,7 +34,7 @@ class struct:
     self.types = tuple( types )
     self.flat_dtype = numpy.dtype( zip( self.fields, self.types ) )
     format = ','.join( shape_unrolled_types_of_flat_dtype( self.flat_dtype ) )
-    number_of_types = len( re.sub( r'\(.+\)', '', format ).split(',') )
+    number_of_types = len( re.sub( r'\([^\)]*\)', '', format ).split(',') )
     self.unrolled_flat_dtype = numpy.dtype( [ ( 'f0', format ) ] ) if number_of_types == 1 else numpy.dtype( format )
 
 class stream:
