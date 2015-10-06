@@ -13,7 +13,7 @@ timestamped_point_t = comma.csv.struct( 'time,coordinates', 'datetime64[us]', po
 record_t = comma.csv.struct( 'observer,event', 'S3', timestamped_point_t )
 
 fields = ',event/coordinates/y,event/coordinates/z,observer,,event/time,event/coordinates/x,,'
-format = comma.csv.format.to_numpy( 'i,2d,s[3],s[7],t,d,2ui' )
+format = ','.join( comma.csv.format.to_numpy( 'i,2d,s[3],s[7],t,d,2ui' ) )
 record_stream = comma.csv.stream( record_t, fields=fields, format=format )
 
 for i,r in enumerate( record_stream.iter(), start=1 ):

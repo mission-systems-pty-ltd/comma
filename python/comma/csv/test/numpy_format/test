@@ -1,20 +1,20 @@
 #!/bin/bash
 
-function comma_format_roundabout
+function comma_format_to_numpy
 {
     python -c "$( cat <<END
 import comma
 import numpy
 
 numpy_format = comma.csv.format.to_numpy( '$1' )
-numpy.dtype( numpy_format )
-print comma.csv.format.from_numpy( numpy_format )
+numpy.dtype( ','.join( numpy_format ) )
+print ','.join( numpy_format )
 END
 )"
 }
 
 while read name comma_format; do
-    output=$( comma_format_roundabout $comma_format )
+    output=$( comma_format_to_numpy $comma_format )
     status=$?
     echo "$name/output=$output"
     echo "$name/status=$status"
