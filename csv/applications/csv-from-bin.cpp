@@ -40,7 +40,6 @@
 #include <iostream>
 #include <comma/application/command_line_options.h>
 #include <comma/application/contact_info.h>
-#include <comma/application/signal_flag.h>
 #include <comma/base/exception.h>
 #include <comma/csv/format.h>
 #include <comma/string/string.h>
@@ -57,7 +56,7 @@ static void usage()
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
-    exit( -1 );
+    exit( 0 );
 }
 
 int main( int ac, char** av )
@@ -67,7 +66,6 @@ int main( int ac, char** av )
     #endif
     try
     {
-        signal_flag shutdownFlag;
         command_line_options options( ac, av );
         if( ac < 2 || options.exists( "--help" ) || options.exists( "-h" ) ) { usage(); }
         char delimiter = options.value( "--delimiter", ',' );
@@ -78,7 +76,6 @@ int main( int ac, char** av )
         char* buf = &w[0];
         while( std::cin.good() && !std::cin.eof() )
         {
-            if( shutdownFlag ) { std::cerr << "csv-from-bin: interrupted by signal" << std::endl; return -1; }
             std::cin.read( buf, format.size() );
             if( std::cin.gcount() == 0 ) { break; }
             if( std::cin.gcount() < static_cast< int >( format.size() ) ) { COMMA_THROW( comma::exception, "expected " << format.size() << " bytes, got only " << std::cin.gcount() ); }
@@ -88,6 +85,6 @@ int main( int ac, char** av )
     }
     catch( std::exception& ex ) { std::cerr << "csv-from-bin: " << ex.what() << std::endl; }
     catch( ... ) { std::cerr << "csv-from-bin: unknown exception" << std::endl; }
-    usage();
+    return 1;
 }
 
