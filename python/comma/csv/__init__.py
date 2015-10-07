@@ -28,7 +28,7 @@ class struct:
         types.extend( type.types )
       else:
         fields.append( name )
-        types.append( type )    
+        types.append( type )
     self.fields = tuple( fields )
     self.types = tuple( types )
     self.flat_dtype = numpy.dtype( zip( self.fields, self.types ) )
@@ -49,7 +49,7 @@ class stream:
     else:
       self.fields = self.struct.fields
     self.binary = binary or format is not None
-    self.delimiter = delimiter if not self.binary else None
+    self.delimiter = delimiter
     self.flush = flush
     self.source = source
     self.target = target
@@ -66,8 +66,7 @@ class stream:
     if format and len( self.fields ) != len( self.dtype.names ):
       raise Exception( "expected same number of fields and format types, got '{}' and '{}'".format( self.fields, format ) )    
     self.size = max( 1, stream.buffer_size_in_bytes / self.dtype.itemsize )
-    if not self.binary:
-      self.converters = time.ascii_converters( shape_unrolled_types_of_flat_dtype( self.dtype ) )
+    self.ascii_converters = comma.csv.time.ascii_converters( shape_unrolled_types_of_flat_dtype( self.dtype ) )
     if self.fields == self.struct.fields:
         self.reshaped_dtype = None
     else:
@@ -92,7 +91,7 @@ class stream:
     else:
       with warnings.catch_warnings():
         warnings.simplefilter( 'ignore' )
-        data = numpy.loadtxt( StringIO( ''.join( itertools.islice( self.source, size ) ) ), dtype=self.dtype , delimiter=self.delimiter, converters=self.converters, ndmin=1 )
+        data = numpy.loadtxt( StringIO( ''.join( itertools.islice( self.source, size ) ) ), dtype=self.dtype , delimiter=self.delimiter, converters=self.ascii_converters, ndmin=1 )
     if data.size == 0: return None
     if self.reshaped_dtype:
       return numpy.array( numpy.ndarray( data.shape, self.reshaped_dtype, data, strides=data.itemsize ).tolist(), dtype=self.struct.flat_dtype ).view( self.struct )
@@ -105,7 +104,7 @@ class stream:
     if self.binary:
       s.tofile( self.target )
     else:
-      to_string = lambda _: time.from_numpy( _ ) if isinstance( _, numpy.datetime64 ) else str( _ )
+      to_string = lambda _: comma.csv.time.from_numpy( _ ) if isinstance( _, numpy.datetime64 ) else str( _ )
       for _ in s.view( self.struct.unrolled_flat_dtype ):
         print >> self.target, self.delimiter.join( map( to_string, _ ) )
     if self.flush: self.target.flush()
