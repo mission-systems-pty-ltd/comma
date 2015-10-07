@@ -326,17 +326,17 @@ xml_split_application::do_element_start(char const * const element, char const *
         if (! writers[element_found_index].is_full())
         {    
             std::ostream  & os(writers[element_found_index].more());
-            os  << '<' << element << ' ';
+            os  << '<' << element;
             if (NULL != attributes)
                 for (unsigned i = 0; NULL != attributes[i]; i += 2)
                 {
-                    os << attributes[i] << "='";
+                    os << ' ' << attributes[i] << "='";
                     for (XML_Char const * p = attributes[i+1]; *p != 0; ++p)
                         if ('\'' == *p)
                             os << "&apos;";
                         else
                             os << *p;
-                    os << "' ";
+                    os << '\'';
                 }
             os << '>';
         }
