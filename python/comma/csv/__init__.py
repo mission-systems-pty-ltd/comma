@@ -95,7 +95,7 @@ class stream:
         data = numpy.loadtxt( StringIO( ''.join( itertools.islice( self.source, size ) ) ), dtype=self.dtype , delimiter=self.delimiter, converters=self.converters, ndmin=1 )
     if data.size == 0: return None
     if self.reshaped_dtype:
-      return numpy.array( map( tuple, numpy.ndarray( data.shape, self.reshaped_dtype, data, strides=data.itemsize ) ), dtype=self.struct.flat_dtype ).view( self.struct )
+      return numpy.array( numpy.ndarray( data.shape, self.reshaped_dtype, data, strides=data.itemsize ).tolist(), dtype=self.struct.flat_dtype ).view( self.struct )
     else:
       return data.view( self.struct )
 
