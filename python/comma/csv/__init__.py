@@ -104,7 +104,7 @@ class stream:
     if self.binary:
       s.tofile( self.target )
     else:
-      to_string = lambda _: comma.csv.time.from_numpy( _ ) if isinstance( _, numpy.datetime64 ) else str( _ )
+      to_string = lambda _: comma.csv.time.from_numpy( _ ) if isinstance( _, numpy.datetime64 ) else str( _ ) # TODO: make sure timedelta64 works and remove trailing .0 from floats (use dtype.char and numpy.typecodes to infer types)
       for _ in s.view( self.struct.unrolled_flat_dtype ):
         print >> self.target, self.delimiter.join( map( to_string, _ ) )
     if self.flush: self.target.flush()
