@@ -232,6 +232,8 @@ void make_blocks_setup( const comma::command_line_options& options, std::string&
     csv.fields = comma::join( v, ',' );
 }
 
+#ifndef WIN32
+
 struct memory_buffer
 {
     char* buffer;
@@ -241,6 +243,10 @@ struct memory_buffer
     ~memory_buffer();
     
     void allocate( size_t size );
+    
+    // if strict is true, fails when less data then expected is received
+    comma::uint32 read_binary_records( comma::uint32 num_record=1, bool strict=false );  
+    
 };
 memory_buffer::memory_buffer() : buffer(NULL), size(0) {}
 memory_buffer::~memory_buffer()
@@ -258,29 +264,55 @@ void memory_buffer::allocate(size_t size)
     if( buffer == NULL ) { std::cerr << name() << "failed to allocate memory buffer of size: " << size << std::endl; exit(1); }
 }
 
-#ifndef WIN32
+comma::uint32 memory_buffer::read_binary_records( comma::uint32 num_record, bool strict )
+{
+    static comma::uint32 one_record_size = csv.format().size();
+    comma::uint32 bytes_to_read = one_record_size * num_record;
+    size_t bytes_read = 0;
+    while ( bytes_read < bytes_to_read && !::feof( stdin ) && !::ferror(stdin) )
+    {
+        bytes_read +=  ::fread( &buffer[bytes_read], 1, bytes_to_read - bytes_read, stdin );
+    }
+    if ( bytes_read == 0 ) { exit( EX_NOINPUT ); } 
+    if ( strict && (bytes_read < bytes_to_read) ) { std::cerr << "csv-blocks: expected " << bytes_to_read << " bytes; got only: " << bytes_read << std::endl; exit( 1 ); } 
+    
+    return bytes_read;
+}
+
+static comma::uint32 extended_buffer_size = 65536; // 64Kb
+
 /// Read a record and  fills out param 'record', the binary data is immediately send to stdout
-static comma::uint32 read_and_write_binary_record()
+static void read_and_write_binary_record()
 {
     static memory_buffer memory( csv.format().size() );
     static comma::csv::binary< input_with_index > binary( csv );
     // Reads from stdin, the exact number of bytes to be memory.size
     //  It should blocks and keep reading until we have the entire message,
     //  This is to reassemble the message if it is broken into pieces (e.g. TCP input piped into stdin)
-    input_with_index record;
-    size_t bytes_read = 0;
-    while ( bytes_read < memory.size && !::feof( stdin ) && !::ferror(stdin) )
-    {
-        bytes_read +=  ::fread( &memory.buffer[bytes_read], 1, memory.size - bytes_read, stdin );
-    }
-    if ( bytes_read == 0 ) { exit( EX_NOINPUT ); } 
-    if ( bytes_read < memory.size ) { std::cerr << "csv-blocks: expected " << memory.size << " bytes; got only: " << bytes_read << std::endl; exit( 1 ); } 
+    comma::uint32 num_of_bytes = memory.read_binary_records();
+    std::cout.write( memory.buffer, num_of_bytes ); // send data to stdout, expect it to read one record
     
+    static input_with_index record;
     // fill 'record' param
     binary.get( record, memory.buffer );
-    // send data to stdout
-    std::cout.write( memory.buffer, memory.size );
-    return record.index;
+    
+    if( record.index == 0 ) { return; }
+    
+    static memory_buffer extended_buffer( extended_buffer_size );
+    static const comma::uint32 one_record_size = csv.format().size();
+    comma::uint32 records_to_read = record.index;
+    
+    // maximum number that will fit in the extened_buffer
+    comma::uint32 records_in_buffer = comma::uint32(extended_buffer_size / one_record_size) ;
+    // only read up to the number of bytes we can hold
+    comma::uint32 read_per_loop = (records_to_read <= records_in_buffer) ? records_to_read : records_in_buffer;
+    comma::uint32 records_read = 0;
+    while( records_read < records_to_read  && !::feof( stdin ) && !::ferror(stdin) )
+    {
+        comma::uint32 read_chunk_size = extended_buffer.read_binary_records( read_per_loop, false);
+        std::cout.write( extended_buffer.buffer, read_chunk_size );
+        records_read += read_per_loop;
+    }
 }
 
 /// Read a record and  fills out param 'record', the binary data is immediately send to stdout
@@ -386,10 +418,14 @@ int main( int ac, char** av )
                 if( csv.binary() ) { _setmode( _fileno( stdin ), _O_BINARY ); }
             #endif
             comma::uint32 num_of_blocks = options.value< comma::uint32 >( "--lines,--num-of-blocks,-n", 1 );
-            while( num_of_blocks > 0 )
+            
+            if( !csv.binary() )
             {
-                comma::uint32 index = csv.binary() ? read_and_write_binary_record() : read_and_write_ascii_record();
-                if( index == 0 ) { --num_of_blocks; }
+                while( num_of_blocks > 0 ) { if( read_and_write_ascii_record() == 0 ) { --num_of_blocks; } }
+            }
+            else
+            {
+                for( std::size_t n=0; n <num_of_blocks; ++n ) { read_and_write_binary_record(); }
             }
             return 0;
 #endif // #ifdef WIN32
