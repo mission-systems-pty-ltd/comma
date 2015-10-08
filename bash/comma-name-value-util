@@ -35,6 +35,10 @@
 [[ -z "$comma_name_value_util_include_guard_" ]] || return 0
 readonly comma_name_value_util_include_guard_=1
 
+[[ -n "$comma_log_util_include_guard_" ]] \
+    || source $( type -p comma-log-util ) \
+    || { echo "$name: cannot source 'comma-log-util' from '$BASH_SOURCE'" >&2; exit 1; }
+
 # take path-value pairs, mangle path to turn them into bash
 # expressions, e.g:
 # echo hello/world=5 | comma_path_value_mangle
@@ -215,19 +219,27 @@ function comma_path_value_to_var()
 
     [[ -z "$prefix" ]] || prefix="$prefix$delimiter"
 
-    local path name value
+    local -r regex="^[[:alpha:]][_[:alnum:]]*$"
+    local path name garbage value
     local -i ret_code=0
     while IFS='=' read path value ; do
         [[ -n "$path" && ! "$path" =~ ^[#\"] ]] || continue
         [[ -n "$value" || -n "$null_ok" ]] || continue
         name=$prefix${path//\//$delimiter}
         name=${name//-/$delimiter}
+        # we are occasionally passed bad data in JSON etc
+        # don't attempt to eval anything that is not a legal variable name
+        [[ "$name" =~ $regex ]] || { echo "comma-application-util: comma_path_value_to_var skipping invalid variable name '$name'" >&2 ; ret_code=1 ; continue ; }
         # Strip quotes then add them back. This ensures consistent behaviour.
         value=${value#\"}
         value=\"${value%\"}\"
         eval "$export_variable $name=$value" \
             || { echo "comma-application-util: comma_path_value_to_var failed '$export_variable $name=$value'" >&2 ; ret_code=1 ; }
     done
+    if (( $ret_code != 0 )) ; then
+        echo "comma-application-util: comma_path_value_to_var encountered an error, callstack:" >&2
+        comma_stacktrace >&2
+    fi
     return $ret_code
 }
 export -f comma_path_value_to_var

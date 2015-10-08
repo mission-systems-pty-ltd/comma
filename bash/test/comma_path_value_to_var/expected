@@ -20,3 +20,6 @@ test[8]/unquoted="unquoted"
 test[8]/quoted="quoted"
 test[8]/parens="(parens)"
 test[8]/quoted_parens="(quoted_parens)"
+test[9]/status=1
+test[9]/color4="white"
+test[9]/color5="black"

@@ -43,3 +43,11 @@ printf "test[8]/unquoted=\"%s\"\n" "$unquoted"
 printf "test[8]/quoted=\"%s\"\n" "$quoted"
 printf "test[8]/parens=\"%s\"\n" "$parens"
 printf "test[8]/quoted_parens=\"%s\"\n" "$quoted_parens"
+
+comma_path_value_to_var <<< 'color6=white
+color@=boom
+1color=boom
+color7=black' ; printf "test[9]/status=%d\n" $?
+printf "test[9]/color4=\"%s\"\n" "$color6"
+printf "test[9]/color5=\"%s\"\n" "$color7"
+

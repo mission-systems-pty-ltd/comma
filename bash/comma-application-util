@@ -35,23 +35,8 @@
 [[ -n "$comma_application_util_include_guard_" ]] && return 0
 readonly comma_application_util_include_guard_=1
 
-source $( type -p comma-name-value-util ) || { echo "$name: cannot source 'comma-name-value-util'" >&2; exit 1; }
-
-# usage: comma_stacktrace <any message>
-# print the stacktrace, the list of lines and script names that were passed
-# through on the way to the currently executed line of the script
-# finally prints the supplied arguments, if any
-function comma_stacktrace()
-{
-    local frame=0
-
-    while caller $frame; do
-        ((frame++));
-    done
-
-    echo "$*"
-}
-export -f comma_stacktrace
+source $( type -p comma-name-value-util ) \
+    || { echo "$name: cannot source 'comma-name-value-util' from '$BASH_SOURCE'" >&2; exit 1; }
 
 # usage: my_options=( $( cat name-value-pairs | comma_options_from_name_value [<options>] ) )
 #
