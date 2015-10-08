@@ -273,7 +273,18 @@ comma::uint32 memory_buffer::read_binary_records( comma::uint32 num_record, bool
     {
         bytes_read +=  ::fread( &buffer[bytes_read], 1, bytes_to_read - bytes_read, stdin );
     }
-    if ( bytes_read == 0 ) { exit( EX_NOINPUT ); } 
+    
+    // todo:
+    //     - by default, exit 0 (is not it simply end of stream?)
+    //     - if --strict, exit with error
+    if ( bytes_read == 0 ) { exit( EX_NOINPUT ); }
+    
+    // todo: checks
+    //       - if bytes_read is not divisible by record size, always error
+    //       - if --strict present, pass it through correctly
+    
+    // todo: make sure same checks are done for ascii data
+    
     if ( strict && (bytes_read < bytes_to_read) ) { std::cerr << "csv-blocks: expected " << bytes_to_read << " bytes; got only: " << bytes_read << std::endl; exit( 1 ); } 
     
     return bytes_read;
