@@ -16,10 +16,6 @@ def shape_unrolled_types_of_flat_dtype( dtype ):
     shape_unrolled_types.extend( [ type ] * reduce( operator.mul, shape, 1 ) )
   return tuple( shape_unrolled_types )
 
-def numpy_scalar_to_string( scalar ):
-    if isinstance( scalar, ( numpy.datetime64, numpy.timedelta64 ) ): return comma.csv.time.from_numpy( scalar )
-    else: return str( scalar )
-
 class struct:
   def __init__( self, concise_fields, *concise_types ):
     if len( concise_fields.split(',') ) != len( concise_types ):
@@ -42,7 +38,7 @@ class struct:
 
 class stream:
   buffer_size_in_bytes = 65536
-  def __init__( self, s, fields=None, format=None, binary=False, delimiter=',', flush=False, source=sys.stdin, target=sys.stdout ):
+  def __init__( self, s, fields=None, format=None, binary=False, delimiter=',', precision=12, flush=False, source=sys.stdin, target=sys.stdout ):
     if not isinstance( s, struct ): raise Exception( "expected '{}', got '{}'".format( str( struct ), repr( s ) ) )
     self.struct = s
     if fields:
@@ -55,6 +51,7 @@ class stream:
     self.binary = binary or format is not None
     self.delimiter = delimiter
     self.flush = flush
+    self.precision = precision
     self.source = source
     self.target = target
     if format:
@@ -68,7 +65,7 @@ class stream:
         types = [ struct_type_of_field.get( name ) or 'S' for name in self.fields ]
         self.dtype = numpy.dtype( zip( names, types ) )
     if format and len( self.fields ) != len( self.dtype.names ):
-      raise Exception( "expected same number of fields and format types, got '{}' and '{}'".format( self.fields, format ) )    
+      raise Exception( "expected same number of fields and format types, got '{}' and '{}'".format( self.fields, format ) )
     self.size = max( 1, stream.buffer_size_in_bytes / self.dtype.itemsize )
     self.ascii_converters = comma.csv.time.ascii_converters( shape_unrolled_types_of_flat_dtype( self.dtype ) )
     if self.fields == self.struct.fields:
@@ -102,6 +99,13 @@ class stream:
     else:
       return data.view( self.struct )
 
+  def numpy_scalar_to_string( self, scalar ):
+    if scalar.dtype.char in numpy.typecodes['AllInteger']: return str( scalar )
+    elif scalar.dtype.char in numpy.typecodes['Float']: return "{scalar:.{precision}g}".format( scalar=scalar, precision=self.precision )
+    elif scalar.dtype.char in numpy.typecodes['Datetime'] : return comma.csv.time.from_numpy( scalar )
+    elif scalar.dtype.char in 'S': return scalar
+    else: raise Exception( "conversion to string for numpy type '{}' is not implemented".format( repr( scalar.dtype ) )  )
+
   def write( self, s ):
     if s.dtype != self.struct.dtype:
       raise Exception( "expected object of dtype '{}', got '{}'".format( str( self.struct.dtype ), repr( s.dtype ) ) )
@@ -109,5 +113,5 @@ class stream:
       s.tofile( self.target )
     else:
       for _ in s.view( self.struct.unrolled_flat_dtype ):
-        print >> self.target, self.delimiter.join( map( numpy_scalar_to_string, _ ) )
+        print >> self.target, self.delimiter.join( map( self.numpy_scalar_to_string, _ ) )
     if self.flush: self.target.flush()
