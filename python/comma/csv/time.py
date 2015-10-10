@@ -2,6 +2,7 @@ import numpy
 import re
 
 NUMPY_TYPE = 'datetime64[us]'
+NUMPY_TYPE_DELTA = 'int64'
 
 def to_numpy( comma_time_string ):
   if comma_time_string == 'not-a-date-time': return numpy.datetime64()
@@ -12,15 +13,11 @@ def to_numpy( comma_time_string ):
   return numpy.datetime64( ''.join( v ), 'us' )
 
 def from_numpy( numpy_time ):
+  if isinstance( numpy_time, numpy.timedelta64 ): return str( numpy_time.astype( NUMPY_TYPE_DELTA ) )
   if numpy_time == numpy.datetime64(): return 'not-a-date-time'
   if numpy_time.dtype != numpy.dtype( NUMPY_TYPE ):
     raise Exception( "expected time of type '{}', got '{}'".format( NUMPY_TYPE, repr( numpy_time ) ) )
   else: return re.sub( r'(\.0{6})?[-+]\d{4}$', '',  str( numpy_time ) ).translate( None, ':-' )
-
-def from_numpy_delta( numpy_timedelta ):
-  if not isinstance( numpy_timedelta, numpy.timedelta64 ):
-    raise Exception( "expected time delta of type '{}', got '{}'".format( numpy.timdelta64, repr( numpy_timedelta ) ) )
-  return str( numpy_timedelta.astype( 'int64' ) )
 
 def ascii_converters( types ):
   return { i: to_numpy for i in numpy.where( numpy.array( types ) == numpy.dtype( NUMPY_TYPE ) )[0] }

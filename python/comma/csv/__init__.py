@@ -17,8 +17,7 @@ def shape_unrolled_types_of_flat_dtype( dtype ):
   return tuple( shape_unrolled_types )
 
 def numpy_scalar_to_string( scalar ):
-    if isinstance( scalar, numpy.datetime64 ): return comma.csv.time.from_numpy( scalar )
-    elif isinstance( scalar, numpy.timedelta64 ): return comma.csv.time.from_numpy_delta( scalar )
+    if isinstance( scalar, ( numpy.datetime64, numpy.timedelta64 ) ): return comma.csv.time.from_numpy( scalar )
     else: return str( scalar )
 
 class struct:
@@ -109,7 +108,6 @@ class stream:
     if self.binary:
       s.tofile( self.target )
     else:
-      #to_string = lambda _: comma.csv.time.from_numpy( _ ) if isinstance( _, numpy.datetime64 ) else str( _ ) # TODO: make sure timedelta64 works and remove trailing .0 from floats (use dtype.char and numpy.typecodes to infer types)
       for _ in s.view( self.struct.unrolled_flat_dtype ):
         print >> self.target, self.delimiter.join( map( numpy_scalar_to_string, _ ) )
     if self.flush: self.target.flush()
