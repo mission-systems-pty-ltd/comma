@@ -15,7 +15,7 @@ def shape_unrolled_types_of_flat_dtype( dtype ):
     shape = descr[2] if len( descr ) > 2 else ()
     shape_unrolled_types.extend( [ type ] * reduce( operator.mul, shape, 1 ) )
   return tuple( shape_unrolled_types )
-  
+
 class struct:
   def __init__( self, concise_fields, *concise_types ):
     if len( concise_fields.split(',') ) != len( concise_types ):
