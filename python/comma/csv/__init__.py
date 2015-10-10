@@ -16,6 +16,11 @@ def shape_unrolled_types_of_flat_dtype( dtype ):
     shape_unrolled_types.extend( [ type ] * reduce( operator.mul, shape, 1 ) )
   return tuple( shape_unrolled_types )
 
+def numpy_scalar_to_string( scalar ):
+    if isinstance( scalar, numpy.datetime64 ): return comma.csv.time.from_numpy( scalar )
+    elif isinstance( scalar, numpy.timedelta64 ): return comma.csv.time.from_numpy_delta( scalar )
+    else: return str( scalar )
+
 class struct:
   def __init__( self, concise_fields, *concise_types ):
     if len( concise_fields.split(',') ) != len( concise_types ):
@@ -104,7 +109,7 @@ class stream:
     if self.binary:
       s.tofile( self.target )
     else:
-      to_string = lambda _: comma.csv.time.from_numpy( _ ) if isinstance( _, numpy.datetime64 ) else str( _ ) # TODO: make sure timedelta64 works and remove trailing .0 from floats (use dtype.char and numpy.typecodes to infer types)
+      #to_string = lambda _: comma.csv.time.from_numpy( _ ) if isinstance( _, numpy.datetime64 ) else str( _ ) # TODO: make sure timedelta64 works and remove trailing .0 from floats (use dtype.char and numpy.typecodes to infer types)
       for _ in s.view( self.struct.unrolled_flat_dtype ):
-        print >> self.target, self.delimiter.join( map( to_string, _ ) )
+        print >> self.target, self.delimiter.join( map( numpy_scalar_to_string, _ ) )
     if self.flush: self.target.flush()

@@ -17,6 +17,10 @@ def from_numpy( numpy_time ):
     raise Exception( "expected time of type '{}', got '{}'".format( NUMPY_TYPE, repr( numpy_time ) ) )
   else: return re.sub( r'(\.0{6})?[-+]\d{4}$', '',  str( numpy_time ) ).translate( None, ':-' )
 
+def from_numpy_delta( numpy_timedelta ):
+  if not isinstance( numpy_timedelta, numpy.timedelta64 ):
+    raise Exception( "expected time delta of type '{}', got '{}'".format( numpy.timdelta64, repr( numpy_timedelta ) ) )
+  return str( numpy_timedelta.astype( 'int64' ) )
+
 def ascii_converters( types ):
   return { i: to_numpy for i in numpy.where( numpy.array( types ) == numpy.dtype( NUMPY_TYPE ) )[0] }
-  
