@@ -2,8 +2,8 @@ import numpy
 import re
 
 def dictionary():
-  from comma.csv.time import NUMPY_TYPE as numpy_time_type
-  return dict( b='int8', ub='uint8', w='int16', uw='uint16', i='int32', ui='uint32', l='int64', ul='uint64', f='float32', d='float64', t=numpy_time_type )
+  from comma.csv.time import NUMPY_TYPE as numpy_datetime_type
+  return dict( b='int8', ub='uint8', w='int16', uw='uint16', i='int32', ui='uint32', l='int64', ul='uint64', f='float32', d='float64', t=numpy_datetime_type )
 
 def expand( compressed_comma_format ):
   d = dictionary()
