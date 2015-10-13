@@ -145,6 +145,7 @@ static void usage( bool more )
     std::cerr << "    --from,--starting-block; use with 'group' operation, the starting block number to use, default is 1" << std::endl;
     std::cerr << "    --step; use with 'increment' operation, the number of increment/decrement for specified field, default is 1" << std::endl;
     std::cerr << "    --lines,--num-of-blocks,-n; use with 'head' operation, outputs only the first specified number of blocks, default is 1" << std::endl;
+    std::cerr << "    --strict; use with 'head' operation, exits with an error if a full block (as indicated by the index number) is not found" << std::endl;
     if( more ) { std::cerr << comma::csv::options::usage() << std::endl << std::endl; }
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
@@ -176,6 +177,7 @@ static void usage( bool more )
 }
 
 static bool verbose;
+static bool strict = false;
 static comma::csv::options csv;
 static input_t default_input;
 static bool reverse_index = false;
@@ -195,7 +197,7 @@ void flush_indexing( std::deque< std::string >& block_records, bool is_binary, c
         
         if( is_binary ) 
         { 
-            std::cout.write( input.c_str(), input.size() );
+            std::cout.write( &input[0], input.size() );
             std::cout.write( (const char *) &index, sizeof(comma::uint32)); 
         }
         else 
@@ -274,18 +276,10 @@ comma::uint32 memory_buffer::read_binary_records( comma::uint32 num_record, bool
         bytes_read +=  ::fread( &buffer[bytes_read], 1, bytes_to_read - bytes_read, stdin );
     }
     
-    // todo:
-    //     - by default, exit 0 (is not it simply end of stream?)
-    //     - if --strict, exit with error
-    if ( bytes_read == 0 ) { exit( EX_NOINPUT ); }
+    if ( bytes_read == 0 ) { exit( EX_NOINPUT ); } // signals end of stream, not an error
     
-    // todo: checks
-    //       - if bytes_read is not divisible by record size, always error
-    //       - if --strict present, pass it through correctly
-    
-    // todo: make sure same checks are done for ascii data
-    
-    if ( strict && (bytes_read < bytes_to_read) ) { std::cerr << "csv-blocks: expected " << bytes_to_read << " bytes; got only: " << bytes_read << std::endl; exit( 1 ); } 
+    if( bytes_read % one_record_size != 0 ) { std::cerr << name() << "expected " << one_record_size << " bytes, got only read: " << ( bytes_read % one_record_size ) << std::endl; exit( 1 ); } 
+    if ( strict && (bytes_read < bytes_to_read) ) { std::cerr << name() << "expected " << bytes_to_read << " bytes (" << ( bytes_to_read / one_record_size  ) << " records); got only: " << bytes_read << " bytes (" << ( bytes_read / one_record_size ) << " records)" << std::endl; exit( 1 ); } 
     
     return bytes_read;
 }
@@ -300,7 +294,7 @@ static void read_and_write_binary_record()
     // Reads from stdin, the exact number of bytes to be memory.size
     //  It should blocks and keep reading until we have the entire message,
     //  This is to reassemble the message if it is broken into pieces (e.g. TCP input piped into stdin)
-    comma::uint32 num_of_bytes = memory.read_binary_records();
+    comma::uint32 num_of_bytes = memory.read_binary_records(1, strict);
     std::cout.write( memory.buffer, num_of_bytes ); // send data to stdout, expect it to read one record
     
     static input_with_index record;
@@ -320,7 +314,7 @@ static void read_and_write_binary_record()
     comma::uint32 records_read = 0;
     while( records_read < records_to_read  && !::feof( stdin ) && !::ferror(stdin) )
     {
-        comma::uint32 read_chunk_size = extended_buffer.read_binary_records( read_per_loop, false);
+        comma::uint32 read_chunk_size = extended_buffer.read_binary_records( read_per_loop, strict);
         std::cout.write( extended_buffer.buffer, read_chunk_size );
         records_read += read_per_loop;
     }
@@ -328,7 +322,7 @@ static void read_and_write_binary_record()
 
 /// Read a record and  fills out param 'record', the binary data is immediately send to stdout
 // when return value is false, 'record' is not filled because line read is empty
-static comma::uint32 read_and_write_ascii_record()
+static comma::uint32 read_and_write_ascii_record( comma::uint32 previous_index, bool strict )
 {
     static memory_buffer memory( 1024 );
     static comma::csv::ascii< input_with_index > ascii( csv );
@@ -341,7 +335,16 @@ static comma::uint32 read_and_write_ascii_record()
         {
             // getline may actually changes the buffer with realloc and extend the size
             ssize_t bytes_read = ::getline( &memory.buffer, &memory.size, stdin );
-            if ( bytes_read <= 0 ) { exit( EX_NOINPUT ); }  // We are done
+            if ( bytes_read <= 0 ) // We are done
+            {
+                if( previous_index != 0 ) 
+                { 
+                    std::cerr << name() << "failed to read a full block, last index read is:"  
+                        << previous_index <<  ", hence " << previous_index << " more record/s expected " << strict << std::endl; 
+                    if( strict ) { exit(1); }
+                }
+                exit( EX_NOINPUT ); // we are done, end of stream
+            } 
 #ifndef WIN32
             has_end_of_line = ( memory.buffer[bytes_read-1] == '\n' );
             sstream.write( memory.buffer, has_end_of_line ? bytes_read-1 : bytes_read );
@@ -370,6 +373,7 @@ int main( int ac, char** av )
     {
         comma::command_line_options options( ac, av, usage );
         verbose = options.exists( "--verbose,-v" );
+        strict = options.exists( "--strict" );
         csv = comma::csv::options( options );
         csv.full_xpath = true;
         csv.quote.reset();
@@ -432,7 +436,12 @@ int main( int ac, char** av )
             
             if( !csv.binary() )
             {
-                while( num_of_blocks > 0 ) { if( read_and_write_ascii_record() == 0 ) { --num_of_blocks; } }
+                comma::uint32 index = 0;    // set as 0 for previous_index at start
+                while( num_of_blocks > 0 ) 
+                { 
+                    index = read_and_write_ascii_record( index, strict );
+                    if( index == 0 ) { --num_of_blocks; } 
+                }
             }
             else
             {
