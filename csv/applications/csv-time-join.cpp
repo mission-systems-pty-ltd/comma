@@ -67,6 +67,11 @@ static void usage()
     //std::cerr << "    --nearest-only: output only the input points nearest to timestamp" << std::endl;
     //std::cerr << "               if 'block' given in --fields, output the whole block" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "limitation" << std::endl;
+    std::cerr << "    data with timestamp before the first and after the last bounding timestamps will be discarded at the moment; this is unwanted behaviour when using --nearest and --bound=n" << std::endl;
+    std::cerr << "    workaround" << std::endl;
+    std::cerr << "        use csv-time-delay to shift data timestamp and/or possibly add a boudning timestamp record with distant time in the past or future" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "<input/output options>" << std::endl;
     std::cerr << "    -: if csv-time-join - b.csv, concatenate output as: <stdin><b.csv>" << std::endl;
     std::cerr << "       if csv-time-join b.csv -, concatenate output as: <b.csv><stdin>" << std::endl;
