@@ -1,2 +1,2 @@
-test_ticks=30
-options=--max-run-time=10
+test_ticks=60
+options=--max-run-time=5

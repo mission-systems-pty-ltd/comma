@@ -1,2 +1,2 @@
-test_ticks=30
-config_timeout=15
+test_ticks=60
+config_timeout=5
