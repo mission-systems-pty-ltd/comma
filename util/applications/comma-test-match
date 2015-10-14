@@ -98,7 +98,7 @@ fi
 if [[ -z "$variables" ]]; then
     input="$( cat )"
     if [[ -z "$input" ]]; then
-        if empty_apart_from_comments "$expr_file"; then exit 1  # no variables means it is OK for the input to be empty
+        if empty_apart_from_comments "$expr_file"; then exit 0  # no variables means it is OK for the input to be empty
         else echo "$name: error: empty input (test script failed?)" >&2; exit 1; fi
     fi
     echo "$input" | name-value-eval --test "$expr_file" --tmp-dir=$tmp_dir
