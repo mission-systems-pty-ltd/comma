@@ -1,0 +1,9 @@
+Test the --max-run-time option and max_run_time config parameter used by comma-test-run.
+
+The input file can have the following values:
+
+test_ticks:     how long to run the test before normal completion (seconds)
+options:        options to use with comma-test-run, e.g. "--max-run-time=..."
+config_timeout: value of "max_run_time" parameter in "config" file
+
+Note that the stderr.log file will say there was an error; this is just because the timeout time was reached (as expected).

@@ -1,0 +1,3 @@
+test_ticks=30
+options=--max-run-time=20
+config_timeout=10

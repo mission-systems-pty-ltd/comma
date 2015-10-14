@@ -1,0 +1,30 @@
+#!/bin/bash
+
+name=$( basename $0 )
+source $( which comma-name-value-util )
+
+subtest=output/subtest
+mkdir $subtest
+cd $subtest
+
+function cleanup()
+{
+    # if we don't remove the generated test, comma-test-run will think it is a real test next time
+    rm -f test
+}
+
+trap 'cleanup; exit 1' SIGINT SIGQUIT SIGTERM
+
+comma_path_value_to_var < <( egrep '^test_ticks=|^config_timeout=|^options=' )
+echo "test:  test_ticks='$test_ticks' config_timeout='$config_timeout' options='$options'" >&2
+if [[ -n "$config_timeout" ]]; then echo "max_run_time=$config_timeout" > config; fi
+
+echo "#/bin/bash
+for (( n = 1; n <= $test_ticks; ++n )); do sleep 1; echo \$n >> time_ticks; done" > test
+chmod +x test
+
+comma-test-run --no-ansiterm-control-characters $options > /dev/null
+ticks=$( tail -1 time_ticks )
+echo "time_ticks=${ticks:-0}"
+cleanup
+exit 0
