@@ -535,7 +535,7 @@ function run_and_match_test()
     error_files="$( find . -name out_of_shared_memory )"
     [[ -n "$error_files" ]] && return 1
 
-    echo "$test_output" > "output/stdout.log"
+    echo -n "$test_output" > "output/stdout.log"
 
     if [[ $test_failed != 0 ]]; then echo "test exit with non-zero status: $test_failed" >&2; fi
 
