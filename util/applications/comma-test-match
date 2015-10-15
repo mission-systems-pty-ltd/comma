@@ -62,13 +62,6 @@ EOF
 
 if [[ $# == 0 ]]; then simple_usage 1; fi
 
-# check if there are no lines other than comments (and blank lines) in a file
-# arguments: <file>
-function empty_apart_from_comments()
-{
-    if egrep -vq '^ *$|^ *#' "$1"; then return 1; fi
-}
-
 variables=
 expr_file=
 tmp_dir=.
@@ -96,15 +89,10 @@ fi
 
 # if the variables file name is known, pass it to name-value-eval, since it can appear in some error messages
 if [[ -z "$variables" ]]; then
-    input="$( cat )"
-    if [[ -z "$input" ]]; then
-        if empty_apart_from_comments "$expr_file"; then exit 0 ; fi # no variables means it is OK for the input to be empty
-    fi
-    echo "$input" | name-value-eval --test "$expr_file" --tmp-dir=$tmp_dir
+    name-value-eval --test "$expr_file" --tmp-dir=$tmp_dir
 else
     if [[ ! -f "$variables" || ! -s "$variables" ]]; then
         echo "$name: error: empty or non-existent input file '$variables' (test script failed?)" >&2; exit 1
     fi
     name-value-eval --test "$expr_file" --variables="$variables" --tmp-dir=$tmp_dir
 fi
-
