@@ -124,7 +124,8 @@ Find subdirectories containing the files ${brown}test${none}, ${brown}input${non
     (d) otherwise the success of the test depends on the exit status of the 'test' script.
 
 Return 0 if all tests succeed, or non-zero if any of the tests fail.
-Output of the test scripts is recorded in ${brown}output/stderr.log${none} and ${brown}output/stdout.log${brown}.
+Output of the test scripts is recorded in ${brown}output/stderr.log${none} and ${brown}output/stdout.log${none}.
+A test can have a ${brown}config${none} file to control load balancing, serialisation and maximum run time (see --help --verbose).
 
 Usage: comma-test-run [<options>]
 
@@ -136,15 +137,19 @@ ${brown}A quick tutorial${none}
     echo "cat" > success/test
     chmod +x success/test
 
-    comma-test-run
-
     mkdir failure
     echo "hello=\"world\"" > failure/input
     echo "hello=\"moon\"" > failure/expected
     echo "cat" > failure/test
     chmod +x failure/test
 
-    comma-test-run
+    mkdir config_demo
+    echo "resources/serial=\"true\"" > config_demo/config    # run this test serially instead of in parallel
+    echo "run/max_time=5" >> config_demo/config              # set the timeout to 5 seconds
+    echo "sleep 30" > config_demo/test
+    chmod +x config_demo/test
+
+    comma-test-run    # only the "success" test should pass
 
 ${brown}Options:${none}
 $( description | sed 's/^/    /g' )
@@ -186,35 +191,29 @@ ${brown}Running tests in parallel${none}
         as are available on the system. This is ${red}not recommended${none} for resource-heavy tests
         unless additional configuration files are provided as explained below.
 
-${brown}Load-balancing and serializing tests${none}
-    to describe a resourse-heavy test, create a file named ${brown}config${none} in the test directory
-    and specify the number of CPUs and the amount of shared memory to be used by the test;
-    may also specify 'serial=\"true\"' to serialize the test.
+${brown}Config files${none}
+    The way a test is run can be controlled using a file named ${brown}config${none} in the test directory,
+    which may contain the following parameters:
 
-    Examples of config files:
+    resources/cpus=<number>
+        Test will not run until the specified number of CPUs are available (out of the '--max-parallel' number).
 
+    resources/memory/shared=<amount> <units>
+        Test will not run until the requested amount of shared memory is available (out of the '--max-memory-shared'
+        total). Units may be kB, MB, or GB. The amount must be an integer.
+
+    resources/serial=\"true\"
+        Test will run only when no other test is running.
+
+    run/max_time=<seconds>
+        Test will be terminated and fail if it has not completed in the specified time (seconds).
+        Overrides option '--max-run-time'.
+
+    Example config:
         resources/cpus=4
         resources/memory/shared=3200 MB
-
-    Will not run until at least 4 or all CPUs (out of '--max-parallel' number) are available. Will
-    not run until 3200 MB of shared memory (counted out of '--max-memory-shared' total) is available.
-
         resources/serial=\"true\"
-
-    Will run only when no other test is running.
-
-    The required memory sizes can be specified in units of kB, MB, or GB. However, the value must
-    be an integer, i.e., values like 3.2 GB are not allowed and have to be approximated as 3300 MB.
-
-    When running multiple tests, will wait at most for the period specified by '--max-wait-time' seconds
-    until the resources are available. If the wait time exceeds the limit, will fail the test.
-
-    No test shall take longer than the period specified by '--max-run-time'. If a test does not complete
-    within this time, it is forcefully terminated and marked as failed.
-
-    The config file can override the maximum run time with the parameter max_run_time; for example:
-
-        max_run_time=600
+        run/max_time=600
 
 ${brown}White(and black)-listing tests${none}
     The test names in the white/black list file shall match ${brown}exactly${none} the corresponding
@@ -569,10 +568,10 @@ function get_test_timeout()
 {
     local config_timeout
     if [[ -f ./config ]]; then
-        config_timeout=$( cat ./config | name-value-get --from=path-value "max_run_time" )
+        config_timeout=$( cat ./config | name-value-get --from=path-value "run/max_time" )
         if [[ -n $config_timeout ]]; then
             if [[ ! $config_timeout =~ ^[0-9]+$ || $config_timeout -eq 0 ]]; then
-                echo "$name: error: illegal max_run_time '$config_timeout' in $( pwd )/config (expected integer > 0); using default $max_run_time" >&2
+                echo "$name: error: illegal run/max_time '$config_timeout' in $( pwd )/config (expected integer > 0); using default $max_run_time" >&2
                 config_timeout=
             fi
         fi
