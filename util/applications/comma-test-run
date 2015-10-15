@@ -567,15 +567,16 @@ export -f run_and_match_test
 
 function get_test_timeout()
 {
-    local timeout=$max_run_time
+    local config_timeout
     if [[ -f ./config ]]; then
-        timeout=$( cat ./config | name-value-get --from=path-value "max_run_time" )
-        if [[ ! $timeout =~ ^[0-9]+$ || $timeout -eq 0 ]]; then
-            echo "$name: error: illegal max_run_time '$timeout' in $( pwd )/config (expected integer > 0); using default $max_run_time" >&2
-            timeout=$max_run_time
+        config_timeout=$( cat ./config | name-value-get --from=path-value "max_run_time" )
+        if [[ -n $config_timeout ]]; then
+            if [[ ! $config_timeout =~ ^[0-9]+$ || $config_timeout -eq 0 ]]; then
+                echo "$name: error: illegal max_run_time '$config_timeout' in $( pwd )/config (expected integer > 0); using default $max_run_time" >&2
+            fi
         fi
     fi
-    echo $timeout
+    echo ${config_timeout:-$max_run_time}
 }
 export -f get_test_timeout
 
