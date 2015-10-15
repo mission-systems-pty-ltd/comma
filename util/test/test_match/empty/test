@@ -1,0 +1,26 @@
+#!/bin/bash
+
+source $( which comma-application-util ) || exit 1
+
+# check if there are no lines other than comments (and blank lines) in a file                                                                                                                               
+# arguments: <file>                                                                                                                                                                                         
+function empty_apart_from_comments()                                                                                                                                                                        
+{                                                                                                                                                                                                           
+    if egrep -vq '^ *$|^ *#' "$1"; then return 1; fi                                                                                                                                                        
+} 
+
+comma_path_value_to_var
+
+input_empty=$( [[ -s "$input" ]] && echo 0 || echo 1 )
+input_data=$( if empty_apart_from_comments "$input" ; then echo 0 ; else echo 1 ; fi )
+expected_empty=$( [[ -s "$expected" ]] && echo 0 || echo 1 )
+expected_data=$( if empty_apart_from_comments "$expected" ; then echo 0 ; else echo 1 ; fi )
+
+cat "$input" | comma-test-match "$expected"
+outcome=$?
+
+echo "outcome=$outcome"
+echo "input/empty=$input_empty"
+echo "input/data=$input_data"
+echo "expected/empty=$expected_empty"
+echo "expected/data=$expected_data"
