@@ -1,0 +1,10 @@
+#python
+
+if 'test' in locals():
+    if 'data' in test.__dict__:
+        if 'foo' in test.data.__dict__:
+            if test/data/foo > 0:
+                expect test/data/bar > 0
+        else:
+            if 'bar' in test.data.__dict__:
+                raise RuntimeError( "there shall be no 'bar' output" )

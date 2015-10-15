@@ -9,7 +9,7 @@ function empty_apart_from_comments()
     if egrep -vq '^ *$|^ *#' "$1"; then return 1; fi                                                                                                                                                        
 } 
 
-comma_path_value_to_var
+comma_path_value_to_var --export
 
 input_empty=$( [[ -s "$input" ]] && echo 0 || echo 1 )
 input_data=$( if empty_apart_from_comments "$input" ; then echo 0 ; else echo 1 ; fi )
@@ -24,3 +24,6 @@ echo "input/empty=$input_empty"
 echo "input/data=$input_data"
 echo "expected/empty=$expected_empty"
 echo "expected/data=$expected_data"
+printenv | grep ^test_data_
+
+exit 0 # otherwise grep exits 0 if no match
