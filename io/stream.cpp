@@ -118,8 +118,7 @@ struct traits < std::ostream >
     }
     #ifdef WIN32
         #ifdef O_LARGEFILE
-            static io::file_descriptor open( const std::string& name ) { return _open( &name[0], O_WRONLY | O_CREAT | O_LARGEFILE, _S_IWRITE );
-            }
+            static io::file_descriptor open( const std::string& name ) { return _open( &name[0], O_WRONLY | O_CREAT | O_LARGEFILE, _S_IWRITE ); }
         #else
             static io::file_descriptor open( const std::string& name ) { return _open( &name[0], O_WRONLY | O_CREAT, _S_IWRITE ); }
         #endif
@@ -135,7 +134,7 @@ struct traits < std::ostream >
 template <>
 struct traits < std::iostream >
 {
-    typedef std::iostream file_stream; // quick and dirty, does not matter for now
+    typedef std::fstream file_stream; // quick and dirty, does not matter for now
     static bool is_standard( const std::iostream* ) { return false; }
     static std::iostream* standard( comma::io::mode::value mode ) { (void) mode; return NULL; }
     static comma::io::file_descriptor standard_fd() { return comma::io::invalid_file_descriptor; }
@@ -347,7 +346,7 @@ stream< S >::stream( const std::string& name, mode::value m, mode::blocking_valu
 
 template class stream< std::istream >;
 template class stream< std::ostream >;
-//template class stream< std::iostream >;
+template class stream< std::iostream >;
 
 istream::istream( const std::string& name, mode::value mode, mode::blocking_value blocking ) : stream< std::istream >( name, mode, blocking ) {}
 istream::istream( std::istream* s, io::file_descriptor fd, mode::value mode, boost::function< void() > close ) : stream< std::istream >( s, fd, mode, mode::non_blocking, close ) {}
@@ -355,6 +354,6 @@ istream::istream( std::istream* s, io::file_descriptor fd, mode::value mode, mod
 ostream::ostream( const std::string& name, mode::value mode, mode::blocking_value blocking ) : stream< std::ostream >( name, mode, blocking ) {}
 ostream::ostream( std::ostream* s, io::file_descriptor fd, mode::value mode, boost::function< void() > close ) : stream< std::ostream >( s, fd, mode, mode::non_blocking, close ) {}
 ostream::ostream( std::ostream* s, io::file_descriptor fd, mode::value mode, mode::blocking_value blocking, boost::function< void() > close ) : stream< std::ostream >( s, fd, mode, blocking, close ) {}
-//iostream::iostream( const std::string& name, mode::value mode ) : stream< std::iostream >( name, mode ) {}
+iostream::iostream( const std::string& name, mode::value mode , mode::blocking_value blocking ) : stream< std::iostream >( name, mode, blocking ) {}
 
 } } // namespace comma { namespace io {

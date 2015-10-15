@@ -64,4 +64,10 @@ inline static S* make_stream( const std::string& endpoint, comma::io::file_descr
     return stream;
 }
 
+template<>
+inline std::iostream* make_stream<std::iostream>( const std::string& endpoint, comma::io::file_descriptor& fd )
+{
+    COMMA_THROW( comma::exception, "zeromq does not support bidirectional iostream/or its not implemented in comma")
+}
+
 } } } // namespace comma { namespace io { namespace zeromq {
