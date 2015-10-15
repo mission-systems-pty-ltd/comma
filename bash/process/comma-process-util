@@ -151,7 +151,7 @@ function comma_execute_and_wait()
     local original_args="$@"
     local usepg="true"
     local statusall="true"
-    local comma_execute_and_wait_verbose="true" # "false"
+    local comma_execute_and_wait_verbose="false" # "true"
     while [[ $# -ne 0 ]]; do
         case $1 in
             --signals=*|--signal-list=*) signal_list=${1#*=};;
