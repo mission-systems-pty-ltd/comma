@@ -573,6 +573,7 @@ function get_test_timeout()
         if [[ -n $config_timeout ]]; then
             if [[ ! $config_timeout =~ ^[0-9]+$ || $config_timeout -eq 0 ]]; then
                 echo "$name: error: illegal max_run_time '$config_timeout' in $( pwd )/config (expected integer > 0); using default $max_run_time" >&2
+                config_timeout=
             fi
         fi
     fi
