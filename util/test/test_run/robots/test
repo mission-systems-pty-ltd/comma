@@ -39,7 +39,7 @@ function run_comma_test_run()
     local options
     [[ -z "$input_resources_limits" ]] || options+=" --max-resources=$input_resources_limits"
     [[ -z "$input_comma_test_run_options" ]] || options+=" $input_comma_test_run_options"
-    comma-test-run --raw --parallel $options > "$output_dir/comma-test-run.log"
+    comma-test-run --raw --parallel $options > "$output_dir/comma-test-run.log" 2>&1
 }
 export -f run_comma_test_run
 
