@@ -251,27 +251,29 @@ ${brown}White(and black)-listing pro hint${none}
 
 function error_()
 {
+    local term=2
+    [[ -z "$2" ]] || term=$2
     if [[ "$options_no_ansiterm_control_characters" == "1" ]] ; then
-        echo -e "$1" >&2
+        echo -e "$1" >&${term}
     else
-        tput bold
         local high="\033[1;31m"
         local normal="\033[0m"
-        echo -e "$high$1$normal" >&2
-        tput sgr0
+        echo -e "$high$1$normal" >&${term}
     fi
 }
 export -f error_
 
 function message_()
 {
+    local term=2
+    [[ -z "$2" ]] || term=$2
     [[ "$options_quiet" != "1" ]] || return
     if [[ "$options_no_ansiterm_control_characters" == "1" ]] ; then
-        echo $1 >&2
+        echo -e "$1" >&${term}
     else
-        tput bold
-        echo $1 >&2
-        tput sgr0
+        local high="\033[1;30m"
+        local normal="\033[0m"
+        echo -e "$high$1$normal" >&${term}
     fi
 }
 export -f message_
@@ -284,13 +286,15 @@ export -f dump_file_
 
 function warning_()
 {
+    local term=2
+    [[ -z "$2" ]] || term=$2
     [[ "$options_quiet" != "1" ]] || return
     if [[ "$options_no_ansiterm_control_characters" == "1" ]] ; then
-        echo -e "$1" >&2
+        echo -e "$1" >&${term}
     else
         local high="\033[1;33m"
         local normal="\033[0m"
-        echo -e "$high$1$normal" >&2
+        echo -e "$high$1$normal" >&${term}
     fi
 }
 export -f warning_
@@ -716,7 +720,7 @@ function run_single_test()
             error_ "$name: error: no \"test\" script found in any parent directory of $dir" >&2
             result=1
         else
-            message_ "$name: test $counter: $dir: running..."
+            message_ "$name: test $counter: $dir: running..." 4
 
             basedir=$( pwd )
 
@@ -751,7 +755,7 @@ function run_single_test()
                         continue
                     }
                     [[ "$test_failed" == "0" ]] && {
-                        message_ "$name: test $counter: $dir: succeeded"
+                        message_ "$name: test $counter: $dir: succeeded" 4
                     } || {
                         result=1
                         error_ "$name: $dir: failed$( (( $test_failed == 124 )) && echo ' (likely timed out)' )"
