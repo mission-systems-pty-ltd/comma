@@ -893,7 +893,9 @@ options_test_option=$( echo "$options_path_value" |  grep "^test-option=" | cut 
 
 # and perform sanity check
 [[ -n "$options_path" && ! -d "$options_path" ]] && { error_ "$name: directory '$options_path' not found"; exit 1; }
-have_max_parallel=$( comma_options_has --max-parallel=$options_max_parallel $@ )
+have_max_parallel_equal=$( comma_options_has --max-parallel=$options_max_parallel $@ )
+have_max_parallel_space=$( comma_options_has --max-parallel $@ )
+have_max_parallel=$(( have_max_parallel_equal > 0 || have_max_parallel_space > 0 ))
 (( $options_parallel == 0 && $have_max_parallel == 0 )) && options_max_parallel=1
 (( $have_max_parallel != 0 )) && options_parallel=1
 (( $options_max_parallel < 1 )) && { error_ "$name: number of parallel tests $options_max_parallel < 1"; exit 1; }
