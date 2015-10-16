@@ -1,0 +1,5 @@
+cpus/max = 8
+queen/max = 1
+working_bee/max = 100
+memory/main/max = 5242880000
+memory/shared/max = 8589934592

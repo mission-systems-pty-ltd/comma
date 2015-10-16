@@ -1,0 +1,106 @@
+#!/bin/bash
+
+scriptname=$( basename $0 )
+
+source $( which comma-process-util ) || exit 1
+source $( which comma-application-util ) || exit 1
+
+function handle()
+{
+    [[ -n "$workdir" ]] && rm -rf "$workdir"
+}
+
+trap 'handle' EXIT
+
+function generate_working_directory()
+{
+    local config=$1
+    local count=$2
+    (
+        # create a given number of test directories with specified resource usage
+        for num in $( seq 0 $(( $count - 1 )) ) ; do
+            mkdir "$num" || return 1
+            touch "$num/input" || return 1
+            cat "$config" > "$num/config"
+        done
+        # create a simple "test" script that sleeps and allows the monitor function
+        # to capture the state of the counter while the "test" is running
+        cat <<EOF > test
+#!/bin/bash
+
+sleep 10
+EOF
+        chmod u+x test
+    )
+}
+
+function run_comma_test_run()
+{
+    local options
+    [[ -z "$input_resources_limits" ]] || options+=" --max-resources=$input_resources_limits"
+    [[ -z "$input_comma_test_run_options" ]] || options+=" $input_comma_test_run_options"
+    comma-test-run --raw --parallel $options > "$output_dir/comma-test-run.log"
+}
+export -f run_comma_test_run
+
+function monitor_users()
+{
+    local counter limits cpus memory_main memory_shared queens working_bees
+    local max_iter=$1
+    local max_cpus=0
+    local max_memory_main=0
+    local max_memory_shared=0
+    local max_queens=0
+    local max_working_bees=0
+
+    while true ; do
+        sleep 1
+        limits=$( find . -name resources_limits.json )
+        [[ -z "$limits" ]] || break
+    done
+    cat "$limits" | name-value-convert --from json --to path-value | grep -v "resources/serial" | sed 's@^resources/@limits/@;s@"@@g'
+
+    local iter=0
+    while true ; do
+        sleep 1
+        counter=$( find . -name resources_counter.json )
+        [[ -f "$counter" ]] && {
+            cpus=$( cat "$counter" | name-value-get --from json resources/cpus ; comma_status_ok && exit 0 || exit 1 )
+            (( $? == 0 )) && { (( cpus > max_cpus )) && max_cpus=$cpus; }
+            memory_main=$( cat "$counter" | name-value-get --from json resources/memory/main ; comma_status_ok && exit 0 || exit 1 )
+            (( $? == 0 )) && { (( memory_main > max_memory_main )) && max_memory_main=$memory_main; }
+            memory_shared=$( cat "$counter" | name-value-get --from json resources/memory/shared ; comma_status_ok && exit 0 || exit 1 )
+            (( $? == 0 )) && { (( memory_shared > max_memory_shared )) && max_memory_shared=$memory_shared; }
+            queens=$( cat "$counter" | name-value-get --from json resources/robots/queen ; comma_status_ok && exit 0 || exit 1 )
+            (( $? == 0 )) && { (( queens > max_queens )) && max_queens=$queens; }
+            working_bees=$( cat "$counter" | name-value-get --from json resources/robots/working_bee ; comma_status_ok && exit 0 || exit 1 )
+            (( $? == 0 )) && { (( working_bees > max_working_bees )) && max_working_bees=$working_bees; }
+        }
+        (( ++iter ))
+        (( iter > max_iter )) && break
+    done
+    echo "cpus/max=$max_cpus"
+    echo "memory/main/max=$max_memory_main"
+    echo "memory/shared/max=$max_memory_shared"
+    echo "queen/max=$max_queens"
+    echo "working_bee/max=$max_working_bees"
+}
+export -f monitor_users
+
+comma_path_value_to_var --prefix=input --export
+[[ "$input_test_count" > 0 ]] || { echo "$0: specify test count" >&2; exit 1; }
+input_monitor_time=${input_monitor_time:-25}
+input_resources_limits=$( readlink -e "$input_resources_limits" )
+input_resources_config=$( readlink -e "$input_resources_config" )
+
+export output_dir="output"
+mkdir -p "$output_dir" || exit 1
+output_dir=$( readlink -f "$output_dir" )
+
+workdir=$( mktemp --directory --tmpdir="$output_dir" )
+cd "$workdir"
+cat "$input_resources_config" | sed 's@^resources/@config/@'
+echo "input/test/count=$input_test_count"
+generate_working_directory "$input_resources_config" "$input_test_count"
+
+comma_execute_and_wait --group "bash -c monitor_users $input_monitor_time" "bash -c run_comma_test_run"

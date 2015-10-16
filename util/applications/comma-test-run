@@ -92,6 +92,7 @@ function description()
 --max-memory-shared=[<N>]; limit on shared memory, in MB; default: $max_memory_shared
 --max-wait-time=[<time>]; maximal time to wait for available CPUs before failing a test, default: ${max_wait_time}
 --max-run-time=[<time>]; maximal time to wait for a test completion before failing it by force, default: ${max_run_time}
+--max-resources=[<file>]; specify limits for all resources in path-value format; see config files in verbose help; explicit options above have precedence
 --no-ansiterm-control-characters,--no-control-characters,--raw; unstyled output (no ANSIterm control characters)
 --output-directories,--dry-run,--dry; output list of test directories intended to run and exit
 --path=[<dir>]; data-storage directory for tests, default: none, let the tests define it
@@ -204,6 +205,15 @@ ${brown}Config files${none}
 
     resources/serial=\"true\"
         Test will run only when no other test is running.
+
+    resources/robots/queen=1
+    resources/robots/working_bee=10
+        Test need one instance of a queen robot and 10 working bee robots (assuming the test knows how to
+        use these bots). You must also specify how many instances of such robots are available by passing
+        a custom limits file via '--max-resource=limits.pv'; the file 'limits.pv' shall contain limits for
+        the robots counters, like:
+            resources/robots/queen=1
+            resources/robots/working_bee=100
 
     run/max_time=<seconds>
         Test will be terminated and fail if it has not completed in the specified time (seconds).
@@ -415,7 +425,8 @@ function resources_limits()
     # the "serial" Boolean is used numerically: false as 0, true as 1, then 1 > 0, etc.
     # the limit of "true" (1) means only 1 task at a time can be serial (occupy this
     # resource to itself)
-    cat <<EOF
+    [[ -r "$options_max_resources" ]] && cat "$options_max_resources"
+    cat <<EOF | name-value-convert --from path-value --to path-value --take-last
 resources/cpus=$max_parallel
 resources/memory/main=$max_memory_main
 resources/memory/shared=$max_memory_shared
