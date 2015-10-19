@@ -236,8 +236,10 @@ class to_format
         xpath xpath_;
         const xpath& append( std::size_t index ) { xpath_.elements.back().index = index; return xpath_; }
         const xpath& append( const char* name ) { xpath_ /= xpath::element( name ); return xpath_; }
+        const xpath& append( const std::string& name ) { xpath_ /= xpath::element( name ); return xpath_; }
         const xpath& trim( std::size_t ) { xpath_.elements.back().index = boost::optional< std::size_t >(); return xpath_; }
         const xpath& trim( const char* ) { xpath_ = xpath_.head(); return xpath_; }
+        const xpath& trim( const std::string& ) { xpath_ = xpath_.head(); return xpath_; }
 };
 
 } // namespace impl {
