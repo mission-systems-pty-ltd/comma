@@ -1,0 +1,5 @@
+input/empty = 1
+input/data = 0
+expected/empty = 0
+expected/data = 1
+outcome = 0

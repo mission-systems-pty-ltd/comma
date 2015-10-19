@@ -1,0 +1,5 @@
+resources/limits="limits.pv"
+comma_test_run/options="--max-memory-main=5000 --max-parallel=8"
+resources/config="config.pv"
+test/count=10
+monitor/time=110

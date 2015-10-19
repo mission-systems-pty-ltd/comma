@@ -1,0 +1,3 @@
+resources/robots/queen=1
+resources/robots/working_bee=100
+resources/memory/main=6000 MB

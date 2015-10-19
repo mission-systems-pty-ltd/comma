@@ -92,6 +92,7 @@ function description()
 --max-memory-shared=[<N>]; limit on shared memory, in MB; default: $max_memory_shared
 --max-wait-time=[<time>]; maximal time to wait for available CPUs before failing a test, default: ${max_wait_time}
 --max-run-time=[<time>]; maximal time to wait for a test completion before failing it by force, default: ${max_run_time}
+--max-resources=[<file>]; specify limits for all resources in path-value format; see config files in verbose help; explicit options above have precedence
 --no-ansiterm-control-characters,--no-control-characters,--raw; unstyled output (no ANSIterm control characters)
 --output-directories,--dry-run,--dry; output list of test directories intended to run and exit
 --path=[<dir>]; data-storage directory for tests, default: none, let the tests define it
@@ -205,6 +206,15 @@ ${brown}Config files${none}
     resources/serial=\"true\"
         Test will run only when no other test is running.
 
+    resources/robots/queen=1
+    resources/robots/working_bee=10
+        Test need one instance of a queen robot and 10 working bee robots (assuming the test knows how to
+        use these bots). You must also specify how many instances of such robots are available by passing
+        a custom limits file via '--max-resource=limits.pv'; the file 'limits.pv' shall contain limits for
+        the robots counters, like:
+            resources/robots/queen=1
+            resources/robots/working_bee=100
+
     run/max_time=<seconds>
         Test will be terminated and fail if it has not completed in the specified time (seconds).
         Overrides option '--max-run-time'.
@@ -241,27 +251,29 @@ ${brown}White(and black)-listing pro hint${none}
 
 function error_()
 {
+    local term=2
+    [[ -z "$2" ]] || term=$2
     if [[ "$options_no_ansiterm_control_characters" == "1" ]] ; then
-        echo -e "$1" >&2
+        echo -e "$1" >&${term}
     else
-        tput bold
         local high="\033[1;31m"
         local normal="\033[0m"
-        echo -e "$high$1$normal" >&2
-        tput sgr0
+        echo -e "$high$1$normal" >&${term}
     fi
 }
 export -f error_
 
 function message_()
 {
+    local term=2
+    [[ -z "$2" ]] || term=$2
     [[ "$options_quiet" != "1" ]] || return
     if [[ "$options_no_ansiterm_control_characters" == "1" ]] ; then
-        echo $1 >&2
+        echo -e "$1" >&${term}
     else
-        tput bold
-        echo $1 >&2
-        tput sgr0
+        local high="\033[1;30m"
+        local normal="\033[0m"
+        echo -e "$high$1$normal" >&${term}
     fi
 }
 export -f message_
@@ -274,13 +286,15 @@ export -f dump_file_
 
 function warning_()
 {
+    local term=2
+    [[ -z "$2" ]] || term=$2
     [[ "$options_quiet" != "1" ]] || return
     if [[ "$options_no_ansiterm_control_characters" == "1" ]] ; then
-        echo -e "$1" >&2
+        echo -e "$1" >&${term}
     else
         local high="\033[1;33m"
         local normal="\033[0m"
-        echo -e "$high$1$normal" >&2
+        echo -e "$high$1$normal" >&${term}
     fi
 }
 export -f warning_
@@ -415,7 +429,8 @@ function resources_limits()
     # the "serial" Boolean is used numerically: false as 0, true as 1, then 1 > 0, etc.
     # the limit of "true" (1) means only 1 task at a time can be serial (occupy this
     # resource to itself)
-    cat <<EOF
+    [[ -r "$options_max_resources" ]] && cat "$options_max_resources"
+    cat <<EOF | name-value-convert --from path-value --to path-value --take-last
 resources/cpus=$max_parallel
 resources/memory/main=$max_memory_main
 resources/memory/shared=$max_memory_shared
@@ -705,7 +720,7 @@ function run_single_test()
             error_ "$name: error: no \"test\" script found in any parent directory of $dir" >&2
             result=1
         else
-            message_ "$name: test $counter: $dir: running..."
+            message_ "$name: test $counter: $dir: running..." 4
 
             basedir=$( pwd )
 
@@ -740,7 +755,7 @@ function run_single_test()
                         continue
                     }
                     [[ "$test_failed" == "0" ]] && {
-                        message_ "$name: test $counter: $dir: succeeded"
+                        message_ "$name: test $counter: $dir: succeeded" 4
                     } || {
                         result=1
                         error_ "$name: $dir: failed$( (( $test_failed == 124 )) && echo ' (likely timed out)' )"
@@ -893,7 +908,9 @@ options_test_option=$( echo "$options_path_value" |  grep "^test-option=" | cut 
 
 # and perform sanity check
 [[ -n "$options_path" && ! -d "$options_path" ]] && { error_ "$name: directory '$options_path' not found"; exit 1; }
-have_max_parallel=$( comma_options_has --max-parallel=$options_max_parallel $@ )
+have_max_parallel_equal=$( comma_options_has --max-parallel=$options_max_parallel $@ )
+have_max_parallel_space=$( comma_options_has --max-parallel $@ )
+have_max_parallel=$(( have_max_parallel_equal > 0 || have_max_parallel_space > 0 ))
 (( $options_parallel == 0 && $have_max_parallel == 0 )) && options_max_parallel=1
 (( $have_max_parallel != 0 )) && options_parallel=1
 (( $options_max_parallel < 1 )) && { error_ "$name: number of parallel tests $options_max_parallel < 1"; exit 1; }
