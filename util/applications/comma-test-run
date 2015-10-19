@@ -107,7 +107,7 @@ function description()
 --verbose,-v; more output
 --white-list=[<file>]; only run these tests mentioned in the <file>, applied first before black list. Comment lines starting with # ignored. Each entry in the list matches to sub directory or directories name using pattern ^<subdir>; see examples.
 --also-expected=[<file>]; apply a global expected <file> to the output of tests that have a local 'expected' file
---always-expected=[<file>]; apply the global expected file to all tests regardless if they have a local 'expected' file
+--always-expected,--expected=[<file>]; apply the global expected file to all tests regardless if they have a local 'expected' file
 --estimate-resources; in serial mode, accumulates performance data using comma-top into 'output/performance.csv' files; note: file may be empty for very short tests
 EOF
 }
