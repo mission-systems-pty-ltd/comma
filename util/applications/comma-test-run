@@ -107,7 +107,7 @@ function description()
 --verbose,-v; more output
 --white-list=[<file>]; only run these tests mentioned in the <file>, applied first before black list. Comment lines starting with # ignored. Each entry in the list matches to sub directory or directories name using pattern ^<subdir>; see examples.
 --also-expected=[<file>]; apply a global expected <file> to the output of tests that have a local 'expected' file
---always-expected=[<file>]; apply the global expected file to all tests regardless if they have a local 'expected' file
+--always-expected,--expected=[<file>]; apply the global expected file to all tests regardless if they have a local 'expected' file
 --estimate-resources; in serial mode, accumulates performance data using comma-top into 'output/performance.csv' files; note: file may be empty for very short tests
 EOF
 }
@@ -256,9 +256,9 @@ function error_()
     if [[ "$options_no_ansiterm_control_characters" == "1" ]] ; then
         echo -e "$1" >&${term}
     else
-        local high="\033[1;31m"
-        local normal="\033[0m"
-        echo -e "$high$1$normal" >&${term}
+        local bold=$( tput bold )
+        local normal=$( tput sgr0 )
+        echo -e "$bold$1$normal" >&${term}
     fi
 }
 export -f error_
@@ -271,9 +271,9 @@ function message_()
     if [[ "$options_no_ansiterm_control_characters" == "1" ]] ; then
         echo -e "$1" >&${term}
     else
-        local high="\033[1;30m"
-        local normal="\033[0m"
-        echo -e "$high$1$normal" >&${term}
+        local bold=$( tput bold )
+        local normal=$( tput sgr0 )
+        echo -e "$bold$1$normal" >&${term}
     fi
 }
 export -f message_
@@ -292,9 +292,9 @@ function warning_()
     if [[ "$options_no_ansiterm_control_characters" == "1" ]] ; then
         echo -e "$1" >&${term}
     else
-        local high="\033[1;33m"
-        local normal="\033[0m"
-        echo -e "$high$1$normal" >&${term}
+        local bold=$( tput bold )
+        local normal=$( tput sgr0 )
+        echo -e "$bold$1$normal" >&${term}
     fi
 }
 export -f warning_

@@ -223,6 +223,7 @@ if [[ -s "$err" ]]; then
     process_python_errors "$err" "$python_input" >&2
 else
     cat $out
+    if [[ $test_option == 1 && -s "$out" ]]; then exit_code=1; fi   # producing any output means there was an error
 fi
 
 bye $exit_code
