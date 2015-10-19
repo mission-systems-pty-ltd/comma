@@ -33,7 +33,7 @@
 #include "../string/split.h"
 #include "../application/command_line_options.h"
 #include "../base/exception.h"
-#include "cverbose.h"
+#include "verbose.h"
 #include <sstream>
 #include <set>
 #include <boost/bind.hpp>
@@ -47,23 +47,23 @@
 
 namespace comma {
 
-cverbose_t cverbose;
-
 command_line_options::command_line_options( int argc, char ** argv, boost::function< void( bool ) > usage )
 {
     argv_.resize( argc );
     for( int i = 0; i < argc; ++i ) { argv_[i] = argv[i]; }
     fill_map_( argv_ );
-    comma::cverbose.init(*this, argv[0]);
-    if( usage && exists( "--help,-h" ) ) { usage( exists( "--verbose,-v" ) ); exit( 1 ); }
+    bool v=exists("--verbose,-v");
+    comma::verbose.init(v, argv[0]);
+    if( usage && exists( "--help,-h" ) ) { usage( v ); exit( 1 ); }
 }
 
 command_line_options::command_line_options( const std::vector< std::string >& argv, boost::function< void( bool ) > usage )
     : argv_( argv )
 {
     fill_map_( argv_ );
-    comma::cverbose.init(*this, argv[0]);
-    if( usage && exists( "--help,-h" ) ) { usage( exists( "--verbose,-v" ) ); exit( 1 ); }
+    bool v=exists("--verbose,-v");
+    comma::verbose.init(v, argv[0]);
+    if( usage && exists( "--help,-h" ) ) { usage( v ); exit( 1 ); }
 }
 
 std::string command_line_options::escaped( const std::string& s ) // quick and dirty

@@ -28,13 +28,10 @@
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-/// @author navidp
-
 #pragma once
 
 #include <iostream>
 #include <boost/filesystem.hpp>
-#include "command_line_options.h"
 
 //prototype for comma::cverbose
 namespace comma {
@@ -44,42 +41,30 @@ namespace comma {
 //examples: 
 //  comma::cverbose << "hello!" << std::endl;
 //  if (comma::cverbose) { std::cerr << comma::cverbose.app_name() << "info" << std::endl; }
-struct cverbose_t
+class verbose_t
 {
-    bool enabled;
+    bool enabled_;
     std::string app_name_;
     bool start_of_line;
 public:
-    void init(const command_line_options& options, const std::string& argv0);
+    verbose_t();
+    void init(bool enabled, const std::string& argv0);
     void flush();
     operator bool () const;
     const std::string& app_name() const;
     template<typename T>
-    cverbose_t& operator<<(const T& t);
-    cverbose_t& operator<<(std::basic_ostream<char>& (*pf)(std::basic_ostream<char>&));
+    verbose_t& operator<<(const T& t);
+    verbose_t& operator<<(std::basic_ostream<char>& (*pf)(std::basic_ostream<char>&));
 };
 
 //this is defined and initialized by command_line_options
-extern cverbose_t cverbose;
+extern verbose_t verbose;
 
 //implementation
-inline void cverbose_t::flush() { if(enabled) { std::cerr.flush(); start_of_line=true; } }
-inline cverbose_t::operator bool () const {return enabled;}
-inline const std::string& cverbose_t::app_name() const {return app_name_;}
-inline void cverbose_t::init(const command_line_options& options, const std::string& argv0)
-{
-    if(!argv0.empty())
-    {
-        app_name_=boost::filesystem::basename(argv0);
-    }
-    enabled=options.exists("--verbose,-v");
-    start_of_line=true;
-}
-
 template<typename T>
-inline cverbose_t& cverbose_t::operator<<(const T& t)
+inline verbose_t& verbose_t::operator<<(const T& t)
 {
-    if(enabled)
+    if(enabled_)
     {
         if(start_of_line)
         {
@@ -87,15 +72,6 @@ inline cverbose_t& cverbose_t::operator<<(const T& t)
             start_of_line=false;
         }
         std::cerr<<t;
-    }
-    return *this;
-}
-inline cverbose_t& cverbose_t::operator<<(std::basic_ostream<char>& (*pf)(std::basic_ostream<char>&))
-{
-    if(enabled)
-    {
-        pf(std::cerr);
-         start_of_line=true;
     }
     return *this;
 }
