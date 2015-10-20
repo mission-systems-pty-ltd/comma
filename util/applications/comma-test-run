@@ -719,7 +719,7 @@ function run_single_test()
     else
         test_exec=$( closest_test_in_path "$dir" )
         if [[ -z "$test_exec" ]]; then
-            error_ "$name: error: no \"test\" script found in any parent directory of $dir" >&2
+            error_ "$name: error: no \"test\" script found in any parent directory of $dir"
             result=1
         else
             message_ "$name: test $counter: $dir: running..." 4
@@ -961,11 +961,11 @@ function apply_white_black_list()
 function test_directories()
 {
     if [[ -n "$options_white_list" && -f "$options_white_list" ]]; then
-        message_ "$name: applying white list from file '$options_white_list'">&2
+        message_ "$name: applying white list from file '$options_white_list'"
         options_white_list="^(\./)?($( sed 's#\./##' <$options_white_list | grep -v ^# | grep -v ^$ | tr \\n '|' | sed 's/|$//'  ))";
     fi
     if [[ -n "$options_black_list" && -f "$options_black_list" ]]; then
-        message_ "$name: applying black list from file '$options_black_list'">&2
+        message_ "$name: applying black list from file '$options_black_list'"
         options_black_list="^(\./)?($( sed 's#\./##' <$options_black_list | grep -v ^# | grep -v ^$ | tr \\n '|' | sed 's/|$//' ))";
     fi
 
