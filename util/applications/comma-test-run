@@ -548,7 +548,7 @@ function run_and_match_test()
 
     echo "$test_output" > "output/stdout.log"
 
-    if [[ $test_failed != 0 ]]; then error_ "test exit with non-zero status: $test_failed" >&2; fi
+    if [[ $test_failed != 0 ]]; then error_ "test exit with non-zero status: $test_failed" ; fi
 
     if [[ $test_failed == 0 ]] ; then
         if [[ -f "./expected" ]] ; then
