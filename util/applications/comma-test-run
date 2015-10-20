@@ -722,7 +722,7 @@ function run_single_test()
             error_ "$name: error: no \"test\" script found in any parent directory of $dir"
             result=1
         else
-            message_ "$name: test $counter: $dir: running..." 4
+            message_ "$name: test $counter: $dir: running..."
 
             basedir=$( pwd )
 
@@ -757,7 +757,7 @@ function run_single_test()
                         continue
                     }
                     [[ "$test_failed" == "0" ]] && {
-                        message_ "$name: test $counter: $dir: succeeded" 4
+                        message_ "$name: test $counter: $dir: succeeded"
                     } || {
                         result=1
                         error_ "$name: $dir: failed$( (( $test_failed == 124 )) && echo ' (likely timed out)' )"
