@@ -279,12 +279,6 @@ function message_()
 }
 export -f message_
 
-function dump_file_()
-{
-    if [[ "$options_quiet" != "1" ]] ; then cat "$1" >&2 ; fi
-}
-export -f dump_file_
-
 function warning_()
 {
     local term=2
@@ -300,6 +294,12 @@ function warning_()
     fi
 }
 export -f warning_
+
+function dump_file_()
+{
+    if [[ "$options_quiet" != "1" ]] ; then cat "$1" >&2 ; fi
+}
+export -f dump_file_
 
 function disabled_()
 {
