@@ -251,46 +251,40 @@ ${brown}White(and black)-listing pro hint${none}
 
 function error_()
 {
-    local term=2
-    [[ -z "$2" ]] || term=$2
     if [[ "$options_no_ansiterm_control_characters" == "1" ]] ; then
-        echo -e "$1" >&${term}
+        echo -e "$1" >&2
     else
         local bold=$( tput bold )
         local red=$( tput setaf 1 )
         local normal=$( tput sgr0 )
-        echo -e "$bold$red$1$normal" >&${term}
+        echo -e "$bold$red$1$normal" >&2
     fi
 }
 export -f error_
 
 function message_()
 {
-    local term=2
-    [[ -z "$2" ]] || term=$2
     [[ "$options_quiet" != "1" ]] || return
     if [[ "$options_no_ansiterm_control_characters" == "1" ]] ; then
-        echo -e "$1" >&${term}
+        echo -e "$1" >&2
     else
         local bold=$( tput bold )
         local normal=$( tput sgr0 )
-        echo -e "$bold$1$normal" >&${term}
+        echo -e "$bold$1$normal" >&2
     fi
 }
 export -f message_
 
 function warning_()
 {
-    local term=2
-    [[ -z "$2" ]] || term=$2
     [[ "$options_quiet" != "1" ]] || return
     if [[ "$options_no_ansiterm_control_characters" == "1" ]] ; then
-        echo -e "$1" >&${term}
+        echo -e "$1" >&2
     else
         local bold=$( tput bold )
         local yellow=$( tput setaf 3 )
         local normal=$( tput sgr0 )
-        echo -e "$bold$yellow$1$normal" >&${term}
+        echo -e "$bold$yellow$1$normal" >&2
     fi
 }
 export -f warning_
