@@ -259,7 +259,7 @@ function error_()
         local bold=$( tput bold )
         local red=$( tput setaf 1 )
         local normal=$( tput sgr0 )
-        echo -e "$bold$red$1$none" >&${term}
+        echo -e "$bold$red$1$normal" >&${term}
     fi
 }
 export -f error_
