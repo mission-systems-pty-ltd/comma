@@ -27,6 +27,8 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+/// @author vsevolod vlaskine
+
 #include <iostream>
 #include <comma/application/command_line_options.h>
 
@@ -40,6 +42,8 @@ void usage()
     std::cerr << "cat description.txt | comma-options-to-name-value <options>" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::command_line_options::description::usage() << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "todo: currently, multiple option values are output out of order; order them" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << std::endl;
@@ -86,19 +90,22 @@ int main( int ac, char** av )
             std::string line;
             std::getline( std::cin, line );
             line = comma::strip( line, '\r' ); // windows... sigh...
-            if( line.empty() ) { continue; }
+            if( line.empty() || line[0] == ' '  || line[0] == '\t'  || line[0] == '#' ) { continue; } // quick and dirty
             const comma::command_line_options::description& d = comma::command_line_options::description::from_string( line );
             d.assert_valid( options );
             std::string& s = d.has_value ? valued : valueless;
             for( unsigned int i = 0; i < d.names.size(); s += ( s.empty() ? "" : "," ) + d.names[i], ++i );
-            std::string name;
-            for( unsigned int i = 0; i < d.names.size(); ++i ) { if( options.exists( d.names[i] ) ) { name = d.names[i]; break; } }
-            if( name.empty() ) { continue; }
+            std::vector< std::string > names;
+            for( unsigned int i = 0; i < d.names.size(); ++i ) { if( options.exists( d.names[i] ) ) { names.push_back( d.names[i] ); } }
+            if( names.empty() ) { continue; }
             const std::string& stripped = comma::strip( comma::strip( d.names[0], '-' ), '-' );
             if( d.has_value )
             {
-                const std::vector< std::string >& values = options.values< std::string >( name );
-                for( unsigned int i = 0; i < values.size(); ++i ) { std::cout << stripped << "=\"" << comma::command_line_options::escaped( values[i] ) << "\"" << std::endl; }
+                for( unsigned int k = 0; k < names.size(); ++k )
+                {
+                    const std::vector< std::string >& values = options.values< std::string >( names[k] );
+                    for( unsigned int i = 0; i < values.size(); ++i ) { std::cout << stripped << "=\"" << comma::command_line_options::escaped( values[i] ) << "\"" << std::endl; }
+                }
             }
             else
             {
