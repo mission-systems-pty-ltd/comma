@@ -85,6 +85,10 @@ int main( int ac, char** av )
         if( options.exists( "--help,-h" ) ) { usage(); }
         std::string valued; // quick and dirty
         std::string valueless;
+        // todo: output option values in the correct order
+        //       - first read all descriptions from stdin
+        //       - command_line_options: add vector of option-value pairs; expose as a method
+        //       - here: put output into the map based on option number; sort before outputting
         while( std::cin.good() )
         {
             std::string line;
