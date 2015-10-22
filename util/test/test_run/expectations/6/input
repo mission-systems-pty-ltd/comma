@@ -1,0 +1,1 @@
+--always-expected=global.expected --always-expected=global.expected.2 --black-list=black-12.list

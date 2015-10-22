@@ -42,8 +42,9 @@ void usage()
     std::cerr << "cat description.txt | comma-options-to-name-value <options>" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::command_line_options::description::usage() << std::endl;
+    std::cerr << "lines starting with spaces, tabs, or comment signs '#' are ignored" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "examples (try them)" << std::endl;
+    std::cerr << "examples (try them):" << std::endl;
     std::cerr << "    valid options:" << std::endl;
     std::cerr << "        echo '--verbose,-v' | comma-options-validate -v hello world" << std::endl;
     std::cerr << "    invalid options:" << std::endl;
@@ -64,7 +65,7 @@ int main( int ac, char** av )
             std::string line;
             std::getline( std::cin, line );
             line = comma::strip( line, '\r' ); // windows... sigh...
-            if( line.empty() ) { continue; }
+            if( line.empty() || line[0] == ' '  || line[0] == '\t'  || line[0] == '#' ) { continue; } // quick and dirty
             descriptions.push_back( comma::command_line_options::description::from_string( line ) );
         }
         options.assert_valid( descriptions, true );

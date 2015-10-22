@@ -78,38 +78,65 @@ raw=0
 EOF
 }
 
-function description()
+function description_test_selection()
 {
     cat <<EOF
---help,-h; show this help, --help --verbose for more help
---black-list=[<file>]; do not run these tests mentioned in <file>, e.g. a lists of sub-directories in white list to be excluded. Format - see --white-list below.
---debug; much more debug output
+--black-list=[<file>]; do not run these tests mentioned in <file>, e.g. a lists of sub-directories in white list
+  to be excluded; see '--white-list' below for file format.
 --end=[<dir>]; run tests up to a given test, the latter excluded, where test directories are ordered lexicographically
 --from,--begin=[<dir>]; run tests starting from a given test, where test directories are ordered lexicographically
---junit=[<file>]; output to file junit record compatible with jenkins for each test
+--run-disabled; run disabled tests
+--run-optional,--optional; run tests having file called "optional" (same logic as for --run-disabled)
+--stdin; read paths from stdin e.g. run test in hello/world: echo hello/world | comma-test-run --stdin
+--to=[<dir>]; run tests up to a given test, the latter included, where test directories are ordered lexicographically
+--until-first-failure; exit after the first failure (works only when tests run serially)
+--white-list=[<file>]; only run these tests mentioned in the <file>, applied first before black list;
+  comment lines starting with # are ignored; each entry in the list matches to a sub-directory or
+  directories name using pattern ^<subdir>; see examples
+EOF
+}
+
+function description_resources()
+{
+    cat <<EOF
+--estimate-resources; in serial mode, accumulates performance data using comma-top into 'output/performance.csv' files;
+  note: file may be empty for very short tests
 --max-parallel=[<N>]; run up to N tests in parallel; default: $max_parallel
 --max-memory-main=[<N>]; limit on main memory, in MB; default: $max_memory_main
 --max-memory-shared=[<N>]; limit on shared memory, in MB; default: $max_memory_shared
 --max-wait-time=[<time>]; maximal time to wait for available CPUs before failing a test, default: ${max_wait_time}
 --max-run-time=[<time>]; maximal time to wait for a test completion before failing it by force, default: ${max_run_time}
---max-resources=[<file>]; specify limits for all resources in path-value format; see config files in verbose help; explicit options above have precedence
+--max-resources=[<file>]; specify limits for all resources in path-value format; see config files in verbose help;
+  explicit options above have precedence
+--parallel; run tests in parallel; default: run serially
+EOF
+}
+
+function description_others()
+{
+    cat <<EOF
+--also-expected=[<file>]; apply a global expected <file> to the output of tests that have a local 'expected' file;
+  pass multiple global files by invoking this option several times
+--always-expected,--expected=[<file>]; apply the global expected file to all tests regardless if they have a local
+  'expected' file; pass multiple global files by invoking this option several times
+--debug; much more debug output
+--junit=[<file>]; output to file junit record compatible with jenkins for each test
 --no-ansiterm-control-characters,--no-control-characters,--raw; unstyled output (no ANSIterm control characters)
 --output-directories,--dry-run,--dry; output list of test directories intended to run and exit
 --path=[<dir>]; data-storage directory for tests, default: none, let the tests define it
---parallel; run tests in parallel
---quiet,-q; minimize output
---run-disabled; run disabled tests
---run-optional,--optional; run tests having file called "optional" (same logic as for --run-disabled)
---stdin; read paths from stdin e.g. run test in hello/world: echo hello/world | comma-test-run --stdin
 --test-option=[<option>]; extra command line argument(s) pass to "test" script
---to=[<dir>]; run tests up to a given test, the latter included, where test directories are ordered lexicographically
---until-first-failure; exit after the first failure (works only when tests run serially)
+
+--quiet,-q; minimize output
 --verbose,-v; more output
---white-list=[<file>]; only run these tests mentioned in the <file>, applied first before black list. Comment lines starting with # ignored. Each entry in the list matches to sub directory or directories name using pattern ^<subdir>; see examples.
---also-expected=[<file>]; apply a global expected <file> to the output of tests that have a local 'expected' file
---always-expected,--expected=[<file>]; apply the global expected file to all tests regardless if they have a local 'expected' file
---estimate-resources; in serial mode, accumulates performance data using comma-top into 'output/performance.csv' files; note: file may be empty for very short tests
+--help,-h; show this help, --help --verbose for more help
 EOF
+}
+
+function description()
+{
+    description_test_selection
+    description_resources
+    description_others
 }
 
 function usage_()
@@ -118,10 +145,13 @@ echo -e "
 
 Search for and execute tests under the current directory.
 
-Find subdirectories containing the files ${brown}test${none}, ${brown}input${none}, or ${brown}expected${none}. Execute 'test', then either:
+Find subdirectories containing the files ${brown}test${none}, ${brown}input${none}, or ${brown}expected${none}.
+Execute 'test', then either:
     (a) if 'expected' exists, compare its contents to the output of 'test' ("path=value" format)
-    (b) if --also-expected='file' is passed on the command line and 'expected' exists, compare the contents of 'file' ("path=value") to the output of 'test'
-    (c) if --always-expected='file' is passed on the command line, compare the contents of 'file' ("path=value") to the output of 'test'
+    (b) if --also-expected='file' is passed on the command line and 'expected' exists, compare the contents of
+        'file' ("path=value") to the output of 'test'
+    (c) if --always-expected='file' is passed on the command line, compare the contents of 'file' ("path=value")
+        to the output of 'test'
     (d) otherwise the success of the test depends on the exit status of the 'test' script.
 
 Return 0 if all tests succeed, or non-zero if any of the tests fail.
@@ -152,8 +182,14 @@ ${brown}A quick tutorial${none}
 
     comma-test-run    # only the "success" test should pass
 
-${brown}Options:${none}
-$( description | sed 's/^/    /g' )
+${brown}Options for test selection${none}
+$( description_test_selection | sed 's/^/    /g' )
+
+${brown}Options to control allocated resources${none}
+$( description_resources | sed 's/^/    /g' )
+
+${brown}Other options:${none}
+$( description_others | sed 's/^/    /g' )
 
 "
 
@@ -251,53 +287,49 @@ ${brown}White(and black)-listing pro hint${none}
 
 function error_()
 {
-    local term=2
-    [[ -z "$2" ]] || term=$2
     if [[ "$options_no_ansiterm_control_characters" == "1" ]] ; then
-        echo -e "$1" >&${term}
+        echo -e "$1" >&2
     else
         local bold=$( tput bold )
+        local red=$( tput setaf 1 )
         local normal=$( tput sgr0 )
-        echo -e "$bold$1$normal" >&${term}
+        echo -e "$bold$red$1$normal" >&2
     fi
 }
 export -f error_
 
 function message_()
 {
-    local term=2
-    [[ -z "$2" ]] || term=$2
     [[ "$options_quiet" != "1" ]] || return
     if [[ "$options_no_ansiterm_control_characters" == "1" ]] ; then
-        echo -e "$1" >&${term}
+        echo -e "$1" >&2
     else
         local bold=$( tput bold )
         local normal=$( tput sgr0 )
-        echo -e "$bold$1$normal" >&${term}
+        echo -e "$bold$1$normal" >&2
     fi
 }
 export -f message_
+
+function warning_()
+{
+    [[ "$options_quiet" != "1" ]] || return
+    if [[ "$options_no_ansiterm_control_characters" == "1" ]] ; then
+        echo -e "$1" >&2
+    else
+        local bold=$( tput bold )
+        local yellow=$( tput setaf 3 )
+        local normal=$( tput sgr0 )
+        echo -e "$bold$yellow$1$normal" >&2
+    fi
+}
+export -f warning_
 
 function dump_file_()
 {
     if [[ "$options_quiet" != "1" ]] ; then cat "$1" >&2 ; fi
 }
 export -f dump_file_
-
-function warning_()
-{
-    local term=2
-    [[ -z "$2" ]] || term=$2
-    [[ "$options_quiet" != "1" ]] || return
-    if [[ "$options_no_ansiterm_control_characters" == "1" ]] ; then
-        echo -e "$1" >&${term}
-    else
-        local bold=$( tput bold )
-        local normal=$( tput sgr0 )
-        echo -e "$bold$1$normal" >&${term}
-    fi
-}
-export -f warning_
 
 function disabled_()
 {
@@ -552,17 +584,22 @@ function run_and_match_test()
 
     echo "$test_output" > "output/stdout.log"
 
-    if [[ $test_failed != 0 ]]; then echo "test exit with non-zero status: $test_failed" >&2; fi
+    if [[ $test_failed != 0 ]]; then error_ "test exit with non-zero status: $test_failed" ; fi
 
     if [[ $test_failed == 0 ]] ; then
         if [[ -f "./expected" ]] ; then
             match_output=$( echo "$test_output" | comma-test-match ./expected 2>&1 )
         fi
+        local global_expected
         if [[ -n "$options_also_expected" && -f "./expected" ]] ; then
-            match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; echo "$test_output" | comma-test-match $options_also_expected 2>&1 )
+            for global_expected in $options_also_expected ; do
+                match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; echo "$test_output" | comma-test-match "$global_expected" 2>&1 )
+            done
         fi
         if [[ -n "$options_always_expected" ]] ; then
-            match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; echo "$test_output" | comma-test-match $options_always_expected 2>&1 )
+            for global_expected in $options_always_expected ; do
+                match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; echo "$test_output" | comma-test-match $global_expected 2>&1 )
+            done
         fi
         if [[ -n "$match_output" ]]; then
             error_ "$name: test output does not match expected:\n"
@@ -717,10 +754,10 @@ function run_single_test()
     else
         test_exec=$( closest_test_in_path "$dir" )
         if [[ -z "$test_exec" ]]; then
-            error_ "$name: error: no \"test\" script found in any parent directory of $dir" >&2
+            error_ "$name: error: no \"test\" script found in any parent directory of $dir"
             result=1
         else
-            message_ "$name: test $counter: $dir: running..." 4
+            message_ "$name: test $counter: $dir: running..."
 
             basedir=$( pwd )
 
@@ -755,7 +792,7 @@ function run_single_test()
                         continue
                     }
                     [[ "$test_failed" == "0" ]] && {
-                        message_ "$name: test $counter: $dir: succeeded" 4
+                        message_ "$name: test $counter: $dir: succeeded"
                     } || {
                         result=1
                         error_ "$name: $dir: failed$( (( $test_failed == 124 )) && echo ' (likely timed out)' )"
@@ -895,6 +932,19 @@ function final_words()
     [[ "$options_debug" != "0" && -n "$comma_test_run_output_flock" ]] && { echo "$name: detailed breakdown:" >&2 ; cat "$comma_test_run_output_flock" >&2; }
 }
 
+function parse_multiple_options()
+{
+    local option=$1
+    shift
+    [[ -n "$option" ]] || return 1
+    local filename
+    # filename is always quoted by comma-options-to-name-value; remove first and last characters with sed
+    for filename in $( description | comma-options-to-name-value $@ | grep "$option" | cut -d= -f2 | sed 's@^.@@;s@.$@@' ) ; do
+        [[ -r $filename ]] || { error_ "$name: cannot find $filename given as argument of '$option'"; return 1 ; }
+        readlink -e "$filename"
+    done
+}
+
 # process command line...
 if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then
     if (( $( comma_options_has --verbose $@ ) || $( comma_options_has -v $@ ) )) ; then usage_ --verbose ; else usage_ ; fi
@@ -928,10 +978,12 @@ if [[ "$options_debug" != "0" ]] ; then verbose="--verbose" ; fi
     [[ -f "$options_also_expected" ]] || { error_ "$name: global expected file '$options_also_expected' not found"; exit 1; }
     options_also_expected=$( readlink -e "$options_also_expected" )
 }
-[[ -n "$options_always_expected" ]] && {
-    [[ -r "$options_always_expected" ]] || { error_ "$name: global expected file '$options_always_expected' not found"; exit 1; }
-    options_always_expected=$( readlink -e "$options_always_expected" )
-}
+
+# handle separately the options that can be repeated multiple times
+# have to store all names in one string because arrays cannot be exported
+# as a consequence, may not have spaces in file names
+options_always_expected=$( parse_multiple_options "always-expected" $@ ) || exit 1
+options_also_expected=$( parse_multiple_options "also-expected" $@ ) || exit 1
 
 # and convert to bytes and export for everyone to use
 max_parallel=$options_max_parallel
@@ -959,11 +1011,11 @@ function apply_white_black_list()
 function test_directories()
 {
     if [[ -n "$options_white_list" && -f "$options_white_list" ]]; then
-        message_ "$name: applying white list from file '$options_white_list'">&2
+        message_ "$name: applying white list from file '$options_white_list'"
         options_white_list="^(\./)?($( sed 's#\./##' <$options_white_list | grep -v ^# | grep -v ^$ | tr \\n '|' | sed 's/|$//'  ))";
     fi
     if [[ -n "$options_black_list" && -f "$options_black_list" ]]; then
-        message_ "$name: applying black list from file '$options_black_list'">&2
+        message_ "$name: applying black list from file '$options_black_list'"
         options_black_list="^(\./)?($( sed 's#\./##' <$options_black_list | grep -v ^# | grep -v ^$ | tr \\n '|' | sed 's/|$//' ))";
     fi
 
