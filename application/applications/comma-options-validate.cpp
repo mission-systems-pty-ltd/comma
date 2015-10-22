@@ -64,7 +64,7 @@ int main( int ac, char** av )
             std::string line;
             std::getline( std::cin, line );
             line = comma::strip( line, '\r' ); // windows... sigh...
-            if( line.empty() ) { continue; }
+            if( line.empty() || line[0] == ' '  || line[0] == '\t'  || line[0] == '#' ) { continue; } // quick and dirty
             descriptions.push_back( comma::command_line_options::description::from_string( line ) );
         }
         options.assert_valid( descriptions, true );
