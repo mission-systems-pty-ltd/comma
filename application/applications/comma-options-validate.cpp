@@ -42,8 +42,9 @@ void usage()
     std::cerr << "cat description.txt | comma-options-to-name-value <options>" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::command_line_options::description::usage() << std::endl;
+    std::cerr << "lines starting with spaces, tabs, or comment signs '#' are ignored" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "examples (try them)" << std::endl;
+    std::cerr << "examples (try them):" << std::endl;
     std::cerr << "    valid options:" << std::endl;
     std::cerr << "        echo '--verbose,-v' | comma-options-validate -v hello world" << std::endl;
     std::cerr << "    invalid options:" << std::endl;
