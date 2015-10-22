@@ -110,8 +110,8 @@ EOF
 function description_others()
 {
     cat <<EOF
---also-expected=[<file>]; apply a global expected <file> to the output of tests that have a local 'expected' file
---always-expected,--expected=[<file>]; apply the global expected file to all tests regardless if they have a local 'expected' file
+--also-expected=[<file>]; apply a global expected <file> to the output of tests that have a local 'expected' file; pass multiple global files by invoking this option several times
+--always-expected,--expected=[<file>]; apply the global expected file to all tests regardless if they have a local 'expected' file; pass multiple global files by invoking this option several times
 --debug; much more debug output
 --junit=[<file>]; output to file junit record compatible with jenkins for each test
 --no-ansiterm-control-characters,--no-control-characters,--raw; unstyled output (no ANSIterm control characters)
@@ -580,11 +580,16 @@ function run_and_match_test()
         if [[ -f "./expected" ]] ; then
             match_output=$( echo "$test_output" | comma-test-match ./expected 2>&1 )
         fi
+        local global_expected
         if [[ -n "$options_also_expected" && -f "./expected" ]] ; then
-            match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; echo "$test_output" | comma-test-match $options_also_expected 2>&1 )
+            for global_expected in $options_also_expected ; do
+                match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; echo "$test_output" | comma-test-match "$global_expected" 2>&1 )
+            done
         fi
         if [[ -n "$options_always_expected" ]] ; then
-            match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; echo "$test_output" | comma-test-match $options_always_expected 2>&1 )
+            for global_expected in $options_always_expected ; do
+                match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; echo "$test_output" | comma-test-match $global_expected 2>&1 )
+            done
         fi
         if [[ -n "$match_output" ]]; then
             error_ "$name: test output does not match expected:\n"
@@ -917,6 +922,19 @@ function final_words()
     [[ "$options_debug" != "0" && -n "$comma_test_run_output_flock" ]] && { echo "$name: detailed breakdown:" >&2 ; cat "$comma_test_run_output_flock" >&2; }
 }
 
+function parse_multiple_options()
+{
+    local option=$1
+    shift
+    [[ -n "$option" ]] || return 1
+    local filename
+    # filename is always quoted by comma-options-to-name-value; remove first and last characters with sed
+    for filename in $( description | comma-options-to-name-value $@ | grep "$option" | cut -d= -f2 | sed 's@^.@@;s@.$@@' ) ; do
+        [[ -r $filename ]] || { error_ "$name: cannot find $filename given as argument of '$option'"; return 1 ; }
+        readlink -e "$filename"
+    done
+}
+
 # process command line...
 if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then
     if (( $( comma_options_has --verbose $@ ) || $( comma_options_has -v $@ ) )) ; then usage_ --verbose ; else usage_ ; fi
@@ -950,10 +968,12 @@ if [[ "$options_debug" != "0" ]] ; then verbose="--verbose" ; fi
     [[ -f "$options_also_expected" ]] || { error_ "$name: global expected file '$options_also_expected' not found"; exit 1; }
     options_also_expected=$( readlink -e "$options_also_expected" )
 }
-[[ -n "$options_always_expected" ]] && {
-    [[ -r "$options_always_expected" ]] || { error_ "$name: global expected file '$options_always_expected' not found"; exit 1; }
-    options_always_expected=$( readlink -e "$options_always_expected" )
-}
+
+# handle separately the options that can be repeated multiple times
+# have to store all names in one string because arrays cannot be exported
+# as a consequence, may not have spaces in file names
+options_always_expected=$( parse_multiple_options "always-expected" $@ ) || exit 1
+options_also_expected=$( parse_multiple_options "also-expected" $@ ) || exit 1
 
 # and convert to bytes and export for everyone to use
 max_parallel=$options_max_parallel
