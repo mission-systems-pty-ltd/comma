@@ -67,6 +67,9 @@ class ascii
 
         /// get value (unfilled fields have the same value as in default constructor; convenience function)
         S get( const std::string& line ) const { S s = sample_; get( s, line ); return s; }
+        
+        /// get value (empty value returns default sample)
+        S get( const boost::optional<std::string>& line ) const { return line ? get(*line) : sample_ ; }
 
         /// put value at the right place in the vector
         const std::vector< std::string >& put( const S& s, std::vector< std::string >& v ) const;
