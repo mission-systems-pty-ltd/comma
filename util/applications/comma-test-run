@@ -81,7 +81,8 @@ EOF
 function description_test_selection()
 {
     cat <<EOF
---black-list=[<file>]; do not run these tests mentioned in <file>, e.g. a lists of sub-directories in white list to be excluded; see '--white-list' below for file format.
+--black-list=[<file>]; do not run these tests mentioned in <file>, e.g. a lists of sub-directories in white list
+  to be excluded; see '--white-list' below for file format.
 --end=[<dir>]; run tests up to a given test, the latter excluded, where test directories are ordered lexicographically
 --from,--begin=[<dir>]; run tests starting from a given test, where test directories are ordered lexicographically
 --run-disabled; run disabled tests
@@ -89,20 +90,24 @@ function description_test_selection()
 --stdin; read paths from stdin e.g. run test in hello/world: echo hello/world | comma-test-run --stdin
 --to=[<dir>]; run tests up to a given test, the latter included, where test directories are ordered lexicographically
 --until-first-failure; exit after the first failure (works only when tests run serially)
---white-list=[<file>]; only run these tests mentioned in the <file>, applied first before black list; comment lines starting with # are ignored; each entry in the list matches to a sub-directory or directories name using pattern ^<subdir>; see examples
+--white-list=[<file>]; only run these tests mentioned in the <file>, applied first before black list;
+  comment lines starting with # are ignored; each entry in the list matches to a sub-directory or
+  directories name using pattern ^<subdir>; see examples
 EOF
 }
 
 function description_resources()
 {
     cat <<EOF
---estimate-resources; in serial mode, accumulates performance data using comma-top into 'output/performance.csv' files; note: file may be empty for very short tests
+--estimate-resources; in serial mode, accumulates performance data using comma-top into 'output/performance.csv' files;
+  note: file may be empty for very short tests
 --max-parallel=[<N>]; run up to N tests in parallel; default: $max_parallel
 --max-memory-main=[<N>]; limit on main memory, in MB; default: $max_memory_main
 --max-memory-shared=[<N>]; limit on shared memory, in MB; default: $max_memory_shared
 --max-wait-time=[<time>]; maximal time to wait for available CPUs before failing a test, default: ${max_wait_time}
 --max-run-time=[<time>]; maximal time to wait for a test completion before failing it by force, default: ${max_run_time}
---max-resources=[<file>]; specify limits for all resources in path-value format; see config files in verbose help; explicit options above have precedence
+--max-resources=[<file>]; specify limits for all resources in path-value format; see config files in verbose help;
+  explicit options above have precedence
 --parallel; run tests in parallel; default: run serially
 EOF
 }
@@ -110,8 +115,10 @@ EOF
 function description_others()
 {
     cat <<EOF
---also-expected=[<file>]; apply a global expected <file> to the output of tests that have a local 'expected' file; pass multiple global files by invoking this option several times
---always-expected,--expected=[<file>]; apply the global expected file to all tests regardless if they have a local 'expected' file; pass multiple global files by invoking this option several times
+--also-expected=[<file>]; apply a global expected <file> to the output of tests that have a local 'expected' file;
+  pass multiple global files by invoking this option several times
+--always-expected,--expected=[<file>]; apply the global expected file to all tests regardless if they have a local
+  'expected' file; pass multiple global files by invoking this option several times
 --debug; much more debug output
 --junit=[<file>]; output to file junit record compatible with jenkins for each test
 --no-ansiterm-control-characters,--no-control-characters,--raw; unstyled output (no ANSIterm control characters)
@@ -138,10 +145,13 @@ echo -e "
 
 Search for and execute tests under the current directory.
 
-Find subdirectories containing the files ${brown}test${none}, ${brown}input${none}, or ${brown}expected${none}. Execute 'test', then either:
+Find subdirectories containing the files ${brown}test${none}, ${brown}input${none}, or ${brown}expected${none}.
+Execute 'test', then either:
     (a) if 'expected' exists, compare its contents to the output of 'test' ("path=value" format)
-    (b) if --also-expected='file' is passed on the command line and 'expected' exists, compare the contents of 'file' ("path=value") to the output of 'test'
-    (c) if --always-expected='file' is passed on the command line, compare the contents of 'file' ("path=value") to the output of 'test'
+    (b) if --also-expected='file' is passed on the command line and 'expected' exists, compare the contents of
+        'file' ("path=value") to the output of 'test'
+    (c) if --always-expected='file' is passed on the command line, compare the contents of 'file' ("path=value")
+        to the output of 'test'
     (d) otherwise the success of the test depends on the exit status of the 'test' script.
 
 Return 0 if all tests succeed, or non-zero if any of the tests fail.
