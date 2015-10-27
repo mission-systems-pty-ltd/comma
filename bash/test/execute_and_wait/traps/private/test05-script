@@ -2,6 +2,7 @@
 
 function handle_usr1()
 {
+    trap '' SIGTERM SIGHUP SIGPIPE SIGINT SIGUSR1
     exit 12
 }
 

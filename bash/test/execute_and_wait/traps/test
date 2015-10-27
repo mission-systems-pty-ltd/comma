@@ -9,6 +9,7 @@ mkdir -p "$output_dir" || exit 1
 # handler has been restored
 function test01_trap()
 {
+    trap '' SIGTERM SIGHUP SIGPIPE SIGINT SIGUSR
     exit 1
 }
 export -f test01_trap
@@ -32,6 +33,7 @@ test01 ; echo "test[1]/exit/status=$?"
 # executed is killed, and that the expected exit status is returned
 function test02_trap()
 {
+    trap '' SIGTERM SIGHUP SIGPIPE SIGINT SIGUSR
     echo "killed by $1"
     exit 11
 }
