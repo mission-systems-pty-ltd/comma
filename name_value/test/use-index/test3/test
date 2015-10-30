@@ -1,7 +1,8 @@
 #!/bin/bash
 in=$(cat )
-echo $in | name-value-convert --from xml --to json --indented >output/json
-diff -w output/json expected-json
+echo $in | name-value-convert --from xml --to json --indented  | tr '\n' ' ' >output/json
+cat  expected-json | tr '\n' ' ' >output/exp
+diff -w output/json output/exp
 #read from unkown
-echo $in | name-value-convert --to json --indented >output/out2
-diff -w output/out2 expected-json
+echo $in | name-value-convert --to json --indented  | tr '\n' ' ' >output/out2
+diff -w output/out2 output/exp

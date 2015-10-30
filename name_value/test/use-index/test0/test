@@ -1,3 +1,4 @@
 #!/bin/bash
-name-value-convert --from path-value --to json >output/json
-diff -w output/json expected-json
+name-value-convert --from path-value --to json | tr '\n' ' ' >output/json
+cat expected-json | tr '\n' ' ' > output/exp
+diff -w output/json output/exp
