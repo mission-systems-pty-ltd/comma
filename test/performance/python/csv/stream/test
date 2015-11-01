@@ -1,0 +1,55 @@
+#!/bin/bash
+
+function output_code
+{
+    if [[ "$1" == "--ascii" ]]; then binary=False; else binary=True; fi
+cat <<END
+#!/usr/bin/python
+
+import comma
+
+point_t = comma.csv.struct( 'x,y,z', 'f8', 'f8', 'f8' )
+event_t = comma.csv.struct( 'time,coordinates,orientation', 'datetime64[us]', point_t, point_t )
+observer_t = comma.csv.struct( 'id,name,values', 'i4', 'S12', '(2,3)f8' )
+record_t = comma.csv.struct( 'event,observer,time,count', event_t, observer_t, 'datetime64[us]', 'u8' )
+
+fields = 'event/coordinates/x,event/orientation/z,observer/values,event/coordinates/z,event/time,event/orientation/y,event/orientation/x,event/coordinates/y,observer/name,observer/id,count,time'
+format = 'f8,f8,(2,3)f8,f8,datetime64[us],f8,f8,f8,S12,i4,u8,datetime64[us]'
+stream = comma.csv.stream( record_t, fields=fields, format=format if $binary else '', precision=$precision )
+
+for records in stream.iter():
+  stream.write( records )
+END
+}
+
+output_dir=output
+
+input_line='0.1234567890123456,-0.3234567890123456,0.1111111111111111,0.2222222222222222,0.3333333333333333,0.44444444444444444,0.55555555555555555,0.66666666666666666,0.3234567890123456,20151122T123456.123456,-0.2234567890123456,-0.1234567890123456,0.2234567890123456,ObserverName,-1234567890,12345678901234567890,20150101T000000.123456'
+input_comma_format='d,d,6d,d,t,d,d,d,s[12],i,ul,t'
+
+expected_output_line='20151122T123456.123456,0.1234567890123456,0.2234567890123456,0.3234567890123456,-0.1234567890123456,-0.2234567890123456,-0.3234567890123456,-1234567890,ObserverName,0.1111111111111111,0.2222222222222222,0.3333333333333333,0.44444444444444444,0.55555555555555555,0.66666666666666666,20150101T000000.123456,12345678901234567890'
+output_comma_format='t,6d,i,s[12],6d,t,ul' 
+
+source $( which comma-name-value-util )
+comma_path_value_to_var
+cat input
+for(( i = 0; i < $binary_number_of_records; i++ )); do echo $input_line; done | csv-to-bin $input_comma_format > $output_dir/input.bin
+for(( i = 0; i < $ascii_number_of_records; i++ )); do echo $input_line; done > $output_dir/input.csv
+
+output_code > $output_dir/bin.py && chmod u+x $output_dir/bin.py
+output_code --ascii > $output_dir/csv.py && chmod u+x $output_dir/csv.py
+
+/usr/bin/time -o $output_dir/timer -f %U $output_dir/bin.py < $output_dir/input.bin > $output_dir/output.bin
+echo "binary/time/elapsed=$( cat $output_dir/timer )"
+
+/usr/bin/time -o $output_dir/timer -f %U $output_dir/csv.py < $output_dir/input.csv > $output_dir/output.csv
+echo "ascii/time/elapsed=$( cat $output_dir/timer )"
+
+for(( i = 0; i < $binary_number_of_records; i++ )); do echo $expected_output_line; done | csv-to-bin $output_comma_format > $output_dir/expected_output.bin
+for(( i = 0; i < $ascii_number_of_records; i++ )); do echo $expected_output_line; done | csv-to-bin $output_comma_format | csv-from-bin $output_comma_format --precision=$precision > $output_dir/expected_output.csv
+
+echo "binary/diff=$( diff $output_dir/output.bin $output_dir/expected_output.bin )"
+echo "ascii/diff=$( diff $output_dir/output.csv $output_dir/expected_output.csv )"
+echo "binary/record/size/bytes=$( csv-size $output_comma_format )"
+echo "binary/size/bytes=$( wc -c < $output_dir/output.bin )"
+echo "ascii/lines/number=$( wc -l < $output_dir/output.csv )"

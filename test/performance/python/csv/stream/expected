@@ -1,0 +1,7 @@
+binary/time/elapsed < 0.55
+binary/diff=""
+binary/size/bytes = binary/number_of_records * binary/record/size/bytes
+
+ascii/time/elapsed < 1.05
+ascii/diff = ""
+ascii/lines/number = ascii/number_of_records
