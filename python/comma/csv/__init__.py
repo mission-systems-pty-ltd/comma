@@ -38,7 +38,7 @@ class struct:
 
 class stream:
   buffer_size_in_bytes = 65536
-  def __init__( self, s, fields=None, format=None, binary=False, delimiter=',', precision=12, flush=False, source=sys.stdin, target=sys.stdout ):
+  def __init__( self, s, fields='', format='', binary=False, delimiter=',', precision=12, flush=False, source=sys.stdin, target=sys.stdout ):
     if not isinstance( s, struct ): raise Exception( "expected '{}', got '{}'".format( str( struct ), repr( s ) ) )
     self.struct = s
     if fields:
@@ -48,7 +48,7 @@ class stream:
       self.fields = tuple( fields.split(',') )
     else:
       self.fields = self.struct.fields
-    self.binary = binary or format is not None
+    self.binary = binary or format is not ''
     self.delimiter = delimiter
     self.flush = flush
     self.precision = precision
