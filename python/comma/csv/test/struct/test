@@ -19,6 +19,21 @@ END
 )"
 }
 
+function shorthand
+{
+    python -c "$( cat <<END
+import comma
+
+point_t = comma.csv.struct( 'x,y,z', 'float64', 'float64', 'float64' )
+timestamped_point_t = comma.csv.struct( 't,coordinates', 'datetime64[us]', point_t )
+record_t = comma.csv.struct( 'observer,event', 'S3', timestamped_point_t )
+for i,name in enumerate( [ 'event', 'event/coordinates' ] ):
+  print "shorthand[{}]/name={}".format( i, name )
+  print "shorthand[{}]/value={}".format( i, ','.join( record_t.shorthand[name] ) )
+END
+)"
+}
+
 function record
 {
     local what=$1
@@ -33,11 +48,13 @@ END
 )"
 }
 
+
 types_incorrect_name; echo "types_incorrect_name/status=$?"
 types_empty_name; echo "types_empty_name/status=$?"
 types_incorrect_number; echo "types_incorrect_number/status=$?"
 
-basic; echo "basic/status=$?"
+basic; echo "status/basic=$?"
+shorthand; echo "status/shorthand=$?"
 
 for what in fields types; do
     output=$( record $what )

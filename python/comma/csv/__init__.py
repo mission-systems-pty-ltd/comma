@@ -22,10 +22,15 @@ class struct:
       raise Exception( "expected {} types for '{}', got {} type(s)".format( len( concise_fields.split(',') ), concise_fields, len( concise_types )) )
     self.dtype = numpy.dtype( zip( concise_fields.split(','), concise_types ) )
     fields, types = [], []
+    self.shorthand = {}
     for name, type in zip( concise_fields.split(','), concise_types ):
       if isinstance( type, struct ):
-        fields.extend( map( lambda _: name + '/' + _, type.fields ) )
+        fields_of_type = [ name + '/' + field for field in type.fields ]
+        fields.extend( fields_of_type )
         types.extend( type.types )
+        self.shorthand[name] = fields_of_type
+        for subname,subfields in type.shorthand.iteritems():
+          self.shorthand[ name + '/' + subname ] = [ name + '/' + field for field in subfields ]
       else:
         fields.append( name )
         types.append( type )
@@ -41,13 +46,9 @@ class stream:
   def __init__( self, s, fields='', format='', binary=False, delimiter=',', precision=12, flush=False, source=sys.stdin, target=sys.stdout ):
     if not isinstance( s, struct ): raise Exception( "expected '{}', got '{}'".format( str( struct ), repr( s ) ) )
     self.struct = s
-    if fields:
-      if not set( fields.split(',') ).issuperset( self.struct.fields ):
-        unaccounted_fields = set( self.struct.fields ) - set( fields.split(',') )
-        raise Exception( "expected field(s) '{}' not found in supplied fields '{}'".format( ','.join( unaccounted_fields ), fields ) )
-      self.fields = tuple( fields.split(',') )
-    else:
-      self.fields = self.struct.fields
+    self.fields = tuple( sum( map( lambda name: self.struct.shorthand.get( name ) or [name], fields.split(',') ), [] ) ) if fields else self.struct.fields
+    if not set( self.fields ).issuperset( self.struct.fields ):
+      raise Exception( "expected field(s) '{}' not found in supplied fields '{}'".format( ','.join( set( self.struct.fields ) - set( self.fields ) ), fields ) )
     self.binary = binary or format is not ''
     self.delimiter = delimiter
     self.flush = flush
