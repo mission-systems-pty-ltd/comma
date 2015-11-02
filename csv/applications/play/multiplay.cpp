@@ -45,7 +45,7 @@ namespace comma {
 Multiplay::Multiplay( const std::vector< SourceConfig >& configs
                     , double speed
                     , bool quiet
-                    , const boost::posix_time::time_duration& precision
+                    , const boost::posix_time::time_duration& resolution
                     , boost::posix_time::ptime from
                     , boost::posix_time::ptime to
                     , bool flush )
@@ -53,7 +53,7 @@ Multiplay::Multiplay( const std::vector< SourceConfig >& configs
     , istreams_( configs.size() )
     , m_inputStreams( configs.size() )
     , m_publishers( configs.size() )
-    , m_play( speed, quiet, precision )
+    , m_play( speed, quiet, resolution )
     , m_timestamps( configs.size() )
     , m_started( false )
     , m_from( from )

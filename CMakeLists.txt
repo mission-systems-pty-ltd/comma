@@ -244,6 +244,7 @@ endif( BUILD_PYTHON_PACKAGES )
 #install(FILES "${Boost_LIBRARY_DIRS}/*.dll" DESTINATION bin )
 
 #the following set up optional parameters for cpack
+SET(CPACK_PACKAGE_NAME "comma")
 SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Command line utilities to manipulate various structured and unstructured data from offline or real time data.")
 SET(CPACK_PACKAGE_VENDOR "Australian Centre for Field Robotics")
 SET(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/COPYING")

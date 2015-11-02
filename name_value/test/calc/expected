@@ -9,5 +9,6 @@ sub/strict/exclude/word = 'foo="-1"'
 sub/strict/exclude/slash = 'foo="-1"'
 sub/strict/exclude/path = 'foo="-1"'
 less/count = 1
-less/detailed/count = 10
+less/detailed/resources/memory/shared="1"
+less/detailed/resources/memory/main="1"
 sub/strict/string/status = 1

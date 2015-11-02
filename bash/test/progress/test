@@ -3,4 +3,4 @@
 elapsed_pv="$( comma-progress --elapsed )"
 
 echo elapsed=\"$( echo -e "$elapsed_pv" | sed 's#-#_#g' | tr \\n ';' )\"
-echo -e "$elapsed_pv" | comma-progress --sum --mean --count | sed 's#^#sum/#; s#-#_#g'
+echo -e "$elapsed_pv" | comma-progress --sum --mean --count | sed 's#^#sum/#; s#-#_#g;s#=\"#=#g;s#\"$##'

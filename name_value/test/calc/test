@@ -10,5 +10,5 @@ name-value-calc data/string1.pv  data/string2.pv  --sub  --strict --exclude 'bar
 name-value-calc data/string1.pv  data/string2.pv  --sub  --strict --exclude 'bar/'    | sed 's@^@sub/strict/exclude/slash=@' | sed "s@=@='@;s@\$@'@"
 name-value-calc data/string1.pv  data/string2.pv  --sub  --strict --exclude 'bar/baz' | sed 's@^@sub/strict/exclude/path=@'  | sed "s@=@='@;s@\$@'@"
 name-value-calc data/small.json  data/large.json  --less --json             | wc -l   | sed 's@^@less/count=@'
-name-value-calc data/small.json  data/large.json  --less --json  --detailed | wc -l   | sed 's@^@less/detailed/count=@'
+name-value-calc data/small.json  data/large.json  --less --json  --detailed | name-value-convert --from json | sed 's@^@less/detailed/@'
 name-value-calc data/string1.pv  data/string2.pv  --sub  --strict ; echo $?           | sed 's@^@sub/strict/string/status=@'
