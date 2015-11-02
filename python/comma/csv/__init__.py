@@ -49,6 +49,11 @@ class stream:
     self.fields = tuple( sum( map( lambda name: self.struct.shorthand.get( name ) or [name], fields.split(',') ), [] ) ) if fields else self.struct.fields
     if not set( self.fields ).issuperset( self.struct.fields ):
       raise Exception( "expected field(s) '{}' not found in supplied fields '{}'".format( ','.join( set( self.struct.fields ) - set( self.fields ) ), fields ) )
+    duplicates = [ field for field in self.fields if field and self.fields.count( field ) > 1 ]
+    if duplicates: raise Exception( "fields '{}' have duplicates in '{}'".format( ','.join( duplicates ), ','.join( self.fields ) ) )
+    if format and binary == False:
+        format = ''
+        warnings.warn( "format keyword is ignored since binary is set to False (stream is ascii)" )
     self.binary = binary or format is not ''
     self.delimiter = delimiter
     self.flush = flush
@@ -93,7 +98,8 @@ class stream:
     else:
       with warnings.catch_warnings():
         warnings.simplefilter( 'ignore' )
-        data = numpy.loadtxt( StringIO( ''.join( itertools.islice( self.source, size ) ) ), dtype=self.dtype , delimiter=self.delimiter, converters=self.ascii_converters, ndmin=1 )
+        self.ascii_input_buffer = ''.join( itertools.islice( self.source, size ) )
+        data = numpy.loadtxt( StringIO( self.ascii_input_buffer ), dtype=self.dtype , delimiter=self.delimiter, converters=self.ascii_converters, ndmin=1 )
     if data.size == 0: return None
     if self.reshaped_dtype:
       return numpy.array( numpy.ndarray( data.shape, self.reshaped_dtype, data, strides=data.itemsize ).tolist(), dtype=self.struct.flat_dtype ).view( self.struct )
@@ -105,7 +111,7 @@ class stream:
     elif scalar.dtype.char in numpy.typecodes['Float']: return "{scalar:.{precision}g}".format( scalar=scalar, precision=self.precision )
     elif scalar.dtype.char in numpy.typecodes['Datetime'] : return comma.csv.time.from_numpy( scalar )
     elif scalar.dtype.char in 'S': return scalar
-    else: raise Exception( "conversion to string for numpy type '{}' is not implemented".format( repr( scalar.dtype ) )  )
+    else: raise Exception( "conversion to string for numpy type '{}' is not implemented".format( repr( scalar.dtype ) ) )
 
   def write( self, s ):
     if s.dtype != self.struct.dtype:
