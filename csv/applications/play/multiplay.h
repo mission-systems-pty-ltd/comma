@@ -69,7 +69,7 @@ class Multiplay
         Multiplay( const std::vector< SourceConfig >& configs
                 , double speed = 1.0
                 , bool quiet = false
-                , const boost::posix_time::time_duration& precision = boost::posix_time::milliseconds( 1 )
+                , const boost::posix_time::time_duration& resolution = boost::posix_time::milliseconds( 1 )
                 , boost::posix_time::ptime from = boost::posix_time::not_a_date_time
                 , boost::posix_time::ptime to = boost::posix_time::not_a_date_time
                 , bool flush = true

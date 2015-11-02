@@ -37,9 +37,9 @@
 namespace comma { namespace csv { namespace impl {
     
 /// constructor    
-play::play( double speed, bool quiet, const boost::posix_time::time_duration& precision ):
+play::play( double speed, bool quiet, const boost::posix_time::time_duration& resolution ):
     m_speed( speed ),
-    m_precision( precision ),
+    m_resolution( resolution ),
     m_lag( false ),
     m_lagCounter( 0U ),
     m_quiet( quiet )
@@ -50,15 +50,15 @@ play::play( double speed, bool quiet, const boost::posix_time::time_duration& pr
 /// @param first first timestamp
 /// @param speed slow-down factor: 1.0 = real time, 2.0 = twice as slow etc...
 /// @param quiet if true, do not output warnings if we can not keep up with the desired playback speed
-/// @param precision expected precision from the sleep function
-play::play( const boost::posix_time::ptime& first, double speed, bool quiet, const boost::posix_time::time_duration& precision ):
+/// @param resolution expected resolution from the sleep function
+play::play( const boost::posix_time::ptime& first, double speed, bool quiet, const boost::posix_time::time_duration& resolution ):
 
     m_systemFirst( boost::get_system_time() ),
     m_offset( m_systemFirst - first ),
     m_first( first ),
     m_last( first ),
     m_speed( speed ),
-    m_precision( precision ),
+    m_resolution( resolution ),
     m_lag( false ),
     m_lagCounter( 0U ),
     m_quiet( quiet )
@@ -87,7 +87,7 @@ void play::wait( const boost::posix_time::ptime& time )
             boost::posix_time::ptime systemTime = boost::get_system_time();
             const boost::posix_time::ptime target = m_systemFirst + boost::posix_time::milliseconds( static_cast<long>(( time - m_first ).total_milliseconds() * m_speed ) );
             const boost::posix_time::time_duration lag = systemTime - target;
-            if ( !m_quiet && ( lag > m_precision ) ) // no need to be alarmed for a lag less than the expected accuracy
+            if ( !m_quiet && ( lag > m_resolution ) ) // no need to be alarmed for a lag less than the expected accuracy
             {
                 if( !m_lag )
                 {
@@ -104,7 +104,7 @@ void play::wait( const boost::posix_time::ptime& time )
                     std::cerr << "csv-play: recovered after " << m_lagCounter << " packets " << std::endl;
                     m_lagCounter = 0U;
                 }
-                if ( lag < -m_precision ) // no need to sleep less than the expected accuracy
+                if ( lag < -m_resolution ) // no need to sleep less than the expected accuracy
                 {
                     boost::this_thread::sleep( target );
                 }

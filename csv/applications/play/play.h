@@ -42,8 +42,8 @@ namespace comma { namespace csv { namespace impl {
 class play
 {
 public:
-    play( double speed = 1.0, bool quiet = false, const boost::posix_time::time_duration& precision = boost::posix_time::milliseconds(1) );
-    play( const boost::posix_time::ptime& first, double speed = 1.0, bool quiet = false, const boost::posix_time::time_duration& precision = boost::posix_time::milliseconds(1) );
+    play( double speed = 1.0, bool quiet = false, const boost::posix_time::time_duration& resolution = boost::posix_time::milliseconds(1) );
+    play( const boost::posix_time::ptime& first, double speed = 1.0, bool quiet = false, const boost::posix_time::time_duration& resolution = boost::posix_time::milliseconds(1) );
 
     void wait( const boost::posix_time::ptime& time );
 
@@ -55,7 +55,7 @@ private:
     boost::posix_time::ptime m_first; /// first timestamp
     boost::posix_time::ptime m_last; /// last timestamp received
     const double m_speed;
-    const boost::posix_time::time_duration m_precision;
+    const boost::posix_time::time_duration m_resolution;
     bool m_lag;
     unsigned int m_lagCounter;
     bool m_quiet;

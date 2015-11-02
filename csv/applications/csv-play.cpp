@@ -68,6 +68,11 @@ static void usage()
     std::cerr << "               can be specified individually for each client, e.g." << std::endl;
     std::cerr << "               csv-play file1;pipe;clients=1 file2;tcp:1234;clients=3" << std::endl;
     std::cerr << "    --no-flush : if present, do not flush the output stream ( use on high bandwidth sources )" << std::endl;
+    std::cerr << "    --resolution=<second>: timestamp resolution; timestamps closer than this value will be" << std::endl;
+    std::cerr << "                           played without delay; the rationale is that microsleep used in csv-play" << std::endl;
+    std::cerr << "                           (boost::this_thread::sleep()) is essentially imprecise and may create" << std::endl;
+    std::cerr << "                           unnecessary delays in the data" << std::endl;
+    std::cerr << "                           default 0.01" << std::endl;
     std::cerr << "    --from <timestamp> : play back data starting at <timestamp> ( iso format )" << std::endl;
     std::cerr << "    --to <timestamp> : play back data up to <timestamp> ( iso format )" << std::endl;
     std::cerr << comma::csv::format::usage();
@@ -110,12 +115,12 @@ int main( int argc, char** argv )
         if( options.exists( "--help,-h" ) ) { usage(); }
         options.assert_mutually_exclusive( "--speed,--slow,--slowdown" );
         double speed = options.value( "--speed", 1.0 / options.value< double >( "--slow,--slowdown", 1.0 ) );
-        unsigned int precision = options.value( "--precision", 10u );
+        double resolution = options.value< double >( "--resolution", 0.01 );
         std::string from = options.value< std::string>( "--from", "" );
         std::string to = options.value< std::string>( "--to", "" );
         bool quiet =  options.exists( "--quiet" );
         bool flush =  !options.exists( "--no-flush" );
-        std::vector< std::string > configstrings = options.unnamed("--quiet,--flush,--no-flush","--slow,--slowdown,--speed,--precision,--binary,--fields,--clients,--from,--to");
+        std::vector< std::string > configstrings = options.unnamed("--quiet,--flush,--no-flush","--slow,--slowdown,--speed,--resolution,--binary,--fields,--clients,--from,--to");
         if( configstrings.empty() ) { configstrings.push_back( "-;-" ); }
         comma::csv::options csvoptions( argc, argv );
         comma::name_value::parser nameValue("filename,output", ';', '=', false );
@@ -129,23 +134,15 @@ int main( int argc, char** argv )
         if( !from.empty() ) { fromtime = boost::posix_time::from_iso_string( from ); }
         boost::posix_time::ptime totime;
         if( !to.empty() ) { totime = boost::posix_time::from_iso_string( to ); }
-        multiPlay.reset( new comma::Multiplay( sourceConfigs, 1.0 / speed, quiet, boost::posix_time::milliseconds(precision), fromtime, totime, flush ) );
+        multiPlay.reset( new comma::Multiplay( sourceConfigs, 1.0 / speed, quiet, boost::posix_time::microseconds( resolution * 1000000 ), fromtime, totime, flush ) );
         while( multiPlay->read() && !shutdownFlag && std::cout.good() && !std::cout.bad() &&!std::cout.eof() );
         multiPlay->close();
         multiPlay.reset();
         if( shutdownFlag ) { std::cerr << "csv-play: interrupted by signal" << std::endl; return -1; }
         return 0;
     }
-    catch( std::exception& ex )
-    {
-        std::cerr << "csv-play: " << ex.what() << std::endl;
-    }
-    catch( ... )
-    {
-        std::cerr << "csv-play: unknown exception" << std::endl;
-    }
+    catch( std::exception& ex ) { std::cerr << "csv-play: " << ex.what() << std::endl; }
+    catch( ... ) { std::cerr << "csv-play: unknown exception" << std::endl; }
     try { if( multiPlay ) { multiPlay->close(); } } catch ( ... ) {} // windows thing
-    std::cerr << "reset multiplay" << std::endl;
-    std::cerr << "done" << std::endl;
-    return -1;
+    return 1;
 }
