@@ -11,7 +11,7 @@ import numpy
 point_t = comma.csv.struct( 'x,y,z', 'float64', 'float64', 'float64' )
 timestamped_point_t = comma.csv.struct( 'time,coordinates', 'datetime64[us]', point_t )
 record_t = comma.csv.struct( 'observer,event', 'S3', timestamped_point_t )
-record_stream = comma.csv.stream( record_t, binary=True )
+record_stream = comma.csv.stream( record_t, format=','.join( record_t.types ) )
 
 for i,r in enumerate( record_stream.iter( size=$1 ), start=1 ):
   r['observer'] = numpy.char.upper( r['observer'] )

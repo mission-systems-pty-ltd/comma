@@ -43,25 +43,27 @@ class struct:
 
 class stream:
   buffer_size_in_bytes = 65536
-  def __init__( self, s, fields='', format='', binary=False, delimiter=',', precision=12, flush=False, source=sys.stdin, target=sys.stdout ):
+  def __init__( self, s, fields='', format='', binary=None, delimiter=',', precision=12, flush=False, source=sys.stdin, target=sys.stdout ):
     if not isinstance( s, struct ): raise Exception( "expected '{}', got '{}'".format( str( struct ), repr( s ) ) )
     self.struct = s
+    if binary:
+      if fields or format: warnings.warn( "fields and format are ignored when binary keyword is set; default fields and format are used" )
+      fields = ''
+      format = '' if binary == False else ','.join( type if isinstance( type, basestring ) else numpy.dtype( type ).str for type in self.struct.types )
     self.fields = tuple( sum( map( lambda name: self.struct.shorthand.get( name ) or [name], fields.split(',') ), [] ) ) if fields else self.struct.fields
     if not set( self.fields ).issuperset( self.struct.fields ):
       raise Exception( "expected field(s) '{}' not found in supplied fields '{}'".format( ','.join( set( self.struct.fields ) - set( self.fields ) ), fields ) )
     duplicates = [ field for field in self.fields if field and self.fields.count( field ) > 1 ]
     if duplicates: raise Exception( "fields '{}' have duplicates in '{}'".format( ','.join( duplicates ), ','.join( self.fields ) ) )
-    if format and binary == False:
-        format = ''
-        warnings.warn( "format keyword is ignored since binary is set to False (stream is ascii)" )
-    self.binary = binary or format is not ''
+    self.binary = format is not ''
     self.delimiter = delimiter
     self.flush = flush
     self.precision = precision
     self.source = source
     self.target = target
-    if format:
+    if self.binary:
       self.dtype = numpy.dtype( format )
+      if len( self.fields ) != len( self.dtype.names ): raise Exception( "expected same number of fields and format types, got '{}' and '{}'".format( ','.join( self.fields ), format ) )
     else:
       if self.fields == self.struct.fields:
         self.dtype = self.struct.flat_dtype
@@ -70,8 +72,6 @@ class stream:
         names = [ 'f' + str( i ) for i in range( len( self.fields ) ) ]
         types = [ struct_type_of_field.get( name ) or 'S' for name in self.fields ]
         self.dtype = numpy.dtype( zip( names, types ) )
-    if format and len( self.fields ) != len( self.dtype.names ):
-      raise Exception( "expected same number of fields and format types, got '{}' and '{}'".format( self.fields, format ) )
     self.size = max( 1, stream.buffer_size_in_bytes / self.dtype.itemsize )
     self.ascii_converters = comma.csv.time.ascii_converters( shape_unrolled_types_of_flat_dtype( self.dtype ) )
     if self.fields == self.struct.fields:
