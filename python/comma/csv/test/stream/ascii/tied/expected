@@ -1,8 +1,11 @@
-original/line[0]="-1,1,2,abc,nothing,20130101T010100.123456,3,10,20"
-original/line[1]="-2,1,2,def,nothing,20140202T020200.123456,4,10,20"
-original/line[2]="-3,1,2,ghi,nothing,20150303T030300.123456,5,10,20"
-appended/line[0]=3.741657386773941 +/- 1e-8
-appended/line[1]=4.58257569495584 +/- 1e-8
-appended/line[2]=5.477225575051661 +/- 1e-8
+original/line[0]="-1,1.0,2.0,abc,nothing,20130101T010100.123456,3.0,10,20"
+original/line[1]="-2,1.0,2.0,def,nothing,20140202T020200.123456,4.0,10,20"
+original/line[2]="-3,1.0,2.0,ghi,nothing,20150303T030300.123456,5.0,10,20"
+appended/line[0]/norm=3.74165738677 +/- 1e-8
+appended/line[1]/norm=4.58257569496 +/- 1e-8
+appended/line[2]/norm=5.47722557505 +/- 1e-8
+appended/line[0]/flag=1
+appended/line[1]/flag=2
+appended/line[2]/flag=3
 status=0
 
