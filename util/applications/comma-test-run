@@ -577,7 +577,7 @@ function run_and_match_test()
     mkdir -p output || exit 1
 
     test_output=$( if [ -f ./input ] ; then cat ./input ; fi \
-        | comma_progress_named "$our_stats_progress" "$dir" comma_env --import PYTHONPATH "$test_exec" "$path" "$verbose" "$options_test_option" 2>"output/stderr.log" )
+        | comma_env --import PYTHONPATH "$test_exec" "$path" "$verbose" "$options_test_option" 2>"output/stderr.log" )
     test_failed=$?
     error_files="$( find . -name out_of_shared_memory )"
     [[ -n "$error_files" ]] && return 1
@@ -646,7 +646,7 @@ function run_test_with_timeout()
     fi
     # Note: timeout option '-k' is missing in RHEL6, remove '-k 10' if need be
     local rv
-    timeout -k 10 -s TERM $timeout_time bash -c run_and_match_test & comma_test_run_and_match_test_pgid=$!
+    comma_progress_named "$our_stats_progress" "$dir" timeout -k 10 -s TERM $timeout_time bash -c run_and_match_test & comma_test_run_and_match_test_pgid=$!
     wait $comma_test_run_and_match_test_pgid
     rv=$?
     unset comma_test_run_and_match_test_pgid
