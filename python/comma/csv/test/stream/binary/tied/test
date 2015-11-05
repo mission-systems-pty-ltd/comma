@@ -15,12 +15,12 @@ fields = ',coordinates/y,coordinates/z,,,time,coordinates/x,,'
 format = ','.join( comma.csv.format.to_numpy( 'i,d,d,s[3],s[7],t,d,ui,ui' ) )
 input_stream = comma.csv.stream( event_t, fields=fields, format=format )
 
-norm_t = comma.csv.struct( 'norm', 'float64' )
-output_stream = comma.csv.stream( norm_t, binary=True, tied=input_stream )
+output_t = comma.csv.struct( 'max', 'float64' )
+output_stream = comma.csv.stream( output_t, binary=True, tied=input_stream )
 
 for events in input_stream.iter():
-  norms = numpy.linalg.norm( events['coordinates'].view( '3f8' ), axis=1 ).view( norm_t )
-  output_stream.write( norms )
+  output = numpy.max( events['coordinates'].view( '3f8' ), axis=1 ).view( output_t )
+  output_stream.write( output )
 END
 )"
 }
@@ -28,7 +28,6 @@ END
 format="i,2d,s[3],s[7],t,d,2ui"
 output="$( csv-to-bin $format | process_records | csv-from-bin $format,d; comma_status_ok )"
 status=$?
-echo "$output" | cut -d, -f1-9 | csv-paste value="original/line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'
-echo "$output" | cut -d, -f10 | csv-paste value="appended/line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'
+echo "$output" | csv-paste value="line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'
 
 echo "status=$status"
