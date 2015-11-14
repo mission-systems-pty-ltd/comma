@@ -9,7 +9,7 @@ import comma.csv.format
 import comma.csv.time
 import numpy.lib.recfunctions
 
-def shape_unrolled_types_of_flat_dtype( dtype ):
+def unrolled_types_of_flat_dtype( dtype ):
   shape_unrolled_types = []
   for descr in dtype.descr:
     type = descr[1]
@@ -17,9 +17,12 @@ def shape_unrolled_types_of_flat_dtype( dtype ):
     shape_unrolled_types.extend( [ type ] * reduce( operator.mul, shape, 1 ) )
   return tuple( shape_unrolled_types )
 
-def dtype( numpy_format ):
-    number_of_types = len( re.sub( r'\([^\)]*\)', '', numpy_format ).split(',') )
-    return numpy.dtype( [ ( 'f0', numpy_format ) ] ) if number_of_types == 1 else numpy.dtype( numpy_format )
+def structured_dtype( numpy_format ):
+  number_of_types = len( re.sub( r'\([^\)]*\)', '', numpy_format ).split(',') )
+  return numpy.dtype( [ ( 'f0', numpy_format ) ] ) if number_of_types == 1 else numpy.dtype( numpy_format )
+
+def format_from_types( types ):
+  return ','.join( type if isinstance( type, basestring ) else numpy.dtype( type ).str for type in types )
 
 class struct:
   def __init__( self, concise_fields, *concise_types ):
@@ -40,8 +43,10 @@ class struct:
         types.append( type )
     self.fields = tuple( fields )
     self.types = tuple( types )
+    self.format = format_from_types( self.types )
     self.flat_dtype = numpy.dtype( zip( self.fields, self.types ) )
-    self.unrolled_flat_dtype = dtype( ','.join( shape_unrolled_types_of_flat_dtype( self.flat_dtype ) ) )
+    self.unrolled_flat_dtype = structured_dtype( ','.join( unrolled_types_of_flat_dtype( self.flat_dtype ) ) )
+    self.type_of_field = dict( zip( self.fields, self.types ) )
 
 class stream:
   buffer_size_in_bytes = 65536
@@ -53,9 +58,14 @@ class stream:
     if binary:
       if fields or format: warnings.warn( "fields and format are ignored when binary keyword is set; default fields and format are used" )
       fields = ''
-      format = '' if binary == False else ','.join( type if isinstance( type, basestring ) else numpy.dtype( type ).str for type in self.struct.types )
+      format = self.struct.format if binary else ''
     self.fields = tuple( sum( map( lambda name: self.struct.shorthand.get( name ) or [name], fields.split(',') ), [] ) ) if fields else self.struct.fields
-    if not set( self.fields ).issuperset( self.struct.fields ): raise Exception( "expected field(s) '{}' not found in supplied fields '{}'".format( ','.join( set( self.struct.fields ) - set( self.fields ) ), fields ) )
+    if set( self.fields ).issuperset( self.struct.fields ):
+      self.missing_fields = ()
+    else:
+      self.missing_fields = tuple( field for field in self.struct.fields if field not in self.fields )
+      self.missing_fields_dtype = structured_dtype( format_from_types( self.struct.types[ self.struct.fields.index( field ) ] for field in self.missing_fields ) )
+      warnings.warn( "expected field(s) '{}' not found in supplied fields '{}'".format( ','.join( self.missing_fields ), fields ) )
     duplicates = [ field for field in self.fields if field and self.fields.count( field ) > 1 ]
     if duplicates: raise Exception( "fields '{}' have duplicates in '{}'".format( ','.join( duplicates ), ','.join( self.fields ) ) )
     self.binary = format is not ''
@@ -66,25 +76,30 @@ class stream:
     self.source = source
     self.target = target
     if self.binary:
-      self.dtype = dtype( format )
-      if len( self.fields ) != len( self.dtype.names ): raise Exception( "expected same number of fields and format types, got '{}' and '{}'".format( ','.join( self.fields ), format ) )
+      self.input_dtype = structured_dtype( format )
+      if len( self.fields ) != len( self.input_dtype.names ): raise Exception( "expected same number of fields and format types, got '{}' and '{}'".format( ','.join( self.fields ), format ) )
     else:
       if self.fields == self.struct.fields:
-        self.dtype = self.struct.flat_dtype
+        self.input_dtype = self.struct.flat_dtype
       else:
-        struct_type_of_field = dict( zip( self.struct.fields, self.struct.types ) )
-        names = [ 'f' + str( i ) for i in range( len( self.fields ) ) ]
-        types = [ struct_type_of_field.get( name ) or 'S' for name in self.fields ]
-        self.dtype = numpy.dtype( zip( names, types ) )
-    self.size = self.tied.size if self.tied else max( 1, stream.buffer_size_in_bytes / self.dtype.itemsize )
-    self.ascii_converters = comma.csv.time.ascii_converters( shape_unrolled_types_of_flat_dtype( self.dtype ) )
-    if self.fields == self.struct.fields:
-        self.reshaped_dtype = None
+        self.input_dtype = structured_dtype( format_from_types( self.struct.type_of_field.get( name ) or 'S' for name in self.fields ) ) 
+    if self.missing_fields:
+      self.complete_fields = self.fields + self.missing_fields
+      missing_names = [ 'f' + str( i + len( self.input_dtype.names ) ) for i in xrange( len( self.missing_fields ) ) ]
+      missing_types = [ self.struct.type_of_field.get( name ) for name in self.missing_fields ]
+      self.complete_dtype = numpy.dtype( self.input_dtype.descr + zip( missing_names, missing_types ) )
     else:
-      names = [ 'f' + str( self.fields.index( name ) ) for name in self.struct.fields ]
-      formats = [ self.dtype.fields[name][0] for name in names ]
-      offsets = [ self.dtype.fields[name][1] for name in names ]
-      self.reshaped_dtype = numpy.dtype( dict( names=names, formats=formats, offsets=offsets ) )
+      self.complete_fields = self.fields
+      self.complete_dtype = self.input_dtype
+    self.size = self.tied.size if self.tied else max( 1, stream.buffer_size_in_bytes / self.input_dtype.itemsize )
+    self.ascii_converters = comma.csv.time.ascii_converters( unrolled_types_of_flat_dtype( self.input_dtype ) )
+    if self.fields == self.struct.fields:
+        self.data_extraction_dtype = None
+    else:
+      names = [ 'f' + str( self.complete_fields.index( name ) ) for name in self.struct.fields ]
+      formats = [ self.complete_dtype.fields[name][0] for name in names ]
+      offsets = [ self.complete_dtype.fields[name][1] for name in names ]
+      self.data_extraction_dtype = numpy.dtype( dict( names=names, formats=formats, offsets=offsets ) )
 
   def iter( self, size=None ):
     while True:
@@ -98,17 +113,18 @@ class stream:
       if self.source == sys.stdin: raise Exception( "expected positive size when stream source is stdin, got {}".format( size ) )
       size = -1 if self.binary else None
     if self.binary:
-      self.data = numpy.fromfile( self.source, dtype=self.dtype, count=size )
+      self.input_data = numpy.fromfile( self.source, dtype=self.input_dtype, count=size )
     else:
       with warnings.catch_warnings():
         warnings.simplefilter( 'ignore' )
         self.ascii_buffer = ''.join( itertools.islice( self.source, size ) )
-        self.data = numpy.loadtxt( StringIO( self.ascii_buffer ), dtype=self.dtype , delimiter=self.delimiter, converters=self.ascii_converters, ndmin=1 )
-    if self.data.size == 0: return None
-    if self.reshaped_dtype:
-      return numpy.array( numpy.ndarray( self.data.shape, self.reshaped_dtype, self.data, strides=self.data.itemsize ).tolist(), dtype=self.struct.flat_dtype ).view( self.struct )
+        self.input_data = numpy.loadtxt( StringIO( self.ascii_buffer ), dtype=self.input_dtype , delimiter=self.delimiter, converters=self.ascii_converters, ndmin=1 )
+    if self.input_data.size == 0: return None
+    if self.data_extraction_dtype:
+      complete_data = numpy.lib.recfunctions.merge_arrays( ( self.input_data, numpy.zeros( self.input_data.size, dtype=self.missing_fields_dtype ) ), usemask=False ) if self.missing_fields else self.input_data
+      return numpy.array( numpy.ndarray( complete_data.shape, self.data_extraction_dtype, complete_data, strides=complete_data.itemsize ).tolist(), dtype=self.struct.flat_dtype ).view( self.struct )
     else:
-      return self.data.view( self.struct )
+      return self.input_data.view( self.struct )
 
   def numpy_scalar_to_string( self, scalar ):
     if scalar.dtype.char in numpy.typecodes['AllInteger']: return str( scalar )
@@ -119,9 +135,9 @@ class stream:
 
   def write( self, s ):
     if s.dtype != self.struct.dtype: raise Exception( "expected object of dtype '{}', got '{}'".format( str( self.struct.dtype ), repr( s.dtype ) ) )
-    if self.tied and s.size != self.tied.data.size: raise Exception( "expected size {} to equal tied size {}".format( s.size, self.tied.size ) )
+    if self.tied and s.size != self.tied.input_data.size: raise Exception( "expected size {} to equal tied size {}".format( s.size, self.tied.size ) )
     if self.binary:
-      ( numpy.lib.recfunctions.merge_arrays( ( self.tied.data, s ) ) if self.tied else s ).tofile( self.target )
+      ( numpy.lib.recfunctions.merge_arrays( ( self.tied.input_data, s ) ) if self.tied else s ).tofile( self.target )
     else:
       for tied_line, scalars in itertools.izip_longest( self.tied.ascii_buffer.splitlines() if self.tied else [], s.view( self.struct.unrolled_flat_dtype ) ):
         print >> self.target, ( tied_line + self.delimiter if self.tied else '' ) + self.delimiter.join( map( self.numpy_scalar_to_string, scalars ) )

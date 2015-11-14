@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import numpy
 import re
 
@@ -22,3 +23,10 @@ def from_numpy( numpy_time ):
 
 def ascii_converters( types ):
   return { i: to_numpy for i in numpy.where( numpy.array( types ) == numpy.dtype( NUMPY_TYPE ) )[0] }
+
+def zone( name ):
+  import os, time
+  if os.environ.get( 'TZ' ) == name: return
+  os.environ['TZ'] = name
+  time.tzset()
+  

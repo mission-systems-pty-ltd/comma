@@ -10,7 +10,7 @@ def expand( compressed_comma_format ):
   types = []
   for type in compressed_comma_format.split(','):
     m = re.match( r'^(\d+)(.*)', type )
-    if m and len( m.groups() ) == 2 and m.group(2) in d.keys(): types += [ m.group(2) ] * int( m.group(1) )
+    if m and len( m.groups() ) == 2 and ( m.group(2) in d.keys() or re.match( r'^s\[\d+\]$', m.group(2) ) ): types += [ m.group(2) ] * int( m.group(1) )
     else: types.append( type )
   return ','.join( types )
 
