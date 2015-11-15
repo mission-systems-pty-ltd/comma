@@ -2,11 +2,13 @@
 
 function output_code
 {
+    local binary
     if [[ "$1" == "--ascii" ]]; then binary=False; else binary=True; fi
 cat <<END
 #!/usr/bin/python
 
 import comma
+comma.csv.time.zone( 'UTC' )
 
 coordinates_t = comma.csv.struct( 'x,y,z', 'f8', 'f8', 'f8' )
 orientation_t = comma.csv.struct( 'roll,pitch,yaw', 'f8', 'f8', 'f8' )
@@ -14,9 +16,7 @@ event_t = comma.csv.struct( 'time,coordinates,orientation', 'datetime64[us]', co
 observer_t = comma.csv.struct( 'id,name,values', 'i4', 'S12', '(2,3)f8' )
 record_t = comma.csv.struct( 'event,observer,time,count', event_t, observer_t, 'datetime64[us]', 'u8' )
 
-fields = 'event/coordinates/x,event/orientation/yaw,observer/values,event/coordinates/z,event/time,event/orientation/pitch,event/orientation/roll,event/coordinates/y,observer/name,observer/id,count,time'
-format = 'f8,f8,(2,3)f8,f8,datetime64[us],f8,f8,f8,S12,i4,u8,datetime64[us]'
-stream = comma.csv.stream( record_t, fields=fields, format=format if $binary else '', precision=$precision )
+stream = comma.csv.stream( record_t, fields='$input_fields', format='$input_numpy_format' if $binary else '', precision=$precision )
 
 for records in stream.iter():
   stream.write( records )
@@ -25,15 +25,25 @@ END
 
 output_dir=output
 
-input_line='0.1234567890123456,-0.3234567890123456,0.1111111111111111,0.2222222222222222,0.3333333333333333,0.44444444444444444,0.55555555555555555,0.66666666666666666,0.3234567890123456,20151122T123456.123456,-0.2234567890123456,-0.1234567890123456,0.2234567890123456,ObserverName,-1234567890,12345678901234567890,20150101T000000.123456'
-input_comma_format='d,d,6d,d,t,d,d,d,s[12],i,ul,t'
-
-expected_output_line='20151122T123456.123456,0.1234567890123456,0.2234567890123456,0.3234567890123456,-0.1234567890123456,-0.2234567890123456,-0.3234567890123456,-1234567890,ObserverName,0.1111111111111111,0.2222222222222222,0.3333333333333333,0.44444444444444444,0.55555555555555555,0.66666666666666666,20150101T000000.123456,12345678901234567890'
-output_comma_format='t,6d,i,s[12],6d,t,ul' 
-
 source $( which comma-name-value-util )
-comma_path_value_to_var
-cat input
+input=$( cat )
+echo "$input"
+comma_path_value_to_var < <( echo "$input" )
+
+output_fields='event/time,event/coordinates/x,event/coordinates/y,event/coordinates/z,event/orientation/roll,event/orientation/pitch,event/orientation/yaw,observer/id,observer/name,observer/values,time,count'
+output_comma_format='t,d,d,d,d,d,d,i,s[12],6d,t,ul'
+output_numpy_format_template='datetime64[us],f8,f8,f8,f8,f8,f8,i4,S12,(2|3)f8,datetime64[us],u8' # (2|3) should be (2,3) but then csv-shuffle gets confused
+
+expected_output_line_template="$input_event_time,$input_event_coordinates,$input_event_orientation,$input_observer_id,$input_observer_name,$input_observer_values_template,$input_time,$input_count"
+expected_output_line=$( echo $expected_output_line_template | sed 's@|@,@g' )
+
+input_line=$( echo $expected_output_line_template | csv-shuffle --fields $output_fields -o $input_fields | sed 's@|@,@g' )
+input_comma_format=$( echo $output_comma_format | csv-shuffle --fields $output_fields -o $input_fields )
+
+if [[ "$input_fields" != "$output_fields$" ]]; then
+  input_numpy_format=$( echo $output_numpy_format_template | csv-shuffle --fields $output_fields -o $input_fields | sed 's@|@,@g' )
+fi
+
 for(( i = 0; i < $binary_number_of_records; i++ )); do echo $input_line; done | csv-to-bin $input_comma_format > $output_dir/input.bin
 for(( i = 0; i < $ascii_number_of_records; i++ )); do echo $input_line; done > $output_dir/input.csv
 
