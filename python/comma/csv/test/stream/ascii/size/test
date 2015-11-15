@@ -20,7 +20,7 @@ END
 )"
 }
 
-output="$( process_records 3 )"
+output="$( process_records $( cat amount ) )"
 status=$?
 echo "$output" | csv-paste value="line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'
 echo "status=$status"

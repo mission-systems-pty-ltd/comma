@@ -109,7 +109,7 @@ class stream:
 
   def read( self, size=None ):
     size = self.size if size is None else size
-    if size <= 0:
+    if size < 0:
       if self.source == sys.stdin: raise Exception( "expected positive size when stream source is stdin, got {}".format( size ) )
       size = -1 if self.binary else None
     if self.binary:

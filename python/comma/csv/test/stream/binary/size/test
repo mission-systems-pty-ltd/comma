@@ -22,7 +22,7 @@ END
 )"
 }
 
-output="$( csv-to-bin s[3],t,3d | process_records 3 | csv-from-bin s[3],t,3d; comma_status_ok )"
+output="$( csv-to-bin s[3],t,3d | process_records $( cat amount ) | csv-from-bin s[3],t,3d; comma_status_ok )"
 status=$?
 echo "$output" | csv-paste value="line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'
 echo "status=$status"
