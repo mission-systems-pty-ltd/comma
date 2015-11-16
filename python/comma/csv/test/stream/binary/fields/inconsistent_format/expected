@@ -1,2 +1,3 @@
-output=""
-status=1
+#python
+expect not exists( output )
+expect status=1
