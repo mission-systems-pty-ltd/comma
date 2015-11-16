@@ -22,7 +22,7 @@ event_t = comma.csv.struct( 'time,coordinates,orientation', 'datetime64[us]', co
 observer_t = comma.csv.struct( 'id,name,values', 'i4', 'S12', '(2,3)f8' )
 record_t = comma.csv.struct( 'event,observer,time,count', event_t, observer_t, 'datetime64[us]', 'u8' )
 
-stream = comma.csv.stream( record_t, fields='$input_fields', format='$input_numpy_format' if $binary else '', precision=$precision )
+stream = comma.csv.stream( record_t, fields='$input_fields', format='$input_numpy_format' if $binary else '', precision=int($precision) if '$precision' else 12 )
 
 for records in stream.iter():
   stream.write( records )
