@@ -1,3 +1,4 @@
+code/option=--ascii
 input/fields=event/time,event/coordinates/x,event/coordinates/y,event/coordinates/z,event/orientation/roll,event/orientation/pitch,event/orientation/yaw,observer/id,observer/name,observer/values,time,count
 
 input/event/time=20151122T123456.123456

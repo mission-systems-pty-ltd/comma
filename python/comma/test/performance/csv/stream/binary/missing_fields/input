@@ -1,3 +1,4 @@
+code/option=--binary
 input/fields=event/orientation/yaw,observer/values,event/coordinates/y,observer/name,count,time
 
 input/event/time=19700101T000000.000000

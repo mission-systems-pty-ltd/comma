@@ -1,7 +1,0 @@
-binary/time/elapsed < 1.5
-binary/diff=""
-binary/size/bytes = binary/number_of_records * binary/record/size/bytes
-
-ascii/time/elapsed < 1.2
-ascii/diff = ""
-ascii/lines/number = ascii/number_of_records
