@@ -68,7 +68,7 @@ function comma_test_commands()
         [[ -n "$key" && ! "$key" =~ \#.* ]] || continue
         value="${value/#\"}"
         value="${value/%\"}"
-        output="$( eval "$value" 2>/dev/null || exit 1 )"
+        output="$( eval "$value" || exit 1 )"
         status="$?"
         echo "$key/output=\"$output\""
         echo "$key/status=$status"
