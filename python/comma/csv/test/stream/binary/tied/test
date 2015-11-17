@@ -1,6 +1,7 @@
 #!/bin/bash
 
 source $( which comma-application-util )
+function output { csv-paste value="line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'; }
 
 function process_records
 {
@@ -26,8 +27,6 @@ END
 }
 
 format="i,2d,s[3],s[7],t,d,2ui"
-output="$( csv-to-bin $format | process_records | csv-from-bin $format,d; comma_status_ok )"
-status=$?
-echo "$output" | csv-paste value="line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'
-
-echo "status=$status"
+csv-to-bin $format | process_records | csv-from-bin $format,d | output
+comma_status_ok
+echo "status=$?"

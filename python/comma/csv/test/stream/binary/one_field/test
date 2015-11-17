@@ -1,5 +1,8 @@
 #!/bin/bash
 
+source $( which comma-application-util )
+function output { csv-paste value="line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'; }
+
 function process_records
 {
     python -c "$( cat <<END
@@ -16,8 +19,7 @@ END
 )"
 }
 
-output="$( csv-to-bin 2d | process_records | csv-from-bin d )"
-status=$?
-echo "$output" | csv-paste value="line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'
-echo "status=$status"
+csv-to-bin 2d | process_records | csv-from-bin d | output
+comma_status_ok
+echo "status=$?"
 

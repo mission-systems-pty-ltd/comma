@@ -1,9 +1,15 @@
 #!/bin/bash
 
+scriptname=$( readlink -e $0 )
+
 function output_code
 {
     local binary
-    if [[ "$1" == "--ascii" ]]; then binary=False; else binary=True; fi
+    case "$1" in
+        --ascii) binary=False ;;
+        --binary) binary=True ;;
+        *) echo "$scriptname: expected --ascii or --binary, got '$1'"; exit 1 ;;
+    esac
 cat <<END
 #!/usr/bin/python
 
@@ -16,7 +22,7 @@ event_t = comma.csv.struct( 'time,coordinates,orientation', 'datetime64[us]', co
 observer_t = comma.csv.struct( 'id,name,values', 'i4', 'S12', '(2,3)f8' )
 record_t = comma.csv.struct( 'event,observer,time,count', event_t, observer_t, 'datetime64[us]', 'u8' )
 
-stream = comma.csv.stream( record_t, fields='$input_fields', format='$input_numpy_format' if $binary else '', precision=$precision )
+stream = comma.csv.stream( record_t, fields='$input_fields', format='$input_numpy_format' if $binary else '', precision=int($precision) if '$precision' else 12 )
 
 for records in stream.iter():
   stream.write( records )
@@ -32,7 +38,7 @@ comma_path_value_to_var < <( echo "$input" )
 
 output_fields='event/time,event/coordinates/x,event/coordinates/y,event/coordinates/z,event/orientation/roll,event/orientation/pitch,event/orientation/yaw,observer/id,observer/name,observer/values,time,count'
 output_comma_format='t,d,d,d,d,d,d,i,s[12],6d,t,ul'
-output_numpy_format_template='datetime64[us],f8,f8,f8,f8,f8,f8,i4,S12,(2|3)f8,datetime64[us],u8' # (2|3) should be (2,3) but then csv-shuffle gets confused
+output_numpy_format_template='datetime64[us],f8,f8,f8,f8,f8,f8,i4,S12,(2|3)f8,datetime64[us],u8' # (2|3) should be (2,3) but then csv-shuffle gets confused, hence this template
 
 expected_output_line_template="$input_event_time,$input_event_coordinates,$input_event_orientation,$input_observer_id,$input_observer_name,$input_observer_values_template,$input_time,$input_count"
 expected_output_line=$( echo $expected_output_line_template | sed 's@|@,@g' )
@@ -40,27 +46,29 @@ expected_output_line=$( echo $expected_output_line_template | sed 's@|@,@g' )
 input_line=$( echo $expected_output_line_template | csv-shuffle --fields $output_fields -o $input_fields | sed 's@|@,@g' )
 input_comma_format=$( echo $output_comma_format | csv-shuffle --fields $output_fields -o $input_fields )
 
-if [[ "$input_fields" != "$output_fields$" ]]; then
+if [[ "$input_fields" != "$output_fields" ]]; then
   input_numpy_format=$( echo $output_numpy_format_template | csv-shuffle --fields $output_fields -o $input_fields | sed 's@|@,@g' )
 fi
 
-for(( i = 0; i < $binary_number_of_records; i++ )); do echo $input_line; done | csv-to-bin $input_comma_format > $output_dir/input.bin
-for(( i = 0; i < $ascii_number_of_records; i++ )); do echo $input_line; done > $output_dir/input.csv
-
-output_code > $output_dir/bin.py && chmod u+x $output_dir/bin.py
-output_code --ascii > $output_dir/csv.py && chmod u+x $output_dir/csv.py
-
-/usr/bin/time -o $output_dir/timer -f %U $output_dir/bin.py < $output_dir/input.bin > $output_dir/output.bin
-echo "binary/time/elapsed=$( cat $output_dir/timer )"
-
-/usr/bin/time -o $output_dir/timer -f %U $output_dir/csv.py < $output_dir/input.csv > $output_dir/output.csv
-echo "ascii/time/elapsed=$( cat $output_dir/timer )"
-
-for(( i = 0; i < $binary_number_of_records; i++ )); do echo $expected_output_line; done | csv-to-bin $output_comma_format > $output_dir/expected_output.bin
-for(( i = 0; i < $ascii_number_of_records; i++ )); do echo $expected_output_line; done | csv-to-bin $output_comma_format | csv-from-bin $output_comma_format --precision=$precision > $output_dir/expected_output.csv
-
-echo "binary/diff=$( diff $output_dir/output.bin $output_dir/expected_output.bin )"
-echo "ascii/diff=$( diff $output_dir/output.csv $output_dir/expected_output.csv )"
-echo "binary/record/size/bytes=$( csv-size $output_comma_format )"
-echo "binary/size/bytes=$( wc -c < $output_dir/output.bin )"
-echo "ascii/lines/number=$( wc -l < $output_dir/output.csv )"
+case $code_option in
+    --ascii)
+        for(( i = 0; i < $ascii_number_of_records; i++ )); do echo $input_line; done > $output_dir/input.csv
+        output_code --ascii > $output_dir/csv.py && chmod u+x $output_dir/csv.py
+        /usr/bin/time -o $output_dir/timer -f %U $output_dir/csv.py < $output_dir/input.csv > $output_dir/output.csv
+        echo "time/elapsed=$( cat $output_dir/timer )"
+        for(( i = 0; i < $ascii_number_of_records; i++ )); do echo $expected_output_line; done | csv-to-bin $output_comma_format | csv-from-bin $output_comma_format --precision=$precision > $output_dir/expected_output.csv
+        echo "diff=$( diff $output_dir/output.csv $output_dir/expected_output.csv )"
+        echo "lines/number=$( wc -l < $output_dir/output.csv )"
+        ;;
+    --binary)
+        for(( i = 0; i < $binary_number_of_records; i++ )); do echo $input_line; done | csv-to-bin $input_comma_format > $output_dir/input.bin
+        output_code --binary > $output_dir/bin.py && chmod u+x $output_dir/bin.py
+        /usr/bin/time -o $output_dir/timer -f %U $output_dir/bin.py < $output_dir/input.bin > $output_dir/output.bin
+        echo "time/elapsed=$( cat $output_dir/timer )"
+        for(( i = 0; i < $binary_number_of_records; i++ )); do echo $expected_output_line; done | csv-to-bin $output_comma_format > $output_dir/expected_output.bin
+        echo "diff=$( diff $output_dir/output.bin $output_dir/expected_output.bin )"
+        echo "record/size/bytes=$( csv-size $output_comma_format )"
+        echo "size/bytes=$( wc -c < $output_dir/output.bin )"
+        ;;
+    *) echo "$scriptname: no code/option found" ;;
+esac

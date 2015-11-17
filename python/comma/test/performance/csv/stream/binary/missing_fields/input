@@ -1,0 +1,13 @@
+code/option=--binary
+input/fields=event/orientation/yaw,observer/values,event/coordinates/y,observer/name,count,time
+
+input/event/time=19700101T000000.000000
+input/event/coordinates=0,0.2234567890123456,0
+input/event/orientation=0,0,-0.3234567890123456
+input/observer/id=0
+input/observer/name=ObserverName
+input/observer/values/template=0.1111111111111111|0.2222222222222222|0.3333333333333333|0.44444444444444444|0.55555555555555555|0.66666666666666666
+input/time=20150101T000000.123456
+input/count=12345678901234567890
+
+binary/number_of_records=100000

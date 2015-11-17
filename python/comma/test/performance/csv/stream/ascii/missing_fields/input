@@ -1,3 +1,4 @@
+code/option=--ascii
 input/fields=event/orientation/yaw,observer/values,event/coordinates/y,observer/name,count,time
 
 input/event/time=19700101T000000.000000
@@ -9,6 +10,5 @@ input/observer/values/template=0.1111111111111111|0.2222222222222222|0.333333333
 input/time=20150101T000000.123456
 input/count=12345678901234567890
 
-binary/number_of_records=100000
 ascii/number_of_records=10000
 precision=12
