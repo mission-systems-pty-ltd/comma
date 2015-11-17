@@ -27,6 +27,11 @@ if( NOT WIN32 )
     add_executable( io-tee ${dir}/io-tee.cpp )
     target_link_libraries( io-tee comma_application comma_io comma_csv comma_base ${comma_EXTERNAL_ALL_LIBRARIES} ) # profiler )
     install( TARGETS io-tee RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
+
+    add_executable( io-ls ${dir}/io-ls.cpp )
+    target_link_libraries( io-ls ${comma_ALL_LIBRARIES} ${comma_EXTERNAL_ALL_LIBRARIES} )
+    install( TARGETS io-ls RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
+
 endif( NOT WIN32 )
 
 install( PROGRAMS zero-publish DESTINATION ${comma_INSTALL_BIN_DIR})
