@@ -84,7 +84,7 @@ static void usage( bool )
     std::cerr << "    clear" << std::endl;
     std::cerr << "        mask/unmask first and third field:" << std::endl;
     std::cerr << "        echo a,b,c,d | csv-fields clear --mask X,,Y" << std::endl;
-    std::cerr << "        a,,c" << std::endl;
+    std::cerr << "        a,,c," << std::endl;
     std::cerr << "        echo a,b,c,d | csv-fields clear --unmask X,,Y" << std::endl;
     std::cerr << "        ,b,,d" << std::endl;
     std::cerr << std::endl;
@@ -99,7 +99,7 @@ static void usage( bool )
     std::cerr << "        hello/world/a,,,hello/world/d" << std::endl;
     std::cerr << std::endl;
     std::cerr << "        cut fields:" << std::endl;
-    std::cerr << "        echo a,b,c,d | csv-fields prefix cut --fields b,c" << std::endl;
+    std::cerr << "        echo a,b,c,d | csv-fields cut --fields b,c" << std::endl;
     std::cerr << "        a,d" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
