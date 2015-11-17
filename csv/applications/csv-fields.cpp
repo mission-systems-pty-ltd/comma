@@ -68,10 +68,10 @@ static void usage( bool )
     std::cerr << "        --values=<default values>: e.g: csv-fields default --values=',,,0,0,not-a-date-time'" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    prefix: prefix all non-empty field names" << std::endl;
-    std::cerr << "        --basename: remove prefix of given fields" << std::endl;
+    std::cerr << "        --basename: remove prefix of explicitly given fields or fields starting with path" << std::endl;
     std::cerr << "        --except=<fields>: don't prefix given fields" << std::endl;
     std::cerr << "        --fields=<fields>: prefix only given fields" << std::endl;
-    std::cerr << "        --path=<prefix>: path to add as a prefix" << std::endl;
+    std::cerr << "        --path=<prefix>: path to add as a prefix or to remove" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << "    numbers" << std::endl;
@@ -210,7 +210,6 @@ int main( int ac, char** av )
         if( operation == "prefix" )
         {
             options.assert_mutually_exclusive( "--fields,--except" );
-            options.assert_mutually_exclusive( "--path,--basename" );
             const std::string& e = options.value< std::string >( "--except", "" );
             const std::string& f = options.value< std::string >( "--fields", "" );
             const std::string& path = options.value< std::string >( "--path", "" ) + '/';
@@ -234,7 +233,13 @@ int main( int ac, char** av )
                     std::cout << comma;
                     comma = delimiter;
                     if( ( v[i].empty() || ( !fields.empty() && except == ( fields.find( v[i] ) != fields.end() ) ) ) ) { std::cout << v[i]; }
-                    else if( basename ) { std::string::size_type p = v[i].find_last_of( '/' ); std::cout << ( p == std::string::npos ? v[i] : v[i].substr( p + 1 ) ); }
+                    else if( basename ) {
+                        if ( path == "/" ) {
+                            std::string::size_type p = v[i].find_last_of( '/' ); std::cout << ( p == std::string::npos ? v[i] : v[i].substr( p + 1 ) );
+                        } else {
+                            std::cout << ( v[i].substr( 0, path.length() ) == path ? v[i].substr( path.length() ) : v[i] );
+                        }
+                    }
                     else { std::cout << path << v[i]; }
                 }
                 std::cout << std::endl;

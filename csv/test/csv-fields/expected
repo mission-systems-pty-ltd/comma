@@ -75,6 +75,12 @@ prefix/basename[6]/output="b,c/d,f"
 prefix/basename[6]/status=0
 prefix/basename[7]/output="b,d,e/f"
 prefix/basename[7]/status=0
+prefix/basename[8]/output="b,d,e/f"
+prefix/basename[8]/status=0
+prefix/basename[9]/output="foo/b,foo/d,e/f"
+prefix/basename[9]/status=0
+prefix/basename[10]/output="a/foo/b,foo/d,e/f"
+prefix/basename[10]/status=0
 
 delimiter[0]/output="4,5"
 delimiter[0]/status=0
