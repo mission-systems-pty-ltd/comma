@@ -150,6 +150,9 @@ IF( comma_BUILD_TESTS )
         FIND_PACKAGE( GTest )
         INCLUDE_DIRECTORIES( ${GTEST_INCLUDE_DIRS} )
     ENDIF( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR ${CMAKE_SYSTEM_NAME} MATCHES "Windows" )
+	
+#TT: Install tests to dir. This allows them to be packed by CPack.
+    SET ( comma_TESTS_DIR share/test/${PROJECT_NAME} )
 ENDIF( comma_BUILD_TESTS )
 
 IF( comma_BUILD_ZEROMQ )

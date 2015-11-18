@@ -5,3 +5,8 @@ FILE( GLOB source ${SOURCE_CODE_BASE_DIR}/${KIT}/test/*_test.cpp )
 ADD_EXECUTABLE( test_${KIT} ${source} )
 
 TARGET_LINK_LIBRARIES( test_${KIT} comma_xpath comma_string comma_name_value ${GTEST_BOTH_LIBRARIES} pthread )
+
+INSTALL ( 
+		FILES ${PROJECT_BINARY_DIR}/bin/test_${KIT}
+		PERMISSIONS WORLD_READ GROUP_READ OWNER_READ OWNER_WRITE WORLD_EXECUTE
+		DESTINATION ${comma_TESTS_DIR} )
