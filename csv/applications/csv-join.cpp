@@ -101,7 +101,7 @@ static void usage( bool more )
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
-    exit( -1 );
+    exit( 0 );
 }
 
 static bool verbose;
@@ -200,9 +200,9 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
     {
         static comma::csv::input_stream< input< K > > filter_stream( **filter_transport, filter_csv, default_input );
         static const input< K >* last = filter_stream.read();
+        filter_map.clear();
         if( !last ) { return; }
         block = last->block;
-        filter_map.clear();
         comma::uint64 count = 0;
         while( last->block == block && !is_shutdown )
         {
