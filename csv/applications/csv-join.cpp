@@ -217,12 +217,12 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
             {
                 filter_map[ *last ].push_back( comma::join( filter_stream.ascii().last(), stdin_csv.delimiter ) );
             }
-            if( verbose ) { ++count; if( count % 10000 == 0 ) { std::cerr << "csv-join: reading block " << block << "; loaded " << count << " point[s]; hash map size: " << filter_map.size() << std::endl; } }
+            if( verbose ) { ++count; if( count % 10000 == 0 ) { std::cerr << "csv-join: reading block " << block << "; loaded " << count << " point" << ( count == 1 ? "" : "s" ) << "; hash map size: " << filter_map.size() << std::endl; } }
             //if( ( *filter_transport )->good() && !( *filter_transport )->eof() ) { break; }
             last = filter_stream.read();
             if( !last ) { break; }
         }
-        if( verbose ) { std::cerr << "csv-join: read block " << block << " of " << count << " point[s]; hash map size: " << filter_map.size() << std::endl; }
+        if( verbose ) { std::cerr << "csv-join: read block " << block << " of " << count << " point" << ( count == 1 ? "" : "s" ) << "; hash map size: " << filter_map.size() << std::endl; }
     }
 
     static int run( const comma::command_line_options& options )
@@ -301,7 +301,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
             }
             if( first_matching ) { filter_map.erase( pair.first, pair.second ); }
         }
-        if( verbose ) { std::cerr << "csv-join: discarded " << discarded << " entrie[s] with no matches" << std::endl; }
+        if( verbose ) { std::cerr << "csv-join: discarded " << discarded << " " << ( discarded == 1 ? "entry" : "entries" ) << " with no matches" << std::endl; }
         return 0;
     }
 };
