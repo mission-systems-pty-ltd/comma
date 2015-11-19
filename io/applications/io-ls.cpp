@@ -53,12 +53,13 @@ struct output_t
     unsigned int tx_queue;
     unsigned int rx_queue;
     unsigned int tr;
-    unsigned long tm_when;
+//     unsigned long tm_when;
     unsigned int retransmit;
     unsigned int uid;
     int timeout;
     void scan(const std::string& line)
     {
+        unsigned long tm_when;
         //see: raw_sock_seq_show function for format http://lxr.oss.org.cn/ident?i=raw_sock_seq_show
         std::sscanf(line.c_str(), "%4d: %08X:%04X %08X:%04X"
             " %02X %08X:%08X %02X:%08lX %08X %5u %8d",  // "%lu %d %pK %d" inode
@@ -114,7 +115,7 @@ template <> struct traits< output_t >
         v.apply( "tx_queue", t.tx_queue );
         v.apply( "rx_queue", t.rx_queue );
         v.apply( "tr", t.tr );
-        v.apply( "tm_when", t.tm_when );
+//         v.apply( "tm_when", t.tm_when );
         v.apply( "retransmit", t.retransmit );
         v.apply( "uid", t.uid );
         v.apply( "timeout", t.timeout );
