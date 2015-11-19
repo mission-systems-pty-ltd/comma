@@ -60,10 +60,6 @@ static void usage( bool more )
     std::cerr << std::endl;
     std::cerr << "Usage: cat something.csv | csv-join \"something_else.csv[,options]\" [<options>]" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    fields:" << std::endl;
-    std::cerr << "        block: block number" << std::endl;
-    std::cerr << "        any other field names: keys" << std::endl;
-    std::cerr << std::endl;
     std::cerr << "Options:" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
     std::cerr << "    --first-matching: output only the first matching record (a bit of hack for now, but we needed it)" << std::endl;
@@ -78,20 +74,30 @@ static void usage( bool more )
     {
         std::cerr << std::endl;
         std::cerr << "csv options:" << std::endl;
-        std::cerr << comma::csv::options::usage() << std::endl;
+        std::cerr << comma::csv::options::usage();
+        std::cerr << std::endl;
+        std::cerr << "    field names:" << std::endl;
+        std::cerr << "        block: block number" << std::endl;
+        std::cerr << "        any other field name: key" << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "        block acts as a key but stream processing occurs at the end of each" << std::endl;
+        std::cerr << "        block. If no block field is given the entire input is considered to be" << std::endl;
+        std::cerr << "        one block. Blocks are required to be contiguous in the input stream." << std::endl;
     }
     std::cerr << std::endl;
-    std::cerr << "examples (try them)" << std::endl;
+    std::cerr << "Examples (try them):" << std::endl;
     std::cerr << "    on the following data file:" << std::endl;
     std::cerr << "        echo 1,2,hello > data.csv" << std::endl;
     std::cerr << "        echo 1,3,hello >> data.csv" << std::endl;
     std::cerr << "        echo 3,4,world >> data.csv" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "    join with a matching record" << std::endl;
     std::cerr << "        echo 1,blah | csv-join --fields=id \"data.csv;fields=id\"" << std::endl;
     std::cerr << "        echo 3,blah | csv-join --fields=id \"data.csv;fields=,id\"" << std::endl;
     std::cerr << "        echo 5,blah | csv-join --fields=id \"data.csv;fields=,id\"" << std::endl;
     std::cerr << "        echo 5,blah | csv-join --fields=id \"data.csv;fields=,id\" --not-matching" << std::endl;
     std::cerr << "        echo 5,blah | csv-join --fields=id \"data.csv;fields=,id\" --strict" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "    join by key which is a string" << std::endl;
     std::cerr << "        echo 1,hello | csv-join --fields=id \"data.csv;fields=,,id\" --string" << std::endl;
     std::cerr << "        echo 1,world | csv-join --fields=id \"data.csv;fields=,,id\" --string" << std::endl;
