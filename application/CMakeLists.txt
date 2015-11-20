@@ -18,7 +18,9 @@ INSTALL(
     ARCHIVE DESTINATION ${comma_INSTALL_LIB_DIR} COMPONENT Development # .a, .lib
 )
 
-ADD_SUBDIRECTORY( applications )
+if( comma_BUILD_APPLICATIONS )
+    add_subdirectory( applications )
+endif( comma_BUILD_APPLICATIONS )
 
 IF( comma_BUILD_TESTS )
     ADD_SUBDIRECTORY( test )

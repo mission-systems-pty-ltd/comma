@@ -1,6 +1,6 @@
 SET( PROJECT "xml" )
 SET( TARGET_NAME comma_${PROJECT} )
 
-IF( comma_BUILD_APPLICATIONS )
-    ADD_SUBDIRECTORY( applications )
-ENDIF( comma_BUILD_APPLICATIONS )
+if( comma_BUILD_APPLICATIONS )
+    add_subdirectory( applications )
+endif( comma_BUILD_APPLICATIONS )
