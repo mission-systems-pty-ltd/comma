@@ -64,8 +64,7 @@ class stream:
       self.missing_fields = ()
     else:
       self.missing_fields = tuple( field for field in self.struct.fields if field not in self.fields )
-      self.missing_fields_dtype = structured_dtype( format_from_types( self.struct.types[ self.struct.fields.index( field ) ] for field in self.missing_fields ) )
-      warnings.warn( "expected field(s) '{}' not found in supplied fields '{}'".format( ','.join( self.missing_fields ), fields ) )
+      warnings.warn( "expected fields '{}' not found in supplied fields '{}'".format( ','.join( self.missing_fields ), fields ) )
     duplicates = [ field for field in self.fields if field and self.fields.count( field ) > 1 ]
     if duplicates: raise Exception( "fields '{}' have duplicates in '{}'".format( ','.join( duplicates ), ','.join( self.fields ) ) )
     self.binary = format is not ''
@@ -87,6 +86,7 @@ class stream:
       self.complete_fields = self.fields + self.missing_fields
       missing_names = [ 'f' + str( i + len( self.input_dtype.names ) ) for i in xrange( len( self.missing_fields ) ) ]
       missing_types = [ self.struct.type_of_field.get( name ) for name in self.missing_fields ]
+      self.missing_fields_dtype = numpy.dtype( zip( missing_names, missing_types ) )
       self.complete_dtype = numpy.dtype( self.input_dtype.descr + zip( missing_names, missing_types ) )
     else:
       self.complete_fields = self.fields

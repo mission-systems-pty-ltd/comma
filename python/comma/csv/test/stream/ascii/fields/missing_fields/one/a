@@ -1,0 +1,8 @@
+#!/usr/bin/python
+
+import comma
+comma.csv.time.zone( 'UTC' )
+
+point_t = comma.csv.struct( 'x,y,z', 'float64', 'float64', 'float64' )
+stream = comma.csv.stream( point_t, fields='z,x' )
+stream.write( stream.read() )
