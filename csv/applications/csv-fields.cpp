@@ -68,10 +68,15 @@ static void usage( bool )
     std::cerr << "        --values=<default values>: e.g: csv-fields default --values=',,,0,0,not-a-date-time'" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    prefix: prefix all non-empty field names" << std::endl;
-    std::cerr << "        --basename: remove prefix of explicitly given fields or fields starting with path" << std::endl;
+    std::cerr << "        --basename: remove prefix of given fields; incompatible with --path" << std::endl;
     std::cerr << "        --except=<fields>: don't prefix given fields" << std::endl;
     std::cerr << "        --fields=<fields>: prefix only given fields" << std::endl;
-    std::cerr << "        --path=<prefix>: path to add as a prefix or to remove" << std::endl;
+    std::cerr << "        --path=<prefix>: path to add" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    strip: remove some leading sub-paths from all or sub-set of fields" << std::endl;
+    std::cerr << "        --except=<fields>: don't modify given fields" << std::endl;
+    std::cerr << "        --fields=<fields>: modify only given fields" << std::endl;
+    std::cerr << "        --path=<prefix>: path to strip" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << "    numbers" << std::endl;
@@ -103,8 +108,9 @@ static void usage( bool )
     std::cerr << "        echo foo/bar/a,,,baz/blah/d | csv-fields prefix --basename" << std::endl;
     std::cerr << "        a,,,d" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "    strip" << std::endl;
     std::cerr << "        selectively remove part of paths:" << std::endl;
-    std::cerr << "        echo foo/bar/a,foo/b,,baz/blah/foo/d | csv-fields prefix --basename --path foo" << std::endl;
+    std::cerr << "        echo foo/bar/a,foo/b,,baz/blah/foo/d | csv-fields strip --path foo" << std::endl;
     std::cerr << "        bar/a,b,,baz/blah/foo/d" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    cut" << std::endl;
@@ -243,14 +249,38 @@ int main( int ac, char** av )
                     std::cout << comma;
                     comma = delimiter;
                     if( ( v[i].empty() || ( !fields.empty() && except == ( fields.find( v[i] ) != fields.end() ) ) ) ) { std::cout << v[i]; }
-                    else if( basename ) {
-                        if ( path == "/" ) {
-                            std::string::size_type p = v[i].find_last_of( '/' ); std::cout << ( p == std::string::npos ? v[i] : v[i].substr( p + 1 ) );
-                        } else {
-                            std::cout << ( v[i].substr( 0, path.length() ) == path ? v[i].substr( path.length() ) : v[i] );
-                        }
-                    }
+                    else if( basename ) { std::string::size_type p = v[i].find_last_of( '/' ); std::cout << ( p == std::string::npos ? v[i] : v[i].substr( p + 1 ) ); }
                     else { std::cout << path << v[i]; }
+                }
+                std::cout << std::endl;
+            }
+            return 0;
+        }
+        if( operation == "strip" )
+        {
+            options.assert_mutually_exclusive( "--fields,--except" );
+            const std::string& e = options.value< std::string >( "--except", "" );
+            const std::string& f = options.value< std::string >( "--fields", "" );
+            const std::string& path = options.value< std::string >( "--path" ) + '/';
+            bool except = !e.empty();
+            std::vector< std::string > g;
+            if( !e.empty() ) { g = comma::split( e, ',' ); }
+            else if( !f.empty() ) { g = comma::split( f, ',' ); }
+            std::set< std::string > fields;
+            for( unsigned int i = 0; i < g.size(); ++i ) { fields.insert( g[i] ); }
+            while( std::cin.good() )
+            {
+                std::string line;
+                std::string comma;
+                std::getline( std::cin, line );
+                if( line.empty() ) { break; }
+                const std::vector< std::string >& v = comma::split( line, delimiter );
+                for( unsigned int i = 0; i < v.size(); ++i )
+                {
+                    std::cout << comma;
+                    comma = delimiter;
+                    if( ( v[i].empty() || ( !fields.empty() && except == ( fields.find( v[i] ) != fields.end() ) ) ) ) { std::cout << v[i]; }
+                    else { std::cout << ( v[i].substr( 0, path.length() ) == path ? v[i].substr( path.length() ) : v[i] ); }
                 }
                 std::cout << std::endl;
             }

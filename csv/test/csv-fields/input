@@ -41,8 +41,10 @@ prefix/basename[5]="echo a/b,c/d,e/f | csv-fields prefix --basename --except=a/b
 prefix/basename[6]="echo a/b,c/d,e/f | csv-fields prefix --basename --except=c/d"
 prefix/basename[7]="echo a/b,c/d,e/f | csv-fields prefix --basename --except=e/f"
 prefix/basename[8]="echo a/foo/b,c/foo/d,e/f | csv-fields prefix --basename --except=e/f"
-prefix/basename[9]="echo a/foo/b,a/foo/d,e/f | csv-fields prefix --basename --path=a"
-prefix/basename[10]="echo a/foo/b,a/foo/d,e/f | csv-fields prefix --basename --path=a --except=a/foo/b"
+
+strip/path[0]="echo a/foo/b,a/foo/d,e/f | csv-fields strip --path=a"
+strip/path[1]="echo a/foo/b,a/foo/d,e/f | csv-fields strip --path=a --except=a/foo/b"
+strip/path[2]="echo a/foo/b,a/foo/d,e/f | csv-fields strip --path=a --fields=a/foo/b"
 
 delimiter[0]="echo '###a#b' | csv-fields numbers --delimiter='#'"
 delimiter[1]="echo 'a#b#c#d' | csv-fields clear --mask ,,, --delimiter='#'"
