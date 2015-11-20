@@ -36,9 +36,11 @@
 #include <string>
 #include <vector>
 #include <boost/array.hpp>
+#include <boost/date_time/posix_time/ptime.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
+#include <boost/static_assert.hpp>
 #include <boost/unordered_map.hpp>
 #include <comma/application/command_line_options.h>
 #include <comma/application/contact_info.h>
@@ -66,7 +68,8 @@ static void usage( bool more )
     std::cerr << "    --not-matching: not matching records as read from stdin, no join performed" << std::endl;
     std::cerr << "    --matching: output only matching records from stdin" << std::endl;
     std::cerr << "    --string,-s: keys are strings; a quick and dirty option to support strings" << std::endl;
-    std::cerr << "                 default: integers" << std::endl;
+    std::cerr << "    --time:      keys are timestamps" << std::endl;
+    std::cerr << "                 default key type is integer" << std::endl;
     std::cerr << "    --strict: fail, if id on stdin is not found" << std::endl;
     std::cerr << "    --tolerance,--epsilon=<value>; compare keys with given tolerance" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
@@ -122,6 +125,14 @@ comma::signal_flag is_shutdown;
 static comma::uint32 block = 0;
 static boost::optional< double > tolerance;
 
+static void hash_combine_( std::size_t& seed, boost::posix_time::ptime key )
+{
+    BOOST_STATIC_ASSERT( sizeof( boost::posix_time::ptime ) == 8 );
+    boost::hash_combine( seed, *reinterpret_cast< const long long* >( &key ) );
+}
+
+template < typename K > static void hash_combine_( std::size_t& seed, K key ) { boost::hash_combine( seed, key ); }
+
 template < typename K >
 struct input
 {
@@ -148,7 +159,7 @@ struct input
         std::size_t operator()( input const& p ) const
         {
             std::size_t seed = 0;
-            for( std::size_t i = 0; i < p.keys.size(); ++i ) { boost::hash_combine( seed, p.keys[i] ); }
+            for( std::size_t i = 0; i < p.keys.size(); ++i ) { hash_combine_( seed, p.keys[i] ); }
             return seed;
         }
     };
@@ -335,7 +346,9 @@ int main( int ac, char** av )
         comma::name_value::parser parser( "filename", ';', '=', false );
         filter_csv = parser.get< comma::csv::options >( unnamed[0] );
         if( stdin_csv.binary() && !filter_csv.binary() ) { std::cerr << "csv-join: stdin stream binary and filter stream ascii: this combination is not supported" << std::endl; return 1; }
-        return   options.exists( "--string,-s" )
+        return   options.exists( "--time" )
+               ? join_impl_< boost::posix_time::ptime, true >::run( options )
+               : options.exists( "--string,-s" )
                ? join_impl_< std::string, true >::run( options )
                : tolerance
                ? join_impl_< double, false >::run( options )
