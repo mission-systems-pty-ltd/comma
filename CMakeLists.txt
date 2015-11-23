@@ -1,6 +1,27 @@
+# to use toolchain, run ccmake/cmake first time as:
+#  ccmake -DUSE_ARM_TOOLCHAIN=ON ~/src/comma/
+# for now, if you want to build applications, you will need to point pthread
+# and boost libraries to the libraries built for arm
+if( USE_ARM_TOOLCHAIN )
+    set( CMAKE_TOOLCHAIN_FILE ${CMAKE_CURRENT_SOURCE_DIR}/CMakeFiles/arm.toolchain.cmake )
+    # for info: look at opencv-2.4.11/platforms/linux/arm-gnueabi.toolchain.cmake
+    include( ${CMAKE_TOOLCHAIN_FILE} REQUIRED )
+endif( USE_ARM_TOOLCHAIN )
+
 PROJECT( "comma" )
 
 cmake_minimum_required(VERSION 2.6)
+
+# option( USE_ARM_TOOLCHAIN "Cross compile using arm toolchain" OFF )
+# if( USE_ARM_TOOLCHAIN )
+#     set(CMAKE_TOOLCHAIN_FILE ${SOURCE_CODE_BASE_DIR}/CMakeFiles/arm.toolchain.cmake)
+# endif( USE_ARM_TOOLCHAIN )
+# 
+# option(my_test_option "whatever" OFF)
+# if(my_test_option)
+#     set(my_other_option "is set")
+# endif(my_test_option)
+# set(my_first_option "is also set")
 
 ENABLE_TESTING()
 
