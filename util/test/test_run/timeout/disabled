@@ -1,0 +1,1 @@
+The earlier change broke comma-test-run Ctrl-C termination; disable until properly re-implemented.
