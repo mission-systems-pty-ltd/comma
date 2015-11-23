@@ -68,10 +68,15 @@ static void usage( bool )
     std::cerr << "        --values=<default values>: e.g: csv-fields default --values=',,,0,0,not-a-date-time'" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    prefix: prefix all non-empty field names" << std::endl;
-    std::cerr << "        --basename: remove prefix of given fields" << std::endl;
+    std::cerr << "        --basename: remove prefix of given fields; incompatible with --path" << std::endl;
     std::cerr << "        --except=<fields>: don't prefix given fields" << std::endl;
     std::cerr << "        --fields=<fields>: prefix only given fields" << std::endl;
-    std::cerr << "        --path=<prefix>: path to add as a prefix" << std::endl;
+    std::cerr << "        --path=<prefix>: path to add" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    strip: remove some leading sub-paths from all or sub-set of fields" << std::endl;
+    std::cerr << "        --except=<fields>: don't modify given fields" << std::endl;
+    std::cerr << "        --fields=<fields>: modify only given fields" << std::endl;
+    std::cerr << "        --path=<prefix>: path to strip" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << "    numbers" << std::endl;
@@ -84,7 +89,7 @@ static void usage( bool )
     std::cerr << "    clear" << std::endl;
     std::cerr << "        mask/unmask first and third field:" << std::endl;
     std::cerr << "        echo a,b,c,d | csv-fields clear --mask X,,Y" << std::endl;
-    std::cerr << "        a,,c" << std::endl;
+    std::cerr << "        a,,c," << std::endl;
     std::cerr << "        echo a,b,c,d | csv-fields clear --unmask X,,Y" << std::endl;
     std::cerr << "        ,b,,d" << std::endl;
     std::cerr << std::endl;
@@ -94,12 +99,23 @@ static void usage( bool )
     std::cerr << "        echo a,b,c,d | csv-fields clear --remove a,b" << std::endl;
     std::cerr << "        ,,c,d" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "    prefix" << std::endl;
     std::cerr << "        prefix non-empty fields:" << std::endl;
     std::cerr << "        echo a,,,d | csv-fields prefix --path \"hello/world\"" << std::endl;
     std::cerr << "        hello/world/a,,,hello/world/d" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "        leave only basename of paths:" << std::endl;
+    std::cerr << "        echo foo/bar/a,,,baz/blah/d | csv-fields prefix --basename" << std::endl;
+    std::cerr << "        a,,,d" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    strip" << std::endl;
+    std::cerr << "        selectively remove part of paths:" << std::endl;
+    std::cerr << "        echo foo/bar/a,foo/b,,baz/blah/foo/d | csv-fields strip --path foo" << std::endl;
+    std::cerr << "        bar/a,b,,baz/blah/foo/d" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    cut" << std::endl;
     std::cerr << "        cut fields:" << std::endl;
-    std::cerr << "        echo a,b,c,d | csv-fields prefix cut --fields b,c" << std::endl;
+    std::cerr << "        echo a,b,c,d | csv-fields cut --fields b,c" << std::endl;
     std::cerr << "        a,d" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
@@ -210,7 +226,6 @@ int main( int ac, char** av )
         if( operation == "prefix" )
         {
             options.assert_mutually_exclusive( "--fields,--except" );
-            options.assert_mutually_exclusive( "--path,--basename" );
             const std::string& e = options.value< std::string >( "--except", "" );
             const std::string& f = options.value< std::string >( "--fields", "" );
             const std::string& path = options.value< std::string >( "--path", "" ) + '/';
@@ -236,6 +251,36 @@ int main( int ac, char** av )
                     if( ( v[i].empty() || ( !fields.empty() && except == ( fields.find( v[i] ) != fields.end() ) ) ) ) { std::cout << v[i]; }
                     else if( basename ) { std::string::size_type p = v[i].find_last_of( '/' ); std::cout << ( p == std::string::npos ? v[i] : v[i].substr( p + 1 ) ); }
                     else { std::cout << path << v[i]; }
+                }
+                std::cout << std::endl;
+            }
+            return 0;
+        }
+        if( operation == "strip" )
+        {
+            options.assert_mutually_exclusive( "--fields,--except" );
+            const std::string& e = options.value< std::string >( "--except", "" );
+            const std::string& f = options.value< std::string >( "--fields", "" );
+            const std::string& path = options.value< std::string >( "--path" ) + '/';
+            bool except = !e.empty();
+            std::vector< std::string > g;
+            if( !e.empty() ) { g = comma::split( e, ',' ); }
+            else if( !f.empty() ) { g = comma::split( f, ',' ); }
+            std::set< std::string > fields;
+            for( unsigned int i = 0; i < g.size(); ++i ) { fields.insert( g[i] ); }
+            while( std::cin.good() )
+            {
+                std::string line;
+                std::string comma;
+                std::getline( std::cin, line );
+                if( line.empty() ) { break; }
+                const std::vector< std::string >& v = comma::split( line, delimiter );
+                for( unsigned int i = 0; i < v.size(); ++i )
+                {
+                    std::cout << comma;
+                    comma = delimiter;
+                    if( ( v[i].empty() || ( !fields.empty() && except == ( fields.find( v[i] ) != fields.end() ) ) ) ) { std::cout << v[i]; }
+                    else { std::cout << ( v[i].substr( 0, path.length() ) == path ? v[i].substr( path.length() ) : v[i] ); }
                 }
                 std::cout << std::endl;
             }
