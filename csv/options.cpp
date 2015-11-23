@@ -103,6 +103,7 @@ std::string options::usage( const std::string& default_fields )
     oss << "    --precision <precision>: floating point precision; default: 12" << std::endl;
     oss << "    --quote=[<quote_character>]: quote sign to quote strings (ascii only); default: '\"'" << std::endl;
     oss << "    --flush: if present, flush output stream after each record" << std::endl;
+    oss << "    --format: explicitly set input format in csv mode (if not set, guess format from first line)" << std::endl;
     oss << "    --binary,-b <format>: use binary format" << std::endl;
     oss << format::usage();
     return oss.str();

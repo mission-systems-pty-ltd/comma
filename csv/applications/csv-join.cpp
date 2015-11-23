@@ -68,6 +68,7 @@ static void usage( bool more )
     std::cerr << "    --not-matching: not matching records as read from stdin, no join performed" << std::endl;
     std::cerr << "    --matching: output only matching records from stdin" << std::endl;
     std::cerr << "    --string,-s: keys are strings; a quick and dirty option to support strings" << std::endl;
+    std::cerr << "    --doubles:   keys are doubles (no epsilon applied)" << std::endl;
     std::cerr << "    --time:      keys are timestamps" << std::endl;
     std::cerr << "                 default key type is integer" << std::endl;
     std::cerr << "    --strict: fail, if id on stdin is not found" << std::endl;
@@ -328,9 +329,9 @@ template < typename K, bool Strict > input< K > join_impl_< K, Strict >::default
 
 int main( int ac, char** av )
 {
+        comma::command_line_options options( ac, av, usage );
     try
     {
-        comma::command_line_options options( ac, av, usage );
         verbose = options.exists( "--verbose,-v" );
         first_matching = options.exists( "--first-matching" );
         strict = options.exists( "--strict" );
@@ -338,7 +339,7 @@ int main( int ac, char** av )
         matching = options.exists( "--matching" );
         tolerance = options.optional< double >( "--tolerance,--epsilon" );
         options.assert_mutually_exclusive( "--tolerance,--epsilon,--first-matching" );
-        options.assert_mutually_exclusive( "--tolerance,--epsilon,--string,-s" );
+        options.assert_mutually_exclusive( "--tolerance,--epsilon,--string,-s,--double,--time" );
         stdin_csv = comma::csv::options( options );
         std::vector< std::string > unnamed = options.unnamed( "--verbose,-v,--first-matching,--matching,--not-matching,--string,-s,--strict", "-.*" );
         if( unnamed.empty() ) { std::cerr << "csv-join: please specify the second source" << std::endl; return 1; }
@@ -350,6 +351,8 @@ int main( int ac, char** av )
                ? join_impl_< boost::posix_time::ptime, true >::run( options )
                : options.exists( "--string,-s" )
                ? join_impl_< std::string, true >::run( options )
+               : options.exists( "--double" )
+               ? join_impl_< double, true >::run( options )
                : tolerance
                ? join_impl_< double, false >::run( options )
                : join_impl_< comma::int64, true >::run( options );
@@ -357,6 +360,7 @@ int main( int ac, char** av )
     catch( std::exception& ex )
     {
         std::cerr << "csv-join: " << ex.what() << std::endl;
+        std::cerr << "called: " << comma::join(options.argv(), ' ') << std::endl;
     }
     catch( ... )
     {
