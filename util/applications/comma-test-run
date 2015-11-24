@@ -950,9 +950,9 @@ if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then
     if (( $( comma_options_has --verbose $@ ) || $( comma_options_has -v $@ ) )) ; then usage_ --verbose ; else usage_ ; fi
 fi
 description | comma-options-validate $@
-comma_path_value_to_var  --prefix=options < <( default_options )
+comma_path_value_to_var --export --prefix=options < <( default_options )
 options_path_value="$( description | comma-options-to-name-value $@ )"
-comma_path_value_to_var --prefix=options <<<"$options_path_value"
+comma_path_value_to_var --export --prefix=options <<<"$options_path_value"
 
 options_test_option=$( echo "$options_path_value" |  grep "^test-option=" | cut -d'=' -f2- | sed 's#^"##;s#"$##' | tr '\n' ' ' )
 
@@ -991,7 +991,8 @@ max_memory_main=$(( $options_max_memory_main * 1024 * 1024 ))
 max_memory_shared=$(( $options_max_memory_shared * 1024 * 1024 ))
 max_wait_time=$options_max_wait_time
 max_run_time=$options_max_run_time
-export max_parallel max_memory_main max_memory_shared max_wait_time max_run_time options_debug options_quiet options_path options_until_first_failure options_test_option options_parallel options_no_ansiterm_control_characters options_run_disabled options_run_optional options_junit options_estimate_resources options_also_expected options_always_expected
+# all "options_*" variables have been already exported
+export max_parallel max_memory_main max_memory_shared max_wait_time max_run_time
 
 function apply_white_list()
 {
