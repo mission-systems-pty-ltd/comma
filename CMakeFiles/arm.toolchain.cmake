@@ -9,11 +9,10 @@ SET(CMAKE_SYSTEM_NAME Linux)
 SET(CMAKE_SYSTEM_VERSION 1)
 
 # specify the cross compiler
-SET( CMAKE_C_COMPILER   arm-linux-gnueabi-gcc )
-SET( CMAKE_CXX_COMPILER arm-linux-gnueabi-g++ )
-set(ARM_LINUX_SYSROOT /usr/arm-linux-gnueabi CACHE PATH "ARM cross compilation system root")
-#set( CMAKE_LINKER arm-linux-gnueabi-ld.gold )
-#SET(CMAKE_LINKER /home/fish-bird/Projects/gumstix-buildroot/r1497/build_arm_nofpu/staging_dir/bin/arm-linux-uclibcgnueabi-ld)
+SET( CMAKE_C_COMPILER   arm-linux-gnueabihf-gcc )
+SET( CMAKE_CXX_COMPILER arm-linux-gnueabihf-g++ )
+set(ARM_LINUX_SYSROOT /usr/arm-linux-gnueabihf/ CACHE PATH "ARM cross compilation system root")
+
 set(ARM_STAGE_LIB /stage/arm CACHE PATH "ARM cross compilation user build root")
 set(CMAKE_FIND_ROOT_PATH ${CMAKE_FIND_ROOT_PATH} ${ARM_LINUX_SYSROOT})
 set(CMAKE_FIND_ROOT_PATH ${CMAKE_FIND_ROOT_PATH} ${ARM_STAGE_LIB} )
@@ -25,5 +24,5 @@ set(CMAKE_FIND_ROOT_PATH ${CMAKE_FIND_ROOT_PATH} ${ARM_STAGE_LIB} )
 #SET(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 
 # for libraries and headers in the target directoriesccma
-#SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 #SET(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
