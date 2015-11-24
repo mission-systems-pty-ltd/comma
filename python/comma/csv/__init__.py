@@ -118,6 +118,7 @@ class stream:
       with warnings.catch_warnings():
         warnings.simplefilter( 'ignore' )
         self.ascii_buffer = ''.join( itertools.islice( self.source, size ) )
+        if not self.ascii_buffer: return None
         self.input_data = numpy.loadtxt( StringIO( self.ascii_buffer ), dtype=self.input_dtype , delimiter=self.delimiter, converters=self.ascii_converters, ndmin=1 )
     if self.input_data.size == 0: return None
     if self.data_extraction_dtype:
