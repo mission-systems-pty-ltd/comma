@@ -427,6 +427,7 @@ function stats_init()
     rm -rf "$stats" || return 1
     mkdir "$stats" || return 1
     touch "$stats_progress_csv"
+    export stats_progress_csv
 }
 
 function junit_finalize() # quick and dirty
@@ -631,7 +632,7 @@ function run_test_with_timeout()
 {
     setup_signal_handler terminate_run_and_match_test
     export -f comma_progress_named
-    export our_stats_progress dir test_exec path verbose
+    export our_stats_progress dir test_exec path
     local timeout_time
     timeout_time=$( get_test_timeout )
     if [[ "$options_estimate_resources" == "1" ]] ; then
@@ -984,7 +985,7 @@ max_memory_shared=$(( $options_max_memory_shared * 1024 * 1024 ))
 max_wait_time=$options_max_wait_time
 max_run_time=$options_max_run_time
 # all "options_*" variables have been already exported
-export max_parallel max_memory_main max_memory_shared max_wait_time max_run_time
+export max_parallel max_memory_main max_memory_shared max_wait_time max_run_time verbose
 
 function apply_white_list()
 {
@@ -1036,7 +1037,7 @@ else
     done
 fi
 [[ -z "$options_output_directories" ]] || { echo ${test_script_dirs[@]} | tr ' ' '\n' ; exit 0 ; }
-test_scripts_count=${#test_script_dirs[@]}
+export test_scripts_count=${#test_script_dirs[@]}
 
 export comma_test_run_unique_dir=
 export comma_test_run_output_flock=
