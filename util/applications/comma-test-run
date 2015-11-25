@@ -554,6 +554,7 @@ function terminate_run_test_with_timeout()
         wait $comma_top_pgid
         unset comma_top_pgid
     fi
+    [[ -n "options_junit" ]] && echo "killed" > "output/junit.failure.log"
     # a process that exits in response to SIGINT should kill itself with SIGINT
     # see http://www.cons.org/cracauer/sigint.html
     [[ "$1" == "SIGINT" ]] && { trap - INT ; kill -SIGINT $BASHPID ; }
