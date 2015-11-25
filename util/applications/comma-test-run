@@ -1061,13 +1061,19 @@ result=0
 run_tests="process_tests_parallel"
 [[ "$options_parallel" == "0" ]] && run_tests="process_tests_serial"
 
+function generate_test_directories()
+{
+    local dir
+    for dir in "${test_script_dirs[@]}" ; do
+        (( ++count ))
+        echo "$count  \"$dir\""
+    done
+}
+
 count=0
 if (( $test_scripts_count > 0 )) ; then
     message_ "$name: $test_scripts_count test[s] in subdirectories of $( pwd ): running..."
-    $run_tests < <( for dir in ${test_script_dirs[@]} ; do
-        (( ++count ))
-        echo "$count  \"$dir\""
-    done )
+    $run_tests < <( generate_test_directories )
 else
     echo -e "${brown}$name: warning: no tests found in $( pwd )${none}" >&2
 fi
