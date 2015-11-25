@@ -731,9 +731,6 @@ function run_single_test()
     # do not touch this equilibristics with file descriptors
     exec 3>&1 4>&2 1>"$our_stderrout_log" 2>&1
 
-    # must save pid of any background process in this variable, so that it is killed by signal handler
-    local comma_test_run_test_pid
-
     local test_exec basedir outcome
     local result=0
     local request="$comma_test_run_unique_dir/request.${worker_id}.json"
@@ -764,12 +761,8 @@ function run_single_test()
                     report_end_of_wait
                     local error_files test_failed
                     find . -name out_of_shared_memory | xargs rm -f
-                    # run this test on the background under a separate group id provided by the timeout command
-                    # wait for the period of max_run_time, and, if still running, kill the group and fail the test
-                    run_test_with_timeout & comma_test_run_test_pid=$!
-                    wait $comma_test_run_test_pid
+                    run_test_with_timeout
                     test_failed=$?
-                    unset comma_test_run_test_pid
                     comma_locked "$comma_test_run_resources_flock" comma_release_resources "$request" "$comma_test_run_resources_counter" "$worker_id"
                     (( $? == 0 )) || {
                         error_ "$name: test $counter: $dir: failed on release_resources, request '$( cat $request )'"
