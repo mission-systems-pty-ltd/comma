@@ -571,8 +571,7 @@ function run_and_match_test()
     rm -rf output || exit 1
     mkdir -p output || exit 1
 
-    test_output=$( if [ -f ./input ] ; then cat ./input ; fi \
-        | comma_progress_named "$our_stats_progress" "$dir" comma_env --import PYTHONPATH "$test_exec" "$path" $verbose "$options_test_option" 2>"output/stderr.log" )
+    test_output=$( if [ -f ./input ] ; then cat ./input ; fi | comma_env --import PYTHONPATH "$test_exec" "$path" $verbose "$options_test_option" 2>"output/stderr.log" )
     test_failed=$?
     error_files="$( find . -name out_of_shared_memory )"
     [[ -n "$error_files" ]] && return 1
@@ -631,7 +630,7 @@ export -f get_test_timeout
 function run_test_with_timeout()
 {
     setup_signal_handler terminate_run_test_with_timeout
-    export our_stats_progress dir test_exec path
+    export dir test_exec path
     local timeout_time
     timeout_time=$( get_test_timeout )
     if [[ "$options_estimate_resources" == "1" ]] ; then
@@ -753,7 +752,7 @@ function run_single_test()
                     report_end_of_wait
                     local error_files test_failed
                     find . -name out_of_shared_memory | xargs rm -f
-                    run_test_with_timeout
+                    comma_progress_named "$our_stats_progress" "$dir" run_test_with_timeout
                     test_failed=$?
                     comma_locked "$comma_test_run_resources_flock" comma_release_resources "$request" "$comma_test_run_resources_counter" "$worker_id"
                     (( $? == 0 )) || {
