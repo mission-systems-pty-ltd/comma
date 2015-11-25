@@ -824,14 +824,6 @@ function terminate_tests_parallel()
 {
     trap '' SIGINT SIGTERM SIGHUP SIGPIPE
     echo "$name: parallel test run terminated by $1..." >&2
-    if [[ -n "$comma_test_run_xargs_pid" ]] ; then
-        kill -s STOP -- $comma_test_run_xargs_pid
-        pkill --signal TERM -P $comma_test_run_xargs_pid
-        kill -s TERM -- $comma_test_run_xargs_pid
-        kill -s CONT -- $comma_test_run_xargs_pid
-        wait $comma_test_run_xargs_pid
-        unset comma_test_run_xargs_pid
-    fi
     rm -f "$comma_test_run_xargs_pipe"
     is_killed=true
     # a process that exits in response to SIGINT should kill itself with SIGINT
@@ -840,16 +832,24 @@ function terminate_tests_parallel()
     exit 1
 }
 
+function tests_parallel_xargs_reader()
+{
+    xargs -P $max_parallel -I{} bash -c run_single_test\ "'$options_path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$test_scripts_count'"\ {} < "$1"
+}
+export -f tests_parallel_xargs_reader
+
 function process_tests_parallel()
 {
     setup_signal_handler terminate_tests_parallel
     comma_test_run_xargs_pipe="$comma_test_run_unique_dir/xargs.pipe"
-    mkfifo -m 600 "$comma_test_run_xargs_pipe"
-    xargs -P $max_parallel -I{} bash -c run_single_test\ "'$options_path'"\ "'$stats_progress_csv'"\ "'$verbose'"\ "'$test_scripts_count'"\ {} < "$comma_test_run_xargs_pipe" & comma_test_run_xargs_pid=$!
-    xargs -n2 > "$comma_test_run_xargs_pipe"
-    wait $comma_test_run_xargs_pid
+    mkfifo -m 600 "$comma_test_run_xargs_pipe" || return 1
+    # do not care about wrapping this pipeline into comma_execute_and_wait: once the reader (below) is gone and pipe is removed, this pipeline will die by itself
+    local tests_parallel_xargs_writer_pid
+    cat | xargs -n2 >"$comma_test_run_xargs_pipe" & tests_parallel_xargs_writer_pid=$!
+    comma_execute_and_wait --group "bash -c tests_parallel_xargs_reader \"$comma_test_run_xargs_pipe\"" #"bash -c tests_parallel_xargs_writer \"$comma_test_run_xargs_pipe\""
     (( $? != 0 )) && result=1
-    unset comma_test_run_xargs_pid
+    wait $tests_parallel_xargs_writer_pid
+    unset tests_parallel_xargs_writer_pid
     rm -f "$comma_test_run_xargs_pipe"
     unset comma_test_run_xargs_pipe
 }
