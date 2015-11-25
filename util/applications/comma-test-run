@@ -696,7 +696,7 @@ function run_single_test()
 {
     # unquote
     local path=$1 ; local temp="${path%\"}" ; path="${temp#\"}"
-    [[ -n "$path" ]] && path="--path=\"$path\""
+    [[ -n "$path" ]] && path="--path=$path"
     local stats_progress=$2 ; temp="${stats_progress%\"}" ; stats_progress="${temp#\"}"
     local verbose=$3 ; temp="${verbose%\"}" ; verbose="${temp#\"}"
     local total=$4
