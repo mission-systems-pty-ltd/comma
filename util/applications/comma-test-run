@@ -658,11 +658,6 @@ function terminate_run_single_test()
 {
     trap '' SIGINT SIGTERM SIGHUP SIGPIPE
     echo "$name: single test run terminated by $1..." >&2
-    if [[ -n "$comma_test_run_test_pid" ]] ; then
-        kill -s TERM -- $comma_test_run_test_pid
-        wait $comma_test_run_test_pid
-        unset comma_test_run_test_pid
-    fi
     # serialize all access to global resources: stats file, stdout/err
     (
         flock -x 9
@@ -686,9 +681,7 @@ function random_sleep()
     local max_nap=$1
     local sleep_time=$( echo $RANDOM | gawk -v max_nap=$max_nap '{ print $1 * max_nap / 32768 }' )
     wait_time=$( echo $wait_time $sleep_time | gawk '{ print $1 + $2 }' )
-    sleep ${sleep_time}s & comma_test_run_test_pid=$!
-    wait $comma_test_run_test_pid
-    unset comma_test_run_test_pid
+    comma_execute_and_wait --group "sleep ${sleep_time}s"
 }
 export -f random_sleep
 
