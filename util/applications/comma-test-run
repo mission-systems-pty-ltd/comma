@@ -572,7 +572,7 @@ function run_and_match_test()
     mkdir -p output || exit 1
 
     test_output=$( if [ -f ./input ] ; then cat ./input ; fi \
-        | comma_progress_named "$our_stats_progress" "$dir" comma_env --import PYTHONPATH "$test_exec" "$path" "$verbose" "$options_test_option" 2>"output/stderr.log" )
+        | comma_progress_named "$our_stats_progress" "$dir" comma_env --import PYTHONPATH "$test_exec" "$path" $verbose "$options_test_option" 2>"output/stderr.log" )
     test_failed=$?
     error_files="$( find . -name out_of_shared_memory )"
     [[ -n "$error_files" ]] && return 1
@@ -702,16 +702,14 @@ export -f random_sleep
 #     test directory          - will cd and run the test inside
 function run_single_test()
 {
-    local path=$1
-    [[ -n "$path" ]] && path="--path=$path"
-    local stats_progress=$2
-    local verbose=$3
+    # unquote
+    local path=$1 ; local temp="${path%\"}" ; path="${temp#\"}"
+    [[ -n "$path" ]] && path="--path=\"$path\""
+    local stats_progress=$2 ; temp="${stats_progress%\"}" ; stats_progress="${temp#\"}"
+    local verbose=$3 ; temp="${verbose%\"}" ; verbose="${temp#\"}"
     local total=$4
     local count=$5
-    local dir=$6
-    # unquote, just in case
-    local temp="${dir%\"}"
-    dir="${temp#\"}"
+    local dir=$6 ; temp="${dir%\"}" ; dir="${temp#\"}"
     local worker_id=$BASHPID
 
     setup_signal_handler terminate_run_single_test
