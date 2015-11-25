@@ -544,7 +544,7 @@ export -f comma_top_wrapper
 
 # this functions terminates a currently running test using its group id
 # the test running under the timeout command will have its own group id
-function terminate_run_and_match_test()
+function terminate_run_test_with_timeout()
 {
     trap '' SIGINT SIGTERM SIGHUP SIGPIPE
     echo "$name: terminating test in $( pwd )..." >&2
@@ -559,7 +559,7 @@ function terminate_run_and_match_test()
     [[ "$1" == "SIGINT" ]] && { trap - INT ; kill -SIGINT $BASHPID ; }
     exit 1
 }
-export -f terminate_run_and_match_test
+export -f terminate_run_test_with_timeout
 
 # this functions executes a provided test with optional input and captures its stdout
 # then it optionally compares the output with the expected file
@@ -630,7 +630,7 @@ export -f get_test_timeout
 # this function runs a provided test application under the timeout command
 function run_test_with_timeout()
 {
-    setup_signal_handler terminate_run_and_match_test
+    setup_signal_handler terminate_run_test_with_timeout
     export our_stats_progress dir test_exec path
     local timeout_time
     timeout_time=$( get_test_timeout )
