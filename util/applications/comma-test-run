@@ -631,7 +631,6 @@ export -f get_test_timeout
 function run_test_with_timeout()
 {
     setup_signal_handler terminate_run_and_match_test
-    export -f comma_progress_named
     export our_stats_progress dir test_exec path
     local timeout_time
     timeout_time=$( get_test_timeout )
