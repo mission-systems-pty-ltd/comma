@@ -858,11 +858,6 @@ function terminate_tests_serial()
 {
     trap '' SIGINT SIGTERM SIGHUP SIGPIPE
     echo "$name: serial test run terminated by $1..." >&2
-    if [[ -n "$comma_test_run_single_test_pid" ]] ; then
-        kill -s TERM -- $comma_test_run_single_test_pid 2>/dev/null
-        wait $comma_test_run_single_test_pid
-        unset comma_test_run_single_test_pid
-    fi
     is_killed=true
     # a process that exits in response to SIGINT should kill itself with SIGINT
     # see http://www.cons.org/cracauer/sigint.html
@@ -873,14 +868,13 @@ function terminate_tests_serial()
 function process_tests_serial()
 {
     setup_signal_handler terminate_tests_serial
-    local line rv
+    local dir counter rv
     while true; do
-        read line
-        [[ -z "$line" ]] && break
-        run_single_test "$options_path" "$stats_progress_csv" "$verbose" "$test_scripts_count" $line & comma_test_run_single_test_pid=$!
-        wait $comma_test_run_single_test_pid
+        read counter dir
+        [[ -z "$dir" ]] && break
+        # note: dir variable is already quoted
+        comma_execute_and_wait --process "run_single_test \"$options_path\" \"$stats_progress_csv\" \"$verbose\" $test_scripts_count $counter $dir"
         rv=$?
-        unset comma_test_run_single_test_pid
         (( $rv == 0 )) || {
             result=1
             [[ "$options_until_first_failure" == "1" ]] && return 1
