@@ -225,7 +225,7 @@ while True:
 for n in ordered_names:
     v = names[n]
     print '%s=\"%s\"' % ( n, str(output(v[0], v[1], logical)) )
-" 2>/dev/null
+"
 }
 
 # Using '-v' does not work because it inverts the _matching_ while we need to invert the exit
@@ -244,6 +244,7 @@ json_format=0
 strict=0
 detailed=0
 excluded=()
+debug=1
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -262,6 +263,8 @@ while [[ $# -gt 0 ]]; do
         --json)                  json_format=1;;
         --strict)                strict=1;;
         --detailed)              detailed=1;;
+        --debug)                 debug=1;;
+        --no-debug)              debug=0;;
         --exclude)               shift; if [[ $# == 0 ]] ; then echo "$name: --exclude lack argument" >&2; exit 1; fi; excluded+=( "$1" );;
         -*)                      echo "$name: unrecognized option '$1'" >&2; exit 1;;
         *)                       input_files+=( "$1" );;
@@ -305,5 +308,28 @@ function feed_input()
     done
 }
 
-feed_input | python_converter | $convert_output
-if ! comma_status_ok; then exit 1; else exit 0; fi
+function cleaner()
+{
+    [[ -n "$tempdir" ]] && rm -rf "$tempdir"
+}
+
+tempdir=
+trap cleaner EXIT
+if (( debug )) ; then
+    tempdir=$( mktemp --directory --tmpdir name-value-calc.debug.XXXXXX )
+    python_stderr="$tempdir/python-stderr.log"
+else
+    python_stderr="/dev/null"
+fi
+
+feed_input | python_converter 2>"$python_stderr" | $convert_output
+if ! comma_status_ok; then
+    echo "$name: final pipeline failed, status '${pipestatus_copy_status_ok[@]}'" >&2
+    [[ -n "$tempdir" ]] && {
+        echo "$name: python output:" >&2
+        cat "$python_stderr" >&2
+    }
+    exit 1
+else
+    exit 0
+fi
