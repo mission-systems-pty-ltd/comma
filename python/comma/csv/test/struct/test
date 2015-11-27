@@ -6,6 +6,7 @@ function types_incorrect_number { python -c "import comma; point_t = comma.csv.s
 
 function blank_field { python -c "import comma; point_t = comma.csv.struct( 'x,,z', 'float64', 'int32', 'float64' )"; }
 function duplicate_field { python -c "import comma; point_t = comma.csv.struct( 'x,x,z', 'float64', 'int32', 'float64' )"; }
+function field_with_slash { python -c "import comma; point_t = comma.csv.struct( 'x,x/y,z', 'float64', 'int32', 'float64' )"; }
 
 function basic
 {
@@ -58,6 +59,7 @@ types_incorrect_number; echo "types_incorrect_number/status=$?"
 
 blank_field; echo "blank_field/status=$?"
 duplicate_field; echo "duplicate_field/status=$?"
+field_with_slash; echo "field_with_slash/status=$?"
 
 basic; echo "status/basic=$?"
 shorthand; echo "status/shorthand=$?"
