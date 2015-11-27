@@ -55,10 +55,8 @@ class stream:
   def __init__( self, s, fields='', format='', binary=None, delimiter=',', precision=12, flush=False, source=sys.stdin, target=sys.stdout, tied=None ):
     if not isinstance( s, struct ): raise Exception( "expected '{}', got '{}'".format( str( struct ), repr( s ) ) )
     if tied and not isinstance( tied, stream ): raise Exception( "tied stream: expected '{}', got '{}'".format( str( stream ), repr( tied ) ) )
-    if binary == True:
-      if fields or format: warnings.warn( "fields and format are ignored when binary keyword is set; default fields and format are used" )
-      fields = ''
-      format = s.format
+    if binary == True and not format: format = s.format
+    elif binary == False and format: format = ''
     self.struct = s
     self.fields = tuple( sum( map( lambda name: self.struct.shorthand.get( name ) or [name], fields.split(',') ), [] ) ) if fields else self.struct.fields
     self.binary = format != ''
@@ -85,7 +83,7 @@ class stream:
       self.missing_fields = ()
     else:
       self.missing_fields = tuple( field for field in self.struct.fields if field not in self.fields )
-      warnings.warn( "expected fields '{}' not found in supplied fields '{}'".format( ','.join( self.missing_fields ), self.fields ) )
+      warnings.warn( "expected fields '{}' not found in supplied fields '{}'".format( ','.join( self.missing_fields ), fields ) )
     if self.missing_fields:
       self.complete_fields = self.fields + self.missing_fields
       missing_names = [ 'f' + str( i + len( self.input_dtype.names ) ) for i in xrange( len( self.missing_fields ) ) ]

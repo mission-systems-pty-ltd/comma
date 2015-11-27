@@ -11,7 +11,7 @@ import numpy
 point_t = comma.csv.struct( 'x,y,z', 'float64', numpy.float64, 'f8' )
 timestamped_point_t = comma.csv.struct( 'time,coordinates', 'datetime64[us]', point_t )
 record_t = comma.csv.struct( 'observer,event', 'S3', timestamped_point_t )
-record_stream = comma.csv.stream( record_t, binary=True, format='format,will,be,ignored' )
+record_stream = comma.csv.stream( record_t, binary=False, format='format,will,be,ignored,' )
 
 for i,r in enumerate( record_stream.iter(), start=1 ):
   r['observer'] = numpy.char.upper( r['observer'] )
@@ -22,7 +22,7 @@ END
 )"
 }
 
-output="$( csv-to-bin s[3],t,3d | process_records | csv-from-bin s[3],t,3d; comma_status_ok )"
+process_records | csv-paste value="line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'
+comma_status_ok
 status=$?
-echo "$output" | csv-paste value="line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'
 echo "status=$status"
