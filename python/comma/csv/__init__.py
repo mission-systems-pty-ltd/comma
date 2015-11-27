@@ -26,8 +26,9 @@ def format_from_types( types ):
 
 class struct:
   def __init__( self, concise_fields, *concise_types ):
+    if '/' in concise_fields: raise Exception( "expected  fields without '/', got '{}'".format( concise_fields ) )
     if '' in concise_fields.split(','): raise Exception( "expected non-blank fields, got '{}'".format( concise_fields ) )
-    if len( concise_fields.split(',') ) != len( concise_types ): raise Exception( "expected {} types for '{}', got {} type(s)".format( len( concise_fields.split(',') ), concise_fields, len( concise_types )) )
+    if len( concise_fields.split(',') ) != len( concise_types ): raise Exception( "expected {} types for '{}', got {} types".format( len( concise_fields.split(',') ), concise_fields, len( concise_types )) )
     self.dtype = numpy.dtype( zip( concise_fields.split(','), concise_types ) )
     fields, types = [], []
     self.shorthand = {}
@@ -54,27 +55,24 @@ class stream:
   def __init__( self, s, fields='', format='', binary=None, delimiter=',', precision=12, flush=False, source=sys.stdin, target=sys.stdout, tied=None ):
     if not isinstance( s, struct ): raise Exception( "expected '{}', got '{}'".format( str( struct ), repr( s ) ) )
     if tied and not isinstance( tied, stream ): raise Exception( "tied stream: expected '{}', got '{}'".format( str( stream ), repr( tied ) ) )
-    self.struct = s
-    self.tied = tied
-    if binary:
+    if binary == True:
       if fields or format: warnings.warn( "fields and format are ignored when binary keyword is set; default fields and format are used" )
       fields = ''
-      format = self.struct.format if binary else ''
+      format = s.format
+    self.struct = s
     self.fields = tuple( sum( map( lambda name: self.struct.shorthand.get( name ) or [name], fields.split(',') ), [] ) ) if fields else self.struct.fields
-    duplicates = tuple( field for field in self.struct.fields if field in self.fields and self.fields.count( field ) > 1 )
-    if duplicates: raise Exception( "fields '{}' have duplicates in '{}'".format( ','.join( duplicates ), ','.join( self.fields ) ) )
-    if set( self.fields ).issuperset( self.struct.fields ):
-      self.missing_fields = ()
-    else:
-      self.missing_fields = tuple( field for field in self.struct.fields if field not in self.fields )
-      warnings.warn( "expected fields '{}' not found in supplied fields '{}'".format( ','.join( self.missing_fields ), fields ) )
-    self.binary = format is not ''
-    if self.tied and self.tied.binary != self.binary: raise Exception( "expected tied stream to be {}, got {}".format( "binary" if self.binary else "ascii", "binary" if self.tied.binary else "ascii" ) )
+    self.binary = format != ''
     self.delimiter = delimiter
     self.flush = flush
     self.precision = precision
     self.source = source
     self.target = target
+    self.tied = tied
+    duplicates = tuple( field for field in self.struct.fields if field in self.fields and self.fields.count( field ) > 1 )
+    if duplicates: raise Exception( "fields '{}' have duplicates in '{}'".format( ','.join( duplicates ), ','.join( self.fields ) ) )
+    if self.tied:
+      if self.tied.binary != self.binary: raise Exception( "expected tied stream to be {}, got {}".format( "binary" if self.binary else "ascii", "binary" if self.tied.binary else "ascii" ) )
+      if not self.binary and self.tied.delimiter != self.delimiter: raise Exception( "expected tied stream to have the same delimiter '{}', got '{}'".format( self.delimiter, self.tied.delimiter ) )
     if self.binary:
       self.input_dtype = structured_dtype( format )
       if len( self.fields ) != len( self.input_dtype.names ): raise Exception( "expected same number of fields and format types, got '{}' and '{}'".format( ','.join( self.fields ), format ) )
@@ -83,6 +81,11 @@ class stream:
         self.input_dtype = self.struct.flat_dtype
       else:
         self.input_dtype = structured_dtype( format_from_types( self.struct.type_of_field.get( name ) or 'S' for name in self.fields ) )
+    if set( self.fields ).issuperset( self.struct.fields ):
+      self.missing_fields = ()
+    else:
+      self.missing_fields = tuple( field for field in self.struct.fields if field not in self.fields )
+      warnings.warn( "expected fields '{}' not found in supplied fields '{}'".format( ','.join( self.missing_fields ), self.fields ) )
     if self.missing_fields:
       self.complete_fields = self.fields + self.missing_fields
       missing_names = [ 'f' + str( i + len( self.input_dtype.names ) ) for i in xrange( len( self.missing_fields ) ) ]
