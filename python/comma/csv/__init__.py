@@ -26,6 +26,7 @@ def format_from_types( types ):
 
 class struct:
   def __init__( self, concise_fields, *concise_types ):
+    if '' in concise_fields.split(','): raise Exception( "expected non-blank fields, got '{}'".format( concise_fields ) )
     if len( concise_fields.split(',') ) != len( concise_types ): raise Exception( "expected {} types for '{}', got {} type(s)".format( len( concise_fields.split(',') ), concise_fields, len( concise_types )) )
     self.dtype = numpy.dtype( zip( concise_fields.split(','), concise_types ) )
     fields, types = [], []
@@ -65,7 +66,7 @@ class stream:
     else:
       self.missing_fields = tuple( field for field in self.struct.fields if field not in self.fields )
       warnings.warn( "expected fields '{}' not found in supplied fields '{}'".format( ','.join( self.missing_fields ), fields ) )
-    duplicates = [ field for field in self.fields if field and self.fields.count( field ) > 1 ]
+    duplicates = tuple( field for field in self.struct.fields if field in self.fields and self.fields.count( field ) > 1 )
     if duplicates: raise Exception( "fields '{}' have duplicates in '{}'".format( ','.join( duplicates ), ','.join( self.fields ) ) )
     self.binary = format is not ''
     if self.tied and self.tied.binary != self.binary: raise Exception( "expected tied stream to be {}, got {}".format( "binary" if self.binary else "ascii", "binary" if self.tied.binary else "ascii" ) )

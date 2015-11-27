@@ -4,6 +4,9 @@ function types_incorrect_name { python -c "import comma; point_t = comma.csv.str
 function types_empty_name { python -c "import comma; point_t = comma.csv.struct( 'x', '' )"; }
 function types_incorrect_number { python -c "import comma; point_t = comma.csv.struct( 'x,y', 'float64' )"; }
 
+function blank_field { python -c "import comma; point_t = comma.csv.struct( 'x,,z', 'float64', 'int32', 'float64' )"; }
+function duplicate_field { python -c "import comma; point_t = comma.csv.struct( 'x,x,z', 'float64', 'int32', 'float64' )"; }
+
 function basic
 {
     python -c "$( cat <<END
@@ -52,6 +55,9 @@ END
 types_incorrect_name; echo "types_incorrect_name/status=$?"
 types_empty_name; echo "types_empty_name/status=$?"
 types_incorrect_number; echo "types_incorrect_number/status=$?"
+
+blank_field; echo "blank_field/status=$?"
+duplicate_field; echo "duplicate_field/status=$?"
 
 basic; echo "status/basic=$?"
 shorthand; echo "status/shorthand=$?"
