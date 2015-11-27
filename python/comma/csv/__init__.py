@@ -61,13 +61,13 @@ class stream:
       fields = ''
       format = self.struct.format if binary else ''
     self.fields = tuple( sum( map( lambda name: self.struct.shorthand.get( name ) or [name], fields.split(',') ), [] ) ) if fields else self.struct.fields
+    duplicates = tuple( field for field in self.struct.fields if field in self.fields and self.fields.count( field ) > 1 )
+    if duplicates: raise Exception( "fields '{}' have duplicates in '{}'".format( ','.join( duplicates ), ','.join( self.fields ) ) )
     if set( self.fields ).issuperset( self.struct.fields ):
       self.missing_fields = ()
     else:
       self.missing_fields = tuple( field for field in self.struct.fields if field not in self.fields )
       warnings.warn( "expected fields '{}' not found in supplied fields '{}'".format( ','.join( self.missing_fields ), fields ) )
-    duplicates = tuple( field for field in self.struct.fields if field in self.fields and self.fields.count( field ) > 1 )
-    if duplicates: raise Exception( "fields '{}' have duplicates in '{}'".format( ','.join( duplicates ), ','.join( self.fields ) ) )
     self.binary = format is not ''
     if self.tied and self.tied.binary != self.binary: raise Exception( "expected tied stream to be {}, got {}".format( "binary" if self.binary else "ascii", "binary" if self.tied.binary else "ascii" ) )
     self.delimiter = delimiter
@@ -82,7 +82,7 @@ class stream:
       if self.fields == self.struct.fields:
         self.input_dtype = self.struct.flat_dtype
       else:
-        self.input_dtype = structured_dtype( format_from_types( self.struct.type_of_field.get( name ) or 'S' for name in self.fields ) ) 
+        self.input_dtype = structured_dtype( format_from_types( self.struct.type_of_field.get( name ) or 'S' for name in self.fields ) )
     if self.missing_fields:
       self.complete_fields = self.fields + self.missing_fields
       missing_names = [ 'f' + str( i + len( self.input_dtype.names ) ) for i in xrange( len( self.missing_fields ) ) ]
