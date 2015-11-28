@@ -14,4 +14,11 @@ shorthand[0]/value="event/t,event/coordinates/x,event/coordinates/y,event/coordi
 shorthand[1]/name="event/coordinates"
 shorthand[1]/value="event/coordinates/x,event/coordinates/y,event/coordinates/z"
 status/shorthand=0
-
+leaves/name="observer/name"
+leaves/id="observer/id"
+leaves/t="event/t"
+leaves/x="event/coordinates/x"
+leaves/y="event/coordinates/y"
+leaves/z="event/coordinates/z"
+leaves/value="value"
+status/leaves=0

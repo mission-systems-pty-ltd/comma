@@ -38,6 +38,21 @@ END
 )"
 }
 
+function leaves
+{
+    python -c "$( cat <<END
+import comma
+
+point_t = comma.csv.struct( 'x,y,z', 'float64', 'float64', 'float64' )
+timestamped_point_t = comma.csv.struct( 't,coordinates', 'datetime64[us]', point_t )
+observer_t = comma.csv.struct( 'name,id', 'S3', 'uint32' )
+record_t = comma.csv.struct( 'observer,event,value', observer_t, timestamped_point_t, 'float64' )
+for leaf in record_t.leaves:
+  print "leaves/{}={}".format( leaf, record_t.xpath_of_leaf.get( leaf ) )
+END
+)"
+}
+
 function record
 {
     local what=$1
@@ -63,6 +78,8 @@ field_with_slash; echo "field_with_slash/status=$?"
 
 basic; echo "status/basic=$?"
 shorthand; echo "status/shorthand=$?"
+
+leaves; echo "status/leaves=$?"
 
 for what in fields types; do
     output=$( record $what )

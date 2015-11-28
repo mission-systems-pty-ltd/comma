@@ -26,9 +26,9 @@ def format_from_types( types ):
 
 class struct:
   def __init__( self, concise_fields, *concise_types ):
-    if '/' in concise_fields: raise Exception( "expected  fields without '/', got '{}'".format( concise_fields ) )
+    if '/' in concise_fields: raise Exception( "expected fields without '/', got '{}'".format( concise_fields ) )
     if '' in concise_fields.split(','): raise Exception( "expected non-blank fields, got '{}'".format( concise_fields ) )
-    if len( concise_fields.split(',') ) != len( concise_types ): raise Exception( "expected {} types for '{}', got {} types".format( len( concise_fields.split(',') ), concise_fields, len( concise_types )) )
+    if len( concise_fields.split(',') ) != len( concise_types ): raise Exception( "expected {} types for '{}', got {} types".format( len( concise_fields.split(',') ), concise_fields, len( concise_types ) ) )
     self.dtype = numpy.dtype( zip( concise_fields.split(','), concise_types ) )
     fields, types = [], []
     self.shorthand = {}
@@ -37,9 +37,9 @@ class struct:
         fields_of_type = [ name + '/' + field for field in type.fields ]
         fields.extend( fields_of_type )
         types.extend( type.types )
-        self.shorthand[name] = fields_of_type
+        self.shorthand[name] = tuple( fields_of_type )
         for subname,subfields in type.shorthand.iteritems():
-          self.shorthand[ name + '/' + subname ] = [ name + '/' + field for field in subfields ]
+          self.shorthand[ name + '/' + subname ] = tuple( name + '/' + field for field in subfields )
       else:
         fields.append( name )
         types.append( type )
@@ -49,16 +49,29 @@ class struct:
     self.flat_dtype = numpy.dtype( zip( self.fields, self.types ) )
     self.unrolled_flat_dtype = structured_dtype( ','.join( unrolled_types_of_flat_dtype( self.flat_dtype ) ) )
     self.type_of_field = dict( zip( self.fields, self.types ) )
+    self.leaves = tuple( xpath.split('/')[-1] for xpath in self.fields )
+    self.ambiguous_leaves = set( leaf for leaf in self.leaves if self.leaves.count( leaf ) > 1 )
+    d = dict( zip( self.leaves, self.fields ) )
+    for ambiguous_leaf in self.ambiguous_leaves: del d[ ambiguous_leaf ]
+    self.xpath_of_leaf = d
 
 class stream:
   buffer_size_in_bytes = 65536
-  def __init__( self, s, fields='', format='', binary=None, delimiter=',', precision=12, flush=False, source=sys.stdin, target=sys.stdout, tied=None ):
+  def __init__( self, s, fields='', format='', binary=None, delimiter=',', precision=12, flush=False, source=sys.stdin, target=sys.stdout, tied=None, full_xpath=True ):
     if not isinstance( s, struct ): raise Exception( "expected '{}', got '{}'".format( str( struct ), repr( s ) ) )
-    if tied and not isinstance( tied, stream ): raise Exception( "tied stream: expected '{}', got '{}'".format( str( stream ), repr( tied ) ) )
-    if binary == True and not format: format = s.format
-    elif binary == False and format: format = ''
     self.struct = s
-    self.fields = tuple( sum( map( lambda name: self.struct.shorthand.get( name ) or [name], fields.split(',') ), [] ) ) if fields else self.struct.fields
+    if fields == '':
+      self.fields = self.struct.fields
+    else:
+      if full_xpath:
+        self.fields = sum( map( lambda name: self.struct.shorthand.get( name ) or ( name, ), fields.split(',') ), () )
+      else:
+        if '/' in fields: raise Exception( "expected fields without '/', got '{}'".format( fields ) )
+        ambiguous_leaves = self.struct.ambiguous_leaves.intersection( fields.split(',') )
+        if ambiguous_leaves: raise Exception( "fields '{}' are ambiguous in '{}', use full xpath".format( ','.join( ambiguous_leaves ), fields ) )
+        self.fields = tuple( self.struct.xpath_of_leaf.get( name ) or name for name in fields.split(',') )
+    if binary == True and not format: format = self.struct.format
+    elif binary == False and format: format = ''
     self.binary = format != ''
     self.delimiter = delimiter
     self.flush = flush
@@ -69,16 +82,16 @@ class stream:
     duplicates = tuple( field for field in self.struct.fields if field in self.fields and self.fields.count( field ) > 1 )
     if duplicates: raise Exception( "fields '{}' have duplicates in '{}'".format( ','.join( duplicates ), ','.join( self.fields ) ) )
     if self.tied:
+      if not isinstance( tied, stream ): raise Exception( "expected tied stream of type '{}', got '{}'".format( str( stream ), repr( tied ) ) )
       if self.tied.binary != self.binary: raise Exception( "expected tied stream to be {}, got {}".format( "binary" if self.binary else "ascii", "binary" if self.tied.binary else "ascii" ) )
       if not self.binary and self.tied.delimiter != self.delimiter: raise Exception( "expected tied stream to have the same delimiter '{}', got '{}'".format( self.delimiter, self.tied.delimiter ) )
     if self.binary:
       self.input_dtype = structured_dtype( format )
       if len( self.fields ) != len( self.input_dtype.names ): raise Exception( "expected same number of fields and format types, got '{}' and '{}'".format( ','.join( self.fields ), format ) )
     else:
-      if self.fields == self.struct.fields:
-        self.input_dtype = self.struct.flat_dtype
-      else:
-        self.input_dtype = structured_dtype( format_from_types( self.struct.type_of_field.get( name ) or 'S' for name in self.fields ) )
+      self.input_dtype = structured_dtype( format_from_types( self.struct.type_of_field.get( name ) or 'S' for name in self.fields ) ) if self.fields != self.struct.fields else self.struct.flat_dtype
+    self.size = self.tied.size if self.tied else max( 1, stream.buffer_size_in_bytes / self.input_dtype.itemsize )
+    self.ascii_converters = comma.csv.time.ascii_converters( unrolled_types_of_flat_dtype( self.input_dtype ) )
     if set( self.fields ).issuperset( self.struct.fields ):
       self.missing_fields = ()
     else:
@@ -93,8 +106,6 @@ class stream:
     else:
       self.complete_fields = self.fields
       self.complete_dtype = self.input_dtype
-    self.size = self.tied.size if self.tied else max( 1, stream.buffer_size_in_bytes / self.input_dtype.itemsize )
-    self.ascii_converters = comma.csv.time.ascii_converters( unrolled_types_of_flat_dtype( self.input_dtype ) )
     if self.fields == self.struct.fields:
         self.data_extraction_dtype = None
     else:
