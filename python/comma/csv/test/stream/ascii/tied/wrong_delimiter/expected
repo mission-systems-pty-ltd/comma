@@ -1,5 +1,5 @@
 #python
 
 expect not exists( line )
-status=1
+expect status=1
 
