@@ -42,7 +42,8 @@ source $( which comma-string-util ) || { echo "$name: cannot source 'comma-strin
 source $( which comma-process-util ) || { echo "$name: cannot source 'comma-process-util'" >&2; exit 1; }
 
 name_offset="${name//?/ } "
-export name name_offset
+comma_test_run_top_pid=$BASHPID
+export name name_offset comma_test_run_top_pid
 
 # determine system parameters and set defaults; command-line options operate in MB
 comma_path_value_to_var --prefix=max < <( comma_total_system_resources )
@@ -747,6 +748,7 @@ function run_single_test()
             local wait_time=0
             get_required_resources | comma_storage_to_bytes > "$request"
             local first="true"
+            local resources_failure_counter=0
             while true ; do
                 outcome=$( comma_locked "$comma_test_run_resources_flock" comma_acquire_resources "$request" "$comma_test_run_resources_counter" "$comma_test_run_resources_limits" "$worker_id" )
                 if [[ $? == 0 ]] ; then
@@ -757,9 +759,12 @@ function run_single_test()
                     test_failed=$?
                     comma_locked "$comma_test_run_resources_flock" comma_release_resources "$request" "$comma_test_run_resources_counter" "$worker_id"
                     (( $? == 0 )) || {
-                        error_ "$name: test $counter: $dir: failed on release_resources, request '$( cat $request )'"
-                        result=1
-                        break
+                        error_ "$name: test $counter: $dir: internal error on release_resources, request '$( cat $request )', will try again"
+                        comma_locked "$comma_test_run_resources_flock" comma_release_resources "$request" "$comma_test_run_resources_counter" "$worker_id"
+                        (( $? == 0 )) || {
+                            error_ "$name: test $counter: $dir: repeated internal error on release_resources, terminate the test run PID '$comma_test_run_top_pid'"
+                            kill -s TERM $comma_test_run_top_pid
+                        }
                     }
                     error_files="$( find . -name out_of_shared_memory )"
                     [[ -n "$error_files" ]] && {
@@ -791,9 +796,16 @@ function run_single_test()
                         random_sleep $( echo "1 + $positional_delay * $position" | bc )
                         continue
                     else
-                        error_ "$name: test $counter: $dir: failed on acquire_resources, outcome '$outcome', request '$( cat $request )'"
-                        result=1
-                        break
+                        error_ "$name: test $counter: $dir: internal error on acquire_resources, outcome '$outcome', request '$( cat $request )'"
+                        # this is a rare internal error; we can be already on the queue, and have to deal with it
+                        if (( ++resources_failure_counter < 2 )) ; then
+                            error_ "$name: test $counter: $dir: first time, will try again"
+                            sleep 1  # do not count as waiting time, for simplicity
+                            continue
+                        else
+                            error_ "$name: terminate the test run with PID '$comma_test_run_top_pid'"
+                            kill -s TERM $comma_test_run_top_pid
+                        fi
                     fi
                 fi
             done
