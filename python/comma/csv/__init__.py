@@ -72,7 +72,7 @@ class stream:
         self.fields = tuple( self.struct.xpath_of_leaf.get( name ) or name for name in fields.split(',') )
       if not set( self.fields ).intersection( self.struct.fields ): raise Exception( "provided fields '{}' do not match any of the expected fields '{}'".format( fields, ','.join( self.struct.fields ) ) )
     if binary == True and not format:
-      if not set( self.struct.fields ).issuperset( self.fields ): raise Exception( "type of fields '{}' is not known, specify format".format( ','.join( name for name in self.fields if name not in self.struct.fields ) ) )
+      if not set( self.struct.fields ).issuperset( self.fields ): raise Exception( "failed to infer type of every field in '{}', specify format".format( ','.join( self.fields ) ) )
       format = format_from_types( self.struct.type_of_field[name] for name in self.fields )
     elif binary == False and format:
       format = ''
