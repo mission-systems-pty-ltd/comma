@@ -71,8 +71,11 @@ class stream:
         if ambiguous_leaves: raise Exception( "fields '{}' are ambiguous in '{}', use full xpath".format( ','.join( ambiguous_leaves ), fields ) )
         self.fields = tuple( self.struct.xpath_of_leaf.get( name ) or name for name in fields.split(',') )
       if not set( self.fields ).intersection( self.struct.fields ): raise Exception( "provided fields '{}' do not match any of the expected fields '{}'".format( fields, ','.join( self.struct.fields ) ) )
-    if binary == True and not format: format = self.struct.format
-    elif binary == False and format: format = ''
+    if binary == True and not format:
+      if not set( self.struct.fields ).issuperset( self.fields ): raise Exception( "type of fields '{}' is not known, specify format".format( ','.join( name for name in self.fields if name not in self.struct.fields ) ) )
+      format = format_from_types( self.struct.type_of_field[name] for name in self.fields )
+    elif binary == False and format:
+      format = ''
     self.binary = format != ''
     self.delimiter = delimiter
     self.flush = flush
