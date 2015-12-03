@@ -70,6 +70,7 @@ class stream:
         ambiguous_leaves = self.struct.ambiguous_leaves.intersection( fields.split(',') )
         if ambiguous_leaves: raise Exception( "fields '{}' are ambiguous in '{}', use full xpath".format( ','.join( ambiguous_leaves ), fields ) )
         self.fields = tuple( self.struct.xpath_of_leaf.get( name ) or name for name in fields.split(',') )
+      if not set( self.fields ).intersection( self.struct.fields ): raise Exception( "provided fields '{}' do not match any of the expected fields '{}'".format( fields, ','.join( self.struct.fields ) ) )
     if binary == True and not format: format = self.struct.format
     elif binary == False and format: format = ''
     self.binary = format != ''
@@ -96,7 +97,7 @@ class stream:
       self.missing_fields = ()
     else:
       self.missing_fields = tuple( field for field in self.struct.fields if field not in self.fields )
-      warnings.warn( "expected fields '{}' not found in supplied fields '{}'".format( ','.join( self.missing_fields ), fields ) )
+      warnings.warn( "expected fields '{}' are not found in supplied fields '{}'".format( ','.join( self.missing_fields ), ','.join( self.fields ) ) )
     if self.missing_fields:
       self.complete_fields = self.fields + self.missing_fields
       missing_names = [ 'f' + str( i + len( self.input_dtype.names ) ) for i in xrange( len( self.missing_fields ) ) ]
