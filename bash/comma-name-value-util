@@ -284,3 +284,14 @@ export -f comma_path_value_from_var
 # No arguments, stdin to stdout
 function comma_path_value_take_last() { tac | sort -u -t= -k1,1 -s ; }
 export -f comma_path_value_take_last
+
+function comma_path_value_sort()
+{
+    # points[10] becomes points[000000000000010]
+    sed 's/\[\([0-9]*\)\]/\[0000000000000000\1\]/g;s/\[[0-9]*\(........\)\]/\[\1\]/g' \
+        | sort \
+        | sed 's/\[0*\([0-9][0-9]*\)\]/\[\1\]/g'  # points[000000000000010] becomes points[10]
+}
+
+export -f comma_path_value_sort
+declare -r comma_path_value_sort
