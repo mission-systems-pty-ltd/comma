@@ -285,6 +285,7 @@ export -f comma_path_value_from_var
 function comma_path_value_take_last() { tac | sort -u -t= -k1,1 -s ; }
 export -f comma_path_value_take_last
 
+# sort path value alphabetically whilst maintaining array indexing order for array elements
 function comma_path_value_sort()
 {
     # points[10] becomes points[000000000000010]
