@@ -107,3 +107,7 @@ install( TARGETS csv-cast RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT
 add_executable( csv-blocks ${dir}/csv-blocks.cpp )
 target_link_libraries ( csv-blocks ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io comma_string comma_xpath comma_csv )
 install( TARGETS csv-blocks RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
+
+IF( BUILD_PYTHON_PACKAGES )
+    INSTALL( PROGRAMS csv-eval DESTINATION ${comma_INSTALL_BIN_DIR} )
+ENDIF( BUILD_PYTHON_PACKAGES )

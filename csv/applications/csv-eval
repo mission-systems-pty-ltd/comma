@@ -1,0 +1,61 @@
+#!/usr/bin/python
+
+import sys
+import argparse
+import numpy
+import comma.csv
+
+class stream:
+  def __init__( self, args ):
+    self.args = args
+    self.initialize_input()
+    self.initialize_output()
+
+  def initialize_input( self ):
+    fields = self.args.fields.split(',')
+    format = self.args.binary or "{}d".format( len( fields ) )
+    input_t = comma.csv.struct( ','.join( fields ), *comma.csv.format.to_numpy( format ) )
+    keywords = dict( ( k, getattr( self.args, k ) ) for k in [ 'delimiter', 'precision', 'flush' ] )
+    self.input = comma.csv.stream( input_t, binary=args.binary != '', full_xpath=False, **keywords )
+
+  def initialize_output( self ):
+    fields = tuple( e.split('=')[0].strip() for e in self.args.expression.split(';') )
+    types = ( 'f8', )*len( fields )
+    output_t = comma.csv.struct( ','.join( fields ), *types )
+    keywords = dict( ( k, getattr( self.input, k ) ) for k in [ 'binary', 'delimiter', 'precision', 'flush' ] )
+    self.output = comma.csv.stream( output_t, tied=self.input, **keywords )
+
+def add_csv_options( parser ):
+  parser.add_argument( "--fields", "-f", required=True, help="comma-separated csv field names", metavar='<names>' )
+  parser.add_argument( "--binary", "-b", default='', help="use binary format; default: ascii stream", metavar='<format>' )
+  parser.add_argument( "--delimiter", "-d", default=',', help="csv delimiter of ascii stream; default: ','", metavar='<delimiter>' )
+  parser.add_argument( "--precision", default=12, help="floating point precision of ascii output; default: 12", metavar='<precision>' )
+  parser.add_argument( "--flush", action="store_true", help="flush output stream" )
+
+def evaluate( expression, input_stream, output_stream ):
+  initialize_input = ( "{name} = __input['{name}']".format( name=name ) for name in input_stream.struct.fields )
+  initialize_output = ( "__output['{name}'] = {name}".format( name=name ) for name in output_stream.struct.fields )
+  code = compile( 'from numpy import *;' + ';'.join( initialize_input ) + ";{};".format( expression ) + ';'.join( initialize_output ), '<string>', 'exec' )
+  output = numpy.empty( input_stream.size, dtype=output_stream.struct )
+  for i in input_stream.iter():
+    if output.size != i.size: output = numpy.empty( i.size, dtype=output_stream.struct )
+    exec code in {}, { '__input': i, '__output': output }
+    output_stream.write( output )
+
+description="""
+evaluate numpy expression and append computed values to csv stream
+"""
+
+epilog="""
+examples:
+    cat data.bin | {script_name} --binary=6d --fields=x,y,z,a,b,c "d=c/(a+x);e=x+sin(y)*b**2;f=minimum(a,b)" | csv-from-bin 9d
+    ( echo 1,2; echo 3,4 ) | {script_name} --fields=x,y "a=2/(x+y);b=x-sin(y)*a**2;c=minimum(a,b)"
+    
+""".format( script_name=sys.argv[0].split('/')[-1] )
+
+parser = argparse.ArgumentParser( description=description, epilog=epilog, formatter_class=lambda prog: argparse.RawTextHelpFormatter( prog, max_help_position=35 ) )
+parser.add_argument( "expression", help="expression to evaluate" )
+add_csv_options( parser )
+args = parser.parse_args()
+s = stream( args )
+evaluate( args.expression, s.input, s.output )
