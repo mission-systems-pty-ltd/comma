@@ -4,6 +4,7 @@ import sys
 import argparse
 import numpy
 import comma.csv
+from signal import signal, SIGPIPE, SIG_DFL
 
 class stream:
   def __init__( self, args ):
@@ -58,4 +59,5 @@ parser = argparse.ArgumentParser( description=description, epilog=epilog, format
 parser.add_argument( "expression", help="numpy expression to evaluate (see examples)" )
 add_csv_options( parser )
 args = parser.parse_args()
+signal( SIGPIPE, SIG_DFL )
 evaluate( args.expression, stream( args ) )
