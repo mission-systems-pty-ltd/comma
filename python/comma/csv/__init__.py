@@ -9,6 +9,14 @@ import comma.csv.format
 import comma.csv.time
 import numpy.lib.recfunctions
 
+def merge_arrays( arrays ):
+  dtype = sum( ( a.dtype.descr for a in arrays ), [] )
+  merged = numpy.empty( arrays[0].size, dtype=dtype )
+  for a in arrays:
+    for name in a.dtype.names:
+      merged[name] = a[name]
+  return merged
+
 def unrolled_types_of_flat_dtype( dtype ):
   shape_unrolled_types = []
   for descr in dtype.descr:
@@ -155,7 +163,7 @@ class stream:
     if s.dtype != self.struct.dtype: raise Exception( "expected object of dtype '{}', got '{}'".format( str( self.struct.dtype ), repr( s.dtype ) ) )
     if self.tied and s.size != self.tied.input_data.size: raise Exception( "expected size {} to equal tied size {}".format( s.size, self.tied.size ) )
     if self.binary:
-      ( numpy.lib.recfunctions.merge_arrays( ( self.tied.input_data, s ), usemask=False ) if self.tied else s ).tofile( self.target )
+      ( merge_arrays( ( self.tied.input_data, s ) ) if self.tied else s ).tofile( self.target )
     else:
       for tied_line, scalars in itertools.izip_longest( self.tied.ascii_buffer.splitlines() if self.tied else [], s.view( self.struct.unrolled_flat_dtype ) ):
         print >> self.target, ( tied_line + self.delimiter if self.tied else '' ) + self.delimiter.join( map( self.numpy_scalar_to_string, scalars ) )
