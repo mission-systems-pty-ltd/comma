@@ -1,0 +1,4 @@
+#!/bin/bash
+
+csv-to-bin s[3],d,i,d | csv-eval --fields=,a,,b --binary=s[3],d,i,d 'c = a + b' | csv-from-bin s[3],d,i,d,d | name-value-from-csv blank1,a,blank2,b,c --line-number --prefix output | sed 's/"//g'
+echo "eps=1e-8"
