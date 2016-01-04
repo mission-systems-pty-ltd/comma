@@ -1,1 +1,0 @@
-a bug in numpy.lib.recfunctions.merge_arrays where it fails to merge some single-field arrays that use standard field names, e.g. f0
