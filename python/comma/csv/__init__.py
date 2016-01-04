@@ -7,7 +7,6 @@ import operator
 import re
 import comma.csv.format
 import comma.csv.time
-import numpy.lib.recfunctions
 
 def merge_arrays( a1, a2 ):
   if a1.size != a2.size: raise Exception( "expected arrays of same size, got {} and {}".format( a1.size, a2.size ) )
