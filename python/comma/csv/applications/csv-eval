@@ -14,20 +14,24 @@ class stream:
 
   def initialize_input( self ):
     if not self.args.fields or not self.args.fields.translate( None, ',' ).strip(): raise Exception( "specify input stream fields, e.g. --fields=x,y" )
-    fields = [ "__blank{}".format( index ) if not name else name for index,name in enumerate( self.args.fields.split(',') ) ]
-    format = self.args.binary or "{}d".format( len( fields ) )
-    input_t = comma.csv.struct( ','.join( fields ), *comma.csv.format.to_numpy( format ) )
-    keywords = dict( ( k, getattr( self.args, k ) ) for k in [ 'delimiter', 'precision', 'flush' ] )
-    self.input = comma.csv.stream( input_t, binary=args.binary != '', full_xpath=False, **keywords )
-    self.nonblank_fields = filter( None, self.args.fields.split(',') )
+    self.nonblank_input_fields = filter( None, self.args.fields.split(',') )
+    if self.args.binary:
+      fields = [ "__blank{}".format( index ) if not name else name for index,name in enumerate( self.args.fields.split(',') ) ]
+      input_t = comma.csv.struct( ','.join( fields ), *comma.csv.format.to_numpy( self.args.binary ) )
+      self.input = comma.csv.stream( input_t, binary=True, full_xpath=False )
+    else:
+      input_t = comma.csv.struct( ','.join( self.nonblank_input_fields ), *('float64',)*len( self.nonblank_input_fields ) )
+      self.input = comma.csv.stream( input_t, fields=self.args.fields, full_xpath=False, delimiter=self.args.delimiter )
 
   def initialize_output( self ):
-    fields = tuple( e.split('=')[0].strip() for e in self.args.expression.split(';') if '=' in e and '==' not in e )
+    fields = [ e.split('=')[0].strip() for e in self.args.expression.split(';') if '=' in e and '==' not in e ]
     if not fields: raise Exception( "expected expression with output fields, e.g. 'a=x+1;b=a**2', got '{}'".format( self.args.expression ) )
-    format = "{}d".format( len( fields ) )
-    output_t = comma.csv.struct( ','.join( fields ), *comma.csv.format.to_numpy( format ) )
-    keywords = dict( ( k, getattr( self.input, k ) ) for k in [ 'delimiter', 'precision', 'flush', 'binary' ] )
-    self.output = comma.csv.stream( output_t, tied=self.input, **keywords )
+    output_t = comma.csv.struct( ','.join( fields ), *('float64',)*len( fields ) )
+    if self.args.binary:
+      self.output = comma.csv.stream( output_t, tied=self.input, binary=True )
+    else:
+      keywords = dict( ( k, getattr( self.args, k ) ) for k in [ 'delimiter', 'precision', 'flush' ] )
+      self.output = comma.csv.stream( output_t, tied=self.input, **keywords )
 
 def add_csv_options( parser ):
   parser.add_argument( "--fields", "-f", default='x,y,z', help="comma-separated csv field names (default: %(default)s)", metavar='<names>' )
@@ -37,7 +41,7 @@ def add_csv_options( parser ):
   parser.add_argument( "--flush", action="store_true", help="flush output stream" )
 
 def evaluate( expression, stream ):
-  initialize_input = ( "{name} = __input['{name}']".format( name=name ) for name in stream.nonblank_fields )
+  initialize_input = ( "{name} = __input['{name}']".format( name=name ) for name in stream.nonblank_input_fields )
   initialize_output = ( "__output['{name}'] = {name}".format( name=name ) for name in stream.output.struct.fields )
   code = compile( 'from numpy import *;' + ';'.join( initialize_input ) + ";{};".format( expression ) + ';'.join( initialize_output ), '<string>', 'exec' )
   output = numpy.empty( stream.input.size, dtype=stream.output.struct )
