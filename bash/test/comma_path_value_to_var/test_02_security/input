@@ -1,0 +1,4 @@
+plan/foobar1=1;touch output/security_hole_1
+plan/foobar2='1';touch output/security_hole_2
+touch output/security_hole_3;plan/foobar3=1
+touch output/security_hole_4;plan/foobar4='1'

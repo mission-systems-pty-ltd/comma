@@ -7,7 +7,7 @@ NUMPY_TYPE = 'datetime64[' + NUMPY_TYPE_UNIT + ']'
 NUMPY_INTEGER_TYPE_OF_TIMEDELATA = 'int64'
 
 def to_numpy( comma_time_string ):
-  if comma_time_string == 'not-a-date-time': return numpy.datetime64()
+  if comma_time_string in [ '', 'not-a-date-time' ]: return numpy.datetime64()
   v = list( comma_time_string )
   if len( v ) < 15: raise Exception( "expected time string in comma format, e.g. 20150101T000000, got '{}'".format( comma_time_string ) )
   for i in [13,11]: v.insert( i, ':' )
@@ -29,4 +29,3 @@ def zone( name ):
   if os.environ.get( 'TZ' ) == name: return
   os.environ['TZ'] = name
   time.tzset()
-  

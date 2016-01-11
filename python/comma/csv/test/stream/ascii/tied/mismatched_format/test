@@ -1,0 +1,25 @@
+#!/bin/bash
+
+source $( which comma-application-util )
+
+function mismatched
+{
+    python -c "$( cat <<END
+import comma
+
+point_t = comma.csv.struct( 'x,y,z', 'float64', 'float64', 'float64' )
+input_stream = comma.csv.stream( point_t, binary=$1 )
+
+output_t = comma.csv.struct( 'a', 'float64' )
+output_stream = comma.csv.stream( output_t, binary=$2, tied=input_stream )
+
+END
+)"
+}
+
+
+mismatched True False | csv-paste value="mismatched[0]\line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'; comma_status_ok
+echo "mismatched[0]/status=$?"
+mismatched False True | csv-paste value="mismatched[1]\line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'; comma_status_ok
+echo "mismatched[1]/status=$?"
+

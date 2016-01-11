@@ -1,0 +1,24 @@
+#!/bin/bash
+
+source $( which comma-application-util )
+
+function process_records
+{
+    python -c "$( cat <<END
+import comma
+
+point_t = comma.csv.struct( 'x,y,z', 'float64', 'float64', 'float64' )
+input_stream = comma.csv.stream( point_t )
+
+output_t = comma.csv.struct( 'a', 'float64' )
+output_stream = comma.csv.stream( output_t, delimiter=';', tied=input_stream )
+
+END
+)"
+}
+
+output="$( process_records )"
+status=$?
+echo "$output" | csv-paste value="line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'
+
+echo "status=$status"

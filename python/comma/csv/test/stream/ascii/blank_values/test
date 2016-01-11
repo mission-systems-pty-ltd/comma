@@ -1,0 +1,21 @@
+#!/bin/bash
+
+function process_records
+{
+    python -c "$( cat <<END
+import comma
+
+t = comma.csv.struct( 's,x,y,t', 'S2', 'i4', 'f8', 'datetime64[us]' )
+s = comma.csv.stream( t )
+
+for r in s.iter( size=1 ):
+  s.write( r )
+END
+)"
+}
+
+output="$( process_records )"
+status=$?
+echo "$output" | csv-paste value="line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'
+echo "status=$status"
+

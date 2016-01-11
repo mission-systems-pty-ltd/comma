@@ -1,0 +1,19 @@
+#!/bin/bash
+
+function process_records
+{
+    python -c "$( cat <<END
+import comma
+
+point_t = comma.csv.struct( 'x,y,z', 'float64', 'float64', 'float64' )
+timestamped_point_t = comma.csv.struct( 'time,coordinates', 'datetime64[us]', point_t )
+record_t = comma.csv.struct( 'observer,event', 'S3', timestamped_point_t )
+record_stream = comma.csv.stream( record_t, fields=',event/coordinates/y,event/coordinates/y,observer,,event/time,event/coordinates/x,,' )
+
+END
+)"
+}
+
+output="$( process_records )"
+status=$?
+echo "status=$status"

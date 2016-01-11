@@ -1,0 +1,73 @@
+#!/usr/bin/python
+
+import sys
+import argparse
+import numpy
+import comma.csv
+from signal import signal, SIGPIPE, SIG_DFL
+
+class stream:
+  def __init__( self, args ):
+    self.args = args
+    self.initialize_input()
+    self.initialize_output()
+
+  def initialize_input( self ):
+    if not self.args.fields or not self.args.fields.translate( None, ',' ).strip(): raise Exception( "specify input stream fields, e.g. --fields=x,y" )
+    self.nonblank_input_fields = filter( None, self.args.fields.split(',') )
+    if self.args.binary:
+      fields = [ "__blank{}".format( index ) if not name else name for index,name in enumerate( self.args.fields.split(',') ) ]
+      input_t = comma.csv.struct( ','.join( fields ), *comma.csv.format.to_numpy( self.args.binary ) )
+      self.input = comma.csv.stream( input_t, binary=True, full_xpath=False )
+    else:
+      input_t = comma.csv.struct( ','.join( self.nonblank_input_fields ), *('float64',)*len( self.nonblank_input_fields ) )
+      self.input = comma.csv.stream( input_t, fields=self.args.fields, full_xpath=False, delimiter=self.args.delimiter )
+
+  def initialize_output( self ):
+    fields = [ e.split('=')[0].strip() for e in self.args.expressions.split(';') if '=' in e and '==' not in e ]
+    if not fields: raise Exception( "expected numerical expressions, e.g. 'a=x+1;b=a**2', got '{}'".format( self.args.expressions ) )
+    output_t = comma.csv.struct( ','.join( fields ), *('float64',)*len( fields ) )
+    if self.args.binary:
+      self.output = comma.csv.stream( output_t, tied=self.input, binary=True )
+    else:
+      keywords = dict( ( k, getattr( self.args, k ) ) for k in [ 'delimiter', 'precision', 'flush' ] )
+      self.output = comma.csv.stream( output_t, tied=self.input, **keywords )
+
+def add_csv_options( parser ):
+  parser.add_argument( "--fields", "-f", default='x,y,z', help="comma-separated csv field names (default: %(default)s)", metavar='<names>' )
+  parser.add_argument( "--binary", "-b", default='', help="assume stream is binary and use binary format (by default, stream is ascii)", metavar='<format>' )
+  parser.add_argument( "--delimiter", "-d", default=',', help="csv delimiter of ascii stream (default: %(default)s)", metavar='<delimiter>' )
+  parser.add_argument( "--precision", default=12, help="floating point precision of ascii output (default: %(default)s)", metavar='<precision>' )
+  parser.add_argument( "--flush", action="store_true", help="flush output stream" )
+
+def evaluate( expressions, stream ):
+  initialize_input = ( "{name} = __input['{name}']".format( name=name ) for name in stream.nonblank_input_fields )
+  initialize_output = ( "__output['{name}'] = {name}".format( name=name ) for name in stream.output.struct.fields )
+  code = compile( 'from numpy import *;' + ';'.join( initialize_input ) + ";{};".format( expressions ) + ';'.join( initialize_output ), '<string>', 'exec' )
+  output = numpy.empty( stream.input.size, dtype=stream.output.struct )
+  for i in stream.input.iter():
+    if output.size != i.size: output = numpy.empty( i.size, dtype=stream.output.struct )
+    exec code in {}, { '__input': i, '__output': output }
+    stream.output.write( output )
+
+description="""
+evaluate numerical expressions and append computed values to csv stream
+"""
+
+epilog="""
+notes:
+    1) in ascii mode, specified fields are treated as floating point numbers
+    2) appended fields have comma format 'd'
+
+examples:
+    ( echo 1,2; echo 3,4 ) | csv-to-bin 2d | {script_name} --binary=2d --fields=x,y 'a=2/(x+y);b=x-sin(y)*a**2;c=minimum(a,b)' | csv-from-bin 5d
+    ( echo 1,2; echo 3,4 ) | {script_name} --fields=x,y --precision=2 'a=2/(x+y);b=x-sin(y)*a**2;c=minimum(a,b)'
+    
+""".format( script_name=sys.argv[0].split('/')[-1] )
+
+parser = argparse.ArgumentParser( description=description, epilog=epilog, formatter_class=lambda prog: argparse.RawTextHelpFormatter( prog, max_help_position=50 ) )
+parser.add_argument( "expressions", help="semicolon-separated numerical expressions to evaluate (see examples)" )
+add_csv_options( parser )
+args = parser.parse_args()
+signal( SIGPIPE, SIG_DFL )
+evaluate( args.expressions, stream( args ) )

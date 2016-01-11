@@ -1,6 +1,6 @@
 #!/bin/bash
 
-scriptname="comma_application_util_test"
+scriptname="comma_bash_application_test_1"
 
 source $( which comma-application-util ) || { printf "%s could not source comma-application-util" $scriptname >&2 ; exit 1 ; } 
 

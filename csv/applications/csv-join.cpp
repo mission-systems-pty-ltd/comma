@@ -58,22 +58,25 @@
 static void usage( bool more )
 {
     std::cerr << std::endl;
-    std::cerr << "Join two csv files or streams by one or several keys" << std::endl;
+    std::cerr << "join two csv files or streams by one or several keys" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "Usage: cat something.csv | csv-join \"something_else.csv[,options]\" [<options>]" << std::endl;
+    std::cerr << "usage: cat something.csv | csv-join \"something_else.csv[,options]\" [<options>]" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "Options:" << std::endl;
+    std::cerr << "options" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
     std::cerr << "    --first-matching: output only the first matching record (a bit of hack for now, but we needed it)" << std::endl;
     std::cerr << "    --not-matching: not matching records as read from stdin, no join performed" << std::endl;
     std::cerr << "    --matching: output only matching records from stdin" << std::endl;
-    std::cerr << "    --string,-s: keys are strings; a quick and dirty option to support strings" << std::endl;
-    std::cerr << "    --doubles:   keys are doubles (no epsilon applied)" << std::endl;
-    std::cerr << "    --time:      keys are timestamps" << std::endl;
-    std::cerr << "                 default key type is integer" << std::endl;
+    std::cerr << "    --unique,--unique-matches: expect only unique matches, exit with error otherwise" << std::endl;
     std::cerr << "    --strict: fail, if id on stdin is not found" << std::endl;
     std::cerr << "    --tolerance,--epsilon=<value>; compare keys with given tolerance" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "key field options" << std::endl;
+    std::cerr << "    --string,-s: keys are strings; a quick and dirty option to support strings" << std::endl;
+    std::cerr << "    --double: keys are doubles (no epsilon applied)" << std::endl;
+    std::cerr << "    --time: keys are timestamps" << std::endl;
+    std::cerr << "    default key type is integer" << std::endl;
     if( more )
     {
         std::cerr << std::endl;
@@ -116,6 +119,7 @@ static void usage( bool more )
 
 static bool verbose;
 static bool first_matching;
+static bool unique;
 static bool strict;
 static bool not_matching;
 static bool matching;
@@ -209,6 +213,16 @@ template < typename T > struct traits< input< T > >
 
 } } // namespace comma { namespace visiting {
 
+template < typename T > static std::string keys_as_string( const input< T >& i ) // quick and dirty
+{
+    std::ostringstream oss;
+    comma::csv::options csv;
+    csv.fields = "keys";
+    comma::csv::ascii_output_stream< input< T > > os( oss, csv, i );
+    os.write( i );
+    return oss.str();
+}
+
 template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
 {
     static typename traits< K, Strict >::map filter_map;
@@ -224,6 +238,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
         comma::uint64 count = 0;
         while( last->block == block && !is_shutdown )
         {
+            typename traits< K, Strict >::map::mapped_type& d = filter_map[ *last ];
             if( filter_stream.is_binary() )
             {
                 typename traits< K, Strict >::map::mapped_type& d = filter_map[ *last ];
@@ -233,7 +248,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
             }
             else
             {
-                filter_map[ *last ].push_back( comma::join( filter_stream.ascii().last(), stdin_csv.delimiter ) );
+                d.push_back( comma::join( filter_stream.ascii().last(), stdin_csv.delimiter ) );
             }
             if( verbose ) { ++count; if( count % 10000 == 0 ) { std::cerr << "csv-join: reading block " << block << "; loaded " << count << " point" << ( count == 1 ? "" : "s" ) << "; hash map size: " << filter_map.size() << std::endl; } }
             //if( ( *filter_transport )->good() && !( *filter_transport )->eof() ) { break; }
@@ -292,6 +307,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
             if( not_matching ) { continue; }
             for( typename traits< K, Strict >::map::const_iterator it = pair.first; it != pair.second; ++it )
             {
+                if( unique && it->second.size() > 1 ) { std::cerr << "csv-join: with --unique option, expected unique entries, got more than one filter entry on the key: " << keys_as_string( it->first ) << std::endl; exit( 1 ); }
                 if( stdin_stream.is_binary() )
                 {
                     for( std::size_t i = 0; i < ( first_matching ? 1 : it->second.size() ); ++i )
@@ -336,6 +352,7 @@ int main( int ac, char** av )
         first_matching = options.exists( "--first-matching" );
         strict = options.exists( "--strict" );
         not_matching = options.exists( "--not-matching" );
+        unique = options.exists( "--unique,--unique-matches" );
         matching = options.exists( "--matching" );
         tolerance = options.optional< double >( "--tolerance,--epsilon" );
         options.assert_mutually_exclusive( "--tolerance,--epsilon,--first-matching" );
@@ -357,14 +374,8 @@ int main( int ac, char** av )
                ? join_impl_< double, false >::run( options )
                : join_impl_< comma::int64, true >::run( options );
     }
-    catch( std::exception& ex )
-    {
-        std::cerr << "csv-join: " << ex.what() << std::endl;
-        std::cerr << "called: " << comma::join(options.argv(), ' ') << std::endl;
-    }
-    catch( ... )
-    {
-        std::cerr << "csv-join: unknown exception" << std::endl;
-    }
+    catch( std::exception& ex ) { std::cerr << "csv-join: " << ex.what() << std::endl; }
+    catch( ... ) { std::cerr << "csv-join: unknown exception" << std::endl; }
+    std::cerr << "csv-join: on call: " << comma::join(options.argv(), ' ') << std::endl;
     return 1;
 }

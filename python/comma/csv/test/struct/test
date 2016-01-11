@@ -4,6 +4,10 @@ function types_incorrect_name { python -c "import comma; point_t = comma.csv.str
 function types_empty_name { python -c "import comma; point_t = comma.csv.struct( 'x', '' )"; }
 function types_incorrect_number { python -c "import comma; point_t = comma.csv.struct( 'x,y', 'float64' )"; }
 
+function blank_field { python -c "import comma; point_t = comma.csv.struct( 'x,,z', 'float64', 'int32', 'float64' )"; }
+function duplicate_field { python -c "import comma; point_t = comma.csv.struct( 'x,x,z', 'float64', 'int32', 'float64' )"; }
+function field_with_slash { python -c "import comma; point_t = comma.csv.struct( 'x,x/y,z', 'float64', 'int32', 'float64' )"; }
+
 function basic
 {
     python -c "$( cat <<END
@@ -34,6 +38,21 @@ END
 )"
 }
 
+function leaves
+{
+    python -c "$( cat <<END
+import comma
+
+point_t = comma.csv.struct( 'x,y,z', 'float64', 'float64', 'float64' )
+timestamped_point_t = comma.csv.struct( 't,coordinates', 'datetime64[us]', point_t )
+observer_t = comma.csv.struct( 'name,id', 'S3', 'uint32' )
+record_t = comma.csv.struct( 'observer,event,value', observer_t, timestamped_point_t, 'float64' )
+for leaf in record_t.leaves:
+  print "leaves/{}={}".format( leaf, record_t.xpath_of_leaf.get( leaf ) )
+END
+)"
+}
+
 function record
 {
     local what=$1
@@ -53,8 +72,14 @@ types_incorrect_name; echo "types_incorrect_name/status=$?"
 types_empty_name; echo "types_empty_name/status=$?"
 types_incorrect_number; echo "types_incorrect_number/status=$?"
 
+blank_field; echo "blank_field/status=$?"
+duplicate_field; echo "duplicate_field/status=$?"
+field_with_slash; echo "field_with_slash/status=$?"
+
 basic; echo "status/basic=$?"
 shorthand; echo "status/shorthand=$?"
+
+leaves; echo "status/leaves=$?"
 
 for what in fields types; do
     output=$( record $what )

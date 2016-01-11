@@ -1,0 +1,7 @@
+#python
+
+expect not exists( mismatched[0]/line )
+expect mismatched[0]/status=1
+expect not exists( mismatched[1]/line )
+expect mismatched[1]/status=1
+

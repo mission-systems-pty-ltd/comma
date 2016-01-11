@@ -1,0 +1,37 @@
+#!/bin/bash
+
+scriptname=$( basename $0 )
+
+source $( which comma-process-util ) || exit 1
+source $( which comma-application-util ) || exit 1
+
+function handle()
+{
+    [[ -n "$workdir" ]] && rm -rf "$workdir"
+}
+
+trap 'handle' EXIT
+
+tarball="../data/path.tar"
+[[ -r "$tarball" ]] || {
+    echo "$scriptname: file '$tarball' not found" >&2
+    exit 1
+}
+tarball=$( readlink -f "$tarball" )
+
+export output_dir="output"
+mkdir -p "$output_dir" || exit 1
+output_dir=$( readlink -f "$output_dir" )
+
+datadir="$output_dir/data"
+mkdir -p "$datadir"
+echo 'foo="bar"' > "$datadir/data.pv"
+
+workdir=$( mktemp --directory --tmpdir="$output_dir" )
+echo "workdir='$workdir'" >&2
+cd "$workdir"
+tar xf "$tarball" || exit 1
+cd path || exit 1
+
+comma-test-run --raw --path="$datadir" > "$output_dir/comma-test-run.log" 2>&1
+echo "status=$?"

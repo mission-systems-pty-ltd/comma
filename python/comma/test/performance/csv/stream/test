@@ -46,12 +46,9 @@ expected_output_line=$( echo $expected_output_line_template | sed 's@|@,@g' )
 input_line=$( echo $expected_output_line_template | csv-shuffle --fields $output_fields -o $input_fields | sed 's@|@,@g' )
 input_comma_format=$( echo $output_comma_format | csv-shuffle --fields $output_fields -o $input_fields )
 
-if [[ "$input_fields" != "$output_fields" ]]; then
-  input_numpy_format=$( echo $output_numpy_format_template | csv-shuffle --fields $output_fields -o $input_fields | sed 's@|@,@g' )
-fi
-
 case $code_option in
     --ascii)
+        input_numpy_format=''
         for(( i = 0; i < $ascii_number_of_records; i++ )); do echo $input_line; done > $output_dir/input.csv
         output_code --ascii > $output_dir/csv.py && chmod u+x $output_dir/csv.py
         /usr/bin/time -o $output_dir/timer -f %U $output_dir/csv.py < $output_dir/input.csv > $output_dir/output.csv
@@ -61,6 +58,7 @@ case $code_option in
         echo "lines/number=$( wc -l < $output_dir/output.csv )"
         ;;
     --binary)
+        input_numpy_format=$( echo $output_numpy_format_template | csv-shuffle --fields $output_fields -o $input_fields | sed 's@|@,@g' )
         for(( i = 0; i < $binary_number_of_records; i++ )); do echo $input_line; done | csv-to-bin $input_comma_format > $output_dir/input.bin
         output_code --binary > $output_dir/bin.py && chmod u+x $output_dir/bin.py
         /usr/bin/time -o $output_dir/timer -f %U $output_dir/bin.py < $output_dir/input.bin > $output_dir/output.bin

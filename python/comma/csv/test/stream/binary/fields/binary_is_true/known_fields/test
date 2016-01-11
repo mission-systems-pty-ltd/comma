@@ -1,0 +1,27 @@
+#!/bin/bash
+
+source $( which comma-application-util )
+function output { csv-paste value="line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'; }
+
+function process_records
+{
+    python -c "$( cat <<END
+import comma
+
+point_t = comma.csv.struct( 'x,y,z', 'float64', 'float64', 'float64' )
+timestamped_point_t = comma.csv.struct( 'time,coordinates', 'datetime64[us]', point_t )
+record_t = comma.csv.struct( 'observer,event', 'S3', timestamped_point_t )
+
+fields = 'event/coordinates/y,event/coordinates/z,observer,event/time,event/coordinates/x'
+format = 'float64,float64,S3,datetime64[us],float64'
+record_stream = comma.csv.stream( record_t, fields=fields, binary=True )
+
+for r in record_stream.iter():
+  record_stream.write( r )
+END
+)"
+}
+
+csv-to-bin 2d,s[3],t,d | process_records | csv-from-bin s[3],t,3d | output
+comma_status_ok
+echo "status=$?"

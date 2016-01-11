@@ -1,0 +1,5 @@
+#!/bin/bash
+
+csv-to-bin 2d | csv-eval --binary=2d --fields=x,y 'a=2/(x+y);b=x-sin(y)*a**2;c=minimum(a,b)' | csv-from-bin 5d \
+    | name-value-from-csv x,y,a,b,c --line-number --prefix output | sed 's/"//g'
+echo "eps=1e-8"

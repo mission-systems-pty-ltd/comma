@@ -44,6 +44,10 @@ void usage()
     std::cerr << comma::command_line_options::description::usage() << std::endl;
     std::cerr << "lines starting with spaces, tabs, or comment signs '#' are ignored" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "attention: error checking does not work very well; e.g. --blah=<abc.txt> in description" << std::endl;
+    std::cerr << "           will be silently omitted and --blah will be considered a valueless option" << std::endl;
+    std::cerr << "           todo: make the parser less permissive" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "todo: currently, multiple option values are output out of order; order them" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;

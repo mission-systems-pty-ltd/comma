@@ -259,9 +259,7 @@ add_subdirectory(web)
 
 ADD_SUBDIRECTORY( etc/bash_completion.d )
 
-if( BUILD_PYTHON_PACKAGES )
-    ADD_SUBDIRECTORY( python )
-endif( BUILD_PYTHON_PACKAGES )
+ADD_SUBDIRECTORY( python )
 
 #in future, may need to add third party dlls somehow, if they are linked as dlls. Not needed for statically linking to boost.
 #if we set them up to install to bin they might be packaged through, e.g. roughly (using GLOB):
