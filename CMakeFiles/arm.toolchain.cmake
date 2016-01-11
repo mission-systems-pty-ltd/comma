@@ -13,9 +13,9 @@ SET( CMAKE_C_COMPILER   arm-linux-gnueabihf-gcc )
 SET( CMAKE_CXX_COMPILER arm-linux-gnueabihf-g++ )
 set(ARM_LINUX_SYSROOT /usr/arm-linux-gnueabihf/ CACHE PATH "ARM cross compilation system root")
 
-set(ARM_STAGE_LIB /stage/arm CACHE PATH "ARM cross compilation user build root")
+set(ARM_STAGE_ROOT /stage/arm/ CACHE PATH "ARM cross compilation user build root")
 set(CMAKE_FIND_ROOT_PATH ${CMAKE_FIND_ROOT_PATH} ${ARM_LINUX_SYSROOT})
-set(CMAKE_FIND_ROOT_PATH ${CMAKE_FIND_ROOT_PATH} ${ARM_STAGE_LIB} )
+set(CMAKE_FIND_ROOT_PATH ${CMAKE_FIND_ROOT_PATH} ${ARM_STAGE_ROOT} )
 
 # where is the target environment 
 #SET(CMAKE_FIND_ROOT_PATH  ${RED_PITAYA_ROOT_PATH})
@@ -25,4 +25,4 @@ set(CMAKE_FIND_ROOT_PATH ${CMAKE_FIND_ROOT_PATH} ${ARM_STAGE_LIB} )
 
 # for libraries and headers in the target directoriesccma
 SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
-#SET(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+SET(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH)
