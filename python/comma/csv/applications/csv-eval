@@ -24,8 +24,8 @@ class stream:
       self.input = comma.csv.stream( input_t, fields=self.args.fields, full_xpath=False, delimiter=self.args.delimiter )
 
   def initialize_output( self ):
-    fields = [ e.split('=')[0].strip() for e in self.args.expression.split(';') if '=' in e and '==' not in e ]
-    if not fields: raise Exception( "expected expression with output fields, e.g. 'a=x+1;b=a**2', got '{}'".format( self.args.expression ) )
+    fields = [ e.split('=')[0].strip() for e in self.args.expressions.split(';') if '=' in e and '==' not in e ]
+    if not fields: raise Exception( "expected numerical expressions, e.g. 'a=x+1;b=a**2', got '{}'".format( self.args.expressions ) )
     output_t = comma.csv.struct( ','.join( fields ), *('float64',)*len( fields ) )
     if self.args.binary:
       self.output = comma.csv.stream( output_t, tied=self.input, binary=True )
@@ -40,10 +40,10 @@ def add_csv_options( parser ):
   parser.add_argument( "--precision", default=12, help="floating point precision of ascii output (default: %(default)s)", metavar='<precision>' )
   parser.add_argument( "--flush", action="store_true", help="flush output stream" )
 
-def evaluate( expression, stream ):
+def evaluate( expressions, stream ):
   initialize_input = ( "{name} = __input['{name}']".format( name=name ) for name in stream.nonblank_input_fields )
   initialize_output = ( "__output['{name}'] = {name}".format( name=name ) for name in stream.output.struct.fields )
-  code = compile( 'from numpy import *;' + ';'.join( initialize_input ) + ";{};".format( expression ) + ';'.join( initialize_output ), '<string>', 'exec' )
+  code = compile( 'from numpy import *;' + ';'.join( initialize_input ) + ";{};".format( expressions ) + ';'.join( initialize_output ), '<string>', 'exec' )
   output = numpy.empty( stream.input.size, dtype=stream.output.struct )
   for i in stream.input.iter():
     if output.size != i.size: output = numpy.empty( i.size, dtype=stream.output.struct )
@@ -51,10 +51,14 @@ def evaluate( expression, stream ):
     stream.output.write( output )
 
 description="""
-evaluate expression and append computed values to csv stream
+evaluate numerical expressions and append computed values to csv stream
 """
 
 epilog="""
+notes:
+    1) in ascii mode, specified fields are treated as floating point numbers
+    2) appended fields have comma format 'd'
+
 examples:
     ( echo 1,2; echo 3,4 ) | csv-to-bin 2d | {script_name} --binary=2d --fields=x,y 'a=2/(x+y);b=x-sin(y)*a**2;c=minimum(a,b)' | csv-from-bin 5d
     ( echo 1,2; echo 3,4 ) | {script_name} --fields=x,y --precision=2 'a=2/(x+y);b=x-sin(y)*a**2;c=minimum(a,b)'
@@ -62,8 +66,8 @@ examples:
 """.format( script_name=sys.argv[0].split('/')[-1] )
 
 parser = argparse.ArgumentParser( description=description, epilog=epilog, formatter_class=lambda prog: argparse.RawTextHelpFormatter( prog, max_help_position=50 ) )
-parser.add_argument( "expression", help="numpy expression to evaluate (see examples)" )
+parser.add_argument( "expressions", help="semicolon-separated numerical expressions to evaluate (see examples)" )
 add_csv_options( parser )
 args = parser.parse_args()
 signal( SIGPIPE, SIG_DFL )
-evaluate( args.expression, stream( args ) )
+evaluate( args.expressions, stream( args ) )
