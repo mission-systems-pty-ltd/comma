@@ -1,0 +1,6 @@
+
+SET( PROJECT "io" )
+
+# for RPM PACKAGING
+INSTALL( FILES __init__.py DESTINATION ${ROOT}/${PROJECT} )
+INSTALL( FILES windows_binary.py DESTINATION ${ROOT}/${PROJECT} )
