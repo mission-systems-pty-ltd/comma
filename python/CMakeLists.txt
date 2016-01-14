@@ -34,7 +34,7 @@ IF( BUILD_PYTHON_PACKAGES )
         SET_DIRECTORY_PROPERTIES( PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES build )
 
         # for RPM PACKAGING
-        SET( PYTHON_TMP "/tmp/python_comma_modules" )
+        SET( PYTHON_TMP "/tmp/comma/python_modules_for_rpm_install" )
         INSTALL( FILES ${SETUP_PY} DESTINATION ${PYTHON_TMP} )
         SET( ROOT "${PYTHON_TMP}/comma" )
 

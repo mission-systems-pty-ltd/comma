@@ -1,3 +1,3 @@
 #!/bin/sh
 
-rm -rf /tmp/python_comma_modules
+rm -rf /tmp/comma/python_modules_for_rpm_install
