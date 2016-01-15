@@ -33,6 +33,11 @@ IF( BUILD_PYTHON_PACKAGES )
 
         SET_DIRECTORY_PROPERTIES( PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES build )
 
+        # consider copying all module files like this rather than copying individual files in each module's CMakeLists.txt
+#         INSTALL( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ DESTINATION "/tmp/comma/python_modules_for_rpm_install"
+#             FILES_MATCHING PATTERN "*.py" 
+#             PATTERN test EXCLUDE PATTERN build EXCLUDE PATTERN applications EXCLUDE PATTERN stats EXCLUDE PATTERN output EXCLUDE )
+
         # for RPM PACKAGING
         SET( PYTHON_TMP "/tmp/comma/python_modules_for_rpm_install" )
         INSTALL( FILES ${SETUP_PY} DESTINATION ${PYTHON_TMP} )
