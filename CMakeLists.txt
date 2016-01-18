@@ -142,6 +142,9 @@ SET( comma_BUILD_TESTS ${BUILD_TESTS} )
 
 OPTION( BUILD_PYTHON_PACKAGES "install comma python packages" OFF )
 
+INCLUDE( CMakeDependentOption )
+CMAKE_DEPENDENT_OPTION( ADD_PYTHON_PACKAGES_TO_RPM "add comma python packages to rpm" OFF "BUILD_PYTHON_PACKAGES" ON )
+
 OPTION( BUILD_APPLICATIONS "build applications" ON )
 SET( comma_BUILD_APPLICATIONS ${BUILD_APPLICATIONS} )
 
@@ -276,13 +279,13 @@ SET(CPACK_PACKAGE_VERSION_PATCH ${COMMITHASH})
 SET(CPACK_PACKAGE_CONTACT "t.teo@acfr.usyd.edu.au")
 
 
-IF( BUILD_PYTHON_PACKAGES )
+IF( ADD_PYTHON_PACKAGES_TO_RPM )
     SET(CPACK_RPM_PACKAGE_REQUIRES "boost-thread recode python numpy")
 	SET(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/python/comma-rpm-post-install.sh" )
 	SET(CPACK_RPM_PRE_INSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/python/comma-rpm-pre-install.sh" )
-ELSE( BUILD_PYTHON_PACKAGES )
+ELSE( ADD_PYTHON_PACKAGES_TO_RPM )
     SET(CPACK_RPM_PACKAGE_REQUIRES "boost-thread recode")
-ENDIF( BUILD_PYTHON_PACKAGES )
+ENDIF( ADD_PYTHON_PACKAGES_TO_RPM )
 
 
 #this line finds the appropriate Visual Studio DLLS in windows. Maybe it would find other dlls if a different build tool were used. Probably should be windows only.
