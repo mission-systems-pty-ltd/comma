@@ -278,14 +278,13 @@ SET(CPACK_PACKAGE_VERSION_MINOR ${COMMITDATE})
 SET(CPACK_PACKAGE_VERSION_PATCH ${COMMITHASH})
 SET(CPACK_PACKAGE_CONTACT "t.teo@acfr.usyd.edu.au")
 
-
-IF( ADD_PYTHON_PACKAGES_TO_RPM )
+IF( BUILD_PYTHON_PACKAGES AND ADD_PYTHON_PACKAGES_TO_RPM )
     SET(CPACK_RPM_PACKAGE_REQUIRES "boost-thread recode python numpy")
-	SET(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/python/comma-rpm-post-install.sh" )
-	SET(CPACK_RPM_PRE_INSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/python/comma-rpm-pre-install.sh" )
-ELSE( ADD_PYTHON_PACKAGES_TO_RPM )
+    SET(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/python/comma-rpm-post-install.sh" )
+    SET(CPACK_RPM_PRE_INSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/python/comma-rpm-pre-install.sh" )
+ELSE( BUILD_PYTHON_PACKAGES AND ADD_PYTHON_PACKAGES_TO_RPM )
     SET(CPACK_RPM_PACKAGE_REQUIRES "boost-thread recode")
-ENDIF( ADD_PYTHON_PACKAGES_TO_RPM )
+ENDIF( BUILD_PYTHON_PACKAGES AND ADD_PYTHON_PACKAGES_TO_RPM )
 
 
 #this line finds the appropriate Visual Studio DLLS in windows. Maybe it would find other dlls if a different build tool were used. Probably should be windows only.
