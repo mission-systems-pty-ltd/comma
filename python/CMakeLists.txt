@@ -2,7 +2,7 @@ IF( BUILD_PYTHON_PACKAGES )
     EXECUTE_PROCESS( COMMAND rm -f ${CMAKE_CURRENT_SOURCE_DIR}/disabled )
     MESSAGE( STATUS "${CMAKE_CURRENT_SOURCE_DIR}/disabled has been removed: testing python modules and applications is enabled" )
 ELSE( BUILD_PYTHON_PACKAGES )
-    MESSAGE( STATUS "comma/python is disabled" )
+    MESSAGE( STATUS "snark/python is disabled" )
     EXECUTE_PROCESS( COMMAND touch ${CMAKE_CURRENT_SOURCE_DIR}/disabled )
     MESSAGE( STATUS "disabled file has been dropped in ${CMAKE_CURRENT_SOURCE_DIR}: testing python modules and applications is disabled" )
 ENDIF( BUILD_PYTHON_PACKAGES )
@@ -44,6 +44,7 @@ IF( BUILD_PYTHON_PACKAGES )
                 PATTERN build EXCLUDE
                 PATTERN applications EXCLUDE
                 PATTERN stats EXCLUDE
+                PATTERN examples EXCLUDE
                 PATTERN output EXCLUDE )
         ENDIF( ADD_PYTHON_PACKAGES_TO_RPM )
 
