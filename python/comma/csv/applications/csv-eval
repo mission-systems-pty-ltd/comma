@@ -27,7 +27,7 @@ class stream:
       self.input = comma.csv.stream( input_t, fields=self.args.fields, full_xpath=False, delimiter=self.args.delimiter )
 
   def initialize_output( self ):
-    fields = [ e.split('=')[0].strip() for e in self.args.expressions.split(';') if '=' in e and '==' not in e ]
+    fields = [ e.split('=')[0].strip() for e in self.args.expressions.split(';') ]
     if not fields: raise Exception( "expected numerical expressions, e.g. 'a=x+1;b=a**2', got '{}'".format( self.args.expressions ) )
     output_t = comma.csv.struct( ','.join( fields ), *('float64',)*len( fields ) )
     if self.args.binary:
