@@ -100,6 +100,7 @@ class stream:
       if len( self.fields ) != len( self.input_dtype.names ): raise Exception( "expected same number of fields and format types, got '{}' and '{}'".format( ','.join( self.fields ), format ) )
     else:
       self.input_dtype = structured_dtype( format_from_types( self.struct.type_of_field.get( name ) or 'S' for name in self.fields ) ) if self.fields != self.struct.fields else self.struct.flat_dtype
+      self.usecols = tuple( range( len( unrolled_types_of_flat_dtype( self.input_dtype ) ) ) )
     self.size = self.tied.size if self.tied else max( 1, stream.buffer_size_in_bytes / self.input_dtype.itemsize )
     self.ascii_converters = comma.csv.time.ascii_converters( unrolled_types_of_flat_dtype( self.input_dtype ) )
     if set( self.fields ).issuperset( self.struct.fields ):
@@ -142,7 +143,7 @@ class stream:
         warnings.simplefilter( 'ignore' )
         self.ascii_buffer = ''.join( itertools.islice( self.source, size ) )
         if not self.ascii_buffer: return None
-        self.input_data = numpy.loadtxt( StringIO( self.ascii_buffer ), dtype=self.input_dtype , delimiter=self.delimiter, converters=self.ascii_converters, ndmin=1 )
+        self.input_data = numpy.loadtxt( StringIO( self.ascii_buffer ), dtype=self.input_dtype , delimiter=self.delimiter, converters=self.ascii_converters, ndmin=1, usecols=self.usecols )
     if self.input_data.size == 0: return None
     if self.data_extraction_dtype:
       complete_data = merge_arrays( self.input_data, numpy.zeros( self.input_data.size, dtype=self.missing_fields_dtype ) ) if self.missing_fields else self.input_data
