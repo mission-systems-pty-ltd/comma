@@ -1,0 +1,16 @@
+output[0]/x=1
+output[0]/y=2
+output[0]/equal=0
+output[1]/x=5
+output[1]/y=5
+output[1]/equal=1
+output[2]/x=-1
+output[2]/y=-1
+output[2]/equal=1
+output[3]/x=1.0001
+output[3]/y=1
+output[3]/equal=0
+output[4]/x=-1
+output[4]/y=-2
+output[4]/equal=0
+
