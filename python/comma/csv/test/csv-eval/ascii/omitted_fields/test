@@ -1,0 +1,23 @@
+#!/bin/bash
+
+function csv_eval
+{
+    local fields=$1
+    local expression="$2"
+    local output_fields=$3
+    echo "case[$case_number]/fields=\"$fields\""
+    echo "case[$case_number]/expression=\"$expression\""
+    echo "case[$case_number]/output_fields=\"$output_fields\""
+    echo "$input" | csv-eval --fields=$fields "$expression" | name-value-from-csv $output_fields --prefix "case[$case_number]/output" --line-number | sed 's/"//g'
+    (( ++case_number ))
+}
+
+input=$( cat )
+declare -i case_number=0
+echo "$input" | name-value-from-csv x,y,z --line-number --prefix 'input' | sed 's/"//g'
+csv_eval 'x' 'a=x-10' 'x,blank1,blank2,a'
+csv_eval 'x,' 'a=x-10' 'x,blank1,blank2,a'
+csv_eval 'x,y' 'a=x+y-10' 'x,y,blank2,a'
+csv_eval ',y' 'a=y-10' 'blank0,y,blank2,a'
+
+echo "eps=1e-8"

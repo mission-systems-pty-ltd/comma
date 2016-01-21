@@ -1,0 +1,15 @@
+output[0]/blank1=1.5
+output[0]/x=1
+output[0]/blank2=-10
+output[0]/blank3=-11
+output[0]/y=2
+output[0]/blank4=0.5
+output[0]/a=3 +/- eps
+output[1]/blank1=2.5
+output[1]/x=3
+output[1]/blank2=-20
+output[1]/blank3=-21
+output[1]/y=4
+output[1]/blank4=0.6
+output[1]/a=7 +/- eps
+
