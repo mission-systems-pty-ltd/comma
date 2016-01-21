@@ -1,0 +1,4 @@
+#!/bin/bash
+
+csv-to-bin 2ui | csv-eval --binary=2ui --fields=x,y 'a=x==y' | csv-from-bin 2ui,d | name-value-from-csv x,y,equal --line-number --prefix output | sed 's/"//g'
+echo "eps=1e-8"
