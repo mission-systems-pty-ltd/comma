@@ -70,6 +70,9 @@ void usage()
     std::cerr << "    --output-all,--all: output all records, append 1 to matching, 0 to not matching; if binary, format of the additional field is 'b'" << std::endl;
     std::cerr << "    --sorted,--input-sorted: a hint that the key column is sorted in ascending order" << std::endl;
     std::cerr << "              todo: support descending order" << std::endl;
+    std::cerr << "              attention: this key is applied only to the common constraints, e.g. in the following example" << std::endl;
+    std::cerr << "                         --sorted will be applied to the condition --less=2, but NOT to the condition \"x;less=1\"" << std::endl;
+    std::cerr << "                         csv-select --less=2 --sorted --fields x \"x;less=1\"" << std::endl;
     std::cerr << "    --strict: if constraint field is not present among fields, exit with error (added for backward compatibility)" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
     std::cerr << "    --or: uses 'or' expression instead of 'and' (default is 'and')" << std::endl;
@@ -115,7 +118,7 @@ struct constraints
     boost::optional< boost::regex > regex;
     bool sorted;
 
-    bool empty() const { return !equals && !not_equal && !less && !greater && !from && !to && !regex; }
+    bool empty() const { return !equals && !not_equal && !less && !greater && !from && !to && !regex && !sorted; }
 
     constraints() : sorted( false ) {}
 
