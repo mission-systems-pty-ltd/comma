@@ -9,6 +9,7 @@ from signal import signal, SIGPIPE, SIG_DFL
 class stream:
   def __init__( self, args ):
     self.args = args
+    self.csv_options = dict( full_xpath=False, flush=self.args.flush, delimiter=self.args.delimiter, precision=self.args.precision )
     self.initialize_input()
     self.initialize_output()
 
@@ -21,20 +22,19 @@ class stream:
       omitted_fields = [''] * ( len( types ) - len( given_fields ) )
       fields = [ "__blank{}".format( index ) if not name else name for index,name in enumerate( given_fields + omitted_fields ) ]
       input_t = comma.csv.struct( ','.join( fields ), *types )
-      self.input = comma.csv.stream( input_t, binary=True, full_xpath=False )
+      self.input = comma.csv.stream( input_t, binary=True, **self.csv_options )
     else:
       input_t = comma.csv.struct( ','.join( self.nonblank_input_fields ), *('float64',)*len( self.nonblank_input_fields ) )
-      self.input = comma.csv.stream( input_t, fields=self.args.fields, full_xpath=False, delimiter=self.args.delimiter )
+      self.input = comma.csv.stream( input_t, fields=self.args.fields, **self.csv_options )
 
   def initialize_output( self ):
     fields = [ e.split('=')[0].strip() for e in self.args.expressions.split(';') ]
     if not fields: raise Exception( "expected numerical expressions, e.g. 'a=x+1;b=a**2', got '{}'".format( self.args.expressions ) )
     output_t = comma.csv.struct( ','.join( fields ), *('float64',)*len( fields ) )
     if self.args.binary:
-      self.output = comma.csv.stream( output_t, tied=self.input, binary=True )
+      self.output = comma.csv.stream( output_t, tied=self.input, binary=True, **self.csv_options )
     else:
-      keywords = dict( ( k, getattr( self.args, k ) ) for k in [ 'delimiter', 'precision', 'flush' ] )
-      self.output = comma.csv.stream( output_t, tied=self.input, **keywords )
+      self.output = comma.csv.stream( output_t, tied=self.input, **self.csv_options )
 
 def add_csv_options( parser ):
   parser.add_argument( "--fields", "-f", default='x,y,z', help="comma-separated csv field names (default: %(default)s)", metavar='<names>' )
