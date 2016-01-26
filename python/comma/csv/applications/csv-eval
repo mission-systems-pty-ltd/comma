@@ -5,6 +5,7 @@ import argparse
 import numpy
 import comma.csv
 from signal import signal, SIGPIPE, SIG_DFL
+import re
 
 class stream:
   def __init__( self, args ):
@@ -28,9 +29,11 @@ class stream:
       self.input = comma.csv.stream( input_t, fields=self.args.fields, **self.csv_options )
 
   def initialize_output( self ):
-    fields = [ e.split('=')[0].strip() for e in self.args.expressions.split(';') ]
+    fields = ','.join( e.split('=')[0].strip() for e in self.args.expressions.split(';') )
     if not fields: raise Exception( "expected numerical expressions, e.g. 'a=x+1;b=a**2', got '{}'".format( self.args.expressions ) )
-    output_t = comma.csv.struct( ','.join( fields ), *('float64',)*len( fields ) )
+    try: check_fields( fields.split(','), input_fields=self.args.fields.split(',') )
+    except Exception, message: raise Exception( "attached fields error: " + str( message ) )
+    output_t = comma.csv.struct( fields, *('float64',)*len( fields.split(',') ) )
     if self.args.binary:
       self.output = comma.csv.stream( output_t, tied=self.input, binary=True, **self.csv_options )
     else:
@@ -61,6 +64,12 @@ def evaluate( expressions, stream, dangerous=False ):
     if output.size != i.size: output = numpy.empty( i.size, dtype=stream.output.struct )
     exec code in restricted_numpy, { '__input': i.copy(), '__output': output }
     stream.output.write( output )
+
+def check_fields( fields, input_fields=(), env=get_dict( numpy ) ):
+  for name in fields:
+    if not re.match( r'^[a-z_]\w*$', name, re.I ): raise Exception( "'{}' is not a valid field name".format( name ) )
+    if name == '__input' or name == '__output' or name in env: raise Exception( "'{}' is a reserved name".format( name ) )
+    if name in input_fields: raise Exception( "'{}' is an input field name".format( name ) )
 
 description="""
 evaluate numerical expressions and append computed values to csv stream
