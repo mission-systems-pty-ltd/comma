@@ -43,14 +43,21 @@ def add_csv_options( parser ):
   parser.add_argument( "--precision", default=12, help="floating point precision of ascii output (default: %(default)s)", metavar='<precision>' )
   parser.add_argument( "--flush", action="store_true", help="flush output stream" )
 
-def evaluate( expressions, stream ):
+def get_dict( module, update={}, delete=[] ):
+  d = module.__dict__.copy()
+  d.update( update )
+  for k in delete: del d[k]
+  return d
+
+def evaluate( expressions, stream, dangerous=False ):
   initialize_input = ( "{name} = __input['{name}']".format( name=name ) for name in stream.nonblank_input_fields )
   initialize_output = ( "__output['{name}'] = {name}".format( name=name ) for name in stream.output.struct.fields )
   code = compile( ';'.join( initialize_input ) + ";{};".format( expressions ) + ';'.join( initialize_output ), '<string>', 'exec' )
+  restricted_numpy = get_dict( numpy ) if dangerous else get_dict( numpy, update=dict(__builtins__={}), delete=['sys'] )
   output = numpy.empty( stream.input.size, dtype=stream.output.struct )
   for i in stream.input.iter():
     if output.size != i.size: output = numpy.empty( i.size, dtype=stream.output.struct )
-    exec code in numpy.__dict__, { '__input': i, '__output': output }
+    exec code in restricted_numpy, { '__input': i, '__output': output }
     stream.output.write( output )
 
 description="""
@@ -70,7 +77,8 @@ examples:
 
 parser = argparse.ArgumentParser( description=description, epilog=epilog, formatter_class=lambda prog: argparse.RawTextHelpFormatter( prog, max_help_position=50 ) )
 parser.add_argument( "expressions", help="semicolon-separated numerical expressions to evaluate (see examples)" )
+parser.add_argument( "--dangerous", action="store_true", help=argparse.SUPPRESS )
 add_csv_options( parser )
 args = parser.parse_args()
 signal( SIGPIPE, SIG_DFL )
-evaluate( args.expressions, stream( args ) )
+evaluate( args.expressions, stream( args ), dangerous=args.dangerous )
