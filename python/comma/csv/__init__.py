@@ -101,7 +101,7 @@ class stream:
     else:
       self.input_dtype = structured_dtype( format_from_types( self.struct.type_of_field.get( name ) or 'S' for name in self.fields ) ) if self.fields != self.struct.fields else self.struct.flat_dtype
       self.usecols = tuple( range( len( unrolled_types_of_flat_dtype( self.input_dtype ) ) ) )
-    self.size = self.tied.size if self.tied else max( 1, stream.buffer_size_in_bytes / self.input_dtype.itemsize )
+    self.size = self.tied.size if self.tied else ( 1 if self.flush else max( 1, stream.buffer_size_in_bytes / self.input_dtype.itemsize ) )
     self.ascii_converters = comma.csv.time.ascii_converters( unrolled_types_of_flat_dtype( self.input_dtype ) )
     if set( self.fields ).issuperset( self.struct.fields ):
       self.missing_fields = ()
