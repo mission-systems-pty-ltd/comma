@@ -29,11 +29,16 @@ class stream:
       self.input = comma.csv.stream( input_t, fields=self.args.fields, **self.csv_options )
 
   def initialize_output( self ):
-    fields = ','.join( e.split('=')[0].strip() for e in self.args.expressions.split(';') )
+    fields = ','.join( e.split('=',1)[0].strip() for e in self.args.expressions.split(';') )
     if not fields: raise Exception( "expected numerical expressions, e.g. 'a=x+1;b=a**2', got '{}'".format( self.args.expressions ) )
+    format = ','.join( ('d',)*len( fields.split(',') ) )
+    if self.args.verbose:
+      print >> sys.stderr, "append fields: '{}'".format( fields )
+      print >> sys.stderr, "append format: '{}'".format( format )
+      print >> sys.stderr, "numpy format: '{}'".format( ','.join( comma.csv.format.to_numpy( format ) ) )
     try: check_fields( fields.split(','), input_fields=self.args.fields.split(',') )
     except Exception, message: raise Exception( "attached fields error: " + str( message ) )
-    output_t = comma.csv.struct( fields, *('float64',)*len( fields.split(',') ) )
+    output_t = comma.csv.struct( fields, *comma.csv.format.to_numpy( format ) )
     if self.args.binary:
       self.output = comma.csv.stream( output_t, tied=self.input, binary=True, **self.csv_options )
     else:
@@ -88,6 +93,7 @@ examples:
 
 parser = argparse.ArgumentParser( description=description, epilog=epilog, formatter_class=lambda prog: argparse.RawTextHelpFormatter( prog, max_help_position=50 ) )
 parser.add_argument( "expressions", help="semicolon-separated numerical expressions to evaluate (see examples)" )
+parser.add_argument( "--verbose", "-v", action="store_true", help="increase output verbosity" )
 parser.add_argument( "--dangerous", action="store_true", help=argparse.SUPPRESS )
 add_csv_options( parser )
 args = parser.parse_args()
