@@ -29,7 +29,7 @@ class stream:
       self.input = comma.csv.stream( input_t, fields=self.args.fields, **self.csv_options )
 
   def initialize_output( self ):
-    fields = ','.join( e.split('=',1)[0].strip() for e in self.args.expressions.split(';') )
+    fields = ','.join( e.split('=',1)[0].strip() for e in self.args.expressions.strip(';').split(';') )
     if not fields: raise Exception( "expected numerical expressions, e.g. 'a=x+1;b=a**2', got '{}'".format( self.args.expressions ) )
     format = ','.join( ('d',)*len( fields.split(',') ) )
     if self.args.verbose:
@@ -98,4 +98,4 @@ parser.add_argument( "--dangerous", action="store_true", help=argparse.SUPPRESS 
 add_csv_options( parser )
 args = parser.parse_args()
 signal( SIGPIPE, SIG_DFL )
-evaluate( args.expressions, stream( args ), dangerous=args.dangerous )
+evaluate( args.expressions.strip(';'), stream( args ), dangerous=args.dangerous )
