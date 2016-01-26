@@ -45,8 +45,8 @@ class stream:
       self.output = comma.csv.stream( output_t, tied=self.input, **self.csv_options )
 
 def add_csv_options( parser ):
-  parser.add_argument( "--fields", "-f", default='x,y,z', help="comma-separated csv field names (default: %(default)s)", metavar='<names>' )
-  parser.add_argument( "--binary", "-b", default='', help="assume stream is binary and use binary format (by default, stream is ascii)", metavar='<format>' )
+  parser.add_argument( "--fields", "-f", default='x,y,z', help="comma-separated field names of input stream (default: %(default)s)", metavar='<names>' )
+  parser.add_argument( "--binary", "-b", default='', help="assume input stream is binary and use binary format (by default, stream is ascii)", metavar='<format>' )
   parser.add_argument( "--delimiter", "-d", default=',', help="csv delimiter of ascii stream (default: %(default)s)", metavar='<delimiter>' )
   parser.add_argument( "--precision", default=12, help="floating point precision of ascii output (default: %(default)s)", metavar='<precision>' )
   parser.add_argument( "--flush", action="store_true", help="flush output stream" )
