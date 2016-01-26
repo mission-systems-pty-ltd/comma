@@ -56,7 +56,7 @@ def add_csv_options( parser ):
 def get_dict( module, update={}, delete=[] ):
   d = module.__dict__.copy()
   d.update( update )
-  for k in delete: del d[k]
+  for k in set( delete ).intersection( d.keys() ): del d[k]
   return d
 
 add_semicolon = lambda _: _ + ( ';' if _ else '' )
