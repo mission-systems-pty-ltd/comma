@@ -3,7 +3,7 @@ import re
 
 def dictionary():
   from comma.csv.time import NUMPY_TYPE as numpy_datetime_type
-  return dict( b='i1', ub='u1', w='i2', uw='u2', i='i4', ui='u4', l='i8', ul='u8', f='f4', d='f8', t=numpy_datetime_type )
+  return dict( b='i1', ub='u1', w='i2', uw='u2', i='i4', ui='u4', l='i8', ul='u8', f='f4', d='f8', t=numpy_datetime_type, bool='b1' )
 
 def expand( compressed_comma_format ):
   d = dictionary()
