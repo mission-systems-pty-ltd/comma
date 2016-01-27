@@ -41,11 +41,10 @@ IF( BUILD_PYTHON_PACKAGES )
             INSTALL( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ DESTINATION ${PYTHON_TMP}
                 FILES_MATCHING PATTERN "*.py"
                 PATTERN test EXCLUDE
-                PATTERN build EXCLUDE
-                PATTERN applications EXCLUDE
+                PATTERN output EXCLUDE
                 PATTERN stats EXCLUDE
-                PATTERN examples EXCLUDE
-                PATTERN output EXCLUDE )
+                PATTERN build EXCLUDE
+                PATTERN examples EXCLUDE )
         ENDIF( ADD_PYTHON_PACKAGES_TO_RPM )
 
         ADD_SUBDIRECTORY( comma )

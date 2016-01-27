@@ -8,5 +8,5 @@ setup(
         description         = 'comma python utilties',
         url                 = 'https://github.com/acfr/comma',
         license             = 'BSD 3-Clause',
-        packages            = [ 'comma', 'comma.csv', 'comma.io' ],
+        packages            = [ 'comma', 'comma.csv', 'comma.csv.applications', 'comma.io' ],
      )
