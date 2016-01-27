@@ -44,22 +44,19 @@ class stream:
     else:
       self.output = comma.csv.stream( output_t, tied=self.input, **self.csv_options )
 
-def add_csv_options( parser ):
-  parser.add_argument( "--fields", "-f", default='x,y,z', help="comma-separated field names of input stream (default: %(default)s)", metavar='<names>' )
-  parser.add_argument( "--binary", "-b", default='', help="assume input stream is binary and use binary format (by default, stream is ascii)", metavar='<format>' )
-  parser.add_argument( "--delimiter", "-d", default=',', help="csv delimiter of ascii stream (default: %(default)s)", metavar='<delimiter>' )
-  parser.add_argument( "--precision", default=12, help="floating point precision of ascii output (default: %(default)s)", metavar='<precision>' )
-  parser.add_argument( "--flush", action="store_true", help="flush output stream" )
-  parser.add_argument( "--append-fields", "-F", help="output fields appended to input stream (by default, inferred from expressions)", metavar='<names>' )
-  parser.add_argument( "--append-binary", "-B", help="for binary stream, binary format of appended fields (by default, 'd' for each)", metavar='<format>' )
-
 def get_dict( module, update={}, delete=[] ):
   d = module.__dict__.copy()
   d.update( update )
   for k in set( delete ).intersection( d.keys() ): del d[k]
   return d
 
-add_semicolon = lambda _: _ + ( ';' if _ else '' )
+def check_fields( fields, input_fields=(), env=get_dict( numpy ) ):
+  for name in fields:
+    if not re.match( r'^[a-z_]\w*$', name, re.I ): raise Exception( "'{}' is not a valid field name".format( name ) )
+    if name == '__input' or name == '__output' or name in env: raise Exception( "'{}' is a reserved name".format( name ) )
+    if name in input_fields: raise Exception( "'{}' is an input field name".format( name ) )
+
+add_semicolon = lambda _: _ + ( ';' if _ and _[-1] != ';' else '' )
 
 def evaluate( expressions, stream, dangerous=False ):
   initialize_input = ';'.join( "{name} = __input['{name}']".format( name=name ) for name in stream.nonblank_input_fields )
@@ -72,11 +69,14 @@ def evaluate( expressions, stream, dangerous=False ):
     exec code in restricted_numpy, { '__input': i.copy(), '__output': output }
     stream.output.write( output )
 
-def check_fields( fields, input_fields=(), env=get_dict( numpy ) ):
-  for name in fields:
-    if not re.match( r'^[a-z_]\w*$', name, re.I ): raise Exception( "'{}' is not a valid field name".format( name ) )
-    if name == '__input' or name == '__output' or name in env: raise Exception( "'{}' is a reserved name".format( name ) )
-    if name in input_fields: raise Exception( "'{}' is an input field name".format( name ) )
+def add_csv_options( parser ):
+  parser.add_argument( "--fields", "-f", default='x,y,z', help="comma-separated field names of input stream (default: %(default)s)", metavar='<names>' )
+  parser.add_argument( "--binary", "-b", default='', help="assume input stream is binary and use binary format (by default, stream is ascii)", metavar='<format>' )
+  parser.add_argument( "--delimiter", "-d", default=',', help="csv delimiter of ascii stream (default: %(default)s)", metavar='<delimiter>' )
+  parser.add_argument( "--precision", default=12, help="floating point precision of ascii output (default: %(default)s)", metavar='<precision>' )
+  parser.add_argument( "--flush", action="store_true", help="flush output stream" )
+  parser.add_argument( "--append-fields", "-F", help="output fields appended to input stream (by default, inferred from expressions)", metavar='<names>' )
+  parser.add_argument( "--append-binary", "-B", help="for binary stream, binary format of appended fields (by default, 'd' for each)", metavar='<format>' )
 
 def main():
   description="""
