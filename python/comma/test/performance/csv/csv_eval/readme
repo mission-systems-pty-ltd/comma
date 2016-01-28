@@ -1,2 +1,21 @@
-This test creates large ascii and binary files and stores them in ascii/data and binary/data respectively.
+This test creates large ascii and binary files and stores them in ascii/data~ and binary/data~ respectively.
 If the necessary files already exist in these directories, they will be reused.
+
+ascii/data~:
+6.0M expected_output.csv
+3.3M input.csv
+
+binary/data~:
+1.5G expected_output.bin
+763M input.bin
+
+Timing estimates are obtained on Intel Xeon CPU E5-2630 0 @ 2.30GHz × 12 by running 500 test cases and 
+computing five sigma standard deviation above the mean values of elapsed time.
+
+e.g.
+
+for i in $( seq 500 ); do
+  comma-test-run --run-optional
+  times=$( find . -name stdout.log -exec cat '{}' \; | grep ^time/elapsed | sed 's|time/elapsed=||' )
+  echo $i $times | tr ' ' ','
+done > times.csv
