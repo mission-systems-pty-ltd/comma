@@ -10,23 +10,23 @@ comma_path_value_to_var < <( echo "$input" )
 input_line=123214.836147863,8.98167846189324
 expected_values=123223.81782632488,123205.8544694011
 
-mkdir -p data
+mkdir -p data~
 
 case $code_option in
     --ascii)
-        [[ -f data/input.csv ]] || for(( i = 0; i < $ascii_number_of_records; i++ )); do echo $input_line; done > data/input.csv
-        /usr/bin/time -o output/timer -f %U csv-eval --fields=a,b 'x=a+b;y=a-b' --precision=$precision < data/input.csv > output/output.csv
+        [[ -f data~/input.csv ]] || for(( i = 0; i < $ascii_number_of_records; i++ )); do echo $input_line; done > data~/input.csv
+        /usr/bin/time -o output/timer -f %U csv-eval --fields=a,b 'x=a+b;y=a-b' --precision=$precision < data~/input.csv > output/output.csv
         echo "time/elapsed=$( cat output/timer )"
-        [[ -f data/expected_output.csv ]] || csv-paste data/input.csv value=$( echo $expected_values | csv-to-bin 2d | csv-from-bin 2d --precision=$precision ) > data/expected_output.csv
-        echo "diff=$( diff output/output.csv data/expected_output.csv -q )"
+        [[ -f data~/expected_output.csv ]] || csv-paste data~/input.csv value=$( echo $expected_values | csv-to-bin 2d | csv-from-bin 2d --precision=$precision ) > data~/expected_output.csv
+        echo "diff=$( diff output/output.csv data~/expected_output.csv -q )"
         echo "lines/number=$( wc -l < output/output.csv )"
         ;;
     --binary)
-        [[ -f data/input.bin ]] || for(( i = 0; i < $binary_number_of_records; i++ )); do echo $input_line; done | csv-to-bin 2d > data/input.bin
-        /usr/bin/time -o output/timer -f %U csv-eval --binary=2d --fields=a,b 'x=a+b;y=a-b' < data/input.bin > output/output.bin
+        [[ -f data~/input.bin ]] || for(( i = 0; i < $binary_number_of_records; i++ )); do echo $input_line; done | csv-to-bin 2d > data~/input.bin
+        /usr/bin/time -o output/timer -f %U csv-eval --binary=2d --fields=a,b 'x=a+b;y=a-b' < data~/input.bin > output/output.bin
         echo "time/elapsed=$( cat output/timer )"
-        [[ -f data/expected_output.bin ]] || for(( i = 0; i < $binary_number_of_records; i++ )); do echo "$input_line,$expected_values"; done | csv-to-bin 4d > data/expected_output.bin
-        echo "diff=$( diff output/output.bin data/expected_output.bin -q )"
+        [[ -f data~/expected_output.bin ]] || for(( i = 0; i < $binary_number_of_records; i++ )); do echo "$input_line,$expected_values"; done | csv-to-bin 4d > data~/expected_output.bin
+        echo "diff=$( diff output/output.bin data~/expected_output.bin -q )"
         echo "record/size/bytes=$( csv-size 4d )"
         echo "size/bytes=$( wc -c < output/output.bin )"
         ;;
