@@ -1,7 +1,6 @@
 #!/bin/bash
 
 scriptname=$( readlink -e $0 )
-output_dir=output
 
 source $( which comma-name-value-util )
 input=$( cat )
@@ -11,25 +10,25 @@ comma_path_value_to_var < <( echo "$input" )
 input_line=123214.836147863,8.98167846189324
 expected_values=123223.81782632488,123205.8544694011
 
+mkdir -p data
+
 case $code_option in
     --ascii)
-        input_numpy_format=''
-        for(( i = 0; i < $ascii_number_of_records; i++ )); do echo $input_line; done > $output_dir/input.csv
-        /usr/bin/time -o $output_dir/timer -f %U csv-eval --fields=a,b 'x=a+b;y=a-b' --precision=$precision < $output_dir/input.csv > $output_dir/output.csv
-        echo "time/elapsed=$( cat $output_dir/timer )"
-        csv-paste $output_dir/input.csv value=$( echo $expected_values | csv-to-bin 2d | csv-from-bin 2d --precision=$precision ) > $output_dir/expected_output.csv
-        echo "diff=$( diff $output_dir/output.csv $output_dir/expected_output.csv -q )"
-        echo "lines/number=$( wc -l < $output_dir/output.csv )"
+        [[ -f data/input.csv ]] || for(( i = 0; i < $ascii_number_of_records; i++ )); do echo $input_line; done > data/input.csv
+        /usr/bin/time -o output/timer -f %U csv-eval --fields=a,b 'x=a+b;y=a-b' --precision=$precision < data/input.csv > output/output.csv
+        echo "time/elapsed=$( cat output/timer )"
+        [[ -f data/expected_output.csv ]] || csv-paste data/input.csv value=$( echo $expected_values | csv-to-bin 2d | csv-from-bin 2d --precision=$precision ) > data/expected_output.csv
+        echo "diff=$( diff output/output.csv data/expected_output.csv -q )"
+        echo "lines/number=$( wc -l < output/output.csv )"
         ;;
     --binary)
-        input_numpy_format=?
-        for(( i = 0; i < $binary_number_of_records; i++ )); do echo $input_line; done | csv-to-bin 2d > $output_dir/input.bin
-        /usr/bin/time -o $output_dir/timer -f %U csv-eval --binary=2d --fields=a,b 'x=a+b;y=a-b' < $output_dir/input.bin > $output_dir/output.bin
-        echo "time/elapsed=$( cat $output_dir/timer )"
-        for(( i = 0; i < $binary_number_of_records; i++ )); do echo "$input_line,$expected_values"; done | csv-to-bin 4d > $output_dir/expected_output.bin
-        echo "diff=$( diff $output_dir/output.bin $output_dir/expected_output.bin -q )"
+        [[ -f data/input.bin ]] || for(( i = 0; i < $binary_number_of_records; i++ )); do echo $input_line; done | csv-to-bin 2d > data/input.bin
+        /usr/bin/time -o output/timer -f %U csv-eval --binary=2d --fields=a,b 'x=a+b;y=a-b' < data/input.bin > output/output.bin
+        echo "time/elapsed=$( cat output/timer )"
+        [[ -f data/expected_output.bin ]] || for(( i = 0; i < $binary_number_of_records; i++ )); do echo "$input_line,$expected_values"; done | csv-to-bin 4d > data/expected_output.bin
+        echo "diff=$( diff output/output.bin data/expected_output.bin -q )"
         echo "record/size/bytes=$( csv-size 4d )"
-        echo "size/bytes=$( wc -c < $output_dir/output.bin )"
+        echo "size/bytes=$( wc -c < output/output.bin )"
         ;;
     *) echo "$scriptname: no code/option found" ;;
 esac

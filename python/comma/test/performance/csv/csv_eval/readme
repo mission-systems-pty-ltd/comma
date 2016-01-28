@@ -1,0 +1,2 @@
+This test creates large ascii and binary files and stores them in ascii/data and binary/data respectively.
+If the necessary files already exist in these directories, they will be reused.
