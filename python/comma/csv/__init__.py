@@ -149,7 +149,7 @@ class stream:
       complete_data = merge_arrays( self.input_data, numpy.zeros( self.input_data.size, dtype=self.missing_fields_dtype ) ) if self.missing_fields else self.input_data
       return numpy.array( numpy.ndarray( complete_data.shape, self.data_extraction_dtype, complete_data, strides=complete_data.itemsize ).tolist(), dtype=self.struct.flat_dtype ).view( self.struct )
     else:
-      return self.input_data.view( self.struct )
+      return self.input_data.copy().view( self.struct )
 
   def numpy_scalar_to_string( self, scalar ):
     if scalar.dtype.char in numpy.typecodes['AllInteger']: return str( scalar )
