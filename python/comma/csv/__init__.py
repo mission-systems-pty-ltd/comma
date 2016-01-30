@@ -166,4 +166,4 @@ class stream:
     else:
       for tied_line, scalars in itertools.izip_longest( self.tied.ascii_buffer.splitlines() if self.tied else [], s.view( self.struct.unrolled_flat_dtype ) ):
         print >> self.target, ( tied_line + self.delimiter if self.tied else '' ) + self.delimiter.join( map( self.numpy_scalar_to_string, scalars ) )
-    if self.flush: self.target.flush()
+    self.target.flush()
