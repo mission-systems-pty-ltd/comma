@@ -66,7 +66,7 @@ def evaluate( expressions, stream, dangerous=False ):
   output = numpy.empty( stream.input.size, dtype=stream.output.struct )
   for i in stream.input.iter():
     if output.size != i.size: output = numpy.empty( i.size, dtype=stream.output.struct )
-    exec code in restricted_numpy, { '__input': i.copy(), '__output': output }
+    exec code in restricted_numpy, { '__input': i, '__output': output }
     stream.output.write( output )
 
 def add_csv_options( parser ):
