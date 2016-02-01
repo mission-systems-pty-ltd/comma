@@ -279,6 +279,9 @@ class input_stream : public boost::noncopyable
         /// read with timeout; return NULL, if insufficient data (e.g. end of stream)
         const S* read( const boost::posix_time::ptime& timeout ) { return ascii_ ? ascii_->read( timeout ) : binary_->read( timeout ); }
 
+        /// return fields
+        const std::vector< std::string >& fields() const { return ascii_ ? ascii_->fields() : binary_->fields(); }
+
         /// get last as string: an evil function, don't use it!
         //std::string last() const;
 
@@ -330,6 +333,9 @@ class output_stream : public boost::noncopyable
         
         /// flush
         void flush() { if( ascii_ ) { ascii_->flush(); } else { binary_->flush(); } }
+
+        /// return fields
+        const std::vector< std::string >& fields() const { return ascii_ ? ascii_->fields() : binary_->fields(); }
 
         const ascii_output_stream< S >& ascii() const { return *ascii_; }
         const binary_output_stream< S >& binary() const { return *binary_; }
