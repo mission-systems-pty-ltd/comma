@@ -133,3 +133,14 @@ cut[6]/output=",,e"
 cut[6]/status=0
 cut[7]/output=",c,,"
 cut[7]/status=0
+
+rename[0]/output="z,b,z,d,z"
+rename[0]/status=0
+rename[1]/output="z"
+rename[1]/status=0
+rename[2]/output="x,y,x,y,x"
+rename[2]/status=0
+rename[3]/output="x,y,k/a"
+rename[3]/status=0
+rename[4]/output="c[0],c[1]"
+rename[4]/status=0

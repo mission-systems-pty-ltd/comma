@@ -32,6 +32,7 @@
 #include <iostream>
 #include <string>
 #include <set>
+#include <map>
 #include <comma/application/contact_info.h>
 #include <comma/application/command_line_options.h>
 #include <comma/string/string.h>
@@ -73,6 +74,10 @@ static void usage( bool )
     std::cerr << "        --fields=<fields>: prefix only given fields" << std::endl;
     std::cerr << "        --path=<prefix>: path to add" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "    rename: rename given fields" << std::endl;
+    std::cerr << "        --fields=<fields>: fields to rename" << std::endl;
+    std::cerr << "        --to=<fields>: list of new field names" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "    strip: remove some leading sub-paths from all or sub-set of fields" << std::endl;
     std::cerr << "        --except=<fields>: don't modify given fields" << std::endl;
     std::cerr << "        --fields=<fields>: modify only given fields" << std::endl;
@@ -108,6 +113,10 @@ static void usage( bool )
     std::cerr << "        echo foo/bar/a,,,baz/blah/d | csv-fields prefix --basename" << std::endl;
     std::cerr << "        a,,,d" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "    rename" << std::endl;
+    std::cerr << "        echo a,b,c,d | csv-fields rename --fields a,c --to x,z" << std::endl;
+    std::cerr << "        x,b,z,d" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "    strip" << std::endl;
     std::cerr << "        selectively remove part of paths:" << std::endl;
     std::cerr << "        echo foo/bar/a,foo/b,,baz/blah/foo/d | csv-fields strip --path foo" << std::endl;
@@ -139,7 +148,7 @@ int main( int ac, char** av )
             {
                 std::string line;
                 std::getline( std::cin, line );
-                if( line.empty() ) { break; }
+                if( line.empty() ) { continue; }
                 const std::vector< std::string >& v = comma::split( line, delimiter );
                 std::string comma;
                 for( unsigned int i = 0; i < v.size(); ++i )
@@ -163,7 +172,7 @@ int main( int ac, char** av )
             {
                 std::string line;
                 std::getline( std::cin, line );
-                if( line.empty() ) { break; }
+                if( line.empty() ) { continue; }
                 if( !keep.empty() || !remove.empty() )
                 {
                     // todo: quick and dirty, refactor, don't do it for each line
@@ -256,6 +265,31 @@ int main( int ac, char** av )
             }
             return 0;
         }
+        if( operation == "rename" )
+        {
+            const std::vector< std::string >& fields = comma::split( options.value< std::string >( "--fields" ), ',' );
+            const std::vector< std::string >& to = comma::split( options.value< std::string >( "--to" ), ',' );
+            if( fields.size() != to.size() ) { std::cerr << "csv-fields: expected equal number of fields in --fields and --to, got: " << fields.size() << " and " << to.size() << std::endl; return 1; }
+            typedef std::map< std::string, std::string > map_t;
+            map_t names; // very small map, thus performance should be close to constant time
+            for( unsigned int i = 0; i < fields.size(); names[ fields[i] ] = to[i], ++i );
+            while( std::cin.good() )
+            {
+                std::string line;
+                std::string comma;
+                std::getline( std::cin, line );
+                if( line.empty() ) { continue; }
+                const std::vector< std::string >& f = comma::split( line, delimiter );
+                for( unsigned int i = 0; i < f.size(); ++i )
+                {
+                    map_t::const_iterator it = names.find( f[i] );
+                    std::cout << comma << ( it == names.end() ? f[i] : it->second );
+                    comma = delimiter;
+                }
+                std::cout << std::endl;
+            }
+            return 0;
+        }
         if( operation == "strip" )
         {
             options.assert_mutually_exclusive( "--fields,--except" );
@@ -273,7 +307,7 @@ int main( int ac, char** av )
                 std::string line;
                 std::string comma;
                 std::getline( std::cin, line );
-                if( line.empty() ) { break; }
+                if( line.empty() ) { continue; }
                 const std::vector< std::string >& v = comma::split( line, delimiter );
                 for( unsigned int i = 0; i < v.size(); ++i )
                 {
@@ -295,7 +329,7 @@ int main( int ac, char** av )
                 std::string line;
                 std::string comma;
                 std::getline( std::cin, line );
-                if( line.empty() ) { break; }
+                if( line.empty() ) { continue; }
                 const std::vector< std::string >& v = comma::split( line, delimiter );
                 for( unsigned int i = 0; i < v.size(); ++i )
                 {
