@@ -76,4 +76,4 @@ rename[0]="echo a,b,a,d,a | csv-fields rename --fields a --to z"
 rename[1]="echo a | csv-fields rename --fields a --to z"
 rename[2]="echo a,b,a,b,a | csv-fields rename --fields a,b --to x,y"
 rename[3]="echo a,b,k/a | csv-fields rename --fields a,b --to x,y"
-
+rename[4]="echo a,b | csv-fields rename --fields a,b --to c[0],c[1]"

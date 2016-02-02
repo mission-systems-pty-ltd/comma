@@ -142,3 +142,5 @@ rename[2]/output="x,y,x,y,x"
 rename[2]/status=0
 rename[3]/output="x,y,k/a"
 rename[3]/status=0
+rename[4]/output="c[0],c[1]"
+rename[4]/status=0
