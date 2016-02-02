@@ -140,7 +140,7 @@ ENDIF( APPLE )
 OPTION( BUILD_TESTS "build unit tests" OFF )
 SET( comma_BUILD_TESTS ${BUILD_TESTS} )
 
-OPTION( BUILD_PYTHON_PACKAGES "install comma python packages" OFF )
+OPTION( BUILD_PYTHON_PACKAGES "install comma python packages" ON )
 
 INCLUDE( CMakeDependentOption )
 CMAKE_DEPENDENT_OPTION( ADD_PYTHON_PACKAGES_TO_RPM "add comma python packages to rpm" OFF "BUILD_PYTHON_PACKAGES" ON )
