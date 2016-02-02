@@ -1,55 +1,71 @@
-IF( BUILD_PYTHON_PACKAGES )
-    EXECUTE_PROCESS( COMMAND rm -f ${CMAKE_CURRENT_SOURCE_DIR}/disabled )
-    MESSAGE( STATUS "${CMAKE_CURRENT_SOURCE_DIR}/disabled has been removed: testing python modules and applications is enabled" )
-ELSE( BUILD_PYTHON_PACKAGES )
-    MESSAGE( STATUS "comma/python is disabled" )
+IF( NOT BUILD_PYTHON_PACKAGES )
     EXECUTE_PROCESS( COMMAND touch ${CMAKE_CURRENT_SOURCE_DIR}/disabled )
     MESSAGE( STATUS "disabled file has been dropped in ${CMAKE_CURRENT_SOURCE_DIR}: testing python modules and applications is disabled" )
-ENDIF( BUILD_PYTHON_PACKAGES )
+    RETURN()
+ENDIF( NOT BUILD_PYTHON_PACKAGES )
 
-IF( BUILD_PYTHON_PACKAGES )
-    FIND_PROGRAM( PYTHON "python" )
+FIND_PROGRAM( PYTHON "python" )
 
-    IF( PYTHON )
+IF( NOT PYTHON )
+    MESSAGE( WARNING "python not found" )
+    MESSAGE( STATUS "comma/python modules and scripts will not be installed" )
+    EXECUTE_PROCESS( COMMAND touch ${CMAKE_CURRENT_SOURCE_DIR}/disabled )
+    MESSAGE( STATUS "disabled file has been dropped in ${CMAKE_CURRENT_SOURCE_DIR}: testing python modules and applications is disabled" )
+    RETURN()
+ENDIF( NOT PYTHON )
 
-        SET( PYTHON_PACKAGE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX} CACHE STRING "install prefix for python packages, leave empty for python default prefix" )
+EXECUTE_PROCESS( COMMAND ${PYTHON} -c "import numpy; print( numpy.__version__ );"
+    RESULT_VARIABLE NUMPY_EXIT_CODE
+    OUTPUT_VARIABLE NUMPY_VERSION_STRING
+    ERROR_VARIABLE NUMPY_ERROR
+    OUTPUT_STRIP_TRAILING_WHITESPACE )
 
-        SET( INSTALL_PREFIX_OPTION "" )
-        IF( PYTHON_PACKAGE_INSTALL_PREFIX )
-            SET( INSTALL_PREFIX_OPTION "--prefix=${PYTHON_PACKAGE_INSTALL_PREFIX}" )
-            IF( NOT WIN32 )
-                SET( INSTALL_PREFIX_OPTION "${INSTALL_PREFIX_OPTION} --exec-prefix=${PYTHON_PACKAGE_INSTALL_PREFIX}" )
-            ENDIF( NOT WIN32 )
-        ENDIF( PYTHON_PACKAGE_INSTALL_PREFIX )
+IF( NUMPY_EXIT_CODE MATCHES 0 )
+    MESSAGE( STATUS "found python numpy module version ${NUMPY_VERSION_STRING}" )
+ELSE( NUMPY_EXIT_CODE MATCHES 0 )
+    MESSAGE( WARNING "python numpy module not found; install it or disable BUILD_PYTHON_PACKAGES" )
+    MESSAGE( STATUS "comma/python modules and scripts will not be installed" )
+    EXECUTE_PROCESS( COMMAND touch ${CMAKE_CURRENT_SOURCE_DIR}/disabled )
+    MESSAGE( STATUS "disabled file has been dropped in ${CMAKE_CURRENT_SOURCE_DIR}: testing python modules and applications is disabled" )
+    RETURN()
+ENDIF( NUMPY_EXIT_CODE MATCHES 0 )
 
-        SET( SETUP_PY "${CMAKE_CURRENT_SOURCE_DIR}/setup.py" )
+EXECUTE_PROCESS( COMMAND rm -f ${CMAKE_CURRENT_SOURCE_DIR}/disabled )
+MESSAGE( STATUS "${CMAKE_CURRENT_SOURCE_DIR}/disabled has been removed: testing python modules and applications is enabled" )
 
-        SET( BUILD_BASE "${CMAKE_CURRENT_BINARY_DIR}/build" )
+SET( PYTHON_PACKAGE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX} CACHE STRING "install prefix for python packages, leave empty for python default prefix" )
 
-        ADD_CUSTOM_TARGET( python_build ALL
-                          ${PYTHON} ${SETUP_PY} build --build-base ${BUILD_BASE}
-                          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+SET( INSTALL_PREFIX_OPTION "" )
+IF( PYTHON_PACKAGE_INSTALL_PREFIX )
+    SET( INSTALL_PREFIX_OPTION "--prefix=${PYTHON_PACKAGE_INSTALL_PREFIX}" )
+    IF( NOT WIN32 )
+        SET( INSTALL_PREFIX_OPTION "${INSTALL_PREFIX_OPTION} --exec-prefix=${PYTHON_PACKAGE_INSTALL_PREFIX}" )
+    ENDIF( NOT WIN32 )
+ENDIF( PYTHON_PACKAGE_INSTALL_PREFIX )
 
-        INSTALL( CODE "EXECUTE_PROCESS(
-                            COMMAND ${PYTHON} ${SETUP_PY} build --build-base ${BUILD_BASE} install ${INSTALL_PREFIX_OPTION}
-                            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )" )
+SET( SETUP_PY "${CMAKE_CURRENT_SOURCE_DIR}/setup.py" )
 
-        SET_DIRECTORY_PROPERTIES( PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES build )
+SET( BUILD_BASE "${CMAKE_CURRENT_BINARY_DIR}/build" )
 
-        IF( ADD_PYTHON_PACKAGES_TO_RPM )
-            SET( PYTHON_TMP "/tmp/comma/python_modules_for_rpm_install" )
-            INSTALL( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ DESTINATION ${PYTHON_TMP}
-                FILES_MATCHING PATTERN "*.py"
-                PATTERN test EXCLUDE
-                PATTERN output EXCLUDE
-                PATTERN stats EXCLUDE
-                PATTERN build EXCLUDE
-                PATTERN examples EXCLUDE )
-        ENDIF( ADD_PYTHON_PACKAGES_TO_RPM )
+ADD_CUSTOM_TARGET( python_build ALL
+                ${PYTHON} ${SETUP_PY} build --build-base ${BUILD_BASE}
+                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
-        ADD_SUBDIRECTORY( comma )
+INSTALL( CODE "EXECUTE_PROCESS(
+                    COMMAND ${PYTHON} ${SETUP_PY} build --build-base ${BUILD_BASE} install ${INSTALL_PREFIX_OPTION}
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )" )
 
-    ELSE( PYTHON )
-        MESSAGE( WARNING "python not found, python modules and scripts will not be installed" )
-    ENDIF( PYTHON )
-ENDIF( BUILD_PYTHON_PACKAGES )
+SET_DIRECTORY_PROPERTIES( PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES build )
+
+IF( ADD_PYTHON_PACKAGES_TO_RPM )
+    SET( PYTHON_TMP "/tmp/comma/python_modules_for_rpm_install" )
+    INSTALL( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ DESTINATION ${PYTHON_TMP}
+        FILES_MATCHING PATTERN "*.py"
+        PATTERN test EXCLUDE
+        PATTERN output EXCLUDE
+        PATTERN stats EXCLUDE
+        PATTERN build EXCLUDE
+        PATTERN examples EXCLUDE )
+ENDIF( ADD_PYTHON_PACKAGES_TO_RPM )
+
+ADD_SUBDIRECTORY( comma )
