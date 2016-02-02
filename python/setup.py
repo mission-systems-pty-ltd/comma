@@ -4,7 +4,7 @@ from distutils.core import setup
 
 setup(
         name                = 'comma',
-        version             = '1.0',
+        version             = open('comma/version.py').readlines()[-1].strip().split()[-1].strip('\"'),
         description         = 'comma python utilties',
         url                 = 'https://github.com/acfr/comma',
         license             = 'BSD 3-Clause',
