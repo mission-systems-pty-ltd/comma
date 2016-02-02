@@ -71,3 +71,9 @@ cut[4]="echo a,b,c,d,e | csv-fields cut --fields b,,,d"
 cut[5]="echo ,b,c,d,e | csv-fields cut --fields b,d"
 cut[6]="echo ,b,,d,e | csv-fields cut --fields b,d"
 cut[7]="echo ,b,c,d,, | csv-fields cut --fields b,d"
+
+rename[0]="echo a,b,a,d,a | csv-fields rename --fields a --to z"
+rename[1]="echo a | csv-fields rename --fields a --to z"
+rename[2]="echo a,b,a,b,a | csv-fields rename --fields a,b --to x,y"
+rename[3]="echo a,b,k/a | csv-fields rename --fields a,b --to x,y"
+
