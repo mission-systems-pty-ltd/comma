@@ -29,13 +29,17 @@ class stream:
       self.input = comma.csv.stream( input_t, fields=self.args.fields, **self.csv_options )
 
   def initialize_output( self ):
-    inferred_fields = ','.join( e.split('=',1)[0].strip() for e in self.args.expressions.split(';') )
-    fields = self.args.append_fields if self.args.append_fields else inferred_fields
-    format = self.args.append_binary if self.args.binary and self.args.append_binary else ','.join( ('d',)*len( fields.split(',') ) )
+    if self.args.append_fields:
+      fields = self.args.append_fields
+    else:
+      expressions = sum( [ line.split(';') for line in self.args.expressions.splitlines() if line.strip() ], [] )
+      fields = ','.join( e.split('=',1)[0].strip() for e in expressions )
+    format = self.args.append_binary if self.args.append_binary else ','.join( ('d',)*len( fields.split(',') ) )
     if self.args.verbose:
       print >> sys.stderr, "append fields: '{}'".format( fields )
       print >> sys.stderr, "append format: '{}'".format( format )
       print >> sys.stderr, "numpy format: '{}'".format( ','.join( comma.csv.format.to_numpy( format ) ) )
+      print >> sys.stderr, "expressions: '{}'".format( self.args.expressions )
     try: check_fields( fields.split(','), input_fields=self.args.fields.split(',') )
     except Exception, message: raise Exception( "attached fields error: " + str( message ) )
     output_t = comma.csv.struct( fields, *comma.csv.format.to_numpy( format ) )
@@ -56,12 +60,10 @@ def check_fields( fields, input_fields=(), env=get_dict( numpy ) ):
     if name == '__input' or name == '__output' or name in env: raise Exception( "'{}' is a reserved name".format( name ) )
     if name in input_fields: raise Exception( "'{}' is an input field name".format( name ) )
 
-add_semicolon = lambda _: _ + ( ';' if _ and _[-1] != ';' else '' )
-
 def evaluate( expressions, stream, dangerous=False ):
-  initialize_input = ';'.join( "{name} = __input['{name}']".format( name=name ) for name in stream.nonblank_input_fields )
-  initialize_output = ';'.join( "__output['{name}'] = {name}".format( name=name ) for name in stream.output.struct.fields )
-  code = compile( add_semicolon( initialize_input ) + add_semicolon( expressions ) + initialize_output, '<string>', 'exec' )
+  initialize_input = '\n'.join( "{name} = __input['{name}']".format( name=name ) for name in stream.nonblank_input_fields )
+  initialize_output = '\n'.join( "__output['{name}'] = {name}".format( name=name ) for name in stream.output.struct.fields )
+  code = compile( initialize_input + '\n' + expressions + '\n' + initialize_output + '\n', '<string>', 'exec' )
   restricted_numpy = get_dict( numpy ) if dangerous else get_dict( numpy, update=dict(__builtins__={}), delete=['sys'] )
   output = numpy.empty( stream.input.size, dtype=stream.output.struct )
   for i in stream.input.iter():

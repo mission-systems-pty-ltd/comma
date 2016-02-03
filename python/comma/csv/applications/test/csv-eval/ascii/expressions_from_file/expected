@@ -1,0 +1,11 @@
+output[0]/x=1 +/- eps
+output[0]/y=2 +/- eps
+output[0]/a=0.6666666666666666 +/- eps
+output[0]/b=0.595867810299697 +/- eps
+output[0]/c=0.595867810299697 +/- eps
+output[1]/x=3 +/- eps
+output[1]/y=4 +/- eps
+output[1]/a=0.2857142857142857 +/- eps
+output[1]/b=3.061779795535341 +/- eps
+output[1]/c=0.2857142857142857 +/- eps
+

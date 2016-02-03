@@ -1,0 +1,4 @@
+a = 2/(x+y)
+
+b = x-sin(y)*a**2; c = minimum(a,b)
+
