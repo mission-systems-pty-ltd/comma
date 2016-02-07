@@ -31,14 +31,15 @@ def format_from_types( types ):
   return ','.join( type if isinstance( type, basestring ) else numpy.dtype( type ).str for type in types )
 
 class struct:
+  default_field_name = 'comma_struct_default_field_name_'
   def __init__( self, concise_fields, *concise_types ):
     if '/' in concise_fields: raise Exception( "expected fields without '/', got '{}'".format( concise_fields ) )
-    if '' in concise_fields.split(','): raise Exception( "expected non-blank fields, got '{}'".format( concise_fields ) )
     if len( concise_fields.split(',') ) != len( concise_types ): raise Exception( "expected {} types for '{}', got {} types".format( len( concise_fields.split(',') ), concise_fields, len( concise_types ) ) )
-    self.dtype = numpy.dtype( zip( concise_fields.split(','), concise_types ) )
+    concise_fields_no_blanks = [ field if field else '{}{}'.format( struct.default_field_name, index ) for index, field in enumerate( concise_fields.split(',') ) ]
+    self.dtype = numpy.dtype( zip( concise_fields_no_blanks, concise_types ) )
     fields, types = [], []
     self.shorthand = {}
-    for name, type in zip( concise_fields.split(','), concise_types ):
+    for name, type in zip( concise_fields_no_blanks, concise_types ):
       if isinstance( type, struct ):
         fields_of_type = [ name + '/' + field for field in type.fields ]
         fields.extend( fields_of_type )
