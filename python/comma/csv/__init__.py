@@ -34,8 +34,10 @@ class struct:
   default_field_name = 'comma_struct_default_field_name_'
   def __init__( self, concise_fields, *concise_types ):
     if '/' in concise_fields: raise Exception( "expected fields without '/', got '{}'".format( concise_fields ) )
-    if len( concise_fields.split(',') ) != len( concise_types ): raise Exception( "expected {} types for '{}', got {} types".format( len( concise_fields.split(',') ), concise_fields, len( concise_types ) ) )
-    concise_fields_no_blanks = [ field if field else '{}{}'.format( struct.default_field_name, index ) for index, field in enumerate( concise_fields.split(',') ) ]
+    given_fields = concise_fields.split(',')
+    if len( given_fields ) > len( concise_types ): raise Exception( "expected no more than {} fields for {} types, got {}".format( len( concise_types ), len( concise_types ), concise_fields ) )
+    omitted_fields = [''] * ( len( concise_types ) - len( given_fields ) )
+    concise_fields_no_blanks = [ field if field else '{}{}'.format( struct.default_field_name, index ) for index, field in enumerate( given_fields + omitted_fields ) ]
     self.dtype = numpy.dtype( zip( concise_fields_no_blanks, concise_types ) )
     fields, types = [], []
     self.shorthand = {}
