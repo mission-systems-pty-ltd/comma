@@ -18,15 +18,12 @@ class stream:
     if not self.args.fields or not self.args.fields.translate( None, ',' ).strip(): raise Exception( "specify input stream fields, e.g. --fields=x,y" )
     self.nonblank_input_fields = filter( None, self.args.fields.split(',') )
     if self.args.binary:
-      given_fields = self.args.fields.split(',')
-      types = comma.csv.format.to_numpy( self.args.binary )
-      omitted_fields = [''] * ( len( types ) - len( given_fields ) )
-      fields = [ "__blank{}".format( index ) if not name else name for index,name in enumerate( given_fields + omitted_fields ) ]
-      input_t = comma.csv.struct( ','.join( fields ), *types )
+      input_t = comma.csv.struct( self.args.fields, *comma.csv.format.to_numpy( self.args.binary ) )
       self.input = comma.csv.stream( input_t, binary=True, **self.csv_options )
     else:
-      input_t = comma.csv.struct( ','.join( self.nonblank_input_fields ), *('float64',)*len( self.nonblank_input_fields ) )
-      self.input = comma.csv.stream( input_t, fields=self.args.fields, **self.csv_options )
+      types = [ 'float64' if field else 'S' for field in self.args.fields.split(',') ]
+      input_t = comma.csv.struct( self.args.fields, *types )
+      self.input = comma.csv.stream( input_t, **self.csv_options )
 
   def initialize_output( self ):
     if self.args.append_fields:
