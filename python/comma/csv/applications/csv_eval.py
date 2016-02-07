@@ -18,13 +18,9 @@ class stream:
     self.nonblank_input_fields = filter( None, self.args.fields.split(',') )
     if not self.nonblank_input_fields: raise Exception( "specify input stream fields, e.g. --fields=x,y" )
     check_fields( self.nonblank_input_fields )
-    if self.args.binary:
-      input_t = comma.csv.struct( self.args.fields, *comma.csv.format.to_numpy( self.args.binary ) )
-      self.input = comma.csv.stream( input_t, binary=True, **self.csv_options )
-    else:
-      types = [ 'float64' if field else 'S' for field in self.args.fields.split(',') ]
-      input_t = comma.csv.struct( self.args.fields, *types )
-      self.input = comma.csv.stream( input_t, **self.csv_options )
+    types = comma.csv.format.to_numpy( self.args.binary ) if self.args.binary else tuple( 'float64' if field else 'S' for field in self.args.fields.split(',') )
+    input_t = comma.csv.struct( self.args.fields, *types )
+    self.input = comma.csv.stream( input_t, binary=bool( self.args.binary ), **self.csv_options )
 
   def initialize_output( self ):
     if self.args.append_fields:
