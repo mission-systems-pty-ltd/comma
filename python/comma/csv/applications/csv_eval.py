@@ -15,8 +15,9 @@ class stream:
     self.initialize_output()
 
   def initialize_input( self ):
-    if not self.args.fields or not self.args.fields.translate( None, ',' ).strip(): raise Exception( "specify input stream fields, e.g. --fields=x,y" )
     self.nonblank_input_fields = filter( None, self.args.fields.split(',') )
+    if not self.nonblank_input_fields: raise Exception( "specify input stream fields, e.g. --fields=x,y" )
+    check_fields( self.nonblank_input_fields )
     if self.args.binary:
       input_t = comma.csv.struct( self.args.fields, *comma.csv.format.to_numpy( self.args.binary ) )
       self.input = comma.csv.stream( input_t, binary=True, **self.csv_options )
@@ -31,19 +32,15 @@ class stream:
     else:
       expressions = sum( [ line.split(';') for line in self.args.expressions.splitlines() if line.strip() ], [] )
       fields = ','.join( e.split('=',1)[0].strip() for e in expressions )
+    check_fields( fields.split(','), input_fields=self.nonblank_input_fields )
     format = self.args.append_binary if self.args.append_binary else ','.join( ('d',)*len( fields.split(',') ) )
     if self.args.verbose:
       print >> sys.stderr, "append fields: '{}'".format( fields )
       print >> sys.stderr, "append format: '{}'".format( format )
       print >> sys.stderr, "numpy format: '{}'".format( ','.join( comma.csv.format.to_numpy( format ) ) )
       print >> sys.stderr, "expressions: '{}'".format( self.args.expressions )
-    try: check_fields( fields.split(','), input_fields=self.args.fields.split(',') )
-    except Exception, message: raise Exception( "attached fields error: " + str( message ) )
     output_t = comma.csv.struct( fields, *comma.csv.format.to_numpy( format ) )
-    if self.args.binary:
-      self.output = comma.csv.stream( output_t, tied=self.input, binary=True, **self.csv_options )
-    else:
-      self.output = comma.csv.stream( output_t, tied=self.input, **self.csv_options )
+    self.output = comma.csv.stream( output_t, tied=self.input, binary=bool( self.args.binary ), **self.csv_options )
 
 def get_dict( module, update={}, delete=[] ):
   d = module.__dict__.copy()
@@ -112,7 +109,7 @@ examples:
 """.format( script_name=sys.argv[0].split('/')[-1] )
   parser = argparse.ArgumentParser( description=description, epilog=epilog, formatter_class=lambda prog: argparse.RawTextHelpFormatter( prog, max_help_position=50 ) )  
   parser.add_argument( "expressions", help="semicolon-separated numerical expressions to evaluate (see examples)" )
-  parser.add_argument( "--verbose", "-v", action="store_true", help="increase output verbosity" )
+  parser.add_argument( "--verbose", "-v", action="store_true", help="output expressions and appended field names/types to stderr" )
   parser.add_argument( "--dangerous", action="store_true", help=argparse.SUPPRESS )
   add_csv_options( parser )
   args = parser.parse_args()
