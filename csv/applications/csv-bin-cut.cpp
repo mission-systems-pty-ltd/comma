@@ -55,30 +55,22 @@ static void usage()
     std::cerr << std::endl;
     std::cerr << "simplified, but similar as Linux cut utility, but for \"binary csv\"" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "DEPRECATED: please use csv-shuffle" << std::endl;
+    std::cerr << "DEPRECATED: use csv-shuffle" << std::endl;
     std::cerr << std::endl;
-    exit( 1 );
+    std::cerr << "usage: cat blah.bin | csv-bin-cut <format> --fields=<fields> [--complement] [--flush]" << std::endl;
+    std::cerr << "    <fields>: field numbers, starting from 1 (to keep" << std::endl;
+    std::cerr << "              consistent with the standard cut utility)" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << csv::format::usage() << std::endl;
+    std::cerr << std::endl;
+    std::cerr << comma::contact_info << std::endl;
+    std::cerr << std::endl;
+    exit( -1 );
 }
-
-// static void usage()
-// {
-//     std::cerr << std::endl;
-//     std::cerr << "simplified, but similar as Linux cut utility, but for \"binary csv\"" << std::endl;
-//     std::cerr << std::endl;
-//     std::cerr << "usage: cat blah.bin | csv-bin-cut <format> --fields=<fields> [--complement] [--flush]" << std::endl;
-//     std::cerr << "    <fields>: field numbers, starting from 1 (to keep" << std::endl;
-//     std::cerr << "              consistent with the standard cut utility)" << std::endl;
-//     std::cerr << std::endl;
-//     std::cerr << csv::format::usage() << std::endl;
-//     std::cerr << std::endl;
-//     std::cerr << comma::contact_info << std::endl;
-//     std::cerr << std::endl;
-//     exit( -1 );
-// }
 
 int main( int ac, char** av )
 {
-    usage();
+    std::cerr << "csv-bin-cut: DEPRECATED: use csv-shuffle" << std::endl;
     #ifdef WIN32
     _setmode( _fileno( stdin ), _O_BINARY ); /// @todo move to a library
     _setmode( _fileno( stdout ), _O_BINARY ); /// @todo move to a library
