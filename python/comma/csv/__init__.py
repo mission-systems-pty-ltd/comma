@@ -138,13 +138,13 @@ class stream:
     size = self.size if size is None else size
     if size < 0:
       if self.source == sys.stdin: raise Exception( "expected positive size when stream source is stdin, got {}".format( size ) )
-      size = -1 if self.binary else None
+      size = -1 # read entire file
     if self.binary:
       self.input_data = numpy.fromfile( self.source, dtype=self.input_dtype, count=size )
     else:
       with warnings.catch_warnings():
         warnings.simplefilter( 'ignore' )
-        self.ascii_buffer = ','.join( self.source.readline() for _ in xrange( size ) )
+        self.ascii_buffer = self.source.read() if size == -1 else ''.join( self.source.readline() for _ in xrange( size ) )
         if not self.ascii_buffer: return None
         self.input_data = numpy.loadtxt( StringIO( self.ascii_buffer ), dtype=self.input_dtype , delimiter=self.delimiter, converters=self.ascii_converters, ndmin=1, usecols=self.usecols )
     if self.input_data.size == 0: return None
