@@ -85,7 +85,7 @@ static void usage(char const * const txt = "")
         "\n    hours / minutes / seconds"
         "\n    percent / fraction"
         "\n"
-        "\n    any case is supoorted and so are abbreviations"
+        "\n    any case is supported and so are abbreviations"
         "\n         meters, metres, m"
         "\n         feet, ft"
         "\n         statute-miles, miles, mi"
@@ -101,8 +101,8 @@ static void usage(char const * const txt = "")
         "\ndata driven"
         "\n    This program can be configured to read the --from units from the input data."
         "\n    End a field name with 'units', to have it treated as --from for a field."
-        "\n    You can explicitlty or implicitly value for a data field."
-        "\n    So for you can specify x or x/value with x/units to drive --from by the date.";
+        "\n    You can explicitly or implicitly set value for a data field."
+        "\n    So for example you can specify x or x/value with x/units to drive --from by the data.";
     static char const * const msg_examples =
         "\n"
         "\nexamples"
