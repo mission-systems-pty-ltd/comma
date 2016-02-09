@@ -144,7 +144,7 @@ class stream:
     else:
       with warnings.catch_warnings():
         warnings.simplefilter( 'ignore' )
-        self.ascii_buffer = ''.join( itertools.islice( self.source, size ) )
+        self.ascii_buffer = ','.join( self.source.readline() for _ in xrange( size ) )
         if not self.ascii_buffer: return None
         self.input_data = numpy.loadtxt( StringIO( self.ascii_buffer ), dtype=self.input_dtype , delimiter=self.delimiter, converters=self.ascii_converters, ndmin=1, usecols=self.usecols )
     if self.input_data.size == 0: return None
