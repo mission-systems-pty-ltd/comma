@@ -5,7 +5,7 @@ function process_records
     python -c "$( cat <<END
 import comma
 
-t = comma.csv.struct( 's,x,y,t', 'S2', 'i4', 'f8', 'datetime64[us]' )
+t = comma.csv.struct( 's1,x,y,t,array,s2,z', 'S2', 'i4', 'f8', 'datetime64[us]', '2u1', 'S4', 'f8' )
 s = comma.csv.stream( t )
 
 for r in s.iter( size=1 ):
