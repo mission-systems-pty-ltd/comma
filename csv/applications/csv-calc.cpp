@@ -80,6 +80,7 @@ static void usage()
     std::cerr << "                 if 'id' field present, calculate by id" << std::endl;
     std::cerr << "                 if 'block' and 'id' fields present, calculate by id in each block" << std::endl;
     std::cerr << "                 block and id fields will be appended to the output" << std::endl;
+    std::cerr << "    --output-fields: print output field names for this operation and then exit" << std::endl;
     std::cerr << "    --format: in ascii mode: format hint string containing the types of the csv data, default: double or time" << std::endl;
     std::cerr << "    --binary,-b: in binary mode: format string of the csv data types" << std::endl;
     std::cerr << comma::csv::format::usage() << std::endl;
@@ -709,6 +710,25 @@ int main( int ac, char** av )
         boost::optional< comma::uint32 > block;
         bool has_block = csv.has_field( "block" );
         bool has_id = csv.has_field( "id" );
+        
+        if (options.exists("--output-fields"))
+        {
+            std::vector < std::string > fields = comma::split(csv.fields, ',');
+            std::vector < std::string > output_fields;
+            for (int op = 0; op < v.size(); op++)
+            {
+                for (int f = 0; f < fields.size(); f++ )
+                {
+                    if (fields[f] == "" || fields[f] == "id" || fields[f] == "block") { continue; }
+                    output_fields.push_back(fields[f] + "/" + v[op]);
+                }
+            }
+            if (has_id) { output_fields.push_back("id"); }
+            if (has_block) { output_fields.push_back("block"); }
+            std::cout << comma::join(output_fields, ',') << std::endl;
+            return 0;
+        }
+        
         comma::signal_flag is_shutdown;
         while( !is_shutdown && std::cin.good() && !std::cin.eof() )
         {
