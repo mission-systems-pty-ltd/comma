@@ -2,7 +2,7 @@ from __future__ import absolute_import
 import signal
 import sys
 
-MANAGED_SIGNALS = tuple( [ signal.SIGINT, signal.SIGTERM, signal.SIGPIPE, signal.SIGHUP ] )
+MANAGED_SIGNALS = tuple( [ signal.SIGINT, signal.SIGTERM, signal.SIGHUP ] )
 
 class is_shutdown:
   def __init__( self ):
@@ -16,3 +16,5 @@ class is_shutdown:
 
   def __nonzero__( self ):
     return self.state
+
+signal.signal( signal.SIGPIPE, signal.SIG_DFL )
