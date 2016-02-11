@@ -30,6 +30,19 @@ def structured_dtype( numpy_format ):
 def format_from_types( types ):
   return ','.join( type if isinstance( type, basestring ) else numpy.dtype( type ).str for type in types )
 
+def readlines( source, size ):
+  if size >= 0:
+    lines = ''
+    number_of_lines = 0
+    while number_of_lines < size:
+      line = source.readline()
+      if not line: break
+      lines += line
+      number_of_lines += 1
+  else:
+    lines = source.read()
+  return lines
+
 class struct:
   default_field_name = 'comma_struct_default_field_name_'
   def __init__( self, concise_fields, *concise_types ):
@@ -103,9 +116,11 @@ class stream:
       if len( self.fields ) != len( self.input_dtype.names ): raise Exception( "expected same number of fields and format types, got '{}' and '{}'".format( ','.join( self.fields ), format ) )
     else:
       self.input_dtype = structured_dtype( format_from_types( self.struct.type_of_field.get( name ) or 'S' for name in self.fields ) ) if self.fields != self.struct.fields else self.struct.flat_dtype
-      self.usecols = tuple( range( len( unrolled_types_of_flat_dtype( self.input_dtype ) ) ) )
+      unrolled_types = unrolled_types_of_flat_dtype( self.input_dtype )
+      self.ascii_converters = comma.csv.time.ascii_converters( unrolled_types )
+      self.usecols = tuple( range( len( unrolled_types ) ) )
+      self.filling_values = '' if len( unrolled_types ) == 1 else ('',)*len( unrolled_types )
     self.size = self.tied.size if self.tied else ( 1 if self.flush else max( 1, stream.buffer_size_in_bytes / self.input_dtype.itemsize ) )
-    self.ascii_converters = comma.csv.time.ascii_converters( unrolled_types_of_flat_dtype( self.input_dtype ) )
     if set( self.fields ).issuperset( self.struct.fields ):
       self.missing_fields = ()
     else:
@@ -138,15 +153,15 @@ class stream:
     size = self.size if size is None else size
     if size < 0:
       if self.source == sys.stdin: raise Exception( "expected positive size when stream source is stdin, got {}".format( size ) )
-      size = -1 if self.binary else None
+      size = -1 # read entire file
     if self.binary:
       self.input_data = numpy.fromfile( self.source, dtype=self.input_dtype, count=size )
     else:
       with warnings.catch_warnings():
         warnings.simplefilter( 'ignore' )
-        self.ascii_buffer = ''.join( itertools.islice( self.source, size ) )
+        self.ascii_buffer = readlines( self.source, size )
         if not self.ascii_buffer: return None
-        self.input_data = numpy.loadtxt( StringIO( self.ascii_buffer ), dtype=self.input_dtype , delimiter=self.delimiter, converters=self.ascii_converters, ndmin=1, usecols=self.usecols )
+        self.input_data = numpy.atleast_1d( numpy.genfromtxt( StringIO( self.ascii_buffer ), dtype=self.input_dtype, delimiter=self.delimiter, converters=self.ascii_converters, usecols=self.usecols, filling_values=self.filling_values, comments=None ) )
     if self.input_data.size == 0: return None
     if self.data_extraction_dtype:
       complete_data = merge_arrays( self.input_data, numpy.zeros( self.input_data.size, dtype=self.missing_fields_dtype ) ) if self.missing_fields else self.input_data

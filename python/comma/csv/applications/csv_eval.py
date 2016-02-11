@@ -3,9 +3,9 @@
 import sys
 import argparse
 import numpy
-import comma.csv
-from signal import signal, SIGPIPE, SIG_DFL
 import re
+import comma.csv
+import comma.signal
 
 class stream:
   def __init__( self, args ):
@@ -56,7 +56,10 @@ def evaluate( expressions, stream, dangerous=False ):
   code = compile( initialize_input + '\n' + expressions + '\n' + initialize_output + '\n', '<string>', 'exec' )
   restricted_numpy = get_dict( numpy ) if dangerous else get_dict( numpy, update=dict(__builtins__={}), delete=['sys'] )
   output = numpy.empty( stream.input.size, dtype=stream.output.struct )
-  for i in stream.input.iter():
+  is_shutdown = comma.signal.is_shutdown()
+  while not is_shutdown:
+    i = stream.input.read()
+    if i is None: break
     if output.size != i.size: output = numpy.empty( i.size, dtype=stream.output.struct )
     exec code in restricted_numpy, { '__input': i, '__output': output }
     stream.output.write( output )
@@ -109,7 +112,6 @@ examples:
   parser.add_argument( "--dangerous", action="store_true", help=argparse.SUPPRESS )
   add_csv_options( parser )
   args = parser.parse_args()
-  signal( SIGPIPE, SIG_DFL )
   evaluate( args.expressions.strip(';'), stream( args ), dangerous=args.dangerous )
 
 if __name__ == '__main__':
