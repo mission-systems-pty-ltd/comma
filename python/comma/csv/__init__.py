@@ -30,13 +30,6 @@ def structured_dtype( numpy_format ):
 def format_from_types( types ):
   return ','.join( type if isinstance( type, basestring ) else numpy.dtype( type ).str for type in types )
 
-def ascii_filling_value( type ):
-  c = numpy.dtype( type ).char
-  if c in numpy.typecodes['AllInteger'] + numpy.typecodes['Float']: return 0
-  elif c in numpy.typecodes['Datetime'] : return comma.csv.time.undefined_time()
-  elif c in 'S': return ''
-  else: raise Exception( "ascii filling value for type '{}' is not defined".format( type ) )
-
 def readlines( source, size ):
   if size >= 0:
     lines = ''
@@ -126,7 +119,7 @@ class stream:
       unrolled_types = unrolled_types_of_flat_dtype( self.input_dtype )
       self.ascii_converters = comma.csv.time.ascii_converters( unrolled_types )
       self.usecols = tuple( range( len( unrolled_types ) ) )
-      self.filling_values = tuple( ascii_filling_value( type ) for type in unrolled_types )
+      self.filling_values = '' if len( unrolled_types ) == 1 else ('',)*len( unrolled_types )
     self.size = self.tied.size if self.tied else ( 1 if self.flush else max( 1, stream.buffer_size_in_bytes / self.input_dtype.itemsize ) )
     if set( self.fields ).issuperset( self.struct.fields ):
       self.missing_fields = ()
