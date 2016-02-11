@@ -176,7 +176,7 @@ IF( comma_BUILD_TESTS )
     ENDIF( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR ${CMAKE_SYSTEM_NAME} MATCHES "Windows" )
 	
 #TT: Install tests to dir. This allows them to be packed by CPack.
-    SET ( comma_TESTS_DIR share/test/${PROJECT_NAME} )
+    SET ( comma_TESTS_DIR share/test )
 ENDIF( comma_BUILD_TESTS )
 
 IF( comma_BUILD_ZEROMQ )
