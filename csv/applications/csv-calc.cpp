@@ -70,7 +70,7 @@ static void usage()
     std::cerr << std::endl;
     std::cerr << "column-wise calculation, optionally by id and block" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "usage: cat data.csv | csv-calc <what> [<options>] > calc.csv" << std::endl;
+    std::cerr << "usage: cat data.csv | " << comma::verbose.app_name() << " <what> [<options>] > calc.csv" << std::endl;
     std::cerr << std::endl;
     std::cerr << "<what>: comma-separated list of operations" << std::endl;
     std::cerr << "        results will be output in the same order" << std::endl;
@@ -103,7 +103,7 @@ static void usage()
     std::cerr << comma::csv::format::usage() << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
-    std::cerr << "    seq 1 1000 | csv-calc percentile=0.9" << std::endl;
+    std::cerr << "    seq 1 1000 | " << comma::verbose.app_name() << " percentile=0.9" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -136,7 +136,7 @@ class Values
                 try { boost::posix_time::from_iso_string( v[i] ); input_format_ += "t"; }
                 catch( ... ) { input_format_ += "d"; }
             }
-            std::cerr << "csv-calc: guessed format: " << input_format_.string() << std::endl;
+            std::cerr << comma::verbose.app_name() << ": guessed format: " << input_format_.string() << std::endl;
             init_format_();
         }
 
@@ -438,13 +438,13 @@ namespace Operations
             void set_options( const std::vector< std::string >& options )
             {
                 if( options.size() == 0 ) {
-                    std::cerr << "csv-calc: percentile operation requires a percentile" << std::endl;
+                    std::cerr << comma::verbose.app_name() << ": percentile operation requires a percentile" << std::endl;
                     exit( 1 );
                 }
 
                 percentile_ = boost::lexical_cast< double >( options[0] );
                 if( percentile_ < 0.0 || percentile_ > 1.0 ) {
-                    std::cerr << "csv-calc: percentile value should be between 0 and 1, got " << percentile_ << std::endl;
+                    std::cerr << comma::verbose.app_name() << ": percentile value should be between 0 and 1, got " << percentile_ << std::endl;
                     exit( 1 );
                 }
 
@@ -452,7 +452,7 @@ namespace Operations
                     if( options[1] == "nearest" ) method_ = nearest;
                     else if( options[1] == "interpolate" ) method_ = interpolate;
                     else {
-                        std::cerr << "csv-calc: expected percentile method, got " << options[1] << std::endl;
+                        std::cerr << comma::verbose.app_name() << ": expected percentile method, got " << options[1] << std::endl;
                         exit( 1 );
                     }
                 }
@@ -842,7 +842,7 @@ int main( int ac, char** av )
         #ifdef WIN32
         if( csv.binary() ) { _setmode( _fileno( stdin ), _O_BINARY ); _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
-        if( unnamed.empty() ) { std::cerr << "csv-calc: please specify operations" << std::endl; exit( 1 ); }
+        if( unnamed.empty() ) { std::cerr << comma::verbose.app_name() << ": please specify operations" << std::endl; exit( 1 ); }
         std::vector< std::string > v = comma::split( unnamed[0], ',' );
         std::vector< Operations::operation_parameters > operations_parameters( v.size() );
         for( std::size_t i = 0; i < v.size(); ++i )
@@ -903,6 +903,6 @@ int main( int ac, char** av )
         calculate_and_output( csv, operations, block, has_block, has_id );
         return 0;
     }
-    catch( std::exception& ex ) { std::cerr << "csv-calc: " << ex.what() << std::endl; }
-    catch( ... ) { std::cerr << "csv-calc: unknown exception" << std::endl; }
+    catch( std::exception& ex ) { std::cerr << comma::verbose.app_name() << ": " << ex.what() << std::endl; }
+    catch( ... ) { std::cerr << comma::verbose.app_name() << ": unknown exception" << std::endl; }
 }
