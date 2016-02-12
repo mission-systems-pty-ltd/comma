@@ -45,6 +45,7 @@
 #include <boost/unordered_map.hpp>
 #include <comma/application/contact_info.h>
 #include <comma/application/signal_flag.h>
+#include <comma/application/verbose.h>
 #include <comma/base/exception.h>
 #include <comma/csv/format.h>
 #include <comma/csv/options.h>
@@ -84,6 +85,7 @@ static void usage()
     std::cerr << "    --output-fields: print output field names for this operation and then exit" << std::endl;
     std::cerr << "    --format: in ascii mode: format hint string containing the types of the csv data, default: double or time" << std::endl;
     std::cerr << "    --binary,-b: in binary mode: format string of the csv data types" << std::endl;
+    std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
     std::cerr << comma::csv::format::usage() << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
@@ -448,6 +450,7 @@ namespace Operations
 
                 if( count > 0 )
                 {
+                    comma::verbose << "calculating " << percentile_*100 << "th percentile using ";
                     T value;
                     typename std::multiset< T >::iterator it = values_.begin();
                     switch( method_ )
@@ -455,6 +458,7 @@ namespace Operations
                         std::size_t rank;
                         
                         case nearest:
+                            comma::verbose << "nearest rank method" << std::endl;
                             // Use the nearest rank method
                             // https://en.wikipedia.org/wiki/Percentile#The_Nearest_Rank_method
                             rank = ( percentile_ == 0.0 ? 1 : std::ceil( count * percentile_ ));
@@ -463,6 +467,8 @@ namespace Operations
                             break;
 
                         case interpolate:
+                            comma::verbose << "NIST linear interpolation method" << std::endl;
+                            comma::verbose << "see http://www.itl.nist.gov/div898/handbook/prc/section2/prc262.htm" << std::endl;
                             // Use linear interpolation.
                             // Note that there are many ways to do linear interpolation,
                             // three methods are discussed at
@@ -475,17 +481,24 @@ namespace Operations
                             // "Sample Quantiles in Statistical Packages",
                             // The American Statistician 50 (4): pp. 361-365.
                             double x = percentile_ * ( count + 1 );
+                            comma::verbose << "p = " << percentile_ << "; N = " << count
+                                           << "; p(N + 1) = " << x;
                             if( x <= 1.0 ) {
+                                comma::verbose << "; below 1 - choosing smallest value" << std::endl;
                                 value = *it;
                             } else if( x >= count ) {
+                                comma::verbose << "; above N - choosing largest value" << std::endl;
                                 value = *( values_.rbegin() );
                             } else {
                                 rank = x;
                                 double remainder = x - rank;
+                                comma::verbose << "; k = " << rank << "; d = " << remainder << std::endl;
                                 std::advance( it, rank - 1 );
                                 double v1 = *it;
                                 double v2 = *++it;
                                 value = v1 + ( v2 - v1 ) * remainder;
+                                comma::verbose << "v1 = " << v1 << "; v2 = " << v2
+                                               << "; result = " << value << std::endl;
                             }
                             break;
                     }
