@@ -65,7 +65,7 @@ static void bash_completion( unsigned const ac, char const * const * av )
     exit( 0 );
 }
 
-static void usage()
+static void usage( bool verbose )
 {
     std::cerr << std::endl;
     std::cerr << "column-wise calculation, optionally by id and block" << std::endl;
@@ -81,6 +81,7 @@ static void usage()
     std::cerr << "    percentile=<n>[:<method>]: percentile value" << std::endl;
     std::cerr << "        <n> is the desired percentile (e.g. 0.9)" << std::endl;
     std::cerr << "        <method> is one of 'nearest' or 'interpolate' (default: nearest)" << std::endl;
+    std::cerr << "        see --help --verbose for more details" << std::endl;
     std::cerr << "    sum: sum" << std::endl;
     std::cerr << "    centre: ( min + max ) / 2" << std::endl;
     std::cerr << "    diameter: max - min" << std::endl;
@@ -101,9 +102,25 @@ static void usage()
     std::cerr << "    --binary,-b: in binary mode: format string of the csv data types" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
     std::cerr << comma::csv::format::usage() << std::endl;
-    std::cerr << std::endl;
+    if( verbose )
+    {
+        std::cerr << "percentile method:" << std::endl;
+        std::cerr << "    The percentile method is either 'nearest' or 'interpolate'." << std::endl;
+        std::cerr << "    For an overview of percentile calculation methods see" << std::endl;
+        std::cerr << "    https://en.wikipedia.org/wiki/Percentile." << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "    'interpolate' implements the NIST recommended linear interpolation method." << std::endl;
+        std::cerr << "    See http://www.itl.nist.gov/div898/handbook/prc/section2/prc262.htm." << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "    For a really detailed analysis see the nine methods discussed in" << std::endl;
+        std::cerr << "    Hyndman, R.J. and Fan, Y. (November 1996)." << std::endl;
+        std::cerr << "    \"Sample Quantiles in Statistical Packages\"," << std::endl;
+        std::cerr << "    The American Statistician 50 (4): pp. 361-365." << std::endl;
+        std::cerr << std::endl;
+    }
     std::cerr << "examples" << std::endl;
     std::cerr << "    seq 1 1000 | " << comma::verbose.app_name() << " percentile=0.9" << std::endl;
+    std::cerr << "    seq 1 1000 | " << comma::verbose.app_name() << " percentile=0.9:interpolate --verbose" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -472,28 +489,18 @@ namespace Operations
                         std::size_t rank;
                         
                         case nearest:
-                            comma::verbose << "nearest rank method" << std::endl;
-                            // Use the nearest rank method
                             // https://en.wikipedia.org/wiki/Percentile#The_Nearest_Rank_method
+                            comma::verbose << "nearest rank method" << std::endl;
                             rank = ( percentile_ == 0.0 ? 1 : std::ceil( count * percentile_ ));
                             std::advance( it, rank - 1 );
                             value = *it;
                             break;
 
                         case interpolate:
+                            // https://en.wikipedia.org/wiki/Percentile#The_Linear_Interpolation_Between_Closest_Ranks_method
+                            // (third method in that section)
                             comma::verbose << "NIST linear interpolation method" << std::endl;
                             comma::verbose << "see http://www.itl.nist.gov/div898/handbook/prc/section2/prc262.htm" << std::endl;
-                            // Use linear interpolation.
-                            // Note that there are many ways to do linear interpolation,
-                            // three methods are discussed at
-                            // https://en.wikipedia.org/wiki/Percentile#The_Linear_Interpolation_Between_Closest_Ranks_method
-                            // This the third method from that page, as recommended by NIST.
-                            // See http://www.itl.nist.gov/div898/handbook/prc/section2/prc262.htm
-                            //
-                            // For a really detailed analysis see the nine methods discussed in
-                            // Hyndman, R.J. and Fan, Y. (November 1996).
-                            // "Sample Quantiles in Statistical Packages",
-                            // The American Statistician 50 (4): pp. 361-365.
                             double x = percentile_ * ( count + 1 );
                             comma::verbose << "p = " << percentile_ << "; N = " << count
                                            << "; p(N + 1) = " << x;
@@ -834,9 +841,8 @@ int main( int ac, char** av )
 {
     try
     {
-        comma::command_line_options options( ac, av );
+        comma::command_line_options options( ac, av, usage );
         if( options.exists( "--bash-completion" ) ) bash_completion( ac, av );
-        if( options.exists( "--help,-h" ) ) { usage(); }
         std::vector< std::string > unnamed = options.unnamed( "", "--binary,-b,--delimiter,-d,--format,--fields,-f" );
         comma::csv::options csv( options );
         #ifdef WIN32
