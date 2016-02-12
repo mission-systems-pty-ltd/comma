@@ -37,10 +37,12 @@ function description()
 {
     cat <<EOF
 --help,-h; show this help
+--accumulated; if present for --io, passed to iotop
 --debug; much more debug output
+--io; if present, run iotop instead of top
 --output-fields; output the field names to stdout and exit
 --num-samples=[<N>]; number of samples to take, default: forever, until terminated
---sampling-interval=[<time>]; sampling interval, see '-d' option of top (1), default: defined by top (1)
+--sampling-interval,--delay=[<time>]; sampling interval, see '-d' option of top (1), default: defined by top (1)
 --top-options=[<options>]; extra command line argument(s) pass to the top (1) utility
 EOF
 }
@@ -48,7 +50,7 @@ EOF
 function usage()
 {
     cat >&2 <<EOF
-Invokes the performance monitoring utility top (1) in continuous mode, parses
+Invokes the performance monitoring utility top (1) or iotop in continuous mode, parses
 top (1) output, and collects the results into CVS file (sent to stdout).
 
 Usage: ${name} <options> [ > output_file.csv ]
@@ -135,22 +137,47 @@ function parser()
     done
 }
 
+io_payload_fields="total/read,total/write,actual/read,actual/write"
+io_fields="timestamp,$io_payload_fields"
+
 function output_fields()
 {
-    echo "timestamp,cpu/user,cpu/system,cpu/total,memory/ram,memory/shared,memory/swap"
+    if (( $( comma_options_has --io $@ ) )) ; then echo $io_fields
+    else echo "timestamp,cpu/user,cpu/system,cpu/total,memory/ram,memory/shared,memory/swap" ; fi
+}
+
+function run_iotop()
+{
+    local total actual
+    [[ -z "$sampling_interval" ]] || delay="--delay=$sampling_interval"
+    [[ -z "$accumulated" ]] || accumulated="--accumulated"
+    sudo iotop --batch --kilobytes -o $delay $accumulated $top_options \
+        | egrep -e 'Total DISK|Actual DISK' --line-buffered \
+        | sed -u -e 's#[a-zA-Z:/ ]##g' -e 's/|/,/g' \
+        | while read total ; do
+              read actual || exit
+              echo $total,$actual
+          done \
+        | csv-units --fields $io_payload_fields --scale 1024 \
+        | csv-time-stamp
 }
 
 if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then usage ; exit ; fi
-if (( $( comma_options_has --output-fields $@ ) )) ; then output_fields ; exit ; fi
+if (( $( comma_options_has --output-fields $@ ) )) ; then output_fields $@ ; exit ; fi
 
 debug=0
 
 description | comma-options-validate $@
 comma_path_value_to_var --export < <( description | comma-options-to-name-value $@ )
 
-feeder_opts=""
-[[ -n "$sampling_interval" ]] && feeder_opts="-d $sampling_interval"
-[[ -n "$top_options" ]] && feeder_opts="$feeder_opts $top_options"
-[[ -n "$num_samples" ]] && (( ++num_samples )) # first line will be ignored, leaving num_samples lines
+if [[ -n "$io" ]] ; then
+    [[ -n "$( sudo which iotop )" ]] || { echo "comma-top: make sure iotop installed" >&2 ; exit 1 ; }
+    run_iotop
+else
+    feeder_opts=""
+    [[ -n "$sampling_interval" ]] && feeder_opts="-d $sampling_interval"
+    [[ -n "$top_options" ]] && feeder_opts="$feeder_opts $top_options"
+    [[ -n "$num_samples" ]] && (( ++num_samples )) # first line will be ignored, leaving num_samples lines
+    feeder "$num_samples" "$feeder_opts" | parser | sed -u -n '1!p'
+fi
 
-feeder "$num_samples" "$feeder_opts" | parser | sed -u -n '1!p'
