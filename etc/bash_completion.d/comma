@@ -172,4 +172,5 @@ _comma_bash_completion()
     COMPREPLY=( $( compgen -f -d -W "${opts}" -- ${cur}) )
 }
 
+complete -F _comma_bash_completion csv-calc
 complete -F _comma_bash_completion csv-units

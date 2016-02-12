@@ -51,6 +51,20 @@
 #include <comma/csv/options.h>
 #include <comma/string/string.h>
 
+static void bash_completion( unsigned const ac, char const * const * av )
+{
+    static char const * const arguments =
+        " min max mean percentile sum centre diameter radius var stddev size"
+        " --delimiter -d"
+        " --fields -f"
+        " --output-fields"
+        " --format"
+        " --binary -b"
+        " --verbose -v";
+    std::cout << arguments << std::endl;
+    exit( 0 );
+}
+
 static void usage()
 {
     std::cerr << std::endl;
@@ -821,6 +835,7 @@ int main( int ac, char** av )
     try
     {
         comma::command_line_options options( ac, av );
+        if( options.exists( "--bash-completion" ) ) bash_completion( ac, av );
         if( options.exists( "--help,-h" ) ) { usage(); }
         std::vector< std::string > unnamed = options.unnamed( "", "--binary,-b,--delimiter,-d,--format,--fields,-f" );
         comma::csv::options csv( options );
