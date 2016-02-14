@@ -1,0 +1,73 @@
+# Sequences
+
+sequence_0_nr[0]="seq 0 100 | csv-calc percentile=0.00:nearest"
+sequence_0_nr[1]="seq 0 100 | csv-calc percentile=0.25:nearest"
+sequence_0_nr[2]="seq 0 100 | csv-calc percentile=0.50:nearest"
+sequence_0_nr[3]="seq 0 100 | csv-calc percentile=0.75:nearest"
+sequence_0_nr[4]="seq 0 100 | csv-calc percentile=1.00:nearest"
+
+sequence_1_nr[0]="seq 1 100 | csv-calc percentile=0.00:nearest"
+sequence_1_nr[1]="seq 1 100 | csv-calc percentile=0.25:nearest"
+sequence_1_nr[2]="seq 1 100 | csv-calc percentile=0.50:nearest"
+sequence_1_nr[3]="seq 1 100 | csv-calc percentile=0.75:nearest"
+sequence_1_nr[4]="seq 1 100 | csv-calc percentile=1.00:nearest"
+
+sequence_0_li[0]="seq 0 100 | csv-calc percentile=0.00:interpolate"
+sequence_0_li[1]="seq 0 100 | csv-calc percentile=0.25:interpolate"
+sequence_0_li[2]="seq 0 100 | csv-calc percentile=0.50:interpolate"
+sequence_0_li[3]="seq 0 100 | csv-calc percentile=0.75:interpolate"
+sequence_0_li[4]="seq 0 100 | csv-calc percentile=1.00:interpolate"
+
+sequence_1_li[0]="seq 1 100 | csv-calc percentile=0.00:interpolate"
+sequence_1_li[1]="seq 1 100 | csv-calc percentile=0.25:interpolate"
+sequence_1_li[2]="seq 1 100 | csv-calc percentile=0.50:interpolate"
+sequence_1_li[3]="seq 1 100 | csv-calc percentile=0.75:interpolate"
+sequence_1_li[4]="seq 1 100 | csv-calc percentile=1.00:interpolate"
+
+# Repeated values
+
+repeat_nr[0]="echo 1 1 1 1 1 1 2 2 2 3 | tr ' ' '\\n' | csv-calc percentile=0.00:nearest"
+repeat_nr[1]="echo 1 1 1 1 1 1 2 2 2 3 | tr ' ' '\\n' | csv-calc percentile=0.25:nearest"
+repeat_nr[2]="echo 1 1 1 1 1 1 2 2 2 3 | tr ' ' '\\n' | csv-calc percentile=0.50:nearest"
+repeat_nr[3]="echo 1 1 1 1 1 1 2 2 2 3 | tr ' ' '\\n' | csv-calc percentile=0.75:nearest"
+repeat_nr[4]="echo 1 1 1 1 1 1 2 2 2 3 | tr ' ' '\\n' | csv-calc percentile=0.90:nearest"
+repeat_nr[5]="echo 1 1 1 1 1 1 2 2 2 3 | tr ' ' '\\n' | csv-calc percentile=1.00:nearest"
+
+repeat_li[0]="echo 1 1 1 1 1 1 2 2 2 3 | tr ' ' '\\n' | csv-calc percentile=0.00:interpolate"
+repeat_li[1]="echo 1 1 1 1 1 1 2 2 2 3 | tr ' ' '\\n' | csv-calc percentile=0.25:interpolate"
+repeat_li[2]="echo 1 1 1 1 1 1 2 2 2 3 | tr ' ' '\\n' | csv-calc percentile=0.50:interpolate"
+repeat_li[3]="echo 1 1 1 1 1 1 2 2 2 3 | tr ' ' '\\n' | csv-calc percentile=0.75:interpolate"
+repeat_li[4]="echo 1 1 1 1 1 1 2 2 2 3 | tr ' ' '\\n' | csv-calc percentile=0.90:interpolate"
+repeat_li[5]="echo 1 1 1 1 1 1 2 2 2 3 | tr ' ' '\\n' | csv-calc percentile=1.00:interpolate"
+
+# Out-of-order
+
+outoforder_nr[0]="echo 6 8 3 8 20 16 9 7 10 13 15 | tr ' ' '\\n' | csv-calc percentile=0.25:nearest"
+outoforder_nr[1]="echo 6 8 3 8 20 16 9 7 10 13 15 | tr ' ' '\\n' | csv-calc percentile=0.50:nearest"
+outoforder_nr[2]="echo 6 8 3 8 20 16 9 7 10 13 15 | tr ' ' '\\n' | csv-calc percentile=0.75:nearest"
+outoforder_nr[3]="echo 6 8 3 8 20 16 9 7 10 13 15 | tr ' ' '\\n' | csv-calc percentile=1.00:nearest"
+
+outoforder_li[0]="echo 40 35 20 50 15 | tr ' ' '\\n' | csv-calc percentile=0.4:interpolate"
+
+# Test data from https://en.wikipedia.org/wiki/Percentile
+
+nearest_rank_1[0]="echo 15 20 35 40 50 | tr ' ' '\\n' | csv-calc percentile=0.3:nearest"
+nearest_rank_1[1]="echo 15 20 35 40 50 | tr ' ' '\\n' | csv-calc percentile=0.4:nearest"
+nearest_rank_1[2]="echo 15 20 35 40 50 | tr ' ' '\\n' | csv-calc percentile=0.5:nearest"
+nearest_rank_1[3]="echo 15 20 35 40 50 | tr ' ' '\\n' | csv-calc percentile=1.0:nearest"
+
+nearest_rank_2[0]="echo 3 6 7 8 8 10 13 15 16 20 | tr ' ' '\\n' | csv-calc percentile=0.25:nearest"
+nearest_rank_2[1]="echo 3 6 7 8 8 10 13 15 16 20 | tr ' ' '\\n' | csv-calc percentile=0.50:nearest"
+nearest_rank_2[2]="echo 3 6 7 8 8 10 13 15 16 20 | tr ' ' '\\n' | csv-calc percentile=0.75:nearest"
+nearest_rank_2[3]="echo 3 6 7 8 8 10 13 15 16 20 | tr ' ' '\\n' | csv-calc percentile=1.00:nearest"
+
+nearest_rank_3[0]="echo 3 6 7 8 8 9 10 13 15 16 20 | tr ' ' '\\n' | csv-calc percentile=0.25:nearest"
+nearest_rank_3[1]="echo 3 6 7 8 8 9 10 13 15 16 20 | tr ' ' '\\n' | csv-calc percentile=0.50:nearest"
+nearest_rank_3[2]="echo 3 6 7 8 8 9 10 13 15 16 20 | tr ' ' '\\n' | csv-calc percentile=0.75:nearest"
+nearest_rank_3[3]="echo 3 6 7 8 8 9 10 13 15 16 20 | tr ' ' '\\n' | csv-calc percentile=1.00:nearest"
+
+linear_interpolation[0]="echo 15 20 35 40 50 | tr ' ' '\\n' | csv-calc percentile=0.4:interpolate"
+
+# Test data from http://www.itl.nist.gov/div898/handbook/prc/section2/prc262.htm
+
+nist[0]="echo 95.1772 95.1567 95.1937 95.1959 95.1442 95.0610 95.1591 95.1195 95.1065 95.0925 95.1990 95.1682 | tr ' ' '\\n' | csv-calc percentile=0.9:interpolate"

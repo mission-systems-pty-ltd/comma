@@ -1,0 +1,9 @@
+#!/bin/bash
+
+source $( type -p comma-application-util )
+
+comma_path_value_to_var < <( cat )
+eval "$input_cmd" \
+    | csv-calc $operation $options \
+    | name-value-from-csv --fields=$( csv-calc $( sed s/=.*// <<< $operation ) $options --output-fields ) \
+                          --prefix=output --line-number

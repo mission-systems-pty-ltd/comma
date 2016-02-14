@@ -42,22 +42,35 @@
 #include <boost/optional.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/scoped_ptr.hpp>
-#include <boost/shared_ptr.hpp>
 #include <boost/unordered_map.hpp>
 #include <comma/application/contact_info.h>
 #include <comma/application/signal_flag.h>
+#include <comma/application/verbose.h>
 #include <comma/base/exception.h>
-//#include <comma/csv/format.h>
 #include <comma/csv/format.h>
 #include <comma/csv/options.h>
 #include <comma/string/string.h>
 
-static void usage()
+static void bash_completion( unsigned const ac, char const * const * av )
+{
+    static char const * const arguments =
+        " min max mean percentile sum centre diameter radius var stddev size"
+        " --delimiter -d"
+        " --fields -f"
+        " --output-fields"
+        " --format"
+        " --binary -b"
+        " --verbose -v";
+    std::cout << arguments << std::endl;
+    exit( 0 );
+}
+
+static void usage( bool verbose )
 {
     std::cerr << std::endl;
     std::cerr << "column-wise calculation, optionally by id and block" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "usage: cat data.csv | csv-calc <what> [<options>] > calc.csv" << std::endl;
+    std::cerr << "usage: cat data.csv | " << comma::verbose.app_name() << " <what> [<options>] > calc.csv" << std::endl;
     std::cerr << std::endl;
     std::cerr << "<what>: comma-separated list of operations" << std::endl;
     std::cerr << "        results will be output in the same order" << std::endl;
@@ -65,6 +78,10 @@ static void usage()
     std::cerr << "    min: minimum" << std::endl;
     std::cerr << "    max: maximum" << std::endl;
     std::cerr << "    mean: mean value" << std::endl;
+    std::cerr << "    percentile=<n>[:<method>]: percentile value" << std::endl;
+    std::cerr << "        <n> is the desired percentile (e.g. 0.9)" << std::endl;
+    std::cerr << "        <method> is one of 'nearest' or 'interpolate' (default: nearest)" << std::endl;
+    std::cerr << "        see --help --verbose for more details" << std::endl;
     std::cerr << "    sum: sum" << std::endl;
     std::cerr << "    centre: ( min + max ) / 2" << std::endl;
     std::cerr << "    diameter: max - min" << std::endl;
@@ -80,12 +97,32 @@ static void usage()
     std::cerr << "                 if 'id' field present, calculate by id" << std::endl;
     std::cerr << "                 if 'block' and 'id' fields present, calculate by id in each block" << std::endl;
     std::cerr << "                 block and id fields will be appended to the output" << std::endl;
+    std::cerr << "    --output-fields: print output field names for this operation and then exit" << std::endl;
     std::cerr << "    --format: in ascii mode: format hint string containing the types of the csv data, default: double or time" << std::endl;
     std::cerr << "    --binary,-b: in binary mode: format string of the csv data types" << std::endl;
+    std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
     std::cerr << comma::csv::format::usage() << std::endl;
-    std::cerr << std::endl;
+    if( verbose )
+    {
+        std::cerr << "percentile method:" << std::endl;
+        std::cerr << "    The percentile method is either 'nearest' or 'interpolate'." << std::endl;
+        std::cerr << "    For an overview of percentile calculation methods see" << std::endl;
+        std::cerr << "    https://en.wikipedia.org/wiki/Percentile." << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "    'interpolate' implements the NIST recommended linear interpolation method." << std::endl;
+        std::cerr << "    See http://www.itl.nist.gov/div898/handbook/prc/section2/prc262.htm." << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "    For a really detailed analysis see the nine methods discussed in" << std::endl;
+        std::cerr << "    Hyndman, R.J. and Fan, Y. (November 1996)." << std::endl;
+        std::cerr << "    \"Sample Quantiles in Statistical Packages\"," << std::endl;
+        std::cerr << "    The American Statistician 50 (4): pp. 361-365." << std::endl;
+        std::cerr << std::endl;
+    }
     std::cerr << "examples" << std::endl;
-    std::cerr << "    todo" << std::endl;
+    std::cerr << "    seq 1 1000 | " << comma::verbose.app_name() << " percentile=0.9" << std::endl;
+    std::cerr << "    seq 1 1000 | " << comma::verbose.app_name() << " percentile=0.9:interpolate --verbose" << std::endl;
+    std::cerr << "    {(seq 1 500 | csv-paste \"-\" \"value=0\") ; (seq 1 100 | csv-paste \"-\" \"value=1\") ; (seq 501 1000 | csv-paste \"-\" \"value=0\")} | " << comma::verbose.app_name() << " --fields=a,block percentile=0.9" << std::endl;
+    std::cerr << "    {(seq 1 500 | csv-paste \"-\" \"value=0\") ; (seq 1 100 | csv-paste \"-\" \"value=1\") ; (seq 501 1000 | csv-paste \"-\" \"value=0\")} | " << comma::verbose.app_name() << " --fields=a,id percentile=0.9" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -118,7 +155,7 @@ class Values
                 try { boost::posix_time::from_iso_string( v[i] ); input_format_ += "t"; }
                 catch( ... ) { input_format_ += "d"; }
             }
-            std::cerr << "csv-calc: guessed format: " << input_format_.string() << std::endl;
+            std::cerr << comma::verbose.app_name() << ": guessed format: " << input_format_.string() << std::endl;
             init_format_();
         }
 
@@ -305,6 +342,7 @@ namespace Operations
         virtual void push( const char* ) = 0;
         virtual void calculate( char* ) = 0;
         virtual base* clone() const = 0;
+        virtual void set_options( const std::vector< std::string >& options ) {}
     };
 
     template < typename T, comma::csv::format::types_enum F > class Centre;
@@ -401,6 +439,110 @@ namespace Operations
         private:
             boost::optional< typename result_traits< T >::type > mean_;
             std::size_t count_;
+    };
+
+    template < typename T, comma::csv::format::types_enum F = comma::csv::format::type_to_enum< T >::value >
+    class Percentile : public base
+    {
+        public:
+            enum Method { nearest, interpolate };
+
+            Percentile() : percentile_( 0.0 ), method_( nearest ) {}
+
+            void push( const char* buf )
+            {
+                values_.insert( comma::csv::format::traits< T, F >::from_bin( buf ));
+            }
+
+            void set_options( const std::vector< std::string >& options )
+            {
+                if( options.size() == 0 ) {
+                    std::cerr << comma::verbose.app_name() << ": percentile operation requires a percentile" << std::endl;
+                    exit( 1 );
+                }
+
+                percentile_ = boost::lexical_cast< double >( options[0] );
+                if( percentile_ < 0.0 || percentile_ > 1.0 ) {
+                    std::cerr << comma::verbose.app_name() << ": percentile value should be between 0 and 1, got " << percentile_ << std::endl;
+                    exit( 1 );
+                }
+
+                if( options.size() == 2 ) {
+                    if( options[1] == "nearest" ) method_ = nearest;
+                    else if( options[1] == "interpolate" ) method_ = interpolate;
+                    else {
+                        std::cerr << comma::verbose.app_name() << ": expected percentile method, got " << options[1] << std::endl;
+                        exit( 1 );
+                    }
+                }
+            }
+
+            void calculate( char* buf )
+            {
+                std::size_t count = values_.size();
+
+                if( count > 0 )
+                {
+                    comma::verbose << "calculating " << percentile_*100 << "th percentile using ";
+                    T value;
+                    typename std::multiset< T >::iterator it = values_.begin();
+                    switch( method_ )
+                    {
+                        std::size_t rank;
+                        
+                        case nearest:
+                            // https://en.wikipedia.org/wiki/Percentile#The_Nearest_Rank_method
+                            comma::verbose << "nearest rank method" << std::endl;
+                            rank = ( percentile_ == 0.0 ? 1 : std::ceil( count * percentile_ ));
+                            std::advance( it, rank - 1 );
+                            value = *it;
+                            break;
+
+                        case interpolate:
+                            // https://en.wikipedia.org/wiki/Percentile#The_Linear_Interpolation_Between_Closest_Ranks_method
+                            // (third method in that section)
+                            comma::verbose << "NIST linear interpolation method" << std::endl;
+                            comma::verbose << "see http://www.itl.nist.gov/div898/handbook/prc/section2/prc262.htm" << std::endl;
+                            double x = percentile_ * ( count + 1 );
+                            comma::verbose << "p = " << percentile_ << "; N = " << count
+                                           << "; p(N + 1) = " << x;
+                            if( x <= 1.0 ) {
+                                comma::verbose << "; below 1 - choosing smallest value" << std::endl;
+                                value = *it;
+                            } else if( x >= count ) {
+                                comma::verbose << "; above N - choosing largest value" << std::endl;
+                                value = *( values_.rbegin() );
+                            } else {
+                                rank = x;
+                                double remainder = x - rank;
+                                comma::verbose << "; k = " << rank << "; d = " << remainder << std::endl;
+                                std::advance( it, rank - 1 );
+                                double v1 = *it;
+                                double v2 = *++it;
+                                value = v1 + ( v2 - v1 ) * remainder;
+                                comma::verbose << "v1 = " << v1 << "; v2 = " << v2
+                                               << "; result = " << value << std::endl;
+                            }
+                            break;
+                    }
+                    comma::csv::format::traits< T, F >::to_bin( static_cast< T >( value ), buf );
+                }
+            }
+
+            base* clone() const { return new Percentile< T, F >( *this ); }
+
+        private:
+            std::multiset< T > values_;
+            double percentile_;
+            Method method_;
+    };
+
+    template < comma::csv::format::types_enum F >
+    class Percentile< boost::posix_time::ptime, F > : public base
+    {
+        void push( const char* ) { COMMA_THROW( comma::exception, "percentile not implemented for time, todo" ); }
+        void calculate( char* ) { COMMA_THROW( comma::exception, "percentile not implemented for time, todo" ); }
+        base* clone() const { COMMA_THROW( comma::exception, "percentile not implemented for time, todo" ); }
     };
 
     template < typename T, comma::csv::format::types_enum F > class Stddev;
@@ -504,7 +646,7 @@ namespace Operations
             std::size_t count_;
     };
 
-    struct Enum { enum Values { min, max, centre, mean, sum, size, radius, diameter, variance, stddev }; };
+    struct Enum { enum Values { min, max, centre, mean, percentile, sum, size, radius, diameter, variance, stddev }; };
 
     static Enum::Values from_name( const std::string& name )
     {
@@ -512,6 +654,7 @@ namespace Operations
         else if( name == "max" ) { return Enum::max; }
         else if( name == "centre" ) { return Enum::centre; }
         else if( name == "mean" ) { return Enum::mean; }
+        else if( name == "percentile" ) { return Enum::percentile; }
         else if( name == "sum" ) { return Enum::sum; }
         else if( name == "radius" ) { return Enum::radius; }
         else if( name == "diameter" ) { return Enum::diameter; }
@@ -521,11 +664,18 @@ namespace Operations
         else { COMMA_THROW( comma::exception, "expected operation name, got " << name ); }
     }
 
+    struct operation_parameters
+    {
+        Enum::Values type;
+        std::vector< std::string > options;
+    };
+
     template < Enum::Values E > struct traits {};
     template <> struct traits< Enum::min > { template < typename T, comma::csv::format::types_enum F > struct FromEnum { typedef Min< T, F > Type; }; };
     template <> struct traits< Enum::max > { template < typename T, comma::csv::format::types_enum F > struct FromEnum { typedef Max< T, F > Type; }; };
     template <> struct traits< Enum::centre > { template < typename T, comma::csv::format::types_enum F > struct FromEnum { typedef Centre< T, F > Type; }; };
     template <> struct traits< Enum::mean > { template < typename T, comma::csv::format::types_enum F > struct FromEnum { typedef Mean< T, F > Type; }; };
+    template <> struct traits< Enum::percentile > { template < typename T, comma::csv::format::types_enum F > struct FromEnum { typedef Percentile< T, F > Type; }; };
     template <> struct traits< Enum::sum > { template < typename T, comma::csv::format::types_enum F > struct FromEnum { typedef Sum< T, F > Type; }; };
     template <> struct traits< Enum::size > { template < typename T, comma::csv::format::types_enum F > struct FromEnum { typedef Size< T, F > Type; }; };
     template <> struct traits< Enum::radius > { template < typename T, comma::csv::format::types_enum F > struct FromEnum { typedef Radius< T, F > Type; }; };
@@ -568,7 +718,8 @@ template < Operations::Enum::Values E >
 struct Operation : public Operationbase
 {
     Operation() {}
-    Operation( const comma::csv::format& format )
+    Operation( const comma::csv::format& format
+             , const std::vector< std::string >& options = std::vector< std::string >() )
     {
         input_format_ = format;
         input_elements_.reserve( input_format_.count() );
@@ -606,6 +757,10 @@ struct Operation : public Operationbase
                 case comma::csv::format::long_time: operations_.push_back( new typename Operations::traits< E >::template FromEnum< boost::posix_time::ptime, comma::csv::format::long_time >::Type ); break;
                 default: COMMA_THROW( comma::exception, "operations for " << i << "th element in " << format.string() << " not defined" );
             }
+            // Call set_options() on the operation that we just added
+            operations_[ operations_.size() - 1 ].set_options( options );
+            operations_.back().set_options( options );
+
             output_format_ += comma::csv::format::to_format( output_type );
         }
         for( std::size_t i = 0; i < input_elements_.size(); ++i ) { output_elements_.push_back( output_format_.offset( i ) ); }
@@ -628,21 +783,22 @@ struct Operation : public Operationbase
 typedef boost::unordered_map< comma::uint32, boost::ptr_vector< Operationbase >* > OperationsMap;
 
 static void init_operations( boost::ptr_vector< Operationbase >& operations
-                           , const std::vector< Operations::Enum::Values >& operation_ids
+                           , const std::vector< Operations::operation_parameters >& operations_parameters
                            , const comma::csv::format& format )
 {
     static boost::ptr_vector< Operationbase > sample;
     if( sample.empty() )
     {
-        sample.reserve( operation_ids.size() );
-        for( std::size_t i = 0; i < operation_ids.size(); ++i )
+        sample.reserve( operations_parameters.size() );
+        for( std::size_t i = 0; i < operations_parameters.size(); ++i )
         {
-            switch( operation_ids[i] )
+            switch( operations_parameters[i].type )
             {
                 case Operations::Enum::min: sample.push_back( new Operation< Operations::Enum::min >( format ) ); break;
                 case Operations::Enum::max: sample.push_back( new Operation< Operations::Enum::max >( format ) ); break;
                 case Operations::Enum::centre: sample.push_back( new Operation< Operations::Enum::centre >( format ) ); break;
                 case Operations::Enum::mean: sample.push_back( new Operation< Operations::Enum::mean >( format ) ); break;
+                case Operations::Enum::percentile: sample.push_back( new Operation< Operations::Enum::percentile >( format, operations_parameters[i].options ) ); break;
                 case Operations::Enum::radius: sample.push_back( new Operation< Operations::Enum::radius >( format ) ); break;
                 case Operations::Enum::diameter: sample.push_back( new Operation< Operations::Enum::diameter >( format ) ); break;
                 case Operations::Enum::variance: sample.push_back( new Operation< Operations::Enum::variance >( format ) ); break;
@@ -687,17 +843,23 @@ int main( int ac, char** av )
 {
     try
     {
-        comma::command_line_options options( ac, av );
-        if( options.exists( "--help,-h" ) ) { usage(); }
+        comma::command_line_options options( ac, av, usage );
+        if( options.exists( "--bash-completion" ) ) bash_completion( ac, av );
         std::vector< std::string > unnamed = options.unnamed( "", "--binary,-b,--delimiter,-d,--format,--fields,-f" );
         comma::csv::options csv( options );
         #ifdef WIN32
         if( csv.binary() ) { _setmode( _fileno( stdin ), _O_BINARY ); _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
-        if( unnamed.empty() ) { std::cerr << "csv-calc: please specify operations" << std::endl; exit( 1 ); }
+        if( unnamed.empty() ) { std::cerr << comma::verbose.app_name() << ": please specify operations" << std::endl; exit( 1 ); }
         std::vector< std::string > v = comma::split( unnamed[0], ',' );
-        std::vector< Operations::Enum::Values > operation_ids( v.size() );
-        for( std::size_t i = 0; i < v.size(); ++i ) { operation_ids[i] = Operations::from_name( v[i] ); }
+        std::vector< Operations::operation_parameters > operations_parameters( v.size() );
+        for( std::size_t i = 0; i < v.size(); ++i )
+        {
+            std::vector< std::string > p = comma::split( v[i], '=' );
+            operations_parameters[i].type = Operations::from_name( p[0] );
+            if( p.size() == 2 )
+                operations_parameters[i].options = comma::split( p[1], ':' );
+        }
         boost::optional< comma::csv::format > format;
         if( csv.binary() ) { format = csv.format(); }
         else if( options.exists( "--format" ) ) { format = comma::csv::format( options.value< std::string >( "--format" ) ); }
@@ -709,6 +871,25 @@ int main( int ac, char** av )
         boost::optional< comma::uint32 > block;
         bool has_block = csv.has_field( "block" );
         bool has_id = csv.has_field( "id" );
+        
+        if (options.exists("--output-fields"))
+        {
+            std::vector < std::string > fields = comma::split(csv.fields, ',');
+            std::vector < std::string > output_fields;
+            for (std::size_t op = 0; op < v.size(); op++)
+            {
+                for (std::size_t f = 0; f < fields.size(); f++ )
+                {
+                    if (fields[f] == "" || fields[f] == "id" || fields[f] == "block") { continue; }
+                    output_fields.push_back(fields[f] + "/" + v[op]);
+                }
+            }
+            if (has_id) { output_fields.push_back("id"); }
+            if (has_block) { output_fields.push_back("block"); }
+            std::cout << comma::join(output_fields, ',') << std::endl;
+            return 0;
+        }
+        
         comma::signal_flag is_shutdown;
         while( !is_shutdown && std::cin.good() && !std::cin.eof() )
         {
@@ -723,13 +904,13 @@ int main( int ac, char** av )
             if( it == operations.end() )
             {
                 it = operations.insert( std::make_pair( v->id(), new boost::ptr_vector< Operationbase > ) ).first;
-                init_operations( *it->second, operation_ids, v->format() );
+                init_operations( *it->second, operations_parameters, v->format() );
             }
             for( std::size_t i = 0; i < it->second->size(); ++i ) { ( *it->second )[i].push( v->buffer() ); }
         }
         calculate_and_output( csv, operations, block, has_block, has_id );
         return 0;
     }
-    catch( std::exception& ex ) { std::cerr << "csv-calc: " << ex.what() << std::endl; }
-    catch( ... ) { std::cerr << "csv-calc: unknown exception" << std::endl; }
+    catch( std::exception& ex ) { std::cerr << comma::verbose.app_name() << ": " << ex.what() << std::endl; }
+    catch( ... ) { std::cerr << comma::verbose.app_name() << ": unknown exception" << std::endl; }
 }
