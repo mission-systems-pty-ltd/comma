@@ -164,6 +164,7 @@ INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIRS} )
 LINK_DIRECTORIES( ${Boost_LIBRARY_DIRS} )
 
 IF( comma_BUILD_TESTS )
+
     # todo: maybe else clause is actually the right way to do things
     IF( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR ${CMAKE_SYSTEM_NAME} MATCHES "Windows" )
         FIND_PATH( GTest_SOURCE_DIR NAMES CMakeLists.txt HINTS /usr/src/gtest DOC "source code of gtest" )
@@ -175,8 +176,11 @@ IF( comma_BUILD_TESTS )
         INCLUDE_DIRECTORIES( ${GTEST_INCLUDE_DIRS} )
     ENDIF( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR ${CMAKE_SYSTEM_NAME} MATCHES "Windows" )
 	
+OPTION( INSTALL_TESTS "Install the tests into the nominated directory" OFF )
+IF( INSTALL_TESTS )
 #TT: Install tests to dir. This allows them to be packed by CPack.
-    SET ( comma_TESTS_DIR share/test )
+    SET ( comma_INSTALL_CPP_TESTS_DIR bin )
+ENDIF( INSTALL_TESTS )
 ENDIF( comma_BUILD_TESTS )
 
 IF( comma_BUILD_ZEROMQ )
