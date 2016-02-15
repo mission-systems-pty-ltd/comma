@@ -370,13 +370,14 @@ function exclude_generic_tests()
 {
     local dir_list=$*
     local result_list=()
+    local dir_list_lines=$( echo $dir_list | fmt -1 )
 
     for dir in $dir_list; do
         if [[ ! -f "$dir/input" && ! -f "$dir/expected" && ! -f "$dir/disabled" ]]; then
             if [[ -d "$dir/test" ]]; then continue; fi
             if [[ -f "$dir/test" ]]; then
                 local pattern="^$( comma_escape_special_chars "$dir" )/."
-                if echo $dir_list | fmt -1 | grep -q "$pattern"; then
+                if grep -q "$pattern" <<<"$dir_list_lines" ; then
                     if [[ "$options_debug" != "0" ]] ; then echo "excluding generic test '$dir/test'" >&2; fi
                     continue
                 fi
