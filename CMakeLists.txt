@@ -176,11 +176,8 @@ IF( comma_BUILD_TESTS )
         INCLUDE_DIRECTORIES( ${GTEST_INCLUDE_DIRS} )
     ENDIF( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR ${CMAKE_SYSTEM_NAME} MATCHES "Windows" )
 	
-OPTION( INSTALL_TESTS "Install the tests into the nominated directory" OFF )
-IF( INSTALL_TESTS )
 #TT: Install tests to dir. This allows them to be packed by CPack.
-    SET ( comma_INSTALL_CPP_TESTS_DIR bin )
-ENDIF( INSTALL_TESTS )
+SET ( comma_CPP_TESTS_INSTALL_DIR bin CACHE PATH "Install directory for cpp unit tests" )
 ENDIF( comma_BUILD_TESTS )
 
 IF( comma_BUILD_ZEROMQ )
