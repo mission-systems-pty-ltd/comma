@@ -52,8 +52,8 @@ function test_comma_locked_single()
 function test_comma_locked_double()
 {
     # The first sleep time must be longer than the second for the test to prove anything
-    local sleep_1=3
-    local sleep_2=1
+    local sleep_1=5
+    local sleep_2=2
     
     comma_locked $lockfile lock_fn $sleep_1 first &
     sleep $sleep_2                 # allow time to grab the lock
@@ -69,8 +69,8 @@ function test_comma_lock_file_not_locked()
     local comma_lock_file_arg=$1
 
     # The lock_fn sleep time must be longer than pause_after_bg for the test to prove anything
-    local lock_fn_sleep=3
-    local pause_after_bg=1
+    local lock_fn_sleep=5
+    local pause_after_bg=2
 
     echo "comma_lock_file/calling"
     comma_lock_file $comma_lock_file_arg $lockfile &
@@ -88,8 +88,8 @@ function test_comma_lock_file_already_locked()
     local comma_lock_file_arg=$1
 
     # The lock_fn sleep time must be longer than pause_after_bg for the test to prove anything
-    local lock_fn_sleep=3
-    local pause_after_bg=1
+    local lock_fn_sleep=5
+    local pause_after_bg=2
     
     echo "comma_locked/calling"
     comma_locked $lockfile lock_fn $lock_fn_sleep &
