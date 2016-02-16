@@ -104,7 +104,7 @@ function extract_cpus()
     local sy=${input%% sy, *}
     sy=${sy##* us,*( )}
     local total=$( echo "$us + $sy" | bc )
-    echo -n ",$us,$sy,$total"
+    echo -n "$us,$sy,$total"
 }
 
 function extract_mem()
@@ -124,9 +124,7 @@ function parser()
         read line
         [[ -z "$line" ]] && break
         [[ "$first" == "true" ]] && {
-            timestamp=$( date +%Y%m%dT%H%M%S )
             shared=$( df --block-size=1024 --local 2>&1 | grep -v ": Permission denied" | grep '/shm$' | head -n 1 | gawk '{ print $3 }' )
-            echo -n "$timestamp"
             first="false"
         }
         [[ "$line" = "%Cpu(s)"* ]]  && extract_cpus "$line"
@@ -134,7 +132,8 @@ function parser()
         # swap is last, finish the line
         [[ "$line" = "KiB Swap"* ]] && { extract_mem  "$line" ; echo ; }
         [[ "$line" = "--" ]] && first="true"
-    done
+    done \
+    | csv-time-stamp
 }
 
 io_payload_fields="total/read,total/write,actual/read,actual/write"
