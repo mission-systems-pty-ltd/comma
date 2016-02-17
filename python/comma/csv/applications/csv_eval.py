@@ -105,8 +105,8 @@ examples:
     # negate boolean
     ( echo 0; echo 1 ) | csv-to-bin b | {script_name} --binary=b --fields=flag 'a=logical_not(flag)' --append-binary=b -v | csv-from-bin 2b
 
-    # ternary operation ( equivalent to 'x<y ? x+y : x-y' in c++ )
-    ( echo 1,2; echo 1,0 ) | csv-to-bin 2d | csv-eval --fields=x,y --binary=2d 'a=where(x<y,x+y,x-y)' | csv-from-bin 3d
+    # select operation based on condition ( 'where(x<y,x+y,x-y)' is equivalent to 'x<y ? x+y : x-y' in c++ )
+    ( echo 1,2; echo 2,1 ) | csv-to-bin 2d | csv-eval --fields=x,y --binary=2d 'a=where(x<y,x+y,x-y)' | csv-from-bin 3d
     
 """.format( script_name=sys.argv[0].split('/')[-1] )
   parser = argparse.ArgumentParser( description=description, epilog=epilog, formatter_class=lambda prog: argparse.RawTextHelpFormatter( prog, max_help_position=50 ) )  
