@@ -112,6 +112,7 @@ examples:
   parser.add_argument( "--dangerous", action="store_true", help=argparse.SUPPRESS )
   add_csv_options( parser )
   args = parser.parse_args()
+  if not args.expressions: raise Exception( "no expressions are given" )
   evaluate( args.expressions.strip(';'), stream( args ), dangerous=args.dangerous )
 
 if __name__ == '__main__':
