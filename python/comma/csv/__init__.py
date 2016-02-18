@@ -6,6 +6,7 @@ import warnings
 import operator
 import re
 import comma.csv.format
+import comma.csv.options
 import comma.csv.time
 
 def merge_arrays( a1, a2 ):

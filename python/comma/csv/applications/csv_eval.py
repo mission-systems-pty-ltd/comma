@@ -65,11 +65,8 @@ def evaluate( expressions, stream, dangerous=False ):
     stream.output.write( output )
 
 def add_csv_options( parser ):
-  parser.add_argument( "--fields", "-f", default='x,y,z', help="comma-separated field names of input stream (default: %(default)s)", metavar='<names>' )
-  parser.add_argument( "--binary", "-b", default='', help="assume input stream is binary and use binary format (by default, stream is ascii)", metavar='<format>' )
-  parser.add_argument( "--delimiter", "-d", default=',', help="csv delimiter of ascii stream (default: %(default)s)", metavar='<delimiter>' )
-  parser.add_argument( "--precision", default=12, help="floating point precision of ascii output (default: %(default)s)", metavar='<precision>' )
-  parser.add_argument( "--flush", "--unbuffered", action="store_true", help="flush stdout after each record (stream is unbuffered)" )
+  comma.csv.options.standard_csv_options( parser, { 'fields': 'x,y,z' } )
+  
   parser.add_argument( "--append-fields", "-F", help="output fields appended to input stream (by default, inferred from expressions)", metavar='<names>' )
   parser.add_argument( "--append-binary", "-B", help="for binary stream, binary format of appended fields (by default, 'd' for each)", metavar='<format>' )
 
