@@ -31,9 +31,56 @@
 #include <comma/base/exception.h>
 #include "../string.h"
 #include "../split.h"
+#include <list>
 #include <gtest/gtest.h>
 
 namespace comma {
+
+TEST( string, join )
+{
+    {
+        std::vector< std::string > v;
+        std::string j = join( v, ',' );
+        EXPECT_TRUE( j == "" );
+    }
+    {
+        std::vector< std::string > v;
+        v.push_back( "one" );
+        std::string j = join( v, ',' );
+        EXPECT_TRUE( j == "one" );
+    }
+    {
+        std::vector< std::string > v;
+        v.push_back( "one" );
+        v.push_back( "two" );
+        std::string j = join( v, ',' );
+        EXPECT_TRUE( j == "one,two" );
+    }
+    {
+        std::vector< std::string > v;
+        v.push_back( "one" );
+        v.push_back( "two" );
+        v.push_back( "three" );
+        std::string j = join( v, ',' );
+        EXPECT_TRUE( j == "one,two,three" );
+    }
+    {
+        std::vector< std::string > v;
+        v.push_back( "one" );
+        v.push_back( "" );
+        v.push_back( "three" );
+        std::string j = join( v, ',' );
+        EXPECT_TRUE( j == "one,,three" );
+    }
+    {
+        std::list< std::string > v;
+        v.push_back( "one" );
+        v.push_back( "two" );
+        v.push_back( "three" );
+        std::string j = join( v, ',' );
+        EXPECT_TRUE( j == "one,two,three" );
+    }
+}
 
 TEST( string, split )
 {
