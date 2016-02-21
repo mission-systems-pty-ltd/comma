@@ -70,8 +70,9 @@ inline std::string join( const A& a, std::size_t size, char delimiter )
 {
     if( size == 0 ) { return ""; }
     std::ostringstream oss;
-    oss << a[0];
-    for( std::size_t i = 1; i < size; ++i ) { oss << delimiter << a[i]; }
+    oss << a.front();
+    typename A::const_iterator current = a.begin();
+    while (++current != a.end() ) { oss << delimiter << *current; }
     return oss.str();
 }
 
