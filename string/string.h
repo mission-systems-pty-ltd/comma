@@ -70,9 +70,8 @@ inline std::string join( const A& a, std::size_t size, char delimiter )
 {
     if( size == 0 ) { return ""; }
     std::ostringstream oss;
-    oss << a.front();
-    typename A::const_iterator current = a.begin();
-    while (++current != a.end() ) { oss << delimiter << *current; }
+    oss << a[0];
+    for( std::size_t i = 1; i < size; ++i ) { oss << delimiter << a[i]; }
     return oss.str();
 }
 
@@ -82,7 +81,7 @@ inline std::string join( It begin, It end, char delimiter )
     if( begin == end ) { return ""; }
     std::ostringstream oss;
     oss << *begin;
-    for( It i = begin + 1; i != end; ++i ) { oss << delimiter << *i; }
+    for( It i = ++begin; i != end; ++i ) { oss << delimiter << *i; }
     return oss.str();
 }
 

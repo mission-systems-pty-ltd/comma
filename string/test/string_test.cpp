@@ -77,7 +77,7 @@ TEST( string, join )
         v.push_back( "one" );
         v.push_back( "two" );
         v.push_back( "three" );
-        std::string j = join( v, ',' );
+        std::string j = join( v.begin(), v.end(), ',' );
         EXPECT_TRUE( j == "one,two,three" );
     }
 }
