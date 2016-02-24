@@ -657,7 +657,7 @@ inline output_stream< S >::output_stream( std::ostream& os, const csv::options& 
 template < typename S >
 inline output_stream< S >::output_stream( std::ostream& os, bool binary, const S& sample )
 {
-    if( binary ) { binary_.reset( new binary_output_stream< S >( os, "", "", false, sample ) ); }
+    if( binary ) { binary_.reset( new binary_output_stream< S >( os, "", "", true, sample ) ); }
     else { ascii_.reset( new ascii_output_stream< S >( os, sample ) ); }
 }
 
