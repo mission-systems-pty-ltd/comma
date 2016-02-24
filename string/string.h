@@ -81,7 +81,7 @@ inline std::string join( It begin, It end, char delimiter )
     if( begin == end ) { return ""; }
     std::ostringstream oss;
     oss << *begin;
-    for( It i = begin + 1; i != end; ++i ) { oss << delimiter << *i; }
+    for( It i = ++begin; i != end; ++i ) { oss << delimiter << *i; }
     return oss.str();
 }
 

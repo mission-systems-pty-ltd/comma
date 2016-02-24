@@ -65,11 +65,8 @@ def evaluate( expressions, stream, dangerous=False ):
     stream.output.write( output )
 
 def add_csv_options( parser ):
-  parser.add_argument( "--fields", "-f", default='x,y,z', help="comma-separated field names of input stream (default: %(default)s)", metavar='<names>' )
-  parser.add_argument( "--binary", "-b", default='', help="assume input stream is binary and use binary format (by default, stream is ascii)", metavar='<format>' )
-  parser.add_argument( "--delimiter", "-d", default=',', help="csv delimiter of ascii stream (default: %(default)s)", metavar='<delimiter>' )
-  parser.add_argument( "--precision", default=12, help="floating point precision of ascii output (default: %(default)s)", metavar='<precision>' )
-  parser.add_argument( "--flush", "--unbuffered", action="store_true", help="flush stdout after each record (stream is unbuffered)" )
+  comma.csv.options.standard_csv_options( parser, { 'fields': 'x,y,z' } )
+  
   parser.add_argument( "--append-fields", "-F", help="output fields appended to input stream (by default, inferred from expressions)", metavar='<names>' )
   parser.add_argument( "--append-binary", "-B", help="for binary stream, binary format of appended fields (by default, 'd' for each)", metavar='<format>' )
 
@@ -104,6 +101,9 @@ examples:
 
     # negate boolean
     ( echo 0; echo 1 ) | csv-to-bin b | {script_name} --binary=b --fields=flag 'a=logical_not(flag)' --append-binary=b -v | csv-from-bin 2b
+
+    # select operation based on condition ( 'where(x<y,x+y,x-y)' is equivalent to 'x<y ? x+y : x-y' in c++ )
+    ( echo 1,2; echo 2,1 ) | csv-to-bin 2d | csv-eval --fields=x,y --binary=2d 'a=where(x<y,x+y,x-y)' | csv-from-bin 3d
     
 """.format( script_name=sys.argv[0].split('/')[-1] )
   parser = argparse.ArgumentParser( description=description, epilog=epilog, formatter_class=lambda prog: argparse.RawTextHelpFormatter( prog, max_help_position=50 ) )  
@@ -112,6 +112,7 @@ examples:
   parser.add_argument( "--dangerous", action="store_true", help=argparse.SUPPRESS )
   add_csv_options( parser )
   args = parser.parse_args()
+  if not args.expressions: raise Exception( "no expressions are given" )
   evaluate( args.expressions.strip(';'), stream( args ), dangerous=args.dangerous )
 
 if __name__ == '__main__':

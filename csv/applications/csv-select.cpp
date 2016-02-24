@@ -66,6 +66,8 @@ void usage()
     std::cerr << std::endl;
     std::cerr << "      todo: implement a simple boolean expression grammar" << std::endl;
     std::cerr << "input/output control options" << std::endl;
+    std::cerr << "    --first-matching: output the first record matching the expression, then exit" << std::endl;
+    std::cerr << "    --format=<format>: explicitly specify input format, in case if in ascii mode csv-select guesses incorrectly" << std::endl;
     std::cerr << "    --not-matching: output only not matching records" << std::endl;
     std::cerr << "    --output-all,--all: output all records, append 1 to matching, 0 to not matching; if binary, format of the additional field is 'b'" << std::endl;
     std::cerr << "    --sorted,--input-sorted: a hint that the key column is sorted in ascending order" << std::endl;
@@ -76,7 +78,6 @@ void usage()
     std::cerr << "    --strict: if constraint field is not present among fields, exit with error (added for backward compatibility)" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
     std::cerr << "    --or: uses 'or' expression instead of 'and' (default is 'and')" << std::endl;
-    std::cerr << "    --first-matching: output the first record matching the expression, then exit" << std::endl;
     std::cerr << std::endl;
     std::cerr << "fields: any non-empty fields will be treated as keys" << std::endl;
     std::cerr << std::endl;
