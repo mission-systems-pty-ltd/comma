@@ -314,7 +314,7 @@ class output_stream : public boost::noncopyable
         /// construct from csv options
         output_stream( std::ostream& os, const csv::options& o, const S& sample = S() );
         
-        output_stream( std::ostream& os, bool binary, const S& sample = S() );
+        output_stream( std::ostream& os, bool binary, bool full_xpath = false, const S& sample = S() );
 
         /// write
         void write( const S& s ) { if( ascii_ ) { ascii_->write( s ); } else { binary_->write( s ); } }
@@ -655,9 +655,9 @@ inline output_stream< S >::output_stream( std::ostream& os, const csv::options& 
 }
 
 template < typename S >
-inline output_stream< S >::output_stream( std::ostream& os, bool binary, const S& sample )
+inline output_stream< S >::output_stream( std::ostream& os, bool binary, bool full_xpath, const S& sample )
 {
-    if( binary ) { binary_.reset( new binary_output_stream< S >( os, "", "", false, sample ) ); }
+    if( binary ) { binary_.reset( new binary_output_stream< S >( os, "", "", full_xpath, sample ) ); }
     else { ascii_.reset( new ascii_output_stream< S >( os, sample ) ); }
 }
 
