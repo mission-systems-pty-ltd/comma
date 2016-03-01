@@ -1,0 +1,15 @@
+test[0]/result[0]="file=fred.csv"
+test[0]/result[1]="binary=ui,d"
+test[0]/result[2]="fields=field/one,field/two"
+
+test[1]/result[0]="filename=thing.csv"
+test[1]/result[1]="fields=a,b,c"
+test[1]/result[2]="binary=ui,d,d"
+
+test[2]/result[0]="csv_file=something.csv"
+test[2]/result[1]="list=d,e,f"
+test[2]/result[2]="numbers=1,2"
+
+test[3]/result[0]="val=single"
+
+test[4]/result[0]="value=single"

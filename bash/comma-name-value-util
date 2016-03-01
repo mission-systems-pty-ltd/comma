@@ -296,3 +296,33 @@ function comma_path_value_sort()
 
 export -f comma_path_value_sort
 declare -r comma_path_value_sort
+
+# Split a semicolon separated list of "path=value"s into separate lines.
+# The (optional) argument is a comma separated list of N paths to use for the first N items
+# (in which case the first N items are assumed not to have a "path=" part).
+#
+# example 1:
+#    echo "data.csv;fields=a,b;binary=d,ui" | comma_path_value_line_split "filename"
+# output:
+#    filename=data.csv
+#    fields=a,b
+#    binary=d,ui
+#
+# example 2:
+#    echo "2,3,4,size=10" | comma_path_value_line_split x,y,z
+# output:
+#    x=2
+#    y=3
+#    z=4
+#    size=10
+function comma_path_value_line_split()
+{
+    local -r paths_in_fixed_positions=$1
+    local -r num_paths_in_fixed_positions=$( echo "$paths_in_fixed_positions" | tr ',' ' ' | wc -w )
+    local -r input="$( cat )"
+    echo "$input" | tr ';' '\n' | csv-paste <( echo "$paths_in_fixed_positions" | tr ',' '\n' ) --delimiter '=' '-'
+    echo "$input" | tr ';' '\n' | tail -n+$(( $num_paths_in_fixed_positions + 1 ))
+}
+
+export -f comma_path_value_line_split
+declare -r comma_path_value_line_split

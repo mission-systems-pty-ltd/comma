@@ -1,0 +1,5 @@
+file=fred.csv;binary=ui,d;fields=field/one,field/two
+thing.csv;fields=a,b,c;binary=ui,d,d filename
+something.csv;d,e,f;1,2 csv_file,list,numbers
+val=single
+single value
