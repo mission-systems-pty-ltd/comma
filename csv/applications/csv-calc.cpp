@@ -109,19 +109,27 @@ static void usage( bool verbose )
         std::cerr << "    For an overview of percentile calculation methods see" << std::endl;
         std::cerr << "    https://en.wikipedia.org/wiki/Percentile." << std::endl;
         std::cerr << std::endl;
-        std::cerr << "    'interpolate' implements the NIST recommended linear interpolation method." << std::endl;
+        std::cerr << "    'nearest' gives the smallest value in the list such that the requested" << std::endl;
+        std::cerr << "    fraction (percentile) of the data is less than or equal to that value." << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "    'interpolate' takes the two nearest values from the list and interpolates" << std::endl;
+        std::cerr << "    between them according to the NIST recommended linear interpolation method." << std::endl;
         std::cerr << "    See http://www.itl.nist.gov/div898/handbook/prc/section2/prc262.htm." << std::endl;
         std::cerr << std::endl;
         std::cerr << "    For a really detailed analysis see the nine methods discussed in" << std::endl;
         std::cerr << "    Hyndman, R.J. and Fan, Y. (November 1996)." << std::endl;
         std::cerr << "    \"Sample Quantiles in Statistical Packages\"," << std::endl;
         std::cerr << "    The American Statistician 50 (4): pp. 361-365." << std::endl;
+        std::cerr << "    'nearest' corresponds to definition 1." << std::endl;
+        std::cerr << "    'interpolate' corresponds to definition 6." << std::endl;
         std::cerr << std::endl;
     }
     std::cerr << "examples" << std::endl;
     std::cerr << "    seq 1 1000 | " << comma::verbose.app_name() << " percentile=0.9" << std::endl;
     std::cerr << "    seq 1 1000 | " << comma::verbose.app_name() << " percentile=0.9:interpolate --verbose" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "    {(seq 1 500 | csv-paste \"-\" \"value=0\") ; (seq 1 100 | csv-paste \"-\" \"value=1\") ; (seq 501 1000 | csv-paste \"-\" \"value=0\")} | " << comma::verbose.app_name() << " --fields=a,block percentile=0.9" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "    {(seq 1 500 | csv-paste \"-\" \"value=0\") ; (seq 1 100 | csv-paste \"-\" \"value=1\") ; (seq 501 1000 | csv-paste \"-\" \"value=0\")} | " << comma::verbose.app_name() << " --fields=a,id percentile=0.9" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
@@ -493,7 +501,9 @@ namespace Operations
                         case nearest:
                             // https://en.wikipedia.org/wiki/Percentile#The_Nearest_Rank_method
                             comma::verbose << "nearest rank method" << std::endl;
+                            comma::verbose << "see https://en.wikipedia.org/wiki/Percentile#The_Nearest_Rank_method" << std::endl;
                             rank = ( percentile_ == 0.0 ? 1 : std::ceil( count * percentile_ ));
+                            comma::verbose << "n = " << rank << std::endl;
                             std::advance( it, rank - 1 );
                             value = *it;
                             break;
