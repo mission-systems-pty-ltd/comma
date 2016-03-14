@@ -57,6 +57,7 @@ static void show_help( bool verbose = false )
         << std::endl
         << "Options:" << std::endl
         << "    --dry-run,--dry: print command that will be piped and exit, debug option" << std::endl
+        << "    --append,-a: append to output file instead of overwriting" << std::endl
         << "    --unbuffered,-u: unbuffered input and output" << std::endl
         << "    --debug: extra debug output (not for normal use)" << std::endl
         << "    --verbose,-v: more output" << std::endl
@@ -87,9 +88,9 @@ static void show_help( bool verbose = false )
         << std::endl;
 }
 
-static bool file_is_writable( const std::string &filename )
+static bool file_is_writable( const std::string &filename, bool append )
 {
-    FILE *file = fopen( &filename[0], "w" );
+    FILE *file = fopen( &filename[0], ( append ? "a" : "w" ) );
     if ( file == NULL ) { return false; }
     fclose( file );
     return true;
@@ -134,20 +135,22 @@ int main( int ac, char **av )
             std::cerr << std::endl;
         }
         comma::command_line_options options( options_ac, av );
-        const std::vector< std::string >& unnamed = options.unnamed( "--unbuffered,-u,--verbose,-v,--debug,--dry-run,--dry", "-.*" );
+        const std::vector< std::string >& unnamed = options.unnamed( "--unbuffered,-u,--verbose,-v,--debug,--dry-run,--dry,--append,-a", "-.*" );
         if( unnamed.empty() ) { std::cerr << app_name << ": please specify output file name" << std::endl; return 1; }
         if( unnamed.size() > 1 ) { std::cerr << app_name << ": expected one output filename, got: " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         std::string outfile = unnamed[0];
         // bash -c only takes a single argument, so put the whole command in single quotes, then double quote each individual argument
         std::string command = "bash -c '" + escape_quotes( av[command_offset] );
         for( int i = command_offset + 1; i < ac; ++i ) { command += " \""; command += escape_quotes( av[i] ); command += "\""; }
-        command += " > ";
+        bool append_to_outfile = options.exists( "--append,-a" );
+        if( append_to_outfile ) { command += " >> "; }
+        else { command += " > "; }
         command += outfile;
         command += "'";
         bool unbuffered = options.exists( "--unbuffered,-u" );
         bool verbose = options.exists( "--verbose,-v" );
         if ( debug ) { verbose = true; }
-        if( !file_is_writable( outfile ) ) { std::cerr << app_name << ": cannot write to " << outfile << std::endl; exit( 1 ); }
+        if( !file_is_writable( outfile, append_to_outfile ) ) { std::cerr << app_name << ": cannot write to " << outfile << std::endl; exit( 1 ); }
         if( options.exists( "--dry-run,--dry" ) ) { std::cout << command << std::endl; return 0; }
         if( verbose ) { std::cerr << app_name << ": will run command: " << command << std::endl; }
         std::cout.flush();
