@@ -178,6 +178,22 @@ function comma_path_value_select()
 }
 export -f comma_path_value_select
 
+# Take a stream of paths and eliminate the invalid paths. The results can then
+# be passed onto comma_path_value_select and comma_path_value_to_var
+function comma_path_valid_variable_paths()
+{
+    sed -e '/^[[:alpha:]][_/[:alnum:]]*=/ ! d'
+}
+export -f comma_path_valid_variable_paths
+
+# Take a stream of paths and eliminate the valid paths. The results can then
+# be passed onto comma_path_value_select and comma_path_value_to_var
+function comma_path_invalid_variable_paths()
+{
+    sed -e '/^[[:alpha:]][_/[:alnum:]]*=/ d'
+}
+export -f comma_path_invalid_variable_paths
+
 # take path-value pairs, assign the values to corresponding bash variables
 # in the variable name slashes will be replaced with given delimiter
 #
