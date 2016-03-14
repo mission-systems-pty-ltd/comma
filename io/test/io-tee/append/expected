@@ -1,0 +1,6 @@
+io_tee/line[1]="some existing text"
+io_tee/line[2]="1111"
+io_tee/line[3]="1122"
+
+stdout/line[1]="1122"
+stdout/line[2]="2222"
