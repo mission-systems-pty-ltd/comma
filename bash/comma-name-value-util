@@ -331,6 +331,14 @@ declare -r comma_path_value_sort
 #    y=3
 #    z=4
 #    size=10
+#
+# example 3:
+#    line="fred;fields=a,b,c;binary=ub,d,f"
+#    prefix="xyz"
+#    eval $( echo "$line" | comma_path_value_line_split "filename" | sed "s/^/${prefix}_/g" )
+#    echo "xyz_filename='$xyz_filename' xyz_fields='$xyz_fields' xyz_binary='$xyz_binary'"
+# output:
+#    xyz_filename='fred' xyz_fields='a,b,c' xyz_binary='ub,d,f'
 function comma_path_value_line_split()
 {
     local -r paths_in_fixed_positions=$1
