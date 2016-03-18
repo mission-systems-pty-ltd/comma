@@ -86,12 +86,12 @@ void property_tree::put( boost::property_tree::ptree& ptree, const xpath& path, 
     t->put_value( value );
 }
 
-boost::optional< std::string > property_tree::get( boost::property_tree::ptree& ptree, const xpath& path, bool use_index )
+boost::optional< const boost::property_tree::ptree& > property_tree::get_tree( const boost::property_tree::ptree& ptree, const xpath& path, bool use_index )
 {
-    boost::property_tree::ptree* t = &ptree;
+    const boost::property_tree::ptree* t = &ptree;
     for( unsigned int i = 0; i < path.elements.size(); ++i )
     {
-        boost::optional< boost::property_tree::ptree& > child = t->get_child_optional( path.elements[i].name );
+        boost::optional< const boost::property_tree::ptree& > child = t->get_child_optional( path.elements[i].name );
         if( path.elements[i].index )
         {
             std::string name = use_index ? "" : path.elements[i].name;
@@ -101,7 +101,7 @@ boost::optional< std::string > property_tree::get( boost::property_tree::ptree& 
                 if(use_index)
                     t = &( *child );
                 bool found = false;
-                for( boost::property_tree::ptree::assoc_iterator j = t->ordered_begin(); j != t->not_found(); ++j )
+                for( boost::property_tree::ptree::const_assoc_iterator j = t->ordered_begin(); j != t->not_found(); ++j )
                 {
                     if( j->first != name ) { if( found ) { break; } else { continue; } }
                     ++size;
@@ -117,6 +117,20 @@ boost::optional< std::string > property_tree::get( boost::property_tree::ptree& 
             t = &( *child );
         }
     }
+    return *t;
+}
+
+boost::optional< boost::property_tree::ptree& > property_tree::get_tree( boost::property_tree::ptree& ptree, const xpath& path, bool use_index )
+{
+    boost::optional< const boost::property_tree::ptree& > t = get_tree( const_cast< const boost::property_tree::ptree& >( ptree ), path, use_index );
+    if( !t ) { return boost::none; }
+    return const_cast< boost::property_tree::ptree& >( *t );
+}
+
+boost::optional< std::string > property_tree::get( const boost::property_tree::ptree& ptree, const xpath& path, bool use_index )
+{
+    boost::optional< const boost::property_tree::ptree& > t = get_tree( ptree, path, use_index );
+    if( !t ) { return boost::none; }
     return t->get_value_optional< std::string >();
 }
     
