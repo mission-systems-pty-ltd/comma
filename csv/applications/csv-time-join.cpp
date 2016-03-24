@@ -70,7 +70,7 @@ static void usage()
     std::cerr << "limitation" << std::endl;
     std::cerr << "    data with timestamp before the first and after the last bounding timestamps will be discarded at the moment; this is unwanted behaviour when using --nearest and --bound=n" << std::endl;
     std::cerr << "    workaround" << std::endl;
-    std::cerr << "        use csv-time-delay to shift data timestamp and/or possibly add a boudning timestamp record with distant time in the past or future" << std::endl;
+    std::cerr << "        use csv-time-delay to shift data timestamp and/or possibly add a bounding timestamp record with distant time in the past or future" << std::endl;
     std::cerr << std::endl;
     std::cerr << "<input/output options>" << std::endl;
     std::cerr << "    -: if csv-time-join - b.csv, concatenate output as: <stdin><b.csv>" << std::endl;
@@ -83,7 +83,7 @@ static void usage()
     std::cerr << "    --no-discard: do not discard input points" << std::endl;
     std::cerr << "                         default: discard input points that cannot be" << std::endl;
     std::cerr << "                         consistently timestamped, especially head or tail" << std::endl;
-    std::cerr << "    --discard-bouding: discard bounding data" << std::endl;
+    std::cerr << "    --discard-bounding: discard bounding data" << std::endl;
     std::cerr << "                         default: no discard" << std::endl;
     std::cerr << "    --buffer: bounding data buffer size" << std::endl;
     std::cerr << "                         default: infinite" << std::endl;
