@@ -103,11 +103,11 @@ class test_structured_dtype( unittest.TestCase ):
     expected = numpy.dtype( 'S2,u4,f8' )
     self.assertEqual( comma.csv.structured_dtype( 'S2,u4,f8' ), expected )
 
-  def test_single_type( self ):
+  def test_single_type_string( self ):
     expected = numpy.dtype( [( 'f0', 'S2' )] )
     self.assertEqual( comma.csv.structured_dtype( 'S2' ), expected )
     
-  def test_single_type( self ):
+  def test_single_type_time( self ):
     expected = numpy.dtype( [( 'f0', 'datetime64[us]' )] )
     self.assertEqual( comma.csv.structured_dtype( 'datetime64[us]' ), expected )
 
