@@ -53,7 +53,7 @@ class test_merge_arrays( unittest.TestCase ):
     c = comma.csv.merge_arrays( a, b )
     numpy.testing.assert_equal( c, expected )
 
-  def test_both_multicolum( self ):
+  def test_both_multicolumn( self ):
     dtype_a = [ ( 'name', 'u4' ), ( 'name_2', 'S1' ) ]
     dtype_b = [ ( 'name_1', 'f8' ), ( 'name_2', 'S1' ) ]
     a = numpy.array( [(1,'a'), (2,'b'), (3,'c') ], dtype=dtype_a )
