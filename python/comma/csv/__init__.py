@@ -9,29 +9,57 @@ import comma.csv.format
 import comma.csv.options
 import comma.csv.time
 
-def merge_arrays( a1, a2 ):
-  if a1.size != a2.size: raise Exception( "expected arrays of same size, got {} and {}".format( a1.size, a2.size ) )
-  merged = numpy.empty( a1.size, dtype=numpy.dtype( [ ( 'a1', a1.dtype ), ( 'a2', a2.dtype ) ] ) )
-  for name in a1.dtype.names: merged['a1'][name] = a1[name]
-  for name in a2.dtype.names: merged['a2'][name] = a2[name]
+def custom_formatwarning( message, *args ):
+  return " comma.csv warning: " + str( message ) + "\n"
+warnings.formatwarning = custom_formatwarning
+
+def strip_prefix( string, prefix_chars='<>|=' ):
+  if string.startswith( tuple( prefix_chars ) ): return string[1:]
+
+def merge_arrays( first, second ):
+  """
+  merge two arrays faster than numpy.lib.recfunctions.merge_arrays
+  """
+  if first.size != second.size: raise Exception( "expected arrays of same size, got {} and {}".format( first.size, second.size ) )
+  merged = numpy.empty( first.size, dtype=numpy.dtype( [ ( 'first', first.dtype ), ( 'second', second.dtype ) ] ) )
+  for name in first.dtype.names: merged['first'][name] = first[name]
+  for name in second.dtype.names: merged['second'][name] = second[name]
   return merged
 
 def unrolled_types_of_flat_dtype( dtype ):
+  """
+  transform a format string (possibly containing array types) into the string with unrolled array types
+  e.g. 'u4,(2,3)f8' becomes 'u4,f8,f8,f8,f8,f8,f8'
+  """
   shape_unrolled_types = []
   for descr in dtype.descr:
-    type = descr[1]
+    type = strip_prefix( descr[1] )
     shape = descr[2] if len( descr ) > 2 else ()
     shape_unrolled_types.extend( [ type ] * reduce( operator.mul, shape, 1 ) )
   return tuple( shape_unrolled_types )
 
 def structured_dtype( numpy_format ):
+  """
+  return structured array even for a format string containing a single type
+  note: passing a single type format string to numpy dtype returns a scalar,
+    e.g., numpy.dtype('f8') yields dtype('float64'), whereas numpy.dtype('f8,f8') yields dtype([('f0', '<f8'), ('f1', '<f8')])
+  """
   number_of_types = len( re.sub( r'\([^\)]*\)', '', numpy_format ).split(',') )
   return numpy.dtype( [ ( 'f0', numpy_format ) ] ) if number_of_types == 1 else numpy.dtype( numpy_format )
 
 def format_from_types( types ):
-  return ','.join( type if isinstance( type, basestring ) else numpy.dtype( type ).str for type in types )
+  """
+  return the format string corresponding to a sequence of types, which can contain both basic-type description strings (including arrays) and numpy types,
+    e.g., ( 'f8', '(2,3)u4', numpy.uint32 )
+  NOTE: add checks to ensure type strings are valid types (use descr, but make sure it works for arrays)
+  """
+  return ','.join( type if isinstance( type, basestring ) else strip_prefix( numpy.dtype( type ).str ) for type in types )
 
 def readlines( source, size ):
+  """
+  read lines from source, such as stdin, without buffering
+  note: builtin readlines()  buffers the input and hence break stream behaviour when flushing is enabled
+  """
   if size >= 0:
     lines = ''
     number_of_lines = 0
@@ -72,9 +100,9 @@ class struct:
     self.flat_dtype = numpy.dtype( zip( self.fields, self.types ) )
     self.unrolled_flat_dtype = structured_dtype( ','.join( unrolled_types_of_flat_dtype( self.flat_dtype ) ) )
     self.type_of_field = dict( zip( self.fields, self.types ) )
-    self.leaves = tuple( xpath.split('/')[-1] for xpath in self.fields )
-    self.ambiguous_leaves = set( leaf for leaf in self.leaves if self.leaves.count( leaf ) > 1 )
-    d = dict( zip( self.leaves, self.fields ) )
+    leaves = tuple( xpath.split('/')[-1] for xpath in self.fields )
+    self.ambiguous_leaves = set( leaf for leaf in leaves if leaves.count( leaf ) > 1 )
+    d = dict( zip( leaves, self.fields ) )
     for ambiguous_leaf in self.ambiguous_leaves: del d[ ambiguous_leaf ]
     self.xpath_of_leaf = d
 
@@ -83,10 +111,11 @@ class stream:
   def __init__( self, s, fields='', format='', binary=None, delimiter=',', precision=12, flush=False, source=sys.stdin, target=sys.stdout, tied=None, full_xpath=True ):
     if not isinstance( s, struct ): raise Exception( "expected '{}', got '{}'".format( str( struct ), repr( s ) ) )
     self.struct = s
+    self.full_xpath = full_xpath
     if fields == '':
       self.fields = self.struct.fields
     else:
-      if full_xpath:
+      if self.full_xpath:
         self.fields = sum( map( lambda name: self.struct.shorthand.get( name ) or ( name, ), fields.split(',') ), () )
       else:
         if '/' in fields: raise Exception( "expected fields without '/', got '{}'".format( fields ) )
@@ -135,6 +164,7 @@ class stream:
       self.complete_dtype = numpy.dtype( self.input_dtype.descr + zip( missing_names, missing_types ) )
     else:
       self.complete_fields = self.fields
+      self.missing_fields_dtype = None
       self.complete_dtype = self.input_dtype
     if self.fields == self.struct.fields:
         self.data_extraction_dtype = None
