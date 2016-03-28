@@ -1,13 +1,11 @@
-#!/usr/bin/python
-
 import unittest
 import comma
 import numpy
 import numpy.testing
 import sys
 
-data_in = '../data/in'
-data_out = '../data/out'
+data_in = 'data/in'
+data_out = 'data/out'
 
 class test_merge_arrays( unittest.TestCase ):
   def test_mismatched_size( self ):

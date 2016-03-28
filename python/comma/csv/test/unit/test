@@ -1,0 +1,7 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+python init.py || { echo "$name: init.py failed" >&2; exit 1; }
+python format.py || { echo "$name: format.py failed" >&2; exit 1; }
+python time.py || { echo "$name: time.py failed" >&2; exit 1; }
