@@ -63,14 +63,19 @@ function comma_test_commands()
     local key
     local value
     local status
-    local output    
+    local output
+    local fields=$1
     while IFS='=' read key value ; do
         [[ -n "$key" && ! "$key" =~ \#.* ]] || continue
         value="${value/#\"}"
         value="${value/%\"}"
         output="$( eval "$value" || exit 1 )"
         status="$?"
-        echo "$key/output=\"$output\""
+        if [[ -n "$fields" ]]; then
+            echo "$output" | name-value-from-csv "$fields" --prefix "$key/output"
+        else
+            echo "$key/output=\"$output\""
+        fi    
         echo "$key/status=$status"
     done < <( grep '=' ; grep -v '^#' )
 }
