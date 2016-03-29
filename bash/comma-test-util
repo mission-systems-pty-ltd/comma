@@ -51,12 +51,20 @@ readonly comma_test_util_include_guard_=1
 #     <test name>/output="<output>"
 #     <test name>/status="<status>"
 #
+# if output fields are specified then the output will be split by field
+#
+#
 # e.g:
 # 
 # source $( type -p comma-test-util )
 # echo "my_basic_test[0]/for/something=\"echo 1 | csv-units --scale 2\"" | comma_test_commands
 # my_basic_test[0]/for/something/output="2"
 # my_basic_test[0]/for/something/output=0
+#
+# echo "my_basic_test[1]/for/something=\"echo 1,2 | csv-units --scale 2\"" | comma_test_commands a,b
+# my_basic_test[1]/for/something/output/a="2"
+# my_basic_test[1]/for/something/output/b="4"
+# my_basic_test[1]/for/something/output=0
 #
 function comma_test_commands()
 {
