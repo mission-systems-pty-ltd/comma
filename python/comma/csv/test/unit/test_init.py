@@ -29,7 +29,7 @@ class test_merge_arrays( unittest.TestCase ):
     dtype_b = numpy.dtype( [ ( 'name', 'f8' ) ] )
     a = numpy.array( [(1,), (2,), (3,) ], dtype=dtype_a )
     b = numpy.array( [(4,), (5,), (6,) ], dtype=dtype_b )
-    expected = numpy.array( [ ((1,),(4,)), ((2,),(5,)), ((3,),(6,)) ], dtype=[ ( 'first', dtype_a ), ( 'second', dtype_b ) ] )
+    expected = numpy.array( [ ((1,), (4,)), ((2,), (5,)), ((3,), (6,)) ], dtype=[ ( 'first', dtype_a ), ( 'second', dtype_b ) ] )
     c = comma.csv.merge_arrays( a, b )
     numpy.testing.assert_equal( c, expected )
 
@@ -37,26 +37,26 @@ class test_merge_arrays( unittest.TestCase ):
     dtype_a = [ ( 'name', 'u4' ) ]
     dtype_b = [ ( 'name_1', 'f8' ), ( 'name_2', 'S1' ) ]
     a = numpy.array( [(1,), (2,), (3,) ], dtype=dtype_a )
-    b = numpy.array( [(4,'a'), (5,'b'), (6,'c') ], dtype=dtype_b )
-    expected = numpy.array( [ ((1,),(4,'a')), ((2,),(5,'b')), ((3,),(6,'c')) ], dtype=[ ( 'first', dtype_a ), ( 'second', dtype_b ) ] )
+    b = numpy.array( [(4, 'a'), (5, 'b'), (6, 'c') ], dtype=dtype_b )
+    expected = numpy.array( [ ((1,), (4, 'a')), ((2,), (5, 'b')), ((3,), (6, 'c')) ], dtype=[ ( 'first', dtype_a ), ( 'second', dtype_b ) ] )
     c = comma.csv.merge_arrays( a, b )
     numpy.testing.assert_equal( c, expected )
 
   def test_second_single_column( self ):
     dtype_a = [ ( 'name', 'u4' ), ( 'name_2', 'S1' ) ]
     dtype_b = [ ( 'name_1', 'f8' ) ]
-    a = numpy.array( [(1,'a'), (2,'b'), (3,'c') ], dtype=dtype_a )
+    a = numpy.array( [(1, 'a'), (2, 'b'), (3, 'c') ], dtype=dtype_a )
     b = numpy.array( [(4,), (5,), (6,) ], dtype=dtype_b )
-    expected = numpy.array( [ ((1,'a'),(4,)), ((2,'b'),(5,)), ((3,'c'),(6,)) ], dtype=[ ( 'first', dtype_a ), ( 'second', dtype_b ) ] )
+    expected = numpy.array( [ ((1, 'a'), (4,)), ((2, 'b'), (5,)), ((3, 'c'), (6,)) ], dtype=[ ( 'first', dtype_a ), ( 'second', dtype_b ) ] )
     c = comma.csv.merge_arrays( a, b )
     numpy.testing.assert_equal( c, expected )
 
   def test_both_multicolumn( self ):
     dtype_a = [ ( 'name', 'u4' ), ( 'name_2', 'S1' ) ]
     dtype_b = [ ( 'name_1', 'f8' ), ( 'name_2', 'S1' ) ]
-    a = numpy.array( [(1,'a'), (2,'b'), (3,'c') ], dtype=dtype_a )
-    b = numpy.array( [(4,'x'), (5,'y'), (6,'z') ], dtype=dtype_b )
-    expected = numpy.array( [ ((1,'a'),(4,'x')), ((2,'b'),(5,'y')), ((3,'c'),(6,'z')) ], dtype=[ ( 'first', dtype_a ), ( 'second', dtype_b ) ] )
+    a = numpy.array( [(1, 'a'), (2, 'b'), (3, 'c') ], dtype=dtype_a )
+    b = numpy.array( [(4, 'x'), (5, 'y'), (6, 'z') ], dtype=dtype_b )
+    expected = numpy.array( [ ((1, 'a'), (4, 'x')), ((2, 'b'), (5, 'y')), ((3, 'c'), (6, 'z')) ], dtype=[ ( 'first', dtype_a ), ( 'second', dtype_b ) ] )
     c = comma.csv.merge_arrays( a, b )
     numpy.testing.assert_equal( c, expected )
 
@@ -73,27 +73,27 @@ class test_unrolled_types_of_flat_dtype( unittest.TestCase ):
 
   def test_array_2d( self ):
     dtype = numpy.dtype( [ ( 'name', '(2,3)u4' ) ] )
-    expected = ( 'u4','u4','u4','u4','u4','u4' )
+    expected = ( 'u4', 'u4', 'u4', 'u4', 'u4', 'u4' )
     self.assertTupleEqual( comma.csv.unrolled_types_of_flat_dtype( dtype ), expected )
 
   def test_array_2d_with_other_fields( self ):
     dtype = numpy.dtype( [ ( 'name1', 'S2' ), ( 'name2', '(2,3)u4' ), ( 'name3', 'f8' ) ] )
-    expected = ( 'S2','u4','u4','u4','u4','u4','u4','f8' )
+    expected = ( 'S2', 'u4', 'u4', 'u4', 'u4', 'u4', 'u4', 'f8' )
     self.assertTupleEqual( comma.csv.unrolled_types_of_flat_dtype( dtype ), expected )
 
   def test_no_array( self ):
     dtype = numpy.dtype( [ ( 'name1', 'S2' ), ( 'name2', 'f8' ) ] )
-    expected =( 'S2', 'f8' )
+    expected = ( 'S2', 'f8' )
     self.assertTupleEqual( comma.csv.unrolled_types_of_flat_dtype( dtype ), expected )
 
   def test_time( self ):
     dtype = numpy.dtype( [ ( 'name1', 'datetime64[us]' ), ( 'name2', 'timedelta64[us]' ) ] )
-    expected =( 'M8[us]', 'm8[us]' )
+    expected = ( 'M8[us]', 'm8[us]' )
     self.assertTupleEqual( comma.csv.unrolled_types_of_flat_dtype( dtype ), expected )
 
   def test_time_array( self ):
     dtype = numpy.dtype( [ ( 'name', '2datetime64[us]' ) ] )
-    expected =( 'M8[us]', 'M8[us]' )
+    expected = ( 'M8[us]', 'M8[us]' )
     self.assertTupleEqual( comma.csv.unrolled_types_of_flat_dtype( dtype ), expected )
 
 class test_structured_dtype( unittest.TestCase ):
@@ -104,7 +104,7 @@ class test_structured_dtype( unittest.TestCase ):
   def test_single_type_string( self ):
     expected = numpy.dtype( [( 'f0', 'S2' )] )
     self.assertEqual( comma.csv.structured_dtype( 'S2' ), expected )
-    
+
   def test_single_type_time( self ):
     expected = numpy.dtype( [( 'f0', 'datetime64[us]' )] )
     self.assertEqual( comma.csv.structured_dtype( 'datetime64[us]' ), expected )
@@ -310,7 +310,7 @@ class test_stream( unittest.TestCase ):
     event_t = comma.csv.struct( 't,point', 'datetime64[us]', point_t )
     record_t = comma.csv.struct( 'id,event', 'u4', event_t )
     s = comma.csv.stream( record_t, fields=',event/point,,,id' )
-    self.assertTupleEqual( s.fields, ( '', 'event/point/x','event/point/y', 'event/point/z', '', '', 'id' ) )
+    self.assertTupleEqual( s.fields, ( '', 'event/point/x', 'event/point/y', 'event/point/z', '', '', 'id' ) )
 
   def test_fields_invalid_fields( self ):
     point_t = comma.csv.struct( 'x,y,z', 'f8', 'f8', 'f8' )
@@ -384,8 +384,8 @@ class test_stream( unittest.TestCase ):
     t = comma.csv.stream( s )
     self.assertEqual( t.input_dtype, numpy.dtype( [ ('x', 'f8'), ('y', 'f8'), ('z', 'f8') ] ) )
     self.assertDictEqual( t.ascii_converters, {} )
-    self.assertTupleEqual( t.usecols, (0,1,2) )
-    self.assertTupleEqual( t.filling_values, ('','','') )
+    self.assertTupleEqual( t.usecols, (0, 1, 2) )
+    self.assertTupleEqual( t.filling_values, ('', '', '') )
     self.assertTupleEqual( t.missing_fields, () )
     self.assertEqual( t.complete_fields, t.fields )
     self.assertEqual( t.complete_dtype, t.input_dtype )
@@ -398,13 +398,13 @@ class test_stream( unittest.TestCase ):
     # f0,f1,... are standard numpy field names, which are used when field names are not specified
     self.assertEqual( t.input_dtype, numpy.dtype( [ ('f0', 'S'), ('f1', 'S'), ('f2', 'M8[us]'), ('f3', 'S'), ('f4', 'f8'), ('f5', 'S') ] ) )
     self.assertDictEqual( t.ascii_converters, {2: comma.csv.time.to_numpy } )
-    self.assertTupleEqual( t.usecols, (0,1,2,3,4,5) )
-    self.assertTupleEqual( t.filling_values, ('','','','','','') )
+    self.assertTupleEqual( t.usecols, (0, 1, 2, 3, 4, 5) )
+    self.assertTupleEqual( t.filling_values, ('', '', '', '', '', '') )
     self.assertTupleEqual( t.missing_fields, ( 'x', 'z' ) )
     self.assertTupleEqual( t.complete_fields, ( 'n1', 'n2', 't', '', 'y', '', 'x', 'z' ) )
     self.assertEqual( t.missing_fields_dtype, numpy.dtype( [ ('f6', 'f8'), ('f7', 'f8') ] ) )
     self.assertEqual( t.complete_dtype, numpy.dtype( [ ('f0', 'S'), ('f1', 'S'), ('f2', 'M8[us]'), ('f3', 'S'), ('f4', 'f8'), ('f5', 'S'), ('f6', 'f8'), ('f7', 'f8') ] ) )
-    self.assertEqual( t.data_extraction_dtype, numpy.dtype( { 'names':['f2','f6','f4','f7'], 'formats':['M8[us]','f8','f8','f8'], 'offsets':[0,16,8,24] } ) )
+    self.assertEqual( t.data_extraction_dtype, numpy.dtype( { 'names': ['f2', 'f6', 'f4', 'f7'], 'formats': ['M8[us]', 'f8', 'f8', 'f8'], 'offsets': [0, 16, 8, 24] } ) )
 
   def test_ascii_structured( self ):
     point_t = comma.csv.struct( 't,x,y,z', 'datetime64[us]', 'f8', 'f8', 'f8' )
@@ -413,13 +413,13 @@ class test_stream( unittest.TestCase ):
     t = comma.csv.stream( record_t, fields=',name,,,id,event/point/x,event/point/t,' )
     self.assertEqual( t.input_dtype, numpy.dtype( [ ('f0', 'S'), ('f1', 'S36'), ('f2', 'S'), ('f3', 'S'), ('f4', 'u4'), ('f5', 'f8'), ('f6', 'M8[us]'), ( 'f7', 'S' ) ] ) )
     self.assertDictEqual( t.ascii_converters, {6: comma.csv.time.to_numpy } )
-    self.assertTupleEqual( t.usecols, (0,1,2,3,4,5,6,7) )
-    self.assertTupleEqual( t.filling_values, ('','','','','','','','') )
+    self.assertTupleEqual( t.usecols, (0, 1, 2, 3, 4, 5, 6, 7) )
+    self.assertTupleEqual( t.filling_values, ('', '', '', '', '', '', '', '') )
     self.assertTupleEqual( t.missing_fields, ( 'event/dt', 'event/point/y', 'event/point/z' ) )
     self.assertTupleEqual( t.complete_fields, ( '', 'name', '', '', 'id', 'event/point/x', 'event/point/t', '', 'event/dt', 'event/point/y', 'event/point/z' ) )
     self.assertEqual( t.missing_fields_dtype, numpy.dtype( [ ('f8', 'm8[us]'), ('f9', 'f8'), ('f10', 'f8') ] ) )
     self.assertEqual( t.complete_dtype, numpy.dtype( [ ('f0', 'S'), ('f1', 'S36'), ('f2', 'S'), ('f3', 'S'), ('f4', 'u4'), ('f5', 'f8'), ('f6', 'M8[us]'), ( 'f7', 'S' ), ('f8', 'm8[us]'), ('f9', 'f8'), ('f10', 'f8') ] ) )
-    self.assertEqual( t.data_extraction_dtype, numpy.dtype({'names':['f4','f1','f8','f6','f5','f9','f10'], 'formats':['u4','S36','m8[us]','M8[us]','f8','f8','f8'], 'offsets':[36,0,56,48,40,64,72] } ) )
+    self.assertEqual( t.data_extraction_dtype, numpy.dtype({'names': ['f4', 'f1', 'f8', 'f6', 'f5', 'f9', 'f10'], 'formats': ['u4', 'S36', 'm8[us]', 'M8[us]', 'f8', 'f8', 'f8'], 'offsets': [36, 0, 56, 48, 40, 64, 72] } ) )
 
   def test_binary_structured( self ):
     point_t = comma.csv.struct( 't,x,y,z', 'datetime64[us]', 'f8', 'f8', 'f8' )
@@ -434,34 +434,34 @@ class test_stream( unittest.TestCase ):
     self.assertTupleEqual( t.complete_fields, ( '', 'name', '', '', 'id', 'event/point/x', 'event/point/t', '', 'event/dt', 'event/point/y', 'event/point/z' ) )
     self.assertEqual( t.missing_fields_dtype, numpy.dtype( [ ('f8', 'm8[us]'), ('f9', 'f8'), ('f10', 'f8') ] ) )
     self.assertEqual( t.complete_dtype, numpy.dtype( [ ('f0', 'i1'), ('f1', 'S36'), ('f2', 'i2'), ('f3', 'i2'), ('f4', 'u4'), ('f5', 'f8'), ('f6', 'M8[us]'), ( 'f7', 'S10' ), ('f8', 'm8[us]'), ('f9', 'f8'), ('f10', 'f8') ] ) )
-    self.assertEqual( t.data_extraction_dtype, numpy.dtype({'names':['f4','f1','f8','f6','f5','f9','f10'], 'formats':['u4','S36','m8[us]','M8[us]','f8','f8','f8'], 'offsets':[41,1,71,53,45,79,87] } ) )
+    self.assertEqual( t.data_extraction_dtype, numpy.dtype({'names': ['f4', 'f1', 'f8', 'f6', 'f5', 'f9', 'f10'], 'formats': ['u4', 'S36', 'm8[us]', 'M8[us]', 'f8', 'f8', 'f8'], 'offsets': [41, 1, 71, 53, 45, 79, 87] } ) )
 
   def test_numpy_scalar_to_string( self ):
     stream = comma.csv.stream( comma.csv.struct( 'i', 'S1' ) )
     stream_with_precision = comma.csv.stream( comma.csv.struct( 'i', 'S1' ), precision=3 )
-    d = lambda value: stream.numpy_scalar_to_string( numpy.float64( value ) )
-    self.assertEqual( d( 1.6789 ), '1.6789' )
-    self.assertEqual( d( 0.12345678901234567890 ), '0.123456789012' )
-    self.assertEqual( d( -1.2345 ), '-1.2345' )
-    self.assertEqual( d( 0.0 ), '0' )
-    self.assertEqual( d( 10 ), '10' )
-    self.assertEqual( d( -12345678 ), '-12345678' )
-    g = lambda value: stream_with_precision.numpy_scalar_to_string( numpy.float64( value ) )
-    self.assertEqual( g( 1.6789 ), '1.68' )
-    self.assertEqual( g( -1.2345 ), '-1.23' )
-    self.assertEqual( g( 0.0 ), '0' )
-    self.assertEqual( g( 10 ), '10' )
-    self.assertEqual( g( -1000 ), '-1e+03' )
-    i = lambda value: stream.numpy_scalar_to_string( numpy.int64( value ) )
+    def f( value ): return stream.numpy_scalar_to_string( numpy.float64( value ) )
+    self.assertEqual( f( 1.6789 ), '1.6789' )
+    self.assertEqual( f( 0.12345678901234567890 ), '0.123456789012' )
+    self.assertEqual( f( -1.2345 ), '-1.2345' )
+    self.assertEqual( f( 0.0 ), '0' )
+    self.assertEqual( f( 10 ), '10' )
+    self.assertEqual( f( -12345678 ), '-12345678' )
+    def p( value ): return stream_with_precision.numpy_scalar_to_string( numpy.float64( value ) )
+    self.assertEqual( p( 1.6789 ), '1.68' )
+    self.assertEqual( p( -1.2345 ), '-1.23' )
+    self.assertEqual( p( 0.0 ), '0' )
+    self.assertEqual( p( 10 ), '10' )
+    self.assertEqual( p( -1000 ), '-1e+03' )
+    def i( value ): return stream.numpy_scalar_to_string( numpy.int64( value ) )
     self.assertEqual( i( 0 ), '0' )
     self.assertEqual( i( -123456789 ), '-123456789' )
-    s = lambda value: stream.numpy_scalar_to_string( numpy.str_( value ) )
+    def s( value ): return stream.numpy_scalar_to_string( numpy.str_( value ) )
     self.assertEqual( s( 'test' ), 'test' )
-    t = lambda value: stream.numpy_scalar_to_string( numpy.datetime64( value, 'us' ) )
+    def t( value ): return stream.numpy_scalar_to_string( numpy.datetime64( value, 'us' ) )
     self.assertEqual( t('2015-01-02 01:02:03.123456'), '20150102T010203.123456' )
     self.assertEqual( t('2015-01-02 01:02:03'), '20150102T010203' )
-    c = lambda value: stream.numpy_scalar_to_string( numpy.complex128( value ) )
-    self.assertRaises( Exception, c, 1+2j )
+    def c( value ): return stream.numpy_scalar_to_string( numpy.complex128( value ) )
+    self.assertRaises( Exception, c, 1 + 2j )
 
 if __name__ == '__main__':
     unittest.main()

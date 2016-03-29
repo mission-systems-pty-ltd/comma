@@ -27,9 +27,9 @@ class stream:
       fields = self.args.append_fields
     else:
       expressions = sum( [ line.split(';') for line in self.args.expressions.splitlines() if line.strip() ], [] )
-      fields = ','.join( e.split('=',1)[0].strip() for e in expressions )
+      fields = ','.join( e.split('=', 1)[0].strip() for e in expressions )
     check_fields( fields.split(','), input_fields=self.nonblank_input_fields )
-    format = self.args.append_binary if self.args.append_binary else ','.join( ('d',)*len( fields.split(',') ) )
+    format = self.args.append_binary if self.args.append_binary else ','.join( ('d',) * len( fields.split(',') ) )
     if self.args.verbose:
       print >> sys.stderr, "append fields: '{}'".format( fields )
       print >> sys.stderr, "append format: '{}'".format( format )
@@ -66,15 +66,15 @@ def evaluate( expressions, stream, dangerous=False ):
 
 def add_csv_options( parser ):
   comma.csv.options.standard_csv_options( parser, { 'fields': 'x,y,z' } )
-  
+
   parser.add_argument( "--append-fields", "-F", help="fields appended to input stream (by default, inferred from expressions)", metavar='<names>' )
   parser.add_argument( "--append-binary", "-B", help="for binary stream, binary format of appended fields (by default, 'd' for each)", metavar='<format>' )
 
 def main():
-  description="""
+  description = """
 evaluate numerical expressions and append computed values to csv stream
 """
-  epilog="""
+  epilog = """
 notes:
     1) in ascii mode, input fields are treated as floating point numbers
     2) fields appended to input stream are inferred from expressions (by default) or specified by --append-fields
@@ -111,9 +111,9 @@ examples:
 
     # add and subtract a microsecond
     ( echo 20150101T000000.000000; echo 20150101T000000.000010 ) | csv-to-bin t | {script_name} --fields=t --binary=t 'a=t+1;b=t-1' --append-binary=2t | csv-from-bin 3t
-    
+ 
 """.format( script_name=sys.argv[0].split('/')[-1] )
-  parser = argparse.ArgumentParser( description=description, epilog=epilog, formatter_class=lambda prog: argparse.RawTextHelpFormatter( prog, max_help_position=50 ) )  
+  parser = argparse.ArgumentParser( description=description, epilog=epilog, formatter_class=lambda prog: argparse.RawTextHelpFormatter( prog, max_help_position=50 ) )
   parser.add_argument( "expressions", help="semicolon-separated numerical expressions to evaluate (see examples)" )
   parser.add_argument( "--verbose", "-v", action="store_true", help="output expressions and appended field names/types to stderr" )
   parser.add_argument( "--dangerous", action="store_true", help=argparse.SUPPRESS )

@@ -2,6 +2,6 @@
 
 name=$( basename $0 )
 
-python test_init.py || { echo "$name: init.py failed" >&2; exit 1; }
-python test_format.py || { echo "$name: format.py failed" >&2; exit 1; }
-python test_time.py || { echo "$name: time.py failed" >&2; exit 1; }
+python test_init.py || { echo "$name: test_init.py failed" >&2; exit 1; }
+python test_format.py || { echo "$name: test_format.py failed" >&2; exit 1; }
+python test_time.py || { echo "$name: test_time.py failed" >&2; exit 1; }
