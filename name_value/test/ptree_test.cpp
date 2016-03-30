@@ -559,19 +559,30 @@ static void test_put_( boost::property_tree::ptree& p, const std::string& path, 
 
 TEST ( name_value_ptree, put )
 {
-    boost::property_tree::ptree p;
-    test_put_( p, "a/b/c", "0" );
-    test_put_( p, "a/b/d[0]", "1" );
-    test_put_( p, "a/b/d[1]", "2" );
-    test_put_( p, "a/e[0]/x", "3" );
-    test_put_( p, "a/e[1]/y", "4" );
-    test_put_( p, "a/e[1]/z[0]", "5" );
-    test_put_( p, "a/e[1]/z[1]", "6" );
-    test_put_( p, "a/e[1]/f[0]/k", "7" );
-    test_put_( p, "a/e[1]/f[1]/m", "8" );
-    EXPECT_FALSE( property_tree::get( p, "x/y/z" ) );
-    EXPECT_FALSE( property_tree::get( p, "a/b/x" ) );
-    EXPECT_FALSE( property_tree::get( p, "a/e[0]/z" ) );
+    {
+        boost::property_tree::ptree p;
+        test_put_( p, "b[0]", "0" );
+        EXPECT_TRUE( property_tree::get( p, "b[0]" ) );
+        EXPECT_EQ( "0", *( property_tree::get( p, "b[0]" ) ) );
+    }
+    {
+        boost::property_tree::ptree p;
+        test_put_( p, "a/b/c", "0" );
+        test_put_( p, "a/b/d[0]", "1" );
+        test_put_( p, "a/b/d[1]", "2" );
+        test_put_( p, "a/e[0]/x", "3" );
+        test_put_( p, "a/e[1]/y", "4" );
+        test_put_( p, "a/e[1]/z[0]", "5" );
+        test_put_( p, "a/e[1]/z[1]", "6" );
+        test_put_( p, "a/e[1]/f[0]/k", "7" );
+        test_put_( p, "a/e[1]/f[1]/m", "8" );
+        
+        EXPECT_TRUE( property_tree::get( p, "a/b/c" ) );
+        EXPECT_TRUE( property_tree::get( p, "a/e[0]/x" ) );
+        EXPECT_FALSE( property_tree::get( p, "x/y/z" ) );
+        EXPECT_FALSE( property_tree::get( p, "a/b/x" ) );
+        EXPECT_FALSE( property_tree::get( p, "a/e[0]/z" ) );
+    }
 }
 
 } } // namespace comma { namespace test {
