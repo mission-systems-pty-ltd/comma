@@ -140,10 +140,10 @@ template <> struct traits< path_value > // quick and dirty
 {
     static void input( std::istream& is, boost::property_tree::ptree& ptree )
     {
-        if( !linewise ) { comma::property_tree::from_path_value( is, ptree, check_type, equal_sign, path_value_delimiter ); return; }
+        if( !linewise ) { comma::property_tree::from_path_value( is, ptree, check_type, equal_sign, path_value_delimiter, true ); return; }
         std::string line;
         std::getline( is, line );
-        ptree = comma::property_tree::from_path_value_string( line, equal_sign, path_value_delimiter, check_type );
+        ptree = comma::property_tree::from_path_value_string( line, equal_sign, path_value_delimiter, check_type, true );
     }
     static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const std::string& path )
     { 
@@ -160,12 +160,12 @@ static std::vector< boost::optional< boost::regex > > path_regex;
 static void ( * input )( std::istream& is, boost::property_tree::ptree& ptree );
 static void ( * output )( std::ostream& is, const boost::property_tree::ptree& ptree, const std::string& );
 
-void match_( std::ostream& os, const boost::property_tree::ptree& ptree )
+static void match_( std::ostream& os, const boost::property_tree::ptree& ptree )
 {
     static const boost::property_tree::ptree::path_type empty;
     for( std::size_t i = 0; i < paths.size(); ++i )
     {
-        boost::optional< const boost::property_tree::ptree& > child = ptree.get_child_optional( paths[i] );
+        boost::optional< const boost::property_tree::ptree& > child = comma::property_tree::get_tree(ptree, path_strings[i]);
         if( !child ) { continue; }
         boost::optional< std::string > value = child->get_optional< std::string >( empty );
         if( value && !value->empty() )

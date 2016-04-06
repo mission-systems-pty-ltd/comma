@@ -8,6 +8,6 @@ ADD_CUSTOM_TARGET( ${TARGET_NAME} ${source} ${includes} )
 
 INSTALL( FILES ${includes} DESTINATION ${comma_INSTALL_INCLUDE_DIR}/${PROJECT} )
 
-#IF( comma_BUILD_TESTS )
-#    ADD_SUBDIRECTORY( test )
-#ENDIF( comma_BUILD_TESTS )
+IF( comma_BUILD_TESTS )
+   ADD_SUBDIRECTORY( test )
+ENDIF( comma_BUILD_TESTS )

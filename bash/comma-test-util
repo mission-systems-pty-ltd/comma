@@ -51,6 +51,9 @@ readonly comma_test_util_include_guard_=1
 #     <test name>/output="<output>"
 #     <test name>/status="<status>"
 #
+# if output fields are specified then the output will be split by field
+#
+#
 # e.g:
 # 
 # source $( type -p comma-test-util )
@@ -58,19 +61,29 @@ readonly comma_test_util_include_guard_=1
 # my_basic_test[0]/for/something/output="2"
 # my_basic_test[0]/for/something/output=0
 #
+# echo "my_basic_test[1]/for/something=\"echo 1,2 | csv-units --scale 2\"" | comma_test_commands a,b
+# my_basic_test[1]/for/something/output/a="2"
+# my_basic_test[1]/for/something/output/b="4"
+# my_basic_test[1]/for/something/output=0
+#
 function comma_test_commands()
 {
     local key
     local value
     local status
-    local output    
+    local output
+    local fields=$1
     while IFS='=' read key value ; do
         [[ -n "$key" && ! "$key" =~ \#.* ]] || continue
         value="${value/#\"}"
         value="${value/%\"}"
         output="$( eval "$value" || exit 1 )"
         status="$?"
-        echo "$key/output=\"$output\""
+        if [[ -n "$fields" ]]; then
+            echo "$output" | name-value-from-csv "$fields" --prefix "$key/output"
+        else
+            echo "$key/output=\"$output\""
+        fi    
         echo "$key/status=$status"
     done < <( grep '=' ; grep -v '^#' )
 }

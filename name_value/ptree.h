@@ -102,17 +102,17 @@ struct property_tree // quick and dirty
     };
 
     /// convert path-value-style string into boost parameter tree
-    static boost::property_tree::ptree from_path_value_string( const std::string& s, char equal_sign = '=', char delimiter = ',', path_value::check_repeated_paths check_type = path_value::no_check, bool use_index = false );
-    static boost::property_tree::ptree& from_path_value_string( boost::property_tree::ptree& ptree, const std::string& s, char equal_sign, char delimiter, path_value::check_repeated_paths check_type = path_value::no_check, bool use_index = false );
+    static boost::property_tree::ptree from_path_value_string( const std::string& s, char equal_sign = '=', char delimiter = ',', path_value::check_repeated_paths check_type = path_value::no_check, bool use_index = true );
+    static boost::property_tree::ptree& from_path_value_string( boost::property_tree::ptree& ptree, const std::string& s, char equal_sign, char delimiter, path_value::check_repeated_paths check_type = path_value::no_check, bool use_index = true );
 
     static void read_xml( std::istream& is, boost::property_tree::ptree& ptree );
     static void write_xml( std::ostream& os, const boost::property_tree::ptree& ptree, const xml_writer_settings_t& xml_writer_settings  = xml_writer_settings_t()  );
     
     /// read as path-value from input stream
-    static void from_path_value( std::istream& is, boost::property_tree::ptree& ptree,  path_value::check_repeated_paths check_type = path_value::no_check, char equal_sign = '=', char delimiter = ',', bool use_index = false );
+    static void from_path_value( std::istream& is, boost::property_tree::ptree& ptree,  path_value::check_repeated_paths check_type = path_value::no_check, char equal_sign = '=', char delimiter = ',', bool use_index = true );
 
     /// guess format and read boost property tree from stream (a wrapper for from_unknown_seekable that buffers input from a non-seekable stream)
-    static void from_unknown( std::istream& stream, boost::property_tree::ptree& ptree, path_value::check_repeated_paths check_type = path_value::no_check, char equal_sign = '=', char delimiter = ',', bool use_index = false  );
+    static void from_unknown( std::istream& stream, boost::property_tree::ptree& ptree, path_value::check_repeated_paths check_type = path_value::no_check, char equal_sign = '=', char delimiter = ',', bool use_index = true );
 
     /// guess format and read boost property tree from a seekable stream (pipe or terminal input is not accepted)
     static void from_unknown_seekable( std::istream& stream, boost::property_tree::ptree& ptree, path_value::check_repeated_paths check_type = path_value::no_check, char equal_sign = '=', char delimiter = ',', bool use_index = false  );

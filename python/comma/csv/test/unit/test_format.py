@@ -1,6 +1,5 @@
 import unittest
 import comma
-import numpy
 
 class test( unittest.TestCase ):
   def test_expand( self ):

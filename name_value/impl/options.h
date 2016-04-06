@@ -33,6 +33,7 @@
 #ifndef COMMA_APPLICATION_NAME_VALUE_OPTIONS_H
 #define COMMA_APPLICATION_NAME_VALUE_OPTIONS_H
 
+#include "../../base/exception.h"
 #include "../../string/string.h"
 #include "../../xpath/xpath.h"
 

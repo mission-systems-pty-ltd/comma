@@ -74,6 +74,7 @@ def readlines( source, size ):
 
 class struct:
   default_field_name = 'comma_struct_default_field_name_'
+
   def __init__( self, concise_fields, *concise_types ):
     if '/' in concise_fields: raise Exception( "expected fields without '/', got '{}'".format( concise_fields ) )
     given_fields = concise_fields.split(',')
@@ -89,7 +90,7 @@ class struct:
         fields.extend( fields_of_type )
         types.extend( type.types )
         self.shorthand[name] = tuple( fields_of_type )
-        for subname,subfields in type.shorthand.iteritems():
+        for subname, subfields in type.shorthand.iteritems():
           self.shorthand[ name + '/' + subname ] = tuple( name + '/' + field for field in subfields )
       else:
         fields.append( name )
@@ -108,6 +109,7 @@ class struct:
 
 class stream:
   buffer_size_in_bytes = 65536
+
   def __init__( self, s, fields='', format='', binary=None, delimiter=',', precision=12, flush=False, source=sys.stdin, target=sys.stdout, tied=None, full_xpath=True ):
     if not isinstance( s, struct ): raise Exception( "expected '{}', got '{}'".format( str( struct ), repr( s ) ) )
     self.struct = s
@@ -123,10 +125,10 @@ class stream:
         if ambiguous_leaves: raise Exception( "fields '{}' are ambiguous in '{}', use full xpath".format( ','.join( ambiguous_leaves ), fields ) )
         self.fields = tuple( self.struct.xpath_of_leaf.get( name ) or name for name in fields.split(',') )
       if not set( self.fields ).intersection( self.struct.fields ): raise Exception( "provided fields '{}' do not match any of the expected fields '{}'".format( fields, ','.join( self.struct.fields ) ) )
-    if binary == True and not format:
+    if binary is True and not format:
       if not set( self.struct.fields ).issuperset( self.fields ): raise Exception( "failed to infer type of every field in '{}', specify format".format( ','.join( self.fields ) ) )
       format = format_from_types( self.struct.type_of_field[name] for name in self.fields )
-    elif binary == False and format:
+    elif binary is False and format:
       format = ''
     self.binary = format != ''
     self.delimiter = delimiter
@@ -149,7 +151,7 @@ class stream:
       unrolled_types = unrolled_types_of_flat_dtype( self.input_dtype )
       self.ascii_converters = comma.csv.time.ascii_converters( unrolled_types )
       self.usecols = tuple( range( len( unrolled_types ) ) )
-      self.filling_values = '' if len( unrolled_types ) == 1 else ('',)*len( unrolled_types )
+      self.filling_values = '' if len( unrolled_types ) == 1 else ('',) * len( unrolled_types )
     self.size = self.tied.size if self.tied else ( 1 if self.flush else max( 1, stream.buffer_size_in_bytes / self.input_dtype.itemsize ) )
     if set( self.fields ).issuperset( self.struct.fields ):
       self.missing_fields = ()
@@ -184,7 +186,7 @@ class stream:
     size = self.size if size is None else size
     if size < 0:
       if self.source == sys.stdin: raise Exception( "expected positive size when stream source is stdin, got {}".format( size ) )
-      size = -1 # read entire file
+      size = -1  # read entire file
     if self.binary:
       self.input_data = numpy.fromfile( self.source, dtype=self.input_dtype, count=size )
     else:
@@ -203,7 +205,7 @@ class stream:
   def numpy_scalar_to_string( self, scalar ):
     if scalar.dtype.char in numpy.typecodes['AllInteger']: return str( scalar )
     elif scalar.dtype.char in numpy.typecodes['Float']: return "{scalar:.{precision}g}".format( scalar=scalar, precision=self.precision )
-    elif scalar.dtype.char in numpy.typecodes['Datetime'] : return comma.csv.time.from_numpy( scalar )
+    elif scalar.dtype.char in numpy.typecodes['Datetime']: return comma.csv.time.from_numpy( scalar )
     elif scalar.dtype.char in 'S': return scalar
     else: raise Exception( "conversion to string for numpy type '{}' is not implemented".format( repr( scalar.dtype ) ) )
 
