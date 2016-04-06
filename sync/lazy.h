@@ -80,10 +80,6 @@ class lazy
         }
 };
 
-template < typename T >
-template < typename A1, typename A2 >
-lazy::lazy( const A1& a1, const A2& a2 );
-
 } // namespace comma {
 
 #endif // #ifndef COMMA_SYNC_LAZY_HEADER_GUARD_
