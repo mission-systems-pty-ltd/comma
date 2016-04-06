@@ -45,6 +45,8 @@
 #include <comma/base/types.h>
 #include <comma/io/file_descriptor.h>
 #include <comma/math/compare.h>
+#include <boost/date_time/posix_time/ptime.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 using namespace comma;
 
@@ -65,6 +67,7 @@ static void usage()
     std::cerr << "    --deterministic,-d: if given, input is downsampled by a factor of int(1 / <rate>)." << std::endl;
     std::cerr << "                        That is, if <rate> is 0.33, output every third packet." << std::endl;
     std::cerr << "                        Default is to output each packet with a probability of <rate>." << std::endl;
+    std::cerr << "   --fps <d>: when specified use time rate for thining, output at time rate of <d> records per second; not to be used with <rate>" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -73,6 +76,7 @@ static void usage()
 
 static double rate;
 static bool deterministic;
+boost::optional<double> fps;
 
 static bool ignore()
 {
@@ -101,6 +105,18 @@ static bool ignore()
         }
         return false;
     }
+    else if(fps)
+    {
+        static boost::posix_time::time_duration period=boost::posix_time::microseconds( 1e6 / *fps );
+        static boost::posix_time::ptime last_time;
+        boost::posix_time::ptime now = boost::posix_time::microsec_clock::universal_time();
+        if(last_time.is_not_a_date_time() || (now >= last_time + period) )
+        {
+            last_time=now;
+            return false;
+        }
+        return true;
+    }
     static boost::mt19937 rng;
     static boost::uniform_real<> dist( 0, 1 );
     static boost::variate_generator< boost::mt19937&, boost::uniform_real<> > random( rng, dist );
@@ -117,13 +133,18 @@ int main( int ac, char** av )
         bool binary = options.exists( "--size,-s" );
         deterministic = options.exists( "--deterministic,-d" );
         std::size_t size = options.value( "--size,-s", 0u );
+        fps=options.optional<double>("--fps");
         #ifdef WIN32
         if( binary ) { _setmode( _fileno( stdin ), _O_BINARY ); _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
-        std::vector< std::string > v = options.unnamed( "--deterministic,-d", "-.*" );
-        if( v.empty() ) { std::cerr << "csv-thin: please specify rate" << std::endl; usage(); }
-        rate = boost::lexical_cast< double >( v[0] );
-        if( comma::math::less( rate, 0 ) || comma::math::less( 1, rate ) ) { std::cerr << "csv-thin: expected rate between 0 and 1, got " << rate << std::endl; usage(); }
+        
+        if(!fps)
+        {
+            std::vector< std::string > v = options.unnamed( "--deterministic,-d", "-.*" );
+            if( v.empty() ) { std::cerr << "csv-thin: please specify rate" << std::endl; usage(); }
+            rate = boost::lexical_cast< double >( v[0] );
+            if( comma::math::less( rate, 0 ) || comma::math::less( 1, rate ) ) { std::cerr << "csv-thin: expected rate between 0 and 1, got " << rate << std::endl; usage(); }
+        }
 
         if( binary ) // quick and dirty, improve performance by reading larger buffer
         {
