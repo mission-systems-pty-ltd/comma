@@ -26,10 +26,10 @@ class stream:
             types = comma.csv.format.to_numpy(self.args.binary)
         else:
             fields = self.args.fields.split(',')
-            types = tuple('float64' if field else 'S' for field in fields)
+            types = ['float64' if field else 'S' for field in fields]
         input_t = comma.csv.struct(self.args.fields, *types)
-        binary = bool(self.args.binary)
-        self.input = comma.csv.stream(input_t, binary=binary, **self.csv_options)
+        options = dict(binary=bool(self.args.binary), **self.csv_options)
+        self.input = comma.csv.stream(input_t, **options)
 
     def initialize_output(self):
         if self.args.append_fields:
@@ -61,13 +61,13 @@ def get_dict(module, update={}, delete=[]):
 
 
 def check_fields(fields, input_fields=(), env=get_dict(numpy)):
-    for name in fields:
-        if not re.match(r'^[a-z_]\w*$', name, re.I):
-            raise Exception("'{}' is not a valid field name".format(name))
-        if name == '__input' or name == '__output' or name in env:
-            raise Exception("'{}' is a reserved name".format(name))
-        if name in input_fields:
-            raise Exception("'{}' is an input field name".format(name))
+    for field in fields:
+        if not re.match(r'^[a-z_]\w*$', field, re.I):
+            raise Exception("'{}' is not a valid field name".format(field))
+        if field == '__input' or field == '__output' or field in env:
+            raise Exception("'{}' is a reserved name".format(field))
+        if field in input_fields:
+            raise Exception("'{}' is an input field name".format(field))
 
 
 def evaluate(expressions, stream, dangerous=False):
@@ -79,10 +79,8 @@ def evaluate(expressions, stream, dangerous=False):
         initialize_output += "__output['{field}'] = {field}\n".format(field=field)
     code_string = initialize_input + '\n' + expressions + '\n' + initialize_output
     code = compile(code_string, '<string>', 'exec')
-    if dangerous:
-        restricted_numpy = get_dict(numpy)
-    else:
-        restricted_numpy = get_dict(numpy, update=dict(__builtins__={}), delete=['sys'])
+    kwds = {'update': dict(__builtins__={}), 'delete': ['sys']} if dangerous else {}
+    restricted_numpy = get_dict(numpy, **kwds)
     output = numpy.empty(stream.input.size, dtype=stream.output.struct)
     is_shutdown = comma.signal.is_shutdown()
     while not is_shutdown:
