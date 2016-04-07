@@ -97,8 +97,54 @@ def evaluate(expressions, stream, dangerous=False):
         stream.output.write(output)
 
 
+description = """
+evaluate numerical expressions and append computed values to csv stream
+"""
+
+
+epilog = """
+notes:
+    1) in ascii mode, input fields are treated as floating point numbers
+    2) fields appended to input stream are inferred from expressions (by default) or specified by --append-fields
+    3) if --append-fields is omitted, only simple assignment statements are allowed in expressions
+    4) in binary mode, appended fields are assigned comma type 'd' (by default) or format is specified by --append-binary
+    5) full xpath input fields are not allowed
+
+examples:
+    ( echo 1,2; echo 3,4 ) | %(prog)s --fields=x,y --precision=2 'a=2/(x+y);b=x-sin(y)*a**2'
+    ( echo 1,2; echo 3,4 ) | csv-to-bin 2d | %(prog)s --binary=2d --fields=x,y 'a=2/(x+y);b=x-sin(y)*a**2' | csv-from-bin 4d
+
+    # define intermediate variable
+    ( echo 1; echo 2 ) | csv-to-bin d | %(prog)s --binary=d --fields=x 'a=2;y=a*x' --append-fields=y | csv-from-bin 2d
+
+    # take minimum
+    ( echo 1,2; echo 4,3 ) | csv-to-bin 2d | %(prog)s --binary=2d --fields=x,y 'c=minimum(x,y)' | csv-from-bin 3d
+
+    # clip index
+    ( echo a,2; echo b,5 ) | csv-to-bin s[1],ui | %(prog)s --binary=s[1],ui --fields=,id 'i=clip(id,3,inf)' --append-binary=ui | csv-from-bin s[1],ui,ui
+
+    # compare fields
+    ( echo 1,2; echo 4,3 ) | csv-to-bin 2i | %(prog)s --binary=2i --fields=i,j 'flag=i+1==j' --append-binary=b | csv-from-bin 2i,b
+    ( echo 1,2; echo 4,3 ) | csv-to-bin 2d | %(prog)s --binary=2d --fields=x,y 'flag=x<y' --append-binary=b | csv-from-bin 2d,b
+    ( echo 0,1; echo 1,2; echo 4,3 ) | csv-to-bin 2d | %(prog)s --binary=2d --fields=x,y 'flag=logical_and(x<y,y<2)' --append-binary=b | csv-from-bin 2d,b
+
+    # negate boolean
+    ( echo 0; echo 1 ) | csv-to-bin b | %(prog)s --binary=b --fields=flag 'a=logical_not(flag)' --append-binary=b | csv-from-bin 2b
+
+    # select operation based on condition
+    ( echo 1,2; echo 2,1 ) | csv-to-bin 2d | %(prog)s --fields=x,y --binary=2d 'a=where(x<y,x+y,x-y)' | csv-from-bin 3d
+
+    # count number of occurances of "/" in a string
+    ( echo 'a'; echo 'a/b' ) | csv-to-bin s[36] | %(prog)s --fields=path --binary=s[36] 'n=char.count(path,"/")' --append-binary=ui | csv-from-bin s[36],ui
+
+    # add and subtract a microsecond
+    ( echo 20150101T000000.000000; echo 20150101T000000.000010 ) | csv-to-bin t | %(prog)s --fields=t --binary=t 'a=t+1;b=t-1' --append-binary=2t | csv-from-bin 3t
+ 
+"""
+
+
 def add_csv_options(parser):
-    comma.csv.options.standard_csv_options(parser, {'fields': 'x,y,z'})
+    comma.csv.options.standard_csv_options(parser, defaults={'fields': 'x,y,z'})
     parser.add_argument(
         "--append-fields", "-F",
         help="fields appended to input stream (by default, inferred from expressions)",
@@ -113,49 +159,7 @@ def argparse_fmt(prog):
     return argparse.RawTextHelpFormatter(prog, max_help_position=50)
 
 
-def main():
-    description = """
-evaluate numerical expressions and append computed values to csv stream
-"""
-    epilog = """
-notes:
-    1) in ascii mode, input fields are treated as floating point numbers
-    2) fields appended to input stream are inferred from expressions (by default) or specified by --append-fields
-    3) if --append-fields is omitted, only simple assignment statements are allowed in expressions
-    4) in binary mode, appended fields are assigned comma type 'd' (by default) or format is specified by --append-binary
-    5) full xpath input fields are not allowed
-
-examples:
-    ( echo 1,2; echo 3,4 ) | {script_name} --fields=x,y --precision=2 'a=2/(x+y);b=x-sin(y)*a**2'
-    ( echo 1,2; echo 3,4 ) | csv-to-bin 2d | {script_name} --binary=2d --fields=x,y 'a=2/(x+y);b=x-sin(y)*a**2' | csv-from-bin 4d
-
-    # define intermediate variable
-    ( echo 1; echo 2 ) | csv-to-bin d | {script_name} --binary=d --fields=x 'a=2;y=a*x' --append-fields=y | csv-from-bin 2d
-
-    # take minimum
-    ( echo 1,2; echo 4,3 ) | csv-to-bin 2d | {script_name} --binary=2d --fields=x,y 'c=minimum(x,y)' | csv-from-bin 3d
-
-    # clip index
-    ( echo a,2; echo b,5 ) | csv-to-bin s[1],ui | {script_name} --binary=s[1],ui --fields=,id 'i=clip(id,3,inf)' --append-binary=ui | csv-from-bin s[1],ui,ui
-
-    # compare fields
-    ( echo 1,2; echo 4,3 ) | csv-to-bin 2i | {script_name} --binary=2i --fields=i,j 'flag=i+1==j' --append-binary=b | csv-from-bin 2i,b
-    ( echo 1,2; echo 4,3 ) | csv-to-bin 2d | {script_name} --binary=2d --fields=x,y 'flag=x<y' --append-binary=b | csv-from-bin 2d,b
-    ( echo 0,1; echo 1,2; echo 4,3 ) | csv-to-bin 2d | {script_name} --binary=2d --fields=x,y 'flag=logical_and(x<y,y<2)' --append-binary=b | csv-from-bin 2d,b
-
-    # negate boolean
-    ( echo 0; echo 1 ) | csv-to-bin b | {script_name} --binary=b --fields=flag 'a=logical_not(flag)' --append-binary=b | csv-from-bin 2b
-
-    # select operation based on condition
-    ( echo 1,2; echo 2,1 ) | csv-to-bin 2d | {script_name} --fields=x,y --binary=2d 'a=where(x<y,x+y,x-y)' | csv-from-bin 3d
-
-    # count number of occurances of "/" in a string
-    ( echo 'a'; echo 'a/b' ) | csv-to-bin s[36] | {script_name} --fields=path --binary=s[36] 'n=char.count(path,"/")' --append-binary=ui | csv-from-bin s[36],ui
-
-    # add and subtract a microsecond
-    ( echo 20150101T000000.000000; echo 20150101T000000.000010 ) | csv-to-bin t | {script_name} --fields=t --binary=t 'a=t+1;b=t-1' --append-binary=2t | csv-from-bin 3t
-\n
-""".format(script_name=sys.argv[0].split('/')[-1])
+def get_parser():
     parser = argparse.ArgumentParser(
         description=description,
         epilog=epilog,
@@ -166,7 +170,11 @@ examples:
                         help="output expressions and appended field names/types to stderr")
     parser.add_argument("--dangerous", action="store_true", help=argparse.SUPPRESS)
     add_csv_options(parser)
-    args = parser.parse_args()
+    return parser
+
+
+def main():
+    args = get_parser().parse_args()
     if not args.expressions:
         raise csv_eval_error("no expressions are given")
     evaluate(args.expressions.strip(';'), stream(args), dangerous=args.dangerous)
