@@ -68,7 +68,7 @@ def check_fields(fields, input_fields=(), env=get_dict(numpy)):
     for field in fields:
         if not re.match(r'^[a-z_]\w*$', field, re.I):
             raise csv_eval_error("'{}' is not a valid field name".format(field))
-        if field == '__input' or field == '__output' or field in env:
+        if field == '_input' or field == '_output' or field in env:
             raise csv_eval_error("'{}' is a reserved name".format(field))
         if field in input_fields:
             raise csv_eval_error("'{}' is an input field name".format(field))
@@ -77,10 +77,10 @@ def check_fields(fields, input_fields=(), env=get_dict(numpy)):
 def evaluate(expressions, stream, dangerous=False):
     input_initializer = ''
     for field in stream.nonblank_input_fields:
-        input_initializer += "{field} = __input['{field}']\n".format(field=field)
+        input_initializer += "{field} = _input['{field}']\n".format(field=field)
     output_initializer = ''
     for field in stream.output_fields:
-        output_initializer += "__output['{field}'] = {field}\n".format(field=field)
+        output_initializer += "_output['{field}'] = {field}\n".format(field=field)
     code_string = input_initializer + '\n' + expressions + '\n' + output_initializer
     code = compile(code_string, '<string>', 'exec')
     kwds = {'update': dict(__builtins__={}), 'delete': ['sys']} if dangerous else {}
@@ -93,7 +93,7 @@ def evaluate(expressions, stream, dangerous=False):
             break
         if output.size != i.size:
             output = numpy.empty(i.size, dtype=stream.output.struct)
-        exec code in restricted_numpy, {'__input': i, '__output': output}
+        exec code in restricted_numpy, {'_input': i, '_output': output}
         stream.output.write(output)
 
 
