@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 import sys
 import argparse
 import numpy
@@ -7,74 +5,117 @@ import re
 import comma.csv
 import comma.signal
 
+
 class stream:
-  def __init__( self, args ):
-    self.args = args
-    self.csv_options = dict( full_xpath=False, flush=self.args.flush, delimiter=self.args.delimiter, precision=self.args.precision )
-    self.initialize_input()
-    self.initialize_output()
+    def __init__(self, args):
+        self.args = args
+        self.csv_options = dict(
+            full_xpath=False,
+            flush=self.args.flush,
+            delimiter=self.args.delimiter,
+            precision=self.args.precision)
+        self.initialize_input()
+        self.initialize_output()
 
-  def initialize_input( self ):
-    self.nonblank_input_fields = filter( None, self.args.fields.split(',') )
-    if not self.nonblank_input_fields: raise Exception( "specify input stream fields, e.g. --fields=x,y" )
-    check_fields( self.nonblank_input_fields )
-    types = comma.csv.format.to_numpy( self.args.binary ) if self.args.binary else tuple( 'float64' if field else 'S' for field in self.args.fields.split(',') )
-    input_t = comma.csv.struct( self.args.fields, *types )
-    self.input = comma.csv.stream( input_t, binary=bool( self.args.binary ), **self.csv_options )
+    def initialize_input(self):
+        self.nonblank_input_fields = filter(None, self.args.fields.split(','))
+        if not self.nonblank_input_fields:
+            raise Exception("specify input stream fields, e.g. --fields=x,y")
+        check_fields(self.nonblank_input_fields)
+        if self.args.binary:
+            types = comma.csv.format.to_numpy(self.args.binary)
+        else:
+            fields = self.args.fields.split(',')
+            types = tuple('float64' if field else 'S' for field in fields)
+        input_t = comma.csv.struct(self.args.fields, *types)
+        binary = bool(self.args.binary)
+        self.input = comma.csv.stream(input_t, binary=binary, **self.csv_options)
 
-  def initialize_output( self ):
-    if self.args.append_fields:
-      fields = self.args.append_fields
+    def initialize_output(self):
+        if self.args.append_fields:
+            fields = self.args.append_fields
+        else:
+            lines = self.args.expressions.splitlines()
+            expressions = sum([line.split(';') for line in lines if line.strip()], [])
+            fields = ','.join(e.split('=', 1)[0].strip() for e in expressions)
+        check_fields(fields.split(','), input_fields=self.nonblank_input_fields)
+        format = self.args.append_binary or ','.join(('d',) * len(fields.split(',')))
+        if self.args.verbose:
+            print >> sys.stderr, "append fields: '{}'".format(fields)
+            print >> sys.stderr, "append format: '{}'".format(format)
+            numpy_format = comma.csv.format.to_numpy(format)
+            print >> sys.stderr, "numpy format: '{}'".format(','.join(numpy_format))
+            print >> sys.stderr, "expressions: '{}'".format(self.args.expressions)
+        output_t = comma.csv.struct(fields, *comma.csv.format.to_numpy(format))
+        options = dict(tied=self.input, binary=bool(self.args.binary), **self.csv_options)
+        self.output = comma.csv.stream(output_t, **options)
+        self.output_fields = self.output.struct.fields
+
+
+def get_dict(module, update={}, delete=[]):
+    d = module.__dict__.copy()
+    d.update(update)
+    for k in set(delete).intersection(d.keys()):
+        del d[k]
+    return d
+
+
+def check_fields(fields, input_fields=(), env=get_dict(numpy)):
+    for name in fields:
+        if not re.match(r'^[a-z_]\w*$', name, re.I):
+            raise Exception("'{}' is not a valid field name".format(name))
+        if name == '__input' or name == '__output' or name in env:
+            raise Exception("'{}' is a reserved name".format(name))
+        if name in input_fields:
+            raise Exception("'{}' is an input field name".format(name))
+
+
+def evaluate(expressions, stream, dangerous=False):
+    initialize_input = ''
+    for field in stream.nonblank_input_fields:
+        initialize_input += "{field} = __input['{field}']\n".format(field=field)
+    initialize_output = ''
+    for field in stream.output_fields:
+        initialize_output += "__output['{field}'] = {field}\n".format(field=field)
+    code_string = initialize_input + '\n' + expressions + '\n' + initialize_output
+    code = compile(code_string, '<string>', 'exec')
+    if dangerous:
+        restricted_numpy = get_dict(numpy)
     else:
-      expressions = sum( [ line.split(';') for line in self.args.expressions.splitlines() if line.strip() ], [] )
-      fields = ','.join( e.split('=', 1)[0].strip() for e in expressions )
-    check_fields( fields.split(','), input_fields=self.nonblank_input_fields )
-    format = self.args.append_binary if self.args.append_binary else ','.join( ('d',) * len( fields.split(',') ) )
-    if self.args.verbose:
-      print >> sys.stderr, "append fields: '{}'".format( fields )
-      print >> sys.stderr, "append format: '{}'".format( format )
-      print >> sys.stderr, "numpy format: '{}'".format( ','.join( comma.csv.format.to_numpy( format ) ) )
-      print >> sys.stderr, "expressions: '{}'".format( self.args.expressions )
-    output_t = comma.csv.struct( fields, *comma.csv.format.to_numpy( format ) )
-    self.output = comma.csv.stream( output_t, tied=self.input, binary=bool( self.args.binary ), **self.csv_options )
+        restricted_numpy = get_dict(numpy, update=dict(__builtins__={}), delete=['sys'])
+    output = numpy.empty(stream.input.size, dtype=stream.output.struct)
+    is_shutdown = comma.signal.is_shutdown()
+    while not is_shutdown:
+        i = stream.input.read()
+        if i is None:
+            break
+        if output.size != i.size:
+            output = numpy.empty(i.size, dtype=stream.output.struct)
+        exec code in restricted_numpy, {'__input': i, '__output': output}
+        stream.output.write(output)
 
-def get_dict( module, update={}, delete=[] ):
-  d = module.__dict__.copy()
-  d.update( update )
-  for k in set( delete ).intersection( d.keys() ): del d[k]
-  return d
 
-def check_fields( fields, input_fields=(), env=get_dict( numpy ) ):
-  for name in fields:
-    if not re.match( r'^[a-z_]\w*$', name, re.I ): raise Exception( "'{}' is not a valid field name".format( name ) )
-    if name == '__input' or name == '__output' or name in env: raise Exception( "'{}' is a reserved name".format( name ) )
-    if name in input_fields: raise Exception( "'{}' is an input field name".format( name ) )
+def add_csv_options(parser):
+    comma.csv.options.standard_csv_options(parser, {'fields': 'x,y,z'})
+    parser.add_argument(
+        "--append-fields", "-F",
+        help="fields appended to input stream (by default, inferred from expressions)",
+        metavar='<names>')
+    parser.add_argument(
+        "--append-binary", "-B",
+        help="for binary stream, format of appended fields (by default, 'd' for each)",
+        metavar='<format>')
 
-def evaluate( expressions, stream, dangerous=False ):
-  initialize_input = '\n'.join( "{name} = __input['{name}']".format( name=name ) for name in stream.nonblank_input_fields )
-  initialize_output = '\n'.join( "__output['{name}'] = {name}".format( name=name ) for name in stream.output.struct.fields )
-  code = compile( initialize_input + '\n' + expressions + '\n' + initialize_output + '\n', '<string>', 'exec' )
-  restricted_numpy = get_dict( numpy ) if dangerous else get_dict( numpy, update=dict(__builtins__={}), delete=['sys'] )
-  output = numpy.empty( stream.input.size, dtype=stream.output.struct )
-  is_shutdown = comma.signal.is_shutdown()
-  while not is_shutdown:
-    i = stream.input.read()
-    if i is None: break
-    if output.size != i.size: output = numpy.empty( i.size, dtype=stream.output.struct )
-    exec code in restricted_numpy, { '__input': i, '__output': output }
-    stream.output.write( output )
 
-def add_csv_options( parser ):
-  comma.csv.options.standard_csv_options( parser, { 'fields': 'x,y,z' } )
+def argparse_fmt(prog):
+    return argparse.RawTextHelpFormatter(prog, max_help_position=50)
 
-  parser.add_argument( "--append-fields", "-F", help="fields appended to input stream (by default, inferred from expressions)", metavar='<names>' )
-  parser.add_argument( "--append-binary", "-B", help="for binary stream, binary format of appended fields (by default, 'd' for each)", metavar='<format>' )
 
 def main():
-  description = """
+    description = """
 evaluate numerical expressions and append computed values to csv stream
 """
-  epilog = """
+    epilog = """
 notes:
     1) in ascii mode, input fields are treated as floating point numbers
     2) fields appended to input stream are inferred from expressions (by default) or specified by --append-fields
@@ -111,16 +152,23 @@ examples:
 
     # add and subtract a microsecond
     ( echo 20150101T000000.000000; echo 20150101T000000.000010 ) | csv-to-bin t | {script_name} --fields=t --binary=t 'a=t+1;b=t-1' --append-binary=2t | csv-from-bin 3t
- 
-""".format( script_name=sys.argv[0].split('/')[-1] )
-  parser = argparse.ArgumentParser( description=description, epilog=epilog, formatter_class=lambda prog: argparse.RawTextHelpFormatter( prog, max_help_position=50 ) )
-  parser.add_argument( "expressions", help="semicolon-separated numerical expressions to evaluate (see examples)" )
-  parser.add_argument( "--verbose", "-v", action="store_true", help="output expressions and appended field names/types to stderr" )
-  parser.add_argument( "--dangerous", action="store_true", help=argparse.SUPPRESS )
-  add_csv_options( parser )
-  args = parser.parse_args()
-  if not args.expressions: raise Exception( "no expressions are given" )
-  evaluate( args.expressions.strip(';'), stream( args ), dangerous=args.dangerous )
+\n
+""".format(script_name=sys.argv[0].split('/')[-1])
+    parser = argparse.ArgumentParser(
+        description=description,
+        epilog=epilog,
+        formatter_class=argparse_fmt)
+    parser.add_argument("expressions",
+                        help="numerical expressions to evaluate (see examples)")
+    parser.add_argument("--verbose", "-v", action="store_true",
+                        help="output expressions and appended field names/types to stderr")
+    parser.add_argument("--dangerous", action="store_true", help=argparse.SUPPRESS)
+    add_csv_options(parser)
+    args = parser.parse_args()
+    if not args.expressions:
+        raise Exception("no expressions are given")
+    evaluate(args.expressions.strip(';'), stream(args), dangerous=args.dangerous)
+
 
 if __name__ == '__main__':
-  main()
+    main()
