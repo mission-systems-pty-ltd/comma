@@ -75,13 +75,13 @@ def check_fields(fields, input_fields=(), env=get_dict(numpy)):
 
 
 def evaluate(expressions, stream, dangerous=False):
-    initialize_input = ''
+    input_initializer = ''
     for field in stream.nonblank_input_fields:
-        initialize_input += "{field} = __input['{field}']\n".format(field=field)
-    initialize_output = ''
+        input_initializer += "{field} = __input['{field}']\n".format(field=field)
+    output_initializer = ''
     for field in stream.output_fields:
-        initialize_output += "__output['{field}'] = {field}\n".format(field=field)
-    code_string = initialize_input + '\n' + expressions + '\n' + initialize_output
+        output_initializer += "__output['{field}'] = {field}\n".format(field=field)
+    code_string = input_initializer + '\n' + expressions + '\n' + output_initializer
     code = compile(code_string, '<string>', 'exec')
     kwds = {'update': dict(__builtins__={}), 'delete': ['sys']} if dangerous else {}
     restricted_numpy = get_dict(numpy, **kwds)
