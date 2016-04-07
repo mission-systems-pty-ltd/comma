@@ -6,6 +6,10 @@ import comma.csv
 import comma.signal
 
 
+class csv_eval_error(Exception):
+    pass
+
+
 class stream:
     def __init__(self, args):
         self.args = args
@@ -20,7 +24,7 @@ class stream:
     def initialize_input(self):
         self.nonblank_input_fields = filter(None, self.args.fields.split(','))
         if not self.nonblank_input_fields:
-            raise Exception("specify input stream fields, e.g. --fields=x,y")
+            raise csv_eval_error("specify input stream fields, e.g. --fields=x,y")
         check_fields(self.nonblank_input_fields)
         if self.args.binary:
             types = comma.csv.format.to_numpy(self.args.binary)
@@ -63,11 +67,11 @@ def get_dict(module, update={}, delete=[]):
 def check_fields(fields, input_fields=(), env=get_dict(numpy)):
     for field in fields:
         if not re.match(r'^[a-z_]\w*$', field, re.I):
-            raise Exception("'{}' is not a valid field name".format(field))
+            raise csv_eval_error("'{}' is not a valid field name".format(field))
         if field == '__input' or field == '__output' or field in env:
-            raise Exception("'{}' is a reserved name".format(field))
+            raise csv_eval_error("'{}' is a reserved name".format(field))
         if field in input_fields:
-            raise Exception("'{}' is an input field name".format(field))
+            raise csv_eval_error("'{}' is an input field name".format(field))
 
 
 def evaluate(expressions, stream, dangerous=False):
@@ -164,7 +168,7 @@ examples:
     add_csv_options(parser)
     args = parser.parse_args()
     if not args.expressions:
-        raise Exception("no expressions are given")
+        raise csv_eval_error("no expressions are given")
     evaluate(args.expressions.strip(';'), stream(args), dangerous=args.dangerous)
 
 
