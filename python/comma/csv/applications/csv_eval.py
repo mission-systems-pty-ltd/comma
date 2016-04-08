@@ -130,12 +130,15 @@ evaluate numerical expressions and append computed values to csv stream
 
 
 notes_and_examples = """
-notes:
-    1) in ascii mode, input fields are treated as floating point numbers
-    2) fields appended to input stream are inferred from expressions (by default) or specified by --output-fields
+input fields:
+    1) full xpath input fields are not allowed
+    2) for ascii streams, input fields are treated as floating point numbers, unless --format is given
+
+output fields:
+    1) output fields are inferred from expressions (by default) or specified by --output-fields
+    2) output fields are always appended to unmodified input
     3) if --output-fields is omitted, only simple assignment statements are allowed in expressions
-    4) in binary mode, appended fields are assigned comma type 'd' (by default) or format is specified by --output-format
-    5) full xpath input fields are not allowed
+    4) output fields are treated as floating point numbers, unless --output-format is given
 
 examples:
     ( echo 1,2; echo 3,4 ) | %(prog)s --fields=x,y --precision=2 'a=2/(x+y);b=x-sin(y)*a**2'
@@ -213,7 +216,7 @@ def get_parser():
         '--verbose',
         '-v',
         action='store_true',
-        help='output expressions and appended field names/types to stderr')
+        help='print input/output fields and formats on stderr')
     parser.add_argument(
         '--dangerous',
         action='store_true',
