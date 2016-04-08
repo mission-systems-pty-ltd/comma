@@ -1,0 +1,62 @@
+#!/bin/bash
+
+unset input
+unset update
+unset command
+
+function reset()
+{
+    rm -rf "update.csv"
+    unset input
+    unset update
+    unset update_file
+    unset command
+}
+
+function make_update()
+{
+    if [[ -n $update ]] ; then
+        update_file="update.csv"
+        for i in ${update[@]} ; do echo "$i" >> $update_file ; done
+    fi
+}
+
+function run_command()
+{
+    local size=0
+    local key="$1"
+    echo "Now running '$command'" >&2
+    while read line ; do
+        echo "$key/output/line[$size]=\"$line\""
+        #echo "$( dirname "$key" )/output/line[$size]=\"$line\""
+        unset none
+        (( ++size ))
+    done < <( for i in ${input[@]} ; do echo "$i" ; done | eval "$command $update_file"  )
+    echo "$key/output/size=$size"
+    echo
+}
+
+reset
+while IFS='=' read key value ; do
+    [[ -n "$key" && "${key:0:1}" != "#" ]] || continue
+    value="${value/#\"}"
+    value="${value/%\"}"
+    key_basename=$(basename $key)
+    case "$key_basename" in
+        input|input\[*\]) 
+            if [[ "$prev_basename" == command* ]] ; then reset ; fi
+            input+=( "$value" )
+            ;;
+        update|update\[*\]) 
+            if [[ "$prev_basename" == command* ]] ; then reset ; fi
+            update+=( "$value" ) 
+            ;;
+        command|command\[*\])
+            command="$value"
+            make_update
+            if [[ $key_basename == command ]] ; then key=$(dirname $key) ; fi
+            run_command "$key"
+            ;;
+    esac
+    prev_basename=$key_basename
+done
