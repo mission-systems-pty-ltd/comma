@@ -365,6 +365,7 @@ int min_max_select( const comma::command_line_options& options )
     // Dumps whats in the cache
     if( is_min ) { min_max_t::output( stdin_csv, min ); }
     if( is_max ) { min_max_t::output( stdin_csv, max ); }
+    return 0;
 }
 int sort( const comma::command_line_options& options )
 {
