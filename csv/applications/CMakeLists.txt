@@ -57,7 +57,7 @@ target_link_libraries ( csv-calc-new ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv c
 target_link_libraries ( csv-crc ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application comma_string )
 target_link_libraries ( csv-play ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application comma_io )
 target_link_libraries ( csv-shuffle ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
-target_link_libraries ( csv-thin ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io )
+target_link_libraries ( csv-thin ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application comma_io )
 target_link_libraries ( csv-analyse ${comma_ALL_EXTERNAL_LIBRARIES} comma_application )
 target_link_libraries ( csv-to-sql ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
 
