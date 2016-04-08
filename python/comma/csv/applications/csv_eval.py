@@ -19,7 +19,7 @@ class csv_eval_error(Exception):
     pass
 
 
-def numpy_type(comma_type, field, default='float64'):
+def numpy_type(comma_type, field, default='f8'):
     if not field:
         return 'S'
     if comma_type:
@@ -37,6 +37,8 @@ class stream(object):
             precision=self.args.precision)
         self.initialize_input()
         self.initialize_output()
+        if self.args.verbose:
+            self.output_info()
 
     def initialize_input(self):
         self.nonblank_input_fields = filter(None, self.args.fields.split(','))
@@ -64,18 +66,21 @@ class stream(object):
         comma_types = comma.csv.format.expand(self.args.output_format).split(',')
         typed_fields = itertools.izip_longest(comma_types, fields.split(','))
         types = [numpy_type(comma_type, field) for comma_type, field in typed_fields]
-        if self.args.verbose:
-            print("output fields: '{}'".format(fields), file=sys.stderr)
-            format = comma.csv.format_from_types(types)
-            numpy_format = ','.join(comma.csv.format.to_numpy(format))
-            print("output format: '{}'".format(format), file=sys.stderr)
-            print("output format (numpy): '{}'".format(numpy_format), file=sys.stderr)
-            print("output format (numpy): '{}'".format(numpy_format), file=sys.stderr)
-            print("expressions: '{}'".format(self.args.expressions), file=sys.stderr)
         output_t = comma.csv.struct(fields, *types)
         options = dict(tied=self.input, binary=bool(self.args.binary), **self.csv_options)
         self.output = comma.csv.stream(output_t, **options)
         self.output_fields = self.output.struct.fields
+
+    def output_info(self, file=sys.stderr):
+        fields = ','.join(self.input.struct.fields)
+        format = self.input.struct.format
+        output_fields = ','.join(self.output.struct.fields)
+        output_format = self.output.struct.format
+        print("input fields: '{}'".format(fields), file=file)
+        print("input format: '{}'".format(format), file=file)
+        print("output fields: '{}'".format(output_fields), file=file)
+        print("output format: '{}'".format(output_format), file=file)
+        print("expressions: '{}'".format(self.args.expressions), file=file)
 
 
 def get_dict(module, update={}, delete=[]):
@@ -219,11 +224,13 @@ def get_parser():
 
 def ingest_deprecated_options(args):
     if args.append_binary:
-        warnings.warn("--append-binary is deprecated, consider using --output-format")
+        if args.verbose:
+            warnings.warn("--append-binary is deprecated, consider using --output-format")
         args.output_format = args.append_binary
         del args.append_binary
     if args.append_fields:
-        warnings.warn("--append-fields is deprecated, consider using --output-fields")
+        if args.verbose:
+            warnings.warn("--append-fields is deprecated, consider using --output-fields")
         args.output_fields = args.append_fields
         del args.append_fields
 
