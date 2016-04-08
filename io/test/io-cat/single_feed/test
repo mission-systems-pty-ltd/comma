@@ -20,7 +20,7 @@ function find_free_port { for(( port=1024; port < 65536; port++ )); do ! netstat
 
 function wait_for_success
 {
-    local reps=10
+    local reps=50
     local dt=0.1
     for(( i=0; i<reps; i++ )); do
         eval "$1" && return 0 || sleep $dt
