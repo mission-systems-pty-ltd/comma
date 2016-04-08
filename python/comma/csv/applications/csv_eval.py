@@ -105,7 +105,7 @@ def evaluate(expressions, stream, dangerous=False):
         output_initializer += "_output['{field}'] = {field}\n".format(field=field)
     code_string = input_initializer + '\n' + expressions + '\n' + output_initializer
     code = compile(code_string, '<string>', 'exec')
-    kwds = {'update': dict(__builtins__={}), 'delete': ['sys']} if dangerous else {}
+    kwds = {} if dangerous else {'update': dict(__builtins__={}), 'delete': ['sys']}
     restricted_numpy = get_dict(numpy, **kwds)
     output = numpy.empty(stream.input.size, dtype=stream.output.struct)
     is_shutdown = comma.signal.is_shutdown()
