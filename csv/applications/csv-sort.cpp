@@ -166,54 +166,6 @@ struct input_t
 struct input_id_t : public input_t
 {
     comma::csv::impl::unstructured ids;     // IDs fields
-    comma::csv::impl::unstructured keys;
-    bool operator==( const input_id_t& rhs ) const
-    {
-        ordering_t::types type = ordering.front().type;
-        const comma::int32 index = 0;
-        switch (type)
-        {
-            case ordering_t::str_type:
-                if (keys.strings[index] != rhs.keys.strings[ index ]) { return false; }
-                break;
-            case ordering_t::long_type:
-                if (keys.longs[index] != rhs.keys.longs[ index ]) { return false; }
-                break;
-            case ordering_t::double_type:
-                if (keys.doubles[index] != rhs.keys.doubles[ index ]) { return false; }
-                break;
-            case ordering_t::time_type:
-                if (keys.time[index] != rhs.keys.time[ index ]) { return false; }
-                break;
-        }
-        return true;
-    }
-
-    bool operator<( const input_id_t& rhs ) const
-    {
-        ordering_t::types type = ordering.front().type;
-        const comma::int32 index = 0;
-        switch (type)
-        {
-            case ordering_t::str_type:
-                if (keys.strings[index] < rhs.keys.strings[ index ]) { return true; }
-                if (keys.strings[index] > rhs.keys.strings[ index ]) { return false; }
-                break;
-            case ordering_t::long_type:
-                if (keys.longs[index] < rhs.keys.longs[ index ]) { return true; }
-                if (keys.longs[index] > rhs.keys.longs[ index ]) { return false; }
-                break;
-            case ordering_t::double_type:
-                if (keys.doubles[index] < rhs.keys.doubles[ index ]) { return true; }
-                if (keys.doubles[index] > rhs.keys.doubles[ index ]) { return false; }
-                break;
-            case ordering_t::time_type:
-                if (keys.time[index] < rhs.keys.time[ index ]) { return true; }
-                if (keys.time[index] > rhs.keys.time[ index ]) { return false; }
-                break;
-        }
-        return false;
-    }
 };
 
 namespace comma { namespace visiting {
@@ -232,15 +184,15 @@ template <> struct traits< input_t >
 
 template <> struct traits< input_id_t >
 {
-    template < typename K, typename V > static void visit( const K&, const input_id_t& p, V& v )
+    template < typename K, typename V > static void visit( const K& k, const input_id_t& p, V& v )
     {
         v.apply( "ids", p.ids );
-        v.apply( "keys", p.keys );
+        traits< input_t >::visit( k, p, v);
     }
-    template < typename K, typename V > static void visit( const K&, input_id_t& p, V& v )
+    template < typename K, typename V > static void visit( const K& k, input_id_t& p, V& v )
     {
         v.apply( "ids", p.ids );
-        v.apply( "keys", p.keys );
+        traits< input_t >::visit( k, p, v);
     }
 };
 
@@ -260,7 +212,7 @@ template < typename It > static void output_( It it, It end )
 
     
 typedef std::vector< std::string > records_t;
-struct save_t
+struct min_max_t
 {
     /// Save data into the records_t collection
     static void save( const comma::csv::options& stdin_csv, const comma::csv::input_stream< input_id_t >& stdin_stream, records_t& d  )
@@ -346,8 +298,6 @@ int min_max_select( const comma::command_line_options& options )
     bool is_min = options.exists( "--min" );
     bool is_max = options.exists( "--max" );
     
-    bool has_id = !default_input.ids.empty();
-    
     bool first = true;
     if (!first_line.empty()) 
     { 
@@ -366,8 +316,8 @@ int min_max_select( const comma::command_line_options& options )
         
         if( first )
         {
-            if( is_min ) { save_t::save( stdin_csv, stdin_stream, min ); }
-            if( is_max ) { save_t::save( stdin_csv, stdin_stream, max ); }
+            if( is_min ) { min_max_t::save( stdin_csv, stdin_stream, min ); }
+            if( is_max ) { min_max_t::save( stdin_csv, stdin_stream, max ); }
 //             if( is_min ) { std::cerr  << "min first again " << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << p->keys.longs[0] << std::endl; }
 //             if( is_max ) { std::cerr  << "max first again " << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << p->keys.longs[0] <<std::endl; }
             first = false;
@@ -377,14 +327,14 @@ int min_max_select( const comma::command_line_options& options )
         {
 //             std::cerr  << "ID flushing"  << std::endl;
             // Dump and clear previous
-            if( is_min ) { save_t::output( stdin_csv, min ); }
-            if( is_max ) { save_t::output( stdin_csv, max ); }
+            if( is_min ) { min_max_t::output( stdin_csv, min ); }
+            if( is_max ) { min_max_t::output( stdin_csv, max ); }
             min.clear();
             max.clear();
             
             // Push new record
-            if( is_min ) { save_t::save( stdin_csv, stdin_stream, min ); }
-            if( is_max ) { save_t::save( stdin_csv, stdin_stream, max ); }
+            if( is_min ) { min_max_t::save( stdin_csv, stdin_stream, min ); }
+            if( is_max ) { min_max_t::save( stdin_csv, stdin_stream, max ); }
 //             if( is_min ) { std::cerr  << "min dumped " << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << std::endl; }
 //             if( is_max ) { std::cerr  << "max dumped " << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << std::endl; }
             prev_id = *p;
@@ -393,13 +343,13 @@ int min_max_select( const comma::command_line_options& options )
         {
             if( is_min )
             {
-                if( *p == prev_id ) { save_t::save( stdin_csv, stdin_stream, min ); } // Else If equals then append
+                if( *p == prev_id ) { min_max_t::save( stdin_csv, stdin_stream, min ); } // Else If equals then append
                 else if( *p < prev_id ) // If new min
                 {
 //                     std::cerr  << "min new " << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << std::endl;
                     // clear and replace
                     min.clear();
-                    save_t::save( stdin_csv, stdin_stream, min );
+                    min_max_t::save( stdin_csv, stdin_stream, min );
                     prev_id = *p;
                 }
                 // else { std::cerr  << "min ignored " << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << std::endl; }
@@ -411,14 +361,14 @@ int min_max_select( const comma::command_line_options& options )
                 if( *p < prev_id ) {} // { std::cerr  << "max ignored " << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << std::endl; } 
                 else if( *p == prev_id ) {  
 //                     std::cerr  << "equal max " << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << std::endl;
-                    save_t::save( stdin_csv, stdin_stream, max ); 
+                    min_max_t::save( stdin_csv, stdin_stream, max ); 
                 } // Else If equals then append
                 else // If new max
                 {
 //                     std::cerr  << "max new " << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << std::endl;
                     // clear and replace
                     max.clear();
-                    save_t::save( stdin_csv, stdin_stream, max );
+                    min_max_t::save( stdin_csv, stdin_stream, max );
                     prev_id = *p;
                 }
             }
@@ -427,8 +377,8 @@ int min_max_select( const comma::command_line_options& options )
     }
     
     // Dumps whats in the cache
-    if( is_min ) { save_t::output( stdin_csv, min ); }
-    if( is_max ) { save_t::output( stdin_csv, max ); }
+    if( is_min ) { min_max_t::output( stdin_csv, min ); }
+    if( is_max ) { min_max_t::output( stdin_csv, max ); }
 }
 int sort( const comma::command_line_options& options )
 {
