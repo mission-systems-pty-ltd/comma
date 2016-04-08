@@ -1,0 +1,13 @@
+output[0]/x=-1
+output[0]/time="20150101T000000.000000"
+output[0]/num=2
+output[0]/string="a"
+output[0]/time1="20150101T000000.000001"
+output[0]/time2="20141231T235959.999998"
+output[1]/x=-2
+output[1]/time="20150101T000000.000010"
+output[1]/num=20
+output[1]/string="ab"
+output[1]/time1="20150101T000000.000011"
+output[1]/time2="20150101T000000.000008"
+
