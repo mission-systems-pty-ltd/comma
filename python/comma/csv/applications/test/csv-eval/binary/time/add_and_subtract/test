@@ -1,0 +1,3 @@
+#!/bin/bash
+
+csv-to-bin i,t,ui,s[4] | csv-eval --fields=,t --binary i,t,ui,s[4] 'a=t+1;b=t-2' --output-format=2t | csv-from-bin i,t,ui,s[4],2t | name-value-from-csv x,time,num,string,time1,time2 --line-number --prefix output | tr -d '"'

@@ -1,0 +1,3 @@
+#!/bin/bash
+
+csv-to-bin i,s[36],ui,s[4] | csv-eval --fields=,path --binary i,s[36],ui,s[4] 'n=char.count(path,"/")' --output-format=s[36] | csv-from-bin i,s[36],ui,s[4],s[36] | name-value-from-csv x,path,num,string,n --line-number --prefix output | tr -d '"'
