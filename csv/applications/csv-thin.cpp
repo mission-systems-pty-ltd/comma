@@ -47,6 +47,9 @@
 #include <comma/math/compare.h>
 #include <boost/date_time/posix_time/ptime.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <comma/csv/options.h>
+#include <comma/csv/stream.h>
+#include <comma/visiting/traits.h>
 
 using namespace comma;
 
@@ -67,7 +70,7 @@ static void usage()
     std::cerr << "    --deterministic,-d: if given, input is downsampled by a factor of int(1 / <rate>)." << std::endl;
     std::cerr << "                        That is, if <rate> is 0.33, output every third packet." << std::endl;
     std::cerr << "                        Default is to output each packet with a probability of <rate>." << std::endl;
-    std::cerr << "   --fps <d>: when specified use time rate for thining, output at time rate of <d> records per second; not to be used with <rate>" << std::endl;
+    std::cerr << "   --fps,--frames-per-second <d>: when specified use time rate for thinning, output at time rate of <d> records per second; not to be used with <rate>" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -124,6 +127,28 @@ static bool ignore()
     return do_ignore && random() > rate;
 }
 
+struct input_t
+{
+    boost::posix_time::ptime t;
+};
+
+namespace comma { namespace visiting {
+
+template <> struct traits< input_t >
+{
+    template< typename K, typename V > static void visit( const K& k, const input_t& p, V& v )
+    {
+        v.apply( "t", p.t );
+    }
+    template< typename K, typename V > static void visit( const K& k, input_t& p, V& v )
+    {
+        v.apply( "t", p.t );
+    }
+};
+    
+} } //namespace comma { namespace visiting {
+
+
 int main( int ac, char** av )
 {
     try
@@ -133,12 +158,46 @@ int main( int ac, char** av )
         bool binary = options.exists( "--size,-s" );
         deterministic = options.exists( "--deterministic,-d" );
         std::size_t size = options.value( "--size,-s", 0u );
-        fps=options.optional<double>("--fps");
+        fps=options.optional<double>("--fps,--frames-per-second");
         #ifdef WIN32
         if( binary ) { _setmode( _fileno( stdin ), _O_BINARY ); _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
         
-        if(!fps)
+        if(fps)
+        {
+            std::string fields=options.value<std::string>("--fields","");
+            if(!fields.empty())
+            {
+                std::vector<std::string> ff=split(fields, ",");
+                if(std::find(ff.begin(), ff.end(), "t") != ff.end())
+                {
+                    comma::csv::options csv(options);
+                    csv.full_xpath=true;
+                    comma::csv::input_stream<input_t> is(std::cin, csv);
+                    static boost::posix_time::time_duration period=boost::posix_time::microseconds( 1e6 / *fps );
+                    static boost::posix_time::ptime last_time;
+                    while(std::cin.good())
+                    {
+                        //read a record
+                        const input_t* input=is.read();
+                        if(!input) { break; }
+                        boost::posix_time::ptime now = input->t;
+                        if(last_time.is_not_a_date_time() || (now >= last_time + period) )
+                        {
+                            last_time=now;
+                            //write output
+                            if(is.is_binary())
+                                std::cout.write(is.binary().last(), is.binary().size());
+                            else
+                                std::cout<<comma::join( is.ascii().last(), is.ascii().ascii().delimiter() )<< std::endl;
+                        }
+                    }
+                    return 0;
+                }
+            }
+
+        }
+        else //!fps
         {
             std::vector< std::string > v = options.unnamed( "--deterministic,-d", "-.*" );
             if( v.empty() ) { std::cerr << "csv-thin: please specify rate" << std::endl; usage(); }
