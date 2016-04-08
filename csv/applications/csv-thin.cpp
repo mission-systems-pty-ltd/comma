@@ -53,7 +53,7 @@
 
 using namespace comma;
 
-static void usage()
+static void usage(bool detail=false)
 {
     std::cerr << std::endl;
     std::cerr << "Read input data and thin them down by the given percentage;" << std::endl;
@@ -71,7 +71,20 @@ static void usage()
     std::cerr << "                        That is, if <rate> is 0.33, output every third packet." << std::endl;
     std::cerr << "                        Default is to output each packet with a probability of <rate>." << std::endl;
     std::cerr << "   --fps,--frames-per-second <d>: when specified use time rate for thinning, output at time rate of <d> records per second; not to be used with <rate>" << std::endl;
+    std::cerr << "                        if --fields is specified and it contains 't' then it will be used as timestamp for thinning otherwise it uses real time of reading input" << std::endl;
+    std::cerr << "                            other standard csv options may apply if t field is used; e.g. --binary=<format> if input is binary" << std::endl;
     std::cerr << std::endl;
+    if(detail)
+    {
+        std::cerr << "csv options:" << std::endl;
+        std::cerr<< comma::csv::options::usage() << std::endl;
+        std::cerr << std::endl;
+    }
+    else
+    {
+        std::cerr << "use -v or --verbose to see more detail" << std::endl;
+        std::cerr << std::endl;
+    }
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 1 );
@@ -153,8 +166,7 @@ int main( int ac, char** av )
 {
     try
     {
-        comma::command_line_options options( ac, av );
-        if( options.exists( "--help,-h" ) || ac == 1 ) { usage(); }
+        comma::command_line_options options( ac, av, usage );
         bool binary = options.exists( "--size,-s" );
         deterministic = options.exists( "--deterministic,-d" );
         std::size_t size = options.value( "--size,-s", 0u );
@@ -172,7 +184,6 @@ int main( int ac, char** av )
                 if(std::find(ff.begin(), ff.end(), "t") != ff.end())
                 {
                     comma::csv::options csv(options);
-                    csv.full_xpath=true;
                     comma::csv::input_stream<input_t> is(std::cin, csv);
                     static boost::posix_time::time_duration period=boost::posix_time::microseconds( 1e6 / *fps );
                     static boost::posix_time::ptime last_time;
@@ -207,7 +218,8 @@ int main( int ac, char** av )
 
         if( binary ) // quick and dirty, improve performance by reading larger buffer
         {
-            unsigned int factor = 65536 / size; // arbitrary
+            //fps needs real time of reading input record, so we can't buffer it
+            unsigned int factor = fps ? 1 : 65536 / size; // arbitrary
             if( factor == 0 ) { factor = 1; }
             std::vector< char > buf( size * factor );
             #ifdef WIN32
