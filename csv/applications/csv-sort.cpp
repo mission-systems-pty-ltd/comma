@@ -304,28 +304,22 @@ int min_max_select( const comma::command_line_options& options )
         prev_id =  comma::csv::ascii< input_id_t >(stdin_csv,default_input).get(first_line);
         min.push_back( first_line + "\n" );
         max.push_back( first_line + "\n" );
-//         if( is_min ) { std::cerr  << "min first " << first_line << " " << prev_id.keys.longs[0] << std::endl; }
-//         if( is_max ) { std::cerr  << "max first " << first_line << " " << prev_id.keys.longs[0] << std::endl; }
         first = false;
     }
     while( stdin_stream.ready() || ( std::cin.good() && !std::cin.eof() ) )
     {
         const input_id_t* p = stdin_stream.read();
         if( !p ) { break; }
-//         std::cerr << "id: " << p->ids.strings[0] << " key: " << p->keys.longs[0] << std::endl;
         
         if( first )
         {
             if( is_min ) { min_max_t::save( stdin_csv, stdin_stream, min ); }
             if( is_max ) { min_max_t::save( stdin_csv, stdin_stream, max ); }
-//             if( is_min ) { std::cerr  << "min first again " << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << p->keys.longs[0] << std::endl; }
-//             if( is_max ) { std::cerr  << "max first again " << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << p->keys.longs[0] <<std::endl; }
             first = false;
             prev_id = *p;
         }
         else if( !(p->ids == prev_id.ids) )
         {
-//             std::cerr  << "ID flushing"  << std::endl;
             // Dump and clear previous
             if( is_min ) { min_max_t::output( stdin_csv, min ); }
             if( is_max ) { min_max_t::output( stdin_csv, max ); }
@@ -335,8 +329,6 @@ int min_max_select( const comma::command_line_options& options )
             // Push new record
             if( is_min ) { min_max_t::save( stdin_csv, stdin_stream, min ); }
             if( is_max ) { min_max_t::save( stdin_csv, stdin_stream, max ); }
-//             if( is_min ) { std::cerr  << "min dumped " << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << std::endl; }
-//             if( is_max ) { std::cerr  << "max dumped " << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << std::endl; }
             prev_id = *p;
         }
         else    /// No ID case, compare to append or replace
@@ -346,7 +338,6 @@ int min_max_select( const comma::command_line_options& options )
                 if( *p == prev_id ) { min_max_t::save( stdin_csv, stdin_stream, min ); } // Else If equals then append
                 else if( *p < prev_id ) // If new min
                 {
-//                     std::cerr  << "min new " << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << std::endl;
                     // clear and replace
                     min.clear();
                     min_max_t::save( stdin_csv, stdin_stream, min );
@@ -357,15 +348,10 @@ int min_max_select( const comma::command_line_options& options )
             
             if( is_max )
             {
-//                 std::cerr  << "MAX compare: " << std::endl;
-                if( *p < prev_id ) {} // { std::cerr  << "max ignored " << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << std::endl; } 
-                else if( *p == prev_id ) {  
-//                     std::cerr  << "equal max " << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << std::endl;
-                    min_max_t::save( stdin_csv, stdin_stream, max ); 
-                } // Else If equals then append
+                if( *p < prev_id ) {} 
+                else if( *p == prev_id ) { min_max_t::save( stdin_csv, stdin_stream, max );  } // Else If equals then append
                 else // If new max
                 {
-//                     std::cerr  << "max new " << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << std::endl;
                     // clear and replace
                     max.clear();
                     min_max_t::save( stdin_csv, stdin_stream, max );
