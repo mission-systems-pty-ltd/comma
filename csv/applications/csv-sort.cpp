@@ -258,31 +258,28 @@ int min_max_select( const comma::command_line_options& options )
         if( verbose ) { std::cerr << "csv-sort: guessed format: " << f.string() << std::endl; }
     }
     
-    // Just one
-    ordering.push_back( ordering_t() );
-    
     comma::uint32 keys_size = 0;
     for( std::size_t k=0; k<v.size(); ++k )
     {
         const std::string& field = v[k];
-        std::string  field_name; // internal field name
         if( field.empty() ) { }
         else if( field == "id" ) { w[k] = "ids/" + default_input.ids.append( f.offset( k ).type ); } // std::cerr  << "appended " << w[k] << std::endl; }
         else 
         {
+            ordering.push_back( ordering_t() );
             std::string type = default_input.keys.append( f.offset( k ).type ); 
-            if ( type[0] == 's' ) {      ordering.front().type = ordering_t::str_type; }
-            else if ( type[0] == 'l' ) { ordering.front().type = ordering_t::long_type; }
-            else if ( type[0] == 'd' ) { ordering.front().type = ordering_t::double_type; }
-            else if ( type[0] == 't' ) { ordering.front().type = ordering_t::time_type; }
-            ordering.front().index = 0;
+            if ( type[0] == 's' ) {      ordering.back().type = ordering_t::str_type; }
+            else if ( type[0] == 'l' ) { ordering.back().type = ordering_t::long_type; }
+            else if ( type[0] == 'd' ) { ordering.back().type = ordering_t::double_type; }
+            else if ( type[0] == 't' ) { ordering.back().type = ordering_t::time_type; }
+            ordering.back().index = keys_size;
             w[k] = "keys/" + type; 
             ++keys_size; 
         }
     }
     
-    if( keys_size > 1 ) { std::cerr << "csv-sort: error, only one field is supported for --min or --max operation" << std::endl; return 1; }
-    if( keys_size < 1 ) { std::cerr << "csv-sort: error, please specify one field for --min or --max operation" << std::endl; return 1; }
+    // if( keys_size > 1 ) { std::cerr << "csv-sort: error, only one field is supported for --min or --max operation" << std::endl; return 1; }
+    if( keys_size < 1 ) { std::cerr << "csv-sort: error, please specify one or more field for --min or --max operation" << std::endl; return 1; }
     
     stdin_csv.fields = comma::join( w, ',' );
     if ( verbose ) { std::cerr << "csv-sort: fields: " << stdin_csv.fields << std::endl; }
@@ -331,7 +328,7 @@ int min_max_select( const comma::command_line_options& options )
             if( is_max ) { min_max_t::save( stdin_csv, stdin_stream, max ); }
             prev_id = *p;
         }
-        else    /// No ID case, compare to append or replace
+        else    /// No ID or same ID as prev record, compare to append or replace
         {
             if( is_min )
             {
