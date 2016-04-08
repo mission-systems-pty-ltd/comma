@@ -151,15 +151,18 @@ examples:
     ( echo 0,1; echo 1,2; echo 4,3 ) | csv-to-bin 2d | %(prog)s --binary=2d --fields=x,y 'flag=logical_and(x<y,y<2)' --output-format=b | csv-from-bin 2d,b
 
     # negate boolean
+    ( echo 0; echo 1 ) | %(prog)s --format=b --fields=flag 'a=logical_not(flag)' --output-format=b
     ( echo 0; echo 1 ) | csv-to-bin b | %(prog)s --binary=b --fields=flag 'a=logical_not(flag)' --output-format=b | csv-from-bin 2b
 
     # select operation based on condition
     ( echo 1,2; echo 2,1 ) | csv-to-bin 2d | %(prog)s --fields=x,y --binary=2d 'a=where(x<y,x+y,x-y)' | csv-from-bin 3d
 
     # count number of occurances of "/" in a string
+    ( echo 'a'; echo 'a/b' ) | %(prog)s --fields=path --format=s[36] 'n=char.count(path,"/")' --output-format=ui
     ( echo 'a'; echo 'a/b' ) | csv-to-bin s[36] | %(prog)s --fields=path --binary=s[36] 'n=char.count(path,"/")' --output-format=ui | csv-from-bin s[36],ui
 
     # add and subtract a microsecond
+    ( echo 20150101T000000.000000; echo 20150101T000000.000010 ) | %(prog)s --fields=t --format=t 'a=t+1;b=t-1' --output-format=2t
     ( echo 20150101T000000.000000; echo 20150101T000000.000010 ) | csv-to-bin t | %(prog)s --fields=t --binary=t 'a=t+1;b=t-1' --output-format=2t | csv-from-bin 3t
  
 """
