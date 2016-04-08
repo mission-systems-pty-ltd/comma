@@ -19,14 +19,6 @@ class csv_eval_error(Exception):
     pass
 
 
-def numpy_type(comma_type, field, default='f8'):
-    if not field:
-        return 'S'
-    if comma_type:
-        return comma.csv.format.to_numpy(comma_type)[0]
-    return default
-
-
 class stream(object):
     def __init__(self, args):
         self.args = args
@@ -40,34 +32,29 @@ class stream(object):
         if self.args.verbose:
             self.output_info()
 
+    @staticmethod
+    def output_fields_from_expressions(expressions_string):
+        lines = expressions_string.splitlines()
+        expressions = sum([line.split(';') for line in lines if line.strip()], [])
+        return ','.join(e.split('=', 1)[0].strip() for e in expressions)
+
     def initialize_input(self):
-        self.nonblank_input_fields = filter(None, self.args.fields.split(','))
+        fields = self.args.fields
+        self.nonblank_input_fields = filter(None, fields.split(','))
         if not self.nonblank_input_fields:
             raise csv_eval_error("specify input stream fields, e.g. --fields=x,y")
         check_fields(self.nonblank_input_fields)
-        if self.args.binary:
-            types = comma.csv.format.to_numpy(self.args.binary)
-        else:
-            split_fields = self.args.fields.split(',')
-            comma_types = comma.csv.format.expand(self.args.format).split(',')
-            typed_fields = itertools.izip_longest(comma_types, split_fields)
-            types = [numpy_type(comma_type, field) for comma_type, field in typed_fields]
-        input_t = comma.csv.struct(self.args.fields, *types)
-        options = dict(binary=bool(self.args.binary), **self.csv_options)
+        types = comma.csv.format.to_numpy(self.args.format)
+        input_t = comma.csv.struct(fields, *types)
+        options = dict(binary=self.args.binary, **self.csv_options)
         self.input = comma.csv.stream(input_t, **options)
 
     def initialize_output(self):
         fields = self.args.output_fields
-        if not fields:
-            lines = self.args.expressions.splitlines()
-            expressions = sum([line.split(';') for line in lines if line.strip()], [])
-            fields = ','.join(e.split('=', 1)[0].strip() for e in expressions)
         check_fields(fields.split(','), input_fields=self.nonblank_input_fields)
-        comma_types = comma.csv.format.expand(self.args.output_format).split(',')
-        typed_fields = itertools.izip_longest(comma_types, fields.split(','))
-        types = [numpy_type(comma_type, field) for comma_type, field in typed_fields]
+        types = comma.csv.format.to_numpy(self.args.output_format)
         output_t = comma.csv.struct(fields, *types)
-        options = dict(tied=self.input, binary=bool(self.args.binary), **self.csv_options)
+        options = dict(tied=self.input, binary=self.args.binary, **self.csv_options)
         self.output = comma.csv.stream(output_t, **options)
         self.output_fields = self.output.struct.fields
 
@@ -245,10 +232,34 @@ def check_options(args):
         raise csv_eval_error("--binary and --format are mutually exclusive")
 
 
-def main():
-    args = get_parser().parse_args()
+def comma_type(maybe_type, field, default_type='d', type_of_unnamed_field='s[0]'):
+    return type_of_unnamed_field if not field else maybe_type or default_type
+
+
+def format_without_blanks(format, fields):
+    maybe_types = comma.csv.format.expand(format).split(',')
+    maybe_typed_fields = itertools.izip_longest(maybe_types, fields.split(','))
+    types = [comma_type(maybe_type, field) for maybe_type, field in maybe_typed_fields]
+    return ','.join(types)
+
+
+def prepare_options(args):
     ingest_deprecated_options(args)
     check_options(args)
+    if args.binary:
+        args.format = comma.csv.format.expand(args.binary)
+        args.binary = True
+    else:
+        args.format = format_without_blanks(args.format, args.fields)
+        args.binary = False
+    if not args.output_fields:
+        args.output_fields = stream.output_fields_from_expressions(args.expressions)
+    args.output_format = format_without_blanks(args.output_format, args.output_fields)
+
+
+def main():
+    args = get_parser().parse_args()
+    prepare_options(args)
     evaluate(args.expressions.strip(';'), stream(args), dangerous=args.dangerous)
 
 
