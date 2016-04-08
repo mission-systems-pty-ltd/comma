@@ -30,7 +30,7 @@ class stream(object):
         self.initialize_input()
         self.initialize_output()
         if self.args.verbose:
-            self.output_info()
+            self.print_info()
 
     @staticmethod
     def output_fields_from_expressions(expressions_string):
@@ -58,7 +58,7 @@ class stream(object):
         self.output = comma.csv.stream(output_t, **options)
         self.output_fields = self.output.struct.fields
 
-    def output_info(self, file=sys.stderr):
+    def print_info(self, file=sys.stderr):
         fields = ','.join(self.input.struct.fields)
         format = self.input.struct.format
         output_fields = ','.join(self.output.struct.fields)
