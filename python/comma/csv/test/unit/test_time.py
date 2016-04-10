@@ -7,6 +7,7 @@ class test_time( unittest.TestCase ):
   def test_to_numpy( self ):
     f = comma.csv.time.to_numpy
     numpy.testing.assert_equal( f( '20150102T122345.012345' ), numpy.datetime64( '2015-01-02 12:23:45.012345', 'us' ) )
+    numpy.testing.assert_equal( f( '19690102T122345.012345' ), numpy.datetime64( '1969-01-02 12:23:45.012345', 'us' ) )
     numpy.testing.assert_equal( f( '20150102T122345' ), numpy.datetime64( '2015-01-02 12:23:45.000000', 'us' ) )
     numpy.testing.assert_equal( f( '' ), numpy.datetime64() )
     numpy.testing.assert_equal( f( 'not-a-date-time' ), numpy.datetime64() )
@@ -17,6 +18,7 @@ class test_time( unittest.TestCase ):
   def test_from_numpy( self ):
     f = comma.csv.time.from_numpy
     numpy.testing.assert_equal( f( numpy.datetime64( '2015-01-02 12:23:45.012345', 'us' ) ), '20150102T122345.012345' )
+    numpy.testing.assert_equal( f( numpy.datetime64( '1969-01-02 12:23:45.012345', 'us' ) ), '19690102T122345.012345' )
     numpy.testing.assert_equal( f( numpy.datetime64( '2015-01-02 12:23:45.000000', 'us' ) ), '20150102T122345' )
     self.assertEqual( f( numpy.datetime64() ), 'not-a-date-time' )
     self.assertRaises( Exception, f, 'invalid' )
