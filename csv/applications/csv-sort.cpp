@@ -74,7 +74,19 @@ static void usage( bool more )
     std::cerr << "        echo -e \"2,3\\n1,1\\n3,2\" | csv-sort --fields=,b" << std::endl;
     std::cerr << "    sort by second field then first field:" << std::endl;
     std::cerr << "        echo -e \"2,3\\n3,1\\n1,1\\n2,2\\n1,3\" | csv-sort --fields=a,b --order=b,a" << std::endl;
-                // TODO examples
+    std::cerr << "  minimum:" << std::endl;
+    std::cerr << "    outputs lowest record in field a for each ID in second column." << std::endl;
+    std::cerr << "        ( echo 1,a,2; echo 2,a,2; echo 3,b,3; ) | csv-sort --min --fields=a,id" << std::endl;
+    std::cerr << "    two fields for comparision" << std::endl;
+    std::cerr << "    priority or for comparision is a then (as listed in --fields)" << std::endl;
+    std::cerr << "        ( echo 1,a,2; echo 1,a,4; echo 3,b,5; ) | csv-sort --min --fields=a,id,b" << std::endl;
+    std::cerr << "    outputs lowest record with two ID fields, field to compare for minimum is a." << std::endl;
+    std::cerr << "        ( echo 1,a,1; echo 1,b,1; echo 3,b,5; echo 3,b,5; ) | csv-sort --min --fields=id,a,id" << std::endl;
+    std::cerr << "    outputs lowest record ith two ID fields, field to compare for minimum is a." << std::endl;
+    std::cerr << "  maximum:" << std::endl;
+    std::cerr << "    outputs lowest record in field a for each ID in second column." << std::endl;
+    std::cerr << "        ( echo 1,a,2; echo 2,a,2; echo 3,b,3; ) | csv-sort --max --fields=a,id" << std::endl;
+    std::cerr << "    please see minimum for other examples" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -255,7 +267,6 @@ int min_max_select( const comma::command_line_options& options )
         while( std::cin.good() && first_line.empty() ) { std::getline( std::cin, first_line ); }
         if( first_line.empty() ) { return 0; }
         f = comma::csv::impl::unstructured::guess_format( first_line, stdin_csv.delimiter );
-        if( verbose ) { std::cerr << "csv-sort: guessed format: " << f.string() << std::endl; }
     }
     
     comma::uint32 keys_size = 0;
@@ -278,11 +289,15 @@ int min_max_select( const comma::command_line_options& options )
         }
     }
     
-    // if( keys_size > 1 ) { std::cerr << "csv-sort: error, only one field is supported for --min or --max operation" << std::endl; return 1; }
+    bool is_min = options.exists( "--min" );
+    bool is_max = options.exists( "--max" );
+    if( is_min && is_max ) { std::cerr << "csv-sort: error, --min and --max are mutually exclusive." << std::endl; return 1; }
     if( keys_size < 1 ) { std::cerr << "csv-sort: error, please specify one or more field for --min or --max operation" << std::endl; return 1; }
     
+    if ( verbose ) { std::cerr << "csv-sort: " << ( ( is_min ) ? "minimum mode" : "maximum mode" )  << std::endl; }
     stdin_csv.fields = comma::join( w, ',' );
     if ( verbose ) { std::cerr << "csv-sort: fields: " << stdin_csv.fields << std::endl; }
+        if( verbose ) { std::cerr << "csv-sort: guessed format: " << f.string() << std::endl; }
     comma::csv::input_stream< input_id_t > stdin_stream( std::cin, stdin_csv, default_input );
     #ifdef WIN32
     if( stdin_stream.is_binary() ) { _setmode( _fileno( stdout ), _O_BINARY ); }
@@ -291,9 +306,6 @@ int min_max_select( const comma::command_line_options& options )
     records_t min;
     records_t max;
     input_id_t prev_id;
-    
-    bool is_min = options.exists( "--min" );
-    bool is_max = options.exists( "--max" );
     
     bool first = true;
     if (!first_line.empty()) 
@@ -459,6 +471,7 @@ int main( int ac, char** av )
     {
         verbose = options.exists( "--verbose,-v" );
         stdin_csv = comma::csv::options( options );
+        stdin_csv.full_xpath = true;
         if( options.exists("--min,--max") ) { return min_max_select( options ); } else { return sort( options ); }
     }
     catch( std::exception& ex )
