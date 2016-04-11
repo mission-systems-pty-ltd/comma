@@ -77,6 +77,9 @@ static void usage( bool verbose = false )
     std::cerr << std::endl;
     std::cerr <<      "warning: if paths are repeated, output value selected from these inputs in not deterministic" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "json options" << std::endl;
+    std::cerr << "    --minify: if present, output minified json" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "xml options" << std::endl;
     std::cerr << "    --indented: if present, output indented xml" << std::endl;
     std::cerr << "    --indent=<indent>: if present, output indented xml; default: 4" << std::endl;
@@ -95,6 +98,7 @@ static comma::property_tree::xml_writer_settings_t xml_writer_settings;
 static char equal_sign;
 static char path_value_delimiter;
 static bool linewise;
+static bool minify_json;
 typedef comma::property_tree::path_mode path_mode;
 static path_mode indices_mode = comma::property_tree::disabled;
 static bool use_index = true;
@@ -124,7 +128,7 @@ template <> struct traits< info >
 template <> struct traits< json >
 {
     static void input( std::istream& is, boost::property_tree::ptree& ptree ) { boost::property_tree::read_json( is, ptree ); }
-    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode ) { boost::property_tree::write_json( os, ptree ); }
+    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode ) { boost::property_tree::write_json( os, ptree, !minify_json ); }
 };
 
 template <> struct traits< xml >
@@ -167,6 +171,7 @@ int main( int ac, char** av )
         std::string to = options.value< std::string >( "--to", "path-value" );
         equal_sign = options.value( "--equal-sign,-e", '=' );
         linewise = options.exists( "--linewise,-l" );
+        minify_json = options.exists( "--minify" );
         if ( options.exists( "--take-last" ) ) check_type = comma::property_tree::path_value::take_last;
         if ( options.exists( "--verify-unique,--unique-input" ) ) check_type = comma::property_tree::path_value::unique_input;
         xml_writer_settings.indent_count = options.value( "--indent", options.exists( "--indented" ) ? 4 : 0 );
