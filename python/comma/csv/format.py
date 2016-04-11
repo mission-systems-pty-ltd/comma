@@ -18,8 +18,7 @@ NUMPY_TYPE_FROM_COMMA_TYPE = OrderedDict([
     ('ul', 'u8'),
     ('f', 'f4'),
     ('d', 'f8'),
-    ('t', numpy_datetime_type),
-    ('bool', 'b1')])
+    ('t', numpy_datetime_type)])
 
 TYPES = tuple(NUMPY_TYPE_FROM_COMMA_TYPE.keys())
 NUMPY_TYPES = tuple(NUMPY_TYPE_FROM_COMMA_TYPE.values())

@@ -6,4 +6,3 @@ mixed i,t,d,d,d,s[3]
 invalid t,d,invalid,i
 empty t,d,,i
 compressed i,2d,s[3],2t,d,2ui,10ub
-boolean bool
