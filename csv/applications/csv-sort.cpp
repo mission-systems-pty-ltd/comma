@@ -35,6 +35,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <boost/unordered_map.hpp>
 #include <boost/lexical_cast.hpp>
 #include <comma/application/command_line_options.h>
 #include <comma/application/contact_info.h>
@@ -184,7 +185,12 @@ struct input_t
 struct input_id_t : public input_t
 {
     comma::csv::impl::unstructured ids;     // IDs fields
+    comma::uint32 block;
+    input_id_t();
 };
+
+input_id_t::input_id_t() : block(0) {}
+
 
 namespace comma { namespace visiting {
 
@@ -204,13 +210,15 @@ template <> struct traits< input_id_t >
 {
     template < typename K, typename V > static void visit( const K& k, const input_id_t& p, V& v )
     {
-        v.apply( "ids", p.ids );
         traits< input_t >::visit( k, p, v);
+        v.apply( "ids", p.ids );
+        v.apply( "block", p.block );
     }
     template < typename K, typename V > static void visit( const K& k, input_id_t& p, V& v )
     {
-        v.apply( "ids", p.ids );
         traits< input_t >::visit( k, p, v);
+        v.apply( "ids", p.ids );
+        v.apply( "block", p.block );
     }
 };
 
@@ -228,8 +236,41 @@ template < typename It > static void output_( It it, It end )
     }
 }
 
-    
 typedef std::vector< std::string > records_t;
+struct limit_data_t
+{
+    input_t keys;    /// For comparisions
+    records_t records;
+    void add_current_record( const comma::csv::input_stream< input_id_t >& stdin_stream )
+    {
+        if( stdin_stream.is_binary() )
+        {
+            records.push_back( std::string() );
+            records.back().resize( stdin_csv.format().size() );
+            ::memcpy( &records.back()[0], stdin_stream.binary().last(), stdin_csv.format().size() );
+        }
+        else
+        {
+            records.push_back( comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) + "\n" );
+        }
+    }
+};
+
+/// ID key to records
+typedef boost::unordered_map< comma::csv::impl::unstructured, limit_data_t, comma::csv::impl::unstructured::hash >  limit_map_t;
+
+void output_current_block( const limit_map_t& map )
+{
+    for( limit_map_t::const_iterator it=map.cbegin(); it!=map.cend(); ++it)
+    {
+        const limit_data_t& data = it->second;
+        for ( std::size_t i=0; i<data.records.size(); ++i) {
+            std::cout.write( &( data.records[i][0] ), stdin_csv.binary() ? stdin_csv.format().size() : data.records[i].length() );
+        }
+        if( stdin_csv.flush ) { std::cout.flush(); }
+    }
+}
+    
 struct min_max_t
 {
     /// Save data into the records_t collection
@@ -245,15 +286,6 @@ struct min_max_t
         {
             d.push_back( comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) + "\n" );
         }
-    }
-    
-    /// Outputs everything to stdout
-    static void output( const comma::csv::options& stdin_csv, const records_t& data )
-    {
-        for( std::size_t i=0; i<data.size(); ++i ) {
-            std::cout.write( &( data[i][0] ), stdin_csv.binary() ? stdin_csv.format().size() : data[i].length() );
-        }
-        if( stdin_csv.flush ) { std::cout.flush(); }
     }
 };
 
@@ -281,6 +313,7 @@ int min_max_select( const comma::command_line_options& options )
         const std::string& field = v[k];
         if( field.empty() ) { }
         else if( field == "id" ) { w[k] = "ids/" + default_input.ids.append( f.offset( k ).type ); } // std::cerr  << "appended " << w[k] << std::endl; }
+        else if( field == "block" ) { w[k] = "block"; } // std::cerr  << "appended " << w[k] << std::endl; }
         else 
         {
             ordering.push_back( ordering_t() );
@@ -297,10 +330,9 @@ int min_max_select( const comma::command_line_options& options )
     
     bool is_min = options.exists( "--min" );
     bool is_max = options.exists( "--max" );
-    if( is_min && is_max ) { std::cerr << "csv-sort: error, --min and --max are mutually exclusive." << std::endl; return 1; }
-    if( keys_size < 1 ) { std::cerr << "csv-sort: error, please specify one or more field for --min or --max operation" << std::endl; return 1; }
+    if( keys_size != 1 ) { std::cerr << "csv-sort: error, please specify exactly one field for --min/--max operation." << std::endl; return 1; }
     
-    if ( verbose ) { std::cerr << "csv-sort: " << ( ( is_min ) ? "minimum mode" : "maximum mode" )  << std::endl; }
+    if ( verbose ) { std::cerr << "csv-sort: minimum mode: " << ( is_min ) << ", maximum mode: " << is_max  << std::endl; }
     stdin_csv.fields = comma::join( w, ',' );
     if ( verbose ) { std::cerr << "csv-sort: fields: " << stdin_csv.fields << std::endl; }
     if( verbose ) { std::cerr << "csv-sort: guessed format: " << f.string() << std::endl; }
@@ -312,74 +344,119 @@ int min_max_select( const comma::command_line_options& options )
     records_t min;
     records_t max;
     input_id_t prev_id;
+    comma::uint32 block = 0;
     
+    limit_map_t min_map;
+    limit_map_t max_map;
+    
+    bool is_same_min_max = true;
     bool first = true;
     if (!first_line.empty()) 
     { 
-        prev_id =  comma::csv::ascii< input_id_t >(stdin_csv,default_input).get(first_line);
-        min.push_back( first_line + "\n" );
-        max.push_back( first_line + "\n" );
+        input_id_t input =  comma::csv::ascii< input_id_t >(stdin_csv,default_input).get(first_line);
+        limit_data_t& data = min_map[input.ids];
+        data.keys = input;
+        data.records.push_back( first_line + "\n");
+        
+        max_map[input.ids] = data;
         first = false;
     }
     while( stdin_stream.ready() || ( std::cin.good() && !std::cin.eof() ) )
     {
         const input_id_t* p = stdin_stream.read();
         if( !p ) { break; }
+//         std::cerr  << "p: " << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << " - " << p->keys.longs[0] << std::endl;
         
         if( first )
         {
-            if( is_min ) { min_max_t::save( stdin_csv, stdin_stream, min ); }
-            if( is_max ) { min_max_t::save( stdin_csv, stdin_stream, max ); }
+            limit_data_t& data = min_map[p->ids];
+            data.keys = *p;
+            data.add_current_record( stdin_stream );
+            
+            max_map[p->ids] = data;
+            
             first = false;
-            prev_id = *p;
         }
-        else if( !(p->ids == prev_id.ids) )
+        else if( p->block != block )
         {
             // Dump and clear previous
-            if( is_min ) { min_max_t::output( stdin_csv, min ); }
-            if( is_max ) { min_max_t::output( stdin_csv, max ); }
-            min.clear();
-            max.clear();
+            output_current_block( min_map );
+            min_map.clear();
+            limit_data_t& data = min_map[p->ids];
+            data.keys = *p;
+            data.add_current_record( stdin_stream );
             
-            // Push new record
-            if( is_min ) { min_max_t::save( stdin_csv, stdin_stream, min ); }
-            if( is_max ) { min_max_t::save( stdin_csv, stdin_stream, max ); }
-            prev_id = *p;
+            output_current_block( max_map );
+            max_map.clear();
+            max_map[p->ids] = data;
+            
+            is_same_min_max = true;
+            block = p->block;
         }
         else    /// No ID or same ID as prev record, compare to append or replace
         {
             if( is_min )
             {
-                if( *p == prev_id ) { min_max_t::save( stdin_csv, stdin_stream, min ); } // Else If equals then append
-                else if( *p < prev_id ) // If new min
+                limit_map_t::iterator iter = min_map.find( p->ids );
+                if( iter == min_map.end() )
                 {
-                    // clear and replace
-                    min.clear();
-                    min_max_t::save( stdin_csv, stdin_stream, min );
-                    prev_id = *p;
+//                     std::cerr  << "not found ids: " << p->ids.longs[0] << std::endl;
+                    limit_data_t& data = min_map[p->ids];
+                    data.keys = *p;
+                    data.add_current_record( stdin_stream );
                 }
-                // else { std::cerr  << "min ignored " << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << std::endl; }
+                else
+                {
+//                     std::cerr  << "found ids: " << p->ids.longs[0] << std::endl;
+                    limit_data_t& data = iter->second;
+//                     std::cerr  << "found ids after: " << std::endl;
+                    if( data.keys == *p ) { data.add_current_record( stdin_stream ); } // std::cerr  << "equals " << std::endl; } // Else If equals then append
+                    else if( *p < data.keys )
+                    {
+//                         std::cerr  << "new min: " << p->ids.longs[0] << std::endl;
+                        data.keys = *p;
+                        data.records.clear();
+                        data.add_current_record( stdin_stream );
+                    }
+//                     else { std::cerr  << "else: " << std::endl; }
+                }
             }
-            
             if( is_max )
             {
-                if( *p < prev_id ) {} 
-                else if( *p == prev_id ) { min_max_t::save( stdin_csv, stdin_stream, max );  } // Else If equals then append
-                else // If new max
+                limit_map_t::iterator iter = max_map.find( p->ids );
+                if( iter == max_map.end() )
                 {
-                    // clear and replace
-                    max.clear();
-                    min_max_t::save( stdin_csv, stdin_stream, max );
-                    prev_id = *p;
+//                     std::cerr  << "not found ids: " << p->ids.longs[0] << std::endl;
+                    limit_data_t& data = max_map[p->ids];
+                    data.keys = *p;
+                    data.add_current_record( stdin_stream );
+                }
+                else
+                {
+//                     std::cerr  << "found ids: " << p->ids.longs[0] << std::endl;
+                    limit_data_t& data = iter->second;
+//                     std::cerr  << "found ids after: " << std::endl;
+                    if( *p < data.keys ) {}
+                    if( data.keys == *p ) { data.add_current_record( stdin_stream ); } // std::cerr  << "equals " << std::endl; } // Else If equals then append
+                    else
+                    {
+//                         std::cerr  << "new max: " << p->ids.longs[0] << std::endl;
+                        data.keys = *p;
+                        data.records.clear();
+                        data.add_current_record( stdin_stream );
+                    }
+//                     else { std::cerr  << "else: " << std::endl; }
                 }
             }
         }
         
     }
+    std::cerr  << "last dump min: " << min_map.size() << std::endl;
+    std::cerr  << "last dump max: " << max_map.size() << std::endl;
     
-    // Dumps whats in the cache
-    if( is_min ) { min_max_t::output( stdin_csv, min ); }
-    if( is_max ) { min_max_t::output( stdin_csv, max ); }
+    if( is_min ) { output_current_block( min_map ); }
+    if( is_max ) { output_current_block( max_map ); }
+    
     return 0;
 }
 int sort( const comma::command_line_options& options )
