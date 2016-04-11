@@ -15,6 +15,7 @@ csv_sort/min_max/test[0]/command[2]="csv-sort --fields=id,max --max "
 csv_sort/min_max/test[0]/command[3]="csv-sort --fields=id,,max --max "
 csv_sort/min_max/test[0]/command[4]="csv-sort --fields=,,max --max "
 
+# ID field is second field
 csv_sort/min_max/test[1]/input[1]="a,1,2"
 csv_sort/min_max/test[1]/input[1]="d,1,5"
 csv_sort/min_max/test[1]/input[1]="e,1,8"
@@ -29,7 +30,7 @@ csv_sort/min_max/test[1]/command[0]="csv-sort --fields=min,id --min "
 csv_sort/min_max/test[1]/command[1]="csv-to-bin 's[1],ui,ui' | csv-sort --fields=min,id --min --binary='s[1],ui,ui' | csv-from-bin 's[1],ui,ui' "
 csv_sort/min_max/test[1]/command[2]="csv-sort --fields=m,id --max "
 
-
+# ID field is a double
 csv_sort/min_max/test[2]/input[1]="a,1.0,2"
 csv_sort/min_max/test[2]/input[1]="d,1.0,5"
 csv_sort/min_max/test[2]/input[1]="e,1.0,8"
@@ -44,9 +45,44 @@ csv_sort/min_max/test[2]/command[0]="csv-sort --fields=min,id --min "
 csv_sort/min_max/test[2]/command[1]="csv-to-bin 's[1],d,ui' | csv-sort --fields=min,id --min --binary='s[1],d,ui' | csv-from-bin 's[1],d,ui' "
 csv_sort/min_max/test[2]/command[2]="csv-sort --fields=m,id --max "
 
-# Without --format=
-#block_indexing/reverse/test[1]/command[1]="csv-blocks --fields=d,a,block index --verbose --reverse"
-# No reverse order
-#block_indexing/reverse/test[2]/command[3]="csv-blocks --fields=d,a,block index --verbose"
-# No reverse order
-#block_indexing/reverse/test[3]/command[4]="csv-to-bin s[1],2ui  | csv-blocks index --fields=d,a,block --binary s[1],ui,ui --reverse | csv-from-bin s[1],3ui"
+# Using more than one compare key
+csv_sort/multi_compare_keys/test[0]/input[0]="d,1,2"
+csv_sort/multi_compare_keys/test[0]/input[1]="d,1,5"
+csv_sort/multi_compare_keys/test[0]/input[2]="e,4,8"
+csv_sort/multi_compare_keys/test[0]/input[3]="e,2,5"
+csv_sort/multi_compare_keys/test[0]/input[4]="e,2,1"
+csv_sort/multi_compare_keys/test[0]/input[5]="e,2,1"
+csv_sort/multi_compare_keys/test[0]/input[6]="c,5,2"
+csv_sort/multi_compare_keys/test[0]/input[7]="c,7,2"
+csv_sort/multi_compare_keys/test[0]/command[0]="csv-sort --fields=id,a,b --min "
+csv_sort/multi_compare_keys/test[0]/command[1]="csv-to-bin 's[1],i,i' | csv-sort --fields=id,a,b --min --binary='s[1],i,i' | csv-from-bin 's[1],i,i' "
+csv_sort/multi_compare_keys/test[0]/command[2]="csv-sort --fields=id,a,b --max "
+
+csv_sort/multi_id_keys/test[0]/input[0]="2,d,1"
+csv_sort/multi_id_keys/test[0]/input[1]="5,d,1"
+csv_sort/multi_id_keys/test[0]/input[2]="8,e,2"
+csv_sort/multi_id_keys/test[0]/input[3]="5,e,4"
+csv_sort/multi_id_keys/test[0]/input[4]="1,e,4"
+csv_sort/multi_id_keys/test[0]/input[5]="1,e,4"
+csv_sort/multi_id_keys/test[0]/input[6]="2,c,7"
+csv_sort/multi_id_keys/test[0]/input[7]="3,c,7"
+csv_sort/multi_id_keys/test[0]/command[0]="csv-sort --fields=a,id,id --max "
+csv_sort/multi_id_keys/test[0]/command[1]="csv-to-bin 'i,s[1],i' | csv-sort --fields=a,id,id --max --binary='i,s[1],i' | csv-from-bin 'i,s[1],i' "
+csv_sort/multi_id_keys/test[0]/command[2]="csv-sort --fields=a,id,id --min "
+
+# Find min or max in all the records
+csv_sort/no_id_field/test[0]/input[0]="a,1,2"
+csv_sort/no_id_field/test[0]/input[1]="d,1,5"
+csv_sort/no_id_field/test[0]/input[2]="e,1,8"
+csv_sort/no_id_field/test[0]/input[3]="b,2,4"
+csv_sort/no_id_field/test[0]/input[4]="c,2,5"
+csv_sort/no_id_field/test[0]/input[5]="z,9,5"
+csv_sort/no_id_field/test[0]/input[6]="d,9,3"
+csv_sort/no_id_field/test[0]/input[7]="m,9,9"
+csv_sort/no_id_field/test[0]/input[8]="d,8,5"
+csv_sort/no_id_field/test[0]/input[9]="o,8,9"
+csv_sort/no_id_field/test[0]/command[0]="csv-sort --fields=,,a --min "
+csv_sort/no_id_field/test[0]/command[1]="csv-to-bin 's[1],ui,ui' | csv-sort --fields=,,a --min --binary='s[1],ui,ui' | csv-from-bin 's[1],ui,ui' "
+csv_sort/no_id_field/test[0]/command[2]="csv-sort --fields=,,a --max "
+# Compare using two columns
+csv_sort/no_id_field/test[0]/command[3]="csv-sort --fields=,a,b --max "
