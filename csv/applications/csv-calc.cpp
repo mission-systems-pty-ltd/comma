@@ -44,6 +44,7 @@
 #include <boost/scoped_ptr.hpp>
 #include <boost/unordered_map.hpp>
 #include <comma/application/contact_info.h>
+#include <comma/application/signal_flag.h>
 #include <comma/application/verbose.h>
 #include <comma/base/exception.h>
 #include <comma/csv/format.h>
@@ -693,13 +694,13 @@ namespace Operations
     template <> struct traits< Enum::stddev > { template < typename T, comma::csv::format::types_enum F > struct FromEnum { typedef Stddev< T, F > Type; }; };
 } // namespace Operations
 
-class operation_base
+class Operationbase
 {
     public:
-        virtual ~operation_base() {}
+        virtual ~Operationbase() {}
         virtual void push( const char* buf ) = 0;
         virtual void calculate() = 0;
-        virtual operation_base* clone() const = 0;
+        virtual Operationbase* clone() const = 0;
         const comma::csv::format& output_format() const { return output_format_; }
         const char* buffer() const { return &buffer_[0]; }
 
@@ -711,7 +712,7 @@ class operation_base
         std::vector< comma::csv::format::element > output_elements_;
         std::vector< char > buffer_;
 
-        operation_base* deep_copy_to_( operation_base* lhs ) const
+        Operationbase* deep_copy_to_( Operationbase* lhs ) const
         {
             lhs->input_format_ = input_format_;
             lhs->input_elements_ = input_elements_;
@@ -724,7 +725,7 @@ class operation_base
 };
 
 template < Operations::Enum::Values E >
-struct Operation : public operation_base
+struct Operation : public Operationbase
 {
     Operation() {}
     Operation( const comma::csv::format& format
@@ -786,16 +787,16 @@ struct Operation : public operation_base
         for( std::size_t i = 0; i < operations_.size(); ++i ) { operations_[i].calculate( &buffer_[0] + output_elements_[i].offset ); }
     }
 
-    operation_base* clone() const { Operation< E >* op = new Operation< E >; return deep_copy_to_( op ); }
+    Operationbase* clone() const { Operation< E >* op = new Operation< E >; return deep_copy_to_( op ); }
 };
 
-typedef boost::unordered_map< comma::uint32, boost::ptr_vector< operation_base >* > OperationsMap;
+typedef boost::unordered_map< comma::uint32, boost::ptr_vector< Operationbase >* > OperationsMap;
 
-static void init_operations( boost::ptr_vector< operation_base >& operations
+static void init_operations( boost::ptr_vector< Operationbase >& operations
                            , const std::vector< Operations::operation_parameters >& operations_parameters
                            , const comma::csv::format& format )
 {
-    static boost::ptr_vector< operation_base > sample;
+    static boost::ptr_vector< Operationbase > sample;
     if( sample.empty() )
     {
         sample.reserve( operations_parameters.size() );
@@ -821,48 +822,31 @@ static void init_operations( boost::ptr_vector< operation_base >& operations
     for( std::size_t i = 0; i < sample.size(); ++i ) { operations.push_back( sample[i].clone() ); }
 }
 
-struct operations_t
+static void calculate_and_output( const comma::csv::options& csv, OperationsMap& operations, boost::optional< comma::uint32 > block, bool has_block, bool has_id )
 {
-    std::string fields;
-    std::string names;
-    std::vector< Operations::operation_parameters > parameters;
-    OperationsMap operations;
-};
-
-static void calculate_and_output( const comma::csv::options& csv, std::vector< operations_t >& operations, boost::optional< comma::uint32 > block, bool has_block, bool has_id )
-{
-    if( operations.empty() || operations[0].operations.empty() ) { return; }
-    comma::uint32 id = operations[0].operations.begin()->first;
-    std::string delimiter;
-    for( unsigned int k = 0; k < operations.size(); ++k )
+    for( OperationsMap::iterator it = operations.begin(); it != operations.end(); ++it )
     {
-        if( !csv.binary() ) { std::cout << delimiter; delimiter = csv.delimiter; }
-        OperationsMap& map = operations[k].operations;
-        for( OperationsMap::iterator it = map.begin(); it != map.end(); ++it )
+        for( std::size_t i = 0; i < it->second->size(); ++i )
         {
-            id = it->first;
-            for( std::size_t i = 0; i < it->second->size(); ++i )
-            {
-                ( *it->second )[i].calculate();
-                if( csv.binary() ) { std::cout.write( ( *it->second )[i].buffer(), ( *it->second )[i].output_format().size() ); }
-                else { if( i > 0 ) { std::cout << csv.delimiter; } std::cout << ( *it->second )[i].output_format().bin_to_csv( ( *it->second )[i].buffer(), csv.delimiter, 12 ); }
-            }
+            ( *it->second )[i].calculate();
+            if( csv.binary() ) { std::cout.write( ( *it->second )[i].buffer(), ( *it->second )[i].output_format().size() ); }
+            else { if( i > 0 ) { std::cout << csv.delimiter; } std::cout << ( *it->second )[i].output_format().bin_to_csv( ( *it->second )[i].buffer(), csv.delimiter, 12 ); }
         }
-        for( OperationsMap::iterator it = map.begin(); it != map.end(); ++it ) { delete it->second; } // quick and dirty
-        map.clear();
+        if( csv.binary() )
+        {
+            if( has_id )  { std::cout.write( reinterpret_cast< const char* >( &it->first ), sizeof( comma::uint32 ) ); } // quick and dirty
+            if( has_block ) { std::cout.write( reinterpret_cast< const char* >( &( *block ) ), sizeof( comma::uint32 ) ); } // quick and dirty
+            std::cout.flush();
+        }
+        else
+        {
+            if( has_id ) { std::cout << csv.delimiter << it->first; }
+            if( has_block ) { std::cout << csv.delimiter << *block; }
+            std::cout << std::endl;
+        }
     }
-    if( csv.binary() )
-    {
-        if( has_id )  { std::cout.write( reinterpret_cast< const char* >( &id ), sizeof( comma::uint32 ) ); } // quick and dirty
-        if( has_block ) { std::cout.write( reinterpret_cast< const char* >( &( *block ) ), sizeof( comma::uint32 ) ); } // quick and dirty
-        std::cout.flush();
-    }
-    else
-    {
-        if( has_id ) { std::cout << csv.delimiter << id; }
-        if( has_block ) { std::cout << csv.delimiter << *block; }
-        std::cout << std::endl;
-    }
+    for( OperationsMap::iterator it = operations.begin(); it != operations.end(); ++it ) { delete it->second; } // quick and dirty
+    operations.clear();
 }
 
 int main( int ac, char** av )
@@ -877,32 +861,14 @@ int main( int ac, char** av )
         if( csv.binary() ) { _setmode( _fileno( stdin ), _O_BINARY ); _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
         if( unnamed.empty() ) { std::cerr << comma::verbose.app_name() << ": please specify operations" << std::endl; exit( 1 ); }
-        std::vector< operations_t > operations_parameters( unnamed.size() );
-        for( unsigned int k = 0; k < unnamed.size(); ++k )
+        std::vector< std::string > v = comma::split( unnamed[0], ',' );
+        std::vector< Operations::operation_parameters > operations_parameters( v.size() );
+        for( std::size_t i = 0; i < v.size(); ++i )
         {
-            std::vector< std::string > w = comma::split( unnamed[k], ';' );
-            switch( w.size() )
-            {
-                case 1:
-                    operations_parameters[k].fields = csv.fields;
-                    operations_parameters[k].names = w[0];
-                    break;
-                case 2:
-                    operations_parameters[k].fields = w[0];
-                    operations_parameters[k].names = w[1];
-                    break;
-                default:
-                    std::cerr << "csv-calc: expected \"<fields>;<operations>\" or \"<operations>\", got: \"" << unnamed[k] << "\"" << std::endl;
-                    return 1;
-            }
-            const std::vector< std::string >& v = comma::split( operations_parameters[k].names, ',' );
-            operations_parameters[k].parameters.resize( v.size() );
-            for( std::size_t i = 0; i < v.size(); ++i )
-            {
-                std::vector< std::string > p = comma::split( v[i], '=' );
-                operations_parameters[k].parameters[i].type = Operations::from_name( p[0] );
-                if( p.size() == 2 ) { operations_parameters[k].parameters[i].options = comma::split( p[1], ':' ); }
-            }
+            std::vector< std::string > p = comma::split( v[i], '=' );
+            operations_parameters[i].type = Operations::from_name( p[0] );
+            if( p.size() == 2 )
+                operations_parameters[i].options = comma::split( p[1], ':' );
         }
         boost::optional< comma::csv::format > format;
         if( csv.binary() ) { format = csv.format(); }
@@ -911,52 +877,48 @@ int main( int ac, char** av )
         boost::scoped_ptr< binaryInput > binary;
         if( csv.binary() ) { binary.reset( new binaryInput( csv ) ); }
         else { ascii.reset( new asciiInput( csv, format ) ); }
+        OperationsMap operations;
         boost::optional< comma::uint32 > block;
         bool has_block = csv.has_field( "block" );
         bool has_id = csv.has_field( "id" );
-        if( options.exists( "--output-fields" ) ) // quick and dirty
+        
+        if (options.exists("--output-fields"))
         {
+            std::vector < std::string > fields = comma::split(csv.fields, ',');
             std::vector < std::string > output_fields;
-            for( unsigned int k = 0; k < operations_parameters.size(); ++k )
+            for (std::size_t op = 0; op < v.size(); op++)
             {
-                if( operations_parameters[k].fields.empty() ) { std::cerr << "csv-calc: expected fields for each operations group, got none for \"" << operations_parameters[k].names << "\"" << std::endl; return 1; }
-                const std::vector < std::string >& fields = comma::split( operations_parameters[k].fields, ',' );
-                const std::vector < std::string >& names = comma::split( operations_parameters[k].names, ',' );
-                for( std::size_t i = 0; i < names.size(); ++i )
+                for (std::size_t f = 0; f < fields.size(); f++ )
                 {
-                    for( std::size_t j = 0; j < fields.size(); ++j )
-                    {
-                        if( fields[j] == "" || fields[j] == "id" || fields[j] == "block" ) { continue; }
-                        output_fields.push_back( fields[j] + "/" + names[i] );
-                    }
+                    if (fields[f] == "" || fields[f] == "id" || fields[f] == "block") { continue; }
+                    output_fields.push_back(fields[f] + "/" + v[op]);
                 }
             }
-            if( has_id ) { output_fields.push_back( "id" ); }
-            if( has_block ) { output_fields.push_back( "block" ); }
-            std::cout << comma::join( output_fields, ',' ) << std::endl;
+            if (has_id) { output_fields.push_back("id"); }
+            if (has_block) { output_fields.push_back("block"); }
+            std::cout << comma::join(output_fields, ',') << std::endl;
             return 0;
         }
-        while( std::cin.good() && !std::cin.eof() )
+        
+        comma::signal_flag is_shutdown;
+        while( !is_shutdown && std::cin.good() && !std::cin.eof() )
         {
             const Values* v = csv.binary() ? binary->read() : ascii->read();
-            if( !v ) { break; }
+            if( v == NULL ) { break; }
             if( has_block )
             {
-                if( block && *block != v->block() ) { calculate_and_output( csv, operations_parameters, block, has_block, has_id ); }
+                if( block && *block != v->block() ) { calculate_and_output( csv, operations, block, has_block, has_id ); }
                 block = v->block();
             }
-            for( unsigned int k = 0; k < operations_parameters.size(); ++k )
+            OperationsMap::iterator it = operations.find( v->id() );
+            if( it == operations.end() )
             {
-                OperationsMap::iterator it = operations_parameters[k].operations.find( v->id() );
-                if( it == operations_parameters[k].operations.end() )
-                {
-                    it = operations_parameters[k].operations.insert( std::make_pair( v->id(), new boost::ptr_vector< operation_base > ) ).first;
-                    init_operations( *it->second, operations_parameters[k].parameters, v->format() );
-                }
-                for( std::size_t i = 0; i < it->second->size(); ++i ) { ( *it->second )[i].push( v->buffer() ); }
+                it = operations.insert( std::make_pair( v->id(), new boost::ptr_vector< Operationbase > ) ).first;
+                init_operations( *it->second, operations_parameters, v->format() );
             }
+            for( std::size_t i = 0; i < it->second->size(); ++i ) { ( *it->second )[i].push( v->buffer() ); }
         }
-        calculate_and_output( csv, operations_parameters, block, has_block, has_id );
+        calculate_and_output( csv, operations, block, has_block, has_id );
         return 0;
     }
     catch( std::exception& ex ) { std::cerr << comma::verbose.app_name() << ": " << ex.what() << std::endl; }
