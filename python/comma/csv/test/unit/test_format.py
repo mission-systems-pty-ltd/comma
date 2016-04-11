@@ -25,9 +25,5 @@ class test( unittest.TestCase ):
     self.assertTupleEqual( f( '11d' ), ( 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8' ) )
     self.assertRaises( comma.csv.format.format_error, f, 'invalid,2invalid' )
 
-  def test_bool( self ):
-    self.assertEqual( comma.csv.format.to_numpy( 'bool' ), ('b1',) )
-    self.assertEqual( comma.csv.format.to_numpy( 'd,bool' ), ( 'f8', 'b1' ) )
-
 if __name__ == '__main__':
     unittest.main()
