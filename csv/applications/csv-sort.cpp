@@ -109,6 +109,8 @@ static void usage( bool more )
 
 static bool verbose;
 static comma::csv::options stdin_csv;
+static bool is_min = false;
+static bool is_max = false;
 
 struct ordering_t
 {
@@ -267,18 +269,33 @@ typedef boost::unordered_map< comma::csv::impl::unstructured, limit_data_t, comm
 typedef boost::unordered_map< comma::csv::impl::unstructured, bool, comma::csv::impl::unstructured::hash >  same_map_t;
 static same_map_t is_same_map;
 
-void output_current_block( const limit_map_t& map, bool check_same_outputs=false )
+/// Preserve the input order of the ID
+std::vector< comma::csv::impl::unstructured > input_order;
+
+void output_current_block( const limit_map_t& min, const limit_map_t& max )
 {
-    for( limit_map_t::const_iterator it=map.cbegin(); it!=map.cend(); ++it)
+    for( std::size_t i=0; i<input_order.size(); ++i )
     {
-        if( check_same_outputs ) {
-            if( is_same_map[ it->first ] == true ) { continue; }
+        const comma::csv::impl::unstructured& ids = input_order[i];
+        
+        if( is_min )
+        {
+            const limit_data_t& data = min.at(ids);
+            for ( std::size_t i=0; i<data.records.size(); ++i) {
+                std::cout.write( &( data.records[i][0] ), stdin_csv.binary() ? stdin_csv.format().size() : data.records[i].length() );
+            }
         }
         
-        const limit_data_t& data = it->second;
-        for ( std::size_t i=0; i<data.records.size(); ++i) {
-            std::cout.write( &( data.records[i][0] ), stdin_csv.binary() ? stdin_csv.format().size() : data.records[i].length() );
+        if( is_min && is_max && is_same_map[ ids ] ) { continue; }
+        
+        if( is_max )
+        {
+            const limit_data_t& data = max.at(ids);
+            for ( std::size_t i=0; i<data.records.size(); ++i) {
+                std::cout.write( &( data.records[i][0] ), stdin_csv.binary() ? stdin_csv.format().size() : data.records[i].length() );
+            }
         }
+        
         if( stdin_csv.flush ) { std::cout.flush(); }
     }
 }
@@ -323,8 +340,8 @@ int min_max_select( const comma::command_line_options& options )
         }
     }
     
-    const bool is_min = options.exists( "--min" );
-    const bool is_max = options.exists( "--max" );
+    is_min = options.exists( "--min" );
+    is_max = options.exists( "--max" );
     if( keys_size != 1 ) { std::cerr << "csv-sort: error, please specify exactly one field for --min/--max operation." << std::endl; return 1; }
     
     if ( verbose ) { std::cerr << "csv-sort: minimum mode: " << ( is_min ) << ", maximum mode: " << is_max  << std::endl; }
@@ -350,6 +367,7 @@ int min_max_select( const comma::command_line_options& options )
         
         max_map[input.ids] = data;
         is_same_map[input.ids] = true;
+        input_order.push_back( input.ids );
         first = false;
     }
     while( stdin_stream.ready() || ( std::cin.good() && !std::cin.eof() ) )
@@ -366,16 +384,17 @@ int min_max_select( const comma::command_line_options& options )
             
             max_map[p->ids] = data;
             is_same_map[p->ids] = true;
+            input_order.push_back( p->ids );
             
             first = false;
         }
         else if( p->block != block )
         {
             // Dump and clear previous
-            if( is_min ) { output_current_block( min_map ); }
-            if( is_max ) { output_current_block( max_map, is_min && is_max ); }
+            output_current_block( min_map, max_map );
             min_map.clear();
             max_map.clear();
+            input_order.clear();
             
             // Set the same record for both min and max, it's a new block, new IDs
             limit_data_t& data = min_map[p->ids];
@@ -384,6 +403,7 @@ int min_max_select( const comma::command_line_options& options )
             
             max_map[p->ids] = data;
             is_same_map[p->ids] = true;
+            input_order.push_back( p->ids );
             
             block = p->block;
         }
@@ -398,6 +418,7 @@ int min_max_select( const comma::command_line_options& options )
                     data.keys = *p;
                     data.add_current_record( stdin_stream );
                     is_same_map[p->ids] = true;
+                    input_order.push_back( p->ids );
                 }
                 else
                 {
@@ -422,6 +443,7 @@ int min_max_select( const comma::command_line_options& options )
                     data.keys = *p;
                     data.add_current_record( stdin_stream );
                     is_same_map[p->ids] = true;
+                    if( !is_min ) { input_order.push_back( p->ids ); }
                 }
                 else
                 {
@@ -442,8 +464,8 @@ int min_max_select( const comma::command_line_options& options )
         }
         
     }
-    if( is_min ) { output_current_block( min_map ); }
-    if( is_max ) { output_current_block( max_map, is_min && is_max ); }
+    
+    output_current_block( min_map, max_map );
     
     return 0;
 }
