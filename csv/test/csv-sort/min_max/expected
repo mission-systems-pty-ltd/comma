@@ -77,3 +77,29 @@ csv_sort/no_id_field/test[0]/command[1]/output/size=1
 csv_sort/no_id_field/test[0]/command[2]/output/line[0]="m,9,9"
 csv_sort/no_id_field/test[0]/command[2]/output/line[1]="o,8,9"
 csv_sort/no_id_field/test[0]/command[2]/output/size=2
+
+# Using --min and --max flag
+#Now running 'csv-sort --fields=id,,a --min --max '
+csv_sort/min_and_max/test[0]/command[0]/output/line[0]="a,1,2"
+csv_sort/min_and_max/test[0]/command[0]/output/line[1]="a,2,8"
+csv_sort/min_and_max/test[0]/command[0]/output/line[2]="b,3,4"
+csv_sort/min_and_max/test[0]/command[0]/output/line[3]="c,2,5"
+csv_sort/min_and_max/test[0]/command[0]/output/line[4]="c,4,5"
+csv_sort/min_and_max/test[0]/command[0]/output/line[5]="d,1,9"
+csv_sort/min_and_max/test[0]/command[0]/output/line[6]="d,2,9"
+csv_sort/min_and_max/test[0]/command[0]/output/line[7]="d,3,3"
+csv_sort/min_and_max/test[0]/command[0]/output/line[8]="z,2,6"
+csv_sort/min_and_max/test[0]/command[0]/output/size=9
+
+#Now running 'csv-sort --fields=,,a --min --max '
+csv_sort/min_and_max/test[0]/command[1]/output/line[0]="a,1,2"
+csv_sort/min_and_max/test[0]/command[1]/output/line[1]="d,1,9"
+csv_sort/min_and_max/test[0]/command[1]/output/line[2]="d,2,9"
+csv_sort/min_and_max/test[0]/command[1]/output/size=3
+
+#Now running 'csv-sort --fields=,a --min --max '
+csv_sort/min_and_max/test[0]/command[2]/output/line[0]="a,1,2"
+csv_sort/min_and_max/test[0]/command[2]/output/line[1]="c,4,5"
+csv_sort/min_and_max/test[0]/command[2]/output/line[2]="d,1,9"
+csv_sort/min_and_max/test[0]/command[2]/output/size=3
+
