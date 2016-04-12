@@ -65,10 +65,12 @@ static void usage( bool more )
     std::cerr << "    --reverse,-r: sort in reverse order" << std::endl;
     std::cerr << "    --unique,-u: only outputs first line matching a given key" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
-    std::cerr << "    --min: output minimum record/s by comparing fields in a given id group" << std::endl;
-    std::cerr << "      id field(s) are optional, multiple id fields are supported." << std::endl;
-    std::cerr << "      multiple named fields are supported, they are used as compare fields with priority in the order listed." << std::endl;
-    std::cerr << "    --max: output maximum record/s by comparing fields in a given id group, complementary and inverse operation to --min, see --min" << std::endl;
+    std::cerr << "    --min: output minimum record/s based on a named field." << std::endl;
+    std::cerr << "      id field(s) may be specified to select minimum record(s) in a sub-set based on the id field values, e.g. --fields=id,a,,id" << std::endl;
+    std::cerr << "      id field(s) are optional, see examples" << std::endl;
+    std::cerr << "      a optional 'block' field is also supported, see examples." << std::endl;
+    std::cerr << "    --max: output maximum record/s a named field, see --min and examples" << std::endl;
+    std::cerr << "      note that --min and --max may be used together." << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << "    sort by first field:" << std::endl;
@@ -80,20 +82,25 @@ static void usage( bool more )
     std::cerr << "  minimum:" << std::endl;
     std::cerr << "    outputs lowest record(s) in column a." << std::endl;
     std::cerr << "        ( echo 1,a,2; echo 2,a,2; echo 3,b,3; ) | csv-sort --min --fields=,,a" << std::endl;
-    std::cerr << "    outputs lowest record in field a for each ID in second column." << std::endl;
+    std::cerr << "    outputs lowest record in field a for each ID, compare using named field a." << std::endl;
     std::cerr << "        ( echo 1,a,2; echo 2,a,2; echo 3,b,3; ) | csv-sort --min --fields=a,id" << std::endl;
-    std::cerr << "    two fields for comparision" << std::endl;
-    std::cerr << "    priority or for comparision is a then (as listed in --fields)" << std::endl;
-    std::cerr << "        ( echo 1,a,2; echo 1,a,4; echo 3,b,5; ) | csv-sort --min --fields=a,id,b" << std::endl;
-    std::cerr << "    outputs lowest record with two ID fields, field to compare for minimum is a." << std::endl;
+    std::cerr << "    outputs lowest record with two ID fields." << std::endl;
     std::cerr << "        ( echo 1,a,1; echo 1,b,1; echo 3,b,5; echo 3,b,5; ) | csv-sort --min --fields=id,a,id" << std::endl;
-    std::cerr << "    outputs lowest record ith two ID fields, field to compare for minimum is a." << std::endl;
+    std::cerr << "    outputs lowest record(s) in column a for each block." << std::endl;
+    std::cerr << "        ( echo 0,a,2; echo 0,a,2; echo 1,b,3; ) | csv-sort --min --fields=block,,a" << std::endl;
+    std::cerr << "    outputs lowest record(s) in column a for each block and each unique id, for simplicity only one id field is used." << std::endl;
+    std::cerr << "        ( echo 0,a,2; echo 0,a,2; echo 1,b,3; ) | csv-sort --min --fields=block,id,a" << std::endl;
     std::cerr << "  maximum:" << std::endl;
     std::cerr << "    outputs highest record(s) in column a." << std::endl;
     std::cerr << "        ( echo 1,a,2; echo 2,a,2; echo 3,b,3; ) | csv-sort --max --fields=,,a" << std::endl;
     std::cerr << "    outputs lowest record in field a for each ID in second column." << std::endl;
     std::cerr << "        ( echo 1,a,2; echo 2,a,2; echo 3,b,3; ) | csv-sort --max --fields=a,id" << std::endl;
     std::cerr << "    please see minimum for other examples" << std::endl;
+    std::cerr << "  minimum and maximum:" << std::endl;
+    std::cerr << "    outputs highest and lowest record(s) in column a." << std::endl;
+    std::cerr << "        ( echo 1,a,2; echo 2,a,2; echo 3,b,3; echo 5,b,7; echo 3,b,9 ) | csv-sort --max --min --fields=,,a" << std::endl;
+    std::cerr << "    outputs highest and lowest record(s) for each unique id." << std::endl;
+    std::cerr << "        ( echo 1,a,2; echo 2,a,2; echo 3,b,3; echo 5,b,7; echo 3,b,9 ) | csv-sort --max --min --fields=,id,a" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -391,13 +398,14 @@ int min_max_select( const comma::command_line_options& options )
         {
             // Dump and clear previous
             output_current_block( min_map );
+            output_current_block( max_map, is_min && is_max );
             min_map.clear();
+            max_map.clear();
+            
             limit_data_t& data = min_map[p->ids];
             data.keys = *p;
             data.add_current_record( stdin_stream );
             
-            output_current_block( max_map, is_min && is_max );
-            max_map.clear();
             max_map[p->ids] = data;
             is_same_map[p->ids] = true;
             
