@@ -397,11 +397,12 @@ int min_max_select( const comma::command_line_options& options )
         else if( p->block != block )
         {
             // Dump and clear previous
-            output_current_block( min_map );
-            output_current_block( max_map, is_min && is_max );
+            if( is_min ) { output_current_block( min_map ); }
+            if( is_max ) { output_current_block( max_map, is_min && is_max ); }
             min_map.clear();
             max_map.clear();
             
+            // Set the same record for both min and max, it's a new block, new IDs
             limit_data_t& data = min_map[p->ids];
             data.keys = *p;
             data.add_current_record( stdin_stream );
