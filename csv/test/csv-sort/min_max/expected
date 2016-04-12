@@ -103,3 +103,31 @@ csv_sort/min_and_max/test[0]/command[2]/output/line[1]="c,4,5"
 csv_sort/min_and_max/test[0]/command[2]/output/line[2]="d,1,9"
 csv_sort/min_and_max/test[0]/command[2]/output/size=3
 
+#Now running 'csv-sort --fields=,block,a --min --max '
+csv_sort/using_a_block/test[0]/command[0]/output/line[0]="a,0,2"
+csv_sort/using_a_block/test[0]/command[0]/output/line[1]="a,0,8"
+csv_sort/using_a_block/test[0]/command[0]/output/line[2]="c,1,5"
+csv_sort/using_a_block/test[0]/command[0]/output/line[3]="c,1,5"
+csv_sort/using_a_block/test[0]/command[0]/output/line[4]="d,1,3"
+csv_sort/using_a_block/test[0]/command[0]/output/size=5
+
+#Now running 'csv-sort --fields=,block,a --min '
+csv_sort/using_a_block/test[0]/command[1]/output/line[0]="a,0,2"
+csv_sort/using_a_block/test[0]/command[1]/output/line[1]="d,1,3"
+csv_sort/using_a_block/test[0]/command[1]/output/size=2
+
+#Now running 'csv-sort --fields=,block,a --max '
+csv_sort/using_a_block/test[0]/command[2]/output/line[0]="a,0,8"
+csv_sort/using_a_block/test[0]/command[2]/output/line[1]="c,1,5"
+csv_sort/using_a_block/test[0]/command[2]/output/line[2]="c,1,5"
+csv_sort/using_a_block/test[0]/command[2]/output/size=3
+
+#Now running 'csv-sort --fields=id,block,a --max '
+csv_sort/using_a_block/test[0]/command[3]/output/line[0]="a,0,8"
+csv_sort/using_a_block/test[0]/command[3]/output/line[1]="b,0,4"
+csv_sort/using_a_block/test[0]/command[3]/output/line[2]="c,1,5"
+csv_sort/using_a_block/test[0]/command[3]/output/line[3]="c,1,5"
+csv_sort/using_a_block/test[0]/command[3]/output/line[4]="d,1,3"
+csv_sort/using_a_block/test[0]/command[3]/output/line[5]="z,0,6"
+csv_sort/using_a_block/test[0]/command[3]/output/size=6
+
