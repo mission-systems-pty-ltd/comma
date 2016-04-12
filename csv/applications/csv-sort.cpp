@@ -189,11 +189,6 @@ struct input_id_t : public input_t
     comma::csv::impl::unstructured ids;     // IDs fields
     comma::uint32 block;
     input_id_t();
-    
-    bool operator==( const input_id_t& rhs ) const
-    {
-        return block == rhs.block && ids == rhs.ids && keys == rhs.keys;
-    }
 };
 
 input_id_t::input_id_t() : block(0) {}
@@ -443,7 +438,7 @@ int min_max_select( const comma::command_line_options& options )
                 limit_map_t::iterator iter = max_map.find( p->ids );
                 if( iter == max_map.end() )
                 {
-//                     std::cerr  << "not found ids: " << p->ids.longs[0] << std::endl;
+//                     std::cerr  << "not found ids: " << p->ids.strings[0] << std::endl;
                     limit_data_t& data = max_map[p->ids];
                     data.keys = *p;
                     data.add_current_record( stdin_stream );
@@ -451,20 +446,18 @@ int min_max_select( const comma::command_line_options& options )
                 }
                 else
                 {
-//                     std::cerr  << "found ids: " << p->ids.longs[0] << std::endl;
+//                     std::cerr  << "found ids: " << p->ids.strings[0] << std::endl;
                     limit_data_t& data = iter->second;
-//                     std::cerr  << "found ids after: " << std::endl;
                     if( *p < data.keys ) {}
-                    if( data.keys == *p ) { data.add_current_record( stdin_stream ); } // std::cerr  << "equals " << std::endl; } // Else If equals then append
+                    else if( data.keys == *p ) { data.add_current_record( stdin_stream ); } //  std::cerr  << "equals " << std::endl; } // Else If equals then append
                     else
                     {
-//                         std::cerr  << "new max: " << p->ids.longs[0] << std::endl;
+//                         std::cerr  << "new max: " << p->ids.strings[0] << " " << p->keys.longs[0] << " " << data.keys.keys.longs[0] << std::endl;
                         data.keys = *p;
                         data.records.clear();
                         data.add_current_record( stdin_stream );
                         is_same_map[p->ids] = false;
                     }
-//                     else { std::cerr  << "else: " << std::endl; }
                 }
             }
         }
