@@ -27,7 +27,7 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-/// @author matthew imhoff
+/// @author matthew imhoff, dewey nguyen
 
 #include <string.h>
 #include <iostream>
@@ -67,8 +67,8 @@ static void usage( bool more )
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
     std::cerr << "    --min: output minimum record/s based on a named field." << std::endl;
     std::cerr << "      id field(s) may be specified to select minimum record(s) in a sub-set based on the id field values, e.g. --fields=id,a,,id" << std::endl;
-    std::cerr << "      id field(s) are optional, see examples" << std::endl;
-    std::cerr << "      a optional 'block' field is also supported, see examples." << std::endl;
+    std::cerr << "      id field(s) are optional, cannot be any field of floating point type, see examples" << std::endl;
+    std::cerr << "      an optional 'block' field is also supported, see examples." << std::endl;
     std::cerr << "    --max: output maximum record/s a named field, see --min and examples" << std::endl;
     std::cerr << "      note that --min and --max may be used together." << std::endl;
     std::cerr << std::endl;
@@ -115,8 +115,6 @@ static void usage( bool more )
 
 static bool verbose;
 static comma::csv::options stdin_csv;
-static bool is_min = false;
-static bool is_max = false;
 
 struct ordering_t
 {
@@ -191,13 +189,15 @@ struct input_t
     
 };
 
+/// Derived from input_t to inherit functionality of comparing record based on keys' fields
 struct input_id_t : public input_t
 {
     comma::csv::impl::unstructured ids;     // IDs fields
-    comma::uint32 block;
+    comma::uint32 block;    /// block 
     input_id_t();
 };
 
+/// default block of 0, when no block field is specified
 input_id_t::input_id_t() : block(0) {}
 
 
@@ -250,6 +250,7 @@ struct limit_data_t
 {
     input_t keys;    /// For comparisions
     records_t records;
+    /// Save/push the latest input record into records collection
     void add_current_record( const comma::csv::input_stream< input_id_t >& stdin_stream )
     {
         if( stdin_stream.is_binary() )
@@ -268,6 +269,7 @@ struct limit_data_t
 /// ID key to records
 typedef boost::unordered_map< comma::csv::impl::unstructured, limit_data_t, comma::csv::impl::unstructured::hash >  limit_map_t;
 
+/// Use to flag if a record is in the minimum map as well as the maximum map, this is true when a first new record is added (for that ID)
 typedef boost::unordered_map< comma::csv::impl::unstructured, bool, comma::csv::impl::unstructured::hash >  same_map_t;
 static same_map_t is_same_map;
 
@@ -287,25 +289,8 @@ void output_current_block( const limit_map_t& map, bool check_same_outputs=false
     }
 }
 
-struct min_max_t
-{
-    /// Save data into the records_t collection
-    static void save( const comma::csv::options& stdin_csv, const comma::csv::input_stream< input_id_t >& stdin_stream, records_t& d  )
-    {
-        if( stdin_stream.is_binary() )
-        {
-            d.push_back( std::string() );
-            d.back().resize( stdin_csv.format().size() );
-            ::memcpy( &d.back()[0], stdin_stream.binary().last(), stdin_csv.format().size() );
-        }
-        else
-        {
-            d.push_back( comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) + "\n" );
-        }
-    }
-};
-
-
+/// Linearly go through the input data to select minimum or maximum record(s)
+/// Outputs the records when a 'block' value changes or at the end of linear loop 
 int min_max_select( const comma::command_line_options& options )
 {
     input_id_t default_input;
@@ -327,10 +312,10 @@ int min_max_select( const comma::command_line_options& options )
     for( std::size_t k=0; k<v.size(); ++k )
     {
         const std::string& field = v[k];
-        if( field.empty() ) { }
-        else if( field == "id" ) { w[k] = "ids/" + default_input.ids.append( f.offset( k ).type ); } // std::cerr  << "appended " << w[k] << std::endl; }
-        else if( field == "block" ) { w[k] = "block"; } // std::cerr  << "appended " << w[k] << std::endl; }
-        else 
+        if( field.empty() ) { } // unnamed fields we don't need to inspect
+        else if( field == "id" ) { w[k] = "ids/" + default_input.ids.append( f.offset( k ).type ); }
+        else if( field == "block" ) { w[k] = "block"; } 
+        else    // Any named field is used as keys to find minimum or/and maximum records
         {
             ordering.push_back( ordering_t() );
             std::string type = default_input.keys.append( f.offset( k ).type ); 
@@ -344,8 +329,8 @@ int min_max_select( const comma::command_line_options& options )
         }
     }
     
-    is_min = options.exists( "--min" );
-    is_max = options.exists( "--max" );
+    const bool is_min = options.exists( "--min" );
+    const bool is_max = options.exists( "--max" );
     if( keys_size != 1 ) { std::cerr << "csv-sort: error, please specify exactly one field for --min/--max operation." << std::endl; return 1; }
     
     if ( verbose ) { std::cerr << "csv-sort: minimum mode: " << ( is_min ) << ", maximum mode: " << is_max  << std::endl; }
@@ -357,11 +342,7 @@ int min_max_select( const comma::command_line_options& options )
     if( stdin_stream.is_binary() ) { _setmode( _fileno( stdout ), _O_BINARY ); }
     #endif
     
-    records_t min;
-    records_t max;
-    input_id_t prev_id;
-    comma::uint32 block = 0;
-    
+    comma::uint32 block = 0;    // previous block number, use default of 0
     limit_map_t min_map;
     limit_map_t max_map;
     
@@ -412,14 +393,13 @@ int min_max_select( const comma::command_line_options& options )
             
             block = p->block;
         }
-        else    /// No ID or same ID as prev record, compare to append or replace
+        else    /// The same block and not first record
         {
             if( is_min )
             {
                 limit_map_t::iterator iter = min_map.find( p->ids );
                 if( iter == min_map.end() )
                 {
-//                     std::cerr  << "not found ids: " << p->ids.longs[0] << std::endl;
                     limit_data_t& data = min_map[p->ids];
                     data.keys = *p;
                     data.add_current_record( stdin_stream );
@@ -427,19 +407,15 @@ int min_max_select( const comma::command_line_options& options )
                 }
                 else
                 {
-//                     std::cerr  << "found ids: " << p->ids.longs[0] << std::endl;
                     limit_data_t& data = iter->second;
-//                     std::cerr  << "found ids after: " << std::endl;
-                    if( data.keys == *p ) { data.add_current_record( stdin_stream ); } // std::cerr  << "equals " << std::endl; } // Else If equals then append
+                    if( data.keys == *p ) { data.add_current_record( stdin_stream ); } 
                     else if( *p < data.keys )
                     {
-//                         std::cerr  << "new min: " << p->ids.longs[0] << std::endl;
                         data.keys = *p;
                         data.records.clear();
                         data.add_current_record( stdin_stream );
                         is_same_map[p->ids] = false;
                     }
-//                     else { std::cerr  << "else: " << std::endl; }
                 }
             }
             if( is_max )
@@ -472,14 +448,12 @@ int min_max_select( const comma::command_line_options& options )
         }
         
     }
-//     std::cerr  << "last dump min: " << min_map.size() << std::endl;
-//     std::cerr  << "last dump max: " << max_map.size() << std::endl;
-    
     if( is_min ) { output_current_block( min_map ); }
     if( is_max ) { output_current_block( max_map, is_min && is_max ); }
     
     return 0;
 }
+
 int sort( const comma::command_line_options& options )
 {
     input_t::map sorted_map;
