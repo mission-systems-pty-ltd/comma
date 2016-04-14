@@ -187,7 +187,8 @@ class stream:
                  target=sys.stdout,
                  tied=None,
                  full_xpath=True,
-                 verbose=False):
+                 verbose=False,
+                 default_values=None):
         if not isinstance(s, struct):
             raise stream_error("expected '{}', got '{}'".format(str(struct), repr(s)))
         self.struct = s
@@ -280,7 +281,24 @@ class stream:
                 warning_msg = "expected fields '{}' are not found in supplied fields '{}'" \
                     "".format(','.join(self.missing_fields), ','.join(self.fields))
                 warnings.warn(warning_msg)
+        self.default_values = None
         if self.missing_fields:
+            if default_values:
+                if self.full_xpath:
+                    default_values_ = default_values
+                else:
+                    default_fields_ = tuple(self.struct.xpath_of_leaf.get(name) or name for name in default_values.keys())
+                    default_values_ = dict(zip(default_fields_, default_values.values()))
+                for field in set(default_values_.keys()).intersection(self.fields):
+                    del default_values_[field]  # this field will be read from stream
+                if set(default_values_.keys()).difference(self.struct.fields):
+                    if self.verbose:
+                        warning_msg = "found default values for fields not in struct: '{}'" \
+                            "".format(','.join(set(default_values_.keys()).difference(self.struct.fields)))
+                        warnings.warn(warning_msg)
+                for field in set(default_values_.keys()).difference(self.struct.fields):
+                    del default_values_[field]  # this field is not in struct
+                self.default_values = default_values_
             self.complete_fields = self.fields + self.missing_fields
             missing_names = ['f' + str(i + len(self.input_dtype.names)) for i in xrange(len(self.missing_fields))]
             missing_types = [self.struct.type_of_field.get(name) for name in self.missing_fields]
@@ -334,6 +352,15 @@ class stream:
         if self.data_extraction_dtype:
             if self.missing_fields:
                 missing_data = np.zeros(self.input_data.size, dtype=self.missing_fields_dtype)
+                if self.default_values:
+                    standard_field = dict(zip(self.missing_fields, self.missing_fields_dtype.names))
+                    for field in self.default_values.keys():
+                        f = standard_field[field]
+                        v = self.default_values[field]
+                        if self.missing_fields_dtype[f] == np.dtype(comma.csv.time.NUMPY_TYPE):
+                            missing_data[f] = comma.csv.time.to_numpy(v)
+                        else:
+                            missing_data[f] = v
                 complete_data = merge_arrays(self.input_data, missing_data)
             else:
                 complete_data = self.input_data
