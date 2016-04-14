@@ -368,6 +368,7 @@ int min_max_select( const comma::command_line_options& options )
         max_map[input.ids] = data;
         is_same_map[input.ids] = true;
         input_order.push_back( input.ids );
+        block = input.block;
         first = false;
     }
     while( stdin_stream.ready() || ( std::cin.good() && !std::cin.eof() ) )
@@ -386,6 +387,7 @@ int min_max_select( const comma::command_line_options& options )
             is_same_map[p->ids] = true;
             input_order.push_back( p->ids );
             
+            block = p->block;
             first = false;
         }
         else if( p->block != block )
