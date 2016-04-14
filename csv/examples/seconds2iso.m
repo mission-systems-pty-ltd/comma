@@ -11,6 +11,6 @@
 %
 %   author James Underwood
 function [ iso_string ] = seconds2iso( seconds )
-[~, iso_string] = dos(sprintf('echo %f| csv-time --to-iso-string',seconds));
+[~, iso_string] = dos(sprintf('echo %f| csv-time --from seconds --to iso',seconds));
 iso_string=iso_string(1:end-1); %strip cr
 end

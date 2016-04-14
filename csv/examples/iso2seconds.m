@@ -12,6 +12,6 @@
 %
 %   author Suchet Bargoti
 function [ seconds ] = iso2seconds( iso )
-[~, secondsStr] = dos(sprintf('echo %s| csv-time --to-seconds',iso));
+[~, secondsStr] = dos(sprintf('echo %s| csv-time --to seconds',iso));
 seconds = str2num(secondsStr);
 
