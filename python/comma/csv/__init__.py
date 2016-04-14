@@ -171,7 +171,8 @@ class stream:
                  source=sys.stdin,
                  target=sys.stdout,
                  tied=None,
-                 full_xpath=True):
+                 full_xpath=True,
+                 verbose=False):
         if not isinstance(s, struct):
             raise stream_error("expected '{}', got '{}'".format(str(struct), repr(s)))
         self.struct = s
@@ -212,6 +213,7 @@ class stream:
         self.source = source
         self.target = target
         self.tied = tied
+        self.verbose = verbose
         duplicates = tuple(field for field in self.struct.fields if field in self.fields and self.fields.count(field) > 1)
         if duplicates:
             msg = "fields '{}' have duplicates in '{}'" \
@@ -259,9 +261,10 @@ class stream:
             self.missing_fields = ()
         else:
             self.missing_fields = tuple(field for field in self.struct.fields if field not in self.fields)
-            warning_msg = "expected fields '{}' are not found in supplied fields '{}'" \
-                "".format(','.join(self.missing_fields), ','.join(self.fields))
-            warnings.warn(warning_msg)
+            if self.verbose:
+                warning_msg = "expected fields '{}' are not found in supplied fields '{}'" \
+                    "".format(','.join(self.missing_fields), ','.join(self.fields))
+                warnings.warn(warning_msg)
         if self.missing_fields:
             self.complete_fields = self.fields + self.missing_fields
             missing_names = ['f' + str(i + len(self.input_dtype.names)) for i in xrange(len(self.missing_fields))]

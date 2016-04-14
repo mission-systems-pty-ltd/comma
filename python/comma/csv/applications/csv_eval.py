@@ -187,7 +187,8 @@ class stream(object):
             binary=self.args.binary,
             flush=self.args.flush,
             delimiter=self.args.delimiter,
-            precision=self.args.precision)
+            precision=self.args.precision,
+            verbose=self.args.verbose)
         self.initialize_input()
         self.initialize_output()
         if self.args.verbose:
