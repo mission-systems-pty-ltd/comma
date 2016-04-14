@@ -50,3 +50,42 @@ function comma_stacktrace()
     echo "$*"
 }
 export -f comma_stacktrace
+
+# A function to log error to stderr with a code and highlighting
+# 
+# Example
+#   comma_log_error comma-log-util 'Deflector Dish Misaligned.'
+#   comma_log_error comma-log-util --timestamp 'Deflector Dish Misaligned.'
+function comma_log_error() { local -r app="$1" ; shift ; comma_log_message "$app" Error $@ ; }
+# A function to log warnings to stderr with a code and highlighting
+function comma_log_warn()  { local -r app="$1" ; shift ; comma_log_message "$app" Warning $@ ; }
+# A function to log warnings to stderr with a code and highlighting
+function comma_log_note()  { local -r app="$1" ; shift ; comma_log_message "$app" Notice $@ ; }
+
+export -f comma_log_error comma_log_warn comma_log_note
+readonly -f comma_log_error comma_log_warn comma_log_note
+
+# A function to log a message to stderr in a well defined format
+#
+# Usage
+#   comma_log_message <application> <message_type> [--timestamp] <text>
+#
+# Example
+#   comma_log_message comma-log-util Error bird
+#   # outputs 'comma-log-util: Error: bird'
+#   comma_log_message comma-log-util Error --timestamp bird
+#   # outputs '(20140101000000),comma-log-util: Error: bird'
+function comma_log_message()
+{
+    local -r app="$1" code="$2"
+    shift 2 
+    local now=''
+    if [[ "$1" == '--timestamp' ]] ; then
+        now="($( date --utc '+%Y%m%d%H%M%SZ' )),"
+        shift
+    fi
+    echo -e "${now}${app}: ${code}: $*" >&2
+}
+export -f comma_log_message
+readonly -f comma_log_message
+
