@@ -156,6 +156,21 @@ class struct:
             del d[ambiguous_leaf]
         self.xpath_of_leaf = d
 
+    def __call__(self, size=1):
+        return np.empty(size, dtype=self)
+
+    def astuple(self, s):
+        if s.dtype != self.dtype:
+            msg = "expected {}, got {}".format(repr(self.dtype), repr(s.dtype))
+            raise struct_error(msg)
+        if comma.csv.time.NUMPY_TYPE in self.types:
+            msg = "not implemented for struct with fields of type 't'"
+            raise struct_error(msg)
+        if s.shape != (1,):
+            msg = "expected shape=(1,), got {}".format(s.shape)
+            raise struct_error(msg)
+        return s.view(self.unrolled_flat_dtype).item()
+
 
 class stream:
     buffer_size_in_bytes = 65536
@@ -347,6 +362,9 @@ class stream:
     def write(self, s):
         if s.dtype != self.struct.dtype:
             msg = "expected {}, got {}".format(repr(self.struct.dtype), repr(s.dtype))
+            raise stream_error(msg)
+        if s.shape != (s.size,):
+            msg = "expected shape=({},), got {}".format(s.size, s.shape)
             raise stream_error(msg)
         if self.tied and s.size != self.tied.input_data.size:
             msg = "size {} not equal to tied size {}".format(s.size, self.tied.size)

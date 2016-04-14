@@ -247,14 +247,14 @@ def evaluate(expressions, stream, dangerous=False):
     code = compile(code_string, '<string>', 'exec')
     kwds = {} if dangerous else {'update': dict(__builtins__={}), 'delete': ['sys']}
     restricted_numpy = get_dict(numpy, **kwds)
-    output = numpy.empty(stream.input.size, dtype=stream.output.struct)
+    output = stream.output.struct(stream.input.size)
     is_shutdown = comma.signal.is_shutdown()
     while not is_shutdown:
         i = stream.input.read()
         if i is None:
             break
         if output.size != i.size:
-            output = numpy.empty(i.size, dtype=stream.output.struct)
+            output = stream.output.struct(i.size)
         exec code in restricted_numpy, {'_input': i, '_output': output}
         stream.output.write(output)
 
