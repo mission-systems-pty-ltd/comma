@@ -159,12 +159,9 @@ class struct:
     def __call__(self, size=1):
         return np.empty(size, dtype=self)
 
-    def astuple(self, s):
+    def to_tuple(self, s):
         if s.dtype != self.dtype:
             msg = "expected {}, got {}".format(repr(self.dtype), repr(s.dtype))
-            raise struct_error(msg)
-        if comma.csv.time.NUMPY_TYPE in self.types:
-            msg = "not implemented for struct with fields of type 't'"
             raise struct_error(msg)
         if s.shape != (1,):
             msg = "expected shape=(1,), got {}".format(s.shape)

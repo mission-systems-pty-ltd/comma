@@ -246,7 +246,7 @@ class test_struct( unittest.TestCase ):
     self.assertEqual(event.dtype, event_t.dtype)
     self.assertEqual(event.size, 12)
 
-  def test_astuple(self):
+  def test_to_tuple(self):
     point_t = comma.csv.struct('x,y,z', 'f8', 'f8', 'f8')
     event_t = comma.csv.struct('id,point', 'u4', point_t)
     event = event_t()
@@ -254,22 +254,28 @@ class test_struct( unittest.TestCase ):
     event['point']['x'] = 1.1
     event['point']['y'] = 1.2
     event['point']['z'] = 1.3
-    self.assertTupleEqual(event_t.astuple(event), (123, 1.1, 1.2, 1.3))
+    self.assertTupleEqual(event_t.to_tuple(event), (123, 1.1, 1.2, 1.3))
 
-  def test_astuple_throw_type(self):
-    point_t = comma.csv.struct('x,y,z', 'f8', 'f8', 'f8')
-    data_t = comma.csv.struct('id', 'u4')
-    self.assertRaises(comma.csv.struct_error, point_t.astuple, data_t())
-
-  def test_astuple_throw_time(self):
+  def test_to_tuple_time(self):
+    comma.csv.time.zone('UTC')
     event_t = comma.csv.struct('t,x,y,z', 'datetime64[us]', 'f8', 'f8', 'f8')
     event = event_t()
-    self.assertRaises(comma.csv.struct_error, event_t.astuple, event)
+    event['t'] = comma.csv.time.to_numpy('20101011T010203')
+    event['x'] = 1.1
+    event['y'] = 1.2
+    event['z'] = 1.3
+    from datetime import datetime
+    self.assertTupleEqual(event_t.to_tuple(event), (datetime(2010, 10, 11, 1, 2, 3), 1.1, 1.2, 1.3))
 
-  def test_astuple_throw_size(self):
+  def test_to_tuple_throw_type(self):
+    point_t = comma.csv.struct('x,y,z', 'f8', 'f8', 'f8')
+    data_t = comma.csv.struct('id', 'u4')
+    self.assertRaises(comma.csv.struct_error, point_t.to_tuple, data_t())
+
+  def test_to_tuple_throw_size(self):
     event_t = comma.csv.struct('t,x,y,z', 'datetime64[us]', 'f8', 'f8', 'f8')
     event = event_t(2)
-    self.assertRaises(comma.csv.struct_error, event_t.astuple, event)
+    self.assertRaises(comma.csv.struct_error, event_t.to_tuple, event)
 
 
 class test_stream( unittest.TestCase ):
