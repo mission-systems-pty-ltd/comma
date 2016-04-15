@@ -39,6 +39,9 @@
 #include <vector>
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time/posix_time/posix_time_duration.hpp>
+#include "boost/date_time/posix_time/ptime.hpp"
+#include "boost/date_time/local_time/local_time.hpp"
+#include "boost/date_time/c_local_time_adjustor.hpp"
 
 #include <comma/application/contact_info.h>
 #include <comma/application/command_line_options.h>
@@ -48,6 +51,7 @@
 #include <comma/csv/impl/epoch.h>
 #include <comma/string/string.h>
 #include <comma/visiting/traits.h>
+#include <time.h>
 
 static void usage( bool )
 {
@@ -59,8 +63,8 @@ static void usage( bool )
         "\n    cat log.csv | csv-time <options> > converted.csv"
         "\n"
         "\nOptions"
-        "\n    --from <what>: input format: any, iso, seconds, sql, xsd; default iso"
-        "\n    --to <what>: output format: iso, seconds, sql, xsd; default iso"
+        "\n    --from <what>: input format: any, iso, seconds, sql, xsd, local; default iso"
+        "\n    --to <what>: output format: iso, seconds, sql, xsd, local; default iso"
         "\n    --delimiter,-d <delimiter> : default: ','"
         "\n    --fields <fields> : time field names or field numbers as in \"cut\""
         "\n                        e.g. \"1,5,7\" or \"a,b,,d\""
@@ -83,6 +87,8 @@ static void usage( bool )
         "\n    - any, guess"
         "\n            a special input format - try to convert from all those supported,"
         "\n            default input format, will be slower"
+        "\n    local"
+        "\n            same as iso but converts from/to local time adjusted using current machine settings"
         "\n"
         "\nDeprecated options:"
         "\n    --to-seconds,--sec,-s: iso input expected; use --from, --to"
@@ -93,7 +99,7 @@ static void usage( bool )
     exit( 0 );
 }
 
-enum what_t { guess, iso, seconds, sql, xsd };
+enum what_t { guess, iso, seconds, sql, xsd, local };
 static what_t from = guess;
 static what_t to = iso;
 static bool accept_empty;
@@ -134,6 +140,8 @@ static what_t what( const std::string& option, const comma::command_line_options
         {
             if( "any" == s ) { return guess; }
         }
+        else if(s=="local")
+            return local;
     }
     std::cerr << "csv-time: expected seconds, sql, or iso; got: \"" << s << "\"" << std::endl;
     exit( 1 );
@@ -190,6 +198,14 @@ static boost::posix_time::ptime from_string( const std::string& s, const what_t 
     {
         case iso:
             return s == not_a_date_time_string ? boost::posix_time::not_a_date_time : boost::posix_time::from_iso_string( s );
+        case local:
+        {
+            boost::posix_time::ptime l=boost::posix_time::from_iso_string(s);
+            tm tm=boost::posix_time::to_tm(l);
+            time_t utc=mktime(&tm);
+            boost::posix_time::ptime day0(boost::gregorian::date(1970,1,1), boost::posix_time::time_duration(0,0,0));
+            return boost::posix_time::from_time_t(utc) + boost::posix_time::microseconds((l-day0).total_microseconds() % 1000000);
+        }
 
         case seconds:
         {
@@ -246,6 +262,9 @@ std::string to_string( const boost::posix_time::ptime& t, what_t w )
         case iso:
             return boost::posix_time::to_iso_string( t );
 
+        case local:
+            return boost::posix_time::to_iso_string(boost::date_time::c_local_adjustor<boost::posix_time::ptime>::utc_to_local(t));
+            
         case seconds: // quick and dirty
         {
             const boost::posix_time::ptime base( comma::csv::impl::epoch );

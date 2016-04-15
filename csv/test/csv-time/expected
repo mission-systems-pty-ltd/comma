@@ -139,3 +139,12 @@ precision[5]/output="19700101T000000"
 precision[5]/status=0
 precision[6]/output="19700101T000000.000001"
 precision[6]/status=0
+
+local[0]/output="20160414T114932.123000"
+local[1]/output="20160214T124932.123000"
+local[2]/output="20160414T014932.123000"
+local[3]/output="20160214T014932.123000"
+local[0]/status=0
+local[1]/status=0
+local[2]/status=0
+local[3]/status=0
