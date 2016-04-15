@@ -111,26 +111,12 @@ class struct:
     default_field_name = 'comma_struct_default_field_name_'
 
     def __init__(self, concise_fields, *concise_types):
-        if '/' in concise_fields:
-            msg = "expected fields without '/', got '{}'".format(concise_fields)
-            raise struct_error(msg)
-        given_fields = concise_fields.split(',')
-        if len(given_fields) > len(concise_types):
-            fields_without_type = ','.join(concise_fields.split(',')[len(concise_types):])
-            msg = "missing types for fields '{}'".format(fields_without_type)
-            raise struct_error(msg)
-        omitted_fields = [''] * (len(concise_types) - len(given_fields))
-        concise_fields_no_blanks = []
-        for index, field in enumerate(given_fields + omitted_fields):
-            if field:
-                nonblank_field = field
-            else:
-                nonblank_field = '{}{}'.format(struct.default_field_name, index)
-            concise_fields_no_blanks.append(nonblank_field)
-        self.dtype = np.dtype(zip(concise_fields_no_blanks, concise_types))
+        self.check_conciseness(concise_fields)
+        split_concise_fields = self.fill_blanks(concise_fields.split(','), concise_types)
+        self.dtype = np.dtype(zip(split_concise_fields, concise_types))
         fields, types = [], []
         self.shorthand = {}
-        for name, type in zip(concise_fields_no_blanks, concise_types):
+        for name, type in zip(split_concise_fields, concise_types):
             if isinstance(type, struct):
                 fields_of_type = [name + '/' + field for field in type.fields]
                 fields.extend(fields_of_type)
@@ -155,6 +141,26 @@ class struct:
         for ambiguous_leaf in self.ambiguous_leaves:
             del d[ambiguous_leaf]
         self.xpath_of_leaf = d
+
+    def check_conciseness(self, fields):
+        if '/' in fields:
+            msg = "expected fields without '/', got '{}'".format(fields)
+            raise struct_error(msg)
+
+    def fill_blanks(self, fields, types):
+        if len(fields) > len(types):
+            fields_without_type = ','.join(fields.split(',')[len(types):])
+            msg = "missing types for fields '{}'".format(fields_without_type)
+            raise struct_error(msg)
+        omitted_fields = [''] * (len(types) - len(fields))
+        fields_without_blanks = []
+        for index, field in enumerate(fields + omitted_fields):
+            if field:
+                nonblank_field = field
+            else:
+                nonblank_field = '{}{}'.format(struct.default_field_name, index)
+            fields_without_blanks.append(nonblank_field)
+        return fields_without_blanks
 
     def __call__(self, size=1):
         return np.empty(size, dtype=self)
