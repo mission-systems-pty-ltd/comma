@@ -232,6 +232,46 @@ class test_struct( unittest.TestCase ):
     self.assertEqual( a.flat_dtype, b.flat_dtype )
     self.assertEqual( a.unrolled_flat_dtype, b.unrolled_flat_dtype )
 
+  def test_call_default(self):
+    point_t = comma.csv.struct('x,y,z', 'f8', 'f8', 'f8')
+    event_t = comma.csv.struct('id,point', 'datetime64[us]', point_t)
+    event = event_t()
+    self.assertEqual(event.dtype, event_t.dtype)
+    self.assertEqual(event.size, 1)
+
+  def test_call_size(self):
+    point_t = comma.csv.struct('x,y,z', 'f8', 'f8', 'f8')
+    event_t = comma.csv.struct('id,point', 'datetime64[us]', point_t)
+    event = event_t(12)
+    self.assertEqual(event.dtype, event_t.dtype)
+    self.assertEqual(event.size, 12)
+
+  def test_astuple(self):
+    point_t = comma.csv.struct('x,y,z', 'f8', 'f8', 'f8')
+    event_t = comma.csv.struct('id,point', 'u4', point_t)
+    event = event_t()
+    event['id'] = 123
+    event['point']['x'] = 1.1
+    event['point']['y'] = 1.2
+    event['point']['z'] = 1.3
+    self.assertTupleEqual(event_t.astuple(event), (123, 1.1, 1.2, 1.3))
+
+  def test_astuple_throw_type(self):
+    point_t = comma.csv.struct('x,y,z', 'f8', 'f8', 'f8')
+    data_t = comma.csv.struct('id', 'u4')
+    self.assertRaises(comma.csv.struct_error, point_t.astuple, data_t())
+
+  def test_astuple_throw_time(self):
+    event_t = comma.csv.struct('t,x,y,z', 'datetime64[us]', 'f8', 'f8', 'f8')
+    event = event_t()
+    self.assertRaises(comma.csv.struct_error, event_t.astuple, event)
+
+  def test_astuple_throw_size(self):
+    event_t = comma.csv.struct('t,x,y,z', 'datetime64[us]', 'f8', 'f8', 'f8')
+    event = event_t(2)
+    self.assertRaises(comma.csv.struct_error, event_t.astuple, event)
+
+
 class test_stream( unittest.TestCase ):
   def test_use_defaults( self ):
     s = comma.csv.stream( comma.csv.struct( 'x', 'f8' ) )
