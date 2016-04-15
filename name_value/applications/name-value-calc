@@ -316,7 +316,7 @@ function cleaner()
 tempdir=
 trap cleaner EXIT
 if (( debug )) ; then
-    tempdir=$( mktemp --directory --tmpdir name-value-calc.debug.XXXXXX )
+    tempdir=$( mktemp --directory --tmpdir name-value-calc.debug.XXXXXXXX )
     python_stderr="$tempdir/python-stderr.log"
 else
     python_stderr="/dev/null"

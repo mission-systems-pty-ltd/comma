@@ -110,7 +110,7 @@ done
 
 function nodename { echo $1 | tr '.-' '_'; }
 
-input_tmp=$( mktemp input.tmp.XXXXXX ) || {
+input_tmp=$( mktemp input.tmp.XXXXXXXX ) || {
     echo "failed to create temp dir $update_file_fields_tmp" >&2
     exit 1
 }
