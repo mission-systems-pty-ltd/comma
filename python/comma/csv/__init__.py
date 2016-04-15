@@ -156,6 +156,21 @@ class struct:
             del d[ambiguous_leaf]
         self.xpath_of_leaf = d
 
+    def __call__(self, size=1):
+        return np.empty(size, dtype=self)
+
+    def astuple(self, s):
+        if s.dtype != self.dtype:
+            msg = "expected {}, got {}".format(repr(self.dtype), repr(s.dtype))
+            raise struct_error(msg)
+        if comma.csv.time.NUMPY_TYPE in self.types:
+            msg = "not implemented for struct with fields of type 't'"
+            raise struct_error(msg)
+        if s.shape != (1,):
+            msg = "expected shape=(1,), got {}".format(s.shape)
+            raise struct_error(msg)
+        return s.view(self.unrolled_flat_dtype).item()
+
 
 class stream:
     buffer_size_in_bytes = 65536
@@ -171,7 +186,9 @@ class stream:
                  source=sys.stdin,
                  target=sys.stdout,
                  tied=None,
-                 full_xpath=True):
+                 full_xpath=True,
+                 verbose=False,
+                 default_values=None):
         if not isinstance(s, struct):
             raise stream_error("expected '{}', got '{}'".format(str(struct), repr(s)))
         self.struct = s
@@ -212,6 +229,7 @@ class stream:
         self.source = source
         self.target = target
         self.tied = tied
+        self.verbose = verbose
         duplicates = tuple(field for field in self.struct.fields if field in self.fields and self.fields.count(field) > 1)
         if duplicates:
             msg = "fields '{}' have duplicates in '{}'" \
@@ -259,10 +277,28 @@ class stream:
             self.missing_fields = ()
         else:
             self.missing_fields = tuple(field for field in self.struct.fields if field not in self.fields)
-            warning_msg = "expected fields '{}' are not found in supplied fields '{}'" \
-                "".format(','.join(self.missing_fields), ','.join(self.fields))
-            warnings.warn(warning_msg)
+            if self.verbose:
+                warning_msg = "expected fields '{}' are not found in supplied fields '{}'" \
+                    "".format(','.join(self.missing_fields), ','.join(self.fields))
+                warnings.warn(warning_msg)
+        self.default_values = None
         if self.missing_fields:
+            if default_values:
+                if self.full_xpath:
+                    default_values_ = default_values
+                else:
+                    default_fields_ = tuple(self.struct.xpath_of_leaf.get(name) or name for name in default_values.keys())
+                    default_values_ = dict(zip(default_fields_, default_values.values()))
+                for field in set(default_values_.keys()).intersection(self.fields):
+                    del default_values_[field]  # this field will be read from stream
+                if set(default_values_.keys()).difference(self.struct.fields):
+                    if self.verbose:
+                        warning_msg = "found default values for fields not in struct: '{}'" \
+                            "".format(','.join(set(default_values_.keys()).difference(self.struct.fields)))
+                        warnings.warn(warning_msg)
+                for field in set(default_values_.keys()).difference(self.struct.fields):
+                    del default_values_[field]  # this field is not in struct
+                self.default_values = default_values_
             self.complete_fields = self.fields + self.missing_fields
             missing_names = ['f' + str(i + len(self.input_dtype.names)) for i in xrange(len(self.missing_fields))]
             missing_types = [self.struct.type_of_field.get(name) for name in self.missing_fields]
@@ -316,6 +352,15 @@ class stream:
         if self.data_extraction_dtype:
             if self.missing_fields:
                 missing_data = np.zeros(self.input_data.size, dtype=self.missing_fields_dtype)
+                if self.default_values:
+                    standard_field = dict(zip(self.missing_fields, self.missing_fields_dtype.names))
+                    for field in self.default_values.keys():
+                        f = standard_field[field]
+                        v = self.default_values[field]
+                        if self.missing_fields_dtype[f] == np.dtype(comma.csv.time.NUMPY_TYPE):
+                            missing_data[f] = comma.csv.time.to_numpy(v)
+                        else:
+                            missing_data[f] = v
                 complete_data = merge_arrays(self.input_data, missing_data)
             else:
                 complete_data = self.input_data
@@ -344,6 +389,9 @@ class stream:
     def write(self, s):
         if s.dtype != self.struct.dtype:
             msg = "expected {}, got {}".format(repr(self.struct.dtype), repr(s.dtype))
+            raise stream_error(msg)
+        if s.shape != (s.size,):
+            msg = "expected shape=({},), got {}".format(s.size, s.shape)
             raise stream_error(msg)
         if self.tied and s.size != self.tied.input_data.size:
             msg = "size {} not equal to tied size {}".format(s.size, self.tied.size)
