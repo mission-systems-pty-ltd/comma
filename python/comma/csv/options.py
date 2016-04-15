@@ -1,9 +1,8 @@
-
-
-def help_text( help, default=None ):
-    return "%s (default: %s)" % ( help, default ) if default else help
-
 def standard_csv_options( parser, defaults={} ):
+
+    def help_text( help, default=None ):
+        return "%s (default: %s)" % ( help, default ) if default else help
+
     option_defaults = {
         'fields': '',
         'binary': '',
