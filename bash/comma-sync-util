@@ -143,7 +143,7 @@ function comma_set_exit_function_child_()
 
 function comma_set_exit_function()
 {
-    local lock=$( mktemp --tmpdir comma_set_exit_function.lock.XXXX )
+    local lock=$( mktemp --tmpdir comma_set_exit_function.lock.XXXXXXXX )
     comma_set_exit_function_debug_ "comma_set_exit_function ($@) using lock '$lock'"
     comma_set_exit_function_debug_ "comma_set_exit_function - spawning child"
     comma_set_exit_function_child_ $lock $@ & wait $!

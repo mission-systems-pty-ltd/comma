@@ -639,7 +639,7 @@ function run_test_with_timeout()
     if [[ "$options_estimate_resources" == "1" ]] ; then
         # have to run it manually without comma_execute_and_wait because we are not waiting for it
         # this group of processes would be explicitly terminated when the main test is done
-        local our_performance_log="$comma_test_run_unique_dir/performance_log.$( mktemp --dry-run XXXXXX )"
+        local our_performance_log="$comma_test_run_unique_dir/performance_log.$( mktemp --dry-run XXXXXXXX )"
         timeout -k 10 -s TERM $timeout_time bash -c comma_top_wrapper\ "$our_performance_log" & comma_top_pgid=$!
     fi
     comma_execute_and_wait --max-wait=$timeout_time --group "bash -c run_and_match_test"
@@ -711,7 +711,7 @@ function run_single_test()
     local counter="$count of $total"
 
     # create a unique file for local comma_progress output; will append to the main output at the end
-    local our_stats_progress="$comma_test_run_unique_dir/stats_progress.$( mktemp --dry-run XXXXXX )"
+    local our_stats_progress="$comma_test_run_unique_dir/stats_progress.$( mktemp --dry-run XXXXXXXX )"
     >"$our_stats_progress"
 
     # say something so that the user is not guessing what is going on
@@ -721,7 +721,7 @@ function run_single_test()
     ) 9>>"$comma_test_run_output_flock"
     # if running tests in parallel, create a unique file for redirecting all output
     # will append to the main output at the end
-    local our_stderrout_log="$comma_test_run_unique_dir/stdout_log.$( mktemp --dry-run XXXXXX )"
+    local our_stderrout_log="$comma_test_run_unique_dir/stdout_log.$( mktemp --dry-run XXXXXXXX )"
     # do not touch this equilibristics with file descriptors
     exec 3>&1 4>&2 1>"$our_stderrout_log" 2>&1
 
@@ -1036,7 +1036,7 @@ stats_init || { error_ "$name: could not initialize stats"; exit 1; }
 
 # keep all plumbing under a common directory
 temp_dir=$( readlink -e "stats" )
-comma_test_run_unique_dir=$( mktemp --directory --tmpdir="$temp_dir" comma-test-run.XXXXXX ) || { error_ "$name: cannot create unique working directory"; exit 1; }
+comma_test_run_unique_dir=$( mktemp --directory --tmpdir="$temp_dir" comma-test-run.XXXXXXXX ) || { error_ "$name: cannot create unique working directory"; exit 1; }
 export comma_test_run_unique_dir
 # to run tests in parallel, we need to lock stats_progress_csv and/or stdout/stderr
 # this is the global flock name

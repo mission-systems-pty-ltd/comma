@@ -5,7 +5,7 @@ source $( type -p comma-sync-util ) || exit 1
 output_dir="output"
 mkdir -p "$output_dir" || exit 1
 
-lockfile=$( mktemp --tmpdir=$output_dir test_comma_sync_util.lock.XXXX )
+lockfile=$( mktemp --tmpdir=$output_dir test_comma_sync_util.lock.XXXXXXXX )
 
 function capture_output()
 {
