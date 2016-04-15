@@ -139,6 +139,13 @@ class struct:
             raise struct_error(msg)
         return s.view(self.unrolled_flat_dtype).item()
 
+    def expand_shorthand(self, compressed_fields):
+        if isinstance(compressed_fields, basestring):
+            compressed_fields = compressed_fields.split(',')
+        expand = self.shorthand.get
+        field_tuples = map(lambda name: expand(name) or (name,), compressed_fields)
+        return sum(field_tuples, ())
+
     def _fill_blanks(self, fields):
         if isinstance(fields, basestring):
             fields = fields.split(',')
@@ -219,89 +226,31 @@ class stream:
                  verbose=False,
                  default_values=None):
         if not isinstance(s, struct):
-            raise stream_error("expected '{}', got '{}'".format(str(struct), repr(s)))
+            msg = "expected '{}', got '{}'".format(str(struct), repr(s))
+            raise stream_error(msg)
         self.struct = s
-        self.full_xpath = full_xpath
-        if fields == '':
-            self.fields = self.struct.fields
-        else:
-            if self.full_xpath:
-                shorthand = self.struct.shorthand.get
-                fields_ = map(lambda name: shorthand(name) or (name,), fields.split(','))
-                self.fields = sum(fields_, ())
-            else:
-                if '/' in fields:
-                    msg = "expected fields without '/', got '{}'".format(fields)
-                    raise stream_error(msg)
-                ambiguous_leaves = self.struct.ambiguous_leaves.intersection(fields.split(','))
-                if ambiguous_leaves:
-                    msg = "fields '{}' are ambiguous in '{}', use full xpath" \
-                        "".format(','.join(ambiguous_leaves), fields)
-                    raise stream_error(msg)
-                self.fields = tuple(self.struct.xpath_of_leaf.get(name) or name for name in fields.split(','))
-            if not set(self.fields).intersection(self.struct.fields):
-                msg = "fields '{}' do not match any of expected fields '{}'" \
-                    "".format(fields, ','.join(self.struct.fields))
-                raise stream_error(msg)
-        if binary is True and not format:
-            if not set(self.struct.fields).issuperset(self.fields):
-                msg = "failed to infer type of every field in '{}', specify format" \
-                    "".format(','.join(self.fields))
-                raise stream_error(msg)
-            format = format_from_types(self.struct.type_of_field[name] for name in self.fields)
-        elif binary is False and format:
-            format = ''
-        self.binary = format != ''
         self.delimiter = delimiter
-        self.flush = flush
         self.precision = precision
+        self.flush = flush
         self.source = source
         self.target = target
         self.tied = tied
+        self.full_xpath = full_xpath
         self.verbose = verbose
-        duplicates = tuple(field for field in self.struct.fields if field in self.fields and self.fields.count(field) > 1)
-        if duplicates:
-            msg = "fields '{}' have duplicates in '{}'" \
-                "".format(','.join(duplicates), ','.join(self.fields))
-            raise stream_error(msg)
+        self.fields = self._fields(fields)
+        self._check_field_uniqueness()
+        self.format = self._format(binary, format)
+        self.binary = self.format != ''
         if self.tied:
-            if not isinstance(tied, stream):
-                msg = "expected tied stream of type '{}', got '{}'" \
-                    "".format(str(stream), repr(tied))
-                raise stream_error(msg)
-            if self.tied.binary != self.binary:
-                msg = "expected tied stream to be {}, got {}" \
-                    "".format("binary" if self.binary else "ascii",
-                              "binary" if self.tied.binary else "ascii")
-                raise stream_error(msg)
-            if not self.binary and self.tied.delimiter != self.delimiter:
-                msg = "expected tied stream to have the same delimiter '{}', got '{}'" \
-                    "".format(self.delimiter, self.tied.delimiter)
-                raise stream_error(msg)
-        if self.binary:
-            self.input_dtype = structured_dtype(format)
-            if len(self.fields) != len(self.input_dtype.names):
-                msg = "expected same number of fields and format types, got '{}' and '{}'" \
-                    "".format(','.join(self.fields), format)
-                raise stream_error(msg)
-        else:
-            if self.fields == self.struct.fields:
-                self.input_dtype = self.struct.flat_dtype
-            else:
-                types_ = [self.struct.type_of_field.get(name) or 'S' for name in self.fields]
-                format_ = format_from_types(types_)
-                self.input_dtype = structured_dtype(format_)
+            self._check_consistency_with_tied()
+        self.input_dtype = self._input_dtype()
+        self.size = self._size()
+        if not self.binary:
             unrolled_types = unrolled_types_of_flat_dtype(self.input_dtype)
             self.ascii_converters = comma.csv.time.ascii_converters(unrolled_types)
-            self.usecols = tuple(range(len(unrolled_types)))
-            self.filling_values = '' if len(unrolled_types) == 1 else ('',) * len(unrolled_types)
-        if self.tied:
-            self.size = self.tied.size
-        else:
-            if self.flush:
-                self.size = 1
-            else:
-                self.size = max(1, stream.buffer_size_in_bytes / self.input_dtype.itemsize)
+            nutypes = len(unrolled_types)
+            self.usecols = tuple(range(nutypes))
+            self.filling_values = '' if nutypes == 1 else ('',) * nutypes
         if set(self.fields).issuperset(self.struct.fields):
             self.missing_fields = ()
         else:
@@ -435,3 +384,84 @@ class stream:
                 output_line = self.delimiter.join(map(self.numpy_scalar_to_string, scalars))
                 print >> self.target, tied_line_with_separator + output_line
         self.target.flush()
+
+    def _fields(self, fields):
+        if fields == '':
+            return self.struct.fields
+        if self.full_xpath:
+            return self.struct.expand_shorthand(fields)
+        if '/' in fields:
+            msg = "expected fields without '/', got '{}'".format(fields)
+            raise stream_error(msg)
+        ambiguous_leaves = self.struct.ambiguous_leaves.intersection(fields.split(','))
+        if ambiguous_leaves:
+            msg = "fields '{}' are ambiguous in '{}', use full xpath" \
+                .format(','.join(ambiguous_leaves), fields)
+            raise stream_error(msg)
+        xpath = self.struct.xpath_of_leaf.get
+        full_xpath_fields = tuple(xpath(name) or name for name in fields.split(','))
+        if not set(full_xpath_fields).intersection(self.struct.fields):
+            msg = "fields '{}' do not match any of expected fields '{}'" \
+                .format(fields, ','.join(self.struct.fields))
+            raise stream_error(msg)
+        return full_xpath_fields
+
+    def _format(self, binary, format):
+        if binary is True and not format:
+            if not set(self.struct.fields).issuperset(self.fields):
+                msg = "failed to infer type of every field in '{}', specify format" \
+                    .format(','.join(self.fields))
+                raise stream_error(msg)
+            type_of = self.struct.type_of_field.get
+            return format_from_types(type_of(field) for field in self.fields)
+        elif binary is False and format:
+            return ''
+        return format
+
+    def _check_field_uniqueness(self):
+        duplicates = tuple(field for field in self.struct.fields
+                           if field in self.fields and self.fields.count(field) > 1)
+        if duplicates:
+            msg = "fields '{}' have duplicates in '{}'" \
+                "".format(','.join(duplicates), ','.join(self.fields))
+            raise stream_error(msg)
+
+    def _check_consistency_with_tied(self):
+        if not isinstance(self.tied, stream):
+            msg = "expected tied stream of type '{}', got '{}'" \
+                "".format(str(stream), repr(self.tied))
+            raise stream_error(msg)
+        if self.tied.binary != self.binary:
+            msg = "expected tied stream to be {}, got {}" \
+                "".format("binary" if self.binary else "ascii",
+                          "binary" if self.tied.binary else "ascii")
+            raise stream_error(msg)
+        if not self.binary and self.tied.delimiter != self.delimiter:
+            msg = "expected tied stream to have the same delimiter '{}', got '{}'" \
+                "".format(self.delimiter, self.tied.delimiter)
+            raise stream_error(msg)
+
+    def _input_dtype(self):
+        if self.binary:
+            input_dtype = structured_dtype(self.format)
+            if len(self.fields) != len(input_dtype.names):
+                msg = "expected same number of fields and format types, got '{}' and '{}'" \
+                    "".format(','.join(self.fields), self.format)
+                raise stream_error(msg)
+        else:
+            if self.fields == self.struct.fields:
+                input_dtype = self.struct.flat_dtype
+            else:
+                type_of = self.struct.type_of_field.get
+                types = [type_of(name) or 'S' for name in self.fields]
+                format = format_from_types(types)
+                input_dtype = structured_dtype(format)
+        return input_dtype
+
+    def _size(self):
+        if self.tied:
+            size = self.tied.size
+        else:
+            buffer_size = max(1, stream.buffer_size_in_bytes / self.input_dtype.itemsize)
+            size = 1 if self.flush else buffer_size
+        return size
