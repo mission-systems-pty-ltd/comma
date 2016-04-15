@@ -1,0 +1,25 @@
+#!/bin/bash
+
+function default_values
+{
+    python -c "$( cat <<END
+import comma
+
+comma.csv.time.zone( 'UTC' )
+
+point_t = comma.csv.struct( 'id,signal,x,y,z', 'uint64', '(2,)float64', 'float64', 'float64', 'int64' )
+observer_t = comma.csv.struct( 't,num', 'datetime64[us]', 'uint8' )
+record_t = comma.csv.struct( 'name,point,observer', 'S3', point_t, observer_t )
+default_values = { 'signal': (-111, -222), 'y': 123, 't': '19991212T123456' }
+format = ','.join(comma.csv.format.to_numpy("$input_format"))
+stream = comma.csv.stream( record_t, fields=',num,x,z,,', format=format, default_values=default_values, verbose=True, full_xpath=False)
+stream.write( stream.read() )
+END
+)"
+}
+
+input_format='s[1],ub,2d,2s[3]'
+output=$( csv-to-bin $input_format | default_values | csv-from-bin s[3],ul,4d,l,t,ub )
+status=$?
+echo "$output" | csv-paste value="line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'
+echo "status=$status"
