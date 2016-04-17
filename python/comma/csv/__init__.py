@@ -254,10 +254,7 @@ class stream:
                  full_xpath=True,
                  verbose=False,
                  default_values=None):
-        if not isinstance(s, struct):
-            msg = "expected '{}', got '{}'".format(str(struct), repr(s))
-            raise stream_error(msg)
-        self.struct = s
+        self.struct = self._struct(s)
         self.delimiter = delimiter
         self.precision = precision
         self.flush = flush
@@ -267,61 +264,24 @@ class stream:
         self.full_xpath = full_xpath
         self.verbose = verbose
         self.fields = self._fields(fields)
-        self._check_field_uniqueness()
+        self._check_fields_uniqueness()
         self.format = self._format(binary, format)
         self.binary = self.format != ''
-        if self.tied:
-            self._check_consistency_with_tied()
+        self._check_consistency_with_tied()
         self.input_dtype = self._input_dtype()
-        self.size = self._size()
+        self.size = self._default_buffer_size()
         if not self.binary:
             unrolled_types = unrolled_types_of_flat_dtype(self.input_dtype)
             self.ascii_converters = comma.csv.time.ascii_converters(unrolled_types)
-            nutypes = len(unrolled_types)
-            self.usecols = tuple(range(nutypes))
-            self.filling_values = '' if nutypes == 1 else ('',) * nutypes
-        if set(self.fields).issuperset(self.struct.fields):
-            self.missing_fields = ()
-        else:
-            self.missing_fields = tuple(field for field in self.struct.fields if field not in self.fields)
-            if self.verbose:
-                warning_msg = "expected fields '{}' are not found in supplied fields '{}'" \
-                    "".format(','.join(self.missing_fields), ','.join(self.fields))
-                warnings.warn(warning_msg)
-        self.default_values = None
-        if self.missing_fields:
-            if default_values:
-                if self.full_xpath:
-                    default_values_ = default_values
-                else:
-                    default_fields_ = tuple(self.struct.xpath_of_leaf.get(name) or name for name in default_values.keys())
-                    default_values_ = dict(zip(default_fields_, default_values.values()))
-                for field in set(default_values_.keys()).intersection(self.fields):
-                    del default_values_[field]  # this field will be read from stream
-                if set(default_values_.keys()).difference(self.struct.fields):
-                    if self.verbose:
-                        warning_msg = "found default values for fields not in struct: '{}'" \
-                            "".format(','.join(set(default_values_.keys()).difference(self.struct.fields)))
-                        warnings.warn(warning_msg)
-                for field in set(default_values_.keys()).difference(self.struct.fields):
-                    del default_values_[field]  # this field is not in struct
-                self.default_values = default_values_
-            self.complete_fields = self.fields + self.missing_fields
-            missing_names = ['f' + str(i + len(self.input_dtype.names)) for i in xrange(len(self.missing_fields))]
-            missing_types = [self.struct.type_of_field.get(name) for name in self.missing_fields]
-            self.missing_fields_dtype = np.dtype(zip(missing_names, missing_types))
-            self.complete_dtype = np.dtype(self.input_dtype.descr + zip(missing_names, missing_types))
-        else:
-            self.complete_fields = self.fields
-            self.missing_fields_dtype = None
-            self.complete_dtype = self.input_dtype
-        if self.fields == self.struct.fields:
-            self.data_extraction_dtype = None
-        else:
-            names = ['f' + str(self.complete_fields.index(name)) for name in self.struct.fields]
-            formats = [self.complete_dtype.fields[name][0] for name in names]
-            offsets = [self.complete_dtype.fields[name][1] for name in names]
-            self.data_extraction_dtype = np.dtype(dict(names=names, formats=formats, offsets=offsets))
+            num_utypes = len(unrolled_types)
+            self.usecols = tuple(range(num_utypes))
+            self.filling_values = '' if num_utypes == 1 else ('',) * num_utypes
+        self.missing_fields = self._missing_fields()
+        self.missing_fields_dtype = self._missing_fields_dtype()
+        self.complete_fields = self.fields + self.missing_fields
+        self.complete_dtype = self._complete_dtype()
+        self.default_values = self._default_values(default_values)
+        self.data_extraction_dtype = self._data_extraction_dtype()
 
     def iter(self, size=None):
         while True:
@@ -414,6 +374,12 @@ class stream:
                 print >> self.target, tied_line_with_separator + output_line
         self.target.flush()
 
+    def _struct(self, s):
+        if not isinstance(s, struct):
+            msg = "expected '{}', got '{}'".format(repr(struct), repr(s))
+            raise stream_error(msg)
+        return s
+
     def _fields(self, fields):
         if fields == '':
             return self.struct.fields
@@ -447,7 +413,7 @@ class stream:
             return ''
         return format
 
-    def _check_field_uniqueness(self):
+    def _check_fields_uniqueness(self):
         duplicates = tuple(field for field in self.struct.fields
                            if field in self.fields and self.fields.count(field) > 1)
         if duplicates:
@@ -456,6 +422,8 @@ class stream:
             raise stream_error(msg)
 
     def _check_consistency_with_tied(self):
+        if not self.tied:
+            return
         if not isinstance(self.tied, stream):
             msg = "expected tied stream of type '{}', got '{}'" \
                 "".format(str(stream), repr(self.tied))
@@ -487,10 +455,63 @@ class stream:
                 input_dtype = structured_dtype(format)
         return input_dtype
 
-    def _size(self):
+    def _default_buffer_size(self):
         if self.tied:
-            size = self.tied.size
+            return self.tied.size
+        elif self.flush:
+            return 1
         else:
-            buffer_size = max(1, stream.buffer_size_in_bytes / self.input_dtype.itemsize)
-            size = 1 if self.flush else buffer_size
-        return size
+            return max(1, stream.buffer_size_in_bytes / self.input_dtype.itemsize)
+
+    def _missing_fields(self):
+        missing_fields = [field for field in self.struct.fields if field not in self.fields]
+        if not missing_fields:
+            return ()
+        if self.verbose:
+            warning_msg = "expected fields '{}' are not found in supplied fields '{}'" \
+                .format(','.join(missing_fields), ','.join(self.fields))
+            warnings.warn(warning_msg)
+        return tuple(missing_fields)
+
+    def _missing_fields_dtype(self):
+        if not self.missing_fields:
+            return
+        n = len(self.input_dtype.names)
+        missing_names = ['f{}'.format(n + i) for i in xrange(len(self.missing_fields))]
+        type_of = self.struct.type_of_field.get
+        missing_types = [type_of(name) for name in self.missing_fields]
+        return np.dtype(zip(missing_names, missing_types))
+
+    def _complete_dtype(self):
+        if self.missing_fields_dtype:
+            return np.dtype(self.input_dtype.descr + self.missing_fields_dtype.descr)
+        else:
+            return self.input_dtype
+
+    def _default_values(self, default_values):
+        if not (self.missing_fields and default_values):
+            return
+        if self.full_xpath:
+            default_values_ = default_values
+        else:
+            default_fields_ = tuple(self.struct.xpath_of_leaf.get(name) or name for name in default_values.keys())
+            default_values_ = dict(zip(default_fields_, default_values.values()))
+        for field in set(default_values_.keys()).intersection(self.fields):
+            del default_values_[field]  # this field will be read from stream
+        if set(default_values_.keys()).difference(self.struct.fields):
+            if self.verbose:
+                warning_msg = "found default values for fields not in struct: '{}'" \
+                    "".format(','.join(set(default_values_.keys()).difference(self.struct.fields)))
+                warnings.warn(warning_msg)
+        for field in set(default_values_.keys()).difference(self.struct.fields):
+            del default_values_[field]  # this field is not in struct
+        return default_values_
+
+    def _data_extraction_dtype(self):
+        if self.fields == self.struct.fields:
+            return
+        index_of = self.complete_fields.index
+        names = ['f{}'.format(index_of(field)) for field in self.struct.fields]
+        formats = [self.complete_dtype.fields[name][0] for name in names]
+        offsets = [self.complete_dtype.fields[name][1] for name in names]
+        return np.dtype(dict(names=names, formats=formats, offsets=offsets))
