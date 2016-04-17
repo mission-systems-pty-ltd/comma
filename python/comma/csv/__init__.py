@@ -492,19 +492,27 @@ class stream:
         if not (self.missing_fields and default_values):
             return
         if self.full_xpath:
-            default_values_ = default_values
+            default_fields_ = default_values.keys()
+            default_values_ = default_values.copy()
         else:
-            default_fields_ = tuple(self.struct.xpath_of_leaf.get(name) or name for name in default_values.keys())
+            leaves = default_values.keys()
+            xpath_of = self.struct.xpath_of_leaf.get
+            default_fields_ = tuple(xpath_of(leaf) or leaf for leaf in leaves)
             default_values_ = dict(zip(default_fields_, default_values.values()))
-        for field in set(default_values_.keys()).intersection(self.fields):
-            del default_values_[field]  # this field will be read from stream
-        if set(default_values_.keys()).difference(self.struct.fields):
+        default_fields_in_stream = set(default_fields_).intersection(self.fields)
+        unknown_default_fields = set(default_fields_).difference(self.struct.fields)
+        if default_fields_in_stream:
+            if self.verbose:
+                warning_msg = "default values for fields in stream are ignored: '{}'" \
+                    "".format(','.join(default_fields_in_stream))
+                warnings.warn(warning_msg)
+        if unknown_default_fields:
             if self.verbose:
                 warning_msg = "found default values for fields not in struct: '{}'" \
-                    "".format(','.join(set(default_values_.keys()).difference(self.struct.fields)))
+                    "".format(','.join(unknown_default_fields))
                 warnings.warn(warning_msg)
-        for field in set(default_values_.keys()).difference(self.struct.fields):
-            del default_values_[field]  # this field is not in struct
+        for field in default_fields_in_stream.union(unknown_default_fields):
+            del default_values_[field]
         return default_values_
 
     def _data_extraction_dtype(self):
