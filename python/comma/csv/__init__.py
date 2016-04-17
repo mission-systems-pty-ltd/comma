@@ -410,6 +410,12 @@ class stream:
         return full_xpath_fields
 
     def _format(self, binary, format):
+        if isinstance(binary, basestring):
+            if self.verbose and binary and format and binary != format:
+                msg = "ignoring '{}' and using '{}' since binary keyword has priority" \
+                    .format(format, binary)
+                warnings.warn(msg)
+            return binary
         if binary is True and not format:
             if not set(self.struct.fields).issuperset(self.fields):
                 msg = "failed to infer type of every field in '{}', specify format" \
@@ -476,9 +482,9 @@ class stream:
         if not missing_fields:
             return ()
         if self.verbose:
-            warning_msg = "expected fields '{}' are not found in supplied fields '{}'" \
+            msg = "expected fields '{}' are not found in supplied fields '{}'" \
                 .format(','.join(missing_fields), ','.join(self.fields))
-            warnings.warn(warning_msg)
+            warnings.warn(msg)
         return tuple(missing_fields)
 
     def _missing_dtype(self):
@@ -511,14 +517,14 @@ class stream:
         unknown_default_fields = set(default_fields_).difference(self.struct.fields)
         if default_fields_in_stream:
             if self.verbose:
-                warning_msg = "default values for fields in stream are ignored: '{}'" \
+                msg = "default values for fields in stream are ignored: '{}'" \
                     "".format(','.join(default_fields_in_stream))
-                warnings.warn(warning_msg)
+                warnings.warn(msg)
         if unknown_default_fields:
             if self.verbose:
-                warning_msg = "found default values for fields not in struct: '{}'" \
+                msg = "found default values for fields not in struct: '{}'" \
                     "".format(','.join(unknown_default_fields))
-                warnings.warn(warning_msg)
+                warnings.warn(msg)
         for field in default_fields_in_stream.union(unknown_default_fields):
             del default_values_[field]
         return default_values_
