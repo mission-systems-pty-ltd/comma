@@ -260,6 +260,13 @@ class test_struct(unittest.TestCase):
         event['point']['z'] = 1.3
         self.assertTupleEqual(event_t.to_tuple(event), (123, 1.1, 1.2, 1.3))
 
+    def test_to_tuple_array(self):
+        event_t = comma.csv.struct('id,point', 'u4', '3f8')
+        event = event_t()
+        event['id'] = 123
+        event['point'] = (1.1, 1.2, 1.3)
+        self.assertTupleEqual(event_t.to_tuple(event), (123, 1.1, 1.2, 1.3))
+
     def test_to_tuple_time(self):
         comma.csv.time.zone('UTC')
         event_t = comma.csv.struct('t,x,y,z', 'datetime64[us]', 'f8', 'f8', 'f8')
