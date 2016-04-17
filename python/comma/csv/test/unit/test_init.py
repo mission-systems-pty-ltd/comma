@@ -426,7 +426,7 @@ class test_stream(unittest.TestCase):
         self.assertTupleEqual(t.missing_fields, ())
         self.assertEqual(t.complete_fields, t.fields)
         self.assertEqual(t.complete_dtype, t.input_dtype)
-        self.assertIsNone(t.missing_fields_dtype)
+        self.assertIsNone(t.missing_dtype)
         self.assertIsNone(t.data_extraction_dtype)
 
     def test_ascii_simple_multiple_fields(self):
@@ -439,7 +439,7 @@ class test_stream(unittest.TestCase):
         self.assertTupleEqual(t.missing_fields, ())
         self.assertEqual(t.complete_fields, t.fields)
         self.assertEqual(t.complete_dtype, t.input_dtype)
-        self.assertIsNone(t.missing_fields_dtype)
+        self.assertIsNone(t.missing_dtype)
         self.assertIsNone(t.data_extraction_dtype)
 
     def test_ascii_general_fields(self):
@@ -452,7 +452,7 @@ class test_stream(unittest.TestCase):
         self.assertTupleEqual(t.filling_values, ('', '', '', '', '', ''))
         self.assertTupleEqual(t.missing_fields, ('x', 'z'))
         self.assertTupleEqual(t.complete_fields, ('n1', 'n2', 't', '', 'y', '', 'x', 'z'))
-        self.assertEqual(t.missing_fields_dtype, np.dtype([('f6', 'f8'), ('f7', 'f8')]))
+        self.assertEqual(t.missing_dtype, np.dtype([('f6', 'f8'), ('f7', 'f8')]))
         self.assertEqual(t.complete_dtype, np.dtype([('f0', 'S'), ('f1', 'S'), ('f2', 'M8[us]'), ('f3', 'S'), ('f4', 'f8'), ('f5', 'S'), ('f6', 'f8'), ('f7', 'f8')]))
         self.assertEqual(t.data_extraction_dtype, np.dtype({ 'names': ['f2', 'f6', 'f4', 'f7'], 'formats': ['M8[us]', 'f8', 'f8', 'f8'], 'offsets': [0, 16, 8, 24] }))
 
@@ -467,7 +467,7 @@ class test_stream(unittest.TestCase):
         self.assertTupleEqual(t.filling_values, ('', '', '', '', '', '', '', ''))
         self.assertTupleEqual(t.missing_fields, ('event/dt', 'event/point/y', 'event/point/z'))
         self.assertTupleEqual(t.complete_fields, ('', 'name', '', '', 'id', 'event/point/x', 'event/point/t', '', 'event/dt', 'event/point/y', 'event/point/z'))
-        self.assertEqual(t.missing_fields_dtype, np.dtype([('f8', 'm8[us]'), ('f9', 'f8'), ('f10', 'f8')]))
+        self.assertEqual(t.missing_dtype, np.dtype([('f8', 'm8[us]'), ('f9', 'f8'), ('f10', 'f8')]))
         self.assertEqual(t.complete_dtype, np.dtype([('f0', 'S'), ('f1', 'S36'), ('f2', 'S'), ('f3', 'S'), ('f4', 'u4'), ('f5', 'f8'), ('f6', 'M8[us]'), ('f7', 'S'), ('f8', 'm8[us]'), ('f9', 'f8'), ('f10', 'f8')]))
         self.assertEqual(t.data_extraction_dtype, np.dtype({'names': ['f4', 'f1', 'f8', 'f6', 'f5', 'f9', 'f10'], 'formats': ['u4', 'S36', 'm8[us]', 'M8[us]', 'f8', 'f8', 'f8'], 'offsets': [36, 0, 56, 48, 40, 64, 72] }))
 
@@ -482,7 +482,7 @@ class test_stream(unittest.TestCase):
         self.assertRaises(AttributeError, getattr, t, 'filling_values')
         self.assertTupleEqual(t.missing_fields, ('event/dt', 'event/point/y', 'event/point/z'))
         self.assertTupleEqual(t.complete_fields, ('', 'name', '', '', 'id', 'event/point/x', 'event/point/t', '', 'event/dt', 'event/point/y', 'event/point/z'))
-        self.assertEqual(t.missing_fields_dtype, np.dtype([('f8', 'm8[us]'), ('f9', 'f8'), ('f10', 'f8')]))
+        self.assertEqual(t.missing_dtype, np.dtype([('f8', 'm8[us]'), ('f9', 'f8'), ('f10', 'f8')]))
         self.assertEqual(t.complete_dtype, np.dtype([('f0', 'i1'), ('f1', 'S36'), ('f2', 'i2'), ('f3', 'i2'), ('f4', 'u4'), ('f5', 'f8'), ('f6', 'M8[us]'), ('f7', 'S10'), ('f8', 'm8[us]'), ('f9', 'f8'), ('f10', 'f8')]))
         self.assertEqual(t.data_extraction_dtype, np.dtype({'names': ['f4', 'f1', 'f8', 'f6', 'f5', 'f9', 'f10'], 'formats': ['u4', 'S36', 'm8[us]', 'M8[us]', 'f8', 'f8', 'f8'], 'offsets': [41, 1, 71, 53, 45, 79, 87] }))
 

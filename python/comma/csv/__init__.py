@@ -196,7 +196,7 @@ class struct:
     def _check_fields_conciseness(self):
         for field in self.concise_fields:
             if '/' in field:
-                msg = "expected fields without '/', got '{}'".format(fields)
+                msg = "expected fields without '/', got '{}'".format(self.concise_fields)
                 raise struct_error(msg)
 
     def _full_xpath_fields(self):
@@ -277,11 +277,13 @@ class stream:
             self.usecols = tuple(range(num_utypes))
             self.filling_values = '' if num_utypes == 1 else ('',) * num_utypes
         self.missing_fields = self._missing_fields()
-        self.missing_fields_dtype = self._missing_fields_dtype()
+        self.missing_dtype = self._missing_dtype()
         self.complete_fields = self.fields + self.missing_fields
         self.complete_dtype = self._complete_dtype()
         self.default_values = self._default_values(default_values)
         self.data_extraction_dtype = self._data_extraction_dtype()
+        self._input_data = None
+        self._missing_data = None
 
     def iter(self, size=None):
         while True:
@@ -291,55 +293,60 @@ class stream:
             yield s
 
     def read(self, size=None):
-        size = self.size if size is None else size
+        if size is None:
+            size = self.size
         if size < 0:
             if self.source == sys.stdin:
                 msg = "stdin requires positive size, got {}".format(size)
                 raise stream_error(msg)
             size = -1  # read entire file
         if self.binary:
-            self.input_data = np.fromfile(self.source, dtype=self.input_dtype, count=size)
+            self._input_data = np.fromfile(self.source, dtype=self.input_dtype, count=size)
         else:
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore')
                 self.ascii_buffer = readlines(self.source, size)
                 if not self.ascii_buffer:
-                    return None
-                self.input_data = np.atleast_1d(
-                    np.genfromtxt(
-                        StringIO(self.ascii_buffer),
-                        dtype=self.input_dtype,
-                        delimiter=self.delimiter,
-                        converters=self.ascii_converters,
-                        usecols=self.usecols,
-                        filling_values=self.filling_values,
-                        comments=None))
-        if self.input_data.size == 0:
-            return None
-        if self.data_extraction_dtype:
-            if self.missing_fields:
-                missing_data = np.zeros(self.input_data.size, dtype=self.missing_fields_dtype)
-                if self.default_values:
-                    standard_field = dict(zip(self.missing_fields, self.missing_fields_dtype.names))
-                    for field in self.default_values.keys():
-                        f = standard_field[field]
-                        v = self.default_values[field]
-                        if self.missing_fields_dtype[f] == np.dtype(comma.csv.time.NUMPY_TYPE):
-                            missing_data[f] = comma.csv.time.to_numpy(v)
-                        else:
-                            missing_data[f] = v
-                complete_data = merge_arrays(self.input_data, missing_data)
-            else:
-                complete_data = self.input_data
-            raw_extracted_data = np.ndarray(
-                complete_data.shape,
-                self.data_extraction_dtype,
-                complete_data,
-                strides=complete_data.itemsize).tolist()
-            extracted_data = np.array(raw_extracted_data, dtype=self.struct.flat_dtype)
-            return extracted_data.view(self.struct)
+                    return
+                self._input_data = np.atleast_1d(np.genfromtxt(
+                    StringIO(self.ascii_buffer),
+                    dtype=self.input_dtype,
+                    delimiter=self.delimiter,
+                    converters=self.ascii_converters,
+                    usecols=self.usecols,
+                    filling_values=self.filling_values,
+                    comments=None))
+        if self._input_data.size == 0:
+            return
+        if not self.data_extraction_dtype:
+            return self._input_data.copy().view(self.struct)
+        if self.missing_fields:
+            missing_data = self.missing_data(self._input_data.size)
+            complete_data = merge_arrays(self._input_data, missing_data)
         else:
-            return self.input_data.copy().view(self.struct)
+            complete_data = self._input_data
+        raw_extracted_data = np.ndarray(
+            shape=complete_data.shape,
+            dtype=self.data_extraction_dtype,
+            buffer=complete_data,
+            strides=complete_data.itemsize).tolist()
+        extracted_data = np.array(raw_extracted_data, dtype=self.struct.flat_dtype)
+        return extracted_data.view(self.struct)
+
+    def missing_data(self, size):
+        if self._missing_data is not None and size <= self._missing_data.size:
+            return self._missing_data[:size]
+        self._missing_data = np.zeros(size, dtype=self.missing_dtype)
+        if not self.default_values:
+            return self._missing_data
+        dtype_name_of = dict(zip(self.missing_fields, self.missing_dtype.names))
+        for field, value in self.default_values.iteritems():
+            name = dtype_name_of[field]
+            if self.missing_dtype[name] == np.dtype(comma.csv.time.NUMPY_TYPE):
+                self._missing_data[name] = comma.csv.time.to_numpy(value)
+            else:
+                self._missing_data[name] = value
+        return self._missing_data
 
     def numpy_scalar_to_string(self, scalar):
         if scalar.dtype.char in np.typecodes['AllInteger']:
@@ -360,11 +367,11 @@ class stream:
         if s.shape != (s.size,):
             msg = "expected shape=({},), got {}".format(s.size, s.shape)
             raise stream_error(msg)
-        if self.tied and s.size != self.tied.input_data.size:
+        if self.tied and s.size != self.tied._input_data.size:
             msg = "size {} not equal to tied size {}".format(s.size, self.tied.size)
             raise stream_error(msg)
         if self.binary:
-            (merge_arrays(self.tied.input_data, s) if self.tied else s).tofile(self.target)
+            (merge_arrays(self.tied._input_data, s) if self.tied else s).tofile(self.target)
         else:
             tied_lines = self.tied.ascii_buffer.splitlines() if self.tied else []
             unrolled_s = s.view(self.struct.unrolled_flat_dtype)
@@ -473,7 +480,7 @@ class stream:
             warnings.warn(warning_msg)
         return tuple(missing_fields)
 
-    def _missing_fields_dtype(self):
+    def _missing_dtype(self):
         if not self.missing_fields:
             return
         n = len(self.input_dtype.names)
@@ -483,8 +490,8 @@ class stream:
         return np.dtype(zip(missing_names, missing_types))
 
     def _complete_dtype(self):
-        if self.missing_fields_dtype:
-            return np.dtype(self.input_dtype.descr + self.missing_fields_dtype.descr)
+        if self.missing_dtype:
+            return np.dtype(self.input_dtype.descr + self.missing_dtype.descr)
         else:
             return self.input_dtype
 
