@@ -284,6 +284,7 @@ class stream:
         self.data_extraction_dtype = self._data_extraction_dtype()
         self._input_data = None
         self._missing_data = None
+        self._ascii_buffer = None
 
     def iter(self, size=None):
         while True:
@@ -305,11 +306,11 @@ class stream:
         else:
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore')
-                self.ascii_buffer = readlines(self.source, size)
-                if not self.ascii_buffer:
+                self._ascii_buffer = readlines(self.source, size)
+                if not self._ascii_buffer:
                     return
                 self._input_data = np.atleast_1d(np.genfromtxt(
-                    StringIO(self.ascii_buffer),
+                    StringIO(self._ascii_buffer),
                     dtype=self.input_dtype,
                     delimiter=self.delimiter,
                     converters=self.ascii_converters,
@@ -373,7 +374,7 @@ class stream:
         if self.binary:
             (merge_arrays(self.tied._input_data, s) if self.tied else s).tofile(self.target)
         else:
-            tied_lines = self.tied.ascii_buffer.splitlines() if self.tied else []
+            tied_lines = self.tied._ascii_buffer.splitlines() if self.tied else []
             unrolled_s = s.view(self.struct.unrolled_flat_dtype)
             for tied_line, scalars in itertools.izip_longest(tied_lines, unrolled_s):
                 tied_line_with_separator = tied_line + self.delimiter if self.tied else ''
