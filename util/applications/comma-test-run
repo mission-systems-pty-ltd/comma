@@ -929,9 +929,12 @@ function parse_multiple_options()
 }
 
 # process command line...
+(( $( comma_options_has --bash-completion $@ ) )) && { description | comma_options_to_bash_completion ; exit 0 ; }
+(( $( comma_options_has --description $@ ) )) && { description ; exit 0 ; }
 if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then
-    if (( $( comma_options_has --verbose $@ ) || $( comma_options_has -v $@ ) )) ; then usage_ --verbose ; else usage_ ; fi
+    (( $( comma_options_has --verbose $@ ) || $( comma_options_has -v $@ ) )) && usage_ --verbose || usage_
 fi
+
 description | comma-options-validate $@
 comma_path_value_to_var --export --prefix=options < <( default_options )
 options_path_value="$( description | comma-options-to-name-value $@ )"
