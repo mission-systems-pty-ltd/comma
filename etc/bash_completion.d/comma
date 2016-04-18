@@ -48,40 +48,6 @@ EOF
 #--output
 }
 
-_comma_test_run_opts() 
-{
-    cat <<EOF
---begin
---black-list
---debug
---dry-run
---end
---estimate-resources
---from
---help
---max-memory-main
---max-memory-shared
---max-parallel
---max-run-time
---max-wait-time
---no-ansiterm-control-characters
---no-control-characters
---optional
---output-directories
---parallel
---path
---quiet
---raw
---run-disabled
---run-optional
---test-option
---to
---until-first-failure
---verbose
---white-list
-EOF
-}
-
 _csv_time_opts()
 {
     cat <<EOF
@@ -141,12 +107,10 @@ _simple()
     COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
 }
 
-_comma_test_run() { _simple _comma_test_run_opts ; }
 _csv_shuffle() { _simple _csv_shuffle_opts ; }
 _csv_time() { _simple _csv_time_opts ; }
 _csv_update() { _simple _csv_update_opts ; }
 
-complete -F _comma_test_run comma-test-run
 complete -F _csv_shuffle csv-shuffle
 complete -F _csv_time csv-time
 complete -F _csv_update csv-update
@@ -174,3 +138,4 @@ _comma_bash_completion()
 
 complete -F _comma_bash_completion csv-calc
 complete -F _comma_bash_completion csv-units
+complete -F _comma_bash_completion comma-test-run
