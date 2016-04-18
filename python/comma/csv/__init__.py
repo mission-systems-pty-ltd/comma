@@ -163,7 +163,7 @@ class struct:
         if s.dtype != self.dtype:
             msg = "expected {}, got {}".format(repr(self.dtype), repr(s.dtype))
             raise struct_error(msg)
-        if s.shape != (1,):
+        if not (s.shape == (1,) or s.shape == ()):
             msg = "expected shape=(1,), got {}".format(s.shape)
             raise struct_error(msg)
         return s.view(self.unrolled_flat_dtype).item()
