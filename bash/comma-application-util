@@ -85,6 +85,41 @@ function comma_options_has()
 }
 export -f comma_options_has
 
+## @page comma_options_names comma_options_names
+# @description converts a standard comma description to a list of names
+# 
+# example
+#   description | comma_options_names
+function comma_options_names()
+{
+    sed -e '/^$/d' -e '/^[^-]/d' -e 's/=.*//g' -e 's/;.*//g' -e 's/,/\n/g'
+}
+export -f comma_options_names
+
+## @page comma_options_to_bash_completion comma_options_to_bash_completion
+# @description converts a standard comma description to input
+# for the comma bash completion function
+# 
+# example
+#   description | comma_options_to_bash_completion
+function comma_options_to_bash_completion()
+{
+    comma_options_names | sort
+}
+export -f comma_options_to_bash_completion
+
+## @page comma_options_select comma_options_select
+# @description after a set of options have been retrieved as paths convert to
+# options format for a child script
+# 
+# example
+#   comma-test-run $( comma-test-run --description | comma-options-to-name-value $@ | comma_name_value_to_options )
+function comma_name_value_to_options()
+{
+    sed -e '/=/ ! d' -e 's/^/--/g'| tr '\n' ' '
+}
+export -f comma_name_value_to_options
+
 # verify the overall exit status of a pipeline ($? reports only the status of the last step
 # in a pipeline); ignore termination by SIGPIPE
 #
