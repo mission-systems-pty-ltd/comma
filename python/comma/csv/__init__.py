@@ -344,7 +344,10 @@ class stream:
         for field, value in self.default_values.iteritems():
             name = dtype_name_of[field]
             if self.missing_dtype[name] == np.dtype(comma.csv.time.NUMPY_TYPE):
-                self._missing_data[name] = comma.csv.time.to_numpy(value)
+                try:
+                    self._missing_data[name] = comma.csv.time.to_numpy(value)
+                except:
+                    self._missing_data[name] = value
             else:
                 self._missing_data[name] = value
         return self._missing_data
