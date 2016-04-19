@@ -1,0 +1,34 @@
+#!/bin/bash
+
+function test_handler()
+{
+    trap '' SIGINT SIGTERM SIGHUP SIGPIPE SIGUSR1
+    sleep 2
+    echo "killed by $1"
+    exit 1
+}
+export -f test_handler
+
+function test_worker()
+{
+    trap 'test_handler HUP'  SIGHUP
+    trap 'test_handler INT'  SIGINT
+    trap 'test_handler TERM' SIGTERM
+    trap 'test_handler PIPE' SIGPIPE
+    trap 'test_handler USR1' SIGUSR1
+    local duration=$1
+    comma-nap $duration | grab
+}
+export -f test_worker
+
+function test_to_execute()
+{
+    local arg args
+    args=${@}
+    pids=()
+    for arg in $args ; do
+        test_worker $arg  >> "$output_file" 2>/dev/null & pids+=( $! )
+    done
+    wait ${pids[@]}
+}
+export -f test_to_execute

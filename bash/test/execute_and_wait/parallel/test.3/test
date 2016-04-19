@@ -1,0 +1,17 @@
+#!/bin/bash
+
+source $( which comma-process-util ) || exit 1
+source "../detail/common-functions" || exit 1
+source "../detail/tests23-functions" || exit 1
+
+export output_dir="output"
+mkdir -p "$output_dir" || exit 1
+
+export output_file="$output_dir/test03.log"
+function test03()
+{
+    comma_execute_and_wait --max-wait=5 "bash -c test_to_execute 19 20"
+}
+test03
+echo "test[3]/exit/status=$?"
+[[ -f "$output_file" ]] && cat "$output_file" | uniq -c | sed 's@^ *@test[3]/output="@;s@$@"@'
