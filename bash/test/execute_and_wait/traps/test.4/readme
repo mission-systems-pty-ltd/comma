@@ -1,0 +1,3 @@
+Set up signal handlers, then run comma_execute_and_wait, and kill by a signal.
+After terminating the background job, control is returned to the original
+signal handler.

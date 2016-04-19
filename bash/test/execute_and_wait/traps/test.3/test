@@ -1,0 +1,22 @@
+#!/bin/bash
+
+source $( which comma-process-util ) || exit 1
+
+export output_dir="output"
+mkdir -p "$output_dir" || exit 1
+
+function test03()
+{
+    (
+        scriptdir=$( dirname "$0" )/detail
+        script="$scriptdir"/test03-script
+        [[ -x "$script" ]] || exit 1
+        # will kill the function by timer (which is shorter than expected run-time)
+        timeout -k 10 -s TERM 5 "$script"
+    )
+}
+
+export output_file="$output_dir/test03.log"
+test03
+echo "test[3]/exit/status=$?"
+echo "test[3]/output=\""$( cat "$output_file" )"\""

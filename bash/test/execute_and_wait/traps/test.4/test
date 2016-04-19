@@ -1,0 +1,44 @@
+#!/bin/bash
+
+source $( which comma-process-util ) || exit 1
+
+export output_dir="output"
+mkdir -p "$output_dir" || exit 1
+
+function test04_outer_handler()
+{
+    echo "handle $1"
+    exit 0
+}
+export -f test04_outer_handler
+
+function test04_to_execute()
+{
+    comma-nap 10 &
+    wait $!
+}
+export -f test04_to_execute
+
+function test04_to_be_killed()
+{
+    trap 'test04_outer_handler TERM' SIGTERM
+    trap 'test04_outer_handler HUP'  SIGHUP
+    trap 'test04_outer_handler PIPE' SIGPIPE
+    trap 'test04_outer_handler INT'  SIGINT
+    #
+    comma_execute_and_wait "bash -c test04_to_execute" > $output_file
+}
+export -f test04_to_be_killed
+
+function test04()
+{
+    (
+        # will kill the function by timer (which is shorter than expected run-time)
+        timeout -k 10 -s TERM 5 bash -c test04_to_be_killed
+    )
+}
+
+export output_file="$output_dir/test04.log"
+test04
+echo "test[4]/exit/status=$?"
+echo "test[4]/output=\""$( cat "$output_file" )"\""

@@ -1,0 +1,44 @@
+#!/bin/bash
+
+source $( which comma-process-util ) || exit 1
+
+export output_dir="output"
+mkdir -p "$output_dir" || exit 1
+
+function test02_trap()
+{
+    trap '' SIGTERM SIGHUP SIGPIPE SIGINT SIGUSR1
+    echo "killed by $1"
+    exit 11
+}
+export -f test02_trap
+
+function test02_to_execute()
+{
+    trap 'test02_trap TERM' SIGTERM
+    trap 'test02_trap HUP'  SIGHUP
+    trap 'test02_trap PIPE' SIGPIPE
+    trap 'test02_trap INT'  SIGINT
+    trap 'test02_trap USR1' SIGUSR1
+    comma-nap 20 &
+    wait $!
+    echo "$FUNCNAME: woken up"
+}
+export -f test02_to_execute
+
+function test02_to_be_killed()
+{
+    comma_execute_and_wait "bash -c test02_to_execute" > "$output_file"
+}
+export -f test02_to_be_killed
+
+function test02()
+{
+    # will kill the function by timer (which is shorter than expected run-time)
+    timeout -k 10 -s TERM 5 bash -c test02_to_be_killed
+}
+
+export output_file="$output_dir/test02.log"
+test02
+echo "test[2]/exit/status=$?"
+echo "test[2]/output=\""$( cat "$output_file" )"\""

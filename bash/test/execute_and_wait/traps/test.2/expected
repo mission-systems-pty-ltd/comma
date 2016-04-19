@@ -1,0 +1,2 @@
+test[2]/exit/status=124
+test[2]/output="killed by TERM"
