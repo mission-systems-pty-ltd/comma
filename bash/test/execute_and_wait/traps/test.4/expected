@@ -1,0 +1,2 @@
+test[4]/exit/status=124
+test[4]/output="handle HUP"

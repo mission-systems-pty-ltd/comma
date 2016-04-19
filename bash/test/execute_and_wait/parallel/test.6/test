@@ -1,0 +1,23 @@
+#!/bin/bash
+
+source $( which comma-process-util ) || exit 1
+
+export output_dir="output"
+mkdir -p "$output_dir" || exit 1
+
+function test06()
+{
+    local exit1=$1
+    local exit2=$2
+    local options=$3
+
+    export script=$( dirname "$0" )/../detail/sleep-and-exit
+    [[ -x "$script" ]] || exit 1
+
+    comma_execute_and_wait "$script 3 $exit1" "$script 2 $exit2" $options
+}
+test06 0 0       ; echo "test[6]/zero/zero/default/exit/status=$?"
+test06 1 0       ; echo "test[6]/one/zero/default/exit/status=$?"
+test06 1 0 --all ; echo "test[6]/one/zero/all/exit/status=$?"
+test06 1 0 --any ; echo "test[6]/one/zero/any/exit/status=$?"
+test06 1 1 --any ; echo "test[6]/one/one/any/exit/status=$?"

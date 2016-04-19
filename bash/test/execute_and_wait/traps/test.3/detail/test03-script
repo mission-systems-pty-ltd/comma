@@ -1,0 +1,17 @@
+#!/bin/bash
+
+function test03_trap()
+{
+    trap '' SIGTERM SIGHUP SIGPIPE SIGINT SIGUSR1
+    echo "killed by $1"
+    exit 11
+}
+export -f test03_trap
+
+exec > "$output_file"
+trap 'test03_trap TERM' SIGTERM
+trap 'test03_trap HUP'  SIGHUP
+trap 'test03_trap PIPE' SIGPIPE
+trap 'test03_trap INT'  SIGINT
+
+comma_execute_and_wait "comma-nap 20"

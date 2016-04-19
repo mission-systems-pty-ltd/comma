@@ -1,0 +1,21 @@
+#!/bin/bash
+
+function grab()
+{
+    sed --regexp-extended -n 's@.*(normal exit).*@\1@p'
+}
+export -f grab
+
+function verify_parallel()
+{
+    local location=$1
+    local original reordered
+    # check that the process were run in parallel:
+    # - cat files in their time order (oldest first)
+    original=$( cd "$location"; cat $( ls -t --reverse ) )
+    # - sort output messages by timestamps
+    reordered=$( echo "$original" | sort )
+    # - if were in parallel, the overall order shall differ from the original
+    [[ "$original" == "$reordered" ]] && echo 0 || echo 1
+}
+export verify_parallel

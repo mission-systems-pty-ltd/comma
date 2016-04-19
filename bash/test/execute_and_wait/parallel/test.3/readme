@@ -1,0 +1,2 @@
+Run multiple background task (in parallel) under comma_execute_and_wait.
+Kill the tasks by a signal.

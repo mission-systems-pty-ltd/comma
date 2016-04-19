@@ -1,0 +1,2 @@
+Run multiple commands in parallel, some exiting with error.
+Verify that the logic of '--all' / '--any' works.

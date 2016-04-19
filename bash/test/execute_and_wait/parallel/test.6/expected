@@ -1,0 +1,5 @@
+test[6]/zero/zero/default/exit/status=0
+test[6]/one/zero/default/exit/status=1
+test[6]/one/zero/all/exit/status=1
+test[6]/one/zero/any/exit/status=0
+test[6]/one/one/any/exit/status=1
