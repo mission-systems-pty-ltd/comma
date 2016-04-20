@@ -1,0 +1,29 @@
+#!/bin/bash
+
+source $( which comma-process-util ) || exit 1
+source "../detail/common-functions" || exit 1
+
+export output_dir="output"
+mkdir -p "$output_dir" || exit 1
+
+function test05()
+{
+    export script=$( dirname "$0" )/../detail/tester
+    [[ -x "$script" ]] || exit 1
+
+    local output_dir="$output_dir/test05"
+    rm -rf "$output_dir" || exit 1
+    mkdir -p "$output_dir" || exit 1
+
+    comma_execute_and_wait "$script 10 $output_dir/log1" "$script 8 $output_dir/log2" --timeout=5
+    local exit_code=$?
+
+    [[ -s "$output_dir/log1" ]] || exit 1
+    [[ -s "$output_dir/log2" ]] || exit 1
+
+    is_parallel=$( verify_parallel "$output_dir" )
+    echo "test[5]/parallel=$is_parallel"
+    return $exit_code
+}
+test05
+echo "test[5]/exit/status=$?"

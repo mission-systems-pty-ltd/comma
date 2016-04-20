@@ -1,0 +1,4 @@
+Similar to test02, but use an external script.  Note that the function / script
+under test is not necessarily killed by TERM, which is sent by timeout. The
+code may be killed by HUP, which is sent by bash itself in responce to
+receiving TERM.

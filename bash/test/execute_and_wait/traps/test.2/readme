@@ -1,0 +1,2 @@
+Kill the process running comma_execute_and_wait; verify that command being
+executed is killed, and that the expected exit status is returned.

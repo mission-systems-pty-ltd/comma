@@ -1,0 +1,33 @@
+#!/bin/bash
+
+function handle_usr1()
+{
+    trap '' SIGTERM SIGHUP SIGPIPE SIGINT SIGUSR1
+    exit 12
+}
+
+trap 'handle_usr1' SIGUSR1
+
+function test05_trap()
+{
+    trap '' SIGTERM SIGHUP SIGPIPE SIGINT SIGUSR1
+    echo "killed by $1"
+    exit 11
+}
+export -f test05_trap
+
+function test05_to_execute()
+{
+    trap 'test05_trap TERM' SIGTERM
+    trap 'test05_trap HUP'  SIGHUP
+    trap 'test05_trap PIPE' SIGPIPE
+    trap 'test05_trap INT'  SIGINT
+    trap 'test05_trap USR1' SIGUSR1
+    comma-nap 20 &
+    wait $!
+    echo "$FUNCNAME: woken up"
+}
+export -f test05_to_execute
+
+exec > "$output_file"
+comma_execute_and_wait "bash -c test05_to_execute" --signals=TERM,HUP,USR1

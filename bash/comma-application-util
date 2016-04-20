@@ -123,7 +123,7 @@ export -f comma_options_to_bash_completion
 #   comma-test-run $( comma-test-run --description | comma-options-to-name-value $@ | comma_name_value_to_options )
 function comma_name_value_to_options()
 {
-    sed -e '/=/ ! d' -e 's/^/--/g'| tr '\n' ' '
+    sed -e '/=/ ! d' -e '/^"/d' -e 's/^/--/g'| tr '\n' ' '
 }
 export -f comma_name_value_to_options
 

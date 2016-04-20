@@ -1,0 +1,29 @@
+#!/bin/bash
+
+source $( which comma-process-util ) || exit 1
+
+export output_dir="output"
+mkdir -p "$output_dir" || exit 1
+
+function test01_trap()
+{
+    trap '' SIGTERM SIGHUP SIGPIPE SIGINT SIGUSR1
+    exit 1
+}
+export -f test01_trap
+
+function test01()
+{
+    # work in a subprocess to prevent setting traps in the script itself
+    (
+        trap 'test01_trap' SIGUSR1
+        start_traps=$( trap | tr '\n' ';' )
+        comma_execute_and_wait "comma-nap 5" >/dev/null
+        end_traps=$( trap | tr '\n' ';' )
+        echo "test[1]/traps/start=\"$start_traps\""
+        echo "test[1]/traps/end=\"$end_traps\""
+        echo "test[1]/traps/SIGUSR1=$( echo "$start_traps" | grep -q SIGUSR1 && echo 1 || echo 0 )"
+    )
+}
+
+test01 ; echo "test[1]/exit/status=$?"
