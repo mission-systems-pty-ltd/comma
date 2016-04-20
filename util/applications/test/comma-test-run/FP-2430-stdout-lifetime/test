@@ -10,9 +10,9 @@ if [[ '--operate-as-child' == "$1" ]] ; then
 
     declare -i count=0
     while (( work )) ; do
-        echo "child/execute[$count]=$(( count * 5 ))"
+        echo "child/execute[$count]=$(( count * 3 ))"
         (( ++count ))
-        sleep 5
+        sleep 3
     done
     echo 'child/end/loop=1'
     exit 0
@@ -47,7 +47,8 @@ EOF
 # ------------------
 # MAIN
 # ------------------
-function error_() { comma_log_error "$trim_name" $@ ;  }
+function message_() { echo "$1: $@" >&2; }
+function error_() { message_ "$trim_name" $@ ;  }
 function die_() { error_ $@ ; exit 1 ; }
 
 declare -r trim_name="$( dirname ${0#*/test/} )"
@@ -58,7 +59,6 @@ name="$trim_name"
 declare options_verbose=''
 
 source $( type -p comma-application-util ) 2>/dev/null || { echo "$scriptname: cannot source 'comma-application-util'" >&2; exit 1; }
-source $( type -p comma-log-util ) 2>/dev/null || { echo "$scriptname: cannot source 'comma-log-util'" >&2; exit 1; }
 
 if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then usage ; fi
 description | comma-options-validate "$@" || die_ "invalid command line options in $name"
@@ -71,7 +71,7 @@ mkdir -p output || die_ "Could not create 'output' directory"
 echo 'main/start=1'
 $0 --operate-as-child &
 pid=$!
-sleep 11
+sleep 7
 echo 'main/=1'
 kill -s SIGTERM $pid
 sleep 1
