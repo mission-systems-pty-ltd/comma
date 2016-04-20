@@ -569,33 +569,35 @@ export -f terminate_run_test_with_timeout
 # finally echoes the result of comma-test-match and the status of the match
 function run_and_match_test()
 {
-    local test_output test_failed match_output error_files
+    local -r marker='test_execution_returned_to_run_and_match_test'
+    local test_failed match_output straggler_output error_files
 
     rm -rf output || exit 1
     mkdir -p output || exit 1
 
-    test_output=$( if [ -f ./input ] ; then cat ./input ; fi | comma_env --import PYTHONPATH "$test_exec" "$path" $verbose $options_test_option 2>"output/stderr.log" )
+    {
+        if [ -f ./input ] ; then cat ./input ; fi | comma_env --import PYTHONPATH "$test_exec" "$path" $verbose $options_test_option
+        echo "$marker=1"
+    } >'output/stdout.log' 2>'output/stderr.log'
     test_failed=$?
     error_files="$( find . -name out_of_shared_memory )"
     [[ -n "$error_files" ]] && return 1
-
-    echo "$test_output" > "output/stdout.log"
 
     if [[ $test_failed != 0 ]]; then error_ "test exit with non-zero status: $test_failed" ; fi
 
     if [[ $test_failed == 0 ]] ; then
         if [[ -f "./expected" ]] ; then
-            match_output=$( echo "$test_output" | comma-test-match ./expected 2>&1 )
+            match_output=$( comma-test-match ./expected <'output/stdout.log' 2>&1 )
         fi
         local global_expected
         if [[ -n "$options_also_expected" && -f "./expected" ]] ; then
             for global_expected in $options_also_expected ; do
-                match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; echo "$test_output" | comma-test-match "$global_expected" 2>&1 )
+                match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; comma-test-match "$global_expected" < 'output/stdout.log' 2>&1 )
             done
         fi
         if [[ -n "$options_always_expected" ]] ; then
             for global_expected in $options_always_expected ; do
-                match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; echo "$test_output" | comma-test-match $global_expected 2>&1 )
+                match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; comma-test-match $global_expected < 'output/stdout.log' 2>&1 )
             done
         fi
         if [[ -n "$match_output" ]]; then
@@ -605,6 +607,12 @@ function run_and_match_test()
             echo >&2
             test_failed=1
         fi
+    fi
+
+    straggler_output="$( sed -n -e "/^$marker=/ ! d ; /^$marker=/ { :again ; n ; /^$/ ! p ; t again }" < 'output/stdout.log' )"
+    if [[ -n "$straggler_output" ]]; then
+        error_ "test was still outputting after execution returned to comma-test-run: '$straggler_output'"
+        test_failed=1
     fi
 
     [[ -n "$options_junit" && $test_failed != 0 ]] && echo "$match_output" > output/junit.failure.log
