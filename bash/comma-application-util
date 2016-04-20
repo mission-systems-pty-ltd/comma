@@ -38,6 +38,7 @@
 # @section comma_application_util_functions Functions
 # @li @link comma_options_from_name_value @endlink
 # @li @link comma_options_has @endlink
+# @li @link comma_options_help @endlink
 
 [[ -n "$comma_application_util_include_guard_" ]] && return 0
 readonly comma_application_util_include_guard_=1
@@ -84,6 +85,12 @@ function comma_options_has()
     echo 0
 }
 export -f comma_options_has
+
+## @page comma_options_help comma_options_help
+# @description convenience function, returns 1, if --help or -h is present; 0 otherwise
+# usage: comma_options_help $@ && usage
+function comma_options_help() { return $(( ! ( $( comma_options_has '--help' $@ ) || $( comma_options_has '-h' $@ ) ) )) ; }
+export -f comma_options_help
 
 ## @page comma_options_names comma_options_names
 # @description converts a standard comma description to a list of names
