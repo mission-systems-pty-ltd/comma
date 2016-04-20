@@ -152,14 +152,14 @@ function comma_status_ok()
     if [[ $# -gt 0 ]]; then
         for outcome_status_ok in $@ ; do
             if ! (( outcome_status_ok == 0 || outcome_status_ok == comma_sigpipe_exit_status_ )) ; then
-                comma_log_note comma-application-util --timestamp "comma_status_ok: a pipe's status was not good ( ${pipestatus_copy_status_ok[@]} ); called from '$( caller 0 )'"
+                #comma_log_note comma-application-util --timestamp "comma_status_ok: a pipe's status was not good ( ${pipestatus_copy_status_ok[@]} ); called from '$( caller 0 )'"
                 return 1
             fi
         done
     else
         for outcome_status_ok in "${pipestatus_copy_status_ok[@]}" ; do
             if ! (( outcome_status_ok == 0 || outcome_status_ok == comma_sigpipe_exit_status_ )) ; then
-                comma_log_note comma-application-util --timestamp "comma_status_ok: a pipe's status was not good ( ${pipestatus_copy_status_ok[@]} ); called from '$( caller 0 )'"
+                #comma_log_note comma-application-util --timestamp "comma_status_ok: a pipe's status was not good ( ${pipestatus_copy_status_ok[@]} ); called from '$( caller 0 )'"
                 return 1
             fi
         done
