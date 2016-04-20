@@ -569,15 +569,14 @@ export -f terminate_run_test_with_timeout
 # finally echoes the result of comma-test-match and the status of the match
 function run_and_match_test()
 {
-    local -r marker='test_execution_returned_to_run_and_match_test'
-    local test_failed match_output straggler_output error_files
+    local test_failed match_output error_files
 
     rm -rf output || exit 1
     mkdir -p output || exit 1
 
     {
         if [ -f ./input ] ; then cat ./input ; fi | comma_env --import PYTHONPATH "$test_exec" "$path" $verbose $options_test_option
-        echo "$marker=1"
+        echo -e '\n# test execution has now returned to comma-test-run :: run_and_match_test'
     } >'output/stdout.log' 2>'output/stderr.log'
     test_failed=$?
     error_files="$( find . -name out_of_shared_memory )"
@@ -607,12 +606,6 @@ function run_and_match_test()
             echo >&2
             test_failed=1
         fi
-    fi
-
-    straggler_output="$( sed -n -e "/^$marker=/ ! d ; /^$marker=/ { :again ; n ; /^$/ ! p ; t again }" < 'output/stdout.log' )"
-    if [[ -n "$straggler_output" ]]; then
-        error_ "test was still outputting after execution returned to comma-test-run: '$straggler_output'"
-        test_failed=1
     fi
 
     [[ -n "$options_junit" && $test_failed != 0 ]] && echo "$match_output" > output/junit.failure.log
