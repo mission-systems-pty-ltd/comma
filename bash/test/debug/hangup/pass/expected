@@ -1,0 +1,3 @@
+lines = 6
+end = 1
+time/end - time/start < 15
