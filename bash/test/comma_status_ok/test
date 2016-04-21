@@ -1,0 +1,76 @@
+#!/bin/bash
+
+function description()
+{
+    cat <<EOF
+--help; display instructions on using this program
+--path=[<directory>]; passed on server command line but ignored by unit tests
+--verbose,-v,--debug; output debugging information
+EOF
+}
+
+function usage()
+{
+    cat >&2 <<EOF
+
+Test that the stdout.log does not dissapear before the test is complete.
+
+Usage:
+    cat input | ./test 
+
+Options:
+EOF
+
+    description | sed 's/^/    /g' >&2
+    exit
+}
+
+# ------------------
+# MAIN
+# ------------------
+function message_() { echo "$1: $@" >&2; }
+function error_() { message_ "$trim_name" $@ ;  }
+function die_() { error_ $@ ; exit 1 ; }
+
+declare -r trim_name="$( dirname ${0#*/test/} )"
+declare -r full_dir_name="$( dirname $( readlink -f "$0" ) )"
+declare -r scriptname=$( basename $0 )
+name="$trim_name"
+
+declare options_verbose=''
+
+source $( type -p comma-application-util ) 2>/dev/null || { echo "$scriptname: cannot source 'comma-application-util'" >&2; exit 1; }
+
+if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then usage ; fi
+description | comma-options-validate "$@" || die_ "invalid command line options in $name"
+comma_path_value_to_var --prefix=options < <( description | comma-options-to-name-value "$@" )
+
+mkdir -p output || die_ "Could not create 'output' directory"
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+
+true
+comma_status_ok && echo "single_application_good=1" || echo "single_application_good=0"
+false
+comma_status_ok && echo "single_application_bad=1" || echo "single_application_bad=0"
+
+true | true | true
+comma_status_ok && echo "three_application_good=1" || echo "three_application_good=0"
+true | false | true
+comma_status_ok && echo "middle_application_bad=1" || echo "middle_application_bad=0"
+
+true | true | true
+comma_status_ok ${PIPESTATUS[@]} && echo "three_application_given_status_good=1" || echo "three_application_given_status_good=0"
+true | false | true
+comma_status_ok ${PIPESTATUS[@]} && echo "middle_application_given_status_bad=1" || echo "middle_application_given_status_bad=0"
+
+true | true | true
+comma_status_ok_verbose && echo "three_application_verbose_good=1" || echo "three_application_verbose_good=0"
+true | false | true
+comma_status_ok_verbose && echo "middle_application_verbose_bad=1" || echo "middle_application_verbose_bad=0"
+
+true | true | true
+comma_status_ok_verbose ${PIPESTATUS[@]} && echo "three_application_given_status_verbose_good=1" || echo "three_application_given_status_verbose_good=0"
+true | false | true
+comma_status_ok_verbose ${PIPESTATUS[@]} && echo "middle_application_given_status_verbose_bad=1" || echo "middle_application_given_status_verbose_bad=0"

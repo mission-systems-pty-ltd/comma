@@ -1,0 +1,10 @@
+single_application_good=1
+single_application_bad=0
+three_application_good=1
+middle_application_bad=0
+three_application_given_status_good=1
+middle_application_given_status_bad=0
+three_application_verbose_good=1
+middle_application_verbose_bad=0
+three_application_given_status_verbose_good=1
+middle_application_given_status_verbose_bad=0

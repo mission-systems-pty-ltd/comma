@@ -146,24 +146,30 @@ export comma_sigpipe_exit_status_
 function comma_status_ok()
 {
     pipestatus_copy_status_ok=("${PIPESTATUS[@]}")  # make a safe copy
-    local outcome_status_ok=""
-    
-    # if a pipetstus vector is passed to us, then use this instead
+    # if a pipetstus vector is passed to us, then use that
     if [[ $# -gt 0 ]]; then
+        local outcome_status_ok=''
         for outcome_status_ok in $@ ; do
-            if ! (( outcome_status_ok == 0 || outcome_status_ok == comma_sigpipe_exit_status_ )) ; then
-                #comma_log_note comma-application-util --timestamp "comma_status_ok: a pipe's status was not good ( ${pipestatus_copy_status_ok[@]} ); called from '$( caller 0 )'"
-                return 1
-            fi
+            (( outcome_status_ok == 0 || outcome_status_ok == comma_sigpipe_exit_status_ )) || return 1
         done
     else
-        for outcome_status_ok in "${pipestatus_copy_status_ok[@]}" ; do
-            if ! (( outcome_status_ok == 0 || outcome_status_ok == comma_sigpipe_exit_status_ )) ; then
-                #comma_log_note comma-application-util --timestamp "comma_status_ok: a pipe's status was not good ( ${pipestatus_copy_status_ok[@]} ); called from '$( caller 0 )'"
-                return 1
-            fi
-        done
+        comma_status_ok ${pipestatus_copy_status_ok[@]} || return 1
     fi
     return 0
 }
 export -f comma_status_ok
+
+function comma_status_ok_verbose()
+{
+    pipestatus_copy_status_ok=("${PIPESTATUS[@]}")  # make a safe copy
+    if [[ $# -gt 0 ]]; then
+        if ! comma_status_ok $@ ; then
+            echo "comma_status_ok: pipestatus ( ${pipestatus_copy_status_ok[@]} ); called from '$( caller 0 )'" >&2
+            return 1
+        fi
+    else
+        comma_status_ok_verbose ${pipestatus_copy_status_ok[@]} || return 1
+    fi
+    return 0
+}
+export -f comma_status_ok_verbose

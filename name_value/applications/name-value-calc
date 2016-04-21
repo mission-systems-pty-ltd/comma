@@ -323,8 +323,7 @@ else
 fi
 
 feed_input | python_converter 2>"$python_stderr" | $convert_output
-if ! comma_status_ok; then
-    echo "$name: final pipeline failed, status '${pipestatus_copy_status_ok[@]}'" >&2
+if ! comma_status_ok_verbose; then
     [[ -n "$tempdir" ]] && {
         echo "$name: python output:" >&2
         cat "$python_stderr" >&2
