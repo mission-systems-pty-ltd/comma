@@ -107,7 +107,8 @@ def readlines(source, size):
     return lines
 
 
-def add_standard_options( parser, defaults={} ):
+# Given a parser, add the csv options
+def add_options( parser, defaults={} ):
 
     def help_text( help, default=None ):
         return "%s (default: %s)" % ( help, default ) if default else help

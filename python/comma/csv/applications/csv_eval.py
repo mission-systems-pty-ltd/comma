@@ -72,7 +72,7 @@ warnings.formatwarning = custom_formatwarning
 
 
 def add_csv_options(parser):
-    comma.csv.add_standard_options(parser, defaults={'fields': 'x,y,z'})
+    comma.csv.add_options(parser, defaults={'fields': 'x,y,z'})
     parser.add_argument(
         '--format',
         default='',
