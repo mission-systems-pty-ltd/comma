@@ -1,0 +1,25 @@
+#!/bin/bash
+
+source $( which comma-application-util )
+function output { csv-paste value="line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'; }
+
+function default_values
+{
+    python -c "$( cat <<END
+import comma
+import numpy as np
+from datetime import datetime
+
+comma.csv.time.zone( 'UTC' )
+default_time = $( cat default_time )
+record_t = comma.csv.struct( 't,id', 'M8[us]', 'u4' )
+default_values = { 't': default_time }
+stream = comma.csv.stream( record_t, fields='id', default_values=default_values, verbose=True)
+stream.write( stream.read() )
+END
+)"
+}
+
+default_values | output
+comma_status_ok
+echo "status=$?"

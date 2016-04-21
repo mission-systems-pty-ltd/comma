@@ -164,7 +164,7 @@ class struct:
             msg = "expected {}, got {}".format(repr(self.dtype), repr(s.dtype))
             raise struct_error(msg)
         if not (s.shape == (1,) or s.shape == ()):
-            msg = "expected shape=(1,), got {}".format(s.shape)
+            msg = "expected a scalar or 1d array with size=1, got {}".format(s.shape)
             raise struct_error(msg)
         return s.view(self.unrolled_flat_dtype).item()
 
@@ -264,7 +264,7 @@ class stream:
         self.full_xpath = full_xpath
         self.verbose = verbose
         self.fields = self._fields(fields)
-        self._check_fields_uniqueness()
+        self._check_fields()
         self.format = self._format(binary, format)
         self.binary = self.format != ''
         self._check_consistency_with_tied()
@@ -344,7 +344,10 @@ class stream:
         for field, value in self.default_values.iteritems():
             name = dtype_name_of[field]
             if self.missing_dtype[name] == np.dtype(comma.csv.time.NUMPY_TYPE):
-                self._missing_data[name] = comma.csv.time.to_numpy(value)
+                try:
+                    self._missing_data[name] = comma.csv.time.to_numpy(value)
+                except:
+                    self._missing_data[name] = value
             else:
                 self._missing_data[name] = value
         return self._missing_data
@@ -402,12 +405,7 @@ class stream:
                 .format(','.join(ambiguous_leaves), fields)
             raise stream_error(msg)
         xpath = self.struct.xpath_of_leaf.get
-        full_xpath_fields = tuple(xpath(name) or name for name in fields.split(','))
-        if not set(full_xpath_fields).intersection(self.struct.fields):
-            msg = "fields '{}' do not match any of expected fields '{}'" \
-                .format(fields, ','.join(self.struct.fields))
-            raise stream_error(msg)
-        return full_xpath_fields
+        return tuple(xpath(name) or name for name in fields.split(','))
 
     def _format(self, binary, format):
         if isinstance(binary, basestring):
@@ -427,7 +425,12 @@ class stream:
             return ''
         return format
 
-    def _check_fields_uniqueness(self):
+    def _check_fields(self):
+        fields_in_struct = set(self.fields).intersection(self.struct.fields)
+        if not fields_in_struct:
+            msg = "fields '{}' do not match any of expected fields '{}'" \
+                .format(','.join(self.fields), ','.join(self.struct.fields))
+            raise stream_error(msg)
         duplicates = tuple(field for field in self.struct.fields
                            if field in self.fields and self.fields.count(field) > 1)
         if duplicates:
