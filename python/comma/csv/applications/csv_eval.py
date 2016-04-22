@@ -23,42 +23,68 @@ input fields:
 output fields:
     1) output fields are inferred from expressions (by default) or specified by --output-fields
     2) output fields are always appended to unmodified input
-    3) if --output-fields is omitted, only simple assignment statements are allowed in expressions
+    3) if --output-fields is omitted, only ;-separated assignment statements are allowed in expressions
     4) output fields are treated as floating point numbers, unless --output-format is given
 
 examples:
-    ( echo 1,2; echo 3,4 ) | %(prog)s --fields=x,y --precision=2 'a=2/(x+y);b=x-sin(y)*a**2'
-    ( echo 1,2; echo 3,4 ) | csv-to-bin 2d | %(prog)s --binary=2d --fields=x,y 'a=2/(x+y);b=x-sin(y)*a**2' | csv-from-bin 4d
+    # basic
+    ( echo 1; echo 2; echo 3 ) | %(prog)s --fields=x 'y = x**2'
 
-    # define intermediate variable
-    ( echo 1; echo 2 ) | csv-to-bin d | %(prog)s --binary=d --fields=x 'a=2;y=a*x' --output-fields=y | csv-from-bin 2d
+    # using an intermediate variable
+    ( echo 1; echo 2; echo 3 ) | %(prog)s --fields=x 'n = 2; y = x**n' --output-fields=y
 
-    # take minimum
-    ( echo 1,2; echo 4,3 ) | csv-to-bin 2d | %(prog)s --binary=2d --fields=x,y 'c=minimum(x,y)' | csv-from-bin 3d
+    # ascii stream with non-default formats
+    ( echo 0,1; echo 1,1 ) | %(prog)s --fields=x,y 'n = x<y' --output-format=ub
+    ( echo 0,1; echo 1,1 ) | %(prog)s --fields=i,j --format=2ub 'n = i==j' --output-format=ub
 
-    # clip index
-    ( echo a,2; echo b,5 ) | csv-to-bin s[1],ui | %(prog)s --binary=s[1],ui --fields=,id 'i=clip(id,3,inf)' --output-format=ui | csv-from-bin s[1],ui,ui
+    # binary stream
+    ( echo 0.1,2; echo 0.1,3 ) | csv-to-bin d,i | %(prog)s --binary=d,i --fields=x,n 'y = x**n' | csv-from-bin d,i,d
 
-    # compare fields
-    ( echo 1,2; echo 4,3 ) | csv-to-bin 2i | %(prog)s --binary=2i --fields=i,j 'flag=i+1==j' --output-format=b | csv-from-bin 2i,b
-    ( echo 1,2; echo 4,3 ) | csv-to-bin 2d | %(prog)s --binary=2d --fields=x,y 'flag=x<y' --output-format=b | csv-from-bin 2d,b
-    ( echo 0,1; echo 1,2; echo 4,3 ) | csv-to-bin 2d | %(prog)s --binary=2d --fields=x,y 'flag=logical_and(x<y,y<2)' --output-format=b | csv-from-bin 2d,b
+    # selecting output based on condition
+    ( echo 1,2; echo 2,1 ) | %(prog)s --fields=x,y 'a=where(x<y,x+y,x-y)'
 
-    # negate boolean
+    # time arithmetic
+    echo 20150101T000000.000000 | %(prog)s --fields=t --format=t 'a=t+1;b=t-1' --output-format=2t
+"""
+
+numpy_functions = """
+functions:
+    any function documented at
+    http://docs.scipy.org/doc/numpy/reference/routines.html
+    can be used in expressions provided that it is compatible with streaming, that is:
+        - it performs element-wise operations only
+        - it returns an array of the same shape and size as the input
+    some examples are given below
+
+math functions:
+    http://docs.scipy.org/doc/numpy/reference/routines.math.html
+
+    ( echo 1,2; echo 3,4 ) | %(prog)s --fields=x,y --precision=2 'a = 2/(x+y); b = a*sin(x-y)'
+    ( echo 1,2; echo 4,3 ) | %(prog)s --fields=x,y 'm = minimum(x,y)'
+    ( echo 1; echo 2; echo 3; echo 4 ) | %(prog)s --format=ui --fields=id 'c = clip(id,3,inf)' --output-format=ui
+
+math constants: pi, e
+    echo pi | %(prog)s --fields name --format=s[2] 'a=pi' --precision=16
+    echo e | %(prog)s --fields name --format=s[1] 'a=e' --precision=16
+
+logical functions:
+    http://docs.scipy.org/doc/numpy/reference/routines.logic.html
+
+    ( echo 0,1; echo 1,2; echo 4,3 ) | %(prog)s --fields=x,y 'flag=logical_and(x<y,y<2)' --output-format=b
+    ( echo 0,1; echo 1,2; echo 4,3 ) | %(prog)s --fields=x,y 'flag=logical_or(x>y,y<2)' --output-format=b
     ( echo 0; echo 1 ) | %(prog)s --format=b --fields=flag 'a=logical_not(flag)' --output-format=b
-    ( echo 0; echo 1 ) | csv-to-bin b | %(prog)s --binary=b --fields=flag 'a=logical_not(flag)' --output-format=b | csv-from-bin 2b
 
-    # select operation based on condition
-    ( echo 1,2; echo 2,1 ) | csv-to-bin 2d | %(prog)s --fields=x,y --binary=2d 'a=where(x<y,x+y,x-y)' | csv-from-bin 3d
+bitwise functions
+    http://docs.scipy.org/doc/numpy/reference/routines.bitwise.html
 
-    # count number of occurances of "/" in a string
+    ( echo 0; echo 1 ) | %(prog)s --fields i --format=ub 'n = ~i'
+    ( echo 0,0; echo 0,1; echo 1,1 ) | %(prog)s --fields i,j --format=2ub 'm = i & j'
+    ( echo 0,0; echo 0,1; echo 1,1 ) | %(prog)s --fields i,j --format=2ub 'm = i | j'
+
+string functions:
+    http://docs.scipy.org/doc/numpy/reference/routines.char.html
+
     ( echo 'a'; echo 'a/b' ) | %(prog)s --fields=path --format=s[36] 'n=char.count(path,"/")' --output-format=ui
-    ( echo 'a'; echo 'a/b' ) | csv-to-bin s[36] | %(prog)s --fields=path --binary=s[36] 'n=char.count(path,"/")' --output-format=ui | csv-from-bin s[36],ui
-
-    # add and subtract a microsecond
-    ( echo 20150101T000000.000000; echo 20150101T000000.000010 ) | %(prog)s --fields=t --format=t 'a=t+1;b=t-1' --output-format=2t
-    ( echo 20150101T000000.000000; echo 20150101T000000.000010 ) | csv-to-bin t | %(prog)s --fields=t --binary=t 'a=t+1;b=t-1' --output-format=2t | csv-from-bin 3t
- 
 """
 
 
@@ -99,25 +125,40 @@ def argparse_fmt(prog):
     return argparse.RawTextHelpFormatter(prog, max_help_position=50)
 
 
-def get_parser():
+def get_args():
     parser = argparse.ArgumentParser(
         description=description,
         epilog=notes_and_examples,
-        formatter_class=argparse_fmt)
+        formatter_class=argparse_fmt,
+        add_help=False)
     parser.add_argument(
         'expressions',
-        help='numerical expressions to evaluate (see examples)')
+        help='numerical expressions to evaluate (see examples)',
+        nargs='?')
+    parser.add_argument(
+        '--help',
+        '-h',
+        action='store_true',
+        help='show this help message and exit')
     parser.add_argument(
         '--verbose',
         '-v',
         action='store_true',
-        help='print input/output fields and formats on stderr')
+        help='more output to stderr')
     parser.add_argument(
         '--dangerous',
         action='store_true',
         help=argparse.SUPPRESS)
     add_csv_options(parser)
-    return parser
+    args = parser.parse_args()
+    if args.help:
+        if args.verbose:
+            parser.epilog += numpy_functions
+        else:
+            parser.epilog += "\nfor more help run '%(prog)s -h -v'"
+        parser.print_help()
+        parser.exit(0)
+    return args
 
 
 def ingest_deprecated_options(args):
@@ -260,7 +301,7 @@ def evaluate(expressions, stream, dangerous=False):
 
 
 def main():
-    args = get_parser().parse_args()
+    args = get_args()
     prepare_options(args)
     evaluate(args.expressions.strip(';'), stream(args), dangerous=args.dangerous)
 
