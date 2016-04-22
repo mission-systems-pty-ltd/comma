@@ -78,6 +78,7 @@ bitwise functions:
     http://docs.scipy.org/doc/numpy/reference/routines.bitwise.html
 
     ( echo 0; echo 1 ) | %(prog)s --fields i --format=ub 'n = ~i'
+    ( echo 0; echo 1 ) | %(prog)s --fields i --format=ub 'n = ~i.astype(bool)'
     ( echo 0,0; echo 0,1; echo 1,1 ) | %(prog)s --fields i,j --format=2ub 'm = i & j'
     ( echo 0,0; echo 0,1; echo 1,1 ) | %(prog)s --fields i,j --format=2ub 'm = i | j'
 
