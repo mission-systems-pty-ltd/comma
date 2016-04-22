@@ -74,7 +74,7 @@ logical functions:
     ( echo 0,1; echo 1,2; echo 4,3 ) | %(prog)s --fields=x,y 'flag=logical_or(x>y,y<2)' --output-format=b
     ( echo 0; echo 1 ) | %(prog)s --format=b --fields=flag 'a=logical_not(flag)' --output-format=b
 
-bitwise functions
+bitwise functions:
     http://docs.scipy.org/doc/numpy/reference/routines.bitwise.html
 
     ( echo 0; echo 1 ) | %(prog)s --fields i --format=ub 'n = ~i'
