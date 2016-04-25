@@ -422,7 +422,7 @@ class stream:
                 raise stream_error(msg)
             type_of = self.struct.type_of_field.get
             return format_from_types(type_of(field) for field in self.fields)
-        elif binary is False and format:
+        if binary is False:
             return ''
         return format
 
