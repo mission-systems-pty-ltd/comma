@@ -52,7 +52,7 @@ def comma_time(numpy_time):
     if numpy_time.dtype != numpy.dtype(NUMPY_TYPE):
         message = "'{}' is not of expected type '{}'".format(repr(numpy_time), NUMPY_TYPE)
         raise time_error(message)
-    return re.sub(r'(\.0{6})?([-+]\d{4}|Z)$', '', str(numpy_time)).translate(None, ':-')
+    return re.sub(r'(\.0{6})?([-+]\d{4}|Z)?$', '', str(numpy_time)).translate(None, ':-')
 
 
 def ascii_converters(types):
