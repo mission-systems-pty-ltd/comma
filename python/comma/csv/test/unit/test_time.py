@@ -28,14 +28,14 @@ class test_time(unittest.TestCase):
         self.assertDictEqual(f(('u1', 'u1', 'datetime64[us]', 'u1', 'M8[us]', 'u1')), { 2: comma.csv.time.to_numpy, 4: comma.csv.time.to_numpy })
 
     def test_zone(self):
-        def f(t): return str(comma.csv.time.to_numpy(t))
+        f = comma.csv.time.to_numpy
         # note that the time zones used below do not have daylight saving time
         comma.csv.time.zone('Asia/Jakarta')
-        self.assertEqual(f('20150101T000000'), '2015-01-01T00:00:00.000000+0700')
+        self.assertEqual(f('20150101T000000'), np.datetime64('2015-01-01T00:00:00'))
         comma.csv.time.zone('America/Caracas')
-        self.assertEqual(f('20150101T000000'), '2015-01-01T00:00:00.000000-0430')
+        self.assertEqual(f('20150101T000000'), np.datetime64('2015-01-01T00:00:00'))
         comma.csv.time.zone('UTC')
-        self.assertEqual(f('20150101T000000'), '2015-01-01T00:00:00.000000+0000')
+        self.assertEqual(f('20150101T000000'), np.datetime64('2015-01-01T00:00:00'))
 
 
 if __name__ == '__main__':
