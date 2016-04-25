@@ -429,7 +429,7 @@ class test_stream(unittest.TestCase):
         self.assertEqual(t.input_dtype, np.dtype([('x', 'f8')]))
         self.assertDictEqual(t.ascii_converters, {})
         self.assertTupleEqual(t.usecols, (0,))
-        self.assertEqual(t.filling_values, '')
+        self.assertEqual(t.filling_values, None)
         self.assertTupleEqual(t.missing_fields, ())
         self.assertEqual(t.complete_fields, t.fields)
         self.assertEqual(t.complete_dtype, t.input_dtype)

@@ -276,7 +276,7 @@ class stream:
             self.ascii_converters = comma.csv.time.ascii_converters(unrolled_types)
             num_utypes = len(unrolled_types)
             self.usecols = tuple(range(num_utypes))
-            self.filling_values = '' if num_utypes == 1 else ('',) * num_utypes
+            self.filling_values = None if num_utypes == 1 else ('',) * num_utypes
         self.missing_fields = self._missing_fields()
         self.missing_dtype = self._missing_dtype()
         self.complete_fields = self.fields + self.missing_fields
