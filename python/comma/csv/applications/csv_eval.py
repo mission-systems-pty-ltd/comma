@@ -92,6 +92,10 @@ class csv_eval_error(Exception):
     pass
 
 
+def custom_formatwarning(msg, *args):
+    return __name__ + " warning: " + str(msg) + '\n'
+
+
 def add_csv_options(parser):
     comma.csv.add_options(parser, defaults={'fields': 'x,y,z'})
     parser.add_argument(
@@ -161,14 +165,14 @@ def ingest_deprecated_options(args):
         args.output_format = args.append_binary
         del args.append_binary
         if args.verbose:
-            with warning() as warn:
+            with warning(custom_formatwarning) as warn:
                 msg = "--append-binary is deprecated, consider using --output-format"
                 warn(msg)
     if args.append_fields:
         args.output_fields = args.append_fields
         del args.append_fields
         if args.verbose:
-            with warning() as warn:
+            with warning(custom_formatwarning) as warn:
                 msg = "--append-fields is deprecated, consider using --output-fields"
                 warn(msg)
 

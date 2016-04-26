@@ -19,6 +19,10 @@ class stream_error(Exception):
     pass
 
 
+def custom_formatwarning(msg, *args):
+    return __name__ + " warning: " + str(msg) + '\n'
+
+
 def strip_prefix(string, prefix_chars='<>|='):
     if string.startswith(tuple(prefix_chars)):
         return string[1:]
@@ -384,7 +388,7 @@ class stream:
 
     def _warn(self, msg, verbose=True):
         if verbose:
-            with warning() as warn:
+            with warning(custom_formatwarning) as warn:
                 warn(msg)
 
     def _struct(self, s):

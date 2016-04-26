@@ -4,14 +4,12 @@ import warnings
 class warning(object):
     default_formatwarning = warnings.formatwarning
 
-    @staticmethod
-    def formatwarning(msg, *args):
-        return __name__ + " warning: " + str(msg) + '\n'
+    def __init__(self, formatwarning):
+        self._formatwarning = formatwarning
 
     def __enter__(self):
-        warnings.formatwarning = warning.formatwarning
+        warnings.formatwarning = self._formatwarning
         return warnings.warn
 
     def __exit__(self, *args):
         warnings.formatwarning = warning.default_formatwarning
-
