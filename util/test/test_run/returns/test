@@ -1,0 +1,42 @@
+#!/bin/bash
+
+scriptname=$( basename $0 )
+
+source $( which comma-process-util ) || exit 1
+source $( which comma-application-util ) || exit 1
+
+function handle()
+{
+    [[ -n "$workdir" ]] && rm -rf "$workdir"
+}
+
+trap 'handle' EXIT
+
+mkdir -p 'output' || exit 1
+output_dir=$( readlink -f 'output' )
+
+mkdir -p 'output/returns_success' || exit 1
+cat > 'output/returns_success/test' <<EOF 
+#!/bin/bash
+exit 0
+EOF
+chmod u+x 'output/returns_success/test'
+mkdir -p 'output/returns_failure' || exit 1
+(
+    cd 'output/returns_success'
+    comma-test-run --raw > 'comma-test-run.log' 2>&1
+    echo "returns_success/status=$?"
+)
+rm 'output/returns_success/test'
+
+cat > 'output/returns_failure/test' <<EOF 
+#!/bin/bash
+exit 9
+EOF
+chmod u+x 'output/returns_failure/test'
+(
+    cd 'output/returns_failure'
+    comma-test-run --raw > 'comma-test-run.log' 2>&1
+    echo "returns_failure/status=$?"
+)
+rm 'output/returns_failure/test'
