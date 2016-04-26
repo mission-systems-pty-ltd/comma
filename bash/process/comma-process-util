@@ -221,7 +221,7 @@ function comma_execute_and_wait()
         wait ${commands_to_execute_pgid[$command_to_execute_index]}
         command_to_execute_status=$?
         # special care when process group has been killed by timeout itself
-        [[ "$usepg" == "true" && $command_to_execute_status == 124 ]] && comma_wait_for_process_group "$cew_funcname" "${commands_to_execute_pgid[$command_to_execute_index]}" 12
+        [[ "$usepg" == "true" ]] && comma_wait_for_process_group "$cew_funcname" "${commands_to_execute_pgid[$command_to_execute_index]}" 12
         [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: group ${commands_to_execute_pgid[$command_to_execute_index]} finished execution, status $command_to_execute_status" >&2
         commands_to_execute_pgid[$command_to_execute_index]=""
         if (( ${#commands_to_execute[@]} == 1 )) ; then
