@@ -8,6 +8,7 @@ import operator
 import re
 import comma.csv.format
 import comma.csv.time
+from comma.util.warning import warning
 
 
 class struct_error(Exception):
@@ -19,8 +20,7 @@ class stream_error(Exception):
 
 
 def custom_formatwarning(msg, *args):
-    return " comma.csv warning: " + str(msg) + '\n'
-warnings.formatwarning = custom_formatwarning
+    return __name__ + " warning: " + str(msg) + '\n'
 
 
 def strip_prefix(string, prefix_chars='<>|='):
@@ -386,6 +386,11 @@ class stream:
                 print >> self.target, tied_line_with_separator + output_line
         self.target.flush()
 
+    def _warn(self, msg, verbose=True):
+        if verbose:
+            with warning(custom_formatwarning) as warn:
+                warn(msg)
+
     def _struct(self, s):
         if not isinstance(s, struct):
             msg = "expected '{}', got '{}'".format(repr(struct), repr(s))
@@ -413,7 +418,7 @@ class stream:
             if self.verbose and binary and format and binary != format:
                 msg = "ignoring '{}' and using '{}' since binary keyword has priority" \
                     .format(format, binary)
-                warnings.warn(msg)
+                self._warn(msg)
             return binary
         if binary is True and not format:
             if not set(self.struct.fields).issuperset(self.fields):
@@ -422,7 +427,7 @@ class stream:
                 raise stream_error(msg)
             type_of = self.struct.type_of_field.get
             return format_from_types(type_of(field) for field in self.fields)
-        elif binary is False and format:
+        if binary is False:
             return ''
         return format
 
@@ -488,7 +493,7 @@ class stream:
         if self.verbose:
             msg = "expected fields '{}' are not found in supplied fields '{}'" \
                 .format(','.join(missing_fields), ','.join(self.fields))
-            warnings.warn(msg)
+            self._warn(msg)
         return tuple(missing_fields)
 
     def _missing_dtype(self):
@@ -523,12 +528,12 @@ class stream:
             if self.verbose:
                 msg = "default values for fields in stream are ignored: '{}'" \
                     "".format(','.join(default_fields_in_stream))
-                warnings.warn(msg)
+                self._warn(msg)
         if unknown_default_fields:
             if self.verbose:
                 msg = "found default values for fields not in struct: '{}'" \
                     "".format(','.join(unknown_default_fields))
-                warnings.warn(msg)
+                self._warn(msg)
         for field in default_fields_in_stream.union(unknown_default_fields):
             del default_values_[field]
         return default_values_

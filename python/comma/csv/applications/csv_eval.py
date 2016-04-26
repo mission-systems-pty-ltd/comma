@@ -6,9 +6,8 @@ import re
 import comma.csv
 import comma.signal
 import itertools
-import warnings
 import os
-
+from comma.util.warning import warning
 
 description = """
 evaluate numerical expressions and append computed values to csv stream
@@ -93,9 +92,8 @@ class csv_eval_error(Exception):
     pass
 
 
-def custom_formatwarning(message, *args):
-    return os.path.basename(sys.argv[0]) + ': warning: ' + str(message) + '\n'
-warnings.formatwarning = custom_formatwarning
+def custom_formatwarning(msg, *args):
+    return __name__ + " warning: " + str(msg) + '\n'
 
 
 def add_csv_options(parser):
@@ -164,15 +162,19 @@ def get_args():
 
 def ingest_deprecated_options(args):
     if args.append_binary:
-        if args.verbose:
-            warnings.warn("--append-binary is deprecated, consider using --output-format")
         args.output_format = args.append_binary
         del args.append_binary
-    if args.append_fields:
         if args.verbose:
-            warnings.warn("--append-fields is deprecated, consider using --output-fields")
+            with warning(custom_formatwarning) as warn:
+                msg = "--append-binary is deprecated, consider using --output-format"
+                warn(msg)
+    if args.append_fields:
         args.output_fields = args.append_fields
         del args.append_fields
+        if args.verbose:
+            with warning(custom_formatwarning) as warn:
+                msg = "--append-fields is deprecated, consider using --output-fields"
+                warn(msg)
 
 
 def check_options(args):
