@@ -3,10 +3,9 @@ import sys
 import argparse
 import numpy
 import re
+import itertools
 import comma.csv
 import comma.signal
-import itertools
-import os
 from comma.util.warning import warning
 
 description = """
