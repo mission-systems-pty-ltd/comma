@@ -72,7 +72,7 @@ echo 'main/start=1'
 $0 --operate-as-child &
 pid=$!
 sleep 7
-echo 'main/=1'
+echo 'main/slept=1'
 kill -s SIGTERM $pid
 sleep 1
 echo 'main/end=1'
