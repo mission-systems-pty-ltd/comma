@@ -145,7 +145,7 @@ export comma_sigpipe_exit_status_
 
 function comma_status_ok()
 {
-    pipestatus_copy_status_ok=("${PIPESTATUS[@]}")  # make a safe copy
+    local pipestatus_copy_status_ok=("${PIPESTATUS[@]}")  # make a safe copy
     # if a pipetstus vector is passed to us, then use that
     if [[ $# -gt 0 ]]; then
         local outcome_status_ok=''
@@ -161,15 +161,10 @@ export -f comma_status_ok
 
 function comma_status_ok_verbose()
 {
-    pipestatus_copy_status_ok=("${PIPESTATUS[@]}")  # make a safe copy
-    if [[ $# -gt 0 ]]; then
-        if ! comma_status_ok $@ ; then
-            echo "comma_status_ok: pipestatus ( ${pipestatus_copy_status_ok[@]} ); called from '$( caller 0 )'" >&2
-            return 1
-        fi
-    else
-        comma_status_ok_verbose ${pipestatus_copy_status_ok[@]} || return 1
-    fi
-    return 0
+    local pipestatus_copy_status_ok=("${PIPESTATUS[@]}")
+    (( $# == 0 )) || pipestatus_copy_status_ok=( $@ )
+    comma_status_ok ${pipestatus_copy_status_ok[@]} && return 0
+    echo "comma_status_ok_verbose: pipestatus ( ${pipestatus_copy_status_ok[@]} ); called from line $( caller 0 )" >&2
+    return 1
 }
 export -f comma_status_ok_verbose
