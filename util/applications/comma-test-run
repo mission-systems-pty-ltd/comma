@@ -576,9 +576,8 @@ function run_and_match_test()
 
     {
         if [ -f ./input ] ; then cat ./input ; fi | comma_env --import PYTHONPATH "$test_exec" "$path" $verbose $options_test_option
-        echo -e '\n# test execution has now returned to comma-test-run :: run_and_match_test'
+        test_failed=$?
     } >'output/stdout.log' 2>'output/stderr.log'
-    test_failed=$?
     error_files="$( find . -name out_of_shared_memory )"
     [[ -n "$error_files" ]] && return 1
 
