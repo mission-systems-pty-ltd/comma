@@ -584,6 +584,7 @@ function run_and_match_test()
     if [[ $test_failed != 0 ]]; then error_ "test exit with non-zero status: $test_failed" ; fi
 
     if [[ $test_failed == 0 ]] ; then
+        echo -e '\n# In comma-test-run before comma-test-match' >> 'output/stdout.log'
         if [[ -f "./expected" ]] ; then
             match_output=$( comma-test-match ./expected <'output/stdout.log' 2>&1 )
         fi
@@ -598,6 +599,7 @@ function run_and_match_test()
                 match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; comma-test-match $global_expected < 'output/stdout.log' 2>&1 )
             done
         fi
+        echo -e '\n# After comma-test-match in comma-test-run' >> 'output/stdout.log'
         if [[ -n "$match_output" ]]; then
             error_ "$name: test output does not match expected:\n"
             echo "expected output:" >&2
