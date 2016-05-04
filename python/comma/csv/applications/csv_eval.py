@@ -1,4 +1,3 @@
-from __future__ import print_function
 import sys
 import argparse
 import numpy
@@ -268,11 +267,11 @@ class stream(object):
         format = self.input.struct.format
         output_fields = ','.join(self.output.struct.fields)
         output_format = self.output.struct.format
-        print("input fields: '{}'".format(fields), file=file)
-        print("input format: '{}'".format(format), file=file)
-        print("output fields: '{}'".format(output_fields), file=file)
-        print("output format: '{}'".format(output_format), file=file)
-        print("expressions: '{}'".format(self.args.expressions), file=file)
+        print >>file, "input fields: '{}'".format(fields)
+        print >>file, "input format: '{}'".format(format)
+        print >>file, "output fields: '{}'".format(output_fields)
+        print >>file, "output format: '{}'".format(output_format)
+        print >>file, "expressions: '{}'".format(self.args.expressions)
 
 
 def check_fields(fields, input_fields=(), env=get_dict(numpy)):
