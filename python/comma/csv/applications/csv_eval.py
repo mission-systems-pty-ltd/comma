@@ -4,6 +4,7 @@ import argparse
 import numpy
 import re
 import itertools
+import ast
 import comma.csv
 import comma.signal
 from comma.util.warning import warning
@@ -19,10 +20,9 @@ input fields:
     2) for ascii streams, input fields are treated as floating point numbers, unless --format is given
 
 output fields:
-    1) output fields are inferred from expressions (by default) or specified by --output-fields
-    2) output fields are always appended to unmodified input
-    3) if --output-fields is omitted, only ;-separated assignment statements are allowed in expressions
-    4) output fields are treated as floating point numbers, unless --output-format is given
+    1) inferred from expressions (by default) or specified by --output-fields
+    2) always appended to unmodified input
+    3) treated as floating point numbers, unless --output-format is given
 
 examples:
     # basic
@@ -195,9 +195,17 @@ def format_without_blanks(format, fields):
 
 
 def output_fields_from_expressions(expressions):
-    lines = expressions.splitlines()
-    split_expressions = sum([line.split(';') for line in lines if line.strip()], [])
-    return ','.join(e.split('=', 1)[0].strip() for e in split_expressions)
+    tree = ast.parse(expressions, '<string>', mode='exec')
+    fields = []
+    for child in ast.iter_child_nodes(tree):
+        if type(child) != ast.Assign:
+            continue
+        for target in child.targets:
+            fields.extend(node.id for node in ast.walk(target) if type(node) == ast.Name)
+    if not fields:
+        msg = "failed to infer output fields from '{}'".format(expressions)
+        raise csv_eval_error(msg)
+    return ','.join(fields)
 
 
 def prepare_options(args):
