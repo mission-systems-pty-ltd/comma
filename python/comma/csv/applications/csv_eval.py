@@ -37,11 +37,14 @@ examples:
     # binary stream
     ( echo 0.1,2; echo 0.1,3 ) | csv-to-bin d,i | %(prog)s --binary=d,i --fields=x,n 'y = x**n' | csv-from-bin d,i,d
 
-    # selecting output based on condition
+    # evaluate one of two expressions based on condition
     ( echo 1,2; echo 2,1 ) | %(prog)s --fields=x,y 'a=where(x<y,x+y,x-y)'
 
     # time arithmetic
     echo 20150101T000000.000000 | %(prog)s --fields=t --format=t 'a=t+1;b=t-1' --output-format=2t
+
+    # select output based on condition
+    ( echo 1,2 ; echo 1,3; echo 1,4 ) | %(prog)s --fields=a,b --format=2i "(a < b - 1) & (b < 4)" --select
 """
 
 numpy_functions = """
@@ -147,6 +150,12 @@ def get_args():
         action='store_true',
         help=argparse.SUPPRESS)
     add_csv_options(parser)
+    parser.add_argument(
+        '--select',
+        '--output-if',
+        '--if',
+        action='store_true',
+        help='select and output records of input stream that satisfy condition')
     args = parser.parse_args()
     if args.help:
         if args.verbose:
@@ -180,6 +189,9 @@ def check_options(args):
         raise csv_eval_error("no expressions are given")
     if args.binary and args.format:
         raise csv_eval_error("--binary and --format are mutually exclusive")
+    if args.select and (args.output_fields or args.output_format):
+        msg = "--select cannot be used with --output-fields or --output-format"
+        raise csv_eval_error(msg)
 
 
 def comma_type(maybe_type, field, default_type='d', type_of_unnamed_field='s[0]'):
@@ -216,16 +228,17 @@ def prepare_options(args):
     else:
         args.format = format_without_blanks(args.format, args.fields)
         args.binary = False
-    if not args.output_fields:
-        args.output_fields = output_fields_from_expressions(args.expressions)
-    args.output_format = format_without_blanks(args.output_format, args.output_fields)
+    if not args.select:
+        if not args.output_fields:
+            args.output_fields = output_fields_from_expressions(args.expressions)
+        args.output_format = format_without_blanks(args.output_format, args.output_fields)
 
 
-def get_dict(module, update={}, delete=[]):
-    d = module.__dict__.copy()
-    d.update(update)
-    for k in set(delete).intersection(d.keys()):
-        del d[k]
+def numpy_env(restrict=False):
+    d = numpy.__dict__.copy()
+    if restrict:
+        d.update(__builtins__={})
+        d.pop('sys', None)
     return d
 
 
@@ -256,29 +269,32 @@ class stream(object):
 
     def initialize_output(self):
         fields = self.args.output_fields
+        if not fields:
+            self.output = None
+            return
         check_fields(fields.split(','), input_fields=self.nonblank_input_fields)
         types = comma.csv.format.to_numpy(self.args.output_format)
         output_t = comma.csv.struct(fields, *types)
         self.output = comma.csv.stream(output_t, tied=self.input, **self.csv_options)
-        self.output_fields = self.output.struct.fields
 
     def print_info(self, file=sys.stderr):
         fields = ','.join(self.input.struct.fields)
         format = self.input.struct.format
-        output_fields = ','.join(self.output.struct.fields)
-        output_format = self.output.struct.format
-        print >>file, "input fields: '{}'".format(fields)
-        print >>file, "input format: '{}'".format(format)
-        print >>file, "output fields: '{}'".format(output_fields)
-        print >>file, "output format: '{}'".format(output_format)
-        print >>file, "expressions: '{}'".format(self.args.expressions)
+        print >> file, "expressions: '{}'".format(self.args.expressions)
+        print >> file, "input fields: '{}'".format(fields)
+        print >> file, "input format: '{}'".format(format)
+        if self.output:
+            output_fields = ','.join(self.output.struct.fields)
+            output_format = self.output.struct.format
+            print >> file, "output fields: '{}'".format(output_fields)
+            print >> file, "output format: '{}'".format(output_format)
 
 
-def check_fields(fields, input_fields=(), env=get_dict(numpy)):
+def check_fields(fields, input_fields=(), env=numpy_env()):
     for field in fields:
         if not re.match(r'^[a-z_]\w*$', field, re.I):
             raise csv_eval_error("'{}' is not a valid field name".format(field))
-        if field == '_input' or field == '_output':
+        if field in ['_input', '_output']:
             raise csv_eval_error("'{}' is a reserved name".format(field))
         if field in env:
             raise csv_eval_error("'{}' is a reserved numpy name".format(field))
@@ -291,12 +307,11 @@ def evaluate(expressions, stream, dangerous=False):
     for field in stream.nonblank_input_fields:
         input_initializer += "{field} = _input['{field}']\n".format(field=field)
     output_initializer = ''
-    for field in stream.output_fields:
+    for field in stream.output.struct.fields:
         output_initializer += "_output['{field}'] = {field}\n".format(field=field)
     code_string = input_initializer + '\n' + expressions + '\n' + output_initializer
     code = compile(code_string, '<string>', 'exec')
-    kwds = {} if dangerous else {'update': dict(__builtins__={}), 'delete': ['sys']}
-    restricted_numpy = get_dict(numpy, **kwds)
+    restricted_numpy = numpy_env(restrict=True)
     output = stream.output.struct(stream.input.size)
     is_shutdown = comma.signal.is_shutdown()
     while not is_shutdown:
@@ -309,10 +324,26 @@ def evaluate(expressions, stream, dangerous=False):
         stream.output.write(output)
 
 
+def select(logical_expression, stream):
+    code = compile(logical_expression, '<string>', 'eval')
+    restricted_numpy = numpy_env(restrict=True)
+    is_shutdown = comma.signal.is_shutdown()
+    while not is_shutdown:
+        i = stream.input.read()
+        if i is None:
+            break
+        input_initializer = {field: i[field] for field in i.dtype.names}
+        mask = eval(code, restricted_numpy, input_initializer)
+        stream.input.dump(mask=mask)
+
+
 def main():
     args = get_args()
     prepare_options(args)
-    evaluate(args.expressions.strip(';'), stream(args), dangerous=args.dangerous)
+    if args.select:
+        select(args.expressions, stream(args))
+    else:
+        evaluate(args.expressions.strip(';'), stream(args), dangerous=args.dangerous)
 
 
 if __name__ == '__main__':
