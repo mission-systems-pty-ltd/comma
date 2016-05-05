@@ -5,11 +5,11 @@ name=$( basename $0 )
 source $( type -p comma-test-util ) || exit 1
 
 mkdir -p 'output' || exit 1
-export output_dir="$( readlink -f 'output' )"
 
-comma_test_run_tarball '../data/sample.tar'  --white-list=white.list --black-list=black.list
+result="$( comma_test_run_tarball '../data/sample.tar'  --white-list=sample/white.list --black-list=sample/black.list )"
+output_directory="$( name-value-get --from path-value 'output_directory' <<< "$result" )"
 
-elapsed="stats/elapsed.csv"
+elapsed="$output_directory/stats/elapsed.csv"
 [[ -r "$elapsed" ]] || { echo "Could not access '$elapsed'" >&2 ; exit 1 ; }
 cat "$elapsed" | sed 's@^\./@@'
 
