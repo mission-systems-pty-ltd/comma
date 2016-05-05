@@ -3,12 +3,12 @@
 expect status == 1
 
 expect int( testsuite/xmlattr/tests ) == 3
-expect testsuite/testcase[0]/xmlattr/name == "ontime"
+expect testsuite/testcase[0]/xmlattr/name == "timeout/ontime"
 expect float( testsuite/testcase[0]/xmlattr/time ) >= 10
 
-expect testsuite/testcase[1]/xmlattr/name == "timeout"
+expect testsuite/testcase[1]/xmlattr/name == "timeout/timeout"
 expect float( testsuite/testcase[1]/xmlattr/time ) >= 10
 expect len( testsuite/testcase[1]/failure ) > 0
 
-expect testsuite/testcase[2]/xmlattr/name == "zzzz"
+expect testsuite/testcase[2]/xmlattr/name == "timeout/zzzz"
 expect float( testsuite/testcase[2]/xmlattr/time ) >= 10

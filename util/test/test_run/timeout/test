@@ -5,31 +5,15 @@ scriptname=$( basename $0 )
 source $( which comma-process-util ) || exit 1
 source $( which comma-application-util ) || exit 1
 
-function handle()
-{
-    [[ -n "$workdir" ]] && rm -rf "$workdir"
-}
+source $( type -p comma-test-util ) || exit 1
 
-trap 'handle' EXIT
+mkdir -p 'output' || exit 1
+outdir="$( readlink -f 'output' )"
 
-tarball="../data/timeout.tar"
-[[ -r "$tarball" ]] || {
-    echo "$scriptname: file '$tarball' not found" >&2
-    exit 1
-}
-tarball=$( readlink -f "$tarball" )
+comma_test_util_run_tarball '../data/timeout.tar' "--junit=$outdir/junit.xml"
 
-export output_dir="output"
-mkdir -p "$output_dir" || exit 1
-output_dir=$( readlink -f "$output_dir" )
+# output_directory="$( name-value-get --from path-value 'output_directory' <<< "$result" )"
 
-workdir=$( mktemp --directory --tmpdir="$output_dir" )
-cd "$workdir"
-tar xf "$tarball" || exit 1
-cd timeout || exit 1
-
-comma-test-run --raw --junit="$output_dir/junit.xml" > "$output_dir/comma-test-run.log" 2>&1
-echo "status=$?"
-
-cat "$output_dir/junit.xml" | name-value-convert --from xml --to path-value | sed 's@[<>]@@g'
+cat "$outdir/junit.xml" | name-value-convert --from xml --to path-value | sed 's@[<>]@@g'
 comma_status_ok || exit 1
+
