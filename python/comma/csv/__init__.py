@@ -1,7 +1,6 @@
 import numpy as np
 import sys
-from StringIO import StringIO
-import argparse
+from cStringIO import StringIO
 import itertools
 import warnings
 import operator
@@ -384,6 +383,38 @@ class stream:
                 tied_line_with_separator = tied_line + self.delimiter if self.tied else ''
                 output_line = self.delimiter.join(map(self.numpy_scalar_to_string, scalars))
                 print >> self.target, tied_line_with_separator + output_line
+        self.target.flush()
+
+    def dump(self, mask=None):
+        if mask is None:
+            self._dump()
+        else:
+            self._dump_with_mask(mask)
+
+    def _dump(self):
+        if self.binary:
+            self._input_data.tofile(self.target)
+        else:
+            self.target.write(self._ascii_buffer)
+        self.target.flush()
+
+    def _dump_with_mask(self, mask):
+        if mask.dtype != bool:
+            msg = "expected mask type to be {}, got {}" \
+                .format(repr(np.dtype(bool)), repr(mask.dtype))
+            raise stream_error(msg)
+        if mask.shape != (mask.size,):
+            msg = "expected mask shape=({},), got {}".format(mask.size, mask.shape)
+            raise stream_error(msg)
+        if mask.size != self._input_data.size:
+            msg = "mask size {} not equal to data size {}" \
+                .format(mask.size, self._input_data.size)
+            raise stream_error(msg)
+        if self.binary:
+            self._input_data[mask].tofile(self.target)
+        else:
+            it = itertools.izip(StringIO(self._ascii_buffer), mask)
+            self.target.write(''.join(line for line, allowed in it if allowed))
         self.target.flush()
 
     def _warn(self, msg, verbose=True):
