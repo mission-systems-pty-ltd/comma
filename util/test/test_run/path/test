@@ -12,5 +12,5 @@ datadir="$( readlink -f 'output/data' )"
 echo 'foo="bar"' > "$datadir/data.pv"
 
 {
-    comma_test_util_run_tarball '../data/path.tar' "--path=$datadir"
+    comma_test_run_tarball '../data/path.tar' "--path=$datadir"
 } | sed -e 's#^#path[0]/#g'

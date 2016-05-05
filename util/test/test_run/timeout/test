@@ -10,7 +10,7 @@ source $( type -p comma-test-util ) || exit 1
 mkdir -p 'output' || exit 1
 outdir="$( readlink -f 'output' )"
 
-comma_test_util_run_tarball '../data/timeout.tar' "--junit=$outdir/junit.xml"
+comma_test_run_tarball '../data/timeout.tar' "--junit=$outdir/junit.xml"
 
 # output_directory="$( name-value-get --from path-value 'output_directory' <<< "$result" )"
 
