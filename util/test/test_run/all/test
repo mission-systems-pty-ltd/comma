@@ -2,30 +2,15 @@
 
 name=$( basename $0 )
 
-function handle()
-{
-    [[ -n "$workdir" ]] && rm -rf "$workdir"
-}
+source $( type -p comma-test-util ) || exit 1
 
-trap 'handle' EXIT
+mkdir -p 'output' || exit 1
 
-output_dir="output"
-output_dir=$( readlink -f "$output_dir" )
+result="$( comma_test_run_tarball '../data/sample.tar' )"
+output_directory="$( name-value-get --from path-value 'output_directory' <<< "$result" )"
 
-tarball="../data/sample.tar"
-[[ -f "$tarball" ]] || {
-    echo "$name: file '$tarball' not found" >&2
-    exit 1
-}
-tarball=$( readlink -f "$tarball" )
-
-workdir=$( mktemp --directory --tmpdir="$output_dir" )
-cd "$workdir"
-tar xf "$tarball" || exit 1
-cd sample || exit 1
-comma-test-run --raw $@ > "$output_dir/log" 2>"$output_dir/log2"
-(( $? == 0 )) || exit 1
-
-elapsed="stats/elapsed.csv"
-[[ -r "$elapsed" ]] || exit 1
+elapsed="$output_directory/stats/elapsed.csv"
+[[ -r "$elapsed" ]] || { echo "Could not access '$elapsed'" >&2 ; exit 1 ; }
 cat "$elapsed" | sed 's@^\./@@'
+
+exit 0
