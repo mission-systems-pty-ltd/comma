@@ -255,11 +255,11 @@ ADD_SUBDIRECTORY( string )
 ADD_SUBDIRECTORY( sync )
 ADD_SUBDIRECTORY( util )
 ADD_SUBDIRECTORY( visiting )
+add_subdirectory( web )
 if( comma_BUILD_XML )
     add_subdirectory( xml )
 endif( comma_BUILD_XML )
 add_subdirectory( xpath )
-add_subdirectory(web)
 
 ADD_SUBDIRECTORY( etc/bash_completion.d )
 

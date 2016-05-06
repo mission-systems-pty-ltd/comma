@@ -88,4 +88,47 @@ function comma_test_commands()
     done < <( grep '=' ; grep -v '^#' )
 }
 
-#export -f comma_test_commands
+# the tmp directory cleanup for comma_test_run_tarball
+function comma_test_run_tarball_cleanup()
+{
+    trap '' SIGINT SIGHUP SIGTERM SIGPIPE SIGQUIT
+    [[ -n "$1" ]] && rm -rf "$1"
+}
+
+# A function to extract a test from a tar format archive and run it under comma test run.
+# Examples:
+#   comma_test_run_tarball '../data/timeout.tar' "--junit=$outdir/junit.xml"
+#   comma_test_run_tarball '../data/path.tar' "--path=$datadir"
+# Output
+#    status=<integer return code>
+#    output_directory="output/directory_name"
+function comma_test_run_tarball()
+{
+    local tarball="$1"
+    [[ -n "$tarball" ]] || { echo "comma_test_run_tarball Error: No tarball given" >&2 ; return 1; }
+    [[ -r "$tarball" ]] || { echo "comma_test_run_tarball Error: Given tarball could not be read '$tarball'" >&2 ; return 1; }
+    shift
+
+    local tarfull workname workdir rv
+    tarfull="$( readlink -f "$tarball" )"
+    workname="${tarfull////_}"
+
+    workdir="$( mktemp --directory --tmpdir "$workname.XXXXXX" || exit 1 )" \
+        || { echo "comma_test_run_tarball Error: Could not create temporary '$workname.XXXXXX'" >&2 ; return 1; }
+    trap "comma_test_run_tarball_cleanup $workdir" SIGINT SIGHUP SIGTERM SIGPIPE SIGQUIT EXIT
+    echo "comma_test_run_tarball Info: Working Directory is '$workdir'" >&2
+    (
+        cd "$workdir" || { echo "comma_test_run_tarball Error: Unable to enter working directory '$workdir'" >&2 ; return 1; }
+        tar xf "$tarfull" || { echo "comma_test_run_tarball Error: Could not extract tarball '$tarfull'" >&2 ; return 1; }
+        echo "comma_test_run_tarball Info: Run comma-test-run --raw $@" >&2
+        comma-test-run --raw $@ >&2 ; rv=$?
+        echo "status=$rv"
+    )
+    
+    find "$workdir" '(' -name input -o -name test -o -name expected ')' -exec mv -v '{}' '{}.executed' ';' >&2 || { echo "comma_test_run_tarball: Error: Unable to rename input and test files under '$workdir'" >&2 ; return 1; }
+    mv -v "$workdir" "output" >&2 || { echo "comma_test_run_tarball Error: Unable to move '$workdir' to output" >&2 ; return 1; }
+    echo "output_directory=\"output/$( basename $workdir )\""
+    
+    return $rv
+}
+
