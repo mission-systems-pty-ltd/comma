@@ -1,0 +1,31 @@
+#!/bin/bash
+
+source $( which comma-application-util )
+function output { csv-paste value="line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'; }
+
+function process_records_fields_has_extra_names
+{
+    python -c "$( cat <<END
+import comma
+import numpy
+
+point_t = comma.csv.struct( 'x,y,z', 'float64', 'float64', 'float64' )
+timestamped_point_t = comma.csv.struct( 'time,coordinates', 'datetime64[us]', point_t )
+record_t = comma.csv.struct( 'observer,event', 'S3', timestamped_point_t )
+fields = "f0,event/coordinates/y,event/coordinates/z,observer,f1,event/time,event/coordinates/x,f2/subfield,f3"
+format = ','.join( comma.csv.format.to_numpy( "$format" ) )
+record_stream = comma.csv.stream( record_t, fields=fields, format=format )
+
+for i,r in enumerate( record_stream.iter(), start=1 ):
+  r['observer'] = numpy.char.upper( r['observer'] )
+  r['event']['time'] += numpy.timedelta64( i, 's' )
+  r['event']['coordinates']['x'] += i
+  record_stream.write( r )
+END
+)"
+}
+
+format='i,2d,s[3],s[7],t,d,2ui'
+csv-to-bin $format | process_records_fields_has_extra_names | csv-from-bin s[3],t,3d | output
+comma_status_ok
+echo "status=$?"
