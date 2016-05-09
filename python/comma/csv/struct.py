@@ -2,7 +2,10 @@ import numpy as np
 from .common import *
 
 
-class struct:
+class struct(object):
+    """
+    see github.com/acfr/comma/wiki/python-csv-module for details
+    """
     default_field_name = 'comma_struct_default_field_name_'
 
     class error(Exception):
@@ -29,6 +32,17 @@ class struct:
         return np.empty(size, dtype=self)
 
     def to_tuple(self, s):
+        """
+        convert a scalar or 1d array of dtype defined by struct to tuple
+
+        >>> import comma
+        >>> struct = comma.csv.struct('a,b', 'S2', 'u4')
+        >>> data = struct()
+        >>> data['a'] = 'ab'
+        >>> data['b'] = 12
+        >>> struct.to_tuple(data)
+        ('ab', 12L)
+        """
         if s.dtype != self.dtype:
             msg = "expected {}, got {}".format(repr(self.dtype), repr(s.dtype))
             raise struct.error(msg)
@@ -38,6 +52,15 @@ class struct:
         return s.view(self.unrolled_flat_dtype).item()
 
     def expand_shorthand(self, compressed_fields):
+        """
+        return tuple of full-xpath fields corresponding to the given shorthand
+
+        >>> import comma
+        >>> inner = comma.csv.struct('i,j', 'u1', 'u1')
+        >>> outer = comma.csv.struct('in', inner)
+        >>> outer.expand_shorthand('in')
+        ('in/i', 'in/j')
+        """
         if isinstance(compressed_fields, basestring):
             compressed_fields = compressed_fields.split(',')
         expand = self.shorthand.get

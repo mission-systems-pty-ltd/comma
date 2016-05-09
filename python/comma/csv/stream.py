@@ -13,7 +13,10 @@ def custom_formatwarning(msg, *args):
     return __name__ + " warning: " + str(msg) + '\n'
 
 
-class stream:
+class stream(object):
+    """
+    see github.com/acfr/comma/wiki/python-csv-module for details
+    """
     buffer_size_in_bytes = 65536
 
     class error(Exception):
@@ -66,6 +69,11 @@ class stream:
         self._ascii_buffer = None
 
     def iter(self, size=None):
+        """
+        a generator that calls read() repeatedly until there is no data in the stream
+
+        size has the same meaning as in read()
+        """
         while True:
             s = self.read(size)
             if s is None:
@@ -73,6 +81,13 @@ class stream:
             yield s
 
     def read(self, size=None):
+        """
+        read the specified number of records from stream, extract data,
+        put it into appropriate numpy array with the dtype defined by struct, and return it
+
+        if size is None, default size is used
+        if size is -1, all records from file are read (stdin is not allowed)
+        """
         if size is None:
             size = self.size
         if size < 0:
@@ -114,6 +129,12 @@ class stream:
         return extracted_data.view(self.struct)
 
     def missing_data(self, size):
+        """
+        return numpy array (of the given size) representing missings data, consisting of
+        fields that are not found in the stream
+
+        use zero values to define the array unless default_values is given
+        """
         if self._missing_data is not None and size <= self._missing_data.size:
             return self._missing_data[:size]
         self._missing_data = np.zeros(size, dtype=self.missing_dtype)
@@ -132,6 +153,9 @@ class stream:
         return self._missing_data
 
     def numpy_scalar_to_string(self, scalar):
+        """
+        convert numpy scalar to a string
+        """
         if scalar.dtype.char in np.typecodes['AllInteger']:
             return str(scalar)
         elif scalar.dtype.char in np.typecodes['Float']:
@@ -144,6 +168,10 @@ class stream:
         raise stream.error(msg)
 
     def write(self, s):
+        """
+        serialize the given numpy array of dtype defined by struct and write the result to
+        the output
+        """
         if s.dtype != self.struct.dtype:
             msg = "expected {}, got {}".format(repr(self.struct.dtype), repr(s.dtype))
             raise stream.error(msg)
@@ -165,6 +193,9 @@ class stream:
         self.target.flush()
 
     def dump(self, mask=None):
+        """
+        dump the data in the stream buffer to the output
+        """
         if mask is None:
             self._dump()
         else:
