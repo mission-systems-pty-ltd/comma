@@ -1,13 +1,12 @@
 import numpy as np
-from comma.csv.common import *
-
-
-class struct_error(Exception):
-    pass
+from .common import *
 
 
 class struct:
     default_field_name = 'comma_struct_default_field_name_'
+
+    class error(Exception):
+        pass
 
     def __init__(self, concise_fields, *concise_types):
         self.concise_types = concise_types
@@ -32,10 +31,10 @@ class struct:
     def to_tuple(self, s):
         if s.dtype != self.dtype:
             msg = "expected {}, got {}".format(repr(self.dtype), repr(s.dtype))
-            raise struct_error(msg)
+            raise struct.error(msg)
         if not (s.shape == (1,) or s.shape == ()):
             msg = "expected a scalar or 1d array with size=1, got {}".format(s.shape)
-            raise struct_error(msg)
+            raise struct.error(msg)
         return s.view(self.unrolled_flat_dtype).item()
 
     def expand_shorthand(self, compressed_fields):
@@ -52,7 +51,7 @@ class struct:
         if len(fields) > ntypes:
             fields_without_type = ','.join(fields.split(',')[ntypes:])
             msg = "missing types for fields '{}'".format(fields_without_type)
-            raise struct_error(msg)
+            raise struct.error(msg)
         omitted_fields = [''] * (ntypes - len(fields))
         fields_without_blanks = []
         for index, field in enumerate(fields + omitted_fields):
@@ -67,7 +66,7 @@ class struct:
         for field in self.concise_fields:
             if '/' in field:
                 msg = "expected fields without '/', got '{}'".format(self.concise_fields)
-                raise struct_error(msg)
+                raise struct.error(msg)
 
     def _full_xpath_fields(self):
         fields = []

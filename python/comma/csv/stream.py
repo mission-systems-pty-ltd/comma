@@ -3,15 +3,10 @@ import sys
 from cStringIO import StringIO
 import itertools
 import warnings
-import comma.csv.format
-import comma.csv.time
-from comma.util.warning import warning
-from comma.csv.struct import struct
-from comma.csv.common import *
-
-
-class stream_error(Exception):
-    pass
+from . import time as csv_time
+from ..util.warning import warning
+from .struct import struct
+from .common import *
 
 
 def custom_formatwarning(msg, *args):
@@ -20,6 +15,9 @@ def custom_formatwarning(msg, *args):
 
 class stream:
     buffer_size_in_bytes = 65536
+
+    class error(Exception):
+        pass
 
     def __init__(self,
                  s,
@@ -53,7 +51,7 @@ class stream:
         self.size = self._default_buffer_size()
         if not self.binary:
             unrolled_types = unrolled_types_of_flat_dtype(self.input_dtype)
-            self.ascii_converters = comma.csv.time.ascii_converters(unrolled_types)
+            self.ascii_converters = csv_time.ascii_converters(unrolled_types)
             num_utypes = len(unrolled_types)
             self.usecols = tuple(range(num_utypes))
             self.filling_values = None if num_utypes == 1 else ('',) * num_utypes
@@ -80,7 +78,7 @@ class stream:
         if size < 0:
             if self.source == sys.stdin:
                 msg = "stdin requires positive size, got {}".format(size)
-                raise stream_error(msg)
+                raise stream.error(msg)
             size = -1  # read entire file
         if self.binary:
             self._input_data = np.fromfile(self.source, dtype=self.input_dtype, count=size)
@@ -124,9 +122,9 @@ class stream:
         dtype_name_of = dict(zip(self.missing_fields, self.missing_dtype.names))
         for field, value in self.default_values.iteritems():
             name = dtype_name_of[field]
-            if self.missing_dtype[name] == np.dtype(comma.csv.time.NUMPY_TYPE):
+            if self.missing_dtype[name] == np.dtype(csv_time.NUMPY_TYPE):
                 try:
-                    self._missing_data[name] = comma.csv.time.to_numpy(value)
+                    self._missing_data[name] = csv_time.to_numpy(value)
                 except:
                     self._missing_data[name] = value
             else:
@@ -139,22 +137,22 @@ class stream:
         elif scalar.dtype.char in np.typecodes['Float']:
             return "{scalar:.{precision}g}".format(scalar=scalar, precision=self.precision)
         elif scalar.dtype.char in np.typecodes['Datetime']:
-            return comma.csv.time.from_numpy(scalar)
+            return csv_time.from_numpy(scalar)
         elif scalar.dtype.char in 'S':
             return scalar
         msg = "converting {} to string is not implemented".format(repr(scalar.dtype))
-        raise stream_error(msg)
+        raise stream.error(msg)
 
     def write(self, s):
         if s.dtype != self.struct.dtype:
             msg = "expected {}, got {}".format(repr(self.struct.dtype), repr(s.dtype))
-            raise stream_error(msg)
+            raise stream.error(msg)
         if s.shape != (s.size,):
             msg = "expected shape=({},), got {}".format(s.size, s.shape)
-            raise stream_error(msg)
+            raise stream.error(msg)
         if self.tied and s.size != self.tied._input_data.size:
             msg = "size {} not equal to tied size {}".format(s.size, self.tied.size)
-            raise stream_error(msg)
+            raise stream.error(msg)
         if self.binary:
             (merge_arrays(self.tied._input_data, s) if self.tied else s).tofile(self.target)
         else:
@@ -183,14 +181,14 @@ class stream:
         if mask.dtype != bool:
             msg = "expected mask type to be {}, got {}" \
                 .format(repr(np.dtype(bool)), repr(mask.dtype))
-            raise stream_error(msg)
+            raise stream.error(msg)
         if mask.shape != (mask.size,):
             msg = "expected mask shape=({},), got {}".format(mask.size, mask.shape)
-            raise stream_error(msg)
+            raise stream.error(msg)
         if mask.size != self._input_data.size:
             msg = "mask size {} not equal to data size {}" \
                 .format(mask.size, self._input_data.size)
-            raise stream_error(msg)
+            raise stream.error(msg)
         if self.binary:
             self._input_data[mask].tofile(self.target)
         else:
@@ -206,7 +204,7 @@ class stream:
     def _struct(self, s):
         if not isinstance(s, struct):
             msg = "expected '{}', got '{}'".format(repr(struct), repr(s))
-            raise stream_error(msg)
+            raise stream.error(msg)
         return s
 
     def _fields(self, fields):
@@ -216,12 +214,12 @@ class stream:
             return self.struct.expand_shorthand(fields)
         if '/' in fields:
             msg = "expected fields without '/', got '{}'".format(fields)
-            raise stream_error(msg)
+            raise stream.error(msg)
         ambiguous_leaves = self.struct.ambiguous_leaves.intersection(fields.split(','))
         if ambiguous_leaves:
             msg = "fields '{}' are ambiguous in '{}', use full xpath" \
                 .format(','.join(ambiguous_leaves), fields)
-            raise stream_error(msg)
+            raise stream.error(msg)
         xpath = self.struct.xpath_of_leaf.get
         return tuple(xpath(name) or name for name in fields.split(','))
 
@@ -236,7 +234,7 @@ class stream:
             if not set(self.struct.fields).issuperset(self.fields):
                 msg = "failed to infer type of every field in '{}', specify format" \
                     .format(','.join(self.fields))
-                raise stream_error(msg)
+                raise stream.error(msg)
             type_of = self.struct.type_of_field.get
             return format_from_types(type_of(field) for field in self.fields)
         if binary is False:
@@ -248,13 +246,13 @@ class stream:
         if not fields_in_struct:
             msg = "fields '{}' do not match any of expected fields '{}'" \
                 .format(','.join(self.fields), ','.join(self.struct.fields))
-            raise stream_error(msg)
+            raise stream.error(msg)
         duplicates = tuple(field for field in self.struct.fields
                            if field in self.fields and self.fields.count(field) > 1)
         if duplicates:
             msg = "fields '{}' have duplicates in '{}'" \
                 "".format(','.join(duplicates), ','.join(self.fields))
-            raise stream_error(msg)
+            raise stream.error(msg)
 
     def _check_consistency_with_tied(self):
         if not self.tied:
@@ -262,16 +260,16 @@ class stream:
         if not isinstance(self.tied, stream):
             msg = "expected tied stream of type '{}', got '{}'" \
                 "".format(str(stream), repr(self.tied))
-            raise stream_error(msg)
+            raise stream.error(msg)
         if self.tied.binary != self.binary:
             msg = "expected tied stream to be {}, got {}" \
                 "".format("binary" if self.binary else "ascii",
                           "binary" if self.tied.binary else "ascii")
-            raise stream_error(msg)
+            raise stream.error(msg)
         if not self.binary and self.tied.delimiter != self.delimiter:
             msg = "expected tied stream to have the same delimiter '{}', got '{}'" \
                 "".format(self.delimiter, self.tied.delimiter)
-            raise stream_error(msg)
+            raise stream.error(msg)
 
     def _input_dtype(self):
         if self.binary:
@@ -279,7 +277,7 @@ class stream:
             if len(self.fields) != len(input_dtype.names):
                 msg = "expected same number of fields and format types, got '{}' and '{}'" \
                     "".format(','.join(self.fields), self.format)
-                raise stream_error(msg)
+                raise stream.error(msg)
         else:
             if self.fields == self.struct.fields:
                 input_dtype = self.struct.flat_dtype
