@@ -1,4 +1,4 @@
-import csv
-import io
-import util
-from comma.version import __version__
+from . import csv
+from . import io
+from . import util
+from .version import __version__
