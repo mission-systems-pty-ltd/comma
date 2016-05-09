@@ -138,7 +138,6 @@ function comma_execute_and_wait()
     # store existing traps for restoring on exit
     comma_execute_and_wait_saved_traps=$( trap )
     local cew_funcname="comma_execute_and_wait ($BASHPID)"
-    [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo -e "$cew_funcname: saved traps are:\n${comma_execute_and_wait_saved_traps[@]}" >&2
 
     # defaults
     local signal_list="TERM,INT,HUP"
@@ -176,6 +175,7 @@ function comma_execute_and_wait()
     # - if the command-to-execute is running, kill its process group
     # - restores the traps
     # - re-sends the trapped signal to itself
+    [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo -e "$cew_funcname: saved traps are:\n${comma_execute_and_wait_saved_traps[@]}" >&2
     local signal_to_handle
     for signal_to_handle in ${signal_list//,/ } ; do
         [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: setting trap on '$signal_to_handle'" >&2
