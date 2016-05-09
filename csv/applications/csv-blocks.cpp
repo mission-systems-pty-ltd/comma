@@ -390,7 +390,7 @@ int main( int ac, char** av )
         
         if( operation == "group" || operation == "make-blocks" )
         {
-            current_block = options.value< comma::uint32 >( "--starting-block,--from", 1 ); // default is 1
+            current_block = options.value< comma::uint32 >( "--starting-block,--from", 0 ); // default is 0
             
             std::string first_line;
             make_blocks_setup( options, first_line );
