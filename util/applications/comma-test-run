@@ -299,6 +299,15 @@ function error_()
 }
 export -f error_
 
+function error_and_junit_()
+{
+    error_ "$( echo -e "$1" | head -1 )" >&2
+    if [[ -n "$options_junit" && -d 'output' ]] ; then
+        echo -e "$1" >> 'output/junit.failure.log'
+    fi
+}
+export -f error_and_junit_
+
 function message_()
 {
     [[ "$options_quiet" != "1" ]] || return
@@ -556,7 +565,7 @@ function terminate_run_test_with_timeout()
         wait $comma_top_pgid
         unset comma_top_pgid
     fi
-    [[ -n "options_junit" ]] && echo "killed" > "output/junit.failure.log"
+    error_and_junit_ "Killed"
     # a process that exits in response to SIGINT should kill itself with SIGINT
     # see http://www.cons.org/cracauer/sigint.html
     [[ "$1" == "SIGINT" ]] && { trap - INT ; kill -SIGINT $BASHPID ; }
@@ -569,26 +578,30 @@ export -f terminate_run_test_with_timeout
 # finally echoes the result of comma-test-match and the status of the match
 function run_and_match_test()
 {
-    local test_failed match_output error_files
+    local test_failed error_files
 
-    rm -rf output || exit 1
-    mkdir -p output || exit 1
+    rm -rf output || { error_and_junit_ "Unable to remove 'output' directory" ; return 1 ; }
+    mkdir -p output || { error_and_junit_ "Unable to make 'output' directory" ; return 1 ; }
 
     {
-        if [ -f ./input ] ; then cat ./input ; fi | comma_env --import PYTHONPATH "$test_exec" "$path" $verbose $options_test_option
+        if [[ -f ./input ]] ; then cat ./input ; fi | comma_env --import PYTHONPATH "$test_exec" "$path" $verbose $options_test_option
         test_failed=$?
     } >'output/stdout.log' 2>'output/stderr.log'
     error_files="$( find . -name out_of_shared_memory )"
-    [[ -n "$error_files" ]] && return 1
+    [[ -n "$error_files" ]] && { error_and_junit_ "'out_of_shared_memory' files found" ; return 1 ; }
 
-    if [[ $test_failed != 0 ]]; then error_ "test exit with non-zero status: $test_failed" ; fi
-
-    if [[ $test_failed == 0 ]] ; then
-        #echo -e '\n# In comma-test-run before comma-test-match' >> 'output/stdout.log'
+    [[ $test_failed == 0 ]] || { error_and_junit_ "Test exited with non-zero status: $test_failed" ; return 1 ; }
+    [[ -e 'output' ]] || { error_and_junit_ "'output' directory does not exist" ; return 1 ; }
+    [[ -d 'output' ]] || { error_and_junit_ "'output' is not a directory" ; return 1 ; }
+    [[ -e 'output/stdout.log' ]] || { error_and_junit_ "'output/stdout.log' file does not exist" ; return 1 ; }
+    [[ -f 'output/stdout.log' ]] || { error_and_junit_ "'output/stdout.log' is not a file" ; return 1 ; }
+    
+    {
+        local match_output global_expected
+        echo -e '\n# In comma-test-run before comma-test-match' >> 'output/stdout.log'
         if [[ -f "./expected" ]] ; then
             match_output=$( comma-test-match ./expected <'output/stdout.log' 2>&1 )
         fi
-        local global_expected
         if [[ -n "$options_also_expected" && -f "./expected" ]] ; then
             for global_expected in $options_also_expected ; do
                 match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; comma-test-match "$global_expected" < 'output/stdout.log' 2>&1 )
@@ -599,19 +612,14 @@ function run_and_match_test()
                 match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; comma-test-match $global_expected < 'output/stdout.log' 2>&1 )
             done
         fi
-        #echo -e '\n# After comma-test-match in comma-test-run' >> 'output/stdout.log'
+        echo -e '\n# After comma-test-match in comma-test-run' >> 'output/stdout.log'
         if [[ -n "$match_output" ]]; then
-            error_ "$name: test output does not match expected:\n"
-            echo "expected output:" >&2
-            echo "$match_output" >&2
-            echo >&2
-            test_failed=1
+            error_and_junit_ "Test output does not match expected:\nexpected output:\n$match_output"
+            return 1
         fi
-    fi
-
-    [[ -n "$options_junit" && $test_failed != 0 ]] && echo "$match_output" > output/junit.failure.log
-
-    return $test_failed
+    }
+    
+    return 0
 }
 export -f run_and_match_test
 
@@ -780,7 +788,7 @@ function run_single_test()
                     } || {
                         result=1
                         error_ "$name: $dir: failed$( (( $test_failed == 124 )) && echo ' (likely timed out)' )"
-                        [[ -n "options_junit" && $test_failed == 124 ]] && echo "likely timed out" > "output/junit.failure.log"
+                        [[ -n "$options_junit" && $test_failed == 124 ]] && echo "likely timed out" >> "output/junit.failure.log"
                     }
                     break
                 else
@@ -812,7 +820,7 @@ function run_single_test()
                     fi
                 fi
             done
-            [[ -n "options_junit" && $result != 0 && ! -f "output/junit.failure.log" ]] && echo "internal error, see detailed log" > "output/junit.failure.log"
+            [[ -n "$options_junit" && $result != 0 && ! -f "output/junit.failure.log" ]] && echo "internal error, see detailed log" >> "output/junit.failure.log"
             cd "$basedir"
         fi
     fi
