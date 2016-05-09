@@ -120,13 +120,13 @@ def add_options( parser, defaults={} ):
     }
     option_defaults.update( defaults )
 
-    parser.add_argument( "-f", "--fields", default=option_defaults["fields"], metavar="<names>",
+    parser.add_argument( "--fields", "-f", default=option_defaults["fields"], metavar="<names>",
                          help=help_text( "field names of input stream", option_defaults["fields"] ))
 
-    parser.add_argument( "-b", "--binary", default=option_defaults["binary"], metavar="<format>",
+    parser.add_argument( "--binary", "-b", default=option_defaults["binary"], metavar="<format>",
                          help="format for binary stream (default: ascii)" )
 
-    parser.add_argument( "-d", "--delimiter", default=option_defaults["delimiter"], metavar="<char>",
+    parser.add_argument( "--delimiter", "-d", default=option_defaults["delimiter"], metavar="<char>",
                          help=help_text( "csv delimiter of ascii stream", option_defaults["delimiter"] ))
 
     parser.add_argument( "--precision", default=option_defaults["precision"], metavar="<precision>",
