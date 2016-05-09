@@ -7,6 +7,7 @@ import ast
 import comma.csv
 import comma.signal
 from comma.util.warning import warning
+from comma.util.help_formatter import argparse_fmt
 
 description = """
 evaluate numerical expressions and append computed values to csv stream
@@ -44,7 +45,7 @@ examples:
     echo 20150101T000000.000000 | %(prog)s --fields=t --format=t 'a=t+1;b=t-1' --output-format=2t
 
     # select output based on condition
-    ( echo 1,2 ; echo 1,3; echo 1,4 ) | %(prog)s --fields=a,b --format=2i "(a < b - 1) & (b < 4)" --select
+    ( echo 1,2 ; echo 1,3; echo 1,4 ) | %(prog)s --fields=a,b --format=2i --select="(a < b - 1) & (b < 4)"
 """
 
 numpy_functions = """
@@ -121,10 +122,6 @@ def add_csv_options(parser):
     parser.add_argument('--append-binary', '-B', help=argparse.SUPPRESS)
 
 
-def argparse_fmt(prog):
-    return argparse.RawTextHelpFormatter(prog, max_help_position=50)
-
-
 def get_args():
     parser = argparse.ArgumentParser(
         description=description,
@@ -154,8 +151,8 @@ def get_args():
         '--select',
         '--output-if',
         '--if',
-        action='store_true',
-        help='select and output records of input stream that satisfy condition')
+        metavar='<cond>',
+        help='select and output records of input stream that satisfy the condition')
     args = parser.parse_args()
     if args.help:
         if args.verbose:
@@ -185,10 +182,13 @@ def ingest_deprecated_options(args):
 
 
 def check_options(args):
-    if not args.expressions:
+    if not (args.expressions or args.select):
         raise csv_eval_error("no expressions are given")
     if args.binary and args.format:
         raise csv_eval_error("--binary and --format are mutually exclusive")
+    if args.select and args.expressions:
+        msg = "--select <cond> cannnot be used with 'expressions'"
+        raise csv_eval_error(msg)
     if args.select and (args.output_fields or args.output_format):
         msg = "--select cannot be used with --output-fields or --output-format"
         raise csv_eval_error(msg)
@@ -324,8 +324,8 @@ def evaluate(expressions, stream, dangerous=False):
         stream.output.write(output)
 
 
-def select(logical_expression, stream):
-    code = compile(logical_expression, '<string>', 'eval')
+def select(condition, stream):
+    code = compile(condition, '<string>', 'eval')
     restricted_numpy = numpy_env(restrict=True)
     is_shutdown = comma.signal.is_shutdown()
     while not is_shutdown:
@@ -341,7 +341,7 @@ def main():
     args = get_args()
     prepare_options(args)
     if args.select:
-        select(args.expressions, stream(args))
+        select(args.select, stream(args))
     else:
         evaluate(args.expressions.strip(';'), stream(args), dangerous=args.dangerous)
 
