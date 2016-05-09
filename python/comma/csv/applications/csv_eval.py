@@ -187,7 +187,7 @@ def check_options(args):
     if args.binary and args.format:
         raise csv_eval_error("--binary and --format are mutually exclusive")
     if args.select and args.expressions:
-        msg = "--select <cond> cannnot be used with 'expressions'"
+        msg = "--select <cond> cannot be used with 'expressions'"
         raise csv_eval_error(msg)
     if args.select and (args.output_fields or args.output_format):
         msg = "--select cannot be used with --output-fields or --output-format"
