@@ -34,5 +34,5 @@ if( NOT WIN32 )
 
 endif( NOT WIN32 )
 
-install( PROGRAMS zero-publish DESTINATION ${comma_INSTALL_BIN_DIR})
+install( PROGRAMS zero-publish io-tee-wrapper DESTINATION ${comma_INSTALL_BIN_DIR})
 

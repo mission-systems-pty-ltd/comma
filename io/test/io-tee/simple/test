@@ -40,7 +40,7 @@ function run_test()
     if [[ -z "$expected" ]]; then > $expected_file; else echo -e "$expected" > $expected_file; fi
     echo "test: $test_name: command is: $@" >&2
     echo "$test_name/command=\"$( io-tee --dry $options out -- "$@" | sed 's/"/(DQUOTE)/g'"; s/'/(SQUOTE)/g" )\""
-    cat $input | io-tee $options $tee_file $dashdash "$@" > $stdout_file
+    cat $input | io-tee-wrapper $options $tee_file $dashdash "$@" > $stdout_file
     if [[ $? != 0 ]]; then
         echo "test: io-tee call failed" >&2
         echo "$test_name/io_tee/status_ok=\"false\""
@@ -62,7 +62,7 @@ function run_test()
     if [[ -n "$options" ]]; then
         # try arguments in a different order
         local tee_file2="${tee_file}2"
-        cat $input | io-tee $tee_file2 $options $dashdash "$@" > /dev/null
+        cat $input | io-tee-wrapper $tee_file2 $options $dashdash "$@" > /dev/null
         if [[ $? != 0 ]]; then
             echo "test: io-tee call #2 failed: io-tee $tee_file2 $options $dashdash $@" >&2
             echo "$test_name/io_tee/status2_ok=\"false\""
