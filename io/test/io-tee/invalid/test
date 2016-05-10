@@ -1,7 +1,7 @@
 #!/bin/bash
 
 cd output
-echo | io-tee out "some_illegal_command" > /dev/null
+echo | io-tee-wrapper out "some_illegal_command" > /dev/null
 status=$?
 echo "test: output status of io-tee: $status" >&2
 if [[ $status != 0 ]]; then
