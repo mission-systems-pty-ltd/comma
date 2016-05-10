@@ -55,49 +55,44 @@ void usage( bool verbose = false )
     std::cerr << std::endl;
     std::cerr << "buffer stdin data to synchronised output data to stdout using a file lock" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "usage: io-buffer <in|out> --lock-file <file> [--buffer-size <size>] [--lines <num>]" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "<address>" << std::endl;
-    std::cerr << "    local:<path>: local socket" << std::endl;
-    std::cerr << "    tcp:<host>:<port>: tcp socket" << std::endl;
-    std::cerr << "    udp:<port>: udp socket" << std::endl;
-    std::cerr << "    zmp-<protocol>:<address>: zmq (todo)" << std::endl;
-    std::cerr << "    <filename>: file" << std::endl;
-    std::cerr << "    <fifo>: named pipe" << std::endl;
-    std::cerr << "    -: stdin" << std::endl;
+    std::cerr << "usage: io-buffer <in|out> --lock-file <file> [--size <size>] [--lines <num>] --buffer-size <size>" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
-    std::cerr << "    --flush,unbuffered,-u: flush output" << std::endl;
-    std::cerr << "    --round-robin=[<number of packets>]: todo: only for multiple inputs: read not more" << std::endl;
-    std::cerr << "                                         than <number of packets> from an input at once," << std::endl;
-    std::cerr << "                                         before checking other inputs" << std::endl;
-    std::cerr << "                                         if not specified, read from each input" << std::endl;
-    std::cerr << "                                         all available data" << std::endl;
-    std::cerr << "                                         ignored for udp streams, where one full udp" << std::endl;
-    std::cerr << "                                         packet at a time is always read" << std::endl;
-    std::cerr << "    --size,-s=[<size>]: packet size, if binary data (required only for multiple sources)" << std::endl;
+    std::cerr << " *  --lock-file,--lock=: an exiting or new filepath to be used as a file lock, content will be truncated if it exists." << std::endl;
+    std::cerr << "    --lines,-n=[<num>]: for line based text input data, buffers number of lines before attempting to write to stdout, default is 1" << std::endl;
+    std::cerr << "    --size,-s=[<bytes>]: for binary input data, where each message is of size x in bytes" << std::endl;
+    std::cerr << "    --buffer-size,-b=[<size>]: for binary input data, binary storage to store multiple of x sized messages." << std::endl;
+    std::cerr << "                                  see --size and buffer size suffixes below." << std::endl;
+    std::cerr << "                                  if not specified, no buffering of binary messages, each is written to stdout." << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "operations" << std::endl;
+    std::cerr << "    out: read in standard input, attempt to write to stdout when buffer is full." << std::endl;
+    std::cerr << "    in: read in standard input, if buffer is full then write to standard output and exits" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "<buffer size suffixes>" << std::endl;
+    std::cerr << "    Mb: megabytes e.g. 5Mb" << std::endl;
+    std::cerr << "    Kb: kilobytes e.g. 10Kb" << std::endl;
+    std::cerr << "    no suffix: bytes e.g. 256" << std::endl;
     std::cerr << std::endl;
     std::cerr << "supported address types: tcp, udp, local (unix) sockets, named pipes, files, zmq (todo)" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    single stream" << std::endl;
-    std::cerr << "        io-cat tcp:localhost:12345" << std::endl;
-    std::cerr << "        io-cat udp:12345" << std::endl;
-    std::cerr << "        io-cat local:/tmp/socket" << std::endl;
-    std::cerr << "        io-cat some/pipe" << std::endl;
-    std::cerr << "        io-cat some/file" << std::endl;
-    std::cerr << "        io-cat zmq-local:/tmp/socket (not implemented)" << std::endl;
-    std::cerr << "        io-cat zmq-tcp:localhost:12345 (not implemented)" << std::endl;
-    std::cerr << "        echo hello | io-cat -" << std::endl;
+    std::cerr << "out operation" << std::endl;
+    std::cerr << "    text based input" << std::endl;
+    std::cerr << "        io-buffer out --lock-file=/tmp/lockfile " << std::endl;
+    std::cerr << "          Read each input line and write to standard output, no buffering" << std::endl;
+    std::cerr << "        io-buffer out --lock-file=/tmp/lockfile --lines=3" << std::endl;
+    std::cerr << "          Read each input line into the buffer that can store up to 3 lines" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    multiple streams" << std::endl;
-    std::cerr << "        merge line-based input" << std::endl;
-    std::cerr << "            io-cat tcp:localhost:55555 tcp:localhost:88888" << std::endl;
-    std::cerr << "        merge binary input with packet size 100 bytes" << std::endl;
-    std::cerr << "            io-cat tcp:localhost:55555 tcp:localhost:88888 --size 100" << std::endl;
-    std::cerr << "        merge line-based input with stdin" << std::endl;
-    std::cerr << "            echo hello | io-cat tcp:localhost:55555 -" << std::endl;
+    std::cerr << "    binary input" << std::endl;
+    std::cerr << "        io-buffer out --lock-file=/tmp/lockfile --size 512 " << std::endl;
+    std::cerr << "          Read each input message of 512 bytes and writes to standard output, no buffering" << std::endl;
+    std::cerr << "        io-buffer out --lock-file=/tmp/lockfile --size 512 --buffer-size 10kb " << std::endl;
+    std::cerr << "          Read each input message of 512 bytes and saves into 10Kb buffer (20 messages maximum). If buffer is full, output buffer." << std::endl;
+    std::cerr << "in operation" << std::endl;
+    std::cerr << "          See 'out' operation, in this mode, the program write to standard output and exits when buffer is full." << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -181,7 +176,7 @@ int main( int argc, char** argv )
         // Check the lockfile can be opened and  truncated
         {
             std::ofstream  lockfile( lockfile_path.c_str(), std::ios::trunc | std::ios::out );
-            if( !lockfile.is_open() ) { std::cerr << name() << "failed to open lockfile: " << lockfile << std::endl; return 1; }
+            if( !lockfile.is_open() ) { std::cerr << name() << "failed to open lockfile: " << lockfile_path << std::endl; return 1; }
             lockfile.close();
         }
         
