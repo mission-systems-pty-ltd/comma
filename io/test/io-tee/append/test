@@ -3,7 +3,7 @@
 file1="output/file1.txt"
 file2="output/file2.txt"
 echo "some existing text" > $file1
-io-tee-wrapper $file1 --append -- grep 1 | grep 2 > $file2
+io-tee $file1 --append -- grep 1 | grep 2 > $file2
 cat $file1 | gawk '{ print "io_tee/line[" NR "]=\"" $0 "\""; }'
 cat $file2 | gawk '{ print "stdout/line[" NR "]=\"" $0 "\""; }'
 
