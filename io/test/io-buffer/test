@@ -1,0 +1,58 @@
+#!/bin/bash
+
+dir=output
+
+mkdir -p $dir
+
+cat >$dir/test.csv
+csv-to-bin 's[1],4ui' <$dir/test.csv >$dir/test.bin
+
+
+lockfile=$dir/lockfile
+message_size=17
+
+# Closes file descriptor 3
+function clean()
+{
+    exec 3>&-
+}
+trap clean EXIT
+
+function run_test()
+{
+    local format=$1     # Set for binary data
+    local args="$2"
+    local test_tag=$3
+    local md5sum_check=$4
+
+    local input_file=$dir/test.csv
+    [[ -n "$format" ]] && input_file=$dir/test.bin
+
+    if [[ -n "$md5sum_check" ]] ; then    
+        local data=$( io-buffer $args --lock-file $lockfile <$input_file )
+        echo $test_tag/md5sum=\"$( md5sum <<<"$data" | cut -d ' ' -f1 )\"
+
+    else
+        exec 3<> $input_file
+        for i in {1..5} ; do
+            io-buffer $args --lock-file $lockfile <&3 \
+                | if [[ -n "$format" ]] ; then csv-from-bin "$format" ; else cat; fi \
+                | sed 's#\(.*\)#"\1"#'";s#^#$test_tag/run[$i]=#;"
+        done | gawk '{ print "line["NR"]/"$0; }'
+        exec 3>&-
+    fi
+}
+
+run_test '' "out --lines=1"     ascii/no_buffering md5sum
+run_test '' "out --lines=3"     ascii/buffering_3_lines md5sum
+run_test '' "out --lines=30"    ascii/buffering_30_lines md5sum
+run_test 's[1],4ui' "out --size=17" binary/no_buffering md5sum
+run_test 's[1],4ui' "out --size=17 --buffer-size=34" binary/buffering_2_messages md5sum
+run_test 's[1],4ui' "out --size=17 --buffer-size=56" binary/buffering_3_messages md5sum
+run_test 's[1],4ui' "out --size=17 --buffer-size=1KB" binary/buffering_1Kb md5sum
+run_test 's[1],4ui' "out --size=17 --buffer-size=1MB" binary/buffering_1Mb md5sum
+
+
+run_test '' "in --lines=1"  ascii/in_operation/no_buffering
+run_test '' "in --lines=3"  ascii/in_operation/buffering_3_lines
+run_test '' "in --lines=30" ascii/in_operation/buffering_30_lines
