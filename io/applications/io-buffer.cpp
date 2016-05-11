@@ -131,6 +131,20 @@ static comma::uint64 get_buffer_size( const std::string& str )
     return bytes;
 }
 
+using boost::interprocess::file_lock;
+using boost::interprocess::scoped_lock;
+static void output_binary( file_lock& lock )
+{
+    scoped_lock< file_lock > filelock( lock );  // Blocks until it has the lock
+    std::cout.write( &(binary_buffer.get()[0]), binary_buffer->size() );
+}
+
+static void output_text( file_lock& lock )
+{
+    scoped_lock< file_lock > filelock( lock );  // Blocks until it has the lock
+    for( std::size_t i=0; i<lines_buffer->size(); ++i ) { std::cout << lines_buffer.get()[i] << std::endl;  }
+}
+
 int main( int argc, char** argv )
 {
     try
@@ -189,69 +203,93 @@ int main( int argc, char** argv )
             lockfile.close();
         }
         
-        using boost::interprocess::file_lock;
-        using boost::interprocess::scoped_lock;
         file_lock lock( lockfile_path.c_str() );     // Note lock file must exists or an exception with crytic message is thrown 
-        if( has_size ) 
-        { 
-            binary_buffer = char_buffer_t();
-            binary_buffer->reserve( buffer_size );
-            while( true )
+        if( operation.front() == "in" )
+        {
             {
-                char_buffer_t message( message_size );
-                std::cin.read( &message[0], message_size );
-                if( !std::cin.good() || std::cin.eof() ) { break; }
-                binary_buffer->insert( binary_buffer->end(), message.begin(), message.end() );  // can't use emplace_back
-                
-                if( binary_buffer->size() >= buffer_size )
+                scoped_lock< file_lock > filelock(lock);
+                if( has_size ) 
                 {
-                    std::cerr << "io-buffer: binary buffer filled at size " << binary_buffer->size() << std::endl;
-                    scoped_lock< file_lock > filelock( lock );  // Blocks until it has the lock
-                    std::cout.write( &(binary_buffer.get()[0]), binary_buffer->size() );
-                    binary_buffer->clear();
-                    
-                    if( in_operation ) { return 0; }
+                    while( true )
+                    {
+                        char_buffer_t message( message_size );
+                        std::cin.read( &message[0], message_size );
+                        if( !std::cin.good() || std::cin.eof() ) { break; }
+                        binary_buffer->insert( binary_buffer->end(), message.begin(), message.end() );  // can't use emplace_back
+                        
+                        if( binary_buffer->size() >= buffer_size ) { break; }
+                        
+                    }
+                }
+                else
+                {
+                    while( std::cin.good() && !std::cin.eof() )
+                    {
+                        std::string line;
+                        std::getline( std::cin, line );
+                        if( !line.empty() ) { lines_buffer->push_back( line ); }
+                        
+                        if( lines_buffer->size() >= lines_num ) { break; }
+                    }
                 }
             }
-            
-            if( !binary_buffer->empty() )
+            if( has_size && !binary_buffer->empty() ) 
             {
-                std::cerr << "io-buffer: binary buffer at end size " << binary_buffer->size() << std::endl;
-                scoped_lock< file_lock > filelock( lock );  // Blocks until it has the lock
+                std::cerr << "io-buffer: binary buffer output at size " << binary_buffer->size() << std::endl;
                 std::cout.write( &(binary_buffer.get()[0]), binary_buffer->size() );
-                binary_buffer->clear();
+                return 0;
+            }
+            else if( !lines_buffer->empty() )
+            {
+                std::cerr << "io-buffer: lines buffer output at size " << lines_buffer->size() << std::endl;
+                for( std::size_t i=0; i<lines_buffer->size(); ++i ) { std::cout << lines_buffer.get()[i] << std::endl;  }
+                return 0;
             }
         }
         else
         {
-            lines_buffer = std::vector< std::string >();
-            lines_buffer->reserve( lines_num );
-            std::cerr << "io-buffer: create lines buffer of size " << lines_num << std::endl;
-            while( std::cin.good() && !std::cin.eof() )
-            {
-                std::string line;
-                std::getline( std::cin, line );
-                if( !line.empty() ) { lines_buffer->push_back( line ); }
-                
-                if( lines_buffer->size() >= lines_num )
+            if( has_size ) 
+            { 
+                binary_buffer = char_buffer_t();
+                binary_buffer->reserve( buffer_size );
+                while( true )
                 {
-                    std::cerr << "io-buffer: lines buffer filled at size " << lines_buffer->size() << std::endl;
-                    scoped_lock< file_lock > filelock( lock );  // Blocks until it has the lock
-                    for( std::size_t i=0; i<lines_buffer->size(); ++i ) { std::cout << lines_buffer.get()[i] << std::endl;  }
-                    lines_buffer->clear();
+                    char_buffer_t message( message_size );
+                    std::cin.read( &message[0], message_size );
+                    if( !std::cin.good() || std::cin.eof() ) { break; }
+                    binary_buffer->insert( binary_buffer->end(), message.begin(), message.end() );  // can't use emplace_back
                     
-                    if( in_operation ) { return 0; }
+                    if( binary_buffer->size() >= buffer_size )
+                    {
+                        std::cerr << "io-buffer: binary buffer filled at size " << binary_buffer->size() << std::endl;
+                        output_binary(lock);
+                        binary_buffer->clear();
+                    }
                 }
+                
+                if( !binary_buffer->empty() ) { output_binary(lock); }
             }
-            
-            if( !output_last && !lines_buffer->empty() )
+            else
             {
-                std::cerr << "io-buffer: lines buffer at end size " << lines_buffer->size() << std::endl;
-                scoped_lock< file_lock > filelock( lock );  // Blocks until it has the lock
-                for( std::size_t i=0; i<lines_buffer->size(); ++i ) { std::cout << lines_buffer.get()[i] << std::endl;  }
-                lines_buffer->clear();
+                lines_buffer = std::vector< std::string >();
+                lines_buffer->reserve( lines_num );
+                std::cerr << "io-buffer: create lines buffer of size " << lines_num << std::endl;
+                while( std::cin.good() && !std::cin.eof() )
+                {
+                    std::string line;
+                    std::getline( std::cin, line );
+                    if( !line.empty() ) { lines_buffer->push_back( line ); }
+                    
+                    if( lines_buffer->size() >= lines_num )
+                    {
+                        std::cerr << "io-buffer: lines buffer filled at size " << lines_buffer->size() << std::endl;
+                        output_text(lock);
+                        lines_buffer->clear();
+                    }
+                }
+                
+                if( !output_last && !lines_buffer->empty() ) { output_text(lock); }
             }
-            
         }
         return 0;
     }
