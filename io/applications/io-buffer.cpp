@@ -93,6 +93,7 @@ void usage( bool verbose = false )
     std::cerr << "          Read each input message of 512 bytes and saves into 10Kb buffer (20 messages maximum). If buffer is full, output buffer." << std::endl;
     std::cerr << "in operation" << std::endl;
     std::cerr << "          See 'out' operation, in this mode, the program write to standard output and exits when buffer is full." << std::endl;
+    std::cerr << "          Call io-buffer multiple times to read more input data." << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -151,7 +152,15 @@ int main( int argc, char** argv )
         #endif
         if( operation.empty() ) { std::cerr << "io-buffer: please specify operation" << std::endl; return 1; }
         else if ( operation.front() == "out" ){ }
-        else if ( operation.front() == "in" ){ in_operation = true; }
+        else if ( operation.front() == "in" )
+        { 
+#ifdef WIN32
+    std::cerr << "io-buffer: not implemented on windows" << std::endl; return 1;
+#endif // #ifdef WIN32
+            in_operation = true; 
+            
+            ::setvbuf( stdin, (char *)NULL, _IONBF, 0 );
+        }
         else { std::cerr  << "unknown operation found: " << operation.front() << std::endl; return 1; }
         
         if( options.exists("--lines,-n") && options.exists("--size,-s") ) { std::cerr << name() << " option --lines(|-n) is not compatible with --size(|-s)." << std::endl; return 1; }
