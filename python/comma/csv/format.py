@@ -1,6 +1,6 @@
 import re
 from collections import OrderedDict
-from comma.csv.time import NUMPY_TYPE as numpy_datetime_type
+from .time import NUMPY_TYPE as numpy_datetime_type
 
 
 class format_error(Exception):

@@ -16,6 +16,9 @@ class help_formatter(argparse.RawTextHelpFormatter):
 
 
 def argparse_fmt(prog):
+    """
+    use this funciton as formatter_class in argparse.ArgumentParser
+    """
     try:
         return help_formatter(prog)
     except:
