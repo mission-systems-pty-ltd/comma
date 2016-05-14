@@ -301,9 +301,12 @@ export -f error_
 
 function error_and_junit_()
 {
-    error_ "$( echo -e "$1" | head -1 )" >&2
+    local -r error_and_junit_formatted="$( echo -e "$1" )"
+    error_ "$( head -1 <<< "$error_and_junit_formatted" )"
+    local -r error_and_junit_formatted_tail="$( tail -n +2 <<< "$error_and_junit_formatted" )"
+    [[ -z "$error_and_junit_formatted_tail" ]] || cat >&2 <<< "$error_and_junit_formatted_tail"
     if [[ -n "$options_junit" && -d 'output' ]] ; then
-        echo -e "$1" >> 'output/junit.failure.log'
+        cat >> 'output/junit.failure.log' <<< "$error_and_junit_formatted"
     fi
 }
 export -f error_and_junit_
