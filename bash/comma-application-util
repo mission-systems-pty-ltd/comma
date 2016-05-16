@@ -168,3 +168,36 @@ function comma_status_ok_verbose()
     return 1
 }
 export -f comma_status_ok_verbose
+
+
+#   invoke io-tee with the text of exported bash functions prepended to command
+#
+#   if command is an application, it is preferable to use io-tee directly
+#
+#   the call signature is exactly the same as that of io-tee (run io-tee -h)
+#
+#   rationale:
+#      io-tee on ubuntu 16.04 fails to work with exported bash functions
+#      due to a bug in bash 4.3.42 and/or lunux function popen()
+#      comma_tee_function passes exported functions in the bash environment to io-tee
+#      hence enabling io-tee to use user-defined bash functions
+function comma_tee_function()
+{
+    local -i file_and_options_end=1 # file is the required first argument of io-tee-worker, so if -- is not present, 1 is the correct index value
+    local -i i
+    for(( i = 1; i <= $#; i++ )); do
+        if [[ "${!i}" == "--" ]]; then
+            file_and_options_end=i
+            break
+        fi
+    done
+
+    local file_and_options=( "${@:1:$file_and_options_end}" )
+    local command="${@:$(( file_and_options_end + 1 )):1}"
+    local command_args=( "${@:$(( file_and_options_end + 2 ))}" )
+
+    local functions="$( declare -fx )"
+
+    io-tee "${file_and_options[@]}" "$functions ${functions:+;} $command" "${command_args[@]}"
+}
+export -f comma_tee_function
