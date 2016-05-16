@@ -110,7 +110,7 @@ def add_csv_options(parser):
         '-o',
         default='',
         metavar='<names>',
-        help="field names of output stream (by default, inferred from expressions)")
+        help="do not infer output fields from expressions; use specified fields instead")
     parser.add_argument(
         '--output-format',
         default='',
