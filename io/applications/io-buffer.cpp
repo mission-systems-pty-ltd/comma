@@ -109,6 +109,7 @@ typedef boost::optional< char_buffer_t > binary_buffer_type;
 
 lines_buffer_type lines_buffer;
 binary_buffer_type binary_buffer;
+static bool verbose = false;
 
 static comma::uint64 get_buffer_size( const std::string& str )
 {
@@ -118,7 +119,7 @@ static comma::uint64 get_buffer_size( const std::string& str )
     for( std::size_t i=0; i<str.size(); ++i) { 
         if( std::isdigit(str[i]) ) { digits += str[i]; } else  { type = str.substr( i ); break; }
     }
-    std::cerr << "digits: " << digits << " type: " << type << std::endl;
+//     std::cerr << "digits: " << digits << " type: " << type << std::endl;
     
     comma::uint64 bytes = 0;
     try { bytes = boost::lexical_cast< comma::uint64 >( digits ); } 
@@ -127,6 +128,7 @@ static comma::uint64 get_buffer_size( const std::string& str )
     if( type.empty() ){ }
     else if ( boost::iequals(type, "mb") ) { bytes *= 1024000; }
     else if ( boost::iequals(type, "kb") ) { bytes *= 1024; }
+    else { std::cerr << name() << "failed to parse buffer size argument: '" << str << "', please see --help" << std::endl;  }
     
     return bytes;
 }
@@ -157,7 +159,7 @@ int main( int argc, char** argv )
         boost::optional< std::string > buffer_size_string = options.optional< std::string >( "--buffer-size,-b" );
         const std::vector< std::string >& operation = options.unnamed( "--lines,--buffer-size,--lock-file,--lock", "-.+" );
         
-        bool verbose = options.value( "--verbose,-v", true );
+        verbose = options.value( "--verbose,-v", true );
         if( verbose ) { std::cerr << name() << ": called as: " << options.string() << std::endl; }
 
         bool in_operation = false;

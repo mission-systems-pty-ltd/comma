@@ -1,0 +1,94 @@
+#!/bin/bash
+
+source $( type -p comma-sync-util ) || exit 1
+
+output_dir="output"
+mkdir -p "$output_dir" || exit 1
+
+lockfile=$( mktemp --tmpdir=$output_dir test_comma_sync_util.lock.XXXXXXXX )
+output_lockfile=$( mktemp --tmpdir=$output_dir test_output_lockfile.lock.XXXXXXXX )
+
+function capture_output()
+{
+    nl -ba | sed -r "s#[^0-9]*([0-9]+)[ \t]*(.*)#$1/output/line[\1]=\"\2\"#"
+}
+
+function lock_fn()
+{
+    if [[ $1 =~ [0-9]+ ]]; then
+        local sleep=$1
+        shift
+    fi
+    local note=$@
+    [[ -n $note ]] && note+=" "
+
+    #echo "lock_fn ${note}starting"
+    [[ -n "$sleep" ]] && sleep $sleep
+    $note
+    #echo "lock_fn ${note}done"
+}
+
+function run_test()
+{
+    local test_name=$1
+    shift
+    local test_fn=$@
+    {
+        echo "test starting"
+        $test_fn
+        local status=$?
+        echo "test finished"
+        return $status
+    } | capture_output $test_name
+    local status=${PIPESTATUS[0]}
+    [[ -f $lockfile ]] && rm $lockfile
+    echo "$test_name/exit_status=$status"
+}
+
+function test_comma_locked_single()
+{
+    comma_locked $lockfile lock_fn 0
+}
+
+# Verify that a second lock waits for the first to release
+function test_comma_locked_double()
+{
+    # The first sleep time must be longer than the second for the test to prove anything
+    local sleep_1=5
+    local sleep_2=2
+    
+    comma_locked $lockfile lock_fn $sleep_1 first &
+    sleep $sleep_2                 # allow time to grab the lock
+    comma_locked $lockfile lock_fn 0 second
+}
+
+
+export -f lock_fn
+num_procs=4
+
+# Input data has fields id,block,index format 's[1],ui,ui'
+inputs=$( cat )
+
+echo "$inputs" | capture_output csv_parallel/sorted
+input_md5sum="$( sort <<<"$inputs" | md5sum |  cut -d ' ' -f1 )"
+
+# Run parallel processes multiple times if need, the outputs will not be the same as inputs
+for i in {1..10}; do
+    # Running the parallel sub processes in xargs
+    # The line order in outputs is mixed up
+    outputs=$( echo "$inputs" | comma_parallel_with_csv_blocks $lockfile 20 $num_procs ',,index' "comma_locked $output_lockfile lock_fn 0.1 cat" )
+    unsorted="$( md5sum <<<"$outputs" |  cut -d ' ' -f1 )"  # An unknown md5sum because lines are mixed up
+
+    # The order of the output lines may be mixed, because of the 0.1s sleep, we need to sort to get back a consistent output
+    sorted="$( sort <<<"$outputs" | md5sum |  cut -d ' ' -f1 )"     # A md5sum exactly matching input_md5sum expected
+    if [[ $input_md5sum != $unsorted && $sorted == $input_md5sum ]] ; then 
+        echo mixed_output_lines=1;  # Success, they did not match
+        echo "$outputs" | capture_output csv_parallel/unsorted
+        break ; 
+    fi 
+done
+
+# These two should match
+echo input/md5sum=\"$input_md5sum\"
+echo output_sorted/md5sum=\"$sorted\"
+
