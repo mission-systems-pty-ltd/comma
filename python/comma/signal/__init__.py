@@ -1,7 +1,7 @@
 import signal
 import sys
 
-MANAGED_SIGNALS = tuple([signal.SIGINT, signal.SIGTERM, signal.SIGHUP])
+MANAGED_SIGNALS = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
 
 
 class is_shutdown(object):
