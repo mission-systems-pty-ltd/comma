@@ -146,7 +146,7 @@ class stream(object):
             if self.missing_dtype[name] == np.dtype(csv_time.NUMPY_TYPE):
                 try:
                     self._missing_data[name] = csv_time.to_numpy(value)
-                except:
+                except Exception:
                     self._missing_data[name] = value
             else:
                 self._missing_data[name] = value
