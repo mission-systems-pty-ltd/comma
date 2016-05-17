@@ -65,6 +65,8 @@ static void show_help( bool verbose = false )
         << "Note that only single commands are supported; to run multiple commands (or a pipeline), put them inside a bash function:" << std::endl
         << "*** IMPORTANT *** use \"export -f function_name\" to make the function visible to " << app_name << "." << std::endl
         << "Remember that " << app_name << " will not have access to the unexported variables, so pass any required values as function arguments." << std::endl
+        << "On Ubuntu 16.04, io-tee might fail to discover a bash function even if it is exported." << std::endl
+        << "In this case, comma_tee_function defined in comma-application-util should be used." << std::endl
         << std::endl
         << "If any options are used (such as --unbuffered), \"--\" must precede the command." << std::endl
         << std::endl
