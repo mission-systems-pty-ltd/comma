@@ -1,0 +1,73 @@
+#!/bin/bash
+
+scriptname="comma_application_util_test"
+
+source $( which comma-application-util ) || { printf "%s could not source comma-application-util" $scriptname >&2 ; exit 1 ; } 
+
+result=$( comma_path_valid_variable_paths <<< '' )
+printf "test[0]/code=%d\n" $? 
+
+result=$( comma_path_valid_variable_paths <<< 'a=1' )
+printf "test[1]/code=%d\n" $?
+printf "test[1]/result=\"%s\"\n" $( tr '\n' @ <<< "$result" )
+
+result=$( comma_path_valid_variable_paths <<< 'a=1
+b=2' )
+printf "test[2]/code=%d\n" $?
+printf "test[2]/result=\"%s\"\n" $( tr '\n' @ <<< "$result" )
+
+result=$( comma_path_valid_variable_paths <<< 'aaa=1' )
+printf "test[3]/code=%d\n" $?
+printf "test[3]/result=\"%s\"\n" $( tr '\n' @ <<< "$result" )
+
+result=$( comma_path_valid_variable_paths <<< 'a1=1
+b2=2
+a_=1
+_b=2
+c_d=3
+ef__=4
+__gh=5' )
+printf "test[4]/code=%d\n" $?
+printf "test[4]/result=\"%s\"\n" $( tr '\n' @ <<< "$result" )
+
+# maybe this should not be legal but it is
+result=$( comma_path_valid_variable_paths <<< 'a=' )
+printf "test[5]/code=%d\n" $?
+printf "test[5]/result=\"%s\"\n" $( tr '\n' @ <<< "$result" )
+
+result=$( comma_path_valid_variable_paths <<< 'a=1
+2b=0
+3_=0
+_4=2' )
+printf "test[6]/code=%d\n" $?
+printf "test[6]/result=\"%s\"\n" $( tr '\n' @ <<< "$result" )
+
+result=$( comma_path_valid_variable_paths <<< 'a' )
+printf "test[7]/code=%d\n" $?
+printf "test[7]/result=\"%s\"\n" $( tr '\n' @ <<< "$result" )
+
+# maybe some of these should not be legal but they are
+result=$( comma_path_valid_variable_paths <<< 'a/b=1
+c/=2
+/=3
+/d=4
+e/_=5
+f_/_g=6' )
+printf "test[8]/code=%d\n" $?
+printf "test[8]/result=\"%s\"\n" $( tr '\n' @ <<< "$result" )
+
+#INVALIDS
+
+result=$( comma_path_invalid_variable_paths <<< 'a=1
+2b=0
+3_=0
+_4=2' )
+printf "inv[1]/code=%d\n" $?
+printf "inv[1]/result=\"%s\"\n" $( tr '\n' @ <<< "$result" )
+
+result=$( comma_path_invalid_variable_paths <<< 'a
+/
+=' )
+printf "inv[2]/code=%d\n" $?
+printf "inv[2]/result=\"%s\"\n" $( tr '\n' @ <<< "$result" )
+
