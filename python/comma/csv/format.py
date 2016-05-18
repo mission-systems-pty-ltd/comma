@@ -33,7 +33,7 @@ def numpy_string_type(comma_string_type):
 
 def numpy_type(comma_type, strict=False):
     type = NUMPY_TYPE_FROM_COMMA_TYPE.get(comma_type) or numpy_string_type(comma_type)
-    if type is None:
+    if strict and type is None:
         known_types = ', '.join(TYPES)
         message = "'{}' is not among known types: {}".format(comma_type, known_types)
         raise format_error(message)
