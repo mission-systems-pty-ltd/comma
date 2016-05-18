@@ -182,7 +182,7 @@ export -f comma_path_value_select
 # be passed onto comma_path_value_select and comma_path_value_to_var
 function comma_path_valid_variable_paths()
 {
-    sed -e '/^[[:alpha:]][_/[:alnum:]]*=/ ! d'
+    sed -e '/^[_[:alpha:]][_/[:alnum:]]*=/ ! d'
 }
 export -f comma_path_valid_variable_paths
 
@@ -190,7 +190,7 @@ export -f comma_path_valid_variable_paths
 # be passed onto comma_path_value_select and comma_path_value_to_var
 function comma_path_invalid_variable_paths()
 {
-    sed -e '/^[[:alpha:]][_/[:alnum:]]*=/ d'
+    sed -e '/^[_[:alpha:]][_/[:alnum:]]*=/ d'
 }
 export -f comma_path_invalid_variable_paths
 
