@@ -426,7 +426,7 @@ class test_stream(unittest.TestCase):
     def test_ascii_simple_single_field(self):
         s = comma.csv.struct('x', 'f8')
         t = comma.csv.stream(s)
-        self.assertEqual(t.input_dtype, np.dtype([('x', 'f8')]))
+        self.assertEqual(t.input_dtype, np.dtype([('f0', 'f8')]))
         self.assertDictEqual(t.ascii_converters, {})
         self.assertTupleEqual(t.usecols, (0,))
         self.assertEqual(t.filling_values, None)
@@ -439,7 +439,7 @@ class test_stream(unittest.TestCase):
     def test_ascii_simple_multiple_fields(self):
         s = comma.csv.struct('x,y,z', 'f8', 'f8', 'f8')
         t = comma.csv.stream(s)
-        self.assertEqual(t.input_dtype, np.dtype([('x', 'f8'), ('y', 'f8'), ('z', 'f8')]))
+        self.assertEqual(t.input_dtype, np.dtype([('f0', 'f8'), ('f1', 'f8'), ('f2', 'f8')]))
         self.assertDictEqual(t.ascii_converters, {})
         self.assertTupleEqual(t.usecols, (0, 1, 2))
         self.assertTupleEqual(t.filling_values, ('', '', ''))
