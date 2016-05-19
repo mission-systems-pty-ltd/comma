@@ -195,7 +195,7 @@ comma::uint32 memory_buffer::read_binary_records( comma::uint32 size, comma::uin
         bytes_read +=  ::fread( &buffer[bytes_read], 1, bytes_to_read - bytes_read, stdin );
     }
     
-    if ( bytes_read == 0 ) { exit( EX_NOINPUT ); } // signals end of stream, not an error
+    if ( bytes_read <= 0 ) { return bytes_read; } // signals end of stream, not an error
     
     if( bytes_read % one_record_size != 0 ) { std::cerr << name() << "expected " << one_record_size << " bytes, got only read: " << ( bytes_read % one_record_size ) << std::endl; exit( 1 ); } 
     if ( strict && (bytes_read < bytes_to_read) ) { std::cerr << name() << "expected " << bytes_to_read << " bytes (" << ( bytes_to_read / one_record_size  ) << " records); got only: " << bytes_read << " bytes (" << ( bytes_read / one_record_size ) << " records)" << std::endl; exit( 1 ); } 
@@ -216,7 +216,7 @@ int main( int argc, char** argv )
         const std::vector< std::string >& operation = options.unnamed( "--help,-h,--verbose,-v,--strict", "-.+" );
         
         strict = options.exists("--strict");
-        verbose = options.value( "--verbose,-v", true );
+        verbose = options.value( "--verbose,-v", false );
         if( verbose ) { std::cerr << name() << ": called as: " << options.string() << std::endl; }
 
         bool in_operation = false;
@@ -272,10 +272,11 @@ int main( int argc, char** argv )
                 if( has_size ) 
                 {
                     memory_buffer memory(message_size);
-                    while( true )
+                    while( !::feof( stdin ) && !::ferror(stdin) )
                     {
                         // Read one message
-                        memory.read_binary_records( message_size, 1, strict );
+                        comma::uint32 bytes = memory.read_binary_records( message_size, 1, strict );
+                        if( bytes == 0 ) { break; }
                         // Put message into buffer
                         binary_buffer->insert( binary_buffer->end(), memory.buffer, memory.buffer + memory.size );  // can't use emplace_back
                         // if buffer is filled

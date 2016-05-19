@@ -25,6 +25,9 @@ function run_test()
     local test_tag=$3
     local md5sum_check=$4
 
+    echo
+    echo "# $test_tag"
+
     local input_file=$dir/test.csv
     [[ -n "$format" ]] && input_file=$dir/test.bin
 
@@ -57,3 +60,9 @@ run_test '' "in --lines=1"  ascii/in_operation/no_buffering
 run_test '' "in --lines=3"  ascii/in_operation/buffering_3_lines
 run_test '' "in --lines=30" ascii/in_operation/buffering_30_lines
 run_test '' "in --lines=5"  ascii/in_operation/buffering_5_lines
+
+
+run_test 's[1],4ui' "in --size=17 "  binary/in_operation/no_buffering
+run_test 's[1],4ui' "in --size=17 --buffer-size=34"  binary/in_operation/buffering_2_messages
+run_test 's[1],4ui' "in --size=17 --buffer-size=54"  binary/in_operation/buffering_3_messages
+run_test 's[1],4ui' "in --size=17 --buffer-size=1kb"  binary/in_operation/buffering_1kb

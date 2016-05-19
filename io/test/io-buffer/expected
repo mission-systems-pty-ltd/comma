@@ -1,18 +1,35 @@
+# ascii/no_buffering
 ascii/no_buffering/md5sum="1ac888cd90b9557c79dfac55e1e441aa"
+
+# ascii/buffering_3_lines
 ascii/buffering_3_lines/md5sum="1ac888cd90b9557c79dfac55e1e441aa"
+
+# ascii/buffering_30_lines
 ascii/buffering_30_lines/md5sum="1ac888cd90b9557c79dfac55e1e441aa"
+
+# binary/no_buffering
 binary/no_buffering/md5sum="802e60246e01012e6cb4d514e413ce6e"
+
+# binary/buffering_2_messages
 binary/buffering_2_messages/md5sum="802e60246e01012e6cb4d514e413ce6e"
+
+# binary/buffering_3_messages
 binary/buffering_3_messages/md5sum="802e60246e01012e6cb4d514e413ce6e"
+
+# binary/buffering_1Kb
 binary/buffering_1Kb/md5sum="802e60246e01012e6cb4d514e413ce6e"
+
+# binary/buffering_1Mb
 binary/buffering_1Mb/md5sum="802e60246e01012e6cb4d514e413ce6e"
 
+# ascii/in_operation/no_buffering
 line[1]/ascii/in_operation/no_buffering/run[1]="a,2,1,5,2"
 line[2]/ascii/in_operation/no_buffering/run[2]="a,1,1,5,1"
 line[3]/ascii/in_operation/no_buffering/run[3]="a,2,2,5,0"
 line[4]/ascii/in_operation/no_buffering/run[4]="b,2,1,6,1"
 line[5]/ascii/in_operation/no_buffering/run[5]="b,1,1,6,0"
 
+# ascii/in_operation/buffering_3_lines
 line[1]/ascii/in_operation/buffering_3_lines/run[1]="a,2,1,5,2"
 line[2]/ascii/in_operation/buffering_3_lines/run[1]="a,1,1,5,1"
 line[3]/ascii/in_operation/buffering_3_lines/run[1]="a,2,2,5,0"
@@ -26,6 +43,7 @@ line[10]/ascii/in_operation/buffering_3_lines/run[4]="c,2,2,7,0"
 line[11]/ascii/in_operation/buffering_3_lines/run[4]="b,2,1,6,1"
 line[12]/ascii/in_operation/buffering_3_lines/run[4]="b,1,1,6,0"
 
+# ascii/in_operation/buffering_30_lines
 line[1]/ascii/in_operation/buffering_30_lines/run[1]="a,2,1,5,2"
 line[2]/ascii/in_operation/buffering_30_lines/run[1]="a,1,1,5,1"
 line[3]/ascii/in_operation/buffering_30_lines/run[1]="a,2,2,5,0"
@@ -39,6 +57,7 @@ line[10]/ascii/in_operation/buffering_30_lines/run[1]="c,2,2,7,0"
 line[11]/ascii/in_operation/buffering_30_lines/run[1]="b,2,1,6,1"
 line[12]/ascii/in_operation/buffering_30_lines/run[1]="b,1,1,6,0"
 
+# ascii/in_operation/buffering_5_lines
 line[1]/ascii/in_operation/buffering_5_lines/run[1]="a,2,1,5,2"
 line[2]/ascii/in_operation/buffering_5_lines/run[1]="a,1,1,5,1"
 line[3]/ascii/in_operation/buffering_5_lines/run[1]="a,2,2,5,0"
@@ -51,4 +70,51 @@ line[9]/ascii/in_operation/buffering_5_lines/run[2]="c,1,1,7,1"
 line[10]/ascii/in_operation/buffering_5_lines/run[2]="c,2,2,7,0"
 line[11]/ascii/in_operation/buffering_5_lines/run[3]="b,2,1,6,1"
 line[12]/ascii/in_operation/buffering_5_lines/run[3]="b,1,1,6,0"
+
+# binary/in_operation/no_buffering
+line[1]/binary/in_operation/no_buffering/run[1]="a,2,1,5,2"
+line[2]/binary/in_operation/no_buffering/run[2]="a,1,1,5,1"
+line[3]/binary/in_operation/no_buffering/run[3]="a,2,2,5,0"
+line[4]/binary/in_operation/no_buffering/run[4]="b,2,1,6,1"
+line[5]/binary/in_operation/no_buffering/run[5]="b,1,1,6,0"
+
+# binary/in_operation/buffering_2_messages
+line[1]/binary/in_operation/buffering_2_messages/run[1]="a,2,1,5,2"
+line[2]/binary/in_operation/buffering_2_messages/run[1]="a,1,1,5,1"
+line[3]/binary/in_operation/buffering_2_messages/run[2]="a,2,2,5,0"
+line[4]/binary/in_operation/buffering_2_messages/run[2]="b,2,1,6,1"
+line[5]/binary/in_operation/buffering_2_messages/run[3]="b,1,1,6,0"
+line[6]/binary/in_operation/buffering_2_messages/run[3]="d,1,1,6,0"
+line[7]/binary/in_operation/buffering_2_messages/run[4]="c,3,1,7,3"
+line[8]/binary/in_operation/buffering_2_messages/run[4]="c,2,1,7,2"
+line[9]/binary/in_operation/buffering_2_messages/run[5]="c,1,1,7,1"
+line[10]/binary/in_operation/buffering_2_messages/run[5]="c,2,2,7,0"
+
+# binary/in_operation/buffering_3_messages
+line[1]/binary/in_operation/buffering_3_messages/run[1]="a,2,1,5,2"
+line[2]/binary/in_operation/buffering_3_messages/run[1]="a,1,1,5,1"
+line[3]/binary/in_operation/buffering_3_messages/run[1]="a,2,2,5,0"
+line[4]/binary/in_operation/buffering_3_messages/run[2]="b,2,1,6,1"
+line[5]/binary/in_operation/buffering_3_messages/run[2]="b,1,1,6,0"
+line[6]/binary/in_operation/buffering_3_messages/run[2]="d,1,1,6,0"
+line[7]/binary/in_operation/buffering_3_messages/run[3]="c,3,1,7,3"
+line[8]/binary/in_operation/buffering_3_messages/run[3]="c,2,1,7,2"
+line[9]/binary/in_operation/buffering_3_messages/run[3]="c,1,1,7,1"
+line[10]/binary/in_operation/buffering_3_messages/run[4]="c,2,2,7,0"
+line[11]/binary/in_operation/buffering_3_messages/run[4]="b,2,1,6,1"
+line[12]/binary/in_operation/buffering_3_messages/run[4]="b,1,1,6,0"
+
+# binary/in_operation/buffering_1kb
+line[1]/binary/in_operation/buffering_1kb/run[1]="a,2,1,5,2"
+line[2]/binary/in_operation/buffering_1kb/run[1]="a,1,1,5,1"
+line[3]/binary/in_operation/buffering_1kb/run[1]="a,2,2,5,0"
+line[4]/binary/in_operation/buffering_1kb/run[1]="b,2,1,6,1"
+line[5]/binary/in_operation/buffering_1kb/run[1]="b,1,1,6,0"
+line[6]/binary/in_operation/buffering_1kb/run[1]="d,1,1,6,0"
+line[7]/binary/in_operation/buffering_1kb/run[1]="c,3,1,7,3"
+line[8]/binary/in_operation/buffering_1kb/run[1]="c,2,1,7,2"
+line[9]/binary/in_operation/buffering_1kb/run[1]="c,1,1,7,1"
+line[10]/binary/in_operation/buffering_1kb/run[1]="c,2,2,7,0"
+line[11]/binary/in_operation/buffering_1kb/run[1]="b,2,1,6,1"
+line[12]/binary/in_operation/buffering_1kb/run[1]="b,1,1,6,0"
 
