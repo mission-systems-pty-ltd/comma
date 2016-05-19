@@ -56,3 +56,4 @@ run_test 's[1],4ui' "out --size=17 --buffer-size=1MB" binary/buffering_1Mb md5su
 run_test '' "in --lines=1"  ascii/in_operation/no_buffering
 run_test '' "in --lines=3"  ascii/in_operation/buffering_3_lines
 run_test '' "in --lines=30" ascii/in_operation/buffering_30_lines
+run_test '' "in --lines=5"  ascii/in_operation/buffering_5_lines
