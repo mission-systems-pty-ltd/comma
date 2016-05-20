@@ -163,7 +163,7 @@ def from_numpy(*numpy_types_or_format):
     >>> from_numpy('f8', 'u4')
     'd,ui'
     >>> from_numpy('f8,f8,u1,u1,u1,u1,u1,u1,u4')
-    'd,d,ub,ub,ub,ub,ub,ub,ui'
+    '2d,6ub,ui'
     >>> from_numpy('2f8,(2,3)u1,u4')
     '2d,6ub,ui'
     """
