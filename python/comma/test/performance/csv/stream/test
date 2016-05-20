@@ -50,8 +50,8 @@ case $code_option in
     --ascii)
         input_numpy_format=''
         for(( i = 0; i < $ascii_number_of_records; i++ )); do echo $input_line; done > $output_dir/input.csv
-        output_code --ascii > $output_dir/csv.py && chmod u+x $output_dir/csv.py
-        /usr/bin/time -o $output_dir/timer -f %U $output_dir/csv.py < $output_dir/input.csv > $output_dir/output.csv
+        output_code --ascii > $output_dir/csv_script && chmod u+x $output_dir/csv_script
+        /usr/bin/time -o $output_dir/timer -f %U $output_dir/csv_script < $output_dir/input.csv > $output_dir/output.csv
         echo "time/elapsed=$( cat $output_dir/timer )"
         for(( i = 0; i < $ascii_number_of_records; i++ )); do echo $expected_output_line; done | csv-to-bin $output_comma_format | csv-from-bin $output_comma_format --precision=$precision > $output_dir/expected_output.csv
         echo "diff=$( diff $output_dir/output.csv $output_dir/expected_output.csv )"
@@ -60,8 +60,8 @@ case $code_option in
     --binary)
         input_numpy_format=$( echo $output_numpy_format_template | csv-shuffle --fields $output_fields -o $input_fields | sed 's@|@,@g' )
         for(( i = 0; i < $binary_number_of_records; i++ )); do echo $input_line; done | csv-to-bin $input_comma_format > $output_dir/input.bin
-        output_code --binary > $output_dir/bin.py && chmod u+x $output_dir/bin.py
-        /usr/bin/time -o $output_dir/timer -f %U $output_dir/bin.py < $output_dir/input.bin > $output_dir/output.bin
+        output_code --binary > $output_dir/bin_script && chmod u+x $output_dir/bin_script
+        /usr/bin/time -o $output_dir/timer -f %U $output_dir/bin_script < $output_dir/input.bin > $output_dir/output.bin
         echo "time/elapsed=$( cat $output_dir/timer )"
         for(( i = 0; i < $binary_number_of_records; i++ )); do echo $expected_output_line; done | csv-to-bin $output_comma_format > $output_dir/expected_output.bin
         echo "diff=$( diff $output_dir/output.bin $output_dir/expected_output.bin )"
