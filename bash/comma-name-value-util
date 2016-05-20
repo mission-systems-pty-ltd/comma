@@ -56,7 +56,7 @@ function comma_path_value_mangle()
     local delimiter="$1"
     [[ -n "$delimiter" ]] || delimiter="_"
     local path name value mangled
-    while IFS='=' read path value ; do
+    while IFS='=' read -r path value ; do
         [[ -n "$path" && ! "$path" =~ ^[#\"] ]] || continue
         name=$prefix${path//\//$delimiter}
         name=${name//-/$delimiter}
@@ -238,7 +238,7 @@ function comma_path_value_to_var()
     local -r regex="^[[:alpha:]][_[:alnum:]]*$"
     local path name garbage value
     local -i ret_code=0
-    while IFS='=' read path value ; do
+    while IFS='=' read -r path value ; do
         [[ -n "$path" && ! "$path" =~ ^[#\"] ]] || continue
         [[ -n "$value" || -n "$null_ok" ]] || continue
         name=$prefix${path//\//$delimiter}
@@ -285,7 +285,7 @@ function comma_path_value_from_var()
     local delimiter="_"
     if [ ! -z $2 ] ; then delimiter="$2" ; fi
     if [ ! -z $1 ] ; then prefix="$1$delimiter" ; fi
-    while IFS='=' read path default_value ; do
+    while IFS='=' read -r path default_value ; do
         if [[ "$path" == "" ]] ; then continue ; fi
         if [[ "$path" =~ "#" ]] ; then continue ; fi
         name=$prefix$( echo $path | sed "s/\//$delimiter/g" | sed "s/-/_/g" )

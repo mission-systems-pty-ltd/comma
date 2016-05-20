@@ -29,11 +29,17 @@
 
 /// @author dewey nguyen
 
+
 #ifndef WIN32
+#include <sysexits.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
 #endif
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <memory.h>
+#include <iostream>
 #include <cctype>
 #include <vector>
 #include <fstream>
@@ -49,6 +55,7 @@
 #include <comma/io/stream.h>
 #include <comma/io/select.h>
 #include <comma/string/string.h>
+#include <comma/csv/stream.h>
 
 void usage( bool verbose = false )
 {
@@ -64,6 +71,7 @@ void usage( bool verbose = false )
     std::cerr << "    --buffer-size,-b=[<size>]: for binary input data, binary storage to store multiple of x sized messages." << std::endl;
     std::cerr << "                                  see --size and buffer size suffixes below." << std::endl;
     std::cerr << "                                  if not specified, no buffering of binary messages, each is written to stdout." << std::endl;
+    std::cerr << "    --strict; use with 'in' operation, exits with an error if a full message size (binary) is not found" << std::endl;
     std::cerr << std::endl;
     std::cerr << "operations" << std::endl;
     std::cerr << "    out: read in standard input, attempt to write to stdout when buffer is full." << std::endl;
@@ -135,6 +143,9 @@ static comma::uint64 get_buffer_size( const std::string& str )
 
 using boost::interprocess::file_lock;
 using boost::interprocess::scoped_lock;
+
+static bool strict = false;
+
 static void output_binary( file_lock& lock )
 {
     scoped_lock< file_lock > filelock( lock );  // Blocks until it has the lock
@@ -147,6 +158,51 @@ static void output_text( file_lock& lock )
     for( std::size_t i=0; i<lines_buffer->size(); ++i ) { std::cout << lines_buffer.get()[i] << std::endl;  }
 }
 
+/// Because we need to use C code for IO input operations
+// This structure help manage the C code, memory allocation and de-allocation
+// ::getline() may actually re-allocate the buffer given to increase the size
+struct memory_buffer
+{
+    char* buffer;
+    size_t size;
+    memory_buffer();
+    memory_buffer( size_t size ) { allocate( size ); }
+    ~memory_buffer();
+    
+    void allocate( size_t size );
+    
+    // if strict is true, fails when less data then expected is received
+    comma::uint32 read_binary_records( comma::uint32 size, comma::uint32 num_record=1, bool strict=false );  
+    
+};
+memory_buffer::memory_buffer() : buffer(NULL), size(0) {}
+memory_buffer::~memory_buffer() { if( buffer != NULL ) { free( (void*) buffer );  } }
+
+void memory_buffer::allocate(size_t size)
+{
+    this->size = size;
+    buffer = (char*) ::malloc( size );
+    if( buffer == NULL ) { std::cerr << name() << "failed to allocate memory buffer of size: " << size << std::endl; exit(1); }
+}
+
+comma::uint32 memory_buffer::read_binary_records( comma::uint32 size, comma::uint32 num_record, bool strict )
+{
+    static comma::uint32 one_record_size = size;
+    comma::uint32 bytes_to_read = one_record_size * num_record;
+    size_t bytes_read = 0;
+    while ( bytes_read < bytes_to_read && !::feof( stdin ) && !::ferror(stdin) )
+    {
+        bytes_read +=  ::fread( &buffer[bytes_read], 1, bytes_to_read - bytes_read, stdin );
+    }
+    
+    if ( bytes_read <= 0 ) { return bytes_read; } // signals end of stream, not an error
+    
+    if( bytes_read % one_record_size != 0 ) { std::cerr << name() << "expected " << one_record_size << " bytes, got only read: " << ( bytes_read % one_record_size ) << std::endl; exit( 1 ); } 
+    if ( strict && (bytes_read < bytes_to_read) ) { std::cerr << name() << "expected " << bytes_to_read << " bytes (" << ( bytes_to_read / one_record_size  ) << " records); got only: " << bytes_read << " bytes (" << ( bytes_read / one_record_size ) << " records)" << std::endl; exit( 1 ); } 
+    
+    return bytes_read;
+}
+
 int main( int argc, char** argv )
 {
     try
@@ -157,9 +213,10 @@ int main( int argc, char** argv )
         std::string lockfile_path = options.value< std::string >( "--lock-file,--lock" );
         boost::optional< comma::uint32 > has_size = options.optional< comma::uint32 >( "--size,s" );
         boost::optional< std::string > buffer_size_string = options.optional< std::string >( "--buffer-size,-b" );
-        const std::vector< std::string >& operation = options.unnamed( "--lines,--buffer-size,--lock-file,--lock", "-.+" );
+        const std::vector< std::string >& operation = options.unnamed( "--help,-h,--verbose,-v,--strict", "-.+" );
         
-        verbose = options.value( "--verbose,-v", true );
+        strict = options.exists("--strict");
+        verbose = options.value( "--verbose,-v", false );
         if( verbose ) { std::cerr << name() << ": called as: " << options.string() << std::endl; }
 
         bool in_operation = false;
@@ -174,8 +231,6 @@ int main( int argc, char** argv )
     std::cerr << "io-buffer: 'in' operation not implemented on windows" << std::endl; return 1;
 #endif // #ifdef WIN32
             in_operation = true; 
-            
-            ::setvbuf( stdin, (char *)NULL, _IONBF, 0 );
         }
         else { std::cerr  << "unknown operation found: " << operation.front() << std::endl; return 1; }
         
@@ -208,28 +263,55 @@ int main( int argc, char** argv )
         file_lock lock( lockfile_path.c_str() );  // Note lock file must exists or an exception with crytic message is thrown 
         if( operation.front() == "in" )
         {
+            // Everything IO in this code block must use C function, because we turn stdin buffering off
+            ::setvbuf( stdin, (char *)NULL, _IONBF, 0 ); // stdin kernel buffering is off
+            
             /// Reading data from standard input is guarded by file lock
             {
                 scoped_lock< file_lock > filelock(lock);
                 if( has_size ) 
                 {
-                    while( true )
+                    memory_buffer memory(message_size);
+                    while( !::feof( stdin ) && !::ferror(stdin) )
                     {
-                        char_buffer_t message( message_size );
-                        std::cin.read( &message[0], message_size );
-                        if( !std::cin.good() || std::cin.eof() ) { break; }
-                        binary_buffer->insert( binary_buffer->end(), message.begin(), message.end() );  // can't use emplace_back
+                        // Read one message
+                        comma::uint32 bytes = memory.read_binary_records( message_size, 1, strict );
+                        if( bytes == 0 ) { break; }
+                        // Put message into buffer
+                        binary_buffer->insert( binary_buffer->end(), memory.buffer, memory.buffer + memory.size );  // can't use emplace_back
                         // if buffer is filled
                         if( binary_buffer->size() >= buffer_size ) { break; }
                     }
                 }
                 else
                 {
-                    while( std::cin.good() && !std::cin.eof() )
+                    static const comma::uint32 max_size = 1024;
+                    while( true )
                     {
-                        std::string line;
-                        std::getline( std::cin, line );
-                        if( !line.empty() ) { lines_buffer->push_back( line ); }
+                        memory_buffer memory( max_size );
+                        std::stringstream sstream;
+                        bool has_end_of_line = false;
+                        
+                        bool has_data = false;
+                        while( !has_end_of_line && !::feof(stdin) )
+                        {
+                            // getline may actually changes the buffer with realloc and extend the size
+                            ssize_t bytes_read = ::getline( &memory.buffer, &memory.size, stdin );
+                            if ( bytes_read <= 0  ) { break; } // we are done, end of stream
+                            has_data = true;
+#ifndef WIN32
+                            has_end_of_line = ( memory.buffer[bytes_read-1] == '\n' );
+                            sstream.write( memory.buffer, has_end_of_line ? bytes_read-1 : bytes_read );
+#else
+                            has_end_of_line = ( bytes_read > 1 
+                                                && memory.buffer[bytes_read-2] == '\r' 
+                                                && memory.buffer[bytes_read-1] == '\n' );
+                            sstream.write( memory.buffer, has_end_of_line ? bytes_read-2 : bytes_read );
+#endif
+                        }      
+                        if( !has_data ) { break; } 
+                        
+                        lines_buffer->push_back( sstream.str() );
                         // if buffer is filled
                         if( lines_buffer->size() >= lines_num ) { break; }
                     }
@@ -237,9 +319,13 @@ int main( int argc, char** argv )
             }
             /// Output side is not guarded by file lock
             if( has_size && !binary_buffer->empty() )  { std::cout.write( &(binary_buffer.get()[0]), binary_buffer->size() ); return 0; }
-            else if( !lines_buffer->empty() ) {
-                for( std::size_t i=0; i<lines_buffer->size(); ++i ) { std::cout << lines_buffer.get()[i] << std::endl;  }
-                return 0;
+            else
+            {
+                if( !lines_buffer->empty() ) {
+                    for( std::size_t i=0; i<lines_buffer->size(); ++i ) { std::cout << lines_buffer.get()[i] << std::endl;  }
+                    return 0;
+                }
+                else { exit( EX_NOINPUT ); }
             }
         }
         else
