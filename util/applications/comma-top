@@ -133,7 +133,7 @@ function parser()
         [[ "$line" = "KiB Swap"* ]] && { extract_mem  "$line" ; echo ; }
         [[ "$line" = "--" ]] && first="true"
     done \
-    | csv-time-stamp
+    | csv-time-stamp 2>/dev/null
 }
 
 io_payload_fields="total/read,total/write,actual/read,actual/write"
@@ -158,7 +158,7 @@ function run_iotop()
               echo $total,$actual
           done \
         | csv-units --fields $io_payload_fields --scale 1024 \
-        | csv-time-stamp
+        | csv-time-stamp 2>/dev/null
 }
 
 if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then usage ; exit ; fi
