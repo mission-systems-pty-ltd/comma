@@ -27,25 +27,43 @@ def merge_arrays(first, second):
     return merged
 
 
-def unrolled_types_of_flat_dtype(dtype):
+def types_of_flat_dtype(dtype, unroll=False):
     """
-    transform a dtype into unrolled types
-    e.g. np.dtype('u4,(2,3)f8') becomes ('u4', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8')
+    transform a dtype into types
+
+    >>> import comma
+    >>> import numpy as np
+    >>> comma.csv.common.types_of_flat_dtype(np.dtype('u4,(2, 3)f8'))
+    ('u4', '(2, 3)f8')
+    >>> comma.csv.common.types_of_flat_dtype(np.dtype('u4,(2, 3)f8'), unroll=True)
+    ('u4', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8')
     """
     shape_unrolled_types = []
     for descr in dtype.descr:
         type = strip_prefix(descr[1])
         shape = descr[2] if len(descr) > 2 else ()
-        shape_unrolled_types.extend([type] * reduce(operator.mul, shape, 1))
+        if unroll:
+            shape_unrolled_types.extend([type] * reduce(operator.mul, shape, 1))
+        else:
+            shape_unrolled_types.append(str(shape) + type if shape else type)
     return tuple(shape_unrolled_types)
+
+
+def unrolled_types_of_flat_dtype(dtype):
+    return types_of_flat_dtype(dtype, unroll=True)
 
 
 def structured_dtype(numpy_format):
     """
     return structured array even for a format string containing a single type
-    note: passing a single type format string to numpy dtype returns a scalar,
-        e.g., np.dtype('f8') yields dtype('float64'),
-        whereas np.dtype('f8,f8') yields dtype([('f0', '<f8'), ('f1', '<f8')])
+    note: passing a single type format string to numpy dtype returns a scalar
+
+    >>> import comma
+    >>> import numpy as np
+    >>> np.dtype('f8')
+    dtype('float64')
+    >>> comma.csv.common.structured_dtype('f8')
+    dtype([('f0', '<f8')])
     """
     number_of_types = len(re.sub(r'\([^\)]*\)', '', numpy_format).split(','))
     if number_of_types == 1:
