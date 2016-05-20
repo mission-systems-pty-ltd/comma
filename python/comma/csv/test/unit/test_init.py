@@ -3,9 +3,6 @@ import comma
 import numpy as np
 import sys
 
-data_in = 'data/in'
-data_out = 'data/out'
-
 
 class test_merge_arrays(unittest.TestCase):
     def test_mismatched_size(self):
@@ -301,8 +298,9 @@ class test_stream(unittest.TestCase):
         self.assertTrue(s.full_xpath)
 
     def test_override_defaults(self):
-        source = open(data_in, 'r')
-        target = open(data_out, 'w')
+        from cStringIO import StringIO
+        source = StringIO("")
+        target = StringIO("")
         t = comma.csv.stream(comma.csv.struct('id', 'S4'), delimiter=';')
         s = comma.csv.stream(comma.csv.struct('x', 'f8'), delimiter=';', flush=True, precision=4, source=source, target=target, tied=t, full_xpath=False)
         self.assertEqual(s.delimiter, ';')
