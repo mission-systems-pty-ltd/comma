@@ -8,9 +8,6 @@ class struct(object):
     """
     default_field_name = 'comma_struct_default_field_name_'
 
-    class error(Exception):
-        pass
-
     def __init__(self, concise_fields, *concise_types):
         self.concise_types = concise_types
         self.concise_fields = self._fill_blanks(concise_fields)
@@ -45,10 +42,10 @@ class struct(object):
         """
         if s.dtype != self.dtype:
             msg = "expected {}, got {}".format(repr(self.dtype), repr(s.dtype))
-            raise struct.error(msg)
+            raise TypeError(msg)
         if not (s.shape == (1,) or s.shape == ()):
-            msg = "expected a scalar or 1d array with size=1, got {}".format(s.shape)
-            raise struct.error(msg)
+            msg = "expected a scalar or 1d array with size=1, got shape={}".format(s.shape)
+            raise ValueError(msg)
         return s.view(self.unrolled_flat_dtype).item()
 
     def expand_shorthand(self, compressed_fields):
@@ -72,9 +69,9 @@ class struct(object):
             fields = fields.split(',')
         ntypes = len(self.concise_types)
         if len(fields) > ntypes:
-            fields_without_type = ','.join(fields.split(',')[ntypes:])
+            fields_without_type = ','.join(fields[ntypes:])
             msg = "missing types for fields '{}'".format(fields_without_type)
-            raise struct.error(msg)
+            raise ValueError(msg)
         omitted_fields = [''] * (ntypes - len(fields))
         fields_without_blanks = []
         for index, field in enumerate(fields + omitted_fields):
@@ -88,8 +85,8 @@ class struct(object):
     def _check_fields_conciseness(self):
         for field in self.concise_fields:
             if '/' in field:
-                msg = "expected fields without '/', got '{}'".format(self.concise_fields)
-                raise struct.error(msg)
+                msg = "expected fields without '/', got '{}'".format(field)
+                raise ValueError(msg)
 
     def _full_xpath_fields(self):
         fields = []

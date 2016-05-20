@@ -212,10 +212,10 @@ class test_struct(unittest.TestCase):
         self.assertSetEqual(s.ambiguous_leaves, set(['id', 'x']))
 
     def test_too_many_fields(self):
-        self.assertRaises(Exception, comma.csv.struct, 'x,y', 'u4')
+        self.assertRaises(ValueError, comma.csv.struct, 'x,y', 'u4')
 
     def test_invalid_field_names(self):
-        self.assertRaises(Exception, comma.csv.struct, 'data/x', 'u4')
+        self.assertRaises(ValueError, comma.csv.struct, 'data/x', 'u4')
 
     def test_strings_vs_types(self):
         a = comma.csv.struct('id,x', 'u4', 'f8')
@@ -278,12 +278,12 @@ class test_struct(unittest.TestCase):
     def test_to_tuple_throw_type(self):
         point_t = comma.csv.struct('x,y,z', 'f8', 'f8', 'f8')
         data_t = comma.csv.struct('id', 'u4')
-        self.assertRaises(comma.csv.struct.error, point_t.to_tuple, data_t())
+        self.assertRaises(TypeError, point_t.to_tuple, data_t())
 
     def test_to_tuple_throw_size(self):
         event_t = comma.csv.struct('t,x,y,z', 'datetime64[us]', 'f8', 'f8', 'f8')
         event = event_t(2)
-        self.assertRaises(comma.csv.struct.error, event_t.to_tuple, event)
+        self.assertRaises(ValueError, event_t.to_tuple, event)
 
 
 class test_stream(unittest.TestCase):
