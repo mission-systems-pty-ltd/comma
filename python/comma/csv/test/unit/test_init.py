@@ -371,28 +371,28 @@ class test_stream(unittest.TestCase):
         point_t = comma.csv.struct('x,y,z', 'f8', 'f8', 'f8')
         event_t = comma.csv.struct('t,point', 'datetime64[us]', point_t)
         record_t = comma.csv.struct('id,event', 'u4', event_t)
-        self.assertRaises(Exception, comma.csv.stream, record_t, fields='event/point', full_xpath=False)
+        self.assertRaises(ValueError, comma.csv.stream, record_t, fields='event/point', full_xpath=False)
 
     def test_fields_ambiguous_leaves(self):
         point_t = comma.csv.struct('x,y,z', 'f8', 'f8', 'f8')
         event_t = comma.csv.struct('id,point', 'datetime64[us]', point_t)
         record_t = comma.csv.struct('id,x,event', 'u4', 'S4', event_t)
-        self.assertRaises(Exception, comma.csv.stream, record_t, fields='x', full_xpath=False)
+        self.assertRaises(ValueError, comma.csv.stream, record_t, fields='x', full_xpath=False)
 
     def test_fields_duplicates(self):
         point_t = comma.csv.struct('x,y,z', 'f8', 'f8', 'f8')
-        self.assertRaises(Exception, comma.csv.stream, point_t, fields='x,y,z,x')
+        self.assertRaises(ValueError, comma.csv.stream, point_t, fields='x,y,z,x')
 
     def test_tied_is_not_stream(self):
         t = comma.csv.struct('x', 'f8')
-        self.assertRaises(Exception, comma.csv.stream, t, tied='not_a_stream')
+        self.assertRaises(TypeError, comma.csv.stream, t, tied='not_a_stream')
 
     def test_mismatched_tied(self):
         t_binary = comma.csv.stream(comma.csv.struct('i', 'u1'), binary=True)
         t_ascii = comma.csv.stream(comma.csv.struct('i', 'u1'))
         s = comma.csv.struct('x', 'f8')
-        self.assertRaises(Exception, comma.csv.stream, s, tied=t_binary)
-        self.assertRaises(Exception, comma.csv.stream, s, binary=True, tied=t_ascii)
+        self.assertRaises(ValueError, comma.csv.stream, s, tied=t_binary)
+        self.assertRaises(ValueError, comma.csv.stream, s, binary=True, tied=t_ascii)
 
     def test_binary(self):
         point_t = comma.csv.struct('x,y,z', 'f8', 'f8', 'f8')
@@ -516,7 +516,7 @@ class test_stream(unittest.TestCase):
         self.assertEqual(t('2015-01-02 01:02:03.123456'), '20150102T010203.123456')
         self.assertEqual(t('2015-01-02 01:02:03'), '20150102T010203')
         def c(value): return stream.numpy_scalar_to_string(np.complex128(value))
-        self.assertRaises(Exception, c, 1 + 2j)
+        self.assertRaises(NotImplementedError, c, 1 + 2j)
 
 
 if __name__ == '__main__':

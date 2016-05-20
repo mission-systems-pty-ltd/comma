@@ -19,9 +19,6 @@ class stream(object):
     """
     buffer_size_in_bytes = 65536
 
-    class error(Exception):
-        pass
-
     def __init__(self,
                  s,
                  fields='',
@@ -93,7 +90,7 @@ class stream(object):
         if size < 0:
             if self.source == sys.stdin:
                 msg = "stdin requires positive size, got {}".format(size)
-                raise stream.error(msg)
+                raise IOError(msg)
             size = -1  # read entire file
         if self.binary:
             self._input_data = np.fromfile(self.source, dtype=self.input_dtype, count=size)
@@ -165,7 +162,7 @@ class stream(object):
         elif scalar.dtype.char in 'S':
             return scalar
         msg = "converting {} to string is not implemented".format(repr(scalar.dtype))
-        raise stream.error(msg)
+        raise NotImplementedError(msg)
 
     def write(self, s):
         """
@@ -174,13 +171,14 @@ class stream(object):
         """
         if s.dtype != self.struct.dtype:
             msg = "expected {}, got {}".format(repr(self.struct.dtype), repr(s.dtype))
-            raise stream.error(msg)
+            raise TypeError(msg)
         if s.shape != (s.size,):
             msg = "expected shape=({},), got {}".format(s.size, s.shape)
-            raise stream.error(msg)
+            raise ValueError(msg)
         if self.tied and s.size != self.tied._input_data.size:
-            msg = "size {} not equal to tied size {}".format(s.size, self.tied.size)
-            raise stream.error(msg)
+            tied_size = self.tied._input_data.size
+            msg = "size {} not equal to tied size {}".format(s.size, tied_size)
+            raise ValueError(msg)
         if self.binary:
             (merge_arrays(self.tied._input_data, s) if self.tied else s).tofile(self.target)
         else:
@@ -212,14 +210,14 @@ class stream(object):
         if mask.dtype != bool:
             msg = "expected mask type to be {}, got {}" \
                 .format(repr(np.dtype(bool)), repr(mask.dtype))
-            raise stream.error(msg)
+            raise TypeError(msg)
         if mask.shape != (mask.size,):
             msg = "expected mask shape=({},), got {}".format(mask.size, mask.shape)
-            raise stream.error(msg)
+            raise ValueError(msg)
         if mask.size != self._input_data.size:
-            msg = "mask size {} not equal to data size {}" \
-                .format(mask.size, self._input_data.size)
-            raise stream.error(msg)
+            data_size = self._input_data.size
+            msg = "mask size {} not equal to data size {}".format(mask.size, data_size)
+            raise ValueError(msg)
         if self.binary:
             self._input_data[mask].tofile(self.target)
         else:
@@ -235,7 +233,7 @@ class stream(object):
     def _struct(self, s):
         if not isinstance(s, struct):
             msg = "expected '{}', got '{}'".format(repr(struct), repr(s))
-            raise stream.error(msg)
+            raise TypeError(msg)
         return s
 
     def _fields(self, fields):
@@ -245,12 +243,12 @@ class stream(object):
             return self.struct.expand_shorthand(fields)
         if '/' in fields:
             msg = "expected fields without '/', got '{}'".format(fields)
-            raise stream.error(msg)
+            raise ValueError(msg)
         ambiguous_leaves = self.struct.ambiguous_leaves.intersection(fields.split(','))
         if ambiguous_leaves:
             msg = "fields '{}' are ambiguous in '{}', use full xpath" \
                 .format(','.join(ambiguous_leaves), fields)
-            raise stream.error(msg)
+            raise ValueError(msg)
         xpath = self.struct.xpath_of_leaf.get
         return tuple(xpath(name) or name for name in fields.split(','))
 
@@ -265,7 +263,7 @@ class stream(object):
             if not set(self.struct.fields).issuperset(self.fields):
                 msg = "failed to infer type of every field in '{}', specify format" \
                     .format(','.join(self.fields))
-                raise stream.error(msg)
+                raise ValueError(msg)
             type_of = self.struct.type_of_field.get
             return format_from_types(type_of(field) for field in self.fields)
         if binary is False:
@@ -277,13 +275,13 @@ class stream(object):
         if not fields_in_struct:
             msg = "fields '{}' do not match any of expected fields '{}'" \
                 .format(','.join(self.fields), ','.join(self.struct.fields))
-            raise stream.error(msg)
+            raise ValueError(msg)
         duplicates = tuple(field for field in self.struct.fields
                            if field in self.fields and self.fields.count(field) > 1)
         if duplicates:
             msg = "fields '{}' have duplicates in '{}'" \
                 "".format(','.join(duplicates), ','.join(self.fields))
-            raise stream.error(msg)
+            raise ValueError(msg)
 
     def _check_consistency_with_tied(self):
         if not self.tied:
@@ -291,16 +289,16 @@ class stream(object):
         if not isinstance(self.tied, stream):
             msg = "expected tied stream of type '{}', got '{}'" \
                 "".format(str(stream), repr(self.tied))
-            raise stream.error(msg)
+            raise TypeError(msg)
         if self.tied.binary != self.binary:
             msg = "expected tied stream to be {}, got {}" \
                 "".format("binary" if self.binary else "ascii",
                           "binary" if self.tied.binary else "ascii")
-            raise stream.error(msg)
+            raise ValueError(msg)
         if not self.binary and self.tied.delimiter != self.delimiter:
             msg = "expected tied stream to have the same delimiter '{}', got '{}'" \
                 "".format(self.delimiter, self.tied.delimiter)
-            raise stream.error(msg)
+            raise ValueError(msg)
 
     def _input_dtype(self):
         if self.binary:
@@ -308,7 +306,7 @@ class stream(object):
             if len(self.fields) != len(input_dtype.names):
                 msg = "expected same number of fields and format types, got '{}' and '{}'" \
                     "".format(','.join(self.fields), self.format)
-                raise stream.error(msg)
+                raise ValueError(msg)
         else:
             type_of = self.struct.type_of_field.get
             types = [type_of(name) or 'S' for name in self.fields]
