@@ -310,13 +310,10 @@ class stream(object):
                     "".format(','.join(self.fields), self.format)
                 raise stream.error(msg)
         else:
-            if self.fields == self.struct.fields:
-                input_dtype = self.struct.flat_dtype
-            else:
-                type_of = self.struct.type_of_field.get
-                types = [type_of(name) or 'S' for name in self.fields]
-                format = format_from_types(types)
-                input_dtype = structured_dtype(format)
+            type_of = self.struct.type_of_field.get
+            types = [type_of(name) or 'S' for name in self.fields]
+            format = format_from_types(types)
+            input_dtype = structured_dtype(format)
         return input_dtype
 
     def _default_buffer_size(self):
