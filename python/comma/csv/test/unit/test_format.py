@@ -2,7 +2,6 @@ import unittest
 import numpy as np
 from comma.csv.format import expand, compress, to_numpy, from_numpy
 from comma.csv.format import COMMA_TO_NUMPY_TYPE
-from comma.csv.format import format_error
 
 
 class test(unittest.TestCase):
@@ -31,13 +30,13 @@ class test(unittest.TestCase):
 
     def test_to_numpy(self):
         f = to_numpy
-        self.assertRaises(format_error, f, '')
+        self.assertRaises(ValueError, f, '')
         self.assertTupleEqual(f('ub'), ('u1',))
         self.assertTupleEqual(f('ub,uw,ui,b,w,i,f,d,s[1],s[10],t'), ('u1', 'u2', 'u4', 'i1', 'i2', 'i4', 'f4', 'f8', 'S1', 'S10', 'M8[us]'))
         self.assertTupleEqual(f('2ub,3s[1],4t'), ('u1', 'u1', 'S1', 'S1', 'S1', 'M8[us]', 'M8[us]', 'M8[us]', 'M8[us]'))
         self.assertTupleEqual(f('2d,3d'), ('f8', 'f8', 'f8', 'f8', 'f8'))
         self.assertTupleEqual(f('11d'), ('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
-        self.assertRaises(format_error, f, 'invalid,2invalid')
+        self.assertRaises(ValueError, f, 'invalid,2invalid')
 
     def test_from_numpy(self):
         f = from_numpy

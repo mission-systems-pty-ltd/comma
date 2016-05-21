@@ -1,26 +1,88 @@
 from __future__ import absolute_import
-import numpy
+import numpy as np
 import re
 import os
 import time
 
-
-class time_error(Exception):
-    pass
-
-NUMPY_TYPE_UNIT = 'us'
-NUMPY_TYPE = 'M8[' + NUMPY_TYPE_UNIT + ']'
-NUMPY_TIMEDELTA_TYPE = 'm8[' + NUMPY_TYPE_UNIT + ']'
-NUMPY_INTEGER_TYPE_OF_TIMEDELATA = 'i8'
-NUMPY_NOT_A_DATE_TIME = 'NaT'
+UNIT = 'us'
+TYPE = 'M8[' + UNIT + ']'
+DTYPE = np.dtype(TYPE)
 
 
 def undefined_time():
-    return numpy.datetime64(NUMPY_NOT_A_DATE_TIME)
+    return np.datetime64('NaT')
 
 
 def is_undefined(numpy_time):
-    return str(numpy_time) == NUMPY_NOT_A_DATE_TIME
+    return str(numpy_time) == 'NaT'
+
+
+def to_numpy(t):
+    """
+    return numpy datetime64 scalar corresponding to the given comma time string
+
+    >>> import numpy as np
+    >>> from comma.csv.time import to_numpy
+    >>> to_numpy('20150102T123456') == np.datetime64('2015-01-02T12:34:56.000000', 'us')
+    True
+    >>> to_numpy('20150102T123456.010203') == np.datetime64('2015-01-02T12:34:56.010203', 'us')
+    True
+    >>> to_numpy('not-a-date-time')
+    numpy.datetime64('NaT')
+    >>> to_numpy('')
+    numpy.datetime64('NaT')
+    """
+    if not (isinstance(t, basestring) and
+            re.match(r'^(\d{8}T\d{6}(\.\d{0,6})?|not-a-date-time|)$', t)):
+        msg = "expected comma time, got '{}'".format(repr(t))
+        raise TypeError(msg)
+    if t == 'not-a-date-time' or t == '':
+        return undefined_time()
+    v = list(t)
+    for i in [13, 11]:
+        v.insert(i, ':')
+    for i in [6, 4]:
+        v.insert(i, '-')
+    return np.datetime64(''.join(v), UNIT)
+
+
+def from_numpy(t):
+    """
+    return comma time string if datetime64 scalar is given or
+    return time delta integer as a string if timedelta64 scalar is given
+
+    >>> import numpy as np
+    >>> from comma.csv.time import from_numpy
+    >>> from_numpy(np.datetime64('2015-01-02T12:34:56', 'us'))
+    '20150102T123456'
+    >>> from_numpy(np.datetime64('2015-01-02T12:34:56.010203', 'us'))
+    '20150102T123456.010203'
+    >>> from_numpy(np.datetime64('NaT'))
+    'not-a-date-time'
+    >>> from_numpy(np.timedelta64(123, 'us'))
+    '123'
+    >>> from_numpy(np.timedelta64(-123, 's'))
+    '-123'
+    """
+    if not ((isinstance(t, np.datetime64) and t.dtype == DTYPE) or
+            is_undefined(t) or
+            isinstance(t, np.timedelta64)):
+        msg = "expected numpy time or timedelta of type '{}' or '{}', got '{}'" \
+            .format(repr(DTYPE), repr(np.timedelta64), repr(t))
+        raise TypeError(msg)
+    if isinstance(t, np.timedelta64):
+        return str(t.astype('i8'))
+    if is_undefined(t):
+        return 'not-a-date-time'
+    return re.sub(r'(\.0{6})?([-+]\d{4}|Z)?$', '', str(t)).translate(None, ':-')
+
+
+def ascii_converters(types):
+    converters = {}
+    for i, type in enumerate(types):
+        if np.dtype(type) == np.dtype(TYPE):
+            converters[i] = to_numpy
+    return converters
 
 
 def get_time_zone():
@@ -36,37 +98,3 @@ def set_time_zone(name):
         time.tzset()
 
 zone = set_time_zone
-
-
-def to_numpy(comma_time):
-    if comma_time in ['', 'not-a-date-time']:
-        return undefined_time()
-    v = list(comma_time)
-    if len(v) < 15:
-        message = "'{}' is not a valid time".format(comma_time)
-        raise time_error(message)
-    for i in [13, 11]:
-        v.insert(i, ':')
-    for i in [6, 4]:
-        v.insert(i, '-')
-    return numpy.datetime64(''.join(v), NUMPY_TYPE_UNIT)
-
-
-def from_numpy(numpy_time):
-    if isinstance(numpy_time, numpy.timedelta64):
-        return str(numpy_time.astype(NUMPY_INTEGER_TYPE_OF_TIMEDELATA))
-    if is_undefined(numpy_time):
-        return 'not-a-date-time'
-    if numpy_time.dtype != numpy.dtype(NUMPY_TYPE):
-        message = "'{}' is not of expected type '{}'".format(repr(numpy_time), NUMPY_TYPE)
-        raise time_error(message)
-    return re.sub(r'(\.0{6})?([-+]\d{4}|Z)?$', '', str(numpy_time)).translate(None, ':-')
-
-
-def ascii_converters(types):
-    converters = {}
-    for i, type in enumerate(types):
-        if numpy.dtype(type) == numpy.dtype(NUMPY_TYPE):
-            converters[i] = to_numpy
-    return converters
-

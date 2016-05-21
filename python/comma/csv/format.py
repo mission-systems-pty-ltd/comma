@@ -2,12 +2,8 @@ import re
 import numpy as np
 from collections import OrderedDict
 from itertools import groupby
-from .time import NUMPY_TYPE as numpy_datetime_type
+from .time import TYPE as numpy_datetime_type
 from .common import types_of_flat_dtype, structured_dtype
-
-
-class format_error(Exception):
-    pass
 
 
 COMMA_TO_NUMPY_TYPE = OrderedDict([
@@ -47,8 +43,8 @@ def to_numpy_type(comma_type):
     numpy_type = COMMA_TO_NUMPY_TYPE.get(comma_type) or to_numpy_string_type(comma_type)
     if numpy_type is None:
         known_types = ', '.join(COMMA_TYPES)
-        message = "'{}' is not among known comma types: {}".format(comma_type, known_types)
-        raise format_error(message)
+        msg = "'{}' is not among known comma types: {}".format(comma_type, known_types)
+        raise ValueError(msg)
     return numpy_type
 
 
@@ -77,7 +73,7 @@ def to_comma_type(numpy_type):
     dtype = structured_dtype(numpy_type)
     if len(dtype) != 1:
         msg = "expected single numpy type, got {}".format(numpy_type)
-        raise format_error(msg)
+        raise ValueError(msg)
     unrolled = types_of_flat_dtype(structured_dtype(numpy_type), unroll=True)
     single_type = unrolled[0]
     numtypes = len(unrolled)
@@ -85,7 +81,7 @@ def to_comma_type(numpy_type):
     if comma_type is None:
         known_types = ', '.join(NUMPY_TYPES)
         msg = "'{}' is not among known numpy types: {}".format(numpy_type, known_types)
-        raise format_error(msg)
+        raise ValueError(msg)
     return str(numtypes) + comma_type if numtypes != 1 else comma_type
 
 

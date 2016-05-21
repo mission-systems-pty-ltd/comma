@@ -140,10 +140,10 @@ class stream(object):
         dtype_name_of = dict(zip(self.missing_fields, self.missing_dtype.names))
         for field, value in self.default_values.iteritems():
             name = dtype_name_of[field]
-            if self.missing_dtype[name] == np.dtype(csv_time.NUMPY_TYPE):
+            if self.missing_dtype[name] == csv_time.DTYPE:
                 try:
                     self._missing_data[name] = csv_time.to_numpy(value)
-                except Exception:
+                except TypeError:
                     self._missing_data[name] = value
             else:
                 self._missing_data[name] = value

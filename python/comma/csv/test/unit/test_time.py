@@ -13,7 +13,7 @@ class test_time(unittest.TestCase):
         self.assertTrue(is_undefined(f('not-a-date-time')))
         self.assertEqual(f('20150102T122345.012345').itemsize, 8)
         invalid = '20150102'
-        self.assertRaises(Exception, f, invalid)
+        self.assertRaises(TypeError, f, invalid)
 
     def test_from_numpy(self):
         f = from_numpy
@@ -21,7 +21,7 @@ class test_time(unittest.TestCase):
         np.testing.assert_equal(f(np.datetime64('1969-01-02 12:23:45.012345', 'us')), '19690102T122345.012345')
         np.testing.assert_equal(f(np.datetime64('2015-01-02 12:23:45.000000', 'us')), '20150102T122345')
         self.assertEqual(f(undefined_time()), 'not-a-date-time')
-        self.assertRaises(Exception, f, 'invalid')
+        self.assertRaises(TypeError, f, 'invalid')
 
     def test_ascii_converters(self):
         f = ascii_converters
