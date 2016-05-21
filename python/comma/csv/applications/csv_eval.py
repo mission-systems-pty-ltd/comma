@@ -311,7 +311,7 @@ def evaluate(expressions, stream, dangerous=False):
         output_initializer += "_output['{field}'] = {field}\n".format(field=field)
     code_string = input_initializer + '\n' + expressions + '\n' + output_initializer
     code = compile(code_string, '<string>', 'exec')
-    restricted_numpy = numpy_env(restrict=True)
+    restricted_numpy = numpy_env(restrict=False if dangerous else True)
     output = stream.output.struct(stream.input.size)
     is_shutdown = comma.signal.is_shutdown()
     while not is_shutdown:
