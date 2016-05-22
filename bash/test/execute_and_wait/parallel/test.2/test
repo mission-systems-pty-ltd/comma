@@ -10,7 +10,7 @@ mkdir -p "$output_dir" || exit 1
 export output_file="$output_dir/test02.log"
 function test02()
 {
-    comma_execute_and_wait --max-wait=20 "bash -c test_to_execute 5 4"
+    comma_execute_and_wait --max-wait=40 "bash -c test_to_execute 15 14"
 }
 test02
 echo "test[2]/exit/status=$?"

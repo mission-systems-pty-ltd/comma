@@ -15,7 +15,7 @@ function test04()
     rm -rf "$output_dir" || exit 1
     mkdir -p "$output_dir" || exit 1
 
-    comma_execute_and_wait "$script 10 $output_dir/log1" "$script 5 $output_dir/log2"
+    comma_execute_and_wait "$script 20 $output_dir/log1" "$script 15 $output_dir/log2"
 
     [[ -s "$output_dir/log1" ]] || exit 1
     [[ -s "$output_dir/log2" ]] || exit 1

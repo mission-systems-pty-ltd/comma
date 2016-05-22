@@ -27,7 +27,7 @@ function test_to_execute()
     args=${@}
     pids=()
     for arg in $args ; do
-        test_worker $arg  >> "$output_file" 2>/dev/null & pids+=( $! )
+        test_worker $arg >> "$output_file" 2>/dev/null & pids+=( $! )
     done
     wait ${pids[@]}
 }

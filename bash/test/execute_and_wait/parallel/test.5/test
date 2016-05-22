@@ -15,7 +15,7 @@ function test05()
     rm -rf "$output_dir" || exit 1
     mkdir -p "$output_dir" || exit 1
 
-    comma_execute_and_wait "$script 10 $output_dir/log1" "$script 8 $output_dir/log2" --timeout=5
+    comma_execute_and_wait "$script 30 $output_dir/log1" "$script 26 $output_dir/log2" --timeout=15
     local exit_code=$?
 
     [[ -s "$output_dir/log1" ]] || exit 1
