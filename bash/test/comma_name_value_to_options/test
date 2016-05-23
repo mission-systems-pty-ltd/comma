@@ -72,3 +72,6 @@ verbose="1"
 debug="1"' | tr '"' '|' | sed 's#^#cnv_to_o[5]/text="#;s#$#"#'
 echo ''
 
+echo "quote[0]/text=\"$( comma-test-run --description | comma-options-to-name-value --path "/tmp" --debug --verbose | csv-quote --delimiter = --unquote | comma_name_value_to_options | tr '"' '|' )\""
+echo "quote[1]/text=\"$( comma-test-run --description | comma-options-to-name-value --path="/tmp" --debug --verbose | csv-quote --delimiter = --unquote | comma_name_value_to_options | tr '"' '|' )\""
+echo "quote[2]/text=\"$( comma-test-run --description | comma-options-to-name-value "--path=/tmp" --debug --verbose | csv-quote --delimiter = --unquote | comma_name_value_to_options | tr '"' '|' )\""
