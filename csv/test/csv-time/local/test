@@ -1,0 +1,9 @@
+#!/bin/bash
+
+utc=$(date -u +%Y%m%dT%H%M%S)
+local=$(date +%Y%m%dT%H%M%S)
+
+echo "utc=\"$utc\""
+echo "utc_to_local=\"$(echo "$utc" | csv-time --to local)\""
+echo "local=\"$local\""
+echo "local_to_utc=\"$(echo "$local" | csv-time --from local )\""
