@@ -194,7 +194,20 @@ def check_options(args):
         raise csv_eval_error(msg)
 
 
-def format_without_blanks(format, fields):
+def format_without_blanks(format, fields=''):
+    """
+    >>> from comma.csv.applications.csv_eval import format_without_blanks
+    >>> format_without_blanks('3ui', fields='a,b,c')
+    'ui,ui,ui'
+    >>> format_without_blanks('ui', fields='a,b,c')
+    'ui,d,d'
+    >>> format_without_blanks('ui', fields='a,,c')
+    'ui,s[0],d'
+    >>> format_without_blanks('4ui', fields='a,,c')
+    'ui,s[0],ui,s[0]'
+    >>> format_without_blanks('3ui')
+    's[0],s[0],s[0]'
+    """
     def comma_type(maybe_type, field, default_type='d', type_of_unnamed_field='s[0]'):
         return type_of_unnamed_field if not field else maybe_type or default_type
 
@@ -205,6 +218,11 @@ def format_without_blanks(format, fields):
 
 
 def output_fields_from_expressions(expressions):
+    """
+    >>> from comma.csv.applications.csv_eval import output_fields_from_expressions
+    >>> output_fields_from_expressions("a = 1; b = x + y; c = '='; d = (b == z)")
+    'a,b,c,d'
+    """
     tree = ast.parse(expressions, '<string>', mode='exec')
     fields = []
     for child in ast.iter_child_nodes(tree):
