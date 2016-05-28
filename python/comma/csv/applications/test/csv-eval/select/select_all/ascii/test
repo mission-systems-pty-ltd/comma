@@ -1,0 +1,4 @@
+#!/bin/bash
+
+csv-eval --fields=a,b,name --format=2i,s[1] --select "(a < b) & ( name == 'y')" \
+    | name-value-from-csv a,b,allow --line-number --prefix output | sed 's/"//g'

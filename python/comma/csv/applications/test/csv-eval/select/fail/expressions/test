@@ -1,0 +1,4 @@
+#!/bin/bash
+
+csv-eval --fields x 'y = x+1' --select 'x > 1'
+echo "status=$?"

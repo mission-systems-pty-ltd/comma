@@ -1,0 +1,16 @@
+number_of(output) = 5
+output[0]/a=0
+output[0]/b=1
+output[0]/allow="y"
+output[1]/a=1
+output[1]/b=2
+output[1]/allow="y"
+output[2]/a=2
+output[2]/b=4
+output[2]/allow="y"
+output[3]/a=4
+output[3]/b=5
+output[3]/allow="y"
+output[4]/a=7
+output[4]/b=9
+output[4]/allow="y"
