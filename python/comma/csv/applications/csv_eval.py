@@ -65,8 +65,8 @@ math functions:
     ( echo 1; echo 2; echo 3; echo 4 ) | %(prog)s --format=ui --fields=id 'c = clip(id,3,inf)' --output-format=ui
 
 math constants: pi, e
-    echo pi | %(prog)s --fields name --format=s[2] 'a=pi' --precision=16
-    echo e | %(prog)s --fields name --format=s[1] 'a=e' --precision=16
+    echo pi | %(prog)s --fields name --format=s[2] 'value=pi' --precision=16 --delimiter='='
+    echo e | %(prog)s --fields name --format=s[2] 'value=e' --precision=16 --delimiter='='
 
 logical functions:
     http://docs.scipy.org/doc/numpy/reference/routines.logic.html
