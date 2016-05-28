@@ -113,7 +113,7 @@ class stream(object):
         if not self.data_extraction_dtype:
             return self._input_data.copy().view(self.struct)
         if self.missing_fields:
-            missing_data = self.missing_data(self._input_data.size)
+            missing_data = self._retrieve_missing_data(self._input_data.size)
             complete_data = merge_arrays(self._input_data, missing_data)
         else:
             complete_data = self._input_data
@@ -125,18 +125,15 @@ class stream(object):
         extracted_data = np.array(raw_extracted_data, dtype=self.struct.flat_dtype)
         return extracted_data.view(self.struct)
 
-    def missing_data(self, size):
-        """
-        return numpy array (of the given size) representing missings data, consisting of
-        fields that are not found in the stream
+    def _retrieve_missing_data(self, size):
+        if self._missing_data is None or size > self._missing_data.size:
+            self._generate_missing_data(size)
+        return self._missing_data[:size]
 
-        use zero values to define the array unless default_values is given
-        """
-        if self._missing_data is not None and size <= self._missing_data.size:
-            return self._missing_data[:size]
+    def _generate_missing_data(self, size):
         self._missing_data = np.zeros(size, dtype=self.missing_dtype)
         if not self.default_values:
-            return self._missing_data
+            return
         dtype_name_of = dict(zip(self.missing_fields, self.missing_dtype.names))
         for field, value in self.default_values.iteritems():
             name = dtype_name_of[field]
@@ -147,7 +144,6 @@ class stream(object):
                     self._missing_data[name] = value
             else:
                 self._missing_data[name] = value
-        return self._missing_data
 
     def numpy_scalar_to_string(self, scalar):
         """
