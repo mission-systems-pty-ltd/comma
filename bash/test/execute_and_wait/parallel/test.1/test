@@ -15,7 +15,7 @@ function test01()
     rm -rf "$output_dir" || exit 1
     mkdir -p "$output_dir" || exit 1
 
-    commandlist=( "$script 10 $output_dir/log1" "$script 5 $output_dir/log2" )
+    commandlist=( "$script 20 $output_dir/log1" "$script 15 $output_dir/log2" )
 
     # This is a template for running multiple background commands in parallel
     for c in "${commandlist[@]}" ; do echo $c ; done |

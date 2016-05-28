@@ -77,8 +77,3 @@ precision[3]="echo 19691231T235959.999999 | csv-time --from=iso --to=seconds | c
 precision[4]="echo 19691231T235959.123456 | csv-time --from=iso --to=seconds | csv-time --from=seconds --to=iso"
 precision[5]="echo 19700101T000000 | csv-time --from=iso --to=seconds | csv-time --from=seconds --to=iso"
 precision[6]="echo 19700101T000000.000001 | csv-time --from=iso --to=seconds | csv-time --from=seconds --to=iso"
-
-local[0]="echo 20160414T014932.123 | csv-time --to local"
-local[1]="echo 20160214T014932.123 | csv-time --to local"
-local[2]="echo 20160414T114932.123000 | csv-time --from local"
-local[3]="echo 20160214T124932.123000 | csv-time --from local"
