@@ -9,7 +9,7 @@ class test_merge_arrays(unittest.TestCase):
         dtype_b = np.dtype([('name', 'f8')])
         a = np.array([(1,), (2,)], dtype=dtype_a)
         b = np.array([(4,), (5,), (6,)], dtype=dtype_b)
-        self.assertRaises(Exception, comma.csv.common.merge_arrays, a, b)
+        self.assertRaises(ValueError, comma.csv.common.merge_arrays, a, b)
 
     def test_merge_empty(self):
         dtype_a = np.dtype([('name', 'u4')])
