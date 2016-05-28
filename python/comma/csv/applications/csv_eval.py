@@ -4,10 +4,7 @@ import numpy
 import re
 import itertools
 import ast
-import comma.csv
-import comma.signal
-from comma.util import warning
-from comma.util import argparse_fmt
+import comma
 
 description = """
 evaluate numerical expressions and append computed values to csv stream
@@ -126,7 +123,7 @@ def get_args():
     parser = argparse.ArgumentParser(
         description=description,
         epilog=notes_and_examples,
-        formatter_class=argparse_fmt,
+        formatter_class=comma.util.argparse_fmt,
         add_help=False)
     parser.add_argument(
         'expressions',
@@ -169,14 +166,14 @@ def ingest_deprecated_options(args):
         args.output_format = args.append_binary
         del args.append_binary
         if args.verbose:
-            with warning(custom_formatwarning) as warn:
+            with comma.util.warning(custom_formatwarning) as warn:
                 msg = "--append-binary is deprecated, consider using --output-format"
                 warn(msg)
     if args.append_fields:
         args.output_fields = args.append_fields
         del args.append_fields
         if args.verbose:
-            with warning(custom_formatwarning) as warn:
+            with comma.util.warning(custom_formatwarning) as warn:
                 msg = "--append-fields is deprecated, consider using --output-fields"
                 warn(msg)
 
