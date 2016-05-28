@@ -77,6 +77,9 @@ class stream(object):
                 break
             yield s
 
+    def __iter__(self):
+        return self.iter()
+
     def read(self, size=None):
         """
         read the specified number of records from stream, extract data,
