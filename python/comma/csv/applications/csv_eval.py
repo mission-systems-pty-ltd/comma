@@ -194,11 +194,10 @@ def check_options(args):
         raise csv_eval_error(msg)
 
 
-def comma_type(maybe_type, field, default_type='d', type_of_unnamed_field='s[0]'):
-    return type_of_unnamed_field if not field else maybe_type or default_type
-
-
 def format_without_blanks(format, fields):
+    def comma_type(maybe_type, field, default_type='d', type_of_unnamed_field='s[0]'):
+        return type_of_unnamed_field if not field else maybe_type or default_type
+
     maybe_types = comma.csv.format.expand(format).split(',')
     maybe_typed_fields = itertools.izip_longest(maybe_types, fields.split(','))
     types = [comma_type(maybe_type, field) for maybe_type, field in maybe_typed_fields]
