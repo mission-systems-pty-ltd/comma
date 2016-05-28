@@ -62,7 +62,7 @@ class test_struct(unittest.TestCase):
         s = comma.csv.struct('id,event', 'u4', event_t)
         self.assertTupleEqual(s.fields, ('id', 'event/t', 'event/point/x', 'event/point/y', 'event/point/z'))
         self.assertTupleEqual(s.types, ('u4', 'datetime64[us]', 'f8', 'f8', 'f8'))
-        self.assertEqual(s.format, 'u4,datetime64[us],f8,f8,f8')
+        self.assertEqual(s.format, 'u4,M8[us],f8,f8,f8')
         self.assertSetEqual(s.ambiguous_leaves, set())
         self.assertDictEqual(s.xpath_of_leaf, dict(id='id', t='event/t', x='event/point/x', y='event/point/y', z='event/point/z'))
         self.assertDictEqual(s.shorthand, { 'event': ('event/t', 'event/point/x', 'event/point/y', 'event/point/z'), 'event/point': ('event/point/x', 'event/point/y', 'event/point/z') })

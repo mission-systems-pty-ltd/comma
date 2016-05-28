@@ -149,19 +149,7 @@ class stream(object):
                 self._missing_data[name] = value
 
     def numpy_scalar_to_string(self, scalar):
-        """
-        convert numpy scalar to a string
-        """
-        if scalar.dtype.char in np.typecodes['AllInteger']:
-            return str(scalar)
-        elif scalar.dtype.char in np.typecodes['Float']:
-            return "{scalar:.{precision}g}".format(scalar=scalar, precision=self.precision)
-        elif scalar.dtype.char in np.typecodes['Datetime']:
-            return csv_time.from_numpy(scalar)
-        elif scalar.dtype.char in 'S':
-            return scalar
-        msg = "converting {} to string is not implemented".format(repr(scalar.dtype))
-        raise NotImplementedError(msg)
+        return numpy_scalar_to_string(scalar, precision=self.precision)
 
     def write(self, s):
         """

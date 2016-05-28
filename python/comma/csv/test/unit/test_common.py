@@ -97,7 +97,7 @@ class test_unrolled_types_of_flat_dtype(unittest.TestCase):
 class test_types_of_flat_dtype(unittest.TestCase):
     def test_array_2d_with_other_fields(self):
         dtype = np.dtype([('name1', 'S2'), ('name2', '(2,3)u4'), ('name3', 'f8')])
-        expected = ('S2', '(2, 3)u4', 'f8')
+        expected = ('S2', '(2,3)u4', 'f8')
         self.assertTupleEqual(comma.csv.common.types_of_flat_dtype(dtype), expected)
 
     def test_no_array(self):
@@ -122,7 +122,7 @@ class test_structured_dtype(unittest.TestCase):
 
 class test_format_from_types(unittest.TestCase):
     def test_strings(self):
-        expected = 'f8,u4,datetime64[us]'
+        expected = 'f8,u4,M8[us]'
         self.assertEqual(comma.csv.common.format_from_types(('f8', 'u4', 'datetime64[us]')), expected)
 
     def test_types(self):

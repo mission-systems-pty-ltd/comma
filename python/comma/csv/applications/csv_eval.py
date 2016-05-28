@@ -1,6 +1,6 @@
 import sys
 import argparse
-import numpy
+import numpy as np
 import re
 import itertools
 import ast
@@ -249,7 +249,7 @@ def prepare_options(args):
 
 
 def numpy_env(restrict=False):
-    d = numpy.__dict__.copy()
+    d = np.__dict__.copy()
     if restrict:
         d.update(__builtins__={})
         d.pop('sys', None)
