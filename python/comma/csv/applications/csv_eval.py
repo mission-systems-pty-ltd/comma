@@ -217,7 +217,7 @@ def format_without_blanks(format, fields=''):
 def output_fields_from_expressions(expressions):
     """
     >>> from comma.csv.applications.csv_eval import output_fields_from_expressions
-    >>> output_fields_from_expressions("a = 1; b = x + y; c = '='; d = (b == z)")
+    >>> output_fields_from_expressions("a = 1; b = x + y; c = 'x = 1; y = 2'; d = (b == z)")
     'a,b,c,d'
     """
     tree = ast.parse(expressions, '<string>', mode='exec')
