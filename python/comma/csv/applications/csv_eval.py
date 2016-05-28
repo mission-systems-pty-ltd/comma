@@ -6,8 +6,8 @@ import itertools
 import ast
 import comma.csv
 import comma.signal
-from comma.util.warning import warning
-from comma.util.help_formatter import argparse_fmt
+from comma.util import warning
+from comma.util import argparse_fmt
 
 description = """
 evaluate numerical expressions and append computed values to csv stream

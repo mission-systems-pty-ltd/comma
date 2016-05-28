@@ -4,7 +4,7 @@ from cStringIO import StringIO
 import itertools
 import warnings
 from . import time as csv_time
-from ..util.warning import warning
+from ..util import warning
 from .struct import struct
 from .common import *
 
