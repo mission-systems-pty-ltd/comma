@@ -50,7 +50,7 @@ class stream(object):
         self.input_dtype = self._input_dtype()
         self.size = self._default_buffer_size()
         if not self.binary:
-            unrolled_types = unrolled_types_of_flat_dtype(self.input_dtype)
+            unrolled_types = types_of_dtype(self.input_dtype, unroll=True)
             self.ascii_converters = csv_time.ascii_converters(unrolled_types)
             num_utypes = len(unrolled_types)
             self.usecols = tuple(range(num_utypes))
@@ -100,7 +100,7 @@ class stream(object):
         else:
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore')
-                self._ascii_buffer = readlines(self.source, size)
+                self._ascii_buffer = readlines_unbuffered(self.source, size)
                 if not self._ascii_buffer:
                     return
                 self._input_data = np.atleast_1d(np.genfromtxt(
@@ -252,7 +252,7 @@ class stream(object):
                     .format(','.join(self.fields))
                 raise ValueError(msg)
             type_of = self.struct.type_of_field.get
-            return format_from_types(type_of(field) for field in self.fields)
+            return ','.join(type_of(field) for field in self.fields)
         if binary is False:
             return ''
         return format
@@ -297,8 +297,7 @@ class stream(object):
         else:
             type_of = self.struct.type_of_field.get
             types = [type_of(name) or 'S' for name in self.fields]
-            format = format_from_types(types)
-            input_dtype = structured_dtype(format)
+            input_dtype = structured_dtype(','.join(types))
         return input_dtype
 
     def _default_buffer_size(self):

@@ -20,7 +20,7 @@ def merge_arrays(first, second):
     return merged
 
 
-def readlines(source, size):
+def readlines_unbuffered(source, size):
     """
     read lines from source, such as stdin, without buffering
     builtin readlines() buffers the input and hence prevents flushing every line
@@ -39,66 +39,66 @@ def readlines(source, size):
     return lines
 
 
-def normalise_type(maybe_array_type):
+def strip_byte_order_prefix(string, prefix_chars='<>|='):
     """
-    >>> from comma.csv.common import normalise_type
-    >>> normalise_type('<f8')
+    >>> from comma.csv.common import strip_byte_order_prefix
+    >>> strip_byte_order_prefix('<f8')
     'f8'
-    >>> normalise_type('f8')
-    'f8'
-    >>> normalise_type('2f8')
-    '2f8'
-    >>> normalise_type('(2,)f8')
-    '2f8'
-    >>> normalise_type('(2, 3)f8')
-    '(2,3)f8'
     """
-    def strip_byte_order_prefix(string, prefix_chars='<>|='):
-        return string[1:] if string.startswith(tuple(prefix_chars)) else string
-
-    maybe_array_type = strip_byte_order_prefix(maybe_array_type).replace(' ', '')
-    m = re.match(r'^\((\d+),\)(.*)', maybe_array_type)
-    if m and len(m.groups()) == 2:
-        size = m.group(1)
-        type = m.group(2)
-        return size + type
-    else:
-        return maybe_array_type
+    return string[1:] if string.startswith(tuple(prefix_chars)) else string
 
 
-def types_of_flat_dtype(dtype, unroll=False):
+def shape_to_string(shape):
     """
-    transform a dtype into types
+    >>> from comma.csv.common import shape_to_string
+    >>> shape_to_string((2,))
+    '2'
+    >>> shape_to_string((2, 3))
+    '(2,3)'
+    """
+    s = str(shape).replace(' ', '')
+    m = re.match(r'^\((\d+),\)', s)
+    if m:
+        return m.group(1)
+    return s
+
+
+def types_of_dtype(dtype, unroll=False):
+    """
+    return a tuple of numpy type strings for a given dtype
 
     >>> import numpy as np
-    >>> from comma.csv.common import types_of_flat_dtype
-    >>> types_of_flat_dtype(np.dtype('u4,(2, 3)f8'))
+    >>> from comma.csv.common import types_of_dtype
+    >>> types_of_dtype(np.dtype('u4,(2, 3)f8'))
     ('u4', '(2,3)f8')
-    >>> types_of_flat_dtype(np.dtype('u4,(2, 3)f8'), unroll=True)
+    >>> types_of_dtype(np.dtype('(2, 3)f8'))
+    ('(2,3)f8',)
+    >>> types_of_dtype(np.dtype('u4,(2, 3)f8'), unroll=True)
     ('u4', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8')
+    >>> types_of_dtype(np.dtype([('a', 'S2'), ('b', [('c', '2f8'), ('d', 'u2')])]))
+    ('S2', '2f8', 'u2')
     """
-    shape_unrolled_types = []
+    if len(dtype) == 0:
+        dtype = np.dtype([('', dtype)])
+    types = []
     for descr in dtype.descr:
         if isinstance(descr[1], list):
-            msg = "expected flat dtype, got '{}'".format(repr(dtype))
-            raise ValueError(msg)
-        single_type = normalise_type(descr[1])
+            types.extend(types_of_dtype(np.dtype(descr[1]), unroll))
+            continue
+        single_type = strip_byte_order_prefix(descr[1])
         shape = descr[2] if len(descr) > 2 else ()
         if unroll:
-            shape_unrolled_types.extend([single_type] * reduce(operator.mul, shape, 1))
+            unrolled_types = [single_type] * reduce(operator.mul, shape, 1)
+            types.extend(unrolled_types)
         else:
-            type = normalise_type(str(shape) + single_type) if shape else single_type
-            shape_unrolled_types.append(type)
-    return tuple(shape_unrolled_types)
-
-
-def unrolled_types_of_flat_dtype(dtype):
-    return types_of_flat_dtype(dtype, unroll=True)
+            type = shape_to_string(shape) + single_type if shape else single_type
+            types.append(type)
+    return tuple(types)
 
 
 def structured_dtype(numpy_format_or_type):
     """
-    return structured array even for a format string containing a single type
+    return structured dtype even for a format string containing a single type
     note: passing a single type format string to numpy dtype returns a scalar
 
     >>> import numpy as np
@@ -114,29 +114,27 @@ def structured_dtype(numpy_format_or_type):
     dtype = np.dtype(numpy_format_or_type)
     if len(dtype) != 0:
         return dtype
-    return np.dtype([('f0', numpy_format_or_type)])
+    return np.dtype([('', numpy_format_or_type)])
 
 
-def format_from_types(types):
+def numpy_type_to_string(type):
     """
-    return the format string corresponding to a sequence of types,
-    which can contain types as strings (including arrays) and numpy types,
-        e.g., ( 'f8', '(2,3)u4', np.uint32 )
-
     >>> import numpy as np
-    >>> from comma.csv.common import format_from_types
-    >>> format_from_types(('f8', '(2,3)u4', np.uint32))
-    'f8,(2,3)u4,u4'
+    >>> from comma.csv.common import numpy_type_to_string
+    >>> numpy_type_to_string(np.uint32)
+    'u4'
+    >>> numpy_type_to_string('u4')
+    'u4'
+    >>> numpy_type_to_string('2u4')
+    '2u4'
+    >>> numpy_type_to_string('(2,3)u4')
+    '(2,3)u4'
     """
-    types_as_strings = []
-    for type in types:
-        dtype = structured_dtype(type) if isinstance(type, basestring) else np.dtype(type)
-        if len(dtype) > 1:
-            msg = "expected single type, got {}".format(type)
-            raise ValueError(msg)
-        type_as_string = normalise_type(types_of_flat_dtype(dtype)[0])
-        types_as_strings.append(type_as_string)
-    return ','.join(types_as_strings)
+    dtype = np.dtype(type)
+    if len(dtype) != 0:
+        msg = "expected single type, got {}".format(type)
+        raise ValueError(msg)
+    return types_of_dtype(dtype)[0]
 
 
 DEFAULT_PRECISION = 12
@@ -144,7 +142,7 @@ DEFAULT_PRECISION = 12
 
 def numpy_scalar_to_string(scalar, precision=DEFAULT_PRECISION):
     """
-    convert numpy scalar to a string
+    convert numpy scalar to a string suitable to comma csv stream
 
     >>> from comma.csv.common import numpy_scalar_to_string
     >>> numpy_scalar_to_string(np.int32(-123))

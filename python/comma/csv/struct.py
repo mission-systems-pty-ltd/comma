@@ -16,9 +16,9 @@ class struct(object):
         self.fields = self._full_xpath_fields()
         self.types = self._basic_types()
         self.shorthand = self._shorthand()
-        self.format = format_from_types(self.types)
+        self.format = ','.join(self.types)
         self.flat_dtype = np.dtype(zip(self.fields, self.types))
-        unrolled_types = unrolled_types_of_flat_dtype(self.flat_dtype)
+        unrolled_types = types_of_dtype(self.flat_dtype, unroll=True)
         self.unrolled_flat_dtype = structured_dtype(','.join(unrolled_types))
         self.type_of_field = dict(zip(self.fields, self.types))
         leaves = tuple(xpath.split('/')[-1] for xpath in self.fields)
@@ -104,7 +104,7 @@ class struct(object):
             if isinstance(type, struct):
                 types.extend(type.types)
             else:
-                types.append(type)
+                types.append(numpy_type_to_string(type))
         return tuple(types)
 
     def _shorthand(self):

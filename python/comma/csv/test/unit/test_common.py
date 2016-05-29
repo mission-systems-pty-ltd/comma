@@ -58,52 +58,82 @@ class test_merge_arrays(unittest.TestCase):
 
 
 class test_unrolled_types_of_flat_dtype(unittest.TestCase):
+    def test_scalar_from_type(self):
+        dtype = np.dtype(np.uint32)
+        expected = ('u4',)
+        self.assertTupleEqual(comma.csv.common.types_of_dtype(dtype, unroll=True), expected)
+
+    def test_scalar_from_string(self):
+        dtype = np.dtype('u4')
+        expected = ('u4',)
+        self.assertTupleEqual(comma.csv.common.types_of_dtype(dtype, unroll=True), expected)
+
+    def test_scalar_array_2d(self):
+        dtype = np.dtype('(2,3)u4')
+        expected = ('u4', 'u4', 'u4', 'u4', 'u4', 'u4')
+        self.assertTupleEqual(comma.csv.common.types_of_dtype(dtype, unroll=True), expected)
+
     def test_array_1d(self):
         dtype = np.dtype([('name', '3u4')])
         expected = ('u4', 'u4', 'u4')
-        self.assertTupleEqual(comma.csv.common.unrolled_types_of_flat_dtype(dtype), expected)
+        self.assertTupleEqual(comma.csv.common.types_of_dtype(dtype, unroll=True), expected)
 
     def test_array_1d_long(self):
         dtype = np.dtype([('name', '12u4')])
         expected = ('u4',) * 12
-        self.assertTupleEqual(comma.csv.common.unrolled_types_of_flat_dtype(dtype), expected)
+        self.assertTupleEqual(comma.csv.common.types_of_dtype(dtype, unroll=True), expected)
 
     def test_array_2d(self):
         dtype = np.dtype([('name', '(2,3)u4')])
         expected = ('u4', 'u4', 'u4', 'u4', 'u4', 'u4')
-        self.assertTupleEqual(comma.csv.common.unrolled_types_of_flat_dtype(dtype), expected)
+        self.assertTupleEqual(comma.csv.common.types_of_dtype(dtype, unroll=True), expected)
 
     def test_array_2d_with_other_fields(self):
         dtype = np.dtype([('name1', 'S2'), ('name2', '(2,3)u4'), ('name3', 'f8')])
         expected = ('S2', 'u4', 'u4', 'u4', 'u4', 'u4', 'u4', 'f8')
-        self.assertTupleEqual(comma.csv.common.unrolled_types_of_flat_dtype(dtype), expected)
+        self.assertTupleEqual(comma.csv.common.types_of_dtype(dtype, unroll=True), expected)
 
     def test_no_array(self):
         dtype = np.dtype([('name1', 'S2'), ('name2', 'f8')])
         expected = ('S2', 'f8')
-        self.assertTupleEqual(comma.csv.common.unrolled_types_of_flat_dtype(dtype), expected)
+        self.assertTupleEqual(comma.csv.common.types_of_dtype(dtype, unroll=True), expected)
 
     def test_time(self):
         dtype = np.dtype([('name1', 'datetime64[us]'), ('name2', 'timedelta64[us]')])
         expected = ('M8[us]', 'm8[us]')
-        self.assertTupleEqual(comma.csv.common.unrolled_types_of_flat_dtype(dtype), expected)
+        self.assertTupleEqual(comma.csv.common.types_of_dtype(dtype, unroll=True), expected)
 
     def test_time_array(self):
         dtype = np.dtype([('name', '2datetime64[us]')])
         expected = ('M8[us]', 'M8[us]')
-        self.assertTupleEqual(comma.csv.common.unrolled_types_of_flat_dtype(dtype), expected)
+        self.assertTupleEqual(comma.csv.common.types_of_dtype(dtype, unroll=True), expected)
 
 
-class test_types_of_flat_dtype(unittest.TestCase):
+class test_types_of_dtype(unittest.TestCase):
+    def test_scalar_from_type(self):
+        dtype = np.dtype(np.uint32)
+        expected = ('u4',)
+        self.assertTupleEqual(comma.csv.common.types_of_dtype(dtype), expected)
+
+    def test_scalar_from_string(self):
+        dtype = np.dtype('u4')
+        expected = ('u4',)
+        self.assertTupleEqual(comma.csv.common.types_of_dtype(dtype), expected)
+
+    def test_scalar_array_2d(self):
+        dtype = np.dtype('(2,3)u4')
+        expected = ('(2,3)u4',)
+        self.assertTupleEqual(comma.csv.common.types_of_dtype(dtype), expected)
+
     def test_array_2d_with_other_fields(self):
         dtype = np.dtype([('name1', 'S2'), ('name2', '(2,3)u4'), ('name3', 'f8')])
         expected = ('S2', '(2,3)u4', 'f8')
-        self.assertTupleEqual(comma.csv.common.types_of_flat_dtype(dtype), expected)
+        self.assertTupleEqual(comma.csv.common.types_of_dtype(dtype), expected)
 
     def test_no_array(self):
         dtype = np.dtype([('name1', 'S2'), ('name2', 'f8')])
         expected = ('S2', 'f8')
-        self.assertTupleEqual(comma.csv.common.types_of_flat_dtype(dtype), expected)
+        self.assertTupleEqual(comma.csv.common.types_of_dtype(dtype), expected)
 
 
 class test_structured_dtype(unittest.TestCase):
@@ -119,19 +149,6 @@ class test_structured_dtype(unittest.TestCase):
         expected = np.dtype([('f0', 'datetime64[us]')])
         self.assertEqual(comma.csv.common.structured_dtype('datetime64[us]'), expected)
 
-
-class test_format_from_types(unittest.TestCase):
-    def test_strings(self):
-        expected = 'f8,u4,M8[us]'
-        self.assertEqual(comma.csv.common.format_from_types(('f8', 'u4', 'datetime64[us]')), expected)
-
-    def test_types(self):
-        expected = 'f8,u4'
-        self.assertEqual(comma.csv.common.format_from_types((np.float64, np.uint32)), expected)
-
-    def test_arrays(self):
-        expected = '(2,3)u4,3f8'
-        self.assertEqual(comma.csv.common.format_from_types(('(2,3)u4', '3f8')), expected)
 
 if __name__ == '__main__':
     unittest.main()

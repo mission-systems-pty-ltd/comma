@@ -3,7 +3,7 @@ import numpy as np
 from collections import OrderedDict
 from itertools import groupby
 from .time import TYPE as numpy_datetime_type
-from .common import types_of_flat_dtype, structured_dtype
+from .common import types_of_dtype
 
 
 COMMA_TO_NUMPY_TYPE = OrderedDict([
@@ -70,11 +70,11 @@ def to_comma_type(numpy_type):
             length = m.group(1)
             return 's[' + length + ']'
 
-    dtype = structured_dtype(numpy_type)
-    if len(dtype) != 1:
+    dtype = np.dtype(numpy_type)
+    if len(dtype) != 0:
         msg = "expected single numpy type, got {}".format(numpy_type)
         raise ValueError(msg)
-    unrolled = types_of_flat_dtype(structured_dtype(numpy_type), unroll=True)
+    unrolled = types_of_dtype(dtype, unroll=True)
     single_type = unrolled[0]
     numtypes = len(unrolled)
     comma_type = NUMPY_TO_COMMA_TYPE.get(single_type) or to_comma_string_type(single_type)
@@ -165,6 +165,6 @@ def from_numpy(*numpy_types_or_format):
     """
     comma_types = []
     for numpy_type_or_format in numpy_types_or_format:
-        for numpy_type in types_of_flat_dtype(np.dtype(numpy_type_or_format)):
+        for numpy_type in types_of_dtype(np.dtype(numpy_type_or_format)):
             comma_types.append(to_comma_type(numpy_type))
     return compress(','.join(comma_types))
