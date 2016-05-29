@@ -248,11 +248,10 @@ def prepare_options(args):
         args.output_format = format_without_blanks(args.output_format, args.output_fields)
 
 
-def numpy_env(restrict=False):
+def restricted_numpy_env():
     d = np.__dict__.copy()
-    if restrict:
-        d.update(__builtins__={})
-        d.pop('sys', None)
+    d.update(__builtins__={})
+    d.pop('sys', None)
     return d
 
 
@@ -304,13 +303,13 @@ class stream(object):
             print >> file, "output format: '{}'".format(output_format)
 
 
-def check_fields(fields, input_fields=(), env=numpy_env()):
+def check_fields(fields, input_fields=()):
     for field in fields:
         if not re.match(r'^[a-z_]\w*$', field, re.I):
             raise csv_eval_error("'{}' is not a valid field name".format(field))
         if field in ['_input', '_output']:
             raise csv_eval_error("'{}' is a reserved name".format(field))
-        if field in env:
+        if field in np.__dict__:
             raise csv_eval_error("'{}' is a reserved numpy name".format(field))
         if field in input_fields:
             raise csv_eval_error("'{}' is an input field name".format(field))
@@ -325,7 +324,7 @@ def evaluate(expressions, stream, dangerous=False):
         output_initializer += "_output['{field}'] = {field}\n".format(field=field)
     code_string = input_initializer + '\n' + expressions + '\n' + output_initializer
     code = compile(code_string, '<string>', 'exec')
-    restricted_numpy = numpy_env(restrict=False if dangerous else True)
+    env = np.__dict__ if dangerous else restricted_numpy_env()
     output = stream.output.struct(stream.input.size)
     is_shutdown = comma.signal.is_shutdown(name=__name__)
     while not is_shutdown:
@@ -334,20 +333,20 @@ def evaluate(expressions, stream, dangerous=False):
             break
         if output.size != i.size:
             output = stream.output.struct(i.size)
-        exec code in restricted_numpy, {'_input': i, '_output': output}
+        exec code in env, {'_input': i, '_output': output}
         stream.output.write(output)
 
 
 def select(condition, stream):
     code = compile(condition, '<string>', 'eval')
-    restricted_numpy = numpy_env(restrict=True)
+    env = restricted_numpy_env()
     is_shutdown = comma.signal.is_shutdown(name=__name__)
     while not is_shutdown:
         i = stream.input.read()
         if i is None:
             break
         input_initializer = {field: i[field] for field in i.dtype.names}
-        mask = eval(code, restricted_numpy, input_initializer)
+        mask = eval(code, env, input_initializer)
         stream.input.dump(mask=mask)
 
 
