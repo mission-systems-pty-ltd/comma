@@ -5,10 +5,11 @@ import itertools
 import warnings
 from ..util import warning
 from ..io import readlines_unbuffered
-from ..numpy import merge_arrays, types_of_dtype, structured_dtype, scalar_to_string
+from ..numpy import merge_arrays, types_of_dtype, structured_dtype
 from . import time as csv_time
 from .struct import struct
 
+DEFAULT_PRECISION = 12
 
 
 def custom_formatwarning(msg, *args):
@@ -27,7 +28,7 @@ class stream(object):
                  format='',
                  binary=None,
                  delimiter=',',
-                 precision=12,
+                 precision=DEFAULT_PRECISION,
                  flush=False,
                  source=sys.stdin,
                  target=sys.stdout,
@@ -151,9 +152,7 @@ class stream(object):
                 self._missing_data[name] = value
 
     def numpy_scalar_to_string(self, scalar):
-        return scalar_to_string(scalar,
-                                time_to_string=csv_time.from_numpy,
-                                precision=self.precision)
+        return numpy_scalar_to_string(scalar, precision=self.precision)
 
     def write(self, s):
         """
@@ -372,3 +371,37 @@ class stream(object):
         formats = [self.complete_dtype.fields[name][0] for name in names]
         offsets = [self.complete_dtype.fields[name][1] for name in names]
         return np.dtype(dict(names=names, formats=formats, offsets=offsets))
+
+
+def numpy_scalar_to_string(scalar, precision=DEFAULT_PRECISION):
+    """
+    convert numpy scalar to a string suitable to comma csv stream
+
+    >>> from comma.csv import numpy_scalar_to_string
+    >>> numpy_scalar_to_string(np.int32(-123))
+    '-123'
+    >>> numpy_scalar_to_string(np.float64(-12.3499), precision=4)
+    '-12.35'
+    >>> numpy_scalar_to_string(np.float64(0.1234567890123456))
+    '0.123456789012'
+    >>> numpy_scalar_to_string(np.string_('abc'))
+    'abc'
+    >>> numpy_scalar_to_string(np.datetime64('2015-01-02T12:34:56', 'us'))
+    '20150102T123456'
+    >>> numpy_scalar_to_string(np.datetime64('2015-01-02T12:34:56.000000', 'us'))
+    '20150102T123456'
+    >>> numpy_scalar_to_string(np.datetime64('2015-01-02T12:34:56.123456', 'us'))
+    '20150102T123456.123456'
+    >>> numpy_scalar_to_string(np.timedelta64(-123, 's'))
+    '-123'
+    """
+    if scalar.dtype.char in np.typecodes['AllInteger']:
+        return str(scalar)
+    elif scalar.dtype.char in np.typecodes['Float']:
+        return "{scalar:.{precision}g}".format(scalar=scalar, precision=precision)
+    elif scalar.dtype.char in np.typecodes['Datetime']:
+        return csv_time.from_numpy(scalar)
+    elif scalar.dtype.char in 'S':
+        return scalar
+    msg = "converting {} to string is not implemented".format(repr(scalar.dtype))
+    raise NotImplementedError(msg)

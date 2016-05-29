@@ -116,37 +116,3 @@ def type_to_string(type):
         msg = "expected single type, got {}".format(type)
         raise ValueError(msg)
     return types_of_dtype(dtype)[0]
-
-
-DEFAULT_PRECISION = 12
-
-
-def scalar_to_string(scalar, time_to_string=str, precision=DEFAULT_PRECISION):
-    """
-    convert numpy scalar to a string suitable to comma csv stream
-
-    >>> from comma.numpy import scalar_to_string
-    >>> scalar_to_string(np.int32(-123))
-    '-123'
-    >>> scalar_to_string(np.float64(-12.3499), precision=4)
-    '-12.35'
-    >>> scalar_to_string(np.float64(0.1234567890123456))
-    '0.123456789012'
-    >>> scalar_to_string(np.string_('abc'))
-    'abc'
-    >>> time_to_string = lambda _: str(_.item().year)
-    >>> scalar_to_string(np.datetime64('2015-01-01'),time_to_string=time_to_string)
-    '2015'
-    >>> scalar_to_string(np.timedelta64(-123, 's'))
-    '-123 seconds'
-    """
-    if scalar.dtype.char in np.typecodes['AllInteger']:
-        return str(scalar)
-    elif scalar.dtype.char in np.typecodes['Float']:
-        return "{scalar:.{precision}g}".format(scalar=scalar, precision=precision)
-    elif scalar.dtype.char in np.typecodes['Datetime']:
-        return time_to_string(scalar)
-    elif scalar.dtype.char in 'S':
-        return scalar
-    msg = "converting {} to string is not implemented".format(repr(scalar.dtype))
-    raise NotImplementedError(msg)
