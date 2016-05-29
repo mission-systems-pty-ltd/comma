@@ -1,5 +1,5 @@
 import numpy as np
-from .common import *
+from ..numpy import types_of_dtype, structured_dtype, type_to_string
 
 
 class struct(object):
@@ -104,7 +104,7 @@ class struct(object):
             if isinstance(type, struct):
                 types.extend(type.types)
             else:
-                types.append(numpy_type_to_string(type))
+                types.append(type_to_string(type))
         return tuple(types)
 
     def _shorthand(self):

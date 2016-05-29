@@ -1,7 +1,7 @@
+from __future__ import absolute_import
 import numpy as np
 import operator
 import re
-from .time import from_numpy as from_numpy_time
 
 
 def merge_arrays(first, second):
@@ -20,28 +20,9 @@ def merge_arrays(first, second):
     return merged
 
 
-def readlines_unbuffered(source, size):
-    """
-    read lines from source, such as stdin, without buffering
-    builtin readlines() buffers the input and hence prevents flushing every line
-    """
-    if size >= 0:
-        lines = ''
-        number_of_lines = 0
-        while number_of_lines < size:
-            line = source.readline()
-            if not line:
-                break
-            lines += line
-            number_of_lines += 1
-    else:
-        lines = source.read()
-    return lines
-
-
 def strip_byte_order_prefix(string, prefix_chars='<>|='):
     """
-    >>> from comma.csv.common import strip_byte_order_prefix
+    >>> from comma.numpy import strip_byte_order_prefix
     >>> strip_byte_order_prefix('<f8')
     'f8'
     """
@@ -50,7 +31,7 @@ def strip_byte_order_prefix(string, prefix_chars='<>|='):
 
 def shape_to_string(shape):
     """
-    >>> from comma.csv.common import shape_to_string
+    >>> from comma.numpy import shape_to_string
     >>> shape_to_string((2,))
     '2'
     >>> shape_to_string((2, 3))
@@ -68,7 +49,7 @@ def types_of_dtype(dtype, unroll=False):
     return a tuple of numpy type strings for a given dtype
 
     >>> import numpy as np
-    >>> from comma.csv.common import types_of_dtype
+    >>> from comma.numpy import types_of_dtype
     >>> types_of_dtype(np.dtype('u4,(2, 3)f8'))
     ('u4', '(2,3)f8')
     >>> types_of_dtype(np.dtype('(2, 3)f8'))
@@ -96,13 +77,13 @@ def types_of_dtype(dtype, unroll=False):
     return tuple(types)
 
 
-def structured_dtype(numpy_format_or_type):
+def structured_dtype(format_or_type):
     """
     return structured dtype even for a format string containing a single type
     note: passing a single type format string to numpy dtype returns a scalar
 
     >>> import numpy as np
-    >>> from comma.csv.common import structured_dtype
+    >>> from comma.numpy import structured_dtype
     >>> structured_dtype(np.float64).names
     ('f0',)
     >>> structured_dtype('f8').names
@@ -111,23 +92,23 @@ def structured_dtype(numpy_format_or_type):
     ('f0', 'f1')
     >>> np.dtype('f8').names
     """
-    dtype = np.dtype(numpy_format_or_type)
+    dtype = np.dtype(format_or_type)
     if len(dtype) != 0:
         return dtype
-    return np.dtype([('', numpy_format_or_type)])
+    return np.dtype([('', format_or_type)])
 
 
-def numpy_type_to_string(type):
+def type_to_string(type):
     """
     >>> import numpy as np
-    >>> from comma.csv.common import numpy_type_to_string
-    >>> numpy_type_to_string(np.uint32)
+    >>> from comma.numpy import type_to_string
+    >>> type_to_string(np.uint32)
     'u4'
-    >>> numpy_type_to_string('u4')
+    >>> type_to_string('u4')
     'u4'
-    >>> numpy_type_to_string('2u4')
+    >>> type_to_string('2u4')
     '2u4'
-    >>> numpy_type_to_string('(2,3)u4')
+    >>> type_to_string('(2,3)u4')
     '(2,3)u4'
     """
     dtype = np.dtype(type)
@@ -140,34 +121,31 @@ def numpy_type_to_string(type):
 DEFAULT_PRECISION = 12
 
 
-def numpy_scalar_to_string(scalar, precision=DEFAULT_PRECISION):
+def scalar_to_string(scalar, time_to_string=str, precision=DEFAULT_PRECISION):
     """
     convert numpy scalar to a string suitable to comma csv stream
 
-    >>> from comma.csv.common import numpy_scalar_to_string
-    >>> numpy_scalar_to_string(np.int32(-123))
+    >>> from comma.numpy import scalar_to_string
+    >>> scalar_to_string(np.int32(-123))
     '-123'
-    >>> numpy_scalar_to_string(np.float64(-12.3499), precision=4)
+    >>> scalar_to_string(np.float64(-12.3499), precision=4)
     '-12.35'
-    >>> numpy_scalar_to_string(np.float64(0.1234567890123456))
+    >>> scalar_to_string(np.float64(0.1234567890123456))
     '0.123456789012'
-    >>> numpy_scalar_to_string(np.string_('abc'))
+    >>> scalar_to_string(np.string_('abc'))
     'abc'
-    >>> numpy_scalar_to_string(np.datetime64('2015-01-02T12:34:56', 'us'))
-    '20150102T123456'
-    >>> numpy_scalar_to_string(np.datetime64('2015-01-02T12:34:56.000000', 'us'))
-    '20150102T123456'
-    >>> numpy_scalar_to_string(np.datetime64('2015-01-02T12:34:56.123456', 'us'))
-    '20150102T123456.123456'
-    >>> numpy_scalar_to_string(np.timedelta64(-123, 's'))
-    '-123'
+    >>> time_to_string = lambda _: str(_.item().year)
+    >>> scalar_to_string(np.datetime64('2015-01-01'),time_to_string=time_to_string)
+    '2015'
+    >>> scalar_to_string(np.timedelta64(-123, 's'))
+    '-123 seconds'
     """
     if scalar.dtype.char in np.typecodes['AllInteger']:
         return str(scalar)
     elif scalar.dtype.char in np.typecodes['Float']:
         return "{scalar:.{precision}g}".format(scalar=scalar, precision=precision)
     elif scalar.dtype.char in np.typecodes['Datetime']:
-        return from_numpy_time(scalar)
+        return time_to_string(scalar)
     elif scalar.dtype.char in 'S':
         return scalar
     msg = "converting {} to string is not implemented".format(repr(scalar.dtype))

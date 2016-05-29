@@ -1,9 +1,9 @@
-import re
 import numpy as np
+import re
 from collections import OrderedDict
 from itertools import groupby
+from ..numpy import types_of_dtype
 from .time import TYPE as numpy_datetime_type
-from .common import types_of_dtype
 
 
 COMMA_TO_NUMPY_TYPE = OrderedDict([

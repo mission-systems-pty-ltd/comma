@@ -3,10 +3,12 @@ import sys
 from cStringIO import StringIO
 import itertools
 import warnings
-from . import time as csv_time
 from ..util import warning
+from ..io import readlines_unbuffered
+from ..numpy import merge_arrays, types_of_dtype, structured_dtype, scalar_to_string
+from . import time as csv_time
 from .struct import struct
-from .common import *
+
 
 
 def custom_formatwarning(msg, *args):
@@ -100,7 +102,7 @@ class stream(object):
         else:
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore')
-                self._ascii_buffer = readlines_unbuffered(self.source, size)
+                self._ascii_buffer = readlines_unbuffered(size, self.source)
                 if not self._ascii_buffer:
                     return
                 self._input_data = np.atleast_1d(np.genfromtxt(
@@ -149,7 +151,9 @@ class stream(object):
                 self._missing_data[name] = value
 
     def numpy_scalar_to_string(self, scalar):
-        return numpy_scalar_to_string(scalar, precision=self.precision)
+        return scalar_to_string(scalar,
+                                time_to_string=csv_time.from_numpy,
+                                precision=self.precision)
 
     def write(self, s):
         """
