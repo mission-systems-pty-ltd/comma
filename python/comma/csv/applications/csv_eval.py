@@ -326,7 +326,7 @@ def evaluate(expressions, stream, dangerous=False):
     code = compile(code_string, '<string>', 'exec')
     env = np.__dict__ if dangerous else restricted_numpy_env()
     output = stream.output.struct(stream.input.size)
-    is_shutdown = comma.signal.is_shutdown(name=__name__)
+    is_shutdown = comma.signal.is_shutdown()
     while not is_shutdown:
         i = stream.input.read()
         if i is None:
@@ -340,7 +340,7 @@ def evaluate(expressions, stream, dangerous=False):
 def select(condition, stream):
     code = compile(condition, '<string>', 'eval')
     env = restricted_numpy_env()
-    is_shutdown = comma.signal.is_shutdown(name=__name__)
+    is_shutdown = comma.signal.is_shutdown()
     while not is_shutdown:
         i = stream.input.read()
         if i is None:
