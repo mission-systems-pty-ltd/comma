@@ -279,6 +279,12 @@ SET(CPACK_PACKAGE_VERSION_MINOR ${COMMITDATE})
 SET(CPACK_PACKAGE_VERSION_PATCH ${COMMITHASH})
 SET(CPACK_PACKAGE_CONTACT "t.teo@acfr.usyd.edu.au")
 
+# If the user builds shared, make sure that the RPM package (that might be generated) runs ldconfig when it's installed.
+IF( BUILD_SHARED_LIBS )
+	SET(CPACK_RPM_SPEC_MORE_DEFINE "%posttrans -p /sbin/ldconfig")
+ENDIF( BUILD_SHARED_LIBS )
+
+
 IF( BUILD_PYTHON_PACKAGES AND ADD_PYTHON_PACKAGES_TO_RPM )
     SET(CPACK_RPM_PACKAGE_REQUIRES "boost-thread recode socat psmisc python numpy")
     SET(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/python/comma-rpm-post-install.sh" )
