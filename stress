@@ -1,0 +1,8 @@
+#!/bin/bash
+
+limit=$(( 3600 * 12 ))
+for i in $( eval echo "{1..$limit}" ) ; do
+    echo "---------- iteration $i ----------" >&2
+    ./main
+    echo "iteration[$i]/status=$?"
+done
