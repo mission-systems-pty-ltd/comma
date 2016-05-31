@@ -1,0 +1,47 @@
+#!/bin/bash
+
+## @page verify_background_process_ids verify_background_process_ids
+# @brief uses pgrep to verify the child processes of a given parent against the expected list
+# @param parent the process id of the parent
+# @param children arbitrary number of the process ids of the children
+function verify_background_process_ids()
+{
+    local parent=$1
+    local children=${@:2}
+    children=$( echo "${children// /$'\n'}" | sort -n | tr '\n' ' ' | head -c-1 )
+    local named_pids pids
+    named_pids=$( pgrep -l -P $parent )
+    pids=$( echo "$named_pids" | sort -n -k 1,1 | grep -v pgrep | cut -d' ' -f1 | tr '\n' ' ' | head -c-1 )
+    [[ "$children" == "$pids" ]] && return 0
+    local process_tree=$( pstree -a -c -g -l -p $parent )
+    cat >&2 <<EOF
+verify_background_pids: verification failure
+    command line:
+        '$@'
+    parent process:
+        '$parent'
+    expected children:
+        '$children'
+    pgrep output:
+        '$named_pids'
+    extracted pids:
+        '$pids'
+    process tree:
+        '$process_tree'
+EOF
+    return 1
+}
+export -f verify_background_process_ids
+declare -r verify_background_process_ids
+
+function background_launcher()
+{
+    local self=$BASHPID
+    echo "background_launcher: run in PID '$self'"
+    kill -s STOP $self
+    # shall be woken up by the caller (and possibly killed at once)
+    echo "background_launcher in PID $self: wake up and exec '${@}'" >&2
+    exec "${@}"
+}
+export -f background_launcher
+declare -r background_launcher

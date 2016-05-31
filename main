@@ -1,0 +1,22 @@
+#!/bin/bash
+
+source ./util || { echo "cannot source './util'" >&2; exit 1; }
+
+children=()
+background_launcher sleep 10 & children+=( $! )
+background_launcher sleep 10 & children+=( $! )
+background_launcher sleep 10 & children+=( $! )
+
+main_pid=$BASHPID
+verify_background_process_ids $main_pid "${children[@]}" && echo "verification success" >&2
+
+echo "process tree of myself:" >&2
+pstree -a -c -g -l -p $main_pid >&2
+
+for pid in ${children[@]} ; do
+    echo "waking up '$pid'" >&2
+    kill -s CONT $pid
+done
+
+echo "waiting for the children to terminate..." >&2
+wait
