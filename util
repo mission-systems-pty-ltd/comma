@@ -45,3 +45,26 @@ function background_launcher()
 }
 export -f background_launcher
 declare -r background_launcher
+
+function wake_up()
+{
+    local pid
+    for pid in "$@" ; do
+        echo "waking up '$pid'" >&2
+        kill -s CONT $pid
+    done
+}
+export -f wake_up
+declare -r wake_up
+
+function wake_up_dead()
+{
+    local pid
+    for pid in "$@" ; do
+        echo "waking up to kill '$pid'" >&2
+        kill -s TERM $pid
+        kill -s CONT $pid
+    done
+}
+export -f wake_up_dead
+declare -r wake_up_dead
