@@ -3,6 +3,6 @@
 *.swo
 *.orig
 *.pyc
-output
+output*
 stats
 stderr.log
