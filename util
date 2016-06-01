@@ -120,15 +120,26 @@ function wake_up_listed()
 export -f wake_up_listed
 declare -r wake_up_listed
 
+function wake_up_and_kill()
+{
+    local pid=$1
+    local rv=0
+    builtin echo "$FUNCNAME: handle process '$pid'" >&2
+    builtin kill -s TERM $pid || rv=1
+    builtin kill -s CONT $pid || rv=1
+    return $rv
+}
+export -f wake_up_and_kill
+declare -r wake_up_and_kill
+
 function wake_up_and_kill_listed()
 {
-    local pid
+    local rv=0
     for pid in "$@" ; do
-        builtin echo "$FUNCNAME: handle process '$pid'" >&2
-        builtin kill -s TERM $pid
-        builtin kill -s CONT $pid
+        wake_up_and_kill $pid
+        (( $? == 0 )) || rv=1
     done
-    return 0
+    return $rv
 }
 export -f wake_up_and_kill_listed
 declare -r wake_up_and_kill_listed
