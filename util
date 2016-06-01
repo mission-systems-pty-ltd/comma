@@ -37,10 +37,10 @@ declare -r verify_background_process_ids
 function background_launcher()
 {
     local self=$BASHPID
-    echo "background_launcher: run in PID '$self'" >&2
-    kill -s STOP $self
+    builtin echo "$FUNCNAME: run in PID '$self'" >&2
+    builtin kill -s STOP $self
     # shall be woken up by the caller (and possibly killed at once)
-    echo "background_launcher in PID $self: wake up and exec '${@}'" >&2
+    builtin echo "$FUNCNAME: in PID $self: wake up and exec '${@}'" >&2
     exec "${@}"
 }
 export -f background_launcher
