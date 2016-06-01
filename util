@@ -97,25 +97,35 @@ function background_launcher()
 export -f background_launcher
 declare -r background_launcher
 
-function wake_up_listed()
+function wake_up()
 {
-    local pid stat
+    local pid=$1
+    local stat
     # one possible issue is that verification can finish before background processes
     # even send STOP to themselves; in such a case, they may receive STOP after CONT
     # causing the processes to hang indefinitely
     # therefore, make sure that the process is in stopped state (T) before signalling
-    for pid in "$@" ; do
-        builtin echo "$FUNCNAME: handle process '$pid'" >&2
-        while true ; do
-            stat=$( ps --no-headers -o stat --pid $pid ) # calling ps is already a delay; do not sleep
-            stat=${stat:0:1} # discard additional BSD characters
-            [[ "$stat" == "T" ]] && break
-            [[ -z "$stat" ]] && { builtin echo "$FUNCNAME: process '$pid' not found, skip" >&2; break; }
-            builtin echo "$FUNCNAME: process '$pid' is not stopped yet, try again" >&2
-        done
-        [[ "$stat" == "T" ]] && builtin kill -s CONT $pid
+    builtin echo "$FUNCNAME: handle process '$pid'" >&2
+    while true ; do
+        stat=$( ps --no-headers -o stat --pid $pid ) # calling ps is already a delay; do not sleep
+        stat=${stat:0:1} # discard additional BSD characters
+        [[ -z "$stat" ]] && { builtin echo "$FUNCNAME: process '$pid' not found, skip" >&2; return 0; }
+        [[ "$stat" == "T" ]] && { builtin kill -s CONT $pid; return; }
+        builtin echo "$FUNCNAME: process '$pid' is not stopped yet, try again" >&2
     done
-    return 0
+}
+export -f wake_up
+declare -r wake_up
+
+function wake_up_listed()
+{
+    local pid stat
+    local rv=0
+    for pid in "$@" ; do
+        wake_up $pid
+        (( $? == 0 )) || rv=1
+    done
+    return $rv
 }
 export -f wake_up_listed
 declare -r wake_up_listed
