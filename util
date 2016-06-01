@@ -16,6 +16,34 @@ function remove_pgrep_from_its_own_output()
 export -f remove_pgrep_from_its_own_output
 declare -r remove_pgrep_from_its_own_output
 
+## @page report_verify_background_process_error report_verify_background_process_error
+# @description auxiliary function provides common error reporting to simplify @link
+# verify_background_process_id @endlink and @link verify_background_process_ids @endlink;
+# relies on specific variable names used in those functions
+# @param arguments command line of the caller, printed verbatim
+function report_verify_background_process_error()
+{
+    local process_tree=$( pstree -a -c -g -l -p $parent )
+    cat >&2 <<EOF
+verify_background_pids: verification failure
+    command line:
+        '$1'
+    parent process:
+        '$parent'
+    expected children:
+        '$children'
+    pgrep output:
+        '$named_pids'
+    extracted pids:
+        '$pids'
+    process tree:
+        '$process_tree'
+EOF
+    return 1
+}
+export -f report_verify_background_process_error
+declare -r report_verify_background_process_error
+
 ## @page verify_background_process_ids verify_background_process_ids
 # @description uses pgrep to verify the child processes of a given parent against the expected list.
 # There shall be no other child processes, e.g., created earlier.
@@ -31,23 +59,7 @@ function verify_background_process_ids()
     pids=$( echo "$named_pids" | remove_pgrep_from_its_own_output )
     [[ "$children" == "$pids" ]] && return 0
     # get here only in case of error
-    local process_tree=$( pstree -a -c -g -l -p $parent )
-    cat >&2 <<EOF
-verify_background_pids: verification failure
-    command line:
-        '$@'
-    parent process:
-        '$parent'
-    expected children:
-        '$children'
-    pgrep output:
-        '$named_pids'
-    extracted pids:
-        '$pids'
-    process tree:
-        '$process_tree'
-EOF
-    return 1
+    report_verify_background_process_error "$*"
 }
 export -f verify_background_process_ids
 declare -r verify_background_process_ids
@@ -67,23 +79,8 @@ function verify_background_process_id()
         (( child == pid )) && return 0
     done
     # get here only in case of error
-    local process_tree=$( pstree -a -c -g -l -p $parent )
-    cat >&2 <<EOF
-verify_background_pids: verification failure
-    command line:
-        '$@'
-    parent process:
-        '$parent'
-    expected child:
-        '$child'
-    pgrep output:
-        '$named_pids'
-    extracted pids:
-        '$pids'
-    process tree:
-        '$process_tree'
-EOF
-    return 1
+    local children=$child # variable name expected by error-reporter
+    report_verify_background_process_error "$*"
 }
 export -f verify_background_process_id
 declare -r verify_background_process_id
