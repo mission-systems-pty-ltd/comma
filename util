@@ -81,3 +81,32 @@ function wake_up_and_kill_listed()
 }
 export -f wake_up_and_kill_listed
 declare -r wake_up_and_kill_listed
+
+# function shall be called from the parent process only thus preventing creation of new children dynamically
+function wake_up_children()
+{
+    local parent=$1
+    local pids stats
+    pids=$( pgrep -P $parent )
+    # see wake_up_listed for explanation
+    while true ; do
+        # this causes some delay, no need to sleep; cut removes additional BSD characters
+        stats=$( echo "$pids" | xargs -I{} ps --no-headers -o stat --pid='{}' | sort -u | cut -c1 )
+        [[ "$stats" == "T" ]] && break
+        [[ -z "$stats" ]] && { builtin echo "$FUNCNAME: no children found for process '$parent', skip" >&2; break; }
+        builtin echo "$FUNCNAME: not all children of process '$parent' have stopped, try again" >&2
+    done
+    [[ "$stats" == "T" ]] || return 0
+    pkill --signal=CONT $parent
+}
+export -f wake_up_children
+declare -r wake_up_children
+
+function wake_up_and_kill_children()
+{
+    local parent=$1
+    pkill --signal=TERM $parent
+    pkill --signal=CONT $parent
+}
+export -f wake_up_and_kill_children
+declare -r wake_up_and_kill_children
