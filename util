@@ -1,5 +1,21 @@
 #!/bin/bash
 
+## @page remove_pgrep_from_its_own_output remove_pgrep_from_its_own_output
+# @description 'pgrep -P' call may list the process id of pgrep itself; take on stdin
+# the output of pgrep -l -P, filter out the pgrep line, output to stdout the remaining
+# process ids as space-separated list
+function remove_pgrep_from_its_own_output()
+{
+    # sort by pid
+    # remove the line with pgrep
+    # leave only the pid field
+    # transform into a single line
+    # remove the trailing whitespace
+    sort -n -k 1,1 | grep -v pgrep | cut -d' ' -f1 | tr '\n' ' ' | sed 's@ *$@@'
+}
+export -f remove_pgrep_from_its_own_output
+declare -r remove_pgrep_from_its_own_output
+
 ## @page verify_background_process_ids verify_background_process_ids
 # @brief uses pgrep to verify the child processes of a given parent against the expected list
 # @param parent the process id of the parent
