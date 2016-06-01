@@ -17,18 +17,20 @@ export -f remove_pgrep_from_its_own_output
 declare -r remove_pgrep_from_its_own_output
 
 ## @page verify_background_process_ids verify_background_process_ids
-# @brief uses pgrep to verify the child processes of a given parent against the expected list
+# @description uses pgrep to verify the child processes of a given parent against the expected list.
+# There shall be no other child processes, e.g., created earlier.
 # @param parent the process id of the parent
 # @param children arbitrary number of the process ids of the children
 function verify_background_process_ids()
 {
     local parent=$1
     local children=${@:2}
-    children=$( echo "${children// /$'\n'}" | sort -n | tr '\n' ' ' | head -c-1 )
+    children=$( echo "${children// /$'\n'}" | sort -n | tr '\n' ' ' | sed 's@ *$@@' )
     local named_pids pids
     named_pids=$( pgrep -l -P $parent )
-    pids=$( echo "$named_pids" | sort -n -k 1,1 | grep -v pgrep | cut -d' ' -f1 | tr '\n' ' ' | head -c-1 )
+    pids=$( echo "$named_pids" | remove_pgrep_from_its_own_output )
     [[ "$children" == "$pids" ]] && return 0
+    # get here only in case of error
     local process_tree=$( pstree -a -c -g -l -p $parent )
     cat >&2 <<EOF
 verify_background_pids: verification failure
