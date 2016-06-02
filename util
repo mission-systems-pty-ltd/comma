@@ -144,11 +144,10 @@ declare -r wake_up_listed
 function wake_up_and_kill()
 {
     local pid=$1
-    local rv=0
     builtin echo "$FUNCNAME: handle process '$pid'" >&2
-    builtin kill -s TERM $pid || rv=1
-    builtin kill -s CONT $pid || rv=1
-    return $rv
+    builtin kill -s TERM $pid || return 1
+    builtin kill -s CONT $pid
+    return 0  # ignore exit status; a non-stopped process may already exit
 }
 export -f wake_up_and_kill
 declare -r wake_up_and_kill
