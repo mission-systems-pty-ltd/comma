@@ -108,6 +108,7 @@ declare -r background_launcher
 # @description sends SIGCONT to a process if it exists. First, waits until the process
 # is in "stopped" state as reported by ps (1).
 # @param pid process id to signal
+# @return 0 if signal sent or process not found; non-zero if cannot send signal for other reasons.
 function wake_up()
 {
     local pid=$1
@@ -128,6 +129,11 @@ function wake_up()
 export -f wake_up
 declare -r wake_up
 
+## @page wake_up_listed wake_up_listed
+# @brief wakes up all processes with ids given as arguments. Iterates over the arguments
+# calling @link wake_up @endlink.
+# @param arguments all the process ids to wake up
+# @return 0 on success, 1 if any of @link wake_up @endlink calls exists with non-zero status
 function wake_up_listed()
 {
     local pid stat
@@ -141,6 +147,11 @@ function wake_up_listed()
 export -f wake_up_listed
 declare -r wake_up_listed
 
+## @page wake_up_and_kill wake_up_and_kill
+# @description terminates a process that is in "stopped" state.
+# It is the caller responsibility to ensure the process exists and is stopped.
+# @param pid process id
+# @return 0 on success, 1 if cannot send termination signal
 function wake_up_and_kill()
 {
     local pid=$1
@@ -152,6 +163,11 @@ function wake_up_and_kill()
 export -f wake_up_and_kill
 declare -r wake_up_and_kill
 
+## @page wake_up_and_kill_listed wake_up_and_kill_listed
+# @description terminate all listed processes that are in "stopped" state.
+# It is the caller responsibility to ensure the processes exist and are stopped.
+# @param arguments all the process ids to terminate
+# @return 0 on success, 1 if any of the @link wake_up_and_kill @endlink calls exits with non-zero status
 function wake_up_and_kill_listed()
 {
     local rv=0
@@ -164,7 +180,10 @@ function wake_up_and_kill_listed()
 export -f wake_up_and_kill_listed
 declare -r wake_up_and_kill_listed
 
-# function shall be called from the parent process only thus preventing creation of new children dynamically
+## @page wake_up_children wake_up_children
+# @description wakes up all child processes. Shall be called from the parent process only thus preventing creation
+# of new children dynamically. Waits until all children are in the "stopped" state before waking the up.
+# @param parent process id of the parent
 function wake_up_children()
 {
     local parent=$1
@@ -184,6 +203,10 @@ function wake_up_children()
 export -f wake_up_children
 declare -r wake_up_children
 
+## @page wake_up_and_kill_children wake_up_and_kill_children
+# @description terminates all the child processes that are possibly in "stopped" state.
+# Shall be called only from the parent process to prevent creation of new children dynamically.
+# @param parent process id of the parent
 function wake_up_and_kill_children()
 {
     local parent=$1
