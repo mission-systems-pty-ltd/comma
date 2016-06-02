@@ -85,6 +85,13 @@ function verify_background_process_id()
 export -f verify_background_process_id
 declare -r verify_background_process_id
 
+## @page background_launcher background_launcher
+# @description a wrapper to start background processes; immediately after launch stops itself
+# giving the parent (or anyone else) reliable possibility to examine the process tree and
+# verify that the process indeed started and kill, if not. Expect the verifier to send SIGCONT
+# once done with verification. After continuing, exec for the second time to run own command
+# line in the same process id. Overall, it is fork-exec-stop-continue-exec process.
+# @param command the entire command line (multiple arguments, if needed) to be exec-ed
 function background_launcher()
 {
     local self=$BASHPID
@@ -97,6 +104,10 @@ function background_launcher()
 export -f background_launcher
 declare -r background_launcher
 
+## @page wake_up wake_up
+# @description sends SIGCONT to a process if it exists. First, waits until the process
+# is in "stopped" state as reported by ps (1).
+# @param pid process id to signal
 function wake_up()
 {
     local pid=$1
