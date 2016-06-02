@@ -1,0 +1,50 @@
+#!/bin/bash
+
+util="../../../util"
+source "$util" || { echo "cannot source '$util'" >&2; exit 1; }
+
+function report_own_tree()
+{
+    echo "process tree of main:"
+    pstree -a -c -g -l -p $main_pid
+}
+
+children=()
+background_launcher sleep 1 & children+=( $! )
+background_launcher sleep 1 & children+=( $! )
+background_launcher sleep 1 & children+=( $! )
+
+bad_boy=111
+# make sure bad boy is not our child
+while [[ " ${children[*]} " == *" $bad_boy "* ]] ; do
+    (( ++bad_boy ))
+done
+echo "bad_boy/pid=$bad_boy"
+
+export main_pid=$BASHPID
+echo "main is PID $main_pid" >&2
+
+verify_background_process_ids $main_pid "${children[@]}"
+echo "verify/multiple/correct=$?"
+verify_background_process_ids $main_pid "${children[@]}" $bad_boy
+echo "verify/multiple/broken=$?"
+
+{
+    for child in ${children[@]} ; do
+        verify_background_process_id $main_pid $child
+        echo "$child,$?"
+    done
+    verify_background_process_id $main_pid $bad_boy
+    echo "$bad_boy,$?"
+} \
+    | name-value-from-csv --output-line-number pid,status \
+    | sed 's@^@child@;s@"@@g'
+
+report_own_tree >&2
+
+wake_up_children $main_pid
+
+report_own_tree >&2
+
+echo "waiting for the children to terminate..." >&2
+wait

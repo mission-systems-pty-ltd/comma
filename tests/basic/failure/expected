@@ -1,0 +1,13 @@
+#python
+import sys
+
+expect verify/multiple/correct == 0
+expect verify/multiple/broken == 1
+
+expect number_of( child ) == 4
+
+for i in range( number_of( child ) ):
+    if child[i]/pid == bad_boy/pid:
+        expect child[i]/status == 1
+    else:
+        expect child[i]/status == 0
