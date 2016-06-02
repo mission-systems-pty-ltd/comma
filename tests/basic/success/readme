@@ -1,0 +1,3 @@
+Launch several background processes, verify success: one-by-one and all
+processes at once. Verify the change in child name before and after the second
+exec (the launcher is doing fork-exec-exec).
