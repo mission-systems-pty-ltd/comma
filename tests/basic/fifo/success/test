@@ -1,0 +1,38 @@
+#!/bin/bash
+
+readonly scriptname=$( basename "$0" )
+
+util="../../../../pid-fifo-util"
+source "$util" || { echo "$scriptname: cannot source '$util'" >&2; exit 1; }
+
+main_pid=$BASHPID
+echo "$scriptname: running as PID $main_pid" >&2
+
+function report_own_tree()
+{
+    echo "$scriptname: process tree of main:"
+    pstree -a -c -g -l -p $main_pid
+}
+
+fifo=$( mktemp --dry-run )
+trap "rm -f '$fifo'" EXIT
+mkfifo "$fifo" || { echo "$scriptname: cannot create FIFO '$fifo'" >&2; exit 1; }
+echo "$scriptname: use fifo '$fifo'" >&2
+
+children=()
+child_count=3
+echo "child/count=$child_count"
+for i in $( eval echo "{1..$child_count}" ) ; do
+    builtin echo "$scriptname: attempt to start a background process..." >&2
+    background_launcher "$fifo" sleep 1 & last_child=$!
+    echo "child[$i]/pid=$last_child"
+    builtin echo "$scriptname: launched background child '$last_child', now verify..." >&2
+    verify_background_process_id "$fifo" $last_child
+    echo "child[$i]/verification/status=$?"
+    children+=( $last_child )
+done
+
+report_own_tree >&2
+
+echo "waiting for the children to terminate..." >&2
+wait

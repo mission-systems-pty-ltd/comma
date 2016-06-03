@@ -1,0 +1,2 @@
+Launch several background processes, write junk into fifo, verify problem is
+detected.

@@ -1,0 +1,7 @@
+#python
+
+for i in range( 1, 1 + number_of( child ) ):
+    if child[i]/pid != bad/boy:
+        expect child[i]/verification/status == 1
+    else:
+        expect child[i]/verification/status == 0

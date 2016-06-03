@@ -1,0 +1,5 @@
+#python
+
+expect number_of(iteration) == limit
+for i in range(1, 1 + limit):
+    expect iteration[i]/status == 0
