@@ -49,3 +49,5 @@ function verify_background_process_id()
     builtin echo "$FUNCNAME: expected pid '$expected', read pid '$pid'; success" >&2
     return 0
 }
+export -f verify_background_process_id
+declare -r verify_background_process_id
