@@ -135,6 +135,8 @@ struct iostream : public stream< std::iostream >
     iostream( const std::string& name, mode::value mode = mode::ascii, mode::blocking_value blocking = mode::blocking );
 };
 
+char const* hello_python(); // NOTE: this function is put here for the purpose of illustrating c++/python bindings
+
 } } // namespace comma { namespace io {
-    
+
 #endif

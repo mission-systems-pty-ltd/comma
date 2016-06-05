@@ -9,4 +9,6 @@ setup(
         url                 = 'https://github.com/acfr/comma',
         license             = 'BSD 3-Clause',
         packages            = [ 'comma', 'comma.csv', 'comma.csv.applications', 'comma.io', 'comma.numpy', 'comma.signal', 'comma.util' ],
+        package_dir         = { 'comma.io': 'comma/io' },
+        package_data        = { 'comma.io': ['stream.so' ] }
      )

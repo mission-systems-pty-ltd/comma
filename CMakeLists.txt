@@ -144,6 +144,7 @@ OPTION( BUILD_PYTHON_PACKAGES "install comma python packages" ON )
 
 INCLUDE( CMakeDependentOption )
 CMAKE_DEPENDENT_OPTION( ADD_PYTHON_PACKAGES_TO_RPM "add comma python packages to rpm" OFF "BUILD_PYTHON_PACKAGES" ON )
+CMAKE_DEPENDENT_OPTION( BUILD_CPP_PYTHON_BINDINGS "build C++/Python bindings" OFF "BUILD_PYTHON_PACKAGES" ON )
 
 OPTION( BUILD_APPLICATIONS "build applications" ON )
 SET( comma_BUILD_APPLICATIONS ${BUILD_APPLICATIONS} )
@@ -159,7 +160,14 @@ SET(comma_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 IF( NOT BUILD_SHARED_LIBS )
     SET( Boost_USE_STATIC_LIBS ON )
 ENDIF( NOT BUILD_SHARED_LIBS )
-FIND_PACKAGE( Boost COMPONENTS thread filesystem system date_time program_options regex )
+
+IF( BUILD_CPP_PYTHON_BINDINGS )
+    FIND_PACKAGE(PythonLibs)
+    INCLUDE_DIRECTORIES( ${PYTHON_INCLUDE_DIRS} )
+    FIND_PACKAGE( Boost COMPONENTS thread filesystem system date_time program_options regex python )
+ELSE( BUILD_CPP_PYTHON_BINDINGS)
+    FIND_PACKAGE( Boost COMPONENTS thread filesystem system date_time program_options regex )
+ENDIF( BUILD_CPP_PYTHON_BINDINGS)
 INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIRS} )
 LINK_DIRECTORIES( ${Boost_LIBRARY_DIRS} )
 

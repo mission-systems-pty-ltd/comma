@@ -337,6 +337,7 @@ stream< S >::stream( const std::string& name, mode::value m, mode::blocking_valu
         //
         //   currently, we simply go for a dirty trick below, which we
         //   have been using successfully in a few applications
+
         fd_ = impl::traits< S >::open( name );
         if( fd_ != io::invalid_file_descriptor ) { set_non_blocking_flags_( fd_ ); return; }
         if( boost::filesystem::is_regular_file( name ) ) { COMMA_THROW( comma::exception, "failed to open \"" << name << "\"" ); }
@@ -355,5 +356,10 @@ ostream::ostream( const std::string& name, mode::value mode, mode::blocking_valu
 ostream::ostream( std::ostream* s, io::file_descriptor fd, mode::value mode, boost::function< void() > close ) : stream< std::ostream >( s, fd, mode, mode::non_blocking, close ) {}
 ostream::ostream( std::ostream* s, io::file_descriptor fd, mode::value mode, mode::blocking_value blocking, boost::function< void() > close ) : stream< std::ostream >( s, fd, mode, blocking, close ) {}
 iostream::iostream( const std::string& name, mode::value mode , mode::blocking_value blocking ) : stream< std::iostream >( name, mode, blocking ) {}
+
+char const* hello_python()
+{
+   return "hello python";
+}
 
 } } // namespace comma { namespace io {
