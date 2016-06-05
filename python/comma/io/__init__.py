@@ -1,2 +1,6 @@
 from .readlines_unbuffered import readlines_unbuffered
-from . import stream
+
+try:
+    from . import stream
+except ImportError:
+    pass
