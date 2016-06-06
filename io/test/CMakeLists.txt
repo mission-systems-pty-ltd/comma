@@ -4,7 +4,7 @@ FILE( GLOB source ${SOURCE_CODE_BASE_DIR}/${KIT}/test/*_test.cpp )
 
 ADD_EXECUTABLE( ${CMAKE_PROJECT_NAME}_test_${KIT} ${source} )
 
-TARGET_LINK_LIBRARIES( ${CMAKE_PROJECT_NAME}_test_${KIT} comma_base comma_string comma_io ${Boost_LIBRARIES} ${GTEST_BOTH_LIBRARIES} pthread rt )
+TARGET_LINK_LIBRARIES( ${CMAKE_PROJECT_NAME}_test_${KIT} comma_base comma_string comma_io ${comma_ALL_EXTERNAL_LIBRARIES} ${GTEST_BOTH_LIBRARIES} pthread rt )
 
 INSTALL ( 
     FILES ${PROJECT_BINARY_DIR}/bin/${CMAKE_PROJECT_NAME}_test_${KIT}
