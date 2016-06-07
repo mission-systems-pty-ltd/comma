@@ -27,20 +27,19 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 #pragma once
 
 #include <iostream>
 #include <boost/filesystem.hpp>
 
-//prototype for comma::cverbose
+//prototype for comma::verbose
 namespace comma {
 
 //a pseudo ostream for outputing information to stderr
-//there is no need to instantiate from this class; just use comma::cverbose
+//there is no need to instantiate from this class; just use comma::verbose
 //examples: 
-//  comma::cverbose << "hello!" << std::endl;
-//  if (comma::cverbose) { std::cerr << comma::cverbose.app_name() << "info" << std::endl; }
+//  comma::verbose << "hello!" << std::endl;
+//  if (comma::verbose) { std::cerr << comma::verbose.app_name() << "info" << std::endl; }
 class verbose_t
 {
     bool enabled_;
