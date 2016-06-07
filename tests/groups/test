@@ -41,9 +41,9 @@ echo "main is PID $main_pid" >&2
 
 for i in 0 1 ; do
     background_launcher "$fifo" timeout -k 10 -s TERM 20 bash -c run_as_group\ "$output_dir/log${i}" & child=$!
-    echo "child[$i]/pid=$child"
+    echo "child[$i]/pid='$child'"
     verify_background_process_id "$fifo" "$child"
-    echo "child[$i]/verification/status=$?"
+    echo "child[$i]/verification/status='$?'"
 done
 
 sleep 1
