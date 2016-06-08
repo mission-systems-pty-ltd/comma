@@ -2,6 +2,9 @@
 
 readonly scriptname=$( basename "$0" )
 
+output_dir="output"
+mkdir -p "$output_dir" || exit 1
+
 util="comma-background-util"
 source $( which "$util" ) || { echo "$scriptname: cannot source '$util'" >&2; exit 1; }
 
@@ -14,7 +17,7 @@ function report_own_tree()
     pstree -a -c -g -l -p $main_pid
 }
 
-fifo=$( mktemp --dry-run )
+fifo=$( mktemp --dry-run --tmpdir="$output_dir" )
 trap "rm -f '$fifo'" EXIT
 mkfifo "$fifo" || { echo "$scriptname: cannot create FIFO '$fifo'" >&2; exit 1; }
 echo "$scriptname: use fifo '$fifo'" >&2
@@ -24,10 +27,14 @@ child_count=3
 bad_boy=111
 echo "bad/boy=$bad_boy"
 echo "child/count=$child_count"
+
+# so that the bad-boy write below does not block
+exec 4<>"$fifo"
 for i in $( eval echo "{1..$child_count}" ) ; do
     builtin echo "$scriptname: attempt to start a background process..." >&2
-    # break the logic
-    echo $bad_boy > "$fifo" &
+    # break the logic; make sure the pipe does not block
+    echo $bad_boy >"$fifo"
+    # now launch the real thing; the fifo is already pre-loaded
     comma_background_launcher "$fifo" sleep 1 & last_child=$!
     echo "child[$i]/pid=$last_child"
     builtin echo "$scriptname: launched background child '$last_child', now verify..." >&2
@@ -39,6 +46,16 @@ done
 report_own_tree >&2
 
 echo "waiting for the children to terminate..." >&2
-# this is needed in case of failures so that the writers (background processes) do not block
-cat < "$fifo" >/dev/null
+
+# need this heresy to let all children to write into the pipe
+# background launcher needs for the pipe to have a reader
+# the launcher may block on write and we have to create a reader to enable the writer to proceed
+# have to repeat the process a few times because of possible multiple children left behind
+# but then, if there are no writers, readers themselves would block
+# thus, stop readers by timeout
+for i in 1 2 3 4 5 ; do
+    sleep 1
+    read -t 1 a <>"$fifo"
+    echo "$scriptname: late write '$a'" >&2
+done
 wait
