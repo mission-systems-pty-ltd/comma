@@ -1,12 +1,12 @@
 #!/bin/bash
 
-## @page background_launcher background_launcher
+## @page comma_background_launcher comma_background_launcher
 # @description a wrapper to start background processes; immediately after launch writes
 # its own PID into a provided FIFO pipe, for the caller to verify, and then exec for the second
 # time to run own command line in the same process id. Overall, it is fork-exec-exec process.
 # @param fifo the named pipe to write the own PID into
 # @param command the entire command line (multiple arguments, if needed) to be exec-ed
-function background_launcher()
+function comma_background_launcher()
 {
     local self=$BASHPID
     local fifo=$1
@@ -17,15 +17,15 @@ function background_launcher()
     builtin echo "$FUNCNAME: in PID '$self': exec '${@}'" >&2
     exec "${@}"
 }
-export -f background_launcher
-declare -r background_launcher
+export -f comma_background_launcher
+declare -r comma_background_launcher
 
-## @page verify_background_process_id verify_background_process_id
+## @page comma_verify_background_pid comma_verify_background_pid
 # @description verify the process id of the background process as returned by bash
 # in $! variable and passed through the named pipe.
 # @param fifo named pipe
 # @param expected the expected process id
-function verify_background_process_id()
+function comma_verify_background_pid()
 {
     local fifo=$1
     local expected=$2
@@ -49,10 +49,10 @@ function verify_background_process_id()
     builtin echo "$FUNCNAME: expected pid '$expected', read pid '$pid'; success" >&2
     return 0
 }
-export -f verify_background_process_id
-declare -r verify_background_process_id
+export -f comma_verify_background_pid
+declare -r comma_verify_background_pid
 
-## @page launch_background_and_verify launch_background_and_verify
+## @page comma_background_and_verify_pid comma_background_and_verify_pid
 # @description launch the given command as a background process and verify its pid
 # by passing it through a fifo and checking against $! variable. If verification passed,
 # the value still stored in $! is safe to use. Note that if a signal interrupt occurs
@@ -61,13 +61,13 @@ declare -r verify_background_process_id
 # @param fifo named pipe
 # @param command the entire command line (multiple arguments, if needed) to be exec-ed
 # @return 0 on verification success, 1 on failure
-function launch_background_and_verify()
+function comma_background_and_verify_pid()
 {
     local fifo=$1
     shift
     local child
-    background_launcher "$fifo" "$@" & child=$!
-    verify_background_process_id "$fifo" "$child"
+    comma_background_launcher "$fifo" "$@" & child=$!
+    comma_verify_background_pid "$fifo" "$child"
 }
-export -f launch_background_and_verify
-declare -r launch_background_and_verify
+export -f comma_background_and_verify_pid
+declare -r comma_background_and_verify_pid

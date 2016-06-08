@@ -2,8 +2,8 @@
 
 scriptname=$( dirname "$0" )
 
-util="../../pid-fifo-util"
-source "$util" || { echo "$scriptname: cannot source '$util'" >&2; exit 1; }
+util="comma-background-util"
+source $( which "$util" ) || { echo "$scriptname: cannot source '$util'" >&2; exit 1; }
 
 output_dir="output"
 mkdir -p "$output_dir" || { echo "$scriptname: cannot create directory '$output_dir'" >&2; exit 1; }
@@ -40,7 +40,7 @@ export main_pid=$BASHPID
 echo "main is PID $main_pid" >&2
 
 for i in 0 1 ; do
-    launch_background_and_verify "$fifo" timeout -k 10 -s TERM 20 bash -c run_as_group\ "$output_dir/log${i}"
+    comma_background_and_verify_pid "$fifo" timeout -k 10 -s TERM 20 bash -c run_as_group\ "$output_dir/log${i}"
     echo "child[$i]/verification/status='$?'"
     echo "child[$i]/pid='$!'"
 done
