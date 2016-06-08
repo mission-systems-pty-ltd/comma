@@ -1,6 +1,6 @@
 #!/bin/bash
 
-util="../../../stop-start-util"
+util="../../stop-start-util"
 source "$util" || { echo "cannot source '$util'" >&2; exit 1; }
 
 function report_own_tree()
