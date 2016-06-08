@@ -2,7 +2,7 @@
 
 readonly scriptname=$( basename "$0" )
 
-util="../../../../pid-fifo-util"
+util="../../../pid-fifo-util"
 source "$util" || { echo "$scriptname: cannot source '$util'" >&2; exit 1; }
 
 main_pid=$BASHPID
