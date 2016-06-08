@@ -36,6 +36,7 @@
 readonly comma_process_util_include_guard_=1
 
 source $( type -p comma-string-util ) || { echo "$name: cannot source 'comma-string-util'" >&2; exit 1; }
+source $( type -p comma-background-util ) || { echo "$name: cannot source 'comma-background-util'" >&2; exit 1; }
 
 # This is a signal handler used by comma_execute_and_wait. See that function for detail.
 function terminate_comma_execute_and_wait()
@@ -48,7 +49,15 @@ function terminate_comma_execute_and_wait()
     local cew_funcname="comma_execute_and_wait ($BASHPID)"
     local termination_signal="TERM"
     [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: interrupted by $received_signal, killsign='$killsign'" >&2
+    # remove the fifo, if created locally
+    [[ "$rm_pid_fifo" == "true" ]] && rm -f "$pid_fifo"
+
     # kill the command(s) being executed
+    (( cew_verified_pids == 1 )) || {
+        echo "$cew_funcname: terminated before verifying PIDs; kill all child processes instead" >&2
+        local all_child_pids=$( pgrep -P $BASHPID )
+        commands_to_execute_pgid=( $all_child_pids )
+    }
     local command_to_execute_index
     for command_to_execute_index in ${!commands_to_execute_pgid[@]} ; do
         if [[ -n "${commands_to_execute_pgid[$command_to_execute_index]}" ]] ; then
@@ -84,12 +93,16 @@ declare -r terminate_comma_execute_and_wait
 
 # Usage:
 #   comma_execute_and_wait command[,command2[,command3]] [--signals=signal1,signal2,...] \
-#                          [--max-wait=max_wait] [--process|--group] [--any|--all]
+#                          [--max-wait=max_wait] [--process|--group] [--any|--all] \
+#                          [--pid-fifo=<named pipe>]
 #
 # The function executes the given command(s) (non-option argument) in a background process(es)
 # and waits for its completion (or timeout, see below).
 #
-# Usually the command is executed in a separate process group. As such, it inherits from
+# To ensure that the correct process ids (PIDs) of the background processes are used, the PIDs
+# are confirmed by passing them back from the child process through a named pipe.
+#
+# Usually the given command is executed in a separate process group. As such, it inherits from
 # the original process its environment variables but not the shell variables. In this usage
 # mode, the command to be executed must be a self-contained string that can be used "as-is":
 # - if it is a bash function, this function shall be 'export -f'-ed
@@ -104,7 +117,7 @@ declare -r terminate_comma_execute_and_wait
 # If so, it would have all shell variables accessible. However, the command may need to provide
 # more elaborate signal handling so that a signal sent to a single process would terminate
 # the entire process tree. Use '--process' to run the command without creating a new process
-# group ('--group', the default). Do not prepend bash functions with 'bash -c' in this mode.
+# group ('--group', the default).
 #
 # The '--signals' option specifies signals to wait for. Default is INT,HUP,TERM (signals are
 # given as comma-separated list of names). If any of the specified signals arrives, the command
@@ -133,6 +146,11 @@ declare -r terminate_comma_execute_and_wait
 # by default is zero if all commands succeed, and one if any fails. This can be explicitly
 # enforced by '--all' option. If '--any' option is given, however, the exit code is zero
 # if at least one command succeeded, and one if all of them fail.
+#
+# If the function receives a fatal signal early in the execution when it launches background
+# processes, it may not capture all the children process ids. In this case, all child processes
+# of the caller will be terminated. To avoid this corner case, this function is best used
+# when the caller has no other background children created beforehand.
 function comma_execute_and_wait()
 {
     # store existing traps for restoring on exit
@@ -151,9 +169,13 @@ function comma_execute_and_wait()
     local usepg="true"
     local statusall="true"
     local comma_execute_and_wait_verbose="false" # "true"
+    local pid_fifo=
+    local rm_pid_fifo="false"
+    local cew_verified_pids=0
     while [[ $# -ne 0 ]]; do
         case $1 in
             --signals=*|--signal-list=*) signal_list=${1#*=};;
+            --fifo=*|--pid-fifo=*)       pid_fifo=${1#*=};;
             --max-wait=*|--timeout=*)    execute_and_wait_timeout=${1#*=} ; timeout_given="true";;
             --group)                     usepg="true";;
             --process)                   usepg="false";;
@@ -170,6 +192,10 @@ function comma_execute_and_wait()
         return 1
     fi
 
+    [[ -n "$pid_fifo" ]] && {
+        [[ -p "$pid_fifo" ]] || { echo "$cew_funcname: fifo argument '$pid_fifo' is not a named pipe" >&2; return 1; }
+    }
+
     # set up a new signal handler / trap that:
     # - determines the signal being sent so that the same signal can be re-raised
     # - if the command-to-execute is running, kill its process group
@@ -182,6 +208,13 @@ function comma_execute_and_wait()
         trap 'terminate_comma_execute_and_wait $usepg $signal_to_handle' $signal_to_handle
     done
     [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo -e "$cew_funcname: newly-set traps are:\n$( trap -p )" >&2
+
+    # if not given explicitly, create a temporary PID fifo
+    [[ -n "$pid_fifo" ]] || {
+        rm_pid_fifo="true"
+        pid_fifo=$( mktemp --dry-run --tmpdir="$TMPDIR" comma_execute_and_wait.pid_fifo.XXXXXXXX )
+        mkfifo "$pid_fifo" || { echo "$cew_funcname: cannot create named pipe '$pid_fifo'" >&2; return 1; }
+    }
 
     local commands_to_execute_pgid=()
     local commands_to_execute_status=0
@@ -202,18 +235,24 @@ function comma_execute_and_wait()
         # its own process group and under timeout
         if [[ "$usepg" == "true" ]] ; then
             if [[ "$shellfcn" == "true" ]] ; then
-                timeout -k 10 -s TERM $execute_and_wait_timeout bash -c "$command_to_execute" & commands_to_execute_pgid+=( $! )
+                comma_background_and_verify_pid "$pid_fifo" timeout -k 10 -s TERM $execute_and_wait_timeout bash -c "$command_to_execute"
             else
-                timeout -k 10 -s TERM $execute_and_wait_timeout $command_to_execute & commands_to_execute_pgid+=( $! )
+                comma_background_and_verify_pid "$pid_fifo" timeout -k 10 -s TERM $execute_and_wait_timeout $command_to_execute
             fi
         else
             if [[ "$shellfcn" == "true" ]] ; then
-                bash -c "$command_to_execute" & commands_to_execute_pgid+=( $! )
+                comma_background_and_verify_pid "$pid_fifo" bash -c "$command_to_execute"
             else
-                $command_to_execute & commands_to_execute_pgid+=( $! )
+                comma_background_and_verify_pid "$pid_fifo" $command_to_execute
             fi
         fi
+        (( $? == 0 )) || {
+            echo "$cew_funcname: terminating self on fatal system error; incorrect background PID reported; re-run your application" >&2
+            kill -s TERM $BASHPID  # go into our signal handler
+        }
+        commands_to_execute_pgid+=( $! )
     done
+    cew_verified_pids=1
 
     # wait for the completion of the subprocess(es)
     local command_to_execute_status command_to_execute_index
@@ -238,6 +277,8 @@ function comma_execute_and_wait()
     done
     # restore traps
     trap - ${signal_list//,/ } ; eval "$comma_execute_and_wait_saved_traps"; unset comma_execute_and_wait_saved_traps
+    # clean up
+    [[ "$rm_pid_fifo" == "true" ]] && rm -f "$pid_fifo"
     # return the wait outcome
     return $commands_to_execute_status
 }

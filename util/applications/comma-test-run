@@ -898,7 +898,7 @@ function process_tests_serial()
         read counter dir
         [[ -z "$dir" ]] && break
         # note: dir variable is already quoted
-        comma_execute_and_wait --process "run_single_test \"$options_path\" \"$stats_progress_csv\" \"$verbose\" $test_scripts_count $counter $dir"
+        comma_execute_and_wait --process "bash -c run_single_test \"$options_path\" \"$stats_progress_csv\" \"$verbose\" $test_scripts_count $counter $dir"
         rv=$?
         (( $rv == 0 )) || {
             result=1
