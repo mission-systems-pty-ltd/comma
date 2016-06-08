@@ -1,9 +1,15 @@
 #!/bin/bash
 
-utc=$(date -u +%Y%m%dT%H%M%S)
-local=$(date +%Y%m%dT%H%M%S)
+output_dir="output"
+mkdir -p "$output_dir" || exit 1
 
-echo "utc=\"$utc\""
-echo "utc_to_local=\"$(echo "$utc" | csv-time --to local)\""
-echo "local=\"$local\""
-echo "local_to_utc=\"$(echo "$local" | csv-time --from local )\""
+dummy="$output_dir/dummy"
+touch "$dummy" || exit 1
+
+utc_time=$( date -u +%Y%m%dT%H%M%S --reference="$dummy" )
+local_time=$( date +%Y%m%dT%H%M%S --reference="$dummy" )
+
+echo "utc=\"$utc_time\""
+echo "utc_to_local=\"$( echo "$utc_time" | csv-time --to local )\""
+echo "local=\"$local_time\""
+echo "local_to_utc=\"$( echo "$local_time" | csv-time --from local )\""
