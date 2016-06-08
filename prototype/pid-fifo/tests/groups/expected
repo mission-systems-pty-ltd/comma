@@ -1,0 +1,11 @@
+#python
+
+expect number_of( child ) == number_of( log )
+
+for c in range( number_of( child ) ):
+    expect child[c]/verification/status == '0'
+    for p in range( number_of( log[c]/process ) ):
+        expect log[c]/process[p]/pgid == child[c]/pid
+        expect log[c]/process[p]/comm in [ "timeout", "bash" ]
+        if log[c]/process[p]/comm == "timeout":
+            expect log[c]/process[p]/pid == child[c]/pid
