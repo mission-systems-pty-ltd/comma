@@ -1,8 +1,0 @@
-#python
-
-expect children/verified == 0
-expect number_of( child ) == number_of( status )
-for i in range( number_of( child ) ):
-    expect status[i]/verified == 0
-    expect child[i]/name/initial = "test"
-    expect child[i]/name/final = "sleep"

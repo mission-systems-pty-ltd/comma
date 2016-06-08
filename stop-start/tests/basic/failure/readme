@@ -1,3 +1,0 @@
-Launch several background processes, then run verify_background_process_*
-functions with (partially) wrong process ids or process id lists. Test that
-verification fails.
