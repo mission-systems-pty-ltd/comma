@@ -40,10 +40,9 @@ export main_pid=$BASHPID
 echo "main is PID $main_pid" >&2
 
 for i in 0 1 ; do
-    background_launcher "$fifo" timeout -k 10 -s TERM 20 bash -c run_as_group\ "$output_dir/log${i}" & child=$!
-    echo "child[$i]/pid='$child'"
-    verify_background_process_id "$fifo" "$child"
+    launch_background_and_verify "$fifo" timeout -k 10 -s TERM 20 bash -c run_as_group\ "$output_dir/log${i}"
     echo "child[$i]/verification/status='$?'"
+    echo "child[$i]/pid='$!'"
 done
 
 sleep 1

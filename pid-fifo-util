@@ -51,3 +51,23 @@ function verify_background_process_id()
 }
 export -f verify_background_process_id
 declare -r verify_background_process_id
+
+## @page launch_background_and_verify launch_background_and_verify
+# @description launch the given command as a background process and verify its pid
+# by passing it through a fifo and checking against $! variable. If verification passed,
+# the value still stored in $! is safe to use. Note that if a signal interrupt occurs
+# before or during verification, nothing is certain about $! and reliable signal handlers
+# shall bluntly kill all child processes.
+# @param fifo named pipe
+# @param command the entire command line (multiple arguments, if needed) to be exec-ed
+# @return 0 on verification success, 1 on failure
+function launch_background_and_verify()
+{
+    local fifo=$1
+    shift
+    local child
+    background_launcher "$fifo" "$@" & child=$!
+    verify_background_process_id "$fifo" "$child"
+}
+export -f launch_background_and_verify
+declare -r launch_background_and_verify
