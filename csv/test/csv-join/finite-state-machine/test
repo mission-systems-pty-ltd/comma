@@ -1,0 +1,3 @@
+#!/bin/bash
+
+csv-join --fields event "state-transition.csv;fields=event,state,next_state" --initial-state 1 | gawk '{ printf( "output[%d]=%s\n", NR, $0 ); }'
