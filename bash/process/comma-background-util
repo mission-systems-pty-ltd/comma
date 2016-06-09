@@ -47,17 +47,19 @@ readonly comma_background_util_include_guard_=1
 # @description a wrapper to start background processes; immediately after launch writes
 # its own PID into a provided FIFO pipe, for the caller to verify, and then exec for the second
 # time to run own command line in the same process id. Overall, it is fork-exec-exec process.
+# @param verbosity optional; if equal to '--verbose', print trace messages; otherwise taken as first argument
 # @param fifo the named pipe to write the own PID into
 # @param command the entire command line (multiple arguments, if needed) to be exec-ed
 function comma_background_launcher()
 {
     local self=$BASHPID
-    local fifo=$1
-    shift
-    builtin echo "$FUNCNAME: run in PID '$self'" >&2
+    local verbose=0
+    local fifo=$1 ; shift
+    [[ "$fifo" == "--verbose" ]] && { verbose=1 ; fifo=$1 ; shift ; }
+    (( verbose == 0 )) || builtin echo "$FUNCNAME: run in PID '$self'" >&2
     [[ -p "$fifo" ]] || { echo "$FUNCNAME: '$fifo' is not a FIFO" >&2; return 1; }
     echo "$self" > "$fifo"
-    builtin echo "$FUNCNAME: in PID '$self': exec '${@}'" >&2
+    (( verbose == 0 )) || builtin echo "$FUNCNAME: in PID '$self': exec '${@}'" >&2
     exec "${@}"
 }
 export -f comma_background_launcher
@@ -66,11 +68,14 @@ declare -r comma_background_launcher
 ## @page comma_verify_background_pid comma_verify_background_pid
 # @description verify the process id of the background process as returned by bash
 # in $! variable and passed through the named pipe.
-# @param fifo named pipe
+# @param verbosity optional; if equal to '--verbose', print trace messages; otherwise taken as first argument
+# @param fifo the named pipe to read PID from
 # @param expected the expected process id
 function comma_verify_background_pid()
 {
+    local verbose=0
     local fifo=$1
+    [[ "$fifo" == "--verbose" ]] && { verbose=1 ; shift; fifo=$1 ; }
     local expected=$2
     local pid status
     local timeout=10
@@ -78,7 +83,7 @@ function comma_verify_background_pid()
     # Your shell is blocking on the open() call before invoking the read builtin.
     #
     # On Linux, you can open the FIFO for both read and write at the same time to prevent blocking on open; this is non-portable, but may do what you want.
-    builtin echo "$FUNCNAME: attempt to read pid from '$fifo' for $timeout seconds ..." >&2
+    (( verbose == 0 )) || builtin echo "$FUNCNAME: attempt to read pid from '$fifo' for $timeout seconds ..." >&2
     read -t $timeout pid <> "$fifo"
     status=$?
     (( status == 0 )) || {
@@ -89,7 +94,7 @@ function comma_verify_background_pid()
         builtin echo "$FUNCNAME: expected to get a pid of '$expected', but read '$pid'" >&2
         return 1
     }
-    builtin echo "$FUNCNAME: expected pid '$expected', read pid '$pid'; success" >&2
+    (( verbose == 0 )) || builtin echo "$FUNCNAME: expected pid '$expected', read pid '$pid'; success" >&2
     return 0
 }
 export -f comma_verify_background_pid
@@ -101,16 +106,18 @@ declare -r comma_verify_background_pid
 # the value still stored in $! is safe to use. Note that if a signal interrupt occurs
 # before or during verification, nothing is certain about $! and reliable signal handlers
 # shall bluntly kill all child processes.
-# @param fifo named pipe
+# @param verbosity optional; if equal to '--verbose', print trace messages; otherwise taken as first argument
+# @param fifo named pipe to use for passing PID from background process to verifier
 # @param command the entire command line (multiple arguments, if needed) to be exec-ed
 # @return 0 on verification success, 1 on failure
 function comma_background_and_verify_pid()
 {
-    local fifo=$1
-    shift
+    local verbose=
+    local fifo=$1 ; shift
+    [[ "$fifo" == "--verbose" ]] && { verbose="--verbose" ; fifo=$1 ; shift ; }
     local child
-    comma_background_launcher "$fifo" "$@" & child=$!
-    comma_verify_background_pid "$fifo" "$child"
+    comma_background_launcher $verbose "$fifo" "$@" & child=$!
+    comma_verify_background_pid $verbose "$fifo" "$child"
 }
 export -f comma_background_and_verify_pid
 declare -r comma_background_and_verify_pid
