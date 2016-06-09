@@ -32,6 +32,14 @@
 # this script is designed to be included in another script directly, for example:
 # source $( type -p comma-process-util )
 
+## @page comma-background-util comma-background-util
+# @brief functions used to start background processes and verify their process ids
+#
+# @section comma_background_util_functions Functions
+# @li @link comma_background_launcher @endlink
+# @li @link comma_verify_background_pid @endlink
+# @li @link comma_background_and_verify_pid @endlink
+
 [[ -n "$comma_background_util_include_guard_" ]] && return 0
 readonly comma_background_util_include_guard_=1
 
