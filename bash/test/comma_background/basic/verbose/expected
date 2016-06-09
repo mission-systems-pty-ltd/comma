@@ -1,0 +1,11 @@
+number_of( verbose/child ) = 2
+verbose/child[0]/verification/status = 0
+verbose/child[1]/verification/status = 0
+number_of( mute/child ) = 2
+mute/child[0]/verification/status = 0
+mute/child[1]/verification/status = 0
+
+number_of( file ) = 3
+file[0]/name="expected"
+file[1]/name="readme"
+file[2]/name="test"

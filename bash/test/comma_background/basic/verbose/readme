@@ -1,0 +1,4 @@
+Launch several background processes, with verbose mode on and off. Verify
+success (one-by-one) in both cases. Basically, check that passing '--verbose'
+as first argument does not break things. Do not look up into stderr to check if
+verbose messages have any effect.
