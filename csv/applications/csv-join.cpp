@@ -77,6 +77,16 @@ static void usage( bool more )
     std::cerr << "    --double: keys are doubles (no epsilon applied)" << std::endl;
     std::cerr << "    --time: keys are timestamps" << std::endl;
     std::cerr << "    default key type is integer" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "finite state machine" << std::endl;
+    std::cerr << "    given a state-transition table as a file/stream with the fields 'state' and 'next_state'" << std::endl;
+    std::cerr << "    csv-join will perform joins on the given keys (e.g. event) and an internal state with" << std::endl;
+    std::cerr << "    the 'state' in the transition table" << std::endl;
+    std::cerr << "    upon a match csv-join will output the match and update its internal state to 'next_state'" << std::endl;
+    std::cerr << "    note:" << std::endl;
+    std::cerr << "        * this mode expects unique matches" << std::endl;
+    std::cerr << "        * this mode reserves the field names 'state' and 'next_state'" << std::endl;
+    std::cerr << "    --initial-state: initial internal state (default: 0)" << std::endl;
     if( more )
     {
         std::cerr << std::endl;
@@ -94,23 +104,31 @@ static void usage( bool more )
     std::cerr << std::endl;
     std::cerr << "Examples (try them):" << std::endl;
     std::cerr << "    on the following data file:" << std::endl;
-    std::cerr << "        echo 1,2,hello > data.csv" << std::endl;
-    std::cerr << "        echo 1,3,hello >> data.csv" << std::endl;
-    std::cerr << "        echo 3,4,world >> data.csv" << std::endl;
+    std::cerr << "        echo 1,1,2,hello > data.csv" << std::endl;
+    std::cerr << "        echo 1,2,3,hello >> data.csv" << std::endl;
+    std::cerr << "        echo 3,3,4,world >> data.csv" << std::endl;
+    std::cerr << "        echo 3,4,3,world >> data.csv" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    join with a matching record" << std::endl;
     std::cerr << "        echo 1,blah | csv-join --fields=id \"data.csv;fields=id\"" << std::endl;
-    std::cerr << "        echo 3,blah | csv-join --fields=id \"data.csv;fields=,id\"" << std::endl;
-    std::cerr << "        echo 5,blah | csv-join --fields=id \"data.csv;fields=,id\"" << std::endl;
-    std::cerr << "        echo 5,blah | csv-join --fields=id \"data.csv;fields=,id\" --not-matching" << std::endl;
-    std::cerr << "        echo 5,blah | csv-join --fields=id \"data.csv;fields=,id\" --strict" << std::endl;
+    std::cerr << "        echo 3,blah | csv-join --fields=id \"data.csv;fields=,,id\"" << std::endl;
+    std::cerr << "        echo 5,blah | csv-join --fields=id \"data.csv;fields=,,id\"" << std::endl;
+    std::cerr << "        echo 5,blah | csv-join --fields=id \"data.csv;fields=,,id\" --not-matching" << std::endl;
+    std::cerr << "        echo 5,blah | csv-join --fields=id \"data.csv;fields=,,id\" --strict" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    join by key which is a string" << std::endl;
-    std::cerr << "        echo 1,hello | csv-join --fields=id \"data.csv;fields=,,id\" --string" << std::endl;
-    std::cerr << "        echo 1,world | csv-join --fields=id \"data.csv;fields=,,id\" --string" << std::endl;
-    std::cerr << "        echo 1,blah | csv-join --fields=id \"data.csv;fields=,,id\" --string" << std::endl;
-    std::cerr << "        echo 1,blah | csv-join --fields=id \"data.csv;fields=,,id\" --string --not-matching" << std::endl;
-    std::cerr << "        echo 1,blah | csv-join --fields=id \"data.csv;fields=,,id\" --string --strict" << std::endl;
+    std::cerr << "        echo 1,hello | csv-join --fields=,id \"data.csv;fields=,,,id\" --string" << std::endl;
+    std::cerr << "        echo 1,world | csv-join --fields=,id \"data.csv;fields=,,,id\" --string" << std::endl;
+    std::cerr << "        echo 1,blah | csv-join --fields=,id \"data.csv;fields=,,,id\" --string" << std::endl;
+    std::cerr << "        echo 1,blah | csv-join --fields=,id \"data.csv;fields=,,,id\" --string --not-matching" << std::endl;
+    std::cerr << "        echo 1,blah | csv-join --fields=,id \"data.csv;fields=,,,id\" --string --strict" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    finite state machine" << std::endl;
+    std::cerr << "        csv-join --fields=event \"data.csv;fields=event,state,next_state\" --initial-state 1" << std::endl;
+    std::cerr << "        <input:1>" << std::endl;
+    std::cerr << "        <input:1>" << std::endl;
+    std::cerr << "        <input:3>" << std::endl;
+    std::cerr << "        <input:3>" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -144,8 +162,10 @@ struct input
     std::vector< K > keys;
 
     comma::uint32 block;
+    K next_state;
 
     input() : block( 0 ) {}
+    input( const input& i ) : keys( i.keys ), block( i.block ), next_state( i.next_state ) {}
 
     bool operator==( const input& rhs ) const
     {
@@ -203,11 +223,13 @@ template < typename T > struct traits< input< T > >
     {
         v.apply( "keys", p.keys );
         v.apply( "block", p.block );
+        v.apply( "next_state", p.next_state );
     }
     template < typename K, typename V > static void visit( const K&, input< T >& p, V& v )
     {
         v.apply( "keys", p.keys );
         v.apply( "block", p.block );
+        v.apply( "next_state", p.next_state );
     }
 };
 
@@ -262,11 +284,16 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
     {
         std::vector< std::string > v = comma::split( stdin_csv.fields, ',' );
         std::vector< std::string > w = comma::split( filter_csv.fields, ',' );
+        bool is_state_machine = false;
+        bool got_next_state = false;
+        std::size_t filter_state_index;
         for( std::size_t i = 0; i < v.size(); ++i ) // quick and dirty, wasteful, but who cares
         {
             if( v[i].empty() || v[i] == "block" ) { continue; }
             for( std::size_t k = 0; k < w.size(); ++k )
             {
+                if( w[k] == "state" ) { is_state_machine = true; filter_state_index = k; continue; }
+                if( w[k] == "next_state" ) { got_next_state = true; continue; }
                 if( v[i] != w[k] ) { continue; }
                 v[i] = "keys[" + boost::lexical_cast< std::string >( default_input.keys.size() ) + "]";
                 w[k] = "keys[" + boost::lexical_cast< std::string >( default_input.keys.size() ) + "]";
@@ -274,6 +301,15 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
             }
         }
         if( default_input.keys.empty() ) { std::cerr << "csv-join: please specify at least one common key; fields: " << stdin_csv.fields << "; filter fields: " << filter_csv.fields << std::endl; return 1; }
+        K state = options.value< K >( "--initial-state", K() );
+        std::size_t state_index;
+        if( is_state_machine )
+        {
+            if( !got_next_state ) { std::cerr << "csv-join: finite state machine requires 'next_state' in state-transition table '" << filter_csv.filename << "'" << std::endl; return 1; }
+            state_index = default_input.keys.size();
+            w[filter_state_index] = "keys[" + boost::lexical_cast< std::string >( state_index ) + "]";
+            default_input.keys.resize( state_index + 1 );
+        }
         stdin_csv.fields = comma::join( v, ',' );
         filter_csv.fields = comma::join( w, ',' );
         comma::csv::input_stream< input< K > > stdin_stream( std::cin, stdin_csv, default_input );
@@ -288,7 +324,14 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
             const input< K >* p = stdin_stream.read();
             if( !p ) { break; }
             if( block != p->block ) { read_filter_block(); }
-            typename traits< K, Strict >::pair pair = traits< K, Strict >::find( filter_map, *p );
+            typename traits< K, Strict >::pair pair;
+            if( !is_state_machine ) { pair = traits< K, Strict >::find( filter_map, *p ); }
+            else
+            {
+                input< K > q( *p );
+                q.keys[ state_index ] = state;
+                pair = traits< K, Strict >::find( filter_map, q );
+            }
             if( pair.first == filter_map.end() ) // if( it == filter_map.end() || it->second.empty() )
             {
                 if( not_matching )
@@ -307,12 +350,14 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
             if( not_matching ) { continue; }
             for( typename traits< K, Strict >::map::const_iterator it = pair.first; it != pair.second; ++it )
             {
-                if( unique && it->second.size() > 1 ) { std::cerr << "csv-join: with --unique option, expected unique entries, got more than one filter entry on the key: " << keys_as_string( it->first ) << std::endl; exit( 1 ); }
+                if( unique && it->second.size() > 1 ) { std::cerr << "csv-join: with --unique option, expected unique entries, got more than one filter entry on the key: " << keys_as_string( it->first ) << std::endl; return 1; }
+                if( is_state_machine && it->second.size() > 1 ) { std::cerr << "csv-join: finite state machine, expected unique entries, got more than one state transition entry on the key: " << keys_as_string( it->first ) << std::endl; return 1; }
                 if( stdin_stream.is_binary() )
                 {
                     for( std::size_t i = 0; i < ( first_matching ? 1 : it->second.size() ); ++i )
                     {
                         std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() );
+                        if( is_state_machine ) { state = it->first.next_state; }
                         if( matching ) { break; }
                         std::cout.write( &( it->second[i][0] ), filter_csv.format().size() );
                         std::cout.flush();
@@ -324,6 +369,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
                     for( std::size_t i = 0; i < ( first_matching ? 1 : it->second.size() ); ++i )
                     {
                         std::cout << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter );
+                        if( is_state_machine ) { state = it->first.next_state; }
                         if( matching ) { std::cout << std::endl; break; }
                         std::cout << stdin_csv.delimiter
                                   << ( filter_csv.binary()
