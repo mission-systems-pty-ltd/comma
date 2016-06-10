@@ -102,22 +102,25 @@ declare -r terminate_comma_execute_and_wait
 # To ensure that the correct process ids (PIDs) of the background processes are used, the PIDs
 # are confirmed by passing them back from the child process through a named pipe.
 #
-# Usually the given command is executed in a separate process group. As such, it inherits from
-# the original process its environment variables but not the shell variables. In this usage
-# mode, the command to be executed must be a self-contained string that can be used "as-is":
+# The command given to be executed inherits from the original process its environment variables
+# but not the shell variables. Therefore, the command must be a self-contained string that can be
+# used "as-is":
 # - if it is a bash function, this function shall be 'export -f'-ed
+# - if the command is a bash function, it shall be prepended with "bash -c"
+# - if this bash function calls other functions, those shall be either 'export -f'-ed or sourced
+#   anew
 # - if some variables are used within a function / script, those variables shall be exported
-# - if it is a function, it shall be prepended with "bash -c"
-# - command shall not contain pipes, output redirection and such; wrap pipelines into functions
+# - the command shall not contain pipes, output redirection and such; wrap pipelines into functions
 #   or scripts; pass the output file name into the function / script being executed and redirect
 #   inside
 # - etc.
 #
-# Alternatively, the command may be executed as a background process in the same process group.
-# If so, it would have all shell variables accessible. However, the command may need to provide
-# more elaborate signal handling so that a signal sent to a single process would terminate
-# the entire process tree. Use '--process' to run the command without creating a new process
-# group ('--group', the default).
+# Usually the given command is executed in a separate process group. If the caller is interrupted
+# by a signal, the entire process group is terminated. Alternatively, the command may be executed
+# as a background process in the same process group. If so, the command may need to provide more
+# elaborate signal handling so that a signal sent to a single process would terminate the entire
+# process tree, if any. Use '--process' to run the command without creating a new process group
+# ('--group', the default).
 #
 # The '--signals' option specifies signals to wait for. Default is INT,HUP,TERM (signals are
 # given as comma-separated list of names). If any of the specified signals arrives, the command
