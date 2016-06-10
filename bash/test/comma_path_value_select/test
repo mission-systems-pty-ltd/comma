@@ -4,10 +4,10 @@ scriptname="comma_application_util_test"
 
 source $( which comma-application-util ) || { printf "%s could not source comma-application-util" $scriptname >&2 ; exit 1 ; } 
 
-result=$( comma_path_value_select <<< '' )
+result=$( comma_path_value_select <( echo ) <<< '' )
 printf "test[0]/code=%d\n" $? 
 
-result=$( comma_path_value_select <<< 'colour=blue' )
+result=$( comma_path_value_select <( echo ) <<< 'colour=blue' )
 printf "test[1]/code=%d\n" $?
 printf "test[1]/result=\"%s\"\n" $( tr '\n' @ <<< "$result" )
 

@@ -320,7 +320,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
         filter_csv.fields = comma::join( w, ',' );
         comma::csv::input_stream< input< K > > stdin_stream( std::cin, stdin_csv, default_input );
         filter_transport.reset( new comma::io::istream( filter_csv.filename, filter_csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii ) );
-        //if( filter_transport->fd() == comma::io::invalid_file_descriptor ) { std::cerr << "csv-join: failed to open \"" << filter_csv.filename << "\"" << std::endl; return 1; }
+        if( filter_transport->fd() == comma::io::invalid_file_descriptor ) { std::cerr << "csv-join: failed to open \"" << filter_csv.filename << "\"" << std::endl; return 1; }
         std::size_t discarded = 0;
         read_filter_block();
         #ifdef WIN32
