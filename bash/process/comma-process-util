@@ -278,10 +278,10 @@ function comma_execute_and_wait()
             fi
         fi
     done
-    # restore traps
-    trap - ${signal_list//,/ } ; eval "$comma_execute_and_wait_saved_traps"; unset comma_execute_and_wait_saved_traps
     # clean up
     [[ "$rm_pid_fifo" == "true" ]] && rm -f "$pid_fifo"
+    # restore traps
+    trap - ${signal_list//,/ } ; eval "$comma_execute_and_wait_saved_traps"; unset comma_execute_and_wait_saved_traps
     # return the wait outcome
     return $commands_to_execute_status
 }
