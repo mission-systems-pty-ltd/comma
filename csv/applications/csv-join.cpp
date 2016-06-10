@@ -44,7 +44,7 @@
 #include <boost/unordered_map.hpp>
 #include <comma/application/command_line_options.h>
 #include <comma/application/contact_info.h>
-#include <comma/application/signal_flag.h>
+//#include <comma/application/signal_flag.h>
 #include <comma/base/exception.h>
 #include <comma/base/types.h>
 #include <comma/csv/stream.h>
@@ -86,7 +86,7 @@ static void usage( bool more )
     std::cerr << "    note:" << std::endl;
     std::cerr << "        * this mode expects unique matches" << std::endl;
     std::cerr << "        * this mode reserves the field names 'state' and 'next_state'" << std::endl;
-    std::cerr << "    --initial-state: initial internal state (default: 0)" << std::endl;
+    std::cerr << "    --initial-state,--state: initial internal state (default: 0)" << std::endl;
     if( more )
     {
         std::cerr << std::endl;
@@ -144,7 +144,6 @@ static bool matching;
 static comma::csv::options stdin_csv;
 static comma::csv::options filter_csv;
 boost::scoped_ptr< comma::io::istream > filter_transport;
-comma::signal_flag is_shutdown;
 static comma::uint32 block = 0;
 static boost::optional< double > tolerance;
 
@@ -258,7 +257,9 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
         if( !last ) { return; }
         block = last->block;
         comma::uint64 count = 0;
-        while( last->block == block && !is_shutdown )
+        //static comma::signal_flag is_shutdown;
+        //while( last->block == block && !is_shutdown ) // we probably don't need it
+        while( last->block == block )
         {
             typename traits< K, Strict >::map::mapped_type& d = filter_map[ *last ];
             if( filter_stream.is_binary() )
@@ -301,7 +302,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
             }
         }
         if( default_input.keys.empty() ) { std::cerr << "csv-join: please specify at least one common key; fields: " << stdin_csv.fields << "; filter fields: " << filter_csv.fields << std::endl; return 1; }
-        K state = options.value< K >( "--initial-state", K() );
+        K state = options.value< K >( "--initial-state,--state", K() );
         std::size_t state_index;
         if( is_state_machine )
         {
@@ -314,12 +315,13 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
         filter_csv.fields = comma::join( w, ',' );
         comma::csv::input_stream< input< K > > stdin_stream( std::cin, stdin_csv, default_input );
         filter_transport.reset( new comma::io::istream( filter_csv.filename, filter_csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii ) );
+        if( filter_transport->fd() == comma::io::invalid_file_descriptor ) { std::cerr << "csv-join: failed to open \"" << filter_csv.filename << "\"" << std::endl; return 1; }
         std::size_t discarded = 0;
         read_filter_block();
         #ifdef WIN32
         if( stdin_stream.is_binary() ) { _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
-        while( !is_shutdown && std::cin.good() && !std::cin.eof() )
+        while( stdin_stream.ready() || std::cin.good() )
         {
             const input< K >* p = stdin_stream.read();
             if( !p ) { break; }
