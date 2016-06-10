@@ -44,7 +44,7 @@
 #include <boost/unordered_map.hpp>
 #include <comma/application/command_line_options.h>
 #include <comma/application/contact_info.h>
-//#include <comma/application/signal_flag.h>
+#include <comma/application/signal_flag.h>
 #include <comma/base/exception.h>
 #include <comma/base/types.h>
 #include <comma/csv/stream.h>
@@ -257,9 +257,8 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
         if( !last ) { return; }
         block = last->block;
         comma::uint64 count = 0;
-        //static comma::signal_flag is_shutdown;
-        //while( last->block == block && !is_shutdown ) // we probably don't need it
-        while( last->block == block )
+        static comma::signal_flag is_shutdown( comma::signal_flag::hard );
+        while( last->block == block && !is_shutdown )
         {
             typename traits< K, Strict >::map::mapped_type& d = filter_map[ *last ];
             if( filter_stream.is_binary() )
@@ -321,7 +320,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
         filter_csv.fields = comma::join( w, ',' );
         comma::csv::input_stream< input< K > > stdin_stream( std::cin, stdin_csv, default_input );
         filter_transport.reset( new comma::io::istream( filter_csv.filename, filter_csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii ) );
-        if( filter_transport->fd() == comma::io::invalid_file_descriptor ) { std::cerr << "csv-join: failed to open \"" << filter_csv.filename << "\"" << std::endl; return 1; }
+        //if( filter_transport->fd() == comma::io::invalid_file_descriptor ) { std::cerr << "csv-join: failed to open \"" << filter_csv.filename << "\"" << std::endl; return 1; }
         std::size_t discarded = 0;
         read_filter_block();
         #ifdef WIN32
