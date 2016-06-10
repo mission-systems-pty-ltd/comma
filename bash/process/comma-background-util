@@ -60,7 +60,7 @@ function comma_background_launcher()
     [[ -p "$fifo" ]] || { echo "$FUNCNAME: '$fifo' is not a FIFO" >&2; return 1; }
     echo "$self" > "$fifo"
     (( verbose == 0 )) || builtin echo "$FUNCNAME: in PID '$self': exec '${@}'" >&2
-    unset verbose
+    unset verbose self fifo
     exec "${@}"
 }
 export -f comma_background_launcher
