@@ -1,7 +1,7 @@
 #python
 
-expect cpus/max == min( limits/cpus, input/test/count )
+expect cpus/max <= min( limits/cpus, input/test/count )
 expect queen/max == 0
-expect working_bee/max == min( limits/robots/working_bee, config/robots/working_bee * limits/cpus )
+expect working_bee/max <= min( limits/robots/working_bee, config/robots/working_bee * limits/cpus )
 expect memory/main/max == 0
 expect memory/shared/max == 0
