@@ -79,13 +79,13 @@ static void usage( bool more )
     std::cerr << "    default key type is integer" << std::endl;
     std::cerr << std::endl;
     std::cerr << "finite state machine" << std::endl;
-    std::cerr << "    given a state-transition table as a file/stream with the fields 'state' and 'next_state'" << std::endl;
+    std::cerr << "    given a state-transition table as a file/stream containing both the fields 'state' and 'next_state'" << std::endl;
     std::cerr << "    csv-join will perform joins on the given keys (e.g. event) and an internal state with" << std::endl;
     std::cerr << "    the 'state' in the transition table" << std::endl;
     std::cerr << "    upon a match csv-join will output the match and update its internal state to 'next_state'" << std::endl;
     std::cerr << "    note:" << std::endl;
     std::cerr << "        * this mode expects unique matches" << std::endl;
-    std::cerr << "        * this mode reserves the field names 'state' and 'next_state'" << std::endl;
+    std::cerr << "        * this mode is only activated when the file/stream fields contain both 'state' and 'next_state'" << std::endl;
     std::cerr << "    --initial-state,--state: initial internal state (default: 0)" << std::endl;
     if( more )
     {
@@ -285,32 +285,38 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
     {
         std::vector< std::string > v = comma::split( stdin_csv.fields, ',' );
         std::vector< std::string > w = comma::split( filter_csv.fields, ',' );
-        bool is_state_machine = false;
+        bool got_state = false;
         bool got_next_state = false;
         std::size_t filter_state_index;
+        for( std::size_t k = 0; k < w.size() && ( !got_state || !got_next_state ); ++k ) 
+        {
+            if( w[k] == "state" ) { got_state = true; filter_state_index = k; continue; }
+            if( w[k] == "next_state" ) { got_next_state = true; continue; }
+        }
+        bool is_state_machine = got_state && got_next_state;
+        std::size_t default_input_keys = 0;
         for( std::size_t i = 0; i < v.size(); ++i ) // quick and dirty, wasteful, but who cares
         {
             if( v[i].empty() || v[i] == "block" ) { continue; }
             for( std::size_t k = 0; k < w.size(); ++k )
             {
-                if( w[k] == "state" ) { is_state_machine = true; filter_state_index = k; continue; }
-                if( w[k] == "next_state" ) { got_next_state = true; continue; }
+                if( is_state_machine && ( w[k] == "state" || w[k] == "next_state" ) ) { continue; }
                 if( v[i] != w[k] ) { continue; }
-                v[i] = "keys[" + boost::lexical_cast< std::string >( default_input.keys.size() ) + "]";
-                w[k] = "keys[" + boost::lexical_cast< std::string >( default_input.keys.size() ) + "]";
-                default_input.keys.resize( default_input.keys.size() + 1 ); // quick and dirty
+                v[i] = "keys[" + boost::lexical_cast< std::string >( default_input_keys ) + "]";
+                w[k] = "keys[" + boost::lexical_cast< std::string >( default_input_keys ) + "]";
+                ++default_input_keys;
             }
         }
-        if( default_input.keys.empty() ) { std::cerr << "csv-join: please specify at least one common key; fields: " << stdin_csv.fields << "; filter fields: " << filter_csv.fields << std::endl; return 1; }
+        if( !default_input_keys ) { std::cerr << "csv-join: please specify at least one common key; fields: " << stdin_csv.fields << "; filter fields: " << filter_csv.fields << std::endl; return 1; }
         K state = options.value< K >( "--initial-state,--state", K() );
         std::size_t state_index;
         if( is_state_machine )
         {
-            if( !got_next_state ) { std::cerr << "csv-join: finite state machine requires 'next_state' in state-transition table '" << filter_csv.filename << "'" << std::endl; return 1; }
-            state_index = default_input.keys.size();
+            state_index = default_input_keys;
             w[filter_state_index] = "keys[" + boost::lexical_cast< std::string >( state_index ) + "]";
-            default_input.keys.resize( state_index + 1 );
+            ++default_input_keys;
         }
+        default_input.keys.resize( default_input_keys );
         stdin_csv.fields = comma::join( v, ',' );
         filter_csv.fields = comma::join( w, ',' );
         comma::csv::input_stream< input< K > > stdin_stream( std::cin, stdin_csv, default_input );
