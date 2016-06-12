@@ -76,6 +76,8 @@ SET( comma_PYTHON_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} )
 
 set_python_build_lib_directory()
 
+ADD_SUBDIRECTORY( comma )
+
 ADD_CUSTOM_TARGET( python_build ALL
                 ${PYTHON} ${SETUP_PY} build --build-base ${BUILD_BASE}
                 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
@@ -98,4 +100,3 @@ IF( ADD_PYTHON_PACKAGES_TO_RPM )
         PATTERN ".*" EXCLUDE )
 ENDIF( ADD_PYTHON_PACKAGES_TO_RPM )
 
-ADD_SUBDIRECTORY( comma )
