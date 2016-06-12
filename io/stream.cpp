@@ -357,9 +357,4 @@ ostream::ostream( std::ostream* s, io::file_descriptor fd, mode::value mode, boo
 ostream::ostream( std::ostream* s, io::file_descriptor fd, mode::value mode, mode::blocking_value blocking, boost::function< void() > close ) : stream< std::ostream >( s, fd, mode, blocking, close ) {}
 iostream::iostream( const std::string& name, mode::value mode , mode::blocking_value blocking ) : stream< std::iostream >( name, mode, blocking ) {}
 
-char const* hello_python()
-{
-   return "hello python";
-}
-
 } } // namespace comma { namespace io {
