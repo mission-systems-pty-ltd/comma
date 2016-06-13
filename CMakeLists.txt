@@ -161,7 +161,7 @@ IF( NOT BUILD_SHARED_LIBS )
     SET( Boost_USE_STATIC_LIBS ON )
 ENDIF( NOT BUILD_SHARED_LIBS )
 
-IF( BUILD_CPP_PYTHON_BINDINGS)
+IF( BUILD_CPP_PYTHON_BINDINGS )
     IF( Boost_USE_STATIC_LIBS )
         MESSAGE( WARNING "Building C++/Python bindings requires linking with Boost shared libraries, Boost_USE_STATIC_LIBS will be set to OFF" )
         SET( Boost_USE_STATIC_LIBS OFF )
