@@ -392,6 +392,28 @@ class tied
 };
 
 template < typename S >
+class passed
+{
+    public:
+        passed( const input_stream< S >& is, std::ostream& os ) : is_( is ), os_( os )
+        {
+            #ifdef WIN32
+            if( is_.is_binary() && os == std::cout ) { _setmode( _fileno( stdout ), _O_BINARY ); }
+            #endif // #ifdef WIN32
+        }
+
+        void write()
+        {
+            if( is_.is_binary() ) { os_.write( is_.binary().last(), is_.binary().size() ); }
+            else os_ << comma::join( is_.ascii().last(), is_.ascii().ascii().delimiter() ) << std::endl;
+        }
+
+    private:
+        const input_stream< S >& is_;
+        std::ostream& os_;
+};
+
+template < typename S >
 inline ascii_input_stream< S >::ascii_input_stream( std::istream& is, const std::string& column_names, char delimiter, bool full_path_as_name, const S& sample )
     : is_( is )
     , pass_through_( 0 )
