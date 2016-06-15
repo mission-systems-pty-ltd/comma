@@ -3,7 +3,7 @@
 
 BOOST_PYTHON_MODULE( csv )
 {
-    boost::python::class_< comma::csv::format >( "format", boost::python::init< std::string >() )
+    boost::python::class_< comma::csv::format >( "format", boost::python::init< const std::string& >() )
         .def( "size", &comma::csv::format::size );
 }
 
