@@ -216,6 +216,7 @@ function comma_execute_and_wait()
     [[ -n "$pid_fifo" ]] || {
         rm_pid_fifo="true"
         pid_fifo=$( mktemp --dry-run --tmpdir="$TMPDIR" comma_execute_and_wait.pid_fifo.XXXXXXXX )
+        [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: creating a temporary named pipe '$pid_fifo'" >&2
         mkfifo "$pid_fifo" || { echo "$cew_funcname: cannot create named pipe '$pid_fifo'" >&2; return 1; }
     }
 
@@ -256,6 +257,8 @@ function comma_execute_and_wait()
         commands_to_execute_pgid+=( $! )
     done
     cew_verified_pids=1
+    # do not need it anymore
+    [[ "$rm_pid_fifo" == "true" ]] && { rm -f "$pid_fifo"; unset pid_fifo; rm_pid_fifo="false"; }
 
     # wait for the completion of the subprocess(es)
     local command_to_execute_status command_to_execute_index
@@ -278,8 +281,6 @@ function comma_execute_and_wait()
             fi
         fi
     done
-    # clean up
-    [[ "$rm_pid_fifo" == "true" ]] && rm -f "$pid_fifo"
     # restore traps
     trap - ${signal_list//,/ } ; eval "$comma_execute_and_wait_saved_traps"; unset comma_execute_and_wait_saved_traps
     # return the wait outcome

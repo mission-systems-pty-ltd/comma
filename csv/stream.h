@@ -51,7 +51,7 @@
 namespace comma { namespace csv {
 
 /// @todo document
-namespace detail { void unsyncronize_with_stdio(); }
+namespace detail { void unsynchronize_with_stdio(); }
 
 template < typename S > class output_stream;
 template < typename S > class input_stream;
@@ -79,9 +79,6 @@ class ascii_input_stream : public boost::noncopyable
         /// @todo implement
         const S* read( const boost::posix_time::ptime& timeout );
 
-        /// set_pass_through; set the stream to pass through input
-        void set_pass_through( std::ostream* pass_through ) { pass_through_ = pass_through; }
-
         /// return the last line read
         const std::vector< std::string >& last() const { return line_; }
 
@@ -105,7 +102,6 @@ class ascii_input_stream : public boost::noncopyable
         
     private:
         std::istream& is_;
-        std::ostream* pass_through_;
         csv::ascii< S > ascii_;
         const S default_;
         S result_;
@@ -182,9 +178,6 @@ class binary_input_stream : public boost::noncopyable
         /// @todo implement
         const S* read( const boost::posix_time::ptime& timeout );
 
-        /// set_pass_through; set the stream to pass through input
-        void set_pass_through( std::ostream* pass_through ) { pass_through_ = pass_through; }
-
         /// return the last line read
         const char* last() const { return &buf_[0]; }
 
@@ -208,7 +201,6 @@ class binary_input_stream : public boost::noncopyable
         
     private:
         std::istream& is_;
-        std::ostream* pass_through_;
         csv::binary< S > binary_;
         const S default_;
         S result_;
@@ -286,12 +278,6 @@ class input_stream : public boost::noncopyable
 
         /// read with timeout; return NULL, if insufficient data (e.g. end of stream)
         const S* read( const boost::posix_time::ptime& timeout ) { return ascii_ ? ascii_->read( timeout ) : binary_->read( timeout ); }
-
-        /// set_pass_through; set the stream to pass through input
-        void set_pass_through( std::ostream* pass_through )
-        {
-            ascii_ ? ascii_->set_pass_through( pass_through ) : binary_->set_pass_through( pass_through );
-        }
 
         /// return fields
         const std::vector< std::string >& fields() const { return ascii_ ? ascii_->fields() : binary_->fields(); }
@@ -416,37 +402,34 @@ class passed
 template < typename S >
 inline ascii_input_stream< S >::ascii_input_stream( std::istream& is, const std::string& column_names, char delimiter, bool full_path_as_name, const S& sample )
     : is_( is )
-    , pass_through_( 0 )
     , ascii_( column_names, delimiter, full_path_as_name, sample )
     , default_( sample )
     , result_( sample )
     , fields_( split( column_names, ',' ) )
 {
-    detail::unsyncronize_with_stdio();
+    detail::unsynchronize_with_stdio();
 }
 
 template < typename S >
 inline ascii_input_stream< S >::ascii_input_stream(std::istream& is, const options& o, const S& sample )
     : is_( is )
-    , pass_through_( 0 )
     , ascii_( o, sample )
     , default_( sample )
     , result_( sample )
     , fields_( split( o.fields, ',' ) )
 {
-    detail::unsyncronize_with_stdio();
+    detail::unsynchronize_with_stdio();
 }
 
 template < typename S >
 inline ascii_input_stream< S >::ascii_input_stream(std::istream& is, const S& sample )
     : is_( is )
-    , pass_through_( 0 )
     , ascii_( options().fields, options().delimiter, true, sample ) // , ascii_( options().fields, options().delimiter, o.full_xpath, sample )
     , default_( sample )
     , result_( sample )
     , fields_( split( options().fields, ',' ) )
 {
-    detail::unsyncronize_with_stdio();
+    detail::unsynchronize_with_stdio();
 }
 
 template < typename S >
@@ -465,8 +448,6 @@ inline const S* ascii_input_stream< S >::read()
         std::getline( is_, s );
         if( !s.empty() && *s.rbegin() == '\r' ) { s = s.substr( 0, s.length() - 1 ); } // windows... sigh...
         if( s.empty() ) { continue; }
-        // TODO: Should be '\n' rather than std::endl below but it seems to cause issues
-        if( pass_through_ ) { *pass_through_ << s << std::endl; }
         result_ = default_;
         line_ = split( s, ascii_.delimiter() );
         ascii_.get( result_, line_ );
@@ -533,7 +514,6 @@ inline void ascii_output_stream< S >::write( const S& s, std::vector< std::strin
 template < typename S >
 inline binary_input_stream< S >::binary_input_stream( std::istream& is, const std::string& format, const std::string& column_names, bool full_path_as_name, const S& sample )
     : is_( is )
-    , pass_through_( 0 )
     , binary_( format, column_names, full_path_as_name, sample )
     , default_( sample )
     , result_( sample )
@@ -544,13 +524,12 @@ inline binary_input_stream< S >::binary_input_stream( std::istream& is, const st
     #ifdef WIN32
     if( &is == &std::cin ) { _setmode( _fileno( stdin ), _O_BINARY ); }
     #endif
-    detail::unsyncronize_with_stdio();
+    detail::unsynchronize_with_stdio();
 }
 
 template < typename S >
 inline binary_input_stream< S >::binary_input_stream( std::istream& is, const options& o, const S& sample )
     : is_( is )
-    , pass_through_( 0 )
     , binary_( o.format().string(), o.fields, o.full_xpath, sample )
     , default_( sample )
     , result_( sample )
@@ -561,7 +540,7 @@ inline binary_input_stream< S >::binary_input_stream( std::istream& is, const op
     #ifdef WIN32
     if( &is == &std::cin ) { _setmode( _fileno( stdin ), _O_BINARY ); }
     #endif
-    detail::unsyncronize_with_stdio();
+    detail::unsynchronize_with_stdio();
 }
 
 template < typename S >
@@ -576,7 +555,6 @@ inline const S* binary_input_stream< S >::read()
     is_.read( &buf_[0], size_ );
     if( is_.gcount() == 0 ) { return NULL; }
     if( is_.gcount() != int( size_ ) ) { COMMA_THROW( comma::exception, "expected " << size_ << " bytes; got " << is_.gcount() ); }
-    if( pass_through_ ) { pass_through_->write( &buf_[0], size_ ); }
     result_ = default_;
     binary_.get( result_, &buf_[0] );
     return &result_;
