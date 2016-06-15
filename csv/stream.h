@@ -51,7 +51,7 @@
 namespace comma { namespace csv {
 
 /// @todo document
-namespace detail { void unsyncronize_with_stdio(); }
+namespace detail { void unsynchronize_with_stdio(); }
 
 template < typename S > class output_stream;
 template < typename S > class input_stream;
@@ -407,7 +407,7 @@ inline ascii_input_stream< S >::ascii_input_stream( std::istream& is, const std:
     , result_( sample )
     , fields_( split( column_names, ',' ) )
 {
-    detail::unsyncronize_with_stdio();
+    detail::unsynchronize_with_stdio();
 }
 
 template < typename S >
@@ -418,7 +418,7 @@ inline ascii_input_stream< S >::ascii_input_stream(std::istream& is, const optio
     , result_( sample )
     , fields_( split( o.fields, ',' ) )
 {
-    detail::unsyncronize_with_stdio();
+    detail::unsynchronize_with_stdio();
 }
 
 template < typename S >
@@ -429,7 +429,7 @@ inline ascii_input_stream< S >::ascii_input_stream(std::istream& is, const S& sa
     , result_( sample )
     , fields_( split( options().fields, ',' ) )
 {
-    detail::unsyncronize_with_stdio();
+    detail::unsynchronize_with_stdio();
 }
 
 template < typename S >
@@ -524,7 +524,7 @@ inline binary_input_stream< S >::binary_input_stream( std::istream& is, const st
     #ifdef WIN32
     if( &is == &std::cin ) { _setmode( _fileno( stdin ), _O_BINARY ); }
     #endif
-    detail::unsyncronize_with_stdio();
+    detail::unsynchronize_with_stdio();
 }
 
 template < typename S >
@@ -540,7 +540,7 @@ inline binary_input_stream< S >::binary_input_stream( std::istream& is, const op
     #ifdef WIN32
     if( &is == &std::cin ) { _setmode( _fileno( stdin ), _O_BINARY ); }
     #endif
-    detail::unsyncronize_with_stdio();
+    detail::unsynchronize_with_stdio();
 }
 
 template < typename S >
