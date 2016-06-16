@@ -57,8 +57,8 @@ function comma_background_launcher()
     local fifo=$1 ; shift
     [[ "$fifo" == "--verbose" ]] && { verbose=1 ; fifo=$1 ; shift ; }
     (( verbose == 0 )) || builtin echo "$FUNCNAME: run in PID '$self'" >&2
-    [[ -p "$fifo" ]] || { echo "$FUNCNAME: '$fifo' is not a FIFO" >&2; return 1; }
-    echo "$self" > "$fifo"
+    [[ -p "$fifo" ]] || { builtin echo "$FUNCNAME: '$fifo' is not a FIFO" >&2; return 1; }
+    builtin echo "$self" > "$fifo"
     (( verbose == 0 )) || builtin echo "$FUNCNAME: in PID '$self': exec '${@}'" >&2
     unset verbose self fifo
     exec "${@}"
