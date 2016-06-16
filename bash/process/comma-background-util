@@ -72,6 +72,10 @@ function comma_get_process_signature()
 export -f comma_get_process_signature
 declare -r comma_get_process_signature
 
+## @page COMMA_KILL_SIGNED_ERROR COMMA_KILL_SIGNED_ERROR
+# @brief exit status of @link comma_kill_signed @endlink in case of internal errors
+declare -r COMMA_KILL_SIGNED_ERROR=1
+
 ## @page COMMA_KILL_SIGNED_NOT_FOUND COMMA_KILL_SIGNED_NOT_FOUND
 # @brief exit status of @link comma_kill_signed @endlink if the process to be killed is not in the process tree (terminated already)
 declare -r COMMA_KILL_SIGNED_NOT_FOUND=3
@@ -85,9 +89,9 @@ declare -r COMMA_KILL_SIGNED_REUSED=4
 # Does nothing if the process is not found.
 # @param pid process id to query; start with '-' to kill the process group
 # @param signature unique process descriptor to compare
-# @return 0 on success (process found, signature matched, process killed), 1 on error
-# (cannot determine current process signature), @link COMMA_KILL_SIGNED_NOT_FOUND @endlink if the process
-# is not found (already terminated), and @link COMMA_KILL_SIGNED_REUSED @endlink on signature mismatch;
+# @return 0 on success (process found, signature matched, process killed), @link COMMA_KILL_SIGNED_NOT_FOUND @endlink
+# on internal errors (cannot determine current process signature), @link COMMA_KILL_SIGNED_NOT_FOUND @endlink
+# if the process is not found (already terminated), and @link COMMA_KILL_SIGNED_REUSED @endlink on signature mismatch;
 # the last two cases may or may not be errors, only the user knows if the process being
 # killed is expected to exist or can exit by itself before calling this function
 function comma_kill_signed()
@@ -102,7 +106,7 @@ function comma_kill_signed()
     (( $? == 0 )) || { builtin echo "$FUNCNAME: process id '$pid' not found; do not kill, assume terminated by itself" >&2; return $COMMA_KILL_SIGNED_NOT_FOUND; }
     local current
     current=$( comma_get_process_signature $pid )
-    (( $? == 0 )) || { builtin echo "$FUNCNAME: cannot get signature of process id '$pid'" >&2; return 1; }
+    (( $? == 0 )) || { builtin echo "$FUNCNAME: cannot get signature of process id '$pid'" >&2; return $COMMA_KILL_SIGNED_ERROR; }
     [[ "$current" == "$signature" ]] || { builtin echo "$FUNCNAME: process '$pid' has signature '$current' different from expected '$signature'; possibly re-used; refuse to kill" >&2; return $COMMA_KILL_SIGNED_REUSED; }
     # TODO allow the user to specify the signal to use for killing
     builtin kill -s TERM ${group}${pid}
