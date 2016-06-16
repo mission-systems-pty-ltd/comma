@@ -265,6 +265,16 @@ function comma_execute_and_wait()
     for command_to_execute_index in ${!commands_to_execute_pgid[@]} ; do
         wait ${commands_to_execute_pgid[$command_to_execute_index]}
         command_to_execute_status=$?
+        (( command_to_execute_status == 127 )) && {
+            echo "$cew_funcname: fatal system error, wait exit status is 127 on the process id ${commands_to_execute_pgid[$command_to_execute_index]}" >&2
+            echo "$cew_funcname: all background process ids ${commands_to_execute_pgid[@]} have been verified" >&2
+            echo "$cew_funcname: the process tree of $BASHPID:" >&2
+            pstree -a -c -g -l -p $BASHPID >&2
+            echo "$cew_funcname: this is likely a rare internal error in bash; re-run your application" >&2
+            statusall="true"
+            commands_to_execute_status=1
+            # keep going to let the other processes to complete
+        }
         # special care when process group has been killed by timeout itself
         [[ "$usepg" == "true" ]] && comma_wait_for_process_group "$cew_funcname" "${commands_to_execute_pgid[$command_to_execute_index]}" 12
         [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: group ${commands_to_execute_pgid[$command_to_execute_index]} finished execution, status $command_to_execute_status" >&2
