@@ -79,7 +79,7 @@ declare -r COMMA_KILL_SIGNED_REUSED=4
 # @description check if the given process id has the given descriptor
 # (see @link comma_get_process_signature @endlink) and kill it with TERM if so.
 # Does nothing if the process is not found.
-# @param pid process id to query
+# @param pid process id to query; start with '-' to kill the process group
 # @param signature unique process descriptor to compare
 # @return 0 on success (process found, signature matched, process killed), 1 on error
 # (cannot determine current process signature), @link COMMA_KILL_SIGNED_NOT_FOUND @endlink if the process
@@ -90,6 +90,8 @@ function comma_kill_signed()
 {
     local pid=$1
     local signature=$2
+    local group=${pid:0:1}
+    [[ "$group" == "-" ]] && pid=${pid:1} || group=""
     trap "builtin kill -s CONT $pid; trap - RETURN" RETURN
     builtin kill -s STOP $pid
     (( $? == 0 )) || { builtin echo "$FUNCNAME: process id '$pid' not found; do not kill, assume terminated by itself" >&2; return $COMMA_KILL_SIGNED_NOT_FOUND; }
@@ -97,7 +99,7 @@ function comma_kill_signed()
     current=$( comma_get_process_signature $pid )
     (( $? == 0 )) || { builtin echo "$FUNCNAME: cannot get signature of process id '$pid'" >&2; return 1; }
     [[ "$current" == "$signature" ]] || { builtin echo "$FUNCNAME: process '$pid' has signature '$current' different from expected '$signature'; possibly re-used; refuse to kill" >&2; return $COMMA_KILL_SIGNED_REUSED; }
-    builtin kill -s TERM $pid
+    builtin kill -s TERM ${group}${pid}
 }
 export -f comma_kill_signed
 declare -r comma_kill_signed
