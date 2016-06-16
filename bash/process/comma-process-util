@@ -53,25 +53,30 @@ function terminate_comma_execute_and_wait()
     [[ "$rm_pid_fifo" == "true" ]] && rm -f "$pid_fifo"
 
     # kill the command(s) being executed
-    (( cew_verified_pids == 1 )) || {
+    if (( cew_verified_pids != 1 )) ; then
         echo "$cew_funcname: terminated before verifying PIDs; kill all child processes instead" >&2
-        local all_child_pids=$( pgrep -P $BASHPID )
-        commands_to_execute_pgid=( $all_child_pids )
-    }
-    local command_to_execute_index
-    for command_to_execute_index in ${!commands_to_execute_pgid[@]} ; do
-        if [[ -n "${commands_to_execute_pgid[$command_to_execute_index]}" ]] ; then
-            [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: killing ${commands_to_execute_pgid[$command_to_execute_index]} by $termination_signal" >&2
-            kill -s $termination_signal -- ${killsign}${commands_to_execute_pgid[$command_to_execute_index]}
-            [[ "$killsign" == "-" ]] && {
-                [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: waiting for group ${commands_to_execute_pgid[$command_to_execute_index]}" >&2
-                comma_wait_for_process_group "$cew_funcname" "${commands_to_execute_pgid[$command_to_execute_index]}" 12
-            }
-            wait ${commands_to_execute_pgid[$command_to_execute_index]}
-            [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: group ${commands_to_execute_pgid[$command_to_execute_index]} was terminated" >&2
-            commands_to_execute_pgid[$command_to_execute_index]=""
-        fi
-    done
+        pkill --signal $termination_signal -P $BASHPID
+        wait
+    else
+        local command_to_execute_index
+        for command_to_execute_index in ${!commands_to_execute_pgid[@]} ; do
+            if [[ -n "${commands_to_execute_pgid[$command_to_execute_index]}" ]] ; then
+                [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: killing ${commands_to_execute_pgid[$command_to_execute_index]} by $termination_signal" >&2
+                # kill -s $termination_signal -- ${killsign}${commands_to_execute_pgid[$command_to_execute_index]}
+                # TODO specify the signal
+                comma_kill_signed ${killsign}${commands_to_execute_pgid[$command_to_execute_index]} ${commands_to_execute_signature[$command_to_execute_index]}
+                # ignore the not found and reused exit status: the original process is gone, multiple background processes can terminate at different times
+                (( $? == COMMA_KILL_SIGNED_ERROR )) && echo "$cew_funcname: error in comma_kill_signed ${killsign}${commands_to_execute_pgid[$command_to_execute_index]} ${commands_to_execute_signature[$command_to_execute_index]}" >&2
+                [[ "$killsign" == "-" ]] && {
+                    [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: waiting for group ${commands_to_execute_pgid[$command_to_execute_index]}" >&2
+                    comma_wait_for_process_group "$cew_funcname" "${commands_to_execute_pgid[$command_to_execute_index]}" 12
+                }
+                wait ${commands_to_execute_pgid[$command_to_execute_index]}
+                [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: group ${commands_to_execute_pgid[$command_to_execute_index]} was terminated" >&2
+                commands_to_execute_pgid[$command_to_execute_index]=""
+            fi
+        done
+    fi
     # use old handlers
     [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo -e "$cew_funcname: restore old traps\n$comma_execute_and_wait_saved_traps\n" >&2
     eval "$comma_execute_and_wait_saved_traps"
@@ -221,6 +226,7 @@ function comma_execute_and_wait()
     }
 
     local commands_to_execute_pgid=()
+    local commands_to_execute_signature=()
     local commands_to_execute_status=0
     [[ "$statusall" == "false" ]] && commands_to_execute_status=1
 
@@ -255,6 +261,7 @@ function comma_execute_and_wait()
             kill -s TERM $BASHPID  # go into our signal handler
         }
         commands_to_execute_pgid+=( $! )
+        commands_to_execute_signature+=( $comma_background_signature )
     done
     cew_verified_pids=1
     # do not need it anymore
