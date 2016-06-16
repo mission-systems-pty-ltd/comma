@@ -1,1 +1,4 @@
-from . import csv
+try:
+    from . import csv
+except ImportError:
+    pass
