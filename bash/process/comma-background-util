@@ -59,12 +59,15 @@ readonly comma_background_util_include_guard_=1
 # @return 0 on success, 1 on error (likely, given PID does not exist),
 function comma_get_process_signature()
 {
-    # TODO provide '--verbose' mode
+    local verbose=0
     local pid=$1
+    [[ "$pid" == "--verbose" ]] && { verbose=1 ; shift ; pid=$1 ; }
     local signature
     signature=$( ps --no-headers -o lstart $pid )
     (( $? == 0 )) || { builtin echo "$FUNCNAME: process with id '$pid' not found" >&2; return 1; }
-    date --date="$signature" +%Y%m%dT%H%M%S
+    signature=$( date --date="$signature" +%Y%m%dT%H%M%S ) || { builtin echo "$FUNCNAME: cannot convert '$signature' to timestamp" >&2; return 1; }
+    (( verbose == 0 )) || builtin echo "$FUNCNAME: process '$pid' signed as '$signature'" >&2
+    echo "$signature"
 }
 export -f comma_get_process_signature
 declare -r comma_get_process_signature
