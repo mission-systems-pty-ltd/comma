@@ -85,8 +85,8 @@ declare -r COMMA_KILL_SIGNED_REUSED=4
 # @return 0 on success (process found, signature matched, process killed), 1 on error
 # (cannot determine current process signature), @link COMMA_KILL_SIGNED_NOT_FOUND @endlink if the process
 # is not found (already terminated), and @link COMMA_KILL_SIGNED_REUSED @endlink on signature mismatch;
-# the last two cases which may or may not be errors, only the user knows if the process being
-# killed is expected to exist or can exit by itself prematurely before calling this function
+# the last two cases may or may not be errors, only the user knows if the process being
+# killed is expected to exist or can exit by itself before calling this function
 function comma_kill_signed()
 {
     # TODO provide '--verbose' mode
