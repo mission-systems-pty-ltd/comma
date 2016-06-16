@@ -1,0 +1,33 @@
+#!/bin/bash
+
+scriptname=$( basename "$0" )
+
+source $( which comma-background-util ) || { echo "$scriptname: cannot source 'comma-background-util'" >&2; exit 1; }
+
+output_dir="output"
+temp_dir="$output_dir/temp"
+
+rm -rf "$temp_dir" || exit 1
+mkdir -p "$temp_dir" || { echo "$scriptname: cannot create directory '$temp_dir'" >&2; exit 1; }
+fifo="$temp_dir/pipe"
+trap "rm -f \"$fifo\"" EXIT
+mkfifo "$fifo" || { echo "$scriptname: cannot create named pipe '$fifo'" >&2; exit 1; }
+
+comma_background_and_verify_pid "$fifo" sleep 100 || { echo "$scriptname: fatal system error, wrong background PID" >&2; exit 1; }
+background_pid=$!
+
+signature=$( comma_get_process_signature "$background_pid" )
+status=$?
+echo -n "comma_get_process_signature/signature="
+echo "$signature" | csv-time --to seconds
+echo "comma_get_process_signature/status=$status"
+
+echo -n "time/now="
+echo "1" | csv-time-stamp | csv-shuffle --fields=t, --output-fields=t | csv-time --to local | csv-time --to seconds
+
+comma_kill_signed "$background_pid" "$signature"
+echo "comma_kill_signed/status=$?"
+
+wait $background_pid
+echo "background/status=$?"
+echo "sigterm/status=$(( 128 + $( kill -l TERM ) ))"
