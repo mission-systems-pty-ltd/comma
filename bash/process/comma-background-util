@@ -59,6 +59,7 @@ readonly comma_background_util_include_guard_=1
 # @return 0 on success, 1 on error (likely, given PID does not exist),
 function comma_get_process_signature()
 {
+    # TODO provide '--verbose' mode
     local pid=$1
     local signature
     signature=$( ps --no-headers -o lstart $pid )
@@ -88,6 +89,7 @@ declare -r COMMA_KILL_SIGNED_REUSED=4
 # killed is expected to exist or can exit by itself prematurely before calling this function
 function comma_kill_signed()
 {
+    # TODO provide '--verbose' mode
     local pid=$1
     local signature=$2
     local group=${pid:0:1}
@@ -99,6 +101,7 @@ function comma_kill_signed()
     current=$( comma_get_process_signature $pid )
     (( $? == 0 )) || { builtin echo "$FUNCNAME: cannot get signature of process id '$pid'" >&2; return 1; }
     [[ "$current" == "$signature" ]] || { builtin echo "$FUNCNAME: process '$pid' has signature '$current' different from expected '$signature'; possibly re-used; refuse to kill" >&2; return $COMMA_KILL_SIGNED_REUSED; }
+    # TODO allow the user to specify the signal to use for killing
     builtin kill -s TERM ${group}${pid}
 }
 export -f comma_kill_signed
