@@ -144,14 +144,14 @@ function comma_verify_background_pid()
     local fifo=$1
     [[ "$fifo" == "--verbose" ]] && { verbose=1 ; shift; fifo=$1 ; }
     local expected=$2
-    # TODO provide an option to control the name of the signature variable, e.g., --signature-name=variable_name; exec the assignment
-    local pid comma_background_signature status
+    local pid status
     local timeout=10
     # http://stackoverflow.com/questions/6448632/read-not-timing-out-when-reading-from-pipe-in-bash
     # Your shell is blocking on the open() call before invoking the read builtin.
     #
     # On Linux, you can open the FIFO for both read and write at the same time to prevent blocking on open; this is non-portable, but may do what you want.
     (( verbose == 0 )) || builtin echo "$FUNCNAME: attempt to read pid from '$fifo' for $timeout seconds ..." >&2
+    # TODO provide an option to control the name of the signature variable, e.g., --signature-name=variable_name; exec the assignment
     read -t $timeout pid comma_background_signature <> "$fifo"
     status=$?
     (( status == 0 )) || {
