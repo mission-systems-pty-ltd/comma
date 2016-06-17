@@ -1,17 +1,25 @@
 #python
 
-expect quiet/TERM/handler/signal == "TERM"
-expect quiet/TERM/comma_kill_signed/status == 0
-expect quiet/TERM/background/status == sigterm/status
+# iterate through a path of attributes: "obj/data/member/value"
+def deepgetattr(obj, attr):
+    """Recurses through an attribute chain to get the ultimate value."""
+    return reduce(getattr, attr.split('/'), obj)
 
-expect verbose/TERM/handler/signal == "TERM"
-expect verbose/TERM/comma_kill_signed/status == 0
-expect verbose/TERM/background/status == sigterm/status
+# allows fetching elements from a dictionary as if it were an object
+class objectview(object):
+    def __init__(self, d):
+        self.__dict__ = d
 
-expect quiet/USR1/handler/signal == "USR1"
-expect quiet/USR1/comma_kill_signed/status == 0
-expect quiet/USR1/background/status == sigusr1/status
+olocals = objectview( locals() )
 
-expect verbose/USR1/handler/signal == "USR1"
-expect verbose/USR1/comma_kill_signed/status == 0
-expect verbose/USR1/background/status == sigusr1/status
+di = { "TERM" : sigterm/status, "USR1" : sigusr1/status }
+
+for variable in [ "default", "mysignature" ]:
+    for verbosity in [ "quiet", "verbose" ]:
+        for signal in [ "TERM", "USR1" ]:
+            name = "/".join( [ variable, verbosity, signal ] )
+            obj = deepgetattr( olocals, name )
+            expect obj/comma_background_and_verify_pid/status == 0
+            expect obj/comma_kill_signed/status == 0
+            expect obj/handler/signal == signal
+            expect obj/background/status == di[signal]

@@ -10,7 +10,7 @@ temp_dir="$output_dir/temp"
 rm -rf "$temp_dir" || exit 1
 mkdir -p "$temp_dir" || { echo "$scriptname: cannot create directory '$temp_dir'" >&2; exit 1; }
 fifo="$temp_dir/pipe"
-trap "rm -f \"$fifo\"" EXIT
+trap "sleep 1; rm -f \"$fifo\"" EXIT
 mkfifo "$fifo" || { echo "$scriptname: cannot create named pipe '$fifo'" >&2; exit 1; }
 
 function handler()
@@ -37,17 +37,27 @@ export -f runme
 
 function toplevel()
 {
-    local verbosity=$1
-    local verbose=
-    [[ "$verbosity" == "verbose" ]] && verbose="--verbose"
-    local signal=$2
-    [[ "$signal" == "TERM" ]] && signal="" || signal="--signal=$signal"
-    comma_background_and_verify_pid $verbose "$fifo" bash -c runme || { echo "$scriptname: fatal system error, wrong background PID" >&2; exit 1; }
+    local variable=$1
+    local verbose=$2
+    local signal=$3
+
+    local args=
+    [[ "$variable" == "default" ]] || args+=" --signature-variable=$variable"
+    [[ "$verbose" == "verbose" ]] && args+=" --verbose"
+    comma_background_and_verify_pid $args "$fifo" bash -c runme || { echo "$scriptname: fatal system error, wrong background PID" >&2; exit 1; }
+    local rv=$?
     background_pid=$!
+    echo "comma_background_and_verify_pid/status=$rv"
 
     sleep 10 # to allow exec to proceed
 
-    comma_kill_signed $verbose $signal "$background_pid" "$comma_background_signature"
+    args=
+    [[ "$verbose" == "verbose" ]] && args+=" --verbose"
+    [[ "$signal" == "TERM" ]] || args=" --signal=$signal"
+    local signature="$comma_background_signature"
+    [[ "$variable" == "default" ]] || eval "signature=\$$variable"
+
+    comma_kill_signed $args "$background_pid" "$signature"
     echo "comma_kill_signed/status=$?"
 
     wait $background_pid
@@ -57,8 +67,10 @@ function toplevel()
 echo "sigterm/status=$(( 128 + $( kill -l TERM ) ))"
 echo "sigusr1/status=$(( 128 + $( kill -l USR1 ) ))"
 
-for verbosity in "quiet" "verbose" ; do
-    for signal in "TERM" "USR1" ; do
-        toplevel "$verbosity" "$signal" | sed "s@^@$verbosity/$signal/@"
+for variable in "default" "mysignature" ; do
+    for verbosity in "quiet" "verbose" ; do
+        for signal in "TERM" "USR1" ; do
+            toplevel "$variable" "$verbosity" "$signal" | sed "s@^@$variable/$verbosity/$signal/@"
+        done
     done
 done
