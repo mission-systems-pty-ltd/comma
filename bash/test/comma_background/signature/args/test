@@ -17,6 +17,8 @@ function handler()
 {
     echo "handler/signal=$1"
     trap - INT HUP TERM PIPE USR1
+    pkill -P $BASHPID
+    wait
     kill -s $1 $BASHPID
 }
 export -f handler
@@ -28,9 +30,8 @@ function runme()
     trap 'handler HUP'  HUP
     trap 'handler PIPE' PIPE
     trap 'handler USR1' USR1
-    for i in {0..10000} ; do
-        sleep 0.01
-    done
+    sleep 100 &
+    wait
 }
 export -f runme
 
