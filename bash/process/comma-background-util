@@ -74,15 +74,18 @@ declare -r comma_get_process_signature
 
 ## @page COMMA_KILL_SIGNED_ERROR COMMA_KILL_SIGNED_ERROR
 # @brief exit status of @link comma_kill_signed @endlink in case of internal errors
-declare -r COMMA_KILL_SIGNED_ERROR=1
+export COMMA_KILL_SIGNED_ERROR=1
+declare -r COMMA_KILL_SIGNED_ERROR
 
 ## @page COMMA_KILL_SIGNED_NOT_FOUND COMMA_KILL_SIGNED_NOT_FOUND
 # @brief exit status of @link comma_kill_signed @endlink if the process to be killed is not in the process tree (terminated already)
-declare -r COMMA_KILL_SIGNED_NOT_FOUND=3
+export COMMA_KILL_SIGNED_NOT_FOUND=3
+declare -r COMMA_KILL_SIGNED_NOT_FOUND
 
 ## @page COMMA_KILL_SIGNED_REUSED COMMA_KILL_SIGNED_REUSED
 # @brief exit status of @link comma_kill_signed @endlink if the process to be killed shows a different signature (PID reused)
-declare -r COMMA_KILL_SIGNED_REUSED=4
+export COMMA_KILL_SIGNED_REUSED=4
+declare -r COMMA_KILL_SIGNED_REUSED
 
 # @description check if the given process id has the given descriptor
 # (see @link comma_get_process_signature @endlink) and kill it with TERM if so.
