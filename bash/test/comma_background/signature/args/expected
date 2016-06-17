@@ -1,0 +1,17 @@
+#python
+
+expect quiet/TERM/handler/signal="TERM"
+expect quiet/TERM/comma_kill_signed/status=0
+expect quiet/TERM/background/status == sigterm/status
+
+expect verbose/TERM/handler/signal="TERM"
+expect verbose/TERM/comma_kill_signed/status=0
+expect verbose/TERM/background/status == sigterm/status
+
+expect quiet/USR1/handler/signal="USR1"
+expect quiet/USR1/comma_kill_signed/status=0
+expect quiet/USR1/background/status == sigusr1/status
+
+expect verbose/USR1/handler/signal="USR1"
+expect verbose/USR1/comma_kill_signed/status=0
+expect verbose/USR1/background/status == sigusr1/status
