@@ -144,7 +144,8 @@ declare -r comma_background_launcher
 
 ## @page comma_verify_background_pid comma_verify_background_pid
 # @description verify the process id of the background process as returned by bash
-# in $! variable and passed through the named pipe.
+# in $! variable and passed through the named pipe. Assign the global variable
+# comma_background_signature to the signature of the background process.
 # @param verbosity optional; if equal to '--verbose', print trace messages; otherwise taken as first argument
 # @param fifo the named pipe to read PID from
 # @param expected the expected process id
