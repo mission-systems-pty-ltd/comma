@@ -158,23 +158,32 @@ declare -r comma_background_launcher
 # in $! variable and passed through the named pipe. Assign the global variable
 # comma_background_signature to the signature of the background process.
 # @param verbosity optional; if equal to '--verbose', print trace messages; otherwise taken as first argument
+# @param variable optional; if equal to '--signature-variable=NAME', assign variable NAME to the signature
+# of the background process; otherwise taken as first argument; default name: comma_background_signature
 # @param fifo the named pipe to read PID from
 # @param expected the expected process id
 function comma_verify_background_pid()
 {
     local verbose=0
+    local signature_variable_name="comma_background_signature"
+    while true; do
+        case $1 in
+            --signature-variable=*) signature_variable_name=${1#*=};;
+            --verbose)              verbose=1;;
+            *)                      break;;
+        esac
+        shift
+    done
     local fifo=$1
-    [[ "$fifo" == "--verbose" ]] && { verbose=1 ; shift; fifo=$1 ; }
     local expected=$2
-    local pid status
+    local pid status signature
     local timeout=10
     # http://stackoverflow.com/questions/6448632/read-not-timing-out-when-reading-from-pipe-in-bash
     # Your shell is blocking on the open() call before invoking the read builtin.
     #
     # On Linux, you can open the FIFO for both read and write at the same time to prevent blocking on open; this is non-portable, but may do what you want.
     (( verbose == 0 )) || builtin echo "$FUNCNAME: attempt to read pid from '$fifo' for $timeout seconds ..." >&2
-    # TODO provide an option to control the name of the signature variable, e.g., --signature-name=variable_name; exec the assignment
-    read -t $timeout pid comma_background_signature <> "$fifo"
+    read -t $timeout pid signature <> "$fifo"
     status=$?
     (( status == 0 )) || {
         builtin echo "$FUNCNAME: could not read process id from '$fifo' in $timeout seconds or read error, status '$status'" >&2
@@ -185,6 +194,7 @@ function comma_verify_background_pid()
         return 1
     }
     (( verbose == 0 )) || builtin echo "$FUNCNAME: expected pid '$expected', read pid '$pid'; success" >&2
+    eval "$signature_variable_name=$signature"
     return 0
 }
 export -f comma_verify_background_pid
@@ -197,17 +207,26 @@ declare -r comma_verify_background_pid
 # before or during verification, nothing is certain about $! and reliable signal handlers
 # shall bluntly kill all child processes.
 # @param verbosity optional; if equal to '--verbose', print trace messages; otherwise taken as first argument
+# @param variable optional, see @link comma_verify_background_pid @endlink for details
 # @param fifo named pipe to use for passing PID from background process to verifier
 # @param command the entire command line (multiple arguments, if needed) to be exec-ed
 # @return 0 on verification success, 1 on failure
 function comma_background_and_verify_pid()
 {
+    local args=
     local verbose=
+    while true; do
+        case $1 in
+            --signature-variable=*) args+=" $1";;
+            --verbose)              args+=" $1"; verbose+="$1";;
+            *)                      break;;
+        esac
+        shift
+    done
     local fifo=$1 ; shift
-    [[ "$fifo" == "--verbose" ]] && { verbose="--verbose" ; fifo=$1 ; shift ; }
     local child
     comma_background_launcher $verbose "$fifo" "$@" & child=$!
-    comma_verify_background_pid $verbose "$fifo" "$child"
+    comma_verify_background_pid $args "$fifo" "$child"
 }
 export -f comma_background_and_verify_pid
 declare -r comma_background_and_verify_pid
