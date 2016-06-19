@@ -42,6 +42,7 @@
 #
 # @section comma_background_util_functions Functions
 # @li @link comma_get_process_signature @endlink
+# @li @link comma_kill_signed_return_trap @endlink
 # @li @link comma_kill_signed @endlink
 # @li @link comma_background_launcher @endlink
 # @li @link comma_verify_background_pid @endlink
@@ -89,6 +90,17 @@ declare -r COMMA_KILL_SIGNED_NOT_FOUND
 export COMMA_KILL_SIGNED_REUSED=4
 declare -r COMMA_KILL_SIGNED_REUSED
 
+## @page comma_kill_signed_return_trap comma_kill_signed_return_trap
+# @brief auxiliary, the return trap for @link comma_kill_signed @endlink
+function comma_kill_signed_return_trap()
+{
+    (( verbose == 1 )) && builtin echo "$FUNCNAME: send CONT to $pid" >&2
+    builtin kill -s CONT $pid
+    trap - RETURN
+}
+export -f comma_kill_signed_return_trap
+declare -r comma_kill_signed_return_trap
+
 ## @page comma_kill_signed comma_kill_signed
 # @description check if the given process id has the given descriptor
 # (see @link comma_get_process_signature @endlink) and kill it with TERM if so.
@@ -119,7 +131,7 @@ function comma_kill_signed()
     local group=${pid:0:1}
     [[ "$group" == "-" ]] && pid=${pid:1} || group=""
     (( verbose == 1 )) && builtin echo "$FUNCNAME: send signal '$signal_to_use' to ${group}${pid}" >&2
-    trap "builtin kill -s CONT $pid; trap - RETURN" RETURN
+    trap 'comma_kill_signed_return_trap' RETURN
     builtin kill -s STOP $pid
     (( $? == 0 )) || { builtin echo "$FUNCNAME: process id '$pid' not found; do not kill, assume terminated by itself" >&2; return $COMMA_KILL_SIGNED_NOT_FOUND; }
     local current
