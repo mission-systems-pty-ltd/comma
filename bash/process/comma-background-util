@@ -36,6 +36,7 @@
 # @brief functions used to start background processes and verify their process ids
 #
 # @section comma_background_util_constants Constants
+# @li @link COMMA_KILL_SIGNED_ERROR @endlink
 # @li @link COMMA_KILL_SIGNED_NOT_FOUND @endlink
 # @li @link COMMA_KILL_SIGNED_REUSED @endlink
 #
@@ -49,6 +50,7 @@
 [[ -n "$comma_background_util_include_guard_" ]] && return 0
 readonly comma_background_util_include_guard_=1
 
+## @page comma_get_process_signature comma_get_process_signature
 # @description parse /proc/{pid} directory to build a unique descriptor
 # of the process with the given process id. Safe to call from the process
 # itself. If called from outside, the caller must make sure that the process
@@ -87,6 +89,7 @@ declare -r COMMA_KILL_SIGNED_NOT_FOUND
 export COMMA_KILL_SIGNED_REUSED=4
 declare -r COMMA_KILL_SIGNED_REUSED
 
+## @page comma_kill_signed comma_kill_signed
 # @description check if the given process id has the given descriptor
 # (see @link comma_get_process_signature @endlink) and kill it with TERM if so.
 # Does nothing if the process is not found.
@@ -123,6 +126,7 @@ function comma_kill_signed()
     current=$( comma_get_process_signature $pid )
     (( $? == 0 )) || { builtin echo "$FUNCNAME: cannot get signature of process id '$pid'" >&2; return $COMMA_KILL_SIGNED_ERROR; }
     [[ "$current" == "$signature" ]] || { builtin echo "$FUNCNAME: process '$pid' has signature '$current' different from expected '$signature'; possibly re-used; refuse to kill" >&2; return $COMMA_KILL_SIGNED_REUSED; }
+    (( verbose == 1 )) && builtin echo "$FUNCNAME: verification passed, do 'kill -s $signal_to_use ${group}${pid}'" >&2
     builtin kill -s $signal_to_use ${group}${pid}
 }
 export -f comma_kill_signed
