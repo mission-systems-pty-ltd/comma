@@ -44,7 +44,7 @@
 # @li @link comma_get_process_signature @endlink
 # @li @link comma_kill_signed_return_trap @endlink
 # @li @link comma_kill_signed @endlink
-# @li @link comma_background_launcher @endlink
+# @li @link comma_process_launch @endlink
 # @li @link comma_verify_background_pid @endlink
 # @li @link comma_background_and_verify_pid @endlink
 
@@ -144,14 +144,14 @@ function comma_kill_signed()
 export -f comma_kill_signed
 declare -r comma_kill_signed
 
-## @page comma_background_launcher comma_background_launcher
+## @page comma_process_launch comma_process_launch
 # @description a wrapper to start background processes; immediately after launch writes
 # its own PID into a provided FIFO pipe, for the caller to verify, and then exec for the second
 # time to run own command line in the same process id. Overall, it is fork-exec-exec process.
 # @param verbosity optional; if equal to '--verbose', print trace messages; otherwise taken as first argument
 # @param fifo the named pipe to write the own PID into
 # @param command the entire command line (multiple arguments, if needed) to be exec-ed
-function comma_background_launcher()
+function comma_process_launch()
 {
     local self=$BASHPID
     local verbose=0
@@ -166,8 +166,8 @@ function comma_background_launcher()
     unset verbose self fifo signature
     exec "${@}"
 }
-export -f comma_background_launcher
-declare -r comma_background_launcher
+export -f comma_process_launch
+declare -r comma_process_launch
 
 ## @page comma_verify_background_pid comma_verify_background_pid
 # @description verify the process id of the background process as returned by bash
@@ -242,7 +242,7 @@ function comma_background_and_verify_pid()
     done
     local fifo=$1 ; shift
     local child
-    comma_background_launcher $verbose "$fifo" "$@" & child=$!
+    comma_process_launch $verbose "$fifo" "$@" & child=$!
     comma_verify_background_pid $args "$fifo" "$child"
 }
 export -f comma_background_and_verify_pid
