@@ -41,7 +41,7 @@
 # @li @link COMMA_KILL_SIGNED_REUSED @endlink
 #
 # @section comma_background_util_functions Functions
-# @li @link comma_get_process_signature @endlink
+# @li @link comma_process_signature @endlink
 # @li @link comma_kill_signed_return_trap @endlink
 # @li @link comma_kill_signed @endlink
 # @li @link comma_process_launch @endlink
@@ -51,7 +51,7 @@
 [[ -n "$comma_background_util_include_guard_" ]] && return 0
 readonly comma_background_util_include_guard_=1
 
-## @page comma_get_process_signature comma_get_process_signature
+## @page comma_process_signature comma_process_signature
 # @description parse /proc/{pid} directory to build a unique descriptor
 # of the process with the given process id. Safe to call from the process
 # itself. If called from outside, the caller must make sure that the process
@@ -60,7 +60,7 @@ readonly comma_background_util_include_guard_=1
 # abruptly, such as killed by signal. The signature is written to stdout.
 # @param pid process id to query
 # @return 0 on success, 1 on error (likely, given PID does not exist),
-function comma_get_process_signature()
+function comma_process_signature()
 {
     local verbose=0
     local pid=$1
@@ -72,8 +72,8 @@ function comma_get_process_signature()
     (( verbose == 0 )) || builtin echo "$FUNCNAME: process '$pid' signed as '$signature'" >&2
     echo "$signature"
 }
-export -f comma_get_process_signature
-declare -r comma_get_process_signature
+export -f comma_process_signature
+declare -r comma_process_signature
 
 ## @page COMMA_KILL_SIGNED_ERROR COMMA_KILL_SIGNED_ERROR
 # @brief exit status of @link comma_kill_signed @endlink in case of internal errors
@@ -103,7 +103,7 @@ declare -r comma_kill_signed_return_trap
 
 ## @page comma_kill_signed comma_kill_signed
 # @description check if the given process id has the given descriptor
-# (see @link comma_get_process_signature @endlink) and kill it with TERM if so.
+# (see @link comma_process_signature @endlink) and kill it with TERM if so.
 # Does nothing if the process is not found.
 # @param verbosity optional; if equal to '--verbose', print trace messages; otherwise taken as first argument
 # @param signal-to-use optional; if equal to '--signal=SIGNAL', use SIGNAL as kill argument; otherwise taken as first argument
@@ -135,7 +135,7 @@ function comma_kill_signed()
     builtin kill -s STOP $pid
     (( $? == 0 )) || { builtin echo "$FUNCNAME: process id '$pid' not found; do not kill, assume terminated by itself" >&2; return $COMMA_KILL_SIGNED_NOT_FOUND; }
     local current
-    current=$( comma_get_process_signature $pid )
+    current=$( comma_process_signature $pid )
     (( $? == 0 )) || { builtin echo "$FUNCNAME: cannot get signature of process id '$pid'" >&2; return $COMMA_KILL_SIGNED_ERROR; }
     [[ "$current" == "$signature" ]] || { builtin echo "$FUNCNAME: process '$pid' has signature '$current' different from expected '$signature'; possibly re-used; refuse to kill" >&2; return $COMMA_KILL_SIGNED_REUSED; }
     (( verbose == 1 )) && builtin echo "$FUNCNAME: verification passed, do 'kill -s $signal_to_use ${group}${pid}'" >&2
@@ -160,7 +160,7 @@ function comma_process_launch()
     (( verbose == 0 )) || builtin echo "$FUNCNAME: run in PID '$self'" >&2
     [[ -p "$fifo" ]] || { builtin echo "$FUNCNAME: '$fifo' is not a FIFO" >&2; return 1; }
     local signature
-    signature=$( comma_get_process_signature $self ) || { builtin echo "$FUNCNAME: cannot get process signature for '$self'" >&2; return 1; }
+    signature=$( comma_process_signature $self ) || { builtin echo "$FUNCNAME: cannot get process signature for '$self'" >&2; return 1; }
     builtin echo "$self $signature" > "$fifo"
     (( verbose == 0 )) || builtin echo "$FUNCNAME: in PID '$self': exec '${@}'" >&2
     unset verbose self fifo signature
