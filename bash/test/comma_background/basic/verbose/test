@@ -28,7 +28,7 @@ for verbosity in "verbose" "mute" ; do
     comma_process_launch $verbose "$fifo" sleep 1 & last_child=$!
     echo "$verbosity/child[0]/pid=$last_child"
     builtin echo "$scriptname: launched background child '$last_child', now verify..." >&2
-    comma_verify_background_pid $verbose "$fifo" $last_child
+    comma_process_validate $verbose "$fifo" $last_child
     echo "$verbosity/child[0]/verification/status=$?"
     # then, use a wrapper
     comma_process_launch_and_validate $verbose "$fifo" sleep 1

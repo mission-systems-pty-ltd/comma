@@ -45,7 +45,7 @@
 # @li @link comma_kill_signed_return_trap @endlink
 # @li @link comma_kill_signed @endlink
 # @li @link comma_process_launch @endlink
-# @li @link comma_verify_background_pid @endlink
+# @li @link comma_process_validate @endlink
 # @li @link comma_process_launch_and_validate @endlink
 
 [[ -n "$comma_background_util_include_guard_" ]] && return 0
@@ -169,7 +169,7 @@ function comma_process_launch()
 export -f comma_process_launch
 declare -r comma_process_launch
 
-## @page comma_verify_background_pid comma_verify_background_pid
+## @page comma_process_validate comma_process_validate
 # @description verify the process id of the background process as returned by bash
 # in $! variable and passed through the named pipe. Also, read the signature of the background
 # process (calculated in the child itself and passed through the same named pipe) and store it
@@ -179,7 +179,7 @@ declare -r comma_process_launch
 # of the background process; otherwise taken as first argument; default name: comma_background_signature
 # @param fifo the named pipe to read PID from
 # @param expected the expected process id
-function comma_verify_background_pid()
+function comma_process_validate()
 {
     local verbose=0
     local signature_variable_name="comma_background_signature"
@@ -214,8 +214,8 @@ function comma_verify_background_pid()
     eval "$signature_variable_name=$signature"
     return 0
 }
-export -f comma_verify_background_pid
-declare -r comma_verify_background_pid
+export -f comma_process_validate
+declare -r comma_process_validate
 
 ## @page comma_process_launch_and_validate comma_process_launch_and_validate
 # @description launch the given command as a background process and verify its pid
@@ -224,7 +224,7 @@ declare -r comma_verify_background_pid
 # before or during verification, nothing is certain about $! and reliable signal handlers
 # shall bluntly kill all child processes.
 # @param verbosity optional; if equal to '--verbose', print trace messages; otherwise taken as first argument
-# @param variable optional, see @link comma_verify_background_pid @endlink for details
+# @param variable optional, see @link comma_process_validate @endlink for details
 # @param fifo named pipe to use for passing PID from background process to verifier
 # @param command the entire command line (multiple arguments, if needed) to be exec-ed
 # @return 0 on verification success, 1 on failure
@@ -243,7 +243,7 @@ function comma_process_launch_and_validate()
     local fifo=$1 ; shift
     local child
     comma_process_launch $verbose "$fifo" "$@" & child=$!
-    comma_verify_background_pid $args "$fifo" "$child"
+    comma_process_validate $args "$fifo" "$child"
 }
 export -f comma_process_launch_and_validate
 declare -r comma_process_launch_and_validate
