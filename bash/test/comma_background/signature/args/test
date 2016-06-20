@@ -57,8 +57,8 @@ function toplevel()
     local signature="$comma_background_signature"
     [[ "$variable" == "default" ]] || eval "signature=\$$variable"
 
-    comma_kill_signed $args "$background_pid" "$signature"
-    echo "comma_kill_signed/status=$?"
+    comma_process_kill $args "$background_pid" "$signature"
+    echo "comma_process_kill/status=$?"
 
     wait $background_pid
     echo "background/status=$?"

@@ -62,9 +62,9 @@ function terminate_comma_execute_and_wait()
         for command_to_execute_index in ${!commands_to_execute_pgid[@]} ; do
             if [[ -n "${commands_to_execute_pgid[$command_to_execute_index]}" ]] ; then
                 [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: killing ${commands_to_execute_pgid[$command_to_execute_index]} by $termination_signal" >&2
-                comma_kill_signed $comma_background_verbose --signal=$termination_signal ${killsign}${commands_to_execute_pgid[$command_to_execute_index]} ${commands_to_execute_signature[$command_to_execute_index]}
+                comma_process_kill $comma_background_verbose --signal=$termination_signal ${killsign}${commands_to_execute_pgid[$command_to_execute_index]} ${commands_to_execute_signature[$command_to_execute_index]}
                 # ignore the not found and reused exit status: the original process is gone, multiple background processes can terminate at different times
-                (( $? == COMMA_KILL_SIGNED_ERROR )) && echo "$cew_funcname: error in comma_kill_signed $comma_background_verbose --signal=$termination_signal ${killsign}${commands_to_execute_pgid[$command_to_execute_index]} ${commands_to_execute_signature[$command_to_execute_index]}" >&2
+                (( $? == COMMA_PROCESS_KILL_ERROR )) && echo "$cew_funcname: error in comma_process_kill $comma_background_verbose --signal=$termination_signal ${killsign}${commands_to_execute_pgid[$command_to_execute_index]} ${commands_to_execute_signature[$command_to_execute_index]}" >&2
                 [[ "$killsign" == "-" ]] && {
                     [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: waiting for group ${commands_to_execute_pgid[$command_to_execute_index]}" >&2
                     comma_wait_for_process_group "$cew_funcname" "${commands_to_execute_pgid[$command_to_execute_index]}" 25

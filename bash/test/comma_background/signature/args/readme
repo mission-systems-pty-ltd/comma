@@ -1,2 +1,2 @@
-Verify that comma_kill_signed verbosity and signal to use can be controlled
+Verify that comma_process_kill verbosity and signal to use can be controlled
 through command-line options.

@@ -25,8 +25,8 @@ echo "comma_process_signature/status=$status"
 echo -n "time/now="
 echo "1" | csv-time-stamp | csv-shuffle --fields=t, --output-fields=t | csv-time --to local | csv-time --to seconds
 
-comma_kill_signed "$background_pid" "$signature"
-echo "comma_kill_signed/status=$?"
+comma_process_kill "$background_pid" "$signature"
+echo "comma_process_kill/status=$?"
 
 wait $background_pid
 echo "background/status=$?"
