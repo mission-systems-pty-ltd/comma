@@ -13,7 +13,7 @@ fifo="$temp_dir/pipe"
 trap "rm -f \"$fifo\"" EXIT
 mkfifo "$fifo" || { echo "$scriptname: cannot create named pipe '$fifo'" >&2; exit 1; }
 
-comma_background_and_verify_pid "$fifo" sleep 100 || { echo "$scriptname: fatal system error, wrong background PID" >&2; exit 1; }
+comma_process_launch_and_validate "$fifo" sleep 100 || { echo "$scriptname: fatal system error, wrong background PID" >&2; exit 1; }
 background_pid=$!
 
 signature=$( comma_get_process_signature "$background_pid" )

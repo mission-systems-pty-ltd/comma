@@ -31,7 +31,7 @@ for verbosity in "verbose" "mute" ; do
     comma_verify_background_pid $verbose "$fifo" $last_child
     echo "$verbosity/child[0]/verification/status=$?"
     # then, use a wrapper
-    comma_background_and_verify_pid $verbose "$fifo" sleep 1
+    comma_process_launch_and_validate $verbose "$fifo" sleep 1
     echo "$verbosity/child[1]/verification/status=$?"
     echo "$verbosity/child[1]/pid=$!"
     report_own_tree >&2

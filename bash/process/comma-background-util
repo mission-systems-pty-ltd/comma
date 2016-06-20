@@ -46,7 +46,7 @@
 # @li @link comma_kill_signed @endlink
 # @li @link comma_process_launch @endlink
 # @li @link comma_verify_background_pid @endlink
-# @li @link comma_background_and_verify_pid @endlink
+# @li @link comma_process_launch_and_validate @endlink
 
 [[ -n "$comma_background_util_include_guard_" ]] && return 0
 readonly comma_background_util_include_guard_=1
@@ -217,7 +217,7 @@ function comma_verify_background_pid()
 export -f comma_verify_background_pid
 declare -r comma_verify_background_pid
 
-## @page comma_background_and_verify_pid comma_background_and_verify_pid
+## @page comma_process_launch_and_validate comma_process_launch_and_validate
 # @description launch the given command as a background process and verify its pid
 # by passing it through a fifo and checking against $! variable. If verification passed,
 # the value still stored in $! is safe to use. Note that if a signal interrupt occurs
@@ -228,7 +228,7 @@ declare -r comma_verify_background_pid
 # @param fifo named pipe to use for passing PID from background process to verifier
 # @param command the entire command line (multiple arguments, if needed) to be exec-ed
 # @return 0 on verification success, 1 on failure
-function comma_background_and_verify_pid()
+function comma_process_launch_and_validate()
 {
     local args=
     local verbose=
@@ -245,5 +245,5 @@ function comma_background_and_verify_pid()
     comma_process_launch $verbose "$fifo" "$@" & child=$!
     comma_verify_background_pid $args "$fifo" "$child"
 }
-export -f comma_background_and_verify_pid
-declare -r comma_background_and_verify_pid
+export -f comma_process_launch_and_validate
+declare -r comma_process_launch_and_validate

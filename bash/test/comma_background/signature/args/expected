@@ -19,7 +19,7 @@ for variable in [ "default", "mysignature" ]:
         for signal in [ "TERM", "USR1" ]:
             name = "/".join( [ variable, verbosity, signal ] )
             obj = deepgetattr( olocals, name )
-            expect obj/comma_background_and_verify_pid/status == 0
+            expect obj/comma_process_launch_and_validate/status == 0
             expect obj/comma_kill_signed/status == 0
             expect obj/handler/signal == signal
             expect obj/background/status == di[signal]
