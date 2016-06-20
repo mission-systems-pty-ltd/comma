@@ -52,9 +52,9 @@ static void usage( bool )
     std::cerr << "operations" << std::endl;
     std::cerr << "    numbers (default): convert comma-separated field names to field numbers" << std::endl;
     std::cerr << "                       e.g. for combining with cut or csv-bin-cut" << std::endl;
-    std::cerr << std::endl;
     std::cerr << "        --from=<value>: start field numbering from <value>; default=1" << std::endl;
     std::cerr << "                        to keep it consistent with linux cut utility" << std::endl;
+    std::cerr << "        --count: output the total number of fields" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    clear: clear some of the field values" << std::endl;
     std::cerr << "        --keep,--except=<fields>: keep given fields by name" << std::endl;
@@ -87,6 +87,8 @@ static void usage( bool )
     std::cerr << "    numbers" << std::endl;
     std::cerr << "        echo \"hello,,,,world\" | csv-fields" << std::endl;
     std::cerr << "        1,5" << std::endl;
+    std::cerr << "        echo \"hello,,,world,\" | csv-fields numbers --count" << std::endl;
+    std::cerr << "        5" << std::endl;
     std::cerr << std::endl;
     std::cerr << "        echo 1,2,3 | cut -d, -f$( echo ,,world | csv-fields )" << std::endl;
     std::cerr << "        3" << std::endl;
@@ -143,6 +145,7 @@ int main( int ac, char** av )
         if( !unnamed.empty() ) { operation = unnamed[0]; }
         if( operation == "numbers" )
         {
+            options.assert_mutually_exclusive( "--count" );
             int from = options.value( "--from", 1 );
             while( std::cin.good() )
             {
@@ -151,6 +154,7 @@ int main( int ac, char** av )
                 if( line.empty() ) { continue; }
                 const std::vector< std::string >& v = comma::split( line, delimiter );
                 std::string comma;
+                if ( options.exists( "--count" ) ) { std::cout << v.size() << std::endl; return 0; }
                 for( unsigned int i = 0; i < v.size(); ++i )
                 {
                     if( v[i].empty() ) { continue; }

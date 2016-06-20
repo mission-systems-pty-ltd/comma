@@ -2,6 +2,8 @@ numbers[0]="echo a | csv-fields"
 numbers[1]="echo a,b | csv-fields"
 numbers[2]="echo ,,,a,b | csv-fields"
 numbers[3]="echo ,,, | csv-fields"
+numbers[4]="echo ,,, | csv-fields --count"
+numbers[5]="echo a,,,b | csv-fields --count"
 
 clear/keep[0]="echo a,b,c,d | csv-fields clear --keep ,,,"
 clear/keep[1]="echo a,b,c,d | csv-fields clear --keep a"

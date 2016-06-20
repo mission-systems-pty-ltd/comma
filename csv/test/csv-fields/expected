@@ -6,6 +6,10 @@ numbers[2]/output="4,5"
 numbers[2]/status=0
 numbers[3]/output=""
 numbers[3]/status=0
+numbers[4]/output="4"
+numbers[4]/status=0
+numbers[5]/output="4"
+numbers[5]/status=0
 
 clear/keep[0]/output=",,,"
 clear/keep[0]/status=0
