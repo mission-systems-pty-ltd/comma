@@ -193,6 +193,7 @@ function comma_process_validate()
     done
     local fifo=$1
     local expected=$2
+    [[ -p "$fifo" ]] || { builtin echo "$FUNCNAME: '$fifo' is not a FIFO" >&2; return 1; }
     local pid status signature
     local timeout=10
     # http://stackoverflow.com/questions/6448632/read-not-timing-out-when-reading-from-pipe-in-bash
@@ -241,6 +242,7 @@ function comma_process_launch_and_validate()
         shift
     done
     local fifo=$1 ; shift
+    [[ -p "$fifo" ]] || { builtin echo "$FUNCNAME: '$fifo' is not a FIFO" >&2; return 1; }
     local child
     comma_process_launch $verbose "$fifo" "$@" & child=$!
     comma_process_validate $args "$fifo" "$child"
