@@ -245,15 +245,15 @@ function comma_execute_and_wait()
         # its own process group and under timeout
         if [[ "$usepg" == "true" ]] ; then
             if [[ "$shellfcn" == "true" ]] ; then
-                comma_process_launch_and_validate $comma_background_verbose "$pid_fifo" timeout -k 10 -s TERM $execute_and_wait_timeout bash -c "$command_to_execute"
+                comma_process_exec_and_validate $comma_background_verbose "$pid_fifo" timeout -k 10 -s TERM $execute_and_wait_timeout bash -c "$command_to_execute"
             else
-                comma_process_launch_and_validate $comma_background_verbose "$pid_fifo" timeout -k 10 -s TERM $execute_and_wait_timeout $command_to_execute
+                comma_process_exec_and_validate $comma_background_verbose "$pid_fifo" timeout -k 10 -s TERM $execute_and_wait_timeout $command_to_execute
             fi
         else
             if [[ "$shellfcn" == "true" ]] ; then
-                comma_process_launch_and_validate $comma_background_verbose "$pid_fifo" bash -c "$command_to_execute"
+                comma_process_exec_and_validate $comma_background_verbose "$pid_fifo" bash -c "$command_to_execute"
             else
-                comma_process_launch_and_validate $comma_background_verbose "$pid_fifo" $command_to_execute
+                comma_process_exec_and_validate $comma_background_verbose "$pid_fifo" $command_to_execute
             fi
         fi
         (( $? == 0 )) || {

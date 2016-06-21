@@ -40,7 +40,7 @@ export main_pid=$BASHPID
 echo "main is PID $main_pid" >&2
 
 for i in 0 1 ; do
-    comma_process_launch_and_validate "$fifo" timeout -k 10 -s TERM 20 bash -c run_as_group\ "$output_dir/log${i}"
+    comma_process_exec_and_validate "$fifo" timeout -k 10 -s TERM 20 bash -c run_as_group\ "$output_dir/log${i}"
     echo "child[$i]/verification/status='$?'"
     echo "child[$i]/pid='$!'"
 done

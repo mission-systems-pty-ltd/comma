@@ -25,13 +25,13 @@ for verbosity in "verbose" "mute" ; do
     [[ "$verbosity" == "verbose" ]] && verbose="--verbose"
     # first, use implementation functions explicitly
     builtin echo "$scriptname: attempt to start a background process..." >&2
-    comma_process_launch $verbose "$fifo" sleep 1 & last_child=$!
+    comma_process_exec $verbose "$fifo" sleep 1 & last_child=$!
     echo "$verbosity/child[0]/pid=$last_child"
     builtin echo "$scriptname: launched background child '$last_child', now verify..." >&2
     comma_process_validate $verbose "$fifo" $last_child
     echo "$verbosity/child[0]/verification/status=$?"
     # then, use a wrapper
-    comma_process_launch_and_validate $verbose "$fifo" sleep 1
+    comma_process_exec_and_validate $verbose "$fifo" sleep 1
     echo "$verbosity/child[1]/verification/status=$?"
     echo "$verbosity/child[1]/pid=$!"
     report_own_tree >&2
