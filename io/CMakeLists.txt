@@ -37,4 +37,8 @@ IF( comma_BUILD_TESTS )
     ADD_SUBDIRECTORY( test )
 ENDIF( comma_BUILD_TESTS )
 
-
+IF(UNIX)
+    ADD_EXECUTABLE( io-line io-line.cpp )
+    TARGET_LINK_LIBRARIES ( io-line comma_application comma_string ${comma_ALL_EXTERNAL_LIBRARIES} )
+    INSTALL( TARGETS io-line RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
+ENDIF(UNIX)

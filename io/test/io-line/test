@@ -1,0 +1,30 @@
+#!/bin/bash
+
+scriptname="io_line_test_1"
+
+source $( type -p comma-application-util ) || { printf "%s could not source comma-application-util" $scriptname >&2 ; exit 1 ; } 
+
+io-line 2>/dev/null ; printf "test[0]/status=%d\n" $?
+
+io-line --help 2>/dev/null ; printf "test[1]/status=%d\n" $?
+
+io-line --delimiter , 2>/dev/null  ; printf "test[2]/status=%d\n" $?
+
+text="$( io-line length <<< '' )"  ; printf "length[0]/status=%d\n" $? ; printf "length[0]/text=\"%s\"\n" "$text"
+
+text="$( io-line length <<< 'one' )"  ; printf "length[1]/status=%d\n" $? ; printf "length[1]/text=\"%s\"\n" "$text"
+
+text="$( io-line length <<< 'one
+two2' )"  ; printf "length[2]/status=%d\n" $? ; printf "length[2]/text=\"%s\"\n" "$( tr '\n' '@' <<< "$text" )"
+
+text="$( io-line length <<< 'one
+
+two2' )"  ; printf "length[3]/status=%d\n" $? ; printf "length[3]/text=\"%s\"\n" "$( tr '\n' '@' <<< "$text" )"
+
+text="$( io-line length <<< 'one
+
+two2' | { io-line get ; echo '#' ; io-line get ; echo '#' ; io-line get ; } )"  ; printf "get[1]/status=%d\n" $? ; printf "get[1]/text=\"%s\"\n" "$( tr '\n' '@' <<< "$text" )"
+
+text="$( io-line length <<< 'one
+
+two2' | { io-line get --to-new-line o ; echo '#' ; io-line get --to-new-line o ; echo '#' ; io-line get --to-new-line o ; } )"  ; printf "get[2]/status=%d\n" $? ; printf "get[2]/text=\"%s\"\n" "$( tr '\n' '@' <<< "$text" )"
