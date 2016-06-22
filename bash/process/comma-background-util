@@ -176,13 +176,13 @@ declare -r comma_process_exec
 # in a global variable; the user can contol the variable name through command-line options.
 # @param verbosity optional; if equal to '--verbose', print trace messages; otherwise taken as first argument
 # @param variable optional; if equal to '--signature-variable=NAME', assign variable NAME to the signature
-# of the background process; otherwise taken as first argument; default name: comma_process_signature
+# of the background process; otherwise taken as first argument; default name: comma_process_child_signature
 # @param fifo the named pipe to read PID from
 # @param expected the expected process id
 function comma_process_validate()
 {
     local verbose=0
-    local signature_variable_name="comma_process_signature"
+    local signature_variable_name="comma_process_child_signature"
     while true; do
         case $1 in
             --signature-variable=*) signature_variable_name=${1#*=};;
