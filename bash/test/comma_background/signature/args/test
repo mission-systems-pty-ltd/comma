@@ -54,7 +54,7 @@ function toplevel()
     args=
     [[ "$verbose" == "verbose" ]] && args+=" --verbose"
     [[ "$signal" == "TERM" ]] || args=" --signal=$signal"
-    local signature="$comma_background_signature"
+    local signature="$comma_process_signature"
     [[ "$variable" == "default" ]] || eval "signature=\$$variable"
 
     comma_process_kill $args "$background_pid" "$signature"
