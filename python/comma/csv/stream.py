@@ -64,8 +64,8 @@ class stream(object):
         self.complete_dtype = self._complete_dtype()
         self.default_values = self._default_values(default_values)
         self.data_extraction_dtype = self._data_extraction_dtype()
-        self._input_data = None
-        self._missing_data = None
+        self._input_array = None
+        self._missing_fields_array = None
         self._ascii_buffer = None
 
     def iter(self, size=None):
@@ -89,24 +89,28 @@ class stream(object):
         put it into appropriate numpy array with the dtype defined by struct, and return it
 
         if size is None, default size is used
-        if size is -1, all records from file are read (stdin is not allowed)
+        if size is negative, all records from source are read
+        if no records have been read, return None
         """
         if size is None:
             size = self.size
-        if size < 0:
-            if self.source == sys.stdin:
-                msg = "stdin requires positive size, got {}".format(size)
-                raise IOError(msg)
-            size = -1  # read entire file
+        self._input_array = self._read(size)
+        if self._input_array.size == 0:
+            return
+        return self._struct_array(self._input_array)
+
+    def _read(self, size):
         if self.binary:
-            self._input_data = np.fromfile(self.source, dtype=self.input_dtype, count=size)
+            if size < 0 and self.source == sys.stdin:
+                return np.fromstring(self.source.read(), dtype=self.input_dtype)
+            else:
+                count = -1 if size < 0 else size
+                return np.fromfile(self.source, dtype=self.input_dtype, count=count)
         else:
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore')
                 self._ascii_buffer = readlines_unbuffered(size, self.source)
-                if not self._ascii_buffer:
-                    return
-                self._input_data = np.atleast_1d(np.genfromtxt(
+                return np.atleast_1d(np.genfromtxt(
                     StringIO(self._ascii_buffer),
                     dtype=self.input_dtype,
                     delimiter=self.delimiter,
@@ -114,30 +118,30 @@ class stream(object):
                     usecols=self.usecols,
                     filling_values=self.filling_values,
                     comments=None))
-        if self._input_data.size == 0:
-            return
+
+    def _struct_array(self, input_array):
         if not self.data_extraction_dtype:
-            return self._input_data.copy().view(self.struct)
+            return input_array.copy().view(self.struct)
         if self.missing_fields:
-            missing_data = self._retrieve_missing_data(self._input_data.size)
-            complete_data = merge_arrays(self._input_data, missing_data)
+            missing_fields_array = self._retrieve_missing_data(input_array.size)
+            complete_array = merge_arrays(input_array, missing_fields_array)
         else:
-            complete_data = self._input_data
+            complete_array = input_array
         raw_extracted_data = np.ndarray(
-            shape=complete_data.shape,
+            shape=complete_array.shape,
             dtype=self.data_extraction_dtype,
-            buffer=complete_data,
-            strides=complete_data.itemsize).tolist()
-        extracted_data = np.array(raw_extracted_data, dtype=self.struct.flat_dtype)
-        return extracted_data.view(self.struct)
+            buffer=complete_array,
+            strides=complete_array.itemsize).tolist()
+        extracted_array = np.array(raw_extracted_data, dtype=self.struct.flat_dtype)
+        return extracted_array.view(self.struct)
 
     def _retrieve_missing_data(self, size):
-        if self._missing_data is None or size > self._missing_data.size:
+        if self._missing_fields_array is None or size > self._missing_fields_array.size:
             self._generate_missing_data(size)
-        return self._missing_data[:size]
+        return self._missing_fields_array[:size]
 
     def _generate_missing_data(self, size):
-        self._missing_data = np.zeros(size, dtype=self.missing_dtype)
+        self._missing_fields_array = np.zeros(size, dtype=self.missing_dtype)
         if not self.default_values:
             return
         dtype_name_of = dict(zip(self.missing_fields, self.missing_dtype.names))
@@ -145,11 +149,11 @@ class stream(object):
             name = dtype_name_of[field]
             if self.missing_dtype[name] == csv_time.DTYPE:
                 try:
-                    self._missing_data[name] = csv_time.to_numpy(value)
+                    self._missing_fields_array[name] = csv_time.to_numpy(value)
                 except TypeError:
-                    self._missing_data[name] = value
+                    self._missing_fields_array[name] = value
             else:
-                self._missing_data[name] = value
+                self._missing_fields_array[name] = value
 
     def numpy_scalar_to_string(self, scalar):
         return numpy_scalar_to_string(scalar, precision=self.precision)
@@ -165,12 +169,12 @@ class stream(object):
         if s.shape != (s.size,):
             msg = "expected shape=({},), got {}".format(s.size, s.shape)
             raise ValueError(msg)
-        if self.tied and s.size != self.tied._input_data.size:
-            tied_size = self.tied._input_data.size
+        if self.tied and s.size != self.tied._input_array.size:
+            tied_size = self.tied._input_array.size
             msg = "size {} not equal to tied size {}".format(s.size, tied_size)
             raise ValueError(msg)
         if self.binary:
-            (merge_arrays(self.tied._input_data, s) if self.tied else s).tofile(self.target)
+            (merge_arrays(self.tied._input_array, s) if self.tied else s).tofile(self.target)
         else:
             tied_lines = self.tied._ascii_buffer.splitlines() if self.tied else []
             unrolled_s = s.view(self.struct.unrolled_flat_dtype)
@@ -191,7 +195,7 @@ class stream(object):
 
     def _dump(self):
         if self.binary:
-            self._input_data.tofile(self.target)
+            self._input_array.tofile(self.target)
         else:
             self.target.write(self._ascii_buffer)
         self.target.flush()
@@ -204,12 +208,12 @@ class stream(object):
         if mask.shape != (mask.size,):
             msg = "expected mask shape=({},), got {}".format(mask.size, mask.shape)
             raise ValueError(msg)
-        if mask.size != self._input_data.size:
-            data_size = self._input_data.size
+        if mask.size != self._input_array.size:
+            data_size = self._input_array.size
             msg = "mask size {} not equal to data size {}".format(mask.size, data_size)
             raise ValueError(msg)
         if self.binary:
-            self._input_data[mask].tofile(self.target)
+            self._input_array[mask].tofile(self.target)
         else:
             it = itertools.izip(StringIO(self._ascii_buffer), mask)
             self.target.write(''.join(line for line, allowed in it if allowed))
