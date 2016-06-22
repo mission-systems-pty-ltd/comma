@@ -36,7 +36,10 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
+#include <cerrno>
 
+#include <unistd.h>
+ 
 #include <comma/application/contact_info.h>
 #include <comma/application/command_line_options.h>
 #include <comma/base/exception.h>
@@ -71,6 +74,18 @@ void usage( bool const verbose = false )
         "\n";
     std::cerr << message << comma::contact_info << '\n' << std::endl;
     std::exit( 0 );
+}
+
+bool read_from_stdin( char * const buffy, const ssize_t length )
+{
+    ssize_t total = 0, sz = 0;
+    while( total < length )
+    {
+        sz = read( 0, buffy + total, length - total );
+        if( -1 != sz ) { total = total + sz; }
+        else if( EINTR != errno ) { return false; }
+    }
+    return true;
 }
 
 static std::string delimiter;
@@ -111,10 +126,7 @@ int get( void )
     if( length > 0 )
     {
         buffy[length] = 0;
-        std::cin.get(buffy, length + 1 );
-        if( ! std::cin ) { std::cerr << "io-line: error: could not get rest of line - tried for " << length << std::endl; return 1; }
-        unsigned const sz = std::cin.gcount();
-        if( length != sz ) { std::cerr << "io-line: error: got " << sz << " characters but expected " << length << std::endl; return 1; }
+        if( ! read_from_stdin(buffy, length ) ) { std::cerr << "io-line: error: could not get rest of line - tried for " << length << std::endl; return 1; }
     }
     
     std::cin.get(ch);
