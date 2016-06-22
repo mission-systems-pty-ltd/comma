@@ -44,10 +44,10 @@ function toplevel()
     local args=
     [[ "$variable" == "default" ]] || args+=" --signature-variable=$variable"
     [[ "$verbose" == "verbose" ]] && args+=" --verbose"
-    comma_background_and_verify_pid $args "$fifo" bash -c runme || { echo "$scriptname: fatal system error, wrong background PID" >&2; exit 1; }
+    comma_process_exec_and_validate $args "$fifo" bash -c runme || { echo "$scriptname: fatal system error, wrong background PID" >&2; exit 1; }
     local rv=$?
     background_pid=$!
-    echo "comma_background_and_verify_pid/status=$rv"
+    echo "comma_process_exec_and_validate/status=$rv"
 
     sleep 10 # to allow exec to proceed
 
@@ -57,8 +57,8 @@ function toplevel()
     local signature="$comma_background_signature"
     [[ "$variable" == "default" ]] || eval "signature=\$$variable"
 
-    comma_kill_signed $args "$background_pid" "$signature"
-    echo "comma_kill_signed/status=$?"
+    comma_process_kill $args "$background_pid" "$signature"
+    echo "comma_process_kill/status=$?"
 
     wait $background_pid
     echo "background/status=$?"

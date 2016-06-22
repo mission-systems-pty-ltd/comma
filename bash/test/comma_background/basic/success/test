@@ -24,10 +24,10 @@ child_count=3
 echo "child/count=$child_count"
 for i in $( eval echo "{1..$child_count}" ) ; do
     builtin echo "$scriptname: attempt to start a background process..." >&2
-    comma_background_launcher "$fifo" sleep 1 & last_child=$!
+    comma_process_exec "$fifo" sleep 1 & last_child=$!
     echo "child[$i]/pid=$last_child"
     builtin echo "$scriptname: launched background child '$last_child', now verify..." >&2
-    comma_verify_background_pid "$fifo" $last_child
+    comma_process_validate "$fifo" $last_child
     echo "child[$i]/verification/status=$?"
     children+=( $last_child )
 done
