@@ -1,0 +1,58 @@
+#!/bin/bash
+
+unset input
+unset filter
+unset command
+
+function reset()
+{
+    rm -rf "filter.csv"
+    unset input
+    unset input_fields
+    unset filter
+    unset filter_file
+    unset filter_fields
+    unset command
+}
+
+function make_filter()
+{
+    if [[ -n $filter ]] ; then
+        filter_file="filter.csv"
+        for i in ${filter[@]} ; do echo "$i" >> $filter_file ; done
+    fi
+}
+
+function run_command()
+{
+    local size=0
+    local key="$1"
+
+    while read line ; do
+        echo "$( dirname "$key" )/output/line[$size]=\"$line\""
+        unset none
+        (( ++size ))
+    done < <( for i in ${input[@]} ; do echo "$i" ; done | eval "$command --fields=$input_fields \"$filter_file;fields=$filter_fields\"" )
+
+    echo "$( dirname "$key" )/output/size=$size"
+    echo
+}
+
+reset
+while IFS='=' read key value ; do
+    [[ -n "$key" && "${key:0:1}" != "#" ]] || continue
+    value="${value/#\"}"
+    value="${value/%\"}"
+    case "$( basename $key )" in
+        input|input\[*\]) input+=( "$value" ) ;;
+        filter|filter\[*\]) filter+=( "$value" ) ;;
+        input_fields) input_fields=$value ;;
+        filter_fields) filter_fields=$value ;;
+        command)
+            command="$value"
+            make_filter
+            run_command "$key"
+            reset
+            ;;
+    esac
+done

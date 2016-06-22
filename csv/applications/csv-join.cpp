@@ -67,6 +67,7 @@ static void usage( bool more )
     std::cerr << "    --first-matching: output only the first matching record (a bit of hack for now, but we needed it)" << std::endl;
     std::cerr << "    --not-matching: not matching records as read from stdin, no join performed" << std::endl;
     std::cerr << "    --matching: output only matching records from stdin" << std::endl;
+    std::cerr << "    --flag-matching: output all records, with 1 appended to matching records and 0 appended to not-matching records" << std::endl;
     std::cerr << "    --unique,--unique-matches: expect only unique matches, exit with error otherwise" << std::endl;
     std::cerr << "    --strict: fail, if id on stdin is not found" << std::endl;
     std::cerr << "    --tolerance,--epsilon=<value>; compare keys with given tolerance" << std::endl;
@@ -141,6 +142,7 @@ static bool unique;
 static bool strict;
 static bool not_matching;
 static bool matching;
+static bool flag_matching;
 static comma::csv::options stdin_csv;
 static comma::csv::options filter_csv;
 boost::scoped_ptr< comma::io::istream > filter_transport;
@@ -347,6 +349,15 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
                     else { std::cout << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << std::endl; }
                     continue;
                 }
+                if ( flag_matching )
+                {
+                    if( stdin_stream.is_binary() ) { 
+                        std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() ); 
+                        char match = 1; std::cout.write( &match, 1 );
+                    }
+                    else { std::cout << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << stdin_csv.delimiter << 0 << std::endl; }
+                    continue;
+                }
                 if( !strict ) { ++discarded; continue; }
                 std::string s;
                 comma::csv::options c;
@@ -365,6 +376,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
                     {
                         std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() );
                         if( is_state_machine ) { state = it->first.next_state; }
+                        if( flag_matching ) { char match = 1; std::cout.write( &match, 1 ); break; }
                         if( matching ) { break; }
                         std::cout.write( &( it->second[i][0] ), filter_csv.format().size() );
                         std::cout.flush();
@@ -377,6 +389,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
                     {
                         std::cout << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter );
                         if( is_state_machine ) { state = it->first.next_state; }
+                        if( flag_matching ) { std::cout << stdin_csv.delimiter << 1 << std::endl; break; }
                         if( matching ) { std::cout << std::endl; break; }
                         std::cout << stdin_csv.delimiter
                                   << ( filter_csv.binary()
@@ -407,7 +420,9 @@ int main( int ac, char** av )
         not_matching = options.exists( "--not-matching" );
         unique = options.exists( "--unique,--unique-matches" );
         matching = options.exists( "--matching" );
+        flag_matching = options.exists( "--flag-matching" );
         tolerance = options.optional< double >( "--tolerance,--epsilon" );
+        options.assert_mutually_exclusive( "--matching,--not-matching,--flag-matching" );
         options.assert_mutually_exclusive( "--tolerance,--epsilon,--first-matching" );
         options.assert_mutually_exclusive( "--tolerance,--epsilon,--string,-s,--double,--time" );
         stdin_csv = comma::csv::options( options );
