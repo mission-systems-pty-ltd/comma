@@ -1,0 +1,2 @@
+ensure that data can be read to end of file from stdin with stream.read(size=-1)
+
