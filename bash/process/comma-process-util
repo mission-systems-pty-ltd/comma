@@ -261,7 +261,7 @@ function comma_execute_and_wait()
             kill -s TERM $BASHPID  # go into our signal handler
         }
         commands_to_execute_pgid+=( $! )
-        commands_to_execute_signature+=( $comma_background_signature $comma_background_verbose )
+        commands_to_execute_signature+=( $comma_background_signature )
     done
     cew_verified_pids=1
     # do not need it anymore
