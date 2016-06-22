@@ -1,0 +1,15 @@
+test[0]/status=0
+test[1]/status=0
+test[2]/status=0
+length[0]/status=0
+length[0]/text="0,"
+length[1]/status=0
+length[1]/text="3,one"
+length[2]/status=0
+length[2]/text="3,one@4,two2@"
+length[3]/status=0
+length[3]/text="3,one@0,@4,two2@"
+get[1]/status=0
+get[1]/text="one@#@@#@two2@"
+get[2]/status=0
+get[2]/text="@ne@#@@#@tw@2@"
