@@ -36,6 +36,9 @@ if( NOT WIN32 )
     target_link_libraries( io-ls ${comma_ALL_LIBRARIES} ${comma_EXTERNAL_ALL_LIBRARIES} )
     install( TARGETS io-ls RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
 
+    add_executable( io-line io-line.cpp )
+    target_link_libraries ( io-line comma_application ${comma_ALL_EXTERNAL_LIBRARIES} )
+    install( TARGETS io-line RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
 endif( NOT WIN32 )
 
 install( PROGRAMS zero-publish DESTINATION ${comma_INSTALL_BIN_DIR})
