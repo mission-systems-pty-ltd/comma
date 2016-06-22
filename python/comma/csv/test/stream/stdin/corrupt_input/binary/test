@@ -13,16 +13,14 @@ timestamped_point_t = comma.csv.struct( 'time,coordinates', 'datetime64[us]', po
 record_t = comma.csv.struct( 'observer,event', 'S3', timestamped_point_t )
 record_stream = comma.csv.stream( record_t, format=','.join( record_t.types ) )
 
-for i,r in enumerate( record_stream.iter( size=-1 ), start=1 ):
-  r['observer'] = numpy.char.upper( r['observer'] )
-  r['event']['time'] += numpy.timedelta64( i, 's' )
-  r['event']['coordinates']['x'] += i
-  record_stream.write( r )
+try:
+    for r in record_stream.iter( size=-1 ):
+        pass
+except ValueError:
+    print "exception=ValueError"
 END
 )"
 }
 
 
-csv-to-bin s[3],t,3d | head -c -16 | process_records | csv-from-bin s[3],t,3d | csv-paste value="line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'
-comma_status_ok 
-echo "status=$?"
+csv-to-bin s[3],t,3d | head -c -16 | process_records 

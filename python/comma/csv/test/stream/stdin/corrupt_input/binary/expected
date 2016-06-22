@@ -1,2 +1,1 @@
-not exists( line )
-status=1
+exception = "ValueError"
