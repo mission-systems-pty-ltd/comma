@@ -108,8 +108,20 @@ declare -r terminate_comma_execute_and_wait
 # The function executes the given command(s) (non-option argument) in a background process(es)
 # and waits for its completion (or timeout, see below).
 #
-# To ensure that the correct process ids (PIDs) of the background processes are used, the PIDs
-# are confirmed by passing them back from the child process through a named pipe.
+# Summary of options:
+#     --signals=|--signal-list=    list the signals to trap
+#     --fifo=|--pid-fifo=          use the user-provided fifo for comma_process_exec
+#     --max-wait=|--timeout=       maximal wait time
+#     --group                      run commands in separate groups
+#     --process                    run commands in the same group
+#     --all                        all commands must succeed
+#     --any                        at least one command must succeed
+#     --show-debug-messages        talk a lot
+#
+# Any other argument starting with '-' is an error.
+#
+# Any other argument is interpreted as a command to be executed. Enquote commands taking
+# arguments into a single string.
 #
 # The command given to be executed inherits from the original process its environment variables
 # but not the shell variables. Therefore, the command must be a self-contained string that can be
@@ -153,6 +165,11 @@ declare -r terminate_comma_execute_and_wait
 # The unit test in "parallel" directory provides a code template. You shall provide a way to
 # distribute signals to all instances to comma_execute_and_wait that are used in this fashion.
 #
+# To ensure that the correct process ids (PIDs) of the background processes are used, the PIDs
+# are confirmed by passing them back from the child process through a named pipe. The pipe can
+# be specified by the user through '--fifo' option. If none given, a temporary named pipe is
+# created and removed after use.
+#
 # The exit code of comma_execute_and_wait equals the exit code of the command-to-execute
 # accounting for possible signal handling. If multiple commands are given, the exit code
 # by default is zero if all commands succeed, and one if any fails. This can be explicitly
@@ -161,8 +178,13 @@ declare -r terminate_comma_execute_and_wait
 #
 # If the function receives a fatal signal early in the execution when it launches background
 # processes, it may not capture all the children process ids. In this case, all child processes
-# of the caller will be terminated. To avoid this corner case, this function is best used
-# when the caller has no other background children created beforehand.
+# of the caller will be terminated.
+#
+# Similar, if the function encounters an internal error and cannot terminate the child process
+# in the usual way, it resorts to killing all child processes as a fallback.
+#
+# To avoid these corner cases, this function is best used when the caller has no other background
+# children created beforehand.
 function comma_execute_and_wait()
 {
     # store existing traps for restoring on exit
