@@ -66,9 +66,13 @@ function comma_process_signature()
     local verbose=0
     local pid=$1
     [[ "$pid" == "--verbose" ]] && { verbose=1 ; shift ; pid=$1 ; }
-    local signature
-    signature=$( ps --no-headers -o lstart $pid )
-    (( $? == 0 )) || { builtin echo "$FUNCNAME: process with id '$pid' not found" >&2; return 1; }
+    local signature psexit
+    while true ; do
+        signature=$( ps --no-headers -o lstart "$pid" )
+        psexit=$?
+        (( $psexit > 128 )) || { builtin echo "$FUNCNAME: ps killed by a signal, try again" >&2; continue; }
+        (( $psexit == 0 )) || { builtin echo "$FUNCNAME: process with id '$pid' not found" >&2; return 1; }
+    done
     signature=$( date --date="$signature" +%Y%m%dT%H%M%S ) || { builtin echo "$FUNCNAME: cannot convert '$signature' to timestamp" >&2; return 1; }
     (( verbose == 0 )) || builtin echo "$FUNCNAME: process '$pid' signed as '$signature'" >&2
     echo "$signature"
