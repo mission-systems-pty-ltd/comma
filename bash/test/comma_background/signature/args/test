@@ -15,11 +15,16 @@ mkfifo "$fifo" || { echo "$scriptname: cannot create named pipe '$fifo'" >&2; ex
 
 function handler()
 {
-    echo "handler/signal=$1"
-    trap - INT HUP TERM PIPE USR1
+    trap '' INT HUP TERM PIPE USR1
+    builtin echo "handler/signal=$1"
     pkill -P $BASHPID
     wait
-    kill -s $1 $BASHPID
+    trap - INT HUP TERM PIPE USR1
+    # if a signal arrives before we kill ourselves (next line), the function may be
+    # killed by a wrong signal and the test would fail; however, such double-signals
+    # shall happen only when tests are terminated (^C) at exactly this moment, and therefore,
+    # cannot pass anyway
+    builtin kill -s $1 $BASHPID
 }
 export -f handler
 
