@@ -1,0 +1,25 @@
+#!/bin/bash
+
+readonly scriptname=$( basename "$0" )
+
+util="comma-background-util"
+source $( which "$util" ) || { echo "$scriptname: cannot source '$util'" >&2; exit 1; }
+
+main_pid=$BASHPID
+echo "$scriptname: running as PID $main_pid" >&2
+
+output_dir="output"
+mkdir -p "$output_dir"
+
+fifo=$( mktemp --dry-run --tmpdir="$output_dir" )
+trap "rm -f '$fifo'" EXIT
+mkfifo "$fifo" || { echo "$scriptname: cannot create FIFO '$fifo'" >&2; exit 1; }
+builtin echo "$scriptname: use fifo '$fifo'" >&2
+
+builtin echo "$scriptname: attempt to start a background process..." >&2
+comma_process_exec --verbose "$fifo" sleep 1 &
+
+# never read from the pipe, the above call shall time out
+echo "waiting for the children to terminate..." >&2
+wait $!
+echo "comma_process_exec/status=$?"

@@ -161,8 +161,9 @@ function comma_process_exec()
     [[ -p "$fifo" ]] || { builtin echo "$FUNCNAME: '$fifo' is not a FIFO" >&2; return 1; }
     local signature
     signature=$( comma_process_signature $self ) || { builtin echo "$FUNCNAME: cannot get process signature for '$self'" >&2; return 1; }
-    timeout -s TERM -k 10 10 bash -c "echo \"$self $signature\" > \"$fifo\""
-    (( $? == 0 )) || { builtin echo "$FUNCNAME: write into the named pipe '$fifo' failed, error $?" >&2; return 1; }
+    timeout -s TERM -k 10 10 bash -c "builtin echo \"$self $signature\" > \"$fifo\""
+    local rv=$?
+    (( rv == 0 )) || { builtin echo "$FUNCNAME: write into the named pipe '$fifo' failed, error $rv" >&2; return $rv; }
     (( verbose == 0 )) || builtin echo "$FUNCNAME: in PID '$self': exec '${@}'" >&2
     unset verbose self fifo signature
     exec "${@}"

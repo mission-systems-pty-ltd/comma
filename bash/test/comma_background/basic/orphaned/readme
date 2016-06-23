@@ -1,0 +1,2 @@
+Verify that comma_process_exec fails by timeout if the reader (parent process)
+does not read (in practice, has been sig-killed).
