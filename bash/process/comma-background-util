@@ -66,6 +66,8 @@ function comma_process_signature()
     local verbose=0
     local pid=$1
     [[ "$pid" == "--verbose" ]] && { verbose=1 ; shift ; pid=$1 ; }
+    # do not change to [[ ]] here
+    if [ "$pid" -eq "$pid" ] ; then :; else builtin echo "$FUNCNAME: pid '$pid' is not an integer" >&2; return 1; fi
     local signature psexit
     while true ; do
         signature=$( ps --no-headers -o lstart "$pid" )
@@ -133,6 +135,8 @@ function comma_process_kill()
         shift
     done
     local pid=$1
+    # do not change to [[ ]] here
+    if [ "$pid" -eq "$pid" ] ; then :; else builtin echo "$FUNCNAME: pid '$pid' is not an integer" >&2; return 1; fi
     local signature=$2
     local group=${pid:0:1}
     [[ "$group" == "-" ]] && pid=${pid:1} || group=""
