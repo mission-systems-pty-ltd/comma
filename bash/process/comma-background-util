@@ -164,6 +164,9 @@ function comma_process_exec()
     timeout -s TERM -k 10 10 bash -c "builtin echo \"$self $signature\" > \"$fifo\""
     local rv=$?
     (( rv == 0 )) || { builtin echo "$FUNCNAME: write into the named pipe '$fifo' failed, error $rv" >&2; return $rv; }
+    # if the caller has been interrupted, while the process was writing, the fifo could be removed
+    # then the write above succeeds, but the result is a file and not a fifo
+    [[ -f "$fifo" ]] && { builtin echo "$FUNCNAME: after the write '$fifo' is not a FIFO" >&2; return 1; }
     (( verbose == 0 )) || builtin echo "$FUNCNAME: in PID '$self': exec '${@}'" >&2
     unset verbose self fifo signature
     exec "${@}"

@@ -49,8 +49,6 @@ function terminate_comma_execute_and_wait()
     local cew_funcname="comma_execute_and_wait ($BASHPID)"
     local termination_signal="TERM"
     [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: interrupted by $received_signal, killsign='$killsign'" >&2
-    # remove the fifo, if created locally
-    [[ "$rm_pid_fifo" == "true" ]] && rm -f "$pid_fifo"
 
     # kill the command(s) being executed
     if (( cew_verified_pids != 1 )) ; then
@@ -75,6 +73,8 @@ function terminate_comma_execute_and_wait()
             fi
         done
     fi
+    # remove the fifo, if created locally
+    [[ "$rm_pid_fifo" == "true" ]] && rm -f "$pid_fifo"
     # use old handlers
     [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo -e "$cew_funcname: restore old traps\n$comma_execute_and_wait_saved_traps\n" >&2
     eval "$comma_execute_and_wait_saved_traps"
