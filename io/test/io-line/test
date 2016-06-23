@@ -23,8 +23,10 @@ two2' )"  ; printf "length[3]/status=%d\n" $? ; printf "length[3]/text=\"%s\"\n"
 
 text="$( io-line length <<< 'one
 
-two2' | { io-line get ; echo '#' ; io-line get ; echo '#' ; io-line get ; } )"  ; printf "get[1]/status=%d\n" $? ; printf "get[1]/text=\"%s\"\n" "$( tr '\n' '@' <<< "$text" )"
+two2' | { io-line get ; echo -n '# ' ; io-line get ; echo -n '# ' ; io-line get ; } )"  ; printf "get[1]/status=%d\n" $? ; printf "get[1]/text=\"%s\"\n" "$( tr '\n' '@' <<< "$text" )"
 
 text="$( io-line length <<< 'one
 
-two2' | { io-line get --to-new-line o ; echo '#' ; io-line get --to-new-line o ; echo '#' ; io-line get --to-new-line o ; } )"  ; printf "get[2]/status=%d\n" $? ; printf "get[2]/text=\"%s\"\n" "$( tr '\n' '@' <<< "$text" )"
+two2' | { io-line get --to-new-line o ; echo -n '# ' ; io-line get --to-new-line o ; echo -n '# ' ; io-line get --to-new-line o ; } )"  ; printf "get[2]/status=%d\n" $? ; printf "get[2]/text=\"%s\"\n" "$( tr '\n' '@' <<< "$text" )"
+
+text="$( io-line length --eol '%' <<< 'one%%two2%' | { io-line get --eol '%' ; echo -n '# ' ; io-line get --eol '%' ; echo -n '# ' ; io-line get --eol '%' ; } )"  ; printf "eol[0]/status=%d\n" $? ; printf "eol[0]/text=\"%s\"\n" "$( tr '\n' '@' <<< "$text" )"

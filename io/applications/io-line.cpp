@@ -61,7 +61,8 @@ void usage( bool const verbose = false )
         "\n        - Other tools like head -1 read too much from the pipe to be "
         "\n"
         "\nOptions:"
-        "\n    --delimiter,-d <delimiter> : default: ','"
+        "\n    --delimiter,-d <delimiter> : default: ','; character after the line length"
+        "\n    --end-of-line,--eol <character>; the input and output use the given character"
         "\n"
         "\nSpecial Options:"
         "\n    --to-new-line=[<chars>]; convert the given characters to new lines before output"
@@ -88,6 +89,7 @@ bool read_from_stdin( char * const buffy, const ssize_t length )
     return true;
 }
 
+static std::string end_of_line;
 static std::string delimiter;
 static std::string to_new_line;
 
@@ -97,12 +99,12 @@ int length( void )
     
     while( std::cin )
     {
-        std::getline( std::cin, buffy );
+        std::getline( std::cin, buffy, end_of_line[0] );
         if( ! std::cin ) return 0;
         std::cout
-            // << std::setfill('0') << std::setw(8) 
-            <<  buffy.size() << delimiter[0] << buffy
-            << std::endl;
+            << buffy.size() << delimiter[0]
+            << buffy
+            << end_of_line[0] << std::flush;
     }
     return 0;
 }
@@ -131,12 +133,12 @@ int get( void )
     
     std::cin.get(ch);
     if( ! std::cin ) { std::cerr << "io-line: error: could not get end of line" << std::endl; return 1; }
-    if( ch != '\n' ) { std::cerr << "io-line: error: end of line was incorrect " << ch << std::endl; return 1; }
+    if( ch != end_of_line[0] ) { std::cerr << "io-line: error: end of line was incorrect " << ch << std::endl; return 1; }
     
     for( unsigned i = 0; i < to_new_line.size(); ++i ) { std::replace( buffy, buffy + length, to_new_line[i], '\n' ); }
     
     if( length > 0 ) { std::cout << buffy; }
-    std::cout << std::endl;
+    std::cout << end_of_line[0] << std::flush;;
     return 0;
 }
 
@@ -149,8 +151,9 @@ int main( int argc, char ** argv )
         comma::command_line_options options( argc, argv, usage );
         to_new_line = options.value< std::string >( "--to-new-line", "" );
         delimiter = options.value< std::string >( "--delimiter,-d", "," );
-        
         if( delimiter.size() != 1 ) { std::cerr << "io-line: error: delimiter must be a single character '" << delimiter << '\'' << std::endl; return 1; }
+        end_of_line = options.value< std::string >( "--end-of-line,--eol", "\n" );
+        if( end_of_line.size() != 1 ) { std::cerr << "io-line: error: end of line must be a single character '" << end_of_line << '\'' << std::endl; return 1; }
         
         if( 0 == std::strcmp( argv[1], "length" ) ) { return length(); }
         else if( 0 == std::strcmp( argv[1], "get" ) )  { return get(); }
