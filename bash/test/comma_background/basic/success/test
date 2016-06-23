@@ -14,7 +14,10 @@ function report_own_tree()
     pstree -a -c -g -l -p $main_pid
 }
 
-fifo=$( mktemp --dry-run )
+output_dir="output"
+mkdir -p "$output_dir"
+
+fifo=$( mktemp --dry-run --tmpdir="$output_dir" )
 trap "rm -f '$fifo'" EXIT
 mkfifo "$fifo" || { echo "$scriptname: cannot create FIFO '$fifo'" >&2; exit 1; }
 echo "$scriptname: use fifo '$fifo'" >&2
