@@ -46,14 +46,15 @@ function terminate_comma_execute_and_wait()
     local killsign="-"
     [[ "$usepg" == "false" ]] && killsign=""
     local received_signal=$2
-    local cew_funcname="comma_execute_and_wait ($BASHPID)"
+    local cew_pid=$BASHPID
+    local cew_funcname="comma_execute_and_wait ($cew_pid)"
     local termination_signal="TERM"
     [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: interrupted by $received_signal, killsign='$killsign'" >&2
 
     # kill the command(s) being executed
     if (( cew_verified_pids != 1 )) ; then
         echo "$cew_funcname: terminated before verifying PIDs; kill all child processes instead" >&2
-        pkill --signal $termination_signal -P $BASHPID
+        pkill --signal $termination_signal -P $cew_pid
         wait
     else
         local command_to_execute_index
@@ -89,7 +90,7 @@ function terminate_comma_execute_and_wait()
         }
     done
     [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: re-raise $received_signal" >&2
-    kill -s $received_signal $BASHPID           # relinguish control
+    kill -s $received_signal $cew_pid           # relinguish control
 }
 export -f terminate_comma_execute_and_wait
 declare -r terminate_comma_execute_and_wait
@@ -161,7 +162,8 @@ function comma_execute_and_wait()
 {
     # store existing traps for restoring on exit
     comma_execute_and_wait_saved_traps=$( trap )
-    local cew_funcname="comma_execute_and_wait ($BASHPID)"
+    local cew_pid=$BASHPID
+    local cew_funcname="comma_execute_and_wait ($cew_pid)"
 
     # defaults
     local signal_list="TERM,INT,HUP"
@@ -258,7 +260,7 @@ function comma_execute_and_wait()
         fi
         (( $? == 0 )) || {
             echo "$cew_funcname: terminating self on fatal system error; incorrect background PID reported; re-run your application" >&2
-            kill -s TERM $BASHPID  # go into our signal handler
+            kill -s TERM $cew_pid  # go into our signal handler
         }
         commands_to_execute_pgid+=( $! )
         commands_to_execute_signature+=( $comma_process_child_signature )
@@ -275,8 +277,8 @@ function comma_execute_and_wait()
         (( command_to_execute_status == 127 )) && {
             echo "$cew_funcname: fatal system error, wait exit status is 127 on the process id ${commands_to_execute_pgid[$command_to_execute_index]}" >&2
             echo "$cew_funcname: all background process ids ${commands_to_execute_pgid[@]} have been verified" >&2
-            echo "$cew_funcname: the process tree of $BASHPID:" >&2
-            pstree -a -c -g -l -p $BASHPID >&2
+            echo "$cew_funcname: the process tree of $cew_pid:" >&2
+            pstree -a -c -g -l -p $cew_pid >&2
             echo "$cew_funcname: this is likely a rare internal error in bash; re-run your application" >&2
             statusall="true"
             commands_to_execute_status=1
