@@ -52,3 +52,14 @@ printf "get[4]/status=%d\nget[3]/count=%d\nget[4]/text=\"%s\"\n" $good $count "$
 text="$( io-line length --eol '%' <<< 'one%%two2%' | { io-line get --eol '%' ; echo -n '# ' ; io-line get --eol '%' ; echo -n '# ' ; io-line get --eol '%' ; } )"
 printf "eol[0]/status=%d\neol[0]/text=\"%s\"\n" $? "$( tr '\n' '@' <<< "$text" )"
 
+text="$( io-line length <<< 'one
+two
+three
+four
+five' | { io-line head --lines 3 ; echo -n '# ' ; io-line get ; } )"
+printf "head[0]/status=%d\nhead[0]/text=\"%s\"\n" $? "$( tr '\n' '@' <<< "$text" )"
+
+text="$( io-line length <<< 'one
+two
+three' | { io-line head --lines 5 ; } )"
+printf "head[1]/status=%d\nhead[1]/text=\"%s\"\n" $? "$( tr '\n' '@' <<< "$text" )"

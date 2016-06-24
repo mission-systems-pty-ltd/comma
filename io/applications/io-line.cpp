@@ -59,6 +59,8 @@ void usage( bool const verbose = false )
         "\n    get"
         "\n        - Read just 1 line with a length field at the front in a pipe safe manner."
         "\n        - Other tools like head -1 read too much from the pipe to be "
+        "\n    head"
+        "\n        - Output a number of lines in a pipe safe manner."
         "\n"
         "\nOptions:"
         "\n    --delimiter,-d <delimiter> : default: ','; character after the line length"
@@ -67,6 +69,8 @@ void usage( bool const verbose = false )
         "\nSpecial Options:"
         "\n    --to-new-line=[<chars>]; convert the given characters to new lines before output"
         "\n         Works with get"
+        "\n    --lines,-n <count>; print the first count lines instead of the first 10"
+        "\n         Works with head"
         "\n"
         "\nExamples:"
         "\n    cat text | io-line length | { io-line get ; echo @ ; io-line get ; }"
@@ -93,6 +97,7 @@ bool read_from_stdin( char * const buffy, const ssize_t length )
 static std::string end_of_line;
 static std::string delimiter;
 static std::string to_new_line;
+static unsigned line_count;
 
 int length( void )
 {
@@ -145,6 +150,16 @@ int get( void )
     return 0;
 }
 
+int head( void )
+{
+    for( unsigned i = 0; i < line_count; ++i )
+    {
+        int code = get();
+        if( code != 0 ) { return code; }
+    }
+    return 0;
+}
+
 int main( int argc, char ** argv )
 {
     try
@@ -157,9 +172,11 @@ int main( int argc, char ** argv )
         if( delimiter.size() != 1 ) { std::cerr << "io-line: error: delimiter must be a single character '" << delimiter << '\'' << std::endl; return 1; }
         end_of_line = options.value< std::string >( "--end-of-line,--eol", "\n" );
         if( end_of_line.size() != 1 ) { std::cerr << "io-line: error: end of line must be a single character '" << end_of_line << '\'' << std::endl; return 1; }
+        line_count = options.value< unsigned >( "--lines,-n", 10 );
         
         if( 0 == std::strcmp( argv[1], "length" ) ) { return length(); }
         else if( 0 == std::strcmp( argv[1], "get" ) )  { return get(); }
+        else if( 0 == std::strcmp( argv[1], "head" ) )  { return head(); }
         
         usage();
     }

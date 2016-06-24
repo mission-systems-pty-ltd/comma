@@ -22,3 +22,7 @@ get[3]/count=0
 get[4]/text="one@# @# two2@# @"
 eol[0]/status=0
 eol[0]/text="one%# %# two2%@"
+head[0]/status=0
+head[0]/text="one@two@three@# four@"
+head[1]/status=1
+head[1]/text="one@two@three@"
