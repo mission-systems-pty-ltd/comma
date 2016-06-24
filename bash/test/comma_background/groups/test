@@ -48,9 +48,9 @@ done
 sleep 1
 report_own_tree >&2
 
+echo "waiting for the children to terminate..." >&2
+wait
+
 for i in 0 1 ; do
     cat "$output_dir/log${i}" | sed "s@^@log[$i]/@"
 done
-
-echo "waiting for the children to terminate..." >&2
-wait
