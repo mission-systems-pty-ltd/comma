@@ -83,8 +83,9 @@ bool read_from_stdin( char * const buffy, const ssize_t length )
     while( total < length )
     {
         sz = read( 0, buffy + total, length - total );
+        if( 0 == sz ) { return false; }
         if( -1 != sz ) { total = total + sz; }
-        else if( EINTR != errno ) { return false; }
+        else if( EINTR != errno ) { std::cerr << "io-line: error: could not get rest of line, had " << total << ", trying for " << length << std::endl; return false; }
     }
     return true;
 }
@@ -100,7 +101,8 @@ int length( void )
     while( std::cin )
     {
         std::getline( std::cin, buffy, end_of_line[0] );
-        if( ! std::cin ) return 0;
+        if( std::cin.eof() ) { return 0; }
+        if( ! std::cin.good() ) { return 1; }
         std::cout
             << buffy.size() << delimiter[0]
             << buffy
@@ -118,6 +120,7 @@ int get( void )
     
     if( ! std::cin ) { std::cerr << "io-line: notice: input stream was not good at start" << std::endl; return 0; }
     std::cin >> length;
+    if( std::cin.eof() ) { return 1; }
     if( ! std::cin ) { std::cerr << "io-line: notice: could not get a length" << std::endl; return 0; }
     std::cin.get(ch);
     if( ! std::cin ) { std::cerr << "io-line: error: could not get delimiter" << std::endl; return 1; }
@@ -128,7 +131,7 @@ int get( void )
     if( length > 0 )
     {
         buffy[length] = 0;
-        if( ! read_from_stdin(buffy, length ) ) { std::cerr << "io-line: error: could not get rest of line - tried for " << length << std::endl; return 1; }
+        if( ! read_from_stdin(buffy, length ) ) { return 1; }
     }
     
     std::cin.get(ch);
