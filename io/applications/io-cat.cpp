@@ -63,6 +63,7 @@ void usage( bool verbose = false )
     std::cerr << "    -: stdin" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
+    std::cerr << "    --exit-on-first-closed,-e: exit, if one of the streams finishes" << std::endl;
     std::cerr << "    --flush,unbuffered,-u: flush output" << std::endl;
     std::cerr << "    --round-robin=[<number of packets>]: todo: only for multiple inputs: read not more" << std::endl;
     std::cerr << "                                         than <number of packets> from an input at once," << std::endl;
@@ -72,6 +73,7 @@ void usage( bool verbose = false )
     std::cerr << "                                         ignored for udp streams, where one full udp" << std::endl;
     std::cerr << "                                         packet at a time is always read" << std::endl;
     std::cerr << "    --size,-s=[<size>]: packet size, if binary data (required only for multiple sources)" << std::endl;
+    std::cerr << "    --verbose,-v: more output" << std::endl;
     std::cerr << std::endl;
     std::cerr << "supported address types: tcp, udp, local (unix) sockets, named pipes, files, zmq (todo)" << std::endl;
     std::cerr << std::endl;
@@ -210,9 +212,11 @@ int main( int argc, char** argv )
     {
         if( argc < 2 ) { usage(); }
         comma::command_line_options options( argc, argv, usage );
+        bool verbose = options.exists( "--verbose,-v" );
         unsigned int size = options.value( "--size,-s", 0 );
         bool unbuffered = options.exists( "--flush,--unbuffered,-u" );
-        const std::vector< std::string >& unnamed = options.unnamed( "--flush,--unbuffered,-u", "-.+" );
+        bool exit_on_first_closed = options.exists( "--exit-on-first-closed,-e" );
+        const std::vector< std::string >& unnamed = options.unnamed( "--exit-on-first-closed,-e,--flush,--unbuffered,-u", "-.+" );
         #ifdef WIN32
         if( size || unnamed.size() == 1 ) { _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
@@ -234,13 +238,26 @@ int main( int argc, char** argv )
             done = true;
             for( unsigned int i = 0; i < streams.size(); ++i )
             {
-                if( streams[i].eof() ) { continue; }
+                if( streams[i].eof() )
+                { 
+                    if( verbose ) { std::cerr << "io-cat: stream " << i << " (" << unnamed[i] << ") closed" << std::endl; }
+                    select.read().remove( streams[i].fd() );
+                    if( exit_on_first_closed ) { return 0; }
+                    continue;
+                }
                 if( !select.read().ready( streams[i].fd() ) ) { done = false; continue; }
                 unsigned int countdown = round_robin_count;
                 while( !is_shutdown && !streams[i].eof() )
                 {
                     unsigned int bytes_read = streams[i].read_available( buffer, countdown ? countdown : max_count );
-                    if( bytes_read == 0 ) { break; }
+                    done = false;
+                    if( bytes_read == 0 )
+                    { 
+                        if( verbose ) { std::cerr << "io-cat: stream " << i << " (" << unnamed[i] << ") closed" << std::endl; }
+                        select.read().remove( streams[i].fd() );
+                        if( exit_on_first_closed || select.read()().empty() ) { return 0; }
+                        break;
+                    }
                     done = false;
                     if( size && bytes_read % size != 0 ) { std::cerr << "io-cat: expected " << size << " byte(s), got only " << ( bytes_read % size ) << " on " << streams[i].address() << std::endl; return 1; }
                     std::cout.write( &buffer[0], bytes_read );
