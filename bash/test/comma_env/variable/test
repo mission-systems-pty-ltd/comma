@@ -1,0 +1,26 @@
+#!/bin/bash
+
+scriptname=$( basename "$0" )
+scriptdir=$( dirname "$0" )
+
+output_dir="output"
+mkdir -p "$output_dir" || exit 1
+
+source $( which comma-env-util ) || { echo "$scriptname: cannot source 'comma-env-util'" >&2; exit 1; }
+[[ -x $( which comma-env-detail ) ]] || { echo "$scriptname: cannot find executable 'comma-env-detail'" >&2; exit 1; }
+
+app="$scriptdir/bin/app"
+[[ -x "$app" ]] || { echo "$scriptname: cannot find executable '$app'" >&2; exit 1; }
+
+export PATH="$( pwd )/bin:$PATH"
+export TMPDIR="$output_dir"
+
+varname="abracadabra"
+export abracadabra=123
+echo "parent/abracadabra=$abracadabra"
+
+log="${output_dir}/log"
+comma_env --import=$varname app > "$log" 2>&1
+
+child=$( grep "$varname" "$log" | cut -d= -f2 )
+echo "child/$varname=$child"
