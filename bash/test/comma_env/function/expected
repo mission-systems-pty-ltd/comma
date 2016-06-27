@@ -1,0 +1,3 @@
+parent/abracadabra/status = 0
+parent/abracadabra/status = child/abracadabra/status
+parent/abracadabra/result = child/abracadabra/result
