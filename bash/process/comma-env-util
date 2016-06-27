@@ -100,26 +100,25 @@ EOF
 
     # remove possible repetitions
     comma_env_variables_list=$( echo "$comma_env_variables_list" | tr ',' '\n' | sort -u )
+    comma_env_variables_list=$( echo $comma_env_variables_list )  # convert newlines to spaces
 
-    local comma_env_command_to_execute=""
-    [[ "$*" == "-" ]] && { comma_env_command_to_execute="set" ; shift ; }
-    local comma_env_environment="# variables to import"
-    local comma_env_variable_name comma_env_path_value
-    for comma_env_variable_name in $comma_env_variables_list ; do
-        if type "$comma_env_variable_name" 2>/dev/null | head -n 1 | grep -q "is a function" ; then
-            comma_env_path_value=$( type "$comma_env_variable_name" | tail -n +2 )
-            comma_env_environment="$comma_env_environment
-$comma_env_path_value
-export -f $comma_env_variable_name"
-        else
-            [[ -v $comma_env_variable_name ]] && {
-                comma_env_path_value=$( echo "export $comma_env_variable_name=\"$( eval echo \$$comma_env_variable_name )\"" )
-                comma_env_environment="$comma_env_environment
-$comma_env_path_value"
-            }
-        fi
-    done
-    # handle PATH explicitly
-    env -i PATH="$PATH" comma_env_environment="$comma_env_environment" comma-env-detail "$comma_env_temp_file" $comma_env_command_to_execute $@ # do not quote the second argument to helper
+    # work in a subshell to use a custom EXIT trap
+    (
+        comma_env_temp_file=$( mktemp --dry-run -t comma-env.XXXXXXXX )
+        trap "rm -f \"$comma_env_temp_file\"" EXIT
+        local comma_env_command_to_execute=""
+        [[ "$*" == "-" ]] && { comma_env_command_to_execute="set" ; shift ; }
+        local comma_env_variable_name
+        for comma_env_variable_name in $comma_env_variables_list ; do
+            if type "$comma_env_variable_name" 2>/dev/null | head -n 1 | grep -q "is a function" ; then
+                type "$comma_env_variable_name" | tail -n +2 >> "$comma_env_temp_file"
+                echo "export -f $comma_env_variable_name" >> "$comma_env_temp_file"
+            else
+                [[ -v $comma_env_variable_name ]] && echo "export $comma_env_variable_name=\"$( eval echo \$$comma_env_variable_name )\"" >> "$comma_env_temp_file"
+            fi
+        done
+        # handle PATH explicitly
+        env -i PATH="$PATH" comma-env-detail "$comma_env_temp_file" $comma_env_command_to_execute $@ # do not quote the second argument to helper
+    )
 }
 export -f comma_env

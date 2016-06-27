@@ -10,7 +10,15 @@ EOF
     exit 1
 }
 
-[[ $# == 0 || "$1" == "-h" || "$1" == "--help" ]] && nonusage
+(( $# < 2 )) && nonusage
+[[ "$1" == "-h" || "$1" == "--help" ]] && nonusage
 
-eval "$comma_env_environment"
+[[ -f "$1" && $( basename "$1" ) == comma-env.* ]] && {
+    source "$1" || { echo "$scriptname: cannot source '$1'" >&2; exit 1; }
+    rm -f "$1"
+} || {
+    echo "$scriptname: expect the first argument a readable file to source named 'comma-env.*'" >&2
+    exit 1
+}
+shift
 $@
