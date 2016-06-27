@@ -71,6 +71,8 @@ void usage( bool const verbose = false )
         "\n         Works with get"
         "\n    --lines,-n <count>; print the first count lines instead of the first 10"
         "\n         Works with head"
+        "\n    --keep-length; keep the length while outputing the line"
+        "\n         Works with get and head"
         "\n"
         "\nExamples:"
         "\n    cat text | io-line length | { io-line get ; echo @ ; io-line get ; }"
@@ -94,6 +96,7 @@ bool read_from_stdin( char * const buffy, const ssize_t length )
     return true;
 }
 
+static bool keep_length = true;
 static std::string end_of_line;
 static std::string delimiter;
 static std::string to_new_line;
@@ -130,6 +133,7 @@ int get( void )
     std::cin.get(ch);
     if( ! std::cin ) { std::cerr << "io-line: error: could not get delimiter" << std::endl; return 1; }
     if( ch != delimiter[0] ) { std::cerr << "io-line: error: delimiter was incorrect " << ch << std::endl; return 1; }
+    if( keep_length ) { std::cout << length << delimiter[0] ; }
     
     char * const buffy = new char[length + 1];
     
@@ -173,10 +177,11 @@ int main( int argc, char ** argv )
         end_of_line = options.value< std::string >( "--end-of-line,--eol", "\n" );
         if( end_of_line.size() != 1 ) { std::cerr << "io-line: error: end of line must be a single character '" << end_of_line << '\'' << std::endl; return 1; }
         line_count = options.value< unsigned >( "--lines,-n", 10 );
+        keep_length = options.exists( "--keep-length" );
         
         if( 0 == std::strcmp( argv[1], "length" ) ) { return length(); }
-        else if( 0 == std::strcmp( argv[1], "get" ) )  { return get(); }
-        else if( 0 == std::strcmp( argv[1], "head" ) )  { return head(); }
+        else if( 0 == std::strcmp( argv[1], "get" ) ) { return get(); }
+        else if( 0 == std::strcmp( argv[1], "head" ) ) { return head(); }
         
         usage();
     }

@@ -26,3 +26,5 @@ head[0]/status=0
 head[0]/text="one@two@three@# four@"
 head[1]/status=1
 head[1]/text="one@two@three@"
+head[2]/status=0
+head[2]/text="3,one@3,two@5,three@# 4,four@"

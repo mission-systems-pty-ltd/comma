@@ -63,3 +63,11 @@ text="$( io-line length <<< 'one
 two
 three' | { io-line head --lines 5 ; } )"
 printf "head[1]/status=%d\nhead[1]/text=\"%s\"\n" $? "$( tr '\n' '@' <<< "$text" )"
+
+text="$( io-line length <<< 'one
+two
+three
+four
+five' | { io-line head --lines 3 --keep-length ; echo -n '# ' ; io-line get --keep-length ; } )"
+printf "head[2]/status=%d\nhead[2]/text=\"%s\"\n" $? "$( tr '\n' '@' <<< "$text" )"
+
