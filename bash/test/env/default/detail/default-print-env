@@ -1,8 +1,13 @@
 #!/bin/bash
 
+function names_only()
+{
+    awk -F '=' '! /^[0-9A-Z_a-z]+=/ {exit} {print $1}'
+}
+
 # assume a reasonably empty environment
 printenv >&2
-echo "printenv/count=$( printenv | wc -l )"
+echo "printenv/count=$( printenv | names_only | wc -l )"
 set >&2
 echo "set/count=$( set | wc -l )"
 
