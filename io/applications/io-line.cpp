@@ -29,54 +29,51 @@
 
 /// @author mathew hounsell
 
+#include <unistd.h>
 #include <algorithm>
-#include <iostream>
-#include <iomanip>
-#include <string>
-#include <cstdlib>
 #include <cstdio>
 #include <cstring>
 #include <cerrno>
-
-#include <unistd.h>
+#include <iostream>
+#include <string>
+#include <vector>
  
-#include <comma/application/contact_info.h>
-#include <comma/application/command_line_options.h>
-#include <comma/base/exception.h>
+#include "../../application/contact_info.h"
+#include "../../application/command_line_options.h"
+#include "../../base/exception.h"
 
 void usage( bool const verbose = false )
 {
     static char const * const message =
         "\n"
-        "\nAccess an I/O stream in a fast line based manner."
+        "\nA toolkit for quick access to ascii line-based input stream"
         "\n"
         "\nUsage:"
-        "\n    source | io-line <action> <options> | destination"
+        "\n    cat lines.txt | io-line <operation> [<options>]"
         "\n"
-        "\nActions:"
-        "\n    length"
-        "\n        - Output each line with a length field at the front"
-        "\n    get"
-        "\n        - Read just 1 line with a length field at the front in a pipe safe manner."
-        "\n        - Other tools like head -1 read too much from the pipe to be "
-        "\n    head"
-        "\n        - Output a number of lines in a pipe safe manner."
+        "\nOperations"
         "\n"
-        "\nOptions:"
-        "\n    --delimiter,-d <delimiter> : default: ','; character after the line length"
-        "\n    --end-of-line,--eol <character>; the input and output use the given character"
+        "\n    length: output each line with a length field at the front"
         "\n"
-        "\nSpecial Options:"
-        "\n    --to-new-line=[<chars>]; convert the given characters to new lines before output"
-        "\n         Works with get"
-        "\n    --lines,-n <count>; print the first count lines instead of the first 10"
-        "\n         Works with head"
-        "\n    --keep-length; keep the length while outputing the line"
-        "\n         Works with get and head"
+        "\n    get: read just 1 line with a length field at the front"
         "\n"
-        "\nExamples:"
-        "\n    cat text | io-line length | { io-line get ; echo @ ; io-line get ; }"
-        "\n    "
+        "\n        options"
+        "\n            --to-new-line=[<chars>]; convert the given characters to new lines before output"
+        "\n            --keep-length; keep the length while outputing the line"
+        "\n"
+        "\n    head: Output a number of lines in a pipe safe manner."
+        "\n"
+        "\n        options"
+        "\n            --lines,-n <count>; print the first count lines instead of the first 10"
+        "\n            --keep-length; keep the length while outputing the line"
+        "\n"
+        "\nOptions"
+        "\n    --delimiter,-d [<delimiter>] : character after the line length; default: ','"
+        "\n    --end-of-line,--eol [<character>]; the input and output use the given character; default: '\\n'"
+        "\n    --include-eol; include end of line into the length, e.g. length of line 'xxx' would be 4"
+        "\n"
+        "\nExamples"
+        "\n    ( echo xxx ; echo yy ; echo zzzz ) | io-line length | { io-line get ; echo @ ; io-line get ; }"
         "\n"
         "\n";
     std::cerr << message << comma::contact_info << '\n' << std::endl;
@@ -97,64 +94,57 @@ bool read_from_stdin( char * const buffy, const ssize_t length )
 }
 
 static bool keep_length = true;
-static std::string end_of_line;
-static std::string delimiter;
+static char end_of_line;
+static char delimiter;
 static std::string to_new_line;
 static unsigned line_count;
 
-int length( void )
+static int length()
 {
-    std::string buffy; buffy.reserve( 1024 * 1024 * 1024 );
-    
+    std::string buffy; buffy.reserve( 1024 * 1024 );
     while( std::cin )
     {
-        std::getline( std::cin, buffy, end_of_line[0] );
+        std::getline( std::cin, buffy, end_of_line );
         if( std::cin.eof() ) { return 0; }
         if( ! std::cin.good() ) { return 1; }
         std::cout
-            << buffy.size() << delimiter[0]
+            << buffy.size() << delimiter
             << buffy
-            << end_of_line[0] << std::flush;
+            << end_of_line << std::flush;
     }
     return 0;
 }
 
-int get( void )
+static int get()
 {
     ::setvbuf( stdin, (char *)NULL, _IONBF, 0 );
     
     unsigned length;
     char ch;
     
-    if( ! std::cin ) { std::cerr << "io-line: notice: input stream was not good at start" << std::endl; return 0; }
+    if( ! std::cin ) { std::cerr << "io-line: notice: stdin not good" << std::endl; return 1; }
     std::cin >> length;
     if( std::cin.eof() ) { return 1; }
-    if( ! std::cin ) { std::cerr << "io-line: notice: could not get a length" << std::endl; return 0; }
+    if( ! std::cin ) { std::cerr << "io-line: invalid length" << std::endl; return 1; }
     std::cin.get(ch);
-    if( ! std::cin ) { std::cerr << "io-line: error: could not get delimiter" << std::endl; return 1; }
-    if( ch != delimiter[0] ) { std::cerr << "io-line: error: delimiter was incorrect " << ch << std::endl; return 1; }
-    if( keep_length ) { std::cout << length << delimiter[0] ; }
+    if( ! std::cin ) { std::cerr << "io-line: could not get delimiter" << std::endl; return 1; }
+    if( ch != delimiter ) { std::cerr << "io-line: expected delimiter \"" << delimiter << "\"; got: \"" << ch << "\"" << std::endl; return 1; }
+    if( keep_length ) { std::cout << length << delimiter ; }
     
-    char * const buffy = new char[length + 1];
-    
-    if( length > 0 )
-    {
-        buffy[length] = 0;
-        if( ! read_from_stdin(buffy, length ) ) { return 1; }
-    }
-    
-    std::cin.get(ch);
+    static std::vector< char > buffy;
+    buffy.resize( length + 1 );
+    buffy[length] = 0;
+    if( length > 0 ) { if( ! read_from_stdin(&buffy[0], length ) ) { return 1; } }
+    std::cin.get( ch );
     if( ! std::cin ) { std::cerr << "io-line: error: could not get end of line" << std::endl; return 1; }
-    if( ch != end_of_line[0] ) { std::cerr << "io-line: error: end of line was incorrect " << ch << std::endl; return 1; }
-    
-    for( unsigned i = 0; i < to_new_line.size(); ++i ) { std::replace( buffy, buffy + length, to_new_line[i], '\n' ); }
-    
-    if( length > 0 ) { std::cout << buffy; }
-    std::cout << end_of_line[0] << std::flush;;
+    if( ch != end_of_line ) { std::cerr << "io-line: error: expected end of line; got: \"" << ch << "\"" << std::endl; return 1; }
+    for( unsigned i = 0; i < to_new_line.size(); ++i ) { std::replace( &buffy[0], &buffy[0] + length, to_new_line[i], end_of_line ); }
+    std::cout << &buffy[0];
+    std::cout << end_of_line << std::flush;
     return 0;
 }
 
-int head( void )
+static int head()
 {
     for( unsigned i = 0; i < line_count; ++i )
     {
@@ -168,22 +158,18 @@ int main( int argc, char ** argv )
 {
     try
     {
-        if( argc == 1 ) { usage() ; return 1; }
-
+        if( argc == 1 ) { usage(); }
         comma::command_line_options options( argc, argv, usage );
         to_new_line = options.value< std::string >( "--to-new-line", "" );
-        delimiter = options.value< std::string >( "--delimiter,-d", "," );
-        if( delimiter.size() != 1 ) { std::cerr << "io-line: error: delimiter must be a single character '" << delimiter << '\'' << std::endl; return 1; }
-        end_of_line = options.value< std::string >( "--end-of-line,--eol", "\n" );
-        if( end_of_line.size() != 1 ) { std::cerr << "io-line: error: end of line must be a single character '" << end_of_line << '\'' << std::endl; return 1; }
+        delimiter = options.value( "--delimiter,-d", ',' );
+        end_of_line = options.value( "--end-of-line,--eol", '\n' );
         line_count = options.value< unsigned >( "--lines,-n", 10 );
         keep_length = options.exists( "--keep-length" );
         
         if( 0 == std::strcmp( argv[1], "length" ) ) { return length(); }
         else if( 0 == std::strcmp( argv[1], "get" ) ) { return get(); }
         else if( 0 == std::strcmp( argv[1], "head" ) ) { return head(); }
-        
-        usage();
+        std::cerr << "io-line: expected operation, got: \"" << argv[1] << "\"" << std::endl;
     }
     catch( std::exception& ex ) { std::cerr << "io-line: " << ex.what() << std::endl; }
     catch( ... ) { std::cerr << "io-line: unknown exception" << std::endl; }
