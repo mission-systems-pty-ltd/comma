@@ -1,5 +1,6 @@
 printenv/count <= 16
 set/count <= 50
+defaults/count = 8
 
 HOME/defined="yes"
 HOSTNAME/defined="yes"

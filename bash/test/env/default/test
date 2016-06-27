@@ -11,4 +11,7 @@ tester="$testdir/detail/default-print-env"
 [[ -v LANGUAGE ]] || { LANGUAGE=$LANG; }
 
 export PATH="$testdir/detail:$PATH"
+
+comma_env --default-imports | csv-fields --count | sed 's@^@defaults/count=@'
+
 comma_env --default $( basename "$tester" )
