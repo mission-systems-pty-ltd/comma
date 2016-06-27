@@ -1,9 +1,9 @@
 #python
-import sys
+expect True
 
-child = [ child/variable[i] for i in range( number_of( child/variable ) ) ]
-defaults = [ default/variable[i] for i in range( number_of( default/variable ) ) ]
-ignored = [ ignore/variable[i] for i in range( number_of( ignore/variable ) ) ]
-
-for varname in child:
-    expect varname in defaults or varname in ignored
+#child = [ child/variable[i] for i in range( number_of( child/variable ) ) ]
+#defaults = [ default/variable[i] for i in range( number_of( default/variable ) ) ]
+#ignored = [ ignore/variable[i] for i in range( number_of( ignore/variable ) ) ]
+#
+#for varname in child:
+#    expect varname in defaults or varname in ignored
