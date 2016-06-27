@@ -6,8 +6,10 @@ function names_only()
 }
 
 # assume a reasonably empty environment
+echo "----- printenv -----" >&2
 printenv >&2
 echo "printenv/count=$( printenv | names_only | wc -l )"
+echo "----- set -----" >&2
 set >&2
 echo "set/count=$( set | wc -l )"
 
