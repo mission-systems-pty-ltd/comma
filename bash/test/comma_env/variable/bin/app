@@ -1,4 +1,0 @@
-#!/bin/bash
-
-echo "# child environment"
-printenv

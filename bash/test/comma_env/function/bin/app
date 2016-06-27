@@ -1,7 +1,0 @@
-#!/bin/bash
-
-echo "child environment:" >&2
-printenv >&2
-result=$( abracadabra )
-echo "child/abracadabra/status=$?"
-echo "child/abracadabra/result=$result"
