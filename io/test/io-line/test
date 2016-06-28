@@ -25,6 +25,11 @@ text="$( io-line length <<< 'one
 two2' )"
 printf "length[3]/status=%d\nlength[3]/text=\"%s\"\n" $? "$( tr '\n' '@' <<< "$text" )"
 
+text="$( io-line length --include-eol <<< 'one
+
+two2' )"
+printf "length[4]/status=%d\nlength[4]/text=\"%s\"\n" $? "$( tr '\n' '@' <<< "$text" )"
+
 text="$( io-line length <<< 'one
 
 two2' | { io-line get ; echo -n '# ' ; io-line get ; } )"

@@ -54,6 +54,8 @@ void usage( bool const verbose = false )
         "\nOperations"
         "\n"
         "\n    length: output each line with a length field at the front"
+        "\n        options:"
+        "\n            --include-eol; add eol to length count"
         "\n"
         "\n    get: read just 1 line with a length field at the front"
         "\n"
@@ -93,6 +95,7 @@ bool read_from_stdin( char * const buffy, const ssize_t length )
     return true;
 }
 
+static bool include_eol = false;
 static bool keep_length = true;
 static char end_of_line;
 static char delimiter;
@@ -108,7 +111,8 @@ static int length()
         if( std::cin.eof() ) { return 0; }
         if( ! std::cin.good() ) { return 1; }
         std::cout
-            << buffy.size() << delimiter
+            << ( buffy.size() + ( include_eol ? 1 : 0 ) )
+            << delimiter
             << buffy
             << end_of_line << std::flush;
     }
@@ -165,6 +169,7 @@ int main( int argc, char ** argv )
         end_of_line = options.value( "--end-of-line,--eol", '\n' );
         line_count = options.value< unsigned >( "--lines,-n", 10 );
         keep_length = options.exists( "--keep-length" );
+        include_eol = options.exists( "--include-eol" );
         
         if( 0 == std::strcmp( argv[1], "length" ) ) { return length(); }
         else if( 0 == std::strcmp( argv[1], "get" ) ) { return get(); }
