@@ -47,8 +47,9 @@ static void usage()
     std::cerr << "Perform various operations on format strings." << std::endl;
     std::cerr << std::endl;
     std::cerr << "Operations:" << std::endl;
-    std::cerr << "    expand      Output fully expand format, e.g. 2i,3f -> i,i,f,f,f" << std::endl;
-    std::cerr << "    collapse    Output minimal format, e.g. i,i,f,f,f -> 2i,3f" << std::endl;
+    std::cerr << "    expand: output fully expand format, e.g. 2i,3f -> i,i,f,f,f" << std::endl;
+    std::cerr << "    collapse: output minimal format, e.g. i,i,f,f,f -> 2i,3f" << std::endl;
+    std::cerr << "    count: output number of fields, e.g. 2i,3f -> 5" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -66,18 +67,14 @@ int main( int ac, char** av )
         { std::cerr << app_name << ": expected an operation (e.g. \"expand\")" << std::endl; return 1; }
         if( unnamed.size() != 1 ) { usage(); }
         std::string operation = unnamed[0];
-
         std::string line;
         while ( std::getline( std::cin, line ) )
         {
             comma::csv::format format( line );
             if( operation == "expand" )        { std::cout << format.expanded_string() << std::endl; }
             else if( operation == "collapse" ) { std::cout << format.collapsed_string() << std::endl; }
-            else
-            {
-                std::cerr << app_name << ": unknown operation \"" << operation << "\"" << std::endl;
-                return 1;
-            }
+            else if( operation == "count" ) { std::cout << format.count() << std::endl; }
+            else { std::cerr << app_name << ": unknown operation \"" << operation << "\"" << std::endl; return 1; }
         }
         return 0;
     }
