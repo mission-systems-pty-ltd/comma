@@ -177,16 +177,13 @@ class stream(object):
             (merge_arrays(self.tied._input_array, s) if self.tied else s).tofile(self.target)
         else:
             unrolled = s.view(self.struct.unrolled_flat_dtype)
-            to_string = self.numpy_scalar_to_string
+            f = self.numpy_scalar_to_string
             if self.tied:
-                def output_lines():
-                    for tied, scalars in itertools.izip(self.tied._ascii_buffer, unrolled):
-                        yield self.delimiter.join([tied] + map(to_string, scalars)) + '\n'
+                for tied, scalars in itertools.izip(self.tied._ascii_buffer, unrolled):
+                    print >> self.target, self.delimiter.join([tied] + map(f, scalars))
             else:
-                def output_lines():
-                    for scalars in unrolled:
-                        yield self.delimiter.join(map(to_string, scalars)) + '\n'
-            self.target.writelines(output_lines())
+                for scalars in unrolled:
+                    print >> self.target, self.delimiter.join(map(f, scalars))
         self.target.flush()
 
     def dump(self, mask=None):
@@ -202,10 +199,8 @@ class stream(object):
         if self.binary:
             self._input_array.tofile(self.target)
         else:
-            def output_lines():
-                for line in self._ascii_buffer:
-                    yield line + '\n'
-            self.target.writelines(output_lines())
+            for line in self._ascii_buffer:
+                print >> self.target, line
         self.target.flush()
 
     def _dump_with_mask(self, mask):
@@ -223,12 +218,9 @@ class stream(object):
         if self.binary:
             self._input_array[mask].tofile(self.target)
         else:
-            def output_lines():
-                for line, allowed in itertools.izip(self._ascii_buffer, mask):
-                    if not allowed:
-                        continue
-                    yield line + '\n'
-            self.target.writelines(output_lines())
+            for line, allowed in itertools.izip(self._ascii_buffer, mask):
+                if allowed:
+                    print >> self.target, line
         self.target.flush()
 
     def _warn(self, msg, verbose=True):
