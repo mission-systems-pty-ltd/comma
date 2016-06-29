@@ -176,12 +176,17 @@ class stream(object):
         if self.binary:
             (merge_arrays(self.tied._input_array, s) if self.tied else s).tofile(self.target)
         else:
-            tied_lines = self.tied._ascii_buffer if self.tied else []
-            unrolled_s = s.view(self.struct.unrolled_flat_dtype)
-            for tied_line, scalars in itertools.izip_longest(tied_lines, unrolled_s):
-                tied_line_with_separator = tied_line + self.delimiter if self.tied else ''
-                output_line = self.delimiter.join(map(self.numpy_scalar_to_string, scalars))
-                print >> self.target, tied_line_with_separator + output_line
+            unrolled = s.view(self.struct.unrolled_flat_dtype)
+            to_string = self.numpy_scalar_to_string
+            if self.tied:
+                def output_lines():
+                    for tied, scalars in itertools.izip(self.tied._ascii_buffer, unrolled):
+                        yield self.delimiter.join([tied] + map(to_string, scalars)) + '\n'
+            else:
+                def output_lines():
+                    for scalars in unrolled:
+                        yield self.delimiter.join(map(to_string, scalars)) + '\n'
+            self.target.writelines(output_lines())
         self.target.flush()
 
     def dump(self, mask=None):
@@ -197,7 +202,10 @@ class stream(object):
         if self.binary:
             self._input_array.tofile(self.target)
         else:
-            self.target.write('\n'.join(self._ascii_buffer) + '\n')
+            def output_lines():
+                for line in self._ascii_buffer:
+                    yield line + '\n'
+            self.target.writelines(output_lines())
         self.target.flush()
 
     def _dump_with_mask(self, mask):
@@ -215,8 +223,12 @@ class stream(object):
         if self.binary:
             self._input_array[mask].tofile(self.target)
         else:
-            it = itertools.izip(self._ascii_buffer, mask)
-            self.target.write('\n'.join(line for line, allowed in it if allowed) + '\n')
+            def output_lines():
+                for line, allowed in itertools.izip(self._ascii_buffer, mask):
+                    if not allowed:
+                        continue
+                    yield line + '\n'
+            self.target.writelines(output_lines())
         self.target.flush()
 
     def _warn(self, msg, verbose=True):
