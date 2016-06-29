@@ -24,6 +24,7 @@
 %   Examples:
 %
 %       data = bin_load('data.bin', 'd,d,ui,w') %load data from 'data.bin'.
+%       data = bin_load('data.bin', '2d,ui,w') %same as above.
 %       % data will be Nx4, for a file containing N entries (rows), where
 %       % each entry has two doubles, an unsigned int (32 bit) and a word
 %       % (signed 16 bit integer)
@@ -34,7 +35,10 @@
 %
 % author James Underwood
 function [data]=bin_load(filename,format_string)
-
+[retval,format_string]=system(['echo ' format_string ' | csv-format expand']);
+if retval~=0
+    error('csv-format failed to expand format string')
+end
 c = textscan(format_string, '%s', 'delimiter', ',');
 format = struct('str',{{}},'bytes',[],'mstr',{{}});
 bytes=[];

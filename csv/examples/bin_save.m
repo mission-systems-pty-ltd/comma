@@ -25,7 +25,8 @@
 %   Examples:
 %
 %       bin_save(data, 'data.bin', 'd,d,ui,w') %save data to 'data.bin'.
-%       % data must be will be Nx4 to match the format string. This will
+%       bin_save(data, 'data.bin', '2d,ui,w') %same as above.
+%       % data must be Nx4 to match the format string. This will
 %       % create a file that contains N entries (rows), where each entry
 %       % has two doubles, an unsigned int (32 bit) and a word
 %       % (signed 16 bit integer)
@@ -36,6 +37,10 @@
 %
 % author James Underwood
 function []=bin_save(data,filename,format_string)
+[retval,format_string]=system(['echo ' format_string ' | csv-format expand']);
+if retval~=0
+    error('csv-format failed to expand format string')
+end
 
 c = textscan(format_string, '%s', 'delimiter', ',');
 
