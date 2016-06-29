@@ -1,0 +1,23 @@
+#!/bin/bash
+
+scriptname=$0
+source $( which comma-application-util ) || { echo "$scriptname: failed to source comma-application-util" >&2; exit 1; }
+
+function process_records
+{
+    python -c "$( cat <<END
+import comma
+
+t = comma.csv.struct( 'x', 'u4' )
+s = comma.csv.stream( t, verbose=True )
+for r in s.iter(size=1):
+    s.write( r )
+
+END
+)"
+}
+
+process_records | csv-paste value="line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'
+comma_status_ok
+echo "status=$?"
+

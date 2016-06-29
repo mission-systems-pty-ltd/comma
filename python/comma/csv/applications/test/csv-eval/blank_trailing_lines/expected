@@ -1,0 +1,5 @@
+status = 0
+number_of( output ) = 1
+output[0]/x=1 +/- eps
+output[0]/y=2 +/- eps
+

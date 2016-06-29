@@ -1,0 +1,10 @@
+#!/bin/bash
+
+scriptname=$0
+
+source $( which comma-application-util) || { echo "$scriptname: failed to source comma-application-util" >&2; exit 1; }
+
+csv-eval --fields=x 'y=x+1' | name-value-from-csv x,y --line-number --prefix output | sed 's/"//g'
+comma_status_ok
+echo "status=$?"
+echo "eps=1e-8"

@@ -1,0 +1,4 @@
+number_of( line ) = 2
+line[0]=1
+line[1]=2
+status=0
