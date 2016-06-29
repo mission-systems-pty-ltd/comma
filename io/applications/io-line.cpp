@@ -75,7 +75,8 @@ void usage( bool const verbose = false )
         "\n    --include-eol; include end of line into the length, e.g. length of line 'xxx' would be 4"
         "\n"
         "\nExamples"
-        "\n    ( echo xxx ; echo yy ; echo zzzz ) | io-line length | { io-line get ; echo @ ; io-line get ; }"
+        "\n    ( echo xxx ; echo yy ; echo zzzz ) | io-line length | { echo 'line 1:' ; io-line get ; echo 'line 2:' ; io-line get ; }"
+        "\n    ( echo xxx ; echo yy ; echo zzzz ) | io-line length | while true ; do echo 'read line:' ; io-line get || break ; done"
         "\n"
         "\n";
     std::cerr << message << comma::contact_info << '\n' << std::endl;
