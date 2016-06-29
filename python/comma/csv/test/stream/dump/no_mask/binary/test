@@ -9,10 +9,10 @@ function process_records
 import comma
 import numpy
 
-point_t = comma.csv.struct( 'x,y', 'float64', 'float64' )
-stream = comma.csv.stream( point_t, fields='x,name,y', format='f8,S3,f8'  )
+point_t = comma.csv.struct( 'x,y,mask', 'float64', 'float64', 'uint32' )
+stream = comma.csv.stream( point_t, fields='x,name,y,mask', format='f8,S3,f8,u4'  )
 
-for points in stream.iter():
+for points in stream.iter(size=3):
   # changes below should not affect dump as it uses internal buffers
   points['x'] = points['x'] + 1
   points['y'] = points['y'] + 1
@@ -21,6 +21,6 @@ END
 )"
 }
 
-csv-to-bin d,s[3],d | process_records | csv-from-bin d,s[3],d | output
+csv-to-bin d,s[3],d,ui | process_records | csv-from-bin d,s[3],d,ui | output
 comma_status_ok
 echo "status=$?"

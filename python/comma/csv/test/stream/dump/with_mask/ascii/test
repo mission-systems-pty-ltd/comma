@@ -10,7 +10,7 @@ import comma
 import numpy
 
 point_t = comma.csv.struct( 'x,y,mask', 'float64', 'float64', 'uint32' )
-stream = comma.csv.stream( point_t, fields='x,name,y,mask'  )
+stream = comma.csv.stream( point_t, fields='x,name,y,mask' )
 
 for points in stream.iter(size=3):
   # changes below should not affect dump as it uses internal buffers

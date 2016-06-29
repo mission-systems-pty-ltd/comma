@@ -111,7 +111,7 @@ class stream(object):
                 warnings.simplefilter('ignore')
                 self._ascii_buffer = readlines_unbuffered(size, self.source)
                 return np.atleast_1d(np.genfromtxt(
-                    StringIO(self._ascii_buffer),
+                    self._ascii_buffer,
                     dtype=self.input_dtype,
                     delimiter=self.delimiter,
                     converters=self.ascii_converters,
@@ -176,7 +176,7 @@ class stream(object):
         if self.binary:
             (merge_arrays(self.tied._input_array, s) if self.tied else s).tofile(self.target)
         else:
-            tied_lines = self.tied._ascii_buffer.splitlines() if self.tied else []
+            tied_lines = self.tied._ascii_buffer if self.tied else []
             unrolled_s = s.view(self.struct.unrolled_flat_dtype)
             for tied_line, scalars in itertools.izip_longest(tied_lines, unrolled_s):
                 tied_line_with_separator = tied_line + self.delimiter if self.tied else ''
@@ -197,7 +197,7 @@ class stream(object):
         if self.binary:
             self._input_array.tofile(self.target)
         else:
-            self.target.write(self._ascii_buffer)
+            self.target.write('\n'.join(self._ascii_buffer) + '\n')
         self.target.flush()
 
     def _dump_with_mask(self, mask):
@@ -215,8 +215,8 @@ class stream(object):
         if self.binary:
             self._input_array[mask].tofile(self.target)
         else:
-            it = itertools.izip(StringIO(self._ascii_buffer), mask)
-            self.target.write(''.join(line for line, allowed in it if allowed))
+            it = itertools.izip(self._ascii_buffer, mask)
+            self.target.write('\n'.join(line for line, allowed in it if allowed) + '\n')
         self.target.flush()
 
     def _warn(self, msg, verbose=True):
