@@ -85,6 +85,7 @@ string functions:
     http://docs.scipy.org/doc/numpy/reference/routines.char.html
 
     ( echo 'a'; echo 'a/b' ) | %(prog)s --fields=path --format=s[36] 'n=char.count(path,"/")' --output-format=ui
+    ( echo 'a'; echo 'a/b' ) | %(prog)s --fields=path --format=s[36] 'r=char.replace(path,"/","_")' --output-format=s[36]
 """
 
 
