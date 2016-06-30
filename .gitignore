@@ -8,3 +8,4 @@ html/
 output
 stats
 stderr.log
+doc/generated
