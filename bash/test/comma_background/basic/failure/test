@@ -5,7 +5,7 @@ readonly scriptname=$( basename "$0" )
 output_dir="output"
 mkdir -p "$output_dir" || exit 1
 
-util="comma-background-util"
+util="comma-process-util"
 source $( which "$util" ) || { echo "$scriptname: cannot source '$util'" >&2; exit 1; }
 
 main_pid=$BASHPID
