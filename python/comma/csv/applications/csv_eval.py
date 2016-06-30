@@ -142,9 +142,9 @@ def get_args():
         action='store_true',
         help='more output to stderr')
     parser.add_argument(
-        '--dangerous',
+        '--permissive',
         action='store_true',
-        help=argparse.SUPPRESS)
+        help='leave python builtins in the exec environment (use with care)')
     add_csv_options(parser)
     parser.add_argument(
         '--select',
@@ -318,7 +318,7 @@ def check_fields(fields, input_fields=None):
             raise csv_eval_error("'{}' is an input field name".format(field))
 
 
-def evaluate(expressions, stream, dangerous=False):
+def evaluate(expressions, stream, permissive=False):
     input_initializer = ''
     for field in stream.nonblank_input_fields:
         input_initializer += "{field} = _input['{field}']\n".format(field=field)
@@ -327,7 +327,7 @@ def evaluate(expressions, stream, dangerous=False):
         output_initializer += "_output['{field}'] = {field}\n".format(field=field)
     code_string = input_initializer + '\n' + expressions + '\n' + output_initializer
     code = compile(code_string, '<string>', 'exec')
-    env = np.__dict__ if dangerous else restricted_numpy_env()
+    env = np.__dict__ if permissive else restricted_numpy_env()
     output = stream.output.struct(stream.input.size)
     is_shutdown = comma.signal.is_shutdown()
     while not is_shutdown:
@@ -360,7 +360,7 @@ def main():
         if args.select:
             select(args.select, stream(args))
         else:
-            evaluate(args.expressions.strip(';'), stream(args), dangerous=args.dangerous)
+            evaluate(args.expressions.strip(';'), stream(args), permissive=args.permissive)
     except csv_eval_error as e:
         name = os.path.basename(sys.argv[0])
         print >> sys.stderr, "{} error: {}".format(name, e)
