@@ -295,6 +295,7 @@ class stream(object):
         fields = ','.join(self.input.struct.fields)
         format = self.input.struct.format
         print >> file, "expressions: '{}'".format(self.args.expressions)
+        print >> file, "select: '{}'".format(self.args.select)
         print >> file, "input fields: '{}'".format(fields)
         print >> file, "input format: '{}'".format(format)
         if self.output:
