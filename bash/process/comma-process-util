@@ -48,13 +48,15 @@
 # @li @link comma_process_exec @endlink
 # @li @link comma_process_validate @endlink
 # @li @link comma_process_exec_and_validate @endlink
+# @li @link terminate_comma_execute_and_wait @endlink
+# @li @link comma_execute_and_wait @endlink
+# @li @link comma_wait_for_process_group @endlink
 
 [[ -n "$comma_process_util_include_guard_" ]] && return 0
 readonly comma_process_util_include_guard_=1
 
 source $( type -p comma-string-util ) || { echo "$name: cannot source 'comma-string-util'" >&2; exit 1; }
 
-# This is a signal handler used by comma_execute_and_wait. See that function for detail.
 ## @page comma_process_signature comma_process_signature
 # @description parse /proc/{pid} directory to build a unique descriptor
 # of the process with the given process id. Safe to call from the process
@@ -269,6 +271,11 @@ function comma_process_exec_and_validate()
 export -f comma_process_exec_and_validate
 declare -r comma_process_exec_and_validate
 
+## @page terminate_comma_execute_and_wait terminate_comma_execute_and_wait
+# @brief This is a signal handler used by @link comma_execute_and_wait @endlink.
+# See that function for detail.
+# @param group true if the background task is a separate process group to be killed altogether; false otherwise
+# @param signal name of the signal received; mostly used for debugging
 function terminate_comma_execute_and_wait()
 {
     trap '' SIGTERM SIGINT SIGHUP SIGPIPE       # temporarily ignore signals
@@ -330,6 +337,9 @@ function terminate_comma_execute_and_wait()
 export -f terminate_comma_execute_and_wait
 declare -r terminate_comma_execute_and_wait
 
+## @page comma_execute_and_wait comma_execute_and_wait
+# @description runs a given command as a background task and waits for it to terminate
+#
 # Usage:
 #   comma_execute_and_wait command[,command2[,command3]] [--signals=signal1,signal2,...] \
 #                          [--max-wait=max_wait] [--process|--group] [--any|--all] \
@@ -415,6 +425,8 @@ declare -r terminate_comma_execute_and_wait
 #
 # To avoid these corner cases, this function is best used when the caller has no other background
 # children created beforehand.
+#
+# @param command commands to execute or options; see the detailed description above
 function comma_execute_and_wait()
 {
     # store existing traps for restoring on exit
@@ -565,16 +577,16 @@ function comma_execute_and_wait()
 export -f comma_execute_and_wait
 declare -r comma_execute_and_wait
 
-# likely a workaround for a problem encountered in bash-4.3 series:
-# the builtin "wait" failed to wait for all processes in a (killed) process group to terminate
-# poll the process list for the given time (or forever) until only one process is left in a group
-# this process is mandatory the group session leader; the caller is always given the chance to
-# wait for it and retrieve the exit status; thus, it is not removed from process table and not reused
-# always call this function before waiting for the process group leader
-# if the timeout is reached, kill -9 the entire group
-# return 0 if processes ended (only 1 left) and 1 if kill-9-ed
-# arguments: caller name (used in output messages), process group to watch, and maximal time to wait
-# (careful: forever by default)
+## @page comma_wait_for_process_group comma_wait_for_process_group
+# @description likely a workaround for a problem encountered in bash-4.3 series:
+# the builtin "wait" failed to wait for all processes in a (killed) process group to terminate;
+# this function would poll the process list for the given time (or forever) until no processes are left
+# creates a race condition in case of PID re-use; will be removed later when a safer version of timeout
+# is ready
+# @param name name of the caller, used only for trace messages
+# @param pgid process group id to wait for
+# @param max_wait the maximal time to wait or "forever"; if this timeout is reached, the function "kill -9" the entire group
+# @return 0 if processes ended by themselves and 1 if kill-9-ed
 function comma_wait_for_process_group()
 {
     local caller_name=$1
