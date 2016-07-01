@@ -185,12 +185,13 @@ def check_options(args):
         raise csv_eval_error("no expressions are given")
     if args.binary and args.format:
         raise csv_eval_error("--binary and --format are mutually exclusive")
-    if args.select and args.expressions:
-        msg = "--select <cond> cannot be used with expressions"
-        raise csv_eval_error(msg)
-    if args.select and (args.output_fields or args.output_format):
-        msg = "--select cannot be used with --output-fields or --output-format"
-        raise csv_eval_error(msg)
+    if args.select:
+        if args.expressions:
+            msg = "--select <condition> cannot be used with expressions"
+            raise csv_eval_error(msg)
+        if args.output_fields or args.output_format:
+            msg = "--select cannot be used with --output-fields or --output-format"
+            raise csv_eval_error(msg)
 
 
 def format_without_blanks(format, fields=''):
@@ -360,7 +361,7 @@ def main():
         if args.select:
             select(args.select, stream(args))
         else:
-            evaluate(args.expressions.strip(';'), stream(args), permissive=args.permissive)
+            evaluate(args.expressions, stream(args), permissive=args.permissive)
     except csv_eval_error as e:
         name = os.path.basename(sys.argv[0])
         print >> sys.stderr, "{} error: {}".format(name, e)
