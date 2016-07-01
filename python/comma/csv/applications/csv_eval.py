@@ -355,6 +355,7 @@ def select(condition, stream):
 
 def main():
     try:
+        name = os.path.basename(sys.argv[0])
         args = get_args()
         prepare_options(args)
         if args.select:
@@ -362,8 +363,11 @@ def main():
         else:
             evaluate(args.expressions.strip(';'), stream(args), permissive=args.permissive)
     except csv_eval_error as e:
-        name = os.path.basename(sys.argv[0])
         print >> sys.stderr, "{} error: {}".format(name, e)
+        sys.exit(1)
+    except StandardError as e:
+        import traceback
+        traceback.print_exc(file=sys.stderr)
         sys.exit(1)
 
 if __name__ == '__main__':

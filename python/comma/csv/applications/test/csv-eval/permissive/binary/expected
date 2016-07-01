@@ -1,0 +1,10 @@
+permissive/on/output[0]/x=1 +/- eps
+permissive/on/output[0]/y=2 +/- eps
+permissive/on/output[0]/a=3 +/- eps
+permissive/on/output[1]/x=3 +/- eps
+permissive/on/output[1]/y=4 +/- eps
+permissive/on/output[1]/a=7 +/- eps
+permissive/on/status = 0
+
+not exists( permissive/off/output )
+permissive/off/status = 1
