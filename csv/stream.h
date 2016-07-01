@@ -94,13 +94,13 @@ class ascii_input_stream : public boost::noncopyable
         /// debug purposes only
         bool ready() const;
 
-    protected:
+    private:
         friend class input_stream<S>;
         template < typename W, typename T >
         friend class tied;
-        std::ostream& is(){return is_;}
+        template < typename V, typename T, typename Data >
+        friend void append( const input_stream< V >& is, output_stream< T >& os, const Data& data );
         
-    private:
         std::istream& is_;
         csv::ascii< S > ascii_;
         const S default_;
@@ -148,14 +148,14 @@ class ascii_output_stream : public boost::noncopyable
         /// return fields
         const std::vector< std::string >& fields() const { return fields_; }
 
-    protected:
+    private:
         friend class output_stream<S>;
         template < typename W, typename T>
         friend class tied;
-        std::ostream& os(){return m_os;}
-        
-    private:
-        std::ostream& m_os;
+        template < typename V, typename T, typename Data >
+        friend void append( const input_stream< V >& is, output_stream< T >& os, const Data& data );
+
+        std::ostream& os_;
         csv::ascii< S > ascii_;
         std::vector< std::string > fields_;
 };
@@ -193,13 +193,13 @@ class binary_input_stream : public boost::noncopyable
         /// return true, if read will not block
         bool ready() const;
 
-    protected:
+    private:
         friend class input_stream<S>;
         template < typename W, typename T>
         friend class tied;
-        std::ostream& is(){return is_;}
-        
-    private:
+        template < typename V, typename T, typename Data >
+        friend void append( const input_stream< V >& is, output_stream< T >& os, const Data& data );
+
         std::istream& is_;
         csv::binary< S > binary_;
         const S default_;
@@ -238,14 +238,14 @@ class binary_output_stream : public boost::noncopyable
         /// return fields
         const std::vector< std::string >& fields() const { return fields_; }
 
-    protected:
+    private:
         template < typename W, typename T>
         friend class tied;
-        friend class output_stream<S>;
-        std::ostream& os(){return m_os;}
+        friend class output_stream< S >;
+        template < typename V, typename T, typename Data >
+        friend void append( const input_stream< V >& is, output_stream< T >& os, const Data& data );
         
-    private:
-        std::ostream& m_os;
+        std::ostream& os_;
         csv::binary< S > binary_;
         //const std::size_t size_;
         std::vector< char > buf_;
@@ -348,6 +348,23 @@ class output_stream : public boost::noncopyable
         boost::scoped_ptr< binary_output_stream< S > > binary_;
 };
 
+/// append record s to last record from input stream and and write them to output
+template < typename S, typename T, typename Data >
+inline void append( const input_stream< S >& is, output_stream< T >& os, const Data& data )
+{ 
+    if( is.is_binary())
+    {
+        os.binary().os_.write( is.binary().last(), is.binary().size() );
+        os.write( data );
+    }
+    else
+    {
+        std::string sbuf;
+        os.ascii().ascii().put( data, sbuf );
+        os.ascii().os_ << comma::join( is.ascii().last(), os.ascii().ascii().delimiter() ) << os.ascii().ascii().delimiter() << sbuf << std::endl;
+    }
+}
+
 /// use this class to append a columns of output to last record of input to write to output stream
 template < typename S, typename T >
 class tied
@@ -356,26 +373,19 @@ class tied
         tied( const input_stream< S >& is, output_stream< T >& os ) : is_( is ), os_( os ) { }
         
         /// append record s to last record from input stream and and write them to output
-        void append( const T& data )
-        {
-            if( is_.is_binary())
-            {
-                os_.binary().os().write( is_.binary().last(), is_.binary().size() );
-                os_.write(data);
-            }
-            else
-            {
-                std::string sbuf;
-                os_.ascii().ascii().put( data, sbuf );
-                os_.ascii().os()<< comma::join( is_.ascii().last(), os_.ascii().ascii().delimiter() ) << os_.ascii().ascii().delimiter() << sbuf << std::endl;
-            }
-        }
+        void append( const T& data ) { csv::append( is_, os_, data ); }
         
     private:
         const input_stream< S >& is_;
         output_stream< T >& os_;
         
 };
+
+template < typename S, typename T >
+inline tied< S, T > make_tied( const input_stream< S >& is, output_stream< T >& os ) { return tied< S, T >( is, os ); }
+
+template < typename S, typename T >
+inline tied< S, T > tie( const input_stream< S >& is, output_stream< T >& os ) { return make_tied( is, os ); }
 
 template < typename S >
 class passed
@@ -458,7 +468,7 @@ inline const S* ascii_input_stream< S >::read()
 
 template < typename S >
 inline ascii_output_stream< S >::ascii_output_stream( std::ostream& os, const std::string& column_names, char delimiter, bool full_path_as_name, const S& sample )
-    : m_os( os )
+    : os_( os )
     , ascii_( column_names, delimiter, full_path_as_name, sample )
     , fields_( split( column_names, ',' ) )
 {
@@ -466,7 +476,7 @@ inline ascii_output_stream< S >::ascii_output_stream( std::ostream& os, const st
 
 template < typename S >
 inline ascii_output_stream< S >::ascii_output_stream( std::ostream& os, const comma::csv::options& o, const S& sample )
-    : m_os( os )
+    : os_( os )
     , ascii_( o, sample )
     , fields_( split( o.fields, ',' ) )
 {
@@ -474,7 +484,7 @@ inline ascii_output_stream< S >::ascii_output_stream( std::ostream& os, const co
 
 template < typename S >
 inline ascii_output_stream< S >::ascii_output_stream( std::ostream& os, const S& sample )
-    : m_os( os )
+    : os_( os )
     , ascii_( options().fields, options().delimiter, true, sample ) // , ascii_( options().fields, options().delimiter, o.full_xpath, sample )
     , fields_( split( options().fields, ',' ) )
 {
@@ -506,9 +516,9 @@ inline void ascii_output_stream< S >::write( const S& s, std::vector< std::strin
 {
     ascii_.put( s, v );
     if( v.empty() ) { return; } // never here, though
-    m_os << v[0];
-    for( std::size_t i = 1; i < v.size(); ++i ) { m_os << ascii_.delimiter() << v[i]; }
-    m_os << std::endl;
+    os_ << v[0];
+    for( std::size_t i = 1; i < v.size(); ++i ) { os_ << ascii_.delimiter() << v[i]; }
+    os_ << std::endl;
 }
 
 template < typename S >
@@ -562,7 +572,7 @@ inline const S* binary_input_stream< S >::read()
 
 template < typename S >
 inline binary_output_stream< S >::binary_output_stream( std::ostream& os, const std::string& format, const std::string& column_names, bool full_path_as_name, const S& sample )
-    : m_os( os )
+    : os_( os )
     , binary_( format, column_names, full_path_as_name, sample )
     //, size_( binary_.format().size() * ( 4098 / binary_.format().size() ) ) // quick and dirty
     , buf_( binary_.format().size() ) //, buf_( size_ )
@@ -580,7 +590,7 @@ inline binary_output_stream< S >::binary_output_stream( std::ostream& os, const 
 
 template < typename S >
 inline binary_output_stream< S >::binary_output_stream( std::ostream& os, const options& o, const S& sample )
-    : m_os( os )
+    : os_( os )
     , binary_( o.format().string(), o.fields, o.full_xpath, sample )
 //     , size_( binary_.format().size() ) //, size_( binary_.format().size() * ( 4098 / binary_.format().size() ) ) // quick and dirty
     , buf_( binary_.format().size() ) //, buf_( size_ )
@@ -599,10 +609,10 @@ inline binary_output_stream< S >::binary_output_stream( std::ostream& os, const 
 template < typename S >
 inline void binary_output_stream< S >::flush()
 {
-    m_os.flush();
+    os_.flush();
 //     if( cur_ == begin_ ) { return; }
-//     m_os.write( begin_, cur_ - begin_ );
-//     m_os.flush();
+//     os_.write( begin_, cur_ - begin_ );
+//     os_.flush();
 //     cur_ = begin_;
 }
 
@@ -610,11 +620,11 @@ template < typename S >
 inline void binary_output_stream< S >::write( const S& s )
 {
     binary_.put( s, &buf_[0] );
-    m_os.write( &buf_[0], binary_.format().size() );
+    os_.write( &buf_[0], binary_.format().size() );
 //     binary_.put( s, cur_ );
 //     cur_ += binary_.format().size();
 //     if( cur_ == end_ ) { flush(); }
-    if( flush_ ) { m_os.flush(); }
+    if( flush_ ) { os_.flush(); }
 }
 
 template < typename S >
@@ -624,7 +634,7 @@ inline void binary_output_stream< S >::write( const S& s, const char* buf )
     write( s );
 //     ::memcpy( cur_, buf, binary_.format().size() );
 //     write( s );
-    if( flush_ ) { m_os.flush(); }
+    if( flush_ ) { os_.flush(); }
 }
 
 template < typename S >

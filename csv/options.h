@@ -91,9 +91,13 @@ class options
         /// true, if --binary specified
         bool binary() const;
 
-        /// return true, if fields have given field (convenience function, slow)
+        /// return true, if fields have all given fields (convenience function, slow)
         /// @param field comma-separated fields, e.g. "x,y,z"
-        bool has_field( const std::string& field ) const;
+        bool has_field( const std::string& fields_to_check ) const;
+        
+        /// return true, if fields have some given fields (convenience function, slow)
+        /// @param field comma-separated fields, e.g. "x,y,z"
+        bool has_some_of_fields( const std::string& fields_to_check ) const;
 
     private:
         boost::optional< csv::format > format_;

@@ -117,4 +117,12 @@ bool options::has_field( const std::string& field ) const
     return true;
 }
 
+bool options::has_some_of_fields( const std::string& field ) const
+{
+    const std::vector< std::string >& v = split( fields, ',' );
+    const std::vector< std::string >& f = split( field, ',' );
+    for( unsigned int i = 0; i < f.size(); ++i ) { if( std::find( v.begin(), v.end(), f[i] ) != v.end() ) { return true; } }
+    return false;
+}
+
 } } // namespace comma { namespace csv {
