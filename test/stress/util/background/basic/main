@@ -2,7 +2,7 @@
 
 readonly scriptname=$( basename "$0" )
 
-util="comma-background-util"
+util="comma-process-util"
 source $( which "$util" ) || { echo "cannot source '$util'" >&2; exit 1; }
 
 function report_own_tree()
