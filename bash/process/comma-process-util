@@ -177,14 +177,15 @@ function comma_process_exec()
     [[ -p "$fifo" ]] || { builtin echo "$FUNCNAME: '$fifo' is not a FIFO" >&2; return 1; }
     local signature
     signature=$( comma_process_signature $self ) || { builtin echo "$FUNCNAME: cannot get process signature for '$self'" >&2; return 1; }
-    timeout -s TERM -k 10 10 bash -c "builtin echo \"$self $signature\" > \"$fifo\""
+    local write_timeout=20
+    timeout -s TERM -k 10 $write_timeout bash -c "builtin echo \"$self $signature\" > \"$fifo\""
     local rv=$?
     (( rv == 0 )) || { builtin echo "$FUNCNAME: write into the named pipe '$fifo' failed, error $rv" >&2; return $rv; }
     # if the caller has been interrupted, while the process was writing, the fifo could be removed
     # then the write above succeeds, but the result is a file and not a fifo
     [[ -f "$fifo" ]] && { builtin echo "$FUNCNAME: after the write '$fifo' is not a FIFO" >&2; return 1; }
     (( verbose == 0 )) || builtin echo "$FUNCNAME: in PID '$self': exec '${@}'" >&2
-    unset verbose self fifo signature
+    unset verbose self fifo signature write_timeout
     exec "${@}"
 }
 export -f comma_process_exec
@@ -216,13 +217,13 @@ function comma_process_validate()
     local expected=$2
     [[ -p "$fifo" ]] || { builtin echo "$FUNCNAME: '$fifo' is not a FIFO" >&2; return 1; }
     local pid status signature
-    local timeout=10
+    local read_timeout=20
     # http://stackoverflow.com/questions/6448632/read-not-timing-out-when-reading-from-pipe-in-bash
     # Your shell is blocking on the open() call before invoking the read builtin.
     #
     # On Linux, you can open the FIFO for both read and write at the same time to prevent blocking on open; this is non-portable, but may do what you want.
     (( verbose == 0 )) || builtin echo "$FUNCNAME: attempt to read pid from '$fifo' for $timeout seconds ..." >&2
-    read -t $timeout pid signature <> "$fifo"
+    read -t $read_timeout pid signature <> "$fifo"
     status=$?
     (( status == 0 )) || {
         builtin echo "$FUNCNAME: could not read process id from '$fifo' in $timeout seconds or read error, status '$status'" >&2
