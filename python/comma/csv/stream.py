@@ -174,17 +174,26 @@ class stream(object):
             msg = "size {} not equal to tied size {}".format(s.size, tied_size)
             raise ValueError(msg)
         if self.binary:
-            (merge_arrays(self.tied._input_array, s) if self.tied else s).tofile(self.target)
+            if self.tied:
+                self.tie_binary(self.tied._input_array, s).tofile(self.target)
+            else:
+                s.tofile(self.target)
         else:
             unrolled = s.view(self.struct.unrolled_flat_dtype)
             f = self.numpy_scalar_to_string
             if self.tied:
-                for tied, scalars in itertools.izip(self.tied._ascii_buffer, unrolled):
-                    print >> self.target, self.delimiter.join([tied] + map(f, scalars))
+                for tied_buf, scalars in itertools.izip(self.tied._ascii_buffer, unrolled):
+                    print >> self.target, self.tie_ascii(tied_buf, map(f, scalars))
             else:
                 for scalars in unrolled:
                     print >> self.target, self.delimiter.join(map(f, scalars))
         self.target.flush()
+
+    def tie_binary(self, tied_array, array):
+        return merge_arrays(tied_array, array)
+
+    def tie_ascii(self, tied_buf, scalars_as_strings):
+        return self.delimiter.join([tied_buf] + scalars_as_strings)
 
     def dump(self, mask=None):
         """
