@@ -5,6 +5,8 @@ import numpy as np
 import re
 import itertools
 import ast
+import copy
+import functools
 import comma
 
 description = """
@@ -152,6 +154,10 @@ def get_args():
         '--if',
         metavar='<cond>',
         help='select and output records of input stream that satisfy the condition')
+    parser.add_argument(
+        '--update',
+        action='store_true',
+        help='update input stream values in place')
     args = parser.parse_args()
     if args.help:
         if args.verbose:
@@ -185,12 +191,17 @@ def check_options(args):
         raise csv_eval_error("no expressions are given")
     if args.binary and args.format:
         raise csv_eval_error("--binary and --format are mutually exclusive")
-    if args.select and args.expressions:
-        msg = "--select <cond> cannot be used with expressions"
-        raise csv_eval_error(msg)
-    if args.select and (args.output_fields or args.output_format):
-        msg = "--select cannot be used with --output-fields or --output-format"
-        raise csv_eval_error(msg)
+    if args.select:
+        if args.expressions:
+            msg = "--select <condition> cannot be used with expressions"
+            raise csv_eval_error(msg)
+        if args.output_fields or args.output_format:
+            msg = "--select cannot be used with --output-fields or --output-format"
+            raise csv_eval_error(msg)
+    if args.update:
+        if args.output_fields or args.output_format:
+            msg = "--update cannot be used with --output-fields or --output-format"
+            raise csv_eval_error(msg)
 
 
 def format_without_blanks(format, fields=''):
@@ -244,10 +255,11 @@ def prepare_options(args):
     else:
         args.format = format_without_blanks(args.format, args.fields)
         args.binary = False
-    if not args.select:
-        if not args.output_fields:
-            args.output_fields = output_fields_from_expressions(args.expressions)
-        args.output_format = format_without_blanks(args.output_format, args.output_fields)
+    if args.select or args.update:
+        return
+    if not args.output_fields:
+        args.output_fields = output_fields_from_expressions(args.expressions)
+    args.output_format = format_without_blanks(args.output_format, args.output_fields)
 
 
 def restricted_numpy_env():
@@ -255,6 +267,22 @@ def restricted_numpy_env():
     d.update(__builtins__={})
     d.pop('sys', None)
     return d
+
+
+class stream_with_tied_update(comma.csv.stream):
+    def tie_binary(self, tied_array, array):
+        index = self.tied.fields.index
+        fields = tied_array.dtype.names
+        for f in self.fields:
+            tied_array[fields[index(f)]] = array[f]
+        return tied_array
+
+    def tie_ascii(self, tied_buf, scalars_as_strings):
+        buf = tied_buf.split(self.delimiter)
+        index = self.tied.fields.index
+        for f, s in zip(self.fields, scalars_as_strings):
+            buf[index(f)] = s
+        return self.delimiter.join(buf)
 
 
 class stream(object):
@@ -283,14 +311,23 @@ class stream(object):
         self.input = comma.csv.stream(input_t, **self.csv_options)
 
     def initialize_output(self):
-        fields = self.args.output_fields
-        if not fields:
+        if self.args.select:
             self.output = None
-            return
-        check_fields(fields.split(','), input_fields=self.nonblank_input_fields)
-        types = comma.csv.format.to_numpy(self.args.output_format)
-        output_t = comma.csv.struct(fields, *types)
-        self.output = comma.csv.stream(output_t, tied=self.input, **self.csv_options)
+        elif self.args.update:
+            all_types = self.args.format.split(',')
+            index = self.args.fields.split(',').index
+            format = ','.join(all_types[index(f)] for f in self.nonblank_input_fields)
+            types = comma.csv.format.to_numpy(format)
+            update_t = comma.csv.struct(','.join(self.nonblank_input_fields), *types)
+            self.output = stream_with_tied_update(update_t,
+                                                  tied=self.input,
+                                                  **self.csv_options)
+        else:
+            fields = self.args.output_fields
+            check_fields(fields.split(','), input_fields=self.nonblank_input_fields)
+            types = comma.csv.format.to_numpy(self.args.output_format)
+            output_t = comma.csv.struct(fields, *types)
+            self.output = comma.csv.stream(output_t, tied=self.input, **self.csv_options)
 
     def print_info(self, file=sys.stderr):
         fields = ','.join(self.input.struct.fields)
@@ -302,8 +339,12 @@ class stream(object):
         if self.output:
             output_fields = ','.join(self.output.struct.fields)
             output_format = self.output.struct.format
-            print >> file, "output fields: '{}'".format(output_fields)
-            print >> file, "output format: '{}'".format(output_format)
+            if self.args.update:
+                print >> file, "update fields: '{}'".format(output_fields)
+                print >> file, "update format: '{}'".format(output_format)
+            else:
+                print >> file, "output fields: '{}'".format(output_fields)
+                print >> file, "output format: '{}'".format(output_format)
 
 
 def check_fields(fields, input_fields=None):
@@ -360,7 +401,7 @@ def main():
         if args.select:
             select(args.select, stream(args))
         else:
-            evaluate(args.expressions.strip(';'), stream(args), permissive=args.permissive)
+            evaluate(args.expressions, stream(args), permissive=args.permissive)
     except csv_eval_error as e:
         name = os.path.basename(sys.argv[0])
         print >> sys.stderr, "{} error: {}".format(name, e)
