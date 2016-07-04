@@ -21,7 +21,7 @@ input fields:
 
 output fields:
     1) inferred from expressions (by default) or specified by --output-fields
-    2) always appended to unmodified input
+    2) appended to unmodified input
     3) treated as floating point numbers, unless --output-format is given
 
 examples:
@@ -46,6 +46,9 @@ examples:
 
     # select output based on condition
     ( echo 1,2 ; echo 1,3; echo 1,4 ) | %(prog)s --fields=a,b --format=2i --select="(a < b - 1) & (b < 4)"
+
+    # update input stream values in place
+    ( echo 1,2 ; echo 3,4 ) | %(prog)s --fields=x,y "x=x+y; y=y-1" --update
 """
 
 numpy_functions = """
