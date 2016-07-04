@@ -1,0 +1,13 @@
+output[0]/dummy1="1"
+output[0]/t="20150101T000000.000001"
+output[0]/dummy2="a"
+output[0]/x=1.9 +/- eps
+output[0]/n=11
+output[0]/dummy3="cat"
+output[1]/dummy1="2"
+output[1]/t="20150102T000000.000001"
+output[1]/dummy2="b"
+output[1]/x=2.9 +/- eps
+output[1]/n=12
+output[1]/dummy3="dog"
+status=0

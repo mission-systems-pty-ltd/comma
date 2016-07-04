@@ -1,0 +1,6 @@
+output[0]/x=2 +/- eps
+output[0]/y=1.9 +/- eps
+output[1]/x=4 +/- eps
+output[1]/y=3.9 +/- eps
+status=0
+
