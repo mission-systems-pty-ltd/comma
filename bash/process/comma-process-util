@@ -81,9 +81,10 @@ function comma_process_signature()
     if [ "$pid" -eq "$pid" ] ; then :; else builtin echo "$FUNCNAME: pid '$pid' is not an integer" >&2; return 1; fi
     local signature psexit
     while true ; do
-        signature=$( ps --no-headers -o lstart "$pid" )
+        # occasionally observed ps hanging here indefinitely
+        signature=$( timeout -k 10 -s TERM 10 ps --no-headers -o lstart "$pid" )
         psexit=$?
-        (( $psexit > 128 )) && { builtin echo "$FUNCNAME: ps killed by a signal, exit status '$psexit', try again" >&2; continue; }
+        (( $psexit >= 126 )) && { builtin echo "$FUNCNAME: ps killed by a signal, exit status '$psexit', try again" >&2; continue; }
         (( $psexit == 0 )) || { builtin echo "$FUNCNAME: process with id '$pid' not found" >&2; return 1; }
         break
     done
