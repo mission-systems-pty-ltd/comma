@@ -224,6 +224,8 @@ def format_without_blanks(format, fields=''):
     def comma_type(maybe_type, field, default_type='d', type_of_unnamed_field='s[0]'):
         return type_of_unnamed_field if not field else maybe_type or default_type
 
+    if not format and not fields:
+        return ''
     maybe_types = comma.csv.format.expand(format).split(',')
     maybe_typed_fields = itertools.izip_longest(maybe_types, fields.split(','))
     types = [comma_type(maybe_type, field) for maybe_type, field in maybe_typed_fields]
@@ -341,12 +343,9 @@ class stream(object):
         if self.output:
             output_fields = ','.join(self.output.struct.fields)
             output_format = self.output.struct.format
-            if self.args.update:
-                print >> file, "update fields: '{}'".format(output_fields)
-                print >> file, "update format: '{}'".format(output_format)
-            else:
-                print >> file, "output fields: '{}'".format(output_fields)
-                print >> file, "output format: '{}'".format(output_format)
+            mode = 'update' if self.args.update else 'output'
+            print >> file, "{} fields: '{}'".format(mode, output_fields)
+            print >> file, "{} format: '{}'".format(mode, output_format)
 
 
 def check_fields(fields, input_fields=None):
