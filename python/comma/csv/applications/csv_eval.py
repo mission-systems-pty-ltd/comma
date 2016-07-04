@@ -314,10 +314,9 @@ class stream(object):
         if self.args.select:
             self.output = None
         elif self.args.update:
-            all_types = self.args.format.split(',')
+            all_types = comma.csv.format.to_numpy(self.args.format)
             index = self.args.fields.split(',').index
-            format = ','.join(all_types[index(f)] for f in self.nonblank_input_fields)
-            types = comma.csv.format.to_numpy(format)
+            types = [all_types[index(f)] for f in self.nonblank_input_fields]
             update_t = comma.csv.struct(','.join(self.nonblank_input_fields), *types)
             self.output = stream_with_tied_update(update_t,
                                                   tied=self.input,
