@@ -1,0 +1,42 @@
+#!/bin/bash
+
+source $( which comma-process-util ) || exit 1
+
+function test_timed_wait()
+{
+    local sleep_time=$1
+    local wait_time=$2
+    local myself=$BASHPID
+    echo "$FUNCNAME: test_timed_wait running in PID $myself" >&2
+    sleep $sleep_time &
+    echo "$FUNCNAME: child process of $myself: $!" >&2
+    ps -o pid,ppid,comm,args $! >&2
+
+    # this is the test; the rest is debugging
+    comma_process_timed_wait --verbose $wait_time
+    local wrv=$?
+
+    echo "$FUNCNAME: comma_process_timed_wait exit status '$wrv'" >&2
+    (( $wrv == $COMMA_PROCESS_ALARM_EXIT )) && {
+        echo "$FUNCNAME: kill all direct children of $myself..." >&2
+        pkill -P $myself
+        echo "$FUNCNAME: final wait..." >&2
+        wait
+        echo "$FUNCNAME: final wait over, exiting" >&2
+    }
+    return $wrv
+}
+
+# work in a subprocess so that terminal bash does not do crazy things
+# when stopped; this is relevant only when running the test manually
+# in a terminal
+export main=$BASHPID
+(
+    echo "alarm/status=$COMMA_PROCESS_ALARM_EXIT"
+    echo "---- main: running test 1" >&2
+    test_timed_wait 20 10
+    echo "test[1]/status=$?"
+    echo "---- main: running test 2" >&2
+    test_timed_wait 5 10
+    echo "test[2]/status=$?"
+)

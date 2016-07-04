@@ -40,6 +40,7 @@
 # @li @link COMMA_PROCESS_KILL_ERROR @endlink
 # @li @link COMMA_PROCESS_KILL_NOT_FOUND @endlink
 # @li @link COMMA_PROCESS_KILL_REUSED @endlink
+# @li @link COMMA_PROCESS_ALARM_EXIT @endlink
 #
 # @section comma_process_util_functions Functions
 # @li @link comma_process_signature @endlink
@@ -48,6 +49,10 @@
 # @li @link comma_process_exec @endlink
 # @li @link comma_process_validate @endlink
 # @li @link comma_process_exec_and_validate @endlink
+# @li @link comma_process_timed_wait_alarm @endlink
+# @li @link comma_process_set_timed_wait_alarm_detail @endlink
+# @li @link comma_process_set_timed_wait_alarm @endlink
+# @li @link comma_process_timed_wait @endlink
 # @li @link terminate_comma_execute_and_wait @endlink
 # @li @link comma_execute_and_wait @endlink
 # @li @link comma_wait_for_process_group @endlink
@@ -76,9 +81,10 @@ function comma_process_signature()
     if [ "$pid" -eq "$pid" ] ; then :; else builtin echo "$FUNCNAME: pid '$pid' is not an integer" >&2; return 1; fi
     local signature psexit
     while true ; do
-        signature=$( ps --no-headers -o lstart "$pid" )
+        # occasionally observed ps hanging here indefinitely
+        signature=$( timeout -k 10 -s TERM 10 ps --no-headers -o lstart "$pid" )
         psexit=$?
-        (( $psexit > 128 )) && { builtin echo "$FUNCNAME: ps killed by a signal, exit status '$psexit', try again" >&2; continue; }
+        (( $psexit >= 126 )) && { builtin echo "$FUNCNAME: ps killed by a signal, exit status '$psexit', try again" >&2; continue; }
         (( $psexit == 0 )) || { builtin echo "$FUNCNAME: process with id '$pid' not found" >&2; return 1; }
         break
     done
@@ -177,14 +183,15 @@ function comma_process_exec()
     [[ -p "$fifo" ]] || { builtin echo "$FUNCNAME: '$fifo' is not a FIFO" >&2; return 1; }
     local signature
     signature=$( comma_process_signature $self ) || { builtin echo "$FUNCNAME: cannot get process signature for '$self'" >&2; return 1; }
-    timeout -s TERM -k 10 10 bash -c "builtin echo \"$self $signature\" > \"$fifo\""
+    local write_timeout=20
+    timeout -s TERM -k 10 $write_timeout bash -c "builtin echo \"$self $signature\" > \"$fifo\""
     local rv=$?
     (( rv == 0 )) || { builtin echo "$FUNCNAME: write into the named pipe '$fifo' failed, error $rv" >&2; return $rv; }
     # if the caller has been interrupted, while the process was writing, the fifo could be removed
     # then the write above succeeds, but the result is a file and not a fifo
     [[ -f "$fifo" ]] && { builtin echo "$FUNCNAME: after the write '$fifo' is not a FIFO" >&2; return 1; }
     (( verbose == 0 )) || builtin echo "$FUNCNAME: in PID '$self': exec '${@}'" >&2
-    unset verbose self fifo signature
+    unset verbose self fifo signature write_timeout
     exec "${@}"
 }
 export -f comma_process_exec
@@ -216,13 +223,13 @@ function comma_process_validate()
     local expected=$2
     [[ -p "$fifo" ]] || { builtin echo "$FUNCNAME: '$fifo' is not a FIFO" >&2; return 1; }
     local pid status signature
-    local timeout=10
+    local read_timeout=20
     # http://stackoverflow.com/questions/6448632/read-not-timing-out-when-reading-from-pipe-in-bash
     # Your shell is blocking on the open() call before invoking the read builtin.
     #
     # On Linux, you can open the FIFO for both read and write at the same time to prevent blocking on open; this is non-portable, but may do what you want.
     (( verbose == 0 )) || builtin echo "$FUNCNAME: attempt to read pid from '$fifo' for $timeout seconds ..." >&2
-    read -t $timeout pid signature <> "$fifo"
+    read -t $read_timeout pid signature <> "$fifo"
     status=$?
     (( status == 0 )) || {
         builtin echo "$FUNCNAME: could not read process id from '$fifo' in $timeout seconds or read error, status '$status'" >&2
@@ -270,6 +277,99 @@ function comma_process_exec_and_validate()
 }
 export -f comma_process_exec_and_validate
 declare -r comma_process_exec_and_validate
+
+## @page comma_process_timed_wait_alarm comma_process_timed_wait_alarm
+# @description raise the alarm (signal ALRM) to wake up the process that called
+# @link comma_process_timed_wait @endlink; if the caller process is not found, no signal is sent
+# @param verbosity, options: if equal to '--verbose', print trace messages; otherwise taken as first argument
+# @param time time to alarm (delay, seconds)
+# @param pid process id of the caller (who waits for the wake up call)
+# @param signature the signature of the caller obtained using @link comma_process_signature @endlink
+# @return none; the function shall be called as a "grandchild" process with no connection
+# to the caller and, consequently, no way to collect the exit status
+function comma_process_timed_wait_alarm()
+{
+    local verbose=
+    local time=$1
+    [[ "$time" == "--verbose" ]] && { verbose="--verbose"; shift ; time=$1; }
+    local caller=$2
+    local signature=$3
+    sleep $time
+    comma_process_kill $verbose --signal=ALRM $caller $signature
+    trap - RETURN
+}
+export -f comma_process_timed_wait_alarm
+declare -r comma_process_timed_wait_alarm
+
+## @page comma_process_set_timed_wait_alarm_detail comma_process_set_timed_wait_alarm_detail
+# @description helper of @link comma_process_set_timed_wait_alarm @endlink; runs the alarm
+# function @link comma_process_timed_wait_alarm @endlink as a background process in a separate
+# group, then terminates (leaving the child orphaned), thus severing all possible connections
+# between the process setting the alarm and the alarm function
+# @param same as @link comma_process_timed_wait_alarm @endlink
+function comma_process_set_timed_wait_alarm_detail()
+{
+    # timeout just to send everything into a separate process group
+    local forever="4294967296d"
+    # do not bother about PID verification, no-one is supposed to wait for this process
+    timeout -s TERM -k 10 $forever bash -c "comma_process_timed_wait_alarm $*" &
+    trap - RETURN
+}
+export -f comma_process_set_timed_wait_alarm_detail
+declare -r comma_process_set_timed_wait_alarm_detail
+
+## @page comma_process_set_timed_wait_alarm comma_process_set_timed_wait_alarm
+# @description prepare the timed alarm; gets the signature for safe kill, sets the trap,
+# and launches @link comma_process_timed_wait_alarm @endlink as an orphaned grandchild
+# @param verbosity, options: if equal to '--verbose', print trace messages; otherwise taken as first argument
+# @param time time to alarm (delay, seconds)
+function comma_process_set_timed_wait_alarm()
+{
+    local verbose=
+    local alarm_time=$1
+    [[ "$alarm_time" == "--verbose" ]] && { verbose="--verbose"; shift ; alarm_time=$1; }
+    local self=$BASHPID
+    local signature
+    signature=$( comma_process_signature $verbose $self )
+    trap ':' ALRM
+    # do not bother about PID verification, no-one is supposed to wait for this process
+    comma_process_set_timed_wait_alarm_detail $verbose $alarm_time $self $signature </dev/null >/dev/null 2>&1 &
+    [[ -z "$verbose" ]] || builtin echo "$FUNCNAME: going to wait for $alarm_time s in PID $self ..." >&2
+}
+export -f comma_process_set_timed_wait_alarm
+declare -r comma_process_set_timed_wait_alarm
+
+## @page COMMA_PROCESS_ALARM_EXIT COMMA_PROCESS_ALARM_EXIT
+# @brief exit status of a process terminated by or wait statement interrupted by SIGALRM
+export COMMA_PROCESS_ALARM_EXIT=$( temp=$( kill -l ALRM ); (( temp+=128 )) ; echo $temp )
+declare -r COMMA_PROCESS_ALARM_EXIT
+
+## @page comma_process_timed_wait comma_process_timed_wait
+# @description bash wait builtin lacks a timeout option; this function fills the gap
+# @param verbosity, options: if equal to '--verbose', print trace messages; otherwise taken as first argument
+# @param time time to alarm (delay, seconds)
+# @return exit status of the wait statement that is @link COMMA_PROCESS_ALARM_EXIT @endlink if the wait
+# was interrupted by timeout and the exit status of the child process, whatever that is, otherwise
+function comma_process_timed_wait()
+{
+    local verbose=
+    local alarm_time=$1
+    [[ "$alarm_time" == "--verbose" ]] && { verbose="--verbose"; shift ; alarm_time=$1; }
+    local self=$BASHPID
+    comma_process_set_timed_wait_alarm $verbose $alarm_time
+    wait
+    local wrv=$?
+    [[ -z "$verbose" ]] || {
+        (( $wrv == $COMMA_PROCESS_ALARM_EXIT )) && {
+            builtin echo "$FUNCNAME: woken up by alarm, some children have not terminated" >&2
+        } || {
+            builtin echo "$FUNCNAME: children terminated by themselves, exiting" >&2
+        }
+    }
+    return $wrv
+}
+export -f comma_process_timed_wait
+declare -r comma_process_timed_wait
 
 ## @page terminate_comma_execute_and_wait terminate_comma_execute_and_wait
 # @brief This is a signal handler used by @link comma_execute_and_wait @endlink.
