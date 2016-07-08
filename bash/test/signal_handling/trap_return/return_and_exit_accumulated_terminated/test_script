@@ -1,0 +1,61 @@
+#!/bin/bash
+
+function get_exit_traps()
+{
+    # "trap -p" has format: "trap -- '' EXIT"
+    trap -p | grep 'EXIT$' | sed 's/^trap -- //g; s/ *[^ ]*EXIT$//g; s/^['\''"]//g; s/['\''"]$//g'
+}
+
+function add_exit_trap()
+{
+    local trap_list=$( get_exit_traps )
+    # use ";:;" to delimit commands (":" means "do nothing" in bash)
+    # -- this is because the command itself might contain ";"
+    if [[ -z "$trap_list" ]]; then trap_list="$*"; else trap_list="$trap_list;:;$*"; fi
+    trap "$trap_list" EXIT
+}
+
+# should only be used to remove traps added by add_exit_trap(), since it relies on traps being separated by ";:;"
+# (which is used is because the command itself might contain ";")
+function remove_exit_trap()
+{
+    local cmd=$1
+    local trap_list=$( get_exit_traps )
+    if [[ $trap_list = *\;\:\;* ]]; then
+        trap_list=$( echo "$trap_list" | gawk '{ gsub(";:;", "\n"); print $0; }' | grep -v "^$cmd\>" | sed 's/$/;:/g' | tr '\n' ';' | sed 's/;:;$//g' )
+        trap "$trap_list" EXIT
+    else
+        trap - EXIT
+    fi
+}
+
+function f1()
+{
+    add_exit_trap f2
+    trap f2 RETURN
+    echo "1"
+
+    local count=0
+    while [[ $count -lt 20 ]]; do
+        if [[ $count == 2 ]]; then kill $BASHPID; fi
+        (( ++count ))
+        sleep 1
+    done
+    echo "Should not get to here"
+}
+
+function f2()
+{
+    echo "2"
+    trap - RETURN
+    remove_exit_trap f2
+}
+
+function f3()
+{
+    echo "3"
+}
+
+f1
+f3
+

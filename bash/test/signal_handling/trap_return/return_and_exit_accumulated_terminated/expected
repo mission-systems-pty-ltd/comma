@@ -1,0 +1,4 @@
+output="1;2"
+
+# interrupted by signal, so status should have a high value
+status >= 128
