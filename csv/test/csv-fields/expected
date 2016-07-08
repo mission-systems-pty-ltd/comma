@@ -148,3 +148,12 @@ rename[3]/output="x,y,k/a"
 rename[3]/status=0
 rename[4]/output="c[0],c[1]"
 rename[4]/status=0
+
+make_fixed[0]/output="a,b,c,d,,"
+make_fixed[0]/status=0
+make_fixed[1]/output=""
+make_fixed[1]/status=1
+make_fixed[2]/output="a,b,c"
+make_fixed[2]/status=0
+make_fixed[3]/output="a:b:c:d::"
+make_fixed[3]/status=0
