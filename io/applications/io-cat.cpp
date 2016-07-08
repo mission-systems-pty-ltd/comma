@@ -110,6 +110,7 @@ class stream
         virtual unsigned int read_available( std::vector< char >& buffer, unsigned int max_count ) = 0;
         virtual comma::io::file_descriptor fd() const = 0;
         virtual bool eof() const = 0;
+        virtual bool empty() const = 0;
         const std::string& address() const { return address_; }
         
     private:
@@ -133,6 +134,8 @@ class udp_stream : public stream
         }
         
         bool eof() const { return false; }
+        
+        bool empty() const { return false; }
         
         comma::io::file_descriptor fd() const { return socket_.native_handle(); }
         
@@ -185,6 +188,8 @@ class any_stream : public stream
                 return line.size() + 1;
             }
         }
+        
+        bool empty() const { return istream_.available() == 0; }
         
         bool eof() const { return !istream_->good() || istream_->eof(); }
         
@@ -246,18 +251,18 @@ int main( int argc, char** argv )
                     continue;
                 }
                 if( !select.read().ready( streams[i].fd() ) ) { done = false; continue; }
+                if( streams[i].empty() )
+                { 
+                    if( verbose ) { std::cerr << "io-cat: stream " << i << " (" << unnamed[i] << ") closed" << std::endl; }
+                    select.read().remove( streams[i].fd() );
+                    if( exit_on_first_closed || select.read()().empty() ) { return 0; }
+                }
                 unsigned int countdown = round_robin_count;
                 while( !is_shutdown && !streams[i].eof() )
                 {
                     unsigned int bytes_read = streams[i].read_available( buffer, countdown ? countdown : max_count );
                     done = false;
-                    if( bytes_read == 0 )
-                    { 
-                        if( verbose ) { std::cerr << "io-cat: stream " << i << " (" << unnamed[i] << ") closed" << std::endl; }
-                        select.read().remove( streams[i].fd() );
-                        if( exit_on_first_closed || select.read()().empty() ) { return 0; }
-                        break;
-                    }
+                    if( bytes_read == 0 ) { break; }
                     done = false;
                     if( size && bytes_read % size != 0 ) { std::cerr << "io-cat: expected " << size << " byte(s), got only " << ( bytes_read % size ) << " on " << streams[i].address() << std::endl; return 1; }
                     std::cout.write( &buffer[0], bytes_read );
