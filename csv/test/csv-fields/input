@@ -79,3 +79,8 @@ rename[1]="echo a | csv-fields rename --fields a --to z"
 rename[2]="echo a,b,a,b,a | csv-fields rename --fields a,b --to x,y"
 rename[3]="echo a,b,k/a | csv-fields rename --fields a,b --to x,y"
 rename[4]="echo a,b | csv-fields rename --fields a,b --to c[0],c[1]"
+
+make_fixed[0]="echo a,b,c,d | csv-fields make-fixed --count=6"
+make_fixed[1]="echo a,b,c,d | csv-fields make-fixed --count=3"
+make_fixed[2]="echo a,b,c,d | csv-fields make-fixed --count=3 --force"
+make_fixed[3]="echo a:b:c:d | csv-fields make-fixed --count=6 --delimiter=:"

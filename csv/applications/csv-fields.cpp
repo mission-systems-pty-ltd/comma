@@ -54,7 +54,7 @@ static void usage( bool )
     std::cerr << "                       e.g. for combining with cut or csv-bin-cut" << std::endl;
     std::cerr << "        --from=<value>: start field numbering from <value>; default=1" << std::endl;
     std::cerr << "                        to keep it consistent with linux cut utility" << std::endl;
-    std::cerr << "        --count: output the total number of fields" << std::endl;
+    std::cerr << "        --count,--size: output the total number of fields" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    clear: clear some of the field values" << std::endl;
     std::cerr << "        --keep,--except=<fields>: keep given fields by name" << std::endl;
@@ -82,6 +82,10 @@ static void usage( bool )
     std::cerr << "        --except=<fields>: don't modify given fields" << std::endl;
     std::cerr << "        --fields=<fields>: modify only given fields" << std::endl;
     std::cerr << "        --path=<prefix>: path to strip" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    make-fixed: normalise input to a fixed number of fields" << std::endl;
+    std::cerr << "        --count,--size=<n>: number of output fields" << std::endl;
+    std::cerr << "        --force: chop input to <n> fields if larger" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << "    numbers" << std::endl;
@@ -129,6 +133,15 @@ static void usage( bool )
     std::cerr << "        echo a,b,c,d | csv-fields cut --fields b,c" << std::endl;
     std::cerr << "        a,d" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "    make-fixed" << std::endl;
+    std::cerr << "        echo -e \"a,,,d\\na,,c\" | csv-fields make-fixed --count=6" << std::endl;
+    std::cerr << "        a,,,d,," << std::endl;
+    std::cerr << "        a,,c,,," << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "        echo -e \"a,,,d\\na,,c\" | csv-fields make-fixed --count=3 --force" << std::endl;
+    std::cerr << "        a,," << std::endl;
+    std::cerr << "        a,,c" << std::endl;
+    std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 1 );
@@ -145,7 +158,6 @@ int main( int ac, char** av )
         if( !unnamed.empty() ) { operation = unnamed[0]; }
         if( operation == "numbers" )
         {
-            options.assert_mutually_exclusive( "--count" );
             int from = options.value( "--from", 1 );
             while( std::cin.good() )
             {
@@ -154,7 +166,7 @@ int main( int ac, char** av )
                 if( line.empty() ) { continue; }
                 const std::vector< std::string >& v = comma::split( line, delimiter );
                 std::string comma;
-                if ( options.exists( "--count" ) ) { std::cout << v.size() << std::endl; return 0; }
+                if ( options.exists( "--count,--size" ) ) { std::cout << v.size() << std::endl; return 0; }
                 for( unsigned int i = 0; i < v.size(); ++i )
                 {
                     if( v[i].empty() ) { continue; }
@@ -338,6 +350,38 @@ int main( int ac, char** av )
                 for( unsigned int i = 0; i < v.size(); ++i )
                 {
                     if( v[i].empty() || std::find( s.begin(), s.end(), v[i] ) == s.end() ) { std::cout << comma << v[i]; comma = delimiter; }
+                }
+                std::cout << std::endl;
+            }
+            return 0;
+        }
+        if( operation == "make-fixed" )
+        {
+            const unsigned int count = options.value< unsigned int >( "--count,--size" );
+            bool force = options.exists( "--force" );
+            while( std::cin.good() )
+            {
+                std::string line;
+                std::getline( std::cin, line );
+                if( line.empty() ) { continue; }
+                const std::vector< std::string >& v = comma::split( line, delimiter );
+                if( v.size() <= count )
+                {
+                    std::cout << line;
+                    for( unsigned int i = v.size(); i < count; i++ ) { std::cout << delimiter; }
+                }
+                else
+                {
+                    if( force )
+                    {
+                        std::string d;
+                        for( unsigned int i = 0; i < count; d = delimiter, i++ ) { std::cout << d << v[i]; }
+                    }
+                    else
+                    {
+                        std::cerr << "csv-fields: make-fixed of " << count << " fields but found " << v.size() << " fields in line: \"" << line << "\". Use --force to crop line to " << count << " fields." << std::endl;
+                        return 1;
+                    }
                 }
                 std::cout << std::endl;
             }
