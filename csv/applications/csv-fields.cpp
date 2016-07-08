@@ -161,8 +161,8 @@ int main( int ac, char** av )
                     std::cout << comma << ( i + from );
                     comma = ',';
                 }
+                std::cout << std::endl;
             }
-            std::cout << std::endl;
             return 0;
         }
         if( operation == "clear" )
