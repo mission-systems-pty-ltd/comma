@@ -1,0 +1,4 @@
+output="1;3"
+
+# signals change exit status to a high value
+status >= 128

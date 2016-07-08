@@ -1,0 +1,2 @@
+The tests in this directory are not specific to any comma application; they are just to verify that
+signal handling works as expected in this version of bash.

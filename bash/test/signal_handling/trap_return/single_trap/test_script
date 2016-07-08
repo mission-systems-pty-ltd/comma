@@ -1,0 +1,22 @@
+#!/bin/bash
+
+function f1()
+{
+    trap f2_trap RETURN
+    echo "1"
+}
+
+function f2_trap()
+{
+    echo "2"
+    trap - RETURN
+}
+
+function f3()
+{
+    echo "3"
+    # should not call f2_trap again, since we did "trap - RETURN"
+}
+
+f1
+f3

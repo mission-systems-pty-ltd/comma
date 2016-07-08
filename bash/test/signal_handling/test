@@ -1,0 +1,10 @@
+#!/bin/bash
+
+script="test_script"
+if [[ ! -f $script ]]; then echo "test: cannot find $script">&2; exit 1; fi
+
+result="$( bash $script )"
+status=$?
+echo "output=\"$( echo "$result" | tr '\n' ';' | sed 's#\;$##g' )""\""
+echo "status=$status"
+

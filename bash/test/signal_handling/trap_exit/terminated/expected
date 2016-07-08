@@ -1,0 +1,3 @@
+output="Finished"
+# high status value mean the process received a signal
+status >= 128

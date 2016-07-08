@@ -1,0 +1,17 @@
+#!/bin/bash
+
+function finished()
+{
+    echo "Finished"
+}
+
+trap "finished" EXIT
+count=0
+while [[ $count -lt 20 ]]; do
+    (( ++count ))
+    if [[ $count = 2 ]]; then kill $BASHPID; fi   # send SIGTERM to self
+    sleep 1
+done
+
+# should never happen
+echo "End of loop reached"

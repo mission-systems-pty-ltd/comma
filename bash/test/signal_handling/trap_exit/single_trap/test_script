@@ -1,0 +1,15 @@
+#!/bin/bash
+
+function f1()
+{
+    echo "1"
+}
+
+function f2()
+{
+    echo "2"
+}
+
+trap "f1" EXIT
+f2
+exit 3

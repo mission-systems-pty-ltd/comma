@@ -1,0 +1,14 @@
+#!/bin/bash
+
+function f1()
+{
+    trap "echo 1" EXIT
+}
+
+function f2()
+{
+    echo "2"
+}
+
+f1
+f2

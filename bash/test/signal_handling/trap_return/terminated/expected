@@ -1,0 +1,4 @@
+output="1"
+
+# high status since it was terminated by a signal
+status >= 128

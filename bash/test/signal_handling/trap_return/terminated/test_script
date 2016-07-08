@@ -1,0 +1,22 @@
+#!/bin/bash
+
+function f1()
+{
+    trap f2_trap RETURN
+    local count=0
+    echo "1"
+    while [[ $count -lt 20 ]]; do
+        if [[ $count == 2 ]]; then kill $BASHPID; fi
+        (( ++count ))
+        sleep 1
+    done
+    echo "Should not get to here"
+}
+
+function f2_trap()
+{
+    echo "2"
+    trap - RETURN
+}
+
+f1
