@@ -145,7 +145,6 @@ int main( int ac, char** av )
         if( !unnamed.empty() ) { operation = unnamed[0]; }
         if( operation == "numbers" )
         {
-            options.assert_mutually_exclusive( "--count" );
             int from = options.value( "--from", 1 );
             while( std::cin.good() )
             {
