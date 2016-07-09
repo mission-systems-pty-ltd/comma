@@ -275,19 +275,20 @@ def restricted_numpy_env():
 
 
 class stream_with_tied_update(comma.csv.stream):
-    def tie_binary(self, tied_array, array):
+    def _tie_binary(self, tied_array, array):
         index = self.tied.fields.index
         fields = tied_array.dtype.names
         for f in self.fields:
             tied_array[fields[index(f)]] = array[f]
         return tied_array
 
-    def tie_ascii(self, tied_buf, scalars_as_strings):
-        buf = tied_buf.split(self.delimiter)
+    def _tie_ascii(self, tied_buffer, unrolled_array):
         index = self.tied.fields.index
-        for f, s in zip(self.fields, scalars_as_strings):
-            buf[index(f)] = s
-        return self.delimiter.join(buf)
+        for tied_line, scalars in itertools.izip(tied_buffer, unrolled_array):
+            tied_values = tied_line.split(self.delimiter)
+            for f, s in zip(self.fields, self._str(scalars)):
+                tied_values[index(f)] = s
+            yield self.delimiter.join(tied_values)
 
 
 class stream(object):

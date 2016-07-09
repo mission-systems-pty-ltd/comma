@@ -1,7 +1,7 @@
 import numpy as np
 import sys
-from cStringIO import StringIO
 import itertools
+import functools
 import warnings
 from ..util import warning
 from ..io import readlines_unbuffered
@@ -67,6 +67,7 @@ class stream(object):
         self._input_array = None
         self._missing_fields_array = None
         self._ascii_buffer = None
+        self._str = functools.partial(map, self.numpy_scalar_to_string)
 
     def iter(self, size=None):
         """
@@ -158,10 +159,10 @@ class stream(object):
     def numpy_scalar_to_string(self, scalar):
         return numpy_scalar_to_string(scalar, precision=self.precision)
 
-    def write(self, s):
+    def write(self, s, **tie_kwds):
         """
         serialize the given numpy array of dtype defined by struct and write the result to
-        the output
+        the target
         """
         if s.dtype != self.struct.dtype:
             msg = "expected {}, got {}".format(repr(self.struct.dtype), repr(s.dtype))
@@ -175,25 +176,28 @@ class stream(object):
             raise ValueError(msg)
         if self.binary:
             if self.tied:
-                self.tie_binary(self.tied._input_array, s).tofile(self.target)
+                self._tie_binary(self.tied._input_array, s, **tie_kwds).tofile(self.target)
             else:
                 s.tofile(self.target)
         else:
-            unrolled = s.view(self.struct.unrolled_flat_dtype)
-            f = self.numpy_scalar_to_string
+            unrolled_array = s.view(self.struct.unrolled_flat_dtype)
             if self.tied:
-                for tied_buf, scalars in itertools.izip(self.tied._ascii_buffer, unrolled):
-                    print >> self.target, self.tie_ascii(tied_buf, map(f, scalars))
+                lines = self._tie_ascii(self.tied._ascii_buffer, unrolled_array, **tie_kwds)
             else:
-                for scalars in unrolled:
-                    print >> self.target, self.delimiter.join(map(f, scalars))
+                lines = (self._toline(scalars) for scalars in unrolled_array)
+            for line in lines:
+                print >> self.target, line
         self.target.flush()
 
-    def tie_binary(self, tied_array, array):
+    def _tie_binary(self, tied_array, array):
         return merge_arrays(tied_array, array)
 
-    def tie_ascii(self, tied_buf, scalars_as_strings):
-        return self.delimiter.join([tied_buf] + scalars_as_strings)
+    def _tie_ascii(self, tied_buffer, unrolled_array):
+        for tied_line, scalars in itertools.izip(tied_buffer, unrolled_array):
+            yield self.delimiter.join([tied_line] + self._str(scalars))
+
+    def _toline(self, scalars):
+        return self.delimiter.join(self._str(scalars))
 
     def dump(self, mask=None):
         """
