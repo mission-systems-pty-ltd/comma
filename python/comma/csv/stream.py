@@ -67,7 +67,7 @@ class stream(object):
         self._input_array = None
         self._missing_fields_array = None
         self._ascii_buffer = None
-        self._str = functools.partial(map, self.numpy_scalar_to_string)
+        self._strings = functools.partial(map, self.numpy_scalar_to_string)
 
     def iter(self, size=None):
         """
@@ -159,7 +159,7 @@ class stream(object):
     def numpy_scalar_to_string(self, scalar):
         return numpy_scalar_to_string(scalar, precision=self.precision)
 
-    def write(self, s, **tie_kwds):
+    def write(self, s):
         """
         serialize the given numpy array of dtype defined by struct and write the result to
         the target
@@ -176,13 +176,13 @@ class stream(object):
             raise ValueError(msg)
         if self.binary:
             if self.tied:
-                self._tie_binary(self.tied._input_array, s, **tie_kwds).tofile(self.target)
+                self._tie_binary(self.tied._input_array, s).tofile(self.target)
             else:
                 s.tofile(self.target)
         else:
             unrolled_array = s.view(self.struct.unrolled_flat_dtype)
             if self.tied:
-                lines = self._tie_ascii(self.tied._ascii_buffer, unrolled_array, **tie_kwds)
+                lines = self._tie_ascii(self.tied._ascii_buffer, unrolled_array)
             else:
                 lines = (self._toline(scalars) for scalars in unrolled_array)
             for line in lines:
@@ -194,10 +194,10 @@ class stream(object):
 
     def _tie_ascii(self, tied_buffer, unrolled_array):
         for tied_line, scalars in itertools.izip(tied_buffer, unrolled_array):
-            yield self.delimiter.join([tied_line] + self._str(scalars))
+            yield self.delimiter.join([tied_line] + self._strings(scalars))
 
     def _toline(self, scalars):
-        return self.delimiter.join(self._str(scalars))
+        return self.delimiter.join(self._strings(scalars))
 
     def dump(self, mask=None):
         """
