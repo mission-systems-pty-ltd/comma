@@ -1,0 +1,169 @@
+#!/bin/bash
+
+# This file is part of comma, a generic and flexible library
+# Copyright (c) 2014 The University of Sydney
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of the University of Sydney nor the
+#    names of its contributors may be used to endorse or promote products
+#    derived from this software without specific prior written permission.
+#
+# NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+# GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+# HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+# BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+source $( type -p comma-application-util )
+
+basename=$( basename $0 )
+
+default_path="/usr/local/bin"
+
+function description()
+{
+    cat <<EOF
+--output,-o=[<type>]; output type - e.g. svg, png, dot
+--path,-p=<path>; default=$default_path; path to scripts
+EOF
+}
+
+function usage {
+    cat <<EOF >&2
+
+$basename [options] [script,]
+
+Generate a callgraph starting from the given scripts.
+If no script is given, generate callgraphs for all scripts in <path>.
+
+Outputs to stdout.
+
+Assumes all scripts are installed in <path>.
+
+Options:
+EOF
+    description | sed 's/^/    /g' >&2
+    cat <<EOF >&2
+
+    output type can be any type supported by dot. In particular:
+        ps, svg, svgz, png, gif and several others
+    If "dot" is specified then the dot script is output.
+
+    If no output is specified then the application relationships are output.
+
+Examples:
+
+    $basename -o svg myscript > mygraph.svg
+    $basename -o svg script1 script2 | display
+    $basename -o dot myscript
+    $basename myscript
+    $basename
+    $basename -o svg > all_scripts.svg
+
+    "display" is an image viewer in the Imagemagick package.
+
+EOF
+    exit
+}
+
+function bye()
+{
+    trap '' SIGHUP SIGINT SIGTERM SIGPIPE # ignore signals
+    for f in $apps_in_dir $words_in_file; do rm -f $f; done
+}
+
+function load_options
+{
+    (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) && usage
+
+    options_path=$default_path
+    options=$( description | comma-options-to-name-value $@ || exit 1 ) \
+        || die "failed to get command line options"
+    comma_path_value_to_var --prefix=options <<< "$options"
+
+    [[ $options_path =~ : ]] && { echo "$basename: <path> supports only a single directory" >&2; exit 1; }
+
+    args=$( echo $options | tr " " "\n" | grep '^"' | sed 's/"//g' )
+}
+
+trap bye EXIT
+
+load_options $@
+
+if [[ $options_output && $options_output != "dot" ]]; then
+    type -p dot > /dev/null || {
+        echo "$basename requires graphviz"
+        echo "Install on Ubuntu with:"
+        echo "$ sudo apt-get install graphviz"
+        exit
+    }
+    output_fn="dot -T$options_output"
+else
+    output_fn="cat"
+fi
+
+apps_in_dir=$( mktemp apps_in_dir.tmp.XXXXXXXX )
+words_in_file=$( mktemp words_in_file.tmp.XXXXXXXX )
+
+all_apps=$( ls $options_path )
+
+todo=${args:-$all_apps}
+
+echo $all_apps | tr ' ' '\n' > $apps_in_dir
+
+(
+    [[ $options_output ]] && echo "digraph callgraph {"
+
+    curr_app=$( echo $todo | cut -f1 -d' ' )
+    todo=$( echo $todo | cut -f2- -d' ' -s )
+
+    while [[ $curr_app ]]; do
+        node=$( echo $curr_app | tr '.-' '_' )
+        if ! echo $done | tr ".-" "_" | egrep -q "\b$node\b"; then
+            [[ $options_output ]] && echo -e "\t$node [label=\"$curr_app\"]"
+            fq_curr_app="$options_path/$curr_app"
+            if file -b $fq_curr_app | grep -q text; then
+                sed -r -f - <<-EOF $fq_curr_app | sort -u > $words_in_file
+                    /^[ \t]*#/d;             # Remove comment-only lines
+                    s/#.*$//;                # Remove in-line comments
+                    /<<EOF/,/^EOF/d;         # Don't look inside here-docs
+                    /^source/d;              # Don't include sourced files
+                    s/[^A-Za-z_-]+/\n/g;     # Break into words
+		EOF
+                for f in $( comm -12 $apps_in_dir $words_in_file ); do
+                    if [[ $f != $curr_app ]]; then
+                        tgt_node=$( echo $f | tr '-' '_' )
+                        if ! echo $todo | tr ".-" "_" | egrep -q "\b$tgt_node\b"; then
+                            todo="$todo $f"
+                        fi
+                        if [[ $options_output ]]; then
+                            echo -e "\t$node -> $tgt_node"
+                        else
+                            echo "$curr_app -> $f"
+                        fi
+                    fi
+                done
+            fi
+        fi
+        done="$done $curr_app"
+        curr_app=$( echo $todo | cut -f1 -d' ' )
+        todo=$( echo $todo | cut -f2- -d' ' -s )
+    done
+
+    [[ $options_output ]] && echo "}"
+) | $output_fn

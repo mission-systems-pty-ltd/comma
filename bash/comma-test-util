@@ -115,7 +115,7 @@ function comma_test_run_tarball()
 
     workdir="$( mktemp --directory --tmpdir "$workname.XXXXXX" || exit 1 )" \
         || { echo "comma_test_run_tarball Error: Could not create temporary '$workname.XXXXXX'" >&2 ; return 1; }
-    trap "comma_test_run_tarball_cleanup $workdir" SIGINT SIGHUP SIGTERM SIGPIPE SIGQUIT EXIT
+    trap "comma_test_run_tarball_cleanup $workdir" EXIT
     echo "comma_test_run_tarball Info: Working Directory is '$workdir'" >&2
     (
         cd "$workdir" || { echo "comma_test_run_tarball Error: Unable to enter working directory '$workdir'" >&2 ; return 1; }

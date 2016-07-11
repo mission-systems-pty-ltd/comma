@@ -11,13 +11,6 @@ csv-to-bin 's[1],4ui' <$dir/test.csv >$dir/test.bin
 lockfile=$dir/lockfile
 message_size=17
 
-# Closes file descriptor 3
-function clean()
-{
-    exec 3>&-
-}
-trap clean EXIT
-
 function run_test()
 {
     local format=$1     # Set for binary data

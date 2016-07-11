@@ -125,24 +125,7 @@ function clean_up()
     if [[ -n "$python_input" ]]; then rm -f "$python_input" ; fi
 }
 
-function bye()
-{
-    clean_up
-    if [[ -z $1 ]] ; then exit 1 ; else exit $1; fi
-}
-
-function signal_handler()
-{
-    local signame=$1
-    clean_up
-    trap - $signame
-    kill -$signame $BASHPID
-}
-
-trap 'signal_handler SIGHUP'  SIGHUP
-trap 'signal_handler SIGINT'  SIGINT
-trap 'signal_handler SIGTERM' SIGTERM
-trap 'signal_handler SIGPIPE' SIGPIPE
+trap clean_up EXIT
 
 test_option=0
 debug=0
@@ -226,5 +209,5 @@ else
     if [[ $test_option == 1 && -s "$out" ]]; then exit_code=1; fi   # producing any output means there was an error
 fi
 
-bye $exit_code
+exit $exit_code
 

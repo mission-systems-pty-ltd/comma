@@ -8,12 +8,6 @@ cd $output_dir
 cat >test.csv
 csv-to-bin 's[1],4ui' <test.csv >test.bin
 
-# Closes file descriptor 3
-function clean()
-{
-    exec 3>&-
-}
-trap clean EXIT
 exec 3<> test.csv
 
 for i in {1..5} ; do
