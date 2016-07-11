@@ -13,7 +13,7 @@ function cleanup()
     rm -f test
 }
 
-trap 'cleanup; exit 1' SIGINT SIGQUIT SIGTERM
+trap 'cleanup' EXIT
 
 comma_path_value_to_var < <( egrep '^test_ticks=|^config_timeout=|^options=' )
 echo "test:  test_ticks='$test_ticks' config_timeout='$config_timeout' options='$options'" >&2
@@ -26,5 +26,3 @@ chmod +x test
 comma-test-run --no-ansiterm-control-characters $options > /dev/null
 ticks=$( tail -1 time_ticks )
 echo "time_ticks=${ticks:-0}"
-cleanup
-exit 0
