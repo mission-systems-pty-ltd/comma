@@ -928,6 +928,14 @@ function final_words()
     [[ "$options_debug" != "0" && -n "$comma_test_run_output_flock" ]] && { echo "$name: detailed breakdown:" >&2 ; cat "$comma_test_run_output_flock" >&2; }
 }
 
+function cleanup()
+{
+    trap '' SIGHUP SIGINT SIGTERM SIGPIPE   # ignore signals
+    stats_finalize
+    final_words
+    clean_working_dir
+}
+
 function parse_multiple_options()
 {
     local option=$1
@@ -1047,7 +1055,7 @@ export test_scripts_count=${#test_script_dirs[@]}
 
 export comma_test_run_unique_dir=
 export comma_test_run_output_flock=
-trap 'stats_finalize; final_words; clean_working_dir' EXIT
+trap cleanup EXIT
 stats_init || { error_ "$name: could not initialize stats"; exit 1; }
 
 # keep all plumbing under a common directory
