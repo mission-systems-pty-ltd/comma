@@ -2,17 +2,6 @@
 
 name=$0
 
-function bye()
-{
-    trap '' SIGTERM SIGINT
-    if [[ -n "$stdout" ]]; then rm -f $stdout; fi
-    if [[ -n "$stderr" ]]; then rm -f $stderr; fi
-    exit $1
-}
-
-unset stdout stderr
-trap 'bye 1' SIGTERM SIGINT
-
 if [[ $name = */* ]]; then dir="${name%/*}"; else dir="."; fi
 data_dir="$dir/data"
 
@@ -21,12 +10,12 @@ if [[ ! -d "$data_dir" ]]; then
     exit 1
 fi
 
-tmpdir="/tmp"
+tmpdir="output/tmp"
+mkdir $tmpdir
 verbose=0
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --tmpdir=*)   tmpdir="${1#*=}";;
         -v|--verbose) verbose=1;;
         -p=*|--path=*) :;;
         -*)           echo "$name: unrecognized option '$1'" >&2; exit 1;;
@@ -36,20 +25,15 @@ while [[ $# -gt 0 ]]; do
 done
 
 variables="$data_dir/variable_vals"
-stdout="$tmpdir/name_value_eval_stdout_$$.tmp"
-stderr="$tmpdir/name_value_eval_stderr_$$.tmp"
-
-if ! touch $stdout; then
-    echo "$name: cannot access temp directory $tmpdir" >&2
-    exit 1
-fi
-
 pass_count=0
 total_count=0
+
 for input in $data_dir/input*; do
     (( ++total_count ))
     suffix=${input#*input_}
     if (( verbose )); then echo "$name: running test $suffix" >&2; fi
+    stdout="$tmpdir/stdout.$suffix"
+    stderr="$tmpdir/stderr.$suffix"
     cat $input | name-value-eval --variables=$variables --test > $stdout 2> $stderr
     if ! cmp --quiet $stdout $data_dir/stdout_$suffix; then
         echo "$name: test failed for input_$suffix (stdout is different):" >&2
