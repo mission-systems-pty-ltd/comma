@@ -17,9 +17,13 @@ input fields:
     1) full xpath input fields are not allowed
     2) for ascii streams, input fields are treated as floating point numbers, unless --format is given
 
+update fields:
+    1) inferred from expressions (by default) or specified by --update-fields
+    2) used to modify input values in place
+
 output fields:
     1) inferred from expressions (by default) or specified by --output-fields
-    2) appended to unmodified input
+    2) appended to possibly modified input
     3) treated as floating point numbers, unless --output-format is given
 
 examples:
@@ -118,6 +122,11 @@ def add_csv_options(parser):
         default='',
         metavar='<format>',
         help="format of output fields (by default, 'd' for each)")
+    parser.add_argument(
+        '--update-fields',
+        default=None,
+        metavar='<names>',
+        help="do not infer update fields from expressions; use specified fields instead")
     # the options defined below are left for compatibility
     # use --output-fields and --output-format instead
     parser.add_argument('--append-fields', '-F', help=argparse.SUPPRESS)
@@ -264,7 +273,8 @@ def prepare_options(args):
         return
     input_fields = args.fields.split(',')
     expr_fields = fields_from_expressions(args.expressions).split(',')
-    args.update_fields = ','.join(f for f in expr_fields if f in input_fields)
+    if args.update_fields is None:
+        args.update_fields = ','.join(f for f in expr_fields if f in input_fields)
     if args.output_fields is None:
         args.output_fields = ','.join(f for f in expr_fields if f not in input_fields)
     args.output_format = format_without_blanks(args.output_format, args.output_fields)
@@ -315,8 +325,8 @@ class stream(object):
             raise csv_eval_error("specify input stream fields, e.g. --fields=x,y")
         check_fields(self.nonblank_input_fields)
         types = comma.csv.format.to_numpy(self.args.format)
-        input_t = comma.csv.struct(fields, *types)
-        self.input = comma.csv.stream(input_t, **self.csv_options)
+        self.input_t = comma.csv.struct(fields, *types)
+        self.input = comma.csv.stream(self.input_t, **self.csv_options)
 
     def initialize_update_and_output(self):
         if self.args.select:
@@ -324,9 +334,11 @@ class stream(object):
         if self.args.update_fields:
             all_types = comma.csv.format.to_numpy(self.args.format)
             index = self.args.fields.split(',').index
+            check_update_fields(self.args.update_fields, self.nonblank_input_fields)
             update_types = [all_types[index(f)] for f in self.args.update_fields.split(',')]
             self.update_t = comma.csv.struct(self.args.update_fields, *update_types)
         if self.args.output_fields:
+            check_output_fields(self.args.output_fields, self.nonblank_input_fields)
             output_types = comma.csv.format.to_numpy(self.args.output_format)
             self.output_t = comma.csv.struct(self.args.output_fields, *output_types)
             self.output = comma.csv.stream(self.output_t,
@@ -334,19 +346,20 @@ class stream(object):
                                            **self.csv_options)
 
     def print_info(self, file=sys.stderr):
-        fields = ','.join(self.input.struct.fields)
-        format = self.input.struct.format
+        fields = ','.join(self.input_t.fields)
+        format = self.input_t.format
         print >> file, "expressions: '{}'".format(self.args.expressions)
         print >> file, "select: '{}'".format(self.args.select)
         print >> file, "input fields: '{}'".format(fields)
         print >> file, "input format: '{}'".format(format)
-        if not self.args.select:
-            update_fields = self.args.update_fields
-            output_fields = self.args.output_fields
-            output_format = self.output_t.format if self.args.output_fields else ''
-            print >> file, "update fields: '{}'".format(update_fields)
-            print >> file, "output fields: '{}'".format(output_fields)
-            print >> file, "output format: '{}'".format(output_format)
+        if self.args.select:
+            return
+        update_fields = ','.join(self.update_t.fields) if self.args.update_fields else ''
+        output_fields = ','.join(self.output_t.fields) if self.args.output_fields else ''
+        output_format = self.output_t.format if self.args.output_fields else ''
+        print >> file, "update fields: '{}'".format(update_fields)
+        print >> file, "output fields: '{}'".format(output_fields)
+        print >> file, "output format: '{}'".format(output_format)
 
 
 def check_fields(fields):
@@ -357,6 +370,24 @@ def check_fields(fields):
             raise csv_eval_error("'{}' is a reserved name".format(field))
         if field in np.__dict__:
             raise csv_eval_error("'{}' is a reserved numpy name".format(field))
+
+
+def check_update_fields(fields, input_fields):
+    check_fields(fields)
+    if set(fields.split(',')).issubset(input_fields.split(',')):
+        return
+    bad_fields = ','.join(set(fields.split(',')).difference(input_fields.split(',')))
+    msg = "update fields '{}' are not in input fields '{}'".format(bad_fields, input_fields)
+    raise csv_eval_error(msg)
+
+
+def check_output_fields(fields, input_fields):
+    check_fields(fields)
+    if not set(fields.split(',')).intersection(input_fields.split(',')):
+        return
+    fields = ','.join(set(fields.split(',')).intersection(input_fields.split(',')))
+    msg = "output fields '{}' are in input fields '{}'".format(fields, input_fields)
+    raise csv_eval_error(msg)
 
 
 def disperse(var, fields):
