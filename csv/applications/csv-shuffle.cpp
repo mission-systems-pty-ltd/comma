@@ -102,6 +102,7 @@ int main( int ac, char** av )
         std::vector< field > fields;
         for( unsigned int i = 0; i < output_fields.size(); ++i )
         {
+            if( output_fields[i].empty() ) { continue; }
             fields.push_back( field( output_fields[i], i ) );
         }
         if( fields.empty() ) { std::cerr << "csv-shuffle: please define at least one output field" << std::endl; return 1; }
@@ -109,7 +110,7 @@ int main( int ac, char** av )
         {
             for( unsigned int j = 0; j < fields.size(); ++j )
             {
-                if( fields[j].name.empty() || fields[j].name != input_fields[i] ) { continue; }
+                if( fields[j].name != input_fields[i] ) { continue; }
                 fields[j].input_index = i;
                 if( csv.binary() )
                 {
@@ -120,7 +121,7 @@ int main( int ac, char** av )
         }
         for( unsigned int i = 0; i < fields.size(); ++i )
         {
-            if( !fields[i].name.empty() && !fields[i].input_index ) { std::cerr << "csv-shuffle: \"" << fields[i].name << "\" not found in input fields " << csv.fields << std::endl; return 1; }
+            if( !fields[i].input_index ) { std::cerr << "csv-shuffle: \"" << fields[i].name << "\" not found in input fields " << csv.fields << std::endl; return 1; }
         }
         if( csv.binary() )
         {
@@ -142,7 +143,6 @@ int main( int ac, char** av )
                 unsigned int previous_index = 0;
                 for( unsigned int i = 0; i < fields.size(); ++i ) // quick and dirty
                 {
-                    if ( fields[i].name.empty() ) { std::cerr << "csv-shuffle: empty output fields are not supported in binary mode" << std::endl; return 1; }
                     for( unsigned int k = previous_index; k < fields[i].index && k < elements.size(); ++k )
                     {
                         std::cout.write( &buf[ elements[k].offset ], elements[k].size );
@@ -178,7 +178,7 @@ int main( int ac, char** av )
                     }
                     previous_index = fields[i].index + 1;
                     std::cout << delimiter;
-                    if ( fields[i].input_index && *fields[i].input_index < v.size() ) { std::cout << v[ *fields[i].input_index ]; }
+                    if ( *fields[i].input_index < v.size() ) { std::cout << v[ *fields[i].input_index ]; }
                     delimiter = csv.delimiter;
                 }
                 for( unsigned int k = previous_index; output_trailing_fields && k < v.size(); ++k )
