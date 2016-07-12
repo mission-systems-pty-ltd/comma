@@ -93,7 +93,7 @@ function load_options
 
     options_path=$default_path
     options=$( description | comma-options-to-name-value $@ || exit 1 ) \
-        || die "failed to get command line options"
+        || { echo "$basename: failed to get command line options" >&2; exit 1; }
     comma_path_value_to_var --prefix=options <<< "$options"
 
     [[ $options_path =~ : ]] && { echo "$basename: <path> supports only a single directory" >&2; exit 1; }
