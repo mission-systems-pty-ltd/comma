@@ -1,0 +1,6 @@
+variables/positive/none/status=0
+variables/positive/some/status=0
+
+variables/negative[0]/status=1
+variables/negative[1]/status=1
+variables/negative[2]/status=1

@@ -1,0 +1,6 @@
+#!/bin/bash
+
+source $( type -p comma-test-util )
+source $( type -p comma-name-value-util )
+
+comma_test_commands

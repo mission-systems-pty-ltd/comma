@@ -1,0 +1,16 @@
+variables/positive/none="comma_assert_defined < <( echo )"
+variables/positive/some="a=1 ; b=2 ; comma_assert_defined < <( echo a ; echo b )"
+
+variables/negative[0]="unset a ; comma_assert_defined < <( echo a )"
+variables/negative[1]="unset a ; b=2; comma_assert_defined < <( echo a ; echo b )"
+variables/negative[2]="unset a ; b=2; comma_assert_defined < <( echo b ; echo a )"
+
+paths/positive/none="comma_path_assert_defined < <( echo )"
+paths/positive/some="a=1 ; b_c=2 ; comma_path_assert_defined < <( echo a ; echo b/c )"
+paths/positive/prefix="xxx_a=1 ; xxx_b_c=2 ; comma_path_assert_defined xxx < <( echo a ; echo b/c )"
+
+paths/negative[0]="a=1 ; b_c=2 ; comma_path_assert_defined < <( echo a ; echo b/c ; echo e/f )"
+paths/negative[1]="a=1 ; b_c=2 ; comma_path_assert_defined < <( echo a ; echo e/f ; echo b/c )"
+paths/negative[2]="a=1 ; b_c=2 ; comma_path_assert_defined < <( echo e/f ; echo a ; echo b/c )"
+paths/negative[3]="xxx_b_c=2 ; comma_path_assert_defined xxx < <( echo a ; echo b/c )"
+paths/negative[4]="xxx_b_c=2 ; a=5 ; comma_path_assert_defined xxx < <( echo a ; echo b/c )"
