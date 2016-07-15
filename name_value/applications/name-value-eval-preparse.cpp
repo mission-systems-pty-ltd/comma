@@ -37,7 +37,7 @@
 #include <algorithm>
 #include <string>
 #include <cctype>
-#include <comma/application/command_line_options.h>
+#include "../../application/command_line_options.h"
 
 // name of executable (will be set to argv[0])
 static const char *exec_name = "";

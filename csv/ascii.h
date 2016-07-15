@@ -33,13 +33,12 @@
 #ifndef COMMA_CSV_ASCII_HEADER_GUARD_
 #define COMMA_CSV_ASCII_HEADER_GUARD_
 
-//#include <comma/base/exception.h>
-#include <comma/csv/names.h>
-#include <comma/csv/options.h>
-#include <comma/csv/impl/ascii_visitor.h>
-#include <comma/csv/impl/from_ascii.h>
-#include <comma/csv/impl/to_ascii.h>
-#include <comma/string/string.h>
+#include "../string/string.h"
+#include "names.h"
+#include "options.h"
+#include "impl/ascii_visitor.h"
+#include "impl/from_ascii.h"
+#include "impl/to_ascii.h"
 
 namespace comma { namespace csv {
 

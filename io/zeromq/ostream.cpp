@@ -29,7 +29,7 @@
 
 /// @author cedric wohlleber
 
-#include <comma/io/zeromq/ostream.h>
+#include "ostream.h"
 
 namespace comma { namespace io { namespace zeromq {
 

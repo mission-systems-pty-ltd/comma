@@ -30,7 +30,6 @@
 
 /// @author cedric wohlleber
 
-#include <comma/io/zeromq/istream.h>
 #include "istream.h"
 
 namespace comma { namespace io { namespace zeromq {

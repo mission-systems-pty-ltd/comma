@@ -27,17 +27,14 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
+#include <cstdio>
+#include <fstream>
 #include <gtest/gtest.h>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/local/stream_protocol.hpp>
 #include <boost/filesystem/operations.hpp>
-#include <comma/io/select.h>
-#include <comma/io/stream.h>
-#include <boost/concept_check.hpp>
-
-#include <cstdio>
-#include <fstream>
+#include "../select.h"
+#include "../stream.h"
 
 TEST( io, file_stream )
 {

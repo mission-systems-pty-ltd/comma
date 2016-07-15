@@ -33,7 +33,7 @@
 #ifndef COMMA_VISITING_VISIT_HEADER_GUARD_
 #define COMMA_VISITING_VISIT_HEADER_GUARD_
 
-#include <comma/visiting/traits.h>
+#include "traits.h"
 
 namespace comma { namespace visiting {
     

@@ -35,8 +35,8 @@
 #include <set>
 #include <vector>
 #include <boost/noncopyable.hpp>
-#include <comma/visiting/apply.h>
-#include <comma/visiting/visit.h>
+#include "../apply.h"
+#include "../visit.h"
 
 namespace comma { namespace visiting { namespace test {
 

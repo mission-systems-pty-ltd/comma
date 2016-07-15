@@ -29,9 +29,9 @@
 
 
 #include <gtest/gtest.h>
-#include <comma/name_value/serialize.h>
-#include <comma/visiting/traits.h>
-#include <comma/xpath/xpath.h>
+#include "../../name_value/serialize.h"
+#include "../../visiting/traits.h"
+#include "../../xpath/xpath.h"
 
 struct nested
 {

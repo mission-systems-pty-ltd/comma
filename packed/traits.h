@@ -31,7 +31,7 @@
 
 #include "big_endian.h"
 #include <boost/array.hpp>
-#include <comma/visiting/traits.h>
+#include "../visiting/traits.h"
 
 namespace comma { namespace visiting {
 
@@ -39,10 +39,7 @@ template < typename T, std::size_t N > struct traits< boost::array<comma::packed
 {
     template< typename K, typename V > static void visit( const K& k, const boost::array<comma::packed::detail::big_endian<T>, N>& t, V& v )
     {
-        for( std::size_t i=0;i<t.size();i++)
-        {
-            v.apply( i, t[i]() );
-        }
+        for( std::size_t i = 0; i < t.size(); i++ ) { v.apply( i, t[i]() ); }
     }
 };
 

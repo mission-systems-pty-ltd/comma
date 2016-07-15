@@ -35,9 +35,9 @@
 #define COMMA_PACKED_LITTLEENDIAN_H_
 
 #include <boost/static_assert.hpp>
-#include <comma/base/exception.h>
-#include <comma/base/types.h>
-#include <comma/packed/field.h>
+#include "../base/exception.h"
+#include "../base/types.h"
+#include "field.h"
 
 namespace comma { namespace packed {
 

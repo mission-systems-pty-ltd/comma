@@ -40,8 +40,8 @@
 #include <boost/function.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
-#include <comma/base/exception.h>
-#include <comma/string/string.h>
+#include "../base/exception.h"
+#include "../string/string.h"
 
 namespace comma {
 

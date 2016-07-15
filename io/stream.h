@@ -37,7 +37,7 @@
 #include <string>
 #include <boost/function.hpp>
 #include <boost/noncopyable.hpp>
-#include <comma/io/file_descriptor.h>
+#include "file_descriptor.h"
 
 namespace comma { namespace io {
 

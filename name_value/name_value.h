@@ -27,12 +27,8 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#pragma once
 
-#ifndef COMMA_NAME_VALUE_NAME_VALUE_H_
-#define COMMA_NAME_VALUE_NAME_VALUE_H_
-
-#include <comma/name_value/map.h>
-#include <comma/name_value/parser.h>
-#include <comma/name_value/ptree.h>
-
-#endif // #ifndef COMMA_NAME_VALUE_NAME_VALUE_H_
+#include "map.h"
+#include "parser.h"
+#include "ptree.h"

@@ -38,8 +38,8 @@
 #include "string.h"
 #endif
 
-#include <comma/base/exception.h>
-#include "comma/base/last_error.h"
+#include "exception.h"
+#include "last_error.h"
 
 namespace comma {
 

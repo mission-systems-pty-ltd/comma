@@ -29,7 +29,7 @@
 
 
 #include <gtest/gtest.h>
-#include <comma/containers/cyclic_buffer.h>
+#include "../cyclic_buffer.h"
 
 namespace comma {
 

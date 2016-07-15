@@ -44,7 +44,7 @@
 #endif
 
 #include <boost/static_assert.hpp>
-#include <comma/packed/field.h>
+#include "field.h"
 
 namespace comma { namespace packed {
 

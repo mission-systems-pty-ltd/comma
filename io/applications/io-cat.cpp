@@ -37,14 +37,14 @@
 #include <vector>
 #include <boost/asio/ip/udp.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
-#include <comma/application/command_line_options.h>
-#include <comma/application/contact_info.h>
-#include <comma/application/signal_flag.h>
-#include <comma/base/exception.h>
-#include <comma/base/types.h>
-#include <comma/io/stream.h>
-#include <comma/io/select.h>
-#include <comma/string/string.h>
+#include "../../application/command_line_options.h"
+#include "../../application/contact_info.h"
+#include "../../application/signal_flag.h"
+#include "../../base/exception.h"
+#include "../../base/types.h"
+#include "../../io/stream.h"
+#include "../../io/select.h"
+#include "../../string/string.h"
 
 void usage( bool verbose = false )
 {

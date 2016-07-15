@@ -30,7 +30,7 @@
 /// @author vsevolod vlaskine
 
 #include <iostream>
-#include <comma/application/command_line_options.h>
+#include "../command_line_options.h"
 
 void usage()
 {

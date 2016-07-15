@@ -33,7 +33,7 @@
 #pragma once
 
 #include "interval.h"
-#include <comma/visiting/traits.h>
+#include "../visiting/traits.h"
 
 namespace comma { namespace visiting {
 

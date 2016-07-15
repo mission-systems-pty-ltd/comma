@@ -42,9 +42,9 @@
 #include <boost/bind.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/lexical_cast.hpp>
-#include <comma/base/exception.h>
-#include <comma/io/file_descriptor.h>
-#include <comma/string/string.h>
+#include "../../base/exception.h"
+#include "../../io/file_descriptor.h"
+#include "../../string/string.h"
 #include "publisher.h"
 
 namespace comma { namespace io { namespace impl {

@@ -39,11 +39,11 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/static_assert.hpp>
-#include <comma/application/contact_info.h>
-#include <comma/application/command_line_options.h>
-#include <comma/application/signal_flag.h>
-#include <comma/base/types.h>
-#include <comma/csv/format.h>
+#include "../../application/contact_info.h"
+#include "../../application/command_line_options.h"
+#include "../../application/signal_flag.h"
+#include "../../base/types.h"
+#include "../../csv/format.h"
 
 void usage()
 {

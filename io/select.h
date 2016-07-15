@@ -45,8 +45,8 @@
 #include <set>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/unordered_set.hpp>
-#include <comma/base/exception.h>
-#include "comma/io/file_descriptor.h"
+#include "../base/exception.h"
+#include "file_descriptor.h"
 
 namespace comma { namespace io {
 

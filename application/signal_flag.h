@@ -36,7 +36,7 @@
 #include <csignal>
 #include <boost/array.hpp>
 #include <boost/noncopyable.hpp>
-#include <comma/base/exception.h>
+#include "../base/exception.h"
 
 namespace comma {
 

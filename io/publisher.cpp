@@ -30,7 +30,7 @@
 
 /// @author vsevolod vlaskine
 
-#include <comma/io/publisher.h>
+#include "publisher.h"
 
 namespace comma { namespace io {
 

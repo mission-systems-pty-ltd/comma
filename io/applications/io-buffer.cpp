@@ -47,15 +47,15 @@
 #include <boost/interprocess/sync/file_lock.hpp>
 #include <boost/interprocess/sync/scoped_lock.hpp>
 #include <boost/algorithm/string.hpp>
-#include <comma/application/command_line_options.h>
-#include <comma/application/contact_info.h>
-#include <comma/application/signal_flag.h>
-#include <comma/base/exception.h>
-#include <comma/base/types.h>
-#include <comma/io/stream.h>
-#include <comma/io/select.h>
-#include <comma/string/string.h>
-#include <comma/csv/stream.h>
+#include "../../application/command_line_options.h"
+#include "../../application/contact_info.h"
+#include "../../application/signal_flag.h"
+#include "../../base/exception.h"
+#include "../../base/types.h"
+#include "../../io/stream.h"
+#include "../../io/select.h"
+#include "../../string/string.h"
+#include "../../csv/stream.h"
 
 void usage( bool verbose = false )
 {

@@ -28,7 +28,7 @@
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-#include <comma/base/exception.h>
+#include "../../base/exception.h"
 #include "../string.h"
 #include "../split.h"
 #include <list>

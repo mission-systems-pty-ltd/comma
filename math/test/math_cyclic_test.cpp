@@ -29,7 +29,7 @@
 
 
 #include <gtest/gtest.h>
-#include <comma/math/cyclic.h>
+#include "../cyclic.h"
 
 namespace comma { namespace math {
 

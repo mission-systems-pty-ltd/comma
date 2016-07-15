@@ -43,11 +43,11 @@
 #include <boost/scoped_ptr.hpp>
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
-#include <comma/application/contact_info.h>
-#include <comma/application/command_line_options.h>
-#include <comma/application/signal_flag.h>
-#include <comma/base/last_error.h>
-#include <comma/string/string.h>
+#include "../../application/contact_info.h"
+#include "../../application/command_line_options.h"
+#include "../../application/signal_flag.h"
+#include "../../base/last_error.h"
+#include "../../string/string.h"
 #include "publish.h"
 
 //#include <google/profiler.h>

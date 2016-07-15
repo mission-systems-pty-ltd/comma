@@ -32,8 +32,8 @@
 
 #include <sstream>
 #include <boost/lexical_cast.hpp>
-#include <comma/base/exception.h>
-#include <comma/string/split.h>
+#include "../base/exception.h"
+#include "../string/split.h"
 #include "xpath.h"
 
 #include <iostream>

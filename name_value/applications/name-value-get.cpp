@@ -38,13 +38,13 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/regex.hpp>
-#include <comma/base/exception.h>
-#include <comma/application/contact_info.h>
-#include <comma/application/command_line_options.h>
-#include <comma/application/signal_flag.h>
-#include <comma/name_value/ptree.h>
-#include <comma/name_value/serialize.h>
-#include <comma/xpath/xpath.h>
+#include "../../base/exception.h"
+#include "../../application/contact_info.h"
+#include "../../application/command_line_options.h"
+#include "../../application/signal_flag.h"
+#include "../../name_value/ptree.h"
+#include "../../name_value/serialize.h"
+#include "../../xpath/xpath.h"
 
 static const std::string regex_characters_ =  ".{}()\\*+?|^$";
 

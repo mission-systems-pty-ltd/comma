@@ -35,8 +35,8 @@
 
 #include <map>
 #include <boost/shared_ptr.hpp>
-#include <comma/containers/cyclic_buffer.h>
-#include <comma/io/publisher.h>
+#include "../../containers/cyclic_buffer.h"
+#include "../../io/publisher.h"
 
 namespace comma { namespace io { namespace applications {
 

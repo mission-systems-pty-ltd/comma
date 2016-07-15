@@ -31,7 +31,7 @@
 #include <string>
 #include <vector>
 #include <boost/shared_ptr.hpp>
-#include <comma/dispatch/dispatched.h>
+#include "../dispatched.h"
 #include <gtest/gtest.h>
 
 namespace comma { namespace test {

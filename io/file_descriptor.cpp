@@ -30,8 +30,8 @@
 
 /// @author vsevolod vlaskine
 
-#include <comma/base/exception.h>
-#include "comma/io/file_descriptor.h"
+#include "../base/exception.h"
+#include "file_descriptor.h"
 
 namespace comma { namespace io {
 

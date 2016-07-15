@@ -31,7 +31,7 @@
 #include <gtest/gtest.h>
 #include <boost/date_time/posix_time/ptime.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <comma/containers/vector.h>
+#include "../vector.h"
 
 namespace comma {
 

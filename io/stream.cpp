@@ -52,14 +52,14 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <comma/base/exception.h>
-#include <comma/io/file_descriptor.h>
-#include <comma/io/select.h>
-#include <comma/io/stream.h>
-#include <comma/string/string.h>
+#include "../base/exception.h"
+#include "../string/string.h"
+#include "file_descriptor.h"
+#include "select.h"
+#include "stream.h"
 
 #ifdef USE_ZEROMQ
-#include <comma/io/zeromq/stream.h>
+#include "zeromq/stream.h"
 #endif
 
 namespace comma { namespace io {

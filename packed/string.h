@@ -27,7 +27,6 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author Matthew Herrmann 2007
 /// @author Vsevolod Vlaskine 2010-2011
 /// @author Dewey Nguyen 2014-2014
@@ -36,12 +35,12 @@
 #define COMMA_PACKED_STRING_H_
 
 #include <cmath>
+#include <iomanip>
 #include <string>
 #include <boost/lexical_cast.hpp>
-#include <comma/base/exception.h>
-#include <comma/packed/field.h>
-#include <comma/string/string.h>
-#include <iomanip>
+#include "../base/exception.h"
+#include "../string/string.h"
+#include "field.h"
 
 namespace comma { namespace packed {
 

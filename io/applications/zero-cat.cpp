@@ -41,10 +41,10 @@
 #include <boost/array.hpp>
 #include <boost/program_options.hpp>
 #include <boost/thread.hpp>
-#include <comma/application/contact_info.h>
-#include <comma/application/signal_flag.h>
-#include <comma/io/publisher.h>
-#include <comma/string/string.h>
+#include "../../application/contact_info.h"
+#include "../../application/signal_flag.h"
+#include "../../io/publisher.h"
+#include "../../string/string.h"
 
 void usage( boost::program_options::options_description const & description, bool const verbose )
 {

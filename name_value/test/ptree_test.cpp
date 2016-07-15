@@ -33,10 +33,10 @@
 #include <boost/optional.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/xml_parser.hpp>
-#include <comma/base/types.h>
-#include <comma/name_value/ptree.h>
-#include <comma/name_value/serialize.h>
-#include <comma/visiting/apply.h>
+#include "../../base/types.h"
+#include "../../name_value/ptree.h"
+#include "../../name_value/serialize.h"
+#include "../../visiting/apply.h"
 
 namespace comma { namespace test {
 

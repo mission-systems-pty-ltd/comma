@@ -29,8 +29,8 @@
 
 
 #include <gtest/gtest.h>
-#include <comma/xpath/xpath.h>
-#include <comma/base/exception.h>
+#include "../../base/exception.h"
+#include "../xpath.h"
 
 TEST( xpath, contruction )
 {

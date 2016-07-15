@@ -34,13 +34,12 @@
 #define COMMA_CSV_BINARY_HEADER_GUARD_
 
 #include <boost/optional.hpp>
-//#include <comma/base/exception.h>
-#include <comma/csv/names.h>
-#include <comma/csv/options.h>
-#include <comma/csv/impl/binary_visitor.h>
-#include <comma/csv/impl/from_binary.h>
-#include <comma/csv/impl/to_binary.h>
-#include <comma/string/string.h>
+#include "../string/string.h"
+#include "names.h"
+#include "options.h"
+#include "impl/binary_visitor.h"
+#include "impl/from_binary.h"
+#include "impl/to_binary.h"
 
 namespace comma { namespace csv {
 

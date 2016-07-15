@@ -32,8 +32,8 @@
 
 #pragma once
 
-#include <comma/base/exception.h>
-#include <comma/math/compare.h>
+#include "../base/exception.h"
+#include "../math/compare.h"
 
 namespace comma { namespace math {
 

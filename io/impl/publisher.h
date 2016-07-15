@@ -36,9 +36,9 @@
 #include <set>
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
-#include <comma/io/file_descriptor.h>
-#include <comma/io/select.h>
-#include <comma/io/stream.h>
+#include "../file_descriptor.h"
+#include "../select.h"
+#include "../stream.h"
 
 namespace comma { namespace io { namespace impl {
 

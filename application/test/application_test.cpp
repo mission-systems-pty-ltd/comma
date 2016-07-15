@@ -29,8 +29,8 @@
 
 #include <limits>
 #include <gtest/gtest.h>
-#include <comma/application/command_line_options.h>
-#include <comma/application/signal_flag.h>
+#include "../command_line_options.h"
+#include "../signal_flag.h"
 
 TEST( application, command_line_options )
 {

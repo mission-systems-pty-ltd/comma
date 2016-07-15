@@ -28,7 +28,7 @@
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <iostream>
-#include <comma/application/command_line_options.h>
+#include "../command_line_options.h"
 
 void usage()
 {

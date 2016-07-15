@@ -34,7 +34,7 @@
 #define COMMA_BASE_LAST_ERROR_HEADER
 
 #include <string>
-#include <comma/base/exception.h>
+#include "exception.h"
 
 namespace comma {
 

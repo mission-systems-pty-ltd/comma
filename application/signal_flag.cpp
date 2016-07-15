@@ -30,7 +30,7 @@
 
 /// @author vsevolod vlaskine
 
-#include "comma/application/signal_flag.h"
+#include "signal_flag.h"
 
 namespace comma {
 

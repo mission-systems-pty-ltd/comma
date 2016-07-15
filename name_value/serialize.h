@@ -38,9 +38,9 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/property_tree/ini_parser.hpp>
-#include <comma/base/exception.h>
-#include <comma/xpath/xpath.h>
-#include <comma/visiting/apply.h>
+#include "../base/exception.h"
+#include "../xpath/xpath.h"
+#include "../visiting/apply.h"
 
 #include "ptree.h"
 

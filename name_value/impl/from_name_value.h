@@ -41,11 +41,11 @@
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/type_traits.hpp>
-#include <comma/base/types.h>
-#include <comma/string/string.h>
-#include <comma/visiting/while.h>
-#include <comma/visiting/visit.h>
-#include <comma/xpath/xpath.h>
+#include "../../base/types.h"
+#include "../../string/string.h"
+#include "../../visiting/while.h"
+#include "../../visiting/visit.h"
+#include "../../xpath/xpath.h"
 
 namespace comma { namespace name_value { namespace impl {
 

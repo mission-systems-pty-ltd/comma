@@ -29,7 +29,7 @@
 
 
 #include <gtest/gtest.h>
-#include <comma/math/interval.h>
+#include "../interval.h"
 
 namespace comma { namespace math {
 

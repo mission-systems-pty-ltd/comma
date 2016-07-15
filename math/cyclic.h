@@ -34,9 +34,9 @@
 #define COMMA_MATH_CYCLIC_H_
 
 #include <iostream>
-#include <comma/base/exception.h>
-#include <comma/math/compare.h>
-#include <comma/math/interval.h>
+#include "../base/exception.h"
+#include "../math/compare.h"
+#include "../math/interval.h"
 
 namespace comma { namespace math {
 

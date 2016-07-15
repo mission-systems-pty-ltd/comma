@@ -27,14 +27,10 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#pragma once
 
-#ifndef COMMA_PACKED_PACKED_HEADER_H_
-#define COMMA_PACKED_PACKED_HEADER_H_
-
-#include <comma/packed/byte.h>
-#include <comma/packed/little_endian.h>
-#include <comma/packed/big_endian.h>
-#include <comma/packed/string.h>
-#include <comma/packed/struct.h>
-
-#endif // COMMA_PACKED_PACKED_HEADER_H_
+#include "byte.h"
+#include "little_endian.h"
+#include "big_endian.h"
+#include "string.h"
+#include "struct.h"

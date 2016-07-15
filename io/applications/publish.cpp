@@ -39,8 +39,8 @@
 #include <errno.h>
 #include <string.h>
 
-#include <comma/base/last_error.h>
-#include <comma/io/file_descriptor.h>
+#include "../../base/last_error.h"
+#include "../../io/file_descriptor.h"
 #include "publish.h"
 
 namespace comma { namespace io { namespace applications {

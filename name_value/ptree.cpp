@@ -41,12 +41,12 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/unordered_set.hpp>
-#include <comma/base/exception.h>
-#include <comma/base/types.h>
-#include <comma/string/string.h>
-#include <comma/xpath/xpath.h>
-#include <comma/visiting/visit.h>
-#include <comma/visiting/while.h>
+#include "../base/exception.h"
+#include "../base/types.h"
+#include "../string/string.h"
+#include "../xpath/xpath.h"
+#include "../visiting/visit.h"
+#include "../visiting/while.h"
 
 #include "ptree.h"
 

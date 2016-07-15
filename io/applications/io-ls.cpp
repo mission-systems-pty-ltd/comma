@@ -1,7 +1,7 @@
-#include <comma/application/command_line_options.h>
-#include <comma/application/verbose.h>
-#include <comma/csv/stream.h>
-#include <comma/visiting/traits.h>
+#include "../../application/command_line_options.h"
+#include "../../application/verbose.h"
+#include "../../csv/stream.h"
+#include "../../visiting/traits.h"
 #include <boost/optional.hpp>
 #include <iostream>
 #include <fstream>

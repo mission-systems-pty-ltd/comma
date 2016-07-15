@@ -36,8 +36,8 @@
 #include <vector>
 #include <boost/optional.hpp>
 #include <boost/shared_ptr.hpp>
-#include <comma/base/exception.h>
-#include <comma/math/cyclic.h>
+#include "../base/exception.h"
+#include "../math/cyclic.h"
 
 namespace comma {
 

@@ -37,8 +37,8 @@
 #include <limits>
 #include <string.h>
 #include <boost/static_assert.hpp>
-#include <comma/packed/field.h>
-#include <comma/base/types.h>
+#include "../packed/field.h"
+#include "../base/types.h"
 #include <boost/type_traits.hpp>
 
 namespace comma { namespace packed {

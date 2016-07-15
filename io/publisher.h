@@ -36,8 +36,8 @@
 #include <stdlib.h>
 #include <string>
 #include <boost/noncopyable.hpp>
-#include <comma/io/stream.h>
-#include <comma/io/impl/publisher.h>
+#include "stream.h"
+#include "impl/publisher.h"
 
 namespace comma { namespace io {
 

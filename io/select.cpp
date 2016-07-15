@@ -35,9 +35,9 @@
 #endif
 
 #include <string>
-#include <comma/base/exception.h>
-#include <comma/base/last_error.h>
-#include <comma/io/select.h>
+#include "../base/exception.h"
+#include "../base/last_error.h"
+#include "select.h"
 
 namespace comma { namespace io {
     

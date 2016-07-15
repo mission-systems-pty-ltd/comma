@@ -36,8 +36,8 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
 #include <boost/type_traits.hpp>
-#include <comma/visiting/visit.h>
-#include <comma/visiting/while.h>
+#include "../visiting/visit.h"
+#include "../visiting/while.h"
 
 namespace comma {
 

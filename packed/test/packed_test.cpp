@@ -35,13 +35,13 @@
 #include <iostream>
 #include <gtest/gtest.h>
 #include <boost/array.hpp>
-#include <comma/packed/packed.h>
-#include <comma/math/compare.h>
-#include <comma/packed/bits.h>
-#include <comma/base/types.h>
-#include <comma/visiting/traits.h>
-#include <comma/csv/stream.h>
-#include <comma/csv/options.h>
+#include "../../packed/packed.h"
+#include "../../math/compare.h"
+#include "../../packed/bits.h"
+#include "../../base/types.h"
+#include "../../visiting/traits.h"
+#include "../../csv/stream.h"
+#include "../../csv/options.h"
 
 struct test_packed_struct_t : public comma::packed::packed_struct< test_packed_struct_t, 16 >
 {

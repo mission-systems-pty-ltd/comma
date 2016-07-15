@@ -30,8 +30,8 @@
 
 /// @author cedric wohlleber
 
-#include <comma/io/zeromq/istream.h>
-#include <comma/io/zeromq/ostream.h>
+#include "istream.h"
+#include "ostream.h"
 #include <boost/thread/thread.hpp>
 #include <iostream>
 
