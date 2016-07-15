@@ -30,10 +30,8 @@
 
 /// @author vsevolod vlaskine
 
-#ifndef COMMA_MATH_INTERVAL_H_
-#define COMMA_MATH_INTERVAL_H_
+#pragma once
 
-#include <iostream>
 #include <comma/base/exception.h>
 #include <comma/math/compare.h>
 
@@ -163,4 +161,3 @@ inline T mod( T t, const interval< T >& r )
 
 } } // namespace comma { namespace math {
 
-#endif // COMMA_MATH_INTERVAL_H_
