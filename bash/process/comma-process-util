@@ -95,6 +95,16 @@ function comma_process_signature()
 export -f comma_process_signature
 declare -r comma_process_signature
 
+## @page comma_get_trap comma_get_trap
+#@ brief get the trap command(s) for a particular signal (e.g. SIGTERM, EXIT)
+function comma_get_trap()
+{
+    local trap_type=$1
+    [[ -z "$trap_type" ]] && { echo "comma_list_traps: error: missing trap type argument" >&2; return 1; }
+    # "trap -p" has format: "trap -- '' EXIT"
+    trap -p | grep " $trap_type\$" | sed 's/^trap -- //g; s/ *[^ ]* *$//g; s/^['\''"]//g; s/['\''"]$//g'
+}
+
 ## @page COMMA_PROCESS_KILL_ERROR COMMA_PROCESS_KILL_ERROR
 # @brief exit status of @link comma_process_kill @endlink in case of internal errors
 export COMMA_PROCESS_KILL_ERROR=1
@@ -114,6 +124,8 @@ declare -r COMMA_PROCESS_KILL_REUSED
 # @brief auxiliary, the return trap for @link comma_process_kill @endlink
 function comma_process_kill_trap_return_()
 {
+    # restore EXIT trap from before comma_process_kill() was called
+    [[ -n "$comma_process_kill_exit_trap_command" ]] && trap "$comma_process_kill_exit_trap_command" EXIT
     (( verbose == 1 )) && builtin echo "$FUNCNAME: send CONT to $pid" >&2
     builtin kill -s CONT $pid
     trap - RETURN
@@ -153,6 +165,10 @@ function comma_process_kill()
     local group=${pid:0:1}
     [[ "$group" == "-" ]] && pid=${pid:1} || group=""
     (( verbose == 1 )) && builtin echo "$FUNCNAME: send signal '$signal_to_use' to ${group}${pid}" >&2
+    # store current exit traps (global so it can be used in comma_process_kill_trap_return_)
+    comma_process_kill_exit_trap_command=$( comma_get_trap "EXIT" )
+    # keep previous EXIT trap command (we can't just say "trap 'comma_process_kill_trap_return_' RETURN EXIT", since that won't call the previous trap command)
+    [[ -n "$comma_process_kill_exit_trap_command" ]] && trap "comma_process_kill_trap_return_; $comma_process_kill_exit_trap_command" EXIT
     trap 'comma_process_kill_trap_return_' RETURN
     builtin kill -s STOP $pid
     (( $? == 0 )) || { builtin echo "$FUNCNAME: process id '$pid' not found; do not kill, assume terminated by itself" >&2; return $COMMA_PROCESS_KILL_NOT_FOUND; }
