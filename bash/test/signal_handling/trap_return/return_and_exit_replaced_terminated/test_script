@@ -10,16 +10,21 @@ function f1()
 
 function f2()
 {
-    original_exit_trap_cmd=$( comma_get_trap "EXIT" )
-    trap "f3; $original_exit_trap_cmd" EXIT
+    # trap -p has format: trap -- 'commands...'
+    original_exit_trap_cmd="$( trap -p | grep 'EXIT$' )"
+
+    # insert a call to f3 after the first single quote
+    local new_exit_trap_cmd=$( echo "$original_exit_trap_cmd" | sed "s/^[^']*'/&f3\;/g" )
+    eval "$new_exit_trap_cmd"
     trap f3 RETURN
     echo "2"
+
     exit 1
 }
 
 function f3()
 {
-    trap "$original_exit_trap_cmd" EXIT
+    eval "$original_exit_trap_cmd"
     echo "3"
     trap - RETURN
 }
