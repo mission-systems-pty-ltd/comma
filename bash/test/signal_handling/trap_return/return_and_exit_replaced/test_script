@@ -1,0 +1,39 @@
+#!/bin/bash
+
+source $( which comma-process-util )
+
+function f1()
+{
+    trap 'f5' EXIT
+    echo "1"
+}
+
+function f2()
+{
+    original_exit_trap_cmd=$( comma_get_trap "EXIT" )
+    trap "f3; $original_exit_trap_cmd" EXIT
+    trap f3 RETURN
+    echo "2"
+}
+
+function f3()
+{
+    trap "$original_exit_trap_cmd" EXIT
+    echo "3"
+    trap - RETURN
+}
+
+function f4()
+{
+    echo "4"
+}
+
+function f5()
+{
+    echo "5"
+}
+
+f1
+f2
+f4
+

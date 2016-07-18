@@ -1,0 +1,1 @@
+test_script saves the original EXIT trap command and restores it after the RETURN trap is called

@@ -1,0 +1,2 @@
+Same as ../return_and_exit_replaced (test_script saves the original EXIT trap command and restores it after the RETURN trap is called),
+but test_script is terminated with "exit 1" before function f2() returns
