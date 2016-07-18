@@ -259,10 +259,12 @@ def fields_from_expressions(expressions):
     >>> from comma.csv.applications.csv_eval import fields_from_expressions
     >>> fields_from_expressions("a = 1; b = x + y; c = 'x = 1; y = 2'; d = (b == z)")
     'a,b,c,d'
-    >>> fields_from_expressions("a, b = 1, 2" )
+    >>> fields_from_expressions("a, b = 1, 2")
     'a,b'
-    >>> fields_from_expressions("a = b = 1" )
+    >>> fields_from_expressions("a = b = 1")
     'a,b'
+    >>> fields_from_expressions("x = 'a = \\"y = 1;a = 2\\"';")
+    'x'
     """
     tree = ast.parse(expressions, '<string>', mode='exec')
     fields = []
