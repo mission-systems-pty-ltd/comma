@@ -296,7 +296,6 @@ function comma_process_timed_wait_alarm()
     local signature=$3
     sleep $time
     comma_process_kill $verbose --signal=ALRM $caller $signature
-    trap - RETURN
 }
 export -f comma_process_timed_wait_alarm
 declare -r comma_process_timed_wait_alarm
@@ -313,7 +312,6 @@ function comma_process_set_timed_wait_alarm_detail()
     local forever="4294967296d"
     # do not bother about PID verification, no-one is supposed to wait for this process
     timeout -s TERM -k 10 $forever bash -c "comma_process_timed_wait_alarm $*" &
-    trap - RETURN
 }
 export -f comma_process_set_timed_wait_alarm_detail
 declare -r comma_process_set_timed_wait_alarm_detail
