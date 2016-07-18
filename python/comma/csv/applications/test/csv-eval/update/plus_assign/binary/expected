@@ -1,0 +1,6 @@
+output[0]/x=2 +/- eps
+output[0]/y="20141231T235959.999999"
+output[1]/x=4 +/- eps
+output[1]/y="20150101T000000.999999"
+status=0
+
