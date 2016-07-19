@@ -44,6 +44,8 @@
 #include <comma/csv/format.h>
 #include <comma/string/string.h>
 
+//#include <google/profiler.h>
+
 using namespace comma;
 
 static void usage( bool )
@@ -70,12 +72,13 @@ int main( int ac, char** av )
     std::string line;
     line.reserve( 4000 );
     try
-    {        
+    {
         signal_flag is_shutdown;
         command_line_options options( ac, av, usage );
         char delimiter = options.value( "--delimiter", ',' );
         bool flush = options.exists( "--flush" );
         comma::csv::format format( av[1] );
+        //{ ProfilerStart( "csv-to-bin.prof" );
         while( std::cin.good() && !std::cin.eof() )
         {
             if( is_shutdown ) { std::cerr << "csv-to-bin: interrupted by signal" << std::endl; return -1; }
@@ -83,6 +86,7 @@ int main( int ac, char** av )
             if( !line.empty() && *line.rbegin() == '\r' ) { line = line.substr( 0, line.length() - 1 ); } // windows... sigh...
             if( !line.empty() ) { format.csv_to_bin( std::cout, line, delimiter, flush ); }
         }
+        //ProfilerStop(); }
         return 0;
     }
     catch( std::exception& ex )

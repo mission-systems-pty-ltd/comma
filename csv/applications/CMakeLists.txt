@@ -50,7 +50,7 @@ target_link_libraries ( csv-time ${comma_ALL_EXTERNAL_LIBRARIES} comma_applicati
 target_link_libraries ( csv-time-delay ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_string comma_xpath )
 target_link_libraries ( csv-time-join ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_io comma_string comma_xpath )
 target_link_libraries ( csv-time-stamp ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_string )
-target_link_libraries ( csv-to-bin ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application )
+target_link_libraries ( csv-to-bin ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application ) # profiler )
 target_link_libraries ( csv-from-bin ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application )
 target_link_libraries ( csv-calc ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application comma_string )
 target_link_libraries ( csv-calc-new ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application comma_string )
