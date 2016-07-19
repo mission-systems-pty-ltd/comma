@@ -256,7 +256,7 @@ static std::size_t csv_to_bin( char* buf, const std::string& s, format::types_en
             case format::float_t: return csv_to_bin< float >( buf, s );
             case format::double_t: return csv_to_bin< double >( buf, s );
             case format::time: // TODO: quick and dirty: use serialization traits
-                try { format::traits< boost::posix_time::ptime, format::time >::to_bin( boost::posix_time::from_iso_string( s ), buf ); }
+                try { format::traits< boost::posix_time::ptime, format::time >::to_bin( ( s.empty() || s == "not-a-date-time" ) ? boost::posix_time::not_a_date_time : boost::posix_time::from_iso_string( s ), buf ); }
                 catch ( ... ) { format::traits< boost::posix_time::ptime, format::time >::to_bin( boost::posix_time::not_a_date_time, buf ); }
                 return format::traits< boost::posix_time::ptime, format::time >::size;
             case format::long_time: // TODO: quick and dirty: use serialization traits
