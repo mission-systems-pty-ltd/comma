@@ -249,11 +249,11 @@ function comma_process_validate()
     # Your shell is blocking on the open() call before invoking the read builtin.
     #
     # On Linux, you can open the FIFO for both read and write at the same time to prevent blocking on open; this is non-portable, but may do what you want.
-    (( verbose == 0 )) || builtin echo "$FUNCNAME: attempt to read pid from '$fifo' for $timeout seconds ..." >&2
+    (( verbose == 0 )) || builtin echo "$FUNCNAME: attempt to read pid from '$fifo' for $read_timeout seconds ..." >&2
     read -t $read_timeout pid signature <> "$fifo"
     status=$?
     (( status == 0 )) || {
-        builtin echo "$FUNCNAME: could not read process id from '$fifo' in $timeout seconds or read error, status '$status'" >&2
+        builtin echo "$FUNCNAME: could not read process id from '$fifo' in $read_timeout seconds or read error, status '$status'" >&2
         return 1
     }
     [[ "$pid" == "$expected" ]] || {
