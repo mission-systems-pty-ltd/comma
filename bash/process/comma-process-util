@@ -96,16 +96,6 @@ function comma_process_signature()
 export -f comma_process_signature
 declare -r comma_process_signature
 
-## @page comma_get_trap comma_get_trap
-#@ brief get the trap command(s) for a particular signal (e.g. SIGTERM, EXIT)
-function comma_get_trap()
-{
-    local trap_type=$1
-    [[ -z "$trap_type" ]] && { echo "comma_list_traps: error: missing trap type argument" >&2; return 1; }
-    # "trap -p" has format: "trap -- '' EXIT"
-    trap -p | grep " $trap_type\$" | sed 's/^trap -- //g; s/ *[^ ]* *$//g; s/^['\''"]//g; s/['\''"]$//g'
-}
-
 ## @page COMMA_PROCESS_KILL_ERROR COMMA_PROCESS_KILL_ERROR
 # @brief exit status of @link comma_process_kill @endlink in case of internal errors
 export COMMA_PROCESS_KILL_ERROR=1
