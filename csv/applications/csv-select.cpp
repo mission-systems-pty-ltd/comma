@@ -38,15 +38,15 @@
 #include <boost/optional.hpp>
 #include <boost/regex.hpp>
 #include <boost/scoped_ptr.hpp>
-#include <comma/application/command_line_options.h>
-#include <comma/application/signal_flag.h>
-#include <comma/application/contact_info.h>
-#include <comma/base/exception.h>
-#include <comma/csv/stream.h>
-#include <comma/math/compare.h>
-#include <comma/name_value/parser.h>
-#include <comma/string/string.h>
-#include <comma/visiting/traits.h>
+#include "../../application/command_line_options.h"
+#include "../../application/signal_flag.h"
+#include "../../application/contact_info.h"
+#include "../../base/exception.h"
+#include "../../csv/stream.h"
+#include "../../math/compare.h"
+#include "../../name_value/parser.h"
+#include "../../string/string.h"
+#include "../../visiting/traits.h"
 
 void usage()
 {

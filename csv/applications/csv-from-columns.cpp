@@ -29,7 +29,7 @@
 
 #include <iostream>
 #include <boost/lexical_cast.hpp>
-#include <comma/application/command_line_options.h>
+#include "../../application/command_line_options.h"
 
 static void usage()
 {

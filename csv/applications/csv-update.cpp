@@ -40,15 +40,15 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/graph/graph_concepts.hpp>
-#include <comma/application/command_line_options.h>
-#include <comma/application/contact_info.h>
-#include <comma/application/signal_flag.h>
-#include <comma/base/types.h>
-#include <comma/csv/stream.h>
-#include <comma/csv/impl/unstructured.h>
-#include <comma/io/stream.h>
-#include <comma/string/string.h>
-#include <comma/visiting/traits.h>
+#include "../../application/command_line_options.h"
+#include "../../application/contact_info.h"
+#include "../../application/signal_flag.h"
+#include "../../base/types.h"
+#include "../../csv/stream.h"
+#include "../../csv/impl/unstructured.h"
+#include "../../io/stream.h"
+#include "../../string/string.h"
+#include "../../visiting/traits.h"
 
 static void usage( bool more )
 {

@@ -38,11 +38,11 @@
 
 #include <stdlib.h>
 #include <iostream>
-#include <comma/application/contact_info.h>
-#include <comma/application/command_line_options.h>
-#include <comma/application/signal_flag.h>
-#include <comma/csv/format.h>
-#include <comma/string/string.h>
+#include "../../application/contact_info.h"
+#include "../../application/command_line_options.h"
+#include "../../application/signal_flag.h"
+#include "../../csv/format.h"
+#include "../../string/string.h"
 
 //#include <google/profiler.h>
 

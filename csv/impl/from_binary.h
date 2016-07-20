@@ -41,11 +41,11 @@
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/type_traits.hpp>
-#include <comma/base/types.h>
-#include <comma/csv/format.h>
-#include <comma/string/string.h>
-#include <comma/visiting/visit.h>
-#include <comma/visiting/while.h>
+#include "../../base/types.h"
+#include "../../csv/format.h"
+#include "../../string/string.h"
+#include "../../visiting/visit.h"
+#include "../../visiting/while.h"
 #include "static_cast.h"
 
 namespace comma { namespace csv { namespace impl {

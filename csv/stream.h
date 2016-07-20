@@ -42,11 +42,11 @@
 #include <iostream>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/noncopyable.hpp>
-#include <comma/base/exception.h>
-#include <comma/csv/ascii.h>
-#include <comma/csv/binary.h>
-#include <comma/csv/options.h>
-#include <comma/string/string.h>
+#include "../base/exception.h"
+#include "../csv/ascii.h"
+#include "../csv/binary.h"
+#include "../csv/options.h"
+#include "../string/string.h"
 
 namespace comma { namespace csv {
 

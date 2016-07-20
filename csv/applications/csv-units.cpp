@@ -52,11 +52,11 @@
 #include <boost/units/base_units/angle/radian.hpp>
 #include <boost/units/base_units/angle/degree.hpp>
 
-#include <comma/application/command_line_options.h>
-#include <comma/application/contact_info.h>
-#include <comma/base/exception.h>
-#include <comma/csv/stream.h>
-#include <comma/visiting/traits.h>
+#include "../../application/command_line_options.h"
+#include "../../application/contact_info.h"
+#include "../../base/exception.h"
+#include "../../csv/stream.h"
+#include "../../visiting/traits.h"
 
 /// Outputs the usage syntax, options and examples
 /// @warning exits the program with an error code of 1

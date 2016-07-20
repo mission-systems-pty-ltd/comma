@@ -31,9 +31,9 @@
 /// @author vsevolod vlaskine
 
 #include <iostream>
-#include <comma/application/command_line_options.h>
-#include <comma/application/contact_info.h>
-#include <comma/csv/format.h>
+#include "../../application/command_line_options.h"
+#include "../../application/contact_info.h"
+#include "../../csv/format.h"
 
 using namespace comma;
 

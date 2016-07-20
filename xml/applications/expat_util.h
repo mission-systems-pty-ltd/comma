@@ -38,7 +38,7 @@
 
 #include <expat.h>
 
-#include <comma/xpath/xpath.h>
+#include "../../xpath/xpath.h"
 
 class simple_expat_application
 {

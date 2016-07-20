@@ -29,8 +29,8 @@
 
 /// @author vsevolod vlaskine
 
-#include <comma/base/exception.h>
-#include <comma/string/string.h>
+#include "../../base/exception.h"
+#include "../../string/string.h"
 #include "fieldwise.h"
 
 namespace comma { namespace csv {

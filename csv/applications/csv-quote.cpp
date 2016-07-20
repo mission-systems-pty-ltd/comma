@@ -30,8 +30,8 @@
 #include <set>
 #include <vector>
 #include <boost/lexical_cast.hpp>
-#include <comma/application/command_line_options.h>
-#include <comma/string/string.h>
+#include "../../application/command_line_options.h"
+#include "../../string/string.h"
 
 static void usage( bool verbose )
 {

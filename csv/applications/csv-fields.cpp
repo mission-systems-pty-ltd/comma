@@ -33,9 +33,9 @@
 #include <string>
 #include <set>
 #include <map>
-#include <comma/application/contact_info.h>
-#include <comma/application/command_line_options.h>
-#include <comma/string/string.h>
+#include "../../application/contact_info.h"
+#include "../../application/command_line_options.h"
+#include "../../string/string.h"
 
 using namespace comma;
 

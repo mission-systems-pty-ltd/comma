@@ -35,7 +35,7 @@
 
 #include <string>
 #include <boost/program_options.hpp>
-#include <comma/csv/options.h>
+#include "../../csv/options.h"
 
 namespace comma { namespace csv {
 

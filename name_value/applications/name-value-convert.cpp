@@ -39,13 +39,13 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/regex.hpp>
 #include <boost/version.hpp>
-#include <comma/base/exception.h>
-#include <comma/application/contact_info.h>
-#include <comma/application/command_line_options.h>
-#include <comma/application/signal_flag.h>
-#include <comma/name_value/ptree.h>
-#include <comma/name_value/serialize.h>
-#include <comma/xpath/xpath.h>
+#include "../../base/exception.h"
+#include "../../application/contact_info.h"
+#include "../../application/command_line_options.h"
+#include "../../application/signal_flag.h"
+#include "../../name_value/ptree.h"
+#include "../../name_value/serialize.h"
+#include "../../xpath/xpath.h"
 
 static void usage( bool verbose = false )
 {

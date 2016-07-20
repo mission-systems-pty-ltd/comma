@@ -32,9 +32,9 @@
 #include <iostream>
 #include <string>
 #include <set>
-#include <comma/application/contact_info.h>
-#include <comma/application/command_line_options.h>
-#include <comma/csv/format.h>
+#include "../../application/contact_info.h"
+#include "../../application/command_line_options.h"
+#include "../../csv/format.h"
 
 using namespace comma;
 static const char *app_name = "csv-format";

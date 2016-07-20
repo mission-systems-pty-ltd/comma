@@ -37,15 +37,15 @@
 #endif
 #include <iostream>
 
-#include <comma/application/command_line_options.h>
-#include <comma/application/contact_info.h>
-#include <comma/application/signal_flag.h>
-#include <comma/csv/options.h>
-#include <comma/csv/stream.h>
-#include <comma/csv/traits.h>
-#include <comma/name_value/parser.h>
-#include <comma/csv/applications/play/play.h>
-#include <comma/csv/applications/play/multiplay.h>
+#include "../../application/command_line_options.h"
+#include "../../application/contact_info.h"
+#include "../../application/signal_flag.h"
+#include "../../csv/options.h"
+#include "../../csv/stream.h"
+#include "../../csv/traits.h"
+#include "../../name_value/parser.h"
+#include "../../csv/applications/play/play.h"
+#include "../../csv/applications/play/multiplay.h"
 
 static void usage()
 {

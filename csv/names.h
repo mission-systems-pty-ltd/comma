@@ -33,10 +33,10 @@
 #ifndef COMMA_CSV_NAMES_H_
 #define COMMA_CSV_NAMES_H_
 
-#include <comma/csv/impl/to_names.h>
-#include <comma/string/string.h>
-#include <comma/visiting/apply.h>
-#include <comma/xpath/xpath.h>
+#include "../csv/impl/to_names.h"
+#include "../string/string.h"
+#include "../visiting/apply.h"
+#include "../xpath/xpath.h"
 
 namespace comma { namespace csv {
 

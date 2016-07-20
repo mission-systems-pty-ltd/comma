@@ -37,18 +37,18 @@
 #include <vector>
 #include <boost/unordered_map.hpp>
 #include <boost/lexical_cast.hpp>
-#include <comma/application/command_line_options.h>
-#include <comma/application/contact_info.h>
-#include <comma/base/exception.h>
-#include <comma/base/types.h>
-#include <comma/csv/stream.h>
-#include <comma/csv/traits.h>
-#include <comma/io/stream.h>
-#include <comma/math/compare.h>
-#include <comma/name_value/parser.h>
-#include <comma/string/string.h>
-#include <comma/visiting/traits.h>
-#include <comma/csv/impl/unstructured.h>
+#include "../../application/command_line_options.h"
+#include "../../application/contact_info.h"
+#include "../../base/exception.h"
+#include "../../base/types.h"
+#include "../../csv/stream.h"
+#include "../../csv/traits.h"
+#include "../../io/stream.h"
+#include "../../math/compare.h"
+#include "../../name_value/parser.h"
+#include "../../string/string.h"
+#include "../../visiting/traits.h"
+#include "../../csv/impl/unstructured.h"
 
 static void usage( bool more )
 {

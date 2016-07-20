@@ -34,8 +34,8 @@
 
 #include <vector>
 #include <boost/optional.hpp>
-#include <comma/csv/names.h>
-#include <comma/csv/options.h>
+#include "../../csv/names.h"
+#include "../../csv/options.h"
 
 namespace comma { namespace csv {
 

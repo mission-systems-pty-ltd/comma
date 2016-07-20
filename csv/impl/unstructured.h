@@ -30,8 +30,7 @@
 
 /// @author vsevolod vlaskine
 
-#ifndef COMMA_CSV_IMPL_UNSTRUCTURED_H_
-#define COMMA_CSV_IMPL_UNSTRUCTURED_H_
+#pragma once
 
 #include <string>
 #include <vector>
@@ -39,10 +38,10 @@
 #include <boost/date_time/posix_time/ptime.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/lexical_cast.hpp>
-#include <comma/csv/options.h>
-#include <comma/math/compare.h>
-#include <comma/string/string.h>
-#include <comma/visiting/traits.h>
+#include "../../csv/options.h"
+#include "../../math/compare.h"
+#include "../../string/string.h"
+#include "../../visiting/traits.h"
 
 namespace comma { namespace csv { namespace impl {
 
@@ -261,5 +260,3 @@ template <> struct traits< comma::csv::impl::unstructured >
 };
 
 } } // namespace comma { namespace visiting {
-
-#endif // COMMA_CSV_IMPL_UNSTRUCTURED_H_

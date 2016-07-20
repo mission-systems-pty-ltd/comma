@@ -42,8 +42,8 @@
 
 #include <boost/filesystem.hpp>
 
-#include <comma/application/command_line_options.h>
-#include <comma/xpath/xpath.h>
+#include "../../application/command_line_options.h"
+#include "../../xpath/xpath.h"
 #include "expat_util.h"
 
 namespace FS = boost::filesystem;

@@ -29,8 +29,8 @@
 
 
 #include <gtest/gtest.h>
-#include <comma/csv/ascii.h>
-#include <comma/csv/impl/fieldwise.h>
+#include "../../csv/ascii.h"
+#include "../../csv/impl/fieldwise.h"
 
 TEST( fieldwise, non_typed_ascii )
 {

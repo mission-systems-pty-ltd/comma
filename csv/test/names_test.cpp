@@ -31,9 +31,9 @@
 #include <gtest/gtest.h>
 #include <vector>
 #include <boost/array.hpp>
-#include <comma/csv/names.h>
-#include <comma/visiting/apply.h>
-#include <comma/string/string.h>
+#include "../../csv/names.h"
+#include "../../visiting/apply.h"
+#include "../../string/string.h"
 
 namespace comma { namespace csv { namespace names_test {
 

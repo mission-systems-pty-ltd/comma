@@ -42,10 +42,10 @@
 #include <boost/static_assert.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
-#include <comma/base/types.h>
-#include <comma/csv/ascii.h>
-#include <comma/csv/binary.h>
-#include <comma/visiting/traits.h>
+#include "../../../base/types.h"
+#include "../../../csv/ascii.h"
+#include "../../../csv/binary.h"
+#include "../../../visiting/traits.h"
 
 namespace comma { namespace csv { namespace applications {
 

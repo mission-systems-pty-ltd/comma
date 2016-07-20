@@ -39,13 +39,13 @@
 #include <sysexits.h>
 #endif
 
-#include <comma/application/command_line_options.h>
-#include <comma/application/contact_info.h>
-#include <comma/base/types.h>
-#include <comma/csv/stream.h>
-#include <comma/csv/impl/unstructured.h>
-#include <comma/string/string.h>
-#include <comma/visiting/traits.h>
+#include "../../application/command_line_options.h"
+#include "../../application/contact_info.h"
+#include "../../base/types.h"
+#include "../../csv/stream.h"
+#include "../../csv/impl/unstructured.h"
+#include "../../string/string.h"
+#include "../../visiting/traits.h"
 
 static const char* name() { return "csv-blocks: "; }
 

@@ -39,11 +39,11 @@
 #include <iostream>
 #include <string>
 #include <boost/optional.hpp>
-#include <comma/application/command_line_options.h>
-#include <comma/application/contact_info.h>
-#include <comma/application/signal_flag.h>
-#include <comma/base/types.h>
-#include <comma/csv/format.h>
+#include "../../application/command_line_options.h"
+#include "../../application/contact_info.h"
+#include "../../application/signal_flag.h"
+#include "../../base/types.h"
+#include "../../csv/format.h"
 
 static void usage()
 {

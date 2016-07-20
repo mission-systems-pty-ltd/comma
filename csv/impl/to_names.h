@@ -39,10 +39,10 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/type_traits.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <comma/visiting/traits.h>
-#include <comma/visiting/visit.h>
-#include <comma/visiting/while.h>
-#include <comma/xpath/xpath.h>
+#include "../../visiting/traits.h"
+#include "../../visiting/visit.h"
+#include "../../visiting/while.h"
+#include "../../xpath/xpath.h"
 
 namespace comma { namespace csv { namespace impl {
 

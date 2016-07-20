@@ -38,11 +38,11 @@
 
 #include <stdlib.h>
 #include <iostream>
-#include <comma/application/command_line_options.h>
-#include <comma/application/contact_info.h>
-#include <comma/base/exception.h>
-#include <comma/csv/format.h>
-#include <comma/string/string.h>
+#include "../../application/command_line_options.h"
+#include "../../application/contact_info.h"
+#include "../../base/exception.h"
+#include "../../csv/format.h"
+#include "../../string/string.h"
 
 using namespace comma;
 

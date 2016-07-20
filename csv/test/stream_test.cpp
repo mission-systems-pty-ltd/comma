@@ -33,8 +33,8 @@
 #include <vector>
 #include <boost/array.hpp>
 //#include <google/profiler.h>
-#include <comma/base/types.h>
-#include <comma/csv/stream.h>
+#include "../../base/types.h"
+#include "../../csv/stream.h"
 
 namespace comma { namespace csv { namespace stream_test {
 

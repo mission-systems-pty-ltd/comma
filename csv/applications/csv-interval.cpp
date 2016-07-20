@@ -35,11 +35,11 @@
 #include <string>
 #include <boost/icl/interval.hpp>
 #include <boost/icl/interval_map.hpp>
-#include "comma/application/command_line_options.h"
-#include "comma/base/exception.h"
-#include "comma/csv/stream.h"
-#include "comma/visiting/traits.h"
-#include "comma/csv/impl/unstructured.h"
+#include "../../application/command_line_options.h"
+#include "../../base/exception.h"
+#include "../../csv/stream.h"
+#include "../../visiting/traits.h"
+#include "../../csv/impl/unstructured.h"
 
 static const std::string app_name = "csv-interval";
 

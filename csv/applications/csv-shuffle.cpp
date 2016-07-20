@@ -34,9 +34,9 @@
 
 #include <iostream>
 #include <vector>
-#include <comma/application/command_line_options.h>
-#include <comma/csv/options.h>
-#include <comma/string/string.h>
+#include "../../application/command_line_options.h"
+#include "../../csv/options.h"
+#include "../../string/string.h"
 
 static void usage( bool verbose )
 {

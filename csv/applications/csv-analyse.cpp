@@ -27,18 +27,18 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author james underwood
 
-#include <iostream>
-#include <map>
-#include <comma/application/command_line_options.h>
-#include <comma/application/contact_info.h>
-#include <comma/application/signal_flag.h>
 #ifdef WIN32
 #include <fcntl.h>
 #include <io.h>
 #endif
+
+#include <iostream>
+#include <map>
+#include "../../application/command_line_options.h"
+#include "../../application/contact_info.h"
+#include "../../application/signal_flag.h"
 
 using namespace comma;
 

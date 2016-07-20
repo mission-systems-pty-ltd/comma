@@ -43,13 +43,13 @@
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/unordered_map.hpp>
-#include <comma/application/contact_info.h>
-#include <comma/application/signal_flag.h>
-#include <comma/application/verbose.h>
-#include <comma/base/exception.h>
-#include <comma/csv/format.h>
-#include <comma/csv/options.h>
-#include <comma/string/string.h>
+#include "../../application/contact_info.h"
+#include "../../application/signal_flag.h"
+#include "../../application/verbose.h"
+#include "../../base/exception.h"
+#include "../../csv/format.h"
+#include "../../csv/options.h"
+#include "../../string/string.h"
 
 static void bash_completion( unsigned const ac, char const * const * av )
 {

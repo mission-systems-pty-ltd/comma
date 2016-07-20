@@ -37,10 +37,10 @@
 #include <sstream>
 #include <boost/array.hpp>
 #include <boost/lexical_cast.hpp>
-#include <comma/base/exception.h>
-#include <comma/base/types.h>
-#include <comma/string/string.h>
-#include <comma/csv/format.h>
+#include "../base/exception.h"
+#include "../base/types.h"
+#include "../string/string.h"
+#include "../csv/format.h"
 #include "impl/epoch.h"
 
 namespace comma { namespace csv {

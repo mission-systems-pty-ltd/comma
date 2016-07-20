@@ -38,10 +38,10 @@
 
 #include <boost/optional.hpp>
 #include <boost/program_options.hpp>
-#include <comma/application/signal_flag.h>
-#include <comma/application/contact_info.h>
-#include <comma/csv/impl/program_options.h>
-#include <comma/csv/traits.h>
+#include "../../application/signal_flag.h"
+#include "../../application/contact_info.h"
+#include "../../csv/impl/program_options.h"
+#include "../../csv/traits.h"
 #include "split/split.h"
 
 comma::csv::options csv;

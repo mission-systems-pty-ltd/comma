@@ -36,20 +36,20 @@
 #endif
 
 #include <iostream>
+#include <boost/date_time/posix_time/ptime.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_real.hpp>
 #include <boost/random/variate_generator.hpp>
-#include <comma/application/command_line_options.h>
-#include <comma/application/contact_info.h>
-#include <comma/base/exception.h>
-#include <comma/base/types.h>
-#include <comma/io/file_descriptor.h>
-#include <comma/math/compare.h>
-#include <boost/date_time/posix_time/ptime.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <comma/csv/options.h>
-#include <comma/csv/stream.h>
-#include <comma/visiting/traits.h>
+#include "../../application/command_line_options.h"
+#include "../../application/contact_info.h"
+#include "../../base/exception.h"
+#include "../../base/types.h"
+#include "../../io/file_descriptor.h"
+#include "../../math/compare.h"
+#include "../../csv/options.h"
+#include "../../csv/stream.h"
+#include "../../visiting/traits.h"
 
 using namespace comma;
 
@@ -193,7 +193,7 @@ int main( int ac, char** av )
                             if(is.is_binary())
                                 std::cout.write(is.binary().last(), is.binary().size());
                             else
-                                std::cout<<comma::join( is.ascii().last(), is.ascii().ascii().delimiter() )<< std::endl;
+                                std::cout << comma::join( is.ascii().last(), is.ascii().ascii().delimiter() )<< std::endl;
                         }
                     }
                     return 0;

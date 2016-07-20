@@ -36,13 +36,13 @@
 #include <vector>
 #include <boost/lexical_cast.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
-#include <comma/application/command_line_options.h>
-#include <comma/application/contact_info.h>
-#include <comma/base/exception.h>
-#include <comma/csv/format.h>
-#include <comma/io/stream.h>
-#include <comma/name_value/parser.h>
-#include <comma/string/string.h>
+#include "../../application/command_line_options.h"
+#include "../../application/contact_info.h"
+#include "../../base/exception.h"
+#include "../../csv/format.h"
+#include "../../io/stream.h"
+#include "../../name_value/parser.h"
+#include "../../string/string.h"
 
 #ifdef WIN32
 #include <io.h>

@@ -31,27 +31,26 @@
 /// @author vsevolod vlaskine
 /// @author mathew hounsell
 
-#include <algorithm>
 #include <string.h>
+#include <time.h>
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <string>
 #include <vector>
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time/posix_time/posix_time_duration.hpp>
-#include "boost/date_time/posix_time/ptime.hpp"
-#include "boost/date_time/local_time/local_time.hpp"
-#include "boost/date_time/c_local_time_adjustor.hpp"
-
-#include <comma/application/contact_info.h>
-#include <comma/application/command_line_options.h>
-#include <comma/base/exception.h>
-#include <comma/base/types.h>
-#include <comma/csv/stream.h>
-#include <comma/csv/impl/epoch.h>
-#include <comma/string/string.h>
-#include <comma/visiting/traits.h>
-#include <time.h>
+#include <boost/date_time/posix_time/ptime.hpp>
+#include <boost/date_time/local_time/local_time.hpp>
+#include <boost/date_time/c_local_time_adjustor.hpp>
+#include "../../application/contact_info.h"
+#include "../../application/command_line_options.h"
+#include "../../base/exception.h"
+#include "../../base/types.h"
+#include "../../csv/stream.h"
+#include "../../csv/impl/epoch.h"
+#include "../../string/string.h"
+#include "../../visiting/traits.h"
 
 static void usage( bool )
 {

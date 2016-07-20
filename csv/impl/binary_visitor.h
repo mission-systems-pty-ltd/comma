@@ -38,12 +38,12 @@
 #include <vector>
 #include <boost/scoped_ptr.hpp>
 #include <boost/type_traits.hpp>
-#include <comma/csv/format.h>
-#include <comma/string/string.h>
-#include <comma/visiting/apply.h>
-#include <comma/visiting/visit.h>
-#include <comma/visiting/while.h>
-#include <comma/xpath/xpath.h>
+#include "../../csv/format.h"
+#include "../../string/string.h"
+#include "../../visiting/apply.h"
+#include "../../visiting/visit.h"
+#include "../../visiting/while.h"
+#include "../../xpath/xpath.h"
 
 namespace comma { namespace csv { namespace impl {
 

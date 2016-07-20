@@ -28,7 +28,7 @@
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/python.hpp>
-#include <comma/csv/format.h>
+#include "../../../csv/format.h"
 
 BOOST_PYTHON_MODULE( csv )
 {

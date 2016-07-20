@@ -48,8 +48,8 @@
 
 #include <expat.h>
 #include <boost/unordered_map.hpp>
-#include <comma/application/command_line_options.h>
-#include <comma/xpath/xpath.h>
+#include "../../application/command_line_options.h"
+#include "../../xpath/xpath.h"
 #include "stream_util.h"
 #include "expat_util.h"
 

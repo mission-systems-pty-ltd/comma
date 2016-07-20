@@ -35,10 +35,10 @@
 #include <functional>
 #include <boost/functional.hpp>
 #include <boost/math/special_functions/round.hpp>
-#include <comma/csv/stream.h>
-#include <comma/visiting/traits.h>
-#include <comma/application/command_line_options.h>
-#include <comma/name_value/ptree.h>
+#include "../../csv/stream.h"
+#include "../../visiting/traits.h"
+#include "../../application/command_line_options.h"
+#include "../../name_value/ptree.h"
 
 static const std::string& name() {
     static const std::string name = "comma-progress";

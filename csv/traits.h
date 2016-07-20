@@ -32,8 +32,8 @@
 #ifndef COMMA_CSV_TRAITS_H_
 #define COMMA_CSV_TRAITS_H_
 
-#include <comma/csv/options.h>
-#include <comma/visiting/traits.h>
+#include "../csv/options.h"
+#include "../visiting/traits.h"
 
 namespace comma { namespace visiting {
 

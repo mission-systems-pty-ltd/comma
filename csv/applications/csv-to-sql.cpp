@@ -39,9 +39,9 @@
 #include <string>
 #include <vector>
 #include <boost/unordered_set.hpp>
-#include <comma/application/command_line_options.h>
-#include <comma/csv/options.h>
-#include <comma/string/string.h>
+#include "../../application/command_line_options.h"
+#include "../../csv/options.h"
+#include "../../string/string.h"
 
 static const char *app_name = "csv-to-sql";
 static const char *default_null_value = "NULL";

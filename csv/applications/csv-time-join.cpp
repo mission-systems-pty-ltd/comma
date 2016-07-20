@@ -30,20 +30,20 @@
 
 /// @author vsevolod vlaskine
 
+#include <deque>
 #include <iostream>
 #include <string>
 #include <boost/scoped_ptr.hpp>
-#include <comma/application/command_line_options.h>
-#include <comma/application/contact_info.h>
-#include <comma/base/types.h>
-#include <comma/csv/stream.h>
-#include <comma/io/stream.h>
-#include <comma/csv/traits.h>
-#include <comma/io/select.h>
-#include <comma/name_value/parser.h>
-#include <comma/string/string.h>
-#include <comma/visiting/traits.h>
-#include <deque>
+#include "../../application/command_line_options.h"
+#include "../../application/contact_info.h"
+#include "../../base/types.h"
+#include "../../csv/stream.h"
+#include "../../io/stream.h"
+#include "../../csv/traits.h"
+#include "../../io/select.h"
+#include "../../name_value/parser.h"
+#include "../../string/string.h"
+#include "../../visiting/traits.h"
 
 static void usage()
 {

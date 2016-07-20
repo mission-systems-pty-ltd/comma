@@ -30,9 +30,9 @@
 
 #include <gtest/gtest.h>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <comma/csv/binary.h>
-#include <comma/csv/format.h>
-#include <comma/string/string.h>
+#include "../../csv/binary.h"
+#include "../../csv/format.h"
+#include "../../string/string.h"
 
 namespace comma { namespace csv { namespace binary_test {
 

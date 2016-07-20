@@ -31,9 +31,9 @@
 #include <gtest/gtest.h>
 #include <limits>
 #include "boost/date_time/posix_time/posix_time.hpp"
-#include <comma/csv/format.h>
-#include <comma/csv/options.h>
-#include <comma/csv/impl/unstructured.h>
+#include "../../csv/format.h"
+#include "../../csv/options.h"
+#include "../../csv/impl/unstructured.h"
 
 TEST( csv, format )
 {

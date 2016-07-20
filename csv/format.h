@@ -41,13 +41,13 @@
 #include <boost/optional.hpp>
 #include <boost/type_traits.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <comma/base/exception.h>
-#include <comma/base/types.h>
-#include <comma/string/string.h>
-#include <comma/visiting/apply.h>
-#include <comma/visiting/visit.h>
-#include <comma/visiting/while.h>
-#include <comma/xpath/xpath.h>
+#include "../base/exception.h"
+#include "../base/types.h"
+#include "../string/string.h"
+#include "../visiting/apply.h"
+#include "../visiting/visit.h"
+#include "../visiting/while.h"
+#include "../xpath/xpath.h"
 
 namespace comma { namespace csv {
 

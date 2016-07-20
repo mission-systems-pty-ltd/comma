@@ -41,12 +41,12 @@
 #include <deque>
 #include <iostream>
 #include <boost/lexical_cast.hpp>
-#include <comma/application/contact_info.h>
-#include <comma/application/command_line_options.h>
-#include <comma/application/signal_flag.h>
-#include <comma/base/exception.h>
-#include <comma/csv/format.h>
-#include <comma/string/string.h>
+#include "../../application/contact_info.h"
+#include "../../application/command_line_options.h"
+#include "../../application/signal_flag.h"
+#include "../../base/exception.h"
+#include "../../csv/format.h"
+#include "../../string/string.h"
 
 using namespace comma;
 
