@@ -1,0 +1,79 @@
+#!/bin/bash
+
+self=$( readlink -f "$0" )
+scriptname=$( basename "$self" )
+scriptdir=$( dirname "$self" )
+
+function print_native_comma_timeout()
+{
+    echo "$scriptname: will use native '$1'" >&2
+    local script="$scriptdir/comma-timeout-native"
+    [[ -r "$script" ]] || { echo "$scriptname: file '$script' not found" >&2; return 1; }
+    local contents
+    contents=$( sed "s#__timeout__#$1#"  "$script" ) || { echo "$scriptname: cannot generate output file contents" >&2; return 1; }
+    touch "$option_output" || { echo "$scriptname: cannot create output file '$option_output'" >&2; return 1; }
+    chmod u+x "$option_output" || { echo "$scriptname: cannot make output file '$option_output' executable" >&2; return 1; }
+    echo "$contents" > "$option_output"
+}
+
+function print_enhanced_comma_timeout()
+{
+    echo "$scriptname: will use enhanced '$1'" >&2
+    local script="$scriptdir/comma-timeout-enhanced"
+    [[ -r "$script" ]] || { echo "$scriptname: file '$script' not found" >&2; return 1; }
+    cat "$script"
+}
+
+function description()
+{
+    cat <<EOF
+--help; display instructions on using this program
+--output,-o=<file>   output file to write
+EOF
+}
+
+function usage()
+{
+    cat >&2 <<EOF
+
+Search for available timeout utilities in the PATH and generate comma-timeout wrapper
+
+Usage:
+    $scriptname <options>
+
+Options:
+EOF
+    description | sed 's/^/    /g' >&2
+}
+
+source $( which comma-application-util ) || { echo "$scriptname: cannot source 'comma-application-util" >&2; exit 1; }
+
+if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then usage ; exit 0; fi
+description | comma-options-validate $@ || { echo "$scriptname: invalid command line options in $scriptname $*" >&2; exit 1; }
+comma_path_value_to_var --prefix=option --export < <( description | comma-options-to-name-value $@ )
+
+timeout=$( which timeout )
+[[ -n "$timeout" ]] || { echo "$scriptname: cannot find native timeout utility" >&2; exit 1; }
+
+timeoutg=
+timeoutg_all=$( which -a timeoutg )
+
+while true ; do
+    read timeoutg_try
+    [[ -n "$timeoutg_try" ]] || break
+    echo -n "$scriptname: look for timeoutg in $timeoutg_try... " >&2
+    [[ -x "$timeoutg_try" ]] || { echo "no, not executable" >&2; continue; }
+    helpstring=$( $timeoutg_try --help 2>&1 )
+    (( $? == 0 )) || { echo "no, does not output help" >&2; continue; }
+    grep -q '\-\-wait-for-process-group' <<<"$helpstring" || { echo "no, not our timeoutg" >&2; continue; }
+    timeoutg="$timeoutg_try"
+    echo "found" >&2
+    break
+done <<< "$timeoutg_all"
+
+if [[ -n "$timeoutg" ]]; then
+    print_enhanced_comma_timeout "$timeoutg"
+else
+    echo "$scriptname: cannot find timeoutg utility; fall back to native timeout" >&2
+    print_native_comma_timeout "$timeout"
+fi
