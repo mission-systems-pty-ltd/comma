@@ -282,14 +282,19 @@ class input_stream : public boost::noncopyable
         /// return fields
         const std::vector< std::string >& fields() const { return ascii_ ? ascii_->fields() : binary_->fields(); }
 
-        /// get last as string: an evil function, don't use it!
-        //std::string last() const;
+        /// a convenience function; return last read record as a string containg the original string for ascii and the original binary buffer for binary, may be slow
+        std::string last() const;
 
         const ascii_input_stream< S >& ascii() const { return *ascii_; }
+        
         const binary_input_stream< S >& binary() const { return *binary_; }
+        
         ascii_input_stream< S >& ascii() { return *ascii_; }
+        
         binary_input_stream< S >& binary() { return *binary_; }
-        bool is_binary() const { return (bool)binary_; }
+        
+        bool is_binary() const { return bool( binary_ ); }
+        
         bool ready() const { return binary_ ? binary_->ready() : ascii_->ready(); }
 
     private:
@@ -336,12 +341,16 @@ class output_stream : public boost::noncopyable
 
         /// return fields
         const std::vector< std::string >& fields() const { return ascii_ ? ascii_->fields() : binary_->fields(); }
-
+        
         const ascii_output_stream< S >& ascii() const { return *ascii_; }
+        
         const binary_output_stream< S >& binary() const { return *binary_; }
+        
         ascii_output_stream< S >& ascii() { return *ascii_; }
+        
         binary_output_stream< S >& binary() { return *binary_; }
-        bool is_binary() const { return (bool)binary_; }
+        
+        bool is_binary() const { return bool( binary_ ); }
 
     private:
         boost::scoped_ptr< ascii_output_stream< S > > ascii_;
@@ -650,34 +659,14 @@ inline input_stream< S >::input_stream( std::istream& is, const S& sample )
 {
 }
 
-//template < typename S >
-//std::string inline input_stream< S >::last() const
-//{
-//    // quick and dirty, otherwise string construction takes forever; profile!
-//    //if( binary_ ) { return std::string( binary_->last(), binary_->size() ); }
-//    //else { return comma::join( ascii_->last(), ascii_->ascii().delimiter() ); }
-//
-//    if( binary_ )
-//    {
-//        std::string s( binary_->size(), 0 );
-//        ::memcpy( &s[0], binary_->last(), binary_->size() );
-//        return s;
-//    }
-//    else
-//    {
-//        return comma::join( ascii_->last(), ascii_->ascii().delimiter() );
-//    }
-//
-////    if( binary_ )
-////    {
-////        last_ = std::string( binary_->last(), binary_->size() );
-////    }
-////    else
-////    {
-////        last_ = comma::join( ascii_->last(), ascii_->ascii().delimiter() ); // improve performance, although ascii
-////    }
-////    return last_;
-//}
+template < typename S >
+std::string inline input_stream< S >::last() const
+{
+    if( !binary_ ) { return comma::join( ascii_->last(), ascii_->ascii().delimiter() ); }
+    std::string s( binary_->size(), 0 );
+    ::memcpy( &s[0], binary_->last(), binary_->size() );
+    return s;
+}
 
 template < typename S >
 inline output_stream< S >::output_stream( std::ostream& os, const csv::options& o, const S& sample )
