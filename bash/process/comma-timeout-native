@@ -1,4 +1,0 @@
-#!/bin/bash
-
-timeout=__timeout__
-exec $timeout $@
