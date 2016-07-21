@@ -135,6 +135,7 @@ fi
 # native timeout does not support '--verbose' option; strip
 while [ $# -gt  0 ]; do
     if [[ "$use_timeoutg" -eq 0 && "$1" == "--verbose" ]] ; then shift ; continue; fi
+    if [[ "$1" == "--use-native-timeout" ]] ; then shift ; continue; fi
     cmd+=" $1"
     shift
 done
