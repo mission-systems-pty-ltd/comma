@@ -1,0 +1,2 @@
+command_line="--wait-for-process-group=1"
+wait/group=20

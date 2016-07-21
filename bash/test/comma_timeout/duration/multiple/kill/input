@@ -1,0 +1,2 @@
+kill/after=20
+command_line="--kill-after 1"

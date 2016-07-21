@@ -23,6 +23,7 @@ duration="10"
 echo "sleep/duration=$duration"
 
 command_line_options=
+[[ -z "$input_command_line" ]] || command_line_options+=" $input_command_line"
 [[ -z "$input_kill_after" ]] || command_line_options+=" --kill-after=$input_kill_after"
 [[ -z "$input_wait_group" ]] || {
     comma-timeout --is-timeout-group || { echo "skipped=1"; exit 0; }
@@ -30,6 +31,7 @@ command_line_options=
 }
 echo "skipped=0"
 
+echo "command/string=\"comma-timeout $command_line_options $duration bash -c ignore_signals_forever\""
 comma-timeout $command_line_options $duration bash -c ignore_signals_forever
 echo "command/status=$?"
 
