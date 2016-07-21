@@ -43,24 +43,6 @@ function description()
 EOF
 }
 
-# list all timeout/timeoutg options for comma-options-validate to pass
-function description_ignore()
-{
-    cat <<EOF
---preserve-status; pass to timeout
---foreground; pass to timeout
---kill-after,-k=duration; pass to timeout
---wait-for-process-group=duration; pass to timeout
---signal,-s=signal; pass to timeout
-EOF
-}
-
-function description_all()
-{
-    description
-    description_ignore
-}
-
 function usage()
 {
     cat >&2 <<EOF
@@ -88,8 +70,13 @@ EOF
 
 source $( which comma-application-util ) || { echo "$scriptname: cannot source 'comma-application-util" >&2; exit 1; }
 
+# TODO
+# cannot parse the entire command line (comma_path_value_to_var): some of the options can come from
+# the program to be started under timeout; such options are unrelated to the desired timeout settings
+# instead, iterate the command line and handle options one by one until the first unknown option or value
+# is reached; then stop iterating and take the rest as the command to run
+# for the same reason cannot search for '--help' here
 if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then usage ; exit 0; fi
-description_all | comma-options-validate $@ || { echo "$scriptname: invalid command line options in $scriptname $*" >&2; exit 1; }
 comma_path_value_to_var --prefix=option --export < <( description | comma-options-to-name-value $@ )
 
 timeout=$( which timeout )
