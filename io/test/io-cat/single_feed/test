@@ -8,6 +8,7 @@ declare -A files
 
 function bye
 {
+    trap '' INT TERM HUP  # ignore signals
     pkill -P $$
     rm -f ${files[@]}
     kill -9 ${pids[@]} &>/dev/null
