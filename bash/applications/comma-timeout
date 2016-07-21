@@ -43,6 +43,24 @@ function description()
 EOF
 }
 
+# list all timeout/timeoutg options for comma-options-validate to pass
+function description_ignore()
+{
+    cat <<EOF
+--preserve-status; pass to timeout
+--foreground; pass to timeout
+--kill-after,-k=duration; pass to timeout
+--wait-for-process-group=duration; pass to timeout
+--signal,-s=signal; pass to timeout
+EOF
+}
+
+function description_all()
+{
+    description
+    description_ignore
+}
+
 function usage()
 {
     cat >&2 <<EOF
@@ -63,7 +81,7 @@ EOF
 cat >&2 <<EOF
 
 All the other options are passed verbatim to the selected timeout utility.
-See 'timeout --help' or 'timeoutg --help' for detail.
+See 'timeout --help' or 'timeoutg --help' for details.
 
 EOF
 }
@@ -71,7 +89,7 @@ EOF
 source $( which comma-application-util ) || { echo "$scriptname: cannot source 'comma-application-util" >&2; exit 1; }
 
 if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then usage ; exit 0; fi
-description | comma-options-validate $@ || { echo "$scriptname: invalid command line options in $scriptname $*" >&2; exit 1; }
+description_all | comma-options-validate $@ || { echo "$scriptname: invalid command line options in $scriptname $*" >&2; exit 1; }
 comma_path_value_to_var --prefix=option --export < <( description | comma-options-to-name-value $@ )
 
 timeout=$( which timeout )
