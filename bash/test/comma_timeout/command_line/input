@@ -1,0 +1,10 @@
+usage[0]="comma-timeout --help"
+usage[1]="comma-timeout --help --verbose"
+
+which_timeout[0]="comma-timeout --which-timeout"
+which_timeout[1]="comma-timeout --use-native-timeout --which-timeout"
+
+is_group[0]="comma-timeout --is-timeout-group"
+
+sleep[0]="comma-timeout -k 10 10 sleep 1"
+sleep[1]="comma-timeout --verbose -k 10 10 sleep 1"

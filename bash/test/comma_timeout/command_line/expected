@@ -1,0 +1,19 @@
+#python
+
+import os.path
+
+if not skipped:
+    expect usage[0]/output == ""
+    expect usage[0]/status == 0
+    expect usage[1]/output == ""
+    expect usage[1]/status == 0
+
+    expect os.path.basename( which_timeout[0]/output ) == "timeoutg"
+    expect os.path.basename( which_timeout[1]/output ) == "timeout"
+
+    expect is_group[0]/status == 0
+
+    expect sleep[0]/status == 0
+    expect sleep[0]/output == ""
+    expect sleep[1]/status == 0
+    expect sleep[1]/output == ""

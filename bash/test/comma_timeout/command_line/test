@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# if timeoutg is not installed, some of the tests are meaningless
+
+timeoutg=$( which timeoutg )
+[[ -n "$timeoutg" ]] || {
+    echo "timeoutg utility not found; skip the test" >&2
+    echo "skipped=1"
+    exit 0
+} && {
+    echo "skipped=0"
+}
+
+source $( which comma-test-util ) || { echo "$0: failed to source comma-test-util" >&2 ; exit 1 ; }
+
+comma_test_commands
