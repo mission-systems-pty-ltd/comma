@@ -37,6 +37,7 @@ function description()
     cat <<EOF
 --help; display instructions on using this program
 --which-timeout; show the full path to the timeout utility to be used by $scriptname and exit
+--use-native-timeout; enforce using the standard timeout utility
 --is-timeout-group; if use timeout utility from timeout-group, exit success; otherwise, exit with error
 --verbose; chat more as it goes
 EOF
@@ -77,21 +78,23 @@ timeout=$( which timeout )
 [[ -n "$timeout" ]] || { echo "$scriptname: cannot find native timeout utility" >&2; exit 1; }
 
 use_timeoutg=0
-timeoutg_all=$( which -a timeoutg )
+if [[ "$option_use_native_timeout" != "1" ]] ; then
+    timeoutg_all=$( which -a timeoutg )
 
-while true ; do
-    read timeoutg_try
-    [[ -n "$timeoutg_try" ]] || break
-    (( option_verbose )) && echo -n "$scriptname: look for timeoutg in $timeoutg_try... " >&2
-    [[ -x "$timeoutg_try" ]] || { (( option_verbose )) && echo "no, not executable" >&2; continue; }
-    helpstring=$( $timeoutg_try --help 2>&1 )
-    (( $? == 0 )) || { (( option_verbose )) && echo "no, does not output help" >&2; continue; }
-    grep -q '\-\-wait-for-process-group' <<<"$helpstring" || { (( option_verbose )) && echo "no, not our timeoutg" >&2; continue; }
-    (( option_verbose )) && echo "found" >&2
-    timeout="$timeoutg_try"
-    use_timeoutg=1
-    break
-done <<< "$timeoutg_all"
+    while true ; do
+        read timeoutg_try
+        [[ -n "$timeoutg_try" ]] || break
+        (( option_verbose )) && echo -n "$scriptname: look for timeoutg in $timeoutg_try... " >&2
+        [[ -x "$timeoutg_try" ]] || { (( option_verbose )) && echo "no, not executable" >&2; continue; }
+        helpstring=$( $timeoutg_try --help 2>&1 )
+        (( $? == 0 )) || { (( option_verbose )) && echo "no, does not output help" >&2; continue; }
+        grep -q '\-\-wait-for-process-group' <<<"$helpstring" || { (( option_verbose )) && echo "no, not our timeoutg" >&2; continue; }
+        (( option_verbose )) && echo "found" >&2
+        timeout="$timeoutg_try"
+        use_timeoutg=1
+        break
+    done <<< "$timeoutg_all"
+fi
 
 if (( $( comma_options_has --which-timeout $@ ) )) ; then echo "$timeout" ; exit 0 ; fi
 if (( $( comma_options_has --is-timeout-group $@ ) )) ; then
