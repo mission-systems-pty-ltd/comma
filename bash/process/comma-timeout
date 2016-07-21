@@ -1,34 +1,44 @@
 #!/bin/bash
 
+# This file is part of comma, a generic and flexible library
+# Copyright (c) 2011 The University of Sydney
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of the University of Sydney nor the
+#    names of its contributors may be used to endorse or promote products
+#    derived from this software without specific prior written permission.
+#
+# NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+# GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+# HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+# BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 self=$( readlink -f "$0" )
 scriptname=$( basename "$self" )
-scriptdir=$( dirname "$self" )
-
-function print_native_comma_timeout()
-{
-    echo "$scriptname: will use native '$1'" >&2
-    local script="$scriptdir/comma-timeout-native"
-    [[ -r "$script" ]] || { echo "$scriptname: file '$script' not found" >&2; return 1; }
-    local contents
-    contents=$( sed "s#__timeout__#$1#"  "$script" ) || { echo "$scriptname: cannot generate output file contents" >&2; return 1; }
-    touch "$option_output" || { echo "$scriptname: cannot create output file '$option_output'" >&2; return 1; }
-    chmod u+x "$option_output" || { echo "$scriptname: cannot make output file '$option_output' executable" >&2; return 1; }
-    echo "$contents" > "$option_output"
-}
-
-function print_enhanced_comma_timeout()
-{
-    echo "$scriptname: will use enhanced '$1'" >&2
-    local script="$scriptdir/comma-timeout-enhanced"
-    [[ -r "$script" ]] || { echo "$scriptname: file '$script' not found" >&2; return 1; }
-    cat "$script"
-}
 
 function description()
 {
     cat <<EOF
 --help; display instructions on using this program
---output,-o=<file>   output file to write
+--which-timeout; show the full path to the timeout utility to be used by $scriptname and exit
+--is-timeout-group; if use timeout utility from timeout-group, exit success; otherwise, exit with error
+--verbose; chat more as it goes
 EOF
 }
 
@@ -36,7 +46,11 @@ function usage()
 {
     cat >&2 <<EOF
 
-Search for available timeout utilities in the PATH and generate comma-timeout wrapper
+Search for available timeout utility in the PATH and invoke it passing all options.
+If the utility is timeout-group (timeoutg), it is automatically invoked to wait for
+the process group, --wait-for-process-group=forever. The user can override this value
+by providing own options that would be appended to the end of timeout's command line
+and override the default waiting duration.
 
 Usage:
     $scriptname <options>
@@ -44,6 +58,13 @@ Usage:
 Options:
 EOF
     description | sed 's/^/    /g' >&2
+
+cat >&2 <<EOF
+
+All the other options are passed verbatim to the selected timeout utility.
+See 'timeout --help' or 'timeoutg --help' for detail.
+
+EOF
 }
 
 source $( which comma-application-util ) || { echo "$scriptname: cannot source 'comma-application-util" >&2; exit 1; }
@@ -55,25 +76,48 @@ comma_path_value_to_var --prefix=option --export < <( description | comma-option
 timeout=$( which timeout )
 [[ -n "$timeout" ]] || { echo "$scriptname: cannot find native timeout utility" >&2; exit 1; }
 
-timeoutg=
+use_timeoutg=0
 timeoutg_all=$( which -a timeoutg )
 
 while true ; do
     read timeoutg_try
     [[ -n "$timeoutg_try" ]] || break
-    echo -n "$scriptname: look for timeoutg in $timeoutg_try... " >&2
-    [[ -x "$timeoutg_try" ]] || { echo "no, not executable" >&2; continue; }
+    (( option_verbose )) && echo -n "$scriptname: look for timeoutg in $timeoutg_try... " >&2
+    [[ -x "$timeoutg_try" ]] || { (( option_verbose )) && echo "no, not executable" >&2; continue; }
     helpstring=$( $timeoutg_try --help 2>&1 )
-    (( $? == 0 )) || { echo "no, does not output help" >&2; continue; }
-    grep -q '\-\-wait-for-process-group' <<<"$helpstring" || { echo "no, not our timeoutg" >&2; continue; }
-    timeoutg="$timeoutg_try"
-    echo "found" >&2
+    (( $? == 0 )) || { (( option_verbose )) && echo "no, does not output help" >&2; continue; }
+    grep -q '\-\-wait-for-process-group' <<<"$helpstring" || { (( option_verbose )) && echo "no, not our timeoutg" >&2; continue; }
+    (( option_verbose )) && echo "found" >&2
+    timeout="$timeoutg_try"
+    use_timeoutg=1
     break
 done <<< "$timeoutg_all"
 
-if [[ -n "$timeoutg" ]]; then
-    print_enhanced_comma_timeout "$timeoutg"
-else
-    echo "$scriptname: cannot find timeoutg utility; fall back to native timeout" >&2
-    print_native_comma_timeout "$timeout"
+if (( $( comma_options_has --which-timeout $@ ) )) ; then echo "$timeout" ; exit 0 ; fi
+if (( $( comma_options_has --is-timeout-group $@ ) )) ; then
+    if (( $use_timeoutg )) ; then
+        (( option_verbose )) && echo "$scriptname: is timeout group? yes" >&2
+        exit 0
+    else
+        (( option_verbose )) && echo "$scriptname: is timeout group? no" >&2
+        exit 1
+    fi
 fi
+
+if (( $use_timeoutg )) ; then
+    cmd="$timeout --wait-for-process-group=forever"
+else
+    (( option_verbose )) && echo "$scriptname: cannot find timeoutg utility; fall back to native timeout" >&2
+    cmd="$timeout"
+fi
+
+# native timeout does not support '--verbose' option; strip
+while [ $# -gt  0 ]; do
+    if [[ "$use_timeoutg" -eq 0 && "$1" == "--verbose" ]] ; then shift ; continue; fi
+    cmd+=" $1"
+    shift
+done
+
+# do it
+(( option_verbose )) && echo "$scriptname: running '$cmd'" >&2
+exec $cmd
