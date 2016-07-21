@@ -1,0 +1,36 @@
+#!/bin/bash
+
+source $( which comma-application-util ) || { echo "$0: cannot source 'comma-application-util'" >&2; exit 1; }
+
+input=$( cat )
+comma_path_value_to_var --export --prefix=input <<<"$input"
+echo "$input" | sed 's@^@input/@'
+
+function ignore_signals_forever()
+{
+    trap '' TERM INT HUP PIPE
+    while true; do
+        sleep 1
+    done
+}
+export -f ignore_signals_forever
+
+kill -l KILL | sed 's@^@kill/signal=@'
+
+date +%Y%m%dT%H%M%S | csv-time --to seconds | sed 's@^@time/start=@'
+
+duration="10"
+echo "sleep/duration=$duration"
+
+command_line_options=
+[[ -z "$input_kill_after" ]] || command_line_options+=" --kill-after=$input_kill_after"
+[[ -z "$input_wait_group" ]] || {
+    comma-timeout --is-timeout-group || { echo "skipped=1"; exit 0; }
+    command_line_options+=" --wait-for-process-group=$input_wait_group"
+}
+echo "skipped=0"
+
+comma-timeout $command_line_options $duration bash -c ignore_signals_forever
+echo "command/status=$?"
+
+date +%Y%m%dT%H%M%S | csv-time --to seconds | sed 's@^@time/end=@'
