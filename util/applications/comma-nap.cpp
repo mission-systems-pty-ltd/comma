@@ -34,48 +34,66 @@
 #include <signal.h>
 
 static int mypid = 0;
+static int verbose = 0;
 
 static void usage(char *name, int brief) {
-    fprintf(stderr, "Usage: %s <seconds to sleep> [-h|--help]\n", name);
+    fprintf(stderr, "Usage: %s <seconds to sleep> [-h|--help] [--verbose]\n", name);
     int alen = (int)strlen(name);
     if ( brief ) return;
     fprintf(stderr, "\n");
     fprintf(stderr, "%s is an auxiliary utility providing a verbose replacement of sleep (2).\n", name);
-    fprintf(stderr, "%*c It prints a message at the end of a normal run, and stays silent if killed.\n", alen, ' ');
+    fprintf(stderr, "%*c It prints a message at the end of a normal run, and stays silent if killed\n", alen, ' ');
+    fprintf(stderr, "%*c (unless '--verbose' is given; then prints the name of the signal caught).\n", alen, ' ');
     fprintf(stderr, "%*c Thus, the user may detect if a kill signal reached its destination.\n", alen, ' ');
     fprintf(stderr, "%*c Input argument is an integer number of seconds to sleep.\n", alen, ' ');
 }
 
 static void catch_sigint(int signo) {
-    fprintf(stderr, "comma-nap (%d): signal INT caught.\n", mypid);
+    if ( verbose ) { fprintf(stderr, "comma-nap (%d): signal INT caught.\n", mypid); }
     exit(1);
 }
  
 static void catch_sigterm(int signo) {
-    fprintf(stderr, "comma-nap (%d): signal TERM caught.\n", mypid);
+    if ( verbose ) { fprintf(stderr, "comma-nap (%d): signal TERM caught.\n", mypid); }
     exit(1);
 }
  
 static void catch_sighup(int signo) {
-    fprintf(stderr, "comma-nap (%d): signal HUP caught.\n", mypid);
+    if ( verbose ) { fprintf(stderr, "comma-nap (%d): signal HUP caught.\n", mypid); }
     exit(1);
 }
  
 int main(int argc, char *argv[]) {
-    if ( argc < 2 ) {
+    if ( argc < 2 || argc > 3 ) {
         usage( argv[0], 1 );
         return 1;
     }
-    if ( 0 == strcmp("-h", argv[1]) || 0 == strcmp("--help", argv[1]) ) {
-        usage( argv[0], 0 );
-        return 0;
-    }
-    char * endptr;
-    int d = (int)( strtol( argv[1], &endptr, 10 ) );
-    if ( *endptr != '\0' ) {
-        fprintf(stderr, "%s: %s is not an integer\n\n", argv[0], argv[1]);
-        usage( argv[0], 1 );
-        return 1;
+
+    int d = -1;
+    for ( int iarg = 1; iarg < argc; ++iarg )
+    {
+        if ( 0 == strcmp("--verbose", argv[iarg]) ) { verbose = 1; continue; }
+        if ( 0 == strcmp("-h", argv[iarg]) || 0 == strcmp("--help", argv[iarg]) ) {
+            usage( argv[0], 0 );
+            return 0;
+        }
+        if ( d != -1 ) {
+            fprintf(stderr, "%s: time to sleep given twice, %d and %s\n\n", argv[0], d, argv[iarg]);
+            usage( argv[0], 1 );
+            return 1;
+        }
+        char * endptr;
+        d = (int)( strtol( argv[iarg], &endptr, 10 ) );
+        if ( *endptr != '\0' ) {
+            fprintf(stderr, "%s: %s is not an integer\n\n", argv[0], argv[iarg]);
+            usage( argv[0], 1 );
+            return 1;
+        }
+        if ( d < 0 ) {
+            fprintf(stderr, "%s: cannot sleep negative time %s\n\n", argv[0], argv[iarg]);
+            usage( argv[0], 1 );
+            return 1;
+        }
     }
 
     mypid = ( int )getpid();

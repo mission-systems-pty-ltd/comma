@@ -1,0 +1,15 @@
+usage[0]="comma-nap -h"
+usage[1]="comma-nap --help"
+usage[2]="comma-nap -h --verbose"
+usage[3]="comma-nap --help --verbose"
+usage[4]="comma-nap --verbose -h"
+usage[5]="comma-nap --verbose --help"
+
+error[0]="comma-nap -10"
+error[1]="comma-nap 10 12"
+error[2]="comma-nap 10 --verbose --help"
+
+sleep[0]="timeout -s TERM 10 comma-nap 1"
+sleep[1]="timeout -s TERM 10 comma-nap --verbose 1"
+sleep[2]="timeout -s TERM 1 comma-nap 10"
+sleep[3]="timeout -s TERM 1 comma-nap --verbose 10"
