@@ -50,17 +50,20 @@ static void usage(char *name, int brief) {
 
 static void catch_sigint(int signo) {
     if ( verbose ) { fprintf(stderr, "comma-nap (%d): signal INT caught.\n", mypid); }
-    exit(1);
+    signal(SIGINT, SIG_DFL);
+    raise(SIGINT);
 }
  
 static void catch_sigterm(int signo) {
     if ( verbose ) { fprintf(stderr, "comma-nap (%d): signal TERM caught.\n", mypid); }
-    exit(1);
+    signal(SIGTERM, SIG_DFL);
+    raise(SIGTERM);
 }
  
 static void catch_sighup(int signo) {
     if ( verbose ) { fprintf(stderr, "comma-nap (%d): signal HUP caught.\n", mypid); }
-    exit(1);
+    signal(SIGHUP, SIG_DFL);
+    raise(SIGHUP);
 }
  
 int main(int argc, char *argv[]) {
