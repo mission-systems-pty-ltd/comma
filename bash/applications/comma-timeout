@@ -32,6 +32,7 @@
 self=$( readlink -f "$0" )
 scriptname=$( basename "$self" )
 
+# do not use this function to parse command line; see the explanation below
 function description()
 {
     cat <<EOF
@@ -68,16 +69,26 @@ See 'timeout --help' or 'timeoutg --help' for details.
 EOF
 }
 
-source $( which comma-application-util ) || { echo "$scriptname: cannot source 'comma-application-util" >&2; exit 1; }
-
-# TODO
-# cannot parse the entire command line (comma_path_value_to_var): some of the options can come from
+# cannot parse the entire command line using comma_path_value_to_var: some of the options can refer to
 # the program to be started under timeout; such options are unrelated to the desired timeout settings
 # instead, iterate the command line and handle options one by one until the first unknown option or value
 # is reached; then stop iterating and take the rest as the command to run
-# for the same reason cannot search for '--help' here
-if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then usage ; exit 0; fi
-comma_path_value_to_var --prefix=option --export < <( description | comma-options-to-name-value $@ )
+# for the same reason cannot search for '--help' or '--verbose' using comma_options_has
+option_which_timeout=0
+option_use_native_timeout=0
+option_is_timeout_group=0
+option_verbose=0
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help)             usage ; exit 0 ;;
+        --verbose)             option_verbose=1 ;;
+        --which-timeout)       option_which_timeout=1 ;;
+        --use-native-timeout)  option_use_native_timeout=1 ;;
+        --is-timeout-group)    option_is_timeout_group=1 ;;
+        *)                     break ;;
+    esac
+    shift
+done
 
 timeout=$( which timeout )
 [[ -n "$timeout" ]] || { echo "$scriptname: cannot find native timeout utility" >&2; exit 1; }
@@ -101,8 +112,8 @@ if [[ "$option_use_native_timeout" != "1" ]] ; then
     done <<< "$timeoutg_all"
 fi
 
-if (( $( comma_options_has --which-timeout $@ ) )) ; then echo "$timeout" ; exit 0 ; fi
-if (( $( comma_options_has --is-timeout-group $@ ) )) ; then
+if (( option_which_timeout )) ; then echo "$timeout" ; exit 0 ; fi
+if (( option_is_timeout_group )) ; then
     if (( $use_timeoutg )) ; then
         (( option_verbose )) && echo "$scriptname: is timeout group? yes" >&2
         exit 0
