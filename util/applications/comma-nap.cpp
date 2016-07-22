@@ -31,8 +31,11 @@
 #include <boost/thread/thread.hpp>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 
-void usage(char *name, int brief) {
+static int mypid = 0;
+
+static void usage(char *name, int brief) {
     fprintf(stderr, "Usage: %s <seconds to sleep> [-h|--help]\n", name);
     int alen = (int)strlen(name);
     if ( brief ) return;
@@ -43,6 +46,21 @@ void usage(char *name, int brief) {
     fprintf(stderr, "%*c Input argument is an integer number of seconds to sleep.\n", alen, ' ');
 }
 
+static void catch_sigint(int signo) {
+    fprintf(stderr, "comma-nap (%d): signal INT caught.\n", mypid);
+    exit(1);
+}
+ 
+static void catch_sigterm(int signo) {
+    fprintf(stderr, "comma-nap (%d): signal TERM caught.\n", mypid);
+    exit(1);
+}
+ 
+static void catch_sighup(int signo) {
+    fprintf(stderr, "comma-nap (%d): signal HUP caught.\n", mypid);
+    exit(1);
+}
+ 
 int main(int argc, char *argv[]) {
     if ( argc < 2 ) {
         usage( argv[0], 1 );
@@ -59,6 +77,22 @@ int main(int argc, char *argv[]) {
         usage( argv[0], 1 );
         return 1;
     }
+
+    mypid = ( int )getpid();
+
+    if (signal(SIGINT, catch_sigint) == SIG_ERR) {
+        fputs("An error occurred while setting a signal handler for INT.\n", stderr);
+        return EXIT_FAILURE;
+    }
+    if (signal(SIGTERM, catch_sigterm) == SIG_ERR) {
+        fputs("An error occurred while setting a signal handler for TERM.\n", stderr);
+        return EXIT_FAILURE;
+    }
+    if (signal(SIGHUP, catch_sighup) == SIG_ERR) {
+        fputs("An error occurred while setting a signal handler for HUP.\n", stderr);
+        return EXIT_FAILURE;
+    }
+
     boost::this_thread::sleep( boost::posix_time::seconds( d ) );
     fprintf(stdout, "%s: normal exit from slumber\n", argv[0]);
     return 0;
