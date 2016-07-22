@@ -2,7 +2,6 @@
 
 import os.path
 
-expect skipped == 0
 expect usage[0]/output == ""
 expect usage[0]/status == 0
 expect usage[1]/output == ""

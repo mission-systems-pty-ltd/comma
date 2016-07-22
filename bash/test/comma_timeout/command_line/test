@@ -3,13 +3,12 @@
 # if timeoutg is not installed, some of the tests are meaningless
 
 timeoutg=$( which timeoutg )
-[[ -n "$timeoutg" ]] || {
+if [[ -z "$timeoutg" ]] ; then
     echo "timeoutg utility not found; skip the test" >&2
     echo "skipped=1"
-    exit 0
-} && {
+else
     echo "skipped=0"
-}
+fi
 
 source $( which comma-test-util ) || { echo "$0: failed to source comma-test-util" >&2 ; exit 1 ; }
 
