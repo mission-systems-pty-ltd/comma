@@ -718,7 +718,7 @@ function comma_wait_for_process_group()
             }
         fi
         # occasionally observed ps hanging here indefinitely
-        leftovers=$( comma-timeout -k 10 -s TERM 10 bash -c "ps --no-headers -u $USER -o pgid,pid,comm" | grep "^ *$process_group_id " | grep -v '<defunct>' )
+        leftovers=$( { comma-timeout -k 10 -s TERM 10 bash -c "ps --no-headers -u $USER -o pgid,pid,comm" ; } | grep "^ *$process_group_id " | grep -v '<defunct>' )
         leftovers_rv=$?
         (( leftovers_rv >= 126 )) && { echo "$caller_name: could not list processes in group $process_group_id (status '$leftovers_rv')" >&2; (( ++iter )); sleep 1; continue; }
         leftovers_count=$( echo "$leftovers" | sed '/^$/d' | wc -l )
