@@ -124,20 +124,21 @@ if (( option_is_timeout_group )) ; then
 fi
 
 if (( $use_timeoutg )) ; then
-    cmd="$timeout --wait-for-process-group=forever"
+    cmd=( "$timeout" )
+    cmd+=( "--wait-for-process-group=forever" )
 else
     (( option_verbose )) && echo "$scriptname: cannot find timeoutg utility; fall back to native timeout" >&2
-    cmd="$timeout"
+    cmd=( "$timeout" )
 fi
 
 # native timeout does not support '--verbose' option; strip
-while [ $# -gt  0 ]; do
-    if [[ "$use_timeoutg" -eq 0 && "$1" == "--verbose" ]] ; then shift ; continue; fi
-    if [[ "$1" == "--use-native-timeout" ]] ; then shift ; continue; fi
-    cmd+=" $1"
+for arg in "$@" ; do
+    if [[ "$use_timeoutg" -eq 0 && "$arg" == "--verbose" ]] ; then shift ; continue; fi
+    if [[ "$arg" == "--use-native-timeout" ]] ; then shift ; continue; fi
+    cmd+=( "$arg" )
     shift
 done
 
 # do it
-(( option_verbose )) && echo "$scriptname: running '$cmd'" >&2
-exec $cmd
+(( option_verbose )) && echo "$scriptname: running '${cmd[@]}' (${#cmd[@]} arguments)" >&2
+exec "${cmd[@]}"
