@@ -7,6 +7,12 @@ iteration=$2
 
 mkdir -p "$output_dir"
 
+function on_exit()
+{
+    rm -f "$mypipe"
+}
+trap 'on_exit' EXIT
+
 mypipe="$output_dir/pipe"
 rm -f "$mypipe"
 mkfifo "$mypipe" || exit 1
