@@ -295,20 +295,20 @@ ${brown}White(and black)-listing pro hint${none}
 function error_()
 {
     if [[ "$options_no_ansiterm_control_characters" == "1" ]] ; then
-        echo -e "$1" >&2
+        echo -e "$*" >&2
     else
         local bold=$( tput bold )
         local red=$( tput setaf 1 )
         local normal=$( tput sgr0 )
-        echo -e "$bold$red$1$normal" >&2
+        echo -e "$bold$red$*$normal" >&2
     fi
 }
 export -f error_
 
 function error_and_junit_()
 {
-    local -r error_and_junit_formatted="$( echo -e "$1" )"
-    error_ "$( head -1 <<< "$error_and_junit_formatted" )"
+    local -r error_and_junit_formatted=$( echo -e "$1" )
+    error_ $( head -1 <<< "$error_and_junit_formatted" )
     local -r error_and_junit_formatted_tail="$( tail -n +2 <<< "$error_and_junit_formatted" )"
     [[ -z "$error_and_junit_formatted_tail" ]] || cat >&2 <<< "$error_and_junit_formatted_tail"
     if [[ -n "$options_junit" && -d 'output' ]] ; then
