@@ -562,26 +562,6 @@ function comma_top_wrapper()
 }
 export -f comma_top_wrapper
 
-# this functions terminates a currently running test using its group id
-# the test running under the timeout command will have its own group id
-function terminate_run_test_with_timeout()
-{
-    trap '' SIGINT SIGTERM SIGHUP SIGPIPE
-    echo "$name: terminating test in $( pwd )..." >&2
-    if [[ -n "$comma_top_pgid" ]] ; then
-        kill -s TERM -- -$comma_top_pgid
-        comma_wait_for_process_group "$name" "$comma_top_pgid" 12
-        wait $comma_top_pgid
-        unset comma_top_pgid
-    fi
-    error_and_junit_ "Killed"
-    # a process that exits in response to SIGINT should kill itself with SIGINT
-    # see http://www.cons.org/cracauer/sigint.html
-    [[ "$1" == "SIGINT" ]] && { trap - INT ; kill -SIGINT $BASHPID ; }
-    exit 1
-}
-export -f terminate_run_test_with_timeout
-
 # this functions executes a provided test with optional input and captures its stdout
 # then it optionally compares the output with the expected file
 # finally echoes the result of comma-test-match and the status of the match
@@ -658,7 +638,6 @@ export -f get_test_timeout
 # this function runs a provided test application under the timeout command
 function run_test_with_timeout()
 {
-    setup_signal_handler terminate_run_test_with_timeout
     export dir test_exec path
     local timeout_time
     timeout_time=$( get_test_timeout )
@@ -684,7 +663,16 @@ export -f run_test_with_timeout
 function terminate_run_single_test()
 {
     trap '' SIGINT SIGTERM SIGHUP SIGPIPE
-    echo "$name: single test run terminated by $1..." >&2
+    echo "$name: $FUNCNAME: single test run in $dir terminated by $1..." >&2
+    error_and_junit_ "test killed"
+
+    if [[ -n "$comma_top_pgid" ]] ; then
+        kill -s TERM -- -$comma_top_pgid
+        comma_wait_for_process_group "$name" "$comma_top_pgid" 12
+        wait $comma_top_pgid
+        unset comma_top_pgid
+    fi
+
     # serialize all access to global resources: stats file, stdout/err
     (
         flock -x 9
@@ -732,12 +720,18 @@ function run_single_test()
     local dir=$6 ; temp="${dir%\"}" ; dir="${temp#\"}"
     local worker_id=$BASHPID
 
-    setup_signal_handler terminate_run_single_test
-
     local counter="$count of $total"
 
     # create a unique file for local comma_progress output; will append to the main output at the end
-    local our_stats_progress="$comma_test_run_unique_dir/stats_progress.$( mktemp --dry-run XXXXXXXX )"
+    our_stats_progress="$comma_test_run_unique_dir/stats_progress.$( mktemp --dry-run XXXXXXXX )"
+    # create a unique file for redirecting all output
+    # will append to the main output at the end of each test
+    local our_stderrout_log="$comma_test_run_unique_dir/stdout_log.$( mktemp --dry-run XXXXXXXX )"
+
+    # prepare to clean up
+    local comma_top_pgid
+    setup_signal_handler terminate_run_single_test
+
     >"$our_stats_progress"
 
     # say something so that the user is not guessing what is going on
@@ -745,9 +739,7 @@ function run_single_test()
         flock -x 9
         message_ "$name: test $counter: $dir: started..."
     ) 9>>"$comma_test_run_output_flock"
-    # if running tests in parallel, create a unique file for redirecting all output
-    # will append to the main output at the end
-    local our_stderrout_log="$comma_test_run_unique_dir/stdout_log.$( mktemp --dry-run XXXXXXXX )"
+
     # do not touch this equilibristics with file descriptors
     exec 3>&1 4>&2 1>"$our_stderrout_log" 2>&1
 
