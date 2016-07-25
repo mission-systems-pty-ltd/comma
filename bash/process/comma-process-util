@@ -156,7 +156,7 @@ function comma_process_kill_helper_()
     (( verbose == 1 )) && builtin echo "$FUNCNAME: send signal '$signal_to_use' to ${group}${pid}" >&2
     trap 'comma_process_kill_trap_exit_' EXIT
     builtin kill -s STOP $pid
-    (( $? == 0 )) || { builtin echo "$FUNCNAME: process id '$pid' not found; do not kill, assume terminated by itself" >&2; exit $COMMA_PROCESS_KILL_NOT_FOUND; }
+    (( $? == 0 )) || { builtin echo "$FUNCNAME: process id '$pid' not found; do not kill, assume terminated by itself" >&2; trap - EXIT; exit $COMMA_PROCESS_KILL_NOT_FOUND; }
     current=$( comma_process_signature $pid )
     (( $? == 0 )) || { builtin echo "$FUNCNAME: cannot get signature of process id '$pid'" >&2; exit $COMMA_PROCESS_KILL_ERROR; }
     [[ "$current" == "$signature" ]] || { builtin echo "$FUNCNAME: process '$pid' has signature '$current' different from expected '$signature'; possibly re-used; refuse to kill" >&2; exit $COMMA_PROCESS_KILL_REUSED; }
