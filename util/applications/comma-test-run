@@ -676,16 +676,14 @@ function terminate_run_single_test()
     # serialize all access to global resources: stats file, stdout/err
     (
         flock -x 9
-        cat "$our_stderrout_log" >&3
+        [[ -f "$our_stderrout_log" ]] && cat "$our_stderrout_log" >&3
         local msg="test $count in '$dir': killed"
         echo "$msg" >&9
     ) 9>>"$comma_test_run_output_flock"
 
     rm -f "$our_stats_progress"
     (( options_debug )) || rm -f "$our_stderrout_log"
-    # a process that exits in response to SIGINT should kill itself with SIGINT
-    # see http://www.cons.org/cracauer/sigint.html
-    [[ "$1" == "SIGINT" ]] && { trap - INT ; kill -s INT $BASHPID ; }
+
     exit 1
 }
 export -f terminate_run_single_test
