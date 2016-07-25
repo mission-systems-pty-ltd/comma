@@ -39,6 +39,7 @@ function description()
 --help; display instructions on using this program
 --which-timeout; show the full path to the timeout utility to be used by $scriptname and exit
 --use-native-timeout; enforce using the standard timeout utility
+--use-timeout-group; must use timeout-group, error if not found
 --is-timeout-group; if use timeout utility from timeout-group, exit success; otherwise, exit with error
 --verbose; chat more as it goes
 EOF
@@ -76,6 +77,7 @@ EOF
 # for the same reason cannot search for '--help' or '--verbose' using comma_options_has
 option_which_timeout=0
 option_use_native_timeout=0
+option_use_timeout_group=0
 option_is_timeout_group=0
 option_verbose=0
 while [[ $# -gt 0 ]]; do
@@ -84,11 +86,14 @@ while [[ $# -gt 0 ]]; do
         --verbose)             option_verbose=1 ;;
         --which-timeout)       option_which_timeout=1 ;;
         --use-native-timeout)  option_use_native_timeout=1 ;;
+        --use-timeout-group)   option_use_timeout_group=1 ;;
         --is-timeout-group)    option_is_timeout_group=1 ;;
         *)                     break ;;
     esac
     shift
 done
+
+[[ "$option_use_native_timeout" != "0" && "$option_use_timeout_group" != "0" ]] && { echo "$scriptname: should either use native timeout or timeout-group" >&2; exit 1; }
 
 timeout=$( which timeout )
 [[ -n "$timeout" ]] || { echo "$scriptname: cannot find native timeout utility" >&2; exit 1; }
@@ -127,6 +132,7 @@ if (( $use_timeoutg )) ; then
     cmd=( "$timeout" )
     cmd+=( "--wait-for-process-group=forever" )
 else
+    (( option_use_timeout_group )) && { echo "$scriptname: told to use timeoutg but cannot find it" >&2; exit 1; }
     (( option_verbose )) && echo "$scriptname: cannot find timeoutg utility; fall back to native timeout" >&2
     cmd=( "$timeout" )
 fi
