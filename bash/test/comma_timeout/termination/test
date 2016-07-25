@@ -30,3 +30,7 @@ for i in $( seq $input_repetitions ) ; do
     $bindir/top.sh "$output_dir" $i
     (( $? == 0 )) || exit 1
 done
+
+echo "bash/versinfo[0]=${BASH_VERSINFO[0]}"
+echo "bash/versinfo[1]=${BASH_VERSINFO[1]}"
+echo "bash/versinfo[2]=${BASH_VERSINFO[2]}"
