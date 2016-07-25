@@ -82,11 +82,11 @@ function comma_process_signature()
     if [ "$pid" -eq "$pid" ] ; then :; else builtin echo "$FUNCNAME: pid '$pid' is not an integer" >&2; return 1; fi
     local signature psexit
     while true ; do
-        # occasionally observed ps hanging here indefinitely
-        signature=$( comma-timeout -k 10 -s TERM 10 ps --no-headers -o lstart "$pid" )
+        # occasionally observed ps hanging here indefinitely; single process, no need for timeout-group
+        signature=$( timeout -k 10 -s TERM 10 ps --no-headers -o lstart "$pid" )
         psexit=$?
         (( $psexit >= 126 )) && { builtin echo "$FUNCNAME: ps killed by a signal, exit status '$psexit', try again" >&2; continue; }
-        (( $psexit == 0 )) || { builtin echo "$FUNCNAME: process with id '$pid' not found" >&2; return 1; }
+        (( $psexit == 0 )) || { builtin echo "$FUNCNAME: process with id '$pid' not found, exit status '$psexit'" >&2; return 1; }
         break
     done
     signature=$( date --date="$signature" +%Y%m%dT%H%M%S ) || { builtin echo "$FUNCNAME: cannot convert '$signature' to timestamp" >&2; return 1; }
@@ -153,7 +153,7 @@ function comma_process_kill_helper_()
     signature=$2
     group=${pid:0:1}
     [[ "$group" == "-" ]] && pid=${pid:1} || group=""
-    (( verbose == 1 )) && builtin echo "$FUNCNAME: send signal '$signal_to_use' to ${group}${pid}" >&2
+    (( verbose == 1 )) && builtin echo "$FUNCNAME: will send signal '$signal_to_use' to ${group}${pid}" >&2
     trap 'comma_process_kill_trap_exit_' EXIT
     builtin kill -s STOP $pid
     (( $? == 0 )) || { builtin echo "$FUNCNAME: process id '$pid' not found; do not kill, assume terminated by itself" >&2; trap - EXIT; exit $COMMA_PROCESS_KILL_NOT_FOUND; }
@@ -628,12 +628,14 @@ function comma_execute_and_wait()
         # run the command-to-execute as a background process or as a background job in
         # its own process group and under timeout
         if [[ "$usepg" == "true" ]] ; then
+            [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: execute commands as process groups" >&2
             if [[ "$shellfcn" == "true" ]] ; then
                 comma_process_exec_and_validate $comma_background_verbose "$pid_fifo" comma-timeout -k 10 -s TERM $execute_and_wait_timeout bash -c "$command_to_execute"
             else
                 comma_process_exec_and_validate $comma_background_verbose "$pid_fifo" comma-timeout -k 10 -s TERM $execute_and_wait_timeout $command_to_execute
             fi
         else
+            [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: execute commands as processes" >&2
             if [[ "$shellfcn" == "true" ]] ; then
                 comma_process_exec_and_validate $comma_background_verbose "$pid_fifo" bash -c "$command_to_execute"
             else
