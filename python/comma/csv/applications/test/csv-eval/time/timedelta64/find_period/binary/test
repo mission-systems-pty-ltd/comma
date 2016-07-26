@@ -1,0 +1,10 @@
+#!/bin/bash
+
+scriptname=$( readlink -f $0 )
+source $( type -p comma-application-util ) || { echo "$scriptname: failed to source comma-application-util" >&2; exit 1; }
+
+csv-to-bin 2t | csv-eval --fields=t1,t2 --binary=2t "days = (t2-t1)/timedelta64(1,'D'); hours = (t2-t1)/timedelta64(1,'h')" \
+    | csv-from-bin 2t,2d \
+    | name-value-from-csv t1,t2,dt/days,dt/hours --line-number --prefix output | tr -d '"'
+comma_status_ok
+echo "status=$?"

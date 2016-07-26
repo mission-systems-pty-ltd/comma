@@ -1,0 +1,8 @@
+#!/bin/bash
+
+scriptname=$( readlink -f $0 )
+source $( type -p comma-application-util ) || { echo "$scriptname: failed to source comma-application-util" >&2; exit 1; }
+
+csv-to-bin t | csv-eval --fields=t --binary=t "t -= timedelta64(2,'D')" | csv-from-bin t | name-value-from-csv time --line-number --prefix output | tr -d '"'
+comma_status_ok
+echo "status=$?"
