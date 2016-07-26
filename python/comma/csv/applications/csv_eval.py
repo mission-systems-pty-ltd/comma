@@ -68,9 +68,6 @@ examples:
     # evaluate one of two expressions based on condition
     ( echo 1,2; echo 2,1 ) | %(prog)s --fields=x,y 'a=where(x<y,x+y,x-y)'
 
-    # time arithmetic
-    echo 20150101T000000.000000 | %(prog)s --fields=t --format=t 'a=t+1;b=t-1' --output-format=2t
-
     # select output based on condition
     ( echo 1,2 ; echo 1,3; echo 1,4 ) | %(prog)s --fields=a,b --format=2i --select="(a < b - 1) & (b < 4)"
 
@@ -118,6 +115,13 @@ string functions:
 
     ( echo 'a'; echo 'a/b' ) | %(prog)s --fields=path --format=s[36] 'n=char.count(path,"/")' --output-format=ui
     ( echo 'a'; echo 'a/b' ) | %(prog)s --fields=path --format=s[36] 'r=char.replace(path,"/","_")' --output-format=s[36]
+
+time arithmetic:
+    http://docs.scipy.org/doc/numpy/reference/arrays.datetime.html#datetime-and-timedelta-arithmetic
+
+    echo 20150101T000000.000000 | %(prog)s --fields=t --format=t 't1=t+1;t2=t-1' --output-format=2t
+    echo 20151231T000000 | %(prog)s --fields=t --format=t "t += timedelta64(1,'D')"
+    echo 20151231T000000,20160515T120000 | %(prog)s --fields=t1,t2 --format=2t "dt = (t2-t1)/timedelta64(1,'D')"
 """
 
 
