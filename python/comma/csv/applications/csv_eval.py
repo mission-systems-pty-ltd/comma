@@ -462,6 +462,7 @@ def select(condition, stream):
 
 def main():
     try:
+        comma.csv.time.zone('UTC')
         args = get_args()
         prepare_options(args)
         if args.select:
