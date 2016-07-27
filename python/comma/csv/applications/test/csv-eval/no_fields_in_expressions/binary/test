@@ -1,0 +1,36 @@
+#!/bin/bash
+
+scriptname=$( readlink -f $0 )
+source $( type -p comma-application-util ) || { exit "$scriptname: failed to source comma-application-util" >&2; exit 1; }
+ 
+valid_input='
+1,1
+2,2
+3,3
+'
+
+invalid_input='
+1,1
+2,3
+3,3
+'
+
+code='
+import sys
+if any(i != j):
+    sys.exit(1)
+'
+
+csv-to-bin 2ui <<< "$valid_input" | csv-eval --fields=i,j --binary=2ui "$code" --permissive \
+    | csv-from-bin 2ui \
+    | name-value-from-csv i,j --prefix=valid_input/passed_through --output-line-number | sed 's/"//g'
+comma_status_ok
+echo "valid_input_status=$?"
+
+csv-to-bin 2ui <<< "$invalid_input" | csv-eval --fields=i,j --format=2ui "$code" --permissive \
+    | csv-from-bin 2ui \
+    | name-value-from-csv i,j --prefix=invalid_input/pased_through --output-line-number | sed 's/"//g'
+comma_status_ok
+echo "invalid_input_status=$?"
+
+

@@ -262,13 +262,15 @@ def fields_from_expressions(expressions):
     """
     >>> from comma.csv.applications.csv_eval import fields_from_expressions
     >>> fields_from_expressions("a = 1; b = x + y; c = 'x = 1; y = 2'; d = (b == z)")
-    'a,b,c,d'
+    ['a', 'b', 'c', 'd']
     >>> fields_from_expressions("a, b = 1, 2")
-    'a,b'
+    ['a', 'b']
     >>> fields_from_expressions("a = b = 1")
-    'a,b'
+    ['a', 'b']
     >>> fields_from_expressions("x = 'a = \\"y = 1;a = 2\\"';")
-    'x'
+    ['x']
+    >>> fields_from_expressions("")
+    []
     """
     tree = ast.parse(expressions, '<string>', mode='exec')
     fields = []
@@ -280,10 +282,7 @@ def fields_from_expressions(expressions):
                         fields.append(node.id)
         if type(child) == ast.AugAssign:
             fields.append(child.target.id)
-    if not fields:
-        msg = "failed to infer fields from '{}'".format(expressions)
-        raise csv_eval_error(msg)
-    return ','.join(fields)
+    return fields
 
 
 def prepare_options(args):
@@ -297,8 +296,8 @@ def prepare_options(args):
         args.binary = False
     if args.select:
         return
-    input_fields = args.fields.split(',')
-    expr_fields = fields_from_expressions(args.expressions).split(',')
+    input_fields = args.fields.split(',') if args.fields else []
+    expr_fields = fields_from_expressions(args.expressions)
     args.update_fields = ','.join(set(f for f in expr_fields if f in input_fields))
     if args.output_fields is None:
         args.output_fields = ','.join(f for f in expr_fields if f not in input_fields)

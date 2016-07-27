@@ -1,0 +1,13 @@
+
+number_of( valid_input/passed_through ) = 3
+
+valid_input/passed_through[0]/i=1
+valid_input/passed_through[0]/j=1
+valid_input/passed_through[1]/i=2
+valid_input/passed_through[1]/j=2
+valid_input/passed_through[2]/i=3
+valid_input/passed_through[2]/j=3
+valid_input_status=0
+
+invalid_input_status=1
+
