@@ -87,8 +87,8 @@ void usage( bool )
         "\n"
         "\nDuration for the '-k' and '--wait-for-process-group' options is a floating point number with"
         "\nan optional suffix 's' for seconds (default), 'm' for minutes, 'h' for hours, and 'd' for days."
-        "\nThe '--wait-for-process-group' option also accepts special duration 'forever' given as a literal"
-        "\nstring (no quotes)."
+        "\nThe '--wait-for-process-group' option also accepts special duration 'forever' (equal to DBL_MAX)"
+        "\ngiven as a literal string (no quotes)."
         "\n"
         "\nReturn value:"
         "\n    - if the command times out, exit with status 124"
@@ -111,7 +111,7 @@ void usage( bool )
     exit( 0 );
 }
 
-double seconds_from_string( const std::string& s )
+double seconds_from_string( const std::string& s, bool allow_forever = false )
 {
     struct impl_ {
         static double from_string( const std::string & s )
@@ -139,6 +139,10 @@ double seconds_from_string( const std::string& s )
     if ( s.empty() )
     {
         COMMA_THROW( comma::exception, "expected non-empty string" );
+    }
+    if ( s == "forever" ) {
+        if ( !allow_forever ) { COMMA_THROW( comma::exception, "the 'forever' duration is not allowed in this context" ); }
+        return DBL_MAX;
     }
     double result = impl_::from_string( s );
     if ( result <= 0.0 )
