@@ -78,9 +78,8 @@ void usage( bool )
         "\nDuration for the '-k' and '--wait-for-process-group' options is a floating point number with"
         "\nan optional suffix 's' for seconds (default), 'm' for minutes, 'h' for hours, and 'd' for days."
         "\nThe '--wait-for-process-group' option also accepts special duration 'forever' (equal to DBL_MAX)"
-        "\ngiven as a literal string (no quotes)."
-        "\n"
-        "\nIf both '--kill-after and --wait-for-process-group' are specified, the former takes precedence."
+        "\ngiven as a literal string (no quotes). If both '--kill-after and --wait-for-process-group' durations"
+        "\nare specified, the former takes precedence."
         "\n"
         "\nReturn value:"
         "\n    - if the command times out, exit with status 124"
@@ -267,12 +266,13 @@ int main( int ac, char** av ) try
     // the '--verbose' option will be interpreted as given to comma-timeout-group, not to my-command
     // same with '--signal=foo', which will cause comma-timeout-group to fail, but was intended to my-command and possibly can take 'foo' as argument
     unsigned int first_argument = count_command_line_options( uac, av, "-h,--help,--verbose,--list-known-signals,--foreground,--preserve-status", "-s,--signal,-k,--kill-after,--wait-for-process-group" );
-    if ( first_argument + 2 > uac ) { COMMA_THROW( comma::exception, "must give at least timeout and command to run" ); }
 
     comma::command_line_options options( first_argument, av, usage );
     if ( options.exists( "-h,--help" ) ) { usage( true ); return 0; }
     if ( options.exists( "--list-known-signals" ) ) { std::cout << sig2str::list_all() << std::endl; return 0; }
     if ( options.exists( "--preserve-status,--foreground" ) ) { usage( true ); COMMA_THROW( comma::exception, "unsupported option of the original timeout" ); }
+
+    if ( first_argument + 2 > uac ) { COMMA_THROW( comma::exception, "must give at least timeout and command to run" ); }
 
     bool verbose = options.exists( "--verbose" );
 
