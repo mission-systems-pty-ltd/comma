@@ -30,28 +30,16 @@
 
 /// @author dmitry mikhin
 
-#include <string.h>
 #include <signal.h>
-#include <time.h>
-#include <algorithm>
-#include <cmath>
 #include <iostream>
 #include <string>
 #include <vector>
 #include <boost/lexical_cast.hpp>
 #include <boost/assign/list_of.hpp>
-#include <boost/date_time/posix_time/posix_time_duration.hpp>
-#include <boost/date_time/posix_time/ptime.hpp>
-#include <boost/date_time/local_time/local_time.hpp>
-#include <boost/date_time/c_local_time_adjustor.hpp>
 #include "../../application/contact_info.h"
 #include "../../application/command_line_options.h"
 #include "../../base/exception.h"
 #include "../../base/types.h"
-#include "../../csv/stream.h"
-#include "../../csv/impl/epoch.h"
-#include "../../string/string.h"
-#include "../../visiting/traits.h"
 
 namespace {
 
