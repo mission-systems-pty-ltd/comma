@@ -117,16 +117,22 @@ double seconds_from_string( const std::string& s )
         static double from_string( const std::string & s )
         {
             const char & w = *s.rbegin();
-            switch( w )
-            {
-                case 'd':
-                    return 60 * 60 * 24 * boost::lexical_cast< double >( static_cast< const char * >( &s[0] ), s.size() - 1 );
-                case 'h':
-                    return 60 * 60 * boost::lexical_cast< double >( static_cast< const char * >( &s[0] ), s.size() - 1 );
-                case 'm':
-                    return 60 * boost::lexical_cast< double >( static_cast< const char * >( &s[0] ), s.size() - 1 );
-                default:
-                    return boost::lexical_cast< double >( s );
+            try {
+                switch( w )
+                {
+                    case 'd':
+                        return 60 * 60 * 24 * boost::lexical_cast< double >( static_cast< const char * >( &s[0] ), s.size() - 1 );
+                    case 'h':
+                        return 60 * 60 * boost::lexical_cast< double >( static_cast< const char * >( &s[0] ), s.size() - 1 );
+                    case 'm':
+                        return 60 * boost::lexical_cast< double >( static_cast< const char * >( &s[0] ), s.size() - 1 );
+                    case 's':
+                        return boost::lexical_cast< double >( static_cast< const char * >( &s[0] ), s.size() - 1 );
+                    default:
+                        return boost::lexical_cast< double >( s );
+                }
+            } catch ( boost::bad_lexical_cast & e ) {
+                COMMA_THROW( comma::exception, "cannot convert '" << s << "' to seconds, " << e.what() );
             }
         }
     };
