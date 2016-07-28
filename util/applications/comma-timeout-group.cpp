@@ -218,9 +218,8 @@ int main( int ac, char** av ) try
 
     bool verbose = options.exists( "--verbose" );
 
-    if ( options.exists( "-s,--signal" ) ) {
-        signal_to_use = sig2str::from_string( options.value< std::string >( "--signal" ) );
-        if ( verbose ) { std::cerr << "comma-timeout-group: will use signal " << signal_to_use << std::endl; }
+    if ( options.exists( "-s,--signal" ) ) { signal_to_use = sig2str::from_string( options.value< std::string >( "--signal" ) ); }
+
     if ( options.exists( "--wait-for-process-group" ) ) {
         wait_for_process_group = true;
         kill_after = seconds_from_string( options.value< std::string >( "--wait-for-process-group" ), true );
@@ -232,6 +231,14 @@ int main( int ac, char** av ) try
     if ( arguments.size() < 2 ) { COMMA_THROW( comma::exception, "must give at least timeout and command to run" ); }
 
     double timeout = seconds_from_string( arguments[0] );
+
+    if ( verbose ) {
+        std::cerr << "comma-timeout-group:" << std::endl;
+        std::cerr << "    will execute '" << comma::join( arguments.begin() + 1, arguments.end(), ' ' ) << "'" << std::endl;
+        std::cerr << "    will time-out this command after " << timeout << " s" << std::endl;
+        std::cerr << "    will use signal " << signal_to_use << " to interrupt the command by timeout" << std::endl;
+        if ( wait_for_process_group ) { std::cerr << "    will wait" << ( kill_after < DBL_MAX ? "" : " forever" ) << " for all processes in the group to finish" << std::endl; }
+        if ( kill_after != 0 && kill_after < DBL_MAX ) { std::cerr << "    will send KILL signal " << kill_after << " s after the timeout" << std::endl; }
     }
 
     return 0;
