@@ -228,6 +228,10 @@ int main( int ac, char** av ) try
 
     if ( options.exists( "-k,--kill-after" ) ) { kill_after = seconds_from_string( options.value< std::string >( "--kill-after" ) ); }
 
+    std::vector< std::string > arguments = options.unnamed( "-h,--help,--verbose,--list-known-signals,--foreground,--preserve-status", "-s,--signal,-k,--kill-after,--wait-for-process-group" );
+    if ( arguments.size() < 2 ) { COMMA_THROW( comma::exception, "must give at least timeout and command to run" ); }
+
+    double timeout = seconds_from_string( arguments[0] );
     }
 
     return 0;
