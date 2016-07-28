@@ -31,6 +31,7 @@
 /// @author dmitry mikhin
 
 #include <signal.h>
+#include <proc/readproc.h>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -212,6 +213,40 @@ unsigned int count_command_line_options( unsigned int ac, char** av, const std::
         return i;
     }
     return ac;
+}
+
+int parse_process_tree( bool verbose = false )
+{
+    int ownpid;
+    ownpid = getpid();
+    int flags = PROC_FILLSTAT;
+    if ( verbose ) flags = flags | PROC_FILLCOM;
+    PROCTAB* proc = openproc(flags);
+    proc_t proc_info;
+    memset(&proc_info, 0, sizeof(proc_info));
+    int first = 1;
+    int count = 0;
+    while (readproc(proc, &proc_info) != NULL) {
+        if ( proc_info.pgrp == ownpid ) {
+            if ( first && verbose ) { std::cerr << "extant processes in group " << ownpid << std::endl; first = 0; }
+            ++count;
+            if ( verbose ) { std::cerr << proc_info.cmd << ":\t" << proc_info.tid << "\t" << proc_info.pgrp << "\t" << proc_info.state << "\t" << proc_info.start_time << std::endl; }
+        }
+    }
+    closeproc(proc);
+    return count;
+}
+
+int parse_process_tree_until_empty( unsigned int each_wait = 10000, bool verbose = false )
+{
+    int count = 0;
+    while ( 1 ) {
+        if ( ( count = parse_process_tree( verbose ) ) <= 1 ) break;
+        usleep( each_wait );
+    }
+    /* shouldn't happen: timeout itself in this process group. */
+    if ( !count ) { COMMA_THROW( comma::exception, "error counting processes in the group, none left" ); }
+    return count;
 }
 
 } // anonymous

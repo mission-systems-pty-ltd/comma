@@ -3,7 +3,7 @@ target_link_libraries(comma-progress ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv c
 INSTALL( TARGETS comma-progress RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
 
 add_executable( comma-timeout-group comma-timeout-group.cpp )
-target_link_libraries(comma-timeout-group ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_name_value )
+target_link_libraries(comma-timeout-group ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_name_value procps )
 INSTALL( TARGETS comma-timeout-group RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
 
 add_executable(comma-nap comma-nap.cpp )
