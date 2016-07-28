@@ -36,6 +36,7 @@
 #include <vector>
 #include <boost/lexical_cast.hpp>
 #include <boost/assign/list_of.hpp>
+#include <boost/regex.hpp>
 #include "../../application/contact_info.h"
 #include "../../application/command_line_options.h"
 #include "../../base/exception.h"
@@ -189,6 +190,30 @@ sig2str::V sig2str::known_signals = boost::assign::list_of< std::pair< std::stri
            ( "CONT", SIGCONT ) \
            ( "STOP", SIGSTOP ) ;
 
+// modified from command_line_options.unnamed: same iteration, but different activity
+unsigned int count_command_line_options( unsigned int ac, char** av, const std::string& valueless_options, const std::string& options_with_values = "-.*" )
+{
+    std::vector< std::string > valueless = comma::split( valueless_options, ',' );
+    std::vector< std::string > valued = comma::split( options_with_values, ',' );
+    for( unsigned int i = 1; i < ac; ++i )
+    {
+        std::string argv_( av[i] );
+        bool is_valueless = false;
+        for( unsigned int k = 0; !is_valueless && k < valueless.size(); ++k ) { is_valueless = boost::regex_match( argv_, boost::regex( valueless[k] ) ); }
+        if( is_valueless ) { continue; }
+        bool is_valued = false;
+        bool has_equal_sign = false;
+        for( unsigned int j = 0; !is_valued && j < valued.size(); ++j )
+        {
+            has_equal_sign = boost::regex_match( argv_, boost::regex( valued[j] + "=.*" ) );
+            is_valued = boost::regex_match( argv_, boost::regex( valued[j] ) ) || has_equal_sign;
+        }
+        if( is_valued ) { if( !has_equal_sign ) { ++i; } continue; }
+        return i;
+    }
+    return ac;
+}
+
 } // anonymous
 
 int main( int ac, char** av ) try
@@ -198,8 +223,18 @@ int main( int ac, char** av ) try
     int child_pid;
     double kill_after = 0.0;
     bool wait_for_process_group = false;
+    unsigned int uac = ac;
 
-    comma::command_line_options options( ac, av, usage );
+    // cannot use comma::command_line_options on the entire command line;
+    // the methods options.unnamed, options.exists, etc. will not parse correctly a generic case
+    // an example:
+    //     comma-timeout-group 10 my-command --verbose --signal=foo
+    // the '--verbose' option will be interpreted as given to comma-timeout-group, not to my-command
+    // same with '--signal=foo', which will cause comma-timeout-group to fail, but was intended to my-command and possibly can take 'foo' as argument
+    unsigned int first_argument = count_command_line_options( uac, av, "-h,--help,--verbose,--list-known-signals,--foreground,--preserve-status", "-s,--signal,-k,--kill-after,--wait-for-process-group" );
+    if ( first_argument + 2 > uac ) { COMMA_THROW( comma::exception, "must give at least timeout and command to run" ); }
+
+    comma::command_line_options options( first_argument, av, usage );
     if ( options.exists( "-h,--help" ) ) { usage( true ); return 0; }
     if ( options.exists( "--list-known-signals" ) ) { std::cout << sig2str::list_all() << std::endl; return 0; }
     if ( options.exists( "--preserve-status,--foreground" ) ) { usage( true ); COMMA_THROW( comma::exception, "unsupported option of the original timeout" ); }
@@ -215,14 +250,16 @@ int main( int ac, char** av ) try
 
     if ( options.exists( "-k,--kill-after" ) ) { kill_after = seconds_from_string( options.value< std::string >( "--kill-after" ) ); }
 
-    std::vector< std::string > arguments = options.unnamed( "-h,--help,--verbose,--list-known-signals,--foreground,--preserve-status", "-s,--signal,-k,--kill-after,--wait-for-process-group" );
-    if ( arguments.size() < 2 ) { COMMA_THROW( comma::exception, "must give at least timeout and command to run" ); }
+    double timeout = seconds_from_string( av[first_argument] );
 
-    double timeout = seconds_from_string( arguments[0] );
+    ++first_argument;
+    std::vector< std::string > command_to_run;
+    command_to_run.reserve( uac - first_argument );
+    for ( unsigned int i = first_argument; i < uac; ++i ) command_to_run.push_back( av[i] );
 
     if ( verbose ) {
         std::cerr << "comma-timeout-group:" << std::endl;
-        std::cerr << "    will execute '" << comma::join( arguments.begin() + 1, arguments.end(), ' ' ) << "'" << std::endl;
+        std::cerr << "    will execute '" << comma::join( command_to_run.begin(), command_to_run.end(), ' ' ) << "'" << std::endl;
         std::cerr << "    will time-out this command after " << timeout << " s" << std::endl;
         std::cerr << "    will use signal " << signal_to_use << " to interrupt the command by timeout" << std::endl;
         if ( wait_for_process_group ) { std::cerr << "    will wait" << ( kill_after < DBL_MAX ? "" : " forever" ) << " for all processes in the group to finish" << std::endl; }
