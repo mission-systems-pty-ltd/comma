@@ -31,13 +31,19 @@
 /// @author dmitry mikhin
 
 #include <signal.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <proc/readproc.h>
+
 #include <iostream>
 #include <string>
 #include <vector>
+
 #include <boost/lexical_cast.hpp>
 #include <boost/assign/list_of.hpp>
 #include <boost/regex.hpp>
+
 #include "../../application/contact_info.h"
 #include "../../application/command_line_options.h"
 #include "../../base/exception.h"
@@ -182,6 +188,7 @@ struct sig2str {
 sig2str::V sig2str::known_signals = boost::assign::list_of< std::pair< std::string, int > > \
            (  "HUP",  SIGHUP ) \
            (  "INT",  SIGINT ) \
+           ( "QUIT", SIGQUIT ) \
            ( "KILL", SIGKILL ) \
            ( "USR1", SIGUSR1 ) \
            ( "USR2", SIGUSR2 ) \
@@ -222,10 +229,10 @@ int parse_process_tree( bool verbose = false )
     if ( verbose ) flags = flags | PROC_FILLCOM;
     PROCTAB* proc = openproc(flags);
     proc_t proc_info;
-    memset(&proc_info, 0, sizeof(proc_info));
+    memset( &proc_info, 0, sizeof( proc_info ) );
     int first = 1;
     int count = 0;
-    while (readproc(proc, &proc_info) != NULL) {
+    while ( readproc( proc, &proc_info ) != NULL ) {
         if ( proc_info.pgrp == ownpid ) {
             if ( first && verbose ) { std::cerr << "extant processes in group " << ownpid << std::endl; first = 0; }
             ++count;
@@ -248,15 +255,79 @@ int parse_process_tree_until_empty( unsigned int each_wait = 10000, bool verbose
     return count;
 }
 
+void set_alarm( double duration )
+{
+    sigset_t signal_set;
+    sigemptyset( &signal_set );
+    sigaddset( &signal_set, SIGALRM );
+    if ( sigprocmask( SIG_UNBLOCK, &signal_set, NULL ) != 0 ) { COMMA_THROW( comma::exception, "cannot unblock SIGALRM" ); }
+
+    struct itimerspec its = { { 0, 0 }, { 0, 0 } };
+    its.it_value.tv_sec = static_cast< time_t >( std::floor( duration ) );
+    its.it_value.tv_nsec = static_cast< time_t >( 1000000000 * ( duration - its.it_value.tv_sec ) );
+    timer_t timerid;
+    if ( 0 != timer_create( CLOCK_REALTIME, NULL, &timerid ) ) { COMMA_THROW( comma::exception, "cannot create timer id" ); }
+    if ( 0 != timer_settime( timerid, 0, &its, NULL ) ) {
+        timer_delete( timerid );
+        COMMA_THROW( comma::exception, "cannot set timer" );
+    }
+}
+
+// many values are used in the handler, no way to pass via arguments, hence, global
+// the rest just moved here to keep all in one place
+sig_atomic_t timed_out = 0;
+int signal_to_use = SIGTERM;  // same default as kill and timeout commands
+int child_pid = 0;
+bool verbose = false;
+double timeout = 0.0;
+double kill_after = 0.0;
+bool wait_for_process_group = false;
+
+void signal_handler( int received_signal )
+{
+    if ( !child_pid ) _exit( 128 + received_signal ); // per shell rules
+
+    if ( received_signal == SIGALRM ) { timed_out = 1; }
+
+    if ( kill_after )
+    {
+        int saved_errno = errno;
+        signal_to_use = SIGKILL;
+        set_alarm( kill_after );
+        kill_after = 0.0;
+        errno = saved_errno;
+    }
+
+    kill( child_pid, signal_to_use ); // child could have created its own group
+    // unset first, do not go into a loop
+    signal( signal_to_use, SIG_IGN );
+    kill( 0, signal_to_use );
+}
+
+void initialize_signal_handling( int signal_to_use )
+{
+     struct sigaction sa;
+     sigemptyset( &sa.sa_mask );
+     sa.sa_handler = signal_handler;
+     sa.sa_flags = SA_RESTART;  // on advice from man 7 signal and man 2 signaction
+
+     sigaction( SIGHUP,  &sa, NULL );
+     sigaction( SIGINT,  &sa, NULL );
+     sigaction( SIGQUIT, &sa, NULL );
+     sigaction( SIGALRM, &sa, NULL );
+     sigaction( SIGTERM, &sa, NULL );
+
+     sigaction( signal_to_use, &sa, NULL );
+
+     signal( SIGTTIN, SIG_IGN );
+     signal( SIGTTOU, SIG_IGN );
+     signal( SIGCHLD, SIG_DFL );
+}
+
 } // anonymous
 
 int main( int ac, char** av ) try
 {
-    bool timed_out;
-    int signal_to_use = SIGTERM;  // same default as kill and timeout commands
-    int child_pid;
-    double kill_after = 0.0;
-    bool wait_for_process_group = false;
     unsigned int uac = ac;
 
     // cannot use comma::command_line_options on the entire command line;
@@ -274,7 +345,7 @@ int main( int ac, char** av ) try
 
     if ( first_argument + 2 > uac ) { COMMA_THROW( comma::exception, "must give at least timeout and command to run" ); }
 
-    bool verbose = options.exists( "--verbose" );
+    verbose = options.exists( "--verbose" );
 
     if ( options.exists( "-s,--signal" ) ) { signal_to_use = sig2str::from_string( options.value< std::string >( "--signal" ) ); }
 
@@ -285,23 +356,84 @@ int main( int ac, char** av ) try
 
     if ( options.exists( "-k,--kill-after" ) ) { kill_after = seconds_from_string( options.value< std::string >( "--kill-after" ) ); }
 
-    double timeout = seconds_from_string( av[first_argument] );
-
-    ++first_argument;
-    std::vector< std::string > command_to_run;
-    command_to_run.reserve( uac - first_argument );
-    for ( unsigned int i = first_argument; i < uac; ++i ) command_to_run.push_back( av[i] );
+    timeout = seconds_from_string( av[first_argument++] );
 
     if ( verbose ) {
         std::cerr << "comma-timeout-group:" << std::endl;
-        std::cerr << "    will execute '" << comma::join( command_to_run.begin(), command_to_run.end(), ' ' ) << "'" << std::endl;
+        std::cerr << "    will execute '" << av[first_argument]; for ( unsigned int i = first_argument + 1; i < uac; ++i ) { std::cerr << ' ' << av[i]; }; std::cerr << "'" << std::endl;
         std::cerr << "    will time-out this command after " << timeout << " s" << std::endl;
         std::cerr << "    will use signal " << signal_to_use << " to interrupt the command by timeout" << std::endl;
+        std::cerr << std::endl;
         if ( wait_for_process_group ) { std::cerr << "    will wait" << ( kill_after < DBL_MAX ? "" : " forever" ) << " for all processes in the group to finish" << std::endl; }
         if ( kill_after != 0 && kill_after < DBL_MAX ) { std::cerr << "    will send KILL signal " << kill_after << " s after the timeout" << std::endl; }
     }
 
-    return 0;
+    // become a group of our own
+    setpgid( 0, 0 );
+
+    // handle signals
+    initialize_signal_handling( signal_to_use );
+
+    child_pid = fork();
+    if ( child_pid == -1 )
+    {
+        COMMA_THROW( comma::exception, "fork system call failed" );
+    }
+    else if ( child_pid == 0 )
+    {
+        // in the child
+
+        // used to ignore
+        signal( SIGTTIN, SIG_DFL );
+        signal( SIGTTOU, SIG_DFL );
+
+        int error = execvp( av[first_argument], av + first_argument );
+        if ( error == -1 ) {
+            if ( errno == ENOENT ) {
+                std::cerr << "comma-timeout-group: command '" << av[first_argument] << "' not found" << std::endl;
+                _exit(127);
+            } else {
+                std::cerr << "comma-timeout-group: cannot execute '" << av[first_argument] << "'" << std::endl;
+                _exit(126);
+            }
+        }
+    }
+
+    // in the parent; all management occurs here
+    set_alarm( timeout );
+
+    pid_t outcome;
+    int status;
+
+    while ( ( outcome = waitpid( child_pid, &status, 0 ) ) < 0 && errno == EINTR ) continue;
+
+    if ( outcome < 0 ) { COMMA_THROW( comma::exception, "waitpid failed, status " << outcome ); }
+
+    if ( wait_for_process_group ) {
+        int count = parse_process_tree_until_empty( verbose );
+        if ( count < 0 ) { COMMA_THROW( comma::exception, "number of processes in the group fell to zero" ); }
+    }
+
+    if ( WIFEXITED( status ) )
+    {
+        if ( verbose ) { std::cerr << "comma-timeout-group: application exited" << std::endl; }
+        return WEXITSTATUS(status);
+    }
+
+    if ( timed_out )
+    {
+        if ( verbose ) { std::cerr << "comma-timeout-group: application timed-out" << std::endl; }
+        return 124;
+    }
+
+    if ( WIFSIGNALED( status ) ) // timed-out also signalled, consider first
+    {
+        int signal_caught = WTERMSIG( status );
+        if ( verbose ) { std::cerr << "comma-timeout-group: application caught signal " << signal_caught << std::endl; }
+        return signal_caught + 128; // per shell rules
+    }
+
+    COMMA_THROW( comma::exception, "unknown status " << status << " from command" );
 }
 catch( std::exception& ex ) { std::cerr << "comma-timeout-group: " << ex.what() << std::endl; }
 catch( ... ) { std::cerr << "comma-timeout-group: unknown exception" << std::endl; }
