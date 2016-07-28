@@ -90,6 +90,8 @@ void usage( bool )
         "\nThe '--wait-for-process-group' option also accepts special duration 'forever' (equal to DBL_MAX)"
         "\ngiven as a literal string (no quotes)."
         "\n"
+        "\nIf both '--kill-after and --wait-for-process-group' are specified, the former takes precedence."
+        "\n"
         "\nReturn value:"
         "\n    - if the command times out, exit with status 124"
         "\n    - if the command does not exit on the first signal, and the KILL signal is sent, exit with"
@@ -206,8 +208,8 @@ int main( int ac, char** av ) try
     bool timed_out;
     int signal_to_use = SIGTERM;  // same default as kill and timeout commands
     int child_pid;
-    double kill_after;
-    bool wait_for_process_group;
+    double kill_after = 0.0;
+    bool wait_for_process_group = false;
 
     comma::command_line_options options( ac, av, usage );
     if ( options.exists( "-h,--help" ) ) { usage( true ); return 0; }
@@ -219,11 +221,13 @@ int main( int ac, char** av ) try
     if ( options.exists( "-s,--signal" ) ) {
         signal_to_use = sig2str::from_string( options.value< std::string >( "--signal" ) );
         if ( verbose ) { std::cerr << "comma-timeout-group: will use signal " << signal_to_use << std::endl; }
+    if ( options.exists( "--wait-for-process-group" ) ) {
+        wait_for_process_group = true;
+        kill_after = seconds_from_string( options.value< std::string >( "--wait-for-process-group" ), true );
     }
 
-    if ( options.exists( "-k,--kill-after" ) ) {
-        kill_after = seconds_from_string( options.value< std::string >( "--kill-after" ) );
-        if ( verbose ) { std::cerr << "comma-timeout-group: will send KILL signal after " << kill_after << " s" << std::endl; }
+    if ( options.exists( "-k,--kill-after" ) ) { kill_after = seconds_from_string( options.value< std::string >( "--kill-after" ) ); }
+
     }
 
     return 0;
