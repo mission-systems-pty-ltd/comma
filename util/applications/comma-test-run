@@ -641,7 +641,6 @@ function terminate_comma_top()
     comma_process_kill --signal=TERM -$comma_top_pgid "$comma_top_signature"
     local ctrv=$?
     (( $ctrv == 0 )) || error_ "$FUNCNAME: terminating comma-top PID $comma_top_pgid, comma_process_kill returned error '$ctrv'"
-    comma-timeout --is-timeout-group || { comma_wait_for_process_group "$name" "$comma_top_pgid" 12; wait $comma_top_pgid; }
     unset comma_top_pgid comma_top_signature
 }
 export -f terminate_comma_top
@@ -658,7 +657,7 @@ function run_test_with_timeout()
         local our_performance_log="$comma_test_run_unique_dir/performance_log.$( mktemp --dry-run XXXXXXXX )"
         comma_top_pid_fifo="$comma_test_run_unique_dir/pid_fifo.$( mktemp --dry-run XXXXXXXX )"
         mkfifo "$comma_top_pid_fifo" || return 1
-        comma_process_exec_and_validate "$comma_top_pid_fifo" comma-timeout -k 10 -s TERM $timeout_time bash -c "comma_top_wrapper \"$our_performance_log\""
+        comma_process_exec_and_validate "$comma_top_pid_fifo" comma-timeout-group --wait-for-process-group=22 -s TERM $timeout_time bash -c "comma_top_wrapper \"$our_performance_log\""
         (( $? == 0 )) || { error_ "$FUNCNAME: fatal system error, incorrect \$! reported by bash; re-run your application"; return 1; }
         comma_top_pgid=$!
         comma_top_signature="$comma_process_child_signature"
