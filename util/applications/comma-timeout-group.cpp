@@ -317,7 +317,7 @@ int main( int ac, char** av ) try
     if ( non_options.size() < 2 )
     {
         // user did not give all the arguments; OK in special cases
-        if ( all_options.exists( "-h,--help" ) ) { usage( true ); return 0; }
+        if ( all_options.exists( "-h,--help" ) ) { usage( true ); }
         if ( all_options.exists( "--list-known-signals" ) ) { std::cout << sig2str::list_all() << std::endl; return 0; }
         COMMA_THROW( comma::exception, "must give at least timeout and command to run" );
     }
@@ -329,7 +329,7 @@ int main( int ac, char** av ) try
     unsigned int command_to_run_pos = std::distance( all_options.argv().begin(), command_to_run_start );
     comma::command_line_options options( command_to_run_pos, av, usage );
     // idiosyncratic case when the user first gave sufficient input and then stuck in '--help' or '-list-known-signals'
-    if ( options.exists( "-h,--help" ) ) { usage( true ); return 0; }
+    if ( options.exists( "-h,--help" ) ) { usage( true ); }
     if ( options.exists( "--list-known-signals" ) ) { std::cout << sig2str::list_all() << std::endl; return 0; }
     preserve_status = options.exists( "--preserve-status" );
     if ( options.exists( "--foreground" ) ) { COMMA_THROW( comma::exception, "unsupported option of the original timeout" ); }
