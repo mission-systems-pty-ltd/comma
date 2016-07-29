@@ -602,18 +602,25 @@ function run_and_match_test()
     {
         local match_output global_expected
         echo -e '\n# In comma-test-run before comma-test-match' >> 'output/stdout.log'
-        if [[ -f "./expected" ]] ; then
-            match_output=$( comma-test-match ./expected <'output/stdout.log' 2>&1 )
-        fi
-        if [[ -n "$options_also_expected" && -f "./expected" ]] ; then
-            for global_expected in $options_also_expected ; do
-                match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; comma-test-match "$global_expected" < 'output/stdout.log' 2>&1 )
-            done
+        function match_expected()
+        {
+            local expected=$1
+            if [[ -f "$expected" ]] ; then
+                match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; comma-test-match "$expected" <'output/stdout.log' 2>&1 )
+            elif [[ -d "$expected" ]] ; then
+                local extras=$( find "$expected" -type f )
+                for extra in $extras ; do
+                    [[ $( basename "$extra" ) != "readme" ]] || continue
+                    match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; comma-test-match "$extra" < 'output/stdout.log' | sed "s#^#$extra:#" 2>&1 )
+                done
+            fi
+        }
+        match_expected "./expected"
+        if [[ -n "$options_also_expected" && -e "./expected" ]] ; then
+            for global_expected in $options_also_expected ; do match_expected "$global_expected" ; done
         fi
         if [[ -n "$options_always_expected" ]] ; then
-            for global_expected in $options_always_expected ; do
-                match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; comma-test-match $global_expected < 'output/stdout.log' 2>&1 )
-            done
+            for global_expected in $options_always_expected ; do match_expected "$global_expected" ; done
         fi
         echo -e '\n# After comma-test-match in comma-test-run' >> 'output/stdout.log'
         if [[ -n "$match_output" ]]; then
