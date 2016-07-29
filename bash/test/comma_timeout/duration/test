@@ -25,14 +25,10 @@ echo "sleep/duration=$duration"
 command_line_options=
 [[ -z "$input_command_line" ]] || command_line_options+=" $input_command_line"
 [[ -z "$input_kill_after" ]] || command_line_options+=" --kill-after=$input_kill_after"
-[[ -z "$input_wait_group" ]] || {
-    comma-timeout --is-timeout-group || { echo "skipped=1"; exit 0; }
-    command_line_options+=" --wait-for-process-group=$input_wait_group"
-}
-echo "skipped=0"
+[[ -z "$input_wait_group" ]] || command_line_options+=" --wait-for-process-group=$input_wait_group"
 
-echo "command/string=\"comma-timeout $command_line_options $duration bash -c ignore_signals_forever\""
-comma-timeout $command_line_options $duration bash -c ignore_signals_forever
+echo "command/string=\"comma-timeout-group $command_line_options $duration bash -c ignore_signals_forever\""
+comma-timeout-group $command_line_options $duration bash -c ignore_signals_forever
 echo "command/status=$?"
 
 date +%Y%m%dT%H%M%S | csv-time --to seconds | sed 's@^@time/end=@'
