@@ -1,14 +1,6 @@
 #!/bin/bash
 
-# if comma-timeout-group is not installed, some of the tests are meaningless
-
-timeoutg=$( which comma-timeout-group )
-if [[ -z "$timeoutg" ]] ; then
-    echo "comma-timeout-group utility not found; skip the test" >&2
-    echo "skipped=1"
-else
-    echo "skipped=0"
-fi
+export PATH="$(pwd)/bin:$PATH"
 
 source $( which comma-test-util ) || { echo "$0: failed to source comma-test-util" >&2 ; exit 1 ; }
 
