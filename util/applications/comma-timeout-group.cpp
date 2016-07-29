@@ -67,7 +67,7 @@ void usage( bool )
         "\nOptions:"
         "\n    -h,--help, print this help and exit"
         "\n    --verbose, chat more"
-        "\n    --preserve-status, not supported"
+        "\n    --preserve-status, exit with the same status as <command>, even when the command timed out"
         "\n    --foreground, not supported"
         "\n    -k, --kill-after=duration, if the command is still running this long after the initial"
         "\n        signal was sent, send the KILL signal to finish it off"
@@ -255,6 +255,7 @@ sig_atomic_t timed_out = 0;
 int signal_to_use = SIGTERM;  // same default as kill and timeout commands
 int child_pid = 0;
 bool verbose = false;
+bool preserve_status = false;
 double timeout = 0.0;
 double kill_after = 0.0;
 bool wait_for_process_group = false;
@@ -330,7 +331,8 @@ int main( int ac, char** av ) try
     // idiosyncratic case when the user first gave sufficient input and then stuck in '--help' or '-list-known-signals'
     if ( options.exists( "-h,--help" ) ) { usage( true ); return 0; }
     if ( options.exists( "--list-known-signals" ) ) { std::cout << sig2str::list_all() << std::endl; return 0; }
-    if ( options.exists( "--preserve-status,--foreground" ) ) { usage( true ); COMMA_THROW( comma::exception, "unsupported option of the original timeout" ); }
+    preserve_status = options.exists( "--preserve-status" );
+    if ( options.exists( "--foreground" ) ) { COMMA_THROW( comma::exception, "unsupported option of the original timeout" ); }
 
     verbose = options.exists( "--verbose" );
 
@@ -410,6 +412,10 @@ int main( int ac, char** av ) try
     if ( timed_out )
     {
         if ( verbose ) { std::cerr << "comma-timeout-group: application timed-out" << std::endl; }
+        if ( preserve_status ) {
+            if ( WIFEXITED( status ) ) { return WEXITSTATUS(status); }
+            if ( WIFSIGNALED( status ) ) { return 128 + WTERMSIG( status ); } // per shell rules
+        }
         return 124;
     }
 
