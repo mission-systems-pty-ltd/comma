@@ -289,6 +289,7 @@ void signal_handler( int received_signal )
 
     if ( received_signal == SIGALRM ) { timed_out = 1; }
 
+    int signal_to_send = signal_to_use;
     if ( kill_after )
     {
         int saved_errno = errno;
@@ -298,10 +299,10 @@ void signal_handler( int received_signal )
         errno = saved_errno;
     }
 
-    kill( child_pid, signal_to_use ); // child could have created its own group
+    kill( child_pid, signal_to_send ); // child could have created its own group
     // unset first, do not go into a loop
-    signal( signal_to_use, SIG_IGN );
-    kill( 0, signal_to_use );
+    signal( signal_to_send, SIG_IGN );
+    kill( 0, signal_to_send );
 }
 
 void initialize_signal_handling( int signal_to_use )
