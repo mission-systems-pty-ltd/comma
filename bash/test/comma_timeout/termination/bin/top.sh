@@ -15,7 +15,7 @@ trap 'on_exit' EXIT
 
 mypipe="$output_dir/pipe"
 rm -f "$mypipe"
-mkfifo "$mypipe" || exit 1
+mkfifo "$mypipe" || { echo "$0: cannot create named pipe '$mypipe'" >&2; exit 1; }
 
 function handler()
 {
@@ -32,12 +32,12 @@ function handler()
     cd "$output_dir"
     for name in foo.sh bar.sh baz.sh ; do
         rm -f "$name"
-        ln -s ../../../bin/sub.sh "$name"
+        ln -s ../../bin/sub.sh "$name"
     done
 
     trap 'handler' SIGINT SIGHUP SIGPIPE SIGTERM
     cat > test.log < pipe & cat_pid=$!
-    ../../../bin/app.sh
+    ../../bin/app.sh
     wait $cat_pid ; unset cat_pid
 
     tail -n 1 test.log | sed "s@^@last[$iteration]=\"@;s@\$@\"@"
