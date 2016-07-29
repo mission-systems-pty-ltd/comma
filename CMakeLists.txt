@@ -188,7 +188,38 @@ IF( comma_BUILD_TESTS )
     ENDIF( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR ${CMAKE_SYSTEM_NAME} MATCHES "Windows" )
 	
 #TT: Install tests to dir. This allows them to be packed by CPack.
-SET ( comma_CPP_TESTS_INSTALL_DIR bin CACHE PATH "Install directory for cpp unit tests" )
+#Note: if your source tree is dirty (eg you've already run tests there and have output/ directories)
+#those will also be installed too.
+
+OPTION( INSTALL_TESTS "Install the tests into the nominated directory" OFF )
+IF( INSTALL_TESTS )
+    SET ( comma_CPP_TESTS_INSTALL_DIR bin CACHE PATH "Install directory for cpp unit tests" )
+    SET ( comma_INSTALL_COMMA_TESTS_DIR share/test )
+	
+# Get the list of test directories (using glob).
+FILE ( GLOB_RECURSE all_files 
+		# RELATIVE is tricky. When you use it, you need to specify the path you expect the output to be RELATIVE to. (Yes, that path could be considerably non-relative to the file that is found.)
+		RELATIVE ${CMAKE_SOURCE_DIR} 
+		* )
+		
+SET ( test_dirs )
+FOREACH ( i ${all_files} )
+	if ( ${i} MATCHES "[\\/]test[\\/]" )
+		LIST (APPEND test_dirs ${i} )
+	endif ()
+ENDFOREACH (i)
+		
+# Add those directories
+	FOREACH (file ${test_dirs} )
+			# Determine the parent directories for a given file so to prefix the install location (otherwise they just all get installed in the destination root)
+			get_filename_component( dest_dir ${file} DIRECTORY )
+			# See that slash there? 		 vvv It's really important.
+			INSTALL ( 	DIRECTORY ${dest_dir}/
+						DESTINATION ${comma_INSTALL_COMMA_TESTS_DIR}/${CMAKE_PROJECT_NAME}/unit/${dest_dir} 
+						USE_SOURCE_PERMISSIONS )
+	ENDFOREACH (file)
+
+ENDIF( INSTALL_TESTS )
 ENDIF( comma_BUILD_TESTS )
 
 IF( comma_BUILD_ZEROMQ )
