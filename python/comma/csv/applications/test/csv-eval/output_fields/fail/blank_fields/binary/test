@@ -3,7 +3,7 @@
 scriptname=$( readlink -f $0 )
 source $( type -p comma-application-util ) || { echo "$scriptname: failed to load comma-application-util" >&2; exit 1; }
 
-csv-eval --fields=x,y 'a=2/(x+y);b=x-sin(y)*a**2;c=minimum(a,b)' | name-value-from-csv x,y,a,b,c --line-number --prefix output | sed 's/"//g'
+csv-to-bin 2ui | csv-eval --fields=i,j --binary=2ui 'ab = i+j; cd = i-j; ef = i*j' --output-fields='ab,,ef' --output-format=3i
 comma_status_ok
 echo "status=$?"
-echo "eps=1e-8"
+

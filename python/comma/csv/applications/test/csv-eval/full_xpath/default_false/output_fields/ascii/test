@@ -1,0 +1,9 @@
+#!/bin/bash
+
+scriptname=$( readlink -f $0 )
+source $( which comma-application-util ) || { echo "$scriptname: failed to source comma-application-util" >&2; exit 1; }
+
+csv-eval --fields=one/x,y --format=2ui 'one_x+=1; y+=1; x=one_x+y' --output-fields='x' --output-format=i --full-xpath \
+    | name-value-from-csv one/x,y,x --line-number --prefix output | sed 's/"//g'
+comma_status_ok
+echo "status=$?"

@@ -1,0 +1,14 @@
+number_of(output)=2
+
+output[0]/i=1
+output[0]/j=2
+output[0]/ab=3
+output[0]/cd=-1
+output[0]/ef=2
+output[1]/i=3
+output[1]/j=4
+output[1]/ab=7
+output[1]/cd=-1
+output[1]/ef=12
+status=0
+
