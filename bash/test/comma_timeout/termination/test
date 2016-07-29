@@ -15,13 +15,6 @@ bindir="../bin"
 [[ -x "$bindir/app.sh" ]] || { echo "$0: executable '$bindir/app.sh' not found"; exit 1; }
 [[ -x "$bindir/sub.sh" ]] || { echo "$0: executable '$bindir/sub.sh' not found"; exit 1; }
 
-if comma-timeout --is-timeout-group ; then
-    echo "skipped=0"
-else
-    echo "skipped=1"
-    [[ "$input_skip_native_only" == "1" ]] && exit 0
-fi
-
 comma_nap=$( which comma-nap ) || exit 1
 export comma_nap
 

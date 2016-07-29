@@ -1,2 +1,2 @@
 repetitions=25
-timeout_options="--use-native-timeout"
+timeout="timeout"
