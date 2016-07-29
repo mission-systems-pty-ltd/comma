@@ -268,11 +268,9 @@ void signal_handler( int received_signal )
     int signal_to_send = signal_to_use;
     if ( kill_after )
     {
-        int saved_errno = errno;
         signal_to_use = SIGKILL;
         set_alarm( kill_after );
         kill_after = 0.0;
-        errno = saved_errno;
     }
 
     kill( child_pid, signal_to_send ); // child could have created its own group
@@ -392,12 +390,11 @@ int main( int ac, char** av ) try
     // in the parent; all management occurs here
     set_alarm( timeout );
 
-    pid_t outcome;
     int status;
-
-    while ( ( outcome = waitpid( child_pid, &status, 0 ) ) < 0 && errno == EINTR ) continue;
-
-    if ( outcome < 0 ) { COMMA_THROW( comma::exception, "waitpid failed, status " << outcome ); }
+    do {
+        pid_t outcome = waitpid( child_pid, &status, 0 );
+        if ( outcome < 0 ) { COMMA_THROW( comma::exception, "waitpid failed, status " << outcome ); }
+    } while (!WIFEXITED(status) && !WIFSIGNALED(status));
 
     if ( wait_for_process_group ) {
         int count = parse_process_tree_until_empty( verbose );
