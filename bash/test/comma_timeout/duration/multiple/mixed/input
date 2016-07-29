@@ -1,2 +1,2 @@
-command_line="--wait-for-process-group=1 --kill-after=2"
+command_line="--wait-for-process-group=1 --kill-after=20"
 wait/group=20

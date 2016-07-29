@@ -192,7 +192,7 @@ inline T command_line_options::value( const std::string& name ) const
 {
     std::vector< T > v = values< T >( name );
     if( v.empty() ) { COMMA_THROW( comma::exception, "option \"" << name << "\" not specified" ); }
-    return v[0];
+    return v.back(); // v[0];
 }
 
 template < typename T >
