@@ -42,6 +42,7 @@
 #include <boost/optional.hpp>
 #include "../base/exception.h"
 #include "../string/string.h"
+#include "verbose.h"
 
 namespace comma {
 
@@ -59,6 +60,12 @@ class command_line_options
         /// if --verbose,-v present, call usage( verbose )
         command_line_options( const std::vector< std::string >& argv, boost::function< void( bool ) > usage = NULL );
         
+        /// constructor
+        /// if --help,-h present, call usage()
+        /// if --verbose,-v present, call usage( verbose )
+        template< typename Iterator >
+        command_line_options( Iterator begin, Iterator end, boost::function< void( bool ) > usage = NULL );
+
         /// constructor
         command_line_options( const command_line_options& rhs );
 
@@ -157,6 +164,19 @@ class command_line_options
         std::vector< std::string > names_;
 };
 
+template< typename Iterator > inline command_line_options::command_line_options( Iterator begin, Iterator end, boost::function< void( bool ) > usage )
+{
+    argv_.resize( std::distance( begin, end ) );
+    for ( Iterator i = begin; i < end; ++i ) { argv_[i] = *i; }
+    fill_map_( argv_ );
+    if ( usage && exists( "--help,-h" ) )
+    {
+        bool v = exists( "--verbose,-v" );
+        comma::verbose.init( v, *begin );
+        usage( v ); exit( 1 );
+    }
+}
+
 template < typename T > inline T command_line_options::lexical_cast_( const std::string& s ) { return boost::lexical_cast< T >( s ); }
 
 template <> inline bool command_line_options::lexical_cast_< bool >( const std::string& s )
@@ -192,7 +212,7 @@ inline T command_line_options::value( const std::string& name ) const
 {
     std::vector< T > v = values< T >( name );
     if( v.empty() ) { COMMA_THROW( comma::exception, "option \"" << name << "\" not specified" ); }
-    return v.back(); // v[0];
+    return v[0];
 }
 
 template < typename T >
