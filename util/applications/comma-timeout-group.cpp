@@ -422,5 +422,5 @@ int main( int ac, char** av ) try
 
     COMMA_THROW( comma::exception, "unknown status " << status << " from command" );
 }
-catch( std::exception& ex ) { std::cerr << "comma-timeout-group: " << ex.what() << std::endl; }
-catch( ... ) { std::cerr << "comma-timeout-group: unknown exception" << std::endl; }
+catch( std::exception& ex ) { std::cerr << "comma-timeout-group: " << ex.what() << std::endl; exit(1); }
+catch( ... ) { std::cerr << "comma-timeout-group: unknown exception" << std::endl; exit(1); }
