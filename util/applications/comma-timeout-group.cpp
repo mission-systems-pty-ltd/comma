@@ -348,14 +348,14 @@ int main( int ac, char** av ) try
 
     verbose = options.exists( "--verbose" );
 
-    if ( options.exists( "-s,--signal" ) ) { signal_to_use = sig2str::from_string( options.value< std::string >( "-s,--signal" ) ); }
+    if ( options.exists( "-s,--signal" ) ) { signal_to_use = sig2str::from_string( options.values< std::string >( "-s,--signal" ).back() ); }
 
     if ( options.exists( "--wait-for-process-group" ) ) {
         wait_for_process_group = true;
-        kill_after = seconds_from_string( options.value< std::string >( "--wait-for-process-group" ), true );
+        kill_after = seconds_from_string( options.values< std::string >( "--wait-for-process-group" ).back(), true );
     }
 
-    if ( options.exists( "-k,--kill-after" ) ) { kill_after = seconds_from_string( options.value< std::string >( "-k,--kill-after" ) ); }
+    if ( options.exists( "-k,--kill-after" ) ) { kill_after = seconds_from_string( options.values< std::string >( "-k,--kill-after" ).back() ); }
 
     timeout = seconds_from_string( av[first_argument++] );
 
