@@ -149,6 +149,7 @@ Search for and execute tests under the current directory.
 Find subdirectories containing the files ${brown}test${none}, ${brown}input${none}, or ${brown}expected${none}.
 Execute 'test', then either:
     (a) if 'expected' exists, compare its contents to the output of 'test' ("path=value" format)
+        'expected' can be either file or directory, see --help --verbose for details
     (b) if --also-expected='file' is passed on the command line and 'expected' exists, compare the contents of
         'file' ("path=value") to the output of 'test'
     (c) if --always-expected='file' is passed on the command line, compare the contents of 'file' ("path=value")
@@ -207,6 +208,11 @@ ${brown}Input, test, output, and expected files${none}
 
     Test output will be put into the subdirectory 'output'. This will contain standard error log 'output/stderr.log'
     and output log 'output/stdout.log'. The contents of 'output/stdout.log' is matched to the 'expected' file.
+
+${brown}expected${none}
+    - if 'expected' is a file: compare its contents to the output of 'test' ("path=value" format)
+    - if 'expected' is a directory: compare all files in all subdirectories of 'expected', except files called
+                                    'readme', to the output of 'test' ("path=value" format)
 
 ${brown}Disabling tests${none}
     to disable tests in a directory and all its subdirectories

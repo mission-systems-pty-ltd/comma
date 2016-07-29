@@ -58,7 +58,7 @@ class command_line_options
         /// if --help,-h present, call usage()
         /// if --verbose,-v present, call usage( verbose )
         command_line_options( const std::vector< std::string >& argv, boost::function< void( bool ) > usage = NULL );
-
+        
         /// constructor
         command_line_options( const command_line_options& rhs );
 

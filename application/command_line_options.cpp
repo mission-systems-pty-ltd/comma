@@ -301,5 +301,4 @@ std::string comma::command_line_options::description::usage()
     return oss.str();
 }
 
-
 } // namespace comma {
