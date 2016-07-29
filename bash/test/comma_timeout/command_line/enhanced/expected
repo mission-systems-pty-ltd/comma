@@ -8,7 +8,7 @@ if not skipped:
     expect usage[1]/output == ""
     expect usage[1]/status == 0
 
-    expect os.path.basename( which_timeout[0]/output ) == "timeoutg"
+    expect os.path.basename( which_timeout[0]/output ) == "comma-timeout-group"
     expect os.path.basename( which_timeout[1]/output ) == "timeout"
 
     expect is_group[0]/status == 0

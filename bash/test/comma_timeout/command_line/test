@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# if timeoutg is not installed, some of the tests are meaningless
+# if comma-timeout-group is not installed, some of the tests are meaningless
 
-timeoutg=$( which timeoutg )
+timeoutg=$( which comma-timeout-group )
 if [[ -z "$timeoutg" ]] ; then
-    echo "timeoutg utility not found; skip the test" >&2
+    echo "comma-timeout-group utility not found; skip the test" >&2
     echo "skipped=1"
 else
     echo "skipped=0"

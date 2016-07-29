@@ -697,7 +697,7 @@ declare -r comma_execute_and_wait
 # the builtin "wait" failed to wait for all processes in a (killed) process group to terminate;
 # this function would poll the process list for the given time (or forever) until no processes are left
 # creates a race condition in case of PID re-use; shall not be called if customized version of
-# timeout (aka timeoutg or timeout-group) is used.
+# timeout (aka comma-timeout-group) is used.
 # @param name name of the caller, used only for trace messages
 # @param pgid process group id to wait for
 # @param max_wait the maximal time to wait or "forever"; if this timeout is reached, the function "kill -9" the entire group

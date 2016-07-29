@@ -50,7 +50,7 @@ function usage()
     cat >&2 <<EOF
 
 Search for available timeout utility in the PATH and invoke it passing all options.
-If the utility is timeout-group (timeoutg), it is automatically invoked to wait for
+If the utility is comma-timeout-group, it is automatically invoked to wait for
 the process group, --wait-for-process-group=forever. The user can override this value
 by providing own options that would be appended to the end of timeout's command line
 and override the default waiting duration.
@@ -65,7 +65,7 @@ EOF
 cat >&2 <<EOF
 
 All the other options are passed verbatim to the selected timeout utility.
-See 'timeout --help' or 'timeoutg --help' for details.
+See 'timeout --help' or 'comma-timeout-group --help' for details.
 
 EOF
 }
@@ -100,16 +100,16 @@ timeout=$( which timeout )
 
 use_timeoutg=0
 if [[ "$option_use_native_timeout" != "1" ]] ; then
-    timeoutg_all=$( which -a timeoutg )
+    timeoutg_all=$( which -a comma-timeout-group )
 
     while true ; do
         read timeoutg_try
         [[ -n "$timeoutg_try" ]] || break
-        (( option_verbose )) && echo -n "$scriptname: look for timeoutg in $timeoutg_try... " >&2
+        (( option_verbose )) && echo -n "$scriptname: look for comma-timeout-group in $timeoutg_try... " >&2
         [[ -x "$timeoutg_try" ]] || { (( option_verbose )) && echo "no, not executable" >&2; continue; }
         helpstring=$( $timeoutg_try --help 2>&1 )
         (( $? == 0 )) || { (( option_verbose )) && echo "no, does not output help" >&2; continue; }
-        grep -q '\-\-wait-for-process-group' <<<"$helpstring" || { (( option_verbose )) && echo "no, not our timeoutg" >&2; continue; }
+        grep -q '\-\-wait-for-process-group' <<<"$helpstring" || { (( option_verbose )) && echo "no, not our comma-timeout-group" >&2; continue; }
         (( option_verbose )) && echo "found" >&2
         timeout="$timeoutg_try"
         use_timeoutg=1
@@ -132,8 +132,8 @@ if (( $use_timeoutg )) ; then
     cmd=( "$timeout" )
     cmd+=( "--wait-for-process-group=forever" )
 else
-    (( option_use_timeout_group )) && { echo "$scriptname: told to use timeoutg but cannot find it" >&2; exit 1; }
-    (( option_verbose )) && echo "$scriptname: cannot find timeoutg utility; fall back to native timeout" >&2
+    (( option_use_timeout_group )) && { echo "$scriptname: told to use comma-timeout-group but cannot find it" >&2; exit 1; }
+    (( option_verbose )) && echo "$scriptname: cannot find comma-timeout-group utility; fall back to native timeout" >&2
     cmd=( "$timeout" )
 fi
 
