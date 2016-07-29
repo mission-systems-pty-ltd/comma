@@ -498,7 +498,7 @@ def evaluate(expressions, stream, permissive=False):
                 update = stream.update_t(size)
             if stream.args.output_fields:
                 output = stream.output_t(size)
-        exec(code, env, {'_input': input, '_update': update, '_output': output})
+        exec code in env, {'_input': input, '_update': update, '_output': output}
         if stream.args.update_fields:
             update_buffer(stream.input, update)
         if stream.args.output_fields:
