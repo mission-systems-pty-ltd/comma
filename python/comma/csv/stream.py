@@ -157,13 +157,13 @@ class stream(object):
             complete_array = merge_arrays(input_array, missing_fields_array)
         else:
             complete_array = input_array
-        raw_extracted_data = np.ndarray(
-            shape=complete_array.shape,
-            dtype=self.data_extraction_dtype,
-            buffer=complete_array,
-            strides=complete_array.itemsize).tolist()
-        extracted_array = np.array(raw_extracted_data, dtype=self.struct.flat_dtype)
-        return extracted_array.view(self.struct)
+        flat_struct_array = np.empty(complete_array.size, dtype=self.struct.flat_dtype)
+        for i, j in zip(flat_struct_array.dtype.names, self.data_extraction_dtype.names):
+            if j in input_array.dtype.names:
+                flat_struct_array[i] = input_array[j]
+            else:
+                flat_struct_array[i] = missing_fields_array[j]
+        return flat_struct_array.view(self.struct)
 
     def _retrieve_missing_data(self, size):
         if self._missing_fields_array is None or size > self._missing_fields_array.size:
