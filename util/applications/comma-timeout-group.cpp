@@ -52,7 +52,6 @@
 namespace {
 
 // todo
-// - --verbose,-v
 // - --help: -k behaviour
 // - --help: examples: demonstrate one feature at a time
 // - test whether the following is supported: comma-timeout-group 1 -k 5 sleep 10
@@ -77,7 +76,7 @@ void usage( bool )
         "\n"
         "\nOptions:"
         "\n    -h,--help, print this help and exit"
-        "\n    --verbose, chat more"
+        "\n    -v,--verbose, chat more"
         "\n    --preserve-status, exit with the same status as <command>, even when the command timed out"
         "\n    --foreground, not supported"
         "\n    -k, --kill-after=duration, if the command is still running this long after the initial"
@@ -331,7 +330,7 @@ int main( int ac, char** av ) try
 
     // first non-option must be the timeout duration, and second the command to run
     comma::command_line_options all_options( ac, av );
-    std::vector< std::string > non_options = all_options.unnamed( "-h,--help,--verbose,--list-known-signals,--foreground,--preserve-status", "-s,--signal,-k,--kill-after,--wait-for-process-group" );
+    std::vector< std::string > non_options = all_options.unnamed( "-h,--help,-v,--verbose,--list-known-signals,--foreground,--preserve-status", "-s,--signal,-k,--kill-after,--wait-for-process-group" );
     if ( non_options.size() < 2 )
     {
         // user did not give all the arguments; OK in special cases
@@ -351,7 +350,7 @@ int main( int ac, char** av ) try
     preserve_status = options.exists( "--preserve-status" );
     if ( options.exists( "--foreground" ) ) { COMMA_THROW( comma::exception, "--foreground: unsupported option of the original timeout" ); }
 
-    verbose = options.exists( "--verbose" );
+    verbose = options.exists( "-v,--verbose" );
 
     if ( options.exists( "-s,--signal" ) ) { signal_to_use = sig2str::from_string( options.values< std::string >( "-s,--signal" ).back() ); }
 
