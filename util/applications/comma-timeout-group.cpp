@@ -285,9 +285,10 @@ bool preserve_status = false;
 double timeout = 0.0;
 double kill_after = 0.0;
 bool wait_for_process_group = false;
-bool can_wait_for_process_group = false;
 #ifdef HAVE_PROCPS_DEV
-can_wait_for_process_group = true;
+const bool can_wait_for_process_group = true;
+#else
+const bool can_wait_for_process_group = false;
 #endif
 
 void signal_handler( int received_signal )
@@ -381,7 +382,7 @@ int main( int ac, char** av ) try
 #ifdef HAVE_PROCPS_DEV
         wait_for_process_group = true;
 #else
-        std::cerr << "comma-timeout-group: built without procps support, '--wait-for-process-group' is a synonym to '-k'" << std::endl;
+        if ( verbose ) { std::cerr << "comma-timeout-group: built without procps support, '--wait-for-process-group' is a synonym to '-k'" << std::endl; }
 #endif
         kill_after = seconds_from_string( options.values< std::string >( "--wait-for-process-group" ).back(), true );
     }
