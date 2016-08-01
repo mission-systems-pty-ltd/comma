@@ -1,4 +1,3 @@
 repetitions=25
-skip_native_only=1
 timeout="comma-timeout-group"
 timeout_options="--wait-for-process-group=forever"

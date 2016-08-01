@@ -27,3 +27,6 @@ done
 echo "bash/versinfo[0]=${BASH_VERSINFO[0]}"
 echo "bash/versinfo[1]=${BASH_VERSINFO[1]}"
 echo "bash/versinfo[2]=${BASH_VERSINFO[2]}"
+
+echo -n "can_wait_for_process_group="
+comma-timeout-group --can-wait-for-process-group && echo 1 || echo 0
