@@ -10,6 +10,9 @@ auxiliary[1]/output = "HUP,INT,QUIT,KILL,USR1,USR2,ALRM,TERM,CONT,STOP"
 auxiliary[2]/status = 0
 auxiliary[2]/output = ""
 
+typo[0]/status = 1
+typo[0]/output = ""
+
 sleep[0]/status = 0
 sleep[0]/output = ""
 sleep[1]/status = 0

@@ -57,7 +57,6 @@ namespace {
 // - ? seconds_from_string: use boost::posix_time::days( ... ) and alike
 // - 60 * 1.5: check whether it works or it should be 60.0 * 1.5
 // - cmake: if WIN32, do not build comma-timeout-group
-// - --list-known-signals: end-of-line-separated
 
 void usage( bool )
 {
@@ -87,7 +86,7 @@ void usage( bool )
         "\n        only a sub-set of all available signal names is supported, use '--list-known-signals' to list;"
         "\n        arbitrary signal to use can be specified as a number, see 'kill -l' for the values;"
         "\n        by default, use SIGTERM"
-        "\n    --list-known-signals, list the supported signals and exit"
+        "\n    --list-known-signals, list the supported signals, one per line, and exit"
         "\n"
         "\nDuration for the '-k' and '--wait-for-process-group' options is a floating point number with"
         "\nan optional suffix 's' for seconds (default), 'm' for minutes, 'h' for hours, and 'd' for days."
@@ -176,12 +175,9 @@ struct sig2str {
     // size is tiny, map probably gives little speed-up in lookup
     typedef std::vector< std::pair< std::string, int > > V;
 
-    static std::string list_all()
+    static void list_all()
     {
-        std::vector< std::string > names;
-        names.reserve( known_signals.size() );
-        for ( V::const_iterator i = known_signals.begin(); i != known_signals.end(); ++i ) { names.push_back( i->first ); }
-        return comma::join( names, ',' );
+        for ( V::const_iterator i = known_signals.begin(); i != known_signals.end(); ++i ) { std::cout << i->first << std::endl; }
     }
 
     static int from_string( const std::string & s ) {
@@ -340,7 +336,7 @@ int main( int ac, char** av ) try
     {
         // user did not give all the arguments; OK in special cases
         if ( all_options.exists( "-h,--help" ) ) { usage( true ); }
-        if ( all_options.exists( "--list-known-signals" ) ) { std::cout << sig2str::list_all() << std::endl; return 0; }
+        if ( all_options.exists( "--list-known-signals" ) ) { sig2str::list_all(); return 0; }
         COMMA_THROW( comma::exception, "please specify timeout and command to run" );
     }
 
@@ -351,7 +347,7 @@ int main( int ac, char** av ) try
     unsigned int command_to_run_pos = std::distance( all_options.argv().begin(), command_to_run_start );
     comma::command_line_options options( command_to_run_pos, av, usage );
     // idiosyncratic case when the user first gave sufficient input and then stuck in '--help' or '-list-known-signals'
-    if ( options.exists( "--list-known-signals" ) ) { std::cout << sig2str::list_all() << std::endl; return 0; }
+    if ( options.exists( "--list-known-signals" ) ) { sig2str::list_all(); return 0; }
     preserve_status = options.exists( "--preserve-status" );
     if ( options.exists( "--foreground" ) ) { COMMA_THROW( comma::exception, "--foreground: unsupported option of the original timeout" ); }
 

@@ -2,9 +2,11 @@ usage[0]="comma-timeout-group --help"
 usage[1]="comma-timeout-group --help --verbose"
 usage[2]="comma-timeout-group 10 --help /dev/null"
 
-auxiliary[0]="comma-timeout-group --list-known-signals"
-auxiliary[1]="comma-timeout-group --list-known-signals 10 very-unlikely-that-such-a-program-exists"
-auxiliary[2]="comma-timeout-group 10 ignore-command-line-options --list-known-signals"
+auxiliary[0]="list_known_signals_on_one_line comma-timeout-group --list-known-signals"
+auxiliary[1]="list_known_signals_on_one_line comma-timeout-group --list-known-signals 10 very-unlikely-that-such-a-program-exists"
+auxiliary[2]="list_known_signals_on_one_line comma-timeout-group 10 ignore-command-line-options --list-known-signals"
+
+typo[0]="list_known_signals_on_one_line comma-timeout-group --list-known-sygnals"
 
 sleep[0]="comma-timeout-group 10 sleep 1"
 sleep[1]="comma-timeout-group --verbose 10 sleep 1"
