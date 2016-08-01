@@ -28,6 +28,8 @@ kill[2]/status = 0
 kill[2]/output = ""
 kill[3]/status = 0
 kill[3]/output = ""
+kill[4]/status = 124
+kill[4]/output = ""
 
 group[0]/status = 0
 group[0]/output = ""

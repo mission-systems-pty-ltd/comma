@@ -16,6 +16,7 @@ kill[0]="comma-timeout-group -k 10 10 sleep 1"
 kill[1]="comma-timeout-group --kill-after=10 10 sleep 1"
 kill[2]="comma-timeout-group --verbose -k 10 10 sleep 1"
 kill[3]="comma-timeout-group 10 --kill-after=10 sleep 1"
+kill[4]="comma-timeout-group 1 -k 2 sleep 10"
 
 group[0]="comma-timeout-group --wait-for-process-group=2 10 sleep 1"
 group[1]="comma-timeout-group 10 --wait-for-process-group=2 sleep 1"
