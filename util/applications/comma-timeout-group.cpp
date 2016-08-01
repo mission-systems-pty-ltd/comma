@@ -34,7 +34,9 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#ifdef HAVE_PROCPS_DEV
 #include <proc/readproc.h>
+#endif
 
 #include <iostream>
 #include <string>
@@ -61,8 +63,12 @@ void usage( bool )
         "\nUsage:"
         "\n    comma-timeout-group <options> duration command <args>"
         "\n"
-        "\nA drop-in replacement of the standard timeout(1) utility for most common"
-        "\nusage patterns. The capability to wait for all processes in a process group added."
+        "\nA drop-in replacement of the standard timeout(1) utility for most common usage patterns."
+        "\nThe capability to wait for all processes in a process group added."
+#ifndef HAVE_PROCPS_DEV
+        "\nWARNING: this new capability is not available in this build. Install procps (or procps-ng)"
+        "\ndevelopment package (containing headers and library) and recompile comma-timeout-group."
+#endif
         "\nSome options of timeout (1) are not supported, and, if given, this utility exits in error."
         "\n"
         "\nOptions:"
@@ -76,17 +82,22 @@ void usage( bool )
         "\n        in the current process group to finish; if some processes are still left, send the KILL signal"
         "\n        to finish them off (same as -k duration); if both this option and '-k' is given, the duration"
         "\n        specified by '-k' takes precedence"
+#ifndef HAVE_PROCPS_DEV
+        "\n        WARNING: your version of comma-timeout-group is built without procps support, the capability to"
+        "\n        wait for process group is not available, and this options is a synonym to '-k'"
+#endif
         "\n    -s, --signal=signal, the signal to be sent on timeout, given as a name (HUP, SIGHUP) or number;"
         "\n        only a sub-set of all available signal names is supported, use '--list-known-signals' to list;"
         "\n        arbitrary signal to use can be specified as a number, see 'kill -l' for the values;"
         "\n        by default, use SIGTERM"
         "\n    --list-known-signals, list the supported signals, one per line, and exit"
+        "\n    --can-wait-for-process-group, if built with procps library and can wait for process groups, exit"
+        "\n        with status success, otherwise, exit with failure"
         "\n"
-        "\nDuration for the '-k' and '--wait-for-process-group' options is a floating point number with"
-        "\nan optional suffix 's' for seconds (default), 'm' for minutes, 'h' for hours, and 'd' for days."
-        "\nThe '--wait-for-process-group' option also accepts special duration 'forever' (equal to max double)"
-        "\ngiven as a literal string (no quotes). If both '--kill-after and --wait-for-process-group' durations"
-        "\nare specified, the former takes precedence."
+        "\nAll the timeout durations are specified as floating point numbers with optional suffixes 's' for seconds,"
+        "\n(default), 'm' for minutes, 'h' for hours, and 'd' for days. The '--wait-for-process-group' option also"
+        "\n accepts special duration 'forever' (equal to max double) given as a literal string (no quotes). If both"
+        "\n'--kill-after and --wait-for-process-group' durations are specified, the former takes precedence."
         "\n"
         "\nReturn value:"
         "\n    - if the command times out, exit with status 124"
@@ -210,6 +221,7 @@ sig2str::V sig2str::known_signals = boost::assign::list_of< std::pair< std::stri
            ( "CONT", SIGCONT ) \
            ( "STOP", SIGSTOP ) ;
 
+#ifdef HAVE_PROCPS_DEV
 int parse_process_tree( bool verbose = false )
 {
     int ownpid;
@@ -243,6 +255,7 @@ int parse_process_tree_until_empty( unsigned int each_wait = 10000, bool verbose
     if ( !count ) { COMMA_THROW( comma::exception, "error counting processes in the group, none left" ); }
     return count;
 }
+#endif
 
 void set_alarm( double duration )
 {
@@ -272,6 +285,10 @@ bool preserve_status = false;
 double timeout = 0.0;
 double kill_after = 0.0;
 bool wait_for_process_group = false;
+bool can_wait_for_process_group = false;
+#ifdef HAVE_PROCPS_DEV
+can_wait_for_process_group = true;
+#endif
 
 void signal_handler( int received_signal )
 {
@@ -313,6 +330,12 @@ void initialize_signal_handling( int signal_to_use )
      signal( SIGCHLD, SIG_DFL );
 }
 
+int can_wait_group()
+{
+    if ( verbose ) { std::cerr << "comma-timeout-group: can " << ( can_wait_for_process_group ? "" : "NOT " ) << "wait for process group" << std::endl; }
+    return !can_wait_for_process_group;
+}
+
 } // anonymous
 
 int main( int ac, char** av ) try
@@ -326,13 +349,14 @@ int main( int ac, char** av ) try
 
     // first non-option must be the timeout duration, and second the command to run
     comma::command_line_options all_options( ac, av );
-    std::vector< std::string > non_options = all_options.unnamed( "-h,--help,-v,--verbose,--list-known-signals,--foreground,--preserve-status", "-s,--signal,-k,--kill-after,--wait-for-process-group" );
+    std::vector< std::string > non_options = all_options.unnamed( "-h,--help,-v,--verbose,--list-known-signals,--foreground,--preserve-status", "-s,--signal,-k,--kill-after,--wait-for-process-group,--can-wait-for-process-group" );
     if ( non_options.size() < 2 )
     {
         // user did not give all the arguments; OK in special cases
         verbose = all_options.exists( "-v,--verbose" );
         if ( all_options.exists( "-h,--help" ) ) { usage( true ); }
         if ( all_options.exists( "--list-known-signals" ) ) { return sig2str::list_all(); }
+        if ( all_options.exists( "--can-wait-for-process-group" ) ) { return can_wait_group(); }
         COMMA_THROW( comma::exception, "please specify timeout and command to run" );
     }
 
@@ -351,8 +375,14 @@ int main( int ac, char** av ) try
 
     if ( options.exists( "-s,--signal" ) ) { signal_to_use = sig2str::from_string( options.values< std::string >( "-s,--signal" ).back() ); }
 
+    if ( options.exists( "--can-wait-for-process-group" ) ) { return can_wait_group(); }
+
     if ( options.exists( "--wait-for-process-group" ) ) {
+#ifdef HAVE_PROCPS_DEV
         wait_for_process_group = true;
+#else
+        std::cerr << "comma-timeout-group: built without procps support, '--wait-for-process-group' is a synonym to '-k'" << std::endl;
+#endif
         kill_after = seconds_from_string( options.values< std::string >( "--wait-for-process-group" ).back(), true );
     }
 
@@ -366,7 +396,9 @@ int main( int ac, char** av ) try
         std::cerr << "    will execute:"; for ( char **i = av + command_to_run_pos; i < av + ac; ++i ) { std::cerr << " \"" << *i << "\""; }; std::cerr << std::endl;
         std::cerr << "    will time-out this command after " << timeout << " s" << std::endl;
         std::cerr << "    will use signal " << signal_to_use << " to interrupt the command by timeout" << std::endl;
+#ifdef HAVE_PROCPS_DEV
         if ( wait_for_process_group ) { std::cerr << "    will wait" << ( kill_after < std::numeric_limits< double >::max() ? "" : " forever" ) << " for all processes in the group to finish" << std::endl; }
+#endif
         if ( kill_after != 0 && kill_after < std::numeric_limits< double >::max() ) { std::cerr << "    will send KILL signal " << kill_after << " s after the timeout" << std::endl; }
         std::cerr << std::endl;
     }
@@ -411,10 +443,12 @@ int main( int ac, char** av ) try
         if ( outcome < 0 ) { COMMA_THROW( comma::exception, "waitpid failed, status " << outcome ); }
     } while (!WIFEXITED(status) && !WIFSIGNALED(status));
 
+#ifdef HAVE_PROCPS_DEV
     if ( wait_for_process_group ) {
         int count = parse_process_tree_until_empty( verbose );
         if ( count < 0 ) { COMMA_THROW( comma::exception, "expected at least one process in the group (at least itself), got none" ); }
     }
+#endif
 
     if ( WIFEXITED( status ) )
     {
