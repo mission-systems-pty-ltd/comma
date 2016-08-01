@@ -169,9 +169,10 @@ struct sig2str {
     // size is tiny, map probably gives little speed-up in lookup
     typedef std::vector< std::pair< std::string, int > > V;
 
-    static void list_all()
+    static int list_all()
     {
         for ( V::const_iterator i = known_signals.begin(); i != known_signals.end(); ++i ) { std::cout << i->first << std::endl; }
+        return 0;
     }
 
     static int from_string( const std::string & s ) {
@@ -329,8 +330,9 @@ int main( int ac, char** av ) try
     if ( non_options.size() < 2 )
     {
         // user did not give all the arguments; OK in special cases
+        verbose = all_options.exists( "-v,--verbose" );
         if ( all_options.exists( "-h,--help" ) ) { usage( true ); }
-        if ( all_options.exists( "--list-known-signals" ) ) { sig2str::list_all(); return 0; }
+        if ( all_options.exists( "--list-known-signals" ) ) { return sig2str::list_all(); }
         COMMA_THROW( comma::exception, "please specify timeout and command to run" );
     }
 
@@ -341,7 +343,7 @@ int main( int ac, char** av ) try
     unsigned int command_to_run_pos = std::distance( all_options.argv().begin(), command_to_run_start );
     comma::command_line_options options( command_to_run_pos, av, usage );
     // idiosyncratic case when the user first gave sufficient input and then stuck in '--help' or '-list-known-signals'
-    if ( options.exists( "--list-known-signals" ) ) { sig2str::list_all(); return 0; }
+    if ( options.exists( "--list-known-signals" ) ) { return sig2str::list_all(); }
     preserve_status = options.exists( "--preserve-status" );
     if ( options.exists( "--foreground" ) ) { COMMA_THROW( comma::exception, "--foreground: unsupported option of the original timeout" ); }
 
