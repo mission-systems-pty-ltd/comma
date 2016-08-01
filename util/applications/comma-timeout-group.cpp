@@ -52,7 +52,6 @@
 namespace {
 
 // todo
-// - --help: -k behaviour
 // - --help: examples: demonstrate one feature at a time
 // - test whether the following is supported: comma-timeout-group 1 -k 5 sleep 10
 // - ? seconds_from_string: use boost::posix_time::days( ... ) and alike
@@ -84,10 +83,10 @@ void usage( bool )
         "\n    --wait-for-process-group=duration, after the initial signal, wait this time for all the processes"
         "\n        in the current process group to finish; if some processes are still left, send the KILL signal"
         "\n        to finish them off (same as -k duration); if both this option and '-k' is given, the duration"
-        "\n        specified last on the command line takes precedence"
-        "\n    -s, --signal=signal, the signal to be sent on timeout, given as a name (HUP) or number;"
+        "\n        specified by '-k' takes precedence"
+        "\n    -s, --signal=signal, the signal to be sent on timeout, given as a name (HUP, SIGHUP) or number;"
         "\n        only a sub-set of all available signal names is supported, use '--list-known-signals' to list;"
-        "\n        if signal specified as a number, arbitrary signal can be used, see 'kill -l' for the values;"
+        "\n        arbitrary signal to use can be specified as a number, see 'kill -l' for the values;"
         "\n        by default, use SIGTERM"
         "\n    --list-known-signals, list the supported signals and exit"
         "\n"
