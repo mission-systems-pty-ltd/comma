@@ -51,16 +51,27 @@
 
 namespace {
 
+// todo
+// - --verbose,-v
+// - --help: -k behaviour
+// - --help: examples: demonstrate one feature at a time
+// - test whether the following is supported: comma-timeout-group 1 -k 5 sleep 10
+// - ? seconds_from_string: use boost::posix_time::days( ... ) and alike
+// - 60 * 1.5: check whether it works or it should be 60.0 * 1.5
+// - DBL_MAX: use std::numeric_limits
+// - cmake: if WIN32, do not build comma-timeout-group
+// - --list-known-signals: end-of-line-separated
+
 void usage( bool )
 {
     static char const * const msg_general =
-        "\nRun the given command with its arguments. Kill the command if it is still running after the given"
+        "\nRun a given command with its arguments. Kill the command if it is still running after the given"
         "\ntime duration."
         "\n"
         "\nUsage:"
         "\n    comma-timeout-group <options> duration command <args>"
         "\n"
-        "\nThis program aims to be a drop-in replacement of the standard timeout(1) utility for most common"
+        "\nA drop-in replacement of the standard timeout(1) utility for most common"
         "\nusage patterns. The capability to wait for all processes in a process group added."
         "\nSome options of timeout (1) are not supported, and, if given, this utility exits in error."
         "\n"
@@ -93,15 +104,22 @@ void usage( bool )
         "\n      status 128+9"
         "\n    - otherwise, exit with the status of command"
         "\n"
-        "\nSimple examples:"
-        "\n    comma-timeout-group 10 sleep 1  # exits after 1 second with status 0"
-        "\n    comma-timeout-group 1 sleep 10  # exits after 1 second with status 124"
+        "\nExamples"
+        "\n    Run an application"
+        "\n        comma-timeout-group 10 sleep 1  # exits after 1 second with status 0"
+        "\n        comma-timeout-group 1 sleep 10  # exits after 1 second with status 124"
         "\n"
-        "\nMore complex examples:"
-        "\n    comma-timeout-group -k 5 --signal=USR1 10 bash -c \"bash_function 1 2\""
-        "\n        run the given bash function with arguments '1 2'; the function must be 'export -f'-ed"
-        "\n        send the bash process the USR1 signal if it is still running in 10 s after start"
-        "\n        send the entire process group the KILL signal if it is still running after another 5 s"
+        "\n    Run a bash function"
+        "\n        comma-timeout-group 10 bash -c \"bash_function 1 2\""
+        "\n"
+        "\n    Run ???"
+        "\n        comma-timeout-group -k 5 10 sleep 3"
+        "\n"
+        "\n    Pass customized symbols"
+        "\n        comma-timeout-group --signal=USR1 10 sleep 3"
+        "\n            run the given bash function with arguments '1 2'; the function must be 'export -f'-ed"
+        "\n            send the bash process the USR1 signal if it is still running in 10 s after start"
+        "\n            send the entire process group the KILL signal if it is still running after another 5 s"
         "\n"
         "\n";
     std::cerr << msg_general << comma::contact_info << std::endl << std::endl;
@@ -319,7 +337,7 @@ int main( int ac, char** av ) try
         // user did not give all the arguments; OK in special cases
         if ( all_options.exists( "-h,--help" ) ) { usage( true ); }
         if ( all_options.exists( "--list-known-signals" ) ) { std::cout << sig2str::list_all() << std::endl; return 0; }
-        COMMA_THROW( comma::exception, "must give at least timeout and command to run" );
+        COMMA_THROW( comma::exception, "please specify timeout and command to run" );
     }
 
     // split the command line into two: comma-timeout-group itself and the command-to-run
@@ -329,10 +347,9 @@ int main( int ac, char** av ) try
     unsigned int command_to_run_pos = std::distance( all_options.argv().begin(), command_to_run_start );
     comma::command_line_options options( command_to_run_pos, av, usage );
     // idiosyncratic case when the user first gave sufficient input and then stuck in '--help' or '-list-known-signals'
-    if ( options.exists( "-h,--help" ) ) { usage( true ); }
     if ( options.exists( "--list-known-signals" ) ) { std::cout << sig2str::list_all() << std::endl; return 0; }
     preserve_status = options.exists( "--preserve-status" );
-    if ( options.exists( "--foreground" ) ) { COMMA_THROW( comma::exception, "unsupported option of the original timeout" ); }
+    if ( options.exists( "--foreground" ) ) { COMMA_THROW( comma::exception, "--foreground: unsupported option of the original timeout" ); }
 
     verbose = options.exists( "--verbose" );
 
@@ -400,7 +417,7 @@ int main( int ac, char** av ) try
 
     if ( wait_for_process_group ) {
         int count = parse_process_tree_until_empty( verbose );
-        if ( count < 0 ) { COMMA_THROW( comma::exception, "number of processes in the group fell to zero" ); }
+        if ( count < 0 ) { COMMA_THROW( comma::exception, "expected at least one process in the group (at least itself), got none" ); }
     }
 
     if ( WIFEXITED( status ) )
@@ -426,7 +443,8 @@ int main( int ac, char** av ) try
         return signal_caught + 128; // per shell rules
     }
 
-    COMMA_THROW( comma::exception, "unknown status " << status << " from command" );
+    std::cerr << "comma-timeout-group: command exited with unknown status " << status << std::endl;
+    return 1;
 }
 catch( std::exception& ex ) { std::cerr << "comma-timeout-group: " << ex.what() << std::endl; exit(1); }
 catch( ... ) { std::cerr << "comma-timeout-group: unknown exception" << std::endl; exit(1); }
