@@ -55,7 +55,6 @@ namespace {
 // todo
 // - test whether the following is supported: comma-timeout-group 1 -k 5 sleep 10
 // - ? seconds_from_string: use boost::posix_time::days( ... ) and alike
-// - 60 * 1.5: check whether it works or it should be 60.0 * 1.5
 // - cmake: if WIN32, do not build comma-timeout-group
 
 void usage( bool )
