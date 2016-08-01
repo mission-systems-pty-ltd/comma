@@ -92,7 +92,9 @@ class stream(object):
         self.complete_fields = self.fields + self.missing_fields
         self.complete_dtype = self._complete_dtype()
         self.default_values = self._default_values(default_values)
-        self.data_extraction_dtype = self._data_extraction_dtype()
+        self.data_extraction_fields = self._data_extraction_fields()
+        self.struct_and_extraction_fields = zip(self.struct.flat_dtype.names,
+                                                self.data_extraction_fields)
         self._input_array = None
         self._missing_fields_array = None
         self._ascii_buffer = None
@@ -150,19 +152,16 @@ class stream(object):
                     comments=None))
 
     def _struct_array(self, input_array):
-        if not self.data_extraction_dtype:
+        if not self.data_extraction_fields:
             return input_array.copy().view(self.struct)
         if self.missing_fields:
             missing_fields_array = self._retrieve_missing_data(input_array.size)
-            complete_array = merge_arrays(input_array, missing_fields_array)
-        else:
-            complete_array = input_array
-        flat_struct_array = np.empty(complete_array.size, dtype=self.struct.flat_dtype)
-        for i, j in zip(flat_struct_array.dtype.names, self.data_extraction_dtype.names):
-            if j in input_array.dtype.names:
-                flat_struct_array[i] = input_array[j]
+        flat_struct_array = np.empty(input_array.size, dtype=self.struct.flat_dtype)
+        for sf, ef in self.struct_and_extraction_fields:
+            if sf in self.missing_fields:
+                flat_struct_array[sf] = missing_fields_array[ef]
             else:
-                flat_struct_array[i] = missing_fields_array[j]
+                flat_struct_array[sf] = input_array[ef]
         return flat_struct_array.view(self.struct)
 
     def _retrieve_missing_data(self, size):
@@ -413,14 +412,11 @@ class stream(object):
             del default_values_[field]
         return default_values_
 
-    def _data_extraction_dtype(self):
+    def _data_extraction_fields(self):
         if self.fields == self.struct.fields:
-            return
+            return ()
         index_of = self.complete_fields.index
-        names = ['f{}'.format(index_of(field)) for field in self.struct.fields]
-        formats = [self.complete_dtype.fields[name][0] for name in names]
-        offsets = [self.complete_dtype.fields[name][1] for name in names]
-        return np.dtype(dict(names=names, formats=formats, offsets=offsets))
+        return tuple('f{}'.format(index_of(field)) for field in self.struct.fields)
 
 
 def numpy_scalar_to_string(scalar, precision=DEFAULT_PRECISION):
