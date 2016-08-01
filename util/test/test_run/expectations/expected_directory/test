@@ -1,0 +1,16 @@
+#!/bin/bash
+
+function clean() { rm -rf $test_dir ; }
+trap clean EXIT
+mkdir -p output || exit 1
+test_dir=$( mktemp --directory --tmpdir="$( readlink -f output )" )
+cd "$test_dir"
+while IFS='=' read path value ; do
+    [[ -z "$path" || "$path" =~ ^#.* ]] && continue
+    mkdir -p $( dirname $path )
+    echo "${value//\"/}" >> $path
+done
+echo "sed 's/\"//g'" > test
+chmod +x test
+comma-test-run --no-ansiterm-control-characters $@ >&2
+echo "status=$?"
