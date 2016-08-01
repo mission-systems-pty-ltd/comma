@@ -322,7 +322,8 @@ function comma_process_set_timed_wait_alarm_detail()
     # timeout just to send everything into a separate process group
     local forever="4294967296d"
     # do not bother about PID verification, no-one is supposed to wait for this process
-    comma-timeout-group --wait-for-process-group 10 -s TERM $forever bash -c "comma_process_timed_wait_alarm $*" &
+    # comma-timeout-group --wait-for-process-group 10 -s TERM $forever bash -c "comma_process_timed_wait_alarm $*" &
+    timeout 10 -s TERM $forever bash -c "comma_process_timed_wait_alarm $*" &
 }
 export -f comma_process_set_timed_wait_alarm_detail
 declare -r comma_process_set_timed_wait_alarm_detail
@@ -622,9 +623,11 @@ function comma_execute_and_wait()
         if [[ "$usepg" == "true" ]] ; then
             [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: execute commands as process groups" >&2
             if [[ "$shellfcn" == "true" ]] ; then
-                comma_process_exec_and_validate $comma_background_verbose "$pid_fifo" comma-timeout-group --wait-for-process-group 25 -s TERM $execute_and_wait_timeout bash -c "$command_to_execute"
+                # comma_process_exec_and_validate $comma_background_verbose "$pid_fifo" comma-timeout-group --wait-for-process-group 25 -s TERM $execute_and_wait_timeout bash -c "$command_to_execute"
+                comma_process_exec_and_validate $comma_background_verbose "$pid_fifo" timeout -k 25 -s TERM $execute_and_wait_timeout bash -c "$command_to_execute"
             else
-                comma_process_exec_and_validate $comma_background_verbose "$pid_fifo" comma-timeout-group --wait-for-process-group 25 -s TERM $execute_and_wait_timeout $command_to_execute
+                # comma_process_exec_and_validate $comma_background_verbose "$pid_fifo" comma-timeout-group --wait-for-process-group 25 -s TERM $execute_and_wait_timeout $command_to_execute
+                comma_process_exec_and_validate $comma_background_verbose "$pid_fifo" timeout -k 25 -s TERM $execute_and_wait_timeout $command_to_execute
             fi
         else
             [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: execute commands as processes" >&2
