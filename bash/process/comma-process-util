@@ -82,11 +82,11 @@ function comma_process_signature()
     if [ "$pid" -eq "$pid" ] ; then :; else builtin echo "$FUNCNAME: pid '$pid' is not an integer" >&2; return 1; fi
     local signature psexit
     while true ; do
-        # occasionally observed ps hanging here indefinitely
+        # occasionally observed ps hanging here indefinitely; single process, no need for timeout-group
         signature=$( timeout -k 10 -s TERM 10 ps --no-headers -o lstart "$pid" )
         psexit=$?
         (( $psexit >= 126 )) && { builtin echo "$FUNCNAME: ps killed by a signal, exit status '$psexit', try again" >&2; continue; }
-        (( $psexit == 0 )) || { builtin echo "$FUNCNAME: process with id '$pid' not found" >&2; return 1; }
+        (( $psexit == 0 )) || { builtin echo "$FUNCNAME: process with id '$pid' not found, exit status '$psexit'" >&2; return 1; }
         break
     done
     signature=$( date --date="$signature" +%Y%m%dT%H%M%S ) || { builtin echo "$FUNCNAME: cannot convert '$signature' to timestamp" >&2; return 1; }
@@ -153,10 +153,10 @@ function comma_process_kill_helper_()
     signature=$2
     group=${pid:0:1}
     [[ "$group" == "-" ]] && pid=${pid:1} || group=""
-    (( verbose == 1 )) && builtin echo "$FUNCNAME: send signal '$signal_to_use' to ${group}${pid}" >&2
+    (( verbose == 1 )) && builtin echo "$FUNCNAME: will send signal '$signal_to_use' to ${group}${pid}" >&2
     trap 'comma_process_kill_trap_exit_' EXIT
     builtin kill -s STOP $pid
-    (( $? == 0 )) || { builtin echo "$FUNCNAME: process id '$pid' not found; do not kill, assume terminated by itself" >&2; exit $COMMA_PROCESS_KILL_NOT_FOUND; }
+    (( $? == 0 )) || { builtin echo "$FUNCNAME: process id '$pid' not found; do not kill, assume terminated by itself" >&2; trap - EXIT; exit $COMMA_PROCESS_KILL_NOT_FOUND; }
     current=$( comma_process_signature $pid )
     (( $? == 0 )) || { builtin echo "$FUNCNAME: cannot get signature of process id '$pid'" >&2; exit $COMMA_PROCESS_KILL_ERROR; }
     [[ "$current" == "$signature" ]] || { builtin echo "$FUNCNAME: process '$pid' has signature '$current' different from expected '$signature'; possibly re-used; refuse to kill" >&2; exit $COMMA_PROCESS_KILL_REUSED; }
@@ -195,6 +195,7 @@ function comma_process_exec()
     local signature
     signature=$( comma_process_signature $self ) || { builtin echo "$FUNCNAME: cannot get process signature for '$self'" >&2; return 1; }
     local write_timeout=20
+    # one process only, no need for comma-timeout-group
     timeout -s TERM -k 10 $write_timeout bash -c "builtin echo \"$self $signature\" > \"$fifo\""
     local rv=$?
     (( rv == 0 )) || { builtin echo "$FUNCNAME: write into the named pipe '$fifo' failed, error $rv" >&2; return $rv; }
@@ -322,7 +323,7 @@ function comma_process_set_timed_wait_alarm_detail()
     # timeout just to send everything into a separate process group
     local forever="4294967296d"
     # do not bother about PID verification, no-one is supposed to wait for this process
-    timeout -s TERM -k 10 $forever bash -c "comma_process_timed_wait_alarm $*" &
+    comma-timeout-group --wait-for-process-group 10 -s TERM $forever bash -c "comma_process_timed_wait_alarm $*" &
 }
 export -f comma_process_set_timed_wait_alarm_detail
 declare -r comma_process_set_timed_wait_alarm_detail
@@ -416,8 +417,10 @@ function terminate_comma_execute_and_wait()
                     wait
                 }
                 [[ "$killsign" == "-" ]] && {
-                    [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: waiting for group ${commands_to_execute_pgid[$command_to_execute_index]}" >&2
-                    comma_wait_for_process_group "$cew_funcname" "${commands_to_execute_pgid[$command_to_execute_index]}" 25
+                    [[ $call_comma_wait_for_process_group -ne 0 ]] && {
+                        [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: waiting for group ${commands_to_execute_pgid[$command_to_execute_index]}" >&2
+                        comma_wait_for_process_group "$cew_funcname" "${commands_to_execute_pgid[$command_to_execute_index]}" 25
+                    }
                 }
                 wait ${commands_to_execute_pgid[$command_to_execute_index]}
                 [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: group ${commands_to_execute_pgid[$command_to_execute_index]} was terminated" >&2
@@ -608,6 +611,8 @@ function comma_execute_and_wait()
     local commands_to_execute_pgid=()
     local commands_to_execute_signature=()
     local commands_to_execute_status=0
+    comma-timeout-group --can-wait-for-process-group
+    local call_comma_wait_for_process_group=$?
     [[ "$statusall" == "false" ]] && commands_to_execute_status=1
 
     local command_to_execute cmd shellfcn
@@ -624,12 +629,14 @@ function comma_execute_and_wait()
         # run the command-to-execute as a background process or as a background job in
         # its own process group and under timeout
         if [[ "$usepg" == "true" ]] ; then
+            [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: execute commands as process groups" >&2
             if [[ "$shellfcn" == "true" ]] ; then
-                comma_process_exec_and_validate $comma_background_verbose "$pid_fifo" timeout -k 10 -s TERM $execute_and_wait_timeout bash -c "$command_to_execute"
+                comma_process_exec_and_validate $comma_background_verbose "$pid_fifo" comma-timeout-group --wait-for-process-group 25 -s TERM $execute_and_wait_timeout bash -c "$command_to_execute"
             else
-                comma_process_exec_and_validate $comma_background_verbose "$pid_fifo" timeout -k 10 -s TERM $execute_and_wait_timeout $command_to_execute
+                comma_process_exec_and_validate $comma_background_verbose "$pid_fifo" comma-timeout-group --wait-for-process-group 25 -s TERM $execute_and_wait_timeout $command_to_execute
             fi
         else
+            [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: execute commands as processes" >&2
             if [[ "$shellfcn" == "true" ]] ; then
                 comma_process_exec_and_validate $comma_background_verbose "$pid_fifo" bash -c "$command_to_execute"
             else
@@ -663,7 +670,7 @@ function comma_execute_and_wait()
             # keep going to let the other processes to complete
         }
         # special care when process group has been killed by timeout itself
-        [[ "$usepg" == "true" ]] && comma_wait_for_process_group "$cew_funcname" "${commands_to_execute_pgid[$command_to_execute_index]}" 25
+        [[ "$usepg" == "true" && $call_comma_wait_for_process_group -ne 0 ]] && comma_wait_for_process_group "$cew_funcname" "${commands_to_execute_pgid[$command_to_execute_index]}" 25
         [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: group ${commands_to_execute_pgid[$command_to_execute_index]} finished execution, status $command_to_execute_status" >&2
         commands_to_execute_pgid[$command_to_execute_index]=""
         if (( ${#commands_to_execute[@]} == 1 )) ; then
@@ -690,8 +697,8 @@ declare -r comma_execute_and_wait
 # @description likely a workaround for a problem encountered in bash-4.3 series:
 # the builtin "wait" failed to wait for all processes in a (killed) process group to terminate;
 # this function would poll the process list for the given time (or forever) until no processes are left
-# creates a race condition in case of PID re-use; will be removed later when a safer version of timeout
-# is ready
+# creates a race condition in case of PID re-use; shall not be called if customized version of
+# timeout (aka comma-timeout-group) is used.
 # @param name name of the caller, used only for trace messages
 # @param pgid process group id to wait for
 # @param max_wait the maximal time to wait or "forever"; if this timeout is reached, the function "kill -9" the entire group
@@ -713,8 +720,8 @@ function comma_wait_for_process_group()
                 return 1
             }
         fi
-        # occasionally observed ps hanging here indefinitely
-        leftovers=$( timeout -k 10 -s TERM 10 bash -c "ps --no-headers -u $USER -o pgid,pid,comm | grep \"^ *$process_group_id \" | grep -v '<defunct>'" )
+        # occasionally observed ps hanging here indefinitely; single process, no need for timeout-group
+        leftovers=$( timeout -k 10 -s TERM 10 ps --no-headers -u $USER -o pgid,pid,comm | grep "^ *$process_group_id " | grep -v '<defunct>' )
         leftovers_rv=$?
         (( leftovers_rv >= 126 )) && { echo "$caller_name: could not list processes in group $process_group_id (status '$leftovers_rv')" >&2; (( ++iter )); sleep 1; continue; }
         leftovers_count=$( echo "$leftovers" | sed '/^$/d' | wc -l )

@@ -1,0 +1,6 @@
+#!/bin/bash
+
+trap '' TERM INT HUP PIPE
+while true; do
+    sleep 1
+done

@@ -1,0 +1,3 @@
+repetitions=25
+timeout="comma-timeout-group"
+timeout_options="--wait-for-process-group=forever"

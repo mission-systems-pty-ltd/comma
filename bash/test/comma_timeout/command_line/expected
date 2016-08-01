@@ -1,0 +1,60 @@
+usage[0]/output = ""
+usage[0]/status = 0
+usage[1]/output = ""
+usage[1]/status = 0
+
+auxiliary[0]/status = 0
+auxiliary[0]/output = "HUP,INT,QUIT,KILL,USR1,USR2,ALRM,TERM,CONT,STOP"
+auxiliary[1]/status = 0
+auxiliary[1]/output = "HUP,INT,QUIT,KILL,USR1,USR2,ALRM,TERM,CONT,STOP"
+auxiliary[2]/status = 0
+auxiliary[2]/output = ""
+
+typo[0]/status = 1
+typo[0]/output = ""
+
+sleep[0]/status = 0
+sleep[0]/output = ""
+sleep[1]/status = 0
+sleep[1]/output = ""
+sleep[2]/status = 124
+sleep[2]/output = ""
+
+kill[0]/status = 0
+kill[0]/output = ""
+kill[1]/status = 0
+kill[1]/output = ""
+kill[2]/status = 0
+kill[2]/output = ""
+kill[3]/status = 0
+kill[3]/output = ""
+kill[4]/status = 124
+kill[4]/output = ""
+
+group[0]/status = 0
+group[0]/output = ""
+group[1]/status = 0
+group[1]/output = ""
+
+unsupported[0]/status = 1
+unsupported[0]/output = ""
+
+unknown[0]/status = 127
+unknown[0]/output = ""
+unknown[1]/status = 126
+unknown[1]/output = ""
+
+signal[0]/status = 124
+signal[0]/output = ""
+signal[1]/status = 124
+signal[1]/output = ""
+signal[2]/status = 124
+signal[2]/output = ""
+signal[3]/status = 1
+signal[3]/output = ""
+signal[4]/status = 129
+signal[4]/output = ""
+signal[5]/status = 130
+signal[5]/output = ""
+signal[6]/status = 130
+signal[6]/output = ""

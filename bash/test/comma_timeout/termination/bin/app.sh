@@ -31,7 +31,7 @@ own_pid=$BASHPID
 own_pgid=$( ps -p $own_pid --no-headers -o pgid )
 own_pgid=${own_pgid// /}
 
-comma-timeout $input_timeout_options -k 10 -s TERM 20 bash -c call_all & timeout_pid=$!
+$input_timeout $input_timeout_options -k 10 -s TERM 20 bash -c call_all & timeout_pid=$!
 
 echo "process group of app: $own_pgid" >&2
 echo "process group of timeout: $timeout_pid" >&2

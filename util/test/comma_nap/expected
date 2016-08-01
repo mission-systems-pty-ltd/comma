@@ -13,7 +13,7 @@ expect sleep[0]/status == 0
 expect len(sleep[0]/output) != 0
 expect sleep[1]/status == 0
 expect len(sleep[1]/output) != 0
-expect sleep[2]/status == 1
+expect sleep[2]/status == 124
 expect len(sleep[2]/output) == 0
-expect sleep[3]/status == 1
+expect sleep[3]/status == 124
 expect len(sleep[3]/output) == 0
