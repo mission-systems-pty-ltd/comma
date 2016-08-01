@@ -92,11 +92,11 @@ class stream(object):
         self.complete_fields = self.fields + self.missing_fields
         self.complete_dtype = self._complete_dtype()
         self.default_values = self._default_values(default_values)
+        self.missing_fields_array = self._missing_fields_array()
         self.data_extraction_fields = self._data_extraction_fields()
         self.struct_and_extraction_fields = zip(self.struct.flat_dtype.names,
                                                 self.data_extraction_fields)
         self._input_array = None
-        self._missing_fields_array = None
         self._ascii_buffer = None
         self._strings = functools.partial(map, self.numpy_scalar_to_string)
 
@@ -129,7 +129,7 @@ class stream(object):
         self._input_array = self._read(size)
         if self._input_array.size == 0:
             return
-        return self._struct_array(self._input_array)
+        return self._struct_array(self._input_array, self.missing_fields_array)
 
     def _read(self, size):
         if self.binary:
@@ -151,11 +151,9 @@ class stream(object):
                     filling_values=self.filling_values,
                     comments=None))
 
-    def _struct_array(self, input_array):
+    def _struct_array(self, input_array, missing_fields_array):
         if not self.data_extraction_fields:
             return input_array.copy().view(self.struct)
-        if self.missing_fields:
-            missing_fields_array = self._retrieve_missing_data(input_array.size)
         flat_struct_array = np.empty(input_array.size, dtype=self.struct.flat_dtype)
         for sf, ef in self.struct_and_extraction_fields:
             if sf in self.missing_fields:
@@ -164,25 +162,22 @@ class stream(object):
                 flat_struct_array[sf] = input_array[ef]
         return flat_struct_array.view(self.struct)
 
-    def _retrieve_missing_data(self, size):
-        if self._missing_fields_array is None or size > self._missing_fields_array.size:
-            self._generate_missing_data(size)
-        return self._missing_fields_array[:size]
-
-    def _generate_missing_data(self, size):
-        self._missing_fields_array = np.zeros(size, dtype=self.missing_dtype)
-        if not self.default_values:
+    def _missing_fields_array(self, size=1):
+        if not self.missing_fields:
             return
-        dtype_name_of = dict(zip(self.missing_fields, self.missing_dtype.names))
-        for field, value in self.default_values.iteritems():
-            name = dtype_name_of[field]
-            if self.missing_dtype[name] == csv_time.DTYPE:
-                try:
-                    self._missing_fields_array[name] = csv_time.to_numpy(value)
-                except TypeError:
-                    self._missing_fields_array[name] = value
-            else:
-                self._missing_fields_array[name] = value
+        missing_fields_array = np.zeros(size, dtype=self.missing_dtype)
+        if self.default_values:
+            dtype_name_of = dict(zip(self.missing_fields, self.missing_dtype.names))
+            for field, value in self.default_values.iteritems():
+                name = dtype_name_of[field]
+                if self.missing_dtype[name] == csv_time.DTYPE:
+                    try:
+                        missing_fields_array[name] = csv_time.to_numpy(value)
+                    except TypeError:
+                        missing_fields_array[name] = value
+                else:
+                    missing_fields_array[name] = value
+        return missing_fields_array
 
     def numpy_scalar_to_string(self, scalar):
         return numpy_scalar_to_string(scalar, precision=self.precision)
