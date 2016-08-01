@@ -6,15 +6,6 @@ input=$( cat )
 comma_path_value_to_var --export --prefix=input <<<"$input"
 echo "$input" | sed 's@^@input/@'
 
-function ignore_signals_forever()
-{
-    trap '' TERM INT HUP PIPE
-    while true; do
-        sleep 1
-    done
-}
-export -f ignore_signals_forever
-
 kill -l KILL | sed 's@^@kill/signal=@'
 
 date +%Y%m%dT%H%M%S | csv-time --to seconds | sed 's@^@time/start=@'
@@ -27,8 +18,13 @@ command_line_options=
 [[ -z "$input_kill_after" ]] || command_line_options+=" --kill-after=$input_kill_after"
 [[ -z "$input_wait_group" ]] || command_line_options+=" --wait-for-process-group=$input_wait_group"
 
-echo "command/string=\"comma-timeout-group $command_line_options $duration bash -c ignore_signals_forever\""
-comma-timeout-group $command_line_options $duration bash -c ignore_signals_forever
+scriptdir=$( dirname "$0" )
+bindir="$scriptdir/bin"
+ignorant="$bindir/ignore-signals-forever"
+[[ -x "$ignorant" ]] || { echo "$0: file '$ignorant' not found or is not executable" >&2; exit 1; }
+
+echo "command/string=\"comma-timeout-group $command_line_options $duration $ignorant\""
+comma-timeout-group $command_line_options $duration "$ignorant"
 echo "command/status=$?"
 
 date +%Y%m%dT%H%M%S | csv-time --to seconds | sed 's@^@time/end=@'
