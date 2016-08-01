@@ -40,6 +40,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <limits>
 
 #include <boost/lexical_cast.hpp>
 #include <boost/assign/list_of.hpp>
@@ -55,7 +56,6 @@ namespace {
 // - test whether the following is supported: comma-timeout-group 1 -k 5 sleep 10
 // - ? seconds_from_string: use boost::posix_time::days( ... ) and alike
 // - 60 * 1.5: check whether it works or it should be 60.0 * 1.5
-// - DBL_MAX: use std::numeric_limits
 // - cmake: if WIN32, do not build comma-timeout-group
 // - --list-known-signals: end-of-line-separated
 
@@ -91,7 +91,7 @@ void usage( bool )
         "\n"
         "\nDuration for the '-k' and '--wait-for-process-group' options is a floating point number with"
         "\nan optional suffix 's' for seconds (default), 'm' for minutes, 'h' for hours, and 'd' for days."
-        "\nThe '--wait-for-process-group' option also accepts special duration 'forever' (equal to DBL_MAX)"
+        "\nThe '--wait-for-process-group' option also accepts special duration 'forever' (equal to max double)"
         "\ngiven as a literal string (no quotes). If both '--kill-after and --wait-for-process-group' durations"
         "\nare specified, the former takes precedence."
         "\n"
@@ -161,7 +161,7 @@ double seconds_from_string( const std::string& s, bool allow_forever = false )
     }
     if ( s == "forever" ) {
         if ( !allow_forever ) { COMMA_THROW( comma::exception, "the 'forever' duration is not allowed in this context" ); }
-        return DBL_MAX;
+        return std::numeric_limits< double >::max();
     }
     double result = impl_::from_string( s );
     if ( result <= 0.0 )
@@ -374,8 +374,8 @@ int main( int ac, char** av ) try
         std::cerr << "    will execute:"; for ( char **i = av + command_to_run_pos; i < av + ac; ++i ) { std::cerr << " \"" << *i << "\""; }; std::cerr << std::endl;
         std::cerr << "    will time-out this command after " << timeout << " s" << std::endl;
         std::cerr << "    will use signal " << signal_to_use << " to interrupt the command by timeout" << std::endl;
-        if ( wait_for_process_group ) { std::cerr << "    will wait" << ( kill_after < DBL_MAX ? "" : " forever" ) << " for all processes in the group to finish" << std::endl; }
-        if ( kill_after != 0 && kill_after < DBL_MAX ) { std::cerr << "    will send KILL signal " << kill_after << " s after the timeout" << std::endl; }
+        if ( wait_for_process_group ) { std::cerr << "    will wait" << ( kill_after < std::numeric_limits< double >::max() ? "" : " forever" ) << " for all processes in the group to finish" << std::endl; }
+        if ( kill_after != 0 && kill_after < std::numeric_limits< double >::max() ) { std::cerr << "    will send KILL signal " << kill_after << " s after the timeout" << std::endl; }
         std::cerr << std::endl;
     }
 
