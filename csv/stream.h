@@ -549,7 +549,7 @@ inline binary_input_stream< S >::binary_input_stream( std::istream& is, const st
 template < typename S >
 inline binary_input_stream< S >::binary_input_stream( std::istream& is, const options& o, const S& sample )
     : is_( is )
-    , binary_( o.format().string(), o.fields, o.full_xpath, sample )
+    , binary_( o.format_string(), o.fields, o.full_xpath, sample )
     , default_( sample )
     , result_( sample )
     , size_( binary_.format().size() )
@@ -600,7 +600,7 @@ inline binary_output_stream< S >::binary_output_stream( std::ostream& os, const 
 template < typename S >
 inline binary_output_stream< S >::binary_output_stream( std::ostream& os, const options& o, const S& sample )
     : os_( os )
-    , binary_( o.format().string(), o.fields, o.full_xpath, sample )
+    , binary_( o.format_string(), o.fields, o.full_xpath, sample )
 //     , size_( binary_.format().size() ) //, size_( binary_.format().size() * ( 4098 / binary_.format().size() ) ) // quick and dirty
     , buf_( binary_.format().size() ) //, buf_( size_ )
 //     , begin_( &buf_[0] )
