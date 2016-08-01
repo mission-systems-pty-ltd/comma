@@ -52,9 +52,6 @@
 
 namespace {
 
-// todo
-// - cmake: if WIN32, do not build comma-timeout-group
-
 void usage( bool )
 {
     static char const * const msg_general =
