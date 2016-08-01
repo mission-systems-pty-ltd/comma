@@ -52,7 +52,6 @@
 namespace {
 
 // todo
-// - --help: examples: demonstrate one feature at a time
 // - test whether the following is supported: comma-timeout-group 1 -k 5 sleep 10
 // - ? seconds_from_string: use boost::posix_time::days( ... ) and alike
 // - 60 * 1.5: check whether it works or it should be 60.0 * 1.5
@@ -102,22 +101,29 @@ void usage( bool )
         "\n      status 128+9"
         "\n    - otherwise, exit with the status of command"
         "\n"
-        "\nExamples"
-        "\n    Run an application"
+        "\nExamples:"
+        "\n    Run an application:"
         "\n        comma-timeout-group 10 sleep 1  # exits after 1 second with status 0"
         "\n        comma-timeout-group 1 sleep 10  # exits after 1 second with status 124"
         "\n"
-        "\n    Run a bash function"
+        "\n    Run a bash function with arguments:"
         "\n        comma-timeout-group 10 bash -c \"bash_function 1 2\""
+        "\n            watch the quotes; the function must be 'export -f'-ed"
         "\n"
-        "\n    Run ???"
+        "\n    Run an application, send KILL signal in 5 seconds if does not die:"
         "\n        comma-timeout-group -k 5 10 sleep 3"
+        "\n            if the application does not exit within 5 s in response to the first signal (TERM,"
+        "\n            default), send KILL signal"
         "\n"
-        "\n    Pass customized symbols"
+        "\n    Pass custom signal:"
         "\n        comma-timeout-group --signal=USR1 10 sleep 3"
-        "\n            run the given bash function with arguments '1 2'; the function must be 'export -f'-ed"
+        "\n            send USR1 after 10 s timeout"
         "\n            send the bash process the USR1 signal if it is still running in 10 s after start"
         "\n            send the entire process group the KILL signal if it is still running after another 5 s"
+        "\n"
+        "\n    Wait for all processes in the group:"
+        "\n        comma-timeout-group --wait-for-process-group=5 10 application"
+        "\n            wait for 5 s for all processes in the group to exit; if some are left, send KILL"
         "\n"
         "\n";
     std::cerr << msg_general << comma::contact_info << std::endl << std::endl;
