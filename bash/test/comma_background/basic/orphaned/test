@@ -18,6 +18,7 @@ builtin echo "$scriptname: use fifo '$fifo'" >&2
 
 builtin echo "$scriptname: attempt to start a background process..." >&2
 comma_process_exec --verbose "$fifo" sleep 1 &
+builtin echo "$scriptname: created a background process $!" >&2
 
 # never read from the pipe, the above call shall time out
 echo "waiting for the children to terminate..." >&2

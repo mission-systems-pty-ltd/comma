@@ -149,6 +149,7 @@ Search for and execute tests under the current directory.
 Find subdirectories containing the files ${brown}test${none}, ${brown}input${none}, or ${brown}expected${none}.
 Execute 'test', then either:
     (a) if 'expected' exists, compare its contents to the output of 'test' ("path=value" format)
+        'expected' can be either file or directory, see --help --verbose for details
     (b) if --also-expected='file' is passed on the command line and 'expected' exists, compare the contents of
         'file' ("path=value") to the output of 'test'
     (c) if --always-expected='file' is passed on the command line, compare the contents of 'file' ("path=value")
@@ -207,6 +208,11 @@ ${brown}Input, test, output, and expected files${none}
 
     Test output will be put into the subdirectory 'output'. This will contain standard error log 'output/stderr.log'
     and output log 'output/stdout.log'. The contents of 'output/stdout.log' is matched to the 'expected' file.
+
+${brown}expected${none}
+    - if 'expected' is a file: compare its contents to the output of 'test' ("path=value" format)
+    - if 'expected' is a directory: compare all files in all subdirectories of 'expected', except files called
+                                    'readme', to the output of 'test' ("path=value" format)
 
 ${brown}Disabling tests${none}
     to disable tests in a directory and all its subdirectories
@@ -289,20 +295,20 @@ ${brown}White(and black)-listing pro hint${none}
 function error_()
 {
     if [[ "$options_no_ansiterm_control_characters" == "1" ]] ; then
-        echo -e "$1" >&2
+        echo -e "$*" >&2
     else
         local bold=$( tput bold )
         local red=$( tput setaf 1 )
         local normal=$( tput sgr0 )
-        echo -e "$bold$red$1$normal" >&2
+        echo -e "$bold$red$*$normal" >&2
     fi
 }
 export -f error_
 
 function error_and_junit_()
 {
-    local -r error_and_junit_formatted="$( echo -e "$1" )"
-    error_ "$( head -1 <<< "$error_and_junit_formatted" )"
+    local -r error_and_junit_formatted=$( echo -e "$1" )
+    error_ $( head -1 <<< "$error_and_junit_formatted" )
     local -r error_and_junit_formatted_tail="$( tail -n +2 <<< "$error_and_junit_formatted" )"
     [[ -z "$error_and_junit_formatted_tail" ]] || cat >&2 <<< "$error_and_junit_formatted_tail"
     if [[ -n "$options_junit" && -d 'output' ]] ; then
@@ -556,26 +562,6 @@ function comma_top_wrapper()
 }
 export -f comma_top_wrapper
 
-# this functions terminates a currently running test using its group id
-# the test running under the timeout command will have its own group id
-function terminate_run_test_with_timeout()
-{
-    trap '' SIGINT SIGTERM SIGHUP SIGPIPE
-    echo "$name: terminating test in $( pwd )..." >&2
-    if [[ -n "$comma_top_pgid" ]] ; then
-        kill -s TERM -- -$comma_top_pgid
-        comma_wait_for_process_group "$name" "$comma_top_pgid" 12
-        wait $comma_top_pgid
-        unset comma_top_pgid
-    fi
-    error_and_junit_ "Killed"
-    # a process that exits in response to SIGINT should kill itself with SIGINT
-    # see http://www.cons.org/cracauer/sigint.html
-    [[ "$1" == "SIGINT" ]] && { trap - INT ; kill -SIGINT $BASHPID ; }
-    exit 1
-}
-export -f terminate_run_test_with_timeout
-
 # this functions executes a provided test with optional input and captures its stdout
 # then it optionally compares the output with the expected file
 # finally echoes the result of comma-test-match and the status of the match
@@ -602,18 +588,25 @@ function run_and_match_test()
     {
         local match_output global_expected
         echo -e '\n# In comma-test-run before comma-test-match' >> 'output/stdout.log'
-        if [[ -f "./expected" ]] ; then
-            match_output=$( comma-test-match ./expected <'output/stdout.log' 2>&1 )
-        fi
-        if [[ -n "$options_also_expected" && -f "./expected" ]] ; then
-            for global_expected in $options_also_expected ; do
-                match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; comma-test-match "$global_expected" < 'output/stdout.log' 2>&1 )
-            done
+        function match_expected()
+        {
+            local expected=$1
+            if [[ -f "$expected" ]] ; then
+                match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; comma-test-match "$expected" <'output/stdout.log' 2>&1 )
+            elif [[ -d "$expected" ]] ; then
+                local extras=$( find "$expected" -type f )
+                for extra in $extras ; do
+                    [[ $( basename "$extra" ) != "readme" ]] || continue
+                    match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; comma-test-match "$extra" < 'output/stdout.log' | sed "s#^#$extra:#" 2>&1 )
+                done
+            fi
+        }
+        match_expected "./expected"
+        if [[ -n "$options_also_expected" && -e "./expected" ]] ; then
+            for global_expected in $options_also_expected ; do match_expected "$global_expected" ; done
         fi
         if [[ -n "$options_always_expected" ]] ; then
-            for global_expected in $options_always_expected ; do
-                match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; comma-test-match $global_expected < 'output/stdout.log' 2>&1 )
-            done
+            for global_expected in $options_always_expected ; do match_expected "$global_expected" ; done
         fi
         echo -e '\n# After comma-test-match in comma-test-run' >> 'output/stdout.log'
         if [[ -n "$match_output" ]]; then
@@ -642,10 +635,19 @@ function get_test_timeout()
 }
 export -f get_test_timeout
 
+# helper to terminate comma-top safely
+function terminate_comma_top()
+{
+    comma_process_kill --signal=TERM -$comma_top_pgid "$comma_top_signature"
+    local ctrv=$?
+    (( $ctrv == 0 )) || error_ "$FUNCNAME: terminating comma-top PID $comma_top_pgid, comma_process_kill returned error '$ctrv'"
+    unset comma_top_pgid comma_top_signature
+}
+export -f terminate_comma_top
+
 # this function runs a provided test application under the timeout command
 function run_test_with_timeout()
 {
-    setup_signal_handler terminate_run_test_with_timeout
     export dir test_exec path
     local timeout_time
     timeout_time=$( get_test_timeout )
@@ -653,15 +655,19 @@ function run_test_with_timeout()
         # have to run it manually without comma_execute_and_wait because we are not waiting for it
         # this group of processes would be explicitly terminated when the main test is done
         local our_performance_log="$comma_test_run_unique_dir/performance_log.$( mktemp --dry-run XXXXXXXX )"
-        timeout -k 10 -s TERM $timeout_time bash -c comma_top_wrapper\ "$our_performance_log" & comma_top_pgid=$!
+        comma_top_pid_fifo="$comma_test_run_unique_dir/pid_fifo.$( mktemp --dry-run XXXXXXXX )"
+        mkfifo "$comma_top_pid_fifo" || return 1
+        comma_process_exec_and_validate "$comma_top_pid_fifo" comma-timeout-group --wait-for-process-group=22 -s TERM $timeout_time bash -c "comma_top_wrapper \"$our_performance_log\""
+        (( $? == 0 )) || { error_ "$FUNCNAME: fatal system error, incorrect \$! reported by bash; re-run your application"; return 1; }
+        comma_top_pgid=$!
+        comma_top_signature="$comma_process_child_signature"
+        rm -f "$comma_top_pid_fifo"
+        unset comma_top_pid_fifo
     fi
     comma_execute_and_wait --max-wait=$timeout_time --group "bash -c run_and_match_test"
     local rv=$?
     if [[ "$options_estimate_resources" == "1" ]] ; then
-        kill -s TERM -- -$comma_top_pgid
-        comma_wait_for_process_group "$name" "$comma_top_pgid" 12
-        wait $comma_top_pgid
-        unset comma_top_pgid
+        terminate_comma_top || rv=1
         mv -f "$our_performance_log" "output/performance.csv"
     fi
     return $rv
@@ -671,20 +677,23 @@ export -f run_test_with_timeout
 function terminate_run_single_test()
 {
     trap '' SIGINT SIGTERM SIGHUP SIGPIPE
-    echo "$name: single test run terminated by $1..." >&2
+    echo "$name: $FUNCNAME: single test run in $dir terminated by $1..." >&2
+    error_and_junit_ "test killed"
+
+    [[ -n "$comma_top_pid_fifo" ]] && rm -f "$comma_top_pid_fifo"
+    [[ -n "$comma_top_pgid" ]] && terminate_comma_top
+
     # serialize all access to global resources: stats file, stdout/err
     (
         flock -x 9
-        cat "$our_stderrout_log" >&3
+        [[ -f "$our_stderrout_log" ]] && cat "$our_stderrout_log" >&3
         local msg="test $count in '$dir': killed"
         echo "$msg" >&9
     ) 9>>"$comma_test_run_output_flock"
 
     rm -f "$our_stats_progress"
     (( options_debug )) || rm -f "$our_stderrout_log"
-    # a process that exits in response to SIGINT should kill itself with SIGINT
-    # see http://www.cons.org/cracauer/sigint.html
-    [[ "$1" == "SIGINT" ]] && { trap - INT ; kill -s INT $BASHPID ; }
+
     exit 1
 }
 export -f terminate_run_single_test
@@ -719,12 +728,18 @@ function run_single_test()
     local dir=$6 ; temp="${dir%\"}" ; dir="${temp#\"}"
     local worker_id=$BASHPID
 
-    setup_signal_handler terminate_run_single_test
-
     local counter="$count of $total"
 
     # create a unique file for local comma_progress output; will append to the main output at the end
-    local our_stats_progress="$comma_test_run_unique_dir/stats_progress.$( mktemp --dry-run XXXXXXXX )"
+    our_stats_progress="$comma_test_run_unique_dir/stats_progress.$( mktemp --dry-run XXXXXXXX )"
+    # create a unique file for redirecting all output
+    # will append to the main output at the end of each test
+    local our_stderrout_log="$comma_test_run_unique_dir/stdout_log.$( mktemp --dry-run XXXXXXXX )"
+
+    # prepare to clean up
+    local comma_top_pgid comma_top_pid_fifo
+    setup_signal_handler terminate_run_single_test
+
     >"$our_stats_progress"
 
     # say something so that the user is not guessing what is going on
@@ -732,9 +747,7 @@ function run_single_test()
         flock -x 9
         message_ "$name: test $counter: $dir: started..."
     ) 9>>"$comma_test_run_output_flock"
-    # if running tests in parallel, create a unique file for redirecting all output
-    # will append to the main output at the end
-    local our_stderrout_log="$comma_test_run_unique_dir/stdout_log.$( mktemp --dry-run XXXXXXXX )"
+
     # do not touch this equilibristics with file descriptors
     exec 3>&1 4>&2 1>"$our_stderrout_log" 2>&1
 

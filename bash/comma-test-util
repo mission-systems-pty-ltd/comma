@@ -77,7 +77,7 @@ function comma_test_commands()
         [[ -n "$key" && ! "$key" =~ \#.* ]] || continue
         value="${value/#\"}"
         value="${value/%\"}"
-        output="$( eval "$value" || exit 1 )"
+        output=$( eval "$value" )
         status="$?"
         if [[ -n "$fields" ]]; then
             echo "$output" | name-value-from-csv "$fields" --prefix "$key/output"

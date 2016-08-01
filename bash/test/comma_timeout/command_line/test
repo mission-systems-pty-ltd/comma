@@ -1,14 +1,13 @@
 #!/bin/bash
 
-# if timeoutg is not installed, some of the tests are meaningless
+export PATH="$(pwd)/bin:$PATH"
 
-timeoutg=$( which timeoutg )
-if [[ -z "$timeoutg" ]] ; then
-    echo "timeoutg utility not found; skip the test" >&2
-    echo "skipped=1"
-else
-    echo "skipped=0"
-fi
+function list_known_signals_on_one_line()
+{
+    eval "${@}" | tr '\n' ',' | head -c -1
+    return ${PIPESTATUS[0]}
+}
+export -f list_known_signals_on_one_line
 
 source $( which comma-test-util ) || { echo "$0: failed to source comma-test-util" >&2 ; exit 1 ; }
 

@@ -33,7 +33,6 @@
 #include "../string/split.h"
 #include "../application/command_line_options.h"
 #include "../base/exception.h"
-#include "verbose.h"
 #include <sstream>
 #include <set>
 #include <boost/bind.hpp>
@@ -300,6 +299,5 @@ std::string comma::command_line_options::description::usage()
     oss << "        " << has_default_value.as_string() << std::endl;
     return oss.str();
 }
-
 
 } // namespace comma {

@@ -1,6 +1,6 @@
 #python
 
-if not skipped:
-    expect command/status = 128 + kill/signal
-    expect time/end = time/start + sleep/duration + input/wait/group +/- 5
-    expect command.string.count(' --kill-after=') == 1
+expect command/status = 128 + kill/signal
+expect time/end = time/start + sleep/duration + input/kill/after +/- 5
+expect command.string.count(' --kill-after=') == 2
+expect command.string.count(' --wait-for-process-group=') == 1

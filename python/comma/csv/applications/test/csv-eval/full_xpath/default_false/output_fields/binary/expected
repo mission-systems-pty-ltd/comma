@@ -1,0 +1,9 @@
+number_of( output ) = 2
+output[0]/one/x=2
+output[0]/y=3
+output[0]/x=5
+output[1]/one/x=4
+output[1]/y=5
+output[1]/x=9
+status=0
+

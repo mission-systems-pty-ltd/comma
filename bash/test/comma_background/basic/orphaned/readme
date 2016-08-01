@@ -1,2 +1,7 @@
 Verify that comma_process_exec fails by timeout if the reader (parent process)
 does not read (in practice, has been sig-killed).
+
+Note: if interrupted from comma-test-run, this test does leak a process and
+comma-test-run wrappers can do nothing about it. The process being leaked is in
+a different group (created by timeout), and therefore, is not reached by
+killing the original process group.

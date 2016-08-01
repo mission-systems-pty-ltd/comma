@@ -8,27 +8,20 @@ comma_path_value_to_var --export --prefix=input <<<"$input"
 output_base="output"
 mkdir -p "$output_base"
 
-bindir="../bin"
+bindir="./bin"
 
 [[ -d "$bindir" ]] || { echo "$0: directory '$bindir' not found"; exit 1; }
 [[ -x "$bindir/top.sh" ]] || { echo "$0: executable '$bindir/top.sh' not found"; exit 1; }
 [[ -x "$bindir/app.sh" ]] || { echo "$0: executable '$bindir/app.sh' not found"; exit 1; }
 [[ -x "$bindir/sub.sh" ]] || { echo "$0: executable '$bindir/sub.sh' not found"; exit 1; }
 
-if comma-timeout --is-timeout-group ; then
-    echo "skipped=0"
-else
-    echo "skipped=1"
-    [[ "$input_skip_native_only" == "1" ]] && exit 0
-fi
-
-comma_nap=$( which comma-nap ) || exit 1
+comma_nap=$( which comma-nap ) || { echo "$0: utility 'comma-nap' not found" >&2; exit 1; }
 export comma_nap
 
 for i in $( seq $input_repetitions ) ; do
     output_dir=$( printf "%s/%03d" "$output_base" $i )
     $bindir/top.sh "$output_dir" $i
-    (( $? == 0 )) || exit 1
+    (( $? == 0 )) || { echo "$0: '$bindir/top.sh' failed for iteration $i" >&2; exit 1; }
 done
 
 echo "bash/versinfo[0]=${BASH_VERSINFO[0]}"

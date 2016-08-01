@@ -1,0 +1,9 @@
+#!/bin/bash
+
+scriptname=$( readlink -f $0 )
+source $( type -p comma-application-util ) || { echo "$scriptname: failed to load comma-application-util" >&2; exit 1; }
+
+csv-eval --fields=i,j --format=2ui 'ab = i+j; cd = i-j; ef = i*j' --output-fields='ab,,ef' --output-format=3i >/dev/null
+comma_status_ok
+echo "status=$?"
+

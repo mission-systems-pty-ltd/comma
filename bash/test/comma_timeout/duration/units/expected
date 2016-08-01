@@ -1,0 +1,2 @@
+command/status = 128 + kill/signal
+time/end = time/start + sleep/duration + 30 +/- 5

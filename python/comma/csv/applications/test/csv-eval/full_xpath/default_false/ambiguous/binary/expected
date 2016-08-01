@@ -1,0 +1,3 @@
+not exists( output )
+status=1
+

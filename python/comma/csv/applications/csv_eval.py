@@ -43,7 +43,7 @@ evaluate numerical expressions and append computed values to csv stream
 
 notes_and_examples = """
 input fields:
-    1) full xpath input fields are not allowed
+    1) slashes are replaced by underscores if --full-xpath is given, otherwise basenames are used
     2) for ascii streams, input fields are treated as floating point numbers, unless --format is given
 
 output fields:
@@ -73,6 +73,10 @@ examples:
 
     # update input stream values in place
     ( echo 1,2 ; echo 3,4 ) | %(prog)s --fields=x,y "x=x+y; y=y-1"
+
+    # using full xpaths
+    ( echo 1,2 ; echo 3,4 ) | %(prog)s --fields=one/x,two/y "x+=1; y-=1"
+    ( echo 1,2 ; echo 3,4 ) | %(prog)s --fields=one/x,two/y "one_x+=1; two_y-=1" --full-xpath
 """
 
 numpy_functions = """
@@ -189,6 +193,10 @@ def get_args():
         default='',
         metavar='<cond>',
         help='select and output records of input stream that satisfy the condition')
+    parser.add_argument(
+        '--full-xpath',
+        action='store_true',
+        help='use full xpaths as variable names (with / replaced by _);\nby default basenames of xpaths are used')
     args = parser.parse_args()
     if args.help:
         if args.verbose:
@@ -231,21 +239,35 @@ def check_options(args):
             raise csv_eval_error(msg)
 
 
-def format_without_blanks(format, fields=''):
+def format_without_blanks(format, fields=[], unnamed_fields=True):
     """
     >>> from comma.csv.applications.csv_eval import format_without_blanks
-    >>> format_without_blanks('3ui', fields='a,b,c')
+    >>> format_without_blanks('3ui', fields=['a', 'b', 'c'])
     'ui,ui,ui'
-    >>> format_without_blanks('ui', fields='a,b,c')
+    >>> format_without_blanks('ui', fields=['a', 'b', 'c'])
     'ui,d,d'
-    >>> format_without_blanks('ui', fields='a,,c')
+    >>> format_without_blanks('ui', fields=['a', '', 'c'])
     'ui,s[0],d'
-    >>> format_without_blanks('4ui', fields='a,,c')
+    >>> format_without_blanks('4ui', fields=['a', '', 'c'])
     'ui,s[0],ui,s[0]'
     >>> format_without_blanks('3ui')
     's[0],s[0],s[0]'
     >>> format_without_blanks('')
     ''
+    >>> format_without_blanks('ui,t', ['a', 'b'], unnamed_fields=False)
+    'ui,t'
+    >>> format_without_blanks('ui,t', ['a', 'b', 'c'], unnamed_fields=False)
+    'ui,t,d'
+    >>> format_without_blanks('ui,,t', ['a', 'b', 'c'], unnamed_fields=False)
+    'ui,d,t'
+    >>> format_without_blanks('ui,t', ['', 'b'], unnamed_fields=False)
+    Traceback (most recent call last):
+     ...
+    ValueError: expected all fields to be named, got ',b'
+    >>> format_without_blanks('ui,t,d', ['a', 'b'], unnamed_fields=False)
+    Traceback (most recent call last):
+     ...
+    ValueError: format 'ui,t,d' is longer than fields 'a,b'
     """
     def comma_type(maybe_type, field, default_type='d', type_of_unnamed_field='s[0]'):
         return type_of_unnamed_field if not field else maybe_type or default_type
@@ -253,24 +275,33 @@ def format_without_blanks(format, fields=''):
     if not format and not fields:
         return ''
     maybe_types = comma.csv.format.expand(format).split(',')
-    maybe_typed_fields = itertools.izip_longest(maybe_types, fields.split(','))
+    if not unnamed_fields:
+        if '' in fields:
+            msg = "expected all fields to be named, got '{}'".format(','.join(fields))
+            raise ValueError(msg)
+        if len(maybe_types) > len(fields):
+            msg = "format '{}' is longer than fields '{}'".format(format, ','.join(fields))
+            raise ValueError(msg)
+    maybe_typed_fields = itertools.izip_longest(maybe_types, fields)
     types = [comma_type(maybe_type, field) for maybe_type, field in maybe_typed_fields]
     return ','.join(types)
 
 
-def fields_from_expressions(expressions):
+def assignment_variable_names(expressions):
     """
-    >>> from comma.csv.applications.csv_eval import fields_from_expressions
-    >>> fields_from_expressions("a = 1; b = x + y; c = 'x = 1; y = 2'; d = (b == z)")
+    >>> from comma.csv.applications.csv_eval import assignment_variable_names
+    >>> assignment_variable_names("a = 1; b = x + y; c = 'x = 1; y = 2'; d = (b == z)")
     ['a', 'b', 'c', 'd']
-    >>> fields_from_expressions("a, b = 1, 2")
+    >>> assignment_variable_names("a, b = 1, 2")
     ['a', 'b']
-    >>> fields_from_expressions("a = b = 1")
+    >>> assignment_variable_names("a = b = 1")
     ['a', 'b']
-    >>> fields_from_expressions("x = 'a = \\"y = 1;a = 2\\"';")
+    >>> assignment_variable_names("x = 'a = \\"y = 1;a = 2\\"';")
     ['x']
-    >>> fields_from_expressions("")
+    >>> assignment_variable_names("")
     []
+    >>> assignment_variable_names("x=1; x=2; y+=1; y+=2; z=1; z+=2")
+    ['x', 'y', 'z']
     """
     tree = ast.parse(expressions, '<string>', mode='exec')
     fields = []
@@ -279,15 +310,49 @@ def fields_from_expressions(expressions):
             for target in child.targets:
                 for node in ast.walk(target):
                     if type(node) == ast.Name:
-                        fields.append(node.id)
-        if type(child) == ast.AugAssign:
-            fields.append(child.target.id)
+                        if node.id not in fields:
+                            fields.append(node.id)
+        elif type(child) == ast.AugAssign:
+            if child.target.id not in fields:
+                fields.append(child.target.id)
     return fields
+
+
+def split_fields(fields):
+    """
+    >>> from comma.csv.applications.csv_eval import split_fields
+    >>> split_fields('')
+    []
+    >>> split_fields('x')
+    ['x']
+    >>> split_fields('x,y')
+    ['x', 'y']
+    """
+    return fields.split(',') if fields else []
+
+
+def normalise_full_xpath(fields, full_xpath=True):
+    """
+    >>> from comma.csv.applications.csv_eval import normalise_full_xpath
+    >>> normalise_full_xpath('')
+    []
+    >>> normalise_full_xpath('a/b')
+    ['a_b']
+    >>> normalise_full_xpath(',a/b,,c,d/e,')
+    ['', 'a_b', '', 'c', 'd_e', '']
+    >>> normalise_full_xpath(',a/b,,c,d/e,', full_xpath=False)
+    ['', 'b', '', 'c', 'e', '']
+    """
+    full_xpath_fields = split_fields(fields)
+    if full_xpath:
+        return [f.replace('/', '_') for f in full_xpath_fields]
+    return [f.split('/')[-1] for f in full_xpath_fields]
 
 
 def prepare_options(args):
     ingest_deprecated_options(args)
     check_options(args)
+    args.fields = normalise_full_xpath(args.fields, args.full_xpath)
     if args.binary:
         args.format = comma.csv.format.expand(args.binary)
         args.binary = True
@@ -296,12 +361,15 @@ def prepare_options(args):
         args.binary = False
     if args.select:
         return
-    input_fields = args.fields.split(',') if args.fields else []
-    expr_fields = fields_from_expressions(args.expressions)
-    args.update_fields = ','.join(set(f for f in expr_fields if f in input_fields))
+    var_names = assignment_variable_names(args.expressions)
+    args.update_fields = [f for f in var_names if f in args.fields]
     if args.output_fields is None:
-        args.output_fields = ','.join(f for f in expr_fields if f not in input_fields)
-    args.output_format = format_without_blanks(args.output_format, args.output_fields)
+        args.output_fields = [f for f in var_names if f not in args.fields]
+    else:
+        args.output_fields = split_fields(args.output_fields)
+    args.output_format = format_without_blanks(args.output_format,
+                                               args.output_fields,
+                                               unnamed_fields=False)
 
 
 def restricted_numpy_env():
@@ -343,13 +411,12 @@ class stream(object):
             self.print_info()
 
     def initialize_input(self):
-        fields = self.args.fields
-        self.nonblank_input_fields = ','.join(filter(None, fields.split(',')))
+        self.nonblank_input_fields = filter(None, self.args.fields)
         if not self.nonblank_input_fields:
             raise csv_eval_error("specify input stream fields, e.g. --fields=x,y")
         check_fields(self.nonblank_input_fields)
         types = comma.csv.format.to_numpy(self.args.format)
-        self.input_t = comma.csv.struct(fields, *types)
+        self.input_t = comma.csv.struct(','.join(self.args.fields), *types)
         self.input = comma.csv.stream(self.input_t, **self.csv_options)
 
     def initialize_update_and_output(self):
@@ -357,13 +424,15 @@ class stream(object):
             return
         if self.args.update_fields:
             all_types = comma.csv.format.to_numpy(self.args.format)
-            index = self.args.fields.split(',').index
-            update_types = [all_types[index(f)] for f in self.args.update_fields.split(',')]
-            self.update_t = comma.csv.struct(self.args.update_fields, *update_types)
+            index = self.args.fields.index
+            update_types = [all_types[index(f)] for f in self.args.update_fields]
+            update_fields = ','.join(self.args.update_fields)
+            self.update_t = comma.csv.struct(update_fields, *update_types)
         if self.args.output_fields:
             check_output_fields(self.args.output_fields, self.nonblank_input_fields)
             output_types = comma.csv.format.to_numpy(self.args.output_format)
-            self.output_t = comma.csv.struct(self.args.output_fields, *output_types)
+            output_fields = ','.join(self.args.output_fields)
+            self.output_t = comma.csv.struct(output_fields, *output_types)
             self.output = comma.csv.stream(self.output_t,
                                            tied=self.input,
                                            **self.csv_options)
@@ -386,7 +455,7 @@ class stream(object):
 
 
 def check_fields(fields):
-    for field in fields.split(','):
+    for field in fields:
         if not re.match(r'^[a-z_]\w*$', field, re.I):
             raise csv_eval_error("'{}' is not a valid field name".format(field))
         if field in ['_input', '_update', '_output']:
@@ -397,26 +466,18 @@ def check_fields(fields):
 
 def check_output_fields(fields, input_fields):
     check_fields(fields)
-    bad_fields = ','.join(set(fields.split(',')).intersection(input_fields.split(',')))
-    if not bad_fields:
-        return
-    msg = "output fields '{}' are in input fields '{}'".format(bad_fields, input_fields)
-    raise csv_eval_error(msg)
-
-
-def disperse(var, fields):
-    if not fields:
-        return ''
-    return '\n'.join("{f} = {v}['{f}']".format(v=var, f=f) for f in fields.split(','))
-
-
-def collect(var, fields):
-    if not fields:
-        return ''
-    return '\n'.join("{v}['{f}'] = {f}".format(v=var, f=f) for f in fields.split(','))
+    invalid_output_fields = set(fields).intersection(input_fields)
+    if invalid_output_fields:
+        msg = "output fields '{}' are present in input fields '{}'" \
+            .format(','.join(invalid_output_fields), ','.join(input_fields))
+        raise csv_eval_error(msg)
 
 
 def evaluate(expressions, stream, permissive=False):
+    def disperse(var, fields):
+        return '\n'.join("{f} = {v}['{f}']".format(v=var, f=f) for f in fields)
+    def collect(var, fields):
+        return '\n'.join("{v}['{f}'] = {f}".format(v=var, f=f) for f in fields)
     input_init = disperse('_input', stream.nonblank_input_fields)
     update_init = collect('_update', stream.args.update_fields)
     output_init = collect('_output', stream.args.output_fields)
@@ -437,7 +498,7 @@ def evaluate(expressions, stream, permissive=False):
                 update = stream.update_t(size)
             if stream.args.output_fields:
                 output = stream.output_t(size)
-        exec(code, env, {'_input': input, '_update': update, '_output': output})
+        exec code in env, {'_input': input, '_update': update, '_output': output}
         if stream.args.update_fields:
             update_buffer(stream.input, update)
         if stream.args.output_fields:

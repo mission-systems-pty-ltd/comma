@@ -20,7 +20,7 @@ trap 'handler HUP'  HUP
 trap 'handler INT'  INT
 trap 'handler TERM' TERM
 
-setsid $comma_nap 10 & background_pid=$!
+setsid $comma_nap 10 >&2 & background_pid=$!
 echo "$0: background process $background_pid" >&2
 wait $background_pid
 

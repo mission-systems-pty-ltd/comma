@@ -87,9 +87,9 @@ static void usage( bool more )
     std::cerr << "        using multiple id fields" << std::endl;
     std::cerr << "            ( echo 1,a,1; echo 1,b,1; echo 3,b,5; echo 3,b,5; ) | csv-sort --min --fields=id,a,id" << std::endl;
     std::cerr << "        using block" << std::endl;
-    std::cerr << "            ( echo 0,a,2; echo 0,a,2; echo 1,b,3; ) | csv-sort --min --fields=block,,a" << std::endl;
+    std::cerr << "            ( echo 0,a,2; echo 0,a,2; echo 0,b,3; echo 0,b,1; echo 1,c,3; echo 1,c,2; ) | csv-sort --min --fields=block,,a" << std::endl;
     std::cerr << "        using block and id" << std::endl;
-    std::cerr << "            ( echo 0,a,2; echo 0,a,2; echo 1,b,3; ) | csv-sort --min --fields=block,id,a" << std::endl;
+    std::cerr << "            ( echo 0,a,2; echo 0,a,2; echo 0,b,3; echo 0,b,1; echo 1,c,3; echo 1,c,2; ) | csv-sort --min --fields=block,id,a" << std::endl;
     std::cerr << "    minimum and maximum:" << std::endl;
     std::cerr << "        basic use" << std::endl;
     std::cerr << "            ( echo 1,a,2; echo 2,a,2; echo 3,b,3; echo 5,b,7; echo 3,b,9 ) | csv-sort --max --min --fields=,,a" << std::endl;
