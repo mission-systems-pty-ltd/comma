@@ -53,7 +53,6 @@
 namespace {
 
 // todo
-// - ? seconds_from_string: use boost::posix_time::days( ... ) and alike
 // - cmake: if WIN32, do not build comma-timeout-group
 
 void usage( bool )
