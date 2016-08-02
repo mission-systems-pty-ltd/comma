@@ -284,8 +284,8 @@ bool verbose = false;
 bool preserve_status = false;
 double timeout = 0.0;
 double kill_after = 0.0;
-bool wait_for_process_group = false;
 #ifdef HAVE_PROCPS_DEV
+bool wait_for_process_group = false;
 const bool can_wait_for_process_group = true;
 #else
 const bool can_wait_for_process_group = false;
