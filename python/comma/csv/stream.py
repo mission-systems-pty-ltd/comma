@@ -92,7 +92,7 @@ class stream(object):
         self.complete_fields = self.fields + self.missing_fields
         self.complete_dtype = self._complete_dtype()
         self.default_values = self._default_values(default_values)
-        self.missing_fields_array = self._missing_fields_array()
+        self.missing_values = self._missing_values()
         self.data_extraction_fields = self._data_extraction_fields()
         self.struct_and_extraction_fields = zip(self.struct.flat_dtype.names,
                                                 self.data_extraction_fields)
@@ -129,7 +129,7 @@ class stream(object):
         self._input_array = self._read(size)
         if self._input_array.size == 0:
             return
-        return self._struct_array(self._input_array, self.missing_fields_array)
+        return self._struct_array(self._input_array, self.missing_values)
 
     def _read(self, size):
         if self.binary:
@@ -151,33 +151,33 @@ class stream(object):
                     filling_values=self.filling_values,
                     comments=None))
 
-    def _struct_array(self, input_array, missing_fields_array):
+    def _struct_array(self, input_array, missing_values):
         if not self.data_extraction_fields:
             return input_array.copy().view(self.struct)
         flat_struct_array = np.empty(input_array.size, dtype=self.struct.flat_dtype)
         for sf, ef in self.struct_and_extraction_fields:
             if sf in self.missing_fields:
-                flat_struct_array[sf] = missing_fields_array[ef]
+                flat_struct_array[sf] = missing_values[ef]
             else:
                 flat_struct_array[sf] = input_array[ef]
         return flat_struct_array.view(self.struct)
 
-    def _missing_fields_array(self, size=1):
-        if not self.missing_fields:
+    def _missing_values(self):
+        if not self.missing_dtype:
             return
-        missing_fields_array = np.zeros(size, dtype=self.missing_dtype)
+        missing = np.zeros(1, dtype=self.missing_dtype)
         if self.default_values:
             dtype_name_of = dict(zip(self.missing_fields, self.missing_dtype.names))
             for field, value in self.default_values.iteritems():
                 name = dtype_name_of[field]
                 if self.missing_dtype[name] == csv_time.DTYPE:
                     try:
-                        missing_fields_array[name] = csv_time.to_numpy(value)
+                        missing[name] = csv_time.to_numpy(value)
                     except TypeError:
-                        missing_fields_array[name] = value
+                        missing[name] = value
                 else:
-                    missing_fields_array[name] = value
-        return missing_fields_array
+                    missing[name] = value
+        return missing[0]
 
     def numpy_scalar_to_string(self, scalar):
         return numpy_scalar_to_string(scalar, precision=self.precision)
