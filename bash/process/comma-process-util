@@ -408,10 +408,10 @@ function terminate_comma_execute_and_wait()
         for command_to_execute_index in ${!commands_to_execute_pgid[@]} ; do
             if [[ -n "${commands_to_execute_pgid[$command_to_execute_index]}" ]] ; then
                 [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: killing ${commands_to_execute_pgid[$command_to_execute_index]} by $termination_signal" >&2
-                comma_process_kill $comma_background_verbose --signal=$termination_signal ${killsign}${commands_to_execute_pgid[$command_to_execute_index]} ${commands_to_execute_signature[$command_to_execute_index]}
+                comma_process_kill $cew_verbose_flag --signal=$termination_signal ${killsign}${commands_to_execute_pgid[$command_to_execute_index]} ${commands_to_execute_signature[$command_to_execute_index]}
                 # ignore the not found and reused exit status: the original process is gone, multiple background processes can terminate at different times
                 (( $? == COMMA_PROCESS_KILL_ERROR )) && {
-                    echo "$cew_funcname: error in comma_process_kill $comma_background_verbose --signal=$termination_signal ${killsign}${commands_to_execute_pgid[$command_to_execute_index]} ${commands_to_execute_signature[$command_to_execute_index]}" >&2
+                    echo "$cew_funcname: error in comma_process_kill $cew_verbose_flag --signal=$termination_signal ${killsign}${commands_to_execute_pgid[$command_to_execute_index]} ${commands_to_execute_signature[$command_to_execute_index]}" >&2
                     echo "$cew_funcname: kill all child processes instead" >&2
                     pkill --signal $termination_signal -P $cew_pid
                     wait
@@ -558,7 +558,7 @@ function comma_execute_and_wait()
     local usepg="true"
     local statusall="true"
     local comma_execute_and_wait_verbose="false" # "true"
-    local comma_background_verbose=
+    local cew_verbose_flag=
     local pid_fifo=
     local rm_pid_fifo="false"
     local cew_verified_pids=0
@@ -581,7 +581,7 @@ function comma_execute_and_wait()
         echo "$cew_funcname: conflicting timeout and process options (called: comma_execute_and_wait $original_args)" >&2
         return 1
     fi
-    [[ "$comma_execute_and_wait_verbose" == "true" ]] && comma_background_verbose="--verbose"
+    [[ "$comma_execute_and_wait_verbose" == "true" ]] && cew_verbose_flag="--verbose"
 
     [[ -n "$pid_fifo" ]] && {
         [[ -p "$pid_fifo" ]] || { echo "$cew_funcname: fifo argument '$pid_fifo' is not a named pipe" >&2; return 1; }
@@ -631,16 +631,16 @@ function comma_execute_and_wait()
         if [[ "$usepg" == "true" ]] ; then
             [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: execute commands as process groups" >&2
             if [[ "$shellfcn" == "true" ]] ; then
-                comma_process_exec_and_validate $comma_background_verbose "$pid_fifo" comma-timeout-group --wait-for-process-group 25 -s TERM $execute_and_wait_timeout bash -c "$command_to_execute"
+                comma_process_exec_and_validate $cew_verbose_flag "$pid_fifo" comma-timeout-group $cew_verbose_flag --wait-for-process-group 25 -s TERM $execute_and_wait_timeout bash -c "$command_to_execute"
             else
-                comma_process_exec_and_validate $comma_background_verbose "$pid_fifo" comma-timeout-group --wait-for-process-group 25 -s TERM $execute_and_wait_timeout $command_to_execute
+                comma_process_exec_and_validate $cew_verbose_flag "$pid_fifo" comma-timeout-group $cew_verbose_flag --wait-for-process-group 25 -s TERM $execute_and_wait_timeout $command_to_execute
             fi
         else
             [[ "$comma_execute_and_wait_verbose" == "true" ]] && echo "$cew_funcname: execute commands as processes" >&2
             if [[ "$shellfcn" == "true" ]] ; then
-                comma_process_exec_and_validate $comma_background_verbose "$pid_fifo" bash -c "$command_to_execute"
+                comma_process_exec_and_validate $cew_verbose_flag "$pid_fifo" bash -c "$command_to_execute"
             else
-                comma_process_exec_and_validate $comma_background_verbose "$pid_fifo" $command_to_execute
+                comma_process_exec_and_validate $cew_verbose_flag "$pid_fifo" $command_to_execute
             fi
         fi
         (( $? == 0 )) || {
