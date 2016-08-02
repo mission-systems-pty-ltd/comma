@@ -291,6 +291,9 @@ const bool can_wait_for_process_group = true;
 const bool can_wait_for_process_group = false;
 #endif
 
+// generally would be nice to give more information but very few functions shall be used inside handlers
+// see man 7 signal; can define to 1 for debugging but not for production
+#define SIGNAL_HANDLER_VERBOSE 0
 void signal_handler( int received_signal )
 {
     if ( !child_pid ) _exit( 128 + received_signal ); // per shell rules
@@ -305,9 +308,15 @@ void signal_handler( int received_signal )
         kill_after = 0.0;
     }
 
+#if ( SIGNAL_HANDLER_VERBOSE )
+    if ( verbose ) { std::cerr << "comma-timeout-group: send signal " << signal_to_send << " to PID " << child_pid << std::endl; }
+#endif
     kill( child_pid, signal_to_send ); // child could have created its own group
     // unset first, do not go into a loop
     signal( signal_to_send, SIG_IGN );
+#if ( SIGNAL_HANDLER_VERBOSE )
+    if ( verbose ) { fprintf( stderr, "comma-timeout-group: send signal %d to own group %d\n", signal_to_send, getpid() ); }
+#endif
     kill( 0, signal_to_send );
 }
 
@@ -393,6 +402,7 @@ int main( int ac, char** av ) try
 
     if ( verbose ) {
         std::cerr << "comma-timeout-group:" << std::endl;
+        std::cerr << "    running as process: " << getpid() << std::endl;
         std::cerr << "    command-line: " << options.string() << std::endl;
         std::cerr << "    will execute:"; for ( char **i = av + command_to_run_pos; i < av + ac; ++i ) { std::cerr << " \"" << *i << "\""; }; std::cerr << std::endl;
         std::cerr << "    will time-out this command after " << timeout << " s" << std::endl;
