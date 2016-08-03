@@ -353,7 +353,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
                 {
                     if( stdin_stream.is_binary() ) { 
                         std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() ); 
-                        char match = 1; std::cout.write( &match, 1 );
+                        char match = 0; std::cout.write( &match, 1 );
                     }
                     else { std::cout << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << stdin_csv.delimiter << 0 << std::endl; }
                     continue;

@@ -33,8 +33,20 @@ function run_command()
         unset none
         (( ++size ))
     done < <( for i in ${input[@]} ; do echo "$i" ; done | eval "$command --fields=$input_fields \"$filter_file;fields=$filter_fields\"" )
-
     echo "$( dirname "$key" )/output/size=$size"
+
+    echo
+    
+    if [[ -n $input_format ]]; then
+        (( size = 0 ))
+        while read line ; do
+            echo "$( dirname "$key" )/binary/output/line[$size]=\"$line\""
+            unset none
+            (( ++size ))
+        done < <( for i in ${input[@]} ; do echo "$i" | csv-to-bin $input_format ; done | eval "$command --fields=$input_fields --binary=$input_format <( cat $filter_file | csv-to-bin $filter_format )\";fields=$filter_fields;binary=$filter_format\"" | csv-from-bin $input_format,ub )
+        echo "$( dirname "$key" )/binary/output/size=$size"
+    fi
+    
     echo
 }
 
@@ -48,6 +60,8 @@ while IFS='=' read key value ; do
         filter|filter\[*\]) filter+=( "$value" ) ;;
         input_fields) input_fields=$value ;;
         filter_fields) filter_fields=$value ;;
+        input_format) input_format=$value ;;
+        filter_format) filter_format=$value ;;
         command)
             command="$value"
             make_filter
