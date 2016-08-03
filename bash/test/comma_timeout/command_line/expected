@@ -36,6 +36,12 @@ group[0]/output = ""
 group[1]/status = 0
 group[1]/output = ""
 
+# what we are trying to say is:
+#    ( group[2]/status = 0 and group[3]/status = 0 ) or ( group[2]/status = 1 and group[3]/status = 1 )
+# in plain English, if can wait for process group, do, otherwise, fail
+# but to simplify this file express it as:
+group[2]/status = group[3]/status
+
 unsupported[0]/status = 1
 unsupported[0]/output = ""
 
