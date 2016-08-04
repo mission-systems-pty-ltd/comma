@@ -20,6 +20,8 @@ kill[4]="comma-timeout-group 1 -k 2 sleep 10"
 
 group[0]="comma-timeout-group --wait-for-process-group=2 10 sleep 1"
 group[1]="comma-timeout-group 10 --wait-for-process-group=2 sleep 1"
+group[2]="comma-timeout-group --can-wait-for-process-group"
+group[3]="comma-timeout-group --enforce-group 10 --wait-for-process-group=2 sleep 1"
 
 unsupported[0]="comma-timeout-group --verbose --foreground -k 10 10 sleep 1"
 

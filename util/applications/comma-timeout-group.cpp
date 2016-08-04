@@ -86,6 +86,9 @@ void usage( bool )
         "\n        WARNING: your version of comma-timeout-group is built without procps support, the capability to"
         "\n        wait for process group is not available, and this options is a synonym to '-k'"
 #endif
+        "\n    --enforce-group, enforce waiting for process groups; if comma-timeout-group is built without procps"
+        "\n        support, '--wait-for-process-group' would exit in error rather then become a synonym to '-k';"
+        "\n        this option does nothing if procps support is built in"
         "\n    -s, --signal=signal, the signal to be sent on timeout, given as a name (HUP, SIGHUP) or number;"
         "\n        only a sub-set of all available signal names is supported, use '--list-known-signals' to list;"
         "\n        arbitrary signal to use can be specified as a number, see 'kill -l' for the values;"
@@ -127,7 +130,10 @@ void usage( bool )
         "\n"
         "\n    Wait for all processes in the group:"
         "\n        comma-timeout-group --wait-for-process-group=5 10 application"
+        "\n            or"
+        "\n        comma-timeout-group --wait-for-process-group=5 10 application"
         "\n            wait for 5 s for all processes in the group to exit; if some are left, send KILL"
+        "\n            if your version is built without procps support, however, the call above"
         "\n"
         "\n";
     std::cerr << msg_general << comma::contact_info << std::endl << std::endl;
@@ -359,7 +365,7 @@ int main( int ac, char** av ) try
 
     // first non-option must be the timeout duration, and second the command to run
     comma::command_line_options all_options( ac, av );
-    std::vector< std::string > non_options = all_options.unnamed( "-h,--help,-v,--verbose,--list-known-signals,--foreground,--preserve-status", "-s,--signal,-k,--kill-after,--wait-for-process-group,--can-wait-for-process-group" );
+    std::vector< std::string > non_options = all_options.unnamed( "-h,--help,-v,--verbose,--list-known-signals,--foreground,--preserve-status,--enforce-group", "-s,--signal,-k,--kill-after,--wait-for-process-group,--can-wait-for-process-group" );
     if ( non_options.size() < 2 )
     {
         // user did not give all the arguments; OK in special cases
@@ -391,7 +397,11 @@ int main( int ac, char** av ) try
 #ifdef HAVE_PROCPS_DEV
         wait_for_process_group = true;
 #else
-        if ( verbose ) { std::cerr << "comma-timeout-group: built without procps support, '--wait-for-process-group' is a synonym to '-k'" << std::endl; }
+        if ( options.exists( "--enforce-group" ) ) {
+            COMMA_THROW( comma::exception, "comma-timeout-group: built without procps support, cannot wait for process groups" );
+        } else {
+            if ( verbose ) { std::cerr << "comma-timeout-group: built without procps support, '--wait-for-process-group' is a synonym to '-k'" << std::endl; }
+        }
 #endif
         kill_after = seconds_from_string( options.values< std::string >( "--wait-for-process-group" ).back(), true );
     }

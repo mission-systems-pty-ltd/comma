@@ -293,7 +293,7 @@ declare -r comma_process_exec_and_validate
 ## @page comma_process_timed_wait_alarm comma_process_timed_wait_alarm
 # @description raise the alarm (signal ALRM) to wake up the process that called
 # @link comma_process_timed_wait @endlink; if the caller process is not found, no signal is sent
-# @param verbosity, options: if equal to '--verbose', print trace messages; otherwise taken as first argument
+# @param verbosity optional: if equal to '--verbose', print trace messages; otherwise taken as first argument
 # @param time time to alarm (delay, seconds)
 # @param pid process id of the caller (who waits for the wake up call)
 # @param signature the signature of the caller obtained using @link comma_process_signature @endlink
