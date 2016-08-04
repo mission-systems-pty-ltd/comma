@@ -1,0 +1,16 @@
+number_of(ascii/output/line)=6
+ascii/output/line[0]=",0,-111,-222,0,123,-1,19991212T123456,10"
+ascii/output/line[1]=",0,-111,-222,1,123,-2,19991212T123456,11"
+ascii/output/line[2]=",0,-111,-222,2,123,-3,19991212T123456,12"
+ascii/output/line[3]=",0,-111,-222,3,123,-4,19991212T123456,13"
+ascii/output/line[4]=",0,-111,-222,4,123,-5,19991212T123456,14"
+ascii/output/line[5]=",0,-111,-222,5,123,-6,19991212T123456,15"
+ascii/status=0
+number_of(binary/output/line)=6
+binary/output/line[0]=",0,-111,-222,0,123,-1,19991212T123456,10"
+binary/output/line[1]=",0,-111,-222,1,123,-2,19991212T123456,11"
+binary/output/line[2]=",0,-111,-222,2,123,-3,19991212T123456,12"
+binary/output/line[3]=",0,-111,-222,3,123,-4,19991212T123456,13"
+binary/output/line[4]=",0,-111,-222,4,123,-5,19991212T123456,14"
+binary/output/line[5]=",0,-111,-222,5,123,-6,19991212T123456,15"
+binary/status=0

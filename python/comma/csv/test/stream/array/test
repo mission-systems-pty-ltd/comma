@@ -1,10 +1,13 @@
 #!/bin/bash
 
 source $( which comma-application-util )
-function output { csv-paste value="line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'; }
+
+function output { local prefix=$1; gawk '{ print "'${prefix:+$prefix/}'output/line["NR-1"]="$0 }' ; }
 
 function process_records
 {
+    local binary
+    if [[ "$1" == "binary" ]]; then binary=True; else binary=False; fi
     python -c "$( cat <<END
 import comma
 import numpy
@@ -12,7 +15,7 @@ import numpy
 event_t = comma.csv.struct( 'point,time', '(3,)f8', '(2,)datetime64[us]' )
 record_t = comma.csv.struct( 'observer,event', 'S3', event_t )
 
-record_stream = comma.csv.stream( record_t, format=','.join( record_t.types ) )
+record_stream = comma.csv.stream( record_t, binary=$binary )
 
 for i,r in enumerate( record_stream.iter( size=1 ), start=1 ):
   r['observer'] = numpy.char.upper( r['observer'] )
@@ -23,6 +26,12 @@ END
 )"
 }
 
-csv-to-bin s[3],3d,2t | process_records | csv-from-bin s[3],3d,2t | output
+input=$( cat )
+echo "$input" | process_records | output ascii
 comma_status_ok
-echo "status=$?"
+echo "ascii/status=$?"
+
+echo "$input" | csv-to-bin s[3],3d,2t | process_records binary | csv-from-bin s[3],3d,2t | output binary
+comma_status_ok
+echo "binary/status=$?"
+

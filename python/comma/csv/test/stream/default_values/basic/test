@@ -1,10 +1,11 @@
 #!/bin/bash
 
 source $( which comma-application-util )
-function output { csv-paste value="line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'; }
+function output { local prefix=$1; gawk '{ print "'${prefix:+$prefix/}'output/line["NR-1"]="$0 }' ; }
 
 function default_values
 {
+    local input_format=$1
     python -c "$( cat <<END
 import comma
 
@@ -14,14 +15,23 @@ point_t = comma.csv.struct( 'id,signal,x,y,z', 'uint64', '(2,)float64', 'float64
 observer_t = comma.csv.struct( 't,id', 'datetime64[us]', 'uint8' )
 record_t = comma.csv.struct( 'name,point,observer', 'S3', point_t, observer_t )
 default_values = { 'point/signal': (-111, -222), 'point/y': 123, 'observer/t': '19991212T123456' }
-format = ','.join(comma.csv.format.to_numpy("$input_format"))
+if "$input_format":
+    format = ','.join(comma.csv.format.to_numpy("$input_format"))
+else:
+    format = ''
 stream = comma.csv.stream( record_t, fields=',observer/id,point/x,point/z,,', format=format, default_values=default_values, verbose=True)
 stream.write( stream.read() )
 END
 )"
 }
 
-input_format='s[1],ub,2d,2s[3]'
-csv-to-bin $input_format | default_values | csv-from-bin s[3],ul,4d,l,t,ub | output
+input=$( cat )
+echo "$input" | default_values | output ascii
 comma_status_ok
-echo "status=$?"
+echo "ascii/status=$?"
+
+
+input_format='s[1],ub,2d,2s[3]'
+echo "$input" | csv-to-bin $input_format | default_values $input_format | csv-from-bin s[3],ul,4d,l,t,ub | output binary
+comma_status_ok
+echo "binary/status=$?"
