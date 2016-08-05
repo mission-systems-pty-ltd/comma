@@ -154,6 +154,10 @@ function comma_process_kill_helper_()
     group=${pid:0:1}
     [[ "$group" == "-" ]] && pid=${pid:1} || group=""
     (( verbose == 1 )) && builtin echo "$FUNCNAME: will send signal '$signal_to_use' to ${group}${pid}" >&2
+    # examine the corner case: what if PID is reused by ourselves, i.e., we are tasked to kill a process that is long gone and by accident this function runs with the same PID
+    # make sure we do this check before sending STOP to ourselves
+    local self=$BASHPID
+    [[ "$pid" == "$self" ]] && exit $COMMA_PROCESS_KILL_REUSED
     trap 'comma_process_kill_trap_exit_' EXIT
     builtin kill -s STOP $pid
     (( $? == 0 )) || { builtin echo "$FUNCNAME: process id '$pid' not found; do not kill, assume terminated by itself" >&2; trap - EXIT; exit $COMMA_PROCESS_KILL_NOT_FOUND; }
