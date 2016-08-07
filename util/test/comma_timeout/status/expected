@@ -1,0 +1,9 @@
+native/status/killed/ignored=124
+native/status/handled/ignored=124
+native/status/killed/preserved=143
+native/status/handled/preserved=2
+
+comma/status/killed/ignored=124
+comma/status/handled/ignored=124
+comma/status/killed/preserved=143
+comma/status/handled/preserved=2

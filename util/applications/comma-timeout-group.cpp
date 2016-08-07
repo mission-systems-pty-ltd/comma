@@ -417,6 +417,7 @@ int main( int ac, char** av ) try
         std::cerr << "    will execute:"; for ( char **i = av + command_to_run_pos; i < av + ac; ++i ) { std::cerr << " \"" << *i << "\""; }; std::cerr << std::endl;
         std::cerr << "    will time-out this command after " << timeout << " s" << std::endl;
         std::cerr << "    will use signal " << signal_to_use << " to interrupt the command by timeout" << std::endl;
+        std::cerr << "    exit status of command: " << ( preserve_status ? "" : "NOT " ) << "preserved" << std::endl;
 #ifdef HAVE_PROCPS_DEV
         if ( wait_for_process_group ) { std::cerr << "    will wait" << ( kill_after < std::numeric_limits< double >::max() ? "" : " forever" ) << " for all processes in the group to finish" << std::endl; }
 #endif
@@ -471,12 +472,6 @@ int main( int ac, char** av ) try
     }
 #endif
 
-    if ( WIFEXITED( status ) )
-    {
-        if ( verbose ) { std::cerr << "comma-timeout-group: application exited" << std::endl; }
-        return WEXITSTATUS(status);
-    }
-
     if ( timed_out )
     {
         if ( verbose ) { std::cerr << "comma-timeout-group: application timed-out" << std::endl; }
@@ -485,6 +480,12 @@ int main( int ac, char** av ) try
             if ( WIFSIGNALED( status ) ) { return 128 + WTERMSIG( status ); } // per shell rules
         }
         return 124;
+    }
+
+    if ( WIFEXITED( status ) )
+    {
+        if ( verbose ) { std::cerr << "comma-timeout-group: application exited" << std::endl; }
+        return WEXITSTATUS(status);
     }
 
     if ( WIFSIGNALED( status ) ) // timed-out also signalled, consider first

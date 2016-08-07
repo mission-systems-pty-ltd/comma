@@ -1,0 +1,27 @@
+#!/bin/bash
+
+timeout 1 bash -c "sleep 10; exit 3"
+echo "native/status/killed/ignored=$?"
+
+timeout 1 bash -c "trap 'exit 2' TERM; sleep 10; exit 3"
+echo "native/status/handled/ignored=$?"
+
+timeout --preserve-status 1 bash -c "sleep 10; exit 3"
+echo "native/status/killed/preserved=$?"
+
+timeout --preserve-status 1 bash -c "trap 'exit 2' TERM; sleep 10; exit 3"
+echo "native/status/handled/preserved=$?"
+
+comma-timeout-group --verbose 1 bash -c "sleep 10; exit 3"
+echo "comma/status/killed/ignored=$?"
+
+comma-timeout-group --verbose 1 bash -c "trap 'exit 2' TERM; sleep 10; exit 3"
+echo "comma/status/handled/ignored=$?"
+
+comma-timeout-group --verbose 1 --preserve-status bash -c "sleep 10; exit 3"
+echo "comma/status/killed/preserved=$?"
+
+comma-timeout-group --verbose 1 --preserve-status bash -c "trap 'exit 2' TERM; sleep 10; exit 3"
+echo "comma/status/handled/preserved=$?"
+
+exit 0
