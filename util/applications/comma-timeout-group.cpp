@@ -398,7 +398,7 @@ int main( int ac, char** av ) try
         wait_for_process_group = true;
 #else
         if ( options.exists( "--enforce-group" ) ) {
-            COMMA_THROW( comma::exception, "comma-timeout-group: built without procps support, cannot wait for process groups" );
+            COMMA_THROW( comma::exception, "built without procps support, cannot wait for process groups" );
         } else {
             if ( verbose ) { std::cerr << "comma-timeout-group: built without procps support, '--wait-for-process-group' is a synonym to '-k'" << std::endl; }
         }
