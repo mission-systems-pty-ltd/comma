@@ -388,6 +388,7 @@ template < typename T > inline void write_json( const T& t, std::ostream& stream
     boost::property_tree::ptree p;
     comma::to_ptree to_ptree( p, root );
     comma::visiting::apply( to_ptree ).to( t );
+    stream.precision( 16 ); // quick and dirty
     boost::property_tree::write_json( stream, p );
 }
 
@@ -409,6 +410,7 @@ template < typename T > inline void write_xml( const T& t, std::ostream& stream,
     boost::property_tree::ptree p;
     comma::to_ptree to_ptree( p, root );
     comma::visiting::apply( to_ptree ).to( t );
+    stream.precision( 16 ); // quick and dirty
     boost::property_tree::write_xml( stream, p );
 }
 
@@ -422,6 +424,7 @@ template < typename T > inline void write_path_value( const T& t, std::ostream& 
     boost::property_tree::ptree p;
     comma::to_ptree to_ptree( p, root );
     comma::visiting::apply( to_ptree ).to( t );
+    stream.precision( 16 ); // quick and dirty
     comma::property_tree::to_path_value( stream, p, comma::property_tree::disabled, '=', '\n' );
 }
 
@@ -443,6 +446,7 @@ template < typename T > inline void write_ini( const T& t, std::ostream& stream,
     boost::property_tree::ptree p;
     comma::to_ptree to_ptree( p, root );
     comma::visiting::apply( to_ptree ).to( t );
+    stream.precision( 16 ); // quick and dirty
     boost::property_tree::write_ini( stream, p );
 }
 
