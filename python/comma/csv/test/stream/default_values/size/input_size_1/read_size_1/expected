@@ -1,0 +1,8 @@
+number_of(ascii/output/line)=1
+number_of(binary/output/line)=1
+ascii/output/line = binary/output/line
+ascii/output/line[0]=",0,-111,-222,0,123,-1,19991212T123456,10"
+ascii/status=0
+binary/output/line[0]=",0,-111,-222,0,123,-1,19991212T123456,10"
+binary/status=0
+

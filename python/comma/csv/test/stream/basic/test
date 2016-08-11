@@ -33,4 +33,4 @@ echo "ascii/status=$?"
 
 echo "$input" | csv-to-bin s[3],t,3d | process_records binary | csv-from-bin s[3],t,3d | output binary
 comma_status_ok
-echo "status=$?"
+echo "binary/status=$?"

@@ -1,0 +1,18 @@
+number_of(ascii/output/line)=6
+number_of(binary/output/line)=6
+ascii/output/line = binary/output/line
+ascii/output/line[0]="a,10,0,1,-1,0,0,20150101T000001,0"
+ascii/output/line[1]="b,11,1,2,-2,0,0,20150101T000002,1"
+ascii/output/line[2]="c,12,2,3,-3,0,0,20150101T000003,2"
+ascii/output/line[3]="d,13,3,4,-4,0,0,20150101T000004,3"
+ascii/output/line[4]="e,14,4,5,-5,0,0,20150101T000005,4"
+ascii/output/line[5]="f,15,5,6,-6,0,0,20150101T000006,5"
+ascii/status=0
+binary/output/line[0]="a,10,0,1,-1,0,0,20150101T000001,0"
+binary/output/line[1]="b,11,1,2,-2,0,0,20150101T000002,1"
+binary/output/line[2]="c,12,2,3,-3,0,0,20150101T000003,2"
+binary/output/line[3]="d,13,3,4,-4,0,0,20150101T000004,3"
+binary/output/line[4]="e,14,4,5,-5,0,0,20150101T000005,4"
+binary/output/line[5]="f,15,5,6,-6,0,0,20150101T000006,5"
+binary/status=0
+
