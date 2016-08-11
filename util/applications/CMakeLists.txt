@@ -27,6 +27,7 @@ INSTALL( TARGETS comma-nap RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONEN
 INSTALL( PROGRAMS comma-profile-graph DESTINATION ${comma_INSTALL_BIN_DIR} )
 INSTALL( PROGRAMS comma-repeat DESTINATION ${comma_INSTALL_BIN_DIR} )
 INSTALL( PROGRAMS comma-stats DESTINATION ${comma_INSTALL_BIN_DIR} )
+install( PROGRAMS comma-test-enforce DESTINATION ${comma_INSTALL_BIN_DIR} )
 install( PROGRAMS comma-test-match DESTINATION ${comma_INSTALL_BIN_DIR} )
 install( PROGRAMS comma-test-run DESTINATION ${comma_INSTALL_BIN_DIR} )
 install( PROGRAMS comma-test-resources DESTINATION ${comma_INSTALL_BIN_DIR} )

@@ -138,4 +138,5 @@ _comma_bash_completion()
 
 complete -F _comma_bash_completion csv-calc
 complete -F _comma_bash_completion csv-units
+complete -F _comma_bash_completion comma-test-enforce
 complete -F _comma_bash_completion comma-test-run

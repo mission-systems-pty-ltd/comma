@@ -1,0 +1,168 @@
+#!/bin/bash
+
+# This file is part of comma, a generic and flexible library
+# Copyright (c) 2016 The University of Sydney
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of the University of Sydney nor the
+#    names of its contributors may be used to endorse or promote products
+#    derived from this software without specific prior written permission.
+#
+# NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+# GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+# HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+# BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+scriptname=$( basename $0 )
+
+source $( type -p comma-application-util ) || { echo "$scriptname: cannot source 'comma-application-util'" >&2; exit 1; }
+
+default_status_file="test-status.out"
+allowed_actions="list check update"
+
+function description()
+{
+    cat <<EOF
+--help,-h;              output help
+--status-file=[<file>]; file to store test status; default $default_status_file
+EOF
+}
+
+function bash_completion()
+{
+    tr ' ' '\n' <<< $allowed_actions
+    description | sed -e 's/;.*//g' -e 's/=.*//g' | tr ',' '\n'
+}
+
+function usage()
+{
+cat <<EOF >&2
+
+Enforce or display test compliance
+
+Usage: $scriptname <action> [<options>]
+
+where <action> is one of:
+    update: creates status file
+    list:   list test status
+    check:  check that all tests are marked as passing
+            exits with 0 status if all tests pass
+
+Options:
+EOF
+    description | sed 's/^/    /g' >&2
+    cat <<EOF >&2
+
+$scriptname can be used to ensure that a suite of tests pass before
+proceeding with some other action. Usage would generally be to run <update> on
+a test directory, to update the status file, then use <check> as a gate.
+
+Currently only supports tests that compare stdout.log to an expected file.
+
+Examples:
+    --- update results then check that all passed ---
+
+    $scriptname update
+    if $scriptname check; then
+        do-some-more-things
+    fi
+
+    --- update results then show them ---
+
+    $scriptname update
+    $scriptname list
+
+EOF
+    exit
+}
+
+# ANSI code to turn on the coloring
+color_none="$( tput sgr0 2>/dev/null )"
+[[ "$color_none" ]] || color_none='\x1B[0m'
+readonly color_none
+
+readonly color_red='\x1B[0;91m'
+readonly color_green="\x1B[0;92m"
+readonly color_brown="\x1B[0;93m"
+readonly color_blue="\x1B[0;94m"
+readonly color_purple="\x1B[0;95m"
+readonly color_cyan="\x1B[0;96m"
+readonly color_gray="\x1B[0;37m"
+
+function say() { echo "$scriptname: $@" >&2; }
+function die() { say "$@"; exit 1; }
+
+(( $( comma_options_has "--bash-completion" $@ ) )) && { shift; bash_completion $@; exit 0; }
+
+if (( $( comma_options_has "--help" $@ ) || $( comma_options_has "-h" $@ ) )); then
+    usage
+fi
+
+options_status_file=$default_status_file
+comma_path_value_to_var --prefix=options < <( description | comma-options-to-name-value $@ | grep '=' )
+args=( $( description | comma-options-to-name-value $@ | csv-quote --unquote | grep -v '=' ) )
+
+function check_test()
+{
+    local test_path=$1
+    [[ -f $test_path/output/stdout.log ]] || { echo "not-run"; return; }
+    { cat $test_path/output/stdout.log | comma-test-match $test_path/expected > /dev/null; } \
+        && echo "passed" || echo "failed"
+}
+
+function update()
+{
+    comma-test-run --dry-run \
+        | while read test_path; do
+              echo -n "$test_path "
+              check_test $test_path
+          done > $options_status_file
+}
+
+function decorate()
+{
+    sed -e "s/passed/${color_green}passed${color_none}/" \
+        -e "s/failed/${color_red}failed${color_none}/" \
+        -e "s/not-run/${color_blue}not-run${color_none}/"
+}
+
+function list()
+{
+    cat $options_status_file | decorate
+}
+
+function check()
+{
+    echo "passed:  $( cat $options_status_file | cut -d' ' -f2 | grep passed | wc -l )"
+    echo "failed:  $( cat $options_status_file | cut -d' ' -f2 | grep failed | wc -l )"
+    echo "not run: $( cat $options_status_file | cut -d' ' -f2 | grep not-run | wc -l )"
+    cat $options_status_file | cut -d' ' -f2 | grep -qv passed
+    (( $? == 1 ))
+}
+
+action=${args[0]}
+
+case "$action" in
+    update) update ;;
+    list)   list ;;
+    check)  check; result=$? ;;
+    *) die "action was \"$action\"; must be one of $allowed_actions"
+esac
+
+[[ $result ]] && exit $result
