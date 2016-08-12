@@ -7,6 +7,8 @@ function output { local prefix=$1; gawk '{ print "'${prefix:+$prefix/}'output/li
 function process_records
 {
     local input_format=$1
+    local in=$2
+    local out=$3
     python -c "$( cat <<END
 import comma
 import numpy
@@ -18,10 +20,9 @@ if "$input_format":
     format = ','.join(comma.csv.format.to_numpy("$input_format"))
 else:
     format = ''
-record_stream = comma.csv.stream( record_t, binary=bool("$input_format") )
+record_stream = comma.csv.stream( record_t, format=format, source=open( '$in', 'r' ), target=open( '$out', 'w') )
 
-i = 1
-for r in record_stream:
+for i,r in enumerate( record_stream.iter( size=-1 ), start=1 ):
   r['observer'] = numpy.char.upper( r['observer'] )
   r['event']['time'] += numpy.timedelta64( i, 's' )
   r['event']['coordinates']['x'] += i
@@ -30,15 +31,27 @@ END
 )"
 }
 
+input=$( cat )
+
+mkdir -p output/ascii
+ascii_in=output/ascii/input.csv
+ascii_out=output/ascii/output.csv
+
+echo "$input" > $ascii_in
+process_records "" $ascii_in $ascii_out
+echo "ascii/status=$?"
+cat "$ascii_out" | output ascii
+
+
+mkdir -p output/binary
+binary_in=output/binary/input.bin
+binary_out=output/binary/output.bin
+
 input_format='s[3],t,3d'
 output_format='s[3],t,3d'
 
-input=$( cat )
-echo "$input" | process_records | output ascii
-comma_status_ok
-echo "ascii/status=$?"
-
-echo "$input" | csv-to-bin $input_format | process_records $input_format | csv-from-bin $output_format | output binary
-comma_status_ok
+echo "$input" | csv-to-bin $input_format > $binary_in
+process_records $input_format $binary_in $binary_out
 echo "binary/status=$?"
+cat "$binary_out" | csv-from-bin $output_format | output binary
 

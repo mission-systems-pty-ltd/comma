@@ -1,7 +1,12 @@
 #!/bin/bash
 
+source $( which comma-application-util )
+
+function output { local prefix=$1; gawk '{ print "'${prefix:+$prefix/}'output/line["NR-1"]="$0 }' ; }
+
 function process_records
 {
+    local input_format=$1
     python -c "$( cat <<END
 import comma
 import numpy
@@ -9,7 +14,12 @@ import numpy
 point_t = comma.csv.struct( 'x,y,z', 'float64', 'float64', 'float64' )
 timestamped_point_t = comma.csv.struct( 'time,coordinates', 'datetime64[us]', point_t )
 record_t = comma.csv.struct( 'observer,event', 'S3', timestamped_point_t )
-record_stream = comma.csv.stream( record_t, fields='dummy,event/coordinates/y,event/coordinates/z,observer,dummy,event/time,event/coordinates/x,dummy,dummy' )
+if "$input_format":
+    format = ','.join(comma.csv.format.to_numpy("$input_format"))
+else:
+    format = ''
+fields = 'dummy,event/coordinates/y,event/coordinates/z,observer,dummy,event/time,event/coordinates/x,dummy,dummy'
+record_stream = comma.csv.stream( record_t, fields=fields, format=format )
 
 for i,r in enumerate( record_stream.iter(), start=1 ):
   r['observer'] = numpy.char.upper( r['observer'] )
@@ -20,7 +30,15 @@ END
 )"
 }
 
-output="$( process_records )"
-status=$?
-echo "$output" | csv-paste value="line[" line-number value="]\=" --delimiter '@' - | sed 's/@//g'
-echo "status=$status"
+input_format='i,2d,s[3],s[12],t,d,2ui'
+output_format='s[3],t,3d'
+
+input=$( cat )
+echo "$input" | process_records | output ascii
+comma_status_ok
+echo "ascii/status=$?"
+
+echo "$input" | csv-to-bin $input_format | process_records $input_format | csv-from-bin $output_format | output binary
+comma_status_ok
+echo "binary/status=$?"
+

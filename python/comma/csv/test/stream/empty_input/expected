@@ -1,0 +1,4 @@
+not exists( ascii/output )
+not exists( binary/output )
+ascii/status=0
+binary/status=0

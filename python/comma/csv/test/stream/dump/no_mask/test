@@ -1,7 +1,6 @@
 #!/bin/bash
 
 source $( which comma-application-util )
-
 function output { local prefix=$1; gawk '{ print "'${prefix:+$prefix/}'output/line["NR-1"]="$0 }' ; }
 
 function process_records
@@ -9,29 +8,25 @@ function process_records
     local input_format=$1
     python -c "$( cat <<END
 import comma
-import numpy
 
-point_t = comma.csv.struct( 'x,y,z', 'float64', 'float64', 'float64' )
-timestamped_point_t = comma.csv.struct( 'time,coordinates', 'datetime64[us]', point_t )
-record_t = comma.csv.struct( 'observer,event', 'S3', timestamped_point_t )
+point_t = comma.csv.struct( 'x,y,mask', 'float64', 'float64', 'uint32' )
 if "$input_format":
     format = ','.join(comma.csv.format.to_numpy("$input_format"))
 else:
     format = ''
-record_stream = comma.csv.stream( record_t, binary=bool("$input_format") )
+stream = comma.csv.stream( point_t, fields='x,name,y,mask', format=format  )
 
-i = 1
-for r in record_stream:
-  r['observer'] = numpy.char.upper( r['observer'] )
-  r['event']['time'] += numpy.timedelta64( i, 's' )
-  r['event']['coordinates']['x'] += i
-  record_stream.write( r )
+for points in stream.iter(size=3):
+  # changes below should not affect dump as it uses internal buffers
+  points['x'] = points['x'] + 1
+  points['y'] = points['y'] + 1
+  stream.dump()
 END
 )"
 }
 
-input_format='s[3],t,3d'
-output_format='s[3],t,3d'
+input_format='d,s[3],d,ui'
+output_format='d,s[3],d,ui'
 
 input=$( cat )
 echo "$input" | process_records | output ascii
