@@ -1,0 +1,36 @@
+#!/bin/bash
+
+source $( which comma-application-util )
+
+function output { local prefix=$1; gawk '{ print "'${prefix:+$prefix/}'output/line["NR-1"]="$0 }' ; }
+
+function process_records
+{
+    local input_format=$1
+    python -c "$( cat <<END
+import comma
+
+point_t = comma.csv.struct( 'x,y,z', 'float64', 'float64', 'float64' )
+if "$input_format":
+    format = ','.join(comma.csv.format.to_numpy("$input_format"))
+else:
+    format = ''
+stream = comma.csv.stream( point_t, fields='z,x', format=format )
+stream.write( stream.read() )
+END
+)"
+}
+
+input_format='2d'
+output_format='3d'
+
+input=$( cat )
+echo "$input" | process_records | output ascii
+comma_status_ok
+echo "ascii/status=$?"
+
+echo "$input" | csv-to-bin $input_format | process_records $input_format | csv-from-bin $output_format | output binary
+comma_status_ok
+echo "binary/status=$?"
+
+

@@ -1,0 +1,9 @@
+number_of(ascii/output/line)=2
+number_of(binary/output/line)=2
+ascii/output/line = binary/output/line
+ascii/output/line[0]="def,20140202T020200.123456,0,1,2"
+ascii/output/line[1]="GHI,20150303T030301.123456,1,1,2"
+ascii/status=0
+binary/output/line[0]="def,20140202T020200.123456,0,1,2"
+binary/output/line[1]="GHI,20150303T030301.123456,1,1,2"
+binary/status=0

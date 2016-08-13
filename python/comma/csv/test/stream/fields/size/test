@@ -1,0 +1,44 @@
+#!/bin/bash
+
+source $( which comma-application-util )
+
+function output { local prefix=$1; gawk '{ print "'${prefix:+$prefix/}'output/line["NR-1"]="$0 }' ; }
+
+function process_records
+{
+    local size=$1
+    local input_format=$2
+    python -c "$( cat <<END
+import comma
+import numpy
+
+point_t = comma.csv.struct( 'x,y,z', 'float64', 'float64', 'float64' )
+timestamped_point_t = comma.csv.struct( 'time,coordinates', 'datetime64[us]', point_t )
+record_t = comma.csv.struct( 'observer,event', 'S3', timestamped_point_t )
+
+fields = ',event/coordinates/y,event/coordinates/z,observer,,event/time,event/coordinates/x,,'
+format = 'int32,float64,float64,S3,S7,datetime64[us],float64,uint32,uint32' if "$input_format" else ''
+record_stream = comma.csv.stream( record_t, fields=fields, format=format )
+
+for i,r in enumerate( record_stream.iter( size=$size ), start=1 ):
+  r['observer'] = numpy.char.upper( r['observer'] )
+  r['event']['time'] += numpy.timedelta64( i, 's' )
+  r['event']['coordinates']['x'] += i
+  record_stream.write( r )
+END
+)"
+}
+
+input_format='i,2d,s[3],s[7],t,d,2ui'
+output_format='s[3],t,3d'
+size=$( cat size )
+
+input=$( cat )
+echo "$input" | process_records $size | output ascii
+comma_status_ok
+echo "ascii/status=$?"
+
+echo "$input" | csv-to-bin $input_format | process_records $size $input_format | csv-from-bin $output_format | output binary
+comma_status_ok
+echo "binary/status=$?"
+
