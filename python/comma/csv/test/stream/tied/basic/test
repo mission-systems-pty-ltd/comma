@@ -9,28 +9,27 @@ function process_records
     local input_format=$1
     python -c "$( cat <<END
 import comma
+import numpy
 
-point_t = comma.csv.struct( 'x,y', 'float64', 'float64' )
+point_t = comma.csv.struct( 'x,y,z', 'float64', 'float64', 'float64' )
+event_t = comma.csv.struct( 'time,coordinates', 'datetime64[us]', point_t )
 
-fields = ',x,,y,'
-if "$input_format":
-    format = ','.join(comma.csv.format.to_numpy("$input_format"))
-else:
-    format = ''
-input_stream = comma.csv.stream( point_t, fields=fields, format=format )
+input_stream = comma.csv.stream( event_t, binary=bool("$input_format") )
 
-output_t = comma.csv.struct( 'f0', 'float64' )
+output_t = comma.csv.struct( 'max,flags', 'float64', '(3,)uint32' )
 output_stream = comma.csv.stream( output_t, binary=bool("$input_format"), tied=input_stream )
 
-for points in input_stream.iter():
-  output = ( points['x'] + points['y'] ).view( output_t )
+for events in input_stream.iter():
+  output = numpy.empty( events.size, dtype=output_t )
+  output['max'] = numpy.max( events['coordinates'].view( '3f8' ), axis=1 )
+  output['flags'] = [10,20,30]
   output_stream.write( output )
 END
 )"
 }
 
-input_format='i,d,i,d,i'
-output_format="$input_format,d"
+input_format="t,3d"
+output_format="$input_format,d,3ui"
 
 input=$( cat )
 echo "$input" | process_records | output ascii

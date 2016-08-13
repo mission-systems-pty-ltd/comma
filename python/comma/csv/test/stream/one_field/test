@@ -10,27 +10,22 @@ function process_records
     python -c "$( cat <<END
 import comma
 
-point_t = comma.csv.struct( 'x,y', 'float64', 'float64' )
-
-fields = ',x,,y,'
+point_t = comma.csv.struct( 'x', 'float64' )
 if "$input_format":
     format = ','.join(comma.csv.format.to_numpy("$input_format"))
 else:
     format = ''
-input_stream = comma.csv.stream( point_t, fields=fields, format=format )
+record_stream = comma.csv.stream( point_t, fields=',x', format=format )
 
-output_t = comma.csv.struct( 'f0', 'float64' )
-output_stream = comma.csv.stream( output_t, binary=bool("$input_format"), tied=input_stream )
-
-for points in input_stream.iter():
-  output = ( points['x'] + points['y'] ).view( output_t )
-  output_stream.write( output )
+for i,r in enumerate( record_stream.iter(), start=1 ):
+  r['x'] += i
+  record_stream.write( r )
 END
 )"
 }
 
-input_format='i,d,i,d,i'
-output_format="$input_format,d"
+input_format='2d'
+output_format='d'
 
 input=$( cat )
 echo "$input" | process_records | output ascii

@@ -1,0 +1,11 @@
+number_of(ascii/output/line)=3
+number_of(binary/output/line)=3
+ascii/output/line = binary/output/line
+ascii/output/line[0]="abc,20141231T230000.123456,0,1,2,-3600"
+ascii/output/line[1]="def,20150101T000000.123456,0,1,2,0"
+ascii/output/line[2]="ghi,20150101T010000.123456,0,1,2,3600"
+ascii/status=0
+binary/output/line[0]="abc,20141231T230000.123456,0,1,2,-3600"
+binary/output/line[1]="def,20150101T000000.123456,0,1,2,0"
+binary/output/line[2]="ghi,20150101T010000.123456,0,1,2,3600"
+binary/status=0

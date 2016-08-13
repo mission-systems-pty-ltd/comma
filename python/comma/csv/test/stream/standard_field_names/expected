@@ -1,5 +1,11 @@
-line[0]="-1,1,0,2,20,3"
-line[1]="-2,1,0,2,20,3"
-line[2]="-3,1,0,2,20,3"
-status=0
-
+number_of(ascii/output/line)=3
+number_of(binary/output/line)=3
+ascii/output/line = binary/output/line
+ascii/output/line[0]="-1,1,0,2,20,3"
+ascii/output/line[1]="-2,1,0,2,20,3"
+ascii/output/line[2]="-3,1,0,2,20,3"
+ascii/status=0
+binary/output/line[0]="-1,1,0,2,20,3"
+binary/output/line[1]="-2,1,0,2,20,3"
+binary/output/line[2]="-3,1,0,2,20,3"
+binary/status=0

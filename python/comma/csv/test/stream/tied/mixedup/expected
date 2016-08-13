@@ -1,0 +1,10 @@
+number_of(ascii/output/line)=3
+number_of(binary/output/line)=3
+ascii/output/line[0]="-1,1.0,2.0,abc,nothing,20130101T010100.123456,3.0,100,200,3,10,20,30"
+ascii/output/line[1]="-2,1.0,2.0,def,nothing,20140202T020200.123456,4.0,100,200,4,10,20,30"
+ascii/output/line[2]="-3,1.0,2.0,ghi,nothing,20150303T030300.123456,5.0,100,200,5,10,20,30"
+ascii/status=0
+binary/output/line[0]="-1,1,2,abc,nothing,20130101T010100.123456,3,100,200,3,10,20,30"
+binary/output/line[1]="-2,1,2,def,nothing,20140202T020200.123456,4,100,200,4,10,20,30"
+binary/output/line[2]="-3,1,2,ghi,nothing,20150303T030300.123456,5,100,200,5,10,20,30"
+binary/status=0
