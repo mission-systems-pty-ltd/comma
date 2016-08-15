@@ -129,7 +129,8 @@ std::ofstream& split< T >::ofstream_by_id_()
         if( seen_ids_.find( current_.id ) == seen_ids_.end() ) { seen_ids_.insert( current_.id ); }
         else { mode |= std::ofstream::app; }
         std::string name = boost::lexical_cast< std::string >( current_.id ) + suffix_;
-        it = files_.insert( std::make_pair( current_.id, new std::ofstream( name.c_str(), mode ) ) ).first;
+        boost::shared_ptr< std::ofstream > stmp( new std::ofstream( name.c_str(), mode ) );
+        it = files_.insert( std::make_pair( current_.id, stmp ) ).first;
     }
     return *it->second;
 }
