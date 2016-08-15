@@ -455,7 +455,7 @@ function junit_testcase()
     local elapsed="$3"
     [[ -n "$elapsed" ]] || elapsed=0
     local attributes="classname=\"testcase\" id=\"$name\" name=\"$name\" time=\"$elapsed\""
-    if [[ -f $log ]] ; then
+    if [[ -s $log ]] ; then
         echo "    <testcase $attributes >"
         echo "        <failure>"
         cat $log | recode ascii..html
@@ -474,9 +474,7 @@ function junit_finalize() # quick and dirty
               local path="$( dirname $key | sed "s#^\./##" )"
               junit_testcase $path $path/output/junit.failure.log $elapsed
               [[ -d "$path/expected" ]] || continue # todo: wrap all tests from expected directory into a testsuite
-              for p in $( ( cd $path/output ; find . -mindepth 2 -name junit.failure.log | sed "s#^\./##" ) ) ; do
-                  junit_testcase $( dirname $path/$p ) $path/output/$p
-              done
+              for p in $( ( cd $path/output ; find . -mindepth 2 -name junit.failure.log | sed "s#^\./##" ) ) ; do junit_testcase $( dirname $path/$p | sed "s#^\./##" ) $path/output/$p ; done
           done
     echo "</testsuite>"
 }
@@ -603,7 +601,8 @@ function run_and_match_test()
             [[ -n "$options_junit" ]] || return
             local dir=$1
             mkdir -p $dir
-            echo "${@:2}" > $dir/junit.failure.log
+            touch $dir/junit.failure.log
+            [[ -z "$2" ]] || echo "${@:2}" > $dir/junit.failure.log
         }
         
         function match_expected()
@@ -617,9 +616,8 @@ function run_and_match_test()
                 for extra in $extras ; do
                     [[ $( basename "$extra" ) != "readme" ]] || continue
                     local extra_match_output=$( comma-test-match "$extra" < 'output/stdout.log' )
-                    [[ -n "$extra_match_output" ]] || continue
-                    match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; echo "$extra_match_output" | sed "s#^#$extra:#" 2>&1 )
                     [[ $is_global ]] || junit_log_error output/$( sed 's#^\./expected/##' <<< "$extra" ) "$extra_match_output"
+                    [[ -z "$extra_match_output" ]] || match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; echo "$extra_match_output" | sed "s#^#$extra:#" 2>&1 )
                 done
             fi
         }
