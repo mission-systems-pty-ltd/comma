@@ -3,6 +3,7 @@
 function clean() { rm -rf $test_dir ; }
 trap clean EXIT
 mkdir -p output || exit 1
+output_dir=$( readlink -f output )
 test_dir=$( mktemp --directory --tmpdir="$( readlink -f output )" )
 cd "$test_dir"
 while IFS='=' read path value ; do
@@ -12,5 +13,5 @@ while IFS='=' read path value ; do
 done
 echo "sed 's/\"//g'" > test
 chmod +x test
-comma-test-run --no-ansiterm-control-characters $@ >&2
+comma-test-run --junit $output_dir/junit.xml --no-ansiterm-control-characters $@ >&2
 echo "status=$?"

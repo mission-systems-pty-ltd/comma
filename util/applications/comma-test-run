@@ -311,9 +311,7 @@ function error_and_junit_()
     error_ $( head -1 <<< "$error_and_junit_formatted" )
     local -r error_and_junit_formatted_tail="$( tail -n +2 <<< "$error_and_junit_formatted" )"
     [[ -z "$error_and_junit_formatted_tail" ]] || cat >&2 <<< "$error_and_junit_formatted_tail"
-    if [[ -n "$options_junit" && -d 'output' ]] ; then
-        cat >> 'output/junit.failure.log' <<< "$error_and_junit_formatted"
-    fi
+    if [[ -n "$options_junit" && -d 'output' ]] ; then cat >> 'output/junit.failure.log' <<< "$error_and_junit_formatted" ; fi
 }
 export -f error_and_junit_
 
@@ -450,24 +448,35 @@ function stats_init()
     export stats_progress_csv
 }
 
+function junit_testcase()
+{
+    local name="$1"
+    local log="$2"
+    local elapsed="$3"
+    [[ -n "$elapsed" ]] || elapsed=0
+    local attributes="classname=\"testcase\" id=\"$name\" name=\"$name\" time=\"$elapsed\""
+    if [[ -s $log ]] ; then
+        echo "    <testcase $attributes >"
+        echo "        <failure>"
+        cat $log | recode ascii..html
+        echo "        </failure>"
+        echo "    </testcase>"
+    else
+        echo "    <testcase $attributes />"
+    fi
+}
+
 function junit_finalize() # quick and dirty
 {
     echo "<testsuite tests=\"$( cat $stats_elapsed_path_value | wc -l )\">"
     cat $stats_elapsed_path_value \
         | while IFS='=' read key elapsed ; do
-              path="$( dirname $key )"
-              local attributes="classname=\"testcase\" name=\"$( echo $path | sed "s#^\./##" )\" time=\"$elapsed\""
-              if [[ -f $path/output/junit.failure.log ]] ; then
-                  echo "    <testcase $attributes >"
-                  echo "        <failure>"
-                  cat $path/output/junit.failure.log | recode ascii..html
-                  echo "        </failure>"
-                  echo "    </testcase>"
-              else
-                  echo "    <testcase $attributes />"
-              fi
-           done
-      echo "</testsuite>"
+              local path="$( dirname $key | sed "s#^\./##" )"
+              junit_testcase $path $path/output/junit.failure.log $elapsed
+              [[ -d "$path/expected" ]] || continue # todo: wrap all tests from expected directory into a testsuite
+              for p in $( ( cd $path/output ; find . -mindepth 2 -name junit.failure.log | sed "s#^\./##" ) ) ; do junit_testcase $( dirname $path/$p | sed "s#^\./##" ) $path/output/$p ; done
+          done
+    echo "</testsuite>"
 }
 
 function stats_finalize()
@@ -578,35 +587,47 @@ function run_and_match_test()
     } >'output/stdout.log' 2>'output/stderr.log'
     error_files="$( find . -name out_of_shared_memory )"
     [[ -n "$error_files" ]] && { error_and_junit_ "'out_of_shared_memory' files found" ; return 1 ; }
-
     [[ $test_failed == 0 ]] || { error_and_junit_ "Test exited with non-zero status: $test_failed" ; return 1 ; }
     [[ -e 'output' ]] || { error_and_junit_ "'output' directory does not exist" ; return 1 ; }
     [[ -d 'output' ]] || { error_and_junit_ "'output' is not a directory" ; return 1 ; }
     [[ -e 'output/stdout.log' ]] || { error_and_junit_ "'output/stdout.log' file does not exist" ; return 1 ; }
     [[ -f 'output/stdout.log' ]] || { error_and_junit_ "'output/stdout.log' is not a file" ; return 1 ; }
-    
     {
         local match_output global_expected
         echo -e '\n# In comma-test-run before comma-test-match' >> 'output/stdout.log'
+        
+        function junit_log_error() # quick and dirty; todo: move all junit stuff to one location
+        {
+            [[ -n "$options_junit" ]] || return
+            local dir=$1
+            mkdir -p $dir
+            touch $dir/junit.failure.log
+            [[ -z "$2" ]] || echo "${@:2}" > $dir/junit.failure.log
+        }
+        
         function match_expected()
         {
             local expected=$1
+            local is_global=$2
             if [[ -f "$expected" ]] ; then
                 match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; comma-test-match "$expected" <'output/stdout.log' 2>&1 )
             elif [[ -d "$expected" ]] ; then
                 local extras=$( find "$expected" -type f )
                 for extra in $extras ; do
                     [[ $( basename "$extra" ) != "readme" ]] || continue
-                    match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; comma-test-match "$extra" < 'output/stdout.log' | sed "s#^#$extra:#" 2>&1 )
+                    local extra_match_output=$( comma-test-match "$extra" < 'output/stdout.log' )
+                    [[ $is_global ]] || junit_log_error output/$( sed 's#^\./expected/##' <<< "$extra" ) "$extra_match_output"
+                    [[ -z "$extra_match_output" ]] || match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; echo "$extra_match_output" | sed "s#^#$extra:#" 2>&1 )
                 done
             fi
         }
+        
         match_expected "./expected"
         if [[ -n "$options_also_expected" && -e "./expected" ]] ; then
-            for global_expected in $options_also_expected ; do match_expected "$global_expected" ; done
+            for global_expected in $options_also_expected ; do match_expected "$global_expected" "is_global" ; done
         fi
         if [[ -n "$options_always_expected" ]] ; then
-            for global_expected in $options_always_expected ; do match_expected "$global_expected" ; done
+            for global_expected in $options_always_expected ; do match_expected "$global_expected" "is_global" ; done
         fi
         echo -e '\n# After comma-test-match in comma-test-run' >> 'output/stdout.log'
         if [[ -n "$match_output" ]]; then
@@ -614,7 +635,6 @@ function run_and_match_test()
             return 1
         fi
     }
-    
     return 0
 }
 export -f run_and_match_test
@@ -994,7 +1014,10 @@ have_max_parallel=$(( have_max_parallel_equal > 0 || have_max_parallel_space > 0
 [[ "$options_parallel" != "0" && "$options_estimate_resources" == "1" ]] && { error_ "$name: resource estimation shall be serial"; exit 1; }
 if [[ "$options_debug" != "0" ]] ; then verbose="--verbose" ; fi
 (( options_verbose )) && verbose="--verbose"
-[[ -n "$options_junit" ]] && rm -f "$options_junit"
+if [[ -n "$options_junit" ]] ; then
+    type -p recode >/dev/null || { error_ "$name: --junit given, but recode is not found; please install recode; e.g. run: sudo apt-get install recode"; exit 1; }
+    rm -f "$options_junit"
+fi
 [[ -n "$options_also_expected" ]] && {
     [[ -f "$options_also_expected" ]] || { error_ "$name: global expected file '$options_also_expected' not found"; exit 1; }
     options_also_expected=$( readlink -e "$options_also_expected" )
@@ -1015,18 +1038,11 @@ max_run_time=$options_max_run_time
 # all "options_*" variables have been already exported
 export max_parallel max_memory_main max_memory_shared max_wait_time max_run_time verbose
 
-function apply_white_list()
-{
-    if [[ -n "$options_white_list" ]] ; then grep -E "$options_white_list"; else cat ; fi
-}
-function apply_black_list()
-{
-    if [[ -n "$options_black_list" ]] ; then grep -vE "$options_black_list"; else cat ; fi
-}
-function apply_white_black_list()
-{
-    apply_white_list | apply_black_list
-}
+function apply_white_list() { if [[ -n "$options_white_list" ]] ; then grep -E "$options_white_list"; else cat ; fi ; }
+
+function apply_black_list() { if [[ -n "$options_black_list" ]] ; then grep -vE "$options_black_list"; else cat ; fi ; }
+
+function apply_white_black_list() { apply_white_list | apply_black_list ; }
 
 # to run, search for directories containing either "test", "input" or "expected";
 # if "test" is absent, use the "test" in the closest parent directory
