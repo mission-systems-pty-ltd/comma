@@ -1,5 +1,5 @@
 printenv/count <= 16
-set/count <= 50
+set/count <= 55
 defaults/count = 8
 
 HOME/defined="yes"
