@@ -15,5 +15,15 @@ echo "sed 's/\"//g'" > test
 chmod +x test
 comma-test-run --junit $output_dir/junit.xml --no-ansiterm-control-characters $@ >&2
 echo "status=$?"
-cat $output_dir/junit.xml | grep '<' | name-value-convert | sed -e 's#^#junit/#' -e 's#<xmlattr>#xmlattr#'
+cat $output_dir/junit.xml | grep '<' | name-value-convert | grep -v 'testsuite/testsuite/testcase' | sed -e 's#^#junit/#' -e 's#<xmlattr>#xmlattr#'
 echo "failures/count=$( cat $output_dir/junit.xml | grep '<' | name-value-convert | grep failure | wc -l )"
+
+cat $output_dir/junit.xml \
+    | grep '<' \
+    | name-value-convert \
+    | grep 'testsuite/testsuite/testcase' \
+    | sed -e 's#failure=""#failure="present"#' -e 's#<xmlattr>#xmlattr#' \
+    | name-value-to-csv --prefix=testsuite/testsuite/testcase --fields=xmlattr/id,xmlattr/name,failure \
+    | sort \
+    | name-value-from-csv xmlattr/id,xmlattr/name,failure --line-number \
+    | sed 's#^#junit/testsuite/testsuite/testcase#'
