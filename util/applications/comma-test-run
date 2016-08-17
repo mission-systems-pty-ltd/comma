@@ -448,33 +448,41 @@ function stats_init()
     export stats_progress_csv
 }
 
-function junit_testcase()
-{
-    local name="$1"
-    local log="$2"
-    local elapsed="$3"
-    [[ -n "$elapsed" ]] || elapsed=0
-    local attributes="classname=\"testcase\" id=\"$name\" name=\"$name\" time=\"$elapsed\""
-    if [[ -s $log ]] ; then
-        echo "    <testcase $attributes >"
-        echo "        <failure>"
-        cat $log | recode ascii..html
-        echo "        </failure>"
-        echo "    </testcase>"
-    else
-        echo "    <testcase $attributes />"
-    fi
-}
-
 function junit_finalize() # quick and dirty
 {
-    echo "<testsuite tests=\"$( cat $stats_elapsed_path_value | wc -l )\">"
+    function junit_testcase()
+    {
+        local name="$1"
+        local log="$2"
+        local elapsed="$3"
+        [[ -n "$elapsed" ]] || elapsed=0
+        local offset
+        for i in $( seq $junit_depth ) ; do offset+='    ' ; done
+        local attributes="classname=\"testcase\" id=\"$name\" name=\"$name\" time=\"$elapsed\""
+        if [[ -s $log ]] ; then
+            echo "$offset<testcase $attributes >"
+            echo "$offset    <failure>"
+            cat $log | recode ascii..html
+            echo "$offset    </failure>"
+            echo "$offset</testcase>"
+        else
+            echo "$offset<testcase $attributes />"
+        fi
+    }
+    
+    echo "<testsuite tests=\"$( cat $stats_elapsed_path_value | wc -l )\" time=\"$( cat $stats_elapsed_path_value | cut -d= -f2 | csv-calc sum 2>/dev/null )\" >"
+    junit_depth=1 # quick and dirty
     cat $stats_elapsed_path_value \
         | while IFS='=' read key elapsed ; do
               local path="$( dirname $key | sed "s#^\./##" )"
               junit_testcase $path $path/output/junit.failure.log $elapsed
-              [[ -d "$path/expected" ]] || continue # todo: wrap all tests from expected directory into a testsuite
+              [[ -d "$path/expected" ]] || continue
+              local paths=$( ( cd $path/output ; find . -mindepth 2 -name junit.failure.log | sed "s#^\./##" ) )
+              echo "    <testsuite tests=\"$( wc -l <<< "$paths" )\" time=\"0\" >"
+              junit_depth=2
               for p in $( ( cd $path/output ; find . -mindepth 2 -name junit.failure.log | sed "s#^\./##" ) ) ; do junit_testcase $( dirname $path/$p | sed "s#^\./##" ) $path/output/$p ; done
+              junit_depth=1
+              echo "    </testsuite>"
           done
     echo "</testsuite>"
 }
