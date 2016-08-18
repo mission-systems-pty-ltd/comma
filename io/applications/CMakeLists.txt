@@ -16,6 +16,10 @@ target_link_libraries( io-buffer comma_application comma_io comma_csv comma_base
 install( TARGETS io-buffer RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
 
 if( NOT WIN32 )
+    add_executable( io-bandwidth ${dir}/io-bandwidth.cpp )
+    target_link_libraries( io-bandwidth ${comma_ALL_LIBRARIES} ${comma_EXTERNAL_ALL_LIBRARIES} )
+    install( TARGETS io-bandwidth RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
+
     add_executable( io-cat ${dir}/io-cat.cpp )
     target_link_libraries( io-cat comma_application comma_io comma_csv comma_base ${comma_EXTERNAL_ALL_LIBRARIES} ) # profiler )
     install( TARGETS io-cat RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
