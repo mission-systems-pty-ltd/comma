@@ -40,9 +40,9 @@
 #include "../../io/select.h"
 #include "../../io/stream.h"
 
-static unsigned int default_window = 10;
-static unsigned int default_window_resolution = 1;
-static unsigned int default_update_interval = 1;
+static double default_window = 10.0f;
+static double default_window_resolution = 0.1f;
+static double default_update_interval = 1.0f;
 static char default_delimiter = ',';
 
 static void bash_completion( unsigned const ac, char const * const * av )
@@ -94,11 +94,6 @@ void usage( bool verbose = false )
 
 static const boost::posix_time::time_duration wait_interval = boost::posix_time::milliseconds( 10 );
 
-// todo
-// - update_interval: make it floating point (in seconds)
-// - window: make it floating point (in seconds)
-// - bucket_width: make it floating point (in seconds)
-
 // todo: optionally use exponential moving average
 
 int main( int ac, char** av )
@@ -110,9 +105,10 @@ int main( int ac, char** av )
 
         if( options.exists( "--output-fields" )) { std::cout << "timestamp,received_bytes,bandwidth/average,bandwidth/window" << std::endl; return 0; }
 
-        boost::posix_time::time_duration update_interval = boost::posix_time::microseconds( options.value< unsigned int >( "--update,-u", default_update_interval ) * 1000000 );
-        unsigned int window = options.value< unsigned int >( "--window,-w", default_window );
-        boost::posix_time::time_duration bucket_width = boost::posix_time::seconds( options.value< unsigned int >( "--resolution,-r", default_window_resolution ));
+        boost::posix_time::time_duration update_interval = boost::posix_time::microseconds( options.value< double >( "--update,-u", default_update_interval ) * 1000000 );
+        double window = options.value< double >( "--window,-w", default_window );
+        double bucket_width = options.value< double >( "--resolution,-r", default_window_resolution );
+        boost::posix_time::time_duration bucket_duration = boost::posix_time::microseconds( bucket_width * 1000000 );
         char delimiter = options.value( "--delimiter,-d", default_delimiter );
 
         comma::io::select select;
@@ -121,10 +117,11 @@ int main( int ac, char** av )
 
         unsigned long long total_bytes = 0;
         unsigned int bucket_bytes = 0;
-        boost::circular_buffer< unsigned int > window_buckets( window / bucket_width.total_seconds() );
+        boost::circular_buffer< unsigned int > window_buckets( std::ceil( window / bucket_width ));
+
         boost::posix_time::ptime start_time = boost::posix_time::microsec_clock::universal_time();
         boost::posix_time::ptime next_update = start_time + update_interval;
-        boost::posix_time::ptime next_bucket = start_time + bucket_width;
+        boost::posix_time::ptime next_bucket = start_time + bucket_duration;
 
         comma::signal_flag is_shutdown;
         bool end_of_stream = false;
@@ -151,7 +148,7 @@ int main( int ac, char** av )
             {
                 window_buckets.push_back( bucket_bytes );
                 bucket_bytes = 0;
-                next_bucket += bucket_width;
+                next_bucket += bucket_duration;
             }
 
             if( now >= next_update )
@@ -160,7 +157,7 @@ int main( int ac, char** av )
                           << total_bytes << delimiter
                           << (double)total_bytes / ( double( ( now - start_time ).total_milliseconds() ) / 1000.0f ) << delimiter
                           << (double)std::accumulate( window_buckets.begin(), window_buckets.end(), 0.0f )
-                                 / window_buckets.size() / bucket_width.total_seconds()
+                                 / window_buckets.size() / bucket_width
                           << std::endl;
                 next_update += update_interval;
             }
