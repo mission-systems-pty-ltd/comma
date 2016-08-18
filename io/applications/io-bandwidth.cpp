@@ -115,7 +115,7 @@ int main( int ac, char** av )
 
         unsigned long long total_bytes = 0;
         unsigned int bucket_bytes = 0;
-        boost::circular_buffer< unsigned int > window_buckets( window );
+        boost::circular_buffer< unsigned int > window_buckets( window / bucket_width.total_seconds() );
         boost::posix_time::ptime start_time = boost::posix_time::microsec_clock::universal_time();
         boost::posix_time::ptime next_update = start_time + update_interval;
         boost::posix_time::ptime next_bucket = start_time + bucket_width;
