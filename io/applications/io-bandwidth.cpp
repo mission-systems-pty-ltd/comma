@@ -68,12 +68,14 @@ void usage( bool verbose = false )
     std::cerr << "    --output-fields: list output fields and exit" << std::endl;
     std::cerr << "    --delimiter,-d <delimiter>: default ','" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "example" << std::endl;
+    std::cerr << "examples" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "    basics:" << std::endl;
     std::cerr << std::endl;
     std::cerr << "        while : ; do echo 1; sleep 0.1; done | io-bandwidth > /dev/null" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    mocking up a more complex input stream: pass data to hexdump and publish bandwidth stats on port 8888 ---" << std::endl;
+    std::cerr << "    mocking up a more complex input stream:" << std::endl;
+    std::cerr << "    pass data to hexdump and publish bandwidth stats on port 8888" << std::endl;
     std::cerr << std::endl;
     std::cerr << "        while : ; do" << std::endl;
     std::cerr << "            dd if=/dev/urandom bs=100 count=1 2> /dev/null; sleep 0.1" << std::endl;
