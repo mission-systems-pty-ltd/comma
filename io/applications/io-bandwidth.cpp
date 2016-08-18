@@ -27,6 +27,8 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+/// @author dave jennings
+
 #include <iostream>
 #include <numeric>
 #include <boost/array.hpp>
@@ -67,18 +69,30 @@ void usage( bool verbose = false )
     std::cerr << "    --delimiter,-d <delimiter>: default ','" << std::endl;
     std::cerr << std::endl;
     std::cerr << "example" << std::endl;
-    std::cerr << "    --- pass data to hexdump and publish bandwidth stats on port 8888 ---" << std::endl;
-    std::cerr << "    while : ; do" << std::endl;
-    std::cerr << "        dd if=/dev/urandom bs=100 count=1 2> /dev/null; sleep 0.1" << std::endl;
-    std::cerr << "    done | io-bandwidth 2> >( io-publish tcp:8888 ) | hexdump" << std::endl;
+    std::cerr << "    basics:" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "        while : ; do echo 1; sleep 0.1; done | io-bandwidth > /dev/null" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    mocking up a more complex input stream: pass data to hexdump and publish bandwidth stats on port 8888 ---" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "        while : ; do" << std::endl;
+    std::cerr << "            dd if=/dev/urandom bs=100 count=1 2> /dev/null; sleep 0.1" << std::endl;
+    std::cerr << "        done | io-bandwidth 2> >( io-publish tcp:8888 ) | hexdump" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 0 );
 }
 
-static const unsigned int wait_interval = 10; // milliseconds
-static const unsigned int bucket_width = 1;   // seconds
+static const boost::posix_time::time_duration wait_interval = boost::posix_time::milliseconds( 10 );
+static const boost::posix_time::time_duration bucket_width = boost::posix_time::seconds( 1 );
+
+// todo
+// - update_interval: make it floating point (in seconds)
+// - window: make it floating point (in seconds)
+// - bucket_width: make it floating point (in seconds)
+
+// todo: optionally use exponential moving average
 
 int main( int ac, char** av )
 {
@@ -87,9 +101,9 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av, usage );
         if( options.exists( "--bash-completion" ) ) bash_completion( ac, av );
 
-        if( options.exists( "--output-fields" )) { std::cout << "timestamp,elapsed_time,received_bytes,bandwidth/average,bandwidth/window" << std::endl; return 0; }
+        if( options.exists( "--output-fields" )) { std::cout << "timestamp,received_bytes,bandwidth/average,bandwidth/window" << std::endl; return 0; }
 
-        unsigned int update_interval = options.value< unsigned int >( "--update,-u", default_update_interval );
+        boost::posix_time::time_duration update_interval = boost::posix_time::microseconds( options.value< unsigned int >( "--update,-u", default_update_interval ) * 1000000 );
         unsigned int window = options.value< unsigned int >( "--window,-w", default_window );
         char delimiter = options.value( "--delimiter,-d", default_delimiter );
 
@@ -97,21 +111,20 @@ int main( int ac, char** av )
         select.read().add( comma::io::stdin_fd );
         comma::io::istream is( "-", comma::io::mode::binary );
 
-        unsigned int total_bytes = 0;
+        unsigned long long total_bytes = 0;
         unsigned int bucket_bytes = 0;
         boost::circular_buffer< unsigned int > window_buckets( window );
         boost::posix_time::ptime start_time = boost::posix_time::microsec_clock::universal_time();
-        boost::posix_time::ptime next_update = start_time + boost::posix_time::seconds( update_interval );
-        boost::posix_time::ptime next_bucket = start_time + boost::posix_time::seconds( bucket_width );
+        boost::posix_time::ptime next_update = start_time + update_interval;
+        boost::posix_time::ptime next_bucket = start_time + bucket_width;
 
         comma::signal_flag is_shutdown;
         bool end_of_stream = false;
-        boost::array< char, 4096 > buffer;
+        boost::array< char, 65536 > buffer;
 
         while( !is_shutdown && !end_of_stream )
         {
-            select.wait( boost::posix_time::milliseconds( wait_interval ));
-
+            select.wait( wait_interval );
             while( select.check() && select.read().ready( is.fd() ) && is->good() )
             {
                 std::size_t available = is.available();
@@ -130,24 +143,18 @@ int main( int ac, char** av )
             {
                 window_buckets.push_back( bucket_bytes );
                 bucket_bytes = 0;
-                next_bucket += boost::posix_time::seconds( bucket_width );
+                next_bucket += bucket_width;
             }
 
             if( now >= next_update )
             {
-                boost::posix_time::time_duration elapsed = now - start_time;
-                double elapsed_seconds = (double)elapsed.total_milliseconds() / 1000.0f;
-                boost::posix_time::ptime now_to_nearest_second = boost::posix_time::ptime( now.date(), boost::posix_time::seconds( now.time_of_day().total_seconds() ));
-
-                std::cerr << boost::posix_time::to_iso_string( now_to_nearest_second ) << delimiter
-                          << elapsed_seconds << delimiter
+                std::cerr << boost::posix_time::to_iso_string( now ) << delimiter
                           << total_bytes << delimiter
-                          << (double)total_bytes / elapsed_seconds << delimiter
+                          << (double)total_bytes / ( double( ( now - start_time ).total_milliseconds() ) / 1000.0f ) << delimiter
                           << (double)std::accumulate( window_buckets.begin(), window_buckets.end(), 0.0f )
-                                 / window_buckets.size() / bucket_width
+                                 / window_buckets.size() / bucket_width.total_seconds()
                           << std::endl;
-
-                next_update += boost::posix_time::seconds( update_interval );
+                next_update += update_interval;
             }
         }
         return 0;
