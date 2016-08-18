@@ -41,6 +41,7 @@
 #include "../../io/stream.h"
 
 static unsigned int default_window = 10;
+static unsigned int default_window_resolution = 1;
 static unsigned int default_update_interval = 1;
 static char default_delimiter = ',';
 
@@ -48,7 +49,7 @@ static void bash_completion( unsigned const ac, char const * const * av )
 {
     static const char* completion_options =
         " --help -h"
-        " --window -w --update -u"
+        " --window -w --update -u --resolution -r"
         " --delimiter -d --output-fields"
         ;
     std::cout << completion_options << std::endl;
@@ -65,8 +66,13 @@ void usage( bool verbose = false )
     std::cerr << "options" << std::endl;
     std::cerr << "    --window,-w=[<n>]: sliding window; default=" << default_window << "s" << std::endl;
     std::cerr << "    --update,-u=[<n>]: update interval; default=" << default_update_interval << "s" << std::endl;
+    std::cerr << "    --resolution,-r=[<n>]; sliding window resolution; default=" << default_window_resolution << "s" << std::endl;
     std::cerr << "    --output-fields: list output fields and exit" << std::endl;
     std::cerr << "    --delimiter,-d <delimiter>: default ','" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "The sliding window consists of a number of buckets. The width of each bucket" << std::endl;
+    std::cerr << "is given by --resolution, and there are sufficient buckets to encompass the" << std::endl;
+    std::cerr << "requested --window." << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << std::endl;
@@ -87,7 +93,6 @@ void usage( bool verbose = false )
 }
 
 static const boost::posix_time::time_duration wait_interval = boost::posix_time::milliseconds( 10 );
-static const boost::posix_time::time_duration bucket_width = boost::posix_time::seconds( 1 );
 
 // todo
 // - update_interval: make it floating point (in seconds)
@@ -107,6 +112,7 @@ int main( int ac, char** av )
 
         boost::posix_time::time_duration update_interval = boost::posix_time::microseconds( options.value< unsigned int >( "--update,-u", default_update_interval ) * 1000000 );
         unsigned int window = options.value< unsigned int >( "--window,-w", default_window );
+        boost::posix_time::time_duration bucket_width = boost::posix_time::seconds( options.value< unsigned int >( "--resolution,-r", default_window_resolution ));
         char delimiter = options.value( "--delimiter,-d", default_delimiter );
 
         comma::io::select select;
