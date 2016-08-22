@@ -317,7 +317,7 @@ boost::property_tree::ptree property_tree::from_path_value_string( const std::st
     return ptree;
 }
 
-bool is_seekable( std::istream& stream ) { return stream.seekg( 0, std::ios::beg ); }
+bool is_seekable( std::istream& stream ) { return static_cast< bool >( stream.seekg( 0, std::ios::beg ) ); }
 
 void property_tree::from_unknown( std::istream& stream, boost::property_tree::ptree& ptree, property_tree::path_value::check_repeated_paths check_type, char equal_sign, char delimiter, bool use_index )
 {

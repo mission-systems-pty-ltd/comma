@@ -45,7 +45,7 @@ void options::format( const std::string& s ) { format_ = csv::format( s ); }
 
 void options::format( const csv::format& f ) { format_ = f; }
 
-bool options::binary() const { return format_; }
+bool options::binary() const { return static_cast< bool >( format_ ); }
 
 std::string options::format_string() const { if(format_) return format_->string(); else return ""; }
 
