@@ -92,6 +92,14 @@ void usage( bool )
         "\n    --enforce-group, enforce waiting for process groups; if comma-timeout-group is built without procps"
         "\n        support, '--wait-for-process-group' would exit in error rather then become a synonym to '-k';"
         "\n        this option does nothing if procps support is built in"
+        "\n    --wait-for-process-group-delay=value, when waiting for all processes in the group to finish, a delay"
+        "\n        is inserted between each parsing of the process tree; the value in microseconds is passed to"
+        "\n        usleep (2), default is 10000 (0.01 s); note that low delay values make the program more"
+        "\n        responsive at the cost of higher CPU load when parsing the process tree"
+#ifndef HAVE_PROCPS_DEV
+        "\n        WARNING: your version of comma-timeout-group is built without procps support, this option"
+        "\n        has no effect"
+#endif
         "\n    -s, --signal=signal, the signal to be sent on timeout, given as a name (HUP, SIGHUP) or number;"
         "\n        only a sub-set of all available signal names is supported, use '--list-known-signals' to list;"
         "\n        arbitrary signal to use can be specified as a number, see 'kill -l' for the values;"
@@ -156,6 +164,7 @@ double kill_after = 0.0;
 #ifdef HAVE_PROCPS_DEV
 bool wait_for_process_group = false;
 const bool can_wait_for_process_group = true;
+unsigned int wait_for_process_group_delay = 10000;
 #else
 const bool can_wait_for_process_group = false;
 #endif
@@ -275,7 +284,7 @@ int parse_process_tree_until_empty( bool verbose = false )
     int count = 0;
     while ( 1 ) {
         if ( ( count = parse_process_tree( verbose ) ) <= 1 ) break;
-        usleep( each_wait );
+        usleep( wait_for_process_group_delay );
     }
     /* shouldn't happen: timeout itself in this process group. */
     if ( !count ) { COMMA_THROW( comma::exception, "error counting processes in the group, none left" ); }
@@ -364,7 +373,7 @@ int main( int ac, char** av ) try
 
     // first non-option must be the timeout duration, and second the command to run
     comma::command_line_options all_options( ac, av );
-    std::vector< std::string > non_options = all_options.unnamed( "-h,--help,-v,--verbose,--verbose-signal-handler,--list-known-signals,--foreground,--preserve-status,--enforce-group,--can-wait-for-process-group", "-s,--signal,-k,--kill-after,--wait-for-process-group" );
+    std::vector< std::string > non_options = all_options.unnamed( "-h,--help,-v,--verbose,--verbose-signal-handler,--list-known-signals,--foreground,--preserve-status,--enforce-group,--can-wait-for-process-group", "-s,--signal,-k,--kill-after,--wait-for-process-group,--wait-for-process-group-delay" );
     if ( non_options.size() < 2 )
     {
         // user did not give all the arguments; OK in special cases
@@ -409,6 +418,12 @@ int main( int ac, char** av ) try
     }
 
     if ( options.exists( "-k,--kill-after" ) ) { kill_after = seconds_from_string( options.values< std::string >( "-k,--kill-after" ).back() ); }
+    if ( options.exists( "--wait-for-process-group-delay" ) ) {
+        wait_for_process_group_delay = options.value< unsigned int >( "--wait-for-process-group-delay" );
+#ifndef HAVE_PROCPS_DEV
+        if ( verbose ) { std::cerr << "comma-timeout-group: built without procps support, '--wait-for-process-group-delay' is ignored" << std::endl; }
+#endif
+    }
 
     timeout = seconds_from_string( non_options[0] );
 
@@ -422,7 +437,10 @@ int main( int ac, char** av ) try
         std::cerr << "    exit status of command: " << ( preserve_status ? "" : "NOT " ) << "preserved" << std::endl;
         if ( verbose_signal_handler ) { std::cerr << "   output messages when sending signals" << std::endl; }
 #ifdef HAVE_PROCPS_DEV
-        if ( wait_for_process_group ) { std::cerr << "    will wait" << ( kill_after < std::numeric_limits< double >::max() ? "" : " forever" ) << " for all processes in the group to finish" << std::endl; }
+        if ( wait_for_process_group ) {
+            std::cerr << "    will wait" << ( kill_after < std::numeric_limits< double >::max() ? "" : " forever" ) << " for all processes in the group to finish" << std::endl;
+            std::cerr << "    will use " << wait_for_process_group_delay << " microsecond delay between each parsing of the process tree" << std::endl;
+        }
 #endif
         if ( kill_after != 0 && kill_after < std::numeric_limits< double >::max() ) { std::cerr << "    will send KILL signal " << kill_after << " s after the timeout" << std::endl; }
         std::cerr << std::endl;
