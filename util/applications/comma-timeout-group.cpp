@@ -143,6 +143,23 @@ void usage( bool )
     exit( 0 );
 }
 
+// many values are used in the signal handler, no way to pass via arguments, hence, global
+// the rest just moved here to keep all in one place
+sig_atomic_t timed_out = 0;
+int signal_to_use = SIGTERM;  // same default as kill and timeout commands
+int child_pid = 0;
+bool verbose = false;
+bool verbose_signal_handler = false;
+bool preserve_status = false;
+double timeout = 0.0;
+double kill_after = 0.0;
+#ifdef HAVE_PROCPS_DEV
+bool wait_for_process_group = false;
+const bool can_wait_for_process_group = true;
+#else
+const bool can_wait_for_process_group = false;
+#endif
+
 double seconds_from_string( const std::string& s, bool allow_forever = false )
 {
     struct impl_ {
@@ -283,23 +300,6 @@ void set_alarm( double duration )
         COMMA_THROW( comma::exception, "cannot set timer" );
     }
 }
-
-// many values are used in the handler, no way to pass via arguments, hence, global
-// the rest just moved here to keep all in one place
-sig_atomic_t timed_out = 0;
-int signal_to_use = SIGTERM;  // same default as kill and timeout commands
-int child_pid = 0;
-bool verbose = false;
-bool verbose_signal_handler = false;
-bool preserve_status = false;
-double timeout = 0.0;
-double kill_after = 0.0;
-#ifdef HAVE_PROCPS_DEV
-bool wait_for_process_group = false;
-const bool can_wait_for_process_group = true;
-#else
-const bool can_wait_for_process_group = false;
-#endif
 
 void signal_handler( int received_signal )
 {
