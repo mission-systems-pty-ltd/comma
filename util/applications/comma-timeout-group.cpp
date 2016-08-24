@@ -467,9 +467,11 @@ int main( int ac, char** av ) try
         pid_t outcome = waitpid( child_pid, &status, 0 );
         if ( outcome < 0 ) { COMMA_THROW( comma::exception, "waitpid failed, status " << outcome ); }
     } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+    if ( verbose ) { std::cerr << "comma-timeout-group: out of waitpid call" << std::endl; }
 
 #ifdef HAVE_PROCPS_DEV
     if ( wait_for_process_group ) {
+        if ( verbose ) { std::cerr << "comma-timeout-group: parse the process tree waiting for all processes in the group to finish" << std::endl; }
         int count = parse_process_tree_until_empty( verbose );
         if ( count < 0 ) { COMMA_THROW( comma::exception, "expected at least one process in the group (at least itself), got none" ); }
     }
