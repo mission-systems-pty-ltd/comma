@@ -94,7 +94,7 @@ void usage( bool )
         "\n        this option does nothing if procps support is built in"
         "\n    --wait-for-process-group-delay=value, when waiting for all processes in the group to finish, a delay"
         "\n        is inserted between each parsing of the process tree; the value in microseconds is passed to"
-        "\n        usleep (2), default is 10000 (0.01 s); note that low delay values make the program more"
+        "\n        usleep (2), default is 100000 (0.1 s); note that low delay values make the program more"
         "\n        responsive at the cost of higher CPU load when parsing the process tree"
 #ifndef HAVE_PROCPS_DEV
         "\n        WARNING: your version of comma-timeout-group is built without procps support, this option"
@@ -164,7 +164,7 @@ double kill_after = 0.0;
 #ifdef HAVE_PROCPS_DEV
 bool wait_for_process_group = false;
 const bool can_wait_for_process_group = true;
-unsigned int wait_for_process_group_delay = 10000;
+unsigned int wait_for_process_group_delay = 100000;
 #else
 const bool can_wait_for_process_group = false;
 #endif
