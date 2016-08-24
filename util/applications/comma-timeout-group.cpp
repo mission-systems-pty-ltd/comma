@@ -372,7 +372,9 @@ int main( int ac, char** av ) try
         if ( all_options.exists( "-h,--help" ) ) { usage( true ); }
         if ( all_options.exists( "--list-known-signals" ) ) { return sig2str::list_all(); }
         if ( all_options.exists( "--can-wait-for-process-group" ) ) { return can_wait_group(); }
-        COMMA_THROW( comma::exception, "please specify timeout and command to run ( non_options["<<non_options.size()<<"]: "<<(non_options.size()?non_options[0]:std::string())<<"; all_options: "<<all_options.string()<<")" );
+        std::string timeout = non_options.size() > 0 ? non_options[0] : std::string();
+        std::string command = non_options.size() > 1 ? non_options[1] : std::string();
+        COMMA_THROW( comma::exception, "please specify timeout and command to run (timeout: '" << timeout << "', command-to-run: '" << command << "', all command line: " << all_options.string() << ")" );
     }
 
     // split the command line into two: comma-timeout-group itself and the command-to-run
