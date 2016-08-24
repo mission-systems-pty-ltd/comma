@@ -272,7 +272,7 @@ int parse_process_tree( bool verbose = false )
         if ( proc_info.pgrp == ownpid ) {
             if ( first && verbose ) { std::cerr << "extant processes in group " << ownpid << std::endl; first = 0; }
             ++count;
-            if ( verbose ) { std::cerr << proc_info.cmd << ":\t" << proc_info.tid << "\t" << proc_info.pgrp << "\t" << proc_info.state << "\t" << proc_info.start_time << std::endl; }
+            if ( verbose ) { std::cerr << "    " << proc_info.cmd << ":\t" << proc_info.tid << "\t" << proc_info.pgrp << "\t" << proc_info.state << "\t" << proc_info.start_time << std::endl; }
         }
     }
     closeproc(proc);
@@ -435,7 +435,7 @@ int main( int ac, char** av ) try
         std::cerr << "    will time-out this command after " << timeout << " s" << std::endl;
         std::cerr << "    will use signal " << signal_to_use << " to interrupt the command by timeout" << std::endl;
         std::cerr << "    exit status of command: " << ( preserve_status ? "" : "NOT " ) << "preserved" << std::endl;
-        if ( verbose_signal_handler ) { std::cerr << "   output messages when sending signals" << std::endl; }
+        if ( verbose_signal_handler ) { std::cerr << "    output messages when sending signals" << std::endl; }
 #ifdef HAVE_PROCPS_DEV
         if ( wait_for_process_group ) {
             std::cerr << "    will wait" << ( kill_after < std::numeric_limits< double >::max() ? "" : " forever" ) << " for all processes in the group to finish" << std::endl;
@@ -485,7 +485,7 @@ int main( int ac, char** av ) try
         pid_t outcome = waitpid( child_pid, &status, 0 );
         if ( outcome < 0 ) { COMMA_THROW( comma::exception, "waitpid failed, status " << outcome ); }
     } while (!WIFEXITED(status) && !WIFSIGNALED(status));
-    if ( verbose ) { std::cerr << "comma-timeout-group: out of waitpid call" << std::endl; }
+    if ( verbose ) { std::cerr << "comma-timeout-group: out of waitpid call, child process terminated" << std::endl; }
 
 #ifdef HAVE_PROCPS_DEV
     if ( wait_for_process_group ) {
