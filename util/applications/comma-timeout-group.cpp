@@ -253,7 +253,7 @@ int parse_process_tree( bool verbose = false )
     return count;
 }
 
-int parse_process_tree_until_empty( unsigned int each_wait = 10000, bool verbose = false )
+int parse_process_tree_until_empty( bool verbose = false )
 {
     int count = 0;
     while ( 1 ) {
