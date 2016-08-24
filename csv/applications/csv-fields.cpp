@@ -166,7 +166,7 @@ int main( int ac, char** av )
                 if( line.empty() ) { continue; }
                 const std::vector< std::string >& v = comma::split( line, delimiter );
                 std::string comma;
-                if ( options.exists( "--count,--size" ) ) { std::cout << v.size() << std::endl; return 0; }
+                if ( options.exists( "--count,--size" ) ) { std::cout << v.size() << std::endl; continue; }
                 for( unsigned int i = 0; i < v.size(); ++i )
                 {
                     if( v[i].empty() ) { continue; }
