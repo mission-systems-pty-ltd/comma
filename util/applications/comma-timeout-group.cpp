@@ -74,6 +74,9 @@ void usage( bool )
         "\nOptions:"
         "\n    -h,--help, print this help and exit"
         "\n    -v,--verbose, chat more"
+        "\n    --verbose-signal-handler, print messages on stderr when sending signals within signal handler;"
+        "\n        WARNING: generally output routines are not re-entrant and shall not be invoked in signal"
+        "\n        handlers; use for debugging but not in production code"
         "\n    --preserve-status, exit with the same status as <command>, even when the command timed out"
         "\n    --foreground, not supported"
         "\n    -k, --kill-after=duration, if the command is still running this long after the initial"
@@ -287,6 +290,7 @@ sig_atomic_t timed_out = 0;
 int signal_to_use = SIGTERM;  // same default as kill and timeout commands
 int child_pid = 0;
 bool verbose = false;
+bool verbose_signal_handler = false;
 bool preserve_status = false;
 double timeout = 0.0;
 double kill_after = 0.0;
@@ -297,9 +301,6 @@ const bool can_wait_for_process_group = true;
 const bool can_wait_for_process_group = false;
 #endif
 
-// generally would be nice to give more information but very few functions shall be used inside handlers
-// see man 7 signal; can define to 1 for debugging but not for production
-#define SIGNAL_HANDLER_VERBOSE 0
 void signal_handler( int received_signal )
 {
     if ( !child_pid ) _exit( 128 + received_signal ); // per shell rules
@@ -314,15 +315,13 @@ void signal_handler( int received_signal )
         kill_after = 0.0;
     }
 
-#if ( SIGNAL_HANDLER_VERBOSE )
-    if ( verbose ) { std::cerr << "comma-timeout-group: send signal " << signal_to_send << " to PID " << child_pid << std::endl; }
-#endif
+    // generally would be nice to give more information but very few functions shall be used inside handlers
+    // see man 7 signal; can define to 1 for debugging but not for production
+    if ( verbose_signal_handler ) { fprintf( stderr, "comma-timeout-group: send signal %d to PID %d\n", signal_to_send, child_pid ); }
     kill( child_pid, signal_to_send ); // child could have created its own group
     // unset first, do not go into a loop
     signal( signal_to_send, SIG_IGN );
-#if ( SIGNAL_HANDLER_VERBOSE )
-    if ( verbose ) { fprintf( stderr, "comma-timeout-group: send signal %d to own group %d\n", signal_to_send, getpid() ); }
-#endif
+    if ( verbose_signal_handler ) { fprintf( stderr, "comma-timeout-group: send signal %d to own group %d\n", signal_to_send, getpid() ); }
     kill( 0, signal_to_send );
 }
 
@@ -365,7 +364,7 @@ int main( int ac, char** av ) try
 
     // first non-option must be the timeout duration, and second the command to run
     comma::command_line_options all_options( ac, av );
-    std::vector< std::string > non_options = all_options.unnamed( "-h,--help,-v,--verbose,--list-known-signals,--foreground,--preserve-status,--enforce-group,--can-wait-for-process-group", "-s,--signal,-k,--kill-after,--wait-for-process-group" );
+    std::vector< std::string > non_options = all_options.unnamed( "-h,--help,-v,--verbose,--verbose-signal-handler,--list-known-signals,--foreground,--preserve-status,--enforce-group,--can-wait-for-process-group", "-s,--signal,-k,--kill-after,--wait-for-process-group" );
     if ( non_options.size() < 2 )
     {
         // user did not give all the arguments; OK in special cases
@@ -388,6 +387,7 @@ int main( int ac, char** av ) try
     if ( options.exists( "--foreground" ) ) { COMMA_THROW( comma::exception, "--foreground: unsupported option of the original timeout" ); }
 
     verbose = options.exists( "-v,--verbose" );
+    verbose_signal_handler = options.exists( "--verbose-signal-handler" );
 
     if ( options.exists( "-s,--signal" ) ) { signal_to_use = sig2str::from_string( options.values< std::string >( "-s,--signal" ).back() ); }
 
@@ -418,6 +418,7 @@ int main( int ac, char** av ) try
         std::cerr << "    will time-out this command after " << timeout << " s" << std::endl;
         std::cerr << "    will use signal " << signal_to_use << " to interrupt the command by timeout" << std::endl;
         std::cerr << "    exit status of command: " << ( preserve_status ? "" : "NOT " ) << "preserved" << std::endl;
+        if ( verbose_signal_handler ) { std::cerr << "   output messages when sending signals" << std::endl; }
 #ifdef HAVE_PROCPS_DEV
         if ( wait_for_process_group ) { std::cerr << "    will wait" << ( kill_after < std::numeric_limits< double >::max() ? "" : " forever" ) << " for all processes in the group to finish" << std::endl; }
 #endif
