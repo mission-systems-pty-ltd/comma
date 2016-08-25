@@ -419,8 +419,9 @@ int main( int ac, char** av ) try
 
     if ( options.exists( "-k,--kill-after" ) ) { kill_after = seconds_from_string( options.values< std::string >( "-k,--kill-after" ).back() ); }
     if ( options.exists( "--wait-for-process-group-delay" ) ) {
+#ifdef HAVE_PROCPS_DEV
         wait_for_process_group_delay = options.value< unsigned int >( "--wait-for-process-group-delay" );
-#ifndef HAVE_PROCPS_DEV
+#else
         if ( verbose ) { std::cerr << "comma-timeout-group: built without procps support, '--wait-for-process-group-delay' is ignored" << std::endl; }
 #endif
     }
