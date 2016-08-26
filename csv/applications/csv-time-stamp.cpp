@@ -69,11 +69,18 @@ int main( int ac, char** av )
     {
         comma::command_line_options options( ac, av );
         if( options.exists( "--help" ) || options.exists( "-h" ) ) { usage(); }
+
         bool local = options.exists( "--local" );
-        
+        char delimiter = options.value( "--delimiter,-d", ',' );
+
+        boost::optional< comma::csv::format > format;
+        if( options.exists( "--binary,-b" ))
+        {
+            format = comma::csv::format( options.value< std::string >( "--binary,-b" ));
+        }
         bool binary = options.exists( "--binary,-b,--size" );
         std::size_t size = options.value( "--size", 0 );
-        char delimiter = options.value( "--delimiter,-d", ',' );
+        if( binary && size == 0 ) { size = format->size(); }
 
         #ifdef WIN32
         if( binary )
