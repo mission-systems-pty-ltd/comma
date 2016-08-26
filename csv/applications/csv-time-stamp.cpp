@@ -52,11 +52,16 @@ static void usage()
     std::cerr << std::endl;
     std::cerr << "usage: cat a.csv | csv-time-stamp [<options>]" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "<options>" << std::endl;
+    std::cerr << "options:" << std::endl;
     std::cerr << "    --binary,-b=<format>: binary format" << std::endl;
     std::cerr << "    --size=<size>: binary input of size" << std::endl;
     std::cerr << "    --delimiter,-d <delimiter>: ascii only; default ','" << std::endl;
     std::cerr << "    --local: if present, local time; default: utc" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "examples:" << std::endl;
+    std::cerr << "    cat input.csv | csv-time-stamp" << std::endl;
+    std::cerr << "    cat input.bin | csv-time-stamp --binary=3ui" << std::endl;
+    std::cerr << "    cat input.bin | csv-time-stamp --size=12" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
