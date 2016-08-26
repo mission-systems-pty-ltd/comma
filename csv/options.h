@@ -98,9 +98,6 @@ class options
         /// return true, if fields have some given fields (convenience function, slow)
         /// @param field comma-separated fields, e.g. "x,y,z"
         bool has_some_of_fields( const std::string& fields_to_check ) const;
-        
-        /// return format string or empty string if no format specified
-        std::string format_string() const;
 
     private:
         boost::optional< csv::format > format_;

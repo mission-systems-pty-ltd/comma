@@ -47,8 +47,6 @@ void options::format( const csv::format& f ) { format_ = f; }
 
 bool options::binary() const { return static_cast< bool >( format_ ); }
 
-std::string options::format_string() const { if(format_) return format_->string(); else return ""; }
-
 namespace impl {
 
 inline static void init( comma::csv::options& csv_options, const comma::command_line_options& options, const std::string& defaultFields )
