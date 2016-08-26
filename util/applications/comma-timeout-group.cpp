@@ -74,6 +74,7 @@ void usage( bool )
         "\nOptions:"
         "\n    -h,--help, print this help and exit"
         "\n    -v,--verbose, chat more"
+        "\n    --report-timeout, run silently but print a message if a command times out"
         "\n    --verbose-signal-handler, print messages on stderr when sending signals within signal handler;"
         "\n        WARNING: generally output routines are not re-entrant and shall not be invoked in signal"
         "\n        handlers; use for debugging but not in production code"
@@ -158,6 +159,7 @@ int signal_to_use = SIGTERM;  // same default as kill and timeout commands
 int child_pid = 0;
 bool verbose = false;
 bool verbose_signal_handler = false;
+bool report_timeout = false;
 bool preserve_status = false;
 double timeout = 0.0;
 double kill_after = 0.0;
@@ -373,7 +375,7 @@ int main( int ac, char** av ) try
 
     // first non-option must be the timeout duration, and second the command to run
     comma::command_line_options all_options( ac, av );
-    std::vector< std::string > non_options = all_options.unnamed( "-h,--help,-v,--verbose,--verbose-signal-handler,--list-known-signals,--foreground,--preserve-status,--enforce-group,--can-wait-for-process-group", "-s,--signal,-k,--kill-after,--wait-for-process-group,--wait-for-process-group-delay" );
+    std::vector< std::string > non_options = all_options.unnamed( "-h,--help,-v,--verbose,--report-timeout,--verbose-signal-handler,--list-known-signals,--foreground,--preserve-status,--enforce-group,--can-wait-for-process-group", "-s,--signal,-k,--kill-after,--wait-for-process-group,--wait-for-process-group-delay" );
     if ( non_options.size() < 2 )
     {
         // user did not give all the arguments; OK in special cases
@@ -398,6 +400,7 @@ int main( int ac, char** av ) try
     if ( options.exists( "--foreground" ) ) { COMMA_THROW( comma::exception, "--foreground: unsupported option of the original timeout" ); }
 
     verbose = options.exists( "-v,--verbose" );
+    report_timeout = options.exists( "--report-timeout" ) || verbose;
     verbose_signal_handler = options.exists( "--verbose-signal-handler" );
 
     if ( options.exists( "-s,--signal" ) ) { signal_to_use = sig2str::from_string( options.values< std::string >( "-s,--signal" ).back() ); }
@@ -428,11 +431,16 @@ int main( int ac, char** av ) try
 
     timeout = seconds_from_string( non_options[0] );
 
+    // string intended not to run, just to use in error or trace messages
+    std::ostringstream oss;
+    for ( char **i = av + command_to_run_pos; i < av + ac; ++i ) { oss << " \"" << *i << "\""; };
+    std::string command_to_run_with_args = oss.str().substr(1);
+
     if ( verbose ) {
         std::cerr << "comma-timeout-group:" << std::endl;
         std::cerr << "    running as process: " << getpid() << std::endl;
         std::cerr << "    command-line: " << options.string() << std::endl;
-        std::cerr << "    will execute:"; for ( char **i = av + command_to_run_pos; i < av + ac; ++i ) { std::cerr << " \"" << *i << "\""; }; std::cerr << std::endl;
+        std::cerr << "    will execute: " << command_to_run_with_args << std::endl;
         std::cerr << "    will time-out this command after " << timeout << " s" << std::endl;
         std::cerr << "    will use signal " << signal_to_use << " to interrupt the command by timeout" << std::endl;
         std::cerr << "    exit status of command: " << ( preserve_status ? "" : "NOT " ) << "preserved" << std::endl;
@@ -498,7 +506,7 @@ int main( int ac, char** av ) try
 
     if ( timed_out )
     {
-        if ( verbose ) { std::cerr << "comma-timeout-group: application timed-out" << std::endl; }
+        if ( report_timeout ) { std::cerr << "comma-timeout-group: command " << command_to_run_with_args << " timed-out" << std::endl; }
         if ( preserve_status ) {
             if ( WIFEXITED( status ) ) { return WEXITSTATUS(status); }
             if ( WIFSIGNALED( status ) ) { return 128 + WTERMSIG( status ); } // per shell rules
