@@ -1,0 +1,4 @@
+options="--size=12"
+input="1,2,3\n4,5,6"
+fields=a,b,c
+format=3ui

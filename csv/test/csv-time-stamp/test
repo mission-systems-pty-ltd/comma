@@ -1,0 +1,25 @@
+#!/bin/bash
+
+source $( type -p comma-application-util )
+
+comma_path_value_to_var < <( cat )
+
+now=$( date -u +%Y%m%dT%H%M%S.%N | csv-time --from iso --to seconds )
+
+input_fn=cat
+output_fn=cat
+if [[ $options =~ --binary|--size ]]; then
+    input_fn="csv-to-bin $format"
+    output_fn="csv-from-bin t,$format"
+fi
+
+# put a small delay between the outputting of each line,
+# so the timestamps are different
+
+echo -e $input | while read line; do echo $line; sleep 0.01; done \
+    | $input_fn \
+    | csv-time-stamp $options \
+    | $output_fn | csv-time --from iso --to seconds \
+    | csv-eval --fields=t "d=t-$now" \
+    | name-value-from-csv --prefix=output --line-number --fields=t,$fields,d \
+    | csv-quote --unquote --delimiter='='
