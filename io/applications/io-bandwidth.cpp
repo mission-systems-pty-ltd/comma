@@ -66,7 +66,7 @@ void usage( bool verbose = false )
     std::cerr << "options" << std::endl;
     std::cerr << "    --window,-w=[<n>]: sliding window; default=" << default_window << "s" << std::endl;
     std::cerr << "    --update,-u=[<n>]: update interval; default=" << default_update_interval << "s" << std::endl;
-    std::cerr << "    --resolution,-r=[<n>]; sliding window resolution; default=" << default_window_resolution << "s" << std::endl;
+    std::cerr << "    --resolution,-r=[<n>]: sliding window resolution; default=" << default_window_resolution << "s" << std::endl;
     std::cerr << "    --output-fields: list output fields and exit" << std::endl;
     std::cerr << "    --delimiter,-d <delimiter>: default ','" << std::endl;
     std::cerr << std::endl;
