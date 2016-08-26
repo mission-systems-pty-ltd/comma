@@ -13,5 +13,5 @@ function generate_data()
 
 { generate_data 1000 5; generate_data 2000 6; } \
     | io-bandwidth $args 2>&1 > /dev/null \
-    | name-value-from-csv $( io-bandwidth --output-fields ) --line-number --prefix output \
+    | name-value-from-csv $( io-bandwidth --output-fields $args ) --line-number --prefix output \
     | csv-quote -d = --unquote

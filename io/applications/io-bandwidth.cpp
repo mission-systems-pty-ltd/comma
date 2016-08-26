@@ -31,12 +31,14 @@
 
 #include <iostream>
 #include <numeric>
+#include <boost/algorithm/string/replace.hpp>
 #include <boost/array.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/thread.hpp>
 #include "../../application/command_line_options.h"
 #include "../../application/contact_info.h"
 #include "../../application/signal_flag.h"
+#include "../../csv/format.h"
 #include "../../io/select.h"
 #include "../../io/stream.h"
 
@@ -44,11 +46,14 @@ static const double default_window = 10.0f;
 static const double default_window_resolution = 0.1f;
 static const double default_update_interval = 1.0f;
 static const char default_delimiter = ',';
+static const std::string standard_output_fields="timestamp,received_bytes,bandwidth/all_time,bandwidth/window";
+static const std::string extended_output_fields="timestamp,received_bytes,bandwidth/all_time,bandwidth/window,records_per_second/all_time,records_per_second/window";
 
 static void bash_completion( unsigned const ac, char const * const * av )
 {
     static const char* completion_options =
         " --help -h"
+        " --binary -b"
         " --window -w --update -u --resolution -r"
         " --delimiter -d --output-fields"
         ;
@@ -64,15 +69,25 @@ void usage( bool verbose = false )
     std::cerr << "usage: io-bandwidth [<options>]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
+    std::cerr << "    --binary,-b=[<format>]: specify format of input data" << std::endl;
     std::cerr << "    --window,-w=[<n>]: sliding window; default=" << default_window << "s" << std::endl;
     std::cerr << "    --update,-u=[<n>]: update interval; default=" << default_update_interval << "s" << std::endl;
     std::cerr << "    --resolution,-r=[<n>]: sliding window resolution; default=" << default_window_resolution << "s" << std::endl;
     std::cerr << "    --output-fields: list output fields and exit" << std::endl;
     std::cerr << "    --delimiter,-d <delimiter>: default ','" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "The sliding window consists of a number of buckets. The width of each bucket" << std::endl;
-    std::cerr << "is given by --resolution, and there are sufficient buckets to encompass the" << std::endl;
-    std::cerr << "requested --window." << std::endl;
+    std::cerr << "    The sliding window consists of a number of buckets. The width of each" << std::endl;
+    std::cerr << "    bucket is given by --resolution, and there are sufficient buckets to" << std::endl;
+    std::cerr << "    encompass the requested --window." << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "output" << std::endl;
+    std::cerr << "    The standard output fields are:" << std::endl;
+    std::cerr << "        " << boost::replace_all_copy( standard_output_fields, ",", "\n        " ) << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    But if the --binary option is used then they are extended to:" << std::endl;
+    std::cerr << "        " << boost::replace_all_copy( extended_output_fields, ",", "\n        " ) << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    Use --output-fields to see these fields programatically" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << std::endl;
@@ -103,7 +118,18 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av, usage );
         if( options.exists( "--bash-completion" ) ) bash_completion( ac, av );
 
-        if( options.exists( "--output-fields" )) { std::cout << "timestamp,received_bytes,bandwidth/all_time,bandwidth/window" << std::endl; return 0; }
+        if( options.exists( "--output-fields" ))
+        {
+            if( options.exists( "--binary,-b" )) { std::cout << extended_output_fields << std::endl; }
+            else { std::cout << standard_output_fields << std::endl; }
+            return 0;
+        }
+
+        boost::optional< std::size_t > record_size;
+        if( options.exists( "--binary,-b" ))
+        {
+            record_size = comma::csv::format( options.value< std::string >( "--binary,-b" )).size();
+        }
 
         boost::posix_time::time_duration update_interval = boost::posix_time::microseconds( options.value< double >( "--update,-u", default_update_interval ) * 1000000 );
         double window = options.value< double >( "--window,-w", default_window );
@@ -153,12 +179,24 @@ int main( int ac, char** av )
 
             if( now >= next_update )
             {
-                std::cerr << boost::posix_time::to_iso_string( now ) << delimiter
-                          << total_bytes << delimiter
-                          << (double)total_bytes / ( double( ( now - start_time ).total_milliseconds() ) / 1000.0f ) << delimiter
-                          << (double)std::accumulate( window_buckets.begin(), window_buckets.end(), 0.0f )
-                                 / window_buckets.size() / bucket_width
-                          << std::endl;
+                double elapsed_time = double( ( now - start_time ).total_milliseconds() ) / 1000.0f;
+                double bandwidth = (double)total_bytes / elapsed_time;
+                double window_bandwidth = (double)std::accumulate( window_buckets.begin()
+                                                                 , window_buckets.end()
+                                                                 , 0.0f )
+                                                  / window_buckets.size() / bucket_width;
+
+                std::cerr << boost::posix_time::to_iso_string( now )
+                          << delimiter << total_bytes
+                          << delimiter << bandwidth
+                          << delimiter << window_bandwidth;
+                if( record_size )
+                {
+                    std::cerr << delimiter << bandwidth / *record_size
+                              << delimiter << window_bandwidth / *record_size;
+                }
+                std::cerr << std::endl;
+
                 next_update += update_interval;
             }
         }
