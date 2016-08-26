@@ -1,8 +1,8 @@
-output[0]/bandwidth/average=1000 +/- 5%
-output[1]/bandwidth/average=1000 +/- 5%
-output[2]/bandwidth/average=1166 +/- 5%
-output[3]/bandwidth/average=1375 +/- 5%
-output[4]/bandwidth/average=1500 +/- 5%
+output[0]/bandwidth/all_time=1000 +/- 5%
+output[1]/bandwidth/all_time=1000 +/- 5%
+output[2]/bandwidth/all_time=1166 +/- 5%
+output[3]/bandwidth/all_time=1375 +/- 5%
+output[4]/bandwidth/all_time=1500 +/- 5%
 
 output[0]/bandwidth/window=1000 +/- 5%
 output[1]/bandwidth/window=1000 +/- 5%

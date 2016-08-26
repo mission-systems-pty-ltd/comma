@@ -103,7 +103,7 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av, usage );
         if( options.exists( "--bash-completion" ) ) bash_completion( ac, av );
 
-        if( options.exists( "--output-fields" )) { std::cout << "timestamp,received_bytes,bandwidth/average,bandwidth/window" << std::endl; return 0; }
+        if( options.exists( "--output-fields" )) { std::cout << "timestamp,received_bytes,bandwidth/all_time,bandwidth/window" << std::endl; return 0; }
 
         boost::posix_time::time_duration update_interval = boost::posix_time::microseconds( options.value< double >( "--update,-u", default_update_interval ) * 1000000 );
         double window = options.value< double >( "--window,-w", default_window );
