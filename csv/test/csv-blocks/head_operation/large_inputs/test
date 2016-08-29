@@ -5,7 +5,6 @@ dir=output
 
 # Size is 4 + 4 + 4 + 4 + 4 = 20 bytes
 format='s[4],ui,ui,ui,ui'
-line='aaaa,1,0'
 
 inputs_csv=$dir/inputs.csv
 inputs_bin=$dir/inputs.bin
@@ -26,14 +25,21 @@ yes "ffff,1,2,1" | head -n3500 | csv-blocks index --fields=,,block --reverse >>$
 csv-to-bin "$format" <$inputs_csv >$inputs_bin
 
 for i in {0..10} ; do
+    lines=$( csv-blocks head --fields=,,,,index  --binary $format | wc -c )
+    echo binary\[0\]/call\[$i\]/bytes=$lines
+    (( lines == 0 )) && break
+done <$inputs_bin
+
+for i in {0..10} ; do
     lines=$( csv-blocks head --fields=,,,,index | wc -l )
     echo ascii\[0\]/call\[$i\]/lines=$lines
     (( lines == 0 )) && break
 done <$inputs_csv
 
+# Now read two blocks at a time
 for i in {0..10} ; do
-    lines=$( csv-blocks head --fields=,,,,index  --binary $format | csv-from-bin $format | wc -l )
-    echo binary\[0\]/call\[$i\]/lines=$lines
+    lines=$( csv-blocks head --fields=,,,,index -n=2  --binary $format | wc -c )
+    echo binary\[1\]/call\[$i\]/bytes=$lines
     (( lines == 0 )) && break
 done <$inputs_bin
 
@@ -42,9 +48,3 @@ for i in {0..10} ; do
     echo ascii\[1\]/call\[$i\]/lines=$lines
     (( lines == 0 )) && break
 done <$inputs_csv
-
-for i in {0..10} ; do
-    lines=$( csv-blocks head --fields=,,,,index -n=2  --binary $format | csv-from-bin $format | wc -l )
-    echo binary\[1\]/call\[$i\]/lines=$lines
-    (( lines == 0 )) && break
-done <$inputs_bin

@@ -1,15 +1,16 @@
 # This test focus on testing binary data where one block exceed the internal binary buffer of 65kb
 
 # The results of reading one block at a time
-# The number of lines is equal to the number of lines generated in test script
-binary[0]/call[0]/lines=7500
-binary[0]/call[1]/lines=3500
-binary[0]/call[2]/lines=1500
-binary[0]/call[3]/lines=3500
-binary[0]/call[4]/lines=7500
-binary[0]/call[5]/lines=3500
-binary[0]/call[6]/lines=0
+# The number of bytes equals the number of bytes generated in test script
+binary[0]/call[0]/bytes=150000
+binary[0]/call[1]/bytes=70000
+binary[0]/call[2]/bytes=30000
+binary[0]/call[3]/bytes=70000
+binary[0]/call[4]/bytes=150000
+binary[0]/call[5]/bytes=70000
+binary[0]/call[6]/bytes=0
 # Might as well test ascii mode
+# The number of lines is equal to the number of lines generated in test script
 ascii[0]/call[0]/lines=7500
 ascii[0]/call[1]/lines=3500
 ascii[0]/call[2]/lines=1500
@@ -23,7 +24,7 @@ ascii[1]/call[0]/lines=11000
 ascii[1]/call[1]/lines=5000
 ascii[1]/call[2]/lines=11000
 ascii[1]/call[3]/lines=0
-binary[1]/call[0]/lines=11000
-binary[1]/call[1]/lines=5000
-binary[1]/call[2]/lines=11000
-binary[1]/call[3]/lines=0
+binary[1]/call[0]/bytes=220000
+binary[1]/call[1]/bytes=100000
+binary[1]/call[2]/bytes=220000
+binary[1]/call[3]/bytes=0
