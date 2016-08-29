@@ -9,14 +9,14 @@ now=$( date -u +%Y%m%dT%H%M%S.%N | csv-time --from iso --to seconds )
 input_fn=cat
 output_fn=cat
 if [[ $options =~ --binary|--size ]]; then
-    input_fn="csv-to-bin $format"
+    input_fn="csv-to-bin $format --flush"
     output_fn="csv-from-bin t,$format"
 fi
 
 # put a small delay between the outputting of each line,
 # so the timestamps are different
 
-echo -e $input | while read line; do echo $line; sleep 0.01; done \
+echo -e $input | while read line; do echo $line; sleep 0.1; done \
     | $input_fn \
     | csv-time-stamp $options \
     | $output_fn | csv-time --from iso --to seconds \
