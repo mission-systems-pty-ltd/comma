@@ -1,0 +1,46 @@
+#!/bin/bash
+
+dir=output
+[[ -d "$dir"  ]] || mkdir $dir
+
+# Size is 4 + 4 + 4 + 4 + 4 = 20 bytes
+format='s[4],ui,ui,ui,ui'
+line='aaaa,1,0'
+
+inputs_csv=$dir/inputs.csv
+inputs_bin=$dir/inputs.bin
+
+# Making a block of 150000 bytes, which is greater than 65kb * 2
+yes "aaaa,1,2,0" | head -n7500 | csv-blocks index --fields=,,block --reverse >$inputs_csv
+# Making a block of 70000 bytes, which is greater than 65kb
+yes "bbbb,1,2,1" | head -n3500 | csv-blocks index --fields=,,block --reverse >>$inputs_csv
+# Making a block of 30000 bytes, which is smaller than 65kb
+yes "cccc,1,2,2" | head -n1500 | csv-blocks index --fields=,,block --reverse >>$inputs_csv
+# Making a block of 70000 bytes, which is greater than 65kb
+yes "dddd,1,2,3" | head -n3500 | csv-blocks index --fields=,,block --reverse >>$inputs_csv
+
+csv-to-bin "$format" <$inputs_csv >$inputs_bin
+
+for i in {0..4} ; do
+    lines=$( csv-blocks head --fields=,,,,index | wc -l )
+    echo ascii\[0\]/call\[$i\]/lines=$lines
+done <$inputs_csv
+
+for i in {0..4} ; do
+    lines=$( csv-blocks head --fields=,,,,index  --binary $format | csv-from-bin $format | wc -l )
+    echo binary\[0\]/call\[$i\]/lines=$lines
+done <$inputs_bin
+
+for i in {0..4} ; do
+    lines=$( csv-blocks head --fields=,,,,index -n=2 | wc -l )
+    echo ascii\[1\]/call\[$i\]/lines=$lines
+done <$inputs_csv
+
+for i in {0..4} ; do
+    lines=$( csv-blocks head --fields=,,,,index -n=2  --binary $format | csv-from-bin $format | wc -l )
+    echo binary\[1\]/call\[$i\]/lines=$lines
+done <$inputs_bin
+
+echo status=$?
+
+
