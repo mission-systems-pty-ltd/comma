@@ -215,7 +215,7 @@ class binary_output_stream : public boost::noncopyable
 {
     public:
         /// constructor
-        binary_output_stream( std::ostream& os, const std::string& format = "", const std::string& column_names = "", bool full_path_as_name = false, const S& sample = S(), bool flush = false );
+        binary_output_stream( std::ostream& os, const std::string& format = "", const std::string& column_names = "", bool full_path_as_name = false, bool flush = false, const S& sample = S() );
 
         /// constructor from options
         binary_output_stream( std::ostream& os, const options& o, const S& sample = S() );
@@ -319,7 +319,7 @@ class output_stream : public boost::noncopyable
         /// construct from csv options
         output_stream( std::ostream& os, const csv::options& o, const S& sample = S() );
         
-        output_stream( std::ostream& os, bool binary, bool full_xpath = false, const S& sample = S(), bool flush = false );
+        output_stream( std::ostream& os, bool binary, bool full_xpath = false, bool flush = false, const S& sample = S() );
 
         /// write
         void write( const S& s ) { if( ascii_ ) { ascii_->write( s ); } else { binary_->write( s ); } }
@@ -580,7 +580,7 @@ inline const S* binary_input_stream< S >::read()
 }
 
 template < typename S >
-inline binary_output_stream< S >::binary_output_stream( std::ostream& os, const std::string& format, const std::string& column_names, bool full_path_as_name, const S& sample, bool flush )
+inline binary_output_stream< S >::binary_output_stream( std::ostream& os, const std::string& format, const std::string& column_names, bool full_path_as_name, bool flush, const S& sample )
     : os_( os )
     , binary_( format, column_names, full_path_as_name, sample )
     //, size_( binary_.format().size() * ( 4098 / binary_.format().size() ) ) // quick and dirty
@@ -676,9 +676,9 @@ inline output_stream< S >::output_stream( std::ostream& os, const csv::options& 
 }
 
 template < typename S >
-inline output_stream< S >::output_stream( std::ostream& os, bool binary, bool full_xpath, const S& sample, bool flush )
+inline output_stream< S >::output_stream( std::ostream& os, bool binary, bool full_xpath, bool flush, const S& sample )
 {
-    if( binary ) { binary_.reset( new binary_output_stream< S >( os, "", "", full_xpath, sample, flush ) ); }
+    if( binary ) { binary_.reset( new binary_output_stream< S >( os, "", "", full_xpath, flush, sample ) ); }
     else { ascii_.reset( new ascii_output_stream< S >( os, sample ) ); }
 }
 
