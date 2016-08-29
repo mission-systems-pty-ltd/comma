@@ -314,6 +314,7 @@ static void read_and_write_binary_record()
     comma::uint32 records_read = 0;
     while( records_read < records_to_read  && !::feof( stdin ) && !::ferror(stdin) )
     {
+        if( read_per_loop > records_to_read  - records_read ) { read_per_loop = records_to_read  - records_read; }
         comma::uint32 read_chunk_size = extended_buffer.read_binary_records( read_per_loop, strict);
         std::cout.write( extended_buffer.buffer, read_chunk_size );
         records_read += read_per_loop;
