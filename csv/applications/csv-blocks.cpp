@@ -159,7 +159,7 @@ static void usage( bool more )
     std::cerr << "            unique ascending block number are assigned based on two id fields" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    index" << std::endl;
-    std::cerr << "        cat $block_csv | csv-blocks index --fields=block | csv-blocks index --fields=,,,,block" << std::endl;
+    std::cerr << "        cat $block_csv | csv-blocks group --fields=id | csv-blocks index --fields=,,,,block" << std::endl;
     std::cerr << "            Append will add block field at the end, 'index' will append how many lines/records are left in the block" << std::endl;
     std::cerr << "            See 'head operation' below" << std::endl;
     std::cerr << std::endl;
