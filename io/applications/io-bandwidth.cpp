@@ -31,24 +31,30 @@
 
 #include <iostream>
 #include <numeric>
+#include <boost/algorithm/string/replace.hpp>
 #include <boost/array.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/thread.hpp>
 #include "../../application/command_line_options.h"
 #include "../../application/contact_info.h"
 #include "../../application/signal_flag.h"
+#include "../../csv/format.h"
 #include "../../io/select.h"
 #include "../../io/stream.h"
 
-static unsigned int default_window = 10;
-static unsigned int default_update_interval = 1;
-static char default_delimiter = ',';
+static const double default_window = 10.0f;
+static const double default_window_resolution = 0.1f;
+static const double default_update_interval = 1.0f;
+static const char default_delimiter = ',';
+static const std::string standard_output_fields="timestamp,received_bytes,bandwidth/all_time,bandwidth/window";
+static const std::string extended_output_fields="timestamp,received_bytes,bandwidth/all_time,bandwidth/window,records_per_second/all_time,records_per_second/window";
 
 static void bash_completion( unsigned const ac, char const * const * av )
 {
     static const char* completion_options =
         " --help -h"
-        " --window -w --update -u"
+        " --binary -b"
+        " --window -w --update -u --resolution -r"
         " --delimiter -d --output-fields"
         ;
     std::cout << completion_options << std::endl;
@@ -63,17 +69,34 @@ void usage( bool verbose = false )
     std::cerr << "usage: io-bandwidth [<options>]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
+    std::cerr << "    --binary,-b=[<format>]: specify format of input data" << std::endl;
     std::cerr << "    --window,-w=[<n>]: sliding window; default=" << default_window << "s" << std::endl;
     std::cerr << "    --update,-u=[<n>]: update interval; default=" << default_update_interval << "s" << std::endl;
+    std::cerr << "    --resolution,-r=[<n>]: sliding window resolution; default=" << default_window_resolution << "s" << std::endl;
     std::cerr << "    --output-fields: list output fields and exit" << std::endl;
     std::cerr << "    --delimiter,-d <delimiter>: default ','" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "example" << std::endl;
+    std::cerr << "    The sliding window consists of a number of buckets. The width of each" << std::endl;
+    std::cerr << "    bucket is given by --resolution, and there are sufficient buckets to" << std::endl;
+    std::cerr << "    encompass the requested --window." << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "output" << std::endl;
+    std::cerr << "    The standard output fields are:" << std::endl;
+    std::cerr << "        " << boost::replace_all_copy( standard_output_fields, ",", "\n        " ) << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    But if the --binary option is used then they are extended to:" << std::endl;
+    std::cerr << "        " << boost::replace_all_copy( extended_output_fields, ",", "\n        " ) << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    Use --output-fields to see these fields programatically" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "examples" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "    basics:" << std::endl;
     std::cerr << std::endl;
     std::cerr << "        while : ; do echo 1; sleep 0.1; done | io-bandwidth > /dev/null" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    mocking up a more complex input stream: pass data to hexdump and publish bandwidth stats on port 8888 ---" << std::endl;
+    std::cerr << "    mocking up a more complex input stream:" << std::endl;
+    std::cerr << "    pass data to hexdump and publish bandwidth stats on port 8888" << std::endl;
     std::cerr << std::endl;
     std::cerr << "        while : ; do" << std::endl;
     std::cerr << "            dd if=/dev/urandom bs=100 count=1 2> /dev/null; sleep 0.1" << std::endl;
@@ -85,12 +108,6 @@ void usage( bool verbose = false )
 }
 
 static const boost::posix_time::time_duration wait_interval = boost::posix_time::milliseconds( 10 );
-static const boost::posix_time::time_duration bucket_width = boost::posix_time::seconds( 1 );
-
-// todo
-// - update_interval: make it floating point (in seconds)
-// - window: make it floating point (in seconds)
-// - bucket_width: make it floating point (in seconds)
 
 // todo: optionally use exponential moving average
 
@@ -101,10 +118,23 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av, usage );
         if( options.exists( "--bash-completion" ) ) bash_completion( ac, av );
 
-        if( options.exists( "--output-fields" )) { std::cout << "timestamp,received_bytes,bandwidth/average,bandwidth/window" << std::endl; return 0; }
+        if( options.exists( "--output-fields" ))
+        {
+            if( options.exists( "--binary,-b" )) { std::cout << extended_output_fields << std::endl; }
+            else { std::cout << standard_output_fields << std::endl; }
+            return 0;
+        }
 
-        boost::posix_time::time_duration update_interval = boost::posix_time::microseconds( options.value< unsigned int >( "--update,-u", default_update_interval ) * 1000000 );
-        unsigned int window = options.value< unsigned int >( "--window,-w", default_window );
+        boost::optional< std::size_t > record_size;
+        if( options.exists( "--binary,-b" ))
+        {
+            record_size = comma::csv::format( options.value< std::string >( "--binary,-b" )).size();
+        }
+
+        boost::posix_time::time_duration update_interval = boost::posix_time::microseconds( options.value< double >( "--update,-u", default_update_interval ) * 1000000 );
+        double window = options.value< double >( "--window,-w", default_window );
+        double bucket_width = options.value< double >( "--resolution,-r", default_window_resolution );
+        boost::posix_time::time_duration bucket_duration = boost::posix_time::microseconds( bucket_width * 1000000 );
         char delimiter = options.value( "--delimiter,-d", default_delimiter );
 
         comma::io::select select;
@@ -113,10 +143,11 @@ int main( int ac, char** av )
 
         unsigned long long total_bytes = 0;
         unsigned int bucket_bytes = 0;
-        boost::circular_buffer< unsigned int > window_buckets( window );
+        boost::circular_buffer< unsigned int > window_buckets( std::ceil( window / bucket_width ));
+
         boost::posix_time::ptime start_time = boost::posix_time::microsec_clock::universal_time();
         boost::posix_time::ptime next_update = start_time + update_interval;
-        boost::posix_time::ptime next_bucket = start_time + bucket_width;
+        boost::posix_time::ptime next_bucket = start_time + bucket_duration;
 
         comma::signal_flag is_shutdown;
         bool end_of_stream = false;
@@ -143,17 +174,29 @@ int main( int ac, char** av )
             {
                 window_buckets.push_back( bucket_bytes );
                 bucket_bytes = 0;
-                next_bucket += bucket_width;
+                next_bucket += bucket_duration;
             }
 
             if( now >= next_update )
             {
-                std::cerr << boost::posix_time::to_iso_string( now ) << delimiter
-                          << total_bytes << delimiter
-                          << (double)total_bytes / ( double( ( now - start_time ).total_milliseconds() ) / 1000.0f ) << delimiter
-                          << (double)std::accumulate( window_buckets.begin(), window_buckets.end(), 0.0f )
-                                 / window_buckets.size() / bucket_width.total_seconds()
-                          << std::endl;
+                double elapsed_time = double( ( now - start_time ).total_milliseconds() ) / 1000.0f;
+                double bandwidth = (double)total_bytes / elapsed_time;
+                double window_bandwidth = (double)std::accumulate( window_buckets.begin()
+                                                                 , window_buckets.end()
+                                                                 , 0.0f )
+                                                  / window_buckets.size() / bucket_width;
+
+                std::cerr << boost::posix_time::to_iso_string( now )
+                          << delimiter << total_bytes
+                          << delimiter << bandwidth
+                          << delimiter << window_bandwidth;
+                if( record_size )
+                {
+                    std::cerr << delimiter << bandwidth / *record_size
+                              << delimiter << window_bandwidth / *record_size;
+                }
+                std::cerr << std::endl;
+
                 next_update += update_interval;
             }
         }

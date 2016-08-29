@@ -120,6 +120,6 @@ $comma_env_path_value"
         fi
     done
     # handle PATH explicitly
-    env -i PATH="$PATH" comma_env_environment="$comma_env_environment" comma-env-detail "$comma_env_temp_file" $comma_env_command_to_execute $@ # do not quote the second argument to helper
+    exec env -i PATH="$PATH" comma_env_environment="$comma_env_environment" comma-env-detail "$comma_env_temp_file" $comma_env_command_to_execute $@ # do not quote the second argument to helper
 }
 export -f comma_env

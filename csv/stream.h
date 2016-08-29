@@ -215,7 +215,7 @@ class binary_output_stream : public boost::noncopyable
 {
     public:
         /// constructor
-        binary_output_stream( std::ostream& os, const std::string& format = "", const std::string& column_names = "", bool full_path_as_name = false, const S& sample = S() );
+        binary_output_stream( std::ostream& os, const std::string& format = "", const std::string& column_names = "", bool full_path_as_name = false, const S& sample = S(), bool flush = false );
 
         /// constructor from options
         binary_output_stream( std::ostream& os, const options& o, const S& sample = S() );
@@ -319,7 +319,7 @@ class output_stream : public boost::noncopyable
         /// construct from csv options
         output_stream( std::ostream& os, const csv::options& o, const S& sample = S() );
         
-        output_stream( std::ostream& os, bool binary, bool full_xpath = false, const S& sample = S() );
+        output_stream( std::ostream& os, bool binary, bool full_xpath = false, const S& sample = S(), bool flush = false );
 
         /// write
         void write( const S& s ) { if( ascii_ ) { ascii_->write( s ); } else { binary_->write( s ); } }
@@ -549,7 +549,7 @@ inline binary_input_stream< S >::binary_input_stream( std::istream& is, const st
 template < typename S >
 inline binary_input_stream< S >::binary_input_stream( std::istream& is, const options& o, const S& sample )
     : is_( is )
-    , binary_( o.format_string(), o.fields, o.full_xpath, sample )
+    , binary_( o.format().string(), o.fields, o.full_xpath, sample )
     , default_( sample )
     , result_( sample )
     , size_( binary_.format().size() )
@@ -580,7 +580,7 @@ inline const S* binary_input_stream< S >::read()
 }
 
 template < typename S >
-inline binary_output_stream< S >::binary_output_stream( std::ostream& os, const std::string& format, const std::string& column_names, bool full_path_as_name, const S& sample )
+inline binary_output_stream< S >::binary_output_stream( std::ostream& os, const std::string& format, const std::string& column_names, bool full_path_as_name, const S& sample, bool flush )
     : os_( os )
     , binary_( format, column_names, full_path_as_name, sample )
     //, size_( binary_.format().size() * ( 4098 / binary_.format().size() ) ) // quick and dirty
@@ -589,7 +589,7 @@ inline binary_output_stream< S >::binary_output_stream( std::ostream& os, const 
     //, end_( begin_ + size_ )
     //, cur_( begin_ )
     , fields_( split( column_names, ',' ) )
-    , flush_( false )
+    , flush_( flush )
 {
     #ifdef WIN32
     if( &os == &std::cout ) { _setmode( _fileno( stdout ), _O_BINARY ); }
@@ -600,7 +600,7 @@ inline binary_output_stream< S >::binary_output_stream( std::ostream& os, const 
 template < typename S >
 inline binary_output_stream< S >::binary_output_stream( std::ostream& os, const options& o, const S& sample )
     : os_( os )
-    , binary_( o.format_string(), o.fields, o.full_xpath, sample )
+    , binary_( o.format().string(), o.fields, o.full_xpath, sample )
 //     , size_( binary_.format().size() ) //, size_( binary_.format().size() * ( 4098 / binary_.format().size() ) ) // quick and dirty
     , buf_( binary_.format().size() ) //, buf_( size_ )
 //     , begin_( &buf_[0] )
@@ -676,9 +676,9 @@ inline output_stream< S >::output_stream( std::ostream& os, const csv::options& 
 }
 
 template < typename S >
-inline output_stream< S >::output_stream( std::ostream& os, bool binary, bool full_xpath, const S& sample )
+inline output_stream< S >::output_stream( std::ostream& os, bool binary, bool full_xpath, const S& sample, bool flush )
 {
-    if( binary ) { binary_.reset( new binary_output_stream< S >( os, "", "", full_xpath, sample ) ); }
+    if( binary ) { binary_.reset( new binary_output_stream< S >( os, "", "", full_xpath, sample, flush ) ); }
     else { ascii_.reset( new ascii_output_stream< S >( os, sample ) ); }
 }
 

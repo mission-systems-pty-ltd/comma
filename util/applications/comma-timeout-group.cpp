@@ -74,6 +74,10 @@ void usage( bool )
         "\nOptions:"
         "\n    -h,--help, print this help and exit"
         "\n    -v,--verbose, chat more"
+        "\n    --report-timeout, run silently but print a message if a command times out"
+        "\n    --verbose-signal-handler, print messages on stderr when sending signals within signal handler;"
+        "\n        WARNING: generally output routines are not re-entrant and shall not be invoked in signal"
+        "\n        handlers; use for debugging but not in production code"
         "\n    --preserve-status, exit with the same status as <command>, even when the command timed out"
         "\n    --foreground, not supported"
         "\n    -k, --kill-after=duration, if the command is still running this long after the initial"
@@ -89,6 +93,14 @@ void usage( bool )
         "\n    --enforce-group, enforce waiting for process groups; if comma-timeout-group is built without procps"
         "\n        support, '--wait-for-process-group' would exit in error rather then become a synonym to '-k';"
         "\n        this option does nothing if procps support is built in"
+        "\n    --wait-for-process-group-delay=value, when waiting for all processes in the group to finish, a delay"
+        "\n        is inserted between each parsing of the process tree; the value in microseconds is passed to"
+        "\n        usleep (2), default is 100000 (0.1 s); note that low delay values make the program more"
+        "\n        responsive at the cost of higher CPU load when parsing the process tree"
+#ifndef HAVE_PROCPS_DEV
+        "\n        WARNING: your version of comma-timeout-group is built without procps support, this option"
+        "\n        has no effect"
+#endif
         "\n    -s, --signal=signal, the signal to be sent on timeout, given as a name (HUP, SIGHUP) or number;"
         "\n        only a sub-set of all available signal names is supported, use '--list-known-signals' to list;"
         "\n        arbitrary signal to use can be specified as a number, see 'kill -l' for the values;"
@@ -139,6 +151,25 @@ void usage( bool )
     std::cerr << msg_general << comma::contact_info << std::endl << std::endl;
     exit( 0 );
 }
+
+// many values are used in the signal handler, no way to pass via arguments, hence, global
+// the rest just moved here to keep all in one place
+sig_atomic_t timed_out = 0;
+int signal_to_use = SIGTERM;  // same default as kill and timeout commands
+int child_pid = 0;
+bool verbose = false;
+bool verbose_signal_handler = false;
+bool report_timeout = false;
+bool preserve_status = false;
+double timeout = 0.0;
+double kill_after = 0.0;
+#ifdef HAVE_PROCPS_DEV
+bool wait_for_process_group = false;
+const bool can_wait_for_process_group = true;
+unsigned int wait_for_process_group_delay = 100000;
+#else
+const bool can_wait_for_process_group = false;
+#endif
 
 double seconds_from_string( const std::string& s, bool allow_forever = false )
 {
@@ -243,19 +274,19 @@ int parse_process_tree( bool verbose = false )
         if ( proc_info.pgrp == ownpid ) {
             if ( first && verbose ) { std::cerr << "extant processes in group " << ownpid << std::endl; first = 0; }
             ++count;
-            if ( verbose ) { std::cerr << proc_info.cmd << ":\t" << proc_info.tid << "\t" << proc_info.pgrp << "\t" << proc_info.state << "\t" << proc_info.start_time << std::endl; }
+            if ( verbose ) { std::cerr << "    " << proc_info.cmd << ":\t" << proc_info.tid << "\t" << proc_info.pgrp << "\t" << proc_info.state << "\t" << proc_info.start_time << std::endl; }
         }
     }
     closeproc(proc);
     return count;
 }
 
-int parse_process_tree_until_empty( unsigned int each_wait = 10000, bool verbose = false )
+int parse_process_tree_until_empty( bool verbose = false )
 {
     int count = 0;
     while ( 1 ) {
         if ( ( count = parse_process_tree( verbose ) ) <= 1 ) break;
-        usleep( each_wait );
+        usleep( wait_for_process_group_delay );
     }
     /* shouldn't happen: timeout itself in this process group. */
     if ( !count ) { COMMA_THROW( comma::exception, "error counting processes in the group, none left" ); }
@@ -281,25 +312,6 @@ void set_alarm( double duration )
     }
 }
 
-// many values are used in the handler, no way to pass via arguments, hence, global
-// the rest just moved here to keep all in one place
-sig_atomic_t timed_out = 0;
-int signal_to_use = SIGTERM;  // same default as kill and timeout commands
-int child_pid = 0;
-bool verbose = false;
-bool preserve_status = false;
-double timeout = 0.0;
-double kill_after = 0.0;
-#ifdef HAVE_PROCPS_DEV
-bool wait_for_process_group = false;
-const bool can_wait_for_process_group = true;
-#else
-const bool can_wait_for_process_group = false;
-#endif
-
-// generally would be nice to give more information but very few functions shall be used inside handlers
-// see man 7 signal; can define to 1 for debugging but not for production
-#define SIGNAL_HANDLER_VERBOSE 0
 void signal_handler( int received_signal )
 {
     if ( !child_pid ) _exit( 128 + received_signal ); // per shell rules
@@ -314,15 +326,13 @@ void signal_handler( int received_signal )
         kill_after = 0.0;
     }
 
-#if ( SIGNAL_HANDLER_VERBOSE )
-    if ( verbose ) { std::cerr << "comma-timeout-group: send signal " << signal_to_send << " to PID " << child_pid << std::endl; }
-#endif
+    // generally would be nice to give more information but very few functions shall be used inside handlers
+    // see man 7 signal; can define to 1 for debugging but not for production
+    if ( verbose_signal_handler ) { fprintf( stderr, "comma-timeout-group: send signal %d to PID %d\n", signal_to_send, child_pid ); }
     kill( child_pid, signal_to_send ); // child could have created its own group
     // unset first, do not go into a loop
     signal( signal_to_send, SIG_IGN );
-#if ( SIGNAL_HANDLER_VERBOSE )
-    if ( verbose ) { fprintf( stderr, "comma-timeout-group: send signal %d to own group %d\n", signal_to_send, getpid() ); }
-#endif
+    if ( verbose_signal_handler ) { fprintf( stderr, "comma-timeout-group: send signal %d to own group %d\n", signal_to_send, getpid() ); }
     kill( 0, signal_to_send );
 }
 
@@ -365,7 +375,7 @@ int main( int ac, char** av ) try
 
     // first non-option must be the timeout duration, and second the command to run
     comma::command_line_options all_options( ac, av );
-    std::vector< std::string > non_options = all_options.unnamed( "-h,--help,-v,--verbose,--list-known-signals,--foreground,--preserve-status,--enforce-group", "-s,--signal,-k,--kill-after,--wait-for-process-group,--can-wait-for-process-group" );
+    std::vector< std::string > non_options = all_options.unnamed( "-h,--help,-v,--verbose,--report-timeout,--verbose-signal-handler,--list-known-signals,--foreground,--preserve-status,--enforce-group,--can-wait-for-process-group", "-s,--signal,-k,--kill-after,--wait-for-process-group,--wait-for-process-group-delay" );
     if ( non_options.size() < 2 )
     {
         // user did not give all the arguments; OK in special cases
@@ -373,7 +383,9 @@ int main( int ac, char** av ) try
         if ( all_options.exists( "-h,--help" ) ) { usage( true ); }
         if ( all_options.exists( "--list-known-signals" ) ) { return sig2str::list_all(); }
         if ( all_options.exists( "--can-wait-for-process-group" ) ) { return can_wait_group(); }
-        COMMA_THROW( comma::exception, "please specify timeout and command to run ( non_options["<<non_options.size()<<"]: "<<(non_options.size()?non_options[0]:std::string())<<"; all_options: "<<all_options.string()<<")" );
+        std::string timeout = non_options.size() > 0 ? non_options[0] : std::string();
+        std::string command = non_options.size() > 1 ? non_options[1] : std::string();
+        COMMA_THROW( comma::exception, "please specify timeout and command to run (timeout: '" << timeout << "', command-to-run: '" << command << "', all command line: " << all_options.string() << ")" );
     }
 
     // split the command line into two: comma-timeout-group itself and the command-to-run
@@ -388,6 +400,8 @@ int main( int ac, char** av ) try
     if ( options.exists( "--foreground" ) ) { COMMA_THROW( comma::exception, "--foreground: unsupported option of the original timeout" ); }
 
     verbose = options.exists( "-v,--verbose" );
+    report_timeout = options.exists( "--report-timeout" ) || verbose;
+    verbose_signal_handler = options.exists( "--verbose-signal-handler" );
 
     if ( options.exists( "-s,--signal" ) ) { signal_to_use = sig2str::from_string( options.values< std::string >( "-s,--signal" ).back() ); }
 
@@ -407,19 +421,35 @@ int main( int ac, char** av ) try
     }
 
     if ( options.exists( "-k,--kill-after" ) ) { kill_after = seconds_from_string( options.values< std::string >( "-k,--kill-after" ).back() ); }
+    if ( options.exists( "--wait-for-process-group-delay" ) ) {
+#ifdef HAVE_PROCPS_DEV
+        wait_for_process_group_delay = options.value< unsigned int >( "--wait-for-process-group-delay" );
+#else
+        if ( verbose ) { std::cerr << "comma-timeout-group: built without procps support, '--wait-for-process-group-delay' is ignored" << std::endl; }
+#endif
+    }
 
     timeout = seconds_from_string( non_options[0] );
+
+    // string intended not to run, just to use in error or trace messages
+    std::ostringstream oss;
+    for ( char **i = av + command_to_run_pos; i < av + ac; ++i ) { oss << " \"" << *i << "\""; };
+    std::string command_to_run_with_args = oss.str().substr(1);
 
     if ( verbose ) {
         std::cerr << "comma-timeout-group:" << std::endl;
         std::cerr << "    running as process: " << getpid() << std::endl;
         std::cerr << "    command-line: " << options.string() << std::endl;
-        std::cerr << "    will execute:"; for ( char **i = av + command_to_run_pos; i < av + ac; ++i ) { std::cerr << " \"" << *i << "\""; }; std::cerr << std::endl;
+        std::cerr << "    will execute: " << command_to_run_with_args << std::endl;
         std::cerr << "    will time-out this command after " << timeout << " s" << std::endl;
         std::cerr << "    will use signal " << signal_to_use << " to interrupt the command by timeout" << std::endl;
         std::cerr << "    exit status of command: " << ( preserve_status ? "" : "NOT " ) << "preserved" << std::endl;
+        if ( verbose_signal_handler ) { std::cerr << "    output messages when sending signals" << std::endl; }
 #ifdef HAVE_PROCPS_DEV
-        if ( wait_for_process_group ) { std::cerr << "    will wait" << ( kill_after < std::numeric_limits< double >::max() ? "" : " forever" ) << " for all processes in the group to finish" << std::endl; }
+        if ( wait_for_process_group ) {
+            std::cerr << "    will wait" << ( kill_after < std::numeric_limits< double >::max() ? "" : " forever" ) << " for all processes in the group to finish" << std::endl;
+            std::cerr << "    will use " << wait_for_process_group_delay << " microsecond delay between each parsing of the process tree" << std::endl;
+        }
 #endif
         if ( kill_after != 0 && kill_after < std::numeric_limits< double >::max() ) { std::cerr << "    will send KILL signal " << kill_after << " s after the timeout" << std::endl; }
         std::cerr << std::endl;
@@ -464,9 +494,11 @@ int main( int ac, char** av ) try
         pid_t outcome = waitpid( child_pid, &status, 0 );
         if ( outcome < 0 ) { COMMA_THROW( comma::exception, "waitpid failed, status " << outcome ); }
     } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+    if ( verbose ) { std::cerr << "comma-timeout-group: out of waitpid call, child process terminated" << std::endl; }
 
 #ifdef HAVE_PROCPS_DEV
     if ( wait_for_process_group ) {
+        if ( verbose ) { std::cerr << "comma-timeout-group: parse the process tree waiting for all processes in the group to finish" << std::endl; }
         int count = parse_process_tree_until_empty( verbose );
         if ( count < 0 ) { COMMA_THROW( comma::exception, "expected at least one process in the group (at least itself), got none" ); }
     }
@@ -474,7 +506,7 @@ int main( int ac, char** av ) try
 
     if ( timed_out )
     {
-        if ( verbose ) { std::cerr << "comma-timeout-group: application timed-out" << std::endl; }
+        if ( report_timeout ) { std::cerr << "comma-timeout-group: command " << command_to_run_with_args << " timed-out" << std::endl; }
         if ( preserve_status ) {
             if ( WIFEXITED( status ) ) { return WEXITSTATUS(status); }
             if ( WIFSIGNALED( status ) ) { return 128 + WTERMSIG( status ); } // per shell rules

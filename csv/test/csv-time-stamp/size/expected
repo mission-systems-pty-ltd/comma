@@ -1,0 +1,5 @@
+output[0]/a="1"
+output[0]/b="2"
+output[0]/c="3"
+output[0]/d=0.0 +/- 0.1
+output[1]/d > output[0]/d

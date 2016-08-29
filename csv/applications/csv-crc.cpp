@@ -185,7 +185,7 @@ static bool run_()
                     }
                     else // quick and dirty: lots of code duplication, but just to make it working
                     {
-                        if( recovered ) { std::cerr << "csv-crc: crc check failed" << ( !give_up_after || give_up_after > 0 ? "; recovering..." : "" ) << std::endl; }
+                        if( recovered ) { std::cerr << "csv-crc: crc check failed" << ( !give_up_after || *give_up_after > 0 ? "; recovering..." : "" ) << std::endl; }
                         recovered = false;
                         ++recovered_byte_count;
                     }

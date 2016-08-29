@@ -52,11 +52,16 @@ static void usage()
     std::cerr << std::endl;
     std::cerr << "usage: cat a.csv | csv-time-stamp [<options>]" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "<options>" << std::endl;
+    std::cerr << "options:" << std::endl;
     std::cerr << "    --binary,-b=<format>: binary format" << std::endl;
     std::cerr << "    --size=<size>: binary input of size" << std::endl;
     std::cerr << "    --delimiter,-d <delimiter>: ascii only; default ','" << std::endl;
     std::cerr << "    --local: if present, local time; default: utc" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "examples:" << std::endl;
+    std::cerr << "    cat input.csv | csv-time-stamp" << std::endl;
+    std::cerr << "    cat input.bin | csv-time-stamp --binary=3ui" << std::endl;
+    std::cerr << "    cat input.bin | csv-time-stamp --size=12" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -69,11 +74,18 @@ int main( int ac, char** av )
     {
         comma::command_line_options options( ac, av );
         if( options.exists( "--help" ) || options.exists( "-h" ) ) { usage(); }
+
         bool local = options.exists( "--local" );
-        
+        char delimiter = options.value( "--delimiter,-d", ',' );
+
+        boost::optional< comma::csv::format > format;
+        if( options.exists( "--binary,-b" ))
+        {
+            format = comma::csv::format( options.value< std::string >( "--binary,-b" ));
+        }
         bool binary = options.exists( "--binary,-b,--size" );
         std::size_t size = options.value( "--size", 0 );
-        char delimiter = options.value( "--delimiter,-d", ',' );
+        if( binary && size == 0 ) { size = format->size(); }
 
         #ifdef WIN32
         if( binary )

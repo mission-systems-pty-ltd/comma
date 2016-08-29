@@ -1,0 +1,17 @@
+#!/bin/bash
+
+args=$( cat )
+
+function generate_data()
+{
+    local bytes_per_sec=$1
+    local duration=$2
+
+    dd if=/dev/urandom bs=$bytes_per_sec count=$duration 2> /dev/null \
+        | pv -q -L $bytes_per_sec
+}
+
+{ generate_data 1000 5; generate_data 2000 6; } \
+    | io-bandwidth $args 2>&1 > /dev/null \
+    | name-value-from-csv $( io-bandwidth --output-fields $args ) --line-number --prefix output \
+    | csv-quote -d = --unquote
