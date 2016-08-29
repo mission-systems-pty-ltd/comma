@@ -169,7 +169,7 @@ static void usage( bool more )
     std::cerr << "            This increments the second field" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    head" << std::endl;
-    std::cerr << "        cat $block_csv | csv-blocks group --fields=id | csv-blocks index --fields=,,,,index | csv-blocks head --fields=,,,,,index " << std::endl;
+    std::cerr << "        cat $block_csv | csv-blocks group --fields=id | csv-blocks index --fields=,,,,block | csv-blocks head --fields=,,,,,index " << std::endl;
     std::cerr << "            After appending the block field, then the block reverse index field, reading a single block from the input is possible" << std::endl;
     std::cerr << std::endl;
     std::cerr << "contact info: " << comma::contact_info <<std::endl;
