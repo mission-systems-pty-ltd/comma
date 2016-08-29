@@ -38,7 +38,6 @@
 #include "../../application/command_line_options.h"
 #include "../../application/contact_info.h"
 #include "../../application/signal_flag.h"
-#include "../../csv/format.h"
 #include "../../io/select.h"
 #include "../../io/stream.h"
 
@@ -53,8 +52,7 @@ static void bash_completion( unsigned const ac, char const * const * av )
 {
     static const char* completion_options =
         " --help -h"
-        " --binary -b"
-        " --window -w --update -u --resolution -r"
+        " --size --window -w --update -u --resolution -r"
         " --delimiter -d --output-fields"
         ;
     std::cout << completion_options << std::endl;
@@ -69,7 +67,7 @@ void usage( bool verbose = false )
     std::cerr << "usage: io-bandwidth [<options>]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
-    std::cerr << "    --binary,-b=[<format>]: specify format of input data" << std::endl;
+    std::cerr << "    --size=[<bytes>]: specify size of one record of input data" << std::endl;
     std::cerr << "    --window,-w=[<n>]: sliding window; default=" << default_window << "s" << std::endl;
     std::cerr << "    --update,-u=[<n>]: update interval; default=" << default_update_interval << "s" << std::endl;
     std::cerr << "    --resolution,-r=[<n>]: sliding window resolution; default=" << default_window_resolution << "s" << std::endl;
@@ -84,7 +82,7 @@ void usage( bool verbose = false )
     std::cerr << "    The standard output fields are:" << std::endl;
     std::cerr << "        " << boost::replace_all_copy( standard_output_fields, ",", "\n        " ) << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    But if the --binary option is used then they are extended to:" << std::endl;
+    std::cerr << "    But if the --size option is used then they are extended to:" << std::endl;
     std::cerr << "        " << boost::replace_all_copy( extended_output_fields, ",", "\n        " ) << std::endl;
     std::cerr << std::endl;
     std::cerr << "    Use --output-fields to see these fields programatically" << std::endl;
@@ -94,6 +92,12 @@ void usage( bool verbose = false )
     std::cerr << "    basics:" << std::endl;
     std::cerr << std::endl;
     std::cerr << "        while : ; do echo 1; sleep 0.1; done | io-bandwidth > /dev/null" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    outputting records/second:" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "        while : ; do" << std::endl;
+    std::cerr << "            echo 1,2 | csv-to-bin 2ui; sleep 0.1" << std::endl;
+    std::cerr << "        done | io-bandwidth --size=$( csv-size 2ui ) > /dev/null" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    mocking up a more complex input stream:" << std::endl;
     std::cerr << "    pass data to hexdump and publish bandwidth stats on port 8888" << std::endl;
@@ -120,16 +124,13 @@ int main( int ac, char** av )
 
         if( options.exists( "--output-fields" ))
         {
-            if( options.exists( "--binary,-b" )) { std::cout << extended_output_fields << std::endl; }
+            if( options.exists( "--size" )) { std::cout << extended_output_fields << std::endl; }
             else { std::cout << standard_output_fields << std::endl; }
             return 0;
         }
 
         boost::optional< std::size_t > record_size;
-        if( options.exists( "--binary,-b" ))
-        {
-            record_size = comma::csv::format( options.value< std::string >( "--binary,-b" )).size();
-        }
+        if( options.exists( "--size" )) { record_size = options.value< std::size_t >( "--size" ); }
 
         boost::posix_time::time_duration update_interval = boost::posix_time::microseconds( options.value< double >( "--update,-u", default_update_interval ) * 1000000 );
         double window = options.value< double >( "--window,-w", default_window );
