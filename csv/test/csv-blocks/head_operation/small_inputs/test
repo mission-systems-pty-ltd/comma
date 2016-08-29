@@ -1,14 +1,13 @@
 #!/bin/bash
 
-output_dir=output
+dir=output
 
-[[ -d "$output_dir"  ]] || mkdir $output_dir
-cd $output_dir 
+[[ -d "$dir"  ]] || mkdir $dir
 
-cat >test.csv
-csv-to-bin 's[1],4ui' <test.csv >test.bin
+cat >$dir/test.csv
+csv-to-bin 's[1],4ui' <$dir/test.csv >$dir/test.bin
 
-exec 3<> test.csv
+exec 3<> $dir/test.csv
 
 for i in {1..5} ; do
     csv-blocks head --fields=,,,,index <&3 \
@@ -16,7 +15,7 @@ for i in {1..5} ; do
 done | gawk '{ print "line["NR"]/"$0; }'
 exec 3>&-
 
-exec 3<> test.bin
+exec 3<> $dir/test.bin
 for i in {1..5} ; do
     csv-blocks head --fields=,,,,index  --binary 's[1],4ui' <&3 \
         | csv-from-bin 's[1],4ui' \
