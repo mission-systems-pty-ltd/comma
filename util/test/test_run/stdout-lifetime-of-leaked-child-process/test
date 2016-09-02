@@ -75,5 +75,6 @@ sleep 7
 echo 'main/slept=1'
 kill -s SIGTERM $pid
 sleep 1
+# if not for this wait, stdout.log is garbled
+wait
 echo 'main/end=1'
-

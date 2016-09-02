@@ -159,7 +159,7 @@ static void usage( bool more )
     std::cerr << "            unique ascending block number are assigned based on two id fields" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    index" << std::endl;
-    std::cerr << "        cat $block_csv | csv-blocks index --fields=block | csv-blocks index --fields=,,,,block" << std::endl;
+    std::cerr << "        cat $block_csv | csv-blocks group --fields=id | csv-blocks index --fields=,,,,block" << std::endl;
     std::cerr << "            Append will add block field at the end, 'index' will append how many lines/records are left in the block" << std::endl;
     std::cerr << "            See 'head operation' below" << std::endl;
     std::cerr << std::endl;
@@ -169,7 +169,7 @@ static void usage( bool more )
     std::cerr << "            This increments the second field" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    head" << std::endl;
-    std::cerr << "        cat $block_csv | csv-blocks group --fields=id | csv-blocks index --fields=,,,,index | csv-blocks head --fields=,,,,,index " << std::endl;
+    std::cerr << "        cat $block_csv | csv-blocks group --fields=id | csv-blocks index --fields=,,,,block | csv-blocks head --fields=,,,,,index " << std::endl;
     std::cerr << "            After appending the block field, then the block reverse index field, reading a single block from the input is possible" << std::endl;
     std::cerr << std::endl;
     std::cerr << "contact info: " << comma::contact_info <<std::endl;
