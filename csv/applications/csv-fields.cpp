@@ -159,6 +159,7 @@ int main( int ac, char** av )
         if( operation == "numbers" )
         {
             int from = options.value( "--from", 1 );
+            bool fill = options.exists( "--fill" );
             while( std::cin.good() )
             {
                 std::string line;
@@ -169,7 +170,7 @@ int main( int ac, char** av )
                 if ( options.exists( "--count,--size" ) ) { std::cout << v.size() << std::endl; continue; }
                 for( unsigned int i = 0; i < v.size(); ++i )
                 {
-                    if( v[i].empty() ) { continue; }
+                    if( v[i].empty() && !fill ) { continue; }
                     std::cout << comma << ( i + from );
                     comma = ',';
                 }
