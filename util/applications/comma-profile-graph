@@ -80,13 +80,6 @@ EOF
     exit
 }
 
-function bye()
-{
-    [[ -f $input_tmp ]] && rm $input_tmp
-}
-
-trap bye EXIT
-
 scaled_object=node
 
 while [[ $# -gt 0 ]]; do
@@ -110,12 +103,7 @@ done
 
 function nodename { echo $1 | tr '.-' '_'; }
 
-input_tmp=$( mktemp input.tmp.XXXXXXXX ) || {
-    echo "failed to create temp dir $update_file_fields_tmp" >&2
-    exit 1
-}
-
-cat - > $input_tmp
+input_tmp=$( cat )
 
 declare -A sums
 
@@ -132,7 +120,7 @@ while read line; do
     # Put the value from comma-progress in the same format as the original -
     # three decimal places and no trailing 0's
     sums[$key]=$( printf "%0.3f" $value | sed -r 's/(\.[0-9]*[1-9])0*$/\1/' )
-done < <( cat $input_tmp | comma-progress --sum \
+done < <( echo "$input_tmp" | comma-progress --sum \
              | sed -r -e 's#^#/#' -e "s#^.*/(.*)/elapsed=\"(.*)\"#\1=\2#" )
 
 nodes_done=""
@@ -146,7 +134,7 @@ fixedsize_option=false
 
 echo "digraph callgraph {"
 
-cat $input_tmp | while read line || [[ -n $line ]]; do
+echo "$input_tmp" | while read line || [[ -n $line ]]; do
     elapsed=$( echo $line | cut -f2 -d= | sed 's/"//g' )
     pair=$( echo $line | sed "s!/elapsed=.*!!" | rev | cut -f1,2 -d/ | rev )
     target=$( echo $pair | cut -f2 -d/ )
