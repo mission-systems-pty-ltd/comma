@@ -273,6 +273,35 @@ stream< S >::stream( const std::string& name, mode::value m, mode::blocking_valu
     else if( v[0] == "serial" )
     {
         COMMA_THROW( comma::exception, "todo" );
+        /* there's no boost implementation that creates an iostream from serial port
+         * (perhaps too many modes of operation, difficult to parametrize?)
+         * 
+         * to implement our own we need to make a stream buffer:
+         *     class serial_buf : public boost::asio::streambuf {
+         *          boost::asio::io_service service;
+         *          boost::asio::serial_port port;
+         *     }
+         *     serial_buf() : connect to port
+         *          needs filename, baudrate, character size, stop bit, parity
+         * 
+         *     serial_buf::overflow() : writing when output buffer is full
+         *          write contents of buffer to port
+         *     serial_buf::underflow() : reading when input buffer is empty
+         *          attempt to read port into buffer
+         *     serial_buf::sync() : sync buffer and serial port
+         *          write contents of buffer to port
+         * 
+         *  Then here:
+         *     serial_buf = comma::io::serial_buf(...);
+         *     stream_ = new S(serial_buf)
+         * 
+         *  Functions in serial_buf to expose these:
+         *     fd_ = serial_buf.port.native_handle()
+         *     close_ = serial_buf.port.close()
+         *
+         *  That should work (for my current use case)! Then cleanup, error handling, etc.
+         *  What other modes are there?
+         */
     }
 #ifndef WIN32
     else if( v[0] == "local" )
