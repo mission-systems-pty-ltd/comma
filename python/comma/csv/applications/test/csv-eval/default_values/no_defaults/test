@@ -1,0 +1,5 @@
+#!/bin/bash
+
+csv-eval --fields=,b 'c = a + 2*b'
+echo "status=$?"
+

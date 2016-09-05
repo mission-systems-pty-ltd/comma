@@ -1,0 +1,6 @@
+output[0]/dummy=30
+output[0]/b=3
+output[1]/dummy=40
+output[1]/b=4
+status=0
+
