@@ -44,11 +44,20 @@ class patched_formatter(BASE_FORMATTER):
         args_string = self._format_args(action, default)
         return ', '.join(action.option_strings) + ' ' + args_string
 
+    def _format_action(self, action):
+        return ''.join([' '*4,
+                        self._format_action_invocation(action),
+                        ': ',
+                        self._expand_help(action),
+                        '\n'])
+
 
 def can_be_patched(base_formatter):
     try:
         getattr(base_formatter, '_format_action_invocation')
         getattr(base_formatter, '_format_args')
+        getattr(base_formatter, '_format_action')
+        getattr(base_formatter, '_expand_help')
         return True
     except AttributeError:
         return False
