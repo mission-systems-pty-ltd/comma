@@ -77,6 +77,9 @@ examples:
     # using full xpaths
     ( echo 1,2 ; echo 3,4 ) | %(prog)s --fields=one/x,two/y "x+=1; y-=1"
     ( echo 1,2 ; echo 3,4 ) | %(prog)s --fields=one/x,two/y "one_x+=1; two_y-=1" --full-xpath
+
+    # using default values
+    ( echo 1,2 ; echo 3,4 ) | %(prog)s --fields=,y "a=x+y" --default-values="x=0;y=0"
 """
 
 numpy_functions = """
@@ -187,16 +190,21 @@ def get_args():
         help='leave python builtins in the exec environment (use with care)')
     add_csv_options(parser)
     parser.add_argument(
+        '--full-xpath',
+        action='store_true',
+        help='use full xpaths as variable names (with / replaced by _); by default basenames of xpaths are used')
+    parser.add_argument(
         '--select',
         '--output-if',
         '--if',
         default='',
-        metavar='<cond>',
+        metavar='<condition>',
         help='select and output records of input stream that satisfy the condition')
     parser.add_argument(
-        '--full-xpath',
-        action='store_true',
-        help='use full xpaths as variable names (with / replaced by _);\nby default basenames of xpaths are used')
+        '--default-values',
+        default='',
+        metavar='<assignments>',
+        help='default values for variables in expressions but not in input stream')
     args = parser.parse_args()
     if args.help:
         if args.verbose:
@@ -438,10 +446,11 @@ class stream(object):
                                            **self.csv_options)
 
     def print_info(self, file=sys.stderr):
-        fields = ','.join(self.input_t.fields)
+        fields = ','.join(self.input_t.nondefault_fields)
         format = self.input_t.format
         print >> file, "expressions: '{}'".format(self.args.expressions)
         print >> file, "select: '{}'".format(self.args.select)
+        print >> file, "default values: '{}'".format(self.args.default_values)
         print >> file, "input fields: '{}'".format(fields)
         print >> file, "input format: '{}'".format(format)
         if self.args.select:
@@ -473,17 +482,18 @@ def check_output_fields(fields, input_fields):
         raise csv_eval_error(msg)
 
 
-def evaluate(expressions, stream, permissive=False):
+def evaluate(stream):
     def disperse(var, fields):
         return '\n'.join("{f} = {v}['{f}']".format(v=var, f=f) for f in fields)
     def collect(var, fields):
         return '\n'.join("{v}['{f}'] = {f}".format(v=var, f=f) for f in fields)
-    input_init = disperse('_input', stream.nonblank_input_fields)
-    update_init = collect('_update', stream.args.update_fields)
-    output_init = collect('_output', stream.args.output_fields)
-    code_string = '\n'.join([input_init, expressions, update_init, output_init])
+    code_string = '\n'.join([stream.args.default_values,
+                             disperse('_input', stream.nonblank_input_fields),
+                             stream.args.expressions,
+                             collect('_update', stream.args.update_fields),
+                             collect('_output', stream.args.output_fields)])
     code = compile(code_string, '<string>', 'exec')
-    env = np.__dict__ if permissive else restricted_numpy_env()
+    env = np.__dict__ if stream.args.permissive else restricted_numpy_env()
     size = None
     update = None
     output = None
@@ -507,16 +517,17 @@ def evaluate(expressions, stream, permissive=False):
             stream.input.dump()
 
 
-def select(condition, stream):
-    code = compile(condition, '<string>', 'eval')
+def select(stream):
     env = restricted_numpy_env()
+    exec stream.args.default_values in env
+    fields = stream.input.fields
+    code = compile(stream.args.select, '<string>', 'eval')
     is_shutdown = comma.signal.is_shutdown()
     while not is_shutdown:
-        i = stream.input.read()
-        if i is None:
+        input = stream.input.read()
+        if input is None:
             break
-        input_initializer = {field: i[field] for field in i.dtype.names}
-        mask = eval(code, env, input_initializer)
+        mask = eval(code, env, {f: input[f] for f in fields})
         stream.input.dump(mask=mask)
 
 
@@ -526,9 +537,9 @@ def main():
         args = get_args()
         prepare_options(args)
         if args.select:
-            select(args.select, stream(args))
+            select(stream(args))
         else:
-            evaluate(args.expressions, stream(args), permissive=args.permissive)
+            evaluate(stream(args))
     except csv_eval_error as e:
         name = os.path.basename(sys.argv[0])
         print >> sys.stderr, "{} error: {}".format(name, e)
