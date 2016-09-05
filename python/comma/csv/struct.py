@@ -43,6 +43,7 @@ class struct(object):
         self._check_fields_conciseness()
         self.dtype = np.dtype(zip(self.concise_fields, self.concise_types))
         self.fields = self._full_xpath_fields()
+        self.nondefault_fields = self._nondefault_fields()
         self.types = self._basic_types()
         self.shorthand = self._shorthand()
         self.format = ','.join(self.types)
@@ -92,6 +93,10 @@ class struct(object):
         expand = self.shorthand.get
         field_tuples = map(lambda name: expand(name) or (name,), compressed_fields)
         return sum(field_tuples, ())
+
+    def _nondefault_fields(self):
+        default_name = struct.default_field_name
+        return tuple(map(lambda f: '' if f.startswith(default_name) else f, self.fields))
 
     def _fill_blanks(self, fields):
         if isinstance(fields, basestring):
