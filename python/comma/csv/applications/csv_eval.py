@@ -157,7 +157,7 @@ def add_csv_options(parser):
         '--output-format',
         default='',
         metavar='<format>',
-        help="format of output fields (by default, 'd' for each)")
+        help="format of output fields (default: 'd' for each)")
     # the options defined below are left for compatibility
     # use --output-fields and --output-format instead
     parser.add_argument('--append-fields', '-F', help=argparse.SUPPRESS)
@@ -192,7 +192,7 @@ def get_args():
     parser.add_argument(
         '--full-xpath',
         action='store_true',
-        help='use full xpaths as variable names (with / replaced by _); by default basenames of xpaths are used')
+        help='use full xpaths as variable names with / replaced by _ (default: use basenames of xpaths)')
     parser.add_argument(
         '--select',
         '--output-if',
@@ -202,6 +202,7 @@ def get_args():
         help='select and output records of input stream that satisfy the condition')
     parser.add_argument(
         '--default-values',
+        '--default',
         default='',
         metavar='<assignments>',
         help='default values for variables in expressions but not in input stream')
