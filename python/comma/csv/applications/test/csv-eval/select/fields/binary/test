@@ -1,0 +1,4 @@
+#!/bin/bash
+
+csv-to-bin 2i,2s[1],ui | csv-eval -v --fields=a,b,,name --binary=2i,2s[1],ui --select "(a < b - 1) & (name == 'y')" | csv-from-bin 2i,2s[1],ui \
+    | name-value-from-csv a,b,dummy,allow,payload --line-number --prefix output | sed 's/"//g'
