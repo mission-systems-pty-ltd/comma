@@ -289,7 +289,8 @@ stream< S >::stream( const std::string& name, mode::value m, mode::blocking_valu
          *     serial_buf::underflow() : reading when input buffer is empty
          *          attempt to read port into buffer
          *     serial_buf::sync() : sync buffer and serial port
-         *          write contents of buffer to port
+         *          write contents of output buffer to port
+         *          clear input buffer
          * 
          *  Then here:
          *     serial_buf = comma::io::serial_buf(...);
