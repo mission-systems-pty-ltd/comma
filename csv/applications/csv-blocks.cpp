@@ -138,6 +138,11 @@ static void usage( bool more )
     std::cerr << "        reads records from first block to stdout, if --num-of-blocks=<num> specified, read more than one blocks" << std::endl;
     std::cerr << "        requires the index from 'index' mode in the inputs" << std::endl;
     std::cerr << "            cat something.csv | csv-blocks index --fields=,index " << std::endl;
+    std::cerr << "    read-until" << std::endl;
+    std::cerr << "        reads records until a given index value, e.g:" << std::endl;
+    std::cerr << "            cat something.csv | csv-blocks read-until --fields=,index --value=5" << std::endl;
+    std::cerr << "        options" << std::endl;
+    std::cerr << "            --index=<index>" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
@@ -286,8 +291,7 @@ comma::uint32 memory_buffer::read_binary_records( comma::uint32 num_record, bool
 
 static comma::uint32 extended_buffer_size = 65536; // 64Kb
 
-/// Read a record and  fills out param 'record', the binary data is immediately send to stdout
-static void read_and_write_binary_record()
+static comma::uint32 read_and_write_binary_record()
 {
     static memory_buffer memory( csv.format().size() );
     static comma::csv::binary< input_with_index > binary( csv );
@@ -300,13 +304,16 @@ static void read_and_write_binary_record()
     static input_with_index record;
     // fill 'record' param
     binary.get( record, memory.buffer );
-    
-    if( record.index == 0 ) { return; }
-    
+    return record.index;
+}
+
+/// Read a record and  fills out param 'record', the binary data is immediately send to stdout
+static void read_and_write_binary_block()
+{
+    comma::uint32 records_to_read = read_and_write_binary_record();
+    if( records_to_read == 0 ) { return; }
     static memory_buffer extended_buffer( extended_buffer_size );
     static const comma::uint32 one_record_size = csv.format().size();
-    comma::uint32 records_to_read = record.index;
-    
     // maximum number that will fit in the extened_buffer
     comma::uint32 records_in_buffer = comma::uint32(extended_buffer_size / one_record_size) ;
     // only read up to the number of bytes we can hold
@@ -323,7 +330,7 @@ static void read_and_write_binary_record()
 
 /// Read a record and  fills out param 'record', the binary data is immediately send to stdout
 // when return value is false, 'record' is not filled because line read is empty
-static comma::uint32 read_and_write_ascii_record( comma::uint32 previous_index, bool strict )
+static boost::optional< comma::uint32 > read_and_write_ascii_record()
 {
     static memory_buffer memory( 1024 );
     static comma::csv::ascii< input_with_index > ascii( csv );
@@ -336,16 +343,7 @@ static comma::uint32 read_and_write_ascii_record( comma::uint32 previous_index, 
         {
             // getline may actually changes the buffer with realloc and extend the size
             ssize_t bytes_read = ::getline( &memory.buffer, &memory.size, stdin );
-            if ( bytes_read <= 0 ) // We are done
-            {
-                if( previous_index != 0 ) 
-                { 
-                    std::cerr << name() << "failed to read a full block, last index read is:"  
-                        << previous_index <<  ", hence " << previous_index << " more record/s expected " << strict << std::endl; 
-                    if( strict ) { exit(1); }
-                }
-                exit( EX_NOINPUT ); // we are done, end of stream
-            } 
+            if ( bytes_read <= 0 ) { return boost::none; } 
 #ifndef WIN32
             has_end_of_line = ( memory.buffer[bytes_read-1] == '\n' );
             sstream.write( memory.buffer, has_end_of_line ? bytes_read-1 : bytes_read );
@@ -427,11 +425,11 @@ int main( int ac, char** av )
         else if( operation == "head" )
         {
 #ifdef WIN32
-            std::cerr << "csv-blocks: not implemented on windows" << std::endl; return 1;
+            std::cerr << "csv-blocks: head: not implemented on windows" << std::endl; return 1;
 #else // #ifdef WIN32
             ::setvbuf( stdin, (char *)NULL, _IONBF, 0 );
             #ifdef WIN32
-                if( csv.binary() ) { _setmode( _fileno( stdin ), _O_BINARY ); }
+                if( csv.binary() ) { _setmode( _fileno( stdin ), _O_BINARY ); } // for the time, when windows actually will be supported... maybe...
             #endif
             comma::uint32 num_of_blocks = options.value< comma::uint32 >( "--lines,--num-of-blocks,-n", 1 );
             
@@ -439,14 +437,24 @@ int main( int ac, char** av )
             {
                 comma::uint32 index = 0;    // set as 0 for previous_index at start
                 while( num_of_blocks > 0 ) 
-                { 
-                    index = read_and_write_ascii_record( index, strict );
+                {
+                    boost::optional< comma::uint32 > i = read_and_write_ascii_record();
+                    if( !i )
+                    {
+                        if( index != 0 )
+                        { 
+                            std::cerr << name() << "failed to read a full block, last index read is:" << index <<  ", hence " << index << " more record/s expected " << strict << std::endl;
+                            if( strict ) { return 1; }
+                        }
+                        return EX_NOINPUT; // we are done, end of stream
+                    }
+                    index = *i;
                     if( index == 0 ) { --num_of_blocks; } 
                 }
             }
             else
             {
-                for( std::size_t n=0; n <num_of_blocks; ++n ) { read_and_write_binary_record(); }
+                for( std::size_t n=0; n <num_of_blocks; ++n ) { read_and_write_binary_block(); }
             }
             return 0;
 #endif // #ifdef WIN32
@@ -503,6 +511,24 @@ int main( int ac, char** av )
             }
             
             return 0;
+        }
+        else if( operation == "read-until" )
+        {
+#ifdef WIN32
+            std::cerr << "csv-blocks: read-until: not implemented on windows" << std::endl; return 1;
+#else // #ifdef WIN32
+            ::setvbuf( stdin, (char *)NULL, _IONBF, 0 );
+            #ifdef WIN32
+                if( csv.binary() ) { _setmode( _fileno( stdin ), _O_BINARY ); } // for the time, when windows actually will be supported... maybe...
+            #endif
+            comma::uint32 index = options.value< comma::uint32 >( "--index" );
+            while( true ) 
+            {
+                boost::optional< comma::uint32 > i = csv.binary() ? read_and_write_binary_record() : read_and_write_ascii_record();
+                if( !i || *i == index ) { break; }
+            }
+            return 0;
+#endif // #ifdef WIN32
         }
         else { std::cerr << name() << "unrecognised operation '" << operation << "'" << std::endl; }
         
