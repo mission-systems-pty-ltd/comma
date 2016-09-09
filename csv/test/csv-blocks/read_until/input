@@ -1,0 +1,13 @@
+ascii/empty="( echo ) | csv-blocks read-until --index=1 --fields=index | paste -s -d';'"
+ascii/absent="( echo 0 ) | csv-blocks read-until --index=1 --fields=index | paste -s -d';'"
+ascii/first="( echo 1 ) | csv-blocks read-until --index=1 --fields=index | paste -s -d';'"
+ascii/once="( echo 0 ; echo 0 ; echo 1 ; echo 0 ) | csv-blocks read-until --index=1 --fields=index | paste -s -d';'"
+ascii/eof="( echo 0 ; echo 0 ; echo 1 ; echo 0 ) | ( csv-blocks read-until --index=1 --fields=index | paste -s -d';' ; csv-blocks read-until --index=1 --fields=index | paste -s -d';' ) | paste -s -d' '"
+ascii/twice="( echo 0 ; echo 0 ; echo 1 ; echo 0 ; echo 1 ; echo 0 ; ) | ( csv-blocks read-until --index=1 --fields=index | paste -s -d';' ; csv-blocks read-until --index=1 --fields=index | paste -s -d';' ) | paste -s -d' '"
+
+binary/empty="( echo ) | csv-to-bin ui | csv-blocks read-until --index=1 --fields=index --binary ui | csv-from-bin ui | paste -s -d';'"
+binary/absent="( echo 0 ) | csv-to-bin ui | csv-blocks read-until --index=1 --fields=index --binary ui | csv-from-bin ui | paste -s -d';'"
+binary/first="( echo 1 ) | csv-to-bin ui | csv-blocks read-until --index=1 --fields=index --binary ui | csv-from-bin ui | paste -s -d';'"
+binary/once="( echo 0 ; echo 0 ; echo 1 ; echo 0 ) | csv-to-bin ui | csv-blocks read-until --index=1 --fields=index --binary ui | csv-from-bin ui | paste -s -d';'"
+binary/eof="( echo 0 ; echo 0 ; echo 1 ; echo 0 ) | csv-to-bin ui | ( csv-blocks read-until --index=1 --fields=index --binary ui | csv-from-bin ui| paste -s -d';' ; csv-blocks read-until --index=1 --fields=index --binary ui | csv-from-bin ui | paste -s -d';' ) | paste -s -d' '"
+binary/twice="( echo 0 ; echo 0 ; echo 1 ; echo 0 ; echo 1 ; echo 0 ; ) | csv-to-bin ui| ( csv-blocks read-until --index=1 --fields=index --binary ui | csv-from-bin ui | paste -s -d';' ; csv-blocks read-until --index=1 --fields=index --binary ui | csv-from-bin ui | paste -s -d';' ) | paste -s -d' '"
