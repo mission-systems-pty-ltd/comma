@@ -140,7 +140,7 @@ static void usage( bool more )
     std::cerr << "            cat something.csv | csv-blocks index --fields=,index " << std::endl;
     std::cerr << "    read-until" << std::endl;
     std::cerr << "        reads records until a given index value, e.g:" << std::endl;
-    std::cerr << "            cat something.csv | csv-blocks read-until --fields=,index --value=5" << std::endl;
+    std::cerr << "            cat something.csv | csv-blocks read-until --fields=,index --index=5" << std::endl;
     std::cerr << "        options" << std::endl;
     std::cerr << "            --index=<index>" << std::endl;
     std::cerr << std::endl;
