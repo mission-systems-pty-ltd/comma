@@ -361,6 +361,7 @@ def normalise_full_xpath(fields, full_xpath=True):
 def prepare_options(args):
     ingest_deprecated_options(args)
     check_options(args)
+    check_fields(assignment_variable_names(args.default_values))
     args.fields = normalise_full_xpath(args.fields, args.full_xpath)
     if args.binary:
         args.format = comma.csv.format.expand(args.binary)
