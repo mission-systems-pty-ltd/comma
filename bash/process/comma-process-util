@@ -715,6 +715,8 @@ function comma_wait_for_process_group()
     [[ -n "$max_wait_time" ]] || max_wait_time="forever"
     local iter=0
     local leftovers leftovers_count leftovers_rv
+    local user=$USER
+    [[ -n $user ]] || user=$(id -un)
     while true ; do
         if [[ "$max_wait_time" != "forever" ]] ; then
             (( iter > max_wait_time )) && {
@@ -725,7 +727,7 @@ function comma_wait_for_process_group()
             }
         fi
         # occasionally observed ps hanging here indefinitely; single process, no need for timeout-group
-        leftovers=$( timeout -k 10 -s TERM 10 ps --no-headers -u $USER -o pgid,pid,comm | grep "^ *$process_group_id " | grep -v '<defunct>' )
+        leftovers=$( timeout -k 10 -s TERM 10 ps --no-headers -u $user -o pgid,pid,comm | grep "^ *$process_group_id " | grep -v '<defunct>' )
         leftovers_rv=$?
         (( leftovers_rv >= 126 )) && { echo "$caller_name: could not list processes in group $process_group_id (status '$leftovers_rv')" >&2; (( ++iter )); sleep 1; continue; }
         leftovers_count=$( echo "$leftovers" | sed '/^$/d' | wc -l )
