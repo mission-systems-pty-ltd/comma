@@ -57,9 +57,11 @@ void usage( bool verbose = false )
     std::cerr << "usage: io-repeat [<options>]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
-    std::cerr << "    --timeout,-t=<seconds>: timeout before repeating the last record" << std::endl;
-    std::cerr << "    --period=<seconds>: period of repeated record" << std::endl;
+    std::cerr << "    --timeout,-t=[<seconds>]: timeout before repeating the last record" << std::endl;
+    std::cerr << "    --period=[<seconds>]: period of repeated record" << std::endl;
     std::cerr << "    --size=[<bytes>]: specify size of one record of input data" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    if --timeout and --period are not set stdin is just echoed to stdout" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << std::endl;
@@ -86,8 +88,17 @@ int main( int ac, char** av )
         if( options.exists( "--size" )) { record_size = options.value< std::size_t >( "--size" ); }
         unsigned int buffer_size = std::max( min_buffer_size, record_size.get_value_or( 0 ));
 
-        boost::posix_time::time_duration timeout = boost::posix_time::microseconds( options.value< double >( "--timeout,-t" ) * 1000000 );
-        boost::posix_time::time_duration period = boost::posix_time::microseconds( options.value< double >( "--period" ) * 1000000 );
+        boost::optional< boost::posix_time::time_duration > timeout;
+        boost::optional< boost::posix_time::time_duration > period;
+
+        if( options.exists( "--timeout,-t" )) { timeout = boost::posix_time::microseconds( options.value< double >( "--timeout,-t" ) * 1000000 ); }
+        if( options.exists( "--period" )) { period = boost::posix_time::microseconds( options.value< double >( "--period" ) * 1000000 ); }
+
+        if( !timeout != !period )
+        {
+            if( timeout ) { COMMA_THROW( comma::exception, "--timeout option requires --period option" ); }
+            else { COMMA_THROW( comma::exception, "--period option requires --timeout option" ); }
+        }
 
         comma::io::select select;
         select.read().add( comma::io::stdin_fd );
@@ -107,9 +118,12 @@ int main( int ac, char** av )
 
         while( !is_shutdown && !end_of_stream )
         {
-            select.wait( repeating ? period : timeout );
+            if( timeout ) { select.wait( repeating ? *period : *timeout ); }
+            else { select.wait(); }
 
-            repeating = true;
+            // We only consider repeating if timeout was set
+            if( timeout ) { repeating = true; }
+
             while( select.check() && select.read().ready( is.fd() ) && is->good()
                    && !end_of_stream && !is_shutdown )
             {
