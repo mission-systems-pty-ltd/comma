@@ -37,8 +37,6 @@
 #include "../../io/select.h"
 #include "../../io/stream.h"
 
-static const double default_timeout = 3.0f;
-static const double default_period = 1.0f;
 static const unsigned long min_buffer_size = 65536ul;
 
 static void bash_completion( unsigned const ac, char const * const * av )
@@ -46,7 +44,6 @@ static void bash_completion( unsigned const ac, char const * const * av )
     static const char* completion_options =
         " --help -h"
         " --size --timeout --period"
-        " --flush --unbuffered -u"
         ;
     std::cout << completion_options << std::endl;
     exit( 0 );
@@ -61,9 +58,8 @@ void usage( bool verbose = false )
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --size=[<bytes>]: specify size of one record of input data" << std::endl;
-    std::cerr << "    --timeout[<seconds>]: timeout before repeating the last record; default=" << default_timeout << "s" << std::endl;
-    std::cerr << "    --period=[<seconds>]: period of repeated record; default=" << default_period << "s" << std::endl;
-    std::cerr << "    --flush,--unbuffered,-u: flush output" << std::endl;
+    std::cerr << "    --timeout,-t=<seconds>: timeout before repeating the last record" << std::endl;
+    std::cerr << "    --period=<seconds>: period of repeated record" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << std::endl;
@@ -88,10 +84,8 @@ int main( int ac, char** av )
         if( options.exists( "--size" )) { record_size = options.value< std::size_t >( "--size" ); }
         unsigned int buffer_size = std::max( min_buffer_size, record_size.get_value_or( 0 ));
 
-        boost::posix_time::time_duration timeout = boost::posix_time::microseconds( options.value< double >( "--timeout", default_timeout ) * 1000000 );
-        boost::posix_time::time_duration period = boost::posix_time::microseconds( options.value< double >( "--period", default_period ) * 1000000 );
-
-        bool unbuffered = options.exists( "--flush,--unbuffered,-u" );
+        boost::posix_time::time_duration timeout = boost::posix_time::microseconds( options.value< double >( "--timeout,-t" ) * 1000000 );
+        boost::posix_time::time_duration period = boost::posix_time::microseconds( options.value< double >( "--period" ) * 1000000 );
 
         comma::io::select select;
         select.read().add( comma::io::stdin_fd );
@@ -104,7 +98,7 @@ int main( int ac, char** av )
         buffer.resize( buffer_size );
 
         std::size_t bytes_buffered = 0;
-        char* start_of_string;
+        const char* start_of_string = NULL;
         std::size_t length_of_string = 0;
         bool repeating = false;
         bool last_record_valid = false;
@@ -127,9 +121,9 @@ int main( int ac, char** av )
                     if( bytes_buffered <= 0 ) { break; }
                     available -= bytes_buffered;
                     std::cout.write( &buffer[0], bytes_buffered );
-                    if( unbuffered ) { std::cout.flush(); }
                     end_of_stream = repeating = last_record_valid = false;
                 }
+                std::cout.flush();
             }
 
             if( repeating )
@@ -151,7 +145,7 @@ int main( int ac, char** av )
                     last_record_valid = true;
                 }
                 std::cout.write( start_of_string, length_of_string );
-                if( unbuffered ) { std::cout.flush(); }
+                std::cout.flush();
             }
         }
         return 0;
