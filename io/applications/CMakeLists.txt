@@ -36,6 +36,10 @@ if( NOT WIN32 )
     target_link_libraries( io-publish ${comma_EXTERNAL_ALL_LIBRARIES} comma_base comma_io comma_application ) # profiler )
     install( TARGETS io-publish RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
 
+    add_executable( io-repeat ${dir}/io-repeat.cpp )
+    target_link_libraries( io-repeat ${comma_ALL_LIBRARIES} ${comma_EXTERNAL_ALL_LIBRARIES} )
+    install( TARGETS io-repeat RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
+
     add_executable( io-tee ${dir}/io-tee.cpp )
     target_link_libraries( io-tee comma_application comma_io comma_csv comma_base ${comma_EXTERNAL_ALL_LIBRARIES} ) # profiler )
     install( TARGETS io-tee RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
