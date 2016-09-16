@@ -130,7 +130,7 @@ int main( int ac, char** av )
 
             if( repeating )
             {
-                if( !last_record_valid )
+                if( !last_record_valid && bytes_buffered != 0 )
                 {
                     if( record_size )
                     {
@@ -146,8 +146,11 @@ int main( int ac, char** av )
                     }
                     last_record_valid = true;
                 }
-                std::cout.write( start_of_string, length_of_string );
-                std::cout.flush();
+                if( last_record_valid )
+                {
+                    std::cout.write( start_of_string, length_of_string );
+                    std::cout.flush();
+                }
             }
         }
         return 0;
