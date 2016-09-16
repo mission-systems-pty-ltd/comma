@@ -1,0 +1,26 @@
+#!/bin/bash
+
+. input
+
+data=$( grep -v ^$ <<< "$data" )
+
+for mode in ascii binary; do
+
+    now=$( echo "1" | csv-time-stamp | csv-shuffle --fields=t, --output-fields=t | csv-time --to seconds )
+
+    while IFS=, read data pause; do
+        echo $data
+        sleep $pause
+    done <<< "$data" \
+        | if [[ $mode == "binary" ]]; then
+              csv-to-bin $format \
+                  | io-repeat --timeout=$timeout --period=$period --size=$( csv-size $format ) \
+                  | csv-from-bin $format
+          else
+              io-repeat --timeout=$timeout --period=$period
+          fi \
+        | csv-time-stamp | csv-time --to seconds | csv-eval --fields=t "t-=$now" --flush \
+        | name-value-from-csv --fields=time,data --line-number --prefix=$mode \
+        | csv-quote -d = --unquote
+
+done
