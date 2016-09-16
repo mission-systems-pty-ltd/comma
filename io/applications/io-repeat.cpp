@@ -62,6 +62,7 @@ void usage( bool verbose = false )
     std::cerr << "    --size=[<bytes>]: specify size of one record of input data" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    if --timeout and --period are not set stdin is just echoed to stdout" << std::endl;
+    std::cerr << "    if --size is not specified data is assumed to be ascii" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << std::endl;
