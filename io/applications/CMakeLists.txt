@@ -12,16 +12,16 @@ INSTALL( TARGETS zero-cat
 ENDIF( comma_BUILD_ZEROMQ )
 
 add_executable( io-buffer ${dir}/io-buffer.cpp )
-target_link_libraries( io-buffer comma_application comma_io comma_csv comma_base ${comma_EXTERNAL_ALL_LIBRARIES} ) # profiler )
+target_link_libraries( io-buffer comma_application comma_io comma_csv comma_base ) # profiler )
 install( TARGETS io-buffer RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
 
 if( NOT WIN32 )
     add_executable( io-bandwidth ${dir}/io-bandwidth.cpp )
-    target_link_libraries( io-bandwidth ${comma_ALL_LIBRARIES} ${comma_EXTERNAL_ALL_LIBRARIES} )
+    target_link_libraries( io-bandwidth ${comma_ALL_LIBRARIES} )
     install( TARGETS io-bandwidth RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
 
     add_executable( io-cat ${dir}/io-cat.cpp )
-    target_link_libraries( io-cat comma_application comma_io comma_csv comma_base ${comma_EXTERNAL_ALL_LIBRARIES} ) # profiler )
+    target_link_libraries( io-cat comma_application comma_io comma_csv comma_base ) # profiler )
     install( TARGETS io-cat RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
 
     add_executable( io-line io-line.cpp )
@@ -29,19 +29,19 @@ if( NOT WIN32 )
     install( TARGETS io-line RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
 
     add_executable( io-ls ${dir}/io-ls.cpp )
-    target_link_libraries( io-ls ${comma_ALL_LIBRARIES} ${comma_EXTERNAL_ALL_LIBRARIES} )
+    target_link_libraries( io-ls ${comma_ALL_LIBRARIES} )
     install( TARGETS io-ls RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
     
     add_executable( io-publish ${dir}/io-publish.cpp ${dir}/publish.h ${dir}/publish.cpp )
-    target_link_libraries( io-publish ${comma_EXTERNAL_ALL_LIBRARIES} comma_base comma_io comma_application ) # profiler )
+    target_link_libraries( io-publish comma_base comma_io comma_application ) # profiler )
     install( TARGETS io-publish RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
 
     add_executable( io-tee ${dir}/io-tee.cpp )
-    target_link_libraries( io-tee comma_application comma_io comma_csv comma_base ${comma_EXTERNAL_ALL_LIBRARIES} ) # profiler )
+    target_link_libraries( io-tee comma_application comma_io comma_csv comma_base ) # profiler )
     install( TARGETS io-tee RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
     
     add_executable( udp-client ${dir}/udp-client.cpp )
-    target_link_libraries( udp-client comma_application comma_io comma_csv comma_base ${comma_EXTERNAL_ALL_LIBRARIES} ) # profiler )
+    target_link_libraries( udp-client comma_application comma_io comma_csv comma_base ) # profiler )
     install( TARGETS udp-client RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
 
 endif( NOT WIN32 )
