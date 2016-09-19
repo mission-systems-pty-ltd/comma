@@ -129,7 +129,9 @@ int main( int ac, char** av )
             return 0;
         }
 
-        boost::optional< std::size_t > record_size;
+        // Functionally equivalent to boost::optional< std::size_t > record_size
+        // but eliminates the gcc "maybe-uninitialized" warning
+        boost::optional< std::size_t > record_size = boost::make_optional< std::size_t >( false, 0 );
         if( options.exists( "--size" )) { record_size = options.value< std::size_t >( "--size" ); }
 
         boost::posix_time::time_duration update_interval = boost::posix_time::microseconds( options.value< double >( "--update,-u", default_update_interval ) * 1000000 );
