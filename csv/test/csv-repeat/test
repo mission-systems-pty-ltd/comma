@@ -14,10 +14,10 @@ for mode in ascii binary; do
     done <<< "$data" \
         | if [[ $mode == "binary" ]]; then
               csv-to-bin $format --flush \
-                  | io-repeat --timeout=$timeout --period=$period --size=$( csv-size $format ) \
+                  | csv-repeat --timeout=$timeout --period=$period --size=$( csv-size $format ) \
                   | csv-from-bin $format --flush
           else
-              io-repeat --timeout=$timeout --period=$period
+              csv-repeat --timeout=$timeout --period=$period
           fi \
         | csv-time-stamp | csv-time --to seconds | csv-eval --fields=t "t-=$now" --flush \
         | name-value-from-csv --fields=time,data --line-number --prefix=$mode \

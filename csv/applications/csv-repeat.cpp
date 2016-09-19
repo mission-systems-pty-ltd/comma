@@ -54,7 +54,7 @@ void usage( bool verbose = false )
     std::cerr << std::endl;
     std::cerr << "pass stdin to stdout, repeating the last record after an period of inactivity" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "usage: io-repeat [<options>]" << std::endl;
+    std::cerr << "usage: csv-repeat [<options>]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --timeout,-t=[<seconds>]: timeout before repeating the last record" << std::endl;
@@ -66,11 +66,11 @@ void usage( bool verbose = false )
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    { echo -e \"1\\n2\\n3\"; sleep 10; } | io-repeat --timeout=3 --period=1" << std::endl;
+    std::cerr << "    { echo -e \"1\\n2\\n3\"; sleep 10; } | csv-repeat --timeout=3 --period=1" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    { echo -e \"1,2,3\\n4,5,6\\n7,8,9\"; sleep 10; } \\" << std::endl;
     std::cerr << "        | csv-to-bin 3d \\" << std::endl;
-    std::cerr << "        | io-repeat --timeout=3 --period=1 --size=$( csv-size 3d ) \\" << std::endl;
+    std::cerr << "        | csv-repeat --timeout=3 --period=1 --size=$( csv-size 3d ) \\" << std::endl;
     std::cerr << "        | csv-from-bin 3d" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
@@ -170,7 +170,7 @@ int main( int ac, char** av )
         }
         return 0;
     }
-    catch( std::exception& ex ) { std::cerr << "io-repeat: " << ex.what() << std::endl; }
-    catch( ... ) { std::cerr << "io-repeat: unknown exception" << std::endl; }
+    catch( std::exception& ex ) { std::cerr << "csv-repeat: " << ex.what() << std::endl; }
+    catch( ... ) { std::cerr << "csv-repeat: unknown exception" << std::endl; }
     return 1;
 }
