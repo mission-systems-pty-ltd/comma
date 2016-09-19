@@ -52,7 +52,7 @@ static void bash_completion( unsigned const ac, char const * const * av )
 void usage( bool verbose = false )
 {
     std::cerr << std::endl;
-    std::cerr << "pass stdin to stdout, repeating the last record after an period of inactivity" << std::endl;
+    std::cerr << "pass stdin to stdout, repeating the last record after a period of inactivity" << std::endl;
     std::cerr << std::endl;
     std::cerr << "usage: csv-repeat [<options>]" << std::endl;
     std::cerr << std::endl;
