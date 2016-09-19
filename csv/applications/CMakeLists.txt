@@ -61,7 +61,7 @@ target_link_libraries ( csv-shuffle ${comma_ALL_EXTERNAL_LIBRARIES} comma_applic
 target_link_libraries ( csv-thin ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application comma_io )
 target_link_libraries ( csv-analyse ${comma_ALL_EXTERNAL_LIBRARIES} comma_application )
 target_link_libraries ( csv-to-sql ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
-target_link_libraries ( csv-repeat comma_application comma_io )
+target_link_libraries ( csv-repeat comma_application comma_csv comma_io )
 
 install( TARGETS csv-bin-cut
                  csv-fields

@@ -34,6 +34,7 @@
 #include "../../application/command_line_options.h"
 #include "../../application/contact_info.h"
 #include "../../application/signal_flag.h"
+#include "../../csv/options.h"
 #include "../../io/select.h"
 #include "../../io/stream.h"
 
@@ -42,7 +43,7 @@ static const unsigned long min_buffer_size = 65536ul;
 static void bash_completion( unsigned const ac, char const * const * av )
 {
     static const char* completion_options =
-        " --help -h"
+        " --help -h --verbose -v"
         " --size --timeout --period"
         ;
     std::cout << completion_options << std::endl;
@@ -57,20 +58,28 @@ void usage( bool verbose = false )
     std::cerr << "usage: csv-repeat [<options>]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
+    std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
     std::cerr << "    --timeout,-t=[<seconds>]: timeout before repeating the last record" << std::endl;
     std::cerr << "    --period=[<seconds>]: period of repeated record" << std::endl;
     std::cerr << "    --size=[<bytes>]: specify size of one record of input data" << std::endl;
+    std::cerr << "    --verbose,-v: more output" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    if --timeout and --period are not set stdin is just echoed to stdout" << std::endl;
-    std::cerr << "    if --size is not specified data is assumed to be ascii" << std::endl;
+    std::cerr << "    if --size or --binary are not specified data is assumed to be ascii" << std::endl;
     std::cerr << std::endl;
+    if( verbose )
+    {
+        std::cerr << "csv options:" << std::endl;
+        std::cerr << comma::csv::options::usage() << std::endl;
+    }
+    else { std::cerr << "    see --help --verbose for more details" << std::endl << std::endl; }
     std::cerr << "examples" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    { echo -e \"1\\n2\\n3\"; sleep 10; } | csv-repeat --timeout=3 --period=1" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    { echo -e \"1,2,3\\n4,5,6\\n7,8,9\"; sleep 10; } \\" << std::endl;
     std::cerr << "        | csv-to-bin 3d \\" << std::endl;
-    std::cerr << "        | csv-repeat --timeout=3 --period=1 --size=$( csv-size 3d ) \\" << std::endl;
+    std::cerr << "        | csv-repeat --timeout=3 --period=1 --binary=3d \\" << std::endl;
     std::cerr << "        | csv-from-bin 3d" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
@@ -85,9 +94,12 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av, usage );
         if( options.exists( "--bash-completion" ) ) bash_completion( ac, av );
 
+        comma::csv::options csv( options );
+
         // Functionally equivalent to boost::optional< std::size_t > record_size
         // but eliminates the gcc "maybe-uninitialized" warning
         boost::optional< std::size_t > record_size = boost::make_optional< std::size_t >( false, 0 );
+        if( csv.binary() ) { record_size = csv.format().size(); }
         if( options.exists( "--size" )) { record_size = options.value< std::size_t >( "--size" ); }
         unsigned int buffer_size = std::max( min_buffer_size, record_size.get_value_or( 0 ));
 
