@@ -145,7 +145,7 @@ int main( int ac, char** av )
 
             if( repeating )
             {
-                if( !last_record_valid && bytes_buffered != 0 )
+                if( !last_record_valid && bytes_buffered > 0 )
                 {
                     if( record_size )
                     {
