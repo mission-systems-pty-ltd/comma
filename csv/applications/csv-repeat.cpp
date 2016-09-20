@@ -78,9 +78,9 @@ void usage( bool verbose = false )
     std::cerr << "    { echo -e \"1\\n2\\n3\"; sleep 10; } | csv-repeat --timeout=3 --period=1" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    { echo -e \"1,2,3\\n4,5,6\\n7,8,9\"; sleep 10; } \\" << std::endl;
-    std::cerr << "        | csv-to-bin 3d \\" << std::endl;
+    std::cerr << "        | csv-to-bin 3d --flush \\" << std::endl;
     std::cerr << "        | csv-repeat --timeout=3 --period=1 --binary=3d \\" << std::endl;
-    std::cerr << "        | csv-from-bin 3d" << std::endl;
+    std::cerr << "        | csv-from-bin 3d --flush" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
