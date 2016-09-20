@@ -44,7 +44,7 @@ static void bash_completion( unsigned const ac, char const * const * av )
 {
     static const char* completion_options =
         " --help -h --verbose -v"
-        " --size --timeout --period"
+        " --timeout --period"
         " --decorate --local"
         ;
     std::cout << completion_options << std::endl;
@@ -64,11 +64,9 @@ void usage( bool verbose = false )
     std::cerr << "    --period=[<seconds>]: period of repeated record" << std::endl;
     std::cerr << "    --decorate=[<fields>]: add extra fields to output" << std::endl;
     std::cerr << "    --local: if present, decorate with local time; default: utc" << std::endl;
-    std::cerr << "    --size=[<bytes>]: specify size of one record of input data" << std::endl;
     std::cerr << "    --verbose,-v: more output" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    if --timeout and --period are not set stdin is just echoed to stdout" << std::endl;
-    std::cerr << "    if --size or --binary are not specified data is assumed to be ascii" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    --decorate fields are appended to output; supported fields are:" << std::endl;
     std::cerr << "        timestamp: append timestamp" << std::endl;
@@ -109,7 +107,6 @@ struct decoration_types
     }
 };
 
-static boost::optional< std::size_t > record_size;
 static comma::csv::options csv;
 static std::vector< decoration_types::values > decorations;
 static bool local;
@@ -122,7 +119,7 @@ static void decorate( bool repeating )
     {
         if( *it == decoration_types::repeating )
         {
-            if( record_size )
+            if( csv.binary() )
             {
                 static const unsigned int bool_size = comma::csv::format::traits< unsigned char >::size;
                 static char repeating_bytes[ bool_size ];
@@ -136,7 +133,7 @@ static void decorate( bool repeating )
             boost::posix_time::ptime now = local
                 ? boost::posix_time::microsec_clock::local_time()
                 : boost::posix_time::microsec_clock::universal_time();
-            if( record_size )
+            if( csv.binary() )
             {
                 static const unsigned int time_size = comma::csv::format::traits< boost::posix_time::ptime, comma::csv::format::time >::size;
                 static char timestamp[ time_size ];
@@ -157,9 +154,9 @@ int main( int ac, char** av )
 
         csv = comma::csv::options( options );
 
+        std::size_t record_size = 0;
         if( csv.binary() ) { record_size = csv.format().size(); }
-        if( options.exists( "--size" )) { record_size = options.value< std::size_t >( "--size" ); }
-        unsigned int buffer_size = std::max( min_buffer_size, record_size.get_value_or( 0 ));
+        unsigned int buffer_size = std::max( min_buffer_size, record_size );
 
         boost::optional< boost::posix_time::time_duration > timeout;
         boost::optional< boost::posix_time::time_duration > period;
@@ -199,10 +196,10 @@ int main( int ac, char** av )
         char* read_position = NULL;
         char* write_position = NULL;
         char* last_record = NULL;
-        if( record_size )
+        if( csv.binary() )
         {
             buffer_begin = &buffer[0];
-            buffer_end = buffer_begin + ( buffer.size() / *record_size ) * *record_size;
+            buffer_end = buffer_begin + ( buffer.size() / record_size ) * record_size;
             write_position = buffer_begin;
             read_position = buffer_begin;
         }
@@ -226,7 +223,7 @@ int main( int ac, char** av )
                 std::size_t available = is.available();
                 while( !is_shutdown && available > 0 )
                 {
-                    if( record_size )
+                    if( csv.binary() )
                     {
                         std::size_t bytes_to_read = std::min( available, ( std::size_t )( buffer_end - read_position ));
                         is->read( read_position, bytes_to_read );
@@ -234,12 +231,12 @@ int main( int ac, char** av )
                         if( bytes_read <= 0 ) { break; }
                         read_position += bytes_read;
                         available -= bytes_read;
-                        while( read_position - write_position >= ( std::ptrdiff_t )*record_size )
+                        while( read_position - write_position >= ( std::ptrdiff_t )record_size )
                         {
-                            std::cout.write( write_position, *record_size );
+                            std::cout.write( write_position, record_size );
                             decorate( false );
                             last_record = write_position;
-                            write_position += *record_size;
+                            write_position += record_size;
                         }
                         if( read_position == buffer_end )
                         {
@@ -262,11 +259,11 @@ int main( int ac, char** av )
 
             if( repeating )
             {
-                if( record_size )
+                if( csv.binary() )
                 {
                     if( last_record )
                     {
-                        std::cout.write( last_record, *record_size );
+                        std::cout.write( last_record, record_size );
                         decorate( true );
                     }
                 }
