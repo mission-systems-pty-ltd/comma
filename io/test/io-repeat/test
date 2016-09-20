@@ -13,9 +13,9 @@ for mode in ascii binary; do
         sleep $pause
     done <<< "$data" \
         | if [[ $mode == "binary" ]]; then
-              csv-to-bin $format \
+              csv-to-bin $format --flush \
                   | io-repeat --timeout=$timeout --period=$period --size=$( csv-size $format ) \
-                  | csv-from-bin $format
+                  | csv-from-bin $format --flush
           else
               io-repeat --timeout=$timeout --period=$period
           fi \
