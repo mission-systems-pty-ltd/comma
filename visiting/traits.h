@@ -177,7 +177,7 @@ struct traits< boost::array< T, S > >
     }    
 };
 
-/// set visiting traits
+/// map visiting traits
 template < typename T, typename S >
 struct traits< std::map< T, S > >
 {
