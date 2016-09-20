@@ -1,0 +1,4 @@
+timeout=3
+period=1
+block_size=80000
+block_count=3

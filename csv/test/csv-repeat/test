@@ -4,9 +4,23 @@
 
 data=$( grep -v ^$ <<< "$data" )
 
+output_fields="data"
+output_format=$format
+if [[ $decorate ]]; then
+    decorate_option="--decorate=$decorate"
+    output_fields+=",$decorate"
+    [[ $decorate =~ repeating ]] && output_format+=",ub"
+    [[ $decorate =~ timestamp ]] && output_format+=",t"
+fi
+
+time_fields=t,$( csv-fields clear --except timestamp <<< $output_fields )
+
 for mode in ascii binary; do
 
     now=$( echo "1" | csv-time-stamp | csv-shuffle --fields=t, --output-fields=t | csv-time --to seconds )
+
+    csv_eval_expr="t-=$now"
+    [[ $decorate =~ timestamp ]] && csv_eval_expr+="; timestamp-=$now"
 
     while IFS=, read data pause; do
         echo $data
@@ -14,13 +28,14 @@ for mode in ascii binary; do
     done <<< "$data" \
         | if [[ $mode == "binary" ]]; then
               csv-to-bin $format --flush \
-                  | csv-repeat --timeout=$timeout --period=$period --binary=$format \
-                  | csv-from-bin $format --flush
+                  | csv-repeat --timeout=$timeout --period=$period $decorate_option --binary=$format \
+                  | csv-from-bin $output_format --flush
           else
-              csv-repeat --timeout=$timeout --period=$period
+              csv-repeat --timeout=$timeout --period=$period $decorate_option
           fi \
-        | csv-time-stamp | csv-time --to seconds | csv-eval --fields=t "t-=$now" --flush \
-        | name-value-from-csv --fields=time,data --line-number --prefix=$mode \
+        | csv-time-stamp | csv-time --fields $time_fields --to seconds \
+        | csv-eval --fields=$time_fields "$csv_eval_expr" --flush \
+        | name-value-from-csv --fields=time,$output_fields --line-number --prefix=$mode \
         | csv-quote -d = --unquote
 
 done

@@ -1,0 +1,18 @@
+#!/bin/bash
+
+. input
+
+format="s[$block_size]"
+
+now=$( echo "1" | csv-time-stamp | csv-shuffle --fields=t, --output-fields=t | csv-time --to seconds )
+
+{
+    for i in $( seq 1 $block_count ); do
+        dd if=/dev/urandom bs=$block_size count=1 2> /dev/null
+    done
+    sleep 5
+} | csv-repeat --binary=$format --timeout=$timeout --period=$period --decorate=timestamp,repeating \
+  | csv-shuffle --fields=data,timestamp,repeating --binary=$format,t,ub --output timestamp,repeating \
+  | csv-from-bin t,ub --flush | csv-time --fields=t --to seconds | csv-eval --fields=t "t-=$now" --flush \
+  | name-value-from-csv --fields=time,repeat --line-number --prefix=output \
+  | csv-quote -d = --unquote

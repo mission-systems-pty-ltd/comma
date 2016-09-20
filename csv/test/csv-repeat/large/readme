@@ -1,0 +1,4 @@
+Two tests for very large input streams.
+
+"smaller" tests input streams where each block is smaller than csv-repeat's default buffer size.
+"larger" tests input streams where each block is larger than csv-repeat's default buffer size.
