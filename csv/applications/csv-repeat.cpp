@@ -45,6 +45,7 @@ static void bash_completion( unsigned const ac, char const * const * av )
     static const char* completion_options =
         " --help -h --verbose -v"
         " --size --timeout --period"
+        " --decorate --local"
         ;
     std::cout << completion_options << std::endl;
     exit( 0 );
@@ -61,11 +62,17 @@ void usage( bool verbose = false )
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
     std::cerr << "    --timeout,-t=[<seconds>]: timeout before repeating the last record" << std::endl;
     std::cerr << "    --period=[<seconds>]: period of repeated record" << std::endl;
+    std::cerr << "    --decorate=[<fields>]: add extra fields to output" << std::endl;
+    std::cerr << "    --local: if present, decorate with local time; default: utc" << std::endl;
     std::cerr << "    --size=[<bytes>]: specify size of one record of input data" << std::endl;
     std::cerr << "    --verbose,-v: more output" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    if --timeout and --period are not set stdin is just echoed to stdout" << std::endl;
     std::cerr << "    if --size or --binary are not specified data is assumed to be ascii" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    --decorate fields are appended to output; supported fields are:" << std::endl;
+    std::cerr << "        timestamp: append timestamp" << std::endl;
+    std::cerr << "        repeating: 1 if currently repeating" << std::endl;
     std::cerr << std::endl;
     if( verbose )
     {
@@ -77,6 +84,9 @@ void usage( bool verbose = false )
     std::cerr << std::endl;
     std::cerr << "    { echo -e \"1\\n2\\n3\"; sleep 10; } | csv-repeat --timeout=3 --period=1" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "    { echo -e \"1\\n2\\n3\"; sleep 10; } \\" << std::endl;
+    std::cerr << "        | csv-repeat --timeout=3 --period=1 --decorate=timestamp,repeating" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "    { echo -e \"1,2,3\\n4,5,6\\n7,8,9\"; sleep 10; } \\" << std::endl;
     std::cerr << "        | csv-to-bin 3d --flush \\" << std::endl;
     std::cerr << "        | csv-repeat --timeout=3 --period=1 --binary=3d \\" << std::endl;
@@ -87,6 +97,57 @@ void usage( bool verbose = false )
     exit( 0 );
 }
 
+struct decoration_types
+{
+    enum values { repeating, timestamp };
+
+    static values from_string( const std::string& value_str )
+    {
+        if( value_str == "repeating" ) { return decoration_types::repeating; }
+        else if( value_str == "timestamp" ) { return decoration_types::timestamp; }
+        else { COMMA_THROW( comma::exception, "expected decoration type, got " << value_str ); }
+    }
+};
+
+static boost::optional< std::size_t > record_size;
+static comma::csv::options csv;
+static std::vector< decoration_types::values > decorations;
+static bool local;
+
+static void decorate( bool repeating )
+{
+    for( std::vector< decoration_types::values >::iterator it = decorations.begin();
+         it != decorations.end();
+         ++it )
+    {
+        if( *it == decoration_types::repeating )
+        {
+            if( record_size )
+            {
+                static const unsigned int bool_size = comma::csv::format::traits< unsigned char >::size;
+                static char repeating_bytes[ bool_size ];
+                comma::csv::format::traits< unsigned char >::to_bin( repeating, repeating_bytes );
+                std::cout.write(( char* )( &repeating_bytes ), bool_size );
+            }
+            else { std::cout << csv.delimiter << repeating; }
+        }
+        else if( *it == decoration_types::timestamp )
+        {
+            boost::posix_time::ptime now = local
+                ? boost::posix_time::microsec_clock::local_time()
+                : boost::posix_time::microsec_clock::universal_time();
+            if( record_size )
+            {
+                static const unsigned int time_size = comma::csv::format::traits< boost::posix_time::ptime, comma::csv::format::time >::size;
+                static char timestamp[ time_size ];
+                comma::csv::format::traits< boost::posix_time::ptime, comma::csv::format::time >::to_bin( now, timestamp );
+                std::cout.write(( char* )( &timestamp ), time_size );
+            }
+            else { std::cout << csv.delimiter << boost::posix_time::to_iso_string( now ); }
+        }
+    }
+}
+
 int main( int ac, char** av )
 {
     try
@@ -94,11 +155,8 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av, usage );
         if( options.exists( "--bash-completion" ) ) bash_completion( ac, av );
 
-        comma::csv::options csv( options );
+        csv = comma::csv::options( options );
 
-        // Functionally equivalent to boost::optional< std::size_t > record_size
-        // but eliminates the gcc "maybe-uninitialized" warning
-        boost::optional< std::size_t > record_size = boost::make_optional< std::size_t >( false, 0 );
         if( csv.binary() ) { record_size = csv.format().size(); }
         if( options.exists( "--size" )) { record_size = options.value< std::size_t >( "--size" ); }
         unsigned int buffer_size = std::max( min_buffer_size, record_size.get_value_or( 0 ));
@@ -115,6 +173,18 @@ int main( int ac, char** av )
             else { COMMA_THROW( comma::exception, "--period option requires --timeout option" ); }
         }
 
+        if( options.exists( "--decorate" ))
+        {
+            std::vector< std::string > decoration_values = comma::split( options.value< std::string >( "--decorate" ), "," );
+            for( std::vector< std::string >::iterator it = decoration_values.begin();
+                 it != decoration_values.end();
+                 ++it )
+            {
+                decorations.push_back( decoration_types::from_string( *it ));
+            }
+        }
+        local = options.exists( "--local" );
+
         comma::io::select select;
         select.read().add( comma::io::stdin_fd );
         comma::io::istream is( "-", comma::io::mode::binary );
@@ -124,12 +194,22 @@ int main( int ac, char** av )
 
         std::vector< char > buffer;
         buffer.resize( buffer_size );
+        char* buffer_begin = NULL;
+        const char* buffer_end = NULL;
+        char* read_position = NULL;
+        char* write_position = NULL;
+        char* last_record = NULL;
+        if( record_size )
+        {
+            buffer_begin = &buffer[0];
+            buffer_end = buffer_begin + ( buffer.size() / *record_size ) * *record_size;
+            write_position = buffer_begin;
+            read_position = buffer_begin;
+        }
 
-        std::size_t bytes_buffered = 0;
-        const char* start_of_string = NULL;
-        std::size_t length_of_string = 0;
+        std::string line;
+
         bool repeating = false;
-        bool last_record_valid = false;
 
         while( !is_shutdown && !end_of_stream )
         {
@@ -146,40 +226,60 @@ int main( int ac, char** av )
                 std::size_t available = is.available();
                 while( !is_shutdown && available > 0 )
                 {
-                    bytes_buffered = std::min( available, buffer.size() );
-                    is->read( &buffer[0], bytes_buffered );
-                    bytes_buffered = is->gcount();
-                    if( bytes_buffered <= 0 ) { break; }
-                    available -= bytes_buffered;
-                    std::cout.write( &buffer[0], bytes_buffered );
-                    end_of_stream = repeating = last_record_valid = false;
+                    if( record_size )
+                    {
+                        std::size_t bytes_to_read = std::min( available, ( std::size_t )( buffer_end - read_position ));
+                        is->read( read_position, bytes_to_read );
+                        std::size_t bytes_read = is->gcount();
+                        if( bytes_read <= 0 ) { break; }
+                        read_position += bytes_read;
+                        available -= bytes_read;
+                        while( read_position - write_position >= ( std::ptrdiff_t )*record_size )
+                        {
+                            std::cout.write( write_position, *record_size );
+                            decorate( false );
+                            last_record = write_position;
+                            write_position += *record_size;
+                        }
+                        if( read_position == buffer_end )
+                        {
+                            read_position = write_position = buffer_begin;
+                        }
+                    }
+                    else
+                    {
+                        std::getline( std::cin, line );
+                        if( line.empty() ) { break; }
+                        available -= ( line.size() + 1 );
+                        std::cout << line;
+                        decorate( false );
+                        std::cout << '\n';
+                    }
+                    end_of_stream = repeating = false;
                 }
                 std::cout.flush();
             }
 
             if( repeating )
             {
-                if( !last_record_valid && bytes_buffered > 0 )
+                if( record_size )
                 {
-                    if( record_size )
+                    if( last_record )
                     {
-                        length_of_string = *record_size;
-                        start_of_string = &buffer[ bytes_buffered - length_of_string ];
+                        std::cout.write( last_record, *record_size );
+                        decorate( true );
                     }
-                    else
-                    {
-                        // Find the last ascii string, by looking for the second-last \n
-                        start_of_string = (char *)memrchr( &buffer[0], '\n', bytes_buffered - 1 );
-                        if( start_of_string ) { start_of_string++; } else { start_of_string = &buffer[0]; }
-                        length_of_string = &buffer[ bytes_buffered ] - start_of_string;
-                    }
-                    last_record_valid = true;
                 }
-                if( last_record_valid )
+                else
                 {
-                    std::cout.write( start_of_string, length_of_string );
-                    std::cout.flush();
+                    if( !line.empty() )
+                    {
+                        std::cout << line;
+                        decorate( true );
+                        std::cout << '\n';
+                    }
                 }
+                std::cout.flush();
             }
         }
         return 0;
