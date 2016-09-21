@@ -1,0 +1,29 @@
+#!/bin/bash
+
+name=$( basename $0 )
+
+source $( which comma-resources-util ) || exit 1
+source "$( dirname $0 )/../resources-test-util" || exit 1
+
+output="output"
+mkdir -p "$output"
+
+# initialize
+counter="$output/counter.json"
+cat <<EOF | comma_initialize_resources "$counter"
+resources/cpus="8"
+resources/memory/main="1000000"
+resources/memory/shared="500000"
+EOF
+
+cat "$counter" | prepare_for_match "initial"
+
+# pretend we are waiting for resources
+our_id=123
+
+enqueued=$( cat "$counter" | name-value-convert --to path-value | sed "/queue/s/\[\]/\[$our_id\]/" | name-value-convert --to json )
+echo "$enqueued" > "$counter"
+cat "$counter" | prepare_for_match "enqueued"
+
+comma_release_resources "data/dummy.json" "$counter" $our_id || must_work "releasing request"
+cat "$counter" | prepare_for_match "released"
