@@ -127,7 +127,7 @@ bool publish::read_bytes()
 #else
         int gcount = _read( 0, buf, packet_size_ );
 #endif
-        if( gcount == 0 ) { return false; } // i.e. end of file
+        if( gcount <= 0 ) { return false; } // i.e. end of file
         written_count = push( buf, gcount );
     }
 
