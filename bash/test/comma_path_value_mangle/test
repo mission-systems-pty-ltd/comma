@@ -1,0 +1,11 @@
+#!/bin/bash
+
+scriptname=$( readlink -f $0 )
+source $( which comma-name-value-util ) || { echo "$scriptname: failed to source comma-name-value-util" >&2; exit 1; }
+
+
+echo "a=1
+b=2" | comma_path_value_mangle | sed 's|^|basic/|'
+
+echo -n "a=1
+b=2" | comma_path_value_mangle | sed 's|^|no_newline_at_end/|'

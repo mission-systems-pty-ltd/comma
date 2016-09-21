@@ -1,0 +1,7 @@
+# ensures that the absense of newline at the end of a multiline string has no effect on output
+basic/a='1'
+basic/b='2'
+no_newline_at_end/a=basic/a
+no_newline_at_end/b=basic/b
+
+

@@ -56,7 +56,7 @@ function comma_path_value_mangle()
     local delimiter="$1"
     [[ -n "$delimiter" ]] || delimiter="_"
     local path name value mangled
-    while IFS='=' read -r path value ; do
+    while IFS='=' read -r path value || [[ -n "$path" ]]; do
         [[ -n "$path" && ! "$path" =~ ^[#\"] ]] || continue
         name=${path//\//$delimiter}
         name=${name//-/$delimiter}
