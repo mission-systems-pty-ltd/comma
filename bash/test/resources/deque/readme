@@ -1,0 +1,2 @@
+Test that a resource user who is waiting (but not yet using) a resource is
+removed from the waiting list (dequeued) when releasing resources.

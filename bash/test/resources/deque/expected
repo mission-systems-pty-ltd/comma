@@ -1,0 +1,15 @@
+initial/processes/queue="[]"
+initial/processes/users="[]"
+initial/resources/cpus=0
+initial/resources/memory/main=0
+initial/resources/memory/shared=0
+enqueued/processes/queue="[123]"
+enqueued/processes/users="[]"
+enqueued/resources/cpus=0
+enqueued/resources/memory/main=0
+enqueued/resources/memory/shared=0
+released/processes/queue="[]"
+released/processes/users="[]"
+released/resources/cpus=0
+released/resources/memory/main=0
+released/resources/memory/shared=0

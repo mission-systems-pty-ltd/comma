@@ -369,7 +369,8 @@ export -f comma_non_negative_resources
 # path to the list of resource users. See also comma_acquire_resources.
 #
 # No stdout output. Write an updated counter file.
-# No changes made if the provided ID is not in the users list.
+# No changes made if the provided ID is not in the users list and not
+# in the waiting queue.
 function comma_release_resources()
 {
     local request=$1
@@ -377,18 +378,32 @@ function comma_release_resources()
     local pid=$3
     local users=$4
     local default_users="processes/users"
+    local waiting=$5
+    local default_waiting="processes/queue"
     users=${users:-"$default_users"}
+    waiting=${waiting:-"$default_waiting"}
     users=$( echo "$users" | sed --regexp-extended 's@([^\\])\/@\1\\\/@g' )
-    local next
+    waiting=$( echo "$waiting" | sed --regexp-extended 's@([^\\])\/@\1\\\/@g' )
+    local next position
     local name="comma_release_resources"
     [[ -z "$pid" ]] && { echo "$name: no PID provided" >&2; return 1; }
-    # search the pid position in the list of users; if not found, print a warning
-    # and ignore the release request
+    # search the pid position in the list of users; if not found, do not change the counters
+    # search the pid position in the waiting list (queue); remove if found
+    # if found neither in user list nor in waiting list, print a warning and do nothing
     position=$( cat "$counter" | comma_check_pid_position "$pid" "$users" )
     (( $? == 0 )) || { echo "$name: cannot check pid position" >&2; return 1; }
     if [[ $position == "-1" ]] ; then
-        echo "$name: warning - resource user not in the list, ignore request" >&2
-        return 0
+        # not in the user list but could be waiting
+        position=$( cat "$counter" | comma_check_pid_position "$pid" "$waiting" )
+        if [[ $position == "-1" ]] ; then
+            echo "$name: warning - resource user not in the user list, not in the waiting list, ignore request" >&2
+            return 0
+        else
+            next=$( cat "$counter" | comma_dequeue_pid "$pid" "$waiting" )
+            (( $? == 0 )) || { echo "$name: cannot remove from the waiting list" >&2; return 1; }
+            echo "$next" > "$counter"
+            return 0
+        fi
     fi
     # decrease the counter and remove ourselves from the user list
     next=$( name-value-calc "$counter" "$request" --subtract --json )
