@@ -119,13 +119,9 @@ template <> struct traits< output_t >
     
 } } // namespace comma { namespace visiting {
 
-// todo: visiting traits
-
 // todo, Dave
 // - --output-fields, --output-format
-// - WIN32!!! fix cmake
 // - remove is_shutdown?
-// - re-enable test
 // - test: make period and timeout MUCH shorter
 // - if period is not given, exit with error on timeout
 // - no period: test; --help: explain it's a watchdog
