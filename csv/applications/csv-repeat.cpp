@@ -44,7 +44,7 @@ static void bash_completion( unsigned const ac, char const * const * av )
     static const char* completion_options =
         " --help -h --verbose -v"
         " --timeout --period"
-        " --decorate"
+        " --append-fields --append -a"
         ;
     std::cout << completion_options << std::endl;
     exit( 0 );
@@ -61,12 +61,12 @@ void usage( bool verbose = false )
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
     std::cerr << "    --timeout,-t=[<seconds>]: timeout before repeating the last record" << std::endl;
     std::cerr << "    --period=[<seconds>]: period of repeated record" << std::endl;
-    std::cerr << "    --decorate=[<fields>]: add extra fields to output" << std::endl;
+    std::cerr << "    --append-fields,--append,-a=[<fields>]: add extra fields to output" << std::endl;
     std::cerr << "    --verbose,-v: more output" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    if --timeout and --period are not set stdin is just echoed to stdout" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    --decorate fields are appended to output; supported fields are:" << std::endl;
+    std::cerr << "    --append fields are appended to output; supported fields are:" << std::endl;
     std::cerr << "        timestamp: append timestamp" << std::endl;
     std::cerr << "        repeating: 1 if currently repeating" << std::endl;
     std::cerr << std::endl;
@@ -81,7 +81,7 @@ void usage( bool verbose = false )
     std::cerr << "    { echo -e \"1\\n2\\n3\"; sleep 10; } | csv-repeat --timeout=3 --period=1" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    { echo -e \"1\\n2\\n3\"; sleep 10; } \\" << std::endl;
-    std::cerr << "        | csv-repeat --timeout=3 --period=1 --decorate=timestamp,repeating" << std::endl;
+    std::cerr << "        | csv-repeat --timeout=3 --period=1 --append=timestamp,repeating" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    { echo -e \"1,2,3\\n4,5,6\\n7,8,9\"; sleep 10; } \\" << std::endl;
     std::cerr << "        | csv-to-bin 3d --flush \\" << std::endl;
@@ -122,7 +122,6 @@ template <> struct traits< output_t >
 // todo: visiting traits
 
 // todo, Dave
-// - --decorate -> --append-fields
 // - --output-fields, --output-format
 // - WIN32!!! fix cmake
 // - remove is_shutdown?
@@ -158,10 +157,10 @@ int main( int ac, char** av )
         select.read().add( comma::io::stdin_fd );
         comma::io::istream is( "-", comma::io::mode::binary );
         boost::scoped_ptr< comma::csv::output_stream< output_t > > ostream;
-        if( options.exists( "--append-fields" ) )
+        if( options.exists( "--append-fields,--append,-a" ) )
         {
             comma::csv::options output_csv;
-            output_csv.fields = options.value< std::string >( "--append-fields" );
+            output_csv.fields = options.value< std::string >( "--append-fields,--append,-a" );
             if( csv.binary() ) { output_csv.format( comma::csv::format::value< output_t >() ); }
             output_csv.delimiter = csv.delimiter;
             ostream.reset( new comma::csv::output_stream< output_t >( std::cout, csv ) );
