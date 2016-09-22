@@ -160,10 +160,30 @@ int main( int ac, char** av )
         if( options.exists( "--append-fields,--append,-a" ) )
         {
             comma::csv::options output_csv;
-            output_csv.fields = options.value< std::string >( "--append-fields,--append,-a" );
-            if( csv.binary() ) { output_csv.format( comma::csv::format::value< output_t >() ); }
+            output_csv.fields = options.value< std::string >( "--append-fields,--append,-a", "" );
+            if( csv.binary() )
+            {
+                std::string format;
+                if( output_csv.fields.empty() )
+                {
+                    format = comma::csv::format::value< output_t >();
+                }
+                else
+                {
+                    const std::vector< std::string >& v = comma::split( output_csv.fields, ',' );
+                    std::string comma;
+                    for( unsigned int i = 0; i < v.size(); ++i )
+                    {
+                        if( v[i] == "repeating" ) { format += comma + 'b'; }
+                        else if( v[i] == "time" ) { format += comma + 't'; }
+                        else { std::cerr << "csv-repeat: expected one of: " << comma::join( comma::csv::names< output_t >( false ), ',' ) << "; got: \"" << v[i] << "\"" << std::endl; return 1; }
+                        comma = ",";
+                    }
+                }
+                output_csv.format( format );
+            }
             output_csv.delimiter = csv.delimiter;
-            ostream.reset( new comma::csv::output_stream< output_t >( std::cout, csv ) );
+            ostream.reset( new comma::csv::output_stream< output_t >( std::cout, output_csv ) );
         }
 
         comma::signal_flag is_shutdown;
