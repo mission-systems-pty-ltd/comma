@@ -76,7 +76,7 @@ function comma_path_mangle()
     local delimiter="$1"
     [[ -n "$delimiter" ]] || delimiter="_"
     local path name mangled
-    while IFS='=' read path _ ; do
+    while IFS='=' read -r path _ || [[ -n "$path" ]]; do
         [[ -n "$path" && ! "$path" =~ ^[#\"] ]] || continue
         name=${path//\//$delimiter}
         name=${name//-/$delimiter}
@@ -181,7 +181,7 @@ export -f comma_path_value_select
 function comma_assert_defined()
 {
     local name
-    while read name ; do
+    while read -r name || [[ -n "$name" ]]; do
         [[ "$name" ]] || continue
         [[ ${!name+1} ]] || { echo "comma_assert_defined: $name undefined" >&2 ; return 1 ; }
     done
@@ -195,7 +195,7 @@ function comma_path_assert_defined()
     [[ -z "$prefix" ]] || prefix+='_'
     local paths=( $( cat ) )
     local count=0
-    while read name ; do
+    while read -r name || [[ -n "$name" ]]; do
         [[ "$name" ]] || continue
         [[ ${!name+1} ]] || { echo "comma_path_assert_defined: ${paths[$count]} undefined" >&2 ; return 1 ; }
         (( ++count ))
@@ -262,7 +262,7 @@ function comma_path_value_to_var()
     local -r regex="^[[:alpha:]][_[:alnum:]]*$"
     local path name garbage value
     local -i ret_code=0
-    while IFS='=' read -r path value ; do
+    while IFS='=' read -r path value || [[ -n "$path" ]]; do
         [[ -n "$path" && ! "$path" =~ ^[#\"] ]] || continue
         [[ -n "$value" || -n "$null_ok" ]] || continue
         name=$prefix${path//\//$delimiter}
@@ -309,7 +309,7 @@ function comma_path_value_from_var()
     local delimiter="_"
     if [ ! -z $2 ] ; then delimiter="$2" ; fi
     if [ ! -z $1 ] ; then prefix="$1$delimiter" ; fi
-    while IFS='=' read -r path default_value ; do
+    while IFS='=' read -r path default_value || [[ -n "$path" ]]; do
         if [[ "$path" == "" ]] ; then continue ; fi
         if [[ "$path" =~ "#" ]] ; then continue ; fi
         name=$prefix$( echo $path | sed "s/\//$delimiter/g" | sed "s/-/_/g" )

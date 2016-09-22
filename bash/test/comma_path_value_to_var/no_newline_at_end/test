@@ -1,0 +1,16 @@
+#!/bin/bash
+
+scriptname=$( readlink -f $0 )
+
+source $( which comma-application-util ) || { echo "$scriptname: could not source comma-application-util" >&2; exit 1; } 
+
+input="var_a=21
+var_b=22"
+
+unset var_a
+unset var_b
+comma_path_value_to_var < <( echo -n "$input" )
+
+echo "var_a=$var_a"
+echo "var_b=$var_b"
+

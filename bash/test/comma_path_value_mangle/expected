@@ -1,7 +1,6 @@
 # ensures that the absense of newline at the end of a multiline string has no effect on output
-basic/a='1'
-basic/b='2'
-no_newline_at_end/a=basic/a
-no_newline_at_end/b=basic/b
-
+basic/var_a='21'
+basic/var_b='22'
+no_newline_at_end/var_a=basic/var_a
+no_newline_at_end/var_b=basic/var_b
 

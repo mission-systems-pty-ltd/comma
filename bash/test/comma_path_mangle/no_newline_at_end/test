@@ -6,7 +6,5 @@ source $( which comma-name-value-util ) || { echo "$scriptname: failed to source
 input="var_a=21
 var_b=22"
 
-echo "$input" | comma_path_value_mangle | sed 's|^|basic/|'
-
-echo -n "$input" | comma_path_value_mangle | sed 's|^|no_newline_at_end/|'
+echo -n "$input" | comma_path_mangle | gawk '{ print "output["NR-1"]="$0}'
 

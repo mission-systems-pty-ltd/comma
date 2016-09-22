@@ -4,3 +4,9 @@ variables/positive/some/status=0
 variables/negative[0]/status=1
 variables/negative[1]/status=1
 variables/negative[2]/status=1
+
+no_newline_at_end/assert/negative/status=1
+no_newline_at_end/assert/positive/status=0
+no_newline_at_end/path_assert/negative/status=1
+no_newline_at_end/path_assert/positive/status=0
+

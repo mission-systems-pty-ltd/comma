@@ -14,3 +14,10 @@ paths/negative[1]="a=1 ; b_c=2 ; comma_path_assert_defined < <( echo a ; echo e/
 paths/negative[2]="a=1 ; b_c=2 ; comma_path_assert_defined < <( echo e/f ; echo a ; echo b/c )"
 paths/negative[3]="xxx_b_c=2 ; comma_path_assert_defined xxx < <( echo a ; echo b/c )"
 paths/negative[4]="xxx_b_c=2 ; a=5 ; comma_path_assert_defined xxx < <( echo a ; echo b/c )"
+
+no_newline_at_end/assert/negative="var_a=21; unset var_b; comma_assert_defined < <( echo var_a; echo -n var_b )"
+no_newline_at_end/assert/positive="var_a=21; var_b=22; comma_assert_defined < <( echo var_a; echo -n var_b )"
+
+no_newline_at_end/path_assert/negative="path_var_a=21; unset path_var_b; comma_path_assert_defined < <( echo path/var_a; echo -n path/var_b )"
+no_newline_at_end/path_assert/positive="path_var_a=21; path_var_b=22; comma_path_assert_defined < <( echo path/var_a; echo -n path/var_b )"
+
