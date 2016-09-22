@@ -127,7 +127,6 @@ template <> struct traits< output_t >
 
 // todo, Dave
 // - remove is_shutdown?
-// - no period: test
 
 int main( int ac, char** av )
 {
