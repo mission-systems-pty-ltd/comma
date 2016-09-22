@@ -45,6 +45,7 @@ static void bash_completion( unsigned const ac, char const * const * av )
         " --help -h --verbose -v"
         " --timeout --period"
         " --append-fields --append -a"
+        " --output-fields --output-format"
         ;
     std::cout << completion_options << std::endl;
     exit( 0 );
@@ -59,12 +60,15 @@ void usage( bool verbose = false )
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
-    std::cerr << "    --timeout,-t=[<seconds>]: timeout before repeating the last record" << std::endl;
+    std::cerr << "    --timeout,-t=<seconds>: timeout before repeating the last record" << std::endl;
     std::cerr << "    --period=[<seconds>]: period of repeated record" << std::endl;
     std::cerr << "    --append-fields,--append,-a=[<fields>]: add extra fields to output" << std::endl;
+    std::cerr << "    --output-fields: print output fields and exit" << std::endl;
+    std::cerr << "    --output-format: print output format and exit" << std::endl;
     std::cerr << "    --verbose,-v: more output" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    if --timeout and --period are not set stdin is just echoed to stdout" << std::endl;
+    std::cerr << "    if --period are not set --timeout acts as a watchdog. If no input is seen" << std::endl;
+    std::cerr << "    within the timeout csv-repeat exits with an error." << std::endl;
     std::cerr << std::endl;
     std::cerr << "    --append fields are appended to output; supported fields are:" << std::endl;
     std::cerr << "        time: append timestamp" << std::endl;
@@ -87,6 +91,8 @@ void usage( bool verbose = false )
     std::cerr << "        | csv-to-bin 3d --flush \\" << std::endl;
     std::cerr << "        | csv-repeat --timeout=3 --period=1 --binary=3d \\" << std::endl;
     std::cerr << "        | csv-from-bin 3d --flush" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    { echo -e \"1\\n2\\n3\"; sleep 10; } | csv-repeat --timeout=3" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -119,16 +125,8 @@ template <> struct traits< output_t >
     
 } } // namespace comma { namespace visiting {
 
-// todo: visiting traits
-
 // todo, Dave
-// - --output-fields, --output-format
-// - WIN32!!! fix cmake
 // - remove is_shutdown?
-// - re-enable test
-// - test: make period and timeout MUCH shorter
-// - if period is not given, exit with error on timeout
-// - no period: test; --help: explain it's a watchdog
 
 int main( int ac, char** av )
 {
@@ -137,7 +135,7 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av, usage );
         if( options.exists( "--bash-completion" ) ) bash_completion( ac, av );
 
-        static comma::csv::options csv = comma::csv::options( options );
+        comma::csv::options csv = comma::csv::options( options );
 
         std::size_t record_size = csv.binary() ? csv.format().size() : 0;
         std::vector< char > buffer( csv.binary() ? ( 65536ul / record_size + 1 ) * record_size : 0 );
@@ -147,19 +145,15 @@ int main( int ac, char** av )
         char* write_position = buffer_begin;
         char* last_record = NULL;
 
-        boost::posix_time::time_duration timeout;
-        boost::optional< boost::posix_time::time_duration > period;
-
-        timeout = boost::posix_time::microseconds( options.value< double >( "--timeout,-t" ) * 1000000 );
-        if( options.exists( "--period" )) { period = boost::posix_time::microseconds( options.value< double >( "--period" ) * 1000000 ); }
-
         comma::io::select select;
         select.read().add( comma::io::stdin_fd );
         comma::io::istream is( "-", comma::io::mode::binary );
         boost::scoped_ptr< comma::csv::output_stream< output_t > > ostream;
+
+        comma::csv::options output_csv;
+
         if( options.exists( "--append-fields,--append,-a" ) )
         {
-            comma::csv::options output_csv;
             output_csv.fields = options.value< std::string >( "--append-fields,--append,-a", "" );
             if( csv.binary() )
             {
@@ -185,6 +179,44 @@ int main( int ac, char** av )
             output_csv.delimiter = csv.delimiter;
             ostream.reset( new comma::csv::output_stream< output_t >( std::cout, output_csv ) );
         }
+
+        if( options.exists( "--output-fields" ))
+        {
+            if( options.exists( "--fields,-f" ))
+            {
+                std::cout << options.value< std::string >( "--fields,-f" );
+                if( !output_csv.fields.empty() ) { std::cout << csv.delimiter << output_csv.fields; }
+                std::cout << std::endl;
+                return 0;
+            }
+            else
+            {
+                std::cerr << "csv-repeat: --output-fields option requires --fields" << std::endl;
+                return 1;
+            }
+        }
+
+        if( options.exists( "--output-format" ))
+        {
+            if( options.exists( "--binary" ))
+            {
+                std::cout << options.value< std::string >( "--binary" );
+                if( options.exists( "--append-fields,--append,-a" )) { std::cout << csv.delimiter << output_csv.format().string(); }
+                std::cout << std::endl;
+                return 0;
+            }
+            else
+            {
+                std::cerr << "csv-repeat: --output-format option requires --binary" << std::endl;
+                return 1;
+            }
+        }
+
+        boost::posix_time::time_duration timeout;
+        boost::optional< boost::posix_time::time_duration > period;
+
+        timeout = boost::posix_time::microseconds( options.value< double >( "--timeout,-t" ) * 1000000 );
+        if( options.exists( "--period" )) { period = boost::posix_time::microseconds( options.value< double >( "--period" ) * 1000000 ); }
 
         comma::signal_flag is_shutdown;
         bool end_of_stream = false;

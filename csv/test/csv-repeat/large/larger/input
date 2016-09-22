@@ -1,4 +1,4 @@
-timeout=3
-period=1
+timeout=0.3
+period=0.1
 block_size=80000
 block_count=3
