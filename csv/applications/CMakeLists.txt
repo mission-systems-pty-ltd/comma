@@ -34,7 +34,6 @@ add_executable( csv-shuffle ${dir}/csv-shuffle.cpp )
 add_executable( csv-thin ${dir}/csv-thin.cpp )
 add_executable( csv-analyse ${dir}/csv-analyse.cpp )
 add_executable( csv-to-sql ${dir}/csv-to-sql.cpp )
-add_executable( csv-repeat ${dir}/csv-repeat.cpp )
 
 target_link_libraries ( csv-fields ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
 target_link_libraries ( csv-format ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
@@ -61,7 +60,6 @@ target_link_libraries ( csv-shuffle ${comma_ALL_EXTERNAL_LIBRARIES} comma_applic
 target_link_libraries ( csv-thin ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application comma_io )
 target_link_libraries ( csv-analyse ${comma_ALL_EXTERNAL_LIBRARIES} comma_application )
 target_link_libraries ( csv-to-sql ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
-target_link_libraries ( csv-repeat comma_application comma_csv comma_io )
 
 install( TARGETS csv-bin-cut
                  csv-fields
@@ -87,7 +85,6 @@ install( TARGETS csv-bin-cut
                  csv-thin
                  csv-analyse
                  csv-to-sql
-                 csv-repeat
          RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR}
          COMPONENT Runtime )
          
@@ -111,3 +108,8 @@ add_executable( csv-blocks ${dir}/csv-blocks.cpp )
 target_link_libraries ( csv-blocks ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io comma_string comma_xpath comma_csv )
 install( TARGETS csv-blocks RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
 
+if( NOT WIN32 )
+    add_executable( csv-repeat ${dir}/csv-repeat.cpp )
+    target_link_libraries ( csv-repeat comma_application comma_csv comma_io )
+    install( TARGETS csv-repeat RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
+endif()
