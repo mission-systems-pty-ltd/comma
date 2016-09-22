@@ -60,14 +60,15 @@ void usage( bool verbose = false )
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
-    std::cerr << "    --timeout,-t=[<seconds>]: timeout before repeating the last record" << std::endl;
+    std::cerr << "    --timeout,-t=<seconds>: timeout before repeating the last record" << std::endl;
     std::cerr << "    --period=[<seconds>]: period of repeated record" << std::endl;
     std::cerr << "    --append-fields,--append,-a=[<fields>]: add extra fields to output" << std::endl;
     std::cerr << "    --output-fields: print output fields and exit" << std::endl;
     std::cerr << "    --output-format: print output format and exit" << std::endl;
     std::cerr << "    --verbose,-v: more output" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    if --timeout and --period are not set stdin is just echoed to stdout" << std::endl;
+    std::cerr << "    if --period are not set --timeout acts as a watchdog. If no input is seen" << std::endl;
+    std::cerr << "    within the timeout csv-repeat exits with an error." << std::endl;
     std::cerr << std::endl;
     std::cerr << "    --append fields are appended to output; supported fields are:" << std::endl;
     std::cerr << "        time: append timestamp" << std::endl;
@@ -90,6 +91,8 @@ void usage( bool verbose = false )
     std::cerr << "        | csv-to-bin 3d --flush \\" << std::endl;
     std::cerr << "        | csv-repeat --timeout=3 --period=1 --binary=3d \\" << std::endl;
     std::cerr << "        | csv-from-bin 3d --flush" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    { echo -e \"1\\n2\\n3\"; sleep 10; } | csv-repeat --timeout=3" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -124,8 +127,7 @@ template <> struct traits< output_t >
 
 // todo, Dave
 // - remove is_shutdown?
-// - if period is not given, exit with error on timeout
-// - no period: test; --help: explain it's a watchdog
+// - no period: test
 
 int main( int ac, char** av )
 {
