@@ -4,14 +4,10 @@
 
 data=$( grep -v ^$ <<< "$data" )
 
-output_fields="data"
-output_format=$format
-if [[ $append ]]; then
-    append_option="--append=$append"
-    output_fields+=",$append"
-    [[ $append =~ repeating ]] && output_format+=",ub"
-    [[ $append =~ time ]] && output_format+=",t"
-fi
+[[ $append ]] && append_option="--append=$append"
+
+output_fields=$( csv-repeat --output-fields --fields=data $append_option )
+output_format=$( csv-repeat --output-format --binary=$format $append_option )
 
 time_fields=t,$( csv-fields clear --except time <<< $output_fields )
 
