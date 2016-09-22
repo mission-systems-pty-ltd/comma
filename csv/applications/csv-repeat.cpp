@@ -210,8 +210,12 @@ int main( int ac, char** av )
                         if( line.empty() ) { break; }
                         available -= ( line.size() + 1 );
                         std::cout << line;
-                        if( ostream ) { std::cout << csv.delimiter ; ostream->write( output_t( boost::posix_time::microsec_clock::universal_time(), false ) ); }
-                        std::cout << std::endl;
+                        if( ostream )
+                        {
+                            std::cout << csv.delimiter;
+                            ostream->write( output_t( boost::posix_time::microsec_clock::universal_time(), false ) );
+                        }
+                        else { std::cout << std::endl; }
                     }
                     end_of_stream = repeating = false;
                 }
@@ -234,8 +238,12 @@ int main( int ac, char** av )
                     if( !line.empty() )
                     {
                         std::cout << line;
-                        if( ostream ) { std::cout << csv.delimiter ; ostream->write( output_t( boost::posix_time::microsec_clock::universal_time(), true ) ); }
-                        std::cout << std::endl;
+                        if( ostream )
+                        {
+                            std::cout << csv.delimiter;
+                            ostream->write( output_t( boost::posix_time::microsec_clock::universal_time(), true ) );
+                        }
+                        else { std::cout << std::endl; }
                     }
                 }
                 std::cout.flush();
