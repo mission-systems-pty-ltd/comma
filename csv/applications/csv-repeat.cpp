@@ -67,7 +67,7 @@ void usage( bool verbose = false )
     std::cerr << "    if --timeout and --period are not set stdin is just echoed to stdout" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    --append fields are appended to output; supported fields are:" << std::endl;
-    std::cerr << "        timestamp: append timestamp" << std::endl;
+    std::cerr << "        time: append timestamp" << std::endl;
     std::cerr << "        repeating: 1 if currently repeating" << std::endl;
     std::cerr << std::endl;
     if( verbose )
@@ -81,7 +81,7 @@ void usage( bool verbose = false )
     std::cerr << "    { echo -e \"1\\n2\\n3\"; sleep 10; } | csv-repeat --timeout=3 --period=1" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    { echo -e \"1\\n2\\n3\"; sleep 10; } \\" << std::endl;
-    std::cerr << "        | csv-repeat --timeout=3 --period=1 --append=timestamp,repeating" << std::endl;
+    std::cerr << "        | csv-repeat --timeout=3 --period=1 --append=time,repeating" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    { echo -e \"1,2,3\\n4,5,6\\n7,8,9\"; sleep 10; } \\" << std::endl;
     std::cerr << "        | csv-to-bin 3d --flush \\" << std::endl;
