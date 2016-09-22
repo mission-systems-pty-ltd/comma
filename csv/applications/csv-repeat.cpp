@@ -124,7 +124,6 @@ template <> struct traits< output_t >
 
 // todo, Dave
 // - remove is_shutdown?
-// - test: make period and timeout MUCH shorter
 // - if period is not given, exit with error on timeout
 // - no period: test; --help: explain it's a watchdog
 
