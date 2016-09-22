@@ -1,6 +1,6 @@
 timeout=3
 period=1
-decorate="repeating"
+append="repeating"
 format=ui
 data="
 123,0.1

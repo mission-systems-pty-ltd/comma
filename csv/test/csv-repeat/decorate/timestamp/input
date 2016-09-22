@@ -1,6 +1,6 @@
 timeout=3
 period=1
-decorate="timestamp"
+append="time"
 format=ui
 data="
 123,0.1

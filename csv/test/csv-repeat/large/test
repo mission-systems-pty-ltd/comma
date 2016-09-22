@@ -11,7 +11,7 @@ now=$( echo "1" | csv-time-stamp | csv-shuffle --fields=t, --output-fields=t | c
         dd if=/dev/urandom bs=$block_size count=1 2> /dev/null
     done
     sleep 5
-} | csv-repeat --binary=$format --timeout=$timeout --period=$period --decorate=timestamp,repeating \
+} | csv-repeat --binary=$format --timeout=$timeout --period=$period --append=timestamp,repeating \
   | csv-shuffle --fields=data,timestamp,repeating --binary=$format,t,ub --output timestamp,repeating \
   | csv-from-bin t,ub --flush | csv-time --fields=t --to seconds | csv-eval --fields=t "t-=$now" --flush \
   | name-value-from-csv --fields=time,repeat --line-number --prefix=output \
