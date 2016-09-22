@@ -35,17 +35,16 @@
 #include "../../application/contact_info.h"
 #include "../../application/signal_flag.h"
 #include "../../csv/options.h"
+#include "../../csv/stream.h"
 #include "../../io/select.h"
 #include "../../io/stream.h"
-
-static const unsigned long min_buffer_size = 65536ul;
 
 static void bash_completion( unsigned const ac, char const * const * av )
 {
     static const char* completion_options =
         " --help -h --verbose -v"
         " --timeout --period"
-        " --decorate --local"
+        " --decorate"
         ;
     std::cout << completion_options << std::endl;
     exit( 0 );
@@ -63,7 +62,6 @@ void usage( bool verbose = false )
     std::cerr << "    --timeout,-t=[<seconds>]: timeout before repeating the last record" << std::endl;
     std::cerr << "    --period=[<seconds>]: period of repeated record" << std::endl;
     std::cerr << "    --decorate=[<fields>]: add extra fields to output" << std::endl;
-    std::cerr << "    --local: if present, decorate with local time; default: utc" << std::endl;
     std::cerr << "    --verbose,-v: more output" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    if --timeout and --period are not set stdin is just echoed to stdout" << std::endl;
@@ -95,55 +93,43 @@ void usage( bool verbose = false )
     exit( 0 );
 }
 
-struct decoration_types
+struct output_t
 {
-    enum values { repeating, timestamp };
-
-    static values from_string( const std::string& value_str )
-    {
-        if( value_str == "repeating" ) { return decoration_types::repeating; }
-        else if( value_str == "timestamp" ) { return decoration_types::timestamp; }
-        else { COMMA_THROW( comma::exception, "expected decoration type, got " << value_str ); }
-    }
+    boost::posix_time::ptime time;
+    bool repeating;
+    output_t() : repeating( false ) {}
+    output_t( const boost::posix_time::ptime& time, bool repeating ) : time( time ), repeating( repeating ) {}
 };
 
-static comma::csv::options csv;
-static std::vector< decoration_types::values > decorations;
-static bool local;
+namespace comma { namespace visiting {
 
-static void decorate( bool repeating )
+template <> struct traits< output_t >
 {
-    for( std::vector< decoration_types::values >::iterator it = decorations.begin();
-         it != decorations.end();
-         ++it )
+    template < typename K, typename V > static void visit( const K&, const output_t& p, V& v )
     {
-        if( *it == decoration_types::repeating )
-        {
-            if( csv.binary() )
-            {
-                static const unsigned int bool_size = comma::csv::format::traits< unsigned char >::size;
-                static char repeating_bytes[ bool_size ];
-                comma::csv::format::traits< unsigned char >::to_bin( repeating, repeating_bytes );
-                std::cout.write(( char* )( &repeating_bytes ), bool_size );
-            }
-            else { std::cout << csv.delimiter << repeating; }
-        }
-        else if( *it == decoration_types::timestamp )
-        {
-            boost::posix_time::ptime now = local
-                ? boost::posix_time::microsec_clock::local_time()
-                : boost::posix_time::microsec_clock::universal_time();
-            if( csv.binary() )
-            {
-                static const unsigned int time_size = comma::csv::format::traits< boost::posix_time::ptime, comma::csv::format::time >::size;
-                static char timestamp[ time_size ];
-                comma::csv::format::traits< boost::posix_time::ptime, comma::csv::format::time >::to_bin( now, timestamp );
-                std::cout.write(( char* )( &timestamp ), time_size );
-            }
-            else { std::cout << csv.delimiter << boost::posix_time::to_iso_string( now ); }
-        }
+        v.apply( "time", p.time );
+        v.apply( "repeating", p.repeating );
     }
-}
+    template < typename K, typename V > static void visit( const K&, output_t& p, V& v )
+    {
+        v.apply( "time", p.time );
+        v.apply( "repeating", p.repeating );
+    }
+};
+    
+} } // namespace comma { namespace visiting {
+
+// todo: visiting traits
+
+// todo, Dave
+// - --decorate -> --append-fields
+// - --output-fields, --output-format
+// - WIN32!!! fix cmake
+// - remove is_shutdown?
+// - re-enable test
+// - test: make period and timeout MUCH shorter
+// - if period is not given, exit with error on timeout
+// - no period: test; --help: explain it's a watchdog
 
 int main( int ac, char** av )
 {
@@ -152,57 +138,37 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av, usage );
         if( options.exists( "--bash-completion" ) ) bash_completion( ac, av );
 
-        csv = comma::csv::options( options );
+        static comma::csv::options csv = comma::csv::options( options );
 
-        std::size_t record_size = 0;
-        if( csv.binary() ) { record_size = csv.format().size(); }
-        unsigned int buffer_size = std::max( min_buffer_size, record_size );
+        std::size_t record_size = csv.binary() ? csv.format().size() : 0;
+        std::vector< char > buffer( csv.binary() ? ( 65536ul / record_size + 1 ) * record_size : 0 );
+        char* buffer_begin = &buffer[0];
+        const char* buffer_end = &buffer[0] + buffer.size();
+        char* read_position = buffer_begin;
+        char* write_position = buffer_begin;
+        char* last_record = NULL;
 
-        boost::optional< boost::posix_time::time_duration > timeout;
+        boost::posix_time::time_duration timeout;
         boost::optional< boost::posix_time::time_duration > period;
 
-        if( options.exists( "--timeout,-t" )) { timeout = boost::posix_time::microseconds( options.value< double >( "--timeout,-t" ) * 1000000 ); }
+        timeout = boost::posix_time::microseconds( options.value< double >( "--timeout,-t" ) * 1000000 );
         if( options.exists( "--period" )) { period = boost::posix_time::microseconds( options.value< double >( "--period" ) * 1000000 ); }
-
-        if( !timeout != !period )
-        {
-            if( timeout ) { COMMA_THROW( comma::exception, "--timeout option requires --period option" ); }
-            else { COMMA_THROW( comma::exception, "--period option requires --timeout option" ); }
-        }
-
-        if( options.exists( "--decorate" ))
-        {
-            std::vector< std::string > decoration_values = comma::split( options.value< std::string >( "--decorate" ), "," );
-            for( std::vector< std::string >::iterator it = decoration_values.begin();
-                 it != decoration_values.end();
-                 ++it )
-            {
-                decorations.push_back( decoration_types::from_string( *it ));
-            }
-        }
-        local = options.exists( "--local" );
 
         comma::io::select select;
         select.read().add( comma::io::stdin_fd );
         comma::io::istream is( "-", comma::io::mode::binary );
+        boost::scoped_ptr< comma::csv::output_stream< output_t > > ostream;
+        if( options.exists( "--append-fields" ) )
+        {
+            comma::csv::options output_csv;
+            output_csv.fields = options.value< std::string >( "--append-fields" );
+            if( csv.binary() ) { output_csv.format( comma::csv::format::value< output_t >() ); }
+            output_csv.delimiter = csv.delimiter;
+            ostream.reset( new comma::csv::output_stream< output_t >( std::cout, csv ) );
+        }
 
         comma::signal_flag is_shutdown;
         bool end_of_stream = false;
-
-        std::vector< char > buffer;
-        buffer.resize( buffer_size );
-        char* buffer_begin = NULL;
-        const char* buffer_end = NULL;
-        char* read_position = NULL;
-        char* write_position = NULL;
-        char* last_record = NULL;
-        if( csv.binary() )
-        {
-            buffer_begin = &buffer[0];
-            buffer_end = buffer_begin + ( buffer.size() / record_size ) * record_size;
-            write_position = buffer_begin;
-            read_position = buffer_begin;
-        }
 
         std::string line;
 
@@ -210,12 +176,8 @@ int main( int ac, char** av )
 
         while( !is_shutdown && !end_of_stream )
         {
-            if( timeout ) { select.wait( repeating ? *period : *timeout ); }
-            else { select.wait(); }
-
-            // We only consider repeating if timeout was set
-            if( timeout ) { repeating = true; }
-
+            select.wait( repeating ? *period : timeout );
+            repeating = true;
             while( select.check() && select.read().ready( is.fd() ) && is->good()
                    && !end_of_stream && !is_shutdown )
             {
@@ -234,7 +196,7 @@ int main( int ac, char** av )
                         while( read_position - write_position >= ( std::ptrdiff_t )record_size )
                         {
                             std::cout.write( write_position, record_size );
-                            decorate( false );
+                            if( ostream ) { ostream->write( output_t( boost::posix_time::microsec_clock::universal_time(), false ) ); }
                             last_record = write_position;
                             write_position += record_size;
                         }
@@ -249,8 +211,8 @@ int main( int ac, char** av )
                         if( line.empty() ) { break; }
                         available -= ( line.size() + 1 );
                         std::cout << line;
-                        decorate( false );
-                        std::cout << '\n';
+                        if( ostream ) { std::cout << csv.delimiter ; ostream->write( output_t( boost::posix_time::microsec_clock::universal_time(), false ) ); }
+                        std::cout << std::endl;
                     }
                     end_of_stream = repeating = false;
                 }
@@ -259,12 +221,13 @@ int main( int ac, char** av )
 
             if( repeating )
             {
+                if( !period ) { std::cerr << "csv-repeat: input data timed out" << std::endl; return 1; }
                 if( csv.binary() )
                 {
                     if( last_record )
                     {
                         std::cout.write( last_record, record_size );
-                        decorate( true );
+                        if( ostream ) { ostream->write( output_t( boost::posix_time::microsec_clock::universal_time(), true ) ); }
                     }
                 }
                 else
@@ -272,8 +235,8 @@ int main( int ac, char** av )
                     if( !line.empty() )
                     {
                         std::cout << line;
-                        decorate( true );
-                        std::cout << '\n';
+                        if( ostream ) { std::cout << csv.delimiter ; ostream->write( output_t( boost::posix_time::microsec_clock::universal_time(), true ) ); }
+                        std::cout << std::endl;
                     }
                 }
                 std::cout.flush();
