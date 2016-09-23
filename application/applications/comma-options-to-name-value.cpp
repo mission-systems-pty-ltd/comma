@@ -104,10 +104,15 @@ int main( int ac, char** av )
             for( unsigned int i = 0; i < d.names.size(); s += ( s.empty() ? "" : "," ) + d.names[i], ++i );
             std::vector< std::string > names;
             for( unsigned int i = 0; i < d.names.size(); ++i ) { if( options.exists( d.names[i] ) ) { names.push_back( d.names[i] ); } }
-            if( names.empty() ) { continue; }
+            if( names.empty() && !d.default_value ) { continue; }
             const std::string& stripped = comma::strip( comma::strip( d.names[0], '-' ), '-' );
             if( d.has_value )
             {
+                if( names.empty() && d.default_value )
+                {
+                    std::cout << stripped << "=\"" << comma::command_line_options::escaped( *d.default_value ) << "\"" << std::endl;
+                    continue;
+                }
                 for( unsigned int k = 0; k < names.size(); ++k )
                 {
                     const std::vector< std::string >& values = options.values< std::string >( names[k] );

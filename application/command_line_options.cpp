@@ -208,8 +208,8 @@ namespace impl {
         qi::rule< iterator, std::string(), ascii::space_type > name = ascii::char_( '-' ) >> string;
         qi::rule< iterator, std::string(), ascii::space_type > value = '<' >> string >> '>';
         qi::rule< iterator, std::string(), ascii::space_type > optional_value = qi::lit( "[<" ) >> string >> qi::lit( ">]" );
-        qi::rule< iterator, std::string(), ascii::space_type > quoted = ascii::char_( "\"" ) >> qi::no_skip[ *ascii::char_ ] >> ascii::char_( "\"" );
-        qi::rule< iterator, std::string(), ascii::space_type > default_value = qi::lit( "default=" ) >> ( quoted | qi::no_skip[ *( ~ascii::char_( ';' ) ) ] );
+        qi::rule< iterator, std::string(), ascii::space_type > quoted = qi::lit( "\"" ) >> qi::no_skip[ *( ( '\\' > ascii::char_( "\"" ) ) | ~ascii::char_( "\"" ) ) ] >> qi::lit( "\"" );
+        qi::rule< iterator, std::string(), ascii::space_type > default_value = qi::lit( "default=" ) >> ( quoted | qi::no_skip[ *( ~ascii::space - ascii::char_( ";" ) ) ] );
         qi::rule< iterator, std::string(), ascii::space_type > help = qi::no_skip[ *ascii::char_ ];
 
         description_t d;
