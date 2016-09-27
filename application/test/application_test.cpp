@@ -217,23 +217,55 @@ TEST( application, command_line_options_description_parsing )
         EXPECT_EQ( "some filename", d.help );
     }
     {
-        comma::command_line_options::description d = comma::command_line_options::description::from_string( "--filename,-f=[<filename>]; default=blah.csv; some filename" );
-        EXPECT_EQ( 2, d.names.size() );
-        EXPECT_EQ( "--filename", d.names[0] );
-        EXPECT_EQ( "-f", d.names[1] );
-        EXPECT_TRUE( d.has_value );
-        EXPECT_TRUE( d.is_optional );
-        ASSERT_TRUE( bool( d.default_value ) );
-        EXPECT_EQ( "blah.csv", *d.default_value );
-        EXPECT_EQ( "some filename", d.help );
-    }
-    {
         EXPECT_THROW( comma::command_line_options::description::from_string( "" ), std::exception );
         EXPECT_THROW( comma::command_line_options::description::from_string( ";;" ), std::exception );
         EXPECT_THROW( comma::command_line_options::description::from_string( "no-hyphen" ), std::exception );
     }
 }
 
+void check_default_value( const std::string& line, const std::string& default_value, const std::string& help = "some filename" )
+{
+    typedef comma::command_line_options::description description;
+    description d = description::from_string( line );
+    EXPECT_EQ( 2, d.names.size() );
+    EXPECT_EQ( "--filename", d.names[0] );
+    EXPECT_EQ( "-f", d.names[1] );
+    EXPECT_TRUE( d.has_value );
+    EXPECT_TRUE( d.is_optional );
+    std::string message = "  command line: '" + line + "'";
+    ASSERT_TRUE( bool( d.default_value ) ) << message;
+    EXPECT_EQ( default_value, *d.default_value ) << message;
+    EXPECT_EQ( help, d.help ) << message;
+}
+
+TEST( application, command_line_options_description_default_values )
+{
+    check_default_value( "--filename,-f=[<filename>]; default=blah.csv; some filename", "blah.csv" );
+    check_default_value( "--filename,-f=[<filename>]; default=blah.csv ; some filename", "blah.csv" );
+    check_default_value( "--filename,-f=[<filename>]; default=blah.csv", "blah.csv", "" );
+    EXPECT_THROW( check_default_value( "--filename,-f=[<filename>]; default=blah.csv the rest is ignored; some filename", "" ), comma::exception );
+}
+
+TEST( application, command_line_options_description_default_values_single_quotes )
+{
+    check_default_value( "--filename,-f=[<filename>]; default='blah.csv'; some filename", "blah.csv" );
+    check_default_value( "--filename,-f=[<filename>]; default=''; some filename", "" );
+    check_default_value( "--filename,-f=[<filename>]; default='blah.csv' ; some filename", "blah.csv" );
+    check_default_value( "--filename,-f=[<filename>]; default='blah=\"$var\"' ; some filename", "blah=\"$var\"" );
+    check_default_value( "--filename,-f=[<filename>]; default='blah=\\\'$var\\\'' ; some filename", "blah='$var'" );
+    check_default_value( "--filename,-f=[<filename>]; default='blah with space '; some filename", "blah with space " );
+}
+
+TEST( application, command_line_options_description_default_values_double_quotes )
+{
+    check_default_value( "--filename,-f=[<filename>]; default=\"blah.csv\"; some filename", "blah.csv" );
+    check_default_value( "--filename,-f=[<filename>]; default=\"\"; some filename", "" );
+    check_default_value( "--filename,-f=[<filename>]; default=\"blah.csv\" ; some filename", "blah.csv" );
+    check_default_value( "--filename,-f=[<filename>]; default=\"blah='$var'\" ; some filename", "blah='$var'" );
+    check_default_value( "--filename,-f=[<filename>]; default=\"blah=\\\"$var\\\"\" ; some filename", "blah=\"$var\"" );
+    check_default_value( "--filename,-f=[<filename>]; default=\"blah with space \"; some filename", "blah with space " );
+}
+    
 int main( int argc, char* argv[] )
 {
     ::testing::InitGoogleTest( &argc, argv );

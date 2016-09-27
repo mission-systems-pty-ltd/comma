@@ -203,14 +203,16 @@ namespace impl {
 
     comma::command_line_options::description from_string_impl_( const std::string& s )
     {
-        qi::rule< iterator, std::string(), ascii::space_type > string = qi::lexeme[ +( boost::spirit::qi::alpha | boost::spirit::qi::digit | ascii::char_( '-' ) | ascii::char_( '_' ) ) ];
+        typedef qi::rule< iterator, std::string(), ascii::space_type > rule;
+        rule string = qi::lexeme[ +( boost::spirit::qi::alpha | boost::spirit::qi::digit | ascii::char_( '-' ) | ascii::char_( '_' ) ) ];
         //qi::rule< iterator, std::string(), ascii::space_type > long_name = ascii::char_( '-' ) >> ascii::char_( '-' ) >> string;
-        qi::rule< iterator, std::string(), ascii::space_type > name = ascii::char_( '-' ) >> string;
-        qi::rule< iterator, std::string(), ascii::space_type > value = '<' >> string >> '>';
-        qi::rule< iterator, std::string(), ascii::space_type > optional_value = qi::lit( "[<" ) >> string >> qi::lit( ">]" );
-        qi::rule< iterator, std::string(), ascii::space_type > quoted = qi::lit( "\"" ) >> qi::no_skip[ *( ( '\\' > ascii::char_( "\"" ) ) | ~ascii::char_( "\"" ) ) ] >> qi::lit( "\"" );
-        qi::rule< iterator, std::string(), ascii::space_type > default_value = qi::lit( "default=" ) >> ( quoted | qi::no_skip[ *( ~ascii::space - ascii::char_( ";" ) ) ] );
-        qi::rule< iterator, std::string(), ascii::space_type > help = qi::no_skip[ *ascii::char_ ];
+        rule name = ascii::char_( '-' ) >> string;
+        rule value = '<' >> string >> '>';
+        rule optional_value = qi::lit( "[<" ) >> string >> qi::lit( ">]" );
+        rule double_quoted = qi::lit( "\"" ) >> qi::no_skip[ *( ( '\\' > ascii::char_( "\"" ) ) | ~ascii::char_( "\"" ) ) ] >> qi::lit( "\"" );
+        rule single_quoted = qi::lit( "'" ) >> qi::no_skip[ *( ( '\\' > ascii::char_( "\'" ) ) | ~ascii::char_( "\'" ) ) ] >> qi::lit( "'" );
+        rule default_value = qi::lit( "default=" ) >> ( double_quoted | single_quoted | qi::no_skip[ *( ~ascii::space - ascii::char_( ";" ) ) ] );
+        rule help = qi::no_skip[ *ascii::char_ ];
 
         description_t d;
         bool r = boost::spirit::qi::phrase_parse( s.begin()
@@ -221,6 +223,7 @@ namespace impl {
                                                                 | optional_value[ boost::bind( got_optional_value, boost::ref( d ), _1 ) ] ) )
                                                     >> -( ';' >> default_value[ boost::bind( got_default_value, boost::ref( d ), _1 ) ] )
                                                     >> -( ';' >> *( ascii::space ) >> help[ boost::bind( set_, boost::ref( d.help ), _1 ) ] )
+                                                    >> qi::eoi
                                                 , ascii::space );
         if( !r ) { COMMA_THROW( comma::exception, "invalid option description: \"" << s << "\"" ); }
         if( d.names[0].size() < 3 || d.names[0][0] != '-' || d.names[0][1] != '-' ) { COMMA_THROW( comma::exception, "expected full name (e.g. --filename), got \"" << d.names[0] << "\" in: \"" << s << "\"" ); }
