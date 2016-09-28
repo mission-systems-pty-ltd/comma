@@ -1,0 +1,9 @@
+#!/bin/bash
+
+set -e
+
+echo '--var=[<var>]; default=10 ; help text' | comma-options-to-name-value "" | sed 's|"||g; s|^|space_with_help/|'
+echo '--var=[<var>]; default=10;' | comma-options-to-name-value "" | sed 's|"||g; s|^|semicolon_no_help/|'
+echo '--var=[<var>]; default=10' | comma-options-to-name-value "" | sed 's|"||g; s|^|no_help/|'
+echo '--var=[<var>]; default=10 ' | comma-options-to-name-value "" | sed 's|"||g; s|^|space_no_help/|'
+

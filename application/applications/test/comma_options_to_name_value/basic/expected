@@ -1,0 +1,3 @@
+# check that default value is used when the option is not given on the command line
+given_value/var=1
+default_value/var=10

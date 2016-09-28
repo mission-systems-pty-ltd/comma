@@ -1,0 +1,12 @@
+# using double quotes to define default value
+basic/var="blah"
+space_inside/var="blah blah"
+space_outside/var="blah"
+semicolon_inside/var="blah;blah"
+no_help/basic/var="blah"
+no_help/space_outside/var="blah"
+no_help/semicolon/var="blah"
+# the following is commented out because comma-test-match can't handle quotes (even if they are escaped)
+# escaped_quotes/var="blah=\"$value\""
+single_quotes/var="blah='$value'"
+

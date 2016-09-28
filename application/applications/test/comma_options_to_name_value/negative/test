@@ -1,0 +1,35 @@
+#!/bin/bash
+
+echo '--var=[<var>]; default=blah blah; help text' | comma-options-to-name-value ""
+echo "unquoted_space/status=$?"
+
+echo '--var=[<var>]; default=blah blah; help text' | comma-options-to-name-value "--var=10"
+echo "fail_with_command_line_options/status=$?"
+
+cat <<END | comma-options-to-name-value "" >/dev/null
+--ok=[<ok>]; default=good_default; some help
+--problem=[<problem>]; default=blah blah; help text
+END
+echo "fail_when_not_first/status=$?"
+
+echo '--var=[<var>]; default=blah help text' | comma-options-to-name-value ""
+echo "no_delimiter/status=$?"
+
+echo '--var=[<var>]; default=blah: help text' | comma-options-to-name-value ""
+echo "incorrect_delimiter/colon/status=$?"
+
+echo '--var=[<var>]; default=blah, help text' | comma-options-to-name-value ""
+echo "incorrect_delimiter/comma/status=$?"
+
+echo '--var=[<var>]; default="blah" trailing_not_space; help text' | comma-options-to-name-value ""
+echo "trailing_non_space/double_quotes/with_helpstatus=$?"
+
+echo '--var=[<var>]; default="blah" trailing_not_space' | comma-options-to-name-value ""
+echo "trailing_non_space/double_quotes/no_help/status=$?"
+
+echo "--var=[<var>]; default='blah' trailing_not_space; help text" | comma-options-to-name-value ""
+echo "trailing_non_space/single_quotes/with_help/status=$?"
+
+echo "--var=[<var>]; default='blah' trailing_not_space" | comma-options-to-name-value ""
+echo "trailing_non_space/single_quotes/no_help/status=$?"
+

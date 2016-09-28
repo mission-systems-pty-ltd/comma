@@ -1,0 +1,11 @@
+# various incorrect ways of using default value
+unquoted_space/status=1
+fail_with_command_line_options/status=1
+fail_when_not_first/status=1
+no_delimiter/status=1
+incorrect_delimiter/colon/status=1
+incorrect_delimiter/comma/status=1
+trailing_non_space/double_quotes/with_helpstatus=1
+trailing_non_space/double_quotes/no_help/status=1
+trailing_non_space/single_quotes/with_help/status=1
+trailing_non_space/single_quotes/no_help/status=1

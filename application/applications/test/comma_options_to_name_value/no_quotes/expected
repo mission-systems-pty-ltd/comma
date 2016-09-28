@@ -1,0 +1,5 @@
+# various ways to define default value correctly (no quotes used in the definition)
+space_with_help/var=10
+semicolon_no_help/var=10
+no_help/var=10
+space_no_help/var=10

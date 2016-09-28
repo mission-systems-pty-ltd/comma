@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -e
+
+echo "--var=[<var>]; default='blah'; help text" | comma-options-to-name-value "" | sed 's|^|basic/|'
+echo "--var=[<var>]; default='blah blah'; help text" | comma-options-to-name-value "" | sed 's|^|space_inside/|'
+echo "--var=[<var>]; default='blah;blah' ; help text" | comma-options-to-name-value "" | sed 's|^|semicolon_inside/|'
+echo "--var=[<var>]; default='blah' ; help text" | comma-options-to-name-value "" | sed 's|^|space_outside/|'
+echo "--var=[<var>]; default='blah'" | comma-options-to-name-value "" | sed 's|^|no_help/basic/|'
+echo "--var=[<var>]; default='blah' " | comma-options-to-name-value "" | sed 's|^|no_help/space_outside/|'
+echo "--var=[<var>]; default='blah';" | comma-options-to-name-value "" | sed 's|^|no_help/semicolon/|'
+
+cat <<END | comma-options-to-name-value "" | sed 's|^|escaped_quotes/|'
+--var=[<var>]; default='blah="\$value"'
+END
