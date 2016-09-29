@@ -1,0 +1,10 @@
+#!/bin/bash
+
+scriptname=$( basename "$0" )
+
+source $( type -p comma-string-util ) || { echo "$scriptname: cannot source comma-string-util" >&2; exit 1; }
+
+while IFS=: read test input; do
+    echo -e "$input" | comma_expand_ranges \
+        | gawk -v test=$test '{ printf "%s/%d=\"%s\"\n", test, NR-1, $0 }'
+done
