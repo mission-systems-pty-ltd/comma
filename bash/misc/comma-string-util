@@ -73,5 +73,4 @@ function comma_expand_ranges()
             | paste -s -d,
     done
 }
-
 export -f comma_expand_ranges
