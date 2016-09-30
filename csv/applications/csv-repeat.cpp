@@ -125,9 +125,6 @@ template <> struct traits< output_t >
     
 } } // namespace comma { namespace visiting {
 
-// todo, Dave
-// - remove is_shutdown?
-
 int main( int ac, char** av )
 {
     try
@@ -229,12 +226,11 @@ int main( int ac, char** av )
         {
             select.wait( repeating ? *period : timeout );
             repeating = true;
-            while( select.check() && select.read().ready( is.fd() ) && is->good()
-                   && !end_of_stream && !is_shutdown )
+            while( select.check() && select.read().ready( is.fd() ) && is->good() && !end_of_stream )
             {
                 end_of_stream = true;
                 std::size_t available = is.available();
-                while( !is_shutdown && available > 0 )
+                while( available > 0 )
                 {
                     if( csv.binary() )
                     {
