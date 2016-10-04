@@ -256,11 +256,17 @@ static std::size_t csv_to_bin( char* buf, const std::string& s, format::types_en
             case format::float_t: return csv_to_bin< float >( buf, s );
             case format::double_t: return csv_to_bin< double >( buf, s );
             case format::time: // TODO: quick and dirty: use serialization traits
-                try { format::traits< boost::posix_time::ptime, format::time >::to_bin( ( s.empty() || s == "not-a-date-time" ) ? boost::posix_time::not_a_date_time : boost::posix_time::from_iso_string( s ), buf ); }
+                try { format::traits< boost::posix_time::ptime, format::time >::to_bin( ( s.empty() || s == "not-a-date-time" ) ? boost::posix_time::not_a_date_time 
+                                                                                      : ( s == "+infinity" || s == "+inf" || s == "inf" ) ? boost::posix_time::pos_infin 
+                                                                                      : ( s == "-infinity" || s == "-inf" ) ? boost::posix_time::neg_infin 
+                                                                                      : boost::posix_time::from_iso_string( s ), buf ); }
                 catch ( ... ) { format::traits< boost::posix_time::ptime, format::time >::to_bin( boost::posix_time::not_a_date_time, buf ); }
                 return format::traits< boost::posix_time::ptime, format::time >::size;
             case format::long_time: // TODO: quick and dirty: use serialization traits
-                try { format::traits< boost::posix_time::ptime, format::long_time >::to_bin( boost::posix_time::from_iso_string( s ), buf ); }
+                try { format::traits< boost::posix_time::ptime, format::long_time >::to_bin( ( s.empty() || s == "not-a-date-time" ) ? boost::posix_time::not_a_date_time 
+                                                                                      : ( s == "+infinity" || s == "+inf" || s == "inf" ) ? boost::posix_time::pos_infin 
+                                                                                      : ( s == "-infinity" || s == "-inf" ) ? boost::posix_time::neg_infin 
+                                                                                      : boost::posix_time::from_iso_string( s ), buf ); }
                 catch ( ... ) { format::traits< boost::posix_time::ptime, format::long_time >::to_bin( boost::posix_time::not_a_date_time, buf ); }
                 return format::traits< boost::posix_time::ptime, format::long_time >::size;
             case format::fixed_string:
@@ -425,6 +431,11 @@ std::string format::collapsed_string() const
     return "";
 }
 
+// formats for not-a-date-time, +infinity, -infinity
+static const comma::int64 bin_not_a_date_time = std::numeric_limits< comma::int64 >::min();
+static const comma::int64 bin_time_pos_infin = std::numeric_limits< comma::int64 >::max();
+static const comma::int64 bin_time_neg_infin = std::numeric_limits< comma::int64 >::min() + 1;
+
 boost::posix_time::ptime format::traits< boost::posix_time::ptime, format::long_time >::from_bin( const char* buf, std::size_t size )
 {
     //comma::int64 seconds; // todo: due to bug in boost, will be casted down to int32, but for the dates we use seconds will never overflow, thus, leave it like this now
@@ -433,6 +444,9 @@ boost::posix_time::ptime format::traits< boost::posix_time::ptime, format::long_
     //::memcpy( &nanoseconds, buf + sizeof( comma::int64 ), sizeof( comma::int32 ) );
 	(void) size;
     comma::int64 seconds = *reinterpret_cast< const comma::int64* >( buf );
+    if( seconds == bin_not_a_date_time ) { return boost::posix_time::not_a_date_time; }
+    if( seconds == bin_time_pos_infin ) { return boost::posix_time::pos_infin; }
+    if( seconds == bin_time_neg_infin ) { return boost::posix_time::neg_infin; }
     comma::int32 nanoseconds = *reinterpret_cast< const comma::int32* >( buf + sizeof( comma::int64 ) );
     return boost::posix_time::ptime( csv::impl::epoch, boost::posix_time::seconds( static_cast< long >( seconds ) ) + boost::posix_time::microseconds( nanoseconds / 1000 ) );
 }
@@ -440,6 +454,9 @@ boost::posix_time::ptime format::traits< boost::posix_time::ptime, format::long_
 void format::traits< boost::posix_time::ptime, format::long_time >::to_bin( const boost::posix_time::ptime& t, char* buf, std::size_t size )
 {
 	(void)size;
+    if( t.is_not_a_date_time() ) { *reinterpret_cast< comma::int64* >( buf ) = bin_not_a_date_time; *reinterpret_cast< comma::int32* >( buf + sizeof( comma::int64 ) ) = 0; return; }
+    if( t.is_pos_infinity() ) { *reinterpret_cast< comma::int64* >( buf ) = bin_time_pos_infin; *reinterpret_cast< comma::int32* >( buf + sizeof( comma::int64 ) ) = 0; return; }
+    if( t.is_neg_infinity() ) { *reinterpret_cast< comma::int64* >( buf ) = bin_time_neg_infin; *reinterpret_cast< comma::int32* >( buf + sizeof( comma::int64 ) ) = 0; return; }
     static const boost::posix_time::ptime base( csv::impl::epoch );
     const boost::posix_time::time_duration duration = t - base;
     comma::int64 seconds = duration.total_seconds();
@@ -450,8 +467,6 @@ void format::traits< boost::posix_time::ptime, format::long_time >::to_bin( cons
     *reinterpret_cast< comma::int32* >( buf + sizeof( comma::int64 ) ) = nanoseconds;
 }
 
-static const comma::int64 bin_not_a_date_time = std::numeric_limits< comma::int64 >::min();
-
 boost::posix_time::ptime format::traits< boost::posix_time::ptime, format::time >::from_bin( const char* buf, std::size_t size )
 {
     //comma::int64 microseconds;
@@ -459,6 +474,8 @@ boost::posix_time::ptime format::traits< boost::posix_time::ptime, format::time 
 	(void)size;
     comma::int64 microseconds = *reinterpret_cast< const comma::int64* >( buf );
     if( microseconds == bin_not_a_date_time ) { return boost::posix_time::not_a_date_time; }
+    if( microseconds == bin_time_pos_infin ) { return boost::posix_time::pos_infin; }
+    if( microseconds == bin_time_neg_infin ) { return boost::posix_time::neg_infin; }
     long seconds = static_cast< long >( microseconds / 1000000 ); // todo: due to bug in boost, will be casted down to int32, but for the dates we use seconds will never overflow, thus, leave it like this now
     microseconds -= static_cast< comma::int64 >( seconds ) * 1000000;
     return boost::posix_time::ptime( csv::impl::epoch, boost::posix_time::seconds( seconds ) + boost::posix_time::microseconds( static_cast< long >( microseconds ) ) );
@@ -467,6 +484,8 @@ boost::posix_time::ptime format::traits< boost::posix_time::ptime, format::time 
 void format::traits< boost::posix_time::ptime, format::time >::to_bin( const boost::posix_time::ptime& t, char* buf, std::size_t size )
 {
     if( t.is_not_a_date_time() ) { *reinterpret_cast< comma::int64* >( buf ) = bin_not_a_date_time; return; }
+    if( t.is_pos_infinity() ) { *reinterpret_cast< comma::int64* >( buf ) = bin_time_pos_infin; return; }
+    if( t.is_neg_infinity() ) { *reinterpret_cast< comma::int64* >( buf ) = bin_time_neg_infin; return; }
 	(void)size;
     static const boost::posix_time::ptime base( csv::impl::epoch );
     const boost::posix_time::time_duration duration = t - base;

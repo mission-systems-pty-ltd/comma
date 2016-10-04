@@ -43,6 +43,7 @@
 #include "../../application/contact_info.h"
 #include "../../base/exception.h"
 #include "../../csv/stream.h"
+#include "../../csv/impl/unstructured.h"
 #include "../../math/compare.h"
 #include "../../name_value/parser.h"
 #include "../../string/string.h"
@@ -341,39 +342,11 @@ static void init_input( const comma::csv::format& format, const comma::command_l
     csv.full_xpath = true;
 }
 
-static comma::csv::format guess_format( const std::string& line )
-{
-    comma::csv::format format;
-    std::vector< std::string > v = comma::split( line, csv.delimiter );
-    for( unsigned int i = 0; i < v.size(); ++i ) // quick and dirty
-    {
-        try
-        {
-            if( v[i] != "not-a-date-time" ) { boost::posix_time::from_iso_string( v[i] ); }
-            format += "t";
-        }
-        catch( ... )
-        {
-            try
-            {
-                boost::lexical_cast< double >( v[i] );
-                format += "d";
-            }
-            catch( ... )
-            {
-                format += "s[1024]"; // quick and dirty
-            }
-        }
-    }
-    if( verbose ) { std::cerr << "csv-select: guessed format: \"" << format.string() << "\"" << std::endl; }
-    return format;
-}
-
 int main( int ac, char** av )
 {
+        comma::command_line_options options( ac, av );
     try
     {
-        comma::command_line_options options( ac, av );
         if( options.exists( "--help,-h" ) ) { usage(); }
         verbose = options.exists( "--verbose,-v" );
         bool is_or = options.exists( "--or" );
@@ -433,7 +406,7 @@ int main( int ac, char** av )
             if( line.empty() ) { return 0; }
             comma::csv::format format = options.exists( "--format" )
                                       ? comma::csv::format( options.value< std::string >( "--format" ) )
-                                      : guess_format( line );
+                                      : comma::csv::impl::unstructured::guess_format( line );
             init_input( format, options );
             comma::csv::ascii_input_stream< input_t > istream( std::cin, csv, input );
             // todo: quick and dirty: no time to debug why the commented section does not work (but that's the right way)
