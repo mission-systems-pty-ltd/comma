@@ -213,6 +213,38 @@ int main( int argc, char** argv )
     std::cerr << "io-cat: not implemented on windows" << std::endl;
     return 1;
     #endif
+    
+    
+    
+//     {
+//         std::vector< char > buffer( 1024 );
+//         comma::io::select s;
+//         s.read().add( 0 );
+//         while( true )
+//         {
+//             s.wait( boost::posix_time::seconds( 1 ) );
+//             int count = 0;
+//             int error = ::ioctl( 0, FIONREAD, &count );
+//             bool eof = count <= 0 && s.read().ready( 0 );
+//             if( error != 0 || eof ) { std::cerr << "--> exit" << std::endl; break; }
+//             int in_avail = std::cin.rdbuf()->in_avail();
+//             if( in_avail <= 0 && count <= 0 ) { continue; }
+//             std::cerr << "--> xxx: in_avail: " << in_avail << std::endl;
+//             std::cerr << "--> b.0: check: " << s.check() << " count: " << count << " error: " << error << std::endl;
+//             std::cerr << "--> b.1: ready: " << s.read().ready( 0 ) << std::endl;
+//             std::cerr << "--> b.2: in_avail: " << std::cin.rdbuf()->in_avail() << std::endl << std::endl;
+//             std::cin.read( &buffer[0], 1 );
+//             count = 0;
+//             error = ::ioctl( 0, FIONREAD, &count );
+//             std::cerr << "--> c.0: check: " << s.check() << " count: " << count << " error: " << error << std::endl;
+//             std::cerr << "--> c.1: ready: " << s.read().ready( 0 ) << std::endl;
+//             std::cerr << "--> c.2: in_avail: " << std::cin.rdbuf()->in_avail() << std::endl << std::endl;
+//         }
+//         return 0;
+//     }
+    
+    
+    
     try
     {
         if( argc < 2 ) { usage(); }
