@@ -171,7 +171,8 @@ struct unstructured
         {
             try
             { 
-                if( v[i] != "not-a-date-time" ) { boost::posix_time::from_iso_string( v[i] ); }
+                // "inf", "+inf", and "-inf" can also be parsed as times. cannot tell apart from double?
+                if( v[i] != "not-a-date-time" && v[i] != "+infinity" && v[i] != "-infinity") { boost::posix_time::from_iso_string( v[i] ); }
                 f += "t";
             }
             catch( ... )

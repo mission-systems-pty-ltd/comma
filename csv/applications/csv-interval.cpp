@@ -79,10 +79,10 @@ template <> struct limits< long double >
 
 template <> struct limits< boost::posix_time::ptime >
 {
-    // static boost::posix_time::ptime max() { return boost::posix_time::pos_infin; }
-    // static boost::posix_time::ptime lowest() { return boost::posix_time::neg_infin; }
-    static boost::posix_time::ptime max() { return boost::posix_time::not_a_date_time; }
-    static boost::posix_time::ptime lowest() { return boost::posix_time::not_a_date_time; }
+    static boost::posix_time::ptime max() { return boost::posix_time::pos_infin; }
+    static boost::posix_time::ptime lowest() { return boost::posix_time::neg_infin; }
+//     static boost::posix_time::ptime max() { return boost::posix_time::not_a_date_time; }
+//     static boost::posix_time::ptime lowest() { return boost::posix_time::not_a_date_time; }
 };
 
 static void usage( bool verbose = false )
