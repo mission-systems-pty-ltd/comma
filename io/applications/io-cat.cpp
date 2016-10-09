@@ -170,7 +170,6 @@ class any_stream : public stream
         unsigned int read_available( std::vector< char >& buffer, unsigned int max_count )
         {
             std::size_t available = available_();
-            std::cerr << "--> available: " << available << std::endl;
             if( available == 0 ) { return 0; }
             if( binary_ )
             {
