@@ -165,6 +165,11 @@ int main( int ac, char **av )
         if( unbuffered ) { stdin_select.read().add( 0 ); if ( debug ) { std::cerr << app_name << ": did initial unbuffered read" << std::endl; } }
         comma::io::istream is( "-", comma::io::mode::binary );
         if ( debug ) { std::cerr << app_name << ": opened input stream" << std::endl; }
+        if( unbuffered )
+        {
+            std::ios_base::sync_with_stdio( false ); // unsync to make rdbuf()->in_avail() working
+            std::cin.tie( NULL ); // std::cin is tied to std::cout by default
+        }
         while( std::cin.good() )
         {
             if ( debug ) { std::cerr << app_name << ": loop" << std::endl; }
