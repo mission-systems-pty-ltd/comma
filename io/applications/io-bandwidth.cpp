@@ -155,13 +155,15 @@ int main( int ac, char** av )
         comma::signal_flag is_shutdown;
         bool end_of_stream = false;
         boost::array< char, 65536 > buffer;
-
+        std::ios_base::sync_with_stdio( false ); // unsync to make rdbuf()->in_avail() working
+        std::cin.tie( NULL ); // std::cin is tied to std::cout by default
+        
         while( !is_shutdown && !end_of_stream )
         {
             select.wait( wait_interval );
             while( select.check() && select.read().ready( is.fd() ) && is->good() )
             {
-                std::size_t available = is.available_on_file_descriptor();
+                std::size_t available = is->rdbuf()->in_avail(); // std::size_t available = is.available_on_file_descriptor();
                 if( available == 0 ) { end_of_stream = true; break; }
                 std::size_t size = std::min( available, buffer.size() );
                 is->read( &buffer[0], size );
