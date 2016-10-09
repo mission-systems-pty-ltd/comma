@@ -214,14 +214,12 @@ int main( int ac, char** av )
 
         timeout = boost::posix_time::microseconds( options.value< double >( "--timeout,-t" ) * 1000000 );
         if( options.exists( "--period" )) { period = boost::posix_time::microseconds( options.value< double >( "--period" ) * 1000000 ); }
-
         comma::signal_flag is_shutdown;
         bool end_of_stream = false;
-
         std::string line;
-
+        std::ios_base::sync_with_stdio( false ); // unsync to make rdbuf()->in_avail() working
+        std::cin.tie( NULL ); // std::cin is tied to std::cout by default
         bool repeating = false;
-
         while( !is_shutdown && !end_of_stream )
         {
             select.wait( repeating ? *period : timeout );
@@ -229,7 +227,7 @@ int main( int ac, char** av )
             while( select.check() && select.read().ready( is.fd() ) && is->good() && !end_of_stream )
             {
                 end_of_stream = true;
-                std::size_t available = is.available_on_file_descriptor();
+                std::size_t available = is->rdbuf()->in_avail(); //std::size_t available = is.available_on_file_descriptor();
                 while( available > 0 )
                 {
                     if( csv.binary() )
