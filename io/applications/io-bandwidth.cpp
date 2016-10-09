@@ -161,7 +161,7 @@ int main( int ac, char** av )
             select.wait( wait_interval );
             while( select.check() && select.read().ready( is.fd() ) && is->good() )
             {
-                std::size_t available = is.available();
+                std::size_t available = is.available_on_file_descriptor();
                 if( available == 0 ) { end_of_stream = true; break; }
                 std::size_t size = std::min( available, buffer.size() );
                 is->read( &buffer[0], size );

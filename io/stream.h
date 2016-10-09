@@ -81,13 +81,15 @@ class stream : boost::noncopyable
         /// return pointer to stream
         const S* operator->() const;
 
-        /// return file descriptor (to use in select)
+        /// @return file descriptor (to use in select)
         comma::io::file_descriptor fd() const;
 
-        /// return the number of characters available for reading
-        unsigned int available() const;
+        /// @return the number of characters available for reading on file descriptor
+        /// @note for number of bytes available for reading in std::istream call rdbuf()->avail()
+        /// e.g. std::cin.rdbuf()->in_avail()
+        unsigned int available_on_file_descriptor() const;
 
-        /// return stream name
+        /// @return stream name
         const std::string& name() const;
 
     protected:

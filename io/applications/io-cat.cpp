@@ -166,7 +166,7 @@ class any_stream : public stream
         
         unsigned int read_available( std::vector< char >& buffer, unsigned int max_count )
         {
-            std::size_t available = istream_.available();
+            std::size_t available = istream_.available_on_file_descriptor();
             if( !available ) { return 0; }
             if( binary_ )
             {
@@ -189,7 +189,7 @@ class any_stream : public stream
             }
         }
         
-        bool empty() const { return istream_.available() == 0; }
+        bool empty() const { return istream_.available_on_file_descriptor() == 0; }
         
         bool eof() const { return !istream_->good() || istream_->eof(); }
         

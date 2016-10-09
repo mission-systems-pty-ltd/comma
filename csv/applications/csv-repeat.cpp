@@ -229,7 +229,7 @@ int main( int ac, char** av )
             while( select.check() && select.read().ready( is.fd() ) && is->good() && !end_of_stream )
             {
                 end_of_stream = true;
-                std::size_t available = is.available();
+                std::size_t available = is.available_on_file_descriptor();
                 while( available > 0 )
                 {
                     if( csv.binary() )

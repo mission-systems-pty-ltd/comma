@@ -228,7 +228,7 @@ comma::io::file_descriptor stream< S >::fd() const
 }
 
 template < typename S >
-unsigned int stream< S >::available() const
+unsigned int stream< S >::available_on_file_descriptor() const
 {
     int count = 0;
 #ifdef WIN32

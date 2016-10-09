@@ -174,7 +174,7 @@ int main( int ac, char **av )
                 if ( debug ) { std::cerr << app_name << ": calling stdin_select.wait(1)" << std::endl; }
                 if( stdin_select.wait( boost::posix_time::seconds( 1 ) ) == 0 ) { continue; }
                 if ( debug ) { std::cerr << app_name << ": after stdin_select.wait" << std::endl; }
-                std::size_t available = is.available();
+                std::size_t available = is.available_on_file_descriptor();
                 if ( debug ) { std::cerr << app_name << ": " << available << " bytes available" << std::endl; }
                 bytes_to_read = std::min( available, buffer.size() );
             }
