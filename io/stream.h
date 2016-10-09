@@ -87,7 +87,7 @@ class stream : boost::noncopyable
         /// @return the number of characters available for reading on file descriptor
         /// @note for number of bytes available for reading in std::istream call rdbuf()->avail()
         /// e.g. std::cin.rdbuf()->in_avail()
-        unsigned int available_on_file_descriptor() const;
+        std::size_t available_on_file_descriptor() const;
 
         /// @return stream name
         const std::string& name() const;

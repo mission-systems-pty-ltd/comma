@@ -160,14 +160,18 @@ class any_stream : public stream
             , size_( size )
             , binary_( binary )
         {
+            if( istream_() != &std::cin ) { return; }
+            std::ios_base::sync_with_stdio( false ); // unsync to make rdbuf()->in_avail() working
+            std::cin.tie( NULL ); // std::cin is tied to std::cout by default
         }
         
         comma::io::file_descriptor fd() const { return istream_.fd(); }
         
         unsigned int read_available( std::vector< char >& buffer, unsigned int max_count )
         {
-            std::size_t available = istream_.available_on_file_descriptor();
-            if( !available ) { return 0; }
+            std::size_t available = available_();
+            std::cerr << "--> available: " << available << std::endl;
+            if( available == 0 ) { return 0; }
             if( binary_ )
             {
                 unsigned int count = size_ ? available / size_ : 0;
@@ -189,7 +193,7 @@ class any_stream : public stream
             }
         }
         
-        bool empty() const { return istream_.available_on_file_descriptor() == 0; }
+        bool empty() const { return available_() == 0; }
         
         bool eof() const { return !istream_->good() || istream_->eof(); }
         
@@ -197,6 +201,12 @@ class any_stream : public stream
         comma::io::istream istream_;
         unsigned int size_;
         bool binary_;
+        std::size_t available_() const // seriously quick and dirty
+        {
+            std::streamsize s = istream_->rdbuf()->in_avail();
+            if( s < 0 ) { return 0; }
+            return std::max( static_cast< std::size_t >( s ), istream_.available_on_file_descriptor() );
+        } 
 };
 
 stream* make_stream( const std::string& address, unsigned int size, bool binary )
@@ -213,37 +223,6 @@ int main( int argc, char** argv )
     std::cerr << "io-cat: not implemented on windows" << std::endl;
     return 1;
     #endif
-    
-    
-    
-//     {
-//         std::vector< char > buffer( 1024 );
-//         comma::io::select s;
-//         s.read().add( 0 );
-//         while( true )
-//         {
-//             s.wait( boost::posix_time::seconds( 1 ) );
-//             int count = 0;
-//             int error = ::ioctl( 0, FIONREAD, &count );
-//             bool eof = count <= 0 && s.read().ready( 0 );
-//             if( error != 0 || eof ) { std::cerr << "--> exit" << std::endl; break; }
-//             int in_avail = std::cin.rdbuf()->in_avail();
-//             if( in_avail <= 0 && count <= 0 ) { continue; }
-//             std::cerr << "--> xxx: in_avail: " << in_avail << std::endl;
-//             std::cerr << "--> b.0: check: " << s.check() << " count: " << count << " error: " << error << std::endl;
-//             std::cerr << "--> b.1: ready: " << s.read().ready( 0 ) << std::endl;
-//             std::cerr << "--> b.2: in_avail: " << std::cin.rdbuf()->in_avail() << std::endl << std::endl;
-//             std::cin.read( &buffer[0], 1 );
-//             count = 0;
-//             error = ::ioctl( 0, FIONREAD, &count );
-//             std::cerr << "--> c.0: check: " << s.check() << " count: " << count << " error: " << error << std::endl;
-//             std::cerr << "--> c.1: ready: " << s.read().ready( 0 ) << std::endl;
-//             std::cerr << "--> c.2: in_avail: " << std::cin.rdbuf()->in_avail() << std::endl << std::endl;
-//         }
-//         return 0;
-//     }
-    
-    
     
     try
     {
