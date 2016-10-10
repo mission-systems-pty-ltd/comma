@@ -161,7 +161,7 @@ int main( int ac, char** av )
         while( !is_shutdown && !end_of_stream )
         {
             select.wait( wait_interval );
-            while( select.check() && select.read().ready( is.fd() ) && is->good() )
+            while( is->rdbuf()->in_avail() || ( select.check() && select.read().ready( is.fd() ) && is->good() ) )
             {
                 std::size_t available = is->rdbuf()->in_avail(); // std::size_t available = is.available_on_file_descriptor();
                 if( available == 0 ) { end_of_stream = true; break; }
