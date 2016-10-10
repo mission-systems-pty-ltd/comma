@@ -82,14 +82,23 @@ class select
         class descriptors
         {
             public:
+                /// default constructor
                 descriptors();
+                
+                /// add file descriptor
                 void add( file_descriptor fd );
-                void remove( file_descriptor fd );
-                bool ready( file_descriptor fd ) const;
-                const std::set< file_descriptor >& operator()() const { return descriptors_; } //const boost::unordered_set< file_descriptor >& operator()() const { return descriptors_; }
                 template < typename T > void add( const T& t ) { add( t.fd() ); }
+                
+                /// remove file descriptor
+                void remove( file_descriptor fd );
                 template < typename T > void remove( const T& t ) { remove( t.fd() ); }
+                
+                /// return true, if file descriptor found in descriptor list and ready
+                bool ready( file_descriptor fd ) const;
                 template < typename T > bool ready( const T& t ) const { return ready( t.fd() ); }
+                
+                /// return set of descriptors
+                const std::set< file_descriptor >& operator()() const { return descriptors_; } //const boost::unordered_set< file_descriptor >& operator()() const { return descriptors_; }
 
             private:
                 friend class select;
@@ -131,8 +140,7 @@ inline void select::descriptors::remove( file_descriptor fd )
 inline bool select::descriptors::ready( file_descriptor fd ) const
 {
     if( fd == invalid_file_descriptor ) { COMMA_THROW( comma::exception, "invalid file descriptor" ); }
-    assert( descriptors_.find( fd ) != descriptors_.end() ); // todo? throw instead?
-    return FD_ISSET( fd, const_cast< fd_set* >( &fd_set_ ) ) != 0;
+    return descriptors_.find( fd ) != descriptors_.end() && FD_ISSET( fd, const_cast< fd_set* >( &fd_set_ ) ) != 0;
 }
 
 

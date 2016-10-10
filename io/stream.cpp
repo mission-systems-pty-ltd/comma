@@ -348,7 +348,7 @@ stream< S >::stream( const std::string& name, mode::value m, mode::blocking_valu
         //
         // select std::ifstream would not work anyway, because select on a file
         // always returns immediately; however if one would like to use select()
-        // on named pipes, which otherwise look like files, he wilio::ostream::model need a file
+        // on named pipes, which otherwise look like files, he will need a file
         // descriptor
         //
         // extracting file descriptor for files is implemented here:
