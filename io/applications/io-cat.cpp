@@ -111,6 +111,8 @@ class stream
         virtual comma::io::file_descriptor fd() const = 0;
         virtual bool eof() const = 0;
         virtual bool empty() const = 0;
+        virtual void close() = 0;
+        virtual bool closed() const = 0;
         const std::string& address() const { return address_; }
         
     private:
@@ -137,6 +139,10 @@ class udp_stream : public stream
         
         bool empty() const { return false; }
         
+        void close() {}
+        
+        bool closed() const { return false; }
+        
         comma::io::file_descriptor fd() const { return socket_.native_handle(); }
         
         unsigned int read_available( std::vector< char >& buffer, unsigned int )
@@ -159,6 +165,7 @@ class any_stream : public stream
             , istream_( address, comma::io::mode::binary, comma::io::mode::non_blocking )
             , size_( size )
             , binary_( binary )
+            , closed_( false )
         {
             if( istream_() != &std::cin ) { return; }
             std::ios_base::sync_with_stdio( false ); // unsync to make rdbuf()->in_avail() working
@@ -192,9 +199,13 @@ class any_stream : public stream
             }
         }
         
-        bool empty() const { return available_() == 0; }
+        bool empty() const { return closed_ || available_() == 0; }
         
         bool eof() const { return !istream_->good() || istream_->eof(); }
+        
+        void close() { closed_ = true; istream_.close(); }
+        
+        bool closed() const { return closed_; }
         
     private:
         comma::io::istream istream_;
@@ -202,10 +213,14 @@ class any_stream : public stream
         bool binary_;
         std::size_t available_() const // seriously quick and dirty
         {
+            if( istream_() == NULL ) { return istream_.available_on_file_descriptor(); } // quick and dirty
             std::streamsize s = istream_->rdbuf()->in_avail();
             if( s < 0 ) { return 0; }
+            // todo: it should be s + available_on_file_descriptor(), but it won't work for std::cin (and potentially for std::ifstream (we have not checked)
+            //       if performance becomes a problem e.g. for tcp, check whether the stream is not std::cin and use sum instead of max
             return std::max( static_cast< std::size_t >( s ), istream_.available_on_file_descriptor() );
-        } 
+        }
+        bool closed_;
 };
 
 stream* make_stream( const std::string& address, unsigned int size, bool binary )
@@ -214,6 +229,12 @@ stream* make_stream( const std::string& address, unsigned int size, bool binary 
     if( v[0] == "udp" ) { return new udp_stream( address ); }
     if( v[0] == "zmq-local" || v[0] == "zero-local" || v[0] == "zmq-tcp" || v[0] == "zero-tcp" ) { COMMA_THROW( comma::exception, "io-cat: zmq support not implemented" ); }
     return new any_stream( address, size, binary );
+}
+
+bool ready( const boost::ptr_vector< stream >& streams, comma::io::select& select )
+{
+    for( unsigned int i = 0; i < streams.size(); ++i ) { if( !streams[i].empty() ) { select.check(); return true; } }
+    return select.wait( boost::posix_time::seconds( 1 ) ) > 0;
 }
 
 int main( int argc, char** argv )
@@ -244,34 +265,31 @@ int main( int argc, char** argv )
             select.read().add( streams.back() );
         }
         const unsigned int max_count = size ? ( size > 65536u ? 1 : 65536u / size ) : 0;
-        std::vector< char > buffer( size ? size * max_count : 65536u );
+        std::vector< char > buffer( size ? size * max_count : 65536u );        
         unsigned int round_robin_count = unnamed.size() > 1 ? options.value( "--round-robin", 0 ) : 0;
         comma::signal_flag is_shutdown;
         for( bool done = false; !is_shutdown && !done; )
         {
-            if( select.wait( boost::posix_time::seconds( 1 ) ) == 0 ) { continue; }
+            if( !ready( streams, select ) ) { continue; }
             done = true;
-            for( unsigned int i = 0; i < streams.size(); ++i )
+            for( unsigned int i = 0; !is_shutdown && i < streams.size(); ++i )
             {
-                if( streams[i].eof() )
+                if( streams[i].closed() ) { continue; }
+                bool ready = select.read().ready( streams[i].fd() );
+                bool empty = streams[i].empty();
+                if( empty && ( streams[i].eof() || ready ) )
                 { 
                     if( verbose ) { std::cerr << "io-cat: stream " << i << " (" << unnamed[i] << ") closed" << std::endl; }
                     select.read().remove( streams[i].fd() );
-                    if( exit_on_first_closed ) { return 0; }
+                    streams[i].close();
+                    if( exit_on_first_closed || select.read()().empty() ) { return 0; }
                     continue;
                 }
-                if( !select.read().ready( streams[i].fd() ) ) { done = false; continue; }
-                if( streams[i].empty() )
-                { 
-                    if( verbose ) { std::cerr << "io-cat: stream " << i << " (" << unnamed[i] << ") closed" << std::endl; }
-                    select.read().remove( streams[i].fd() );
-                    if( exit_on_first_closed || select.read()().empty() ) { return 0; }
-                }
+                if( !ready && empty ) { done = false; continue; }
                 unsigned int countdown = round_robin_count;
                 while( !is_shutdown && !streams[i].eof() )
                 {
                     unsigned int bytes_read = streams[i].read_available( buffer, countdown ? countdown : max_count );
-                    done = false;
                     if( bytes_read == 0 ) { break; }
                     done = false;
                     if( size && bytes_read % size != 0 ) { std::cerr << "io-cat: expected " << size << " byte(s), got only " << ( bytes_read % size ) << " on " << streams[i].address() << std::endl; return 1; }
