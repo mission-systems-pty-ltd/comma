@@ -16,8 +16,6 @@ ascii[7]/timestamp=0.81 +/- 0.02
 ascii[7]/data=456
 ascii[8]/timestamp=0.91 +/- 0.02
 ascii[8]/data=456
-ascii[9]/timestamp=1.00 +/- 0.02
-ascii[9]/data=456
 
 binary[0]/timestamp=0.00 +/- 0.02
 binary[0]/data=123
@@ -37,5 +35,3 @@ binary[7]/timestamp=0.81 +/- 0.02
 binary[7]/data=456
 binary[8]/timestamp=0.91 +/- 0.02
 binary[8]/data=456
-binary[9]/timestamp=1.00 +/- 0.02
-binary[9]/data=456

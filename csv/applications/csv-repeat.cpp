@@ -173,6 +173,7 @@ int main( int ac, char** av )
                 }
                 output_csv.format( format );
             }
+            output_csv.flush = true;
             output_csv.delimiter = csv.delimiter;
             ostream.reset( new comma::csv::output_stream< output_t >( std::cout, output_csv ) );
         }
@@ -220,53 +221,50 @@ int main( int ac, char** av )
         std::ios_base::sync_with_stdio( false ); // unsync to make rdbuf()->in_avail() working
         std::cin.tie( NULL ); // std::cin is tied to std::cout by default
         bool repeating = false;
-        while( !is_shutdown && !end_of_stream )
+        while( !is_shutdown && is->good() && !end_of_stream )
         {
             select.wait( repeating ? *period : timeout );
             repeating = true;
-            while( select.check() && select.read().ready( is.fd() ) && is->good() && !end_of_stream )
+            while( is->rdbuf()->in_avail() > 0 || ( select.check() && select.read().ready( is.fd() ) ) )
             {
                 end_of_stream = true;
-                std::size_t available = is->rdbuf()->in_avail(); //std::size_t available = is.available_on_file_descriptor();
-                while( available > 0 )
+                if( csv.binary() )
                 {
-                    if( csv.binary() )
+                    std::size_t available = is->rdbuf()->in_avail(); //std::size_t available = is.available_on_file_descriptor();
+                    std::size_t bytes_to_read = std::min( available, ( std::size_t )( buffer_end - read_position ));
+                    is->read( read_position, bytes_to_read );
+                    std::size_t bytes_read = is->gcount();
+                    if( bytes_read <= 0 ) { break; }
+                    read_position += bytes_read;
+                    while( read_position - write_position >= ( std::ptrdiff_t )record_size )
                     {
-                        std::size_t bytes_to_read = std::min( available, ( std::size_t )( buffer_end - read_position ));
-                        is->read( read_position, bytes_to_read );
-                        std::size_t bytes_read = is->gcount();
-                        if( bytes_read <= 0 ) { break; }
-                        read_position += bytes_read;
-                        available -= bytes_read;
-                        while( read_position - write_position >= ( std::ptrdiff_t )record_size )
-                        {
-                            std::cout.write( write_position, record_size );
-                            if( ostream ) { ostream->write( output_t( boost::posix_time::microsec_clock::universal_time(), false ) ); }
-                            last_record = write_position;
-                            write_position += record_size;
-                        }
-                        if( read_position == buffer_end )
-                        {
-                            read_position = write_position = buffer_begin;
-                        }
+                        std::cout.write( write_position, record_size );
+                        if( ostream ) { ostream->write( output_t( boost::posix_time::microsec_clock::universal_time(), false ) ); }
+                        else { std::cout.flush(); }
+                        last_record = write_position;
+                        write_position += record_size;
                     }
-                    else
+                    if( read_position == buffer_end )
                     {
-                        std::getline( std::cin, line );
-                        if( line.empty() ) { break; }
-                        available -= ( line.size() + 1 );
-                        std::cout << line;
-                        if( ostream )
-                        {
-                            std::cout << csv.delimiter;
-                            ostream->write( output_t( boost::posix_time::microsec_clock::universal_time(), false ) );
-                        }
-                        else { std::cout << std::endl; }
+                        read_position = write_position = buffer_begin;
                     }
-                    end_of_stream = repeating = false;
                 }
-                std::cout.flush();
+                else
+                {
+                    std::getline( std::cin, line );
+                    if( line.empty() ) { break; }
+                    std::cout << line;
+                    if( ostream )
+                    {
+                        std::cout << csv.delimiter;
+                        ostream->write( output_t( boost::posix_time::microsec_clock::universal_time(), false ) );
+                    }
+                    else { std::cout << std::endl; }
+                }
+                end_of_stream = repeating = false;
             }
+
+            if( is_shutdown || !is->good() || end_of_stream ) { break; }
 
             if( repeating )
             {
