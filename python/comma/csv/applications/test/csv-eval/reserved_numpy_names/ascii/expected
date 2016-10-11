@@ -1,0 +1,8 @@
+output[0]/dummy=1
+output[0]/where=2
+output[0]/var=3
+output[1]/dummy=3
+output[1]/where=4
+output[1]/var=5
+status=0
+
