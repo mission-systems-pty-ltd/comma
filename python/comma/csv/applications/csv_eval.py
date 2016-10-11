@@ -465,13 +465,13 @@ class stream(object):
         print >> file, "output format: '{}'".format(output_format)
 
 
-def check_fields(fields):
+def check_fields(fields, allow_numpy_names=True):
     for field in fields:
         if not re.match(r'^[a-z_]\w*$', field, re.I):
             raise csv_eval_error("'{}' is not a valid field name".format(field))
         if field in ['_input', '_update', '_output']:
             raise csv_eval_error("'{}' is a reserved name".format(field))
-        if field in np.__dict__:
+        if not allow_numpy_names and field in np.__dict__:
             raise csv_eval_error("'{}' is a reserved numpy name".format(field))
 
 
