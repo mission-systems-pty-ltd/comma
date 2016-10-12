@@ -1,0 +1,6 @@
+# ensure that numpy datetime64 and comma binary representation of not-a-date-time are identical
+not_a_date_time/numpy = not_a_date_time/comma
+
+# ensure that arithmetic operations like +1 do not change not-a-date-time
+not_a_date_time/plus_1 = "not-a-date-time"
+not_a_date_time/minus_1 = "not-a-date-time"

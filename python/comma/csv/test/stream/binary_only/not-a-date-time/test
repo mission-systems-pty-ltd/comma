@@ -1,0 +1,22 @@
+#!/bin/bash
+
+numpy_int=$(
+python -c "
+from comma.csv import *
+t = struct( 'f', *format.to_numpy('t') )
+s = stream( t, binary=True )
+a = t()
+a['f'] = time.undefined_time()
+s.write(a)" \
+    | csv-from-bin l )
+
+comma_int=$( echo not-a-date-time | csv-to-bin t | csv-from-bin l )
+
+echo "not_a_date_time/numpy=$numpy_int"
+echo "not_a_date_time/comma=$comma_int"
+
+plus_1=$( echo not-a-date-time | csv-to-bin t | csv-eval --fields f --binary t "f+=1" | csv-from-bin t )
+minus_1=$( echo not-a-date-time | csv-to-bin t | csv-eval --fields f --binary t "f-=1" | csv-from-bin t )
+
+echo "not_a_date_time/plus_1=$plus_1"
+echo "not_a_date_time/minus_1=$minus_1"
