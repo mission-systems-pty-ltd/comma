@@ -121,6 +121,7 @@ function description_others()
 --always-expected,--expected=[<file>]; apply the global expected file to all tests regardless if they have a local
   'expected' file; pass multiple global files by invoking this option several times
 --debug; much more debug output
+--document,--doc; do not run tests, only output to stdout a collated test documentation in informal way, if --junit present, produce junit-like output (todo)
 --junit=[<file>]; output to file junit record compatible with jenkins for each test
 --no-ansiterm-control-characters,--no-control-characters,--raw; unstyled output (no ANSIterm control characters)
 --output-directories,--dry-run,--dry; output list of test directories intended to run and exit
@@ -578,6 +579,30 @@ function comma_top_wrapper()
     comma-top --sampling-interval=0.5 > "$log"
 }
 export -f comma_top_wrapper
+
+function document_test() # todo: handle --document --junit: figure out tag for documentation and trivially implement
+{
+    function extract_comments() { while read line ; do [[ "$line" =~ ^# ]] || break ; echo $line ; done | sed 's/^#\( \)*//' ; }
+    local dir=$1
+    (
+        cd $dir
+        local doc
+        if [[ -s "./readme" ]] ; then
+            doc=$( cat ./readme )
+        else
+            if [[ -d "./expected" ]] ; then
+                doc="expected directory documentation: todo" # todo: for each file in subdirectories, use extract_comments to output doc
+            elif [[ -s "./expected" ]] ; then
+                doc+=$( cat ./expected | extract_comments )
+            fi
+            if [[ -z "$doc" && -s "./input" ]] ; then doc+=$( cat ./input | extract_comments ) ; fi
+        fi
+        [[ -n "$doc" ]] || { echo "$dir: not documented" ; echo ; return 1 ; }
+        echo $dir
+        echo "$doc" | sed 's/^/    /'
+        echo
+    )
+}
 
 # this functions executes a provided test with optional input and captures its stdout
 # then it optionally compares the output with the expected file
@@ -1091,6 +1116,7 @@ else
     done
 fi
 [[ -z "$options_output_directories" ]] || { echo ${test_script_dirs[@]} | tr ' ' '\n' ; exit 0 ; }
+[[ -z "$options_document" ]] || { for d in ${test_script_dirs[@]} ; do document_test $d ; done ; exit 0 ; }
 export test_scripts_count=${#test_script_dirs[@]}
 
 export comma_test_run_unique_dir=
