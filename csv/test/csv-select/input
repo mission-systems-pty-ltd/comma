@@ -2,9 +2,13 @@ all/ascii[0]="echo 1,1,1 | csv-select --fields a 'a;equals=1' --all"
 all/ascii[1]="echo 2,2,2 | csv-select --fields a 'a;equals=1' --all"
 all/ascii[2]="echo 1,1,1 | csv-select --fields a 'a;equals=1' --all --not-matching"
 all/ascii[3]="echo 2,2,2 | csv-select --fields a 'a;equals=1' --all --not-matching"
+all/ascii[4]="echo -infinity,20150101T000000 | csv-select --fields=f,t 'f;less=20140101T000000' 't;greater=20140101T000000' --all"
+all/ascii[5]="echo -infinity,20150101T000000 | csv-select --fields=f,t 'f;less=20140101T000000' 't;greater=20140101T000000' --all --not-matching"
 
 all/binary[0]="echo 1,1,1 | csv-to-bin 3ui | csv-select --fields a 'a;equals=1' --all --binary=3ui | csv-from-bin 3ui,b"
 all/binary[1]="echo 2,2,2 | csv-to-bin 3ui | csv-select --fields a 'a;equals=1' --all --binary=3ui | csv-from-bin 3ui,b"
 all/binary[2]="echo 1,1,1 | csv-to-bin 3ui | csv-select --fields a 'a;equals=1' --all --binary=3ui --not-matching | csv-from-bin 3ui,b"
 all/binary[3]="echo 2,2,2 | csv-to-bin 3ui | csv-select --fields a 'a;equals=1' --all --binary=3ui --not-matching | csv-from-bin 3ui,b"
+all/binary[4]="echo -infinity,20150101T000000 | csv-to-bin 2t | csv-select --fields=f,t 'f;less=20140101T000000' 't;greater=20140101T000000' --all --binary=2t | csv-from-bin 2t,b"
+all/binary[5]="echo -infinity,20150101T000000 | csv-to-bin 2t | csv-select --fields=f,t 'f;less=20140101T000000' 't;greater=20140101T000000' --all --not-matching --binary=2t | csv-from-bin 2t,b"
 

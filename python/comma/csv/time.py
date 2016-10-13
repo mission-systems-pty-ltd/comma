@@ -45,6 +45,17 @@ def undefined_time():
 def is_undefined(numpy_time):
     return str(numpy_time) == 'NaT'
 
+def pos_infinity_time():
+    return np.datetime64('294247-01-09T04:00:54.775807Z')
+
+def neg_infinity_time():
+    return np.datetime64('-290308-12-22T19:59:05.224191Z')
+
+def is_positive_infinity(numpy_time):
+    return numpy_time == pos_infinity_time()
+
+def is_negative_infinity(numpy_time):
+    return numpy_time == neg_infinity_time()
 
 def to_numpy(t):
     """
@@ -61,12 +72,18 @@ def to_numpy(t):
     >>> to_numpy('')
     numpy.datetime64('NaT')
     """
-    if not (isinstance(t, basestring) and
-            re.match(r'^(\d{8}T\d{6}(\.\d{0,6})?|not-a-date-time|)$', t)):
+    if not ( isinstance(t, basestring) ):
         msg = "expected comma time, got '{}'".format(repr(t))
         raise TypeError(msg)
     if t == 'not-a-date-time' or t == '':
         return undefined_time()
+    if t == '+infinity' or t == 'inf' or t == "+inf" or t == "infinity":
+        return pos_infinity_time()
+    if t == '-infinity' or t == '-inf':
+        return neg_infinity_time()
+    if not ( re.match(r'^(\d{8}T\d{6}(\.\d{0,6})?)$', t)):
+        msg = "expected comma time, got '{}'".format(repr(t))
+        raise TypeError(msg)
     v = list(t)
     for i in [13, 11]:
         v.insert(i, ':')
@@ -103,6 +120,10 @@ def from_numpy(t):
         return str(t.astype('i8'))
     if is_undefined(t):
         return 'not-a-date-time'
+    if is_negative_infinity(t):
+        return '-infinity'
+    if is_positive_infinity(t):
+        return '+infinity'
     return re.sub(r'(\.0{6})?([-+]\d{4}|Z)?$', '', str(t)).translate(None, ':-')
 
 

@@ -141,7 +141,10 @@ inline bool lexical_cast< bool >( const std::string& s )
 template <>
 inline boost::posix_time::ptime lexical_cast< boost::posix_time::ptime >( const std::string& s )
 {
-    return s == "not-a-date-time" ? boost::posix_time::not_a_date_time : boost::posix_time::from_iso_string( s );
+    if ( s == "not-a-date-time" ) { return boost::posix_time::not_a_date_time; }
+    else if ( s == "+infinity" || s == "+inf" || s == "inf" ) { return boost::posix_time::pos_infin; }
+    else if ( s == "-infinity" || s == "-inf" ) { return boost::posix_time::neg_infin; }
+    else return boost::posix_time::from_iso_string( s );
 }
 
 } // namespace detail {

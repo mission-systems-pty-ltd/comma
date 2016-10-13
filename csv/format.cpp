@@ -224,6 +224,19 @@ static std::size_t bin_to_csv( std::ostringstream& oss, const char* buf, const b
     return sizeof( T );
 }
 
+static boost::posix_time::ptime time_from_iso_string( const std::string& s )
+{
+    if ( s.empty() || s == "not-a-date-time" ) { return boost::posix_time::not_a_date_time; }
+    else if ( s == "+infinity" || s == "+inf" || s == "inf" ) { return boost::posix_time::pos_infin; }
+    else if ( s == "-infinity" || s == "-inf" ) { return boost::posix_time::neg_infin; }
+    else 
+    { 
+        try { return boost::posix_time::from_iso_string( s ); }
+        catch ( ... ) { return boost::posix_time::not_a_date_time; }
+    }
+    return boost::posix_time::not_a_date_time;
+}
+
 static std::size_t csv_to_bin( char* buf, const std::string& s, format::types_enum type, std::size_t size )
 {
     try
@@ -256,18 +269,10 @@ static std::size_t csv_to_bin( char* buf, const std::string& s, format::types_en
             case format::float_t: return csv_to_bin< float >( buf, s );
             case format::double_t: return csv_to_bin< double >( buf, s );
             case format::time: // TODO: quick and dirty: use serialization traits
-                try { format::traits< boost::posix_time::ptime, format::time >::to_bin( ( s.empty() || s == "not-a-date-time" ) ? boost::posix_time::not_a_date_time 
-                                                                                      : ( s == "+infinity" || s == "+inf" || s == "inf" ) ? boost::posix_time::pos_infin 
-                                                                                      : ( s == "-infinity" || s == "-inf" ) ? boost::posix_time::neg_infin 
-                                                                                      : boost::posix_time::from_iso_string( s ), buf ); }
-                catch ( ... ) { format::traits< boost::posix_time::ptime, format::time >::to_bin( boost::posix_time::not_a_date_time, buf ); }
+                format::traits< boost::posix_time::ptime, format::time >::to_bin( time_from_iso_string(s), buf );
                 return format::traits< boost::posix_time::ptime, format::time >::size;
             case format::long_time: // TODO: quick and dirty: use serialization traits
-                try { format::traits< boost::posix_time::ptime, format::long_time >::to_bin( ( s.empty() || s == "not-a-date-time" ) ? boost::posix_time::not_a_date_time 
-                                                                                      : ( s == "+infinity" || s == "+inf" || s == "inf" ) ? boost::posix_time::pos_infin 
-                                                                                      : ( s == "-infinity" || s == "-inf" ) ? boost::posix_time::neg_infin 
-                                                                                      : boost::posix_time::from_iso_string( s ), buf ); }
-                catch ( ... ) { format::traits< boost::posix_time::ptime, format::long_time >::to_bin( boost::posix_time::not_a_date_time, buf ); }
+                format::traits< boost::posix_time::ptime, format::long_time >::to_bin( time_from_iso_string(s), buf );
                 return format::traits< boost::posix_time::ptime, format::long_time >::size;
             case format::fixed_string:
             {
@@ -432,6 +437,8 @@ std::string format::collapsed_string() const
 }
 
 // formats for not-a-date-time, +infinity, -infinity
+// note: these are not boost representations. in boost, +infinity = int64::max() - 1, -infinity = int64::min(), not-a-date-time = int64::max()
+// not-a-date-time is chosen to matche python numpy.datetime64('NaT') = int64::min()
 static const comma::int64 bin_not_a_date_time = std::numeric_limits< comma::int64 >::min();
 static const comma::int64 bin_time_pos_infin = std::numeric_limits< comma::int64 >::max();
 static const comma::int64 bin_time_neg_infin = std::numeric_limits< comma::int64 >::min() + 1;

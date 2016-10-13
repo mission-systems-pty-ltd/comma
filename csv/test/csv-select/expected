@@ -6,6 +6,10 @@ all/ascii[2]/output="1,1,1,0"
 all/ascii[2]/status=0
 all/ascii[3]/output="2,2,2,1"
 all/ascii[3]/status=0
+all/ascii[4]/output="-infinity,20150101T000000,1"
+all/ascii[4]/status=0
+all/ascii[5]/output="-infinity,20150101T000000,0"
+all/ascii[5]/status=0
 
 all/binary[0]/output="1,1,1,1"
 all/binary[0]/status=0
@@ -15,4 +19,7 @@ all/binary[2]/output="1,1,1,0"
 all/binary[2]/status=0
 all/binary[3]/output="2,2,2,1"
 all/binary[3]/status=0
-
+all/binary[4]/output="-infinity,20150101T000000,1"
+all/binary[4]/status=0
+all/binary[5]/output="-infinity,20150101T000000,0"
+all/binary[5]/status=0
