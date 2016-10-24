@@ -82,6 +82,9 @@ class publisher : public boost::noncopyable
         /// accept waiting clients, non-blocking
         void accept();
         
+        /// return acceptor file descriptor
+        file_descriptor acceptor_file_descriptor() const;
+        
     private:
         impl::publisher* pimpl_;
 };

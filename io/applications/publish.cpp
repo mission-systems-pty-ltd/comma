@@ -27,7 +27,6 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author cedric wohlleber
 
 #ifdef WIN32
@@ -45,22 +44,15 @@
 
 namespace comma { namespace io { namespace applications {
 
-publish::publish(const std::vector<std::string> filenames, unsigned int n, unsigned int c, unsigned int packet_size, bool discard, bool flush )
-    : packet_(packet_size)
-    , packet_offset_(0U)
-    , packet_size_(packet_size)
-    , packet_counter_(0U)
-    , buffer_discarding_(false)
+publish::publish( const std::vector< std::string >& filenames, unsigned int n, unsigned int c, unsigned int packet_size, bool discard, bool flush )
+    : packet_( packet_size )
+    , packet_offset_( 0U )
+    , packet_size_( packet_size )
+    , packet_counter_( 0U )
+    , buffer_discarding_( false )
 {
-    if( c != 0 )
-    {
-        char_buffer_.reset( new comma::cyclic_buffer< std::vector<char> >( c ) );
-    }
-    if( n != 0 )
-    {
-        line_buffer_.reset( new comma::cyclic_buffer< std::string >( n ) );
-    }
-
+    if( is_binary_() ) { if( c > 0 ) { char_buffer_.reset( new comma::cyclic_buffer< std::vector< char > >( c ) ); } }
+    else { if( n > 0 ) { line_buffer_.reset( new comma::cyclic_buffer< std::string >( n ) ); } }
     // redirect SIGPIPE to SIG_IGN so that it does not kill the application when it tries to write on a closed pipe
 #ifndef WIN32
     struct sigaction new_action, old_action;
@@ -70,54 +62,41 @@ publish::publish(const std::vector<std::string> filenames, unsigned int n, unsig
     sigaction(SIGPIPE, &new_action, NULL);
     select_.read().add( stdin_fd );
 #endif
-
-    io::mode::value mode = packet_size_ == 0 ? io::mode::ascii : io::mode::binary;
-    for( std::size_t i = 0; i < filenames.size(); ++i )
-    {
-        publishers_.push_back( boost::shared_ptr< io::publisher >( new io::publisher( filenames[i], mode, !discard, flush ) ) );
-    }
+    for( std::size_t i = 0; i < filenames.size(); ++i ) { publishers_.push_back( new io::publisher( filenames[i], is_binary_() ? io::mode::binary : io::mode::ascii, !discard, flush ) ); }
+    for( std::size_t i = 0; i < publishers_.size(); ++i ) { if( publishers_[i].acceptor_file_descriptor() != io::invalid_file_descriptor ) { select_.read().add( publishers_[i].acceptor_file_descriptor() ); } }
 }
 
-publish::~publish()
-{
-    for( std::size_t i = 0; i < publishers_.size(); ++i ) { publishers_[i]->close(); }
-}
+publish::~publish() { for( std::size_t i = 0; i < publishers_.size(); ++i ) { publishers_[i].close(); } }
+
+void publish::accept_() { for( std::size_t i = 0; i < publishers_.size(); ++i ) { if( select_.read().ready( publishers_[i].acceptor_file_descriptor() ) ) { publishers_[i].accept(); } } }
 
 bool publish::read_line()
 {
-    if( line_buffer_ && !line_buffer_->empty() )
-    {
-        select_.wait();
-    }
-    bool written_count = 0;
+    if( is_binary_() ) { COMMA_THROW( comma::exception, "read_line() called in binary publisher" ); } // todo: just have separate classes for ascii and binary readers
+    if( line_buffer_ && line_buffer_->empty() ) { select_.wait(); }
+    accept_(); // todo: does it even work?
     if( !line_buffer_ || line_buffer_->empty() || select_.read().ready( stdin_fd ) )
     {
         std::string line;
         std::getline( std::cin, line );
-        if( line.length() != 0 )
+        if( std::cin.good() )
         {
             line += '\n';
-            written_count += push(line);
+            push_( line );
         }
     }
-    while( line_buffer_ && ( !line_buffer_->empty() ) ) // pop the buffer
+    while( line_buffer_ && !line_buffer_->empty() ) // pop the buffer
     {
-        int written_ok = write( line_buffer_->front().data(), line_buffer_->front().size() );
-        if( written_ok ) { line_buffer_->pop(); }
-	written_count += written_ok;
+        if( write_( line_buffer_->front().data(), line_buffer_->front().size() ) ) { line_buffer_->pop(); }
     }
-    
     return true;
 }
 
 bool publish::read_bytes()
 {
-    if( char_buffer_ && !char_buffer_->empty() )
-    {
-        select_.wait();
-    }
-    
-    int written_count = 0;
+    if( !is_binary_() ) { COMMA_THROW( comma::exception, "read_line() called in binary publisher" ); } // todo: just have separate classes for ascii and binary readers
+    if( char_buffer_ && char_buffer_->empty() ) { select_.wait(); }
+    accept_(); // todo: does it even work?
     if( !char_buffer_ || char_buffer_->empty() || select_.read().ready( stdin_fd ) )
     {
         std::vector< char > w( packet_size_ );
@@ -128,37 +107,33 @@ bool publish::read_bytes()
         int gcount = _read( 0, buf, packet_size_ );
 #endif
         if( gcount <= 0 ) { return false; } // i.e. end of file
-        written_count = push( buf, gcount );
+        push_( buf, gcount );
     }
-
-    while( char_buffer_ &&  !char_buffer_->empty() ) // pop the buffer packet by packet
+    while( char_buffer_ && !char_buffer_->empty() ) // pop the buffer packet by packet
     {
-        int written_ok = write( &char_buffer_->front()[0], packet_size_ );
-	if( written_ok ) { char_buffer_->pop(); }
-	written_count += written_ok;
+        if( write_( &char_buffer_->front()[0], packet_size_ ) ) { char_buffer_->pop(); }
     }
-    
     return true;
 }
 
-std::size_t publish::write( const char* buffer, std::size_t size )
+std::size_t publish::write_( const char* buffer, std::size_t size )
 {
     std::size_t count = 0;
-    for( std::size_t i = 0; i < publishers_.size(); ++i ) { count += publishers_[i]->write( buffer, size ); }
+    for( std::size_t i = 0; i < publishers_.size(); ++i ) { count += publishers_[i].write( buffer, size ); }
     return count;
 }
 
 
-int publish::push(const std::string& line)
+unsigned int publish::push_( const std::string& line )
 {
-    int written_count = 0; // streams written to
-    if( ( !line_buffer_ || ( line_buffer_->empty() ) ) )
-    {
-	written_count = write( line.data(), line.size() );
+    unsigned int written_count = 0; // streams written to
+    if( !line_buffer_ || line_buffer_->empty() )
+    { 
+        written_count = write_( line.data(), line.size() );
     }
     else if( line_buffer_ )
     {
-        if(  line_buffer_->size() >= line_buffer_->capacity() )
+        if( line_buffer_->size() >= line_buffer_->capacity() )
         {
             line_buffer_->pop(); // throw oldest line away
             if( !buffer_discarding_ )
@@ -168,19 +143,18 @@ int publish::push(const std::string& line)
                 first_discarded_ = packet_counter_;
             }
         }
-        line_buffer_->push(line);
+        line_buffer_->push( line );
     }
-    
     return written_count;
 }
 
-int publish::push(char* buffer, std::size_t size)
+unsigned int publish::push_( char* buffer, std::size_t size )
 {
     // fill out the packet buffer
     char* p = buffer;
-    bool fullPacket = ( packet_offset_ == 0U ) && ( size >= packet_size_ );
+    bool full_packet = ( packet_offset_ == 0U ) && ( size >= packet_size_ );
     char* packet = buffer;
-    if( fullPacket )
+    if( full_packet )
     {
         // can copy whole packet, but no need yet, only if buffering
         p += packet_size_;
@@ -189,23 +163,22 @@ int publish::push(char* buffer, std::size_t size)
     else
     {
         // packet_ partly filled or not enough data to fill it, fill as much as possible
-        for (; (packet_offset_ < packet_size_) && (p < buffer + size); p++)
+        for( ; packet_offset_ < packet_size_ && p < buffer + size; ++p )
         {
             packet_[packet_offset_] = *p;
             packet_offset_++;
         }
         packet = &packet_[0];
     }
-
-    int written_count = 0;
+    unsigned int written_count = 0;
     if( packet_offset_ == packet_size_ )
     {
         // try to write packet buffer to the pipes
-        if ( ( !char_buffer_ || ( char_buffer_->empty() ) ) )
-        {
-	    written_count = write( packet, packet_size_ );
+        if( !char_buffer_ || char_buffer_->empty() )
+        { 
+            written_count = write_( packet, packet_size_ );
         }
-        else if ( char_buffer_ )
+        else if( char_buffer_ )
         {
             if( char_buffer_->size() >= char_buffer_->capacity() )
             {
@@ -217,20 +190,13 @@ int publish::push(char* buffer, std::size_t size)
                     first_discarded_ = packet_counter_;
                 }
             }
-            if( fullPacket )
-            {
-                ::memcpy( &packet_[0], buffer, packet_size_ );
-            }
-            char_buffer_->push(packet_);
+            if( full_packet ) { ::memcpy( &packet_[0], buffer, packet_size_ ); }
+            char_buffer_->push( packet_ );
         }
         packet_offset_ = 0U;
     }
     // handle the remaining bytes
-    if ( p < buffer + size )
-    {
-        written_count += push( p, size - static_cast<std::size_t>(p - buffer) );
-    }
-    
+    if( p < buffer + size ) { written_count += push_( p, size - static_cast< std::size_t >( p - buffer ) ); }
     return written_count;
 }
 

@@ -45,6 +45,7 @@ namespace comma { namespace io { namespace impl {
 struct acceptor
 {
     virtual ~acceptor() {}
+    virtual io::file_descriptor fd() const = 0;
     virtual io::ostream* accept() = 0;
     virtual void notify_closed() {} // quick and dirty
     virtual void close() {}
@@ -68,8 +69,9 @@ class publisher
                 streams::iterator it = i++;
                 if( !blocking_ && !select_.write().ready( **it ) ) { continue; }
                 ( ***it ) << lhs;
-                if( ( **it )->good() ) { ( **it )->flush(); ++count; }
-                else { remove( it ); }
+                if( flush_ ) { ( **it )->flush(); }
+                if( ( **it )->good() ) { ++count; }
+                else { remove_( it ); }
             }
             return *this;
         }
@@ -79,16 +81,17 @@ class publisher
         std::size_t size() const;
 
         void accept();
+        
+        const io::impl::acceptor& acceptor() const { return *acceptor_; }
 
     private:
         bool blocking_;
-        bool m_flush;
-        boost::scoped_ptr< acceptor > acceptor_;
+        bool flush_;
+        boost::scoped_ptr< io::impl::acceptor > acceptor_;
         typedef std::set< boost::shared_ptr< io::ostream > > streams;
         streams streams_;
         io::select select_;
-         
-        void remove( streams::iterator it );
+        void remove_( streams::iterator it );
 };
 
 } } } // namespace comma { namespace io { namespace impl {

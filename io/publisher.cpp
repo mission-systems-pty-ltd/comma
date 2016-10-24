@@ -46,4 +46,6 @@ void publisher::close() { pimpl_->close(); }
 
 std::size_t publisher::size() const { return pimpl_->size(); }
 
+file_descriptor publisher::acceptor_file_descriptor() const { return pimpl_->acceptor().fd(); }
+
 } } // namespace comma { namespace io {

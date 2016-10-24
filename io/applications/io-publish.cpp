@@ -40,9 +40,10 @@
 #include <sys/select.h>
 #endif
 
-#include <boost/scoped_ptr.hpp>
-#include <boost/function.hpp>
 #include <boost/bind.hpp>
+#include <boost/function.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/scoped_ptr.hpp>
 #include "../../application/contact_info.h"
 #include "../../application/command_line_options.h"
 #include "../../application/signal_flag.h"
@@ -52,7 +53,7 @@
 
 //#include <google/profiler.h>
 
-static void usage()
+static void usage( bool verbose = false )
 {
     std::cerr << std::endl;
     std::cerr << "read from standard input and write to given outputs (files, sockets, named pipes):" << std::endl;
@@ -63,14 +64,28 @@ static void usage()
     std::cerr << std::endl;
     std::cerr << "usage: io-publish [<options>] <outputs>" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "<options>" << std::endl;
-    std::cerr << "    --number,-n: ascii line-based input; buffer up to n lines, default is 0" << std::endl;
+    std::cerr << "stream options" << std::endl;
+    std::cerr << "    --number,-n: ascii line-based input; buffer up to n lines, default: 0" << std::endl;
     std::cerr << "    --size,-s: binary input; packet size" << std::endl;
     std::cerr << "    --buffer,-b: buffer size, default is 0" << std::endl;
     std::cerr << "    --multiplier,-m: multiplier for packet size, default is 1. The actual packet size will be m*s" << std::endl;
     std::cerr << "    --no-discard: if present, do blocking write to every open pipe" << std::endl;
-    std::cerr << "    --no-flush: if present, do not flush the output stream ( use on high bandwidth sources )" << std::endl;
-    std::cerr << "<outputs>" << std::endl;
+    std::cerr << "    --no-flush: if present, do not flush the output stream (use on high bandwidth sources)" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "client options" << std::endl;
+    std::cerr << "    --exit-on-no-clients,-e: once the last client disconnects, exit" << std::endl;
+    std::cerr << "    --output-number-of-clients,--clients: output to stdout timestamped number of clients whenever it changes" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    attention: in the current implementation, the number of clients will be updated only on attemt to write a new record," << std::endl;
+    std::cerr << "               i.e. output number of clients will not change if there are no new records on stdin, even if the actual" << std::endl;
+    std::cerr << "               number of clients changes" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    known problem: io::ostream or at least boost::asio::ostream does not mark stream as bad, if one tries to write to" << std::endl;
+    std::cerr << "                   it first time after stream has been closed; the stream is marked as bad only after writing to it second time" << std::endl;
+    std::cerr << "                   this problem is pretty benign: the worst thing that happens is writing to a closed stream, which will not" << std::endl;
+    std::cerr << "                   cause grief unless you specifically rely io-publish on exiting on no clients for a rarely sent heartbeat" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "output streams" << std::endl;
     std::cerr << "    tcp:<port>: e.g. tcp:1234" << std::endl;
     std::cerr << "    udp:<port>: e.g. udp:1234 (todo)" << std::endl;
     std::cerr << "    local:<name>: linux/unix local server socket e.g. local:./tmp/my_socket" << std::endl;
@@ -79,36 +94,80 @@ static void usage()
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
-    exit( -1 );
+    exit( 0 );
 }
+
+class number_of_clients
+{
+    public:
+        number_of_clients( const comma::command_line_options& options
+                         , const std::vector< std::string >& names
+                         , const comma::io::applications::publish::publishers_t& publishers )
+            : output_number_of_clients_( options.exists( "--output-number-of-clients,--clients" ) )
+            , exit_on_no_clients_( options.exists( "--exit-on-no-clients,-e" ) )
+            , publishers_( publishers )
+            , size_( publishers.size(), 0 )
+        {
+            if( output_number_of_clients_ ) { for( unsigned int i = 0; i < names.size(); ++i ) { if( names[i] == "-" ) { std::cerr << "io-publish: '-' and --output-number-of-clients are incompatible, since both output to stdout" << std::endl; exit( 1 ); } } }
+        }
+        
+        bool update()
+        {
+            if( !output_number_of_clients_ && exit_on_no_clients_ ) { return true; }
+            bool changed = false;
+            unsigned int total = 0;
+            for( unsigned int i = 0; i < publishers_.size(); ++i )
+            {
+                total += publishers_[i].size();
+                changed = changed || publishers_[i].size() != size_[i];
+                size_[i] = publishers_[i].size();
+            }
+            if( !changed ) { return true; }
+            if( output_number_of_clients_ ) // quick and dirty, not using comma::csv to avoid coupling of comma::io with comma::csv
+            {
+                std::cout << boost::posix_time::to_iso_string( boost::posix_time::microsec_clock::universal_time() );
+                for( unsigned int i = 0; i < size_.size(); ++i ) { std::cout << ',' << size_[i]; }
+                std::cout << std::endl;
+            }
+            if( exit_on_no_clients_ && total == 0 ) { std::cerr << "io-publish: the last client exited" << std::endl; return false; }
+            return true;
+        }
+        
+    private:
+        bool output_number_of_clients_;
+        bool exit_on_no_clients_;
+        const comma::io::applications::publish::publishers_t& publishers_;
+        std::vector< unsigned int > size_;
+};
 
 int main( int ac, char** av )
 {
     try
     {
+        comma::command_line_options options( ac, av, usage );
         const boost::array< comma::signal_flag::signals, 2 > signals = { { comma::signal_flag::sigint, comma::signal_flag::sigterm } };
         comma::signal_flag is_shutdown( signals );
-        comma::command_line_options options( ac, av );
-        if( options.exists( "--help" ) || options.exists( "-h" ) ) { usage(); }
-        std::vector< std::string > names = options.unnamed( "--no-discard,--verbose,-v,--no-flush", "-n,--number,-m,--multiplier,-b,--buffer,-s,--size" );
         unsigned int n = options.value( "-n,--number", 0 );
         unsigned int packet_size = options.value( "-s,--size", 0 ) * options.value( "-m,--multiplier", 1 );
         unsigned int buffer_size = options.value( "-b,--buffer", 0 );
         bool discard = !options.exists( "--no-discard" );
         bool flush = !options.exists( "--no-flush" );
         bool binary = packet_size != 0;
-        if( names.empty() ) { std::cerr << "io-publish: please specify at least one file ('-' for stdout)" << std::endl; usage(); }
+        const std::vector< std::string >& names = options.unnamed( "--no-discard,--verbose,-v,--no-flush,--output-number-of-clients,--clients,--exit-on-no-clients,-e", "-.+" );
+        if( names.empty() ) { std::cerr << "io-publish: please specify at least one stream ('-' for stdout)" << std::endl; return 1; }
         if( binary )
         {
             //ProfilerStart( "io-publish.prof" ); {
             comma::io::applications::publish publish( names, n, buffer_size, packet_size, discard );
-            while( !is_shutdown && publish.read_bytes() );
+            number_of_clients nc( options, names, publish.publishers() );
+            while( !is_shutdown && publish.read_bytes() && nc.update() );
             //ProfilerStop(); }
         }
         else
         {
             comma::io::applications::publish publish( names, n, 1, 0, discard, flush );
-            while( !is_shutdown && std::cin.good() && !std::cin.eof() && publish.read_line() );
+            number_of_clients nc( options, names, publish.publishers() );
+            while( !is_shutdown && std::cin.good() && !std::cin.eof() && publish.read_line() && nc.update() );
         }
         if( is_shutdown ) { std::cerr << "io-publish: interrupted by signal" << std::endl; }
         return 0;

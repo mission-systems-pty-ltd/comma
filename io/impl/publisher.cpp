@@ -55,7 +55,7 @@ class file_acceptor : public acceptor
         file_acceptor( const std::string& name, io::mode::value mode )
             : name_( name )
             , mode_( mode )
-            , close_d( true )
+            , closed_( true )
             , fd_( io::invalid_file_descriptor )
         {
         }
@@ -71,23 +71,25 @@ class file_acceptor : public acceptor
 
         io::ostream* accept()
         {
-            if( !close_d ) { return NULL; }
+            if( !closed_ ) { return NULL; }
 #ifndef WIN32
-            fd_ = ::open( name_.c_str(), O_WRONLY | O_CREAT | O_NONBLOCK, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH ); // quick and dirty
+            fd_ = ::open( &name_[0], O_WRONLY | O_CREAT | O_NONBLOCK, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH ); // quick and dirty
 #else
-            fd_ = _open( name_.c_str(), O_WRONLY | _O_CREAT, _S_IWRITE );
+            fd_ = _open( &name_[0], O_WRONLY | _O_CREAT, _S_IWRITE );
 #endif
             if( fd_ == io::invalid_file_descriptor ) { return NULL; }
-            close_d = false;
+            closed_ = false;
             return new io::ostream( name_, mode_, io::mode::non_blocking ); // quick and dirty
         }
 
-        void notify_closed() { close_d = true; ::close( fd_ ); }
+        void notify_closed() { closed_ = true; ::close( fd_ ); }
+        
+        io::file_descriptor fd() const { return fd_; }
 
     private:
         const std::string name_;
         const io::mode::value mode_;
-        bool close_d;
+        bool closed_;
         io::file_descriptor fd_; // todo: make io::ostream non-throwing on construction
 };
 
@@ -147,6 +149,12 @@ class socket_acceptor : public acceptor
 
         void close() { acceptor_.close(); }
 
+#ifndef WIN32
+        io::file_descriptor fd() const { return const_cast< typename socket_traits< S >::acceptor& >( acceptor_ ).native(); }
+#else
+        io::file_descriptor fd() const { return io::invalid_file_descriptor; }
+#endif
+
     private:
         io::mode::value mode_;
         io::select select_;
@@ -177,6 +185,8 @@ class zero_acceptor_ : public acceptor
         }
 
         void close() { stream_->close(); }
+        
+        io::file_descriptor fd() const { return io::invalid_file_descriptor; } // quick and dirty
 
     private:
         io::ostream* stream_;
@@ -185,7 +195,7 @@ class zero_acceptor_ : public acceptor
 
 publisher::publisher( const std::string& name, io::mode::value mode, bool blocking, bool flush )
     : blocking_( blocking ),
-      m_flush( flush )
+      flush_( flush )
 {
     std::vector< std::string > v = comma::split( name, ':' );
     if( v[0] == "tcp" )
@@ -227,21 +237,16 @@ publisher::publisher( const std::string& name, io::mode::value mode, bool blocki
 unsigned int publisher::write( const char* buf, std::size_t size )
 {
     accept();
-    if( !blocking_ )
-    {
-        select_.check(); // todo: if slow, put all the files in one select
-    }
+    if( !blocking_ ) { select_.check(); } // todo: if slow, put all the files in one select
     unsigned int count = 0;
-    for( streams::iterator it = streams_.begin(); it != streams_.end(); ++it )
+    for( streams::iterator i = streams_.begin(); i != streams_.end(); )
     {
+        streams::iterator it = i++;
         if( !blocking_ && !select_.write().ready( **it ) ) { continue; }
         ( **it )->write( buf, size );
-        if( ( **it )->good() )
-        {
-            if( m_flush ) { ( **it )->flush(); }
-            ++count;
-        }
-       else { remove( it ); }
+        if( flush_ ) { ( **it )->flush(); }
+        if( ( **it )->good() ) { ++count; }
+        else { remove_( it ); }
     }
     return count;
 }
@@ -249,10 +254,7 @@ unsigned int publisher::write( const char* buf, std::size_t size )
 void publisher::close()
 {
     if( acceptor_ ) { acceptor_->close(); }
-    while( streams_.begin() != streams_.end() ) {
-
-        remove( streams_.begin() );
-    }
+    while( streams_.begin() != streams_.end() ) { remove_( streams_.begin() ); }
 }
 
 void publisher::accept()
@@ -267,12 +269,12 @@ void publisher::accept()
     }
 }
 
-void publisher::remove( streams::iterator it )
+void publisher::remove_( streams::iterator it )
 {
     select_.write().remove( **it );
     ( *it )->close();
-    streams_.erase( it );
     if( acceptor_ ) { acceptor_->notify_closed(); }
+    streams_.erase( it );
 }
 
 std::size_t publisher::size() const { return streams_.size(); }
