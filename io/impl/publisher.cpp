@@ -69,7 +69,7 @@ class file_acceptor : public acceptor
 #endif
         }
 
-        io::ostream* accept()
+        io::ostream* accept( boost::posix_time::time_duration )
         {
             if( !closed_ ) { return NULL; }
 #ifndef WIN32
@@ -133,9 +133,9 @@ class socket_acceptor : public acceptor
 #endif
         }
 
-        io::ostream* accept()
+        io::ostream* accept( boost::posix_time::time_duration timeout )
         {
-            select_.check();
+            select_.wait( timeout );
 #ifndef WIN32
             if( !select_.read().ready( acceptor_.native() ) ) { return NULL; }
 #else
@@ -171,7 +171,7 @@ class zero_acceptor_ : public acceptor
         {
         }
 
-        io::ostream* accept()
+        io::ostream* accept( boost::posix_time::time_duration )
         {
             if( !accepted_ )
             {
@@ -234,9 +234,9 @@ publisher::publisher( const std::string& name, io::mode::value mode, bool blocki
     }
 }
 
-unsigned int publisher::write( const char* buf, std::size_t size )
+unsigned int publisher::write( const char* buf, std::size_t size, bool do_accept )
 {
-    accept();
+    if( do_accept ) { accept(); }
     if( !blocking_ ) { select_.check(); } // todo: if slow, put all the files in one select
     unsigned int count = 0;
     for( streams::iterator i = streams_.begin(); i != streams_.end(); )
@@ -257,15 +257,17 @@ void publisher::close()
     while( streams_.begin() != streams_.end() ) { remove_( streams_.begin() ); }
 }
 
-void publisher::accept()
+unsigned int publisher::accept()
 {
-    if( !acceptor_ ) { return; }
+    if( !acceptor_ ) { return 0; }
+    unsigned int count = 0;
     while( true ) // while( streams_.size() < maxSize ?
     {
         io::ostream* s = acceptor_->accept();
-        if( s == NULL ) { return; }
+        if( s == NULL ) { return count; }
         streams_.insert( boost::shared_ptr< io::ostream >( s ) );
         select_.write().add( *s );
+        ++count;
     }
 }
 

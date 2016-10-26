@@ -38,9 +38,9 @@ publisher::publisher( const std::string& name, comma::io::mode::value mode, bool
 
 publisher::~publisher() { delete pimpl_; }
 
-std::size_t publisher::write( const char* buf, std::size_t size ) { return pimpl_->write( buf, size ); }
+std::size_t publisher::write( const char* buf, std::size_t size, bool do_accept ) { return pimpl_->write( buf, size, do_accept ); }
 
-void publisher::accept() { pimpl_->accept(); }
+unsigned int publisher::accept() { return pimpl_->accept(); }
 
 void publisher::close() { pimpl_->close(); }
 

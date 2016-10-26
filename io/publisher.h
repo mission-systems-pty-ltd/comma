@@ -59,8 +59,8 @@ class publisher : public boost::noncopyable
         /// destructor
         ~publisher();
 
-        /// publish to all existing connections (blocking), return number of client with successful write
-        std::size_t write( const char* buf, std::size_t size );
+        /// publish to all existing connections (blocking), return number of clients with successful write
+        std::size_t write( const char* buf, std::size_t size, bool do_accept = true );
 
         /// publish to all existing connections (blocking)
         /// @note data integrity is the user's responsibility
@@ -80,7 +80,8 @@ class publisher : public boost::noncopyable
         std::size_t size() const;
 
         /// accept waiting clients, non-blocking
-        void accept();
+        /// @return number of clients accepted
+        unsigned int accept();
         
         /// return acceptor file descriptor
         file_descriptor acceptor_file_descriptor() const;

@@ -32,7 +32,7 @@ if( NOT WIN32 )
     target_link_libraries( io-ls comma_application comma_csv comma_xpath )
     install( TARGETS io-ls RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
     
-    add_executable( io-publish ${dir}/io-publish.cpp ${dir}/publish.h ${dir}/publish.cpp )
+    add_executable( io-publish ${dir}/io-publish.cpp )
     target_link_libraries( io-publish comma_base comma_io comma_application ) # profiler )
     install( TARGETS io-publish RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
 

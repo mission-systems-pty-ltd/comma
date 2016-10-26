@@ -46,7 +46,7 @@ struct acceptor
 {
     virtual ~acceptor() {}
     virtual io::file_descriptor fd() const = 0;
-    virtual io::ostream* accept() = 0;
+    virtual io::ostream* accept( boost::posix_time::time_duration timeout = boost::posix_time::seconds( 0 ) ) = 0;
     virtual void notify_closed() {} // quick and dirty
     virtual void close() {}
 };
@@ -56,7 +56,7 @@ class publisher
     public:
         publisher( const std::string& name, io::mode::value mode, bool blocking = false, bool flush = true );
 
-        unsigned int write( const char* buf, std::size_t size );
+        unsigned int write( const char* buf, std::size_t size, bool do_accept = true );
 
         template < typename T >
         impl::publisher& operator<<( const T& lhs ) // quick and dirty, inefficient, but then ascii is meant to be slow...
@@ -80,7 +80,7 @@ class publisher
 
         std::size_t size() const;
 
-        void accept();
+        unsigned int accept();
         
         const io::impl::acceptor& acceptor() const { return *acceptor_; }
 

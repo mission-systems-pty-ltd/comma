@@ -27,29 +27,29 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author cedric wohlleber
 
-#ifdef WIN32
-#include <stdio.h>
-#include <fcntl.h>
-#include <io.h>
-#else
 #include <errno.h>
-#include <unistd.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <string.h>
 #include <sys/select.h>
-#endif
+#include <unistd.h>
 
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/scoped_ptr.hpp>
+#include <boost/thread.hpp>
 #include "../../application/contact_info.h"
 #include "../../application/command_line_options.h"
 #include "../../application/signal_flag.h"
 #include "../../base/last_error.h"
+#include "../../io/file_descriptor.h"
+#include "../../io/publisher.h"
 #include "../../string/string.h"
-#include "publish.h"
+#include "../../sync/synchronized.h"
 
 //#include <google/profiler.h>
 
@@ -65,10 +65,8 @@ static void usage( bool verbose = false )
     std::cerr << "usage: io-publish [<options>] <outputs>" << std::endl;
     std::cerr << std::endl;
     std::cerr << "stream options" << std::endl;
-    std::cerr << "    --number,-n: ascii line-based input; buffer up to n lines, default: 0" << std::endl;
     std::cerr << "    --size,-s: binary input; packet size" << std::endl;
-    std::cerr << "    --buffer,-b: buffer size, default is 0" << std::endl;
-    std::cerr << "    --multiplier,-m: multiplier for packet size, default is 1. The actual packet size will be m*s" << std::endl;
+    std::cerr << "    --multiplier,-m: multiplier for packet size, default is 1. The actual packet size will be m * s" << std::endl;
     std::cerr << "    --no-discard: if present, do blocking write to every open pipe" << std::endl;
     std::cerr << "    --no-flush: if present, do not flush the output stream (use on high bandwidth sources)" << std::endl;
     std::cerr << std::endl;
@@ -97,47 +95,116 @@ static void usage( bool verbose = false )
     exit( 0 );
 }
 
-class number_of_clients
+class publish
 {
     public:
-        number_of_clients( const comma::command_line_options& options
-                         , const std::vector< std::string >& names
-                         , const comma::io::applications::publish::publishers_t& publishers )
-            : output_number_of_clients_( options.exists( "--output-number-of-clients,--clients" ) )
-            , exit_on_no_clients_( options.exists( "--exit-on-no-clients,-e" ) )
-            , publishers_( publishers )
-            , size_( publishers.size(), 0 )
+        typedef comma::synchronized< boost::ptr_vector< comma::io::publisher > > publishers_t;
+        
+        typedef publishers_t::scoped_transaction transaction_t;
+        
+        publish( const std::vector< std::string >& filenames, unsigned int packet_size, bool discard, bool flush, bool output_number_of_clients, bool exit_on_no_clients )
+            : buffer_( packet_size, '\0' )
+            , packet_size_( packet_size )
+            , discard_( discard )
+            , output_number_of_clients_( output_number_of_clients )
+            , exit_on_no_clients_( exit_on_no_clients )
+            , got_first_client_( false )
+            , sizes_( filenames.size() )
+            , is_shutdown_( false )
         {
-            if( output_number_of_clients_ ) { for( unsigned int i = 0; i < names.size(); ++i ) { if( names[i] == "-" ) { std::cerr << "io-publish: '-' and --output-number-of-clients are incompatible, since both output to stdout" << std::endl; exit( 1 ); } } }
+            struct sigaction new_action, old_action;
+            new_action.sa_handler = SIG_IGN;
+            sigemptyset( &new_action.sa_mask );
+            sigaction( SIGPIPE, NULL, &old_action );
+            sigaction( SIGPIPE, &new_action, NULL );
+            transaction_t t( publishers_ );
+            for( std::size_t i = 0; i < filenames.size(); ++i ) { t->push_back( new comma::io::publisher( filenames[i], is_binary_() ? comma::io::mode::binary : comma::io::mode::ascii, !discard, flush ) ); }
+            acceptor_thread_.reset( new boost::thread( boost::bind( &publish::accept_, boost::ref( *this ) ) ) );
         }
         
-        bool update()
+        ~publish()
         {
-            if( !output_number_of_clients_ && exit_on_no_clients_ ) { return true; }
-            bool changed = false;
-            unsigned int total = 0;
-            for( unsigned int i = 0; i < publishers_.size(); ++i )
+            is_shutdown_ = true;
+            acceptor_thread_->join();
+            transaction_t t( publishers_ );
+            { for( std::size_t i = 0; i < t->size(); ++i ) { ( *t )[i].close(); } }
+        }
+        
+        bool read()
+        {
+            if( is_binary_() )
             {
-                total += publishers_[i].size();
-                changed = changed || publishers_[i].size() != size_[i];
-                size_[i] = publishers_[i].size();
+                std::cin.read( &buffer_[0], buffer_.size() );
+                if( std::cin.gcount() < int( buffer_.size() ) || !std::cin.good() ) { return false; }
+            }
+            else
+            {
+                std::getline( std::cin, buffer_ );
+                buffer_ += '\n';
+                if( !std::cin.good() ) { return false; }
+            }
+            transaction_t t( publishers_ );
+            for( std::size_t i = 0; i < t->size(); ++i ) { ( *t )[i].write( &buffer_[0], buffer_.size(), false ); }
+            return handle_sizes_( t );
+        }
+
+    private:
+        bool is_binary_() const { return packet_size_ > 0; }
+        
+        bool handle_sizes_( transaction_t& t )
+        {
+            if( !output_number_of_clients_ && !exit_on_no_clients_ ) { return true; }
+            unsigned int total = 0;
+            bool changed = false;
+            for( unsigned int i = 0; i < t->size(); ++i )
+            {
+                unsigned int size = ( *t )[i].size();
+                total += size;
+                if( sizes_[i] == size ) { continue; }
+                sizes_[i] = size;
+                changed = true;
             }
             if( !changed ) { return true; }
-            if( output_number_of_clients_ ) // quick and dirty, not using comma::csv to avoid coupling of comma::io with comma::csv
+            if( output_number_of_clients_ )
             {
                 std::cout << boost::posix_time::to_iso_string( boost::posix_time::microsec_clock::universal_time() );
-                for( unsigned int i = 0; i < size_.size(); ++i ) { std::cout << ',' << size_[i]; }
+                for( unsigned int i = 0; i < sizes_.size(); ++i ) { std::cout << ',' << sizes_[i]; }
                 std::cout << std::endl;
             }
-            if( exit_on_no_clients_ && total == 0 ) { std::cerr << "io-publish: the last client exited" << std::endl; return false; }
+            if( exit_on_no_clients_ )
+            {
+                if( total > 0 ) { got_first_client_ = true; }
+                else if( got_first_client_ ) { std::cerr << "io-publish: the last client exited" << std::endl; return false; }
+            }
             return true;
         }
         
-    private:
+        void accept_()
+        {
+            comma::io::select select;
+            {
+                transaction_t t( publishers_ );
+                for( unsigned int i = 0; i < t->size(); ++i ) { select.read().add( ( *t )[i].acceptor_file_descriptor() ); }
+            }
+            while( !is_shutdown_ )
+            {
+                select.wait( boost::posix_time::millisec( 100 ) ); // arbitrary timeout
+                transaction_t t( publishers_ );
+                for( unsigned int i = 0; i < t->size(); ++i ) { if( select.read().ready( ( *t )[i].acceptor_file_descriptor() ) ) { ( *t )[i].accept(); } }
+                handle_sizes_( t );
+            }
+        }
+        
+        publishers_t publishers_;
+        std::string buffer_;
+        unsigned int packet_size_;
+        bool discard_;
         bool output_number_of_clients_;
         bool exit_on_no_clients_;
-        const comma::io::applications::publish::publishers_t& publishers_;
-        std::vector< unsigned int > size_;
+        bool got_first_client_;
+        std::vector< unsigned int > sizes_;
+        boost::scoped_ptr< boost::thread > acceptor_thread_;
+        bool is_shutdown_;
 };
 
 int main( int ac, char** av )
@@ -145,45 +212,30 @@ int main( int ac, char** av )
     try
     {
         comma::command_line_options options( ac, av, usage );
+        const std::vector< std::string >& names = options.unnamed( "--no-discard,--verbose,-v,--no-flush,--output-number-of-clients,--clients,--exit-on-no-clients,-e", "-.+" );
+        if( names.empty() ) { std::cerr << "io-publish: please specify at least one stream; use '-' for stdout" << std::endl; return 1; }
         const boost::array< comma::signal_flag::signals, 2 > signals = { { comma::signal_flag::sigint, comma::signal_flag::sigterm } };
         comma::signal_flag is_shutdown( signals );
-        unsigned int n = options.value( "-n,--number", 0 );
-        unsigned int packet_size = options.value( "-s,--size", 0 ) * options.value( "-m,--multiplier", 1 );
-        unsigned int buffer_size = options.value( "-b,--buffer", 0 );
-        bool discard = !options.exists( "--no-discard" );
-        bool flush = !options.exists( "--no-flush" );
-        bool binary = packet_size != 0;
-        const std::vector< std::string >& names = options.unnamed( "--no-discard,--verbose,-v,--no-flush,--output-number-of-clients,--clients,--exit-on-no-clients,-e", "-.+" );
-        if( names.empty() ) { std::cerr << "io-publish: please specify at least one stream ('-' for stdout)" << std::endl; return 1; }
-        if( binary )
-        {
-            //ProfilerStart( "io-publish.prof" ); {
-            comma::io::applications::publish publish( names, n, buffer_size, packet_size, discard );
-            number_of_clients nc( options, names, publish.publishers() );
-            while( !is_shutdown && publish.read_bytes() && nc.update() );
-            //ProfilerStop(); }
-        }
-        else
-        {
-            comma::io::applications::publish publish( names, n, 1, 0, discard, flush );
-            number_of_clients nc( options, names, publish.publishers() );
-            while( !is_shutdown && std::cin.good() && !std::cin.eof() && publish.read_line() && nc.update() );
-        }
+        publish p( names
+                 , options.value( "-s,--size", 0 ) * options.value( "-m,--multiplier", 1 )
+                 , !options.exists( "--no-discard" )
+                 , !options.exists( "--no-flush" )
+                 , options.exists( "--output-number-of-clients,--clients" )
+                 , options.exists( "--exit-on-no-clients,-e" ) );
+        //ProfilerStart( "io-publish.prof" ); {
+        while( std::cin.good() && !is_shutdown && p.read() );
+        //ProfilerStop(); }
         if( is_shutdown ) { std::cerr << "io-publish: interrupted by signal" << std::endl; }
         return 0;
     }
     catch( std::exception& ex )
     {
-        #ifndef WIN32
         if( comma::last_error::value() == EINTR || comma::last_error::value() == EBADF ) { return 0; }
-        #endif
         std::cerr << "io-publish: " << ex.what() << std::endl;
     }
     catch( ... )
     {
-        #ifndef WIN32
         if( comma::last_error::value() == EINTR || comma::last_error::value() == EBADF ) { return 0; }
-        #endif
         std::cerr << "io-publish: unknown exception" << std::endl;
     }
     return 1;
