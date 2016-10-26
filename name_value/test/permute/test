@@ -1,0 +1,17 @@
+#!/bin/bash
+
+cd output
+
+[[ -f ../options ]] && options=$(cat ../options)
+
+cat ../input | name-value-permute $options
+
+for f in *.path-value
+do
+    base=$(basename $f .path-value)
+    prefix=${base%.*}
+    count=${base#*.}
+    cat $f | sed "s#^#files/$prefix[$count]/#"
+done
+
+cat ../input | name-value-permute $options --stdout | sed "s#^#stdout/#"
