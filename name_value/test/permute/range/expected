@@ -1,0 +1,8 @@
+files/permutations[0]/range=1
+files/permutations[1]/range=2
+files/permutations[2]/range=3
+files/permutations[3]/range=4
+stdout/permutations[0]/range=1
+stdout/permutations[1]/range=2
+stdout/permutations[2]/range=3
+stdout/permutations[3]/range=4

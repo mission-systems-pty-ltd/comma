@@ -30,6 +30,7 @@
 #include <iostream>
 #include <fstream>
 #include <boost/lexical_cast.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include "../../base/exception.h"
 #include "../../application/contact_info.h"
 #include "../../application/command_line_options.h"
@@ -49,6 +50,7 @@ static void usage( bool verbose = false )
     std::cerr << "    permutations can be a combination of lists and ranges" << std::endl;
     std::cerr << "    for a list, values are separated with ',' (or use --delim option to set a delimiter other than , )" << std::endl;
     std::cerr << "    for a range, specify with <start>:<stop>[:<step>] (use --range-delim to set a delimiter other than : )" << std::endl;
+    std::cerr << "    valid types for ranges are int, double and time (time step is in seconds)" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options:" << std::endl;
     std::cerr << "    --help,-h; output help and exit" << std::endl;
@@ -182,29 +184,60 @@ int main( int ac, char** av )
                     if (range.size() < 2 || range.size() > 3) 
                     { COMMA_THROW(comma::exception, "expected range is \"start" << range_delimiter << "stop" << range_delimiter << "step\", got \"" << values[i] << "\"" << std::endl ); }
                     
-                    double start = boost::lexical_cast<double>(range[0]);
-                    double stop = boost::lexical_cast<double>(range[1]);
                     
-                    if ( !boost::math::isfinite(start) || !boost::math::isfinite(stop) ) 
-                    { COMMA_THROW(comma::exception, "cannot expand range " << values[i] << std::endl ); }
+                    try {
+                        double start = boost::lexical_cast<double>(range[0]);
+                        double stop = boost::lexical_cast<double>(range[1]);
                     
-                    int sign = start < stop ? 1 : -1 ;
-                    double step;
-                    if ( range.size() == 3 ) { step = boost::lexical_cast<double>(range[2]); }
-                    else { step = sign; }
+                        if ( !boost::math::isfinite(start) || !boost::math::isfinite(stop) ) 
+                        { COMMA_THROW(comma::exception, "cannot expand range " << values[i] << std::endl ); }
                     
-                    if ( step == 0 || ( sign * step < 0 ) ) { COMMA_THROW(comma::exception, "cannot expand range " << values[i] << std::endl) }
+                        int sign = start < stop ? 1 : -1 ;
+                        double step;
+                        if ( range.size() == 3 ) { step = boost::lexical_cast<double>(range[2]); }
+                        else { step = sign; }
                     
-                    // if it is a range: parse begin, end, and step (default 1)
-                    // todo: support int, double, time??
+                        if ( step == 0 || ( sign * step < 0 ) ) { COMMA_THROW(comma::exception, "cannot expand range " << values[i] << std::endl) }
                     
-                    // throw on infinity, step = 0, sign mismatch
-                    // for (i = start; i <= stop; i += step ) // (need to check for -ve step)
-                    // push the value onto std::vector<std::string> of values associated with path
-                    for (double i = start; ( ( sign > 0 && i <= stop ) || ( sign < 0 && i >= stop ) ); i += step )
+                        // if it is a range: parse begin, end, and step (default 1)
+                        // todo: support int, double, time??
+                    
+                        // throw on infinity, step = 0, sign mismatch
+                        // for (i = start; i <= stop; i += step ) // (need to check for -ve step)
+                        // push the value onto std::vector<std::string> of values associated with path
+                        double i = start;
+                        do
+                        {
+                            std::string s = boost::lexical_cast<std::string>(i);
+                            map.values.push_back(s);
+                            i += step;
+                        } while ( ( sign > 0 && i < stop ) || ( sign < 0 && i > stop ) );
+                    }
+                    catch ( boost::bad_lexical_cast & e )
                     {
-                        std::string s = boost::lexical_cast<std::string>(i);
-                        map.values.push_back(s);
+                        boost::posix_time::ptime start = boost::posix_time::from_iso_string(range[0]);
+                        boost::posix_time::ptime stop = boost::posix_time::from_iso_string(range[1]);
+                    
+                        int sign = start < stop ? 1 : -1 ;
+                        double step;
+                        if ( range.size() == 3 ) { step = boost::lexical_cast<double>(range[2]); }
+                        else { step = sign; }
+                    
+                        if ( step == 0 || ( sign * step < 0 ) ) { COMMA_THROW(comma::exception, "cannot expand range " << values[i] << std::endl) }
+                    
+                        // if it is a range: parse begin, end, and step (default 1)
+                        // todo: support int, double, time??
+                    
+                        // throw on infinity, step = 0, sign mismatch
+                        // for (i = start; i <= stop; i += step ) // (need to check for -ve step)
+                        // push the value onto std::vector<std::string> of values associated with path
+                        boost::posix_time::ptime i = start;
+                        do
+                        {
+                            std::string s = boost::posix_time::to_iso_string(i);
+                            map.values.push_back(s);
+                            i += boost::posix_time::seconds(step);
+                        } while ( ( sign > 0 && i < stop ) || ( sign < 0 && i > stop ) );
                     }
                 }
             }

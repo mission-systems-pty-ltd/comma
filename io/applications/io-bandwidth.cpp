@@ -192,9 +192,11 @@ int main( int ac, char** av )
                                                   / window_buckets.size() / bucket_width;
 
                 std::cerr << boost::posix_time::to_iso_string( now )
+                          << std::fixed
                           << delimiter << total_bytes
                           << delimiter << bandwidth
-                          << delimiter << window_bandwidth;
+                          << delimiter << window_bandwidth
+                          << std::scientific;
                 if( record_size )
                 {
                     std::cerr << delimiter << bandwidth / *record_size
