@@ -67,7 +67,7 @@ static void usage( bool verbose = false )
     std::cerr << "stream options" << std::endl;
     std::cerr << "    --size,-s: binary input; packet size" << std::endl;
     std::cerr << "    --multiplier,-m: multiplier for packet size, default is 1. The actual packet size will be m * s" << std::endl;
-    std::cerr << "    --no-discard: if present, do blocking write to every open pipe" << std::endl;
+    std::cerr << "    --no-discard: if present, do blocking write to every open stream" << std::endl;
     std::cerr << "    --no-flush: if present, do not flush the output stream (use on high bandwidth sources)" << std::endl;
     std::cerr << std::endl;
     std::cerr << "client options" << std::endl;
@@ -105,11 +105,10 @@ class publish
         publish( const std::vector< std::string >& filenames, unsigned int packet_size, bool discard, bool flush, bool output_number_of_clients, bool exit_on_no_clients )
             : buffer_( packet_size, '\0' )
             , packet_size_( packet_size )
-            , discard_( discard )
             , output_number_of_clients_( output_number_of_clients )
             , exit_on_no_clients_( exit_on_no_clients )
             , got_first_client_( false )
-            , sizes_( filenames.size() )
+            , sizes_( filenames.size(), 0 )
             , is_shutdown_( false )
         {
             struct sigaction new_action, old_action;
@@ -198,7 +197,6 @@ class publish
         publishers_t publishers_;
         std::string buffer_;
         unsigned int packet_size_;
-        bool discard_;
         bool output_number_of_clients_;
         bool exit_on_no_clients_;
         bool got_first_client_;
