@@ -195,8 +195,8 @@ int main( int ac, char** av )
                           << std::fixed
                           << delimiter << total_bytes
                           << delimiter << bandwidth
-                          << delimiter << window_bandwidth
-                          << std::scientific;
+                          << delimiter << window_bandwidth;
+                std::cerr.unsetf( std::ios_base::floatfield );
                 if( record_size )
                 {
                     std::cerr << delimiter << bandwidth / *record_size
