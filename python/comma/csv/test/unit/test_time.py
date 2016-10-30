@@ -1,5 +1,5 @@
 import unittest
-from comma.csv.time import to_numpy, from_numpy, is_undefined, undefined_time, zone, ascii_converters
+from comma.csv.time import to_numpy, from_numpy, is_undefined, NOT_A_DATE_TIME, zone, ascii_converters
 import numpy as np
 
 
@@ -20,7 +20,7 @@ class test_time(unittest.TestCase):
         np.testing.assert_equal(f(np.datetime64('2015-01-02 12:23:45.012345', 'us')), '20150102T122345.012345')
         np.testing.assert_equal(f(np.datetime64('1969-01-02 12:23:45.012345', 'us')), '19690102T122345.012345')
         np.testing.assert_equal(f(np.datetime64('2015-01-02 12:23:45.000000', 'us')), '20150102T122345')
-        self.assertEqual(f(undefined_time()), 'not-a-date-time')
+        self.assertEqual(f(NOT_A_DATE_TIME), 'not-a-date-time')
         self.assertRaises(TypeError, f, 'invalid')
 
     def test_ascii_converters(self):

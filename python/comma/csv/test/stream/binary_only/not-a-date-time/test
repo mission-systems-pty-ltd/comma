@@ -6,7 +6,7 @@ from comma.csv import *
 t = struct( 'f', *format.to_numpy('t') )
 s = stream( t, binary=True )
 a = t()
-a['f'] = time.undefined_time()
+a['f'] = time.NOT_A_DATE_TIME
 s.write(a)" \
     | csv-from-bin l )
 

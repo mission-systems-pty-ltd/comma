@@ -37,25 +37,22 @@ UNIT = 'us'
 TYPE = 'M8[' + UNIT + ']'
 DTYPE = np.dtype(TYPE)
 
-
-def undefined_time():
-    return np.datetime64('NaT')
+NOT_A_DATE_TIME = np.datetime64('NaT')
+POSITIVE_INFINITY = np.datetime64('294247-01-09T04:00:54.775807Z')
+NEGATIVE_INFINITY = np.datetime64('-290308-12-22T19:59:05.224191Z')
 
 
 def is_undefined(numpy_time):
-    return str(numpy_time) == 'NaT'
+    return str(numpy_time) == str(NOT_A_DATE_TIME)
 
-def pos_infinity_time():
-    return np.datetime64('294247-01-09T04:00:54.775807Z')
-
-def neg_infinity_time():
-    return np.datetime64('-290308-12-22T19:59:05.224191Z')
 
 def is_positive_infinity(numpy_time):
-    return numpy_time == pos_infinity_time()
+    return numpy_time == POSITIVE_INFINITY
+
 
 def is_negative_infinity(numpy_time):
-    return numpy_time == neg_infinity_time()
+    return numpy_time == NEGATIVE_INFINITY
+
 
 def to_numpy(t):
     """
@@ -72,16 +69,13 @@ def to_numpy(t):
     >>> to_numpy('')
     numpy.datetime64('NaT')
     """
-    if not ( isinstance(t, basestring) ):
-        msg = "expected comma time, got '{}'".format(repr(t))
-        raise TypeError(msg)
-    if t == 'not-a-date-time' or t == '':
-        return undefined_time()
-    if t == '+infinity' or t == 'inf' or t == "+inf" or t == "infinity":
-        return pos_infinity_time()
-    if t == '-infinity' or t == '-inf':
-        return neg_infinity_time()
-    if not ( re.match(r'^(\d{8}T\d{6}(\.\d{0,6})?)$', t)):
+    if t in ['', 'not-a-date-time']:
+        return NOT_A_DATE_TIME
+    if t in ['+infinity', '+inf', 'infinity', 'inf']:
+        return POSITIVE_INFINITY
+    if t in ['-infinity', '-inf']:
+        return NEGATIVE_INFINITY
+    if not (isinstance(t, basestring) and re.match(r'^(\d{8}T\d{6}(\.\d{0,6})?)$', t)):
         msg = "expected comma time, got '{}'".format(repr(t))
         raise TypeError(msg)
     v = list(t)
@@ -130,7 +124,7 @@ def from_numpy(t):
 def ascii_converters(types):
     converters = {}
     for i, type in enumerate(types):
-        if np.dtype(type) == np.dtype(TYPE):
+        if np.dtype(type) == DTYPE:
             converters[i] = to_numpy
     return converters
 
