@@ -1,0 +1,4 @@
+#!/bin/bash
+
+data/script
+echo "status=$?"

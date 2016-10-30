@@ -1,0 +1,4 @@
+number_of( fa ) < 3
+number_of( fb ) = 1
+number_of( fc ) < 3
+

@@ -1,0 +1,32 @@
+#!/bin/bash
+
+function fa
+{
+    trap "kill $pid" EXIT
+    for(( i=0; i<10; i++)); do echo "fa[$i]=1"; sleep 1; done
+    echo "leaving fa" >&2
+}
+export -f fa
+
+function fb
+{
+    trap "kill $pid" EXIT
+    echo "fb[0]=1"
+    sleep 1
+    echo "leaving fb" >&2
+}
+export -f fb
+
+function fc
+{
+    trap "kill $pid" EXIT
+    for(( i=0; i<10; i++)); do echo "fc[$i]=1"; sleep 1; done
+    echo "leaving fc" >&2
+}
+export -f fc
+
+source $( type -p comma-process-util ) || { echo "failed to source comma-process-util" >&2; exit 1; }
+export pid=$BASHPID
+
+comma_execute_and_wait --any "bash -c fa" "bash -c fb" "bash -c fc"
+
