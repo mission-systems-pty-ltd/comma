@@ -79,30 +79,30 @@ struct map_t
     std::vector<std::string> values;
 };
 
-bool update_index(const std::vector<map_t>& permutations, std::vector<std::size_t>& index)
+void update_index(const std::vector<map_t>& permutations, std::vector<std::size_t>& index)
 {
     for (std::size_t i = permutations.size(); i-- > 0;)
     {
         index[i]++;
-        if (index[i] == permutations[i].values.size()) { index[i] = 0; }
-        else { return false; }
+        if (index[i] == permutations[i].values.size()) { index[i] = 0; continue; }
+        break;
     }
-    return true;
 }
 
 void output_to_stdout(const std::vector<map_t>& permutations, const std::vector<std::string>& passthrough, const std::string& prefix )
 {
     for (std::size_t i = 0; i < passthrough.size(); ++i) { std::cout << passthrough[i] << std::endl; }  
     std::size_t count = 0;
+    std::size_t total_count = 1;
+    for ( std::size_t p = 0; p < permutations.size(); ++p ) { total_count = total_count * permutations[p].values.size(); }
     std::vector <std::size_t> index(permutations.size());
-    bool finished = false;
-    while (!finished)
+    while (count < total_count)
     {
         for (std::size_t p = 0; p < permutations.size(); ++p)
         {
             std::cout << prefix << "[" << count << "]/" << permutations[p].path << "=" << permutations[p].values[index[p]] << std::endl;
         }
-        finished = update_index(permutations, index);
+        update_index(permutations, index);
         count++;
     }
 }
@@ -110,9 +110,12 @@ void output_to_stdout(const std::vector<map_t>& permutations, const std::vector<
 void output_to_files(const std::vector<map_t>& permutations, const std::vector<std::string>& passthrough, const std::string& prefix )
 {
     std::size_t count = 0;
+    std::size_t total_count = 1;
+    for ( std::size_t p = 0; p < permutations.size(); ++p ) { total_count = total_count * permutations[p].values.size(); }
+    
+    // vector containing the current position in each input 
     std::vector <std::size_t> index(permutations.size());
-    bool finished = false;
-    while (!finished)
+    while (count < total_count)
     {
         std::string filename = prefix + "." + boost::lexical_cast<std::string>(count) + ".path-value"; 
         std::ofstream ostream(filename.c_str());
@@ -122,7 +125,7 @@ void output_to_files(const std::vector<map_t>& permutations, const std::vector<s
             ostream << permutations[p].path << "=" << permutations[p].values[index[p]] << std::endl;
         }
         ostream.close();
-        finished = update_index(permutations, index);
+        update_index(permutations, index);
         count++;
     }
 }
