@@ -27,11 +27,9 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author vsevolod vlaskine
 
-#ifndef COMMA_IO_SELECT_HEADER
-#define COMMA_IO_SELECT_HEADER
+#pragma once
 
 #if defined(WINCE)
 #include <Winsock.h>
@@ -125,25 +123,10 @@ class select
         descriptors except_descriptors_;
 };
 
-inline void select::descriptors::add( file_descriptor fd )
-{
-    if( fd == invalid_file_descriptor ) { COMMA_THROW( comma::exception, "invalid file descriptor" ); }
-    descriptors_.insert( fd );
-}
+inline void select::descriptors::add( file_descriptor fd ) { if( fd != invalid_file_descriptor ) { descriptors_.insert( fd ); } }
 
-inline void select::descriptors::remove( file_descriptor fd )
-{
-    if( fd == invalid_file_descriptor ) { COMMA_THROW( comma::exception, "invalid file descriptor" ); }
-    descriptors_.erase( fd );
-}
+inline void select::descriptors::remove( file_descriptor fd ) { if( fd != invalid_file_descriptor ) { descriptors_.erase( fd ); } }
 
-inline bool select::descriptors::ready( file_descriptor fd ) const
-{
-    if( fd == invalid_file_descriptor ) { COMMA_THROW( comma::exception, "invalid file descriptor" ); }
-    return descriptors_.find( fd ) != descriptors_.end() && FD_ISSET( fd, const_cast< fd_set* >( &fd_set_ ) ) != 0;
-}
-
+inline bool select::descriptors::ready( file_descriptor fd ) const { return descriptors_.find( fd ) != descriptors_.end() && FD_ISSET( fd, const_cast< fd_set* >( &fd_set_ ) ) != 0; }
 
 } } // namespace comma { namespace io {
-
-#endif // COMMA_IO_SELECT_HEADER

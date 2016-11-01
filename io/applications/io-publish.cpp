@@ -183,7 +183,7 @@ class publish
             comma::io::select select;
             {
                 transaction_t t( publishers_ );
-                for( unsigned int i = 0; i < t->size(); ++i ) { select.read().add( ( *t )[i].acceptor_file_descriptor() ); }
+                for( unsigned int i = 0; i < t->size(); ++i ) { if( ( *t )[i].acceptor_file_descriptor() != comma::io::invalid_file_descriptor ) { select.read().add( ( *t )[i].acceptor_file_descriptor() ); } }
             }
             while( !is_shutdown_ )
             {

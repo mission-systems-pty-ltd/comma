@@ -40,6 +40,12 @@
 #include "../select.h"
 #include "../stream.h"
 
+namespace comma { namespace io {
+    
+class publisher;
+
+} } // namespace comma { namespace io {
+
 namespace comma { namespace io { namespace impl {
 
 struct acceptor
@@ -85,6 +91,7 @@ class publisher
         const io::impl::acceptor& acceptor() const { return *acceptor_; }
 
     private:
+        friend class comma::io::publisher;
         bool blocking_;
         bool flush_;
         boost::scoped_ptr< io::impl::acceptor > acceptor_;
