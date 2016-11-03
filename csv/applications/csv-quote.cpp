@@ -76,6 +76,8 @@ int main( int ac, char** av )
         char quote = options.value( "--quote", '\"' );
         bool unquote = options.exists( "--unquote" );
         std::string backslash;
+        std::vector<std::string> format;
+        if (options.exists("--format") ) { format = comma::split(options.value<std::string>("--format"), ','); }
         if( options.exists( "--escape" ) ) { backslash = "\\"; }
         while( std::cin.good() )
         {
@@ -83,6 +85,10 @@ int main( int ac, char** av )
             std::getline( std::cin, line );
             if( line.empty() ) { continue; }
             const std::vector< std::string >& v = comma::split( line, delimiter );
+            if (!format.empty() && format.size() != v.size())
+            {
+                COMMA_THROW(comma::exception, "--format \"" << options.value<std::string>("--format") << "\" has " << format.size() << " fields but input line \"" << line << "\" has " << v.size() << " fields");
+            }
             std::string comma;
             for( std::size_t i = 0; i < v.size(); ++i )
             {
@@ -99,15 +105,22 @@ int main( int ac, char** av )
                     bool do_quote = false;
                     if( has_field )
                     {
-                        do_quote = true;
-                        if( forced.find( i ) == forced.end() )
+                        if (!format.empty())
                         {
-                            try
+                            do_quote = (format[i][0] == 's');
+                        } 
+                        else
+                        {
+                            do_quote = true;
+                            if( format.empty() && forced.find( i ) == forced.end() )
                             {
-                                boost::lexical_cast< double >( value );
-                                do_quote = false;
+                                try
+                                {
+                                    boost::lexical_cast< double >( value );
+                                    do_quote = false;
+                                }
+                                catch( ... ) {}
                             }
-                            catch( ... ) {}
                         }
                     }
                     if( do_quote ) { std::cout << backslash << quote << value << backslash << quote; }
