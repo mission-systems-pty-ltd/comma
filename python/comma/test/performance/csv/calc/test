@@ -1,0 +1,74 @@
+#!/bin/bash
+
+function generate_uniform_input
+{
+    local size=$1
+    local number_of_ids=100
+    python -c "$( cat <<END
+import numpy as np
+import comma
+t = comma.csv.struct('id,value', 'u4', 'f8')
+s = comma.csv.stream(t, binary=True)
+number_of_ids = $number_of_ids
+size_per_id = $(( size / number_of_ids ))
+for id in xrange(number_of_ids):
+    ids = (np.ones(size_per_id, dtype='u4') * id).view([('id', 'u4')])
+    values = np.random.rand(size_per_id).view([('value', 'f8')])
+    data = comma.numpy.merge_arrays(ids, values)
+    s.write(data.view(t))
+END
+)"
+}
+
+function generate_random_input
+{
+    local size=$1
+    python -c "$( cat <<END
+import numpy as np
+import comma
+t = comma.csv.struct('id,value', 'u4', 'f8')
+s = comma.csv.stream(t, binary=True)
+size = $size
+min_id, max_id = 0, 100
+ids = np.random.randint(min_id, max_id, size, dtype='u4').view([('id', 'u4')])
+values = np.random.rand(size).view([('value', 'f8')])
+data = comma.numpy.merge_arrays(ids, values)
+
+s.write(data.view(t))
+END
+)"
+}
+
+function process
+{
+    local case=$1
+    /usr/bin/time -o cpp_timer -f %U csv-calc $operation --fields id,value --binary ui,d < $big_data_dir/${case}_input.bin \
+        | csv-shuffle --fields result,id --output-fields id,result --binary d,ui \
+        | csv-sort --binary ui,d --fields id > cpp_output.bin
+    /usr/bin/time -o python_timer -f %U $python_script < $big_data_dir/${case}_input.bin > python_output.bin
+
+    echo "$case/cpp/time/elapsed=$( cat cpp_timer )"
+    echo "$case/python/time/elapsed=$( cat python_timer )"
+    echo "$case/diff=$( diff cpp_output.bin python_output.bin )"
+}
+
+
+big_data_dir=$( dirname $( readlink -f $0 ) )/data~
+mkdir -p $big_data_dir
+sample_size=100000000
+[[ -f $big_data_dir/random_input.bin ]] || generate_random_input $sample_size > $big_data_dir/random_input.bin
+[[ -f $big_data_dir/uniform_input.bin ]] || generate_uniform_input $sample_size > $big_data_dir/uniform_input.bin
+
+echo "random/input/size/bytes=$( wc -c < $big_data_dir/random_input.bin )"
+echo "uniform/input/size/bytes=$( wc -c < $big_data_dir/uniform_input.bin )"
+
+scriptname=$( readlink -f $0 )
+source $( type -p comma-application-util ) || { echo "$scriptname: failed to source comma-application-util"; exit 1; }
+
+# define operation and python_script
+comma_path_value_to_var
+python_script=$( pwd )/$python_script
+
+( mkdir -p output/random && cd output/random && process random )
+( mkdir -p output/uniform && cd output/uniform && process uniform )
+
