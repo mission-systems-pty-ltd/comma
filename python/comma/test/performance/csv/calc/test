@@ -55,7 +55,7 @@ function process
 
 big_data_dir=$( dirname $( readlink -f $0 ) )/data~
 mkdir -p $big_data_dir
-sample_size=100000000
+sample_size=10000000
 [[ -f $big_data_dir/random_input.bin ]] || generate_random_input $sample_size > $big_data_dir/random_input.bin
 [[ -f $big_data_dir/uniform_input.bin ]] || generate_uniform_input $sample_size > $big_data_dir/uniform_input.bin
 
