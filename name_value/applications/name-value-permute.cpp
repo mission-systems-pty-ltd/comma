@@ -113,11 +113,13 @@ void output_to_files(const std::vector<map_t>& permutations, const std::vector<s
     std::size_t total_count = 1;
     for ( std::size_t p = 0; p < permutations.size(); ++p ) { total_count = total_count * permutations[p].values.size(); }
     
+    std::string dot = prefix.empty() ? "" : ".";
+    
     // vector containing the current position in each input 
     std::vector <std::size_t> index(permutations.size());
     while (count < total_count)
     {
-        std::string filename = prefix + "." + boost::lexical_cast<std::string>(count) + ".path-value"; 
+        std::string filename = prefix + dot + boost::lexical_cast<std::string>(count) + ".path-value"; 
         std::ofstream ostream(filename.c_str());
         for (std::size_t i = 0; i < passthrough.size(); ++i) { ostream << passthrough[i] << std::endl; }  
         for (std::size_t p = 0; p < permutations.size(); ++p)
@@ -247,7 +249,7 @@ int main( int ac, char** av )
             permutations.push_back(map);
         }
         
-        std::string prefix = options.value<std::string>("--prefix", "permutations");
+        std::string prefix = options.exists("--prefix") ? options.value<std::string>("--prefix", "") : "permutations";
         
         if (options.exists("--stdout"))
         {
