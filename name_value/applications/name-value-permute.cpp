@@ -36,6 +36,11 @@
 #include "../../application/command_line_options.h"
 #include "../../string/split.h"
 
+// todo
+// - rename default prefix "permutation" to "permutations"
+// - the following does not workj at all in many ways: ( echo number=684:690:2 ; echo 'string="a,";b;c' ; echo unchanged=unchanged ) | name-value-permute --stdout
+//   please speak to seva for details
+
 static void usage( bool verbose = false )
 {
     std::cerr << std::endl;
