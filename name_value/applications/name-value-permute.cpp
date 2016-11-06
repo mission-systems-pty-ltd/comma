@@ -37,7 +37,7 @@
 #include "../../string/split.h"
 
 // todo
-// - rename default prefix "permutation" to "permutations"
+// - rename output files from permutations.0.path-value to 0.path-value
 // - the following does not workj at all in many ways: ( echo number=684:690:2 ; echo 'string="a,";b;c' ; echo unchanged=unchanged ) | name-value-permute --stdout
 //   please speak to seva for details
 
@@ -61,8 +61,8 @@ static void usage( bool verbose = false )
     std::cerr << "    --help,-h; output help and exit" << std::endl;
     std::cerr << "    --delimiter,-d=<delimiter>;default=','; delimiter for lists" << std::endl;
     std::cerr << "    --range-delimiter=<delimiter>;default=':'; delimiter for ranges" << std::endl;
-    std::cerr << "    --prefix=<prefix>;default='permutation'; prefix to add to paths or filenames" << std::endl;
-    std::cerr << "    --stdout; output to stdout as permutation array; default: output to file" << std::endl;
+    std::cerr << "    --prefix=<prefix>;default='permutations'; prefix to add to paths or filenames" << std::endl;
+    std::cerr << "    --stdout; output to stdout as permutation array; default: output to files" << std::endl;
     std::cerr << "examples:" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    echo 'list=a,b,c' | name-value-permute" << std::endl;
