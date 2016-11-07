@@ -67,11 +67,11 @@ static void usage( bool verbose = false )
     std::cerr << std::endl;
     std::cerr << "    echo 'list=a,b,c' | name-value-permute" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    echo 'range=1-3' | name-value-permute --range-delim='-'" << std::endl;
+    std::cerr << "    echo 'range=1-3' | name-value-permute --range-delimiter='-'" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    echo 'number=684:690:2" << std::endl;
     std::cerr << "          string=\"a,\";b;c" << std::endl;
-    std::cerr << "          unchanged=unchanged' | name-value-permute --stdout" << std::endl;
+    std::cerr << "          unchanged=unchanged' | name-value-permute --stdout --delimiter=';'" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -94,9 +94,10 @@ void update_index(const std::vector<map_t>& permutations, std::vector<std::size_
     }
 }
 
-void output_to_stdout(const std::vector<map_t>& permutations, const std::vector<std::string>& passthrough, const std::string& prefix )
+void output_to_stdout(const std::vector<map_t>& permutations, const std::vector<std::string>& passthrough, const comma::command_line_options& options )
 {
     for (std::size_t i = 0; i < passthrough.size(); ++i) { std::cout << passthrough[i] << std::endl; }  
+    std::string prefix = options.value<std::string>("--prefix", "permutations");
     std::size_t count = 0;
     std::size_t total_count = 1;
     for ( std::size_t p = 0; p < permutations.size(); ++p ) { total_count = total_count * permutations[p].values.size(); }
@@ -112,11 +113,13 @@ void output_to_stdout(const std::vector<map_t>& permutations, const std::vector<
     }
 }
 
-void output_to_files(const std::vector<map_t>& permutations, const std::vector<std::string>& passthrough, const std::string& prefix )
+void output_to_files(const std::vector<map_t>& permutations, const std::vector<std::string>& passthrough, const comma::command_line_options& options )
 {
     std::size_t count = 0;
     std::size_t total_count = 1;
     for ( std::size_t p = 0; p < permutations.size(); ++p ) { total_count = total_count * permutations[p].values.size(); }
+    
+    std::string prefix = options.value<std::string>("--prefix", "");
     
     std::string dot = prefix.empty() ? "" : ".";
     
@@ -143,8 +146,8 @@ int main( int ac, char** av )
     try
     {
         comma::command_line_options options( ac, av, usage );
-        char delimiter = options.value< char >( "--delimiter,-d", ',' );
-        char range_delimiter = options.value< char >( "--range-delimiter", ':' );
+        char delimiter = options.value< char >( "--delimiter,--delim,-d", ',' );
+        char range_delimiter = options.value< char >( "--range-delimiter,--range-delim,-r", ':' );
         
         // read each input line.
         std::string line;
@@ -254,15 +257,13 @@ int main( int ac, char** av )
             permutations.push_back(map);
         }
         
-        std::string prefix = options.exists("--prefix") ? options.value<std::string>("--prefix", "") : "permutations";
-        
         if (options.exists("--stdout"))
         {
-            output_to_stdout(permutations, passthrough, prefix);  
+            output_to_stdout(permutations, passthrough, options);  
         }
         else
         {
-            output_to_files(permutations, passthrough, prefix);
+            output_to_files(permutations, passthrough, options);
         }
         
         return 0;
