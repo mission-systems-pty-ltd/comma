@@ -36,11 +36,6 @@
 #include "../../application/command_line_options.h"
 #include "../../string/split.h"
 
-// todo
-// - rename output files from permutations.0.path-value to 0.path-value
-// - the following does not workj at all in many ways: ( echo number=684:690:2 ; echo 'string="a,";b;c' ; echo unchanged=unchanged ) | name-value-permute --stdout
-//   please speak to seva for details
-
 static void usage( bool verbose = false )
 {
     std::cerr << std::endl;
@@ -94,9 +89,8 @@ void update_index(const std::vector<map_t>& permutations, std::vector<std::size_
     }
 }
 
-void output_to_stdout(const std::vector<map_t>& permutations, const std::vector<std::string>& passthrough, const comma::command_line_options& options )
+void output_to_stdout(const std::vector<map_t>& permutations, const comma::command_line_options& options )
 {
-    for (std::size_t i = 0; i < passthrough.size(); ++i) { std::cout << passthrough[i] << std::endl; }  
     std::string prefix = options.value<std::string>("--prefix", "permutations");
     std::size_t count = 0;
     std::size_t total_count = 1;
@@ -113,7 +107,7 @@ void output_to_stdout(const std::vector<map_t>& permutations, const std::vector<
     }
 }
 
-void output_to_files(const std::vector<map_t>& permutations, const std::vector<std::string>& passthrough, const comma::command_line_options& options )
+void output_to_files(const std::vector<map_t>& permutations, const comma::command_line_options& options )
 {
     std::size_t count = 0;
     std::size_t total_count = 1;
@@ -129,7 +123,6 @@ void output_to_files(const std::vector<map_t>& permutations, const std::vector<s
     {
         std::string filename = prefix + dot + boost::lexical_cast<std::string>(count) + ".path-value"; 
         std::ofstream ostream(filename.c_str());
-        for (std::size_t i = 0; i < passthrough.size(); ++i) { ostream << passthrough[i] << std::endl; }  
         for (std::size_t p = 0; p < permutations.size(); ++p)
         {
             ostream << permutations[p].path << "=" << permutations[p].values[index[p]] << std::endl;
@@ -152,14 +145,13 @@ int main( int ac, char** av )
         // read each input line.
         std::string line;
         
-        std::vector<std::string> passthrough;
         std::vector< map_t > permutations;
         
         while (std::getline(std::cin, line))
         {
             if ( line.empty() ) { continue; }
-            // pass through comments
-            if ( line[0] == '#' ) { passthrough.push_back(line); continue; }
+            // ignored comments
+            if ( line[0] == '#' ) { continue; }
             // get path and value. ( split at first = )
             std::string::size_type p = line.find_first_of( '=' );
             if( p == std::string::npos ) { COMMA_THROW( comma::exception, "expected '" << delimiter << "'-separated xpath=value pairs; got \"" << line << "\"" ); }
@@ -167,15 +159,6 @@ int main( int ac, char** av )
             const std::string& value = line.substr( p + 1, std::string::npos );
             // use split_escaped to split by delimiter
             std::vector<std::string> values = comma::split_escaped(value, delimiter);
-            if (values.size() == 1 && comma::split_escaped(value, range_delimiter).size() == 1)
-            {
-                // if one value:
-                //    split_escaped to check range delimiter.
-                //    if still one value
-                //    add line to std::vector<std::string> of passthrough values
-                passthrough.push_back(line);
-                continue;
-            }
             
             map_t map;
             map.path = path;
@@ -259,11 +242,11 @@ int main( int ac, char** av )
         
         if (options.exists("--stdout"))
         {
-            output_to_stdout(permutations, passthrough, options);  
+            output_to_stdout(permutations, options);  
         }
         else
         {
-            output_to_files(permutations, passthrough, options);
+            output_to_files(permutations, options);
         }
         
         return 0;
