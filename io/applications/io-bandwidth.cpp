@@ -52,7 +52,7 @@ static void bash_completion( unsigned const ac, char const * const * av )
 {
     static const char* completion_options =
         " --help -h"
-        " --size --window -w --update -u --resolution -r"
+        " --size -s --window -w --update -u --resolution -r"
         " --delimiter -d --output-fields"
         ;
     std::cout << completion_options << std::endl;
@@ -67,7 +67,7 @@ void usage( bool verbose = false )
     std::cerr << "usage: io-bandwidth [<options>]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
-    std::cerr << "    --size=[<bytes>]: specify size of one record of input data" << std::endl;
+    std::cerr << "    --size,-s=[<bytes>]: specify size of one record of input data" << std::endl;
     std::cerr << "    --window,-w=[<n>]: sliding window; default=" << default_window << "s" << std::endl;
     std::cerr << "    --update,-u=[<n>]: update interval; default=" << default_update_interval << "s" << std::endl;
     std::cerr << "    --resolution,-r=[<n>]: sliding window resolution; default=" << default_window_resolution << "s" << std::endl;
