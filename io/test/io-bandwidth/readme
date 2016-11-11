@@ -1,0 +1,4 @@
+Note that all tests have --window=10.
+
+The default value of --window=1, whilst generally preferable,
+is too prone to sampling errors in these tests.

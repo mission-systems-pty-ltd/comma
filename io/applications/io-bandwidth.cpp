@@ -41,7 +41,7 @@
 #include "../../io/select.h"
 #include "../../io/stream.h"
 
-static const double default_window = 10.0f;
+static const double default_window = 1.0f;
 static const double default_window_resolution = 0.1f;
 static const double default_update_interval = 1.0f;
 static const char default_delimiter = ',';
