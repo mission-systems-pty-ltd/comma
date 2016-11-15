@@ -38,6 +38,7 @@
 #include "string.h"
 #endif
 
+#include <boost/lexical_cast.hpp>
 #include "exception.h"
 #include "last_error.h"
 
@@ -85,13 +86,15 @@ void last_error::to_exception( const std::string& msg )
 }
 
 last_error::exception::exception( const char* msg, const char *filename, unsigned long line_number, const char *function_name )
-    : comma::exception( std::string( msg ) + ": " + last_error::to_string(), filename, line_number, function_name )
+    : comma::exception( std::string( msg ) + ": errno " + boost::lexical_cast< std::string >( last_error::value() ) + " - " + last_error::to_string(), filename, line_number, function_name )
 {
+    value = last_error::value();
 }
 
 last_error::exception::exception( const std::string& msg, const char *filename, unsigned long line_number, const char *function_name )
-    : comma::exception( msg + ": " + last_error::to_string(), filename, line_number, function_name )
+    : comma::exception( msg + ": errno " + boost::lexical_cast< std::string >( last_error::value() ) + " - " + last_error::to_string(), filename, line_number, function_name )
 {
+    value = last_error::value();
 }
 
 last_error::interrupted_system_call_exception::interrupted_system_call_exception( const char* msg, const char *filename, unsigned long line_number, const char *function_name )

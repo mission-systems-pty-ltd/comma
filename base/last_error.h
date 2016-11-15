@@ -67,6 +67,8 @@ struct last_error::exception : public comma::exception
 {
     exception( const char*, const char *filename, unsigned long line_number, const char *function_name );
     exception( const std::string&, const char *filename, unsigned long line_number, const char *function_name );
+
+    int value;
 };
 
 struct last_error::interrupted_system_call_exception : public last_error::exception
