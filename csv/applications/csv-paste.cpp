@@ -74,7 +74,11 @@ static void usage()
     std::cerr << "    <file> : <filename>[;size=<size>|binary=<format>]: file name or \"-\" for stdin; specify size or format, if binary" << std::endl;
     std::cerr << "    <value> : <csv values>[;binary=<format>]; specify size or format, if binary" << std::endl;
     std::cerr << "    line-number : add the line number; as ui, if binary (quick and dirty, will override the file named \"line-number\")" << std::endl;
-    std::cerr << "    --begin <index>: start line number count at <index> (default 0)" << std::endl;    
+    std::cerr << "        options" << std::endl;
+    std::cerr << "            --begin <index>: start line number count at <index>; default: 0" << std::endl;
+    std::cerr << "            --size,--block-size <size>: number of records with the same line number; default: 1" << std::endl;
+    std::cerr << "        example (try it)" << std::endl;
+    std::cerr << "            seq 0 20 | csv-paste - line-number --begin 5 --size 3" << std::endl;
     std::cerr << comma::csv::format::usage() << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
@@ -156,23 +160,35 @@ struct value : public source
 class line_number : public source
 {
     public:
-        line_number( bool is_binary, comma::uint32 begin=0 ) : source( is_binary ? "binary=ui" : "" ), value_( begin ) {}
+        line_number( bool is_binary, comma::uint32 begin = 0, comma::uint32 size = 1 ) : source( is_binary ? "binary=ui" : "" ), value_( begin ), count_( 0 ), size_( size ) {}
         
         const std::string* read()
         { 
-            serialized_ = boost::lexical_cast< std::string >( value_++ );
+            serialized_ = boost::lexical_cast< std::string >( value_ );
+            update_();
             return &serialized_;
         }
         
         const char* read( char* buf ) // quick and dirty
         {
-            comma::csv::format::traits< comma::uint32 >::to_bin( value_++, buf );
+            comma::csv::format::traits< comma::uint32 >::to_bin( value_, buf );
+            update_();
             return buf;
         }
         
     private:
         comma::uint32 value_;
+        comma::uint32 count_;
+        comma::uint32 size_;
         std::string serialized_;
+        
+        void update_()
+        {
+            ++count_;
+            if( count_ < size_ ) { return; }
+            count_ = 0;
+            ++value_;
+        }
 };
 
 int main( int ac, char** av )
@@ -182,7 +198,7 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av );
         if( options.exists( "--help,-h" ) ) { usage(); }
         char delimiter = options.value( "--delimiter,-d", ',' );
-        std::vector< std::string > unnamed = options.unnamed( "", "--delimiter,-d,--begin" );
+        std::vector< std::string > unnamed = options.unnamed( "", "--delimiter,-d,--begin,--size,--block-size" );
         boost::ptr_vector< source > sources;
         bool is_binary = false;
         for( unsigned int i = 0; i < unnamed.size(); ++i ) // quick and dirty
@@ -216,7 +232,7 @@ int main( int ac, char** av )
                     begin = options.value( "--begin", 0 ); 
                     if( begin < 0) { std::cerr << "csv-paste: expected non-negative --begin, got " << begin << std::endl; return 1; }
                 }
-                s = new line_number( is_binary , boost::lexical_cast< comma::uint32 >( begin ) );
+                s = new line_number( is_binary, boost::lexical_cast< comma::uint32 >( begin ), options.value< comma::uint32 >( "--size,--block-size", 1 ) );
             }
             else
             { 
