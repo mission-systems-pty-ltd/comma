@@ -80,16 +80,13 @@ function comma_process_signature()
     [[ "$pid" == "--verbose" ]] && { verbose=1 ; shift ; pid=$1 ; }
     # do not change to [[ ]] here
     if [ "$pid" -eq "$pid" ] ; then :; else builtin echo "$FUNCNAME: pid '$pid' is not an integer" >&2; return 1; fi
-    local signature psexit
-    while true ; do
-        # occasionally observed ps hanging here indefinitely; single process, no need for timeout-group
-        signature=$( timeout -k 10 -s TERM 10 ps --no-headers -o lstart "$pid" )
-        psexit=$?
-        (( $psexit >= 126 )) && { builtin echo "$FUNCNAME: ps killed by a signal, exit status '$psexit', try again" >&2; continue; }
-        (( $psexit == 0 )) || { builtin echo "$FUNCNAME: process with id '$pid' not found, exit status '$psexit'" >&2; return 1; }
-        break
-    done
-    signature=$( date --date="$signature" +%Y%m%dT%H%M%S ) || { builtin echo "$FUNCNAME: cannot convert '$signature' to timestamp" >&2; return 1; }
+    local stat readexit
+    read -a stat < /proc/$pid/stat
+    readexit=$?
+    (( $readexit == 0 )) || { builtin echo "$FUNCNAME: failed to read /proc/$pid/stat, exit status '$readexit'" >&2; return 1; }
+    # use process starttime as signature, see proc(5)
+    local signature=${stat[21]}
+    [[ -n "$signature" ]] || { builtin echo "$FUNCNAME: no signature for pid '$pid'" >&2; return 1; }
     (( verbose == 0 )) || builtin echo "$FUNCNAME: process '$pid' signed as '$signature'" >&2
     echo "$signature"
 }
@@ -206,7 +203,7 @@ function comma_process_exec()
     # if the caller has been interrupted, while the process was writing, the fifo could be removed
     # then the write above succeeds, but the result is a file and not a fifo
     [[ -f "$fifo" ]] && { builtin echo "$FUNCNAME: after the write '$fifo' is not a FIFO" >&2; return 1; }
-    (( verbose == 0 )) || builtin echo "$FUNCNAME: in PID '$self': exec '${@}'" >&2
+    (( verbose == 0 )) || builtin echo "$FUNCNAME: in PID '$self' '$signature': exec '${@}'" >&2
     unset verbose self fifo signature write_timeout
     exec "${@}"
 }
