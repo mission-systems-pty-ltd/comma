@@ -1,6 +1,6 @@
 #python
 
-expect abs( comma_process_signature/signature - time/now ) < 5
+expect abs( comma_process_signature/signature - time/now ) < 5 * clock_ticks_per_second
 expect comma_process_signature/status=0
 expect comma_process_kill/status=0
 expect background/status == sigterm/status

@@ -13,10 +13,13 @@ fifo="$temp_dir/pipe"
 trap "rm -f \"$fifo\"" EXIT
 mkfifo "$fifo" || { echo "$scriptname: cannot create named pipe '$fifo'" >&2; exit 1; }
 
+ticks=$( getconf CLK_TCK )
+echo "clock_ticks_per_second=$ticks"
+
 comma_process_exec_and_validate "$fifo" sleep 100 || { echo "$scriptname: fatal system error, wrong background PID" >&2; exit 1; }
 background_pid=$!
 
-now=$( awk -v ticks=$( getconf CLK_TCK ) '{ print $1 * ticks }' /proc/uptime )
+now=$( awk -v ticks=$ticks '{ print $1 * ticks }' /proc/uptime )
 echo "time/now=$now"
 
 signature=$( comma_process_signature "$background_pid" )
