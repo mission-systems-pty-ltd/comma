@@ -25,8 +25,8 @@ function usage()
 perform git or make operations on the repository and its dependencies
 
 a convenience script to manage consistent git operations, building, and packaging of
-multiple repositories; it is just a helper to quickly and is not meant to grow into
-any kind of fully fledged build system, which is done better by others
+multiple repositories; it is just a non-intrusive helper to quickly and is not meant
+to grow into any kind of fully fledged build system, which is done better by others
 
 any options will be passed to the operation on each dependency
 
