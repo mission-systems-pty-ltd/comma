@@ -1,0 +1,338 @@
+#!/bin/bash
+
+# Copyright (c) 2013-2016. This code was produced by the
+# Australian Centre for Field Robotics, The University of Sydney under
+# the Future Flight Planning project, University Reference 13996, contract
+# NSW-CPS-2011-015264, Work Orders 5, 7 and 8. The intellectual property
+# ownership is as set out in these contracts, as registered with
+# Commercial Development and Industry Partnerships.
+
+source $( type -p comma-application-util ) || { echo "$basename: cannot source 'comma-application-util'" >&2; exit 1; }
+
+function description()
+{
+    cat <<eof
+--help,-h; help, --help --verbose: more help
+--verbose,-v; more output
+--bash-completion; output bash completion data and exit
+eof
+}
+
+function usage()
+{
+    cat <<eof >&2
+
+perform git or make operations on the repository and its dependencies
+
+a convenience script to manage consistent git operations, building, and packaging of
+multiple repositories; it is just a helper to quickly and is not meant to grow into
+any kind of fully fledged build system, which is done better by others
+
+any options will be passed to the operation on each dependency
+
+usage: comma-build <operation> [<options>]
+
+operations: commits,list-commits, dependencies, install, make, pack, pull, push
+
+    commits,list-commits: list commits for repository and all dependencies
+    dependencies: output all dependencies and exit
+    install [<cmake options>]: cmake, make, and install repository and all dependencies
+    make [<cmake options>]: run cmake and make
+    sudo-install [<cmake options>]: same as install, but make install runs as sudo
+    pack <commit> <dir> [<cpack options>]: make rpm packages of the repository and all dependencies
+        <commit>: commit of the top repository to package
+        <dir>: directory where to build and place rpms
+               <dir>/src: source will be cloned here
+               <dir>/build: build will be done here
+               <dir>/install: libraries and utilities will be installed here
+               <dir>/rpm: rpm archives finally will be placed here
+        used files
+            dependencies: 
+            dependencies.cmake-cache: additional cmake 
+    pull: pull repository and all dependencies
+    push: push repository and all dependencies
+    <arbitrary command>: run on all the dependencies, e.g: comma-build ls -al
+
+options
+eof
+    description | sed 's/^/    /' >&2
+    cat <<eof
+
+conventions
+    the source and build directories are expected to be in the same directory, e.g:
+        ~/my-projects/src/comma
+        ~/my-projects/src/snark
+        ...
+        ~/my-projects/build/comma
+        ~/my-projects/build/snark
+        ...
+        
+    the immediate dependencies should be listed in the dependencies file, e.g:
+        > cat ~/my-projects/src/snark/dependencies
+        comma
+        
+    notice that snark depends only on comma, another repository depending on snark
+    identify comma as its dependency
+    
+    special files in repository source (e.g. src/snark)
+        dependencies
+            immediate dependencies of repository
+            specified by the user
+        dependencies.commits
+            commits of all dependencies associated with the current commit
+            updated by comma-build push
+        dependencies.cmake-cache
+            cmake definitions for all dependencies
+            used by comma-build cpack in non-recursive way, i.e. if snark is being packed
+            only src/snark/dependencies.cmake-cache will be applied,
+            not src/comma/dependencies.cmake-cache, if the latter exists
+            rationale: it is the top package that decides what settings it
+                       requires for dependency packages specified by the user
+    
+examples
+    pull snark and all its dependencies
+        cd ~/src/snark
+        comma-build pull
+        
+    build and install snark and all its dependencies
+        cd ~/src/snark
+        comma-build make -j4 && comma-build sudo-install
+        
+    run a (reasonably) arbitrary command on snark and all its dependencies
+        cd ~/src/snark
+        comma-build find . -name "*region*"
+
+eof
+    [[ -n "$1" ]] || { echo "use --help --verbose for more info" >&2 ; exit 0 ; }
+
+    cat <<eof >&2
+details and limitations
+    needs to run in the source directory, e.g. ~/src/snark
+    
+    extracts dependencies hierarchically (try comma-build dependencies)
+
+    expects a file called 'dependencies' in the source directory
+    containing dependency list, e.g:
+
+    comma
+    snark
+
+    expects all the dependencies to be in one directory up,
+    e.g. ~/src/comma, ~/src/snark, etc
+
+    expects all the build directories to be two directories up,
+    e.g. ~/build (todo? make configurable?)
+
+eof
+    exit 0
+}
+
+function bash_completion()
+{ 
+    cat <<eof
+--help
+-h
+--verbose
+-v
+--bash-completion
+commits
+dependencies
+make
+install
+list-commits
+pack
+pull
+push
+eof
+}
+
+(( $( comma_options_has --bash-completion $@ ) )) && { bash_completion; exit 0; }
+(( $( comma_options_has --verbose $@ ) || $( comma_options_has -v $@ ) )) && { options_verbose=1; }
+(( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) && { usage $options_verbose; }
+options=$( description | comma-options-to-name-value $@ || exit 1 ) || { echo "comma-build: failed to get command line options" >&2 ; exit 1 ; }
+comma_path_value_to_var --prefix=options <<< "$options"
+
+function dependencies_()
+{
+    [[ -f "./dependencies" ]] || return
+    for d in $( cat ./dependencies ) ; do
+        dir="$( dirname $( pwd ) )/$d"
+        [[ -d "$dir" ]] || { echo "comma-build: no such directory '$dir'" >&2 ; exit 1 ; }
+        ( cd $dir && comma-build dependencies )
+    done
+    cat ./dependencies
+}
+
+function unique_()
+{
+    unset seen_
+    declare -A seen_
+    while read line ; do
+        [[ -z ${seen_[$line]} ]] || continue
+        seen_[$line]="1"
+        echo $line
+    done
+}
+
+function get_dependencies() { dependencies_ | sed -e 's/[ ]*$//' -e 's/^[ ]*//' | unique_ ; }
+
+function run_command()
+{
+    local dir="$1"
+    echo "comma-build: running in $dir: ${@:2}" >&2
+    ( cd "$dir" && ${@:2} )
+}
+
+function make_only() { cmake "../../src/$( basename $( pwd ) )" $@ && make -j4 ; }
+
+function make_install() { cmake "../../src/$( basename $( pwd ) )" $@ && make -j4 && make install -j4 ; }
+
+function sudo_make_install() { cmake "../../src/$( basename $( pwd ) )" $@ && make -j4 && sudo make install -j4 ; }
+
+function run_build_command()
+{
+    local build_dir="../../build/$1"
+    local src_dir="../../src/$1"
+    local command=$2
+    mkdir "$build_dir" -p || { echo "comma-build: $command: failed to create '$build_dir'" >&2 ; exit 1 ; }
+    echo "comma-build: $command: running in $build_dir: ${@:2}" >&2
+    ( cd "$build_dir" && ${@:2} )
+}
+
+function run_cmake()
+{
+    local build_dir="../../build/$1"
+    local src_dir="../../src/$1"
+    mkdir "$build_dir" -p || { echo "comma-build: $cmake: failed to create '$build_dir'" >&2 ; exit 1 ; }
+    echo "comma-build: $cmake: running in $build_dir: cmake $src_dir ${@:3}" >&2
+    ( cd "$build_dir" && cmake $src_dir ${@:3} )
+}
+
+function output_commit()
+{
+    (
+        cd ../$1
+        if [[ "$( git status --porcelain | wc -l )" != "0" ]] ; then echo "$1,uncommitted"
+        else echo "$1,$( git log | head -n1 | cut -d' ' -f2 )" ; fi
+    )
+}
+
+function run_push()
+{
+    local dir="$1"
+    local what="$( basename $dir )"
+    echo "comma-build: pushing $what..." >&2
+    (
+        cd $dir
+        local has_local_commits="$( git log --stat origin/master..HEAD | wc -l )"
+        [[ -f dependencies ]] || { [[ "$has_local_commits" == 0 ]] || { git push || return 1 ; } ; return 0 ; }
+        local dependencies_commits=( $( comma-build commits | grep -v "^$what," ) )
+        while (( 1 )) ; do
+            echo ${dependencies_commits[@]} | tr ' ' '\n' > dependencies.commits
+            [[ "$has_local_commits" != 0 || "$( git status --porcelain | wc -l )" != "0" ]] || return 0
+            git add dependencies.commits
+            if [[ "$has_local_commits" == 0 ]] ; then git commit -m "dependencies.commits: updated"
+            else git commit --amend --no-edit ; fi
+            git push && return 0
+            git pull
+            git checkout HEAD dependencies.commits
+            git add dependencies.commits
+            git commit -m "comma-build: merged"
+            [[ $( git status --porcelain | grep '^UU' | wc -l ) == 0 ]] || return 1
+        done
+    )
+}
+
+function prepare_push()
+{
+    [[ $( comma-build commits | grep uncommitted | wc -l ) == 0 ]] || { echo -e "comma-build: push: failed due to uncommitted changes:" >&2 ; comma-build commits | sed 's/^/    /' >&2 ; exit 1 ; }
+    comma-build pull || exit 1
+}
+
+function run_pack() # quick and dirty
+{
+    [[ ! -f dependencies || -f dependencies.commits ]] || { echo "comma-build: pack: dependencies.commits not found in $( pwd )" >&2 ; exit 1 ; }
+    local top_commit=$1
+    local pack_dir=$2
+    [[ -n "$pack_dir" ]] || { echo "comma-build: pack: please specify directory" >&2 ; exit 1 ; }
+    [[ -n "$top_commit" ]] || { echo "comma-build: pack: please specify commit" >&2 ; exit 1 ; }
+    local src_dir="$( pwd )"
+    local top_repository="$( basename $src_dir )"
+    declare -A commits
+    commits["$( basename $( pwd ) )"]="$top_commit"
+    declare -A urls
+    urls["$( basename $( pwd ) )"]="$( cat .git/config | name-value-get --from ini "remote \"origin\"/url" )"
+    local what
+    local commit
+    while IFS=, read what commit ; do
+        commits["$what"]="$commit"
+        urls["$what"]="$( cat ../$what/.git/config | name-value-get --from ini "remote \"origin\"/url" )"
+    done < <( [[ ! -f dependencies.commits ]] || cat dependencies.commits )
+    pack_dir=$( readlink -f $pack_dir )
+    rm -rf $pack_dir/src $pack_dir/build $pack_dir/rpm
+    mkdir -p $pack_dir/src $pack_dir/build $pack_dir/install/CMakeFiles $pack_dir/rpm || { echo "comma-build: pack: could not create directories in \"$pack_dir\"" >&2 ; exit 1 ; }
+    (
+        cd $pack_dir/src
+        local cmake_options
+        for what in ${!urls[@]} ; do
+            echo "comma-build: pack: clone $what from ${urls[$what]} to $pack_dir/src/$what..." >&2
+            rm -rf $pack_dir/src/$what
+            git clone ${urls[$what]} $what || { echo "comma-build: pack: failed to clone $what to $pack_dir" >&2 ; exit 1 ; }
+            echo "comma-build: pack: checkout ${commit[$what]} on $pack_dir/src/$what..." >&2
+            ( cd $what ; git checkout ${commits[$what]} || { echo "comma-build: pack: failed to checkout $what, commit ${commits[$what]}" >&2 ; exit 1 ; } ) || exit 1  
+            cmake_options+=( -D${what}_DIR=$pack_dir/install/CMakeFiles )
+        done
+        cd $top_repository
+        cmake_options+=( -DCMAKE_INSTALL_PREFIX=$pack_dir/install )
+        [[ ! -f $src_dir/dependencies.cmake-cache ]] || cmake_options+=( -C$src_dir/dependencies.cmake-cache )
+        comma-build install ${cmake_options[@]}
+        if [[ -f $src_dir/dependencies.cpack-options ]]; then
+		cpack_make_opts=$(cat $src_dir/dependencies.cpack-options )
+		# The user specified different options for packing. Re-run the make so that the Cmake files are regenerated.
+		# This is primarily done so that software can be built as a standard user, and installations that would otherwise go into system directories (eg /etc/systemd) can be redirected to /usr/local/...
+		# When the software is packed however, you'd want it to go to install location (/etc).
+		comma-build make ${cpack_make_opts}
+	fi		
+	comma-build cpack -G RPM ${@:3} || exit 1 #-D CPACK_RPM_PACKAGE_RELOCATABLE=ON || exit 1 #-D CPACK_PACKAGING_INSTALL_PREFIX=$pack_dir/rpm
+    ) || { echo "comma-build: pack failed" >&2 ; exit 1 ; }
+    cat dependencies.commits | while IFS=, read what commit ; do cp $pack_dir/build/$what/*.rpm $pack_dir/rpm ; done
+    cp $pack_dir/build/$top_repository/*.rpm $pack_dir/rpm
+    echo "comma-build: pack: rpm files copied to $pack_dir/rpm" >&2
+    ls $pack_dir/rpm | sed 's/^/    /' >&2
+}
+
+function do_once()
+{
+    local operation="$2"
+    case $operation in
+        commits|list-commits) output_commit $1 ;;
+        cmake) run_cmake $@ ;;
+        cpack) run_build_command $@ ;;
+        install) run_build_command $1 make_install ${@:3} ;;
+        make) run_build_command $1 make_only ${@:3} ;;
+        sudo-install) run_build_command $1 sudo_make_install ${@:3} ;;
+        pull) run_command ../$1 git ${@:2} ;;
+        push) run_push ../$1 $@ ;;
+        *) run_command ../$1 ${@:2} ;;
+    esac
+}
+
+(
+    initial_dir=$( pwd )
+    while [[ ! -d .git && "$( pwd )" != "/" ]] ; do cd .. ; done
+    what="$( basename $( pwd ) )"
+    [[ -d .git ]] || { echo "comma-build: $initial_dir not a git repository or its subdirectory" ; exit 1 ; }
+    operation="$1"
+    echo "comma-build: $what: preparing to run $operation..." >&2
+    case $operation in
+        dependencies) get_dependencies || exit 1 ; exit 0 ;;
+        pack) run_pack ${@:2} || exit 1 ; exit 0 ;;
+        push) prepare_push ;; 
+    esac
+    dependencies=( $( get_dependencies ) )
+    dependencies+=( "$what" )
+    echo "comma-build: $what: will run $operation on: ${dependencies[@]}" >&2
+    for d in ${dependencies[@]} ; do
+        do_once $d $@ || { echo "comma-build: $what: failed on $d" >&2 ; exit 1 ; }
+    done
+)
