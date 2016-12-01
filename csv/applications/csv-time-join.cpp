@@ -80,6 +80,7 @@ static void usage()
     std::cerr << "    --delimiter,-d <delimiter>: ascii only; default ','" << std::endl;
     std::cerr << "    --fields,-f <fields>: input fields; default: t" << std::endl;
     std::cerr << "    --bound=<seconds>: if present, output only points inside of bound in second as double" << std::endl;
+    std::cerr << "    --do-not-append,--select: if present, do not append any field from the second input" << std::endl;
     std::cerr << "    --no-discard: do not discard input points" << std::endl;
     std::cerr << "                         default: discard input points that cannot be" << std::endl;
     std::cerr << "                         consistently timestamped, especially head or tail" << std::endl;
@@ -140,6 +141,8 @@ int main( int ac, char** av )
         bool nearest = options.exists( "--nearest" );
         bool by_lower = ( options.exists( "--by-lower" ) || !by_upper ) && !nearest;
         bool timestamp_only = options.exists( "--timestamp-only,--time-only" );
+        bool select_only = options.exists( "--do-not-append,--select" );
+        if( select_only && timestamp_only ) { std::cerr << "csv-time-join: --timetamp-only specified with --select, ignoring --timestamp-only" << std::endl; }
         bool discard_bounding = options.exists( "--discard-bounding" );
         boost::optional< unsigned int > buffer_size;
         if( options.exists( "--buffer" ) ) { buffer_size = options.value< unsigned int >( "--buffer" ); }
@@ -151,7 +154,7 @@ int main( int ac, char** av )
         #ifdef WIN32
         if( stdin_csv.binary() ) { _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif // #ifdef WIN32
-        std::vector< std::string > unnamed = options.unnamed( "--by-lower,--by-upper,--nearest,--timestamp-only,--time-only,--no-discard,--discard-bounding", "--binary,-b,--delimiter,-d,--fields,-f,--bound,--buffer" );
+        std::vector< std::string > unnamed = options.unnamed( "--by-lower,--by-upper,--nearest,--select,--do-not-append,--timestamp-only,--time-only,--no-discard,--discard-bounding", "--binary,-b,--delimiter,-d,--fields,-f,--bound,--buffer" );
         std::string properties;
         bool bounded_first = true;
         switch( unnamed.size() )
@@ -314,7 +317,8 @@ int main( int ac, char** av )
                 {
                     std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() );
                 }
-                if( timestamp_only )
+                if( select_only ) { } /// This is --do-no-append, so don't append
+                else if( timestamp_only )
                 {
                     static comma::csv::binary< Point > b;
                     std::vector< char > v( b.format().size() );
@@ -335,15 +339,16 @@ int main( int ac, char** av )
             {
                 if( bounded_first )
                 {
-                    std::cout << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << stdin_csv.delimiter;
+                    std::cout << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter );
                 }
-                if( timestamp_only )
+                if( select_only ) { } /// This is --do-no-append, so don't append
+                else if( timestamp_only )
                 {
-                    std::cout << boost::posix_time::to_iso_string( chosen_bound.first );
+                    std::cout << stdin_csv.delimiter << boost::posix_time::to_iso_string( chosen_bound.first );
                 }
                 else
                 {
-                    std::cout << chosen_bound.second;
+                    std::cout << stdin_csv.delimiter << chosen_bound.second;
                 }
                 if( !bounded_first )
                 {
