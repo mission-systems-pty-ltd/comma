@@ -90,8 +90,11 @@ static void usage( bool verbose )
     std::cerr << "         sample: use sample variance (default: population variance)" << std::endl;
     std::cerr << "    stddev[=sample]: standard deviation" << std::endl;
     std::cerr << "         sample: use sample stddev (default: population stddev)" << std::endl;
-    std::cerr << "    skew: skew" << std::endl;
-    std::cerr << "    kurtosis: kurtosis" << std::endl;
+    std::cerr << "    skew[=sample]: skew" << std::endl;
+    std::cerr << "         sample: use sample skew (default: population stddev)" << std::endl;
+    std::cerr << "    kurtosis[=sample|excess]: kurtosis" << std::endl;
+    std::cerr << "         sample: use sample kurtosis (default: population kurtosis)" << std::endl;
+    std::cerr << "         excess: calculate excess kurtosis" << std::endl;
     std::cerr << "    size: number of values" << std::endl;
     std::cerr << std::endl;
     std::cerr << "<options>" << std::endl;
@@ -703,20 +706,25 @@ namespace Operations
     class Skew : public base // todo: generalise for kth moment
     {
         public:
+            void set_options( const std::vector< std::string >& options ) { sample_ = ( !options.empty() && options[0] == "sample" ); }
             void push ( const char* buf ) { T t = comma::csv::format::traits< T >::from_bin( buf ); moments_.update( t ); }
             void calculate( char* buf ) 
             { 
                 if( moments_.count() > 0 ) 
                 { 
-                    std::size_t n = moments_.count();
+                    typename result_traits< T >::type n = moments_.count();
+                    
+                    // corrected sample skew requires at least 3 samples
+                    typename result_traits< T >::type correction = sample_ ? sqrt( n * ( n - 1 ) ) / ( n - 2 ) : 1 ;
                     typename result_traits< T >::type m2 = moments_.previous().value();
                     typename result_traits< T >::type m3 = moments_.value();
-                    comma::csv::format::traits< T, F >::to_bin( static_cast< T >( sqrt( n / ( m2 * m2 * m2 ) ) * m3 ), buf ); 
+                    comma::csv::format::traits< T, F >::to_bin( static_cast< T >( correction * sqrt( n / ( m2 * m2 * m2 ) ) * m3 ), buf ); 
                 } 
             }
             base* clone() const { return new Skew< T, F >( *this ); }
         private:
             Moment< T, 3 > moments_;
+            bool sample_;
     };
 
     template < comma::csv::format::types_enum F >
@@ -731,20 +739,36 @@ namespace Operations
     class Kurtosis : public base // todo: generalise for kth moment
     {
         public:
+            Kurtosis(): sample_( false ), excess_( false ) {}
+            void set_options( const std::vector< std::string >& options ) 
+            { 
+                for (std::size_t i = 0; i < options.size(); i++) 
+                {
+                    if ( options[i] == "sample" ) { sample_ = true; }
+                    else if ( options[i] == "excess" ) { excess_ = true; }
+                }
+            }
             void push ( const char* buf ) { T t = comma::csv::format::traits< T >::from_bin( buf ); moments_.update( t ); }
             void calculate( char* buf ) 
             { 
                 if( moments_.count() > 0 ) 
                 { 
-                    std::size_t n = moments_.count();
+                    typename result_traits< T >::type n = moments_.count();
                     typename result_traits< T >::type m2 = moments_.previous().previous().value();
-                    typename result_traits< T >::type m4 = moments_.value();                
-                    comma::csv::format::traits< T, F >::to_bin( static_cast< T >( n * m4 / ( m2 * m2 ) ), buf ); 
+                    typename result_traits< T >::type m4 = moments_.value();
+                    typename result_traits< T >::type result = n * m4 / ( m2 * m2 );
+                    
+                    // corrected sample kurtosis requires at least 4 samples
+                    if ( sample_ ) { result = n > 3 ? ( n - 1 ) / ( n - 2 ) / ( n - 3 ) * ( ( n + 1 ) * result - 3 * ( n - 1 ) ) + 3 : nan(""); }
+                    if ( excess_ ) { result = result - 3; }
+                    comma::csv::format::traits< T, F >::to_bin( static_cast< T >( result ), buf ); 
                 } 
             }
             base* clone() const { return new Kurtosis< T, F >( *this ); }
         private:
             Moment< T, 4 > moments_;
+            bool sample_;
+            bool excess_;
     };
     
     template < comma::csv::format::types_enum F >
@@ -770,7 +794,7 @@ namespace Operations
 //                 mean_ = mean_ ? *mean_ + ( t - *mean_ ) / count_ : t;
 //                 squares_ = squares_ ? *squares_ + ( t * t - *squares_ ) / count_ : t * t;
 //             }
-//             void calculate( char* buf ) { if( count_ > 0 ) { comma::csv::format::traits< T, F >::to_bin( static_cast< T >( *squares_ - *mean_ * *mean_ ), buf ); } }
+//             void calculate( char* buf ) { if( count_ > 0 ) { comma::csv::format::traits< T, F sample excess kurtosis:>::to_bin( static_cast< T >( *squares_ - *mean_ * *mean_ ), buf ); } }
 //             base* clone() const { return new Variance< T, F >( *this ); }
 //         private:
 //             friend class Stddev< T, F >;
@@ -1016,8 +1040,8 @@ static void init_operations( boost::ptr_vector< Operationbase >& operations
                 case Operations::Enum::diameter: sample.push_back( new Operation< Operations::Enum::diameter >( format ) ); break;
                 case Operations::Enum::variance: sample.push_back( new Operation< Operations::Enum::variance >( format, operations_parameters[i].options ) ); break;
                 case Operations::Enum::stddev: sample.push_back( new Operation< Operations::Enum::stddev >( format, operations_parameters[i].options ) ); break;
-                case Operations::Enum::skew: sample.push_back( new Operation< Operations::Enum::skew >( format ) ); break;
-                case Operations::Enum::kurtosis: sample.push_back( new Operation< Operations::Enum::kurtosis >( format ) ); break;
+                case Operations::Enum::skew: sample.push_back( new Operation< Operations::Enum::skew >( format, operations_parameters[i].options ) ); break;
+                case Operations::Enum::kurtosis: sample.push_back( new Operation< Operations::Enum::kurtosis >( format, operations_parameters[i].options ) ); break;
                 case Operations::Enum::sum: sample.push_back( new Operation< Operations::Enum::sum >( format ) ); break;
                 case Operations::Enum::size: sample.push_back( new Operation< Operations::Enum::size >( format ) ); break;
             }
@@ -1062,7 +1086,7 @@ int main( int ac, char** av )
         if( options.exists( "--bash-completion" ) ) bash_completion( ac, av );
         std::vector< std::string > unnamed = options.unnamed( "", "--binary,-b,--delimiter,-d,--format,--fields,-f,--output-fields" );
         comma::csv::options csv( options );
-        #ifdef WIN32comma::verbose << "p["<<1<<"]"<<" is " << p[1] << std::endl;
+        #ifdef WIN32
         if( csv.binary() ) { _setmode( _fileno( stdin ), _O_BINARY ); _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
         if( unnamed.empty() ) { std::cerr << comma::verbose.app_name() << ": please specify operations" << std::endl; exit( 1 ); }
