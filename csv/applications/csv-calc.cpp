@@ -86,8 +86,10 @@ static void usage( bool verbose )
     std::cerr << "    centre: ( min + max ) / 2" << std::endl;
     std::cerr << "    diameter: max - min" << std::endl;
     std::cerr << "    radius: size / 2" << std::endl;
-    std::cerr << "    var: variance" << std::endl;
-    std::cerr << "    stddev: standard deviation" << std::endl;
+    std::cerr << "    var[=sample]: variance" << std::endl;
+    std::cerr << "         sample: use sample variance (default: population variance)" << std::endl;
+    std::cerr << "    stddev[=sample]: standard deviation" << std::endl;
+    std::cerr << "         sample: use sample stddev (default: population stddev)" << std::endl;
     std::cerr << "    skew: skew" << std::endl;
     std::cerr << "    kurtosis: kurtosis" << std::endl;
     std::cerr << "    size: number of values" << std::endl;
@@ -657,11 +659,14 @@ namespace Operations
     class Stddev : public base
     {
         public:
+            Stddev() : sample_ (false) {}
+            void set_options( const std::vector< std::string >& options ) { sample_ = ( !options.empty() && options[0] == "sample" ); }
             void push( const char* buf ) { T t = comma::csv::format::traits< T >::from_bin( buf ); moments_.update( t ); }
-            void calculate( char* buf ) { if( moments_.count() > 0 ) { comma::csv::format::traits< T, F >::to_bin( static_cast< T >( std::sqrt( static_cast< long double >( moments_.value() / moments_.count()  ) ) ), buf ); } }
+            void calculate( char* buf ) { if( moments_.count() > 0 ) { comma::csv::format::traits< T, F >::to_bin( static_cast< T >( std::sqrt( static_cast< long double >( moments_.value() / ( sample_ ? moments_.count() - 1 : moments_.count() )  ) ) ), buf ); } }
             base* clone() const { return new Stddev< T, F >( *this ); }
         private:
             Moment< T, 2 > moments_;
+            bool sample_;
     };
 
     template < comma::csv::format::types_enum F >
@@ -676,11 +681,14 @@ namespace Operations
     class Variance : public base // todo: generalise for kth moment
     {
         public:
+            Variance() : sample_ (false) {}
+            void set_options( const std::vector< std::string >& options ) { sample_ = ( !options.empty() && options[0] == "sample" ); }
             void push( const char* buf ) { T t = comma::csv::format::traits< T >::from_bin( buf ); moments_.update( t ); }
-            void calculate( char* buf ) { if( moments_.count() > 0 ) { comma::csv::format::traits< T, F >::to_bin( static_cast< T >( moments_.value() / moments_.count() ), buf ); } }
+            void calculate( char* buf ) { if( moments_.count() > 0 ) { comma::csv::format::traits< T, F >::to_bin( static_cast< T >( moments_.value() / ( sample_ ? moments_.count() - 1 : moments_.count() ) ), buf ); } }
             base* clone() const { return new Variance< T, F >( *this ); }
         private:
             Moment< T, 2 > moments_;
+            bool sample_;
     };
 
     template < comma::csv::format::types_enum F >
@@ -1006,8 +1014,8 @@ static void init_operations( boost::ptr_vector< Operationbase >& operations
                 case Operations::Enum::percentile: sample.push_back( new Operation< Operations::Enum::percentile >( format, operations_parameters[i].options ) ); break;
                 case Operations::Enum::radius: sample.push_back( new Operation< Operations::Enum::radius >( format ) ); break;
                 case Operations::Enum::diameter: sample.push_back( new Operation< Operations::Enum::diameter >( format ) ); break;
-                case Operations::Enum::variance: sample.push_back( new Operation< Operations::Enum::variance >( format ) ); break;
-                case Operations::Enum::stddev: sample.push_back( new Operation< Operations::Enum::stddev >( format ) ); break;
+                case Operations::Enum::variance: sample.push_back( new Operation< Operations::Enum::variance >( format, operations_parameters[i].options ) ); break;
+                case Operations::Enum::stddev: sample.push_back( new Operation< Operations::Enum::stddev >( format, operations_parameters[i].options ) ); break;
                 case Operations::Enum::skew: sample.push_back( new Operation< Operations::Enum::skew >( format ) ); break;
                 case Operations::Enum::kurtosis: sample.push_back( new Operation< Operations::Enum::kurtosis >( format ) ); break;
                 case Operations::Enum::sum: sample.push_back( new Operation< Operations::Enum::sum >( format ) ); break;
@@ -1054,7 +1062,7 @@ int main( int ac, char** av )
         if( options.exists( "--bash-completion" ) ) bash_completion( ac, av );
         std::vector< std::string > unnamed = options.unnamed( "", "--binary,-b,--delimiter,-d,--format,--fields,-f,--output-fields" );
         comma::csv::options csv( options );
-        #ifdef WIN32
+        #ifdef WIN32comma::verbose << "p["<<1<<"]"<<" is " << p[1] << std::endl;
         if( csv.binary() ) { _setmode( _fileno( stdin ), _O_BINARY ); _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
         if( unnamed.empty() ) { std::cerr << comma::verbose.app_name() << ": please specify operations" << std::endl; exit( 1 ); }
@@ -1064,8 +1072,7 @@ int main( int ac, char** av )
         {
             std::vector< std::string > p = comma::split( v[i], '=' );
             operations_parameters[i].type = Operations::from_name( p[0] );
-            if( p.size() == 2 )
-                operations_parameters[i].options = comma::split( p[1], ':' );
+            if( p.size() == 2 ){ operations_parameters[i].options = comma::split( p[1], ':' ); }
         }
         boost::optional< comma::csv::format > format;
         if( csv.binary() ) { format = csv.format(); }
