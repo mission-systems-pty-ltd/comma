@@ -88,6 +88,8 @@ static void usage( bool verbose )
     std::cerr << "    radius: size / 2" << std::endl;
     std::cerr << "    var: variance" << std::endl;
     std::cerr << "    stddev: standard deviation" << std::endl;
+    std::cerr << "    skew: skew" << std::endl;
+    std::cerr << "    kurtosis: kurtosis" << std::endl;
     std::cerr << "    size: number of values" << std::endl;
     std::cerr << std::endl;
     std::cerr << "<options>" << std::endl;
@@ -556,48 +558,114 @@ namespace Operations
     };
 
     template < typename T, comma::csv::format::types_enum F > class Stddev;
+    template < typename T, comma::csv::format::types_enum F > class Variance;
+    template < typename T, comma::csv::format::types_enum F > class Skew;
+    template < typename T, comma::csv::format::types_enum F > class Kurtosis;
 
+//     template < typename T, comma::csv::format::types_enum F = comma::csv::format::type_to_enum< T >::value >
+//     class Variance : public base // todo: generalise for kth moment
+//     {
+//         public:
+//             Variance() : first_( 0 ), count_( 0 ) {}
+//             void push( const char* buf )
+//             {
+//                 T t = comma::csv::format::traits< T, F >::from_bin( buf );
+//                 if( !squares_ ) { first_ = t; }
+//                 t -= first_; // todo: quick and dirty, to account for large numbers; it would be nice to add ld for long double in csv, too
+//                 ++count_;
+//                 mean_ = mean_ ? *mean_ + ( t - *mean_ ) / count_ : t;
+//                 squares_ = squares_ ? *squares_ + ( t * t - *squares_ ) / count_ : t * t;
+//             }
+//             void calculate( char* buf ) { if( count_ > 0 ) { comma::csv::format::traits< T, F >::to_bin( static_cast< T >( *squares_ - *mean_ * *mean_ ), buf ); } }
+//             base* clone() const { return new Variance< T, F >( *this ); }
+//         private:
+//             friend class Stddev< T, F >;
+//             T first_;
+//             boost::optional< typename result_traits< T >::type > mean_;
+//             boost::optional< typename result_traits< T >::type > squares_;
+//             std::size_t count_;
+//     };
+// 
+//     template < comma::csv::format::types_enum F >
+//     class Variance< boost::posix_time::ptime, F > : public base
+//     {
+//         void push( const char* ) { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
+//         void calculate( char* ) { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
+//         base* clone() const { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
+//     };
+
+//     template < typename T, comma::csv::format::types_enum F = comma::csv::format::type_to_enum< T >::value >
+//     class Stddev : public base
+//     {
+//         public:
+//             void push( const char* buf ) { variance_.push( buf ); }
+//             void calculate( char* buf ) { if( variance_.count_ > 0 ) { comma::csv::format::traits< T, F >::to_bin( static_cast< T >( std::sqrt( static_cast< long double >( *variance_.squares_ - *variance_.mean_ * *variance_.mean_ ) ) ), buf ); } }
+//             base* clone() const { return new Stddev< T, F >( *this ); }
+//         private:
+//             Variance< T, F > variance_;
+//     };
+// 
+//     template < comma::csv::format::types_enum F >
+//     class Stddev< boost::posix_time::ptime, F > : public base
+//     {
+//         void push( const char* ) { COMMA_THROW( comma::exception, "standard deviation not implemented for time, todo" ); }
+//         void calculate( char* ) { COMMA_THROW( comma::exception, "standard deviation not implemented for time, todo" ); }
+//         base* clone() const { COMMA_THROW( comma::exception, "standard deviation not implemented for time, todo" ); }
+//     };
+
+    // class for calculating 1st (mean), 2nd (variance), 3rd (skewness), 4th (kurtosis) moments
+    // 
+    // general formula combines the moments of two populations (e.g. M3A and M3B)
+    // - this is the formula when population B contains only one element giving: n_A = (n - 1), n_B = 1, M2B, M3B, M4B = 0
+    // d = x - M_1
+    // M_1' = M_1 + d/n
+    // M_2' = M_2 + d^2 (n - 1) / n
+    // M_3' = M_3 + d^3 (n - 1)*(n - 2) + 3 d M_2 / n
+    // M_4' = M_4 + d^4 (n - 1)( (n-1)^2 - (n - 1) + 1) / n^3 + 6 d^2 M_2 / n^2 - 4 d M_3 / n
+    //
+    // todo: refactor - there are many common terms (e.g d/n, d^2/n, d^2/n^2, d^3/n^2, d^4/n^3 ...)
     template < typename T, comma::csv::format::types_enum F = comma::csv::format::type_to_enum< T >::value >
-    class Variance : public base // todo: generalise for kth moment
+    class Moments : public base
     {
         public:
-            Variance() : first_( 0 ), count_( 0 ) {}
-            void push( const char* buf )
+            Moments() : count_( 0 ), m1_( 0 ), m2_( 0 ), m3_( 0 ), m4_( 0 ) {}
+            void push ( const char* buf )
             {
                 T t = comma::csv::format::traits< T, F >::from_bin( buf );
-                if( !squares_ ) { first_ = t; }
-                t -= first_; // todo: quick and dirty, to account for large numbers; it would be nice to add ld for long double in csv, too
-                ++count_;
-                mean_ = mean_ ? *mean_ + ( t - *mean_ ) / count_ : t;
-                squares_ = squares_ ? *squares_ + ( t * t - *squares_ ) / count_ : t * t;
+                count_++;
+                
+                typename result_traits< T >::type d = t - m1_;
+                typename result_traits< T >::type inv_n = 1.0 / count_;
+
+                m4_ = m4_ + d * d * d * d * inv_n * inv_n * inv_n * ( count_ - 1 ) * (count_ * count_ - 3 * count_ + 3) + 6 * d * d * inv_n * inv_n * m2_ - 4 * d * inv_n * m3_;
+                m3_ = m3_ + d * d * d * inv_n * inv_n * ( count_ - 1 ) * (count_ - 2) - 3 * d * inv_n * m2_;
+                m2_ = m2_ + d * d * inv_n * ( count_ - 1 );
+                m1_ = m1_ + d * inv_n;
             }
-            void calculate( char* buf ) { if( count_ > 0 ) { comma::csv::format::traits< T, F >::to_bin( static_cast< T >( *squares_ - *mean_ * *mean_ ), buf ); } }
-            base* clone() const { return new Variance< T, F >( *this ); }
+            void calculate( char* buf ) { if( count_ > 0 ) { COMMA_THROW( comma::exception, "moments output not implemented, todo" ); } }
+            base* clone() const { return new Moments< T, F >( *this ); }
         private:
             friend class Stddev< T, F >;
-            T first_;
-            boost::optional< typename result_traits< T >::type > mean_;
-            boost::optional< typename result_traits< T >::type > squares_;
+            friend class Variance< T, F >;
+            friend class Skew< T, F >;
+            friend class Kurtosis< T, F >;
+            
+            typename result_traits< T >::type m1_;
+            typename result_traits< T >::type m2_;
+            typename result_traits< T >::type m3_;
+            typename result_traits< T >::type m4_;
             std::size_t count_;
-    };
-
-    template < comma::csv::format::types_enum F >
-    class Variance< boost::posix_time::ptime, F > : public base
-    {
-        void push( const char* ) { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
-        void calculate( char* ) { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
-        base* clone() const { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
     };
 
     template < typename T, comma::csv::format::types_enum F = comma::csv::format::type_to_enum< T >::value >
     class Stddev : public base
     {
         public:
-            void push( const char* buf ) { variance_.push( buf ); }
-            void calculate( char* buf ) { if( variance_.count_ > 0 ) { comma::csv::format::traits< T, F >::to_bin( static_cast< T >( std::sqrt( static_cast< long double >( *variance_.squares_ - *variance_.mean_ * *variance_.mean_ ) ) ), buf ); } }
+            void push( const char* buf ) { moments_.push( buf ); }
+            void calculate( char* buf ) { if( moments_.count_ > 0 ) { comma::csv::format::traits< T, F >::to_bin( static_cast< T >( std::sqrt( static_cast< long double >( moments_.m2_ / moments_.count_  ) ) ), buf ); } }
             base* clone() const { return new Stddev< T, F >( *this ); }
         private:
-            Variance< T, F > variance_;
+            Moments< T, F > moments_;
     };
 
     template < comma::csv::format::types_enum F >
@@ -607,7 +675,74 @@ namespace Operations
         void calculate( char* ) { COMMA_THROW( comma::exception, "standard deviation not implemented for time, todo" ); }
         base* clone() const { COMMA_THROW( comma::exception, "standard deviation not implemented for time, todo" ); }
     };
+    
+    template < typename T, comma::csv::format::types_enum F = comma::csv::format::type_to_enum< T >::value >
+    class Variance : public base // todo: generalise for kth moment
+    {
+        public:
+            void push( const char* buf )
+            {
+                moments_.push(buf);
+            }
+            void calculate( char* buf ) { if( moments_.count_ > 0 ) { comma::csv::format::traits< T, F >::to_bin( static_cast< T >( moments_.m2_ / moments_.count_ ), buf ); } }
+            base* clone() const { return new Variance< T, F >( *this ); }
+        private:
+            Moments< T, F > moments_;
+    };
 
+    template < comma::csv::format::types_enum F >
+    class Variance< boost::posix_time::ptime, F > : public base
+    {
+        void push( const char* ) { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
+        void calculate( char* ) { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
+        base* clone() const { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
+    };
+    
+    template < typename T, comma::csv::format::types_enum F = comma::csv::format::type_to_enum< T >::value >
+    class Skew : public base // todo: generalise for kth moment
+    {
+        public:
+            void push ( const char* buf )
+            {
+                moments_.push( buf );
+            }
+            void calculate( char* buf ) { if( moments_.count_ > 0 ) { comma::csv::format::traits< T, F >::to_bin( static_cast< T >( sqrt( moments_.count_ / ( moments_.m2_ * moments_.m2_ * moments_.m2_) ) * moments_.m3_ ), buf ); } }
+            base* clone() const { return new Skew< T, F >( *this ); }
+        private:
+            Moments< T, F > moments_;
+    };
+
+    template < comma::csv::format::types_enum F >
+    class Skew< boost::posix_time::ptime, F > : public base
+    {
+        void push( const char* ) { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
+        void calculate( char* ) { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
+        base* clone() const { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
+    };
+    
+    template < typename T, comma::csv::format::types_enum F = comma::csv::format::type_to_enum< T >::value >
+    class Kurtosis : public base // todo: generalise for kth moment
+    {
+        public:
+            void push ( const char* buf )
+            {
+                moments_.push( buf );
+            }
+            void calculate( char* buf ) { if( moments_.count_ > 0 ) { comma::csv::format::traits< T, F >::to_bin( static_cast< T >( moments_.count_ * moments_.m4_ / ( moments_.m2_ * moments_.m2_ ) ), buf ); } }
+            base* clone() const { return new Kurtosis< T, F >( *this ); }
+        private:
+            Moments< T, F > moments_;
+    };
+    
+    template < comma::csv::format::types_enum F >
+    class Kurtosis< boost::posix_time::ptime, F > : public base
+    {
+        void push( const char* ) { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
+        void calculate( char* ) { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
+        base* clone() const { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
+    };
+
+    
     template < typename T > struct Diff
     {
         typedef T Type;
@@ -656,7 +791,7 @@ namespace Operations
             std::size_t count_;
     };
 
-    struct Enum { enum Values { min, max, centre, mean, percentile, sum, size, radius, diameter, variance, stddev }; };
+    struct Enum { enum Values { min, max, centre, mean, percentile, sum, size, radius, diameter, variance, stddev, skew, kurtosis }; };
 
     static Enum::Values from_name( const std::string& name )
     {
@@ -670,6 +805,8 @@ namespace Operations
         else if( name == "diameter" ) { return Enum::diameter; }
         else if( name == "var" ) { return Enum::variance; }
         else if( name == "stddev" ) { return Enum::stddev; }
+        else if( name == "skew" ) { return Enum::skew; }
+        else if( name == "kurtosis" ) { return Enum::kurtosis; }
         else if( name == "size" ) { return Enum::size; }
         else { COMMA_THROW( comma::exception, "expected operation name, got " << name ); }
     }
@@ -692,6 +829,8 @@ namespace Operations
     template <> struct traits< Enum::diameter > { template < typename T, comma::csv::format::types_enum F > struct FromEnum { typedef Diameter< T, F > Type; }; };
     template <> struct traits< Enum::variance > { template < typename T, comma::csv::format::types_enum F > struct FromEnum { typedef Variance< T, F > Type; }; };
     template <> struct traits< Enum::stddev > { template < typename T, comma::csv::format::types_enum F > struct FromEnum { typedef Stddev< T, F > Type; }; };
+    template <> struct traits< Enum::skew > { template < typename T, comma::csv::format::types_enum F > struct FromEnum { typedef Skew< T, F > Type; }; };
+    template <> struct traits< Enum::kurtosis > { template < typename T, comma::csv::format::types_enum F > struct FromEnum { typedef Kurtosis< T, F > Type; }; };
 } // namespace Operations
 
 class Operationbase
@@ -813,6 +952,8 @@ static void init_operations( boost::ptr_vector< Operationbase >& operations
                 case Operations::Enum::diameter: sample.push_back( new Operation< Operations::Enum::diameter >( format ) ); break;
                 case Operations::Enum::variance: sample.push_back( new Operation< Operations::Enum::variance >( format ) ); break;
                 case Operations::Enum::stddev: sample.push_back( new Operation< Operations::Enum::stddev >( format ) ); break;
+                case Operations::Enum::skew: sample.push_back( new Operation< Operations::Enum::skew >( format ) ); break;
+                case Operations::Enum::kurtosis: sample.push_back( new Operation< Operations::Enum::kurtosis >( format ) ); break;
                 case Operations::Enum::sum: sample.push_back( new Operation< Operations::Enum::sum >( format ) ); break;
                 case Operations::Enum::size: sample.push_back( new Operation< Operations::Enum::size >( format ) ); break;
             }
