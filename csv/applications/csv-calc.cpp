@@ -731,7 +731,7 @@ namespace Operations
                     std::size_t n = moments_.count();
                     typename result_traits< T >::type m2 = moments_.previous().previous().value();
                     typename result_traits< T >::type m4 = moments_.value();                
-                    comma::csv::format::traits< T, F >::to_bin( static_cast< T >( n * m4 / ( m2 * m2 ) - 3), buf ); 
+                    comma::csv::format::traits< T, F >::to_bin( static_cast< T >( n * m4 / ( m2 * m2 ) ), buf ); 
                 } 
             }
             base* clone() const { return new Kurtosis< T, F >( *this ); }
