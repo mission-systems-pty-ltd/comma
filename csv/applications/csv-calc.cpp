@@ -43,6 +43,7 @@
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/unordered_map.hpp>
+#include <boost/date_time/posix_time/posix_time_types.hpp>
 #include "../../application/contact_info.h"
 #include "../../application/signal_flag.h"
 #include "../../application/verbose.h"
@@ -622,7 +623,7 @@ namespace Operations
             {
                 typename result_traits< T >::type d = t - mean();
                 ++count_;
-                value_ = value_ + moment_traits< T, M >::update( d, count_, previous_ ); // pass more params?
+                value_ = value_ + moment_traits< T, M >::update( d, count_, previous_ );
                 previous_.update( t );
             }
             
@@ -664,20 +665,39 @@ namespace Operations
         public:
             Stddev() : sample_ (false) {}
             void set_options( const std::vector< std::string >& options ) { sample_ = ( !options.empty() && options[0] == "sample" ); }
-            void push( const char* buf ) { T t = comma::csv::format::traits< T >::from_bin( buf ); moments_.update( t ); }
+            void push( const char* buf ) 
+            { 
+                T t = comma::csv::format::traits< T >::from_bin( buf ); 
+                if ( !first_ ) { first_ = t; }
+                double diff = t - *first_;
+                moments_.update( diff ); 
+            }
+            void update( const T t ) { moments_.update(t); }
             void calculate( char* buf ) { if( moments_.count() > 0 ) { comma::csv::format::traits< T, F >::to_bin( static_cast< T >( std::sqrt( static_cast< long double >( moments_.value() / ( sample_ ? moments_.count() - 1 : moments_.count() )  ) ) ), buf ); } }
             base* clone() const { return new Stddev< T, F >( *this ); }
         private:
             Moment< T, 2 > moments_;
+            boost::optional<T> first_;
             bool sample_;
     };
 
     template < comma::csv::format::types_enum F >
     class Stddev< boost::posix_time::ptime, F > : public base
     {
-        void push( const char* ) { COMMA_THROW( comma::exception, "standard deviation not implemented for time, todo" ); }
-        void calculate( char* ) { COMMA_THROW( comma::exception, "standard deviation not implemented for time, todo" ); }
-        base* clone() const { COMMA_THROW( comma::exception, "standard deviation not implemented for time, todo" ); }
+        public:
+            void set_options( const std::vector< std::string >& options ) { stddev_.set_options(options); }
+            void push( const char* buf ) 
+            {
+                boost::posix_time::ptime t = comma::csv::format::traits< boost::posix_time::ptime >::from_bin( buf );
+                if ( !first_ ) { first_ = t; }
+                double diff = ( t - *first_ ).total_microseconds() / 1e6;
+                stddev_.update(diff);
+            }
+            void calculate( char* buf ) { stddev_.calculate(buf); }
+            base* clone() const { return new Stddev< boost::posix_time::ptime, F >( *this ); }
+        private:
+            Stddev< double, F > stddev_;
+            boost::optional<boost::posix_time::ptime> first_;
     };
     
     template < typename T, comma::csv::format::types_enum F = comma::csv::format::type_to_enum< T >::value >
@@ -686,20 +706,39 @@ namespace Operations
         public:
             Variance() : sample_ (false) {}
             void set_options( const std::vector< std::string >& options ) { sample_ = ( !options.empty() && options[0] == "sample" ); }
-            void push( const char* buf ) { T t = comma::csv::format::traits< T >::from_bin( buf ); moments_.update( t ); }
+            void push( const char* buf ) 
+            { 
+                T t = comma::csv::format::traits< T >::from_bin( buf ); 
+                if ( !first_ ) { first_ = t; }
+                double diff = t - *first_;
+                moments_.update( diff ); 
+            }
+            void update( const T t ) { moments_.update(t); }
             void calculate( char* buf ) { if( moments_.count() > 0 ) { comma::csv::format::traits< T, F >::to_bin( static_cast< T >( moments_.value() / ( sample_ ? moments_.count() - 1 : moments_.count() ) ), buf ); } }
             base* clone() const { return new Variance< T, F >( *this ); }
         private:
             Moment< T, 2 > moments_;
+            boost::optional<T> first_;
             bool sample_;
     };
 
     template < comma::csv::format::types_enum F >
     class Variance< boost::posix_time::ptime, F > : public base
     {
-        void push( const char* ) { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
-        void calculate( char* ) { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
-        base* clone() const { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
+        public:
+            void set_options( const std::vector< std::string >& options ) { variance_.set_options(options); }
+            void push( const char* buf ) 
+            {
+                boost::posix_time::ptime t = comma::csv::format::traits< boost::posix_time::ptime >::from_bin( buf );
+                if ( !first_ ) { first_ = t; }
+                double diff = ( t - *first_ ).total_microseconds() / 1e6;
+                variance_.update( diff );
+            }
+            void calculate( char* buf ) { variance_.calculate(buf); }
+            base* clone() const { return new Variance< boost::posix_time::ptime, F >( *this ); }
+        private:
+            Variance< double, F> variance_;
+            boost::optional<boost::posix_time::ptime> first_;
     };
     
     template < typename T, comma::csv::format::types_enum F = comma::csv::format::type_to_enum< T >::value >
@@ -707,7 +746,14 @@ namespace Operations
     {
         public:
             void set_options( const std::vector< std::string >& options ) { sample_ = ( !options.empty() && options[0] == "sample" ); }
-            void push ( const char* buf ) { T t = comma::csv::format::traits< T >::from_bin( buf ); moments_.update( t ); }
+            void push( const char* buf ) 
+            { 
+                T t = comma::csv::format::traits< T >::from_bin( buf ); 
+                if ( !first_ ) { first_ = t; }
+                double diff = t - *first_;
+                moments_.update( diff ); 
+            }
+            void update( const T t ) { moments_.update(t); }
             void calculate( char* buf ) 
             { 
                 if( moments_.count() > 0 ) 
@@ -724,15 +770,27 @@ namespace Operations
             base* clone() const { return new Skew< T, F >( *this ); }
         private:
             Moment< T, 3 > moments_;
+            boost::optional<T> first_;
             bool sample_;
     };
 
     template < comma::csv::format::types_enum F >
     class Skew< boost::posix_time::ptime, F > : public base
     {
-        void push( const char* ) { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
-        void calculate( char* ) { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
-        base* clone() const { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
+        public:
+            void set_options( const std::vector< std::string >& options ) { skew_.set_options(options); }
+            void push( const char* buf ) 
+            {
+                boost::posix_time::ptime t = comma::csv::format::traits< boost::posix_time::ptime >::from_bin( buf );
+                if ( !first_ ) { first_ = t; }
+                double diff = ( t - *first_ ).total_microseconds() / 1e6;
+                skew_.update(diff);
+            }
+            void calculate( char* buf ) { skew_.calculate(buf); }
+            base* clone() const { return new Skew< boost::posix_time::ptime, F >( *this ); }
+        private:
+            Skew< double, F> skew_;
+            boost::optional<boost::posix_time::ptime> first_;
     };
     
     template < typename T, comma::csv::format::types_enum F = comma::csv::format::type_to_enum< T >::value >
@@ -748,7 +806,14 @@ namespace Operations
                     else if ( options[i] == "excess" ) { excess_ = true; }
                 }
             }
-            void push ( const char* buf ) { T t = comma::csv::format::traits< T >::from_bin( buf ); moments_.update( t ); }
+            void push( const char* buf ) 
+            { 
+                T t = comma::csv::format::traits< T >::from_bin( buf ); 
+                if ( !first_ ) { first_ = t; }
+                double diff = t - *first_;
+                moments_.update( diff ); 
+            }
+            void update( const T t ) { moments_.update(t); }
             void calculate( char* buf ) 
             { 
                 if( moments_.count() > 0 ) 
@@ -767,6 +832,7 @@ namespace Operations
             base* clone() const { return new Kurtosis< T, F >( *this ); }
         private:
             Moment< T, 4 > moments_;
+            boost::optional<T> first_;
             bool sample_;
             bool excess_;
     };
@@ -774,9 +840,20 @@ namespace Operations
     template < comma::csv::format::types_enum F >
     class Kurtosis< boost::posix_time::ptime, F > : public base
     {
-        void push( const char* ) { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
-        void calculate( char* ) { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
-        base* clone() const { COMMA_THROW( comma::exception, "variance not implemented for time, todo" ); }
+        public:
+            void set_options( const std::vector< std::string >& options ) { kurtosis_.set_options(options); }
+            void push( const char* buf ) 
+            {
+                boost::posix_time::ptime t = comma::csv::format::traits< boost::posix_time::ptime >::from_bin( buf );
+                if ( !first_ ) { first_ = t; }
+                double diff = ( t - *first_ ).total_microseconds() / 1e6;
+                kurtosis_.update(diff);
+            }
+            void calculate( char* buf ) { kurtosis_.calculate(buf); }
+            base* clone() const { return new Kurtosis< boost::posix_time::ptime, F >( *this ); }
+        private:
+            Kurtosis< double, F> kurtosis_;
+            boost::optional<boost::posix_time::ptime> first_;
     };
 
 //  previous code for Variance and Stddev:
@@ -969,6 +1046,10 @@ struct Operation : public Operationbase
             {
                 case Operations::Enum::radius:
                 case Operations::Enum::diameter:
+                case Operations::Enum::stddev:
+                case Operations::Enum::variance:
+                case Operations::Enum::skew:
+                case Operations::Enum::kurtosis:
                     if( input_elements_[i].type == comma::csv::format::time || input_elements_[i].type == comma::csv::format::long_time ) { output_type = comma::csv::format::double_t; }
                     break;
                 case Operations::Enum::size:
