@@ -8,7 +8,7 @@ if( USE_ARM_TOOLCHAIN )
     include( ${CMAKE_TOOLCHAIN_FILE} REQUIRED )
 endif( USE_ARM_TOOLCHAIN )
 
-PROJECT( "comma" )
+PROJECT( "comma"  )
 
 cmake_minimum_required(VERSION 2.6)
 
