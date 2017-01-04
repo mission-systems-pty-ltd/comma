@@ -180,9 +180,15 @@ int main( int ac, char** av )
                 window_buckets.push_back( bucket_bytes );
                 bucket_bytes = 0;
                 next_bucket += bucket_duration;
+                // If there's been a large pause (for some reason), catch up
+                if( now > next_bucket )
+                {
+                    window_buckets.clear();
+                    next_bucket = now + bucket_duration;
+                }
             }
 
-            if( now >= next_update )
+            if( now >= next_update && !window_buckets.empty() )
             {
                 double elapsed_time = double( ( now - start_time ).total_milliseconds() ) / 1000.0f;
                 double bandwidth = (double)total_bytes / elapsed_time;
@@ -205,6 +211,8 @@ int main( int ac, char** av )
                 std::cerr << std::endl;
 
                 next_update += update_interval;
+                // If there's been a large pause (for some reason), catch up
+                if( now > next_update ) { next_update = now + update_interval; }
             }
         }
         return 0;
