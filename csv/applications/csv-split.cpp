@@ -49,10 +49,12 @@ boost::optional< boost::posix_time::time_duration > duration;
 std::string suffix;
 unsigned int size = 0;
 
+bool passthrough;
+
 template < typename T >
 void run()
 {
-    comma::csv::applications::split< T > split( duration, suffix, csv );
+    comma::csv::applications::split< T > split( duration, suffix, csv, passthrough );
     comma::signal_flag is_shutdown;
     if( size == 0 )
     {
@@ -91,7 +93,8 @@ int main( int argc, char** argv )
             ( "period,t", boost::program_options::value< double >( &period ), "period in seconds after which a new file is created" )
             ( "suffix,s", boost::program_options::value< std::string >( &extension ), "filename extension; default will be csv or bin, depending whether it is ascii or binary" )
             ( "string", "id is string; default: 32-bit integer" )
-            ( "time", "id is time; default: 32-bit integer" );
+            ( "time", "id is time; default: 32-bit integer" )
+            ( "passthrough,pass", "pass data through to stdout" );
         description.add( comma::csv::program_options::description() );
         boost::program_options::variables_map vm;
         boost::program_options::store( boost::program_options::parse_command_line( argc, argv, description), vm );
@@ -118,6 +121,8 @@ int main( int argc, char** argv )
         if( csv.binary() ) { size = csv.format().size(); }
         bool id_is_string = vm.count( "string" );
         bool id_is_time = vm.count( "time" );
+        passthrough = vm.count("passthrough");
+        
         if( id_is_string && id_is_time ) { std::cerr << "csv-split: either --string or --time" << std::endl; }
         if( period > 0 ) { duration = boost::posix_time::microseconds( period * 1e6 ); }
         if( extension.empty() ) { suffix = csv.binary() || size > 0 ? ".bin" : ".csv"; }

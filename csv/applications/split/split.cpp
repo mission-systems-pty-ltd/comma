@@ -50,10 +50,12 @@ namespace comma { namespace csv { namespace applications {
 template < typename T >
 split< T >::split( boost::optional< boost::posix_time::time_duration > period
             , const std::string& suffix
-            , const comma::csv::options& csv )
+            , const comma::csv::options& csv
+            , bool pass )
     : ofstream_( boost::bind( &split< T >::ofstream_by_time_, this ) )
     , period_( period )
     , suffix_( suffix )
+    , pass_ ( pass )
 {
     if( ( csv.has_field( "t" ) || csv.fields.empty() ) && !period ) { COMMA_THROW( comma::exception, "please specify --period" ); }
     if( csv.fields.empty() ) { return; }
@@ -70,6 +72,7 @@ void split< T >::write( const char* data, unsigned int size )
     if( binary_ ) { binary_->get( current_, data ); }
     else { current_.timestamp = boost::get_system_time(); }
     ofstream_().write( data, size );
+    if ( pass_ ) { std::cout.write( data, size ); std::cout.flush(); }
 }
 
 template < typename T >
@@ -81,6 +84,7 @@ void split< T >::write ( const std::string& line )
     std::ofstream& ofs = ofstream_();
     ofs.write( &line[0], line.size() );
     ofs.put( '\n' );
+    if ( pass_ ) { std::cout.write( &line[0], line.size() ); std::cout.put('\n'); std::cout.flush(); }
 }
 
 template < typename T >

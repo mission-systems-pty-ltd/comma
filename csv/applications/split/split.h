@@ -114,7 +114,8 @@ class split
 
         split( boost::optional< boost::posix_time::time_duration > period
              , const std::string& suffix
-             , const comma::csv::options& csv );
+             , const comma::csv::options& csv
+             , bool passthrough );
         void write( const char* data, unsigned int size );
         void write( const std::string& line );
 
@@ -138,6 +139,7 @@ class split
         typedef typename traits< T >::set ids_type_;
         Files files_;
         ids_type_ seen_ids_;
+        bool pass_;
 };
 
 } } } // namespace comma { namespace csv { namespace applications {
