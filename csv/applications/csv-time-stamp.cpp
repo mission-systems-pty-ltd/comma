@@ -135,7 +135,6 @@ int main( int ac, char** av )
                 std::cout << boost::posix_time::to_iso_string( now ) << delimiter << line << std::endl;
             }
         }
-        if( is_shutdown ) { std::cerr << "csv-time-stamp: interrupted by signal" << std::endl; }
         return 0;
     }
     catch( std::exception& ex ) { std::cerr << "csv-time-stamp: " << ex.what() << std::endl; }
