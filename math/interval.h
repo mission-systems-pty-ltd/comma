@@ -109,7 +109,7 @@ class closed_interval
         bool contains( const T& t ) const { return !math::less( t, interval_.first ) && !math::less( interval_.second, t ); }
         
         /// return true, if variable belongs to the interval
-        bool contains( const closed_interval& rhs ) const { return !( math::less( rhs.first, interval_.first ) || math::less( interval_.second, rhs.second ) ); }
+        bool contains( const closed_interval& rhs ) const { return !( math::less( rhs.min(), interval_.first ) || math::less( interval_.second, rhs.max() ) ); }
         
         /// compute the hull of the interval and [x]
         closed_interval< T > hull( const T& x ) { return closed_interval( std::min( interval_.first, x ), std::max( interval_.second, x ) ); }
