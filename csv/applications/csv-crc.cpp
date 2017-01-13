@@ -46,7 +46,7 @@
 #include "../../application/signal_flag.h"
 #include "../../base/types.h"
 
-static void usage()
+static void usage( bool )
 {
     std::cerr << std::endl;
     std::cerr << "wrap/check crc on fixed-width input (ascii or binary)" << std::endl;
@@ -59,6 +59,7 @@ static void usage()
     std::cerr << "    recover: recover with given parameters (see below)" << std::endl;
     std::cerr << std::endl;
     std::cerr << "data options" << std::endl;
+    std::cerr << "    --crc-size; output given crc size to stdout and exit" << std::endl;
     std::cerr << "    --delimiter,-d=<delimiter>: ascii csv delimiter" << std::endl;
     std::cerr << "    --size=<size>: binary data size; if absent, expect ascii csv" << std::endl;
     std::cerr << "                   for wrap: payload size" << std::endl;
@@ -243,8 +244,17 @@ int main( int ac, char** av )
 {
     try
     {
-        comma::command_line_options options( ac, av );
-        if( ac < 2 || options.exists( "--help,-h" ) ) { usage(); }
+        comma::command_line_options options( ac, av, usage );
+        std::string crc = options.value< std::string >( "--crc", "ccitt" );
+        if( options.exists( "--crc-size" ) )
+        {
+            if( crc == "16" ) { std::cout << sizeof( boost::crc_16_type::value_type ) << std::endl; }
+            else if( crc == "32" ) { std::cout << sizeof( boost::crc_32_type::value_type ) << std::endl; }
+            else if( crc == "ccitt" ) { std::cout << sizeof( boost::crc_ccitt_type::value_type ) << std::endl; }
+            else if( crc == "xmodem" ) { std::cout << sizeof( boost::crc_xmodem_type::value_type ) << std::endl; }
+            else { std::cerr << "csv-crc: expected crc type, got \"" << crc << "\"" << std::endl; return 1; }
+            return 0;
+        }
         if( wrap && recover ) { std::cerr << "csv-crc: if 'wrap', then no 'check' or 'recover'" << std::endl; return 1; }
         verbose = options.exists( "--verbose,-v" );
         give_up_after = options.optional< unsigned int >( "--give-up-after" );
@@ -263,7 +273,6 @@ int main( int ac, char** av )
             else if( commands[i] == "recover" ) { recover = true; }
             else { std::cerr << "csv-crc: expected command, got '" << commands[i] << "'" << std::endl; return 1; }
         }
-        std::string crc = options.value< std::string >( "--crc", "ccitt" );
         if( crc == "16" ) { return run_< boost::crc_16_type >(); }
         else if( crc == "32" ) { return run_< boost::crc_32_type >(); }
         else if( crc == "ccitt" ) { return run_< boost::crc_ccitt_type >(); }
