@@ -35,6 +35,11 @@
 #include "../../csv/options.h"
 #include "../../csv/impl/unstructured.h"
 
+TEST( csv, dummy )
+{
+    EXPECT_EQ( 0, 1 );
+}
+
 TEST( csv, format )
 {
     {
