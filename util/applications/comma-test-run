@@ -123,6 +123,7 @@ function description_others()
 --debug; much more debug output
 --document,--doc; do not run tests, only output to stdout a collated test documentation in informal way, if --junit present, produce junit-like output (todo)
 --junit=[<file>]; output to file junit record compatible with jenkins for each test
+--interactive; allow test scripts to access an X window to provide supervised/interactive tests, if present tests cannot be run in parallel
 --no-ansiterm-control-characters,--no-control-characters,--raw; unstyled output (no ANSIterm control characters)
 --output-directories,--dry-run,--dry; output list of test directories intended to run and exit
 --path=[<dir>]; data-storage directory for tests, default: none, let the tests define it
@@ -611,11 +612,14 @@ function run_and_match_test()
 {
     local test_failed error_files
 
+    local env_variables="PYTHONPATH"
+    (( options_interactive )) && env_variables+=",XDG_RUNTIME_DIR,DISPLAY"
+    
     rm -rf output || { error_and_junit_ "Unable to remove 'output' directory" ; return 1 ; }
     mkdir -p output || { error_and_junit_ "Unable to make 'output' directory" ; return 1 ; }
 
     {
-        if [[ -f ./input ]] ; then cat ./input ; fi | comma_env --import PYTHONPATH "$test_exec" "$path" $verbose $options_test_option
+        if [[ -f ./input ]] ; then cat ./input ; fi | comma_env --import "$env_variables" "$test_exec" "$path" $verbose $options_test_option
         test_failed=$?
     } >'output/stdout.log' 2>'output/stderr.log'
     error_files="$( find . -name out_of_shared_memory )"
@@ -1040,6 +1044,7 @@ have_max_parallel=$(( have_max_parallel_equal > 0 || have_max_parallel_space > 0
 (( $options_parallel == 0 && $have_max_parallel == 0 )) && options_max_parallel=1
 (( $have_max_parallel != 0 )) && options_parallel=1
 (( $options_max_parallel < 1 )) && { error_ "$name: number of parallel tests $options_max_parallel < 1"; exit 1; }
+(( $options_max_parallel > 1 && options_interactive == 1 )) && { error_ "$name: cannot run interactive tests in parallel"; exit 1; }
 (( $options_max_memory_main < 1 )) && { error_ "$name: amount of shared memory $options_max_memory_main < 1 MB"; exit 1; }
 (( $options_max_memory_shared < 1 )) && { error_ "$name: amount of shared memory $options_max_memory_shared < 1 MB"; exit 1; }
 [[ "$options_max_wait_time" != "forever" ]] && {
