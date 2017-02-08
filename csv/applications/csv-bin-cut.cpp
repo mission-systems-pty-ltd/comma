@@ -38,13 +38,10 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <deque>
 #include <iostream>
 #include <boost/lexical_cast.hpp>
 #include "../../application/contact_info.h"
 #include "../../application/command_line_options.h"
-#include "../../application/signal_flag.h"
-#include "../../base/exception.h"
 #include "../../csv/format.h"
 #include "../../string/string.h"
 
@@ -74,7 +71,6 @@ int main( int ac, char** av )
     #endif
     try
     {
-        signal_flag shutdownFlag;
         command_line_options options( ac, av );
         if( ac < 2 || options.exists( "--help" ) || options.exists( "-h" ) ) { usage(); }
         comma::csv::format format( av[1] );
@@ -117,19 +113,11 @@ int main( int ac, char** av )
         std::vector< char > buf( format.size() );
         while( std::cin.good() && !std::cin.eof() )
         {
-            if( shutdownFlag ) { std::cerr << "csv-bin-cut: interrupted by signal" << std::endl; return -1; }
-            // quick and dirty; if performance is an issue, you could read more than
-            // one record every time, but absolutely don't make this read blocking!
-            // see comma::csv::binary_input_stream::read() for reference - if you know
-            // how to do it better, please tell everyone!
             std::cin.read( &buf[0], format.size() );
             if( std::cin.gcount() == 0 ) { continue; }
             if( std::cin.gcount() < int( format.size() ) ) { std::cerr << "csv-bin-cut: expected " << format.size() << " bytes, got only " << std::cin.gcount() << std::endl; return 1; }
-            for( unsigned int i = 0; i < offsets.size(); ++i )
-            {
-                std::cout.write( &buf[0] + offsets[i].offset, offsets[i].size );
-                if( flush ) { std::cout.flush(); }
-            }
+            for( unsigned int i = 0; i < offsets.size(); ++i ) { std::cout.write( &buf[0] + offsets[i].offset, offsets[i].size ); }
+            if( flush ) { std::cout.flush(); }
         }
         return 0;
     }
