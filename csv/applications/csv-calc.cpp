@@ -242,7 +242,8 @@ class Values
             }
             for( unsigned int i = 0; i < indices_.size(); ++i )
             {
-                format_ += comma::csv::format::to_format( input_format_.offset( indices_[i] ).type );
+                comma::csv::format::element e = input_format_.offset( indices_[i] );
+                format_ += comma::csv::format::to_format( e.type, e.size );
             }
             for( unsigned int i = 0; i < indices_.size(); ++i )
             {
