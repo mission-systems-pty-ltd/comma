@@ -177,6 +177,13 @@ static void usage( bool more )
     std::cerr << "        cat $block_csv | csv-blocks group --fields=id | csv-blocks index --fields=,,,,block | csv-blocks head --fields=,,,,,index " << std::endl;
     std::cerr << "            After appending the block field, then the block reverse index field, reading a single block from the input is possible" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "    index and head together" << std::endl;
+    std::cerr << "        echo -e \"0\\n0\\n1\\n1\\n1\\n0\\n0\\n0\\n0\" | csv-blocks index --fields=block --reverse | while true ; do" << std::endl;
+    std::cerr << "            block=$( csv-blocks head --fields block,index ) || break ; echo \"---\" ; echo \"$block\"" << std::endl;
+    std::cerr << "        done" << std::endl;
+    std::cerr << "            After indexing the input in reverse order, the stream is read block-by-block, with the first line given the maximal" << std::endl;
+    std::cerr << "            element id in the block, essentially, the block size" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "contact info: " << comma::contact_info <<std::endl;
     exit(0);
 }
