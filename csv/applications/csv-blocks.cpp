@@ -296,7 +296,7 @@ comma::uint32 memory_buffer::read_binary_records( comma::uint32 num_record, bool
     return bytes_read;
 }
 
-static comma::uint32 extended_buffer_size = 65536; // 64Kb
+static comma::uint32 extended_buffer_size = 65536; // 64Kb, default, overwritten on demand if a record is longer
 
 static comma::uint32 read_and_write_binary_record()
 {
@@ -320,9 +320,6 @@ static void read_and_write_binary_block()
     comma::uint32 records_to_read = read_and_write_binary_record();
     if( records_to_read == 0 ) { return; }
     static const comma::uint32 one_record_size = csv.format().size();
-    // TODO: this is inefficient (causes major buffering if record size is large), but the calculations
-    //       below are totally screwed otherwise; quick fix is to increase the extended buffer size
-    //       proper fix (to be done) is to read each large record incrementally
     extended_buffer_size = std::max( extended_buffer_size, one_record_size );
     static memory_buffer extended_buffer( extended_buffer_size );
     // maximum number that will fit in the extened_buffer
