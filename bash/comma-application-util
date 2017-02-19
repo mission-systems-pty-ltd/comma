@@ -152,6 +152,8 @@ function comma_status_ok()
         for outcome_status_ok in $@ ; do
             (( outcome_status_ok == 0 || outcome_status_ok == comma_sigpipe_exit_status_ )) || return 1
         done
+        # shall we do this?
+        # return ${@: -1}  # propagate comma_sigpipe_exit_status_ in the last argument
     else
         comma_status_ok "$pipestatus_copy_status_ok" || return 1
     fi
