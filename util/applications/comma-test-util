@@ -38,6 +38,7 @@
 readonly comma_test_util_include_guard_=1
 
 source $( type -p comma-name-value-util )
+source $( type -p comma-application-util )
 
 # a helper to write tests in the comma-test-run style
 #
@@ -80,7 +81,8 @@ function comma_test_commands()
         value="${value/#\"}"
         value="${value/%\"}"
         output=$( eval "$value" )
-        status="$?"
+        comma_status_ok
+        status=$?
         if [[ -n "$fields" ]]; then
             echo "$output" | name-value-from-csv "$fields" --prefix "$key/output"
         else
