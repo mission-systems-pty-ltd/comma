@@ -74,15 +74,15 @@ function comma_test_commands()
     local key
     local value
     local status
-    local output
+    local output pipe
     local fields=$1
     while IFS='=' read key value ; do
         [[ -n "$key" && ! "$key" =~ \#.* ]] || continue
         value="${value/#\"}"
         value="${value/%\"}"
         output=$( eval "$value" )
-        comma_status_ok
-        status=$?
+        pipe=( ${PIPESTATUS[@]} )
+        status=$( if [[ ${#pipe[@]} == 1 ]] ; then echo ${pipe[0]} ; else comma_status_ok ${pipe[@]} ; echo $? ; fi )
         if [[ -n "$fields" ]]; then
             echo "$output" | name-value-from-csv "$fields" --prefix "$key/output"
         else
