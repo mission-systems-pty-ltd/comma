@@ -83,6 +83,8 @@ static void usage( bool )
         "\n                 2014-12-25T00:00:00.000+11"
         "\n    - seconds"
         "\n            seconds since UNIX epoch as double"
+        "\n    - microseconds, us"
+        "\n            microseconds since UNIX epoch as integer"
         "\n    - any, guess"
         "\n            a special input format - try to convert from all those supported,"
         "\n            default input format, will be slower"
@@ -98,7 +100,7 @@ static void usage( bool )
     exit( 0 );
 }
 
-enum what_t { guess, iso, seconds, sql, xsd, local };
+enum what_t { guess, iso, seconds, microseconds, sql, xsd, local };
 static what_t from = guess;
 static what_t to = iso;
 static bool accept_empty;
@@ -126,6 +128,14 @@ static what_t what( const std::string& option, const comma::command_line_options
         {
             if( "sql" == s ) return sql;
             if( "seconds" == s ) return seconds;
+        }
+        else if( 'm' == s[0] )
+        {
+            if( "microseconds" == s ) return microseconds;
+        }
+        else if ('u' == s[0] )
+        {
+            if( "us" == s ) return microseconds;
         }
         else if( 'x' == s[0] )
         {
@@ -216,6 +226,12 @@ static boost::posix_time::ptime from_string( const std::string& s, const what_t 
             return boost::posix_time::ptime( comma::csv::impl::epoch, boost::posix_time::seconds( seconds ) + boost::posix_time::microseconds( microseconds ) );
         }
 
+        case microseconds:
+        {
+            comma::int64 microseconds = boost::lexical_cast< comma::int64 >( s );
+            return boost::posix_time::ptime( comma::csv::impl::epoch, boost::posix_time::microseconds( microseconds ) );
+        }
+        
         case sql:
             return s == "NULL" || s == "null" ? boost::posix_time::not_a_date_time : boost::posix_time::time_from_string( s );
 
@@ -279,6 +295,16 @@ std::string to_string( const boost::posix_time::ptime& t, what_t w )
                 oss.fill( '0' );
                 oss << std::abs( nanoseconds );
             }
+            return oss.str();
+        }
+        
+        case microseconds:
+        {
+            const boost::posix_time::ptime base( comma::csv::impl::epoch );
+            const boost::posix_time::time_duration d = t - base;
+            comma::int64 microseconds = d.total_microseconds();
+            std::ostringstream oss;
+            oss << ( microseconds < 0 ? "-" : "" ) << microseconds;
             return oss.str();
         }
 
