@@ -40,7 +40,6 @@
 #include <iostream>
 #include "../../application/contact_info.h"
 #include "../../application/command_line_options.h"
-#include "../../application/signal_flag.h"
 #include "../../csv/format.h"
 #include "../../string/string.h"
 
