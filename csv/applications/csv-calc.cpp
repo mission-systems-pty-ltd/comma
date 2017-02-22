@@ -45,7 +45,6 @@
 #include <boost/unordered_map.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include "../../application/contact_info.h"
-#include "../../application/signal_flag.h"
 #include "../../application/verbose.h"
 #include "../../base/exception.h"
 #include "../../csv/format.h"
@@ -1242,8 +1241,7 @@ int main( int ac, char** av )
             return 0;
         }
         
-        comma::signal_flag is_shutdown;
-        while( !is_shutdown && std::cin.good() && !std::cin.eof() )
+        while( std::cin.good() && !std::cin.eof() )
         {
             const Values* v = csv.binary() ? binary->read() : ascii->read();
             if( v == NULL ) { break; }

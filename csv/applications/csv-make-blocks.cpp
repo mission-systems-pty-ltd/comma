@@ -34,7 +34,6 @@
 #include <queue>
 #include "../../application/command_line_options.h"
 #include "../../application/contact_info.h"
-#include "../../application/signal_flag.h"
 #include "../../base/types.h"
 #include "../../csv/Stream.h"
 #include "../../visiting/traits.h"
@@ -145,8 +144,7 @@ int main( int ac, char** av )
         typedef std::deque< std::pair< Input, std::string > > Points;
         Points points;
         std::size_t block = 0;
-        comma::signal_flag is_shutdown;
-        while( !is_shutdown && std::cin.good() && !std::cin.eof() )
+        while( std::cin.good() && !std::cin.eof() )
         {
             const Input* p = istream.read();
             // todo: if !chunk && !life && !p, output the last block
