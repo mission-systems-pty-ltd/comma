@@ -122,22 +122,26 @@ template <> struct traits< appended_column >
 static void usage( bool more )
 {
     std::cerr << std::endl;
+    std::cerr << "operations contiguous blocks of csv data" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "usage: cat some-data.csv | csv-blocks <operation> [<options>]" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "operations" << std::endl;
     std::cerr << "    group|make-blocks" << std::endl;
     std::cerr << "        cat something.csv | csv-blocks group --fields=,id, " << std::endl;
     std::cerr << "            appends group's block field base on specified id key or keys" << std::endl;
-    std::cerr << "    index" << std::endl;
-    std::cerr << "        appends an index field counting the number of records for each block. Use --reverse for count down." << std::endl;
-    std::cerr << "            cat something.csv | csv-blocks index --fields=,block " << std::endl;
+    std::cerr << "    head" << std::endl;
+    std::cerr << "        reads records from first block to stdout, if --num-of-blocks=<num> specified, read more than one blocks" << std::endl;
+    std::cerr << "        requires the index from 'index' mode in the inputs" << std::endl;
+    std::cerr << "            cat something.csv | csv-blocks index --fields=,index " << std::endl;
     std::cerr << "    increment" << std::endl;
     std::cerr << "        increments specified field value, must be uint32 type - any such field can be used as a block:" << std::endl;
     std::cerr << "            cat something.csv | csv-blocks increment --fields=,,block" << std::endl;
     std::cerr << "            cat something.csv | csv-blocks increment --fields=,,block --step 2" << std::endl;
     std::cerr << "            cat something.csv | csv-blocks increment --fields=,,block --step -1" << std::endl;
-    std::cerr << "    head" << std::endl;
-    std::cerr << "        reads records from first block to stdout, if --num-of-blocks=<num> specified, read more than one blocks" << std::endl;
-    std::cerr << "        requires the index from 'index' mode in the inputs" << std::endl;
-    std::cerr << "            cat something.csv | csv-blocks index --fields=,index " << std::endl;
+    std::cerr << "    index" << std::endl;
+    std::cerr << "        appends an index field counting the number of records for each block. Use --reverse for count down." << std::endl;
+    std::cerr << "            cat something.csv | csv-blocks index --fields=,block " << std::endl;
     std::cerr << "    read-until" << std::endl;
     std::cerr << "        reads records until a given index value, e.g:" << std::endl;
     std::cerr << "            cat something.csv | csv-blocks read-until --fields=,index --index=5" << std::endl;
@@ -185,6 +189,7 @@ static void usage( bool more )
     std::cerr << "            element id in the block, essentially, the block size" << std::endl;
     std::cerr << std::endl;
     std::cerr << "contact info: " << comma::contact_info <<std::endl;
+    std::cerr << std::endl;
     exit(0);
 }
 
