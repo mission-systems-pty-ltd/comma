@@ -55,7 +55,7 @@ static void usage( bool )
 int main( int ac, char** av )
 {
     typedef comma::csv::impl::unstructured input_t;
-    typedef boost::unordered_map< comma::csv::impl::unstructured, comma::uint32, comma::csv::impl::unstructured::hash >  map_t;
+    typedef boost::unordered_map< comma::csv::impl::unstructured, std::pair< comma::uint32, comma::uint32 >, comma::csv::impl::unstructured::hash >  map_t;
     try
     {
         comma::command_line_options options( ac, av, usage );
@@ -92,16 +92,16 @@ int main( int ac, char** av )
         if( !first_line.empty() )
         { 
             input_t input = comma::csv::ascii< input_t >( csv, default_input ).get( first_line );
-            map[ comma::csv::ascii< input_t >( csv, default_input ).get( first_line ) ] = id++;
+            map[ comma::csv::ascii< input_t >( csv, default_input ).get( first_line ) ] = std::make_pair( id++, 1 );
             if( !output_map ) { std::cout << first_line << csv.delimiter << 0 << std::endl; }
         }
         while( istream.ready() || std::cin.good() )
         {
             const input_t* p = istream.read();
             if( !p ) { break; }
-            map_t::const_iterator it = map.find( *p );
+            map_t::iterator it = map.find( *p );
             comma::uint32 cur = id;
-            if( it == map.end() ) { map[ *p ] = id++; } else { cur = it->second; }
+            if( it == map.end() ) { map[ *p ] = std::make_pair( id++, 1 ); } else { cur = it->second.first; ++( it->second.second ); }
             if( !output_map )
             {
                 if( csv.binary() )
@@ -119,8 +119,8 @@ int main( int ac, char** av )
         comma::csv::options output_csv;
         output_csv.delimiter = csv.delimiter;
         output_csv.full_xpath = true;
-        if( csv.binary() ) { output_csv.format( comma::csv::format::value< input_t >( default_input ) ); }
-        comma::csv::output_stream< std::pair< input_t, comma::uint32 > > ostream( std::cout, output_csv, std::make_pair( default_input, 0 ) );
+        if( csv.binary() ) { output_csv.format( comma::csv::format::value< input_t >( default_input ) + "2ui" ); }
+        comma::csv::output_stream< map_t::value_type > ostream( std::cout, output_csv, std::make_pair( default_input, std::make_pair( 0, 0 ) ) );
         if( output_map ) { for( map_t::const_iterator it = map.begin(); it != map.end(); ++it ) { ostream.write( *it ); } }
         return 0;
     }
