@@ -49,7 +49,7 @@ static void usage( bool verbose )
     std::cerr << "options" << std::endl;
     std::cerr << "    --fields,-f=<fields>; fields of interest, actual field names do not matter; e.g: --fields ,,,a,,b,,,c" << std::endl;
     std::cerr << "    --format=<binary format>; if input is ascii and deducing data types may be ambiguous, define field types explicitly, value as in --binary" << std::endl;
-    std::cerr << "    --output-map,--map: do not output input records, only the list of key values, corresponding ids, and value count" << std::endl;
+    std::cerr << "    --output-map,--map: do not output input records, only the list of key values, corresponding ids (as ui), and value count (as ui)" << std::endl;
     std::cerr << std::endl;
     std::cerr << "csv options" << std::endl;
     if( verbose ) { std::cerr << comma::csv::options::usage() << std::endl; } else { std::cerr << "    run csv-enumerate --help --verbose for more..." << std::endl; }
