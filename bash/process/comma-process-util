@@ -195,7 +195,7 @@ function comma_process_exec()
     [[ -p "$fifo" ]] || { builtin echo "$FUNCNAME: '$fifo' is not a FIFO" >&2; return 1; }
     local signature
     signature=$( comma_process_signature $self ) || { builtin echo "$FUNCNAME: cannot get process signature for '$self'" >&2; return 1; }
-    local write_timeout=20
+    local write_timeout=60
     # one process only, no need for comma-timeout-group
     timeout -s TERM -k 10 $write_timeout bash -c "builtin echo \"$self $signature\" > \"$fifo\""
     local rv=$?
@@ -236,7 +236,7 @@ function comma_process_validate()
     local expected=$2
     [[ -p "$fifo" ]] || { builtin echo "$FUNCNAME: '$fifo' is not a FIFO" >&2; return 1; }
     local pid status signature
-    local read_timeout=20
+    local read_timeout=60
     # http://stackoverflow.com/questions/6448632/read-not-timing-out-when-reading-from-pipe-in-bash
     # Your shell is blocking on the open() call before invoking the read builtin.
     #
