@@ -304,10 +304,10 @@ void set_alarm( double duration )
     struct itimerspec its = { { 0, 0 }, { 0, 0 } };
     static const long NSEC_PER_SEC = 1000000000L;
     double sec = std::floor( duration );
-    double nsec = ( duration - sec ) * 1e9;
     if( sec < std::numeric_limits< time_t >::max() )
     {
         its.it_value.tv_sec = sec;
+        double nsec = ( duration - its.it_value.tv_sec ) * 1e9;
         if( nsec < NSEC_PER_SEC ) { its.it_value.tv_nsec = nsec; }
         else if( verbose ) { std::cerr << "comma-timeout-group: warning: nsec duration '" << nsec << "' out of range, using 0" << std::endl; }
     }
