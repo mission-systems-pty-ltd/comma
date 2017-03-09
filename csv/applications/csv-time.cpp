@@ -88,6 +88,9 @@ static void usage( bool )
         "\n    - any, guess"
         "\n            a special input format - try to convert from all those supported,"
         "\n            default input format, will be slower"
+        "\n    - format"
+        "\n            user given time format, for e.g 'format;%Y%m%dT%H%M%S' will also convert to/from iso format."
+        "\n            see date manual for details about time format specifications."
         "\n    local"
         "\n            same as iso but converts from/to local time adjusted using current machine settings"
         "\n"
@@ -100,9 +103,11 @@ static void usage( bool )
     exit( 0 );
 }
 
-enum what_t { guess, iso, seconds, microseconds, sql, xsd, local };
+enum what_t { guess, iso, seconds, microseconds, sql, xsd, local, format };
 static what_t from = guess;
 static what_t to = iso;
+static std::string from_format;
+static std::string to_format;
 static bool accept_empty;
 static const std::string not_a_date_time_string = boost::posix_time::to_iso_string( boost::posix_time::ptime() );
 
@@ -149,6 +154,22 @@ static what_t what( const std::string& option, const comma::command_line_options
         {
             if( "any" == s ) { return guess; }
         }
+        else if( 'f' == s[0] )
+        {
+            std::string::size_type fmt_loc = s.find_first_of(';');
+            if( "format" == s.substr( 0, fmt_loc ) && std::string::npos != fmt_loc )
+            {
+                std::string fmt( s.substr( fmt_loc + 1 ) );
+                if( ! fmt.empty() )
+                {
+                    if ( "--from" == option ) { from_format = fmt; return format; }
+                    if ( "--to" == option ) { to_format = fmt; return format; }
+                }
+            }
+            std::cerr << "csv-time: unable to get the custom time format in option '" << option << "'" << std::endl;
+            exit( 1 );
+        }
+
         else if(s=="local")
             return local;
     }
@@ -237,7 +258,17 @@ static boost::posix_time::ptime from_string( const std::string& s, const what_t 
 
         case xsd: // 2014-03-05T23:00:00.000Z
             return from_string_xsd( s );
-        
+
+        case format:
+        {
+            std::istringstream is( s );
+            boost::posix_time::ptime pt;
+            is.exceptions(std::ios_base::failbit);
+            is.imbue( std::locale( std::cin.getloc(), new boost::posix_time::time_input_facet( from_format ) ) );
+            is >> pt;
+            return pt;
+        }
+
         case guess:
             try
             { 
@@ -313,6 +344,14 @@ std::string to_string( const boost::posix_time::ptime& t, what_t w )
 
         case xsd: // 2014-03-05T23:00:00.000Z
             return boost::posix_time::to_iso_extended_string( t );
+
+        case format:
+        {
+            std::ostringstream os;
+            os.imbue( std::locale( std::cout.getloc(), new boost::posix_time::time_facet( to_format.c_str() ) ) );
+            os << t;
+            return os.str();
+        }
 
         case guess:
             COMMA_THROW( comma::exception, "never here" );
