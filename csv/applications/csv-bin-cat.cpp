@@ -187,11 +187,11 @@ int main( int ac, char** av )
             {
                 for( unsigned int i = 0; i < fields.size(); ++i )
                 {
-                    std::streamoff off = fields[i].input_offset - ( i == 0 ? 0 : fields[i - 1].input_offset );
+                    std::streamoff off = fields[i].input_offset - ( i == 0 ? 0 : fields[i - 1].input_offset + fields[i - 1].size );
                     ifs.seekg( off, std::ios_base::cur );
                     ifs.read( &buf[ fields[i].offset ], fields[i].size );
                     if ( ifs.eof() ) {
-                        if ( i == 0 ) { continue; }
+                        if ( i == 0 ) { break; }
                         std::cerr << "csv-bin-cat: encountered eof mid-record in '" << *ifile << "'" << std::endl; return 1;
                     }
                     if ( ifs.fail() ) { std::cerr << "csv-bin-cat: reading '" << fields[i].name << "' at position " << record_start + off << " failed" << std::endl; return 1; }
