@@ -1,33 +1,21 @@
 #!/bin/bash
 
-function generate_binary_file()
-{
-    local max=$1
-    local t
-    for i in $( seq 0 $(( max - 1 )) ) ; do
-        t=$( date +%Y%m%dT%H%M%S.%N )
-        echo "$i,$t,your-data-could-be-here-${n}"
-        sleep 0.22
-    done \
-        | csv-paste --size=5 line-number - \
-        | csv-paste --size=2 - line-number \
-        | csv-to-bin "ui,ui,t,s[100],ui"
-}
+scriptname=$( basename "$0" )
+
+source $( which comma-application-util ) || { echo "$scriptname: cannot source 'comma-application-util'" >&2; exit 1; }
 
 output_dir="output"
-mkdir -p "$output_dir" || exit 1
+mkdir -p "$output_dir" || { echo "$scriptname: cannot create directory '$output_dir'" >&2; exit 1; }
 
-binfile="$output_dir/file.bin"
-
-generate_binary_file 10 > "$binfile"
+comma_path_value_to_var
 
 function compare()
 {
     local cmd="$1"
     local subdir="$2"
-    mkdir -p "$output_dir/$subdir"
-    csv-bin-cat "$binfile" $cmd > "$output_dir/$subdir/new.bin"
-    cat "$binfile" | csv-shuffle $cmd > "$output_dir/$subdir/old.bin"
+    mkdir -p "$output_dir/$subdir" || { echo "$scriptname: cannot create directory '$output_dir/$subdir'" >&2; exit 1; }
+    csv-bin-cat "$input_files" $cmd > "$output_dir/$subdir/new.bin"
+    cat "$input_files" | csv-shuffle $cmd > "$output_dir/$subdir/old.bin"
     cmp "$output_dir/$subdir/new.bin" "$output_dir/$subdir/old.bin" > "$output_dir/$subdir/cmp.log"
 }
 
