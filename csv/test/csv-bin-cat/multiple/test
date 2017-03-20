@@ -1,0 +1,53 @@
+#!/bin/bash
+
+function generate_binary_file()
+{
+    local max=$1
+    local t
+    for i in $( seq 0 $(( max - 1 )) ) ; do
+        t=$( date +%Y%m%dT%H%M%S.%N )
+        echo "$i,$t,your-data-could-be-here-${n}"
+        sleep 0.22
+    done \
+        | csv-paste --size=5 line-number - \
+        | csv-paste --size=2 - line-number \
+        | csv-to-bin "ui,ui,t,s[100],ui"
+}
+
+output_dir="output"
+mkdir -p "$output_dir" || exit 1
+cd "$output_dir"
+
+for n in $( seq 0 2 ) ; do
+    generate_binary_file 10 > "file${n}.bin"
+done
+
+cmd="--binary=2ui,t,s[100],ui --fields=block,counter,t,string,num --output-fields=t"
+subdir=0
+mkdir -p "$subdir" || exit 1
+csv-bin-cat "file0.bin" "file1.bin" "file2.bin" $cmd > "$subdir/new.bin"
+cat "file0.bin" "file1.bin" "file2.bin" | csv-shuffle $cmd > "$subdir/old.bin"
+cmp "$subdir/new.bin" "$subdir/old.bin" > "$subdir/cmp.log"
+echo "test[$subdir]/cmp/status=$?"
+
+cmd="--binary=2ui,t,s[100],ui --fields=block,counter,t,string,num --output-fields=block,t,num"
+record=$( csv-size "2ui,t,s[100],ui" )
+for count in nan -1 0 4 15 ; do
+    for skip in 6 12 23 ; do
+        (( ++subdir ))
+        mkdir -p "$subdir" || exit 1
+        car="cat"
+        cdr="tail -c +$(( record * skip + 1 ))"
+        count_option=
+        [[ "$count" == "nan" ]] || {
+            count_option="--count=$count"
+            (( count >= 0 )) && car="head -c $(( record * count ))"
+        }
+        csv-bin-cat "file0.bin" "file1.bin" "file2.bin" $cmd --skip=$skip $count_option > "$subdir/new.bin"
+        cat "file0.bin" "file1.bin" "file2.bin" | $cdr | $car | csv-shuffle $cmd > "$subdir/old.bin"
+        cmp "$subdir/new.bin" "$subdir/old.bin" > "$subdir/cmp.log"
+        echo "test[$subdir]/cmp/status=$?"
+        echo "test[$subdir]/skip=$skip"
+        echo "test[$subdir]/count=$count"
+    done
+done
