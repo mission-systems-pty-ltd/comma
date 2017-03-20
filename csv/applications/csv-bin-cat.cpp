@@ -184,6 +184,7 @@ int main( int ac, char** av )
                 if ( ifs.fail() ) { std::cerr << "csv-bin-cat: cannot skip " << skip << " records in the file '" << *ifile << "'" << std::endl; return 1; }
                 skip = 0;
             }
+            if ( count_max >= 0 && count >= count_max ) { return 0; }
             while( ifs.good() && !ifs.eof() )
             {
                 for( unsigned int i = 0; i < fields.size(); ++i )
@@ -202,8 +203,7 @@ int main( int ac, char** av )
                     std::cout.write( &buf[0], orecord_size );
                     if (flush) { std::cout.flush(); }
                     if ( std::cout.fail() ) { std::cerr << "csv-bin-cat: std::cout output failed" << std::endl; return 1; }
-                    ++count;
-                    if ( count_max >= 0 && count >= count_max ) { return 0; }
+                    if ( count_max >= 0 && ++count >= count_max ) { return 0; }  // count not incremented if no limit imposed, do not care
                     // go to the start of the next record
                     record_start += csv.format().size();
                     ifs.seekg( record_start, std::ios_base::beg );
