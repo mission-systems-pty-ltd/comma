@@ -209,36 +209,6 @@ int main( int ac, char** av )
                 }
             }
         }
-#if 0
-            std::vector< char > buf( csv.format().size() );
-            std::vector< comma::csv::format::element > elements;
-            elements.reserve( csv.format().count() ); // quick and dirty, can be really wasteful on large things like images
-            for( unsigned int i = 0; i < elements.capacity(); ++i ) { elements.push_back( csv.format().offset( i ) ); }
-            while( std::cin.good() && !std::cin.eof() )
-            {
-                // todo: quick and dirty; if performance is an issue, you could read more than
-                // one record every time see comma::csv::binary_input_stream::read() for reference
-                std::cin.read( &buf[0], csv.format().size() );
-                if( std::cin.gcount() == 0 ) { continue; }
-                if( std::cin.gcount() < int( csv.format().size() ) ) { std::cerr << "csv-shuffle: expected " << csv.format().size() << " bytes, got only " << std::cin.gcount() << std::endl; return 1; }
-                unsigned int previous_index = 0;
-                for( unsigned int i = 0; i < fields.size(); ++i ) // quick and dirty
-                {
-                    for( unsigned int k = previous_index; k < fields[i].index && k < elements.size(); ++k )
-                    {
-                        std::cout.write( &buf[ elements[k].offset ], elements[k].size );
-                    }
-                    std::cout.write( &buf[ fields[i].input_offset ], fields[i].size );
-                    previous_index = fields[i].index + 1;
-                }
-                //std::cerr << "--> previous_index: " << previous_index << " elements.size(): " << elements.size() << std::endl;
-                for( unsigned int k = previous_index; output_trailing_fields && k < elements.size(); ++k )
-                {
-                    std::cout.write( &buf[ elements[k].offset ], elements[k].size );
-                }
-                std::cout.flush(); // todo: flushing too often?
-            }
-#endif
         return 0;
     }
     catch( std::exception& ex ) { std::cerr << "csv-from-bin: " << ex.what() << std::endl; }
