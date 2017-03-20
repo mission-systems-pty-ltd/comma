@@ -53,23 +53,22 @@ namespace {
     {
         std::cerr << std::endl;
         std::cerr << "Usage:" << std::endl;
-        std::cerr << "    csv-bin-cat file.bin [file2.bin ...] --binary=<format> --fields=<fields> --output-fields=<output-fields>" << std::endl;
+        std::cerr << "    csv-bin-cat file.bin [file2.bin ...] --binary=<format> --fields=<fields> --output-fields=<output-fields> [<options>]" << std::endl;
         std::cerr << std::endl;
         std::cerr << "    output the specified fields from the binary file(s)" << std::endl;
-        std::cerr << "    produce the same output as the more universal csv-shuffle call" << std::endl;
+        std::cerr << "    produce the same output as the csv-shuffle call" << std::endl;
         std::cerr << "        cat file.bin | csv-shuffle --binary=<format> --fields=<fields> --output-fields=<output-fields>" << std::endl;
-        std::cerr << "    but more efficient; MUCH more efficient for large data is only a small sub-set has to be output" << std::endl;
-        std::cerr << "    TODO: support the rules for output of trailing fields as in csv-shuffle" << std::endl;
+        std::cerr << "    but more efficient; MUCH more efficient for large data if only a small sub-set has to be output" << std::endl;
         std::cerr << std::endl;
         std::cerr << "options:" << std::endl;
         std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
         std::cerr << "    --fields,-f,--input-fields <fields>: input fields" << std::endl;
         std::cerr << "    --binary,--format <format>: input binary format" << std::endl;
         std::cerr << "    --output-fields,--output,-o <fields>: output fields" << std::endl;
-        std::cerr << "    --skip=<N>; skip the first N records (applied once, if multiple files are given; no skip if N = 0)" << std::endl;
-        std::cerr << "    --count=<N>; output no more than N records; no output if N = 0" << std::endl;
-        std::cerr << "    --flush; flush after every output record" << std::endl;
-        std::cerr << "    --verbose,-v: more output" << std::endl;
+        std::cerr << "    --skip=<N>; skip the first N records (applied once if multiple input files are given); no skip if N = 0" << std::endl;
+        std::cerr << "    --count=<N>; output no more than N records; no output if N <= 0" << std::endl;
+        std::cerr << "    --flush; flush after every output record; less efficient, more predictable" << std::endl;
+        std::cerr << "    --verbose,-v: chat more" << std::endl;
         std::cerr << std::endl;
         std::cerr << "examples:" << std::endl;
         std::cerr << "    csv-bin-cat input.bin --binary=t,s[100000] --fields=t,s --output-fields=t" << std::endl;
@@ -124,14 +123,14 @@ int main( int ac, char** av )
             std::string f = options.value< std::string >( "--input-fields", "" );
             if( !f.empty() ) { csv.fields = f; }
         }
-        if( !csv.binary() ) { std::cerr << "csv-bin-cat: must provide '--binary=..' format" << std::endl; return 1; }
 
         std::vector< std::string > files = options.unnamed( "--help,-h,--verbose,-v,--flush", "--fields,-f,--input-fields,--output-fields,-o,--binary,--format,--skip,--count" );
         if( files.size() < 1 ) { std::cerr << "csv-bin-cat: expected at least one file name" << std::endl; return 1; }
+        if( !csv.binary() ) { std::cerr << "csv-bin-cat: must provide '--binary=..' format" << std::endl; return 1; }
 
         std::vector< std::string > input_fields = comma::split( csv.fields, ',' );
         std::vector< std::string > output_fields = comma::split( options.value< std::string >( "--output-fields,--output,-o" ), ',' );
-        // TODO:
+        // TODO?
         // bool output_trailing_fields = output_fields.back() == "...";
         // if( output_fields.back() == "..." ) { output_fields.erase( output_fields.end() - 1 ); }
         std::vector< field > fields;
