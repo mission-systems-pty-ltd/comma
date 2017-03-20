@@ -37,7 +37,7 @@
 #endif
 
 #include <stdlib.h>
-#include <iostream>
+#include <fstream>
 #include "../../application/command_line_options.h"
 #include "../../application/contact_info.h"
 #include "../../base/exception.h"
@@ -68,6 +68,7 @@ namespace {
         std::cerr << "    --output-fields,--output,-o <fields>: output fields" << std::endl;
         std::cerr << "    --skip=<N>; skip the first N records (applied once, if multiple files are given; no skip if N = 0)" << std::endl;
         std::cerr << "    --count=<N>; output no more than N records; no output if N = 0" << std::endl;
+        std::cerr << "    --flush; flush after every output record" << std::endl;
         std::cerr << "    --verbose,-v: more output" << std::endl;
         std::cerr << std::endl;
         std::cerr << "examples:" << std::endl;
@@ -125,7 +126,7 @@ int main( int ac, char** av )
         }
         if( !csv.binary() ) { std::cerr << "csv-bin-cat: must provide '--binary=..' format" << std::endl; return 1; }
 
-        std::vector< std::string > files = options.unnamed( "--help,-h,--verbose,-v", ",--fields,-f,--input-fields,--output-fields,-o,--binary,--format,--skip,--count" );
+        std::vector< std::string > files = options.unnamed( "--help,-h,--verbose,-v,--flush", "--fields,-f,--input-fields,--output-fields,-o,--binary,--format,--skip,--count" );
         if( files.size() < 1 ) { std::cerr << "csv-bin-cat: expected at least one file name" << std::endl; return 1; }
 
         std::vector< std::string > input_fields = comma::split( csv.fields, ',' );
@@ -146,33 +147,67 @@ int main( int ac, char** av )
             {
                 if( fields[j].name != input_fields[i] ) { continue; }
                 fields[j].input_index = i;
-                if( csv.binary() )
-                {
-                    fields[j].input_offset = csv.format().offset( i ).offset;
-                    fields[j].size = csv.format().offset( i ).size;
-                }
+                fields[j].input_offset = csv.format().offset( i ).offset;
+                fields[j].size = csv.format().offset( i ).size;
             }
         }
         size_t orecord_size = 0;
         for( unsigned int i = 0; i < fields.size(); ++i )
         {
             if( !fields[i].input_index ) { std::cerr << "csv-bin-cat: \"" << fields[i].name << "\" not found in input fields " << csv.fields << std::endl; return 1; }
+            fields[i].offset = ( i == 0 ? 0 : fields[i - 1].offset + fields[i - 1].size );
             orecord_size += fields[i].size;
         }
         unsigned int skip = options.value< unsigned int >( "--skip", 0 );
-        int count = options.value< int >( "--count", -1 );
+        long int count_max = options.value< long int >( "--count", -1 );
+        bool flush = options.exists( "--flush" );
 
         // algorithm summary:
-        // - use FILE (C-level) streams as they support fseek
-        // - fseek to the beginning of record, iterate over fields, seek to the beginning of each field, and read into buffer
+        // - seekg to the beginning of record
+        // - iterate over fields by doing seekg to the beginning of each field, and read into buffer
         // - check for read errors / end of input
         // - write the buffer to stdout
         std::vector< char > buf( orecord_size );
-        FILE *istream;
+        long int count = 0;
         for ( std::vector< std::string >::const_iterator ifile = files.begin(); ifile < files.end(); ++ifile ) {
-            istream = fopen( ifile->c_str(), "rb" );
-            if ( !istream ) { std::cerr << "csv-bin-cat: cannot open '" << *ifile << "' for reading" << std::endl; return 1; }
-            long int position = 0;
+            std::ifstream ifs( ifile->c_str(), std::ifstream::binary );
+            if ( !ifs.is_open() ) { std::cerr << "csv-bin-cat: cannot open '" << *ifile << "' for reading" << std::endl; return 1; }
+            std::streampos record_start = 0;
+            if ( skip ) {
+                ifs.seekg( 0, std::ios_base::end );
+                std::streampos fsize = ifs.tellg();
+                unsigned int nrecords = fsize / csv.format().size();
+                if ( nrecords * csv.format().size() != fsize ) { std::cerr << "csv-bin-cat: size of file '" << *ifile << "' is not a multiple of the record size" << std::endl; return 1; }
+                if ( nrecords < skip ) { skip -= nrecords; continue; }
+                record_start = csv.format().size() * skip;
+                ifs.seekg( record_start, std::ios_base::beg );
+                if ( ifs.fail() ) { std::cerr << "csv-bin-cat: cannot skip " << skip << " records in the file '" << *ifile << "'" << std::endl; return 1; }
+            }
+            while( ifs.good() && !ifs.eof() )
+            {
+                for( unsigned int i = 0; i < fields.size(); ++i )
+                {
+                    std::streamoff off = fields[i].input_offset - ( i == 0 ? 0 : fields[i - 1].input_offset );
+                    ifs.seekg( off, std::ios_base::cur );
+                    ifs.read( &buf[ fields[i].offset ], fields[i].size );
+                    if ( ifs.eof() ) {
+                        if ( i == 0 ) { continue; }
+                        std::cerr << "csv-bin-cat: encountered eof mid-record in '" << *ifile << "'" << std::endl; return 1;
+                    }
+                    if ( ifs.fail() ) { std::cerr << "csv-bin-cat: reading '" << fields[i].name << "' at position " << record_start + off << " failed" << std::endl; return 1; }
+                }
+                if ( !ifs.eof() )
+                {
+                    std::cout.write( &buf[0], orecord_size );
+                    if (flush) { std::cout.flush(); }
+                    if ( std::cout.fail() ) { std::cerr << "csv-bin-cat: std::cout output failed" << std::endl; return 1; }
+                    ++count;
+                    if ( count_max >= 0 && count >= count_max ) { return 0; }
+                    // go to the start of the next record
+                    record_start += csv.format().size();
+                    ifs.seekg( record_start, std::ios_base::beg );
+                }
+            }
         }
 #if 0
             std::vector< char > buf( csv.format().size() );
