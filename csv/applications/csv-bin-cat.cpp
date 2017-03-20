@@ -182,6 +182,7 @@ int main( int ac, char** av )
                 record_start = csv.format().size() * skip;
                 ifs.seekg( record_start, std::ios_base::beg );
                 if ( ifs.fail() ) { std::cerr << "csv-bin-cat: cannot skip " << skip << " records in the file '" << *ifile << "'" << std::endl; return 1; }
+                skip = 0;
             }
             while( ifs.good() && !ifs.eof() )
             {
