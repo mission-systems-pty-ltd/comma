@@ -110,6 +110,17 @@ int main( int ac, char** av )
         {
             for( unsigned int i = 0; i < indices.size(); ++i ) { offsets.push_back( format.offset( indices[i] ) ); }
         }
+        // todo
+        // - by default, if records are "small", use read; otherwise use seek+read
+        // - --seek: enforce seek+read
+        // - semantics:
+        //   - csv-bin-cut a.bin b.bin ... --binary <format>: data from files
+        //   - csv-bin-cut --binary <format>: data from stdin
+        //   - csv-bin-cut - --binary <format>: data from stdin
+        //   - csv-bin-cut a.bin - b.bin --binary <format>: error: not implemented
+        //   - csv-bin-cut <format>: data from stdin
+        // - clear (and brief) --help on performance
+        // - unit test
         std::vector< char > buf( format.size() );
         while( std::cin.good() && !std::cin.eof() )
         {
