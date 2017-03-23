@@ -105,7 +105,7 @@ IF(CMAKE_BUILD_TOOL MATCHES "make")
 
 ENDIF(CMAKE_BUILD_TOOL MATCHES "make")
 
-option( USE_CXX11 "build with C++11 support" OFF )
+option( USE_CXX11 "build with C++11 support" ON )
 if( USE_CXX11 )
     if( UNIX )
         # A much better way to do this is with CXX_STANDARD but that requires CMake 3.1
