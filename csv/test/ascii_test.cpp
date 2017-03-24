@@ -278,7 +278,7 @@ TEST( csv, ascii_optional_element )
         {
             comma::csv::ascii_test::test_struct s;
             ascii.get( s, "1,2,3,4" );
-            EXPECT_FALSE( bool( s.z ) );
+            EXPECT_TRUE( bool( s.z ) );
             EXPECT_TRUE( bool( s.nested ) );
             EXPECT_EQ( s.z, 2 );
             EXPECT_EQ( s.nested->x, 3 );
