@@ -145,6 +145,8 @@ boost::optional< double > bound;
 static comma::csv::options stdin_csv;
 static comma::csv::options filter_csv;
 
+bool no_discard;
+
 void output(const timestring_t & input, const timestring_t& filter)
 {   
     if (bound)
@@ -191,18 +193,19 @@ void process_input_queue(std::deque<timestring_t>& inputs, const boost::optional
 {
     bool output_prev = true;
     while (!inputs.empty() && (next && inputs[0].first < next->first) )
-    {
+    {        
         switch (mode)
         {
             case join_t::streaming:
             case join_t::prev:
-                output(inputs[0], *prev);
+                if (no_discard || inputs[0].first > prev->first) { output(inputs[0], *prev); }
                 break;
             case join_t::next:
                 output(inputs[0], *next);
                 break;
             case join_t::nearest:
-                if ( prev && next && (inputs[0].first - prev->first) < ( next->first - inputs[0].first) )
+                
+                if ( prev && next && (inputs[0].first - prev->first) > ( next->first - inputs[0].first) )
                 { 
                     output_prev = false;
                 }
@@ -219,6 +222,8 @@ int main( int ac, char** av )
     {
         comma::command_line_options options( ac, av );
         comma::signal_flag is_shutdown( comma::signal_flag::hard );
+        
+        comma::verbose << comma::join(options.argv(), ' ') << std::endl;
 
         if( options.exists( "--help" ) || options.exists( "-h" ) || ac == 1 ) { usage(); }
         options.assert_mutually_exclusive( "--by-lower,--by-upper,--nearest" );
@@ -235,7 +240,7 @@ int main( int ac, char** av )
         boost::optional< timestring_t > prev;
         boost::optional< timestring_t > next;
         
-        bool no_discard = options.exists("--no-discard");
+        no_discard = options.exists("--no-discard");
         
         if( options.exists( "--bound" ) ) { bound = options.value< double >( "--bound" ); }
         
@@ -259,10 +264,10 @@ int main( int ac, char** av )
         
         bool end_of_input = false;
         bool end_of_filter = false;
-        boost::optional<boost::posix_time::ptime> input_time;
-        boost::optional<boost::posix_time::ptime> filter_time;
+        boost::optional<boost::posix_time::ptime> input_time = boost::none;
+        boost::optional<boost::posix_time::ptime> filter_time = boost::none;
 
-        while (!is_shutdown && !end_of_input && !end_of_filter) {
+        while (!is_shutdown && !end_of_input ) {
             
             if ( !filter.ready() && !stdin.ready() )
             {
@@ -271,19 +276,20 @@ int main( int ac, char** av )
             
             if( !is_shutdown && !end_of_input && ( stdin.ready() || ( select.check() && select.read().ready( comma::io::stdin_fd ) ) ) )
             {
-                // read and process input until greater than upper
+                // read and process input until greater than latest in filter stream
                 // if in "lower (streaming)" mode: output immediately
                 // otherwise queue
                 do
                 {
                     const input_t* p = stdin.read();
-                    if( !p ) 
+                    if( !p )
                     { 
                         comma::verbose << "end of input stream" << std::endl;
                         end_of_input = true; 
                         break;
                     }
-                    input_time = !p->t ? *p->t : boost::posix_time::microsec_clock::universal_time();
+                    input_time = p->t ? *p->t : boost::posix_time::microsec_clock::universal_time();
+                    
                     timestring_t input = std::make_pair(*input_time, stdin.last());
                     if ( mode == join_t::streaming )
                     {
@@ -297,12 +303,13 @@ int main( int ac, char** av )
                         // add to input queue
                         input_queue.push_back(input);
                     }
-                } while (filter_time && *input_time < *filter_time);
+                    
+                } while (end_of_filter || (filter_time && *filter_time > *input_time ));
             }
             
             if( !is_shutdown && !end_of_filter && ( filter.ready() || ( select.check() && select.read().ready(filter_stream.fd()) ) ) )
             {
-                // read filter until input queue is empty
+                // read filter until it passes input stream
                 do
                 {
                     const input_t* f = filter.read();
@@ -312,23 +319,25 @@ int main( int ac, char** av )
                         break;
                     }
                     // add to queue, remove
-                    filter_time = !f->t ? *f->t : boost::posix_time::microsec_clock::universal_time();
+                    filter_time = f->t ? *f->t : boost::posix_time::microsec_clock::universal_time();
                     timestring_t bounds = (std::make_pair(*filter_time, filter.last()));
+                    process_input_queue(input_queue, prev, next);
                     if (!prev) { prev = bounds; }
                     else if (next) { prev = next; }
                     next = bounds;
-                    
-                    process_input_queue(input_queue, prev, next);
-                } while (input_time && *filter_time < *input_time );
+                } while (!end_of_input && input_time && ( *input_time > *filter_time ) );
                 if (end_of_input) { break; }
             }
         }
         if (is_shutdown) { std::cerr << "got a signal" << std::endl; return 0; }
-        if (!input_queue.empty())
+        // process inputs that are in the final interval of the filter
+        process_input_queue(input_queue, prev, next);
+        while (!input_queue.empty())
         {
-            if (no_discard || mode == join_t::nearest) { process_input_queue(input_queue, prev, next); }
-            else if (mode == join_t::next) { comma::verbose << "no upper timestamp - discarding inputs" << std::endl; }
-        }
+            // process inputs that came after the last filter sample
+            if (mode == join_t::next && !no_discard) { comma::verbose << "no upper timestamp - discarding inputs" << std::endl; break; }
+            output(input_queue[0], *next); input_queue.pop_front();
+        }        
         return 0;
     }
     catch( std::exception& ex ) { std::cerr << "csv-time-join: " << ex.what() << std::endl; }

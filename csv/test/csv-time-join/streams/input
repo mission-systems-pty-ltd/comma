@@ -1,0 +1,8 @@
+lower="cat stdin | csv-play | csv-time-join <( sleep 0.01; cat filter | csv-play ) --verbose | tee output/lower.csv"
+upper="cat stdin | csv-play | csv-time-join <( sleep 0.01; cat filter | csv-play ) --by-upper --verbose | tee output/upper.csv"
+nearest="cat stdin | csv-play | csv-time-join <( sleep 0.01; cat filter | csv-play ) --nearest --verbose | tee output/nearest.csv"
+bounds_nearest="cat stdin | csv-play | csv-time-join <( sleep 0.01; cat filter | csv-play ) --nearest --bound=0.02 --verbose | tee output/bounds_nearest.csv"
+bounds_lower="cat stdin | csv-play | csv-time-join <( sleep 0.01; cat filter | csv-play ) --by-lower --bound=0.02 --verbose | tee output/bounds_lower.csv"
+bounds_upper="cat stdin | csv-play | csv-time-join <( sleep 0.01; cat filter | csv-play ) --by-upper --bound=0.02 --verbose | tee output/bounds_upper.csv"
+no_discard_lower="cat stdin | csv-play | csv-time-join <( sleep 0.01; cat filter | csv-play ) --by-lower --no-discard --verbose | tee output/no_discard_lower.csv"
+no_discard_upper="cat stdin | csv-play | csv-time-join <( sleep 0.01; cat filter | csv-play ) --by-upper --no-discard --verbose | tee output/no_discard_upper.csv"

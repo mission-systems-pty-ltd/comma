@@ -1,0 +1,8 @@
+lower="cat stdin | csv-time-join filter --verbose | tee output/lower.csv"
+upper="cat stdin | csv-time-join filter --by-upper --verbose | tee output/upper.csv"
+nearest="cat stdin | csv-time-join filter --nearest --verbose | tee output/nearest.csv"
+bounds_nearest="cat stdin | csv-time-join filter --nearest --bound=10 --verbose | tee output/bounds_nearest.csv"
+bounds_lower="cat stdin | csv-time-join filter --by-lower --bound=10 --verbose | tee output/bounds_lower.csv"
+bounds_upper="cat stdin | csv-time-join filter --by-upper --bound=10 --verbose | tee output/bounds_upper.csv"
+no_discard_lower="cat stdin | csv-time-join filter --by-lower --no-discard --verbose | tee output/no_discard_lower.csv"
+no_discard_upper="cat stdin | csv-time-join filter --by-upper --no-discard --verbose | tee output/no_discard_upper.csv"
