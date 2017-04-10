@@ -61,13 +61,10 @@ static void usage()
     std::cerr << "usage: cat a.csv | csv-time-join <how> [<options>] bounding.csv [-] > joined.csv" << std::endl;
     std::cerr << std::endl;
     std::cerr << "<how>" << std::endl;
-    std::cerr << "    --by-lower: join by lower timestamp" << std::endl;
-    std::cerr << "    --by-upper: join by upper timestamp" << std::endl;
-    std::cerr << "                default: --by-lower" << std::endl;
-    std::cerr << "    --nearest: join by nearest timestamp" << std::endl;
-    std::cerr << "               if 'block' given in --fields, output the whole block" << std::endl;
-    //std::cerr << "    --nearest-only: output only the input points nearest to timestamp" << std::endl;
-    //std::cerr << "               if 'block' given in --fields, output the whole block" << std::endl;
+    std::cerr << "    --by-lower: join with previous filter timestamp (default)" << std::endl;
+    std::cerr << "    --by-upper: join by next filter timestamp" << std::endl;
+    std::cerr << "    --nearest: join by nearest filter timestamp" << std::endl;
+    std::cerr << "    --stream: output immediately with current lowest filter timestamp" << std::endl;
     std::cerr << std::endl;
     std::cerr << "limitation" << std::endl;
     std::cerr << "    data with timestamp before the first and after the last bounding timestamps will be discarded at the moment; this is unwanted behaviour when using --nearest and --bound=n" << std::endl;
@@ -190,28 +187,29 @@ void output(const timestring_t & input, const timestring_t& filter)
     std::cout.flush();
 }
 
-void process_input_queue(const std::vector<timestring_t>& inputs, const boost::optional<timestring_t>& prev, boost::optional<timestring_t>& next)
+void process_input_queue(std::deque<timestring_t>& inputs, const boost::optional<timestring_t>& prev, boost::optional<timestring_t>& next)
 {
     bool output_prev = true;
-    for (std::size_t i = 0; i < inputs.size(); ++i)
+    while (!inputs.empty() && (next && inputs[0].first < next->first) )
     {
         switch (mode)
         {
             case join_t::streaming:
             case join_t::prev:
-                output(inputs[i], *prev);
+                output(inputs[0], *prev);
                 break;
             case join_t::next:
-                output(inputs[i], *next);
+                output(inputs[0], *next);
                 break;
             case join_t::nearest:
-                if ( prev && next && (inputs[i].first - prev->first) < ( next->first - inputs[i].first) )
+                if ( prev && next && (inputs[0].first - prev->first) < ( next->first - inputs[0].first) )
                 { 
                     output_prev = false;
                 }
-                if (prev && output_prev) {output(inputs[i], *prev); break; }
-                else { output(inputs[i], *next); break; }
+                if (prev && output_prev) {output(inputs[0], *prev); break; }
+                else { output(inputs[0], *next); break; }
         }
+        inputs.pop_front();
     }
 }
 
@@ -254,15 +252,15 @@ int main( int ac, char** av )
         if( filter_csv.fields.empty() ) { filter_csv.fields = "t"; }
         comma::io::istream filter_stream( comma::split( unnamed[0], ';' )[0], filter_csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii );
         comma::csv::input_stream< input_t > filter( *filter_stream, filter_csv );
-        std::vector<timestring_t> input_queue;
+        std::deque<timestring_t> input_queue;
         comma::io::select select;
         select.read().add(comma::io::stdin_fd);
         select.read().add(filter_stream.fd());
         
         bool end_of_input = false;
         bool end_of_filter = false;
-        boost::posix_time::ptime input_time;
-        boost::posix_time::ptime filter_time;
+        boost::optional<boost::posix_time::ptime> input_time;
+        boost::optional<boost::posix_time::ptime> filter_time;
 
         while (!is_shutdown && !end_of_input && !end_of_filter) {
             
@@ -276,7 +274,7 @@ int main( int ac, char** av )
                 // read and process input until greater than upper
                 // if in "lower (streaming)" mode: output immediately
                 // otherwise queue
-                while (true)
+                do
                 {
                     const input_t* p = stdin.read();
                     if( !p ) 
@@ -286,7 +284,7 @@ int main( int ac, char** av )
                         break;
                     }
                     input_time = !p->t ? *p->t : boost::posix_time::microsec_clock::universal_time();
-                    timestring_t input = std::make_pair(input_time, stdin.last());
+                    timestring_t input = std::make_pair(*input_time, stdin.last());
                     if ( mode == join_t::streaming )
                     {
                         // output immediately if in streaming mode
@@ -299,14 +297,13 @@ int main( int ac, char** av )
                         // add to input queue
                         input_queue.push_back(input);
                     }
-                    break;
-                }
+                } while (filter_time && *input_time < *filter_time);
             }
             
             if( !is_shutdown && !end_of_filter && ( filter.ready() || ( select.check() && select.read().ready(filter_stream.fd()) ) ) )
             {
                 // read filter until input queue is empty
-                while (true)
+                do
                 {
                     const input_t* f = filter.read();
                     if (!f) {
@@ -316,25 +313,13 @@ int main( int ac, char** av )
                     }
                     // add to queue, remove
                     filter_time = !f->t ? *f->t : boost::posix_time::microsec_clock::universal_time();
-                    timestring_t bounds = (std::make_pair(filter_time, filter.last()));
-                    switch (mode)
-                    {
-                        case join_t::streaming:
-                        case join_t::prev:
-                            prev = bounds;
-                            break;
-                        case join_t::next:
-                            next = bounds;
-                            break;
-                        case join_t::nearest:
-                            if (next) { prev = next; }
-                            next = bounds;
-                            break;
-                    }
+                    timestring_t bounds = (std::make_pair(*filter_time, filter.last()));
+                    if (!prev) { prev = bounds; }
+                    else if (next) { prev = next; }
+                    next = bounds;
+                    
                     process_input_queue(input_queue, prev, next);
-                    input_queue.clear();
-                    break;
-                }
+                } while (input_time && *filter_time < *input_time );
                 if (end_of_input) { break; }
             }
         }
