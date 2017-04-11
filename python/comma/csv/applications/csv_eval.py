@@ -246,12 +246,12 @@ def check_options(args):
         raise csv_eval_error("no expressions are given")
     if args.binary and args.format:
         raise csv_eval_error("--binary and --format are mutually exclusive")
-    if args.select:
+    if args.select or args.exit_if:
         if args.expressions:
-            msg = "--select <condition> cannot be used with expressions"
+            msg = "--select <condition> and --exit-if <condition> cannot be used with expressions"
             raise csv_eval_error(msg)
         if args.output_fields or args.output_format:
-            msg = "--select cannot be used with --output-fields or --output-format"
+            msg = "--select and --exit-if cannot be used with --output-fields or --output-format"
             raise csv_eval_error(msg)
 
 
