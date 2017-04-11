@@ -36,6 +36,7 @@
 #include <boost/scoped_ptr.hpp>
 #include "../../application/command_line_options.h"
 #include "../../application/contact_info.h"
+#include "../../application/signal_flag.h"
 #include "../../base/types.h"
 #include "../../csv/stream.h"
 #include "../../io/stream.h"
@@ -64,6 +65,11 @@ static void usage()
     std::cerr << "                default: --by-lower" << std::endl;
     std::cerr << "    --nearest: join by nearest timestamp" << std::endl;
     std::cerr << "               if 'block' given in --fields, output the whole block" << std::endl;
+    std::cerr << "    --realtime: output immediately with current latest bounding timestamp" << std::endl;
+    std::cerr << "                i.e wait for upper bound in bounding stream" << std::endl;
+    std::cerr << "                attention: in this mode, it is possible that the latest bounding timestamp" << std::endl;
+    std::cerr << "                           may be less or greater than the timestamp on stdin" << std::endl;
+    std::cerr << "                           (i.e. no timestamp comparisons are made before outputting a record)" << std::endl;
     //std::cerr << "    --nearest-only: output only the input points nearest to timestamp" << std::endl;
     //std::cerr << "               if 'block' given in --fields, output the whole block" << std::endl;
     std::cerr << std::endl;
@@ -108,7 +114,7 @@ static void usage()
 
 struct Point
 {
-    boost::posix_time::ptime timestamp;
+    boost::optional<boost::posix_time::ptime> timestamp;
     Point() {}
     Point( const boost::posix_time::ptime& timestamp ) : timestamp( timestamp ) {}
 };
@@ -130,31 +136,85 @@ template <> struct traits< Point >
     
 } } // namespace comma { namespace visiting {
 
+
+bool by_upper;
+bool nearest;
+bool by_lower;
+bool timestamp_only;
+bool select_only;
+
+comma::csv::options stdin_csv;
+comma::csv::options csv;
+boost::optional< boost::posix_time::time_duration > bound;
+typedef std::pair< boost::posix_time::ptime, std::string > timestring_t;
+
+boost::posix_time::ptime get_time (const Point p)
+{
+    return p.timestamp ? *p.timestamp : boost::posix_time::microsec_clock::universal_time();
+}
+
+void output(const timestring_t & input, const timestring_t& joined)
+{   
+    if (bound && (input.first - joined.first > bound || joined.first - input.first > bound) ) { return; }
+    if (stdin_csv.binary())
+    {
+        std::cout.write(&input.second[0], stdin_csv.format().size());
+        if (select_only) { return; }
+        
+        if (timestamp_only)
+        {
+            static const unsigned int time_size = comma::csv::format::traits< boost::posix_time::ptime, comma::csv::format::time >::size;
+            static char timestamp[ time_size ];
+            comma::csv::format::traits< boost::posix_time::ptime, comma::csv::format::time >::to_bin( joined.first, timestamp );
+            std::cout.write( (char*)&timestamp, time_size );
+        }
+        else
+        {
+            std::cout.write(&joined.second[0], csv.format().size());
+        }
+    }
+    else
+    {
+        std::cout << input.second;
+        if ( select_only ) { return; } 
+        
+        if (timestamp_only)
+        {
+            std::cout << stdin_csv.delimiter << boost::posix_time::to_iso_string(joined.first);
+        }
+        else 
+        {
+            std::cout << stdin_csv.delimiter << joined.second << std::endl;
+        }
+    }
+    std::cout.flush();
+}
+
 int main( int ac, char** av )
 {
     try
     {
+        comma::signal_flag is_shutdown(comma::signal_flag::hard);
         comma::command_line_options options( ac, av );
         if( options.exists( "--help" ) || options.exists( "-h" ) || ac == 1 ) { usage(); }
         options.assert_mutually_exclusive( "--by-lower,--by-upper,--nearest" );
-        bool by_upper = options.exists( "--by-upper" );
-        bool nearest = options.exists( "--nearest" );
-        bool by_lower = ( options.exists( "--by-lower" ) || !by_upper ) && !nearest;
-        bool timestamp_only = options.exists( "--timestamp-only,--time-only" );
-        bool select_only = options.exists( "--do-not-append,--select" );
+        by_upper = options.exists( "--by-upper" );
+        nearest = options.exists( "--nearest" );
+        by_lower = ( options.exists( "--by-lower" ) || !by_upper ) && !nearest;
+        timestamp_only = options.exists( "--timestamp-only,--time-only" );
+        select_only = options.exists( "--do-not-append,--select" );
         if( select_only && timestamp_only ) { std::cerr << "csv-time-join: --timetamp-only specified with --select, ignoring --timestamp-only" << std::endl; }
         bool discard_bounding = options.exists( "--discard-bounding" );
         boost::optional< unsigned int > buffer_size;
         if( options.exists( "--buffer" ) ) { buffer_size = options.value< unsigned int >( "--buffer" ); }
         bool discard = !options.exists( "--no-discard" );
-        boost::optional< boost::posix_time::time_duration > bound;
         if( options.exists( "--bound" ) ) { bound = boost::posix_time::microseconds( options.value< double >( "--bound" ) * 1000000 ); }
-        comma::csv::options stdin_csv( options, "t" );
+        stdin_csv = comma::csv::options( options, "t" );
         comma::csv::input_stream< Point > stdin_stream( std::cin, stdin_csv );
         #ifdef WIN32
         if( stdin_csv.binary() ) { _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif // #ifdef WIN32
-        std::vector< std::string > unnamed = options.unnamed( "--by-lower,--by-upper,--nearest,--select,--do-not-append,--timestamp-only,--time-only,--no-discard,--discard-bounding", "--binary,-b,--delimiter,-d,--fields,-f,--bound,--buffer" );
+        std::vector< std::string > unnamed = options.unnamed( "--by-lower,--by-upper,--nearest,--select,--do-not-append,--timestamp-only,--time-only,--no-discard,--discard-bounding,--realtime", "--binary,-b,--delimiter,-d,--fields,-f,--bound,--buffer,--verbose,-v" );
         std::string properties;
         bool bounded_first = true;
         switch( unnamed.size() )
@@ -175,11 +235,10 @@ int main( int ac, char** av )
                 return 1;
         }
         comma::name_value::parser parser( "filename" );
-        comma::csv::options csv = parser.get< comma::csv::options >( properties );
+        csv = parser.get< comma::csv::options >( properties );
         if( csv.fields.empty() ) { csv.fields = "t"; }
         comma::io::istream is( comma::split( properties, ';' )[0], csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii );
         comma::csv::input_stream< Point > istream( *is, csv );
-        typedef std::pair< boost::posix_time::ptime, std::string > timestring_t;
         std::deque<timestring_t> bounding_queue;
         #ifndef WIN32
         comma::io::select select;
@@ -192,172 +251,220 @@ int main( int ac, char** av )
         bool next=true;
 
         bool bounding_data_available;
-
-        while( ( stdin_stream.ready() || ( std::cin.good() && !std::cin.eof() ) ) )
+        if (options.exists("--realtime"))
         {
-            bounding_data_available =  istream.ready() || ( is->good() && !is->eof());
-            #ifdef WIN32
-            bool istream_ready = true;
-            bool stdin_stream_ready = true;
-            #else // #ifdef WIN32
-            //check so we do not block
-            bool istream_ready = istream.ready();
-            bool stdin_stream_ready = stdin_stream.ready();
-
-            if(next)
+            #ifndef WIN32
+            bool end_of_input = false;
+            bool end_of_bounds = false;
+            
+            boost::optional<timestring_t> joined_line;
+            
+            while (!is_shutdown && !end_of_input)
             {
-                if(!istream_ready || !stdin_stream_ready)
+                if ( !istream.ready() && !stdin_stream.ready() )
                 {
-                    if(!istream_ready && !stdin_stream_ready)
+                    select.wait(boost::posix_time::milliseconds(1));
+                }
+                
+                if ( !is_shutdown && !end_of_input && ( stdin_stream.ready() || ( select.check() && select.read().ready( comma::io::stdin_fd ) ) ) )
+                {
+                    p = stdin_stream.read();
+                    if (!p)
                     {
-                        select.wait(boost::posix_time::milliseconds(10));
+                        comma::verbose << "end of input stream" << std::endl;
+                        end_of_input = true;
                     }
-                    else
+                    timestring_t input_line = std::make_pair(get_time(*p), stdin_stream.last());
+                    if (joined_line) { output(input_line, *joined_line); }
+                }
+                
+                if ( !is_shutdown && !end_of_bounds && ( istream.ready() || ( select.check() && select.read().ready( is.fd() ) ) ) )
+                {
+                    p = istream.read();
+                    if (!p)
                     {
-                        select.check();
+                        comma::verbose << "end of bounding stream" << std::endl;
+                        end_of_bounds = true;
                     }
-                    if(select.read().ready(is.fd()))
-                    {
-                        istream_ready=true;
-                    }
-                    if(select.read().ready(0))
-                    {
-                        stdin_stream_ready=true;
-                    }
+                    joined_line = std::make_pair(get_time(*p), istream.last());
                 }
             }
-            else
-            {
-                if(!istream_ready)
-                {
-                    istream_select.wait(boost::posix_time::milliseconds(10));
-                    if(istream_select.read().ready(is.fd()))
-                    {
-                        istream_ready=true;
-                    }
-                }
-            }
-            #endif //#ifdef WIN32
-            //keep storing available bounding data
-            if(istream_ready)
-            {
-                if(!buffer_size || bounding_queue.size()<*buffer_size || discard_bounding)
-                {
-                    const Point* q = istream.read();
-                    if( q )
-                    {
-                        std::string line = csv.binary() ? std::string( istream.binary().last(), csv.format().size() ) : comma::join( istream.ascii().last(), stdin_csv.delimiter );
-                        bounding_queue.push_back(std::make_pair(q->timestamp,line));
-                    }
-                    else
-                    {
-                        bounding_data_available=false;
-                    }
-                }
-                if(buffer_size && bounding_queue.size()>*buffer_size && discard_bounding)
-                {
-                    bounding_queue.pop_front();
-                }
-            }
+            if (is_shutdown) { comma::verbose << "got a signal" << std::endl; return 0; }
+            #else
+            COMMA_THROW(comma::exception, "--realtime mode not supported in WIN32");
+            #endif
+        }
+        else
+        {
+          while( ( stdin_stream.ready() || ( std::cin.good() && !std::cin.eof() ) ) )
+          {
+              bounding_data_available =  istream.ready() || ( is->good() && !is->eof());
+              #ifdef WIN32
+              bool istream_ready = true;
+              bool stdin_stream_ready = true;
+              #else // #ifdef WIN32
+              //check so we do not block
+              bool istream_ready = istream.ready();
+              bool stdin_stream_ready = stdin_stream.ready();
 
-            //if we are done with the last bounded point get next
-            if(next)
-            {
-                if(!stdin_stream_ready) { continue; }
-                p = stdin_stream.read();
-                if( !p ) { break; }
-            }
+              if(next)
+              {
+                  if(!istream_ready || !stdin_stream_ready)
+                  {
+                      if(!istream_ready && !stdin_stream_ready)
+                      {
+                          select.wait(boost::posix_time::milliseconds(10));
+                      }
+                      else
+                      {
+                          select.check();
+                      }
+                      if(select.read().ready(is.fd()))
+                      {
+                          istream_ready=true;
+                      }
+                      if(select.read().ready(0))
+                      {
+                          stdin_stream_ready=true;
+                      }
+                  }
+              }
+              else
+              {
+                  if(!istream_ready)
+                  {
+                      istream_select.wait(boost::posix_time::milliseconds(10));
+                      if(istream_select.read().ready(is.fd()))
+                      {
+                          istream_ready=true;
+                      }
+                  }
+              }
+              #endif //#ifdef WIN32
+              //keep storing available bounding data
+              if(istream_ready)
+              {
+                  if(!buffer_size || bounding_queue.size()<*buffer_size || discard_bounding)
+                  {
+                      const Point* q = istream.read();
+                      if( q )
+                      {
+                          std::string line = csv.binary() ? std::string( istream.binary().last(), csv.format().size() ) : comma::join( istream.ascii().last(), stdin_csv.delimiter );
+                          bounding_queue.push_back(std::make_pair(get_time(*q),line));
+                      }
+                      else
+                      {
+                          bounding_data_available=false;
+                      }
+                  }
+                  if(buffer_size && bounding_queue.size()>*buffer_size && discard_bounding)
+                  {
+                      bounding_queue.pop_front();
+                  }
+              }
 
-            //get bound
-            while(bounding_queue.size()>=2)
-            {
-                if( p->timestamp < bounding_queue[1].first ) { break; }
-                bounding_queue.pop_front();
-            }
+              //if we are done with the last bounded point get next
+              if(next)
+              {
+                  if(!stdin_stream_ready) { continue; }
+                  p = stdin_stream.read();
+                  if( !p ) { break; }
+              }
 
-            if(bounding_queue.size()<2)
-            {
-                //bound not found
-                //do we have more data?
-                if(!bounding_data_available) { break; }
-                next=false;
-                continue;
-//                if(bounding_data_available) { next=false; continue; }
-//                if(bounding_queue.empty()) { break; } //no bounding data
-//                if(p->timestamp < bounding_queue.front().first || !by_lower) { break; }
-//                //duplicate point to emulate first
-//                bounding_queue.push_back(bounding_queue.front());
-            }
+              boost::posix_time::ptime t = get_time(*p);
+              
+              //get bound
+              while(bounding_queue.size()>=2)
+              {
+                  if( t < bounding_queue[1].first ) { break; }
+                  bounding_queue.pop_front();
+              }
 
-            //bound available
+              if(bounding_queue.size()<2)
+              {
+                  //bound not found
+                  //do we have more data?
+                  if(!bounding_data_available) { break; }
+                  next=false;
+                  continue;
+  //                if(bounding_data_available) { next=false; continue; }
+  //                if(bounding_queue.empty()) { break; } //no bounding data
+  //                if(p->timestamp < bounding_queue.front().first || !by_lower) { break; }
+  //                //duplicate point to emulate first
+  //                bounding_queue.push_back(bounding_queue.front());
+              }
 
-            //check late points
-            if( (discard || !by_upper) && p->timestamp < bounding_queue.front().first )
-            {
-                //std::cerr<<bounding_queue[0].first<<","<<p->timestamp<<","<<bounding_queue[1].first<<std::endl;
-                next=true;
-                continue;
-            }
+              //bound available
 
-            bool is_first = by_lower || ( nearest && ( p->timestamp - bounding_queue[0].first ) < ( bounding_queue[1].first - p->timestamp ) );
+              
+              //check late points
+              if( (discard || !by_upper) && t < bounding_queue.front().first )
+              {
+                  //std::cerr<<bounding_queue[0].first<<","<<p->timestamp<<","<<bounding_queue[1].first<<std::endl;
+                  next=true;
+                  continue;
+              }
 
-            const timestring_t& chosen_bound = is_first ? bounding_queue[0] : bounding_queue[1];;
+              bool is_first = by_lower || ( nearest && ( t - bounding_queue[0].first ) < ( bounding_queue[1].first - t ) );
 
-            //check bound
-            if( bound && !( ( chosen_bound.first - *bound ) <= p->timestamp && p->timestamp <= ( chosen_bound.first + *bound ) ) )
-            {
-                next=true;
-                continue;
-            }
+              const timestring_t& chosen_bound = is_first ? bounding_queue[0] : bounding_queue[1];;
 
-            //match available -> join and output
-            if( stdin_csv.binary() )
-            {
-                if( bounded_first )
-                {
-                    std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() );
-                }
-                if( select_only ) { } /// This is --do-no-append, so don't append
-                else if( timestamp_only )
-                {
-                    static comma::csv::binary< Point > b;
-                    std::vector< char > v( b.format().size() );
-                    b.put( Point( chosen_bound.first ), &v[0] );
-                    std::cout.write( &v[0], b.format().size() );
-                }
-                else
-                {
-                    std::cout.write( &chosen_bound.second[0], chosen_bound.second.size() );
-                }
-                if( !bounded_first )
-                {
-                    std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() );
-                }
-                std::cout.flush();
-            }
-            else
-            {
-                if( bounded_first )
-                {
-                    std::cout << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter );
-                }
-                if( select_only ) { } /// This is --do-no-append, so don't append
-                else if( timestamp_only )
-                {
-                    std::cout << stdin_csv.delimiter << boost::posix_time::to_iso_string( chosen_bound.first );
-                }
-                else
-                {
-                    std::cout << stdin_csv.delimiter << chosen_bound.second;
-                }
-                if( !bounded_first )
-                {
-                    std::cout << stdin_csv.delimiter << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter );
-                }
-                std::cout << std::endl;
-            }
-            //get a new point
-            next=true;
+              //check bound
+              if( bound && !( ( chosen_bound.first - *bound ) <= t && t <= ( chosen_bound.first + *bound ) ) )
+              {
+                  next=true;
+                  continue;
+              }
+
+              //match available -> join and output
+              if( stdin_csv.binary() )
+              {
+                  if( bounded_first )
+                  {
+                      std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() );
+                  }
+                  if( select_only ) { } /// This is --do-no-append, so don't append
+                  else if( timestamp_only )
+                  {
+                      static comma::csv::binary< Point > b;
+                      std::vector< char > v( b.format().size() );
+                      b.put( Point( chosen_bound.first ), &v[0] );
+                      std::cout.write( &v[0], b.format().size() );
+                  }
+                  else
+                  {
+                      std::cout.write( &chosen_bound.second[0], chosen_bound.second.size() );
+                  }
+                  if( !bounded_first )
+                  {
+                      std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() );
+                  }
+                  std::cout.flush();
+              }
+              else
+              {
+                  if( bounded_first )
+                  {
+                      std::cout << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter );
+                  }
+                  if( select_only ) { } /// This is --do-no-append, so don't append
+                  else if( timestamp_only )
+                  {
+                      std::cout << stdin_csv.delimiter << boost::posix_time::to_iso_string( chosen_bound.first );
+                  }
+                  else
+                  {
+                      std::cout << stdin_csv.delimiter << chosen_bound.second;
+                  }
+                  if( !bounded_first )
+                  {
+                      std::cout << stdin_csv.delimiter << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter );
+                  }
+                  std::cout << std::endl;
+              }
+              //get a new point
+              next=true;
+          }
         }
         return 0;     
     }

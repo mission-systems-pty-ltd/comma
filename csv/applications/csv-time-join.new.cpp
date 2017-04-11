@@ -64,7 +64,11 @@ static void usage()
     std::cerr << "    --by-lower: join with previous filter timestamp (default)" << std::endl;
     std::cerr << "    --by-upper: join by next filter timestamp" << std::endl;
     std::cerr << "    --nearest: join by nearest filter timestamp" << std::endl;
-    std::cerr << "    --stream: output immediately with current lowest filter timestamp" << std::endl;
+    std::cerr << "    --realtime: output immediately with current latest bounding timestamp" << std::endl;
+    std::cerr << "                i.e wait for upper bound in bounding stream" << std::endl;
+    std::cerr << "                attention: in this mode, it is possible that the latest bounding timestamp" << std::endl;
+    std::cerr << "                           may be less or greater than the timestamp on stdin" << std::endl;
+    std::cerr << "                           (i.e. no timestamp comparisons are made before outputting a record)" << std::endl;
     std::cerr << std::endl;
     std::cerr << "limitation" << std::endl;
     std::cerr << "    data with timestamp before the first and after the last bounding timestamps will be discarded at the moment; this is unwanted behaviour when using --nearest and --bound=n" << std::endl;
@@ -152,7 +156,7 @@ void output(const timestring_t & input, const timestring_t& filter)
     if (bound)
     {
         boost::posix_time::time_duration d = input.first - filter.first;
-        double seconds = abs(d.total_microseconds() / 1000000.0);
+        double seconds = fabs(d.total_microseconds() / 1000000.0);
         if ( seconds > *bound ) { return; }
     }
     if (stdin_csv.binary())
@@ -274,7 +278,11 @@ int main( int ac, char** av )
                 select.wait(boost::posix_time::milliseconds(1));
             }
             
-            if( !is_shutdown && !end_of_input && ( stdin.ready() || ( select.check() && select.read().ready( comma::io::stdin_fd ) ) ) )
+            if
+            ( 
+                !is_shutdown && !end_of_input 
+                && ( stdin.ready() || ( select.check() && select.read().ready( comma::io::stdin_fd ) ) )
+            )
             {
                 // read and process input until greater than latest in filter stream
                 // if in "lower (streaming)" mode: output immediately
@@ -307,7 +315,12 @@ int main( int ac, char** av )
                 } while (end_of_filter || (filter_time && *filter_time > *input_time ));
             }
             
-            if( !is_shutdown && !end_of_filter && ( filter.ready() || ( select.check() && select.read().ready(filter_stream.fd()) ) ) )
+            if
+            ( 
+              !is_shutdown && !end_of_filter // not shutdown
+              && ( filter.ready() || ( select.check() && select.read().ready(filter_stream.fd()) ) ) // filter stream is ready
+              && (!filter_time || (input_time && *input_time > *filter_time)) // filter is not ahead of input
+            )
             {
                 // read filter until it passes input stream
                 do
