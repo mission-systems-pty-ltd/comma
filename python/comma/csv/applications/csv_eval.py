@@ -552,7 +552,6 @@ def exit_if(stream):
             break
         mask = eval(code, env, {f: input[f] for f in fields})
         if mask:
-            print >> sys.stderr, "condition met, exiting..."
             sys.exit()
         stream.input.dump()
 
