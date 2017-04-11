@@ -71,6 +71,9 @@ examples:
     # select output based on condition
     ( echo 1,2 ; echo 1,3; echo 1,4 ) | %(prog)s --fields=a,b --format=2i --select="(a < b - 1) & (b < 4)"
 
+    # pass through input until condition is met
+    ( echo 1,2 ; echo 1,3; echo 1,4 ) | csv-eval --fields=a,b --format=2i --exit-if="(a < b - 1) & (b < 4)"
+    
     # update input stream values in place
     ( echo 1,2 ; echo 3,4 ) | %(prog)s --fields=x,y "x=x+y; y=y-1"
 
