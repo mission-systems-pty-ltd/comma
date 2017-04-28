@@ -77,7 +77,7 @@ namespace {
         std::cerr << "    csv-bin-cat input.bin --skip=1000 --binary=t,s[100000] --fields=t,s --output-fields=t | csv-from-bin t" << std::endl;
         std::cerr << "        output only the time field starting with 1000th record; much more efficient form of" << std::endl;
         std::cerr << "            cat input.bin | csv-shuffle --binary=t,s[100000] --fields=t,s --output-fields=t | csv-from-bin t | tail -n+1001" << std::endl;
-        std::cerr << "    csv-bin-cat 1.bin 2.bin 3.bin --skip=1000 --head=2 --binary=t,s[100000] --fields=t,s ..." << std::endl;
+        std::cerr << "    csv-bin-cat 1.bin 2.bin 3.bin --skip=1000 --count=2 --binary=t,s[100000] --fields=t,s ..." << std::endl;
         std::cerr << "        assuming each of the binary files holds 500 records, output data from" << std::endl;
         std::cerr << "        records 0 and 1 of file '3.bin'; records 0-499 in the file '1.bin' skipped, records 0-499 in" << std::endl;
         std::cerr << "        the file '2.bin' skipped (total of 1000 skipped records), then 2 records output" << std::endl;
