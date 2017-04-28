@@ -47,7 +47,7 @@
 
 using namespace comma;
 
-static void usage()
+static void usage( int status = 0 )
 {
     std::cerr << std::endl;
     std::cerr << "simplified, but similar as Linux cut utility, but for \"binary csv\"" << std::endl;
@@ -60,7 +60,7 @@ static void usage()
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
-    exit( -1 );
+    exit( status );
 }
 
 int main( int ac, char** av )
@@ -134,6 +134,5 @@ int main( int ac, char** av )
     }
     catch( std::exception& ex ) { std::cerr << "csv-bin-cut: " << ex.what() << std::endl; }
     catch( ... ) { std::cerr << "csv-bin-cut: unknown exception" << std::endl; }
-    usage();
+    usage( 1 );
 }
-
