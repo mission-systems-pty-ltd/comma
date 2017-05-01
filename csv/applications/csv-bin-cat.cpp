@@ -77,7 +77,8 @@ namespace {
         std::cerr << "    csv-bin-cat a.bin b.bin --binary=<format> ...: data from files, potentially fast" << std::endl;
         std::cerr << "    csv-bin-cat --binary=<format> ...: data from stdin" << std::endl;
         std::cerr << "    csv-bin-cat - --binary=<format> ...: also data from stdin" << std::endl;
-        std::cerr << "    csv-bin-cat a.bin - b.bin --binary=<format> ...: not supported, cannot put '-' between files" << std::endl;
+        std::cerr << "    csv-bin-cat a.bin - b.bin --binary=<format> ...: data from a.bin (potentially fast), then from stdin (read full records," << std::endl;
+        std::cerr << "        may be slow), then data from b.bin (again, potentially fast)" << std::endl;
         std::cerr << "    csv-bin-cat <format> ...: data from stdin" << std::endl;
         std::cerr << std::endl;
         std::cerr << "Semantics for output:" << std::endl;
