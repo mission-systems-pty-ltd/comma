@@ -187,63 +187,93 @@ namespace {
         return fields;
     }
 
-    int seek( const std::vector< std::string > & files
-            , const std::vector< field > & fields
-            , const comma::csv::options & csv
-            , size_t orecord_size
-            , unsigned int skip
-            , long int count_max
-            , bool flush )
+    class seeker
+    {
+        public:
+            seeker( const std::vector< field > & fields, const comma::csv::options & csv, unsigned int skip, long int count_max, bool flush )
+                : fields_( fields )
+                , orecord_size_( std::accumulate( fields.begin(), fields.end(), (size_t)0, []( size_t i, const field & f ){ return f.size + i; } ) )
+                , buf_( orecord_size_ )
+                , irecord_size_( csv.format().size() )
+                , skip_( skip )
+                , count_( 0 )
+                , count_max_( count_max )
+                , flush_( flush )
+                {}
+
+            int process( const std::vector< std::string > & files );
+
+        private:
+            int seek( std::ifstream & ifs, const std::string & fname );
+            int read( );
+
+            const std::vector< field > & fields_;
+            size_t orecord_size_;
+            std::vector< char > buf_;
+            size_t irecord_size_;
+            unsigned int skip_;
+            long int count_;
+            long int count_max_;
+            bool flush_;
+    };
+
+    int seeker::seek( std::ifstream & ifs, const std::string & fname )
     {
             // algorithm summary:
             // - seekg to the beginning of record
             // - iterate over fields by doing seekg to the beginning of each field, and read into buffer
             // - check for read errors / end of input
             // - write the buffer to stdout
-            std::vector< char > buf( orecord_size );
-            long int count = 0;
-            for ( std::vector< std::string >::const_iterator ifile = files.begin(); ifile < files.end(); ++ifile ) {
-                std::ifstream ifs( ifile->c_str(), std::ifstream::binary );
-                if ( !ifs.is_open() ) { std::cerr << "csv-bin-cat: cannot open '" << *ifile << "' for reading" << std::endl; return 1; }
-                std::streampos record_start = 0;
-                if ( skip ) {
-                    ifs.seekg( 0, std::ios_base::end );
-                    std::streampos fsize = ifs.tellg();
-                    unsigned int nrecords = fsize / csv.format().size();
-                    if ( nrecords * csv.format().size() != fsize ) { std::cerr << "csv-bin-cat: size of file '" << *ifile << "' is not a multiple of the record size" << std::endl; return 1; }
-                    if ( nrecords < skip ) { skip -= nrecords; continue; }
-                    record_start = csv.format().size() * skip;
-                    ifs.seekg( record_start, std::ios_base::beg );
-                    if ( ifs.fail() ) { std::cerr << "csv-bin-cat: cannot skip " << skip << " records in the file '" << *ifile << "'" << std::endl; return 1; }
-                    skip = 0;
-                }
-                if ( count_max >= 0 && count >= count_max ) { return 0; }
-                while( ifs.good() && !ifs.eof() )
+            std::streampos record_start = 0;
+            if ( skip_ ) {
+                ifs.seekg( 0, std::ios_base::end );
+                std::streampos fsize = ifs.tellg();
+                unsigned int nrecords = fsize / irecord_size_;
+                if ( nrecords * irecord_size_ != fsize ) { COMMA_THROW( comma::exception, "csv-bin-cat: size of file '" << fname << "' is not a multiple of the record size" ); }
+                if ( nrecords < skip_ ) { skip_ -= nrecords; return 0; }
+                record_start = irecord_size_ * skip_;
+                ifs.seekg( record_start, std::ios_base::beg );
+                if ( ifs.fail() ) { COMMA_THROW( comma::exception, "csv-bin-cat: cannot skip " << skip_ << " records in the file '" << fname << "'" ); }
+                skip_ = 0;
+            }
+            if ( count_max_ >= 0 && count_ >= count_max_ ) { return 0; }
+            while( ifs.good() && !ifs.eof() )
+            {
+                for( unsigned int i = 0; i < fields_.size(); ++i )
                 {
-                    for( unsigned int i = 0; i < fields.size(); ++i )
-                    {
-                        std::streamoff off = fields[i].input_offset - ( i == 0 ? 0 : fields[i - 1].input_offset + fields[i - 1].size );
-                        ifs.seekg( off, std::ios_base::cur );
-                        ifs.read( &buf[ fields[i].offset ], fields[i].size );
-                        if ( ifs.eof() ) {
-                            if ( i == 0 ) { break; }
-                            std::cerr << "csv-bin-cat: encountered eof mid-record in '" << *ifile << "'" << std::endl; return 1;
-                        }
-                        if ( ifs.fail() ) { std::cerr << "csv-bin-cat: reading '" << fields[i].name << "' at position " << record_start + off << " failed" << std::endl; return 1; }
+                    std::streamoff off = fields_[i].input_offset - ( i == 0 ? 0 : fields_[i - 1].input_offset + fields_[i - 1].size );
+                    ifs.seekg( off, std::ios_base::cur );
+                    ifs.read( &buf_[ fields_[i].offset ], fields_[i].size );
+                    if ( ifs.eof() ) {
+                        if ( i == 0 ) { break; }
+                        COMMA_THROW( comma::exception, "csv-bin-cat: encountered eof mid-record in '" << fname << "'" );
                     }
-                    if ( !ifs.eof() )
-                    {
-                        std::cout.write( &buf[0], orecord_size );
-                        if (flush) { std::cout.flush(); }
-                        if ( std::cout.fail() ) { std::cerr << "csv-bin-cat: std::cout output failed" << std::endl; return 1; }
-                        if ( count_max >= 0 && ++count >= count_max ) { return 0; }  // count not incremented if no limit imposed, do not care
-                        // go to the start of the next record
-                        record_start += csv.format().size();
-                        ifs.seekg( record_start, std::ios_base::beg );
-                    }
+                    if ( ifs.fail() ) { COMMA_THROW( comma::exception, "csv-bin-cat: reading field '" << fields_[i].name << "' at position " << record_start + off << " failed" ); }
+                }
+                if ( !ifs.eof() )
+                {
+                    std::cout.write( &buf_[0], orecord_size_ );
+                    if ( flush_ ) { std::cout.flush(); }
+                    if ( std::cout.fail() ) { COMMA_THROW( comma::exception, "csv-bin-cat: std::cout output failed" ); }
+                    if ( count_max_ >= 0 && ++count_ >= count_max_ ) { return 0; }  // count not incremented if no limit imposed, do not care
+                    // go to the start of the next record
+                    record_start += irecord_size_;
+                    ifs.seekg( record_start, std::ios_base::beg );
                 }
             }
             return 0;
+    }
+
+    int seeker::process( const std::vector< std::string > & files )
+    {
+        for ( std::vector< std::string >::const_iterator ifile = files.begin(); ifile < files.end(); ++ifile ) {
+            std::ifstream ifs( ifile->c_str(), std::ifstream::binary );
+            if ( !ifs.is_open() ) { std::cerr << "csv-bin-cat: cannot open '" << *ifile << "' for reading" << std::endl; return 1; }
+            int rv = seek( ifs, *ifile );
+            if ( rv != 0 ) { return rv; }
+            if ( count_max_ >= 0 && count_ >= count_max_ ) { return 0; }
+        }
+        return 0;
     }
 
 } // anonymous
@@ -288,12 +318,12 @@ int main( int ac, char** av )
 
         std::vector< field > fields = setup_fields( options, csv );
 
-        size_t orecord_size = std::accumulate( fields.begin(), fields.end(), (size_t)0, []( size_t i, const field & f ){ return f.size + i; } );
         unsigned int skip = options.value< unsigned int >( "--skip", 0 );
         long int count_max = options.value< long int >( "--count", -1 );
         bool flush = options.exists( "--flush" );
 
-        return seek( files, fields, csv, orecord_size, skip, count_max, flush );
+        seeker seek( fields, csv, skip, count_max, flush );
+        return seek.process( files );
     }
     catch( std::exception& ex ) { std::cerr << "csv-from-bin: " << ex.what() << std::endl; }
     catch( ... ) { std::cerr << "csv-from-bin: unknown exception" << std::endl; }
