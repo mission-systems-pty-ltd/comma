@@ -11,12 +11,18 @@ comma_path_value_to_var
 
 cd "$output_dir"
 
+if [[ -n "$input_files_direct" ]] ; then
+    all_files=$( echo "$input_files_direct" | sed "s@-@$input_files_stdin@" )
+else
+    all_fiels=$input_files_stdin
+fi
+
 cmd="--binary=2ui,t,s[100],ui --fields=block,counter,t,string,num --output-fields=t"
 subdir=0
 mkdir -p "$subdir" || { echo "$scriptname: cannot create directory '$output_dir/$subdir'" >&2; exit 1; }
-csv-bin-cat $input_files $cmd > "$subdir/new.bin"
+cat "$input_files_stdin" | csv-bin-cat $input_files_direct $cmd > "$subdir/new.bin"
 echo "test[$subdir]/cat/status=$?"
-cat $input_files | csv-shuffle $cmd > "$subdir/old.bin"
+cat $all_files | csv-shuffle $cmd > "$subdir/old.bin"
 echo "test[$subdir]/shuffle/status=$?"
 cmp "$subdir/new.bin" "$subdir/old.bin" > "$subdir/cmp.log"
 echo "test[$subdir]/cmp/status=$?"
@@ -34,9 +40,9 @@ for count in nan -1 0 4 15 ; do
             count_option="--count=$count"
             (( count >= 0 )) && car="head -c $(( record * count ))"
         }
-        csv-bin-cat $input_files $cmd --skip=$skip $count_option > "$subdir/new.bin"
+        cat "$input_files_stdin" | csv-bin-cat $input_files_direct $cmd --skip=$skip $count_option > "$subdir/new.bin"
         echo "test[$subdir]/cat/status=$?"
-        cat $input_files | $cdr | $car | csv-shuffle $cmd > "$subdir/old.bin"
+        cat $all_files | $cdr | $car | csv-shuffle $cmd > "$subdir/old.bin"
         echo "test[$subdir]/shuffle/status=$?"
         cmp "$subdir/new.bin" "$subdir/old.bin" > "$subdir/cmp.log"
         echo "test[$subdir]/cmp/status=$?"
