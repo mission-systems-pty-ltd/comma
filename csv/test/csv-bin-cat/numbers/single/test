@@ -9,6 +9,12 @@ mkdir -p "$output_dir" || { echo "$scriptname: cannot create directory '$output_
 
 comma_path_value_to_var
 
+if [[ -n "$input_files_direct" ]] ; then
+    all_files=$( echo "$input_files_direct" | sed "s@-@$input_files_stdin@" )
+else
+    all_files=$input_files_stdin
+fi
+
 function compare()
 {
     local fields="$1"
@@ -17,8 +23,8 @@ function compare()
     local cat_args="--binary=$input_binary --fields=$fields"
     local shuffle_output_fields=$( echo "$input_fields" | cut -d, -f${fields} )
     local shuffle_args="--binary=$input_binary --fields=$input_fields --output-fields=$shuffle_output_fields"
-    cat "$input_files" | csv-bin-cat $cat_args > "$output_dir/$subdir/new.bin" || return 1
-    cat "$input_files" | csv-shuffle $shuffle_args > "$output_dir/$subdir/old.bin" || return 1
+    cat $input_files_stdin | csv-bin-cat $input_files_direct $cat_args > "$output_dir/$subdir/new.bin" || return 1
+    cat $all_files | csv-shuffle $shuffle_args > "$output_dir/$subdir/old.bin" || return 1
     cmp "$output_dir/$subdir/new.bin" "$output_dir/$subdir/old.bin" > "$output_dir/$subdir/cmp.log"
 }
 
