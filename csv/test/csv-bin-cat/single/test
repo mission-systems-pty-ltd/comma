@@ -13,9 +13,9 @@ function compare()
 {
     local cmd="$1"
     local subdir="$2"
-    mkdir -p "$output_dir/$subdir" || { echo "$scriptname: cannot create directory '$output_dir/$subdir'" >&2; exit 1; }
-    csv-bin-cat "$input_files" $cmd > "$output_dir/$subdir/new.bin"
-    cat "$input_files" | csv-shuffle $cmd > "$output_dir/$subdir/old.bin"
+    mkdir -p "$output_dir/$subdir" || { echo "$scriptname: cannot create directory '$output_dir/$subdir'" >&2; return 1; }
+    csv-bin-cat "$input_files" $cmd > "$output_dir/$subdir/new.bin" || return 1
+    cat "$input_files" | csv-shuffle $cmd > "$output_dir/$subdir/old.bin" || return 1
     cmp "$output_dir/$subdir/new.bin" "$output_dir/$subdir/old.bin" > "$output_dir/$subdir/cmp.log"
 }
 
