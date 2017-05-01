@@ -221,6 +221,7 @@ namespace {
 
     int seeker::read_all( std::istream & is )
     {
+        if ( count_max_ >= 0 && count_ >= count_max_ ) { return 0; }
         ibuf_.resize( irecord_size_ );
         while( is.good() && !is.eof() )
         {
@@ -228,7 +229,7 @@ namespace {
             if( is.gcount() == 0 ) { continue; }
             if( is.gcount() < int( irecord_size_ ) ) { COMMA_THROW( comma::exception, "csv-bin-cat: expected " << irecord_size_ << " bytes, got only " << is.gcount() ); }
             if ( skip_ ) { --skip_; continue; }
-            for( unsigned int i = 0; i < fields_.size(); ++i ) { std::cout.write( &ibuf_[0] + fields_[i].offset, fields_[i].size ); }
+            for( unsigned int i = 0; i < fields_.size(); ++i ) { std::cout.write( &ibuf_[0] + fields_[i].input_offset, fields_[i].size ); }
             if( flush_ ) { std::cout.flush(); }
             if ( count_max_ >= 0 && ++count_ >= count_max_ ) { return 0; }
         }
@@ -323,21 +324,19 @@ int main( int ac, char** av )
         }
 
         std::vector< std::string > files = options.unnamed( "--help,-h,--verbose,-v,--flush", "--fields,-f,--input-fields,--output-fields,-o,--binary,--format,--skip,--count,--seek" );
-        bool read_stdin = ( files.size() < 1 || ( files.size() == 1 && files[0] == "-" ) );
         if ( files.size() == 1 && files[0] != "-" ) {
             // could be format string, not a file
             try
             {
                 comma::csv::format f( files[0] );
                 csv.format( f );
-                read_stdin = true;
+                files.pop_back();
             }
             catch ( comma::exception & )
             {
                 // OK, not a string
             }
         }
-        if( files.size() < 1 ) { std::cerr << "csv-bin-cat: expected at least one file name" << std::endl; return 1; }
         if( !csv.binary() ) { std::cerr << "csv-bin-cat: must provide '--binary=..' format" << std::endl; return 1; }
 
         std::vector< field > fields = setup_fields( options, csv );
