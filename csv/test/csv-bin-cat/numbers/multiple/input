@@ -1,3 +1,0 @@
-input/files="../../../data/file0.bin ../../../data/file1.bin ../../../data/file2.bin"
-input/binary="2ui,t,s[100],ui"
-input/fields="block,counter,t,string,num"
