@@ -1,2 +1,2 @@
-input/files/stdin="../../../data/file1.bin"
+input/files/stdin="../../../../data/file1.bin"
 input/files/direct=""

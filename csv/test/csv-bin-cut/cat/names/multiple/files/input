@@ -1,1 +1,1 @@
-input/files/direct="../../../../data/file0.bin ../../../../data/file1.bin ../../../../data/file2.bin"
+input/files/direct="../../../../../data/file0.bin ../../../../../data/file1.bin ../../../../../data/file2.bin"
