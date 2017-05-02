@@ -20,7 +20,7 @@ function compare()
     local cmd="$1"
     local subdir="$2"
     mkdir -p "$output_dir/$subdir" || { echo "$scriptname: cannot create directory '$output_dir/$subdir'" >&2; return 1; }
-    cat $input_files_stdin | csv-bin-cat $input_files_direct $cmd > "$output_dir/$subdir/new.bin" || return 1
+    cat $input_files_stdin | csv-bin-cut $input_files_direct $cmd > "$output_dir/$subdir/new.bin" || return 1
     cat $all_files | csv-shuffle $cmd > "$output_dir/$subdir/old.bin" || return 1
     cmp "$output_dir/$subdir/new.bin" "$output_dir/$subdir/old.bin" > "$output_dir/$subdir/cmp.log"
 }

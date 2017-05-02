@@ -15,6 +15,6 @@ else
     all_files=$input_files_stdin
 fi
 
-cat $input_files_stdin | csv-bin-cat $input_files_direct $input_command_line > "$output_dir/out.bin"
+cat $input_files_stdin | csv-bin-cut $input_files_direct $input_command_line > "$output_dir/out.bin"
 echo "status=$?"
 cat "$output_dir/out.bin" | md5sum | cut -d' ' -f1 | sed 's/^/md5sum=/'

@@ -20,10 +20,10 @@ function compare()
     local fields="$1"
     local subdir=$2
     mkdir -p "$output_dir/$subdir" || { echo "$scriptname: cannot create directory '$output_dir/$subdir'" >&2; return 1; }
-    local cat_args="--binary=$input_binary --fields=$fields"
+    local cut_args="--binary=$input_binary --fields=$fields"
     local shuffle_output_fields=$( echo "$input_fields" | cut -d, -f${fields} )
     local shuffle_args="--binary=$input_binary --fields=$input_fields --output-fields=$shuffle_output_fields"
-    cat $input_files_stdin | csv-bin-cat $input_files_direct $cat_args > "$output_dir/$subdir/new.bin" || return 1
+    cat $input_files_stdin | csv-bin-cut $input_files_direct $cut_args > "$output_dir/$subdir/new.bin" || return 1
     cat $all_files | csv-shuffle $shuffle_args > "$output_dir/$subdir/old.bin" || return 1
     cmp "$output_dir/$subdir/new.bin" "$output_dir/$subdir/old.bin" > "$output_dir/$subdir/cmp.log"
 }

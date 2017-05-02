@@ -13,7 +13,6 @@ add_executable( csv-fields ${dir}/csv-fields.cpp )
 add_executable( csv-format ${dir}/csv-format.cpp )
 add_executable( csv-size ${dir}/csv-size.cpp )
 add_executable( csv-select ${dir}/csv-select.cpp )
-add_executable( csv-bin-cat ${dir}/csv-bin-cat.cpp )
 add_executable( csv-bin-cut ${dir}/csv-bin-cut.cpp )
 add_executable( csv-from-columns ${dir}/csv-from-columns.cpp )
 add_executable( csv-join ${dir}/csv-join.cpp )
@@ -38,7 +37,6 @@ add_executable( csv-to-sql ${dir}/csv-to-sql.cpp )
 target_link_libraries ( csv-fields ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
 target_link_libraries ( csv-format ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
 target_link_libraries ( csv-size ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
-target_link_libraries ( csv-bin-cat ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv comma_xpath )
 target_link_libraries ( csv-bin-cut ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv comma_xpath )
 target_link_libraries ( csv-split comma_csv comma_application comma_string comma_xpath ${comma_ALL_EXTERNAL_LIBRARIES} )
 target_link_libraries ( csv-from-columns ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io comma_string )
@@ -61,8 +59,7 @@ target_link_libraries ( csv-thin ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma
 target_link_libraries ( csv-analyse ${comma_ALL_EXTERNAL_LIBRARIES} comma_application )
 target_link_libraries ( csv-to-sql ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
 
-install( TARGETS csv-bin-cat
-                 csv-bin-cut
+install( TARGETS csv-bin-cut
                  csv-fields
                  csv-format
                  csv-join
