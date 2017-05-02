@@ -339,7 +339,7 @@ int main( int ac, char** av )
                 // OK, not a string
             }
         }
-        if( !csv.binary() ) { std::cerr << "csv-bin-cat: must provide '--binary=..' format" << std::endl; return 1; }
+        if( !csv.binary() ) { COMMA_THROW( comma::exception, "csv-bin-cut: must provide '--binary=..' format" ); }
 
         std::vector< field > fields = setup_fields( options, csv );
 
@@ -351,8 +351,8 @@ int main( int ac, char** av )
         seeker seek( fields, csv, skip, count_max, flush, force_read );
         return seek.process( files );
     }
-    catch( std::exception& ex ) { std::cerr << "csv-from-bin: " << ex.what() << std::endl; }
-    catch( ... ) { std::cerr << "csv-from-bin: unknown exception" << std::endl; }
+    catch( std::exception& ex ) { std::cerr << "csv-bin-cut: " << ex.what() << std::endl; }
+    catch( ... ) { std::cerr << "csv-bin-cut: unknown exception" << std::endl; }
     return 1;
 }
 
