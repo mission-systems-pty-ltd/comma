@@ -277,7 +277,9 @@ namespace {
                     if ( count_max_ >= 0 && ++count_ >= count_max_ ) { return 0; }  // count not incremented if no limit imposed, do not care
                     // go to the start of the next record
                     record_start += irecord_size_;
-                    ifs.seekg( record_start, std::ios_base::beg );
+                    unsigned int i = fields_.size() - 1;
+                    std::streamoff off = irecord_size_ - ( fields_[i].input_offset + fields_[i].size );
+                    ifs.seekg( off, std::ios_base::cur );
                 }
             }
             return 0;
