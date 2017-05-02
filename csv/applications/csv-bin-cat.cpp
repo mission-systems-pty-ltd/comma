@@ -293,7 +293,7 @@ namespace {
                 if ( rv != 0 ) { return rv; }
             } else {
                 std::ifstream ifs( ifile->c_str(), std::ifstream::binary );
-                if ( !ifs.is_open() ) { std::cerr << "csv-bin-cat: cannot open '" << *ifile << "' for reading" << std::endl; return 1; }
+                if ( !ifs.is_open() ) { COMMA_THROW( comma::exception, "csv-bin-cat: cannot open '" << *ifile << "' for reading" ); }
                 int rv = read_fields( ifs, *ifile );
                 if ( rv != 0 ) { return rv; }
             }
