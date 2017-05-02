@@ -69,9 +69,9 @@ namespace {
         std::cerr << "    The third form reads data from standard input and is similar to csv-shuffle. Can use either names or numbers for fields." << std::endl;
         std::cerr << std::endl;
         std::cerr << "    When csv-bin-cat reads files (as opposed to stdin), it seeks to the position of the next data to be output as opposed to" << std::endl;
-        std::cerr << "    reading entire records; this improves performance for large record sizes as most of the input is skipped. For small records" << std::endl;
-        std::cerr << "    the improvement is lost because seek-read-seek-read would repeatedly read the same disk block. So, for records less than 4k" << std::endl;
-        std::cerr << "    the routine reads the entire input record at once; use '--seek' option to change the threshold." << std::endl;
+        std::cerr << "    reading entire records; this improves performance for large record sizes as most of the input is skipped. For small records," << std::endl;
+        std::cerr << "    however, the improvement is lost because seek-read-seek-read would repeatedly read the same disk block. Therefore, for small" << std::endl;
+        std::cerr << "    records it is advised to turn off the seeking algorithm by the '--read-all' option." << std::endl;
         std::cerr << std::endl;
         std::cerr << "Semantics for input:" << std::endl;
         std::cerr << "    csv-bin-cat a.bin b.bin --binary=<format> ...: data from files, potentially fast" << std::endl;
@@ -92,13 +92,13 @@ namespace {
         std::cerr << "    --output-fields,--output,-o <fields>: output fields" << std::endl;
         std::cerr << "    --skip=<N>; skip the first N records (applied once if multiple input files are given); no skip if N = 0" << std::endl;
         std::cerr << "    --count=<N>; output no more than N records; no output if N <= 0" << std::endl;
-        std::cerr << "    --seek=<N>; uses the seek form of the algorithm for records larger than N bytes (use suffixes k,M,G for larger units)" << std::endl;
+        std::cerr << "    --read-all,--force-read; do not use the seek form of the algorithm, read entire records at once (see above)" << std::endl;
         std::cerr << "    --flush; flush after every output record; less efficient, more predictable" << std::endl;
         std::cerr << "    --verbose,-v: chat more" << std::endl;
         std::cerr << std::endl;
         std::cerr << "Examples:" << std::endl;
         std::cerr << "    csv-bin-cat input.bin --binary=t,s[1000000] --fields=t,s --output-fields=t" << std::endl;
-        std::cerr << "        output only the time field from a binary file; much more efficient form of" << std::endl;
+        std::cerr << "        output only the time field from a binary file; more efficient form of" << std::endl;
         std::cerr << "            cat input.bin | csv-shuffle --binary=t,s[1000000] --fields=t,s --output-fields=t" << std::endl;
         std::cerr << std::endl;
         std::cerr << "    csv-bin-cat input.bin --binary=t,s[1000000] --fields=1" << std::endl;
@@ -107,15 +107,12 @@ namespace {
         std::cerr << "    cat input.bin | csv-bin-cat --binary=t,s[1000000] --fields=1" << std::endl;
         std::cerr << "        take input on stdin; same output as above but less efficient because has to read the whole file" << std::endl;
         std::cerr << std::endl;
-        std::cerr << "    csv-bin-cat input.bin --binary=t,s[2000] --fields=1" << std::endl;
-        std::cerr << "        record size is below 4k, read the entire record at once; thus, identical to" << std::endl;
+        std::cerr << "    csv-bin-cat input.bin --binary=t,s[2000] --fields=1 --read-all" << std::endl;
+        std::cerr << "        record size is small, force reading the entire record at once; thus, identical to" << std::endl;
         std::cerr << "            cat input.bin | csv-shuffle --binary=t,s[2000] --fields=t,s --output-fields=t" << std::endl;
         std::cerr << std::endl;
-        std::cerr << "    csv-bin-cat input.bin --binary=t,s[2000] --fields=1 --seek=1k" << std::endl;
-        std::cerr << "        force using the seek algorithm because record size is above 1024 bytes" << std::endl;
-        std::cerr << std::endl;
         std::cerr << "    csv-bin-cat input.bin --skip=1000 --binary=t,s[1000000] --fields=t,s --output-fields=t | csv-from-bin t" << std::endl;
-        std::cerr << "        output only the time field starting with 1000th record; much more efficient form of" << std::endl;
+        std::cerr << "        output only the time field starting with 1000th record; more efficient form of" << std::endl;
         std::cerr << "            cat input.bin | csv-shuffle --binary=t,s[1000000] --fields=t,s --output-fields=t | csv-from-bin t | tail -n+1001" << std::endl;
         std::cerr << std::endl;
         std::cerr << "    csv-bin-cat 1.bin 2.bin 3.bin --skip=1000 --count=2 --binary=t,s[1000000] --fields=t,s ..." << std::endl;
@@ -191,7 +188,7 @@ namespace {
     class seeker
     {
         public:
-            seeker( const std::vector< field > & fields, const comma::csv::options & csv, unsigned int skip, long int count_max, bool flush )
+            seeker( const std::vector< field > & fields, const comma::csv::options & csv, unsigned int skip, long int count_max, bool flush, bool force_read )
                 : fields_( fields )
                 , orecord_size_( std::accumulate( fields.begin(), fields.end(), (size_t)0, []( size_t i, const field & f ){ return f.size + i; } ) )
                 , obuf_( orecord_size_ )
@@ -201,6 +198,7 @@ namespace {
                 , count_( 0 )
                 , count_max_( count_max )
                 , flush_( flush )
+                , force_read_( force_read )
                 {}
 
             int process( const std::vector< std::string > & files );
@@ -218,6 +216,7 @@ namespace {
             long int count_;
             long int count_max_;
             bool flush_;
+            bool force_read_;
     };
 
     int seeker::read_all( std::istream & is )
@@ -296,7 +295,7 @@ namespace {
             } else {
                 std::ifstream ifs( ifile->c_str(), std::ifstream::binary );
                 if ( !ifs.is_open() ) { COMMA_THROW( comma::exception, "csv-bin-cat: cannot open '" << *ifile << "' for reading" ); }
-                int rv = read_fields( ifs, *ifile );
+                int rv = ( force_read_ ? read_all( ifs ) : read_fields( ifs, *ifile ) );
                 if ( rv != 0 ) { return rv; }
             }
         }
@@ -326,7 +325,7 @@ int main( int ac, char** av )
             if( !f.empty() ) { csv.fields = f; }
         }
 
-        std::vector< std::string > files = options.unnamed( "--help,-h,--verbose,-v,--flush", "--fields,-f,--input-fields,--output-fields,-o,--binary,--format,--skip,--count,--seek" );
+        std::vector< std::string > files = options.unnamed( "--help,-h,--verbose,-v,--flush,--read-all,--force-read", "--fields,-f,--input-fields,--output-fields,-o,--binary,--format,--skip,--count" );
         if ( files.size() == 1 && files[0] != "-" ) {
             // could be format string, not a file
             try
@@ -347,8 +346,9 @@ int main( int ac, char** av )
         unsigned int skip = options.value< unsigned int >( "--skip", 0 );
         long int count_max = options.value< long int >( "--count", -1 );
         bool flush = options.exists( "--flush" );
+        bool force_read = options.exists( "--read-all,--force-read" );
 
-        seeker seek( fields, csv, skip, count_max, flush );
+        seeker seek( fields, csv, skip, count_max, flush, force_read );
         return seek.process( files );
     }
     catch( std::exception& ex ) { std::cerr << "csv-from-bin: " << ex.what() << std::endl; }
