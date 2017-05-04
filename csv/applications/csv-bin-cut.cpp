@@ -41,24 +41,34 @@
 #include <numeric>
 #include "../../application/command_line_options.h"
 #include "../../application/contact_info.h"
-#include "../../base/exception.h"
 #include "../../csv/format.h"
 #include "../../csv/options.h"
 #include "../../string/string.h"
 
 using namespace comma;
 
+// todo
+// - help
+//   - move to examples or verbose
+//     - --output-fields description
+//     - lengthy implementation details -> examples or verbose
+//     - Semantics for input
+//     - Semantics for output
+//     - '-' + files: add an example
+
 namespace {
 
     void usage( bool verbose )
     {
         std::cerr << std::endl;
+        std::cerr << "do to fixed-size binary records same as linux cut utility for csv data" << std::endl;
+        std::cerr << std::endl;
         std::cerr << "Usage:" << std::endl;
-        std::cerr << "    csv-bin-cut file.bin [file2.bin ...] --binary=<format> --fields=<fields> --output-fields=<output-fields> [<options>]" << std::endl;
-        std::cerr << "or" << std::endl;
-        std::cerr << "    csv-bin-cut file.bin [file2.bin ...] --binary=<format> --fields=<numbers> [<options>]" << std::endl;
-        std::cerr << "or" << std::endl;
-        std::cerr << "    cat file.bin [file2.bin ...] | csv-bin-cut --binary=... --fields=... [<options>]" << std::endl;
+        std::cerr << "    1) faster version reading from files" << ( verbose ? "" : "; run --help --verbose for details" ) << std::endl;
+        std::cerr << "       csv-bin-cut file.bin [file2.bin ...] [<options>]" << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "    2) slower version reading from stdin" << ( verbose ? "" : "; run --help --verbose for details" ) << std::endl;
+        std::cerr << "       cat file.bin | csv-bin-cut [<options>]" << std::endl;
         std::cerr << std::endl;
         std::cerr << "    The first form outputs the specified fields from the binary file(s); produce the same output as the csv-shuffle call" << std::endl;
         std::cerr << "        cat file.bin | csv-shuffle --binary=<format> --fields=<fields> --output-fields=<output-fields>" << std::endl;
@@ -79,7 +89,7 @@ namespace {
         std::cerr << "    csv-bin-cut - --binary=<format> ...: also data from stdin" << std::endl;
         std::cerr << "    csv-bin-cut a.bin - b.bin --binary=<format> ...: data from a.bin (potentially fast), then from stdin (read full records," << std::endl;
         std::cerr << "        may be slow), then data from b.bin (again, potentially fast)" << std::endl;
-        std::cerr << "    csv-bin-cut <format> ...: data from stdin" << std::endl;
+        std::cerr << "    csv-bin-cut <format> ...: data from stdin, format as the first argument (deprecated, left for backward compatibility)" << std::endl;
         std::cerr << std::endl;
         std::cerr << "Semantics for output:" << std::endl;
         std::cerr << "    csv-bin-cut ... --fields=foo,bar,baz --output-fields=foo,baz: input and output fields specified by names" << std::endl;
@@ -87,13 +97,13 @@ namespace {
         std::cerr << std::endl;
         std::cerr << "Options:" << std::endl;
         std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
-        std::cerr << "    --fields,-f,--input-fields <fields>: input field names if '--output-fields' are given; output field numbers if not" << std::endl;
-        std::cerr << "    --binary,--format <format>: input binary format" << std::endl;
-        std::cerr << "    --output-fields,--output,-o <fields>: output fields" << std::endl;
-        std::cerr << "    --skip=<N>; skip the first N records (applied once if multiple input files are given); no skip if N = 0" << std::endl;
-        std::cerr << "    --count=<N>; output no more than N records; no output if N <= 0" << std::endl;
-        std::cerr << "    --read-all,--force-read; do not use the seek form of the algorithm, read entire records at once (see above)" << std::endl;
-        std::cerr << "    --flush; flush after every output record; less efficient, more predictable" << std::endl;
+        std::cerr << "    --fields,-f=<fields>: input field names if '--output-fields' are given; otherwise: output field numbers starting from 1" << std::endl;
+        std::cerr << "    --binary,-b=<format>: input binary format" << std::endl;
+        std::cerr << "    --output-fields,--output,-o=<fields>: output fields" << std::endl;
+        std::cerr << "    --skip=<N>; skip the first N records (applied once if multiple input files are given); default: 0" << std::endl;
+        std::cerr << "    --count=<N>; output no more than N records" << std::endl;
+        std::cerr << "    --read-all,--force-read; do not use the seek form of the algorithm, read entire records at once; " << ( verbose ? "see below" : "run --help --verbose for details" ) << std::endl;
+        std::cerr << "    --flush; flush after every output record; less efficient, use it if you need to process a stream of records in real time to avoid buffering" << std::endl;
         std::cerr << "    --verbose,-v: chat more" << std::endl;
         std::cerr << std::endl;
         std::cerr << "Examples:" << std::endl;
@@ -169,17 +179,17 @@ namespace {
             {
                 if ( input_fields[i].empty() ) { continue; }
                 int pos = boost::lexical_cast< int >( input_fields[i] );
-                if ( pos < 1 || pos > int( csv.format().count() ) ) { COMMA_THROW( comma::exception, "field number " << input_fields[i] << " out of [1," << csv.format().count() << "] bounds" ); }
+                if ( pos < 1 || pos > int( csv.format().count() ) ) { std::cerr << "csv-bin-cut: field number " << input_fields[i] << " out of [1," << csv.format().count() << "] bounds" << std::endl; exit( 1 ); }
                 fields.push_back( field( boost::lexical_cast< std::string >( pos ), fields.size() ) );
                 fields.back().input_index = --pos;
                 fields.back().input_offset = csv.format().offset( pos ).offset;
                 fields.back().size = csv.format().offset( pos ).size;
             }
         }
-        if( fields.empty() ) { COMMA_THROW( comma::exception, "csv-bin-cut: please define at least one output field" ); }
+        if( fields.empty() ) { std::cerr << "csv-bin-cut: please define at least one output field" << std::endl; exit( 1 ); }
         for( unsigned int i = 0; i < fields.size(); ++i )
         {
-            if( !fields[i].input_index ) { COMMA_THROW( comma::exception, "csv-bin-cut: field '" << fields[i].name << "' not found in input fields '" << csv.fields << "'" ); }
+            if( !fields[i].input_index ) { std::cerr << "csv-bin-cut: field '" << fields[i].name << "' not found in input fields '" << csv.fields << "'" << std::endl; exit( 1 ); }
             fields[i].offset = ( i == 0 ? 0 : fields[i - 1].offset + fields[i - 1].size );
         }
         return fields;
@@ -227,7 +237,7 @@ namespace {
         {
             is.read( &ibuf_[0], irecord_size_ );
             if( is.gcount() == 0 ) { continue; }
-            if( is.gcount() < int( irecord_size_ ) ) { COMMA_THROW( comma::exception, "csv-bin-cut: expected " << irecord_size_ << " bytes, got only " << is.gcount() ); }
+            if( is.gcount() < int( irecord_size_ ) ) { std::cerr << "csv-bin-cut: expected " << irecord_size_ << " bytes, got only " << is.gcount() << std::endl; exit( 1 ); }
             if ( skip_ ) { --skip_; continue; }
             for( unsigned int i = 0; i < fields_.size(); ++i ) { std::cout.write( &ibuf_[0] + fields_[i].input_offset, fields_[i].size ); }
             if( flush_ ) { std::cout.flush(); }
@@ -248,11 +258,11 @@ namespace {
             ifs.seekg( 0, std::ios_base::end );
             std::streampos fsize = ifs.tellg();
             unsigned int nrecords = fsize / irecord_size_;
-            if ( nrecords * irecord_size_ != static_cast< unsigned int >( fsize ) ) { COMMA_THROW( comma::exception, "csv-bin-cut: size of file '" << fname << "' is not a multiple of the record size" ); }
+            if ( nrecords * irecord_size_ != static_cast< unsigned int >( fsize ) ) { std::cerr << "csv-bin-cut: size of file '" << fname << "' is not a multiple of the record size" << std::endl; exit( 1 ); }
             if ( nrecords < skip_ ) { skip_ -= nrecords; return 0; }
             record_start = irecord_size_ * skip_;
             ifs.seekg( record_start, std::ios_base::beg );
-            if ( ifs.fail() ) { COMMA_THROW( comma::exception, "csv-bin-cut: cannot skip " << skip_ << " records in the file '" << fname << "'" ); }
+            if ( ifs.fail() ) { std::cerr << "csv-bin-cut: cannot skip " << skip_ << " records in the file '" << fname << "'" << std::endl; exit( 1 ); }
             skip_ = 0;
         }
         while( ifs.good() && !ifs.eof() )
@@ -264,15 +274,15 @@ namespace {
                 ifs.read( &obuf_[ fields_[i].offset ], fields_[i].size );
                 if ( ifs.eof() ) {
                     if ( i == 0 ) { break; }
-                    COMMA_THROW( comma::exception, "csv-bin-cut: encountered eof mid-record in '" << fname << "'" );
+                    std::cerr << "csv-bin-cut: encountered eof mid-record in '" << fname << "'" << std::endl; exit( 1 );
                 }
-                if ( ifs.fail() ) { COMMA_THROW( comma::exception, "csv-bin-cut: reading field '" << fields_[i].name << "' at position " << record_start + off << " failed" ); }
+                if ( ifs.fail() ) { std::cerr << "csv-bin-cut: reading field '" << fields_[i].name << "' at position " << record_start + off << " failed" << std::endl; exit( 1 ); }
             }
             if ( !ifs.eof() )
             {
                 std::cout.write( &obuf_[0], orecord_size_ );
                 if ( flush_ ) { std::cout.flush(); }
-                if ( std::cout.fail() ) { COMMA_THROW( comma::exception, "csv-bin-cut: std::cout output failed" ); }
+                if ( std::cout.fail() ) { std::cerr << "csv-bin-cut: std::cout output failed" << std::endl; exit( 1 ); }
                 if ( count_max_ >= 0 && ++count_ >= count_max_ ) { return 0; }  // count not incremented if no limit imposed, do not care
                 // go to the start of the next record
                 record_start += irecord_size_;
@@ -293,8 +303,8 @@ namespace {
                 int rv = read_all( std::cin );
                 if ( rv != 0 ) { return rv; }
             } else {
-                std::ifstream ifs( ifile->c_str(), std::ifstream::binary );
-                if ( !ifs.is_open() ) { COMMA_THROW( comma::exception, "csv-bin-cut: cannot open '" << *ifile << "' for reading" ); }
+                std::ifstream ifs( &( *ifile )[0], std::ifstream::binary );
+                if ( !ifs.is_open() ) { std::cerr << "csv-bin-cut: cannot open '" << *ifile << "' for reading" << std::endl; exit( 1 ); }
                 int rv = ( force_read_ ? read_all( ifs ) : read_fields( ifs, *ifile ) );
                 if ( rv != 0 ) { return rv; }
             }
@@ -312,36 +322,27 @@ int main( int ac, char** av )
     #endif
     try
     {
-        command_line_options options( ac, av );
-
-        bool verbose = options.exists( "--verbose,-v" );
-        if( options.exists( "--help,-h" ) ) { usage( verbose ); }
-
+        command_line_options options( ac, av, usage );
         comma::csv::options csv( options );
+        std::vector< std::string > files = options.unnamed( "--help,-h,--verbose,-v,--flush,--read-all,--force-read", "-.*" );
+        if( !csv.binary() )
         {
-            std::string b = options.value< std::string >( "--format", "" );
-            if( !b.empty() ) { csv.format( b ); }
-            std::string f = options.value< std::string >( "--input-fields", "" );
-            if( !f.empty() ) { csv.fields = f; }
-        }
-
-        std::vector< std::string > files = options.unnamed( "--help,-h,--verbose,-v,--flush,--read-all,--force-read", "--fields,-f,--input-fields,--output-fields,-o,--binary,--format,--skip,--count" );
-        if ( files.size() == 1 && files[0] != "-" ) {
-            // could be format string, not a file
-            try
+            if( files.size() == 1 && files[0] != "-" ) // deprecated, left for backward compatibility
             {
-                comma::csv::format f( files[0] );
-                csv.format( f );
-                files.pop_back();
-            }
-            catch ( comma::exception & )
-            {
-                // OK, not a string
+                try
+                {
+                    csv.format( comma::csv::format( files[0] ) );
+                    files.clear();
+                }
+                catch ( comma::exception & )
+                {
+                    // it's not a format, it's filename
+                }
             }
         }
-        if( !csv.binary() ) { COMMA_THROW( comma::exception, "csv-bin-cut: must provide '--binary=..' format" ); }
+        if( !csv.binary() ) { std::cerr << "csv-bin-cut: please specify --binary" << std::endl; exit( 1 ); }
 
-        std::vector< field > fields = setup_fields( options, csv );
+        const std::vector< field >& fields = setup_fields( options, csv );
 
         unsigned int skip = options.value< unsigned int >( "--skip", 0 );
         long int count_max = options.value< long int >( "--count", -1 );
