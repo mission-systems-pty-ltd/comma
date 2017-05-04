@@ -87,7 +87,7 @@ namespace {
         std::cerr << std::endl;
         std::cerr << "Options:" << std::endl;
         std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
-        std::cerr << "    --fields,-f <fields>: input field names if '--output-fields' are given; output field numbers if not" << std::endl;
+        std::cerr << "    --fields,-f,--input-fields <fields>: input field names if '--output-fields' are given; output field numbers if not" << std::endl;
         std::cerr << "    --binary,--format <format>: input binary format" << std::endl;
         std::cerr << "    --output-fields,--output,-o <fields>: output fields" << std::endl;
         std::cerr << "    --skip=<N>; skip the first N records (applied once if multiple input files are given); no skip if N = 0" << std::endl;
