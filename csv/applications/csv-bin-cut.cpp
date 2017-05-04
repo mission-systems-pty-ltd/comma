@@ -169,7 +169,7 @@ namespace {
             {
                 if ( input_fields[i].empty() ) { continue; }
                 int pos = boost::lexical_cast< int >( input_fields[i] );
-                if ( pos < 1 || pos > csv.format().count() ) { COMMA_THROW( comma::exception, "field number " << input_fields[i] << " out of [0," << csv.format().count() << "] bounds" ); }
+                if ( pos < 1 || pos > int( csv.format().count() ) ) { COMMA_THROW( comma::exception, "field number " << input_fields[i] << " out of [1," << csv.format().count() << "] bounds" ); }
                 fields.push_back( field( boost::lexical_cast< std::string >( pos ), fields.size() ) );
                 fields.back().input_index = --pos;
                 fields.back().input_offset = csv.format().offset( pos ).offset;
@@ -248,7 +248,7 @@ namespace {
             ifs.seekg( 0, std::ios_base::end );
             std::streampos fsize = ifs.tellg();
             unsigned int nrecords = fsize / irecord_size_;
-            if ( nrecords * irecord_size_ != fsize ) { COMMA_THROW( comma::exception, "csv-bin-cut: size of file '" << fname << "' is not a multiple of the record size" ); }
+            if ( nrecords * irecord_size_ != static_cast< unsigned int >( fsize ) ) { COMMA_THROW( comma::exception, "csv-bin-cut: size of file '" << fname << "' is not a multiple of the record size" ); }
             if ( nrecords < skip_ ) { skip_ -= nrecords; return 0; }
             record_start = irecord_size_ * skip_;
             ifs.seekg( record_start, std::ios_base::beg );
