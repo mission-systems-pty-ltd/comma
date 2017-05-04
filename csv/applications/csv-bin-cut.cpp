@@ -324,7 +324,7 @@ int main( int ac, char** av )
     {
         command_line_options options( ac, av, usage );
         comma::csv::options csv( options );
-        std::vector< std::string > files = options.unnamed( "--help,-h,--verbose,-v,--flush,--read-all,--force-read", "-.*" );
+        std::vector< std::string > files = options.unnamed( "--help,-h,--verbose,-v,--flush,--read-all,--force-read", "--fields,-f,--output-fields,-o,--binary,-b,--skip,--count" );
         if( !csv.binary() )
         {
             if( files.size() == 1 && files[0] != "-" ) // deprecated, left for backward compatibility
