@@ -58,10 +58,21 @@ using namespace comma;
 
 namespace {
 
+    void brief_examples( )
+    {
+        std::cerr << "Brief examples (run --help --verbose for more):" << std::endl;
+        std::cerr << "    csv-bin-cut input.bin --binary=t,s[1000000] --fields=t,s --output-fields=t" << std::endl;
+        std::cerr << "    csv-bin-cut input.bin --binary=t,s[1000000] --fields=1" << std::endl;
+        std::cerr << "    cat input.bin | csv-bin-cut --binary=t,s[1000000] --fields=t, --output-fields=t" << std::endl;
+        std::cerr << "    cat input.bin | csv-bin-cut t,s[1000000] --fields=1" << std::endl;
+        std::cerr << "all versions output the same field 't'; first two variants are faster" << std::endl;
+        std::cerr << std::endl;
+    }
+
     void usage( bool verbose )
     {
         std::cerr << std::endl;
-        std::cerr << "do to fixed-size binary records same as linux cut utility for csv data" << std::endl;
+        std::cerr << "Do to fixed-size binary records same as linux utility cut (1) for csv data" << std::endl;
         std::cerr << std::endl;
         std::cerr << "Usage:" << std::endl;
         std::cerr << "    1) faster version reading from files" << ( verbose ? "" : "; run --help --verbose for details" ) << std::endl;
@@ -70,67 +81,69 @@ namespace {
         std::cerr << "    2) slower version reading from stdin" << ( verbose ? "" : "; run --help --verbose for details" ) << std::endl;
         std::cerr << "       cat file.bin | csv-bin-cut [<options>]" << std::endl;
         std::cerr << std::endl;
-        std::cerr << "    The first form outputs the specified fields from the binary file(s); produce the same output as the csv-shuffle call" << std::endl;
-        std::cerr << "        cat file.bin | csv-shuffle --binary=<format> --fields=<fields> --output-fields=<output-fields>" << std::endl;
-        std::cerr << "    but can be MUCH more efficient for large data if only a small sub-set has to be output." << std::endl;
-        std::cerr << std::endl;
-        std::cerr << "    The second form specifies the output fields as numbers; it works like the UNIX cut (1) utility for \"binary csv\"." << std::endl;
-        std::cerr << std::endl;
-        std::cerr << "    The third form reads data from standard input and is similar to csv-shuffle. Can use either names or numbers for fields." << std::endl;
-        std::cerr << std::endl;
-        std::cerr << "    When csv-bin-cut reads files (as opposed to stdin), it seeks to the position of the next data to be output as opposed to" << std::endl;
-        std::cerr << "    reading entire records; this improves performance for large record sizes as most of the input is skipped. For small records," << std::endl;
-        std::cerr << "    however, the improvement is lost because seek-read-seek-read would repeatedly read the same disk block. Therefore, for small" << std::endl;
-        std::cerr << "    records it is advised to turn off the seeking algorithm by the '--read-all' option." << std::endl;
-        std::cerr << std::endl;
-        std::cerr << "Semantics for input:" << std::endl;
-        std::cerr << "    csv-bin-cut a.bin b.bin --binary=<format> ...: data from files, potentially fast" << std::endl;
-        std::cerr << "    csv-bin-cut --binary=<format> ...: data from stdin" << std::endl;
-        std::cerr << "    csv-bin-cut - --binary=<format> ...: also data from stdin" << std::endl;
-        std::cerr << "    csv-bin-cut a.bin - b.bin --binary=<format> ...: data from a.bin (potentially fast), then from stdin (read full records," << std::endl;
-        std::cerr << "        may be slow), then data from b.bin (again, potentially fast)" << std::endl;
-        std::cerr << "    csv-bin-cut <format> ...: data from stdin, format as the first argument (deprecated, left for backward compatibility)" << std::endl;
-        std::cerr << std::endl;
-        std::cerr << "Semantics for output:" << std::endl;
-        std::cerr << "    csv-bin-cut ... --fields=foo,bar,baz --output-fields=foo,baz: input and output fields specified by names" << std::endl;
-        std::cerr << "    csv-bin-cut ... --fields=1,3: fields to output are specified by numbers as in cut (1) utility; numbers start with 1" << std::endl;
-        std::cerr << std::endl;
         std::cerr << "Options:" << std::endl;
         std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
-        std::cerr << "    --fields,-f=<fields>: input field names if '--output-fields' are given; otherwise: output field numbers starting from 1" << std::endl;
+        std::cerr << "    --fields,-f=<fields>: input field names if '--output-fields' are given; otherwise output field numbers starting from 1" << std::endl;
         std::cerr << "    --binary,-b=<format>: input binary format" << std::endl;
-        std::cerr << "    --output-fields,--output,-o=<fields>: output fields" << std::endl;
-        std::cerr << "    --skip=<N>; skip the first N records (applied once if multiple input files are given); default: 0" << std::endl;
-        std::cerr << "    --count=<N>; output no more than N records" << std::endl;
+        std::cerr << "    --output-fields,--output,-o=[<fields>]: output fields" << std::endl;
+        std::cerr << "    --skip=[<N>]; skip the first N records (applied once if multiple input files are given); default: 0" << std::endl;
+        std::cerr << "    --count=[<N>]; output no more than N records" << std::endl;
         std::cerr << "    --read-all,--force-read; do not use the seek form of the algorithm, read entire records at once; " << ( verbose ? "see below" : "run --help --verbose for details" ) << std::endl;
-        std::cerr << "    --flush; flush after every output record; less efficient, use it if you need to process a stream of records in real time to avoid buffering" << std::endl;
+        std::cerr << "    --flush; flush after every output record; less efficient, use it if you need to process records in real time to avoid buffering" << std::endl;
         std::cerr << "    --verbose,-v: chat more" << std::endl;
         std::cerr << std::endl;
-        std::cerr << "Examples:" << std::endl;
-        std::cerr << "    csv-bin-cut input.bin --binary=t,s[1000000] --fields=t,s --output-fields=t" << std::endl;
-        std::cerr << "        output only the time field from a binary file; more efficient form of" << std::endl;
-        std::cerr << "            cat input.bin | csv-shuffle --binary=t,s[1000000] --fields=t,s --output-fields=t" << std::endl;
-        std::cerr << std::endl;
-        std::cerr << "    csv-bin-cut input.bin --binary=t,s[1000000] --fields=1" << std::endl;
-        std::cerr << "        same but uses positional number to specify output of the 1st field (time)" << std::endl;
-        std::cerr << std::endl;
-        std::cerr << "    cat input.bin | csv-bin-cut --binary=t,s[1000000] --fields=1" << std::endl;
-        std::cerr << "        take input on stdin; same output as above but less efficient because has to read the whole file" << std::endl;
-        std::cerr << std::endl;
-        std::cerr << "    csv-bin-cut input.bin --binary=t,s[2000] --fields=1 --read-all" << std::endl;
-        std::cerr << "        record size is small, force reading the entire record at once; thus, identical to" << std::endl;
-        std::cerr << "            cat input.bin | csv-shuffle --binary=t,s[2000] --fields=t,s --output-fields=t" << std::endl;
-        std::cerr << std::endl;
-        std::cerr << "    csv-bin-cut input.bin --skip=1000 --binary=t,s[1000000] --fields=t,s --output-fields=t | csv-from-bin t" << std::endl;
-        std::cerr << "        output only the time field starting with 1000th record; more efficient form of" << std::endl;
-        std::cerr << "            cat input.bin | csv-shuffle --binary=t,s[1000000] --fields=t,s --output-fields=t | csv-from-bin t | tail -n+1001" << std::endl;
-        std::cerr << std::endl;
-        std::cerr << "    csv-bin-cut 1.bin 2.bin 3.bin --skip=1000 --count=2 --binary=t,s[1000000] --fields=t,s ..." << std::endl;
-        std::cerr << "        assuming each of the binary files holds 500 records, output data from" << std::endl;
-        std::cerr << "        records 0 and 1 of file '3.bin'; records 0-499 in the file '1.bin' skipped, records 0-499 in" << std::endl;
-        std::cerr << "        the file '2.bin' skipped (total of 1000 skipped records), then 2 records output" << std::endl;
-        std::cerr << std::endl;
-        if ( verbose ) {
+        if ( !verbose ) {
+            brief_examples();
+        } else {
+            std::cerr << "Semantics for input:" << std::endl;
+            std::cerr << "    csv-bin-cut a.bin b.bin --binary=<format> ...: read data from files, potentially fast" << std::endl;
+            std::cerr << "    csv-bin-cut --binary=<format> ...: read data from stdin" << std::endl;
+            std::cerr << "    csv-bin-cut - --binary=<format> ...: also read data from stdin" << std::endl;
+            std::cerr << "    csv-bin-cut a.bin - b.bin --binary=<format> ...: read data from a.bin (fast), then read data from stdin (full records," << std::endl;
+            std::cerr << "        may be slow), then read data from b.bin (again, fast)" << std::endl;
+            std::cerr << "    csv-bin-cut <format> ...: read data from stdin, specify format as the first argument (deprecated, left for backward compatibility)" << std::endl;
+            std::cerr << std::endl;
+            std::cerr << "Semantics for output:" << std::endl;
+            std::cerr << "    csv-bin-cut ... --fields=foo,bar,baz --output-fields=foo,baz: input and output fields specified by names" << std::endl;
+            std::cerr << "    csv-bin-cut ... --fields=1,3: fields to output are specified by numbers as in cut (1) utility; numbers start with 1" << std::endl;
+            std::cerr << std::endl;
+            std::cerr << "Algorithm:" << std::endl;
+            std::cerr << "    When csv-bin-cut reads a file (as opposed to stdin), it seeks to the position of the next data to be output as opposed to" << std::endl;
+            std::cerr << "    reading entire records; this improves performance for large record sizes as most of the input is skipped. For small records," << std::endl;
+            std::cerr << "    however, the improvement is lost because seek-read-seek-read would repeatedly read the same disk block. Therefore, for small" << std::endl;
+            std::cerr << "    records it is advised to turn off the seeking algorithm by the '--read-all' option." << std::endl;
+            std::cerr << std::endl;
+            std::cerr << "Examples:" << std::endl;
+            std::cerr << "    csv-bin-cut input.bin --binary=t,s[1000000] --fields=t,s --output-fields=t" << std::endl;
+            std::cerr << "        output only the time field from a binary file; more efficient form of" << std::endl;
+            std::cerr << "            cat input.bin | csv-shuffle --binary=t,s[1000000] --fields=t,s --output-fields=t" << std::endl;
+            std::cerr << std::endl;
+            std::cerr << "    csv-bin-cut input.bin --binary=t,s[1000000] --fields=1" << std::endl;
+            std::cerr << "        same but uses positional number to specify output of the 1st field (time)" << std::endl;
+            std::cerr << std::endl;
+            std::cerr << "    cat input.bin | csv-bin-cut --binary=t,s[1000000] --fields=1" << std::endl;
+            std::cerr << "        take input on stdin; same output as above but less efficient because has to read the whole file" << std::endl;
+            std::cerr << std::endl;
+            std::cerr << "    csv-bin-cut input.bin --binary=t,s[2000] --fields=1 --read-all" << std::endl;
+            std::cerr << "        record size is small, force reading the entire record at once; thus, identical to" << std::endl;
+            std::cerr << "            cat input.bin | csv-shuffle --binary=t,s[2000] --fields=t,s --output-fields=t" << std::endl;
+            std::cerr << std::endl;
+            std::cerr << "    csv-bin-cut input.bin --skip=1000 --binary=t,s[1000000] --fields=t,s --output-fields=t | csv-from-bin t" << std::endl;
+            std::cerr << "        output only the time field starting with 1000th record; more efficient form of" << std::endl;
+            std::cerr << "            cat input.bin | csv-shuffle --binary=t,s[1000000] --fields=t,s --output-fields=t | csv-from-bin t | tail -n+1001" << std::endl;
+            std::cerr << std::endl;
+            std::cerr << "    csv-bin-cut 1.bin 2.bin 3.bin --skip=1000 --count=2 --binary=t,s[1000000] --fields=t,s ..." << std::endl;
+            std::cerr << "        assuming each of the binary files holds 500 records, output data from" << std::endl;
+            std::cerr << "        records 0 and 1 of file '3.bin'; records 0-499 in the file '1.bin' skipped, records 0-499 in" << std::endl;
+            std::cerr << "        the file '2.bin' skipped (total of 1000 skipped records), then 2 records output" << std::endl;
+            std::cerr << std::endl;
+            std::cerr << "    cat 2.bin | csv-bin-cut 1.bin - 3.bin --binary=t,s[1000000] --fields=1" << std::endl;
+            std::cerr << "        read file 1.bin (fast), then stdin (file 2.bin; slower), then file 3.bin (again, fast)" << std::endl;
+            std::cerr << std::endl;
+            std::cerr << "    cat 2.bin | csv-bin-cut t,s[1000000] --fields=1" << std::endl;
+            std::cerr << "        specify format as command-line argument; supported for backward compatibility; no further file arguments" << std::endl;
+            std::cerr << "        are taken, mandatory read stdin" << std::endl;
+            std::cerr << std::endl;
             std::cerr << "format specifications:" << std::endl;
             std::cerr << csv::format::usage() << std::endl;
         }
@@ -336,7 +349,7 @@ int main( int ac, char** av )
                 }
                 catch ( comma::exception & )
                 {
-                    // it's not a format, it's filename
+                    // it's not a format string
                 }
             }
         }
@@ -356,4 +369,3 @@ int main( int ac, char** av )
     catch( ... ) { std::cerr << "csv-bin-cut: unknown exception" << std::endl; }
     return 1;
 }
-
