@@ -65,7 +65,7 @@ namespace {
         std::cerr << "    csv-bin-cut input.bin --binary=t,s[1000000] --fields=1" << std::endl;
         std::cerr << "    cat input.bin | csv-bin-cut --binary=t,s[1000000] --fields=t, --output-fields=t" << std::endl;
         std::cerr << "    cat input.bin | csv-bin-cut t,s[1000000] --fields=1" << std::endl;
-        std::cerr << "all versions output the same field 't'; first two variants are faster" << std::endl;
+        std::cerr << "all versions output the same field 't'; the first two variants are faster" << std::endl;
         std::cerr << std::endl;
     }
 
@@ -79,7 +79,7 @@ namespace {
         std::cerr << "       csv-bin-cut file.bin [file2.bin ...] [<options>]" << std::endl;
         std::cerr << std::endl;
         std::cerr << "    2) slower version reading from stdin" << ( verbose ? "" : "; run --help --verbose for details" ) << std::endl;
-        std::cerr << "       cat file.bin | csv-bin-cut [<options>]" << std::endl;
+        std::cerr << "       cat file.bin [file2.bin ...] | csv-bin-cut [<options>]" << std::endl;
         std::cerr << std::endl;
         std::cerr << "Options:" << std::endl;
         std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
@@ -119,7 +119,7 @@ namespace {
             std::cerr << "            cat input.bin | csv-shuffle --binary=t,s[1000000] --fields=t,s --output-fields=t" << std::endl;
             std::cerr << std::endl;
             std::cerr << "    csv-bin-cut input.bin --binary=t,s[1000000] --fields=1" << std::endl;
-            std::cerr << "        same but uses positional number to specify output of the 1st field (time)" << std::endl;
+            std::cerr << "        same but uses positional number to specify output of the 't' field" << std::endl;
             std::cerr << std::endl;
             std::cerr << "    cat input.bin | csv-bin-cut --binary=t,s[1000000] --fields=1" << std::endl;
             std::cerr << "        take input on stdin; same output as above but less efficient because has to read the whole file" << std::endl;
@@ -144,7 +144,7 @@ namespace {
             std::cerr << "        specify format as command-line argument; supported for backward compatibility; no further file arguments" << std::endl;
             std::cerr << "        are taken, mandatory read stdin" << std::endl;
             std::cerr << std::endl;
-            std::cerr << "format specifications:" << std::endl;
+            std::cerr << "Format specifications:" << std::endl;
             std::cerr << csv::format::usage() << std::endl;
         }
         std::cerr << comma::contact_info << std::endl;
