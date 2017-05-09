@@ -1295,7 +1295,7 @@ int main( int ac, char** av )
             if (has_id && !append) { std::cout << csv.delimiter << "ui"; }
             if (has_block && !append) { std::cout << csv.delimiter << "ui"; }
             std::cout << std::endl;
-            return 1;
+            return 0;
         } 
         while( std::cin.good() && !std::cin.eof() )
         {
