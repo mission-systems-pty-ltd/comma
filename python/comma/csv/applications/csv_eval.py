@@ -197,12 +197,16 @@ def get_args():
         action='store_true',
         help='use full xpaths as variable names with / replaced by _ (default: use basenames of xpaths)')
     parser.add_argument(
-        '--select',
-        '--output-if',
-        '--if',
+        '--default-values',
+        '--default',
         default='',
-        metavar='<condition>',
-        help='select and output records of input stream that satisfy the condition')
+        metavar='<assignments>',
+        help='default values for variables in expressions but not in input stream')
+    parser.add_argument(
+        '--with-error',
+        default='',
+        metavar='<message>',
+        help='if --exit-if, exit with error and a given error message')
     parser.add_argument(
         '--exit-if',
         '--output-until',
@@ -211,11 +215,12 @@ def get_args():
         metavar='<condition>',
         help='output all records and exit when the condition is satisfied')
     parser.add_argument(
-        '--default-values',
-        '--default',
+        '--select',
+        '--output-if',
+        '--if',
         default='',
-        metavar='<assignments>',
-        help='default values for variables in expressions but not in input stream')
+        metavar='<condition>',
+        help='select and output records of input stream that satisfy the condition')
     args = parser.parse_args()
     if args.help:
         if args.verbose:
@@ -255,6 +260,10 @@ def check_options(args):
             raise csv_eval_error(msg)
         if args.output_fields or args.output_format:
             msg = "--select and --exit-if cannot be used with --output-fields or --output-format"
+            raise csv_eval_error(msg)
+    if args.with_error:
+        if not args.exit_if:
+            msg = "--with-error is only used with --exit-if"
             raise csv_eval_error(msg)
 
 
@@ -555,7 +564,10 @@ def exit_if(stream):
             break
         mask = eval(code, env, {f: input[f] for f in fields})
         if mask:
-            sys.exit()
+            if not stream.args.with_error: sys.exit()
+            name = os.path.basename(sys.argv[0])
+            print >> sys.stderr, "{} error: {}".format(name, stream.args.with_error)
+            sys.exit(1)
         stream.input.dump()
 
 def main():
