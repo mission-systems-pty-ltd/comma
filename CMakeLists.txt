@@ -8,6 +8,12 @@ if( USE_ARM_TOOLCHAIN )
     include( ${CMAKE_TOOLCHAIN_FILE} REQUIRED )
 endif( USE_ARM_TOOLCHAIN )
 
+if( USE_ARM64_TOOLCHAIN )
+    set( CMAKE_TOOLCHAIN_FILE ${CMAKE_CURRENT_SOURCE_DIR}/CMakeFiles/arm64.toolchain.cmake )
+    # for info: look at opencv-2.4.11/platforms/linux/arm-gnueabi.toolchain.cmake
+    include( ${CMAKE_TOOLCHAIN_FILE} REQUIRED )
+endif( USE_ARM64_TOOLCHAIN )
+
 PROJECT( "comma" )
 
 cmake_minimum_required(VERSION 2.6)
