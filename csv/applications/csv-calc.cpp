@@ -55,9 +55,11 @@ static void bash_completion( unsigned const ac, char const * const * av )
 {
     static char const * const arguments =
         " min max mean mode percentile sum centre diameter radius var stddev size"
+        " --append"
         " --delimiter -d"
         " --fields -f"
         " --output-fields"
+        " --output-format"
         " --format"
         " --binary -b"
         " --verbose -v";
@@ -106,7 +108,10 @@ static void usage( bool verbose )
     std::cerr << "                 if 'id' field present, calculate by id" << std::endl;
     std::cerr << "                 if 'block' and 'id' fields present, calculate by id in each block" << std::endl;
     std::cerr << "                 block and id fields will be appended to the output" << std::endl;
-    std::cerr << "    --output-fields: print output field names for this operation and then exit" << std::endl;
+    std::cerr << "    --output-fields: print output field names for these operations and then exit" << std::endl;
+    std::cerr << "                     (note: with --append, this includes input fields)" << std::endl;
+    std::cerr << "    --output-format: print output format for this operation and then exit (note: requires input-format)" << std::endl;
+    std::cerr << "                     (note: with --append, this includes input format)" << std::endl;
     std::cerr << "    --format: in ascii mode: format hint string containing the types of the csv data, default: double or time" << std::endl;
     std::cerr << "    --binary,-b: in binary mode: format string of the csv data types" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
@@ -1259,6 +1264,7 @@ int main( int ac, char** av )
         {
             std::vector < std::string > fields = comma::split(csv.fields, ',');
             std::vector < std::string > output_fields;
+            if (append) { output_fields = fields; }
             for (std::size_t op = 0; op < v.size(); op++)
             {
                 std::replace(v[op].begin(), v[op].end(), '=', '_');
@@ -1270,12 +1276,27 @@ int main( int ac, char** av )
                     output_fields.push_back(fields[f] + "/" + v[op]);
                 }
             }
-            if (has_id) { output_fields.push_back("id"); }
-            if (has_block) { output_fields.push_back("block"); }
+            if (has_id && !append) { output_fields.push_back("id"); }
+            if (has_block && !append ) { output_fields.push_back("block"); }
             std::cout << comma::join(output_fields, ',') << std::endl;
             return 0;
         }
-        
+        if (options.exists("--output-format"))
+        {
+	    if ( !format ) { std::cerr << comma::verbose.app_name() << ": option --output-format requires input format to be specified, please use --format or --binary" << std::endl; return 1; }
+            boost::ptr_vector< Operationbase > ops;
+            init_operations(ops, operations_parameters, Values(csv, *format).format());
+            if (append) { std::cout << format->string(); }
+            for ( std::size_t i = 0; i < ops.size(); ++i ) 
+            { 
+                if ( append || i > 0 ) { std::cout << csv.delimiter; }
+                std::cout << ops[i].output_format().string();
+            }
+            if (has_id && !append) { std::cout << csv.delimiter << "ui"; }
+            if (has_block && !append) { std::cout << csv.delimiter << "ui"; }
+            std::cout << std::endl;
+            return 1;
+        } 
         while( std::cin.good() && !std::cin.eof() )
         {
             const Values* v = csv.binary() ? binary->read() : ascii->read();

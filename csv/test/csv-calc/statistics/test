@@ -2,8 +2,6 @@
 
 source $( type -p comma-application-util )
 
-set -x
-
 comma_path_value_to_var < <( cat )
 eval "$input_cmd" \
     | csv-calc $operation $options \
