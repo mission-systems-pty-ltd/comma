@@ -8,10 +8,17 @@ SET(CMAKE_SYSTEM_NAME Linux)
 #this one not so much
 SET(CMAKE_SYSTEM_VERSION 1)
 
-# specify the cross compiler
-SET( CMAKE_C_COMPILER   arm-linux-gnueabihf-gcc )
-SET( CMAKE_CXX_COMPILER arm-linux-gnueabihf-g++ )
-set(ARM_LINUX_SYSROOT /usr/arm-linux-gnueabihf/ CACHE PATH "ARM cross compilation system root")
+IF( "${ARM_ARCH}" STREQUAL "aarch64" )
+    # specify the cross compiler
+    SET( CMAKE_C_COMPILER   aarch64-linux-gnu-gcc )
+    SET( CMAKE_CXX_COMPILER aarch64-linux-gnu-g++ )
+    set(ARM_LINUX_SYSROOT /usr/aarch64-linux-gnu CACHE PATH "ARM cross compilation system root")
+ELSE( "${ARM_ARCH}" STREQUAL "aarch64" )
+    # specify the cross compiler
+    SET( CMAKE_C_COMPILER   arm-linux-gnueabihf-gcc )
+    SET( CMAKE_CXX_COMPILER arm-linux-gnueabihf-g++ )
+    set(ARM_LINUX_SYSROOT /usr/arm-linux-gnueabihf/ CACHE PATH "ARM cross compilation system root")
+ENDIF( "${ARM_ARCH}" STREQUAL "aarch64" )
 
 set(ARM_STAGE_ROOT /stage/arm/ CACHE PATH "ARM cross compilation user build root")
 set(CMAKE_FIND_ROOT_PATH ${CMAKE_FIND_ROOT_PATH} ${ARM_LINUX_SYSROOT})
