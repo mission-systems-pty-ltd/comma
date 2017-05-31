@@ -173,13 +173,13 @@ function run_iotop()
         | csv-time-stamp 2>/dev/null
 }
 
-if (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) ; then usage ; exit ; fi
-if (( $( comma_options_has --output-fields $@ ) )) ; then output_fields $@ ; exit ; fi
+if (( $( comma_options_has --help "$@" ) || $( comma_options_has -h "$@" ) )) ; then usage ; exit ; fi
+if (( $( comma_options_has --output-fields "$@" ) )) ; then output_fields "$@" ; exit ; fi
 
 debug=0
 
-description | comma-options-validate $@
-comma_path_value_to_var --export < <( description | comma-options-to-name-value $@ )
+description | comma-options-validate "$@"
+comma_path_value_to_var --export < <( description | comma-options-to-name-value "$@" )
 
 if [[ -n "$io" ]] ; then
     [[ -n "$( sudo which iotop )" ]] || { echo "comma-top: make sure iotop installed" >&2 ; exit 1 ; }
