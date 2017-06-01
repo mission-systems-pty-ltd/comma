@@ -188,9 +188,7 @@ else
     feeder_opts=""
     [[ -n "$sampling_interval" ]] && feeder_opts="-d $sampling_interval"
     [[ -n "$top_options" ]] && feeder_opts="$feeder_opts $top_options"
-    [[ -n "$num_samples" ]] && (( ++num_samples )) # first line will be ignored, leaving num_samples lines
+    [[ -n "$num_samples" && -z "$num_procs" ]] && (( ++num_samples )) # first line will be ignored, leaving num_samples lines
     if [[ -n "$num_procs" ]]; then parser="parser_num_procs"; else parser="parser_totals"; fi
     feeder "$num_samples" "$feeder_opts" "$num_procs" | $parser | csv-time-stamp 2>/dev/null 
 fi
-
-extract_mem
