@@ -213,7 +213,7 @@ namespace {
         public:
             seeker( const std::vector< field > & fields, const comma::csv::options & csv, unsigned int skip, long int count_max, bool flush, bool force_read )
                 : fields_( fields )
-                , orecord_size_( std::accumulate( fields.begin(), fields.end(), (size_t)0, []( size_t i, const field & f ){ return f.size + i; } ) )
+                , orecord_size_( std::accumulate( fields.begin(), fields.end(), (size_t)0, seeker::add_size ) )
                 , obuf_( orecord_size_ )
                 , ibuf_( 0 )
                 , irecord_size_( csv.format().size() )
@@ -240,6 +240,8 @@ namespace {
             long int count_max_;
             bool flush_;
             bool force_read_;
+
+            static size_t add_size( size_t i, const field & f ){ return i + f.size; }
     };
 
     int seeker::read_all( std::istream & is )
