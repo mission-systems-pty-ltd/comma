@@ -9,10 +9,11 @@ SET(CMAKE_SYSTEM_NAME Linux)
 SET(CMAKE_SYSTEM_VERSION 1)
 
 IF( "${ARM_ARCH}" STREQUAL "aarch64" )
-    # specify the cross compiler
-    SET( CMAKE_C_COMPILER   aarch64-linux-gnu-gcc )
-    SET( CMAKE_CXX_COMPILER aarch64-linux-gnu-g++ )
-    set(ARM_LINUX_SYSROOT /usr/aarch64-linux-gnu CACHE PATH "ARM cross compilation system root")
+    # Specify the cross compiler
+    # For arm64-v8 specifically, this does not work for Andriod which has no libc.so
+    SET( CMAKE_C_COMPILER   aarch64-linux-android-gcc )
+    SET( CMAKE_CXX_COMPILER aarch64-linux-android-g++ )
+    set(ARM_LINUX_SYSROOT /stage/android CACHE PATH "ARM cross compilation system root")
 ELSE( "${ARM_ARCH}" STREQUAL "aarch64" )
     # specify the cross compiler
     SET( CMAKE_C_COMPILER   arm-linux-gnueabihf-gcc )
