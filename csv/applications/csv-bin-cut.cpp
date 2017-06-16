@@ -144,6 +144,9 @@ namespace {
             std::cerr << "        specify format as command-line argument; supported for backward compatibility; no further file arguments" << std::endl;
             std::cerr << "        are taken, mandatory read stdin" << std::endl;
             std::cerr << std::endl;
+            std::cerr << "    echo 1,2,3,4,5,6,7 | csv-to-bin 2ub,3uw,2ui | csv-bin-cut --fields=1-3,5,6-7 --binary=2ub,3uw,2ui | csv-from-bin 2ub,2uw,2ui" << std::endl;
+            std::cerr << "        numeric fields can be specified as ranges (inclusive)" << std::endl;
+            std::cerr << std::endl;
             std::cerr << "Format specifications:" << std::endl;
             std::cerr << csv::format::usage() << std::endl;
         }
@@ -187,16 +190,35 @@ namespace {
                 }
             }
         } else {
-            // input fields must be numbers
+            // input fields must be numbers or ranges of numbers
             for( unsigned int i = 0; i < input_fields.size(); ++i )
             {
                 if ( input_fields[i].empty() ) { continue; }
-                int pos = boost::lexical_cast< int >( input_fields[i] );
-                if ( pos < 1 || pos > int( csv.format().count() ) ) { std::cerr << "csv-bin-cut: field number " << input_fields[i] << " out of [1," << csv.format().count() << "] bounds" << std::endl; exit( 1 ); }
-                fields.push_back( field( boost::lexical_cast< std::string >( pos ), fields.size() ) );
-                fields.back().input_index = --pos;
-                fields.back().input_offset = csv.format().offset( pos ).offset;
-                fields.back().size = csv.format().offset( pos ).size;
+                std::vector< std::string > r = comma::split( input_fields[i], '-' );
+                if( r.size() == 2 )
+                {
+                    comma::int32 begin = boost::lexical_cast< comma::int32 >( r[0] );
+                    if( begin <= 0 ) { std::cerr << "csv-bin-cut: field numbers start with 1 (to keep it consistent with linux cut utility)" << std::endl; exit( 1 ); }
+                    comma::int32 end = boost::lexical_cast< comma::int32 >( r[1] );
+                    if( end <= begin ) { std::cerr << "csv-bin-cut: expected range, got: " << input_fields[i] << std::endl; exit( 1 ); }
+                    ++end;
+                    for( int k = begin; k < end; ++k ) {
+                        int pos = k;
+                        fields.push_back( field( boost::lexical_cast< std::string >( pos ), fields.size() ) );
+                        fields.back().input_index = --pos;
+                        fields.back().input_offset = csv.format().offset( pos ).offset;
+                        fields.back().size = csv.format().offset( pos ).size;
+                    }
+                }
+                else
+                {
+                    int pos = boost::lexical_cast< int >( input_fields[i] );
+                    if ( pos < 1 || pos > int( csv.format().count() ) ) { std::cerr << "csv-bin-cut: field number " << input_fields[i] << " out of [1," << csv.format().count() << "] bounds" << std::endl; exit( 1 ); }
+                    fields.push_back( field( boost::lexical_cast< std::string >( pos ), fields.size() ) );
+                    fields.back().input_index = --pos;
+                    fields.back().input_offset = csv.format().offset( pos ).offset;
+                    fields.back().size = csv.format().offset( pos ).size;
+                }
             }
         }
         if( fields.empty() ) { std::cerr << "csv-bin-cut: please define at least one output field" << std::endl; exit( 1 ); }
