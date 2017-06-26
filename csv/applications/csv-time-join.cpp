@@ -205,8 +205,7 @@ int main( int ac, char** av )
         select_only = options.exists( "--do-not-append,--select" );
         if( select_only && timestamp_only ) { std::cerr << "csv-time-join: --timetamp-only specified with --select, ignoring --timestamp-only" << std::endl; }
         bool discard_bounding = options.exists( "--discard-bounding" );
-        boost::optional< unsigned int > buffer_size;
-        if( options.exists( "--buffer" ) ) { buffer_size = options.value< unsigned int >( "--buffer" ); }
+        boost::optional< unsigned int > buffer_size = options.optional< unsigned int >( "--buffer" );
         bool discard = !options.exists( "--no-discard" );
         if( options.exists( "--bound" ) ) { bound = boost::posix_time::microseconds( options.value< double >( "--bound" ) * 1000000 ); }
         stdin_csv = comma::csv::options( options, "t" );
