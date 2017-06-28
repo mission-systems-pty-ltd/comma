@@ -105,7 +105,7 @@ IF(CMAKE_BUILD_TOOL MATCHES "make")
 
 ENDIF(CMAKE_BUILD_TOOL MATCHES "make")
 
-option( TRY_USE_CXX03 "try to build using C++03" OFF )
+option( TRY_USE_CXX0X "try to build using C++0X" OFF )
 if( UNIX )
     # A much better way to do this is with CXX_STANDARD but that requires CMake 3.1
     include( CheckCXXCompilerFlag )
@@ -117,19 +117,19 @@ if( UNIX )
             set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wc++11-narrowing" )
         endif ( CMAKE_CXX_COMPILER_ID MATCHES "Clang" )
     else()
-        if ( TRY_USE_CXX03 )
+        if ( TRY_USE_CXX0X )
             if( compiler_supports_cxx0x )
-                message( WARNING "${CMAKE_CXX_COMPILER} supports only C++03, may fail for some C++11 code
+                message( WARNING "${CMAKE_CXX_COMPILER} supports only C++0X, may fail for some C++11 code
 proceed at your own risk, the build may fail
 consider using 'make --keep-going' to build at least something" )
                 set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x" )
             else()
-                message( FATAL_ERROR "attempt to use C++03 but ${CMAKE_CXX_COMPILER} has no C++03 support" )
+                message( FATAL_ERROR "attempt to use C++0X but ${CMAKE_CXX_COMPILER} has no C++0X support" )
             endif()
         else()
             if( compiler_supports_cxx0x )
                 message( FATAL_ERROR "project uses C++11; ${CMAKE_CXX_COMPILER} has no C++11 support
-try turning TRY_USE_CXX03 switch ON as a last ditch effort" )
+try turning TRY_USE_CXX0X switch ON as a last ditch effort" )
             else()
                 message( FATAL_ERROR "project uses C++11; ${CMAKE_CXX_COMPILER} has no C++11 support" )
             endif()
