@@ -105,30 +105,32 @@ IF(CMAKE_BUILD_TOOL MATCHES "make")
 
 ENDIF(CMAKE_BUILD_TOOL MATCHES "make")
 
-SET( CXX_STANDARDS "0x;11;14;17" CACHE STRING "list of known c++ standards" )
-MARK_AS_ADVANCED( FORCE CXX_STANDARDS )
-STRING( REGEX REPLACE ";" "," CXX_STANDARDS_READABLE "${CXX_STANDARDS}" )
-SET( CXX_STANDARD_TO_USE "11" CACHE STRING "c++ standard to use (one of ${CXX_STANDARDS_READABLE})" )
-SET_PROPERTY( CACHE CXX_STANDARD_TO_USE PROPERTY STRINGS ${CXX_STANDARDS} )
-STRING( REGEX REPLACE ";" "|" CXX_STANDARDS_REGEX "${CXX_STANDARDS}" )
-if ( NOT ( "${CXX_STANDARD_TO_USE}" MATCHES "${CXX_STANDARDS_REGEX}" ) )
-    message( FATAL_ERROR "Unknown C++ standard ${CXX_STANDARD_TO_USE}, not one of ${CXX_STANDARDS_READABLE}" )
-endif()
-
-IF( NOT( DEFINED CXX_STANDARD_LAST ) )
-     SET( CXX_STANDARD_LAST "NotAnOption" CACHE STRING "last c++ standard used" )
-     SET( CXX_STANDARD_FLAGS "NotStandardFlags" CACHE STRING "compiler flags selecting C++ standard" )
-     MARK_AS_ADVANCED( FORCE CXX_STANDARD_LAST )
-     MARK_AS_ADVANCED( FORCE CXX_STANDARD_FLAGS )
-ENDIF()
-
 if( UNIX )
+    SET( CXX_STANDARDS "0x;11;14;17" CACHE STRING "list of known c++ standards" )
+    MARK_AS_ADVANCED( FORCE CXX_STANDARDS )
+    STRING( REGEX REPLACE ";" "," CXX_STANDARDS_READABLE "${CXX_STANDARDS}" )
+    SET( CXX_STANDARD_DEFAULT "11" CACHE STRING "default c++ standard to use" )
+    MARK_AS_ADVANCED( FORCE CXX_STANDARD_DEFAULT )
+    SET( CXX_STANDARD_TO_USE "${CXX_STANDARD_DEFAULT}" CACHE STRING "c++ standard to use (one of ${CXX_STANDARDS_READABLE})" )
+    SET_PROPERTY( CACHE CXX_STANDARD_TO_USE PROPERTY STRINGS ${CXX_STANDARDS} )
+    STRING( REGEX REPLACE ";" "|" CXX_STANDARDS_REGEX "${CXX_STANDARDS}" )
+    if ( NOT ( "${CXX_STANDARD_TO_USE}" MATCHES "${CXX_STANDARDS_REGEX}" ) )
+	message( FATAL_ERROR "Unknown C++ standard ${CXX_STANDARD_TO_USE}, not one of ${CXX_STANDARDS_READABLE}" )
+    endif()
+
+    IF( NOT( DEFINED CXX_STANDARD_LAST ) )
+	 SET( CXX_STANDARD_LAST "NotAnOption" CACHE STRING "last c++ standard used" )
+	 SET( CXX_STANDARD_FLAGS "NotStandardFlags" CACHE STRING "compiler flags selecting C++ standard" )
+	 MARK_AS_ADVANCED( FORCE CXX_STANDARD_LAST )
+	 MARK_AS_ADVANCED( FORCE CXX_STANDARD_FLAGS )
+    ENDIF()
+
     # A much better way to do this is with CXX_STANDARD but that requires CMake 3.1
     include( CheckCXXCompilerFlag )
     IF( ${CXX_STANDARD_TO_USE} MATCHES "0x" )
         message( WARNING "
  ################################################################################
- #### you have chosed to use C++0X; compilation may fail for some C++11 code ####
+ #### you have chosen to use C++0X; compilation may fail for some C++${CXX_STANDARD_DEFAULT} code ####
  ####              proceed at your own risk, the build may fail              ####
  ####     consider using 'make --keep-going' to build at least something     ####
  ################################################################################" )
