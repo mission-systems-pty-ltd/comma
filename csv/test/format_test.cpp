@@ -373,6 +373,18 @@ TEST( csv, unstructured_hash )
     }
 }
 
+TEST( csv, expand )
+{
+    EXPECT_EQ( "", comma::csv::format( "" ).expanded_string() );
+    EXPECT_EQ( "d", comma::csv::format( "d" ).expanded_string() );
+    EXPECT_EQ( "i,i", comma::csv::format( "2i" ).expanded_string() );
+    EXPECT_EQ( "i,i,d,d,d,i,i", comma::csv::format( "2i,3d,2i" ).expanded_string() );
+    EXPECT_EQ( "s[10]", comma::csv::format( "s[10]" ).expanded_string() );
+    EXPECT_EQ( "s[10],s[5]", comma::csv::format( "s[10],s[5]" ).expanded_string() );
+    EXPECT_EQ( "s[10],s[10]", comma::csv::format( "s[10],s[10]" ).expanded_string() );
+    EXPECT_EQ( "i,f,f,f,s[10],f,f", comma::csv::format( "i,3f,s[10],2f" ).expanded_string() );
+}
+
 TEST( csv, collapse )
 {
     EXPECT_EQ( "", comma::csv::format( "" ).collapsed_string() );
