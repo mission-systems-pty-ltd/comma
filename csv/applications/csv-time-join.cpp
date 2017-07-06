@@ -70,14 +70,6 @@ static void usage( bool verbose )
     std::cerr << "                may be less or greater than the timestamp on stdin (i.e. no" << std::endl;
     std::cerr << "                timestamp comparisons are made before outputting a record)" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "limitation" << std::endl;
-    std::cerr << "    data with timestamp before the first and after the last bounding timestamps" << std::endl;
-    std::cerr << "    will be discarded at the moment; this is unwanted behaviour when using" << std::endl;
-    std::cerr << "    --nearest and --bound=n." << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "    as a workaround use csv-time-delay to shift data timestamp and/or possibly" << std::endl;
-    std::cerr << "    add a bounding timestamp record with distant time in the past or future" << std::endl;
-    std::cerr << std::endl;
     std::cerr << "<input/output options>" << std::endl;
     std::cerr << "    -: if csv-time-join - b.csv, concatenate output as: <stdin><b.csv>" << std::endl;
     std::cerr << "       if csv-time-join b.csv -, concatenate output as: <b.csv><stdin>" << std::endl;
@@ -314,6 +306,12 @@ int main( int ac, char** av )
         }
         else
         {
+          if( by_upper || nearest )
+          {
+              // add a fake entry for an lower bound to allow stdin before first bound to match
+              bounding_queue.push_back( std::make_pair( boost::posix_time::neg_infin, "" ));
+          }
+
           while( ( stdin_stream.ready() || ( std::cin.good() && !std::cin.eof() ) ) )
           {
               bounding_data_available =  istream.ready() || ( is->good() && !is->eof());
@@ -379,6 +377,11 @@ int main( int ac, char** av )
                   {
                       bounding_queue.pop_front();
                   }
+              }
+              if( is->eof() && ( by_lower || nearest ))
+              {
+                  // add a fake entry for an upper bound to allow stdin data above last bound to match
+                  bounding_queue.push_back( std::make_pair( boost::posix_time::pos_infin, "" ));
               }
 
               //if we are done with the last bounded point get next
