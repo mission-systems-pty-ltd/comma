@@ -152,6 +152,7 @@ template <> struct traits< Point >
 bool by_upper;
 bool nearest;
 bool by_lower;
+bool realtime;
 bool timestamp_only;
 bool select_only;
 
@@ -208,10 +209,11 @@ int main( int ac, char** av )
     {
         comma::signal_flag is_shutdown(comma::signal_flag::hard);
         comma::command_line_options options( ac, av, usage );
-        options.assert_mutually_exclusive( "--by-lower,--by-upper,--nearest" );
+        options.assert_mutually_exclusive( "--by-lower,--by-upper,--nearest,--realtime" );
         by_upper = options.exists( "--by-upper" );
         nearest = options.exists( "--nearest" );
-        by_lower = ( options.exists( "--by-lower" ) || !by_upper ) && !nearest;
+        realtime = options.exists( "--realtime" );
+        by_lower = ( !by_upper && !nearest && !realtime );
         timestamp_only = options.exists( "--timestamp-only,--time-only" );
         select_only = options.exists( "--do-not-append,--select" );
         if( select_only && timestamp_only ) { std::cerr << "csv-time-join: --timestamp-only specified with --select, ignoring --timestamp-only" << std::endl; }
@@ -261,7 +263,7 @@ int main( int ac, char** av )
         bool next=true;
 
         bool bounding_data_available;
-        if (options.exists("--realtime"))
+        if( realtime )
         {
             #ifndef WIN32
             bool end_of_input = false;
