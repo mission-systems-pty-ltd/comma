@@ -64,11 +64,10 @@ static void usage( bool verbose )
     std::cerr << "                default: --by-lower" << std::endl;
     std::cerr << "    --nearest:  join by nearest timestamp" << std::endl;
     std::cerr << "                if 'block' given in --fields, output the whole block" << std::endl;
-    std::cerr << "    --realtime: output immediately with current latest bounding timestamp" << std::endl;
-    std::cerr << "                i.e wait for upper bound in bounding stream" << std::endl;
-    std::cerr << "                in this mode, it is possible that the latest bounding timestamp" << std::endl;
-    std::cerr << "                may be less or greater than the timestamp on stdin (i.e. no" << std::endl;
-    std::cerr << "                timestamp comparisons are made before outputting a record)" << std::endl;
+    std::cerr << "    --realtime: (streams only) output input immediately joined with current" << std::endl;
+    std::cerr << "                latest bounding timestamp. The joined bounding timestamp may" << std::endl;
+    std::cerr << "                be less than or greater than the timestamp from stdin." << std::endl;
+    std::cerr << "                No timestamp comparisons are made before outputting a record." << std::endl;
     std::cerr << std::endl;
     std::cerr << "<input/output options>" << std::endl;
     std::cerr << "    -: if csv-time-join - b.csv, concatenate output as: <stdin><b.csv>" << std::endl;
