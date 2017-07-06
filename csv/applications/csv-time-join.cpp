@@ -222,7 +222,7 @@ int main( int ac, char** av )
         by_lower = ( options.exists( "--by-lower" ) || !by_upper ) && !nearest;
         timestamp_only = options.exists( "--timestamp-only,--time-only" );
         select_only = options.exists( "--do-not-append,--select" );
-        if( select_only && timestamp_only ) { std::cerr << "csv-time-join: --timetamp-only specified with --select, ignoring --timestamp-only" << std::endl; }
+        if( select_only && timestamp_only ) { std::cerr << "csv-time-join: --timestamp-only specified with --select, ignoring --timestamp-only" << std::endl; }
         bool discard_bounding = options.exists( "--discard-bounding" );
         boost::optional< unsigned int > buffer_size = options.optional< unsigned int >( "--buffer" );
         bool discard = !options.exists( "--no-discard" );
