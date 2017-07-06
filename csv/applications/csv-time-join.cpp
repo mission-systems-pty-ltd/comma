@@ -279,24 +279,30 @@ int main( int ac, char** av )
                 if ( !is_shutdown && !end_of_input && ( stdin_stream.ready() || ( select.check() && select.read().ready( comma::io::stdin_fd ) ) ) )
                 {
                     p = stdin_stream.read();
-                    if (!p)
+                    if( p )
+                    {
+                        timestring_t input_line = std::make_pair( get_time( *p ), stdin_stream.last() );
+                        if( joined_line ) { output( input_line, *joined_line ); }
+                    }
+                    else
                     {
                         comma::verbose << "end of input stream" << std::endl;
                         end_of_input = true;
                     }
-                    timestring_t input_line = std::make_pair(get_time(*p), stdin_stream.last());
-                    if (joined_line) { output(input_line, *joined_line); }
                 }
                 
                 if ( !is_shutdown && !end_of_bounds && ( istream.ready() || ( select.check() && select.read().ready( is.fd() ) ) ) )
                 {
                     p = istream.read();
-                    if (!p)
+                    if( p )
+                    {
+                        joined_line = std::make_pair( get_time( *p ), istream.last() );
+                    }
+                    else
                     {
                         comma::verbose << "end of bounding stream" << std::endl;
                         end_of_bounds = true;
                     }
-                    joined_line = std::make_pair(get_time(*p), istream.last());
                 }
             }
             if (is_shutdown) { comma::verbose << "got a signal" << std::endl; return 0; }
