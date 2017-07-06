@@ -46,7 +46,7 @@
 #include "../../string/string.h"
 #include "../../visiting/traits.h"
 
-static void usage()
+static void usage( bool verbose )
 {
     std::cerr << std::endl;
     std::cerr << "join timestamped data from stdin with corresponding timestamped data from the" << std::endl;
@@ -106,9 +106,30 @@ static void usage()
     std::cerr << "    3rd field on stdin is timestamp, the 2nd field of filter is timestamp" << std::endl;
     std::cerr << "        cat a.csv | csv-time-join --fields=,,t \"b.csv;fields=,t\"" << std::endl;
     std::cerr << std::endl;
+    if( verbose )
+    {
+        std::cerr << "    echo \"20170101T115955,a\" >  a.csv" << std::endl;
+        std::cerr << "    echo \"20170101T120001,b\" >> a.csv" << std::endl;
+        std::cerr << "    echo \"20170101T120002,c\" >> a.csv" << std::endl;
+        std::cerr << "    echo \"20170101T120007,d\" >> a.csv" << std::endl;
+        std::cerr << "    echo \"20170101T120012,e\" >> a.csv" << std::endl;
+        std::cerr << "    echo \"20170101T120013,f\" >> a.csv" << std::endl;
+        std::cerr << "    echo \"20170101T120000,a\" >  b.csv" << std::endl;
+        std::cerr << "    echo \"20170101T120010,b\" >> b.csv" << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "    cat a.csv | csv-time-join b.csv" << std::endl;
+        std::cerr << "    cat a.csv | csv-time-join b.csv --by-upper" << std::endl;
+        std::cerr << "    cat a.csv | csv-time-join b.csv --nearest" << std::endl;
+        std::cerr << "    ( sleep 1; cat a.csv ) | csv-play | csv-time-join --realtime <( cat b.csv | csv-play )" << std::endl;
+}
+    else
+    {
+        std::cerr << "    try --help --verbose for more examples" << std::endl;
+    }
+    std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
-    exit( -1 );
+    exit( 0 );
 }
 
 struct Point
@@ -194,8 +215,7 @@ int main( int ac, char** av )
     try
     {
         comma::signal_flag is_shutdown(comma::signal_flag::hard);
-        comma::command_line_options options( ac, av );
-        if( options.exists( "--help" ) || options.exists( "-h" ) || ac == 1 ) { usage(); }
+        comma::command_line_options options( ac, av, usage );
         options.assert_mutually_exclusive( "--by-lower,--by-upper,--nearest" );
         by_upper = options.exists( "--by-upper" );
         nearest = options.exists( "--nearest" );
@@ -468,5 +488,4 @@ int main( int ac, char** av )
     }
     catch( std::exception& ex ) { std::cerr << "csv-time-join: " << ex.what() << std::endl; }
     catch( ... ) { std::cerr << "csv-time-join: unknown exception" << std::endl; }
-    usage();
 }
