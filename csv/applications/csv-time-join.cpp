@@ -80,9 +80,6 @@ static void usage( bool verbose )
     std::cerr << "    --bound=<seconds>:          output only points within given bound" << std::endl;
     std::cerr << "    --do-not-append,--select:   do not append any field from the second input" << std::endl;
     std::cerr << "    --timestamp-only:           append only timestamp from the second input" << std::endl;
-    std::cerr << "    --no-discard:               do not discard input points" << std::endl;
-    std::cerr << "                                default is to discard points that cannot be" << std::endl;
-    std::cerr << "                                consistently timestamped, usually head or tail" << std::endl;
     std::cerr << "    --buffer:                   bounding data buffer size; default: infinite" << std::endl;
     std::cerr << "    --discard-bounding:         discard bounding data if buffer size reached" << std::endl;
     std::cerr << "                                default is to block until stdin catches up" << std::endl;
@@ -223,14 +220,13 @@ int main( int ac, char** av )
         if( select_only && timestamp_only ) { std::cerr << "csv-time-join: --timestamp-only specified with --select, ignoring --timestamp-only" << std::endl; }
         bool discard_bounding = options.exists( "--discard-bounding" );
         boost::optional< unsigned int > buffer_size = options.optional< unsigned int >( "--buffer" );
-        bool discard = !options.exists( "--no-discard" );
         if( options.exists( "--bound" ) ) { bound = boost::posix_time::microseconds( options.value< double >( "--bound" ) * 1000000 ); }
         stdin_csv = comma::csv::options( options, "t" );
         comma::csv::input_stream< Point > stdin_stream( std::cin, stdin_csv );
         #ifdef WIN32
         if( stdin_csv.binary() ) { _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif // #ifdef WIN32
-        std::vector< std::string > unnamed = options.unnamed( "--by-lower,--by-upper,--nearest,--select,--do-not-append,--timestamp-only,--time-only,--no-discard,--discard-bounding,--realtime", "--binary,-b,--delimiter,-d,--fields,-f,--bound,--buffer,--verbose,-v" );
+        std::vector< std::string > unnamed = options.unnamed( "--by-lower,--by-upper,--nearest,--select,--do-not-append,--timestamp-only,--time-only,--discard-bounding,--realtime", "--binary,-b,--delimiter,-d,--fields,-f,--bound,--buffer,--verbose,-v" );
         std::string properties;
         bool bounded_first = true;
         switch( unnamed.size() )
@@ -429,12 +425,9 @@ int main( int ac, char** av )
 
               //bound available
 
-              
-              //check late points
-              if( (discard || !by_upper) && t < bounding_queue.front().first )
+              if( by_lower && t < bounding_queue.front().first )
               {
-                  //std::cerr<<bounding_queue[0].first<<","<<p->timestamp<<","<<bounding_queue[1].first<<std::endl;
-                  next=true;
+                  next = true;
                   continue;
               }
 
