@@ -1,8 +1,0 @@
-#!/bin/bash
-
-cat stdin | csv-time-join filter --verbose | name-value-from-csv -f line -d : -n -p lower
-cat stdin | csv-time-join filter --by-upper --verbose | name-value-from-csv -f line -d : -n -p upper
-cat stdin | csv-time-join filter --nearest --verbose | name-value-from-csv -f line -d : -n -p nearest
-cat stdin | csv-time-join filter --nearest --bound=0.02 --verbose | name-value-from-csv -f line -d : -n -p bounds_nearest
-cat stdin | csv-time-join filter --by-lower --bound=0.02 --verbose | name-value-from-csv -f line -d : -n -p bounds_lower
-cat stdin | csv-time-join filter --by-upper --bound=0.02 --verbose | name-value-from-csv -f line -d : -n -p bounds_upper
