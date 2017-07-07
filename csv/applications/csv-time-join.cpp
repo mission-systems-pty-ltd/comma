@@ -77,14 +77,15 @@ static void usage( bool verbose )
     std::cerr << "    --binary,-b <format>:       binary format" << std::endl;
     std::cerr << "    --delimiter,-d <delimiter>: ascii only; default ','" << std::endl;
     std::cerr << "    --fields,-f <fields>:       input fields; default: t" << std::endl;
-    std::cerr << "    --bound=<seconds>:          output only points inside of bound of seconds" << std::endl;
+    std::cerr << "    --bound=<seconds>:          output only points within given bound" << std::endl;
     std::cerr << "    --do-not-append,--select:   do not append any field from the second input" << std::endl;
+    std::cerr << "    --timestamp-only:           append only timestamp from the second input" << std::endl;
     std::cerr << "    --no-discard:               do not discard input points" << std::endl;
     std::cerr << "                                default is to discard points that cannot be" << std::endl;
     std::cerr << "                                consistently timestamped, usually head or tail" << std::endl;
-    std::cerr << "    --discard-bounding:         discard bounding data" << std::endl;
     std::cerr << "    --buffer:                   bounding data buffer size; default: infinite" << std::endl;
-    std::cerr << "    --timestamp-only:           append only timestamp from the second input" << std::endl;
+    std::cerr << "    --discard-bounding:         discard bounding data if buffer size reached" << std::endl;
+    std::cerr << "                                default is to block until stdin catches up" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << "    first field on stdin is timestamp, the first field of filter is timestamp" << std::endl;
