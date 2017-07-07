@@ -104,14 +104,19 @@ static void usage( bool verbose )
         std::cerr << "    echo \"20170101T120002,c\" >> a.csv" << std::endl;
         std::cerr << "    echo \"20170101T120007,d\" >> a.csv" << std::endl;
         std::cerr << "    echo \"20170101T120012,e\" >> a.csv" << std::endl;
-        std::cerr << "    echo \"20170101T120013,f\" >> a.csv" << std::endl;
-        std::cerr << "    echo \"20170101T120000,a\" >  b.csv" << std::endl;
-        std::cerr << "    echo \"20170101T120010,b\" >> b.csv" << std::endl;
+        std::cerr << "    echo \"20170101T120015,f\" >> a.csv" << std::endl;
+        std::cerr << "    echo \"20170101T120000,y\" >  b.csv" << std::endl;
+        std::cerr << "    echo \"20170101T120010,z\" >> b.csv" << std::endl;
         std::cerr << std::endl;
         std::cerr << "    cat a.csv | csv-time-join b.csv" << std::endl;
         std::cerr << "    cat a.csv | csv-time-join b.csv --by-upper" << std::endl;
         std::cerr << "    cat a.csv | csv-time-join b.csv --nearest" << std::endl;
-        std::cerr << "    ( sleep 1; cat a.csv ) | csv-play | csv-time-join --realtime <( cat b.csv | csv-play )" << std::endl;
+        std::cerr << "    cat a.csv | csv-time-join b.csv --nearest --bound=2" << std::endl;
+        std::cerr << "    cat a.csv | csv-time-join b.csv --nearest --bound=2 --select" << std::endl;
+        std::cerr << "    cat a.csv | csv-time-join b.csv --nearest --bound=2 --timestamp-only" << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "    ( sleep 1; cat a.csv ) | csv-play |" << std::endl;
+        std::cerr << "        csv-time-join --realtime <( cat b.csv | csv-play )" << std::endl;
 }
     else
     {
