@@ -46,12 +46,11 @@
 #include "../../string/string.h"
 #include "../../visiting/traits.h"
 
-static void usage()
+static void usage( bool verbose )
 {
     std::cerr << std::endl;
-    std::cerr << "a quick utility on the popular demand:" << std::endl;
-    std::cerr << "join timestamped data from stdin with corresponding" << std::endl;
-    std::cerr << "timestamped data from the second input" << std::endl;
+    std::cerr << "join timestamped data from stdin with corresponding timestamped data from the" << std::endl;
+    std::cerr << "second input" << std::endl;
     std::cerr << std::endl;
     std::cerr << "timestamps are expected to be fully ordered" << std::endl;
     std::cerr << std::endl;
@@ -63,39 +62,27 @@ static void usage()
     std::cerr << "    --by-lower: join by lower timestamp" << std::endl;
     std::cerr << "    --by-upper: join by upper timestamp" << std::endl;
     std::cerr << "                default: --by-lower" << std::endl;
-    std::cerr << "    --nearest: join by nearest timestamp" << std::endl;
-    std::cerr << "               if 'block' given in --fields, output the whole block" << std::endl;
-    std::cerr << "    --realtime: output immediately with current latest bounding timestamp" << std::endl;
-    std::cerr << "                i.e wait for upper bound in bounding stream" << std::endl;
-    std::cerr << "                attention: in this mode, it is possible that the latest bounding timestamp" << std::endl;
-    std::cerr << "                           may be less or greater than the timestamp on stdin" << std::endl;
-    std::cerr << "                           (i.e. no timestamp comparisons are made before outputting a record)" << std::endl;
-    //std::cerr << "    --nearest-only: output only the input points nearest to timestamp" << std::endl;
-    //std::cerr << "               if 'block' given in --fields, output the whole block" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "limitation" << std::endl;
-    std::cerr << "    data with timestamp before the first and after the last bounding timestamps will be discarded at the moment; this is unwanted behaviour when using --nearest and --bound=n" << std::endl;
-    std::cerr << "    workaround" << std::endl;
-    std::cerr << "        use csv-time-delay to shift data timestamp and/or possibly add a bounding timestamp record with distant time in the past or future" << std::endl;
+    std::cerr << "    --nearest:  join by nearest timestamp" << std::endl;
+    std::cerr << "                if 'block' given in --fields, output the whole block" << std::endl;
+    std::cerr << "    --realtime: (streams only) output input immediately joined with current" << std::endl;
+    std::cerr << "                latest bounding timestamp. The joined bounding timestamp may" << std::endl;
+    std::cerr << "                be less than or greater than the timestamp from stdin." << std::endl;
+    std::cerr << "                No timestamp comparisons are made before outputting a record." << std::endl;
     std::cerr << std::endl;
     std::cerr << "<input/output options>" << std::endl;
     std::cerr << "    -: if csv-time-join - b.csv, concatenate output as: <stdin><b.csv>" << std::endl;
     std::cerr << "       if csv-time-join b.csv -, concatenate output as: <b.csv><stdin>" << std::endl;
     std::cerr << "       default: csv-time-join - b.csv" << std::endl;
-    std::cerr << "    --binary,-b <format>: binary format" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    --binary,-b <format>:       binary format" << std::endl;
     std::cerr << "    --delimiter,-d <delimiter>: ascii only; default ','" << std::endl;
-    std::cerr << "    --fields,-f <fields>: input fields; default: t" << std::endl;
-    std::cerr << "    --bound=<seconds>: if present, output only points inside of bound in second as double" << std::endl;
-    std::cerr << "    --do-not-append,--select: if present, do not append any field from the second input" << std::endl;
-    std::cerr << "    --no-discard: do not discard input points" << std::endl;
-    std::cerr << "                         default: discard input points that cannot be" << std::endl;
-    std::cerr << "                         consistently timestamped, especially head or tail" << std::endl;
-    std::cerr << "    --discard-bounding: discard bounding data" << std::endl;
-    std::cerr << "                         default: no discard" << std::endl;
-    std::cerr << "    --buffer: bounding data buffer size" << std::endl;
-    std::cerr << "                         default: infinite" << std::endl;
-    std::cerr << "    --timestamp-only,--time-only: join only timestamp from the second input" << std::endl;
-    std::cerr << "                                  otherwise join the whole line" << std::endl;
+    std::cerr << "    --fields,-f <fields>:       input fields; default: t" << std::endl;
+    std::cerr << "    --bound=<seconds>:          output only points within given bound" << std::endl;
+    std::cerr << "    --do-not-append,--select:   do not append any field from the second input" << std::endl;
+    std::cerr << "    --timestamp-only:           append only timestamp from the second input" << std::endl;
+    std::cerr << "    --buffer:                   bounding data buffer size; default: infinite" << std::endl;
+    std::cerr << "    --discard-bounding:         discard bounding data if buffer size reached" << std::endl;
+    std::cerr << "                                default is to block until stdin catches up" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << "    first field on stdin is timestamp, the first field of filter is timestamp" << std::endl;
@@ -107,9 +94,35 @@ static void usage()
     std::cerr << "    3rd field on stdin is timestamp, the 2nd field of filter is timestamp" << std::endl;
     std::cerr << "        cat a.csv | csv-time-join --fields=,,t \"b.csv;fields=,t\"" << std::endl;
     std::cerr << std::endl;
+    if( verbose )
+    {
+        std::cerr << "    echo \"20170101T115955,a\" >  a.csv" << std::endl;
+        std::cerr << "    echo \"20170101T120001,b\" >> a.csv" << std::endl;
+        std::cerr << "    echo \"20170101T120002,c\" >> a.csv" << std::endl;
+        std::cerr << "    echo \"20170101T120007,d\" >> a.csv" << std::endl;
+        std::cerr << "    echo \"20170101T120012,e\" >> a.csv" << std::endl;
+        std::cerr << "    echo \"20170101T120015,f\" >> a.csv" << std::endl;
+        std::cerr << "    echo \"20170101T120000,y\" >  b.csv" << std::endl;
+        std::cerr << "    echo \"20170101T120010,z\" >> b.csv" << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "    cat a.csv | csv-time-join b.csv" << std::endl;
+        std::cerr << "    cat a.csv | csv-time-join b.csv --by-upper" << std::endl;
+        std::cerr << "    cat a.csv | csv-time-join b.csv --nearest" << std::endl;
+        std::cerr << "    cat a.csv | csv-time-join b.csv --nearest --bound=2" << std::endl;
+        std::cerr << "    cat a.csv | csv-time-join b.csv --nearest --bound=2 --select" << std::endl;
+        std::cerr << "    cat a.csv | csv-time-join b.csv --nearest --bound=2 --timestamp-only" << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "    ( sleep 1; cat a.csv ) | csv-play |" << std::endl;
+        std::cerr << "        csv-time-join --realtime <( cat b.csv | csv-play )" << std::endl;
+}
+    else
+    {
+        std::cerr << "    try --help --verbose for more examples" << std::endl;
+    }
+    std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
-    exit( -1 );
+    exit( 0 );
 }
 
 struct Point
@@ -140,6 +153,7 @@ template <> struct traits< Point >
 bool by_upper;
 bool nearest;
 bool by_lower;
+bool realtime;
 bool timestamp_only;
 bool select_only;
 
@@ -195,25 +209,24 @@ int main( int ac, char** av )
     try
     {
         comma::signal_flag is_shutdown(comma::signal_flag::hard);
-        comma::command_line_options options( ac, av );
-        if( options.exists( "--help" ) || options.exists( "-h" ) || ac == 1 ) { usage(); }
-        options.assert_mutually_exclusive( "--by-lower,--by-upper,--nearest" );
+        comma::command_line_options options( ac, av, usage );
+        options.assert_mutually_exclusive( "--by-lower,--by-upper,--nearest,--realtime" );
         by_upper = options.exists( "--by-upper" );
         nearest = options.exists( "--nearest" );
-        by_lower = ( options.exists( "--by-lower" ) || !by_upper ) && !nearest;
+        realtime = options.exists( "--realtime" );
+        by_lower = ( !by_upper && !nearest && !realtime );
         timestamp_only = options.exists( "--timestamp-only,--time-only" );
         select_only = options.exists( "--do-not-append,--select" );
-        if( select_only && timestamp_only ) { std::cerr << "csv-time-join: --timetamp-only specified with --select, ignoring --timestamp-only" << std::endl; }
+        if( select_only && timestamp_only ) { std::cerr << "csv-time-join: --timestamp-only specified with --select, ignoring --timestamp-only" << std::endl; }
         bool discard_bounding = options.exists( "--discard-bounding" );
         boost::optional< unsigned int > buffer_size = options.optional< unsigned int >( "--buffer" );
-        bool discard = !options.exists( "--no-discard" );
         if( options.exists( "--bound" ) ) { bound = boost::posix_time::microseconds( options.value< double >( "--bound" ) * 1000000 ); }
         stdin_csv = comma::csv::options( options, "t" );
         comma::csv::input_stream< Point > stdin_stream( std::cin, stdin_csv );
         #ifdef WIN32
         if( stdin_csv.binary() ) { _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif // #ifdef WIN32
-        std::vector< std::string > unnamed = options.unnamed( "--by-lower,--by-upper,--nearest,--select,--do-not-append,--timestamp-only,--time-only,--no-discard,--discard-bounding,--realtime", "--binary,-b,--delimiter,-d,--fields,-f,--bound,--buffer,--verbose,-v" );
+        std::vector< std::string > unnamed = options.unnamed( "--by-lower,--by-upper,--nearest,--select,--do-not-append,--timestamp-only,--time-only,--discard-bounding,--realtime", "--binary,-b,--delimiter,-d,--fields,-f,--bound,--buffer,--verbose,-v" );
         std::string properties;
         bool bounded_first = true;
         switch( unnamed.size() )
@@ -250,7 +263,7 @@ int main( int ac, char** av )
         bool next=true;
 
         bool bounding_data_available;
-        if (options.exists("--realtime"))
+        if( realtime )
         {
             #ifndef WIN32
             bool end_of_input = false;
@@ -268,24 +281,30 @@ int main( int ac, char** av )
                 if ( !is_shutdown && !end_of_input && ( stdin_stream.ready() || ( select.check() && select.read().ready( comma::io::stdin_fd ) ) ) )
                 {
                     p = stdin_stream.read();
-                    if (!p)
+                    if( p )
+                    {
+                        timestring_t input_line = std::make_pair( get_time( *p ), stdin_stream.last() );
+                        if( joined_line ) { output( input_line, *joined_line ); }
+                    }
+                    else
                     {
                         comma::verbose << "end of input stream" << std::endl;
                         end_of_input = true;
                     }
-                    timestring_t input_line = std::make_pair(get_time(*p), stdin_stream.last());
-                    if (joined_line) { output(input_line, *joined_line); }
                 }
                 
                 if ( !is_shutdown && !end_of_bounds && ( istream.ready() || ( select.check() && select.read().ready( is.fd() ) ) ) )
                 {
                     p = istream.read();
-                    if (!p)
+                    if( p )
+                    {
+                        joined_line = std::make_pair( get_time( *p ), istream.last() );
+                    }
+                    else
                     {
                         comma::verbose << "end of bounding stream" << std::endl;
                         end_of_bounds = true;
                     }
-                    joined_line = std::make_pair(get_time(*p), istream.last());
                 }
             }
             if (is_shutdown) { comma::verbose << "got a signal" << std::endl; return 0; }
@@ -295,6 +314,12 @@ int main( int ac, char** av )
         }
         else
         {
+          if( by_upper || nearest )
+          {
+              // add a fake entry for an lower bound to allow stdin before first bound to match
+              bounding_queue.push_back( std::make_pair( boost::posix_time::neg_infin, "" ));
+          }
+
           while( ( stdin_stream.ready() || ( std::cin.good() && !std::cin.eof() ) ) )
           {
               bounding_data_available =  istream.ready() || ( is->good() && !is->eof());
@@ -361,6 +386,11 @@ int main( int ac, char** av )
                       bounding_queue.pop_front();
                   }
               }
+              if( is->eof() && ( by_lower || nearest ))
+              {
+                  // add a fake entry for an upper bound to allow stdin data above last bound to match
+                  bounding_queue.push_back( std::make_pair( boost::posix_time::pos_infin, "" ));
+              }
 
               //if we are done with the last bounded point get next
               if(next)
@@ -395,12 +425,9 @@ int main( int ac, char** av )
 
               //bound available
 
-              
-              //check late points
-              if( (discard || !by_upper) && t < bounding_queue.front().first )
+              if( by_lower && t < bounding_queue.front().first )
               {
-                  //std::cerr<<bounding_queue[0].first<<","<<p->timestamp<<","<<bounding_queue[1].first<<std::endl;
-                  next=true;
+                  next = true;
                   continue;
               }
 
@@ -469,5 +496,4 @@ int main( int ac, char** av )
     }
     catch( std::exception& ex ) { std::cerr << "csv-time-join: " << ex.what() << std::endl; }
     catch( ... ) { std::cerr << "csv-time-join: unknown exception" << std::endl; }
-    usage();
 }
