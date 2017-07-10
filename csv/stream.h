@@ -335,6 +335,10 @@ class output_stream : public boost::noncopyable
 
         /// write, substituting corresponding fields in the last record read from the input
         void write( const S& s, const input_stream< S >& istream ) { if( binary_ ) { binary_->write( s, istream.binary().last() ); } else { ascii_->write( s, istream.ascii().last() ); } }
+
+        /// append record s to line and write them to output
+        /// e.g. line can be input line from input_stream.last(), will act like csv-paste input,output
+        void append(const std::string& line, const S& s);
         
         /// flush
         void flush() { if( ascii_ ) { ascii_->flush(); } else { binary_->flush(); } }
@@ -356,6 +360,22 @@ class output_stream : public boost::noncopyable
         boost::scoped_ptr< ascii_output_stream< S > > ascii_;
         boost::scoped_ptr< binary_output_stream< S > > binary_;
 };
+
+template < typename S >
+void output_stream<S>::append(const std::string& line, const S& s)
+{
+    if(is_binary())
+    {
+        binary().os_.write(&line[0], line.size());
+        write(s);
+    }
+    else
+    {
+        std::string sbuf;
+        ascii().ascii().put(s, sbuf);
+        ascii().os_ << line << ascii().ascii().delimiter() << sbuf << std::endl;
+    }
+}
 
 /// append record s to last record from input stream and and write them to output
 template < typename S, typename T, typename Data >
