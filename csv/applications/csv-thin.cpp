@@ -111,7 +111,7 @@ static bool ignore()
         return true;
         */
         
-        static unsigned long long size = 1000000;
+        static const unsigned long long size = 1.0e+15;
         static unsigned long long step = 0;
         static unsigned long long count = 0;
         ++count;
