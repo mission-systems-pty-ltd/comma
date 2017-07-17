@@ -139,9 +139,8 @@ int main( int ac, char** av )
                         if(!is_binary){ std::cout << csv.delimiter; } 
                         std::cout.write( &(*is)[0], is->size() ); 
                     }
-                    std::cout << std::endl;
+                    if(!is_binary){ std::cout << std::endl; } 
                     
-                    // TBD: support block with --sliding-window?
                     if( !use_sliding_window ) { lines.clear(); } else { lines.pop_front(); }
                 }
             }

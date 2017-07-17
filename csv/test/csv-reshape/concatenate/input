@@ -1,9 +1,8 @@
-basics[0]="seq 1 9 | csv-reshape concatenate -n 3 | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
-basics[1]="seq 1 8 | csv-reshape concatenate -n 4 | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
+basics[0]="seq 1 9 | csv-reshape concatenate -n 3  | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
+basics[1]="seq 1 8 | csv-reshape concatenate -n 4  | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
 # -n value must be greater than one
-basics[2]="seq 1 10 | csv-reshape concatenate -n 1 --discard | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
-basics[3]="seq 1 10 | csv-reshape concatenate -n 0 --discard | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
-
+basics[2]="seq 1 10 | csv-reshape concatenate -n 1 | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
+basics[3]="seq 1 10 | csv-reshape concatenate -n 0 | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
 empty_lines[0]="( echo 1; echo 2; echo; echo 3; echo 5; echo ; echo; echo ; ) | csv-reshape concatenate -n 2 --discard | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
 
 sliding_window[0]="seq 1 10 | csv-reshape concatenate -n 2 -w | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
@@ -12,3 +11,11 @@ sliding_window[2]="seq 1 10 | csv-reshape concatenate -n 9 -w | tr \\\\n ';' | s
 sliding_window[3]="seq 1 10 | csv-reshape concatenate -n 10 -w | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
 sliding_window[4]="seq 1 10 | csv-reshape concatenate -n 11 -w | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
 sliding_window[5]="seq 1 10 | csv-reshape concatenate -n 1  -w | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
+
+
+binary_sliding_window[0]="seq 1 10 | csv-to-bin i | csv-reshape concatenate -n 2 -w  --binary i | csv-from-bin 2i | tr \\\\n ';' | sed 's#;$##';  (( ${PIPESTATUS[2]} == 0 ))"
+binary_sliding_window[1]="seq 1 10 | csv-to-bin i | csv-reshape concatenate -n 3 -w  --binary i | csv-from-bin 3i | tr \\\\n ';' | sed 's#;$##';  (( ${PIPESTATUS[2]} == 0 ))"
+binary_sliding_window[2]="seq 1 10 | csv-to-bin i | csv-reshape concatenate -n 9 -w  --binary i | csv-from-bin 9i | tr \\\\n ';' | sed 's#;$##';  (( ${PIPESTATUS[2]} == 0 ))"
+binary_sliding_window[3]="seq 1 10 | csv-to-bin i | csv-reshape concatenate -n 10 -w --binary i | csv-from-bin 10i | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[2]} == 0 ))"
+binary_sliding_window[4]="seq 1 10 | csv-to-bin i | csv-reshape concatenate -n 11 -w --binary i | csv-from-bin 11i | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[2]} == 0 ))"
+binary_sliding_window[5]="seq 1 10 | csv-to-bin i | csv-reshape concatenate -n 1  -w --binary i | csv-from-bin i | tr \\\\n ';' | sed 's#;$##';   (( ${PIPESTATUS[2]} == 0 ))"

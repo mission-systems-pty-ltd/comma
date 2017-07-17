@@ -8,6 +8,7 @@ basics[2]/output=""
 basics[2]/status=1
 basics[3]/output=""
 basics[3]/status=1
+
 # Empty lines ignored
 empty_lines[0]/output="1,2;3,5"
 empty_lines[0]/status=0
@@ -27,3 +28,18 @@ sliding_window[4]/status=1
 # Negative test
 sliding_window[5]/output=""
 sliding_window[5]/status=1
+
+binary_sliding_window[0]/output="1,2;2,3;3,4;4,5;5,6;6,7;7,8;8,9;9,10"
+binary_sliding_window[0]/status=0
+binary_sliding_window[1]/output="1,2,3;2,3,4;3,4,5;4,5,6;5,6,7;6,7,8;7,8,9;8,9,10"
+binary_sliding_window[1]/status=0
+binary_sliding_window[2]/output="1,2,3,4,5,6,7,8,9;2,3,4,5,6,7,8,9,10"
+binary_sliding_window[2]/status=0
+binary_sliding_window[3]/output="1,2,3,4,5,6,7,8,9,10"
+binary_sliding_window[3]/status=0
+# Slid_ng window size is greater than input window
+binary_sliding_window[4]/output=""
+binary_sliding_window[4]/status=1
+# Nega_ive test
+binary_sliding_window[5]/output=""
+binary_sliding_window[5]/status=1
