@@ -42,6 +42,7 @@
 #include "../../application/command_line_options.h"
 #include "../../application/contact_info.h"
 #include "../options.h"
+#include "../stream.h"
 
 using namespace comma;
 
@@ -80,6 +81,18 @@ static void usage( bool verbose=false )
     exit( -1 );
 }
 
+struct input_t {};
+
+namespace comma { namespace visiting {
+
+template <> struct traits< input_t >
+{
+    template < typename K, typename V > static void visit( const K&, const input_t& p, V& v ) {  }
+    template < typename K, typename V > static void visit( const K&, input_t& p, V& v ) {  }
+};
+
+} } // namespace comma { namespace visiting {
+
 typedef std::deque< std::string > lines_type;
 
 int main( int ac, char** av )
@@ -97,28 +110,35 @@ int main( int ac, char** av )
         
         if( unnamed.front() == "concatenate" )
         {
-            // throw or just pass through?
-            if( csv.binary() ) { COMMA_THROW(comma::exception, "operation 'concatenate' found with binary input data, only input csv data"); } 
+            const bool use_sliding_window = options.exists("--sliding-window,-w");
+            if( !use_sliding_window && csv.binary() ) { COMMA_THROW(comma::exception, " error - concatenate without sliding window expects only input csv data"); } 
             const comma::uint32 size = options.value< comma::uint32 >("--size,-n");
             if( size < 2 ) { std::cerr <<  comma::verbose.app_name() << ": expected --size,-n= value to be greater than 1" << std::endl; return 1; }
-            const bool use_sliding_window = options.exists("--sliding-window,-w");
             const bool discard = options.exists("--discard");
             
+            const bool is_binary = csv.binary();
+            
+            comma::csv::input_stream< input_t > istream(std::cin, options);
+            
             lines_type lines;
-            comma::uint32 count;
-            while( true )
+            comma::uint32 count = 0;
+            while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
             {
-                lines.push_back( std::string() );
-                std::getline( std::cin, lines.back() );
-                if( (std::cin.bad() ||  std::cin.eof()) ) { lines.pop_back(); break; }
+                const input_t* p = istream.read();
+                if( !p ) { break; }
+                lines.push_back( istream.last() );
                 ++count;
                 
                 if( lines.size() < size ) {}
                 else if ( lines.size() > size ) { COMMA_THROW(comma::exception, "too many input lines buffered"); }
                 else
                 {
-                    std::cout << lines.front();
-                    for( lines_type::const_iterator is=(lines.cbegin()+1); is!=lines.cend(); ++is ) { std::cout << csv.delimiter << *is; }
+                    std::cout.write( &(lines.front()[0]), lines.front().size() );
+                    for( lines_type::const_iterator is=(lines.cbegin()+1); is!=lines.cend(); ++is ) 
+                    { 
+                        if(!is_binary){ std::cout << csv.delimiter; } 
+                        std::cout.write( &(*is)[0], is->size() ); 
+                    }
                     std::cout << std::endl;
                     
                     // TBD: support block with --sliding-window?
