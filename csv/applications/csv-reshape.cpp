@@ -62,10 +62,9 @@ static void usage( bool verbose=false )
     std::cerr << "      --verbose,-v: more output to stderr, shows examples with --help,-h" << std::endl;
     std::cerr << std::endl;
     std::cerr << "   concatenate" << std::endl;
-    std::cerr << "      --delimiter,-d=<char>; default=','; field separating character" << std::endl;
-    std::cerr << "      --discard; throw away last lines that are less than --lines" << std::endl;
-    std::cerr << "      --lines,-n=<num>; number of input lines to concatenate into output lines" << std::endl;
-    std::cerr << "      --sliding-window,-w; concatenate current input lines a the sliding window to create output lines" << std::endl;
+    std::cerr << "      --delimiter,-d=[<char>]; default=','; field separating character" << std::endl;
+    std::cerr << "      --size,-n=<num>; number of input record to concatenate into output record" << std::endl;
+    std::cerr << "      --sliding-window,-w; use a sliding window to create output record, see examples" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -88,7 +87,7 @@ int main( int ac, char** av )
     try
     {
         comma::command_line_options options( ac, av, usage );
-        std::vector< std::string > unnamed = options.unnamed( "--sliding-window,-w,--discard,--help,-h,--verbose,-v", "--binary,-b,--delimiter,-d,--format,--fields,-f,--output-fields,--lines,-n" );
+        std::vector< std::string > unnamed = options.unnamed( "--sliding-window,-w,--discard,--help,-h,--verbose,-v", "--binary,-b,--delimiter,-d,--format,--fields,-f,--output-fields,--size,-n" );
         const comma::csv::options csv( options );
         #ifdef WIN32
         if( csv.binary() ) { _setmode( _fileno( stdin ), _O_BINARY ); _setmode( _fileno( stdout ), _O_BINARY ); }
@@ -100,8 +99,8 @@ int main( int ac, char** av )
         {
             // throw or just pass through?
             if( csv.binary() ) { COMMA_THROW(comma::exception, "operation 'concatenate' found with binary input data, only input csv data"); } 
-            comma::uint32 size = options.value< comma::uint32 >("--lines,-n");
-            if( size < 2 ) { std::cerr <<  comma::verbose.app_name() << ": expected --lines,-n= value to be greater than 1" << std::endl; return 1; }
+            const comma::uint32 size = options.value< comma::uint32 >("--size,-n");
+            if( size < 2 ) { std::cerr <<  comma::verbose.app_name() << ": expected --size,-n= value to be greater than 1" << std::endl; return 1; }
             const bool use_sliding_window = options.exists("--sliding-window,-w");
             const bool discard = options.exists("--discard");
             
@@ -127,8 +126,8 @@ int main( int ac, char** av )
                 }
             }
             
-            if( use_sliding_window && count < size ) { std::cerr << comma::verbose.app_name() << "--lines= is bigger than number of input lines: " << count << std::endl; return 1; }
-            if( !use_sliding_window && !discard && !lines.empty() ) { std::cerr << comma::verbose.app_name() << ": discarding tail input lines: " << lines.size() << " lines." << std::endl; }
+            if( use_sliding_window && count < size ) { std::cerr << comma::verbose.app_name() << "--size,-n= is bigger than total number of input records: " << count << std::endl; return 1; }
+            if( !use_sliding_window && !lines.empty() ) { std::cerr << comma::verbose.app_name() << ": error, leftover tail input record found: " << lines.size() << " lines." << std::endl; return 1; }
         }
         else { std::cerr << comma::verbose.app_name() << ": operation not supported or unknown: '" << unnamed.front() << '\'' << std::endl; }
 
