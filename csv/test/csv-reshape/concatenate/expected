@@ -20,5 +20,5 @@ sliding_window[3]/status=0
 sliding_window[4]/output=""
 sliding_window[4]/status=0
 # Negative test
-sliding_window[0]/output=""
-sliding_window[0]/status=1
+sliding_window[5]/output=""
+sliding_window[5]/status=1

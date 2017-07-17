@@ -9,4 +9,4 @@ sliding_window[1]="seq 1 10 | csv-reshape concatenate -n 3 -w --discard | tr \\\
 sliding_window[2]="seq 1 10 | csv-reshape concatenate -n 9 -w --discard | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
 sliding_window[3]="seq 1 10 | csv-reshape concatenate -n 10 -w --discard | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
 sliding_window[4]="seq 1 10 | csv-reshape concatenate -n 11 -w --discard | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
-sliding_window[0]="seq 1 10 | csv-reshape concatenate -n 1 -w --discard | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
+sliding_window[5]="seq 1 10 | csv-reshape concatenate -n 1 -w --discard | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"

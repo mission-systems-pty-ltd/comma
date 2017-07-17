@@ -98,6 +98,7 @@ int main( int ac, char** av )
             // throw or just pass through?
             if( csv.binary() ) { COMMA_THROW(comma::exception, "operation 'concatenate' found with binary input data, only input csv data"); } 
             comma::uint32 size = options.value< comma::uint32 >("--lines,-n");
+            if( size < 2 ) { std::cerr <<  comma::verbose.app_name() << ": expected --lines,-n= value to be greater than 1" << std::endl; return 1; }
             const bool use_sliding_window = options.exists("--sliding-window,-w");
             const bool discard = options.exists("--discard");
             
