@@ -70,9 +70,7 @@ static void usage(bool detail=false)
     std::cerr << "    --deterministic,-d: if given, input is downsampled by a factor of int(1 / <rate>)." << std::endl;
     std::cerr << "                        That is, if <rate> is 0.33, output every third packet." << std::endl;
     std::cerr << "                        Default is to output each packet with a probability of <rate>." << std::endl;
-    std::cerr << "   --fps,--frames-per-second <d>: when specified use time rate for thinning, output at time rate of <d> records per second; not to be used with <rate>" << std::endl;
-    std::cerr << "                        if --fields is specified and it contains 't' then it will be used as timestamp for thinning otherwise it uses real time of reading input" << std::endl;
-    std::cerr << "                            other standard csv options may apply if t field is used; e.g. --binary=<format> if input is binary" << std::endl;
+    std::cerr << "   --fps,--frames-per-second <d>: deprecated and remove!" << std::endl;
     std::cerr << "    --size,-s <size>: if given, data is packets of fixed size" << std::endl;
     std::cerr << "                      otherwise data is expected line-wise" << std::endl;
     std::cerr << "                      alternatively use --binary" << std::endl;
@@ -95,7 +93,6 @@ static void usage(bool detail=false)
 
 static double rate;
 static bool deterministic;
-boost::optional<double> fps;
 
 static bool ignore()
 {
@@ -124,18 +121,6 @@ static bool ignore()
         }
         return false;
     }
-    if( fps )
-    {
-        static boost::posix_time::time_duration period=boost::posix_time::microseconds( 1e6 / *fps );
-        static boost::posix_time::ptime last_time;
-        boost::posix_time::ptime now = boost::posix_time::microsec_clock::universal_time();
-        if( last_time.is_not_a_date_time() || ( now >= last_time + period ) )
-        {
-            last_time = now;
-            return false;
-        }
-        return true;
-    }
     static boost::mt19937 rng;
     static boost::uniform_real<> dist( 0, 1 );
     static boost::variate_generator< boost::mt19937&, boost::uniform_real<> > random( rng, dist );
@@ -163,51 +148,15 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av, usage );
         bool binary = options.exists( "--size,-s,--binary,-b" );
         deterministic = options.exists( "--deterministic,-d" );
-        fps=options.optional<double>("--fps,--frames-per-second");
+        if(options.exists("--fps,--frames-per-second")) { COMMA_THROW( comma::exception, "ERROR: --fps option is deprecated and removed! Please talk to software team if you are using it"); }
         #ifdef WIN32
         if( binary ) { _setmode( _fileno( stdin ), _O_BINARY ); _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
         
-        if( fps )
-        {
-            std::string fields=options.value<std::string>("--fields","");
-            if(!fields.empty())
-            {
-                std::vector<std::string> ff=split(fields, ",");
-                if(std::find(ff.begin(), ff.end(), "t") != ff.end())
-                {
-                    comma::csv::options csv(options);
-                    comma::csv::input_stream<input_t> is(std::cin, csv);
-                    static boost::posix_time::time_duration period=boost::posix_time::microseconds( 1e6 / *fps );
-                    static boost::posix_time::ptime last_time;
-                    while(std::cin.good())
-                    {
-                        //read a record
-                        const input_t* input=is.read();
-                        if(!input) { break; }
-                        boost::posix_time::ptime now = input->t;
-                        if(last_time.is_not_a_date_time() || (now >= last_time + period) )
-                        {
-                            last_time=now;
-                            //write output
-                            if(is.is_binary())
-                                std::cout.write(is.binary().last(), is.binary().size());
-                            else
-                                std::cout << comma::join( is.ascii().last(), is.ascii().ascii().delimiter() )<< std::endl;
-                        }
-                    }
-                    return 0;
-                }
-            }
-
-        }
-        else //!fps
-        {
-            std::vector< std::string > v = options.unnamed( "--deterministic,-d", "-.*" );
-            if( v.empty() ) { std::cerr << "csv-thin: please specify rate" << std::endl; usage(); }
-            rate = boost::lexical_cast< double >( v[0] );
-            if( comma::math::less( rate, 0 ) || comma::math::less( 1, rate ) ) { std::cerr << "csv-thin: expected rate between 0 and 1, got " << rate << std::endl; usage(); }
-        }
+        std::vector< std::string > v = options.unnamed( "--deterministic,-d", "-.*" );
+        if( v.empty() ) { std::cerr << "csv-thin: please specify rate" << std::endl; usage(); }
+        rate = boost::lexical_cast< double >( v[0] );
+        if( comma::math::less( rate, 0 ) || comma::math::less( 1, rate ) ) { std::cerr << "csv-thin: expected rate between 0 and 1, got " << rate << std::endl; usage(); }
 
         if( binary ) // quick and dirty, improve performance by reading larger buffer
         {
@@ -217,8 +166,7 @@ int main( int ac, char** av )
             if( !format_string.empty() ) { f.reset( comma::csv::format( format_string ) ); }
             if( !size ) { size = f->size(); }
             if( f && f->size() != size ) { std::cerr << "csv-thin: expected consistent size, got --size " << size << " and --binary of size " << f->size() << std::endl; return 1; }
-            //fps needs real time of reading input record, so we can't buffer it
-            unsigned int factor = fps ? 1 : 65536 / size; // arbitrary
+            unsigned int factor = 65536 / size; // arbitrary
             if( factor == 0 ) { factor = 1; }
             std::vector< char > buf( size * factor );
             #ifdef WIN32
