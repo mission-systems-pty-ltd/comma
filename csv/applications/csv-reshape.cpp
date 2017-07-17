@@ -55,13 +55,11 @@ static void usage( bool verbose=false )
     std::cerr << "   operations" << std::endl;
     std::cerr << "      concatenate: input lines to make longer output lines, e.g. 3 csv input lines to one output line" << std::endl;
     std::cerr << "          cat file.csv | csv-reshape concatenate -n 4 --discard" << std::endl;
-    std::cerr << "      transpose: transpose rows into columns" << std::endl;
-    std::cerr << "          cat file.bin | csv-reshape transpose --fields ,,block --binary t,d,ui" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "   general" << std::endl;
     std::cerr << "      --help,-h;  see this usage message" << std::endl;
-    std::cerr << "      --verbose,-v: more output to stderr" << std::endl;
+    std::cerr << "      --verbose,-v: more output to stderr, shows examples with --help,-h" << std::endl;
     std::cerr << std::endl;
     std::cerr << "   concatenate" << std::endl;
     std::cerr << "      --delimiter,-d=<char>; default=','; field separating character" << std::endl;
@@ -73,7 +71,12 @@ static void usage( bool verbose=false )
     std::cerr << std::endl;
     if(verbose)
     {
-        std::cerr << comma::csv::format::usage() << std::endl;
+        std::cerr << "examples:" << std::endl;
+        std::cerr << "   concatenate" << std::endl;
+        std::cerr << "      concatenate 4 input lines into one output line" << std::endl;
+        std::cerr << "          seq 1 10 | csv-reshape concatenate -n 4" << std::endl;
+        std::cerr << "      concatenate sliding window of 4 input lines into one output line" << std::endl;
+        std::cerr << "          seq 1 10 | csv-reshape concatenate -n 4 --sliding-window" << std::endl;
     }
     exit( -1 );
 }
@@ -103,11 +106,13 @@ int main( int ac, char** av )
             const bool discard = options.exists("--discard");
             
             lines_type lines;
+            comma::uint32 count;
             while( true )
             {
                 lines.push_back( std::string() );
                 std::getline( std::cin, lines.back() );
                 if( (std::cin.bad() ||  std::cin.eof()) ) { lines.pop_back(); break; }
+                ++count;
                 
                 if( lines.size() < size ) {}
                 else if ( lines.size() > size ) { COMMA_THROW(comma::exception, "too many input lines buffered"); }
@@ -122,10 +127,8 @@ int main( int ac, char** av )
                 }
             }
             
-            if( !use_sliding_window && !discard && !lines.empty() ) {
-                std::cerr << comma::verbose.app_name() << ": discarding trailing input lines: " << lines.size() << " lines." << std::endl;
-            }
-            
+            if( use_sliding_window && count < size ) { std::cerr << comma::verbose.app_name() << "--lines= is bigger than number of input lines: " << count << std::endl; return 1; }
+            if( !use_sliding_window && !discard && !lines.empty() ) { std::cerr << comma::verbose.app_name() << ": discarding tail input lines: " << lines.size() << " lines." << std::endl; }
         }
         else { std::cerr << comma::verbose.app_name() << ": operation not supported or unknown: '" << unnamed.front() << '\'' << std::endl; }
 

@@ -4,6 +4,8 @@ basics[1]="seq 1 10 | csv-reshape concatenate -n 4 --discard | tr \\\\n ';' | se
 basics[2]="seq 1 10 | csv-reshape concatenate -n 1 --discard | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
 basics[3]="seq 1 10 | csv-reshape concatenate -n 0 --discard | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
 
+empty_lines[0]="( echo 1; echo 2; echo; echo 3; echo 5; echo ; echo; echo ; ) | csv-reshape concatenate -n 2 --discard | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
+
 sliding_window[0]="seq 1 10 | csv-reshape concatenate -n 2 -w --discard | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
 sliding_window[1]="seq 1 10 | csv-reshape concatenate -n 3 -w --discard | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
 sliding_window[2]="seq 1 10 | csv-reshape concatenate -n 9 -w --discard | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
