@@ -36,12 +36,16 @@
 #endif
 
 #include <iostream>
+#include <vector>
+#include <deque>
+#include "../../base/types.h"
 #include "../../application/command_line_options.h"
 #include "../../application/contact_info.h"
+#include "../options.h"
 
 using namespace comma;
 
-static void usage()
+static void usage( bool verbose=false )
 {
     std::cerr << std::endl;
     std::cerr << "Perform reshaping operations on input data" << std::endl;
@@ -53,10 +57,12 @@ static void usage()
     std::cerr << "          cat file.csv | csv-reshape concatenate -n 4 --discard" << std::endl;
     std::cerr << "      transpose: transpose rows into columns" << std::endl;
     std::cerr << "          cat file.bin | csv-reshape transpose --fields ,,block --binary t,d,ui" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "   general" << std::endl;
     std::cerr << "      --help,-h;  see this usage message" << std::endl;
     std::cerr << "      --verbose,-v: more output to stderr" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "   concatenate" << std::endl;
     std::cerr << "      --delimiter,-d=<char>; default=','; field separating character" << std::endl;
     std::cerr << "      --discard; throw away last lines that are less than --lines" << std::endl;
@@ -65,8 +71,14 @@ static void usage()
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
+    if(verbose)
+    {
+        std::cerr << comma::csv::format::usage() << std::endl;
+    }
     exit( -1 );
 }
+
+typedef std::deque< std::string > lines_type;
 
 int main( int ac, char** av )
 {
@@ -74,12 +86,47 @@ int main( int ac, char** av )
     {
         comma::command_line_options options( ac, av, usage );
         std::vector< std::string > unnamed = options.unnamed( "--sliding-window,-w,--discard,--help,-h,--verbose,-v", "--binary,-b,--delimiter,-d,--format,--fields,-f,--output-fields,--lines,-n" );
-        comma::csv::options csv( options );
+        const comma::csv::options csv( options );
         #ifdef WIN32
         if( csv.binary() ) { _setmode( _fileno( stdin ), _O_BINARY ); _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
         if( unnamed.empty() ) { std::cerr << comma::verbose.app_name() << ": please specify operations" << std::endl; exit( 1 ); }
         std::vector< std::string > v = comma::split( unnamed[0], ',' );
+        
+        if( unnamed.front() == "concatenate" )
+        {
+            // throw or just pass through?
+            if( csv.binary() ) { COMMA_THROW(comma::exception, "operation 'concatenate' found with binary input data, only input csv data"); } 
+            comma::uint32 size = options.value< comma::uint32 >("--lines,-n");
+            const bool use_sliding_window = options.exists("--sliding-window,-w");
+            const bool discard = options.exists("--discard");
+            
+            lines_type lines;
+            while( true )
+            {
+                lines.push_back( std::string() );
+                std::getline( std::cin, lines.back() );
+                if( (std::cin.bad() ||  std::cin.eof()) ) { lines.pop_back(); break; }
+                
+                if( lines.size() < size ) {}
+                else if ( lines.size() > size ) { COMMA_THROW(comma::exception, "too many input lines buffered"); }
+                else
+                {
+                    std::cout << lines.front();
+                    for( lines_type::const_iterator is=(lines.cbegin()+1); is!=lines.cend(); ++is ) { std::cout << csv.delimiter << *is; }
+                    std::cout << std::endl;
+                    
+                    // TBD: support block with --sliding-window?
+                    if( !use_sliding_window ) { lines.clear(); } else { lines.pop_front(); }
+                }
+            }
+            
+            if( !use_sliding_window && !discard && !lines.empty() ) {
+                std::cerr << comma::verbose.app_name() << ": discarding trailing input lines: " << lines.size() << " lines." << std::endl;
+            }
+            
+        }
+        else { std::cerr << comma::verbose.app_name() << ": operation not supported or unknown: '" << unnamed.front() << '\'' << std::endl; }
 
         return 0;
     }
