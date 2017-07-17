@@ -37,9 +37,16 @@ binary_sliding_window[2]/output="1,2,3,4,5,6,7,8,9;2,3,4,5,6,7,8,9,10"
 binary_sliding_window[2]/status=0
 binary_sliding_window[3]/output="1,2,3,4,5,6,7,8,9,10"
 binary_sliding_window[3]/status=0
-# Slid_ng window size is greater than input window
+# Sliding window size is greater than input window
 binary_sliding_window[4]/output=""
 binary_sliding_window[4]/status=1
-# Nega_ive test
+# Negative test
 binary_sliding_window[5]/output=""
 binary_sliding_window[5]/status=1
+
+# Input record has multiple fields
+multi_fields[0]/output="1,a,2,2,b,u;b,b,b,5,d,6"
+multi_fields[0]/status=0
+multi_fields_sliding[0]/output="1,a,2,2,b,7,3,c,4;2,b,7,3,c,4,5,d,6"
+multi_fields_sliding[0]/status=0
+

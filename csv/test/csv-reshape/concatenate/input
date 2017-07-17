@@ -19,3 +19,8 @@ binary_sliding_window[2]="seq 1 10 | csv-to-bin i | csv-reshape concatenate -n 9
 binary_sliding_window[3]="seq 1 10 | csv-to-bin i | csv-reshape concatenate -n 10 -w --binary i | csv-from-bin 10i | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[2]} == 0 ))"
 binary_sliding_window[4]="seq 1 10 | csv-to-bin i | csv-reshape concatenate -n 11 -w --binary i | csv-from-bin 11i | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[2]} == 0 ))"
 binary_sliding_window[5]="seq 1 10 | csv-to-bin i | csv-reshape concatenate -n 1  -w --binary i | csv-from-bin i | tr \\\\n ';' | sed 's#;$##';   (( ${PIPESTATUS[2]} == 0 ))"
+
+
+multi_fields[0]="( echo 1,a,2; echo 2,b,u; echo b,b,b; echo 5,d,6 ) | csv-reshape concatenate -n 2 | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
+
+multi_fields_sliding[0]="( echo 1,a,2; echo 2,b,7; echo 3,c,4; echo 5,d,6; ) | csv-to-bin 'ui,s[1],ui' | csv-reshape concatenate -n 3 -w --binary 'ui,s[1],ui' | csv-from-bin 'ui,s[1],ui,ui,s[1],ui,ui,s[1],ui'| tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[2]} == 0 ))"
