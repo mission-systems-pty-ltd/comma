@@ -59,7 +59,7 @@ static void usage( bool verbose=false )
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --binary,-b=[<format>]: in binary mode: format string of the input csv data types" << std::endl;
-    std::cerr << "    --delimiter,-d=[<char>]; default=','; field separating character." << std::endl;
+    std::cerr << "    --delimiter,-d=[<char>]; default=','; in ascii mode, field separating character." << std::endl;
     std::cerr << "    --help,-h;  see this usage message" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr, shows examples with --help,-h" << std::endl;
     std::cerr << std::endl;
