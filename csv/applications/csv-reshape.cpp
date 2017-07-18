@@ -36,6 +36,7 @@
 #include "../../application/command_line_options.h"
 #include "../options.h"
 #include "../stream.h"
+#include "../format.h"
 
 using namespace comma;
 
@@ -96,6 +97,19 @@ template <> struct traits< input_t >
 
 } } // namespace comma { namespace visiting {
 
+// There is nothing to do in this case - binary data
+static void simple_binary_pass_through(const comma::csv::format& f, bool flush=false)
+{
+    std::vector< char > buffer( f.size(), '\0' );
+    while( std::cin.good() && !std::cin.eof() )
+    {
+        if( std::cin.read( &buffer[0], buffer.size() ) ) {
+            std::cout.write( &buffer[0], buffer.size() );
+            if( flush ) { std::cout.flush(); }
+        }
+    }
+}
+
 int main( int ac, char** av )
 {
     try
@@ -108,7 +122,8 @@ int main( int ac, char** av )
         if( operation == "concatenate" )
         {
             const bool use_sliding_window = options.exists("--sliding-window,-w");
-            if( !use_sliding_window && csv.binary() ) { std::cerr << comma::verbose.app_name() << ": error - concatenate with binary inputs and no sliding window, nothing to be done"; return 1; } 
+            if( !use_sliding_window && csv.binary() ) { simple_binary_pass_through(csv.format(), csv.flush); return 0; };
+            
             const comma::uint32 size = options.value< comma::uint32 >("--size,-n");
             if( size < 2 ) { std::cerr <<  comma::verbose.app_name() << ": expected --size,-n= value to be greater than 1" << std::endl; return 1; }
             const bool is_binary = csv.binary();
