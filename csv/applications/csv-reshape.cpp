@@ -42,40 +42,46 @@ using namespace comma;
 
 // todo
 //   - concatenate
-//     - --help: explain the operation better
-//     - support binary mode (currently throws an error for no good reason)
-//     - --help: document binary mode support
-//     - put input_t in a namespace for concatenate (when more operations introduced, they may need a different input type)
+//    done - --help: explain the operation better
+//    done: (just pipe data back out if no sliding window) - support binary mode (currently throws an error for no good reason)
+//    done - --help: document binary mode support
+//    done - put input_t in a namespace for concatenate (when more operations introduced, they may need a different input type)
 
 static void usage( bool verbose=false )
 {
-    std::cerr << std::endl;
     std::cerr << "Perform reshaping operations on input data" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "operations" << std::endl;
+    std::cerr << "    concatenate: group input records for concatenation into output records." << std::endl;
+    std::cerr << "                 the user can choose non-overlapping or overlapping grouping (sliding window) mode." << std::endl;
     std::cerr << std::endl;
     std::cerr << "Usage: cat data.csv | csv-reshape <operation> [<options>]" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "operations" << std::endl;
-    std::cerr << "    concatenate: input lines to make longer output lines" << std::endl;
-    std::cerr << std::endl;
     std::cerr << "options" << std::endl;
+    std::cerr << "    --binary,-b=[<format>]: in binary mode: format string of the input csv data types" << std::endl;
+    std::cerr << "    --delimiter,-d=[<char>]; default=','; field separating character." << std::endl;
     std::cerr << "    --help,-h;  see this usage message" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr, shows examples with --help,-h" << std::endl;
     std::cerr << std::endl;
+    if( verbose ) { std::cerr << comma::csv::format::usage() << std::endl; }
     std::cerr << "operations options" << std::endl;
     std::cerr << std::endl;
     std::cerr << "   concatenate" << std::endl;
-    std::cerr << "      --delimiter,-d=[<char>]; default=','; field separating character" << std::endl;
-    std::cerr << "      --size,-n=<num>; number of input record to concatenate into output record" << std::endl;
-    std::cerr << "      --sliding-window,-w; use a sliding window to create output record, see examples" << std::endl;
+    std::cerr << "      --size,-n=<num>; number of input records in each grouping, range: 2 and above" << std::endl;
+    std::cerr << "      --sliding-window,-w; use a sliding window to group input records, see examples" << std::endl;
     std::cerr << std::endl;
     if( verbose )
     {
         std::cerr << "examples" << std::endl;   
         std::cerr << "   concatenate" << std::endl;
-        std::cerr << "      concatenate 4 input lines into one output line" << std::endl;
-        std::cerr << "          seq 1 10 | csv-reshape concatenate -n 5" << std::endl;
-        std::cerr << "      concatenate sliding window of 4 input lines into one output line" << std::endl;
-        std::cerr << "          seq 1 10 | csv-reshape concatenate -n 5 --sliding-window" << std::endl;
+        std::cerr << "      non overlaping groups:" << std::endl;
+        std::cerr << "          concatenate each group of 5 input records into one output record." << std::endl;
+        std::cerr << "          input records 1 to 5 create the first output record, input records 6-10 create the second output record, and so forth." << std::endl;
+        std::cerr << "              seq 1 15 | csv-reshape concatenate -n 5" << std::endl;
+        std::cerr << "      overlapping groups:" << std::endl;
+        std::cerr << "          move a sliding window of size 5 along the input records, every time the sliding window moves, make an output record from window" << std::endl;
+        std::cerr << "          input records 1 to 5 create the first output record, input records 2 to 6 create the second record, input records 3 to 7 create the third record, and so forth" << std::endl;
+        std::cerr << "              seq 1 10 | csv-reshape concatenate -n 5 --sliding-window" << std::endl;
     }
     else
     {
@@ -84,15 +90,18 @@ static void usage( bool verbose=false )
     exit( 0 );
 }
 
+namespace concatenate { 
 // The input records are not inspected at all, no need
 struct input_t {};
 
+} // namespace concatenate { 
+
 namespace comma { namespace visiting {
 
-template <> struct traits< input_t >
+template <> struct traits< concatenate::input_t >
 {
-    template < typename K, typename V > static void visit( const K&, const input_t& p, V& v ) {  }
-    template < typename K, typename V > static void visit( const K&, input_t& p, V& v ) {  }
+    template < typename K, typename V > static void visit( const K&, const concatenate::input_t& p, V& v ) {  }
+    template < typename K, typename V > static void visit( const K&, concatenate::input_t& p, V& v ) {  }
 };
 
 } } // namespace comma { namespace visiting {
@@ -127,12 +136,12 @@ int main( int ac, char** av )
             const comma::uint32 size = options.value< comma::uint32 >("--size,-n");
             if( size < 2 ) { std::cerr <<  comma::verbose.app_name() << ": expected --size,-n= value to be greater than 1" << std::endl; return 1; }
             const bool is_binary = csv.binary();
-            comma::csv::input_stream< input_t > istream(std::cin, csv);
+            comma::csv::input_stream< concatenate::input_t > istream(std::cin, csv);
             std::deque< std::string > deque;
             comma::uint32 count = 0;
             while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
             {
-                const input_t* p = istream.read();
+                const concatenate::input_t* p = istream.read();
                 if( !p ) { break; }
                 deque.push_back( istream.last() );
                 ++count;
