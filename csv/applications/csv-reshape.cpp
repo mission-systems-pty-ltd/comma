@@ -40,13 +40,6 @@
 
 using namespace comma;
 
-// todo
-//   - concatenate
-//    done - --help: explain the operation better
-//    done: (just pipe data back out if no sliding window) - support binary mode (currently throws an error for no good reason)
-//    done - --help: document binary mode support
-//    done - put input_t in a namespace for concatenate (when more operations introduced, they may need a different input type)
-
 static void usage( bool verbose=false )
 {
     std::cerr << "Perform reshaping operations on input data" << std::endl;
