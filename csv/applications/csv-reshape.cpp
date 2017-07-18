@@ -29,56 +29,58 @@
 
 /// @author dewey nguyen
 
-#ifdef WIN32
-#include <stdio.h>
-#include <fcntl.h>
-#include <io.h>
-#endif
-
 #include <iostream>
 #include <vector>
 #include <deque>
 #include "../../base/types.h"
 #include "../../application/command_line_options.h"
-#include "../../application/contact_info.h"
 #include "../options.h"
 #include "../stream.h"
 
 using namespace comma;
+
+// todo
+//   - concatenate
+//     - --help: explain the operation better
+//     - support binary mode (currently throws an error for no good reason)
+//     - --help: document binary mode support
+//     - put input_t in a namespace for concatenate (when more operations introduced, they may need a different input type)
 
 static void usage( bool verbose=false )
 {
     std::cerr << std::endl;
     std::cerr << "Perform reshaping operations on input data" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "Usage: cat data.csv | csv-reshape <operation> [options]" << std::endl;
+    std::cerr << "Usage: cat data.csv | csv-reshape <operation> [<options>]" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "   operations" << std::endl;
-    std::cerr << "      concatenate: input lines to make longer output lines, e.g. 3 csv input lines to one output line" << std::endl;
-    std::cerr << "          cat file.csv | csv-reshape concatenate -n 3" << std::endl;
+    std::cerr << "operations" << std::endl;
+    std::cerr << "    concatenate: input lines to make longer output lines" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
-    std::cerr << "   general" << std::endl;
-    std::cerr << "      --help,-h;  see this usage message" << std::endl;
-    std::cerr << "      --verbose,-v: more output to stderr, shows examples with --help,-h" << std::endl;
+    std::cerr << "    --help,-h;  see this usage message" << std::endl;
+    std::cerr << "    --verbose,-v: more output to stderr, shows examples with --help,-h" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "operations options" << std::endl;
     std::cerr << std::endl;
     std::cerr << "   concatenate" << std::endl;
     std::cerr << "      --delimiter,-d=[<char>]; default=','; field separating character" << std::endl;
     std::cerr << "      --size,-n=<num>; number of input record to concatenate into output record" << std::endl;
     std::cerr << "      --sliding-window,-w; use a sliding window to create output record, see examples" << std::endl;
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
-    std::cerr << std::endl;
-    if(verbose)
+    if( verbose )
     {
-        std::cerr << "examples:" << std::endl;
+        std::cerr << "examples" << std::endl;   
         std::cerr << "   concatenate" << std::endl;
         std::cerr << "      concatenate 4 input lines into one output line" << std::endl;
         std::cerr << "          seq 1 10 | csv-reshape concatenate -n 5" << std::endl;
         std::cerr << "      concatenate sliding window of 4 input lines into one output line" << std::endl;
         std::cerr << "          seq 1 10 | csv-reshape concatenate -n 5 --sliding-window" << std::endl;
     }
-    exit( -1 );
+    else
+    {
+        std::cerr << "examples: run csv-reshape --help --verbose for more..." << std::endl;
+    }
+    exit( 0 );
 }
 
 // The input records are not inspected at all, no need
@@ -99,24 +101,18 @@ int main( int ac, char** av )
     try
     {
         comma::command_line_options options( ac, av, usage );
-        std::vector< std::string > unnamed = options.unnamed( "--sliding-window,-w,--help,-h,--verbose,-v", "--binary,-b,--delimiter,-d,--format,--fields,-f,--output-fields,--size,-n" );
+        std::vector< std::string > unnamed = options.unnamed( "--sliding-window,-w,--verbose,-v", "-.*" );
         const comma::csv::options csv( options );
-        #ifdef WIN32
-        if( csv.binary() ) { _setmode( _fileno( stdin ), _O_BINARY ); _setmode( _fileno( stdout ), _O_BINARY ); }
-        #endif
         if( unnamed.empty() ) { std::cerr << comma::verbose.app_name() << ": please specify operations" << std::endl; exit( 1 ); }
-        std::vector< std::string > v = comma::split( unnamed[0], ',' );
-        
-        if( unnamed.front() == "concatenate" )
+        std::string operation = unnamed[0];
+        if( operation == "concatenate" )
         {
             const bool use_sliding_window = options.exists("--sliding-window,-w");
             if( !use_sliding_window && csv.binary() ) { std::cerr << comma::verbose.app_name() << ": error - concatenate with binary inputs and no sliding window, nothing to be done"; return 1; } 
             const comma::uint32 size = options.value< comma::uint32 >("--size,-n");
             if( size < 2 ) { std::cerr <<  comma::verbose.app_name() << ": expected --size,-n= value to be greater than 1" << std::endl; return 1; }
             const bool is_binary = csv.binary();
-            
-            comma::csv::input_stream< input_t > istream(std::cin, options);
-            
+            comma::csv::input_stream< input_t > istream(std::cin, csv);
             std::deque< std::string > deque;
             comma::uint32 count = 0;
             while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
@@ -125,27 +121,22 @@ int main( int ac, char** av )
                 if( !p ) { break; }
                 deque.push_back( istream.last() );
                 ++count;
-                
-                if( deque.size() < size ) {}
-//                 else if ( deque.size() > size ) { COMMA_THROW(comma::exception, "too many input records buffered"); }
-                else
+                if( deque.size() >= size )
                 {
                     std::cout.write( &(deque.front()[0]), deque.front().size() );
                     for( auto is=(deque.cbegin()+1); is!=deque.cend(); ++is ) { if(!is_binary){ std::cout << csv.delimiter; } std::cout.write( &(*is)[0], is->size() ); }
                     if(!is_binary){ std::cout << std::endl; } 
-                    
                     if( !use_sliding_window ) { deque.clear(); } else { deque.pop_front(); }
                 }
             }
-            
             if( use_sliding_window && count < size ) { std::cerr << comma::verbose.app_name() << "--size,-n= is bigger than total number of input records: " << count << std::endl; return 1; }
             if( !use_sliding_window && !deque.empty() ) { std::cerr << comma::verbose.app_name() << ": error, leftover tail input record found: " << deque.size() << " lines." << std::endl; return 1; }
+            return 0;
         }
-        else { std::cerr << comma::verbose.app_name() << ": operation not supported or unknown: '" << unnamed.front() << '\'' << std::endl; }
-
-        return 0;
+        std::cerr << comma::verbose.app_name() << ": operation not supported or unknown: '" << operation << '\'' << std::endl;
+        return 1;
     }
     catch( std::exception& ex ) { std::cerr << "csv-reshape: " << ex.what() << std::endl; }
     catch( ... ) { std::cerr << "csv-reshape: unknown exception" << std::endl; }
-    usage();
+    return 1;
 }
