@@ -114,7 +114,6 @@ int main( int ac, char** av )
             if( !use_sliding_window && csv.binary() ) { COMMA_THROW(comma::exception, " error - concatenate without sliding window expects only input csv data"); } 
             const comma::uint32 size = options.value< comma::uint32 >("--size,-n");
             if( size < 2 ) { std::cerr <<  comma::verbose.app_name() << ": expected --size,-n= value to be greater than 1" << std::endl; return 1; }
-            const bool discard = options.exists("--discard");
             
             const bool is_binary = csv.binary();
             
