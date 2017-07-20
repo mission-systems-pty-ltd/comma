@@ -131,6 +131,14 @@ def reset_signals():
         signal.signal( signal.SIGINT, s )
 
 
+def is_leaf( tree ):
+    try:
+        comma.csv.format.from_numpy( tree.dtype )
+        return True
+    except ( AttributeError, ValueError ):
+        return False
+
+
 def step_down( mat ):
     if mat.dtype == numpy.dtype('O'): # sometimes there's extra nesting
         mat = mat[0][0]
@@ -140,14 +148,13 @@ def step_down( mat ):
 
 
 def print_tree( path, tree, sep, with_values ):
-    try:
-        comma.csv.format.from_numpy( tree.dtype )
+    if is_leaf( tree ):
         if len( path ) > 0:
             if with_values:
                 print "%s=%s" % ( path[1:], tree.tolist() )
             else:
                 print path[1:]
-    except ( AttributeError, ValueError ):
+    else:
         # at the top level, mat is a dictionary, but as we drill down
         # it turns into nested numpy.ndarray objects
         keys = ( [ i for i in tree.keys() if i[0] != '_' ]
@@ -186,15 +193,11 @@ def main():
         print_tree( "", mat, args.path_separator, False )
         return
 
-    try:
-        numpy_type = comma.csv.format.from_numpy( mat.dtype )
-        leaf_node = True
-    except ( AttributeError, ValueError ):
-        leaf_node = False
+    leaf_node = is_leaf( mat )
 
     if args.output_format:
         if leaf_node:
-            print "%s%s" % ( mat.shape[1], numpy_type )
+            print "%s%s" % ( mat.shape[1], comma.csv.format.from_numpy( mat.dtype ))
         else:
             if args.variable:
                 message( "%s is not a data array", args.variable )
