@@ -85,14 +85,14 @@ file format:
   required then python library h5py can help, or possibly hdf5storage.
 
 examples:
-  {script_name} file.mat
-  {script_name} file.mat foo.bar
-  {script_name} file.mat --list
-  {script_name} file.mat --list --path-separator /
-  {script_name} file.mat foo --list
-  {script_name} file.mat foo.bar --binary
-  {script_name} file.mat foo.bar --output-format
-  {script_name} file.mat my-big-variable --preview
+  {script_name} data.mat
+  {script_name} data.mat foo.bar
+  {script_name} data.mat --list
+  {script_name} data.mat --list --path-separator /
+  {script_name} data.mat foo --list
+  {script_name} data.mat foo.bar --binary
+  {script_name} data.mat foo.bar --output-format
+  {script_name} data.mat my-big-variable --preview
 """.format( script_name=sys.argv[0].split('/')[-1] )
 
     fmt=lambda prog: argparse.RawDescriptionHelpFormatter( prog, max_help_position=50 )
