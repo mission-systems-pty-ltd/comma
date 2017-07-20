@@ -122,6 +122,33 @@ def reset_signals():
         signal.signal( signal.SIGINT, s )
 
 
+def step_down( mat ):
+    if mat.dtype == numpy.dtype('O'): # sometimes there's extra nesting
+        mat = mat[0][0]
+    if not isinstance( mat, numpy.ndarray ):
+        raise ValueError
+    return mat
+
+
+def print_tree( path, tree ):
+    try:
+        comma.csv.format.from_numpy( tree.dtype )
+        if len( path ) > 0:
+            print path[1:]
+    except ( AttributeError, ValueError ):
+        # at the top level, mat is a dictionary, but as we drill down
+        # it turns into nested numpy.ndarray objects
+        keys = ( [ i for i in tree.keys() if i[0] != '_' ]
+                 if isinstance( tree, dict )
+                 else tree.dtype.fields.keys() )
+        for k in keys:
+            try:
+                d = step_down( tree[k] )
+            except ValueError:
+                return
+            print_tree( "%s.%s" % ( path, k ), d )
+
+
 def main():
     reset_signals
     args = parse_args()
@@ -138,22 +165,13 @@ def main():
     if args.variable:
         for v in args.variable.split("."):
             try:
-                mat = mat[ v ]
-                if mat.dtype == numpy.dtype('O'): # sometimes there's extra nesting
-                    mat = mat[0][0]
+                mat = step_down( mat[ v ] )
             except ( KeyError, ValueError ):
                 message( "variable \"%s\" does not exist", args.variable )
                 return
 
     if args.list:
-        try:
-            # at the top level, mat is a dictionary, but as we drill down
-            # it turns into nested numpy.ndarray objects
-            print '\n'.join( mat.dtype.fields.keys()
-                             if args.variable
-                             else [ i for i in mat.keys() if i[0] != '_' ] )
-        except AttributeError:
-            pass                # expected if we're at the end of the variable chain
+        print_tree( "", mat )
         return
 
     try:
