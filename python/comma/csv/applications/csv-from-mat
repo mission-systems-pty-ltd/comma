@@ -72,6 +72,12 @@ extract variable from Matlab save file and return as csv
 """
 
     epilog="""
+output format:
+  If the variable given is a leaf node then the data in that node is output in
+  csv-style ascii or binary. If it's higher than a leaf node then all variables
+  from that point down are output in path-value form with the value in
+  python-style ascii.
+
 file format:
   Currently supports file format v7 and earlier, which is the default for all
   current versions of Matlab (including R2017a). Use the version option in the
@@ -79,6 +85,7 @@ file format:
   required then python library h5py can help, or possibly hdf5storage.
 
 examples:
+  {script_name} file.mat
   {script_name} file.mat foo.bar
   {script_name} file.mat --list
   {script_name} file.mat --list --path-separator /
@@ -132,11 +139,14 @@ def step_down( mat ):
     return mat
 
 
-def print_tree( path, tree, sep ):
+def print_tree( path, tree, sep, with_values ):
     try:
         comma.csv.format.from_numpy( tree.dtype )
         if len( path ) > 0:
-            print path[1:]
+            if with_values:
+                print "%s=%s" % ( path[1:], tree.tolist() )
+            else:
+                print path[1:]
     except ( AttributeError, ValueError ):
         # at the top level, mat is a dictionary, but as we drill down
         # it turns into nested numpy.ndarray objects
@@ -148,7 +158,7 @@ def print_tree( path, tree, sep ):
                 d = step_down( tree[k] )
             except ValueError:
                 return
-            print_tree( "%s%s%s" % ( path, sep, k ), d, sep )
+            print_tree( "%s%s%s" % ( path, sep, k ), d, sep, with_values )
 
 
 def main():
@@ -173,20 +183,23 @@ def main():
                 return
 
     if args.list:
-        print_tree( "", mat, args.path_separator )
+        print_tree( "", mat, args.path_separator, False )
         return
 
     try:
         numpy_type = comma.csv.format.from_numpy( mat.dtype )
-    except ValueError:
-        message( "%s is not a data array", args.variable )
-        return
+        leaf_node = True
+    except ( AttributeError, ValueError ):
+        leaf_node = False
 
     if args.output_format:
-        try:
-            print "%s%s" % ( mat.shape[1], comma.csv.format.from_numpy( mat.dtype ))
-        except IndexError:
-            message( "%s is not a data array", args.variable )
+        if leaf_node:
+            print "%s%s" % ( mat.shape[1], numpy_type )
+        else:
+            if args.variable:
+                message( "%s is not a data array", args.variable )
+            else:
+                message( "--output-format requires a specific variable" )
         return
 
     if args.preview:
@@ -194,11 +207,17 @@ def main():
         return
 
     if args.binary:
-        mat.tofile( sys.stdout )
+        if leaf_node:
+            mat.tofile( sys.stdout )
+        else:
+            message( "only leaf nodes can be output in binary" )
     else:
-        for t in mat:
-            t.tofile( sys.stdout, "," )
-            print
+        if leaf_node:
+            for t in mat:
+                t.tofile( sys.stdout, "," )
+                print
+        else:
+            print_tree( "", mat, args.path_separator, True )
 
 
 if __name__ == '__main__':
