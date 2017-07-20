@@ -81,6 +81,7 @@ file format:
 examples:
   {script_name} file.mat foo.bar
   {script_name} file.mat --list
+  {script_name} file.mat --list --path-separator /
   {script_name} file.mat foo --list
   {script_name} file.mat foo.bar --binary
   {script_name} file.mat foo.bar --output-format
@@ -100,6 +101,7 @@ examples:
     parser.add_argument( '--binary', action='store_true', help="output in binary (default is ascii)" )
     parser.add_argument( '--list', action='store_true', help="list variables in given file" )
     parser.add_argument( '--output-format', action='store_true', help="show format of data" )
+    parser.add_argument( '--path-separator', metavar="<char>", default=".", help="separator for input and output of variable paths (default=.)" )
     parser.add_argument( '--preview', action='store_true', help="show preview of data" )
 
     args = parser.parse_args()
@@ -130,7 +132,7 @@ def step_down( mat ):
     return mat
 
 
-def print_tree( path, tree ):
+def print_tree( path, tree, sep ):
     try:
         comma.csv.format.from_numpy( tree.dtype )
         if len( path ) > 0:
@@ -146,7 +148,7 @@ def print_tree( path, tree ):
                 d = step_down( tree[k] )
             except ValueError:
                 return
-            print_tree( "%s.%s" % ( path, k ), d )
+            print_tree( "%s%s%s" % ( path, sep, k ), d, sep )
 
 
 def main():
@@ -163,7 +165,7 @@ def main():
         return
 
     if args.variable:
-        for v in args.variable.split("."):
+        for v in args.variable.split( args.path_separator ):
             try:
                 mat = step_down( mat[ v ] )
             except ( KeyError, ValueError ):
@@ -171,7 +173,7 @@ def main():
                 return
 
     if args.list:
-        print_tree( "", mat )
+        print_tree( "", mat, args.path_separator )
         return
 
     try:
