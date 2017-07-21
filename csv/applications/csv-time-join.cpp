@@ -182,35 +182,58 @@ boost::posix_time::ptime get_time (const Point p)
     return p.timestamp ? *p.timestamp : boost::posix_time::microsec_clock::universal_time();
 }
 
-void output(const timestring_t & input, const timestring_t& joined)
-{   
-    if (bound && (input.first - joined.first > bound || joined.first - input.first > bound) ) { return; }
-    if (stdin_csv.binary())
+static void output_joined( std::ostream& os, const timestring_t& joined, bool bounded_first )
+{
+    if( !select_only )
     {
-        std::cout.write(&input.second[0], stdin_csv.format().size());
-        if (select_only) { return; }
-        
-        if (timestamp_only)
+        if( stdin_csv.binary() )
         {
-            static const unsigned int time_size = comma::csv::format::traits< boost::posix_time::ptime, comma::csv::format::time >::size;
-            static char timestamp[ time_size ];
-            comma::csv::format::traits< boost::posix_time::ptime, comma::csv::format::time >::to_bin( joined.first, timestamp );
-            std::cout.write( (char*)&timestamp, time_size );
+            if( timestamp_only )
+            {
+                static const unsigned int time_size = comma::csv::format::traits< boost::posix_time::ptime, comma::csv::format::time >::size;
+                static char timestamp[ time_size ];
+                comma::csv::format::traits< boost::posix_time::ptime, comma::csv::format::time >::to_bin( joined.first, timestamp );
+                os.write( (char*)&timestamp, time_size );
+            }
+            else
+            {
+                os.write( &joined.second[0], joined.second.size() );
+            }
         }
         else
         {
-            std::cout.write(&joined.second[0], bounding_csv.format().size());
+            if( bounded_first ) { os << stdin_csv.delimiter; }
+            os << ( timestamp_only ? boost::posix_time::to_iso_string( joined.first ) : joined.second );
+            if( !bounded_first ) { os << stdin_csv.delimiter; }
         }
+    }
+}
+
+static void output_input( std::ostream& os, const timestring_t& input )
+{
+    if( stdin_csv.binary() ) { os.write( &input.second[0], stdin_csv.format().size() ); }
+    else { os << input.second; }
+}
+
+static void output( const timestring_t& input, const timestring_t& joined, bool bounded_first )
+{
+    if( bound && ( input.first - joined.first > bound || joined.first - input.first > bound ))
+    {
+        return;
+    }
+
+    if( bounded_first )
+    {
+        output_input( std::cout, input );
+        output_joined( std::cout, joined, bounded_first );
     }
     else
     {
-        std::cout << input.second;
-        if ( select_only ) { return; }
-
-        std::cout << stdin_csv.delimiter
-                  << ( timestamp_only ? boost::posix_time::to_iso_string( joined.first ) : joined.second )
-                  << std::endl;
+        output_joined( std::cout, joined, bounded_first );
+        output_input( std::cout, input );
     }
+
+    if( !stdin_csv.binary() ) { std::cout << '\n'; }
     std::cout.flush();
 }
 
@@ -295,7 +318,7 @@ int main( int ac, char** av )
                     if( p )
                     {
                         timestring_t input_line = std::make_pair( get_time( *p ), stdin_stream.last() );
-                        if( joined_line ) { output( input_line, *joined_line ); }
+                        if( joined_line ) { output( input_line, *joined_line, bounded_first ); }
                     }
                     else
                     {
@@ -445,61 +468,9 @@ int main( int ac, char** av )
               bool is_first = by_lower || ( nearest && ( t - bounding_queue[0].first ) < ( bounding_queue[1].first - t ) );
 
               const timestring_t& chosen_bound = is_first ? bounding_queue[0] : bounding_queue[1];;
+              timestring_t input_line = std::make_pair( t, stdin_stream.last() );
 
-              //check bound
-              if( bound && !( ( chosen_bound.first - *bound ) <= t && t <= ( chosen_bound.first + *bound ) ) )
-              {
-                  next=true;
-                  continue;
-              }
-
-              //match available -> join and output
-              if( stdin_csv.binary() )
-              {
-                  if( bounded_first )
-                  {
-                      std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() );
-                  }
-                  if( select_only ) { } /// This is --do-no-append, so don't append
-                  else if( timestamp_only )
-                  {
-                      static comma::csv::binary< Point > b;
-                      std::vector< char > v( b.format().size() );
-                      b.put( Point( chosen_bound.first ), &v[0] );
-                      std::cout.write( &v[0], b.format().size() );
-                  }
-                  else
-                  {
-                      std::cout.write( &chosen_bound.second[0], chosen_bound.second.size() );
-                  }
-                  if( !bounded_first )
-                  {
-                      std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() );
-                  }
-                  std::cout.flush();
-              }
-              else
-              {
-                  if( bounded_first )
-                  {
-                      std::cout << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter );
-                  }
-                  if( select_only ) { } /// This is --do-no-append, so don't append
-                  else if( timestamp_only )
-                  {
-                      std::cout << stdin_csv.delimiter << boost::posix_time::to_iso_string( chosen_bound.first );
-                  }
-                  else
-                  {
-                      std::cout << stdin_csv.delimiter << chosen_bound.second;
-                  }
-                  if( !bounded_first )
-                  {
-                      std::cout << stdin_csv.delimiter << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter );
-                  }
-                  std::cout << std::endl;
-              }
-              //get a new point
+              output( input_line, chosen_bound, bounded_first );
               next=true;
           }
         }
