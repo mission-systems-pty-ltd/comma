@@ -205,16 +205,11 @@ void output(const timestring_t & input, const timestring_t& joined)
     else
     {
         std::cout << input.second;
-        if ( select_only ) { return; } 
-        
-        if (timestamp_only)
-        {
-            std::cout << stdin_csv.delimiter << boost::posix_time::to_iso_string(joined.first);
-        }
-        else 
-        {
-            std::cout << stdin_csv.delimiter << joined.second << std::endl;
-        }
+        if ( select_only ) { return; }
+
+        std::cout << stdin_csv.delimiter
+                  << ( timestamp_only ? boost::posix_time::to_iso_string( joined.first ) : joined.second )
+                  << std::endl;
     }
     std::cout.flush();
 }
