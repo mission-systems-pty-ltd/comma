@@ -14,10 +14,19 @@ output_dir=output
 [[ -d $output_dir ]] || mkdir $output_dir
 cd $output_dir
 
+# note that we can't tell much conclusively about realtime streams,
+# so we only output simple statistics
+
 cat $input \
     | if [[ $input_type == "file" ]]; then
           csv-time-join $bounding $options --verbose
       else
           csv-play | csv-time-join <( sleep 0.01; cat $bounding | csv-play ) $options --verbose
       fi \
-    | name-value-from-csv -f line -d : -n -p output
+    | if [[ $options =~ --realtime ]]; then
+          sed 's/[^,]//g' | wc -lc | tr -s ' ' | sed 's/^ //' | tr ' ' , \
+              | csv-eval --fields=lines,chars "chars = chars / lines" \
+              | name-value-from-csv -f num_records,num_fields
+      else
+          name-value-from-csv -f line -d : -n -p output
+      fi
