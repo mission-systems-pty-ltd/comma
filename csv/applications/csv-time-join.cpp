@@ -74,6 +74,8 @@ static void usage( bool verbose )
     std::cerr << "       if csv-time-join b.csv -, concatenate output as: <b.csv><stdin>" << std::endl;
     std::cerr << "       default: csv-time-join - b.csv" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "    --help,-h:                  this help" << std::endl;
+    std::cerr << "    --verbose,-v:               more output" << std::endl;
     std::cerr << "    --binary,-b <format>:       binary format" << std::endl;
     std::cerr << "    --delimiter,-d <delimiter>: ascii only; default ','" << std::endl;
     std::cerr << "    --fields,-f <fields>:       input fields; default: t" << std::endl;
@@ -81,7 +83,7 @@ static void usage( bool verbose )
     std::cerr << "    --do-not-append,--select:   do not append any field from the second input" << std::endl;
     std::cerr << "    --timestamp-only:           append only timestamp from the second input" << std::endl;
     std::cerr << "    --buffer:                   bounding data buffer size; default: infinite" << std::endl;
-    std::cerr << "    --discard-bounding:         discard bounding data if buffer size reached" << std::endl;
+    std::cerr << "    --discard-bounding:         discard bounding data if buffer size reached;" << std::endl;
     std::cerr << "                                default is to block until stdin catches up" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
