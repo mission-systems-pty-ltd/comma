@@ -46,6 +46,19 @@
 #include "../../string/string.h"
 #include "../../visiting/traits.h"
 
+static void bash_completion( unsigned const ac, char const * const * av )
+{
+    static const char* completion_options =
+        " --help --verbose"
+        " --by-lower --by-upper --nearest --realtime"
+        " --binary --delimiter --fields"
+        " --bound --do-not-append --select --timestamp-only"
+        " --buffer --discard-bounding"
+        ;
+    std::cout << completion_options << std::endl;
+    exit( 0 );
+}
+
 static void usage( bool verbose )
 {
     std::cerr << std::endl;
@@ -212,6 +225,7 @@ int main( int ac, char** av )
     {
         comma::signal_flag is_shutdown(comma::signal_flag::hard);
         comma::command_line_options options( ac, av, usage );
+        if( options.exists( "--bash-completion" )) bash_completion( ac, av );
         options.assert_mutually_exclusive( "--by-lower,--by-upper,--nearest,--realtime" );
         by_upper = options.exists( "--by-upper" );
         nearest = options.exists( "--nearest" );

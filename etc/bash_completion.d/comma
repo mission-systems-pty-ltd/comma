@@ -139,5 +139,6 @@ complete -F _comma_bash_completion comma-test-run
 complete -F _comma_bash_completion csv-calc
 complete -F _comma_bash_completion csv-from-mat
 complete -F _comma_bash_completion csv-repeat
+complete -F _comma_bash_completion csv-time-join
 complete -F _comma_bash_completion csv-units
 complete -F _comma_bash_completion io-bandwidth
