@@ -403,10 +403,7 @@ int main( int ac, char** av )
                         const Point* q = bounding_stream.read();
                         if( q )
                         {
-                            std::string line = bounding_csv.binary()
-                                ? std::string( bounding_stream.binary().last(), bounding_csv.format().size() )
-                                : comma::join( bounding_stream.ascii().last(), stdin_csv.delimiter );
-                            bounding_queue.push_back( std::make_pair( get_time( *q ), line ));
+                            bounding_queue.push_back( std::make_pair( get_time( *q ), bounding_stream.last() ));
                         }
                         else
                         {
