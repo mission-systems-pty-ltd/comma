@@ -217,10 +217,9 @@ static void output_input( std::ostream& os, const timestring_t& input )
 
 static void output( const timestring_t& input, const timestring_t& joined, bool bounded_first )
 {
-    if( bound && ( input.first - joined.first > bound || joined.first - input.first > bound ))
-    {
-        return;
-    }
+    if( joined.first.is_infinity() ) { return; }
+
+    if( bound && ( input.first - joined.first > bound || joined.first - input.first > bound )) { return; }
 
     if( bounded_first )
     {
@@ -348,11 +347,8 @@ int main( int ac, char** av )
         }
         else
         {
-          if( by_upper || nearest )
-          {
-              // add a fake entry for an lower bound to allow stdin before first bound to match
-              bounding_queue.push_back( std::make_pair( boost::posix_time::neg_infin, "" ));
-          }
+          // add a fake entry for an lower bound to allow stdin before first bound to match
+          bounding_queue.push_back( std::make_pair( boost::posix_time::neg_infin, "" ));
 
           while( ( stdin_stream.ready() || ( std::cin.good() && !std::cin.eof() ) ) )
           {
@@ -420,7 +416,7 @@ int main( int ac, char** av )
                       bounding_queue.pop_front();
                   }
               }
-              if( is->eof() && ( by_lower || nearest ))
+              if( is->eof() )
               {
                   // add a fake entry for an upper bound to allow stdin data above last bound to match
                   bounding_queue.push_back( std::make_pair( boost::posix_time::pos_infin, "" ));
