@@ -1,0 +1,5 @@
+input=../../stdin.csv
+bounding=../../bounding.csv
+bounds_first=1
+options="--by-lower"
+input_type=stream

@@ -14,14 +14,21 @@ output_dir=output
 [[ -d $output_dir ]] || mkdir $output_dir
 cd $output_dir
 
+stdin_first="-"
+stdin_second=""
+if [[ $bounds_first ]]; then
+    stdin_first=""
+    stdin_second="-"
+fi
+
 # note that we can't tell much conclusively about realtime streams,
 # so we only output simple statistics
 
 cat $input \
     | if [[ $input_type == "file" ]]; then
-          csv-time-join $bounding $options --verbose
+          csv-time-join $stdin_first $bounding $stdin_second $options --verbose
       else
-          csv-play | csv-time-join <( sleep 0.01; cat $bounding | csv-play ) $options --verbose
+          csv-play | csv-time-join $stdin_first <( sleep 0.01; cat $bounding | csv-play ) $stdin_second $options --verbose
       fi \
     | if [[ $options =~ --realtime ]]; then
           sed 's/[^,]//g' | wc -lc | tr -s ' ' | sed 's/^ //' | tr ' ' , \
