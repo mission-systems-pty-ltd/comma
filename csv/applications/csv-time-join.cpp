@@ -173,7 +173,7 @@ bool timestamp_only;
 bool select_only;
 
 comma::csv::options stdin_csv;
-comma::csv::options csv;
+comma::csv::options bounding_csv;
 boost::optional< boost::posix_time::time_duration > bound;
 typedef std::pair< boost::posix_time::ptime, std::string > timestring_t;
 
@@ -199,7 +199,7 @@ void output(const timestring_t & input, const timestring_t& joined)
         }
         else
         {
-            std::cout.write(&joined.second[0], csv.format().size());
+            std::cout.write(&joined.second[0], bounding_csv.format().size());
         }
     }
     else
@@ -258,10 +258,10 @@ int main( int ac, char** av )
                 return 1;
         }
         comma::name_value::parser parser( "filename" );
-        csv = parser.get< comma::csv::options >( properties );
-        if( csv.fields.empty() ) { csv.fields = "t"; }
-        comma::io::istream is( comma::split( properties, ';' )[0], csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii );
-        comma::csv::input_stream< Point > istream( *is, csv );
+        bounding_csv = parser.get< comma::csv::options >( properties );
+        if( bounding_csv.fields.empty() ) { bounding_csv.fields = "t"; }
+        comma::io::istream is( comma::split( properties, ';' )[0], bounding_csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii );
+        comma::csv::input_stream< Point > istream( *is, bounding_csv );
         std::deque<timestring_t> bounding_queue;
         #ifndef WIN32
         comma::io::select select;
@@ -384,7 +384,7 @@ int main( int ac, char** av )
                       const Point* q = istream.read();
                       if( q )
                       {
-                          std::string line = csv.binary() ? std::string( istream.binary().last(), csv.format().size() ) : comma::join( istream.ascii().last(), stdin_csv.delimiter );
+                          std::string line = bounding_csv.binary() ? std::string( istream.binary().last(), bounding_csv.format().size() ) : comma::join( istream.ascii().last(), stdin_csv.delimiter );
                           bounding_queue.push_back(std::make_pair(get_time(*q),line));
                       }
                       else
