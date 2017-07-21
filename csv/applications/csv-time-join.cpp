@@ -72,9 +72,8 @@ static void usage( bool verbose )
     std::cerr << "usage: cat a.csv | csv-time-join <how> [<options>] bounding.csv [-] > joined.csv" << std::endl;
     std::cerr << std::endl;
     std::cerr << "<how>" << std::endl;
-    std::cerr << "    --by-lower: join by lower timestamp" << std::endl;
+    std::cerr << "    --by-lower: join by lower timestamp (default)" << std::endl;
     std::cerr << "    --by-upper: join by upper timestamp" << std::endl;
-    std::cerr << "                default: --by-lower" << std::endl;
     std::cerr << "    --nearest:  join by nearest timestamp" << std::endl;
     std::cerr << "                if 'block' given in --fields, output the whole block" << std::endl;
     std::cerr << "    --realtime: (streams only) output input immediately joined with current" << std::endl;
@@ -164,17 +163,15 @@ template <> struct traits< Point >
     
 } } // namespace comma { namespace visiting {
 
-
-bool by_upper;
-bool nearest;
-bool by_lower;
-bool realtime;
+enum class how { by_lower, by_upper, nearest, realtime };
+how method = how::by_lower;
 bool timestamp_only;
 bool select_only;
 
 comma::csv::options stdin_csv;
 comma::csv::options bounding_csv;
 boost::optional< boost::posix_time::time_duration > bound;
+
 typedef std::pair< boost::posix_time::ptime, std::string > timestring_t;
 
 boost::posix_time::ptime get_time (const Point p)
@@ -244,10 +241,9 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av, usage );
         if( options.exists( "--bash-completion" )) bash_completion( ac, av );
         options.assert_mutually_exclusive( "--by-lower,--by-upper,--nearest,--realtime" );
-        by_upper = options.exists( "--by-upper" );
-        nearest = options.exists( "--nearest" );
-        realtime = options.exists( "--realtime" );
-        by_lower = ( !by_upper && !nearest && !realtime );
+        if( options.exists( "--by-upper" )) { method = how::by_upper; }
+        if( options.exists( "--nearest" )) { method = how::nearest; }
+        if( options.exists( "--realtime" )) { method = how::realtime; }
         timestamp_only = options.exists( "--timestamp-only,--time-only" );
         select_only = options.exists( "--do-not-append,--select" );
         if( select_only && timestamp_only ) { std::cerr << "csv-time-join: --timestamp-only specified with --select, ignoring --timestamp-only" << std::endl; }
@@ -296,7 +292,7 @@ int main( int ac, char** av )
         bool next=true;
 
         bool bounding_data_available;
-        if( realtime )
+        if( method == how::realtime )
         {
             #ifndef WIN32
             bool end_of_input = false;
@@ -455,13 +451,14 @@ int main( int ac, char** av )
 
               //bound available
 
-              if( by_lower && t < bounding_queue.front().first )
+              if( method == how::by_lower && t < bounding_queue.front().first )
               {
                   next = true;
                   continue;
               }
 
-              bool is_first = by_lower || ( nearest && ( t - bounding_queue[0].first ) < ( bounding_queue[1].first - t ) );
+              bool is_first = ( method == how::by_lower )
+                  || ( method == how::nearest && ( t - bounding_queue[0].first ) < ( bounding_queue[1].first - t ));
 
               const timestring_t& chosen_bound = is_first ? bounding_queue[0] : bounding_queue[1];;
               timestring_t input_line = std::make_pair( t, stdin_stream.last() );
