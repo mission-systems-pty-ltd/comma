@@ -70,7 +70,7 @@ static void usage(bool detail=false)
     std::cerr << "    --deterministic,-d: if given, input is downsampled by a factor of int(1 / <rate>)." << std::endl;
     std::cerr << "                        That is, if <rate> is 0.33, output every third packet." << std::endl;
     std::cerr << "                        Default is to output each packet with a probability of <rate>." << std::endl;
-    std::cerr << "   --fps,--frames-per-second <d>: deprecated and remove!" << std::endl;
+    std::cerr << "   --fps,--frames-per-second <d>: deprecated and removed" << std::endl;
     std::cerr << "    --size,-s <size>: if given, data is packets of fixed size" << std::endl;
     std::cerr << "                      otherwise data is expected line-wise" << std::endl;
     std::cerr << "                      alternatively use --binary" << std::endl;
@@ -127,19 +127,6 @@ static bool ignore()
     static bool do_ignore = comma::math::less( rate, 1.0 );
     return do_ignore && random() > rate;
 }
-
-struct input_t { boost::posix_time::ptime t; };
-
-namespace comma { namespace visiting {
-
-template <> struct traits< input_t >
-{
-    template< typename K, typename V > static void visit( const K& k, const input_t& p, V& v ) { v.apply( "t", p.t ); }
-    template< typename K, typename V > static void visit( const K& k, input_t& p, V& v ) { v.apply( "t", p.t ); }
-};
-
-} } //namespace comma { namespace visiting {
-
 
 int main( int ac, char** av )
 {
