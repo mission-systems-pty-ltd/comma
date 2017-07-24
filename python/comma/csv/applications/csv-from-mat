@@ -105,6 +105,7 @@ examples:
 
     parser.add_argument( '--bash-completion', action='store_true', help=argparse.SUPPRESS )
     parser.add_argument( '--binary', action='store_true', help="output in binary (default is ascii)" )
+    parser.add_argument( '--csv', action='store_true', help="output as csv (only for non-compound variables)" )
     parser.add_argument( '--list', action='store_true', help="list variables in given file" )
     parser.add_argument( '--output-format', action='store_true', help="show format of data" )
     parser.add_argument( '--path-separator', metavar="<char>", default=".", help="separator for input and output of variable paths (default=.)" )
@@ -157,13 +158,13 @@ def print_tree( path, tree, sep, with_values ):
                 d = step_down( tree[k] )
             except ValueError:
                 return
-            print_tree( "%s%s%s" % ( path, sep, k ), d, sep, with_values )
+            print_tree( k if path is None else "%s%s%s" % ( path, sep, k ),
+                        d, sep, with_values )
     else:
-        if len( path ) > 0:
-            if with_values:
-                print "%s=%s" % ( path[1:], tree.tolist() )
-            else:
-                print path[1:]
+        if with_values:
+            print "%s=%s" % ( path, tree.tolist() )
+        else:
+            print path
 
 
 def main():
@@ -188,7 +189,7 @@ def main():
                 return
 
     if args.list:
-        print_tree( "", mat, args.path_separator, False )
+        print_tree( args.variable, mat, args.path_separator, False )
         return
 
     compound_variable = is_compound( mat )
@@ -209,12 +210,15 @@ def main():
         else:
             mat.tofile( sys.stdout )
     else:
-        if compound_variable:
-            print_tree( "", mat, args.path_separator, True )
+        if args.csv:
+            if compound_variable:
+                message( "only non-compound variables can be output in csv format" )
+            else:
+                for t in mat:
+                    t.tofile( sys.stdout, "," )
+                    print
         else:
-            for t in mat:
-                t.tofile( sys.stdout, "," )
-                print
+            print_tree( args.variable, mat, args.path_separator, True )
 
 
 if __name__ == '__main__':
