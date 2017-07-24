@@ -129,12 +129,12 @@ def reset_signals():
         signal.signal( signal.SIGINT, s )
 
 
-def is_leaf( tree ):
+def is_compound( variable ):
     try:
-        comma.csv.format.from_numpy( tree.dtype )
-        return True
-    except ( AttributeError, ValueError ):
+        comma.csv.format.from_numpy( variable.dtype )
         return False
+    except ( AttributeError, ValueError ):
+        return True
 
 
 def step_down( mat ):
@@ -146,13 +146,7 @@ def step_down( mat ):
 
 
 def print_tree( path, tree, sep, with_values ):
-    if is_leaf( tree ):
-        if len( path ) > 0:
-            if with_values:
-                print "%s=%s" % ( path[1:], tree.tolist() )
-            else:
-                print path[1:]
-    else:
+    if is_compound( tree ):
         # at the top level, mat is a dictionary, but as we drill down
         # it turns into nested numpy.ndarray objects
         keys = ( [ i for i in tree.keys() if i[0] != '_' ]
@@ -164,6 +158,12 @@ def print_tree( path, tree, sep, with_values ):
             except ValueError:
                 return
             print_tree( "%s%s%s" % ( path, sep, k ), d, sep, with_values )
+    else:
+        if len( path ) > 0:
+            if with_values:
+                print "%s=%s" % ( path[1:], tree.tolist() )
+            else:
+                print path[1:]
 
 
 def main():
@@ -191,30 +191,30 @@ def main():
         print_tree( "", mat, args.path_separator, False )
         return
 
-    leaf_node = is_leaf( mat )
+    compound_variable = is_compound( mat )
 
     if args.output_format:
-        if leaf_node:
-            print "%s%s" % ( mat.shape[1], comma.csv.format.from_numpy( mat.dtype ))
-        else:
+        if compound_variable:
             if args.variable:
                 message( "%s is not a data array", args.variable )
             else:
-                message( "--output-format requires a specific variable" )
+                message( "--output-format requires a non-compound variable" )
+        else:
+            print "%s%s" % ( mat.shape[1], comma.csv.format.from_numpy( mat.dtype ))
         return
 
     if args.binary:
-        if leaf_node:
-            mat.tofile( sys.stdout )
+        if compound_variable:
+            message( "only non-compound variables can be output in binary" )
         else:
-            message( "only leaf nodes can be output in binary" )
+            mat.tofile( sys.stdout )
     else:
-        if leaf_node:
+        if compound_variable:
+            print_tree( "", mat, args.path_separator, True )
+        else:
             for t in mat:
                 t.tofile( sys.stdout, "," )
                 print
-        else:
-            print_tree( "", mat, args.path_separator, True )
 
 
 if __name__ == '__main__':
