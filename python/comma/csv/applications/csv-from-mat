@@ -92,7 +92,6 @@ examples:
   {script_name} data.mat foo --list
   {script_name} data.mat foo.bar --binary
   {script_name} data.mat foo.bar --output-format
-  {script_name} data.mat my-big-variable --preview
 """.format( script_name=sys.argv[0].split('/')[-1] )
 
     fmt=lambda prog: argparse.RawDescriptionHelpFormatter( prog, max_help_position=50 )
@@ -109,7 +108,6 @@ examples:
     parser.add_argument( '--list', action='store_true', help="list variables in given file" )
     parser.add_argument( '--output-format', action='store_true', help="show format of data" )
     parser.add_argument( '--path-separator', metavar="<char>", default=".", help="separator for input and output of variable paths (default=.)" )
-    parser.add_argument( '--preview', action='store_true', help="show preview of data" )
 
     args = parser.parse_args()
 
@@ -203,10 +201,6 @@ def main():
                 message( "%s is not a data array", args.variable )
             else:
                 message( "--output-format requires a specific variable" )
-        return
-
-    if args.preview:
-        print mat
         return
 
     if args.binary:
