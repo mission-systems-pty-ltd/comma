@@ -29,7 +29,7 @@ add_executable( csv-calc ${dir}/csv-calc.cpp )
 add_executable( csv-calc-new ${dir}/csv-calc.new.cpp )
 add_executable( csv-crc ${dir}/csv-crc.cpp )
 add_executable( csv-play ${dir}/csv-play.cpp ${dir}/play/multiplay.cpp ${dir}/play/play.cpp )
-add_executable( csv-reshape ${dir}/csv-reshape.cpp )
+add_executable( csv-shape ${dir}/csv-shape.cpp )
 add_executable( csv-shuffle ${dir}/csv-shuffle.cpp )
 add_executable( csv-thin ${dir}/csv-thin.cpp )
 add_executable( csv-analyse ${dir}/csv-analyse.cpp )
@@ -55,7 +55,7 @@ target_link_libraries ( csv-calc ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma
 target_link_libraries ( csv-calc-new ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application comma_string )
 target_link_libraries ( csv-crc ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application comma_string )
 target_link_libraries ( csv-play ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application comma_io )
-target_link_libraries ( csv-reshape ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
+target_link_libraries ( csv-shape ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
 target_link_libraries ( csv-shuffle ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv )
 target_link_libraries ( csv-thin ${comma_ALL_EXTERNAL_LIBRARIES} comma_csv comma_xpath comma_application comma_io )
 target_link_libraries ( csv-analyse ${comma_ALL_EXTERNAL_LIBRARIES} comma_application )
@@ -78,7 +78,7 @@ install( TARGETS csv-bin-cut
                  csv-size
                  csv-calc
                  csv-play
-                 csv-reshape
+                 csv-shape
                  csv-shuffle
                  csv-crc
                  csv-select

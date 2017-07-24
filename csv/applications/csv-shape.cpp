@@ -48,7 +48,7 @@ static void usage( bool verbose=false )
     std::cerr << "    concatenate: group input records for concatenation into output records." << std::endl;
     std::cerr << "                 the user can choose non-overlapping or overlapping grouping (sliding window) mode." << std::endl;
     std::cerr << std::endl;
-    std::cerr << "Usage: cat data.csv | csv-reshape <operation> [<options>]" << std::endl;
+    std::cerr << "Usage: cat data.csv | csv-shape <operation> [<options>]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --binary,-b=[<format>]: in binary mode: format string of the input csv data types" << std::endl;
@@ -70,15 +70,15 @@ static void usage( bool verbose=false )
         std::cerr << "      non overlaping groups:" << std::endl;
         std::cerr << "          concatenate each group of 5 input records into one output record." << std::endl;
         std::cerr << "          input records 1 to 5 create the first output record, input records 6-10 create the second output record, and so forth." << std::endl;
-        std::cerr << "              seq 1 15 | csv-reshape concatenate -n 5" << std::endl;
+        std::cerr << "              seq 1 15 | csv-shape concatenate -n 5" << std::endl;
         std::cerr << "      overlapping groups:" << std::endl;
         std::cerr << "          move a sliding window of size 5 along the input records, every time the sliding window moves, make an output record from window" << std::endl;
         std::cerr << "          input records 1 to 5 create the first output record, input records 2 to 6 create the second record, input records 3 to 7 create the third record, and so forth" << std::endl;
-        std::cerr << "              seq 1 10 | csv-reshape concatenate -n 5 --sliding-window" << std::endl;
+        std::cerr << "              seq 1 10 | csv-shape concatenate -n 5 --sliding-window" << std::endl;
     }
     else
     {
-        std::cerr << "examples: run csv-reshape --help --verbose for more..." << std::endl;
+        std::cerr << "examples: run csv-shape --help --verbose for more..." << std::endl;
     }
     exit( 0 );
 }
@@ -153,7 +153,7 @@ int main( int ac, char** av )
         std::cerr << comma::verbose.app_name() << ": operation not supported or unknown: '" << operation << '\'' << std::endl;
         return 1;
     }
-    catch( std::exception& ex ) { std::cerr << "csv-reshape: " << ex.what() << std::endl; }
-    catch( ... ) { std::cerr << "csv-reshape: unknown exception" << std::endl; }
+    catch( std::exception& ex ) { std::cerr << "csv-shape: " << ex.what() << std::endl; }
+    catch( ... ) { std::cerr << "csv-shape: unknown exception" << std::endl; }
     return 1;
 }
