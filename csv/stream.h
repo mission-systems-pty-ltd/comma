@@ -414,7 +414,7 @@ template < typename S >
 class passed
 {
     public:
-        passed( const input_stream< S >& is, std::ostream& os ) : is_( is ), os_( os )
+        passed( const input_stream< S >& is, std::ostream& os, bool flush=false ) : is_( is ), os_( os ), flush(flush)
         {
             #ifdef WIN32
             if( is_.is_binary() && os == std::cout ) { _setmode( _fileno( stdout ), _O_BINARY ); }
@@ -425,11 +425,13 @@ class passed
         {
             if( is_.is_binary() ) { os_.write( is_.binary().last(), is_.binary().size() ); }
             else os_ << comma::join( is_.ascii().last(), is_.ascii().ascii().delimiter() ) << std::endl;
+            if(flush) { os_.flush(); }
         }
 
     private:
         const input_stream< S >& is_;
         std::ostream& os_;
+        bool flush;
 };
 
 template < typename S >
