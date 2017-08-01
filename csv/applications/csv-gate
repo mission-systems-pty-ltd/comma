@@ -105,4 +105,4 @@ esac
 
 csv-time-join --fields $options_fields "$options_gate" --realtime ${options_binary:+--binary=$options_format} |
     csv-eval --fields=$joined_fields "$evaluation" $format_option=$joined_format --flush --full-xpath |
-    csv-shuffle -f $options_fields -o $options_fields $format_option=$joined_format
+    csv-shuffle -f $options_fields -o $options_fields $format_option=$joined_format --flush

@@ -88,6 +88,8 @@ install( TARGETS csv-bin-cut
          RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR}
          COMPONENT Runtime )
 
+install ( PROGRAMS csv-gate DESTINATION ${comma_INSTALL_BIN_DIR} )
+
 add_executable( csv-blocks ${dir}/csv-blocks.cpp )
 target_link_libraries ( csv-blocks ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io comma_string comma_xpath comma_csv )
 install( TARGETS csv-blocks RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
