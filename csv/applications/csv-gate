@@ -93,8 +93,8 @@ else
 fi
 
 
-joined_fields="$options_fields,$(echo $gate_fields | csv-fields prefix --path $options_prefix)"
-joined_format="$options_format,$gate_format"
+joined_fields="$options_fields,,$(echo $gate_fields | csv-fields prefix --path $options_prefix)"
+joined_format="$options_format,ub,$gate_format"
 
 
 case $options_operation in
@@ -103,6 +103,8 @@ case $options_operation in
     *) echo "unknown operation $options_operation" >&2 ; exit 1 ;;
 esac
 
-csv-time-join --fields $options_fields "$options_gate" --realtime ${options_binary:+--binary=$options_format} |
+csv-repeat --append-fields=repeating --timeout=0.1 --period=0.1 ${options_binary:+--binary=$options_format} |
+    csv-time-join --fields $options_fields "$options_gate" --realtime ${options_binary:+--binary=$options_format,ub} |
     csv-eval --fields=$joined_fields "$evaluation" $format_option=$joined_format --flush --full-xpath |
+    csv-eval --fields=$(echo $options_fields | csv-fields clear),repeating --output-if="repeating==0" $format_option=$joined_format --flush --full-xpath |
     csv-shuffle -f $options_fields -o $options_fields $format_option=$joined_format --flush
