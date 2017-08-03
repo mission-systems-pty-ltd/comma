@@ -131,6 +131,7 @@ bool verify( const std::deque<std::string>& deque )
         std::cerr << comma::verbose.app_name() << ": error, leftover tail input record found: " << deque.size() << " lines." << std::endl; 
         return false; 
     }
+    return true;
 }
 
 int main( int ac, char** av )
@@ -139,7 +140,8 @@ int main( int ac, char** av )
     {
         comma::command_line_options options( ac, av, usage );
         std::vector< std::string > unnamed = options.unnamed( "--sliding-window,-w,--verbose,-v", "-.*" );
-        const comma::csv::options csv( options );
+        comma::csv::options csv( options );
+        if (csv.fields.empty()) { csv.fields="a"; }
         if( unnamed.empty() ) { std::cerr << comma::verbose.app_name() << ": please specify operations" << std::endl; exit( 1 ); }
         std::string operation = unnamed[0];
         if( operation == "concatenate" )
@@ -176,7 +178,8 @@ int main( int ac, char** av )
                     if( !use_sliding_window ) { deque.clear(); } else { deque.pop_front(); }
                 }
             }
-            return verify(deque);
+            if (verify(deque)) { return 0; }
+            return 1;
         }
         std::cerr << comma::verbose.app_name() << ": operation not supported or unknown: '" << operation << '\'' << std::endl;
         return 1;
