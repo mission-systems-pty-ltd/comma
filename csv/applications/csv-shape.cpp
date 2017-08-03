@@ -85,7 +85,9 @@ static void usage( bool verbose=false )
 
 namespace concatenate { 
 // The input records are not inspected at all, no need
-struct input_t {};
+struct input_t {
+    comma::uint32 block = 0;
+};
 
 } // namespace concatenate { 
 
@@ -93,8 +95,8 @@ namespace comma { namespace visiting {
 
 template <> struct traits< concatenate::input_t >
 {
-    template < typename K, typename V > static void visit( const K&, const concatenate::input_t& p, V& v ) {  }
-    template < typename K, typename V > static void visit( const K&, concatenate::input_t& p, V& v ) {  }
+    template < typename K, typename V > static void visit( const K&, const concatenate::input_t& p, V& v ) { v.apply("block", p.block); }
+    template < typename K, typename V > static void visit( const K&, concatenate::input_t& p, V& v ) { v.apply("block", p.block); }
 };
 
 } } // namespace comma { namespace visiting {
@@ -112,6 +114,25 @@ static void simple_binary_pass_through(const comma::csv::format& f, bool flush=f
     }
 }
 
+bool use_sliding_window;
+comma::uint32 size;
+comma::uint32 count;
+comma::uint32 block;
+
+bool verify( const std::deque<std::string>& deque ) 
+{ 
+    if( use_sliding_window && count < size ) 
+    { 
+        std::cerr << comma::verbose.app_name() << "--size,-n= " << size << " is bigger than total number of input records: " << count << std::endl; 
+        return false; 
+    }
+    if ( !use_sliding_window && !deque.empty() ) 
+    { 
+        std::cerr << comma::verbose.app_name() << ": error, leftover tail input record found: " << deque.size() << " lines." << std::endl; 
+        return false; 
+    }
+}
+
 int main( int ac, char** av )
 {
     try
@@ -123,19 +144,28 @@ int main( int ac, char** av )
         std::string operation = unnamed[0];
         if( operation == "concatenate" )
         {
-            const bool use_sliding_window = options.exists("--sliding-window,-w");
+            use_sliding_window = options.exists("--sliding-window,-w");
             if( !use_sliding_window && csv.binary() ) { simple_binary_pass_through(csv.format(), csv.flush); return 0; };
             
-            const comma::uint32 size = options.value< comma::uint32 >("--size,-n");
+            size = options.value< comma::uint32 >("--size,-n");
             if( size < 2 ) { std::cerr <<  comma::verbose.app_name() << ": expected --size,-n= value to be greater than 1" << std::endl; return 1; }
             const bool is_binary = csv.binary();
             comma::csv::input_stream< concatenate::input_t > istream(std::cin, csv);
             std::deque< std::string > deque;
-            comma::uint32 count = 0;
+            count = 0;
+            block = 0;
+            bool has_block = csv.has_field( "block" );
             while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
             {
                 const concatenate::input_t* p = istream.read();
                 if( !p ) { break; }
+                if ( has_block && (block != p->block) )
+                {
+                    if (!verify(deque)) { return 1; }
+                    count = 0;
+                    deque.clear();        
+                }
+                block = p->block;
                 deque.push_back( istream.last() );
                 ++count;
                 if( deque.size() >= size )
@@ -146,9 +176,7 @@ int main( int ac, char** av )
                     if( !use_sliding_window ) { deque.clear(); } else { deque.pop_front(); }
                 }
             }
-            if( use_sliding_window && count < size ) { std::cerr << comma::verbose.app_name() << "--size,-n= is bigger than total number of input records: " << count << std::endl; return 1; }
-            if( !use_sliding_window && !deque.empty() ) { std::cerr << comma::verbose.app_name() << ": error, leftover tail input record found: " << deque.size() << " lines." << std::endl; return 1; }
-            return 0;
+            return verify(deque);
         }
         std::cerr << comma::verbose.app_name() << ": operation not supported or unknown: '" << operation << '\'' << std::endl;
         return 1;
