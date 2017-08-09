@@ -1,0 +1,20 @@
+#!/bin/bash
+
+function comma_guess_format
+{
+    python -c "$( cat <<END
+import comma
+import numpy
+
+guessed_format = comma.csv.format.guess_format( '$1' )
+print guessed_format
+END
+)"
+}
+
+while read name comma_format; do
+    output=$( comma_guess_format $comma_format )
+    status=$?
+    echo "$name/output=$output"
+    echo "$name/status=$status"
+done

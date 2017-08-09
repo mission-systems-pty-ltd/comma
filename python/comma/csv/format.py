@@ -33,6 +33,7 @@ from collections import OrderedDict
 from itertools import groupby
 from ..numpy import types_of_dtype
 from .time import TYPE as numpy_datetime_type
+from .time import to_numpy as parse_time
 
 
 COMMA_TO_NUMPY_TYPE = OrderedDict([
@@ -197,3 +198,29 @@ def from_numpy(*numpy_types_or_format):
         for numpy_type in types_of_dtype(np.dtype(numpy_type_or_format)):
             comma_types.append(to_comma_type(numpy_type))
     return compress(','.join(comma_types))
+
+def guess_type(element):
+    """
+    guess the type of one element
+    """
+    try:
+        t = parse_time(element)
+        return "t"
+    except TypeError:
+
+        try:
+            d = float(element)
+            return "d"
+        except ValueError:
+
+            return "s"
+        
+
+def guess_format(record):
+    """
+    guess format given an example input record
+    """
+    comma_types = []
+    for element in record.split(','):
+        comma_types.append(guess_type(element))
+    return ','.join(comma_types)
