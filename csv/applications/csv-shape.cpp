@@ -47,6 +47,9 @@ static void usage( bool verbose=false )
     std::cerr << "operations" << std::endl;
     std::cerr << "    concatenate: group input records for concatenation into output records." << std::endl;
     std::cerr << "                 the user can choose non-overlapping or overlapping grouping (sliding window) mode." << std::endl;
+    std::cerr << "    loop:        group input records for concatenation into output records." << std::endl;
+    std::cerr << "                 the last record loops and is joined to the first record." << std::endl;
+    std::cerr << "                 this mode always uses the sliding window for overlapping groups" << std::endl;
     std::cerr << std::endl;
     std::cerr << "Usage: cat data.csv | csv-shape <operation> [<options>]" << std::endl;
     std::cerr << std::endl;
@@ -60,8 +63,14 @@ static void usage( bool verbose=false )
     std::cerr << "operations options" << std::endl;
     std::cerr << std::endl;
     std::cerr << "   concatenate" << std::endl;
+    std::cerr << "      --bidirectional; output records in both directions (e.g. a,b; b,a)" << std::endl;
+    std::cerr << "      --reverse; output records in reverse order (e.g. b,a)" << std::endl;
     std::cerr << "      --size,-n=<num>; number of input records in each grouping, range: 2 and above" << std::endl;
     std::cerr << "      --sliding-window,-w; use a sliding window to group input records, see examples" << std::endl;
+    std::cerr << "   loop" << std::endl;
+    std::cerr << "      --bidirectional; output records in both directions (e.g. a,b; b,a)" << std::endl;
+    std::cerr << "      --reverse; output records in reverse order (e.g. b,a)" << std::endl;
+    std::cerr << "      --size,-n=<num>; number of input records in each grouping, range: 2 and above" << std::endl;
     std::cerr << std::endl;
     if( verbose )
     {
@@ -83,24 +92,6 @@ static void usage( bool verbose=false )
     exit( 0 );
 }
 
-namespace concatenate { 
-// The input records are not inspected at all, no need
-struct input_t {
-    comma::uint32 block = 0;
-};
-
-} // namespace concatenate { 
-
-namespace comma { namespace visiting {
-
-template <> struct traits< concatenate::input_t >
-{
-    template < typename K, typename V > static void visit( const K&, const concatenate::input_t& p, V& v ) { v.apply("block", p.block); }
-    template < typename K, typename V > static void visit( const K&, concatenate::input_t& p, V& v ) { v.apply("block", p.block); }
-};
-
-} } // namespace comma { namespace visiting {
-
 // There is nothing to do in this case - binary data
 static void simple_binary_pass_through(const comma::csv::format& f, bool flush=false)
 {
@@ -114,25 +105,129 @@ static void simple_binary_pass_through(const comma::csv::format& f, bool flush=f
     }
 }
 
-bool use_sliding_window;
-comma::uint32 size;
-comma::uint32 count;
-comma::uint32 block;
+bool is_binary;
 
-bool verify( const std::deque<std::string>& deque ) 
-{ 
-    if( use_sliding_window && count < size ) 
-    { 
-        std::cerr << comma::verbose.app_name() << "--size,-n= " << size << " is bigger than total number of input records: " << count << std::endl; 
-        return false; 
+class concatenate_impl_
+{
+public:
+
+    concatenate_impl_() 
+        : use_sliding_window_(false)
+        , bidirectional_(false)
+        , reverse_(false)
+        , looping_(false)
+        , size_(0)
+        , count_(0)
+        , block_(0)
+        {}
+
+    int run( const comma::command_line_options& options, const comma::csv::options& csv)
+    {
+        std::vector< std::string > unnamed = options.unnamed( "--sliding-window,-w,--verbose,-v", "-.*" );
+        std::string operation = unnamed[0];
+        looping_ = ( operation == "loop");
+        use_sliding_window_ = ( looping_ || options.exists("--sliding-window,-w") );
+        reverse_ = options.exists("--reverse");
+        bidirectional_ = options.exists("--bidirectional");
+        if( !use_sliding_window_ && is_binary ) { simple_binary_pass_through(csv.format(), csv.flush); return 0; };
+        size_ = options.value< comma::uint32 >("--size,-n");
+        if( size_ < 2 ) { std::cerr <<  comma::verbose.app_name() << ": expected --size,-n= value to be greater than 1" << std::endl; return 1; }
+        comma::csv::input_stream< input_t > istream(std::cin, csv);
+        std::deque< std::string > deque;
+        std::deque< std::string > first;
+        bool has_block_ = csv.has_field( "block" );
+        while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
+        {
+            const input_t* p = istream.read();
+            if( !p ) { break; }
+            if ( has_block_ && (block_ != p->block_) )
+            {
+                if (!verify(deque)) { return 1; }
+                count_ = 0;
+                if ( looping_ ) { output_loop(deque, first, csv); }
+                deque.clear();  
+            }
+            block_ = p->block_;
+            deque.push_back( istream.last() );
+            if ( looping_ && first.size() + 1  < size_ )  { first.push_back(istream.last()); }
+            ++count_;
+            if( deque.size() >= size_ )
+            {
+                output_records(deque, csv);
+                if( !use_sliding_window_ ) { deque.clear(); } else { deque.pop_front(); }
+            }
+        }
+        if ( !verify(deque)) { return 1; }
+        if ( looping_ ) { output_loop(deque, first, csv); }
+        return 0;
     }
-    if ( !use_sliding_window && !deque.empty() ) 
+
+    struct input_t {
+        comma::uint32 block_ = 0;
+    };
+
+private:
+
+    bool use_sliding_window_;
+    bool bidirectional_;
+    bool reverse_;
+    bool looping_;
+    comma::uint32 size_;
+    comma::uint32 count_;
+    comma::uint32 block_;
+
+    bool verify( const std::deque<std::string>& deque )
     { 
-        std::cerr << comma::verbose.app_name() << ": error, leftover tail input record found: " << deque.size() << " lines." << std::endl; 
-        return false; 
+        if( use_sliding_window_ && count_ < size_ ) 
+        { 
+            std::cerr << comma::verbose.app_name() << "--size,-n= " << size_ << " is bigger than total number of input records: " << count_ << std::endl; 
+            return false; 
+        }
+        if ( !use_sliding_window_ && !deque.empty() ) 
+        { 
+            std::cerr << comma::verbose.app_name() << ": error, leftover tail input record found: " << deque.size() << " lines." << std::endl; 
+            return false; 
+        }
+        return true;
     }
-    return true;
-}
+
+    void output_records(const std::deque<std::string>& deque, const comma::csv::options& csv)
+    {
+        if (!reverse_)
+        {
+            std::cout.write( &(deque.front()[0]), deque.front().size() );
+            for( auto is=(deque.cbegin()+1); is!=deque.cend(); ++is ) { if(!is_binary){ std::cout << csv.delimiter; } std::cout.write( &(*is)[0], is->size() ); }
+            if(!is_binary){ std::cout << std::endl; } 
+        }
+        if (bidirectional_ || reverse_ ) 
+        {
+            std::cout.write( &(deque.back()[0]), deque.back().size() );
+            for( auto is=(deque.crbegin()+1); is!=deque.crend(); ++is ) { if(!is_binary){ std::cout << csv.delimiter; } std::cout.write( &(*is)[0], is->size() ); }
+            if(!is_binary){ std::cout << std::endl; } 
+        }
+    }
+
+    void output_loop( std::deque<std::string>& deque, std::deque<std::string>& first, const comma::csv::options& csv)
+    {
+        while ( first.size() > 0 )
+        {
+            deque.push_back(first.front());
+            output_records(deque, csv);
+            deque.pop_front();
+            first.pop_front();
+        }
+    }
+};
+
+namespace comma { namespace visiting {
+
+template <> struct traits< concatenate_impl_::input_t >
+{
+    template < typename K, typename V > static void visit( const K&, const concatenate_impl_::input_t& p, V& v ) { v.apply("block_", p.block_); }
+    template < typename K, typename V > static void visit( const K&, concatenate_impl_::input_t& p, V& v ) { v.apply("block_", p.block_); }
+};
+
+} } // namespace comma { namespace visiting {
 
 int main( int ac, char** av )
 {
@@ -142,44 +237,12 @@ int main( int ac, char** av )
         std::vector< std::string > unnamed = options.unnamed( "--sliding-window,-w,--verbose,-v", "-.*" );
         comma::csv::options csv( options );
         if (csv.fields.empty()) { csv.fields="a"; }
+        is_binary = csv.binary();
         if( unnamed.empty() ) { std::cerr << comma::verbose.app_name() << ": please specify operations" << std::endl; exit( 1 ); }
         std::string operation = unnamed[0];
-        if( operation == "concatenate" )
+        if( operation == "concatenate" || operation == "loop" )
         {
-            use_sliding_window = options.exists("--sliding-window,-w");
-            if( !use_sliding_window && csv.binary() ) { simple_binary_pass_through(csv.format(), csv.flush); return 0; };
-            
-            size = options.value< comma::uint32 >("--size,-n");
-            if( size < 2 ) { std::cerr <<  comma::verbose.app_name() << ": expected --size,-n= value to be greater than 1" << std::endl; return 1; }
-            const bool is_binary = csv.binary();
-            comma::csv::input_stream< concatenate::input_t > istream(std::cin, csv);
-            std::deque< std::string > deque;
-            count = 0;
-            block = 0;
-            bool has_block = csv.has_field( "block" );
-            while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
-            {
-                const concatenate::input_t* p = istream.read();
-                if( !p ) { break; }
-                if ( has_block && (block != p->block) )
-                {
-                    if (!verify(deque)) { return 1; }
-                    count = 0;
-                    deque.clear();        
-                }
-                block = p->block;
-                deque.push_back( istream.last() );
-                ++count;
-                if( deque.size() >= size )
-                {
-                    std::cout.write( &(deque.front()[0]), deque.front().size() );
-                    for( auto is=(deque.cbegin()+1); is!=deque.cend(); ++is ) { if(!is_binary){ std::cout << csv.delimiter; } std::cout.write( &(*is)[0], is->size() ); }
-                    if(!is_binary){ std::cout << std::endl; } 
-                    if( !use_sliding_window ) { deque.clear(); } else { deque.pop_front(); }
-                }
-            }
-            if (verify(deque)) { return 0; }
-            return 1;
+            return concatenate_impl_().run(options, csv);
         }
         std::cerr << comma::verbose.app_name() << ": operation not supported or unknown: '" << operation << '\'' << std::endl;
         return 1;
