@@ -36,75 +36,75 @@ basename=$( basename $0 )
 function options_description()
 {
     cat <<EOF
+--binary=[<format>]; binary format of input stream
 --fields=<fields>; fields of input stream
 --format=[<format>]; format of input stream
---binary=[<format>]; binary format of input stream
---gate=<gate>;gate stream options
---prefix=<path>;default="gate"; prefix for gate fields
---condition=<condition>; condition expression
---operation=<operation>; operation
+EOF
+}
+
+function operations_description()
+{
+    cat <<EOF
+--exit-if=[<condition>]; exit on first record that matches <condition>
+--output-if=[<condition>]; output only records that match <condition>
 EOF
 }
 
 function usage()
 {
     cat <<EOF >&2
-input | $basename --fields=<fields> --format=<format> --gate="<gate stream>;fields=<fields>;format=<format>" --condition=<expr> --operation=<operation>
+
+cat input.csv | $basename "<control stream>" <operation> [<options>]
 
 gate an input stream based on a control stream
+
+Operations:
+EOF
+    operations_description | sed 's/^/    /g' >&2
+    cat <<EOF >&2
 
 Options:
 EOF
     options_description | sed 's/^/    /g' >&2
     cat <<EOF >&2
 
-gate stream options:
+control stream options:
     fields=<fields>; fields for gate stream
     binary=[<format>]; binary format for gate stream
     format=[<format>]; ascii format for gate stream
-
-operations:
-    output: output records that meet the condition expression
-    exit: exit on the first record that meets the condition expression
-
-example:
-    in first terminal: csv-time-stamp | csv-to-bin t,d --flush | io-publish tcp:10001 --size $(csv-size t,d)
-    in second terminal: csv-time-stamp | csv-gate --fields=t,a --format=t,d --gate="tcp:localhost:45000;fields=t,b;format=t,d" --condition="a < gate_b" --operation=output
 
 EOF
 }
 
 (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) && { usage; exit 0; }
-options=$( options_description | comma-options-to-name-value "$@" ; comma_status_ok || exit 1 ) || { echo "$basename: failed to get command line options" >&2; exit 1; }
+options=$( ( options_description; operations_description ) | comma-options-to-name-value "$@" ; comma_status_ok || exit 1 ) || { echo "$basename: failed to get command line options" >&2; exit 1; }
 
 comma_path_value_to_var --prefix=options <<< "$options"
-gate_options=$(echo $options_gate | tr ';' '\n')
-comma_path_value_to_var --prefix=gate <<< "$gate_options"
+options_control="$1"
+control_options=$(echo $options_control | tr ';' '\n')
+comma_path_value_to_var --prefix=control <<< "$control_options"
 
-if [[ -n "$options_binary" && -n "$gate_binary" ]]; then
+if [[ -n "$options_binary" && -n "$control_binary" ]]; then
     format_option="--binary"
     options_format=$options_binary
-    gate_format=$gate_binary
-elif [[ -n "$options_format" && -n "$gate_format" ]]; then
+    control_format=$control_binary
+elif [[ -n "$options_format" && -n "$control_format" ]]; then
     format_option="--format"
 else
     echo "input and gate stream should be both binary or both ascii" >&2
     exit 1
 fi
 
+joined_fields="$options_fields,,$(echo $control_fields | csv-fields prefix --path control)"
+joined_format="$options_format,ub,$control_format"
 
-joined_fields="$options_fields,,$(echo $gate_fields | csv-fields prefix --path $options_prefix)"
-joined_format="$options_format,ub,$gate_format"
+[[ -n "$options_exit_if" && -n "$options_output_if" ]] && { echo "expected one of the operations --output-if or --exit-if, got both"; exit 1; }
+[[ -z "$options_exit_if" && -z "$options_output_if" ]] && { echo "expected one of the operations --output-if or --exit-if"; exit 1; }
 
-
-case $options_operation in
-    output) evaluation="--output-if=$options_condition" ;;
-    exit) evaluation="--exit-if=$options_condition" ;;
-    *) echo "unknown operation $options_operation" >&2 ; exit 1 ;;
-esac
+if [[ -n "$options_exit_if" ]]; then operation="--exit-if=$options_exit_if" ; else operation="--output-if=$options_output_if"; fi
 
 csv-repeat --append-fields=repeating --timeout=0.1 --period=0.1 ${options_binary:+--binary=$options_format} |
-    csv-time-join --fields $options_fields "$options_gate" --realtime ${options_binary:+--binary=$options_format,ub} |
-    csv-eval --fields=$joined_fields "$evaluation" $format_option=$joined_format --flush --full-xpath |
+    csv-time-join --fields $options_fields "$options_control" --realtime ${options_binary:+--binary=$options_format,ub} |
+    csv-eval --fields=$joined_fields "$operation" $format_option=$joined_format --flush --full-xpath |
     csv-eval --fields=$(echo $options_fields | csv-fields clear),repeating --output-if="repeating==0" $format_option=$joined_format --flush --full-xpath |
     csv-shuffle -f $options_fields -o $options_fields $format_option=$joined_format --flush
