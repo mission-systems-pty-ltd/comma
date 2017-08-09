@@ -156,17 +156,25 @@ static void usage( bool more )
     std::cerr << "    read-until" << std::endl;
     std::cerr << "        reads records until a given index value, e.g:" << std::endl;
     std::cerr << "            cat something.csv | csv-blocks read-until --fields=,index --index=5" << std::endl;
-    std::cerr << "        options" << std::endl;
-    std::cerr << "            --index=<index>" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
-    std::cerr << "    --reverse; use with 'index' operation, output the indices in descending order instead of ascending" << std::endl;
-    std::cerr << "    --from,--starting-block; use with 'group' operation, the starting block number to use, default is 1" << std::endl;
-    std::cerr << "    --step; use with 'increment' operation, the number of increment/decrement for specified field, default is 1" << std::endl;
-    std::cerr << "    --lines,--num-of-blocks,-n; use with 'head' operation, outputs only the first specified number of blocks, default is 1" << std::endl;
-    std::cerr << "    --strict; use with 'head' operation, exits with an error if a full block (as indicated by the index number) is not found" << std::endl;
-    if( more ) { std::cerr << comma::csv::options::usage() << std::endl << std::endl; }
+    if( more ) { std::cerr << comma::csv::options::usage() << std::endl; } else { std::cerr << std::endl; }
+    std::cerr << "  head" << std::endl;
+    std::cerr << "    --lines,--num-of-blocks,-n; outputs only the first specified number of blocks, default is 1" << std::endl;
+    std::cerr << "    --strict; exits with an error if a full block (as indicated by the index number) is not found" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "  increment" << std::endl;
+    std::cerr << "    --step; the number of increment/decrement for specified field, default is 1" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "  index" << std::endl;
+    std::cerr << "    --reverse; output the indices in descending order instead of ascending" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "  group" << std::endl;
+    std::cerr << "    --from,--starting-block; the starting block number to use, default is 1" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "  read-until" << std::endl;
+    std::cerr << "    --index=<index>" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << "    block_csv=block.csv" << std::endl;
