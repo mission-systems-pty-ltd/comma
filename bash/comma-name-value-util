@@ -292,10 +292,9 @@ export -f comma_path_value_to_var
 # lines starting with '#' ignored
 # empty lines ignored
 #
-# usage: comma_path_value_from_var [--export] [<prefix>] [<slash replacement>]
+# usage: comma_path_value_from_var [<prefix>] [<slash replacement>]
 #     <prefix>: variable name prefix
 #     <slash replacement>: slash replacement; default: _
-#     --export: if present, export variables
 #
 # examples (try them):
 #     todo
