@@ -1,6 +1,6 @@
-doubles/output=d,d,d,d
+doubles/output="d,d,d,d"
 doubles/status=0
-times/output=t,t,t
+times/output="t,t,t"
 times/status=0
-strings/output=s,s,s,s
+strings/output="s,s,s,s"
 strings/status=0
