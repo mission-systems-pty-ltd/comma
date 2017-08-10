@@ -1,1 +1,3 @@
-doubles 1,2,3,4
+doubles 1,2.2,-3.4e5,inf
+times 20170101T000000,20170101T000000.123456,not-a-date-time
+strings a,,",,,",b

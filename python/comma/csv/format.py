@@ -27,10 +27,11 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import numpy as np
 import re
 from collections import OrderedDict
 from itertools import groupby
+from csv import reader
+import numpy as np
 from ..numpy import types_of_dtype
 from .time import TYPE as numpy_datetime_type
 from .time import to_numpy as parse_time
@@ -203,24 +204,26 @@ def guess_type(element):
     """
     guess the type of one element
     """
+    if element in ['']:
+        return "s"
+
     try:
-        t = parse_time(element)
-        return "t"
-    except TypeError:
-
+        d = float(element)
+        return "d"
+    except ValueError:
         try:
-            d = float(element)
-            return "d"
-        except ValueError:
-
+            t = parse_time(element)
+            return "t"
+        except TypeError:
             return "s"
-        
+
 
 def guess_format(record):
     """
     guess format given an example input record
     """
     comma_types = []
-    for element in record.split(','):
-        comma_types.append(guess_type(element))
+    for split in reader([record]):
+        for element in split:
+            comma_types.append(guess_type(element))
     return ','.join(comma_types)
