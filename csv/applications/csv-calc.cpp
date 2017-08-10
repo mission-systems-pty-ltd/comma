@@ -1302,7 +1302,7 @@ int main( int ac, char** av )
                 if( block && *block != v->block() ) 
                 { 
                     calculate(csv, operations, results);
-                    if ( append ) { append_and_output(csv, inputs, results); }
+                    if ( append ) { append_and_output(csv, inputs, results); inputs.clear(); }
                     else { output( csv, results, block, has_block, has_id ); }
                 }
                 block = v->block();
@@ -1313,7 +1313,7 @@ int main( int ac, char** av )
                 it = operations.insert( std::make_pair( v->id(), new boost::ptr_vector< Operationbase > ) ).first;
                 init_operations( *it->second, operations_parameters, v->format() );
             }
-            inputs.push_back( std::make_pair( v->id(), csv.binary() ? binary->line() : ascii->line() ) );
+            if (append) { inputs.push_back( std::make_pair( v->id(), csv.binary() ? binary->line() : ascii->line() ) ); }
             for( std::size_t i = 0; i < it->second->size(); ++i ) { ( *it->second )[i].push( v->buffer() ); }
         }
         calculate(csv, operations, results);
