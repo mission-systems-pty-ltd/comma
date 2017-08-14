@@ -102,7 +102,13 @@ class publish
         
         typedef publishers_t::scoped_transaction transaction_t;
         
-        publish( const std::vector< std::string >& filenames, unsigned int packet_size, bool discard, bool flush, bool output_number_of_clients, bool exit_on_no_clients )
+        publish( const std::vector< std::string >& filenames
+               , unsigned int packet_size
+               , bool discard
+               , bool flush
+               , bool output_number_of_clients
+               , bool exit_on_no_clients
+               )
             : buffer_( packet_size, '\0' )
             , packet_size_( packet_size )
             , output_number_of_clients_( output_number_of_clients )
@@ -117,8 +123,14 @@ class publish
             sigaction( SIGPIPE, NULL, &old_action );
             sigaction( SIGPIPE, &new_action, NULL );
             transaction_t t( publishers_ );
-            for( std::size_t i = 0; i < filenames.size(); ++i ) { t->push_back( new comma::io::publisher( filenames[i], is_binary_() ? comma::io::mode::binary : comma::io::mode::ascii, !discard, flush ) ); }
-            acceptor_thread_.reset( new boost::thread( boost::bind( &publish::accept_, boost::ref( *this ) ) ) );
+            for( std::size_t i = 0; i < filenames.size(); ++i )
+            {
+                t->push_back( new comma::io::publisher( filenames[i]
+                                                      , is_binary_() ? comma::io::mode::binary : comma::io::mode::ascii
+                                                      , !discard
+                                                      , flush ));
+            }
+            acceptor_thread_.reset( new boost::thread( boost::bind( &publish::accept_, boost::ref( *this ))));
         }
         
         ~publish()
@@ -189,7 +201,13 @@ class publish
             {
                 select.wait( boost::posix_time::millisec( 100 ) ); // arbitrary timeout
                 transaction_t t( publishers_ );
-                for( unsigned int i = 0; i < t->size(); ++i ) { if( select.read().ready( ( *t )[i].acceptor_file_descriptor() ) ) { ( *t )[i].accept(); } }
+                for( unsigned int i = 0; i < t->size(); ++i )
+                {
+                    if( select.read().ready( ( *t )[i].acceptor_file_descriptor() ) )
+                    {
+                        ( *t )[i].accept();
+                    }
+                }
                 handle_sizes_( t );
             }
         }
