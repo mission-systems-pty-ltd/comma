@@ -19,6 +19,11 @@ fields[3]="echo 20140305T230000,blue,20140305T230000 | csv-time --from iso --to 
 iso[0]="echo 20140305T230000 | csv-time --from iso --to seconds"
 iso[1]="echo 20140305T230000 | csv-time --from iso-8601-basic --to seconds"
 
+iso_always_with_fractions[0]="echo 20140305T230000 | csv-time --from iso --to iso-always-with-fractions"
+iso_always_with_fractions[1]="echo 20140305T230000.0 | csv-time --from iso --to iso-always-with-fractions"
+iso_always_with_fractions[2]="echo 20140305T230000.000000 | csv-time --from iso --to iso-always-with-fractions"
+iso_always_with_fractions[3]="echo 20140305T230000 | csv-time --from iso-always-with-fractions --to iso-always-with-fractions"
+
 sql[0]="echo '2014-03-05 23:00:00' | csv-time --from sql --to seconds"
 sql[1]="echo '2014-03-05 23:00:00' | csv-time --from posix --to seconds"
 sql[2]="echo '2014-03-05 23:00:00' | csv-time --from 'ieee-std-1003.1' --to seconds"
