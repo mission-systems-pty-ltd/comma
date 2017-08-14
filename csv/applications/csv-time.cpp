@@ -73,7 +73,9 @@ static void usage( bool )
         "\nTime formats"
         "\n    - iso, iso-8601-basic"
         "\n            YYYYMMDDTHHMMSS.FFFFFF, e.g. 20140101T001122.333000"
-        "\n            it is guaranteed to output 20140101T000000.000000, not 20140101T000000"
+        "\n    - iso-always-with-fractions"
+        "\n            YYYYMMDDTHHMMSS.FFFFFF"
+        "\n            output 20140101T000000.000000, not 20140101T000000"
         "\n    - sql, posix, ieee-std-1003.1"
         "\n            e.g. 2014-01-01 00:11:22"
         "\n    - xsd, iso-8601-extended"
@@ -104,7 +106,7 @@ static void usage( bool )
     exit( 0 );
 }
 
-enum what_t { guess, iso, seconds, microseconds, sql, xsd, local, format };
+enum what_t { guess, iso, seconds, microseconds, sql, xsd, local, format, iso_always_with_fractions };
 static what_t from = guess;
 static what_t to = iso;
 static std::string from_format;
@@ -121,27 +123,28 @@ static what_t what( const std::string& option, const comma::command_line_options
     {
         if( 'i' == s[0] )
         {
-            if( "iso" == s ) return iso;
-            if( "iso-8601-basic" == s ) return iso;
+            if( "iso" == s ) { return iso; }
+            if( "iso-8601-basic" == s ) { return iso; }
+            if( "iso-always-with-fractions" == s ) { return iso_always_with_fractions; }
             if( "iso-8601-extended" == s ) { return xsd; }
-            if( "ieee-std-1003.1" == s ) return sql;
+            if( "ieee-std-1003.1" == s ) { return sql; }
         }
         else if( 'p' == s[0] )
         {
-            if( "posix" == s ) return sql;
+            if( "posix" == s ) { return sql; }
         }
         else if( 's' == s[0] )
         {
-            if( "sql" == s ) return sql;
-            if( "seconds" == s ) return seconds;
+            if( "sql" == s ) { return sql; }
+            if( "seconds" == s ) { return seconds; }
         }
         else if( 'm' == s[0] )
         {
-            if( "microseconds" == s ) return microseconds;
+            if( "microseconds" == s ) { return microseconds; }
         }
         else if ('u' == s[0] )
         {
-            if( "us" == s ) return microseconds;
+            if( "us" == s ) { return microseconds; }
         }
         else if( 'x' == s[0] )
         {
@@ -170,9 +173,10 @@ static what_t what( const std::string& option, const comma::command_line_options
             std::cerr << "csv-time: unable to get the custom time format in option '" << option << "'" << std::endl;
             exit( 1 );
         }
-
-        else if(s=="local")
+        else if( s == "local" )
+        {
             return local;
+        }
     }
     std::cerr << "csv-time: expected seconds, sql, or iso; got: \"" << s << "\"" << std::endl;
     exit( 1 );
@@ -228,12 +232,14 @@ static boost::posix_time::ptime from_string( const std::string& s, const what_t 
     switch( w )
     {
         case iso:
-            return s == not_a_date_time_string ? boost::posix_time::not_a_date_time : boost::posix_time::from_iso_string( s );
+        case iso_always_with_fractions:
+            return s == not_a_date_time_string ? boost::posix_time::not_a_date_time : boost::posix_time::from_iso_string( s ); // todo? support infinity?
+            
         case local:
         {
-            boost::posix_time::ptime l=boost::posix_time::from_iso_string(s);
-            tm tm=boost::posix_time::to_tm(l);
-            time_t utc=mktime(&tm);
+            boost::posix_time::ptime l = boost::posix_time::from_iso_string(s);
+            tm tm = boost::posix_time::to_tm(l);
+            time_t utc = ::mktime( &tm );
             boost::posix_time::ptime day0(boost::gregorian::date(1970,1,1), boost::posix_time::time_duration(0,0,0));
             return boost::posix_time::from_time_t(utc) + boost::posix_time::microseconds((l-day0).total_microseconds() % 1000000);
         }
@@ -302,21 +308,21 @@ static boost::posix_time::ptime from_string( const std::string& s, const what_t 
     COMMA_THROW( comma::exception, "never here" );
 }
 
-std::string to_iso_string_always_with_fractions( const boost::posix_time::ptime& t )
-{
-    const std::string& s = boost::posix_time::to_iso_string( t );
-    return !t.is_special() && s.find( "." ) == std::string::npos ? s + ".000000" : s; // quick and dirty
-}
-
 std::string to_string( const boost::posix_time::ptime& t, what_t w )
 {
     switch( w )
     {
         case iso:
-            return to_iso_string_always_with_fractions( t );
-
+            return boost::posix_time::to_iso_string( t );
+            
+        case iso_always_with_fractions:
+        {
+            const std::string& s = boost::posix_time::to_iso_string( t );
+            return !t.is_special() && s.find( "." ) == std::string::npos ? s + ".000000" : s; // quick and dirty
+        }
+            
         case local:
-            return to_iso_string_always_with_fractions( boost::date_time::c_local_adjustor<boost::posix_time::ptime>::utc_to_local( t ) );
+            return boost::posix_time::to_iso_string( boost::date_time::c_local_adjustor<boost::posix_time::ptime>::utc_to_local( t ) );
             
         case seconds: // quick and dirty
         {
