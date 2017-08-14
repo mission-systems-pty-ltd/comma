@@ -72,7 +72,8 @@ static void usage( bool )
         "\n"
         "\nTime formats"
         "\n    - iso, iso-8601-basic"
-        "\n            YYYYMMDDTHHMMSS.FFFFFF, e.g. 20140101T001122.333"
+        "\n            YYYYMMDDTHHMMSS.FFFFFF, e.g. 20140101T001122.333000"
+        "\n            it is guaranteed to output 20140101T000000.000000, not 20140101T000000"
         "\n    - sql, posix, ieee-std-1003.1"
         "\n            e.g. 2014-01-01 00:11:22"
         "\n    - xsd, iso-8601-extended"
@@ -301,15 +302,21 @@ static boost::posix_time::ptime from_string( const std::string& s, const what_t 
     COMMA_THROW( comma::exception, "never here" );
 }
 
+std::string to_iso_string_always_with_fractions( const boost::posix_time::ptime& t )
+{
+    const std::string& s = boost::posix_time::to_iso_string( t );
+    return !t.is_special() && s.find( "." ) == std::string::npos ? s + ".000000" : s; // quick and dirty
+}
+
 std::string to_string( const boost::posix_time::ptime& t, what_t w )
 {
     switch( w )
     {
         case iso:
-            return boost::posix_time::to_iso_string( t );
+            return to_iso_string_always_with_fractions( t );
 
         case local:
-            return boost::posix_time::to_iso_string(boost::date_time::c_local_adjustor<boost::posix_time::ptime>::utc_to_local(t));
+            return to_iso_string_always_with_fractions( boost::date_time::c_local_adjustor<boost::posix_time::ptime>::utc_to_local( t ) );
             
         case seconds: // quick and dirty
         {

@@ -6,8 +6,8 @@ mkdir -p "$output_dir" || exit 1
 dummy="$output_dir/dummy"
 touch "$dummy" || exit 1
 
-utc_time=$( date -u +%Y%m%dT%H%M%S --reference="$dummy" )
-local_time=$( date +%Y%m%dT%H%M%S --reference="$dummy" )
+utc_time=$( date -u +%Y%m%dT%H%M%S.000000 --reference="$dummy" )
+local_time=$( date +%Y%m%dT%H%M%S.000000 --reference="$dummy" )
 
 echo "utc=\"$utc_time\""
 echo "utc_to_local=\"$( echo "$utc_time" | csv-time --to local )\""
