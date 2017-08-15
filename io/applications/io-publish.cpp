@@ -30,10 +30,12 @@
 /// @author cedric wohlleber
 
 #include <errno.h>
+#include <ext/stdio_filebuf.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <string.h>
 #include <sys/select.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include <boost/bind.hpp>
@@ -69,6 +71,8 @@ static void usage( bool verbose = false )
     std::cerr << "    --multiplier,-m: multiplier for packet size, default is 1. The actual packet size will be m * s" << std::endl;
     std::cerr << "    --no-discard: if present, do blocking write to every open stream" << std::endl;
     std::cerr << "    --no-flush: if present, do not flush the output stream (use on high bandwidth sources)" << std::endl;
+    std::cerr << "    --exec=[<cmd>]: read from cmd rather than stdin" << std::endl;
+    std::cerr << "    --on-demand: only run <cmd> when a client is connected" << std::endl;
     std::cerr << std::endl;
     std::cerr << "client options" << std::endl;
     std::cerr << "    --exit-on-no-clients,-e: once the last client disconnects, exit" << std::endl;
@@ -115,6 +119,7 @@ class publish
             , exit_on_no_clients_( exit_on_no_clients )
             , got_first_client_( false )
             , sizes_( filenames.size(), 0 )
+            , num_clients_( 0 )
             , is_shutdown_( false )
         {
             struct sigaction new_action, old_action;
@@ -141,23 +146,25 @@ class publish
             { for( std::size_t i = 0; i < t->size(); ++i ) { ( *t )[i].close(); } }
         }
         
-        bool read()
+        bool read( std::istream& input )
         {
             if( is_binary_() )
             {
-                std::cin.read( &buffer_[0], buffer_.size() );
-                if( std::cin.gcount() < int( buffer_.size() ) || !std::cin.good() ) { return false; }
+                input.read( &buffer_[0], buffer_.size() );
+                if( input.gcount() < int( buffer_.size() ) || !input.good() ) { return false; }
             }
             else
             {
-                std::getline( std::cin, buffer_ );
+                std::getline( input, buffer_ );
                 buffer_ += '\n';
-                if( !std::cin.good() ) { return false; }
+                if( !input.good() ) { return false; }
             }
             transaction_t t( publishers_ );
             for( std::size_t i = 0; i < t->size(); ++i ) { ( *t )[i].write( &buffer_[0], buffer_.size(), false ); }
             return handle_sizes_( t );
         }
+
+        unsigned int num_clients() { return num_clients_; }
 
     private:
         bool is_binary_() const { return packet_size_ > 0; }
@@ -174,6 +181,7 @@ class publish
                 if( sizes_[i] == size ) { continue; }
                 sizes_[i] = size;
                 changed = true;
+                num_clients_ = total;
             }
             if( !changed ) { return true; }
             if( output_number_of_clients_ )
@@ -219,8 +227,62 @@ class publish
         bool exit_on_no_clients_;
         bool got_first_client_;
         std::vector< unsigned int > sizes_;
+        unsigned int num_clients_;
         boost::scoped_ptr< boost::thread > acceptor_thread_;
         bool is_shutdown_;
+};
+
+class command
+{
+    public:
+        command( const std::string& cmd )
+            : cmd_( cmd )
+            , child_pid_( -1 )
+        {
+            // create a pipe to send the child stdout to the parent stdin
+            int fd[2];
+            if( pipe( fd ) == -1 ) { comma::last_error::to_exception( "couldn't open pipe" ); }
+
+            pid_t pid = fork();
+            if( pid == -1 ) { comma::last_error::to_exception( "failed to fork()" ); }
+            if( pid == 0 )
+            {
+                // make the child a process group leader
+                setsid();
+                // connect pipe input to stdout in child
+                while(( dup2( fd[1], STDOUT_FILENO ) == -1 ) && ( errno == EINTR )) {}
+                close( fd[1] );     // no longer need fd[1], now that it's duped
+                close( fd[0] );     // don't need pipe output in the child
+                execlp( "bash", "bash", "-c", &cmd_[0], NULL );
+                std::cerr << "io-publish: failed to exec child: errno "
+                          << comma::last_error::value() << " - "
+                          << comma::last_error::to_string() << std::endl;
+                exit( 1 );
+            }
+            child_pid_ = pid;
+            // close pipe input in the parent
+            close( fd[1] );
+            pipe_output_fd_ = fd[0];
+
+            filebuf_.reset( new __gnu_cxx::stdio_filebuf< char >( pipe_output_fd_, std::ios::in ));
+            istream_.reset( new std::istream( filebuf_.get() ));
+        }
+
+        ~command()
+        {
+            close( pipe_output_fd_ );
+            kill( -child_pid_, SIGTERM );
+            waitpid( -child_pid_, NULL, 0 );
+        }
+
+        std::istream& istream() { return *istream_; }
+
+    private:
+        std::string cmd_;
+        pid_t child_pid_;
+        int pipe_output_fd_;
+        boost::scoped_ptr< __gnu_cxx::stdio_filebuf< char > > filebuf_;
+        boost::scoped_ptr< std::istream > istream_;
 };
 
 int main( int ac, char** av )
@@ -228,18 +290,40 @@ int main( int ac, char** av )
     try
     {
         comma::command_line_options options( ac, av, usage );
-        const std::vector< std::string >& names = options.unnamed( "--no-discard,--verbose,-v,--no-flush,--output-number-of-clients,--clients,--exit-on-no-clients,-e", "-.+" );
+        const std::vector< std::string >& names = options.unnamed( "--no-discard,--verbose,-v,--no-flush,--output-number-of-clients,--clients,--exit-on-no-clients,-e,--on-demand", "-.+" );
         if( names.empty() ) { std::cerr << "io-publish: please specify at least one stream; use '-' for stdout" << std::endl; return 1; }
         const boost::array< comma::signal_flag::signals, 2 > signals = { { comma::signal_flag::sigint, comma::signal_flag::sigterm } };
         comma::signal_flag is_shutdown( signals );
+        bool on_demand = options.exists( "--on-demand" );
         publish p( names
                  , options.value( "-s,--size", 0 ) * options.value( "-m,--multiplier", 1 )
                  , !options.exists( "--no-discard" )
                  , !options.exists( "--no-flush" )
                  , options.exists( "--output-number-of-clients,--clients" )
-                 , options.exists( "--exit-on-no-clients,-e" ) );
+                 , options.exists( "--exit-on-no-clients,-e" ) || on_demand );
+        std::string exec_cmd = options.value< std::string >( "--exec", "" );
         //ProfilerStart( "io-publish.prof" ); {
-        while( std::cin.good() && !is_shutdown && p.read() );
+        if( exec_cmd.empty() )
+        {
+            while( std::cin.good() && !is_shutdown && p.read( std::cin ));
+        }
+        else
+        {
+            bool done = false;
+            while( !done && !is_shutdown )
+            {
+                if( !on_demand || p.num_clients() > 0 )
+                {
+                    command cmd( exec_cmd );
+                    while( cmd.istream().good() && !is_shutdown && p.read( cmd.istream() ));
+                    if( !on_demand ) { done = true; }
+                }
+                else
+                {
+                    sleep( 0.1 );
+                }
+            }
+        }
         //ProfilerStop(); }
         if( is_shutdown ) { std::cerr << "io-publish: interrupted by signal" << std::endl; }
         return 0;
