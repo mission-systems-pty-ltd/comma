@@ -140,7 +140,7 @@ public:
         {
             const input_t* p = istream.read();
             if( !p ) { break; }
-            if ( has_block_ && (block_ != p->block) )
+            if ( !deque.empty() && has_block_ && (block_ != p->block) )
             {
                 if (!verify(deque)) { return 1; }
                 count_ = 0;
@@ -180,7 +180,7 @@ private:
     { 
         if( use_sliding_window_ && count_ < size_ ) 
         { 
-            std::cerr << comma::verbose.app_name() << "--size,-n= " << size_ << " is bigger than total number of input records: " << count_ << std::endl; 
+            std::cerr << comma::verbose.app_name() << ": --size,-n= " << size_ << " is bigger than total number of input records: " << count_ << std::endl; 
             return false; 
         }
         if ( !use_sliding_window_ && !deque.empty() ) 
