@@ -140,14 +140,14 @@ public:
         {
             const input_t* p = istream.read();
             if( !p ) { break; }
-            if ( has_block_ && (block_ != p->block_) )
+            if ( has_block_ && (block_ != p->block) )
             {
                 if (!verify(deque)) { return 1; }
                 count_ = 0;
                 if ( looping_ ) { output_loop(deque, first, csv); }
                 deque.clear();  
             }
-            block_ = p->block_;
+            block_ = p->block;
             deque.push_back( istream.last() );
             if ( looping_ && first.size() + 1  < size_ )  { first.push_back(istream.last()); }
             ++count_;
@@ -163,7 +163,7 @@ public:
     }
 
     struct input_t {
-        comma::uint32 block_ = 0;
+        comma::uint32 block = 0;
     };
 
 private:
@@ -223,8 +223,8 @@ namespace comma { namespace visiting {
 
 template <> struct traits< concatenate_impl_::input_t >
 {
-    template < typename K, typename V > static void visit( const K&, const concatenate_impl_::input_t& p, V& v ) { v.apply("block_", p.block_); }
-    template < typename K, typename V > static void visit( const K&, concatenate_impl_::input_t& p, V& v ) { v.apply("block_", p.block_); }
+    template < typename K, typename V > static void visit( const K&, const concatenate_impl_::input_t& p, V& v ) { v.apply("block", p.block); }
+    template < typename K, typename V > static void visit( const K&, concatenate_impl_::input_t& p, V& v ) { v.apply("block", p.block); }
 };
 
 } } // namespace comma { namespace visiting {
