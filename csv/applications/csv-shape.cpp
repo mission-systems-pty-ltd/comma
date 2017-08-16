@@ -47,8 +47,8 @@ static void usage( bool verbose=false )
     std::cerr << "operations" << std::endl;
     std::cerr << "    concatenate: group input records for concatenation into output records." << std::endl;
     std::cerr << "                 the user can choose non-overlapping or overlapping grouping (sliding window) mode." << std::endl;
-    std::cerr << "    loop:        group input records for concatenation into output records." << std::endl;
-    std::cerr << "                 the last record loops and is joined to the first record." << std::endl;
+    std::cerr << "    loop:        same as concatenate, but with an additional last record:" << std::endl;
+    std::cerr << "                 last input record concatenated with the first record (hence, 'loop')" << std::endl;
     std::cerr << "                 this mode always uses the sliding window for overlapping groups" << std::endl;
     std::cerr << std::endl;
     std::cerr << "Usage: cat data.csv | csv-shape <operation> [<options>]" << std::endl;
@@ -70,7 +70,7 @@ static void usage( bool verbose=false )
     std::cerr << "   loop" << std::endl;
     std::cerr << "      --bidirectional; output records in both directions (e.g. a,b; b,a)" << std::endl;
     std::cerr << "      --reverse; output records in reverse order (e.g. b,a)" << std::endl;
-    std::cerr << "      --size,-n=<num>; number of input records in each grouping, range: 2 and above" << std::endl;
+    std::cerr << "      --size,-n=<num>; number of input records in each grouping; default: 2" << std::endl;
     std::cerr << std::endl;
     if( verbose )
     {
@@ -130,7 +130,7 @@ public:
         reverse_ = options.exists("--reverse");
         bidirectional_ = options.exists("--bidirectional");
         if( !use_sliding_window_ && is_binary ) { simple_binary_pass_through(csv.format(), csv.flush); return 0; };
-        size_ = options.value< comma::uint32 >("--size,-n");
+        size_ = looping_ ? options.value("--size,-n", 2) : options.value< comma::uint32 >("--size,-n");
         if( size_ < 2 ) { std::cerr <<  comma::verbose.app_name() << ": expected --size,-n= value to be greater than 1" << std::endl; return 1; }
         comma::csv::input_stream< input_t > istream(std::cin, csv);
         std::deque< std::string > deque;
