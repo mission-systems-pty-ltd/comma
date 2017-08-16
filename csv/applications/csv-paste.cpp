@@ -198,23 +198,14 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av );
         if( options.exists( "--help,-h" ) ) { usage(); }
         char delimiter = options.value( "--delimiter,-d", ',' );
-        std::vector< std::string > unnamed = options.unnamed( "", "--delimiter,-d,--begin,--size,--block-size" );
+        std::vector< std::string > unnamed = options.unnamed( "--flush", "--delimiter,-d,--begin,--size,--block-size" );
         boost::ptr_vector< source > sources;
         bool is_binary = false;
         for( unsigned int i = 0; i < unnamed.size(); ++i ) // quick and dirty
         {
-            if( unnamed[i].substr( 0, 6 ) == "value=" )
-            { 
-                if( value( unnamed[i] ).binary() ) { is_binary = true; }
-            }
-            else if( unnamed[i] == "line-number" )
-            { 
-                continue;
-            }
-            else
-            { 
-                if( stream( unnamed[i] ).binary() ) { is_binary = true; }
-            }            
+            if( unnamed[i].substr( 0, 6 ) == "value=" ) { if( value( unnamed[i] ).binary() ) { is_binary = true; } }
+            else if( unnamed[i] == "line-number" ) { continue; }
+            if( stream( unnamed[i] ).binary() ) { is_binary = true; }
         }
         for( unsigned int i = 0; i < unnamed.size(); ++i )
         {
@@ -235,7 +226,7 @@ int main( int ac, char** av )
                 s = new line_number( is_binary, boost::lexical_cast< comma::uint32 >( begin ), options.value< comma::uint32 >( "--size,--block-size", 1 ) );
             }
             else
-            { 
+            {
                 s = new stream( unnamed[i] );
                 if( is_binary != s->binary() ) { std::cerr << "csv-paste: one input is ascii, the other binary: " << sources.back().properties() << " vs " << s->properties() << std::endl; return 1; }
             }
@@ -259,9 +250,10 @@ int main( int ac, char** av )
                     if( sources[i].read( p ) == NULL )
                     {
                         if( streams == 0 ) { return 0; }
-                        std::cerr << "csv-paste: unexpected end of file in " << unnamed[i] << std::endl; return 1;
+                        std::cerr << "csv-paste: unexpected end of file in " << unnamed[i] << std::endl;
+                        return 1;
                     }
-                    if (sources[i].is_stream()) ++streams;
+                    if( sources[i].is_stream() ) { ++streams; }
                 }
                 std::cout.write( &buffer[0], buffer.size() );
                 std::cout.flush();
