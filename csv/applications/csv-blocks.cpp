@@ -233,7 +233,8 @@ static void flush_indexing( std::deque< std::string >& block_records, bool is_bi
         if( is_binary ) 
         { 
             std::cout.write( &input[0], input.size() );
-            std::cout.write( (const char *) &index, sizeof(comma::uint32)); 
+            std::cout.write( (const char *) &index, sizeof(comma::uint32));
+            if( csv.flush ) { std::cout.flush(); }
         }
         else 
         { 
@@ -323,6 +324,7 @@ static comma::uint32 read_and_write_binary_record()
     //  This is to reassemble the message if it is broken into pieces (e.g. TCP input piped into stdin)
     comma::uint32 num_of_bytes = memory.read_binary_records(1, strict);
     std::cout.write( memory.buffer, num_of_bytes ); // send data to stdout, expect it to read one record
+    if( csv.flush ) { std::cout.flush(); }
     
     static input_with_index record;
     // fill 'record' param
@@ -348,6 +350,7 @@ static void read_and_write_binary_block()
         if( read_per_loop > records_to_read  - records_read ) { read_per_loop = records_to_read  - records_read; }
         comma::uint32 read_chunk_size = extended_buffer.read_binary_records( read_per_loop, strict);
         std::cout.write( extended_buffer.buffer, read_chunk_size );
+        if( csv.flush ) { std::cout.flush(); }
         records_read += read_per_loop;
     }
 }
@@ -478,6 +481,7 @@ int main( int ac, char** av )
                 if( istream.is_binary() ) { std::cout.write( (char*)&p, istream.binary().size() ); }
                 else { std::cout << first_line << istream.ascii().ascii().delimiter(); }
                 ostream.write( appended_column( current_block ) );
+                if( csv.flush ) { std::cout.flush(); }
             }
             while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
             {
@@ -486,8 +490,8 @@ int main( int ac, char** av )
                 if( !(keys == p->key) ) { ++current_block; }
                 keys = p->key;
                 tied.append( appended_column( current_block ) );
-            }
-            
+                if( csv.flush ) { std::cout.flush(); }
+            }            
             return 0;
         }
         else if( operation == "head" )
@@ -573,9 +577,9 @@ int main( int ac, char** av )
             {
                 const input_with_block* p = istream.read();
                 if( !p ) { break; }
-                
                 incremented.value = p->block + increment_step;
                 tied.append( incremented );
+                if( csv.flush ) { std::cout.flush(); }
             }
             
             return 0;
