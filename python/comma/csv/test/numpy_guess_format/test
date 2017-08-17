@@ -6,7 +6,7 @@ function comma_guess_format
 import comma
 import numpy
 
-guessed_format = comma.csv.format.guess_format( '$1' )
+guessed_format = comma.csv.format.guess_format( ['$1'] )
 print guessed_format
 END
 )"

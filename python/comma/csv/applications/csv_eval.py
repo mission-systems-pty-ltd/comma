@@ -376,18 +376,24 @@ def normalise_full_xpath(fields, full_xpath=True):
         return [f.replace('/', '_') for f in full_xpath_fields]
     return [f.split('/')[-1] for f in full_xpath_fields]
 
-
 def prepare_options(args):
     ingest_deprecated_options(args)
     check_options(args)
     check_fields(assignment_variable_names(args.default_values))
     args.fields = normalise_full_xpath(args.fields, args.full_xpath)
     if args.binary:
+        args.first_line = ''
         args.format = comma.csv.format.expand(args.binary)
         args.binary = True
-    else:
+    elif args.format:
+        args.first_line = ''
         args.format = format_without_blanks(args.format, args.fields)
         args.binary = False
+    else:
+        args.first_line = comma.io.readlines_unbuffered(1, sys.stdin)
+        args.format = comma.csv.format.guess_format(args.first_line)
+        args.binary = False
+        print >> sys.stderr, "guessed format:", args.format
     if args.select or args.exit_if:
         return
     var_names = assignment_variable_names(args.expressions)
@@ -519,56 +525,67 @@ def evaluate(stream):
     size = None
     update = None
     output = None
+    input = None
     is_shutdown = comma.signal.is_shutdown()
+    if stream.args.first_line:
+        input = stream.input.read_from_line(stream.args.first_line)
     while not is_shutdown:
+        if input is not None:
+            if size != input.size:
+                size = input.size
+                if stream.args.update_fields:
+                    update = stream.update_t(size)
+                if stream.args.output_fields:
+                    output = stream.output_t(size)
+            exec code in env, {'_input': input, '_update': update, '_output': output}
+            if stream.args.update_fields:
+                update_buffer(stream.input, update)
+            if stream.args.output_fields:
+                stream.output.write(output)
+            else:
+                stream.input.dump()
         input = stream.input.read()
         if input is None:
             break
-        if size != input.size:
-            size = input.size
-            if stream.args.update_fields:
-                update = stream.update_t(size)
-            if stream.args.output_fields:
-                output = stream.output_t(size)
-        exec code in env, {'_input': input, '_update': update, '_output': output}
-        if stream.args.update_fields:
-            update_buffer(stream.input, update)
-        if stream.args.output_fields:
-            stream.output.write(output)
-        else:
-            stream.input.dump()
-
 
 def select(stream):
+    input = None
     env = restricted_numpy_env()
     exec stream.args.default_values in env
     fields = stream.input.fields
     code = compile(stream.args.select, '<string>', 'eval')
     is_shutdown = comma.signal.is_shutdown()
+    if stream.args.first_line:
+        input = stream.input.read_from_line(stream.args.first_line)
     while not is_shutdown:
+        if input is not None: 
+            mask = eval(code, env, {f: input[f] for f in fields})
+            stream.input.dump(mask=mask)
         input = stream.input.read()
         if input is None:
             break
-        mask = eval(code, env, {f: input[f] for f in fields})
-        stream.input.dump(mask=mask)
 
 def exit_if(stream):
+    input = None
     env = restricted_numpy_env()
     exec stream.args.default_values in env
     fields = stream.input.fields
     code = compile(stream.args.exit_if, '<string>', 'eval')
     is_shutdown = comma.signal.is_shutdown()
+    if stream.args.first_line:
+        input = stream.input.read_from_line(stream.args.first_line)
     while not is_shutdown:
+        if input is not None:
+            mask = eval(code, env, {f: input[f] for f in fields})
+            if mask:
+                if not stream.args.with_error: sys.exit()
+                name = os.path.basename(sys.argv[0])
+                print >> sys.stderr, "{} error: {}".format(name, stream.args.with_error)
+                sys.exit(1)
+            stream.input.dump()
         input = stream.input.read(size=1)
         if input is None:
             break
-        mask = eval(code, env, {f: input[f] for f in fields})
-        if mask:
-            if not stream.args.with_error: sys.exit()
-            name = os.path.basename(sys.argv[0])
-            print >> sys.stderr, "{} error: {}".format(name, stream.args.with_error)
-            sys.exit(1)
-        stream.input.dump()
 
 def main():
     try:

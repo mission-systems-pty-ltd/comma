@@ -131,6 +131,20 @@ class stream(object):
             return
         return self._struct_array(self._input_array, self.missing_values)
 
+    def read_from_line(self, line):
+        self._ascii_buffer = line
+        self._input_array = np.atleast_1d(np.genfromtxt(
+            self._ascii_buffer,
+            dtype=self.input_dtype,
+            delimiter=self.delimiter,
+            converters=self.ascii_converters,
+            usecols=self.usecols,
+            filling_values=self.filling_values,
+            comments=None))
+        if self._input_array.size == 0:
+            return
+        return self._struct_array(self._input_array, self.missing_values)
+
     def _read(self, size):
         if self.binary:
             if size < 0 and self.source == sys.stdin:

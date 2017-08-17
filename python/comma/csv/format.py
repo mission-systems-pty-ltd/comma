@@ -205,7 +205,7 @@ def guess_type(element):
     guess the type of one element
     """
     if element in ['']:
-        return "s"
+        return "s[0]"
 
     try:
         d = float(element)
@@ -215,7 +215,7 @@ def guess_type(element):
             t = parse_time(element)
             return "t"
         except TypeError:
-            return "s"
+            return "s[0]"
 
 
 def guess_format(record):
@@ -223,7 +223,7 @@ def guess_format(record):
     guess format given an example input record
     """
     comma_types = []
-    for split in reader([record]):
+    for split in reader(record):
         for element in split:
             comma_types.append(guess_type(element))
     return ','.join(comma_types)
