@@ -205,7 +205,7 @@ def guess_type(element):
     guess the type of one element
     """
     if element in ['']:
-        return "s[0]"
+        return "s[1024]"
 
     try:
         d = float(element)
@@ -215,7 +215,7 @@ def guess_type(element):
             t = parse_time(element)
             return "t"
         except TypeError:
-            return "s[0]"
+            return "s[1024]"
 
 
 def guess_format(record):

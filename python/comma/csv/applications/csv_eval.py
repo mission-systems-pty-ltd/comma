@@ -393,7 +393,7 @@ def prepare_options(args):
         args.first_line = comma.io.readlines_unbuffered(1, sys.stdin)
         args.format = comma.csv.format.guess_format(args.first_line)
         args.binary = False
-        print >> sys.stderr, "guessed format:", args.format
+        print >> sys.stderr, __name__ + ": guessed format", args.format
     if args.select or args.exit_if:
         return
     var_names = assignment_variable_names(args.expressions)

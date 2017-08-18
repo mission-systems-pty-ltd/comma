@@ -2,5 +2,5 @@ doubles/output="d,d,d,d"
 doubles/status=0
 times/output="t,t,t"
 times/status=0
-strings/output="s[0],s[0],s[0],s[0]"
+strings/output="s[1024],s[1024],s[1024],s[1024]"
 strings/status=0
