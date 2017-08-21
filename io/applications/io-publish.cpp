@@ -30,7 +30,6 @@
 /// @author cedric wohlleber
 
 #include <errno.h>
-#include <ext/stdio_filebuf.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <string.h>
@@ -270,29 +269,21 @@ class command
                 exit( 1 );
             }
             child_pid_ = pid;
-            // close pipe input in the parent
-            close( fd[1] );
-            pipe_output_fd_ = fd[0];
-
-            filebuf_.reset( new __gnu_cxx::stdio_filebuf< char >( pipe_output_fd_, std::ios::in ));
-            istream_.reset( new std::istream( filebuf_.get() ));
+            // connect pipe output to stdin in parent
+            while(( dup2( fd[0], STDIN_FILENO ) == -1 ) && ( errno == EINTR )) {}
+            close( fd[0] );         // no longer need fd[0], now that it's duped
+            close( fd[1] );         // don't need pipe input in the parent
         }
 
         ~command()
         {
-            close( pipe_output_fd_ );
             kill( -child_pid_, SIGTERM );
             waitpid( -child_pid_, NULL, 0 );
         }
 
-        std::istream& istream() { return *istream_; }
-
     private:
         std::string cmd_;
         pid_t child_pid_;
-        int pipe_output_fd_;
-        boost::scoped_ptr< __gnu_cxx::stdio_filebuf< char > > filebuf_;
-        boost::scoped_ptr< std::istream > istream_;
 };
 
 int main( int ac, char** av )
@@ -325,7 +316,7 @@ int main( int ac, char** av )
                 if( !on_demand || p.num_clients() > 0 )
                 {
                     command cmd( exec_cmd );
-                    while( cmd.istream().good() && !is_shutdown && p.read( cmd.istream() ));
+                    while( std::cin.good() && !is_shutdown && p.read( std::cin ));
                     if( !on_demand ) { done = true; }
                 }
                 else
