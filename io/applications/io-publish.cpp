@@ -30,15 +30,11 @@
 /// @author cedric wohlleber
 
 #include <errno.h>
-#include <fcntl.h>
 #include <signal.h>
-#include <string.h>
-#include <sys/select.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
 #include <boost/bind.hpp>
-#include <boost/function.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/scoped_ptr.hpp>
