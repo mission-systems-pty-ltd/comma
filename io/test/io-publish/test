@@ -1,0 +1,67 @@
+#!/bin/bash
+
+source $( type -p comma-process-util )
+source <( cat )
+
+function children()
+{
+    for child in $( ps --ppid $1 ho pid ); do
+        ps o comm= $child
+        children $child
+    done
+}
+
+function kill_pid_and_children()
+{
+    pid=$1
+    local child_pids=$( pgrep -P $pid )
+    echo "killing children: $child_pids" >&2
+    [[ $child_pids ]] && kill $child_pids
+    echo "killing $pid" >&2
+    kill $pid 2> /dev/null
+    wait $pid
+}
+
+[[ -d output ]] || mkdir output
+cd output
+
+[[ $( type -t exec_cmd ) == "function" ]] && options+=" --exec exec_cmd"
+
+if [[ $( type -t stdin_cmd ) == "function" ]]; then
+    stdin_cmd | io-publish tcp:$port $options &
+else
+    io-publish tcp:$port $options &
+fi
+io_publish_pid=$!
+echo "io_publish_pid=$io_publish_pid" >&2
+
+if [[ $( type -t client_cmd ) == "function" ]]; then
+    client_cmd > /dev/null &
+    client_cmd_pid=$!
+    echo "client_cmd_pid=$client_cmd_pid" >&2
+fi
+
+[[ $test_duration ]] || test_duration=10
+[[ $report_interval ]] || report_interval=1
+
+loops=$( echo "$test_duration / $report_interval" | bc -l | sed 's/\.[0-9]*$//' )
+
+for i in $( seq 1 $loops ); do
+    sleep $report_interval
+    # need at least one process in this report to stop the line being filtered out
+    echo "io-publish,$( children $io_publish_pid | tr '\n' , | sed 's/,$/\n/' )"
+done | sed 's/,$//;s/,[^,]* <defunct>//' | grep -v ",bash$" | uniq \
+     | name-value-from-csv processes --prefix output -n -d @
+
+# when logging the processes above, we filter out lines with just bash at the
+# end, as they are in transition, with their children having just died
+
+if [[ $client_cmd_pid ]]; then
+    kill_pid_and_children $client_cmd_pid
+fi
+echo "killing io-publish: $io_publish_pid" >&2
+kill_pid_and_children $io_publish_pid
+
+if [[ -f client.out ]]; then
+    cat client.out | name-value-from-csv line --prefix output -n -d @
+fi

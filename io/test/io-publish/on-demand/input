@@ -1,0 +1,39 @@
+# because we source these files into the test script, we can use functions from the test script
+
+port=42643
+options="--on-demand"
+test_duration=40
+report_interval=0.5
+
+function exec_cmd()
+{
+    yes
+}
+export -f exec_cmd
+
+function read_port()
+{
+    echo "test: creating reader" >&2
+    socat tcp:localhost:$port -
+}
+
+function client_cmd()
+{
+    sleep 5
+    read_port &
+    first_client_pid=$!
+    sleep 5
+    read_port &
+    second_client_pid=$!
+    sleep 5
+    kill_pid_and_children $first_client_pid
+    sleep 5
+    kill_pid_and_children $second_client_pid
+    sleep 5
+    read_port &
+    third_client_pid=$!
+    sleep 5
+    kill_pid_and_children $third_client_pid
+    sleep 5
+}
+export -f client_cmd

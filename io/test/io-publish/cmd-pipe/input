@@ -1,0 +1,7 @@
+port=42644
+
+function exec_cmd()
+{
+    yes | sed 's/$/,no/'
+}
+export -f exec_cmd

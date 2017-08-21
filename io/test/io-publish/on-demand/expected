@@ -1,0 +1,5 @@
+output[0]/processes="io-publish"
+output[1]/processes="io-publish,bash,yes"
+output[2]/processes="io-publish"
+output[3]/processes="io-publish,bash,yes"
+output[4]/processes="io-publish"
