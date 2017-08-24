@@ -1,11 +1,11 @@
-output[0]/bandwidth/all_time=1000 +/- 5%
-output[1]/bandwidth/all_time=1000 +/- 5%
-output[2]/bandwidth/all_time=1166 +/- 5%
-output[3]/bandwidth/all_time=1375 +/- 5%
-output[4]/bandwidth/all_time=1500 +/- 5%
+output[0]/bytes_per_second/all_time=1000 +/- 5%
+output[1]/bytes_per_second/all_time=1000 +/- 5%
+output[2]/bytes_per_second/all_time=1166 +/- 5%
+output[3]/bytes_per_second/all_time=1375 +/- 5%
+output[4]/bytes_per_second/all_time=1500 +/- 5%
 
-output[0]/bandwidth/window=1000 +/- 5%
-output[1]/bandwidth/window=1000 +/- 5%
-output[2]/bandwidth/window=1166 +/- 5%
-output[3]/bandwidth/window=1375 +/- 5%
-output[4]/bandwidth/window=1500 +/- 5%
+output[0]/bytes_per_second/window=1000 +/- 5%
+output[1]/bytes_per_second/window=1000 +/- 5%
+output[2]/bytes_per_second/window=1166 +/- 5%
+output[3]/bytes_per_second/window=1375 +/- 5%
+output[4]/bytes_per_second/window=1500 +/- 5%
