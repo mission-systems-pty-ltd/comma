@@ -62,15 +62,17 @@ static void usage( bool verbose=false )
     if( verbose ) { std::cerr << comma::csv::format::usage() << std::endl; }
     std::cerr << "operations options" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "   common options" << std::endl;
+    std::cerr << "      --size,-n=<num>; number of input records in each grouping, range: 2 and above" << std::endl;
+    std::cerr << "      --step=<num>; default=1; relative offset of the records to be concatenated" << std::endl;
+    std::cerr << "      --expected-records; output the expected records for given --size and --step, and exit" << std::endl;
     std::cerr << "   concatenate" << std::endl;
     std::cerr << "      --bidirectional; output records in both directions (e.g. a,b; b,a)" << std::endl;
     std::cerr << "      --reverse; output records in reverse order (e.g. b,a)" << std::endl;
-    std::cerr << "      --size,-n=<num>; number of input records in each grouping, range: 2 and above" << std::endl;
     std::cerr << "      --sliding-window,-w; use a sliding window to group input records, see examples" << std::endl;
     std::cerr << "   loop" << std::endl;
     std::cerr << "      --bidirectional; output records in both directions (e.g. a,b; b,a)" << std::endl;
     std::cerr << "      --reverse; output records in reverse order (e.g. b,a)" << std::endl;
-    std::cerr << "      --size,-n=<num>; number of input records in each grouping; default: 2" << std::endl;
     std::cerr << std::endl;
     if( verbose )
     {
@@ -119,11 +121,13 @@ public:
         , size_(0)
         , count_(0)
         , block_(0)
+        , step_(1)
+        , expected_records_(0)
         {}
 
     int run( const comma::command_line_options& options, const comma::csv::options& csv)
     {
-        std::vector< std::string > unnamed = options.unnamed( "--sliding-window,-w,--verbose,-v", "-.*" );
+        std::vector< std::string > unnamed = options.unnamed( "--size,-n,--sliding-window,-w,--step,--verbose,-v", "-.*" );
         std::string operation = unnamed[0];
         looping_ = ( operation == "loop");
         use_sliding_window_ = ( looping_ || options.exists("--sliding-window,-w") );
@@ -131,7 +135,10 @@ public:
         bidirectional_ = options.exists("--bidirectional");
         if( !use_sliding_window_ && is_binary ) { simple_binary_pass_through(csv.format(), csv.flush); return 0; };
         size_ = looping_ ? options.value("--size,-n", 2) : options.value< comma::uint32 >("--size,-n");
+        step_ = options.value( "--step",1 );
         if( size_ < 2 ) { std::cerr <<  comma::verbose.app_name() << ": expected --size,-n= value to be greater than 1" << std::endl; return 1; }
+        expected_records_ = step_ * ( size_ - 1 ) + 1;
+        if( options.exists("--expected-records") ) { std::cout << expected_records_ << std::endl; return 0; };
         comma::csv::input_stream< input_t > istream(std::cin, csv);
         std::deque< std::string > deque;
         std::deque< std::string > first;
@@ -149,9 +156,9 @@ public:
             }
             block_ = p->block;
             deque.push_back( istream.last() );
-            if ( looping_ && first.size() + 1  < size_ )  { first.push_back(istream.last()); }
+            if ( looping_ && first.size() + 1 < expected_records_ )  { first.push_back(istream.last()); }
             ++count_;
-            if( deque.size() >= size_ )
+            if( deque.size() >= step_ * ( size_ - 1 ) + 1 )
             {
                 output_records(deque, csv);
                 if( !use_sliding_window_ ) { deque.clear(); } else { deque.pop_front(); }
@@ -175,12 +182,15 @@ private:
     comma::uint32 size_;
     comma::uint32 count_;
     comma::uint32 block_;
+    comma::uint32 step_;
+    comma::uint32 expected_records_;
 
     bool verify( const std::deque<std::string>& deque )
     { 
-        if( use_sliding_window_ && count_ < size_ ) 
+        if( use_sliding_window_ && count_ < step_ * ( size_ - 1 ) + 1 )
         { 
-            std::cerr << comma::verbose.app_name() << ": --size,-n= " << size_ << " is bigger than total number of input records: " << count_ << std::endl; 
+            std::cerr << comma::verbose.app_name() << ": --size,-n=" << size_ << ", --step=" << step_ << ", expected records count (" << step_ * ( size_ - 1 ) + 1
+                      << ") is bigger than total number of input records: " << count_ << std::endl; 
             return false; 
         }
         if ( !use_sliding_window_ && !deque.empty() ) 
@@ -193,17 +203,18 @@ private:
 
     void output_records(const std::deque<std::string>& deque, const comma::csv::options& csv)
     {
+        auto delimiter = std::string();
         if (!reverse_)
         {
-            std::cout.write( &(deque.front()[0]), deque.front().size() );
-            for( auto is=(deque.cbegin()+1); is!=deque.cend(); ++is ) { if(!is_binary){ std::cout << csv.delimiter; } std::cout.write( &(*is)[0], is->size() ); }
-            if(!is_binary){ std::cout << std::endl; } 
+            std::cout.write( &( deque.front()[ 0 ] ), deque.front().size() );
+            auto is = deque.cbegin(); while( ( is + 1 ) != deque.cend() ) { if(!is_binary){ std::cout << csv.delimiter; } is += step_; std::cout.write( &(*is)[0], is->size() ); }
+            if(!is_binary){ std::cout << std::endl; }
         }
         if (bidirectional_ || reverse_ ) 
         {
-            std::cout.write( &(deque.back()[0]), deque.back().size() );
-            for( auto is=(deque.crbegin()+1); is!=deque.crend(); ++is ) { if(!is_binary){ std::cout << csv.delimiter; } std::cout.write( &(*is)[0], is->size() ); }
-            if(!is_binary){ std::cout << std::endl; } 
+            std::cout.write( &( deque.back()[0] ), deque.back().size() );
+            auto is = deque.crbegin(); while( ( is + 1 ) != deque.crend() ) { if(!is_binary){ std::cout << csv.delimiter; } is += step_; std::cout.write( &(*is)[0], is->size() ); }
+            if(!is_binary){ std::cout << std::endl; }
         }
     }
 
@@ -234,7 +245,7 @@ int main( int ac, char** av )
     try
     {
         comma::command_line_options options( ac, av, usage );
-        std::vector< std::string > unnamed = options.unnamed( "--sliding-window,-w,--verbose,-v", "-.*" );
+        std::vector< std::string > unnamed = options.unnamed( "--size,-n,--sliding-window,-w,--step,--verbose,-v", "-.*" );
         comma::csv::options csv( options );
         if (csv.fields.empty()) { csv.fields="a"; }
         is_binary = csv.binary();

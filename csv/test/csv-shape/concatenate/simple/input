@@ -5,12 +5,17 @@ basics[2]="seq 1 10 | csv-shape concatenate -n 1 | tr \\\\n ';' | sed 's#;$##'; 
 basics[3]="seq 1 10 | csv-shape concatenate -n 0 | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
 empty_lines[0]="( echo 1; echo 2; echo; echo 3; echo 5; echo ; echo; echo ; ) | csv-shape concatenate -n 2 --discard | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
 
+step[0]="seq 1 20 | csv-shape concatenate -n 4 --step 3 | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
+step[1]="seq 1 10 | csv-shape concatenate -n 5 --step 3 | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
+
 sliding_window[0]="seq 1 10 | csv-shape concatenate -n 2 -w | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
 sliding_window[1]="seq 1 10 | csv-shape concatenate -n 3 -w | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
 sliding_window[2]="seq 1 10 | csv-shape concatenate -n 9 -w | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
 sliding_window[3]="seq 1 10 | csv-shape concatenate -n 10 -w | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
 sliding_window[4]="seq 1 10 | csv-shape concatenate -n 11 -w | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
 sliding_window[5]="seq 1 10 | csv-shape concatenate -n 1  -w | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
+sliding_window[6]="seq 1 15 | csv-shape concatenate -n 4 --step 3 -w | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
+sliding_window[7]="seq 1 10 | csv-shape concatenate -n 5 --step 3 -w | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
 
 
 binary_sliding_window[0]="seq 1 10 | csv-to-bin i | csv-shape concatenate -n 2 -w  --binary i | csv-from-bin 2i | tr \\\\n ';' | sed 's#;$##';  (( ${PIPESTATUS[2]} == 0 ))"
@@ -19,8 +24,11 @@ binary_sliding_window[2]="seq 1 10 | csv-to-bin i | csv-shape concatenate -n 9 -
 binary_sliding_window[3]="seq 1 10 | csv-to-bin i | csv-shape concatenate -n 10 -w --binary i | csv-from-bin 10i | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[2]} == 0 ))"
 binary_sliding_window[4]="seq 1 10 | csv-to-bin i | csv-shape concatenate -n 11 -w --binary i | csv-from-bin 11i | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[2]} == 0 ))"
 binary_sliding_window[5]="seq 1 10 | csv-to-bin i | csv-shape concatenate -n 1  -w --binary i | csv-from-bin i | tr \\\\n ';' | sed 's#;$##';   (( ${PIPESTATUS[2]} == 0 ))"
-
+binary_sliding_window[6]="seq 1 15 | csv-to-bin i | csv-shape concatenate -n 4 --step 3 -w --binary i | csv-from-bin 4i | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[2]} == 0 ))"
+binary_sliding_window[7]="seq 1 10 | csv-to-bin i | csv-shape concatenate -n 5 --step 3 -w --binary i | csv-from-bin 5i | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[2} == 0 ))"
 
 multi_fields[0]="( echo 1,a,2; echo 2,b,u; echo b,b,b; echo 5,d,6 ) | csv-shape concatenate -n 2 | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
+multi_fields[1]="( echo 1,a,2; echo 2,b,u; echo b,b,b; echo 5,d,6; echo 7,f,x; echo 9,m,6 ) | csv-shape concatenate -n 2 --step=2 | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"
 
 multi_fields_sliding[0]="( echo 1,a,2; echo 2,b,7; echo 3,c,4; echo 5,d,6; ) | csv-to-bin 'ui,s[1],ui' | csv-shape concatenate -n 3 -w --binary 'ui,s[1],ui' | csv-from-bin 'ui,s[1],ui,ui,s[1],ui,ui,s[1],ui'| tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[2]} == 0 ))"
+multi_fields_sliding[1]="( echo 1,a,2; echo 2,b,7; echo 3,c,4; echo 5,d,6; echo 7,f,8; echo 9,m,0 ) | csv-to-bin 'ui,s[1],ui' | csv-shape concatenate -n 2 --step=3 -w --binary 'ui,s[1],ui' | csv-from-bin 'ui,s[1],ui,ui,s[1],ui' | tr \\\\n ';' | sed 's#;$##'; (( ${PIPESTATUS[1]} == 0 ))"

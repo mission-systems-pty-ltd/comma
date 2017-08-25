@@ -13,6 +13,10 @@ basics[3]/status=1
 empty_lines[0]/output="1,2;3,5"
 empty_lines[0]/status=0
 
+step[0]/output="1,4,7,10;11,14,17,20"
+step[0]/status=0
+step[1]/output=""
+step[1]/status=1
 
 sliding_window[0]/output="1,2;2,3;3,4;4,5;5,6;6,7;7,8;8,9;9,10"
 sliding_window[0]/status=0
@@ -22,9 +26,14 @@ sliding_window[2]/output="1,2,3,4,5,6,7,8,9;2,3,4,5,6,7,8,9,10"
 sliding_window[2]/status=0
 sliding_window[3]/output="1,2,3,4,5,6,7,8,9,10"
 sliding_window[3]/status=0
+sliding_window[6]/output="1,4,7,10;2,5,8,11;3,6,9,12;4,7,10,13;5,8,11,14;6,9,12,15"
+sliding_window[6]/status=0
+
 # Sliding window size is greater than input window
 sliding_window[4]/output=""
 sliding_window[4]/status=1
+sliding_window[7]/output=""
+sliding_window[7]/status=1
 # Negative test
 sliding_window[5]/output=""
 sliding_window[5]/status=1
@@ -37,9 +46,14 @@ binary_sliding_window[2]/output="1,2,3,4,5,6,7,8,9;2,3,4,5,6,7,8,9,10"
 binary_sliding_window[2]/status=0
 binary_sliding_window[3]/output="1,2,3,4,5,6,7,8,9,10"
 binary_sliding_window[3]/status=0
+binary_sliding_window[6]/output="1,4,7,10;2,5,8,11;3,6,9,12;4,7,10,13;5,8,11,14;6,9,12,15"
+binary_sliding_window[6]/status=0
+
 # Sliding window size is greater than input window
 binary_sliding_window[4]/output=""
 binary_sliding_window[4]/status=1
+binary_sliding_window[7]/output=""
+binary_sliding_window[7]/status=1
 # Negative test
 binary_sliding_window[5]/output=""
 binary_sliding_window[5]/status=1
@@ -47,6 +61,12 @@ binary_sliding_window[5]/status=1
 # Input record has multiple fields
 multi_fields[0]/output="1,a,2,2,b,u;b,b,b,5,d,6"
 multi_fields[0]/status=0
+multi_fields[1]/output="1,a,2,b,b,b;5,d,6,9,m,6"
+multi_fields[1]/status=0
+
 multi_fields_sliding[0]/output="1,a,2,2,b,7,3,c,4;2,b,7,3,c,4,5,d,6"
 multi_fields_sliding[0]/status=0
+multi_fields_sliding[1]/output="1,a,2,5,d,6;2,b,7,7,f,8;3,c,4,9,m,0"
+multi_fields_sliding[1]/status=0
+
 
