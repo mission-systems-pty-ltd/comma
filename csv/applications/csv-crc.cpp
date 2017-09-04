@@ -69,6 +69,7 @@ static void usage( bool )
     std::cerr << "        16: 16-bit, generator 0x8805" << std::endl;
     std::cerr << "        ccitt: 16-bit, generator 0x1021" << std::endl;
     std::cerr << "        xmodem: 16-bit, generator 0x8408" << std::endl;
+    std::cerr << "        xmodem-correct: 16-bit, generator 0x1021" << std::endl;
     std::cerr << "        32: 32-bit, generator 0x04C11DB7" << std::endl;
     //std::cerr << "        checksum16: simple 16-bit checksum (todo)" << std::endl;
     //std::cerr << "        checksum32: simple 32-bit checksum (todo)" << std::endl;
@@ -271,10 +272,18 @@ int main( int ac, char** av )
             else if( commands[i] == "recover" ) { recover = true; }
             else { std::cerr << "csv-crc: expected command, got '" << commands[i] << "'" << std::endl; return 1; }
         }
+        // Note that the crc versions identified by boost typedef's are not always correct.
+        // This is the definitive list of 16 bits CRC algorithms:
+        //     http://reveng.sourceforge.net/crc-catalogue/16.htm
+        // The error is acknowledged in the boost/crc git repo:
+        //     https://github.com/boostorg/crc/blob/develop/include/boost/crc.hpp
+        // but for some reason this is not in any released Boost version (up to at least Boost 1.65)
         if( crc == "16" ) { return run_< boost::crc_16_type >(); }
         else if( crc == "32" ) { return run_< boost::crc_32_type >(); }
         else if( crc == "ccitt" ) { return run_< boost::crc_ccitt_type >(); }
         else if( crc == "xmodem" ) { return run_< boost::crc_xmodem_type >(); }
+        // the following is designated boost::crc_xmodem_t in the git repo for boost/crc.hpp
+        else if( crc == "xmodem-correct" ) { return run_< boost::crc_optimal< 16, 0x1021, 0, 0, false, false > >(); }
         std::cerr << "csv-crc: expected crc type, got \"" << crc << "\"" << std::endl;
         return 1;
     }
