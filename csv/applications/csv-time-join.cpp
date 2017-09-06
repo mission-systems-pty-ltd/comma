@@ -354,6 +354,7 @@ int main( int ac, char** av )
             std::deque<timestring_t> bounding_queue;
             bool next = true;
             bool bounding_data_available;
+            bool upper_bound_added = false;
 
             // add a fake entry for an lower bound to allow stdin before first bound to match
             bounding_queue.push_back( std::make_pair( boost::posix_time::neg_infin, "" ));
@@ -415,10 +416,11 @@ int main( int ac, char** av )
                         bounding_queue.pop_front();
                     }
                 }
-                if( bounding_istream->eof() )
+                if( !upper_bound_added && bounding_istream->eof() )
                 {
                     // add a fake entry for an upper bound to allow stdin data above last bound to match
                     bounding_queue.push_back( std::make_pair( boost::posix_time::pos_infin, "" ));
+                    upper_bound_added = true;
                 }
 
                 //if we are done with the last bounded point get next
