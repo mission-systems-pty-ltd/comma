@@ -44,8 +44,8 @@ static const double default_window = 1.0f;
 static const double default_window_resolution = 0.1f;
 static const double default_update_interval = 1.0f;
 static const char default_delimiter = ',';
-static const std::string standard_output_fields="timestamp,received_bytes,bandwidth/all_time,bandwidth/window";
-static const std::string extended_output_fields="timestamp,received_bytes,bandwidth/all_time,bandwidth/window,records_per_second/all_time,records_per_second/window";
+static const std::string standard_output_fields="timestamp,received_bytes,bytes_per_second/all_time,bytes_per_second/window";
+static const std::string extended_output_fields="timestamp,received_bytes,bytes_per_second/all_time,bytes_per_second/window,records_per_second/all_time,records_per_second/window";
 
 static void bash_completion( unsigned const ac, char const * const * av )
 {

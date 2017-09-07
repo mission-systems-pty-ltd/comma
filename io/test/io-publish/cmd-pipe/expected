@@ -1,0 +1,1 @@
+output[0]/processes="io-publish,bash,yes,sed"

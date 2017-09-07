@@ -1,0 +1,12 @@
+port=42642
+
+function exec_cmd()
+{
+    yes
+}
+export -f exec_cmd
+
+function client_cmd()
+{
+    socat tcp:localhost:$port - | head -10 > client.out
+}

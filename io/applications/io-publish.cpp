@@ -30,14 +30,11 @@
 /// @author cedric wohlleber
 
 #include <errno.h>
-#include <fcntl.h>
 #include <signal.h>
-#include <string.h>
-#include <sys/select.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include <boost/bind.hpp>
-#include <boost/function.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/scoped_ptr.hpp>
@@ -69,19 +66,31 @@ static void usage( bool verbose = false )
     std::cerr << "    --multiplier,-m: multiplier for packet size, default is 1. The actual packet size will be m * s" << std::endl;
     std::cerr << "    --no-discard: if present, do blocking write to every open stream" << std::endl;
     std::cerr << "    --no-flush: if present, do not flush the output stream (use on high bandwidth sources)" << std::endl;
+    std::cerr << "    --exec=[<cmd>]: read from cmd rather than stdin" << std::endl;
+    std::cerr << "    --on-demand: only run <cmd> when a client is connected" << std::endl;
     std::cerr << std::endl;
     std::cerr << "client options" << std::endl;
     std::cerr << "    --exit-on-no-clients,-e: once the last client disconnects, exit" << std::endl;
     std::cerr << "    --output-number-of-clients,--clients: output to stdout timestamped number of clients whenever it changes" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    attention: in the current implementation, the number of clients will be updated only on attemt to write a new record," << std::endl;
-    std::cerr << "               i.e. output number of clients will not change if there are no new records on stdin, even if the actual" << std::endl;
-    std::cerr << "               number of clients changes" << std::endl;
+    std::cerr << "    attention: in the current implementation, the number of clients will be" << std::endl;
+    std::cerr << "               updated only on attempt to write a new record," << std::endl;
+    std::cerr << "               i.e. output number of clients will not change if there are no new" << std::endl;
+    std::cerr << "               records on stdin, even if the actual number of clients changes" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    known problem: io::ostream or at least boost::asio::ostream does not mark stream as bad, if one tries to write to" << std::endl;
-    std::cerr << "                   it first time after stream has been closed; the stream is marked as bad only after writing to it second time" << std::endl;
-    std::cerr << "                   this problem is pretty benign: the worst thing that happens is writing to a closed stream, which will not" << std::endl;
-    std::cerr << "                   cause grief unless you specifically rely io-publish on exiting on no clients for a rarely sent heartbeat" << std::endl;
+    std::cerr << "    known problems: io::ostream or at least boost::asio::ostream does not mark" << std::endl;
+    std::cerr << "               stream as bad, if one tries to write to it first time after" << std::endl;
+    std::cerr << "               stream has been closed; the stream is marked as bad only after" << std::endl;
+    std::cerr << "               writing to it second time." << std::endl;
+    std::cerr << "               This problem is pretty benign: the worst thing that happens is" << std::endl;
+    std::cerr << "               writing to a closed stream, which will not cause grief unless you" << std::endl;
+    std::cerr << "               specifically rely on io-publish exiting on no clients for a" << std::endl;
+    std::cerr << "               rarely sent heartbeat." << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "               io-publish will not be very responsive in counting clients for" << std::endl;
+    std::cerr << "               low bandwidth streams. It immediately recognises new clients" << std::endl;
+    std::cerr << "               but might take a while to notice that a client has gone." << std::endl;
+    std::cerr << "               This affects --output-number-of-clients and --on-demand." << std::endl;
     std::cerr << std::endl;
     std::cerr << "output streams" << std::endl;
     std::cerr << "    tcp:<port>: e.g. tcp:1234" << std::endl;
@@ -102,13 +111,20 @@ class publish
         
         typedef publishers_t::scoped_transaction transaction_t;
         
-        publish( const std::vector< std::string >& filenames, unsigned int packet_size, bool discard, bool flush, bool output_number_of_clients, bool exit_on_no_clients )
+        publish( const std::vector< std::string >& filenames
+               , unsigned int packet_size
+               , bool discard
+               , bool flush
+               , bool output_number_of_clients
+               , bool exit_on_no_clients
+               )
             : buffer_( packet_size, '\0' )
             , packet_size_( packet_size )
             , output_number_of_clients_( output_number_of_clients )
             , exit_on_no_clients_( exit_on_no_clients )
             , got_first_client_( false )
             , sizes_( filenames.size(), 0 )
+            , num_clients_( 0 )
             , is_shutdown_( false )
         {
             struct sigaction new_action, old_action;
@@ -117,8 +133,14 @@ class publish
             sigaction( SIGPIPE, NULL, &old_action );
             sigaction( SIGPIPE, &new_action, NULL );
             transaction_t t( publishers_ );
-            for( std::size_t i = 0; i < filenames.size(); ++i ) { t->push_back( new comma::io::publisher( filenames[i], is_binary_() ? comma::io::mode::binary : comma::io::mode::ascii, !discard, flush ) ); }
-            acceptor_thread_.reset( new boost::thread( boost::bind( &publish::accept_, boost::ref( *this ) ) ) );
+            for( std::size_t i = 0; i < filenames.size(); ++i )
+            {
+                t->push_back( new comma::io::publisher( filenames[i]
+                                                      , is_binary_() ? comma::io::mode::binary : comma::io::mode::ascii
+                                                      , !discard
+                                                      , flush ));
+            }
+            acceptor_thread_.reset( new boost::thread( boost::bind( &publish::accept_, boost::ref( *this ))));
         }
         
         ~publish()
@@ -129,23 +151,25 @@ class publish
             { for( std::size_t i = 0; i < t->size(); ++i ) { ( *t )[i].close(); } }
         }
         
-        bool read()
+        bool read( std::istream& input )
         {
             if( is_binary_() )
             {
-                std::cin.read( &buffer_[0], buffer_.size() );
-                if( std::cin.gcount() < int( buffer_.size() ) || !std::cin.good() ) { return false; }
+                input.read( &buffer_[0], buffer_.size() );
+                if( input.gcount() < int( buffer_.size() ) || !input.good() ) { return false; }
             }
             else
             {
-                std::getline( std::cin, buffer_ );
+                std::getline( input, buffer_ );
                 buffer_ += '\n';
-                if( !std::cin.good() ) { return false; }
+                if( !input.good() ) { return false; }
             }
             transaction_t t( publishers_ );
             for( std::size_t i = 0; i < t->size(); ++i ) { ( *t )[i].write( &buffer_[0], buffer_.size(), false ); }
             return handle_sizes_( t );
         }
+
+        unsigned int num_clients() { return num_clients_; }
 
     private:
         bool is_binary_() const { return packet_size_ > 0; }
@@ -162,6 +186,7 @@ class publish
                 if( sizes_[i] == size ) { continue; }
                 sizes_[i] = size;
                 changed = true;
+                num_clients_ = total;
             }
             if( !changed ) { return true; }
             if( output_number_of_clients_ )
@@ -189,7 +214,13 @@ class publish
             {
                 select.wait( boost::posix_time::millisec( 100 ) ); // arbitrary timeout
                 transaction_t t( publishers_ );
-                for( unsigned int i = 0; i < t->size(); ++i ) { if( select.read().ready( ( *t )[i].acceptor_file_descriptor() ) ) { ( *t )[i].accept(); } }
+                for( unsigned int i = 0; i < t->size(); ++i )
+                {
+                    if( select.read().ready( ( *t )[i].acceptor_file_descriptor() ) )
+                    {
+                        ( *t )[i].accept();
+                    }
+                }
                 handle_sizes_( t );
             }
         }
@@ -201,8 +232,54 @@ class publish
         bool exit_on_no_clients_;
         bool got_first_client_;
         std::vector< unsigned int > sizes_;
+        unsigned int num_clients_;
         boost::scoped_ptr< boost::thread > acceptor_thread_;
         bool is_shutdown_;
+};
+
+class command
+{
+    public:
+        command( const std::string& cmd )
+            : cmd_( cmd )
+            , child_pid_( -1 )
+        {
+            // create a pipe to send the child stdout to the parent stdin
+            int fd[2];
+            if( pipe( fd ) == -1 ) { comma::last_error::to_exception( "couldn't open pipe" ); }
+
+            pid_t pid = fork();
+            if( pid == -1 ) { comma::last_error::to_exception( "failed to fork()" ); }
+            if( pid == 0 )
+            {
+                // make the child a process group leader
+                setsid();
+                // connect pipe input to stdout in child
+                while(( dup2( fd[1], STDOUT_FILENO ) == -1 ) && ( errno == EINTR )) {}
+                close( fd[1] );     // no longer need fd[1], now that it's duped
+                close( fd[0] );     // don't need pipe output in the child
+                execlp( "bash", "bash", "-c", &cmd_[0], NULL );
+                std::cerr << "io-publish: failed to exec child: errno "
+                          << comma::last_error::value() << " - "
+                          << comma::last_error::to_string() << std::endl;
+                exit( 1 );
+            }
+            child_pid_ = pid;
+            // connect pipe output to stdin in parent
+            while(( dup2( fd[0], STDIN_FILENO ) == -1 ) && ( errno == EINTR )) {}
+            close( fd[0] );         // no longer need fd[0], now that it's duped
+            close( fd[1] );         // don't need pipe input in the parent
+        }
+
+        ~command()
+        {
+            kill( -child_pid_, SIGTERM );
+            waitpid( -child_pid_, NULL, 0 );
+        }
+
+    private:
+        std::string cmd_;
+        pid_t child_pid_;
 };
 
 int main( int ac, char** av )
@@ -210,18 +287,40 @@ int main( int ac, char** av )
     try
     {
         comma::command_line_options options( ac, av, usage );
-        const std::vector< std::string >& names = options.unnamed( "--no-discard,--verbose,-v,--no-flush,--output-number-of-clients,--clients,--exit-on-no-clients,-e", "-.+" );
+        const std::vector< std::string >& names = options.unnamed( "--no-discard,--verbose,-v,--no-flush,--output-number-of-clients,--clients,--exit-on-no-clients,-e,--on-demand", "-.+" );
         if( names.empty() ) { std::cerr << "io-publish: please specify at least one stream; use '-' for stdout" << std::endl; return 1; }
         const boost::array< comma::signal_flag::signals, 2 > signals = { { comma::signal_flag::sigint, comma::signal_flag::sigterm } };
         comma::signal_flag is_shutdown( signals );
+        bool on_demand = options.exists( "--on-demand" );
         publish p( names
                  , options.value( "-s,--size", 0 ) * options.value( "-m,--multiplier", 1 )
                  , !options.exists( "--no-discard" )
                  , !options.exists( "--no-flush" )
                  , options.exists( "--output-number-of-clients,--clients" )
-                 , options.exists( "--exit-on-no-clients,-e" ) );
+                 , options.exists( "--exit-on-no-clients,-e" ) || on_demand );
+        std::string exec_cmd = options.value< std::string >( "--exec", "" );
         //ProfilerStart( "io-publish.prof" ); {
-        while( std::cin.good() && !is_shutdown && p.read() );
+        if( exec_cmd.empty() )
+        {
+            while( std::cin.good() && !is_shutdown && p.read( std::cin ));
+        }
+        else
+        {
+            bool done = false;
+            while( !done && !is_shutdown )
+            {
+                if( !on_demand || p.num_clients() > 0 )
+                {
+                    command cmd( exec_cmd );
+                    while( std::cin.good() && !is_shutdown && p.read( std::cin ));
+                    if( !on_demand ) { done = true; }
+                }
+                else
+                {
+                    sleep( 0.1 );
+                }
+            }
+        }
         //ProfilerStop(); }
         if( is_shutdown ) { std::cerr << "io-publish: interrupted by signal" << std::endl; }
         return 0;
