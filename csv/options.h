@@ -49,7 +49,7 @@ class options
         options( int argc, char** argv, const std::string& defaultFields = "" );
 
         /// constructor
-        options( const comma::command_line_options& options, const std::string& defaultFields = "" );
+        options( const comma::command_line_options& options, const std::string& defaultFields = "", bool set_full_xpath = false );
 
         /// return usage to incorporate into application usage
         static std::string usage( const std::string& default_fields = "" );
@@ -98,6 +98,9 @@ class options
         /// return true, if fields have some given fields (convenience function, slow)
         /// @param field comma-separated fields, e.g. "x,y,z"
         bool has_some_of_fields( const std::string& fields_to_check ) const;
+
+        /// returns comma separated list of valueless csv options that can be passed to command_line_options.unnamed
+        static std::string valueless_options();
 
     private:
         boost::optional< csv::format > format_;

@@ -85,9 +85,10 @@ options::options( int argc, char** argv, const std::string& defaultFields )
     impl::init( *this, comma::command_line_options( argc, argv ), defaultFields );
 }
 
-options::options( const comma::command_line_options& options, const std::string& defaultFields )
+options::options( const comma::command_line_options& options, const std::string& defaultFields, bool set_full_xpath )
 {
     impl::init( *this, options, defaultFields );
+    if(set_full_xpath) { full_xpath = true; }
 }
 
 std::string options::usage( const std::string& default_fields )
@@ -123,6 +124,11 @@ bool options::has_some_of_fields( const std::string& field ) const
     const std::vector< std::string >& f = split( field, ',' );
     for( unsigned int i = 0; i < f.size(); ++i ) { if( std::find( v.begin(), v.end(), f[i] ) != v.end() ) { return true; } }
     return false;
+}
+
+std::string options::valueless_options()
+{
+    return "--full-xpath,--flush";
 }
 
 } } // namespace comma { namespace csv {
