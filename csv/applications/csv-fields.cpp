@@ -67,6 +67,9 @@ static void usage( bool )
     std::cerr << std::endl;
     std::cerr << "    default: set empty fields to default values" << std::endl;
     std::cerr << "        --values=<default values>: e.g: csv-fields default --values=',,,0,0,not-a-date-time'" << std::endl;
+    std::cerr << "    has: check presence of field(s)" << std::endl;
+    std::cerr << "        --any: check any of the fields are present" << std::endl;
+    std::cerr << "        --fields=<fields>: fields to check for" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    prefix: prefix all non-empty field names" << std::endl;
     std::cerr << "        --basename: remove prefix of given fields; incompatible with --path" << std::endl;
@@ -132,6 +135,12 @@ static void usage( bool )
     std::cerr << "        cut fields:" << std::endl;
     std::cerr << "        echo a,b,c,d | csv-fields cut --fields b,c" << std::endl;
     std::cerr << "        a,d" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    has" << std::endl;
+    std::cerr << "        echo a,b,c,d | csv-fields has --fields b,d && echo 'fields present'" << std::endl;
+    std::cerr << "        fields present" << std::endl;
+    std::cerr << "        echo a,b,c,d | csv-fields has --fields t,b,d || echo 'fields missing'" << std::endl;
+    std::cerr << "        fields missing" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    make-fixed" << std::endl;
     std::cerr << "        { echo a,b,c,d; echo x,y,z; } | csv-fields make-fixed --count=6" << std::endl;
@@ -355,6 +364,23 @@ int main( int ac, char** av )
                 std::cout << std::endl;
             }
             return 0;
+        }
+        if( operation == "has" )
+        {
+            const std::string& f = options.value< std::string >( "--fields" );
+            const std::vector< std::string >& v = comma::split( f, delimiter );
+            const std::set< std::string > fields( v.begin(), v.end() );
+            const bool any = options.exists( "--any" );
+            std::string line;
+            std::getline( std::cin, line );
+            if( line.empty() ) { return 1; }
+            const std::vector< std::string >& l = comma::split( line, delimiter );
+            const std::set< std::string > input( l.begin(), l.end() );
+            unsigned int matches = 0;
+            for( const auto& field : fields ) { if( input.count( field ) ) { ++matches; if( any ) { break; } } }
+            if( !matches ) { return 1; }
+            if( any ) { return 0; }
+            return matches == fields.size() ? 0 : 1;
         }
         if( operation == "make-fixed" )
         {
