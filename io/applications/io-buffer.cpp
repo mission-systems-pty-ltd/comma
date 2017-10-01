@@ -218,7 +218,6 @@ int main( int argc, char** argv )
         verbose = options.value( "--verbose,-v", false );
         if( verbose ) { std::cerr << name() << ": called as: " << options.string() << std::endl; }
 
-        bool in_operation = false;
         #ifdef WIN32
         if( has_size || operation.size() == 1 ) { _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
@@ -229,7 +228,6 @@ int main( int argc, char** argv )
 #ifdef WIN32
     std::cerr << "io-buffer: 'in' operation not implemented on windows" << std::endl; return 1;
 #endif // #ifdef WIN32
-            in_operation = true; 
         }
         else { std::cerr  << "unknown operation found: " << operation.front() << std::endl; return 1; }
         
