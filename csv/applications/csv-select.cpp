@@ -405,6 +405,7 @@ int main( int ac, char** av )
             comma::csv::format format = options.exists( "--format" )
                                       ? comma::csv::format( options.value< std::string >( "--format" ) )
                                       : comma::csv::impl::unstructured::guess_format( line );
+            if( !options.exists( "--format" ) ) { std::cerr << "csv-select: guessed format from the first input line: " << format.string() << "; if you think the guess is wrong, please specify --format" << std::endl; }
             init_input( format, options );
             comma::csv::ascii_input_stream< input_t > istream( std::cin, csv, input );
             // todo: quick and dirty: no time to debug why the commented section does not work (but that's the right way)
