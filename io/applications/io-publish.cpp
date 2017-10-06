@@ -247,21 +247,17 @@ class command
             // create a pipe to send the child stdout to the parent stdin
             int fd[2];
             if( pipe( fd ) == -1 ) { comma::last_error::to_exception( "couldn't open pipe" ); }
-
             pid_t pid = fork();
             if( pid == -1 ) { comma::last_error::to_exception( "failed to fork()" ); }
             if( pid == 0 )
             {
-                // make the child a process group leader
-                setsid();
+                setsid(); // make the child a process group leader
                 // connect pipe input to stdout in child
                 while(( dup2( fd[1], STDOUT_FILENO ) == -1 ) && ( errno == EINTR )) {}
                 close( fd[1] );     // no longer need fd[1], now that it's duped
                 close( fd[0] );     // don't need pipe output in the child
                 execlp( "bash", "bash", "-c", &cmd_[0], NULL );
-                std::cerr << "io-publish: failed to exec child: errno "
-                          << comma::last_error::value() << " - "
-                          << comma::last_error::to_string() << std::endl;
+                std::cerr << "io-publish: failed to exec child: errno " << comma::last_error::value() << " - " << comma::last_error::to_string() << std::endl;
                 exit( 1 );
             }
             child_pid_ = pid;
@@ -286,7 +282,11 @@ int main( int ac, char** av )
 {
     try
     {
-        comma::command_line_options options( ac, av, usage );
+        //comma::command_line_options options( ac, av, usage );
+        std::vector< std::string > head, tail;
+        for( int i = 0; i < ac && std::string( "--" ) != av[i]; ++i ) { head.push_back( av[i] ); }
+        for( int i = head.size() + 1; i < ac; ++i ) { tail.push_back( av[i] ); }
+        comma::command_line_options options( head, usage );
         const std::vector< std::string >& names = options.unnamed( "--no-discard,--verbose,-v,--no-flush,--output-number-of-clients,--clients,--exit-on-no-clients,-e,--on-demand", "-.+" );
         if( names.empty() ) { std::cerr << "io-publish: please specify at least one stream; use '-' for stdout" << std::endl; return 1; }
         const boost::array< comma::signal_flag::signals, 2 > signals = { { comma::signal_flag::sigint, comma::signal_flag::sigterm } };
@@ -298,9 +298,14 @@ int main( int ac, char** av )
                  , !options.exists( "--no-flush" )
                  , options.exists( "--output-number-of-clients,--clients" )
                  , options.exists( "--exit-on-no-clients,-e" ) || on_demand );
-        std::string exec_cmd = options.value< std::string >( "--exec", "" );
+        std::string exec_command = options.value< std::string >( "--exec", "" );
+        if( !tail.empty() )
+        {
+            if( !exec_command.empty() ) { std::cerr << "io-publish: expected either --exec or --, got both" << std::endl; return 1; }
+            exec_command = comma::join( tail, ' ' );
+        }
         //ProfilerStart( "io-publish.prof" ); {
-        if( exec_cmd.empty() )
+        if( exec_command.empty() )
         {
             while( std::cin.good() && !is_shutdown && p.read( std::cin ));
         }
@@ -311,7 +316,7 @@ int main( int ac, char** av )
             {
                 if( !on_demand || p.num_clients() > 0 )
                 {
-                    command cmd( exec_cmd );
+                    command cmd( exec_command );
                     while( std::cin.good() && !is_shutdown && p.read( std::cin ));
                     if( !on_demand ) { done = true; }
                 }
