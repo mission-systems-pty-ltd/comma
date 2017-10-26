@@ -98,7 +98,7 @@ namespace comma { namespace test { namespace serialise_guess {
 
 static const std::string json =
     "{\n"
-    "    \"name\": \"dummy\", // comment\n"
+    "    \"name\": \"dummy\",\n"
     "    \"size\": \"10\",\n"
     "    \"nest\": {\n"
     "                  \"name\": \"nested\",\n"
