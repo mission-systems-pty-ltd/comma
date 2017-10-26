@@ -96,8 +96,8 @@ class stream(object):
         self.data_extraction_fields = self._data_extraction_fields()
         self.struct_and_extraction_fields = zip(self.struct.flat_dtype.names,
                                                 self.data_extraction_fields)
-        self.write_dtype = self._write_dtype()
-        self.unrolled_write_dtype = structured_dtype( ','.join( types_of_dtype( self.write_dtype, unroll=True ) ) )
+        #self.write_dtype = self._write_dtype()
+        #self.unrolled_write_dtype = structured_dtype( ','.join( types_of_dtype( self.write_dtype, unroll=True ) ) )
         #print >>sys.stderr, "self.write_dtype.descr = %s" % str(self.write_dtype.descr)
         #print >>sys.stderr, "self.unrolled_write_dtype = %s" % str(self.unrolled_write_dtype)
         self._input_array = None
@@ -433,9 +433,12 @@ class stream(object):
         return tuple('f{}'.format(index_of(field)) for field in self.struct.fields)
 
     def _write_dtype(self):
+        import sys
         names = []
         formats = []
         offsets = []
+        #print >>sys.stderr, self.struct.flat_dtype
+        #print >>sys.stderr, self.struct.flat_dtype.fields
         for name in self.fields:
             try:
                 flat_dtype = self.struct.flat_dtype.fields[name]
@@ -445,6 +448,9 @@ class stream(object):
             except KeyError:
                 pass
         itemsize = self.struct.flat_dtype.itemsize
+        #print >>sys.stderr, "names=%s" % str(names)
+        #print >>sys.stderr, "formats=%s" % str(formats)
+        #print >>sys.stderr, "offsets=%s" % str(offsets)
         return np.dtype( dict( names=names, formats=formats, offsets=offsets, itemsize=itemsize ) )
 
 
