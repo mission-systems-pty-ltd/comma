@@ -96,8 +96,8 @@ class stream(object):
         self.data_extraction_fields = self._data_extraction_fields()
         self.struct_and_extraction_fields = zip(self.struct.flat_dtype.names,
                                                 self.data_extraction_fields)
-        self.write_dtype = self._write_dtype()
-        self.unrolled_write_dtype = structured_dtype( ','.join( types_of_dtype( self.write_dtype, unroll=True ) ) )
+        #self.write_dtype = self._write_dtype()
+        #self.unrolled_write_dtype = structured_dtype( ','.join( types_of_dtype( self.write_dtype, unroll=True ) ) )
         #print >>sys.stderr, "self.write_dtype.descr = %s" % str(self.write_dtype.descr)
         #print >>sys.stderr, "self.unrolled_write_dtype = %s" % str(self.unrolled_write_dtype)
         self._input_array = None
