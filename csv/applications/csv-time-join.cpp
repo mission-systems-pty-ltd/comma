@@ -361,6 +361,8 @@ int main( int ac, char** av )
 
             while( ( stdin_stream.ready() || ( std::cin.good() && !std::cin.eof() ) ) )
             {
+                if( !std::cin.good() ) { select.read().remove( 0 ); }
+                if( !bounding_istream->good() ) { select.read().remove( bounding_istream.fd() ); }
                 bounding_data_available = bounding_stream.ready() || ( bounding_istream->good() && !bounding_istream->eof() );
                 #ifdef WIN32
                 bool bounding_stream_ready = true;
