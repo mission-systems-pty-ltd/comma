@@ -96,6 +96,10 @@ class stream(object):
         self.data_extraction_fields = self._data_extraction_fields()
         self.struct_and_extraction_fields = zip(self.struct.flat_dtype.names,
                                                 self.data_extraction_fields)
+        self.write_dtype = self._write_dtype()
+        self.unrolled_write_dtype = structured_dtype( ','.join( types_of_dtype( self.write_dtype, unroll=True ) ) )
+        #print >>sys.stderr, "self.write_dtype.descr = %s" % str(self.write_dtype.descr)
+        #print >>sys.stderr, "self.unrolled_write_dtype = %s" % str(self.unrolled_write_dtype)
         self._input_array = None
         self._ascii_buffer = None
         self._strings = functools.partial(map, self.numpy_scalar_to_string)
@@ -218,6 +222,7 @@ class stream(object):
                 s.tofile(self.target)
         else:
             unrolled_array = s.view(self.struct.unrolled_flat_dtype)
+            #unrolled_array = s.view( self.unrolled_write_dtype )
             if self.tied:
                 lines = self._tie_ascii(self.tied._ascii_buffer, unrolled_array)
             else:
@@ -426,6 +431,15 @@ class stream(object):
             return ()
         index_of = self.complete_fields.index
         return tuple('f{}'.format(index_of(field)) for field in self.struct.fields)
+
+    def _write_dtype(self):
+        formats = [ self.struct.flat_dtype.fields[name][0] for name in self.fields]
+        offsets = [ self.struct.flat_dtype.fields[name][1] for name in self.fields]
+        itemsize = self.struct.flat_dtype.itemsize
+        return np.dtype( dict( names=self.fields,
+                               formats=formats,
+                               offsets=offsets,
+                               itemsize=itemsize ) )
 
 
 def numpy_scalar_to_string(scalar, precision=DEFAULT_PRECISION):
