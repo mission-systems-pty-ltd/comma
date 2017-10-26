@@ -149,6 +149,48 @@ class test_structured_dtype(unittest.TestCase):
         expected = np.dtype([('f0', 'datetime64[us]')])
         self.assertEqual(structured_dtype('datetime64[us]'), expected)
 
+    def test_structure_out_of_order(self):
+        names1 = ['word', 'a3', 'byte', 'a2' ]
+        formats1 = [np.dtype('uint16'), np.dtype(('<f8', (3,))), np.dtype('uint8'), np.dtype(('<f8', (2,))) ]
+        offsets1 = [0, 2, 26, 27 ]
+        itemsize = 43
+
+        ndtype1 = np.dtype( dict( names=names1, formats=formats1, offsets=offsets1, itemsize=itemsize ) )
+        sorted_fields1 = sorted( list( ndtype1.fields.iteritems() ), key = lambda t: t[1] )
+
+        names2 = ['a3', 'word', 'a2', 'byte' ]
+        formats2 = [np.dtype(('<f8', (3,))), np.dtype('uint16'), np.dtype(('<f8', (2,))), np.dtype('uint8') ]
+        offsets2 = [2, 0, 27, 26 ]
+
+        ndtype2 = np.dtype( dict( names=names2, formats=formats2, offsets=offsets2, itemsize=itemsize ) )
+        sorted_fields2 = sorted( list( ndtype2.fields.iteritems() ), key = lambda t: t[1] )
+
+        self.assertEqual( sorted_fields1, sorted_fields2 )
+        self.assertEqual( len( ndtype1.descr ), 4 )
+        self.assertEqual( len( ndtype2.descr ), 5 )  # shall be 4
+        self.assertEqual( len( functions.types_of_dtype( ndtype1 ) ), 4 )
+        self.assertEqual( len( functions.types_of_dtype( ndtype2 ) ), 5 )  # shall be 4
+
+        if False:
+            import sys
+            self.assertEqual( sorted( ndtype1.descr ), sorted( ndtype2.descr ) )
+            self.assertEqual( sorted( functions.types_of_dtype( ndtype1 ) ), sorted( functions.types_of_dtype( ndtype2 ) ) )
+
+            print >>sys.stderr, "observe the differences:"
+
+            print >>sys.stderr, "ndtype1: ", ndtype1
+            print >>sys.stderr, "ndtype2: ", ndtype2
+
+            print >>sys.stderr, "ndtype1.fields: ", ndtype1.fields
+            print >>sys.stderr, "ndtype2.fields: ", ndtype2.fields
+            print >>sys.stderr, "fields identical: ", sorted_fields1 == sorted_fields2
+
+            print >>sys.stderr, "ndtype1.descr: ", ndtype1.descr
+            print >>sys.stderr, "ndtype2.descr: ", ndtype2.descr
+
+            print >>sys.stderr, "types_of_dtype( ndtype1 ): ", comma.numpy.functions.types_of_dtype( ndtype1 )
+            print >>sys.stderr, "types_of_dtype( ndtype2 ): ", comma.numpy.functions.types_of_dtype( ndtype2 )
+
 
 if __name__ == '__main__':
     unittest.main()
