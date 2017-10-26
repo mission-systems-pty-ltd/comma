@@ -433,13 +433,19 @@ class stream(object):
         return tuple('f{}'.format(index_of(field)) for field in self.struct.fields)
 
     def _write_dtype(self):
-        formats = [ self.struct.flat_dtype.fields[name][0] for name in self.fields]
-        offsets = [ self.struct.flat_dtype.fields[name][1] for name in self.fields]
+        names = []
+        formats = []
+        offsets = []
+        for name in self.fields:
+            try:
+                flat_dtype = self.struct.flat_dtype.fields[name]
+                names.append( name )
+                formats.append( flat_dtype[0] )
+                offsets.append( flat_dtype[1] )
+            except KeyError:
+                pass
         itemsize = self.struct.flat_dtype.itemsize
-        return np.dtype( dict( names=self.fields,
-                               formats=formats,
-                               offsets=offsets,
-                               itemsize=itemsize ) )
+        return np.dtype( dict( names=names, formats=formats, offsets=offsets, itemsize=itemsize ) )
 
 
 def numpy_scalar_to_string(scalar, precision=DEFAULT_PRECISION):
