@@ -47,7 +47,6 @@ comma::csv::options csv;
 boost::optional< boost::posix_time::time_duration > duration;
 std::string suffix;
 unsigned int size = 0;
-
 bool passthrough;
 
 template < typename T >
@@ -130,13 +129,8 @@ int main( int argc, char** argv )
         else { run< comma::uint32 >(); }
         return 0;
     }
-    catch( std::exception& ex )
-    {
-        std::cerr << argv[0] << ": " << ex.what() << std::endl;
-    }
-    catch( ... )
-    {
-        std::cerr << argv[0] << ": unknown exception" << std::endl;
-    }
+    catch( std::exception& ex ) { std::cerr << argv[0] << ": " << ex.what() << std::endl; }
+    catch( ... ) { std::cerr << argv[0] << ": unknown exception" << std::endl; }
     return 1;
 }
+
