@@ -512,10 +512,14 @@ static int sort( const comma::command_line_options& options )
     input_with_block default_input;
     std::vector< std::string > v = comma::split( stdin_csv.fields, ',' );
     std::vector< std::string > order = options.exists( "--order" ) ? comma::split( options.value< std::string >( "--order" ), ',' ) : v;
-    order.push_back("block"); // ensure block field is propagated to key fields
     std::vector< std::string > w( v.size() );
     bool unique = options.exists( "--unique,-u" );
     
+    for( std::size_t k = 0; k < v.size(); ++k )
+    {
+        if( v[k] == "block" ) { w[k] = "block"; }
+    }
+
     std::string first_line;
     comma::csv::format f;
     if( stdin_csv.binary() ) { f = stdin_csv.format(); }
@@ -529,10 +533,9 @@ static int sort( const comma::command_line_options& options )
     }
     for( std::size_t i = 0; i < order.size(); ++i ) // quick and dirty, wasteful, but who cares
     {
-        if( order[i].empty() ) { continue; }
+        if( order[i].empty() || order[i] == "block" ) { continue; }
         for( std::size_t k = 0; k < v.size(); ++k )
         {
-            if( v[k] == "block" ) { w[k] = "block"; continue; }
             if( v[k].empty() || v[k] != order[i] ) 
             { 
                 if( k + 1 == v.size() ) { std::cerr << "csv-sort: order field name \"" << order[i] << "\" not found in input fields \"" << stdin_csv.fields << "\"" << std::endl; return 1; }
