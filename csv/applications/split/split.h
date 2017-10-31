@@ -140,6 +140,7 @@ class split
         Files files_;
         ids_type_ seen_ids_;
         bool pass_;
+        bool flush_;
 };
 
 } } } // namespace comma { namespace csv { namespace applications {

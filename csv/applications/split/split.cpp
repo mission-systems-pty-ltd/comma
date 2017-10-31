@@ -56,6 +56,7 @@ split< T >::split( boost::optional< boost::posix_time::time_duration > period
     , period_( period )
     , suffix_( suffix )
     , pass_ ( pass )
+    , flush_( csv.flush )
 {
     if( ( csv.has_field( "t" ) || csv.fields.empty() ) && !period ) { COMMA_THROW( comma::exception, "please specify --period" ); }
     if( csv.fields.empty() ) { return; }
@@ -72,6 +73,7 @@ void split< T >::write( const char* data, unsigned int size )
     if( binary_ ) { binary_->get( current_, data ); }
     else { current_.timestamp = boost::get_system_time(); }
     ofstream_().write( data, size );
+    if( flush_ ) { ofstream_().flush(); }
     if ( pass_ ) { std::cout.write( data, size ); std::cout.flush(); }
 }
 
@@ -84,6 +86,7 @@ void split< T >::write ( const std::string& line )
     std::ofstream& ofs = ofstream_();
     ofs.write( &line[0], line.size() );
     ofs.put( '\n' );
+    if( flush_ ) { ofs.flush(); }
     if ( pass_ ) { std::cout.write( &line[0], line.size() ); std::cout.put('\n'); std::cout.flush(); }
 }
 
