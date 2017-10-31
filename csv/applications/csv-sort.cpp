@@ -107,7 +107,7 @@ static void usage( bool more )
         std::cerr << "csv options:" << std::endl;
         std::cerr << comma::csv::options::usage() << std::endl;
     }
-    exit( -1 );
+    exit( 0 );
 }
 
 static bool verbose;
@@ -592,18 +592,16 @@ static int sort( const comma::command_line_options& options )
         }
         if( !p ) { break; }
         block = p->block;
+        input_t::map::mapped_type& d = sorted_map[ *p ];
+        if( unique && !d.empty() ) { continue; }
         if( stdin_stream.is_binary() )
         {
-            input_t::map::mapped_type& d = sorted_map[ *p ];
-            if( unique && !d.empty() ) { continue; }
             d.push_back( std::string() );
             d.back().resize( stdin_csv.format().size() );
             ::memcpy( &d.back()[0], stdin_stream.binary().last(), stdin_csv.format().size() );
         }
         else
         {
-            input_t::map::mapped_type& d = sorted_map[ *p ];
-            if( unique && !d.empty() ) { continue; }
             d.push_back( comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) + "\n" );
         }
     }
@@ -615,10 +613,11 @@ int main( int ac, char** av )
     try
     {
         comma::command_line_options options( ac, av, usage );
+        options.assert_mutually_exclusive( "--discard-out-of-order,--discard-unsorted,--first,--min" );
+        options.assert_mutually_exclusive( "--discard-out-of-order,--discard-unsorted,--first,--max" );
         verbose = options.exists( "--verbose,-v" );
         stdin_csv = comma::csv::options( options );
         stdin_csv.full_xpath = true;
-        options.assert_mutually_exclusive( "--discard-out-of-order,--discard-unsorted,--first,--min,--max" );
         return options.exists( "--first,--min,--max" ) ? handle_operations( options ) : sort( options );
     }
     catch( std::exception& ex ) { std::cerr << "csv-sort: " << ex.what() << std::endl; }
