@@ -60,19 +60,20 @@ static void usage( bool more )
     std::cerr << std::endl;
     std::cerr << "Options:" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
+    std::cerr << "    --discard-out-of-order,--discard-unsorted: instead of sorting, discard records out of order" << std::endl;
     std::cerr << "    --first: first line matching given keys; first line in the block, if block field present" << std::endl;
-    std::cerr << "    --order <fields>: order in which to sort fields; default is input field order" << std::endl;
-    std::cerr << "    --string,-s: keys are strings; a quick and dirty option to support strings" << std::endl;
-    std::cerr << "                 default: double" << std::endl;
-    std::cerr << "    --reverse,-r: sort in reverse order" << std::endl;
-    std::cerr << "    --unique,-u: only outputs first line matching given keys" << std::endl;
-    std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
     std::cerr << "    --min: output only record(s) with minimum value for a given field." << std::endl;
     std::cerr << "           fields" << std::endl;
     std::cerr << "               id: if present, multiple id fields accepted; output minimum for each set of ids ; e.g. --fields=id,a,,id" << std::endl;
     std::cerr << "               block: if present; output minimum for each contiguous block" << std::endl;
     std::cerr << "    --max: output record(s) with maximum value, same semantics as --min" << std::endl;
     std::cerr << "           --min and --max may be used together." << std::endl;
+    std::cerr << "    --order <fields>: order in which to sort fields; default is input field order" << std::endl;
+    std::cerr << "    --reverse,--descending,-r: sort in reverse order" << std::endl;
+    std::cerr << "    --string,-s: keys are strings; a quick and dirty option to support strings" << std::endl;
+    std::cerr << "                 default: double" << std::endl;
+    std::cerr << "    --unique,-u: only outputs first line matching given keys" << std::endl;
+    std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << "    sort by first field:" << std::endl;
@@ -193,11 +194,11 @@ struct input_with_block : public input_t
     input_with_block() : block( 0 ) {}
 };
 
-struct input_with_id_t : public input_t
+struct input_with_ids_t : public input_t
 {
     comma::csv::impl::unstructured ids;
     comma::uint32 block;
-    input_with_id_t() : block( 0 ) {}
+    input_with_ids_t() : block( 0 ) {}
 };
 
 namespace comma { namespace visiting {
@@ -208,15 +209,15 @@ template <> struct traits< input_t >
     template < typename K, typename V > static void visit( const K&, input_t& p, V& v ) { v.apply( "keys", p.keys ); }
 };
 
-template <> struct traits< input_with_id_t >
+template <> struct traits< input_with_ids_t >
 {
-    template < typename K, typename V > static void visit( const K& k, const input_with_id_t& p, V& v )
+    template < typename K, typename V > static void visit( const K& k, const input_with_ids_t& p, V& v )
     {
         traits< input_t >::visit( k, p, v);
         v.apply( "ids", p.ids );
         v.apply( "block", p.block );
     }
-    template < typename K, typename V > static void visit( const K& k, input_with_id_t& p, V& v )
+    template < typename K, typename V > static void visit( const K& k, input_with_ids_t& p, V& v )
     {
         traits< input_t >::visit( k, p, v);
         v.apply( "ids", p.ids );
@@ -240,7 +241,27 @@ template <> struct traits< input_with_block >
 
 } } // namespace comma { namespace visiting {
 
-static int handle_first( comma::csv::input_stream< input_with_id_t >& istream, const comma::csv::options& csv, const std::string& first_line, const input_with_id_t& default_input )
+static int handle_discard_out_of_order( comma::csv::input_stream< input_with_block >& istream, const comma::csv::options& csv, const std::string& first_line, const input_with_block& default_input, bool reverse )
+{
+    boost::optional< input_with_block > last;
+    if( !first_line.empty() )
+    { 
+        last = comma::csv::ascii< input_with_block >( csv, default_input ).get( first_line );
+        std::cout << first_line << std::endl;
+    }
+    while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
+    {
+        const input_with_block* p = istream.read();
+        if( !p ) { break; }
+        if( last && p->block == last->block && ( ( reverse && *last < *p ) || ( !reverse && *p < *last ) ) ) { continue; }
+        last = *p;
+        if( csv.binary() ) { std::cout.write( istream.binary().last(), csv.format().size() ); }
+        else { std::cout << comma::join( istream.ascii().last(), csv.delimiter ) << std::endl; }
+    }
+    return 0;
+}
+
+static int handle_first( comma::csv::input_stream< input_with_ids_t >& istream, const comma::csv::options& csv, const std::string& first_line, const input_with_ids_t& default_input )
 {
     typedef boost::unordered_set< comma::csv::impl::unstructured, comma::csv::impl::unstructured::hash > set_t;
     typedef boost::unordered_map< comma::csv::impl::unstructured, set_t, comma::csv::impl::unstructured::hash > map_t;
@@ -248,14 +269,14 @@ static int handle_first( comma::csv::input_stream< input_with_id_t >& istream, c
     comma::uint32 block = 0;
     if( !first_line.empty() )
     { 
-        input_with_id_t input = comma::csv::ascii< input_with_id_t >( csv, default_input ).get( first_line );
+        input_with_ids_t input = comma::csv::ascii< input_with_ids_t >( csv, default_input ).get( first_line );
         block = input.block;
         keys[ input.ids ].insert( input.keys );
         std::cout << first_line << std::endl;
     }
     while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
     {
-        const input_with_id_t* p = istream.read();
+        const input_with_ids_t* p = istream.read();
         if( !p ) { break; }
         if( p->block != block ) { block = p->block; keys.clear(); }
         if( keys[ p->ids ].insert( p->keys ).second )
@@ -282,7 +303,7 @@ struct limit_data_t
     input_t keys;    /// For comparisions
     records_t records;
     /// Save/push the latest input record into records collection
-    void add_current_record( const comma::csv::input_stream< input_with_id_t >& stdin_stream )
+    void add_current_record( const comma::csv::input_stream< input_with_ids_t >& stdin_stream )
     {
         if( stdin_stream.is_binary() )
         {
@@ -339,10 +360,9 @@ void output_current_block( const limit_map_t& min, const limit_map_t& max )
 /// Outputs the records when a 'block' value changes or at the end of linear loop 
 int handle_operations( const comma::command_line_options& options )
 {
-    input_with_id_t default_input;
+    input_with_ids_t default_input;
     std::vector< std::string > v = comma::split( stdin_csv.fields, ',' );
     std::vector< std::string > w (v.size());
-    
     std::string first_line;
     comma::csv::format f;
     if( stdin_csv.binary() ) { f = stdin_csv.format(); }
@@ -353,7 +373,6 @@ int handle_operations( const comma::command_line_options& options )
         if( first_line.empty() ) { return 0; }
         f = comma::csv::impl::unstructured::guess_format( first_line, stdin_csv.delimiter );
     }
-    
     comma::uint32 keys_size = 0;
     for( std::size_t k=0; k<v.size(); ++k )
     {
@@ -377,12 +396,11 @@ int handle_operations( const comma::command_line_options& options )
     stdin_csv.fields = comma::join( w, ',' );
     if ( verbose ) { std::cerr << "csv-sort: fields: " << stdin_csv.fields << std::endl; }
     if( verbose ) { std::cerr << "csv-sort: guessed format: " << f.string() << std::endl; }
-    comma::csv::input_stream< input_with_id_t > stdin_stream( std::cin, stdin_csv, default_input );
+    comma::csv::input_stream< input_with_ids_t > stdin_stream( std::cin, stdin_csv, default_input );
     #ifdef WIN32
     if( stdin_stream.is_binary() ) { _setmode( _fileno( stdout ), _O_BINARY ); }
-    #endif
+    #endif    
     if( options.exists( "--first" ) ) { return handle_first( stdin_stream, stdin_csv, first_line, default_input ); }
-    
     is_min = options.exists( "--min" );
     is_max = options.exists( "--max" );
     if( keys_size != 1 ) { std::cerr << "csv-sort: error, please specify exactly one field for --min/--max operation." << std::endl; return 1; }
@@ -394,7 +412,7 @@ int handle_operations( const comma::command_line_options& options )
     bool first = true;
     if (!first_line.empty()) 
     { 
-        input_with_id_t input =  comma::csv::ascii< input_with_id_t >(stdin_csv,default_input).get(first_line);
+        input_with_ids_t input =  comma::csv::ascii< input_with_ids_t >(stdin_csv,default_input).get(first_line);
         limit_data_t& data = min_map[input.ids];
         data.keys = input;
         data.records.push_back( first_line + "\n");
@@ -407,7 +425,7 @@ int handle_operations( const comma::command_line_options& options )
     }
     while( stdin_stream.ready() || ( std::cin.good() && !std::cin.eof() ) )
     {
-        const input_with_id_t* p = stdin_stream.read();
+        const input_with_ids_t* p = stdin_stream.read();
         if( !p ) { break; }
 //         std::cerr  << "p: " << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ) << " - " << p->keys.longs[0] << std::endl;
         
@@ -514,12 +532,7 @@ static int sort( const comma::command_line_options& options )
     std::vector< std::string > order = options.exists( "--order" ) ? comma::split( options.value< std::string >( "--order" ), ',' ) : v;
     std::vector< std::string > w( v.size() );
     bool unique = options.exists( "--unique,-u" );
-    
-    for( std::size_t k = 0; k < v.size(); ++k )
-    {
-        if( v[k] == "block" ) { w[k] = "block"; }
-    }
-
+    for( std::size_t k = 0; k < v.size(); ++k ) { if( v[k] == "block" ) { w[k] = "block"; } }
     std::string first_line;
     comma::csv::format f;
     if( stdin_csv.binary() ) { f = stdin_csv.format(); }
@@ -559,8 +572,8 @@ static int sort( const comma::command_line_options& options )
     #ifdef WIN32
     if( stdin_stream.is_binary() ) { _setmode( _fileno( stdout ), _O_BINARY ); }
     #endif
-    
-    bool reverse = options.exists( "--reverse,-r" );
+    bool reverse = options.exists( "--reverse,--descending,-r" );
+    if( options.exists( "--discard-out-of-order,--discard-unsorted" ) ) { return handle_discard_out_of_order( stdin_stream, stdin_csv, first_line, default_input, reverse ); }
     comma::uint32 block = 0;
     if( !first_line.empty() )
     { 
@@ -599,16 +612,16 @@ static int sort( const comma::command_line_options& options )
 
 int main( int ac, char** av )
 {
-    comma::command_line_options options( ac, av, usage );
     try
     {
+        comma::command_line_options options( ac, av, usage );
         verbose = options.exists( "--verbose,-v" );
         stdin_csv = comma::csv::options( options );
         stdin_csv.full_xpath = true;
-        options.assert_mutually_exclusive( "--first", "--min,--max" );
-        if( options.exists( "--first,--min,--max" ) ) { return handle_operations( options ); } else { return sort( options ); }
+        options.assert_mutually_exclusive( "--discard-out-of-order,--discard-unsorted,--first,--min,--max" );
+        return options.exists( "--first,--min,--max" ) ? handle_operations( options ) : sort( options );
     }
-    catch( std::exception& ex ) { std::cerr << "csv-sort: " << ex.what() << std::endl << comma::join(options.argv(), ' ') << std::endl; }
+    catch( std::exception& ex ) { std::cerr << "csv-sort: " << ex.what() << std::endl; }
     catch( ... ) { std::cerr << "csv-sort: unknown exception" << std::endl; }
     return 1;
 }
