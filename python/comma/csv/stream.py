@@ -433,12 +433,9 @@ class stream(object):
         return tuple('f{}'.format(index_of(field)) for field in self.struct.fields)
 
     def _write_dtype(self):
-        import sys
         names = []
         formats = []
         offsets = []
-        #print >>sys.stderr, self.struct.flat_dtype
-        #print >>sys.stderr, self.struct.flat_dtype.fields
         for name in self.fields:
             try:
                 flat_dtype = self.struct.flat_dtype.fields[name]
@@ -448,9 +445,6 @@ class stream(object):
             except KeyError:
                 pass
         itemsize = self.struct.flat_dtype.itemsize
-        #print >>sys.stderr, "names=%s" % str(names)
-        #print >>sys.stderr, "formats=%s" % str(formats)
-        #print >>sys.stderr, "offsets=%s" % str(offsets)
         return np.dtype( dict( names=names, formats=formats, offsets=offsets, itemsize=itemsize ) )
 
 
