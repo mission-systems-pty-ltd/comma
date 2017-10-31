@@ -70,6 +70,8 @@ static void usage( bool )
         "\n                        defaults to \"a\" (first field only is datetime)"
         "\n    --empty-as-not-a-date-time,--accept-empty,-e: if time field is empty, consider it as not-a-date-time"
         "\n"
+        "\nNote: no --binary option, do not use this utility on binary; instead read as unsigned long-long (time in microseconds)"
+        "\n"
         "\nTime formats"
         "\n    - iso, iso-8601-basic"
         "\n            YYYYMMDDTHHMMSS.FFFFFF, e.g. 20140101T001122.333000"
