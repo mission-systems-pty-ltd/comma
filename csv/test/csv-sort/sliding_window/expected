@@ -1,0 +1,11 @@
+ascending/all[0]/output="2;1;0;3;4;"
+ascending/all[1]/output="2;1;0;3;4;"
+
+ascending/block[0]/output="1,0;0,0;2,0;3,0;1,1;0,1;2,1;3,1;1,2;0,2;2,2;3,2;"
+ascending/block[1]/output="1,0;0,0;2,0;3,0;1,1;0,1;2,1;3,1;1,2;0,2;2,2;3,2;"
+
+descending/all[0]/output="2;3;4;1;0;"
+descending/all[1]/output="2;3;4;1;0;"
+
+descending/block[0]/output="2,0;3,0;1,0;0,0;2,1;3,1;1,1;0,1;2,2;3,2;1,2;0,2;"
+descending/block[1]/output="2,0;3,0;1,0;0,0;2,1;3,1;1,1;0,1;2,2;3,2;1,2;0,2;"
