@@ -27,9 +27,10 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-/// @author matthew imhoff, dewey nguyen
+/// @authors matthew imhoff, dewey nguyen, vsevolod vlaskine
 
 #include <string.h>
+#include <deque>
 #include <iostream>
 #include <map>
 #include <sstream>
@@ -245,6 +246,24 @@ template <> struct traits< input_with_block >
 
 } } // namespace comma { namespace visiting {
 
+template < typename T > static void output_last_( comma::csv::input_stream< T >& istream )
+{
+    if( csv.binary() ) { std::cout.write( istream.binary().last(), csv.format().size() ); }
+    else { std::cout << comma::join( istream.ascii().last(), csv.delimiter ) << std::endl; }
+}
+
+template < typename T > static void output_( T t )
+{
+    for( std::size_t i = 0; i < t.size() ; ++i )
+    { 
+        std::cout.write( &( t[i][0] ), t[i].size() );
+        if( !csv.binary() ) { std::cout << std::endl; }
+    }
+    if( csv.flush ) { std::cout.flush(); }
+}
+
+template < typename It > static void output_( It it, It end ) { for( ; it != end; ++it ) { output_( it->second ); } }
+
 static int handle_discard_out_of_order( comma::csv::input_stream< input_with_block >& istream, const std::string& first_line, const input_with_block& default_input, bool reverse )
 {
     boost::optional< input_with_block > last;
@@ -259,8 +278,7 @@ static int handle_discard_out_of_order( comma::csv::input_stream< input_with_blo
         if( !p ) { break; }
         if( last && p->block == last->block && ( ( reverse && *last < *p ) || ( !reverse && *p < *last ) ) ) { continue; }
         last = *p;
-        if( csv.binary() ) { std::cout.write( istream.binary().last(), csv.format().size() ); }
-        else { std::cout << comma::join( istream.ascii().last(), csv.delimiter ) << std::endl; }
+        output_last_( istream );
     }
     return 0;
 }
@@ -283,26 +301,61 @@ static int handle_first( comma::csv::input_stream< input_with_ids_t >& istream, 
         const input_with_ids_t* p = istream.read();
         if( !p ) { break; }
         if( p->block != block ) { block = p->block; keys.clear(); }
-        if( keys[ p->ids ].insert( p->keys ).second )
-        {
-            if( csv.binary() ) { std::cout.write( istream.binary().last(), csv.format().size() ); }
-            else { std::cout << comma::join( istream.ascii().last(), csv.delimiter ) << std::endl; }
-        }
+        if( keys[ p->ids ].insert( p->keys ).second ) { output_last_( istream ); }
     }
     return 0;
 }
 
-template < typename T > static void output_( T t )
+static int handle_sliding_window( comma::csv::input_stream< input_with_block >& istream, const std::string& first_line, const input_with_block& default_input, bool reverse, unsigned int sliding_window )
 {
-    for( std::size_t i = 0; i < t.size() ; ++i )
+    if( sliding_window < 2 ) { std::cerr << "csv-sort: expected sliding window greater than 1, got: " << sliding_window << std::endl; return 1; }
+    comma::uint32 block = 0;
+    unsigned int count = 0;
+    typedef std::map< input_t, std::deque< std::string > > map_t;
+    map_t map;
+    if( !first_line.empty() )
     { 
-        std::cout.write( &( t[i][0] ), t[i].size() );
-        if( !csv.binary() ) { std::cout << std::endl; }
+        input_with_block input = comma::csv::ascii< input_with_block >( csv, default_input ).get( first_line );
+        block = input.block;
+        map_t::mapped_type& d = map[ input ];
+        d.push_back( first_line );
+        ++count;
     }
-    if( csv.flush ) { std::cout.flush(); }
+    while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) || !map.empty() )
+    {
+        const input_with_block* p = istream.read();
+        if( !p || p->block != block )
+        {
+            if( reverse ) { output_( map.rbegin(), map.rend() ); } else { output_( map.begin(), map.end() ); }
+            map.clear();
+            count = 0;
+        }
+        if( !p ) { break; }
+        block = p->block;
+        map_t::mapped_type& d = map[ *p ];
+        if( istream.is_binary() )
+        {
+            d.push_back( std::string() );
+            d.back().resize( csv.format().size() );
+            ::memcpy( &d.back()[0], istream.binary().last(), csv.format().size() );
+        }
+        else
+        {
+            d.push_back( comma::join( istream.ascii().last(), csv.delimiter ) );
+        }
+        ++count;
+        if( count == sliding_window )
+        {
+            auto it = reverse ? --map.rbegin().base() : map.begin();
+            std::cout.write( &( it->second.front()[0] ), it->second.front().size() );
+            if( !csv.binary() ) { std::cout << std::endl; }
+            it->second.pop_front();
+            if( it->second.empty() ) { map.erase( it ); }
+            --count;
+        }
+    }
+    return 0;
 }
-
-template < typename It > static void output_( It it, It end ) { for( ; it != end; ++it ) { output_( it->second ); } }
 
 typedef std::vector< std::string > records_t;
 struct limit_data_t
@@ -578,10 +631,9 @@ static int sort( const comma::command_line_options& options )
     bool reverse = options.exists( "--reverse,--descending,-r" );
     if( options.exists( "--discard-out-of-order,--discard-unsorted" ) ) { return handle_discard_out_of_order( istream, first_line, default_input, reverse ); }
     auto sliding_window = options.optional< unsigned int >( "--sliding-window,--window" );
-    if( sliding_window && *sliding_window < 2 ) { std::cerr << "csv-sort: expected sliding window greater than 1, got: " << *sliding_window << std::endl; return 1; }
+    if( sliding_window ) { return handle_sliding_window( istream, first_line, default_input, reverse, *sliding_window ); }
     comma::uint32 block = 0;
     input_t::map map;
-    // todo? unique, sliding window -> separate operations
     if( !first_line.empty() )
     { 
         input_with_block input = comma::csv::ascii< input_with_block >( csv, default_input ).get( first_line );
@@ -611,11 +663,6 @@ static int sort( const comma::command_line_options& options )
         else
         {
             d.push_back( comma::join( istream.ascii().last(), csv.delimiter ) );
-        }
-        if( sliding_window && map.size() == *sliding_window )
-        {
-            if( reverse ) { output_( map.rbegin()->second ); map.erase( --map.rbegin().base() ); } // as bizarre as it is
-            else { output_( map.begin()->second ); map.erase( map.begin() ); }
         }
     }
     return 0;
