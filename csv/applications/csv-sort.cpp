@@ -61,10 +61,13 @@ static void usage( bool more )
     std::cerr << "Options:" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
     std::cerr << "    --discard-out-of-order,--discard-unsorted: instead of sorting, discard records out of order" << std::endl;
-    std::cerr << "    --first: first line matching given keys; first line in the block, if block field present" << std::endl;
+    std::cerr << "    --first: first line matching given keys; first line in the block, if block field present; no sorting will be done; if sorting required, use unique instead" << std::endl;
+    std::cerr << "           fields" << std::endl;
+    std::cerr << "               id: if present, multiple id fields accepted; output first record for each set of ids in a given block; e.g. --fields=id,a,,id" << std::endl;
+    std::cerr << "               block: if present; output minimum for each contiguous block" << std::endl;
     std::cerr << "    --min: output only record(s) with minimum value for a given field." << std::endl;
     std::cerr << "           fields" << std::endl;
-    std::cerr << "               id: if present, multiple id fields accepted; output minimum for each set of ids ; e.g. --fields=id,a,,id" << std::endl;
+    std::cerr << "               id: if present, multiple id fields accepted; output minimum for each set of ids in a given block; e.g. --fields=id,a,,id" << std::endl;
     std::cerr << "               block: if present; output minimum for each contiguous block" << std::endl;
     std::cerr << "    --max: output record(s) with maximum value, same semantics as --min" << std::endl;
     std::cerr << "           --min and --max may be used together." << std::endl;
@@ -73,7 +76,7 @@ static void usage( bool more )
     std::cerr << "    --sliding-window,--window=<size>: sort last <size> entries" << std::endl;
     std::cerr << "    --string,-s: keys are strings; a quick and dirty option to support strings" << std::endl;
     std::cerr << "                 default: double" << std::endl;
-    std::cerr << "    --unique,-u: only outputs first line matching given keys" << std::endl;
+    std::cerr << "    --unique,-u: sort input, output only the first line matching given keys; if no sorting required, use --first for better performance" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
