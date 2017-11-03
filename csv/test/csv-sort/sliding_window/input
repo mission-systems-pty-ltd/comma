@@ -1,0 +1,10 @@
+ascending/all[0]="( echo 4; echo 3; echo 2; echo 1; echo 0 ) | csv-sort --sliding-window=3 --fields a | tr \'\\\n\' \';\'"
+ascending/all[1]="( echo 4; echo 3; echo 2; echo 1; echo 0 ) | csv-sort --sliding-window=3 --fields a --format ui | tr \'\\\n\' \';\'"
+ascending/all[2]="( echo 3; echo 3; echo 3; echo 1; echo 0 ) | csv-sort --sliding-window=3 --fields a | tr \'\\\n\' \';\'"
+ascending/block[0]="( echo 3,0; echo 2,0; echo 1,0; echo 0,0; echo 3,1; echo 2,1; echo 1,1; echo 0,1; echo 3,2; echo 2,2; echo 1,2; echo 0,2; ) | csv-sort --sliding-window=3 --fields a,block | tr \'\\\n\' \';\'"
+ascending/block[1]="( echo 3,0; echo 2,0; echo 1,0; echo 0,0; echo 3,1; echo 2,1; echo 1,1; echo 0,1; echo 3,2; echo 2,2; echo 1,2; echo 0,2; ) | csv-sort --sliding-window=3 --fields a,block --format 2ui | tr \'\\\n\' \';\'"
+
+descending/all[0]="( echo 0; echo 1; echo 2; echo 3; echo 4 ) | csv-sort --sliding-window=3 --fields a --reverse | tr \'\\\n\' \';\'"
+descending/all[1]="( echo 0; echo 1; echo 2; echo 3; echo 4 ) | csv-sort --sliding-window=3 --fields a --format ui --reverse | tr \'\\\n\' \';\'"
+descending/block[0]="( echo 0,0; echo 1,0; echo 2,0; echo 3,0; echo 0,1; echo 1,1; echo 2,1; echo 3,1; echo 0,2; echo 1,2; echo 2,2; echo 3,2; ) | csv-sort --sliding-window=3 --fields a,block --reverse | tr \'\\\n\' \';\'"
+descending/block[1]="( echo 0,0; echo 1,0; echo 2,0; echo 3,0; echo 0,1; echo 1,1; echo 2,1; echo 3,1; echo 0,2; echo 1,2; echo 2,2; echo 3,2; ) | csv-sort --sliding-window=3 --fields a,block --format 2ui --reverse | tr \'\\\n\' \';\'"

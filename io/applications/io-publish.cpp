@@ -67,6 +67,7 @@ static void usage( bool verbose = false )
     std::cerr << "    --no-discard: if present, do blocking write to every open stream" << std::endl;
     std::cerr << "    --no-flush: if present, do not flush the output stream (use on high bandwidth sources)" << std::endl;
     std::cerr << "    --exec=[<cmd>]: read from cmd rather than stdin" << std::endl;
+    std::cerr << "    -- [<cmd>]: alternate syntax for specifying a command (simplifies quoting)" << std::endl;
     std::cerr << "    --on-demand: only run <cmd> when a client is connected" << std::endl;
     std::cerr << std::endl;
     std::cerr << "client options" << std::endl;
@@ -98,6 +99,11 @@ static void usage( bool verbose = false )
     std::cerr << "    local:<name>: linux/unix local server socket e.g. local:./tmp/my_socket" << std::endl;
     std::cerr << "    <named pipe name>: named pipe, which will be re-opened, if client reconnects" << std::endl;
     std::cerr << "    <filename>: a regular file" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "examples" << std::endl;
+    std::cerr << "    cat data | io-publish tcp:1234 --size 100" << std::endl;
+    std::cerr << "    io-publish tcp:1234 --size 24000 --on-demand --exec \"camera-cat arg1 arg2\"" << std::endl;
+    std::cerr << "    io-publish tcp:1234 --size 24000 --on-demand -- camera-cat arg1 arg2" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;

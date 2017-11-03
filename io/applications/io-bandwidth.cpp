@@ -123,7 +123,7 @@ int main( int ac, char** av )
 
         if( options.exists( "--output-fields" ))
         {
-            if( options.exists( "--size" )) { std::cout << extended_output_fields << std::endl; }
+            if( options.exists( "--size,-s" )) { std::cout << extended_output_fields << std::endl; }
             else { std::cout << standard_output_fields << std::endl; }
             return 0;
         }
@@ -131,7 +131,7 @@ int main( int ac, char** av )
         // Functionally equivalent to boost::optional< std::size_t > record_size
         // but eliminates the gcc "maybe-uninitialized" warning
         boost::optional< std::size_t > record_size = boost::make_optional< std::size_t >( false, 0 );
-        if( options.exists( "--size" )) { record_size = options.value< std::size_t >( "--size" ); }
+        if( options.exists( "--size,-s" )) { record_size = options.value< std::size_t >( "--size,-s" ); }
 
         boost::posix_time::time_duration update_interval = boost::posix_time::microseconds( options.value< double >( "--update,-u", default_update_interval ) * 1000000 );
         double window = options.value< double >( "--window,-w", default_window );
