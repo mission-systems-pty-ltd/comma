@@ -128,9 +128,9 @@ std::size_t format::size() const { return size_; }
 
 std::size_t format::count() const { return count_; }
 
-static boost::array< unsigned int, 12 > Sizesimpl()
+static boost::array< unsigned int, 14 > Sizesimpl()
 {
-    boost::array< unsigned int, 12 > sizes;
+    boost::array< unsigned int, 14 > sizes;
     sizes[ format::char_t ] = sizeof( char );
     sizes[ format::int8 ] = sizeof( char );
     sizes[ format::uint8 ] = sizeof( unsigned char );
@@ -182,11 +182,8 @@ std::string format::usage()
     return oss.str();
 }
 
-std::size_t format::size_of( types_enum type ) // todo: returns 0 for fixed size string, which is lame
-{
-    static boost::array< unsigned int, 12 > sizes = Sizesimpl();
-    return sizes[ static_cast< std::size_t >( type ) ];
-}
+static boost::array< unsigned int, 14 > format_sizes = Sizesimpl();
+std::size_t format::size_of( types_enum type ) { return format_sizes[ static_cast< std::size_t >( type ) ]; }
 
 namespace impl {
 
