@@ -93,6 +93,14 @@ class struct(object):
         expand = self.shorthand.get
         field_tuples = map(lambda name: expand(name) or (name,), compressed_fields)
         return sum(field_tuples, ())
+    
+    def assign( self, lhs, rhs ):
+        for p in self.fields: self._assign( lhs, rhs, p.split( '/' ) ) # todo: quick and dirty, should be very slow; to improve performance, bootstrap with lambda functions in constructor
+        return rhs
+        
+    def _assign( self, lhs, rhs, fields ):
+        if len( fields ) > 1: self._assign( getattr( lhs, fields[0] ), rhs[fields[0]], fields[1:] )
+        else: setattr( lhs, fields[0], rhs[fields[0]][0] ) # todo: quick and dirty; any problems with array support?
 
     def _nondefault_fields(self):
         default_name = struct.default_field_name
