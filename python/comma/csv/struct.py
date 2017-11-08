@@ -105,7 +105,7 @@ class struct(object):
                 if range( len( lhs ) ) < range( len( rhs ) ): raise ValueError( "expected left hand side list not shorter than right hand side list, got " + str( len( lhs ) ) + " in target structure and " + str( len( rhs ) ) + " in the right hand side structure" )
                 for i in range( len( rhs ) ): self._assign( lhs[i], rhs[i], fields[:1] )
             else:
-                lhs[ :len( rhs ) ] = rhs
+                raise ValueError( "it's a bug: should not be here" )
         else:
             if len( fields ) > 1:
                 self._assign( getattr( lhs, fields[0] ), rhs[fields[0]], fields[1:] )
