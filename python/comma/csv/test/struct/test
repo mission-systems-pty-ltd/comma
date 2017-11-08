@@ -93,6 +93,47 @@ END
 )"
 }
 
+function assign()
+{
+    local what=$1
+    python -c "
+import numpy as np
+import comma
+
+class test_class:
+    class nested:
+        def __init__( self ):
+            self.a = int( 3 )
+            
+    def __init__( self ):
+        self.a = int( 1 )
+        self.b = float( 2 )
+        self.c = np.datetime64( '2017-01-01T01:23:45' )
+        self.d = str( 'abc' )
+        self.e = test_class.nested()
+        self.f = [ int( 0 ), int( 1 ) ]
+
+nested_struct = comma.csv.struct( 'a', 'uint32' )
+test_struct = comma.csv.struct( 'a,b,c,d,e,f', 'uint32', 'float32', 'datetime64[us]', 'S4', nested_struct, 'uint32' )
+t = test_struct()
+t['a'] = 10
+t['b'] = 20
+t['c'] = np.datetime64( '2017-01-01T12:34:56' )
+t['d'] = 'xyz'
+t['e']['a'] = 40
+t['f'] = 50
+c = test_class()
+test_struct.assign( c, t )
+print 'assign/output/a=' + str( c.a )
+print 'assign/output/b=' + str( c.b )
+print 'assign/output/c=\"' + str( c.c ) + '\"'
+print 'assign/output/d=\"' + str( c.d ) + '\"'
+print 'assign/output/e/a=' + str( c.e.a )
+print 'assign/output/f[0]=' + str( c.f[0] )
+print 'assign/output/f[1]=' + str( c.f[1] )
+"
+}
+
 
 types_incorrect_name; echo "types_incorrect_name/status=$?"
 types_empty_name; echo "types_empty_name/status=$?"
@@ -114,3 +155,6 @@ for what in fields types; do
     echo "record/$what/output=$output"
     echo "record/$what/status=$status"
 done
+
+echo '===============================================================' >&2
+assign ; echo "assign/status=$?"
