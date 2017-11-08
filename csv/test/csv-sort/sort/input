@@ -1,0 +1,14 @@
+ascending/all[0]="( echo 0; echo 1; echo 0; echo 0; echo 1; echo 2 ) | csv-sort --unique --fields a | tr \'\\\n\' \';\'"
+ascending/all[1]="( echo 0; echo 1; echo 0; echo 0; echo 1; echo 2 ) | csv-sort --unique --fields a --format ui | tr \'\\\n\' \';\'"
+ascending/all[2]="( echo 0,0; echo 1,0; echo 0,1; echo 1,1 ) | csv-sort --unique --fields a,b | tr \'\\\n\' \';\'"
+ascending/all[3]="( echo 0,0; echo 1,0; echo 0,1; echo 1,1 ) | csv-sort --unique --fields a,b --format 2ui | tr \'\\\n\' \';\'"
+ascending/block[0]="( echo 0,0; echo 1,0; echo 0,0 ; echo 0,1; echo 1,1; echo 0,1 ) | csv-sort --unique --fields a,block | tr \'\\\n\' \';\'"
+ascending/block[1]="( echo 0,0; echo 1,0; echo 0,0 ; echo 0,1; echo 1,1; echo 0,1 ) | csv-sort --unique --fields a,block --format 2ui | tr \'\\\n\' \';\'"
+
+descending/all[0]="( echo 2; echo 1; echo 2; echo 2; echo 1; echo 0 ) | csv-sort --unique --fields a --reverse | tr \'\\\n\' \';\'"
+descending/all[1]="( echo 2; echo 1; echo 2; echo 2; echo 1; echo 0 ) | csv-sort --unique --fields a --reverse --format ui | tr \'\\\n\' \';\'"
+descending/all[2]="( echo 1,1; echo 0,1; echo 1,0; echo 0,0 ) | csv-sort --unique --fields a,b --reverse | tr \'\\\n\' \';\'"
+descending/all[3]="( echo 1,1; echo 0,1; echo 1,0; echo 0,0 ) | csv-sort --unique --fields a,b --reverse --format 2ui | tr \'\\\n\' \';\'"
+descending/block[0]="( echo 1,0; echo 0,0; echo 1,0 ; echo 1,1; echo 0,1; echo 1,1 ) | csv-sort --unique --fields a,block --reverse | tr \'\\\n\' \';\'"
+descending/block[2]="( echo 1,0; echo 0,0; echo 1,0 ; echo 1,1; echo 0,1; echo 1,1 ) | csv-sort --unique --fields a,block --reverse --format 2ui | tr \'\\\n\' \';\'"
+

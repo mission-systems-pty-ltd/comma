@@ -640,7 +640,6 @@ static int sort( const comma::command_line_options& options )
         block = input.block;
         input_t::map::mapped_type& d = map[ input ];
         d.push_back( first_line );
-        if( unique ) { output_( d ); }
     }
     while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) || !map.empty() )
     {
