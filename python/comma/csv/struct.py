@@ -95,7 +95,8 @@ class struct(object):
         return sum(field_tuples, ())
     
     def assign( self, lhs, rhs ):
-        for p in self.fields: self._assign( lhs, rhs, p.split( '/' ) ) # todo: quick and dirty, should be very slow; to improve performance, bootstrap with lambda functions in constructor
+        for p in self.fields:
+            if len( p ) > 0: self._assign( lhs, rhs, p.split( '/' ) ) # todo: quick and dirty, should be very slow; to improve performance, bootstrap with lambda functions in constructor
         return rhs
         
     def _assign( self, lhs, rhs, fields ):
