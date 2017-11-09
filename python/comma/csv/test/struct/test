@@ -112,30 +112,31 @@ class test_class:
         self.c = np.datetime64( '2017-01-01T01:23:45' )
         self.d = str( 'abc' )
         self.e = test_class.nested()
-        self.f = [ int( 0 ), int( 1 ) ]
+        #self.f = [ int( 0 ), int( 1 ) ]
         #self.g = [ test_class.nested(), test_class.nested() ]
 
 nested_struct = comma.csv.struct( 'a', 'uint32' )
 #test_struct = comma.csv.struct( 'a,b,c,d,e,f,g', 'uint32', 'float32', 'datetime64[us]', 'S4', nested_struct, 'uint32', ( nested_struct, ( 2, ) ) )
-test_struct = comma.csv.struct( 'a,b,c,d,e,f', 'uint32', 'float32', 'datetime64[us]', 'S4', nested_struct, 'uint32' )
+test_struct = comma.csv.struct( 'a,b,c,d,e', 'uint32', 'float32', 'datetime64[us]', 'S4', nested_struct )
 t = test_struct()
 t['a'] = 10
 t['b'] = 20
 t['c'] = np.datetime64( '2017-01-01T12:34:56' )
 t['d'] = 'xyz'
 t['e']['a'] = 40
-t['f'] = 50
+#t['f'] = 50
 #t['g'][0][0]['a'] = 60
 #t['g'][0][1]['a'] = 70
 c = test_class()
-test_struct.assign( c, t )
+assign = test_struct.assign( c )
+assign( t )
 print 'assign/output/a=' + str( c.a )
 print 'assign/output/b=' + str( c.b )
 print 'assign/output/c=\"' + str( c.c ) + '\"'
 print 'assign/output/d=\"' + str( c.d ) + '\"'
 print 'assign/output/e/a=' + str( c.e.a )
-print 'assign/output/f[0]=' + str( c.f[0] )
-print 'assign/output/f[1]=' + str( c.f[1] )
+#print 'assign/output/f[0]=' + str( c.f[0] )
+#print 'assign/output/f[1]=' + str( c.f[1] )
 #print 'assign/output/g[0]/a=' + str( c.g[0].a )
 #print 'assign/output/g[1]/a=' + str( c.g[1].a )
 "

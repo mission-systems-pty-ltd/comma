@@ -94,25 +94,48 @@ class struct(object):
         field_tuples = map(lambda name: expand(name) or (name,), compressed_fields)
         return sum(field_tuples, ())
     
-    def assign( self, lhs, rhs ):
-        for p in self.fields:
-            if len( p ) > 0: self._assign( lhs, rhs, p.split( '/' ) ) # todo: quick and dirty, should be very slow; to improve performance, bootstrap with lambda functions in constructor
-        return rhs
-        
-    def _assign( self, lhs, rhs, fields ):
-        if isinstance( lhs, list ):
-            if len( fields ) == 0: raise ValueError( "it's a bug: should not be here" )
-            raise ValueError( "lists of structures not supported yet" )
-            if range( len( lhs ) ) < range( len( rhs ) ): raise ValueError( "expected left hand side list not shorter than right hand side list, got " + str( len( lhs ) ) + " in target structure and " + str( len( rhs ) ) + " in the right hand side structure" )
-            for i in range( len( rhs ) ): self._assign( lhs[i], rhs[i], fields[:1] )
-                
-        else:
-            if len( fields ) > 1:
-                self._assign( getattr( lhs, fields[0] ), rhs[fields[0]], fields[1:] )
+    def assign( self, data ):
+        """
+        return functor assigning csv.struct to an arbitrary data structure
+        todo: add array support
+        """
+        fields_map = dict()
+        def _make_fields_map( m, fields ):
+            if not fields[0] in m: m[fields[0]] = dict()
+            if len( fields ) > 1: _make_fields_map( m[fields[0]], fields[1:] )
+        for p in self.fields: _make_fields_map( fields_map, p.split( '/' ) )
+        return self._assign( data, fields_map )
+
+    def _assign( self, data, fields_map ):
+        functors = {}
+        for k, v in fields_map.iteritems():
+            if len( v ) > 0:
+                functors[k] = self._assign( getattr( data, k ), v )
             else:
-                a = getattr( lhs, fields[0] )
-                if isinstance( a, list ): a[ :len( rhs ) ] = rhs[fields[0]]
-                else: setattr( lhs, fields[0], rhs[fields[0]][0] )
+                def functor( value, key = k ): setattr( data, key, value[0] )
+                functors[k] = functor
+        def apply_functors( record ):
+            for k, f in functors.iteritems(): f( record[k] )
+        return apply_functors
+    
+    #def assign( self, lhs, rhs ):
+        #for p in self.fields:
+            #if len( p ) > 0: self._assign( lhs, rhs, p.split( '/' ) ) # todo: quick and dirty, should be very slow; to improve performance, bootstrap with lambda functions in constructor
+        #return rhs
+        
+    #def _assign( self, lhs, rhs, fields ):
+        #if isinstance( lhs, list ):
+            #if len( fields ) == 0: raise ValueError( "it's a bug: should not be here" )
+            #raise ValueError( "lists of structures not supported yet" )
+            #if range( len( lhs ) ) < range( len( rhs ) ): raise ValueError( "expected left hand side list not shorter than right hand side list, got " + str( len( lhs ) ) + " in target structure and " + str( len( rhs ) ) + " in the right hand side structure" )
+            #for i in range( len( rhs ) ): self._assign( lhs[i], rhs[i], fields[:1] )                
+        #else:
+            #if len( fields ) > 1:
+                #self._assign( getattr( lhs, fields[0] ), rhs[fields[0]], fields[1:] )
+            #else:
+                #a = getattr( lhs, fields[0] )
+                #if isinstance( a, list ): a[ :len( rhs ) ] = rhs[fields[0]]
+                #else: setattr( lhs, fields[0], rhs[fields[0]][0] )
 
     def _nondefault_fields(self):
         default_name = struct.default_field_name
