@@ -101,12 +101,11 @@ class struct(object):
         
     def _assign( self, lhs, rhs, fields ):
         if isinstance( lhs, list ):
-            if len( fields ) > 0:
-                raise ValueError( "lists of structures not supported yet" )
-                if range( len( lhs ) ) < range( len( rhs ) ): raise ValueError( "expected left hand side list not shorter than right hand side list, got " + str( len( lhs ) ) + " in target structure and " + str( len( rhs ) ) + " in the right hand side structure" )
-                for i in range( len( rhs ) ): self._assign( lhs[i], rhs[i], fields[:1] )
-            else:
-                raise ValueError( "it's a bug: should not be here" )
+            if len( fields ) == 0: raise ValueError( "it's a bug: should not be here" )
+            raise ValueError( "lists of structures not supported yet" )
+            if range( len( lhs ) ) < range( len( rhs ) ): raise ValueError( "expected left hand side list not shorter than right hand side list, got " + str( len( lhs ) ) + " in target structure and " + str( len( rhs ) ) + " in the right hand side structure" )
+            for i in range( len( rhs ) ): self._assign( lhs[i], rhs[i], fields[:1] )
+                
         else:
             if len( fields ) > 1:
                 self._assign( getattr( lhs, fields[0] ), rhs[fields[0]], fields[1:] )
