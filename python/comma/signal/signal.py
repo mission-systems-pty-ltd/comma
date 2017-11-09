@@ -32,20 +32,18 @@ import signal
 import sys
 import os
 
-MANAGED_SIGNALS = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
-
+MANAGED_SIGNALS = ( signal.SIGINT, signal.SIGTERM, signal.SIGHUP )
 
 class is_shutdown(object):
-    def __init__(self):
+    def __init__( self, verbose = False ):
         self.state = False
-        for s in MANAGED_SIGNALS:
-            signal.signal(s, self.switch_on)
+        self.verbose = verbose
+        for s in MANAGED_SIGNALS: signal.signal( s, self.switch_on )
 
-    def switch_on(self, signum, frame):
-        print >> sys.stderr, os.path.basename(sys.argv[0]), "caught signal:", signum
+    def switch_on( self, signum, frame ):
         self.state = True
+        if self.verbose: print >> sys.stderr, os.path.basename(sys.argv[0]), "caught signal:", signum
 
-    def __nonzero__(self):
-        return self.state
+    def __nonzero__( self ): return self.state
 
-signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+signal.signal( signal.SIGPIPE, signal.SIG_DFL )
