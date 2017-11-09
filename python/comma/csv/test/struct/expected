@@ -24,12 +24,17 @@ leaves/z="event/coordinates/z"
 leaves/value="value"
 status/leaves=0
 
-assign/output/a=10
-assign/output/b=20.0
-assign/output/c="2017-01-01T12:34:56.000000"
-assign/output/d="xyz"
-assign/output/e/a=40
-#assign/output/f[0]=50
-#assign/output/f[1]=1
+assign/basic/output/a=10
+assign/basic/output/b=20.0
+assign/basic/output/c="2017-01-01T12:34:56.000000"
+assign/basic/output/d="xyz"
+assign/basic/output/e/a=40
+#assign/basic/output/f[0]=50
+#assign/basic/output/f[1]=1
+assign/convert/output/a=10
+assign/convert/output/b=20.0
+assign/convert/output/c="customized time: 2017-01-01T12:34:56.000000"
+assign/convert/output/d="xyz"
+assign/convert/output/e/a=40
 assign/status=0
 

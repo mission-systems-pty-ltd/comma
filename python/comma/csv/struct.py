@@ -94,7 +94,7 @@ class struct(object):
         field_tuples = map(lambda name: expand(name) or (name,), compressed_fields)
         return sum(field_tuples, ())
     
-    def assign( self, data ):
+    def assign( self, data, convert = None ):
         """
         return functor assigning csv.struct to an arbitrary data structure
         todo: add array support
@@ -104,15 +104,15 @@ class struct(object):
             if not fields[0] in m: m[fields[0]] = dict()
             if len( fields ) > 1: _make_fields_map( m[fields[0]], fields[1:] )
         for p in self.fields: _make_fields_map( fields_map, p.split( '/' ) )
-        return self._assign( data, fields_map )
+        return self._assign( data, fields_map, convert )
 
-    def _assign( self, data, fields_map ):
+    def _assign( self, data, fields_map, convert ):
         functors = {}
         for k, v in fields_map.iteritems():
             if len( v ) > 0:
-                functors[k] = self._assign( getattr( data, k ), v )
+                functors[k] = self._assign( getattr( data, k ), v, convert )
             else:
-                def functor( value, key = k ): setattr( data, key, value[0] )
+                def functor( value, key = k ): setattr( data, key, value[0] if convert is None else convert( value[0] ) )
                 functors[k] = functor
         def apply_functors( record ):
             for k, f in functors.iteritems(): f( record[k] )

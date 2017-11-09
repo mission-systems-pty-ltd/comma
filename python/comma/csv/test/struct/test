@@ -130,15 +130,23 @@ t['e']['a'] = 40
 c = test_class()
 assign = test_struct.assign( c )
 assign( t )
-print 'assign/output/a=' + str( c.a )
-print 'assign/output/b=' + str( c.b )
-print 'assign/output/c=\"' + str( c.c ) + '\"'
-print 'assign/output/d=\"' + str( c.d ) + '\"'
-print 'assign/output/e/a=' + str( c.e.a )
-#print 'assign/output/f[0]=' + str( c.f[0] )
-#print 'assign/output/f[1]=' + str( c.f[1] )
-#print 'assign/output/g[0]/a=' + str( c.g[0].a )
-#print 'assign/output/g[1]/a=' + str( c.g[1].a )
+print 'assign/basic/output/a=' + str( c.a )
+print 'assign/basic/output/b=' + str( c.b )
+print 'assign/basic/output/c=\"' + str( c.c ) + '\"'
+print 'assign/basic/output/d=\"' + str( c.d ) + '\"'
+print 'assign/basic/output/e/a=' + str( c.e.a )
+#print 'assign/basic/output/f[0]=' + str( c.f[0] )
+#print 'assign/basic/output/f[1]=' + str( c.f[1] )
+#print 'assign/basic/output/g[0]/a=' + str( c.g[0].a )
+#print 'assign/basic/output/g[1]/a=' + str( c.g[1].a )
+def convert( v ): return 'customized time: ' + str( v ) if type( v ) == np.datetime64 else v
+assign = test_struct.assign( c, convert )
+assign( t )
+print 'assign/convert/output/a=' + str( c.a )
+print 'assign/convert/output/b=' + str( c.b )
+print 'assign/convert/output/c=\"' + str( c.c ) + '\"'
+print 'assign/convert/output/d=\"' + str( c.d ) + '\"'
+print 'assign/convert/output/e/a=' + str( c.e.a )
 "
 }
 
