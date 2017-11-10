@@ -119,6 +119,8 @@ nested_struct = comma.csv.struct( 'a', 'uint32' )
 #test_struct = comma.csv.struct( 'a,b,c,d,e,f,g', 'uint32', 'float32', 'datetime64[us]', 'S4', nested_struct, 'uint32', ( nested_struct, ( 2, ) ) )
 test_struct = comma.csv.struct( 'a,b,c,d,e', 'uint32', 'float32', 'datetime64[us]', 'S4', nested_struct )
 t = test_struct()
+print >> sys.stderr, '--> type:', type( t )
+print >> sys.stderr, '--> value:', t
 t['a'] = 10
 t['b'] = 20
 t['c'] = np.datetime64( '2017-01-01T12:34:56' )
@@ -129,7 +131,7 @@ t['e']['a'] = 40
 #t['g'][0][1]['a'] = 70
 c = test_class()
 assign = test_struct.assign( c )
-assign( t )
+assign( t[0] )
 print 'assign/basic/output/a=' + str( c.a )
 print 'assign/basic/output/b=' + str( c.b )
 print 'assign/basic/output/c=\"' + str( c.c ) + '\"'
@@ -141,7 +143,7 @@ print 'assign/basic/output/e/a=' + str( c.e.a )
 #print 'assign/basic/output/g[1]/a=' + str( c.g[1].a )
 def convert( v ): return 'customized time: ' + str( v ) if type( v ) == np.datetime64 else v
 assign = test_struct.assign( c, convert )
-assign( t )
+assign( t[0] )
 print 'assign/convert/output/a=' + str( c.a )
 print 'assign/convert/output/b=' + str( c.b )
 print 'assign/convert/output/c=\"' + str( c.c ) + '\"'
@@ -149,7 +151,6 @@ print 'assign/convert/output/d=\"' + str( c.d ) + '\"'
 print 'assign/convert/output/e/a=' + str( c.e.a )
 "
 }
-
 
 types_incorrect_name; echo "types_incorrect_name/status=$?"
 types_empty_name; echo "types_empty_name/status=$?"
