@@ -161,17 +161,26 @@ def compress(comma_format):
     return ','.join(str(n) + type if n != 1 else type for n, type in counted_types)
 
 
-def to_numpy(comma_format):
+def to_numpy(comma_format, compress=False):
     """
     return a tuple of numpy types corresponsing to the provided comma format
+    if the second argument is True, compress numpy types
 
     >>> from comma.csv.format import *
     >>> to_numpy('2d,6ub,ui')
     ('f8', 'f8', 'u1', 'u1', 'u1', 'u1', 'u1', 'u1', 'u4')
+    >>> to_numpy('2d,6ub,ui', True)
+    ('2f8', '6u1', 'u4')
     """
     numpy_types = []
-    for comma_type in expand(comma_format).split(','):
-        numpy_types.append(to_numpy_type(comma_type))
+    for comma_type in comma_format.split(','):
+        expanded_comma_type = expand( comma_type ).split(',')
+        count = len( expanded_comma_type )
+        numpy_type = to_numpy_type( expanded_comma_type[0] )
+        if compress:
+            numpy_types.append( count > 1 and str( count ) + numpy_type or numpy_type )
+        else:
+            numpy_types.extend( [ numpy_type ] * count )
     return tuple(numpy_types)
 
 

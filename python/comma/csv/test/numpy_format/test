@@ -2,19 +2,21 @@
 
 function comma_format_to_numpy
 {
+    local compress=$2
+    compress=${compress:+", $compress"}
     python -c "$( cat <<END
 import comma
 import numpy
 
-numpy_format = comma.csv.format.to_numpy( '$1' )
+numpy_format = comma.csv.format.to_numpy( '$1' $compress )
 numpy.dtype( ','.join( numpy_format ) )
 print ','.join( numpy_format )
 END
 )"
 }
 
-while read name comma_format; do
-    output=$( comma_format_to_numpy $comma_format )
+while read name comma_format compress ; do
+    output=$( comma_format_to_numpy $comma_format $compress )
     status=$?
     echo "$name/output=$output"
     echo "$name/status=$status"
