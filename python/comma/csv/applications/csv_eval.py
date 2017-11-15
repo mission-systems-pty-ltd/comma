@@ -83,6 +83,17 @@ examples:
 
     # using default values
     ( echo 1,2 ; echo 3,4 ) | %(prog)s --fields=,y "a=x+y" --default-values="x=0;y=0"
+
+    # operating on time (internally represented in microseconds)
+    echo 20171112T224515.5 | %(prog)s --format=t --fields=t1 "t2=t1+1000000" --output-format t
+    echo 20171112T224515.5 | csv-to-bin t | %(prog)s --binary=t --fields=t1 "t2=t1+1000000" --output-format t | csv-from-bin 2t
+
+    # using numpy min and max (note axis=0 needed due to implementation details)
+    echo 0,1,2,3,4 | %(prog)s --fields=a,b,c,d,e --format=5ui "f=min((a,b,c,d,e),axis=0);g=max((a,b,c,d,e),axis=0)"
+
+    # format agreement (output format should be considered)
+    echo 5 | csv-to-bin ul | csv-eval --binary=ul --fields=a "b=a" --output-format=ul | csv-from-bin 2ul
+
 """
 
 numpy_functions = """
