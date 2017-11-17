@@ -1,0 +1,5 @@
+status/help=0
+status/good=0
+status/bad/bar=2
+status/bad/blah=2
+status/bad/b=2

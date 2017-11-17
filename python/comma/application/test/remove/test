@@ -1,0 +1,37 @@
+#!/bin/bash
+
+name=$( basename "$0" )
+
+output_dir="output"
+mkdir -p "$output_dir" || exit 1
+
+function main()
+{
+    python -c "
+import comma.application
+import argparse
+
+parser = argparse.ArgumentParser( )
+parser.add_argument( 'positional', help = 'capture positional arguments', nargs = 1 )
+parser.add_argument( '--foo', help = 'enter foo', type = int )
+parser.add_argument( '--bar', help = 'enter bar', type = int )
+parser.add_argument( '-b', '--baz', help = 'enter baz', type = int  )
+comma.application.remove_argparse_options( parser, [ '-b', '--bar' ] )
+args = parser.parse_args()
+" "positional" $@
+}
+
+main --help >"$output_dir/help.log"
+echo "status/help=$?"
+
+main --foo 1 --baz 2
+echo "status/good=$?"
+
+main --foo 1 --baz 2 --bar 3
+echo "status/bad/bar=$?"
+
+main --foo 1 --baz 2 --blah 3
+echo "status/bad/blah=$?"
+
+main --foo 1 -b 3
+echo "status/bad/b=$?"
