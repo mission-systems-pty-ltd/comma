@@ -61,6 +61,10 @@ static void usage( bool verbose = false )
     std::cerr << std::endl;
     std::cerr << "usage: io-publish [<options>] <outputs>" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "general options" << std::endl;
+    std::cerr << "    --help,-h: show this help" << std::endl;
+    std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "stream options" << std::endl;
     std::cerr << "    --size,-s: binary input; packet size" << std::endl;
     std::cerr << "    --multiplier,-m: multiplier for packet size, default is 1. The actual packet size will be m * s" << std::endl;
