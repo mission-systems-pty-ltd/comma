@@ -250,6 +250,7 @@ class command
             : cmd_( cmd )
             , child_pid_( -1 )
         {
+            comma::verbose << "launching " << cmd << std::endl;
             // create a pipe to send the child stdout to the parent stdin
             int fd[2];
             if( pipe( fd ) == -1 ) { comma::last_error::to_exception( "couldn't open pipe" ); }
@@ -275,8 +276,11 @@ class command
 
         ~command()
         {
+            comma::verbose << "killing child pid " << child_pid_ << " for " << cmd_ << std::endl;
             kill( -child_pid_, SIGTERM );
+            comma::verbose << "waiting for pid " << child_pid_ << std::endl;
             waitpid( -child_pid_, NULL, 0 );
+            comma::verbose << "finished waiting for pid " << child_pid_ << std::endl;
         }
 
     private:
