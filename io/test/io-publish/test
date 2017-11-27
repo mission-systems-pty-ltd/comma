@@ -51,7 +51,7 @@ for i in $( seq 1 $loops ); do
     sleep $report_interval
     # need at least one process in this report to stop the line being filtered out
     echo "io-publish,$( children $io_publish_pid | tr '\n' , | sed 's/,$/\n/' )"
-done | sed 's/,$//;s/,[^,]* <defunct>//' | grep -v ",bash$" | uniq \
+done | sed 's/,$//;s/,[^,]* <defunct>//g' | grep -v ",bash$" | uniq \
      | name-value-from-csv processes --prefix output -n -d @
 
 # when logging the processes above, we filter out lines with just bash at the
