@@ -43,7 +43,10 @@ if( NOT WIN32 )
     add_executable( udp-client ${dir}/udp-client.cpp )
     target_link_libraries( udp-client comma_application comma_io comma_csv comma_base ) # profiler )
     install( TARGETS udp-client RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
-
+    
+    add_executable( io-console ${dir}/io-console.cpp )
+    target_link_libraries( io-console comma_base comma_io comma_application ) # profiler )
+    install( TARGETS io-console RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
 endif( NOT WIN32 )
 
 install( PROGRAMS zero-publish DESTINATION ${comma_INSTALL_BIN_DIR})
