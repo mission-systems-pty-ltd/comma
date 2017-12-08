@@ -31,8 +31,8 @@
 #include <iostream>
 #include <boost/program_options.hpp>
 #include <boost/scoped_ptr.hpp>
-#include <comma/application/signal_flag.h>
-#include <comma/io/select.h>
+#include "../../application/signal_flag.h"
+#include "../select.h"
 
 int main( int argc, char** argv )
 {
