@@ -209,12 +209,14 @@ private:
             std::cout.write( &( deque.front()[ 0 ] ), deque.front().size() );
             auto is = deque.cbegin(); while( ( is + 1 ) != deque.cend() ) { if(!is_binary){ std::cout << csv.delimiter; } is += step_; std::cout.write( &(*is)[0], is->size() ); }
             if(!is_binary){ std::cout << std::endl; }
+            if (csv.flush) { std::cout.flush(); }
         }
         if (bidirectional_ || reverse_ ) 
         {
             std::cout.write( &( deque.back()[0] ), deque.back().size() );
             auto is = deque.crbegin(); while( ( is + 1 ) != deque.crend() ) { if(!is_binary){ std::cout << csv.delimiter; } is += step_; std::cout.write( &(*is)[0], is->size() ); }
             if(!is_binary){ std::cout << std::endl; }
+            if (csv.flush) { std::cout.flush(); }
         }
     }
 
