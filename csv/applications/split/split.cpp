@@ -118,6 +118,17 @@ std::ofstream& split< T >::ofstream_by_block_()
 }
 
 template < typename T >
+static std::string make_filename_from_id(const T& id, std::string suffix )
+{
+    return boost::lexical_cast< std::string >( id ) + suffix;
+}
+
+static std::string make_filename_from_id(const boost::posix_time::ptime& id, std::string suffix )
+{
+    return boost::posix_time::to_iso_string( id ) + suffix;
+}
+
+template < typename T >
 std::ofstream& split< T >::ofstream_by_id_()
 {
     typename Files::iterator it = files_.find( current_.id );
@@ -135,7 +146,7 @@ std::ofstream& split< T >::ofstream_by_id_()
         std::ios_base::openmode mode = mode_;
         if( seen_ids_.find( current_.id ) == seen_ids_.end() ) { seen_ids_.insert( current_.id ); }
         else { mode |= std::ofstream::app; }
-        std::string name = boost::lexical_cast< std::string >( current_.id ) + suffix_;
+        std::string name = make_filename_from_id( current_.id, suffix_);
         boost::shared_ptr< std::ofstream > stmp( new std::ofstream( name.c_str(), mode ) );
         it = files_.insert( std::make_pair( current_.id, stmp ) ).first;
     }
