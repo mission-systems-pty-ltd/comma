@@ -140,7 +140,7 @@ static void usage( bool more )
     std::cerr << "                   use csv-sort for post-processing, if required" << std::endl;
     std::cerr << "    group|make-blocks" << std::endl;
     std::cerr << "        cat something.csv | csv-blocks group --fields=,id, " << std::endl;
-    std::cerr << "            appends group's block field base on specified id key or keys" << std::endl;
+    std::cerr << "            appends group's block field based on specified id key or keys" << std::endl;
     std::cerr << "    head" << std::endl;
     std::cerr << "        reads records from first block to stdout, if --num-of-blocks=<num> specified, read more than one blocks" << std::endl;
     std::cerr << "        requires the index from 'index' mode in the inputs" << std::endl;
