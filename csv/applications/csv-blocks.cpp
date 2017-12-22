@@ -222,24 +222,29 @@ static comma::csv::impl::unstructured keys;
 static comma::uint32 current_block = 1;
 static comma::int32 increment_step = 1;
 
-static void flush_indexing( std::deque< std::string >& block_records, bool is_binary, char delimiter )
+static void output_record_and_index( const std::string& input, comma::uint32 index, bool is_binary, char delimiter )
+{
+    if( is_binary ) 
+    { 
+        std::cout.write( &input[0], input.size() );
+        std::cout.write( (const char *) &index, sizeof(comma::uint32));
+        if( csv.flush ) { std::cout.flush(); }
+    }
+    else 
+    { 
+        std::cout << input << delimiter << index << std::endl; 
+        if( csv.flush ) { std::cout.flush(); }
+    }
+}
+
+static void output_reverse_indexing( std::deque< std::string >& block_records, bool is_binary, char delimiter )
 {
     std::size_t size = block_records.size();
     for( std::size_t i=0; i<size; ++i ) 
     {
         const std::string& input = block_records[i];
-        comma::uint32 index = reverse_index ? size - (i+1) : i ;
-        
-        if( is_binary ) 
-        { 
-            std::cout.write( &input[0], input.size() );
-            std::cout.write( (const char *) &index, sizeof(comma::uint32));
-            if( csv.flush ) { std::cout.flush(); }
-        }
-        else 
-        { 
-            std::cout << input << delimiter << index << std::endl; 
-        }
+        comma::uint32 index = size - (i+1);
+        output_record_and_index( input, index, is_binary, delimiter );
     }
     block_records.clear();
 }
@@ -387,6 +392,7 @@ static boost::optional< comma::uint32 > read_and_write_ascii_record()
         ascii.get( record, line );
         // send line to stdout
         std::cout << line << std::endl;
+        if( csv.flush ) { std::cout.flush(); }
         return record.index; // 'record' filled
     }
 }
@@ -539,6 +545,7 @@ int main( int ac, char** av )
             
             char delimiter = istream.is_binary() ? ',' : istream.ascii().ascii().delimiter();
             comma::uint32 block = 0;
+            comma::uint32 index = 0;
             std::string buffer;
             if( istream.is_binary() ) { buffer.resize( istream.binary().size() ); }
             
@@ -547,20 +554,35 @@ int main( int ac, char** av )
                 const input_with_block* p = istream.read();
                 if( !p ) { break; }
                 
-                if( block != p->block && !block_records.empty() ) { flush_indexing( block_records, istream.is_binary(), delimiter  ); }
+                if( block != p->block ) 
+                { 
+                    if ( reverse_index ) { output_reverse_indexing( block_records, istream.is_binary(), delimiter  ); }
+                    else { index = 0; }
+                }
                 block = p->block;
                 
-                // Put the input into the buffer
-                if( istream.is_binary() )  
-                { 
-                    ::memcpy( &buffer[0], istream.binary().last(),  istream.binary().size() ); 
-                    block_records.push_back( buffer );
+                if ( reverse_index )
+                {
+                    // Reverse index mode - accumulate whole block before indexing
+                    if( istream.is_binary() )  
+                    { 
+                        ::memcpy( &buffer[0], istream.binary().last(),  istream.binary().size() ); 
+                        block_records.push_back( buffer );
+                    }
+                    else { block_records.push_back( comma::join( istream.ascii().last(), delimiter ) ); }
                 }
-                else { block_records.push_back( comma::join( istream.ascii().last(), delimiter ) ); }
+                else
+                {
+                    // Forward index mode - append index to each record
+                    if( istream.is_binary() ) { ::memcpy( &buffer[0], istream.binary().last(),  istream.binary().size() ); }
+                    else { buffer = comma::join( istream.ascii().last(), delimiter ); }
+                    output_record_and_index( buffer, index, istream.is_binary(), delimiter );
+                    index++;
+                }
             }
             
             // flushes the last block
-            flush_indexing( block_records, istream.is_binary(), delimiter  );
+            if ( reverse_index ) { output_reverse_indexing( block_records, istream.is_binary(), delimiter  ); }
             
             return 0;
         }
