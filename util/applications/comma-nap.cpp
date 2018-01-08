@@ -35,9 +35,10 @@
 
 static int mypid = 0;
 static int verbose = 0;
+static int spin = 0;
 
 static void usage(char *name, int brief) {
-    fprintf(stderr, "Usage: %s <seconds to sleep> [-h|--help] [--verbose]\n", name);
+    fprintf(stderr, "Usage: %s <seconds to sleep> [-h|--help] [--verbose] [--spin]\n", name);
     int alen = (int)strlen(name);
     if ( brief ) return;
     fprintf(stderr, "\n");
@@ -67,7 +68,7 @@ static void catch_sighup(int signo) {
 }
  
 int main(int argc, char *argv[]) {
-    if ( argc < 2 || argc > 3 ) {
+    if ( argc < 2 ) {
         usage( argv[0], 1 );
         return 1;
     }
@@ -76,6 +77,7 @@ int main(int argc, char *argv[]) {
     for ( int iarg = 1; iarg < argc; ++iarg )
     {
         if ( 0 == strcmp("--verbose", argv[iarg]) ) { verbose = 1; continue; }
+        if ( 0 == strcmp("--spin", argv[iarg]) ) { spin = 1; continue; }
         if ( 0 == strcmp("-h", argv[iarg]) || 0 == strcmp("--help", argv[iarg]) ) {
             usage( argv[0], 0 );
             return 0;
@@ -114,7 +116,12 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    boost::this_thread::sleep( boost::posix_time::seconds( d ) );
+    if (spin)
+    {
+        boost::posix_time::ptime end = boost::posix_time::microsec_clock::universal_time() + boost::posix_time::seconds( d );
+        while ( boost::posix_time::microsec_clock::universal_time() < end );
+    }
+    else { boost::this_thread::sleep( boost::posix_time::seconds( d ) ); };
     fprintf(stdout, "%s: normal exit from slumber\n", argv[0]);
     return 0;
 }
