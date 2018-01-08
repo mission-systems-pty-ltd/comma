@@ -7,9 +7,13 @@ usage[5]="comma-nap --verbose --help"
 
 error[0]="comma-nap -10"
 error[1]="comma-nap 10 12"
-error[2]="comma-nap 10 --verbose --help"
 
 sleep[0]="timeout -s TERM 10 comma-nap 1"
 sleep[1]="timeout -s TERM 10 comma-nap --verbose 1"
 sleep[2]="timeout -s TERM 1 comma-nap 10"
 sleep[3]="timeout -s TERM 1 comma-nap --verbose 10"
+
+spin[0]="timeout -s TERM 10 comma-nap 1 --spin"
+spin[1]="timeout -s TERM 10 comma-nap --verbose 1 --spin"
+spin[2]="timeout -s TERM 1 comma-nap 10 --spin"
+spin[3]="timeout -s TERM 1 comma-nap --verbose 10 --spin"
