@@ -521,7 +521,7 @@ int main( int ac, char** av )
                     {
                         if( index != 0 )
                         { 
-                            std::cerr << name() << "failed to read a full block, last index read is:" << index <<  ", hence " << index << " more record/s expected " << strict << std::endl;
+                            std::cerr << name() << "failed to read a full block, last index read is:" << index <<  ", hence " << index << " more record/s expected" << std::endl;
                             if( strict ) { return 1; }
                         }
                         return EX_NOINPUT; // we are done, end of stream
