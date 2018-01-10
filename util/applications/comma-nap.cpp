@@ -57,23 +57,36 @@ static void usage(char *name, int brief) {
     fprintf(stderr, "%*c --verbose; verbose output \n", alen, ' ');
 }
 
+boost::posix_time::ptime start;
+
+static void output(int result)
+{
+    fprintf(stdout, "%d", result);
+    if (stats)
+    {
+        boost::posix_time::ptime end = boost::posix_time::microsec_clock::universal_time();
+        fprintf(stdout, ",%s,%s,%f", boost::posix_time::to_iso_string(start).c_str(), boost::posix_time::to_iso_string(end).c_str(), (double)(end - start).total_microseconds() / 1000000.0 );
+    }
+    fprintf(stdout, "\n");
+}
+
 static void catch_sigint(int signo) {
     if ( verbose ) { fprintf(stderr, "comma-nap (%d): signal INT caught.\n", mypid); }
-    if ( stats ) { fprintf(stdout, "comma-nap: ended nap at %s after SIGINT\n", boost::posix_time::to_iso_string(boost::posix_time::microsec_clock::universal_time()).c_str()); }
+    output(signo);
     signal(SIGINT, SIG_DFL);
     raise(SIGINT);
 }
  
 static void catch_sigterm(int signo) {
     if ( verbose ) { fprintf(stderr, "comma-nap (%d): signal TERM caught.\n", mypid); }
-    if ( stats ) { fprintf(stdout, "comma-nap: ended nap at %s after SIGTERM\n", boost::posix_time::to_iso_string(boost::posix_time::microsec_clock::universal_time()).c_str()); }
+    output(signo);
     signal(SIGTERM, SIG_DFL);
     raise(SIGTERM);
 }
  
 static void catch_sighup(int signo) {
     if ( verbose ) { fprintf(stderr, "comma-nap (%d): signal HUP caught.\n", mypid); }
-    if ( stats ) { fprintf(stdout, "comma-nap: ended nap at %s after SIGHUP\n", boost::posix_time::to_iso_string(boost::posix_time::microsec_clock::universal_time()).c_str()); }
+    output(signo);
     signal(SIGHUP, SIG_DFL);
     raise(SIGHUP);
 }
@@ -128,12 +141,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    boost::posix_time::ptime start = boost::posix_time::microsec_clock::universal_time();
-
-    if (stats)
-    {
-        fprintf(stdout, "%s: started nap at %s\n", argv[0], boost::posix_time::to_iso_string(start).c_str());    
-    }
+    start = boost::posix_time::microsec_clock::universal_time();
 
     if (spin)
     {
@@ -141,14 +149,9 @@ int main(int argc, char *argv[]) {
         while ( boost::posix_time::microsec_clock::universal_time() < end );
     }
     else { boost::this_thread::sleep( boost::posix_time::seconds( d ) ); };
-
-    if (stats)
-    {
-        boost::posix_time::ptime end = boost::posix_time::microsec_clock::universal_time();
-        fprintf(stdout, "%s: ended nap at %s\n", argv[0], boost::posix_time::to_iso_string(end).c_str());
-        fprintf(stdout, "%s: napped for %f seconds\n", argv[0], ( (double)(end - start).total_microseconds() / 1000000.0 )  );
-    }
-
-    fprintf(stdout, "%s: normal exit from slumber\n", argv[0]);
+    if ( verbose ) { fprintf(stderr, "%s: normal exit from slumber\n", argv[0]); }
+    
+    output(0);
+    
     return 0;
 }

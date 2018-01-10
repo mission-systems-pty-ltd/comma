@@ -1,11 +1,5 @@
 #!/bin/bash
 
-function grab()
-{
-    sed --regexp-extended -n 's@.*(normal exit).*@\1@p'
-}
-export -f grab
-
 function verify_parallel()
 {
     local location=$1

@@ -2,12 +2,6 @@
 
 source $( which comma-process-util ) || exit 1
 
-function grab()
-{
-    sed --regexp-extended -n 's@.*(normal exit).*@\1@p'
-}
-export -f grab
-
 export output_dir="output"
 mkdir -p "$output_dir" || exit 1
 
@@ -17,7 +11,7 @@ function test01()
 {
     comma_execute_and_wait "comma-nap 10" > "$output_dir/test01.log"
 }
-test01 ; echo "test[1]/exit/status=$?" ; echo "test[1]/output=\""$( tail -n 1 "$output_dir"/test01.log | grab )"\""
+test01 ; echo "test[1]/exit/status=$?" ; echo "test[1]/output=\""$( tail -n 1 "$output_dir"/test01.log )"\""
 
 # run a long program and terminate by timeout; verify that the command-to-execute
 # was terminated (did not produce output), and that that expected status was returned
@@ -32,7 +26,7 @@ function test03()
 {
     comma_execute_and_wait --signals="TERM,USR1" "comma-nap 10" > "$output_dir/test03.log"
 }
-test03 ; echo "test[3]/exit/status=$?" ; echo "test[3]/output=\""$( tail -n 1 "$output_dir"/test03.log | grab )"\""
+test03 ; echo "test[3]/exit/status=$?" ; echo "test[3]/output=\""$( tail -n 1 "$output_dir"/test03.log )"\""
 
 # check that can run a bash function to completion and pass arguments through
 # the environment

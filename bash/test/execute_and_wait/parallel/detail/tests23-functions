@@ -17,7 +17,7 @@ function test_worker()
     trap 'test_handler PIPE' SIGPIPE
     trap 'test_handler USR1' SIGUSR1
     local duration=$1
-    comma-nap $duration | grab
+    comma-nap $duration
 }
 export -f test_worker
 

@@ -10,19 +10,38 @@ for i in range(2):
     expect error[i]/status == 1
 
 expect sleep[0]/status == 0
-expect len(sleep[0]/output) != 0
+expect sleep[0]/output == "0"
 expect sleep[1]/status == 0
-expect len(sleep[1]/output) != 0
+expect sleep[1]/output == "0"
 expect sleep[2]/status == 124
-expect len(sleep[2]/output) == 0
+expect sleep[2]/output == ""
 expect sleep[3]/status == 124
-expect len(sleep[3]/output) == 0
+expect sleep[3]/output == ""
+
+expect sleep[4]/status == 0
+expect sleep[4]/output == "0"
+expect sleep[5]/status == 0
+expect sleep[5]/output == "0"
+expect sleep[6]/status == 124
+expect sleep[6]/output == ""
+expect sleep[7]/status == 124
+expect sleep[7]/output == ""
+
 
 expect spin[0]/status == 0
-expect len(spin[0]/output) != 0
+expect spin[0]/output == "0"
 expect spin[1]/status == 0
-expect len(spin[1]/output) != 0
+expect spin[1]/output == "0"
 expect spin[2]/status == 124
-expect len(spin[2]/output) == 0
+expect spin[2]/output == ""
 expect spin[3]/status == 124
-expect len(spin[3]/output) == 0
+expect spin[3]/output == ""
+
+expect spin[4]/status == 0
+expect spin[4]/output == "0"
+expect spin[5]/status == 0
+expect spin[5]/output == "0"
+expect spin[6]/status == 124
+expect spin[6]/output == ""
+expect spin[7]/status == 124
+expect spin[7]/output == ""
