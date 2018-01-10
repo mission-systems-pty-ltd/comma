@@ -32,13 +32,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 static int mypid = 0;
 static int verbose = 0;
 static int spin = 0;
+static int stats = 0;
 
 static void usage(char *name, int brief) {
-    fprintf(stderr, "Usage: %s <seconds to sleep> [-h|--help] [--verbose] [--spin]\n", name);
+    fprintf(stderr, "Usage: %s <seconds to sleep> [<options>]\n", name);
     int alen = (int)strlen(name);
     if ( brief ) return;
     fprintf(stderr, "\n");
@@ -47,22 +49,31 @@ static void usage(char *name, int brief) {
     fprintf(stderr, "%*c (unless '--verbose' is given; then prints the name of the signal caught).\n", alen, ' ');
     fprintf(stderr, "%*c Thus, the user may detect if a kill signal reached its destination.\n", alen, ' ');
     fprintf(stderr, "%*c Input argument is an integer number of seconds to sleep.\n", alen, ' ');
+    fprintf(stderr, "\n" );
+    fprintf(stderr, "Options:\n");
+    fprintf(stderr, "%*c --help,-h; show usage and exit.\n", alen, ' ');
+    fprintf(stderr, "%*c --spin; use spinwait (default: sleep thread) \n", alen, ' ');
+    fprintf(stderr, "%*c --stats; print timing statistics \n", alen, ' ');
+    fprintf(stderr, "%*c --verbose; verbose output \n", alen, ' ');
 }
 
 static void catch_sigint(int signo) {
     if ( verbose ) { fprintf(stderr, "comma-nap (%d): signal INT caught.\n", mypid); }
+    if ( stats ) { fprintf(stdout, "comma-nap: ended nap at %s after SIGINT\n", boost::posix_time::to_iso_string(boost::posix_time::microsec_clock::universal_time()).c_str()); }
     signal(SIGINT, SIG_DFL);
     raise(SIGINT);
 }
  
 static void catch_sigterm(int signo) {
     if ( verbose ) { fprintf(stderr, "comma-nap (%d): signal TERM caught.\n", mypid); }
+    if ( stats ) { fprintf(stdout, "comma-nap: ended nap at %s after SIGTERM\n", boost::posix_time::to_iso_string(boost::posix_time::microsec_clock::universal_time()).c_str()); }
     signal(SIGTERM, SIG_DFL);
     raise(SIGTERM);
 }
  
 static void catch_sighup(int signo) {
     if ( verbose ) { fprintf(stderr, "comma-nap (%d): signal HUP caught.\n", mypid); }
+    if ( stats ) { fprintf(stdout, "comma-nap: ended nap at %s after SIGHUP\n", boost::posix_time::to_iso_string(boost::posix_time::microsec_clock::universal_time()).c_str()); }
     signal(SIGHUP, SIG_DFL);
     raise(SIGHUP);
 }
@@ -78,6 +89,7 @@ int main(int argc, char *argv[]) {
     {
         if ( 0 == strcmp("--verbose", argv[iarg]) ) { verbose = 1; continue; }
         if ( 0 == strcmp("--spin", argv[iarg]) ) { spin = 1; continue; }
+        if ( 0 == strcmp("--stats", argv[iarg]) ) { stats = 1; continue; }
         if ( 0 == strcmp("-h", argv[iarg]) || 0 == strcmp("--help", argv[iarg]) ) {
             usage( argv[0], 0 );
             return 0;
@@ -116,12 +128,27 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    boost::posix_time::ptime start = boost::posix_time::microsec_clock::universal_time();
+
+    if (stats)
+    {
+        fprintf(stdout, "%s: started nap at %s\n", argv[0], boost::posix_time::to_iso_string(start).c_str());    
+    }
+
     if (spin)
     {
-        boost::posix_time::ptime end = boost::posix_time::microsec_clock::universal_time() + boost::posix_time::seconds( d );
+        boost::posix_time::ptime end = start + boost::posix_time::seconds( d );
         while ( boost::posix_time::microsec_clock::universal_time() < end );
     }
     else { boost::this_thread::sleep( boost::posix_time::seconds( d ) ); };
+
+    if (stats)
+    {
+        boost::posix_time::ptime end = boost::posix_time::microsec_clock::universal_time();
+        fprintf(stdout, "%s: ended nap at %s\n", argv[0], boost::posix_time::to_iso_string(end).c_str());
+        fprintf(stdout, "%s: napped for %f seconds\n", argv[0], ( (double)(end - start).total_microseconds() / 1000000.0 )  );
+    }
+
     fprintf(stdout, "%s: normal exit from slumber\n", argv[0]);
     return 0;
 }
