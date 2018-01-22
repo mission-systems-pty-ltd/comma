@@ -251,6 +251,7 @@ int main( int ac, char** av )
             else if( crc == "32" ) { std::cout << sizeof( boost::crc_32_type::value_type ) << std::endl; }
             else if( crc == "ccitt" ) { std::cout << sizeof( boost::crc_ccitt_type::value_type ) << std::endl; }
             else if( crc == "xmodem" ) { std::cout << sizeof( boost::crc_xmodem_type::value_type ) << std::endl; }
+            else if( crc == "xmodem-correct" ) { std::cout << sizeof( boost::crc_xmodem_type::value_type ) << std::endl; }
             else { std::cerr << "csv-crc: expected crc type, got \"" << crc << "\"" << std::endl; return 1; }
             return 0;
         }
