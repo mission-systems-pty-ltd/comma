@@ -54,7 +54,7 @@ static void usage( bool )
     std::cerr << std::endl;
     std::cerr << "<command>" << std::endl;
     std::cerr << "    wrap: add crc" << std::endl;
-    std::cerr << "    check: check crs; exit, if check fails" << std::endl;
+    std::cerr << "    check: check crc; exit, if check fails" << std::endl;
     std::cerr << "    recover: recover with given parameters (see below)" << std::endl;
     std::cerr << std::endl;
     std::cerr << "data options" << std::endl;
