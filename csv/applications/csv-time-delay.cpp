@@ -43,7 +43,7 @@
 static void usage()
 {
     std::cerr << std::endl;
-    std::cerr << "subtract given value from timestamp" << std::endl;
+    std::cerr << "add given value to timestamp" << std::endl;
     std::cerr << std::endl;
     std::cerr << "usage: cat a.csv | csv-time-delay <seconds> [<options>]" << std::endl;
     std::cerr << std::endl;
