@@ -255,7 +255,11 @@ stream< S >::stream( const std::string& name, mode::value m, mode::blocking_valu
     if( v[0] == "tcp" )
     {
         if( v.size() != 3 ) { COMMA_THROW( comma::exception, "expected tcp:<address>:<port>, got \"" << name << "\"" ); }
+#if (BOOST_VERSION >= 106600)
+        boost::asio::io_context service;
+#else
         boost::asio::io_service service;
+#endif
         boost::asio::ip::tcp::resolver resolver( service );
         boost::asio::ip::tcp::resolver::query query( v[1] == "localhost" ? "127.0.0.1" : v[1], v[2] );
         boost::asio::ip::tcp::resolver::iterator it = resolver.resolve( query );
@@ -263,7 +267,11 @@ stream< S >::stream( const std::string& name, mode::value m, mode::blocking_valu
         if( !*s ) { delete s; COMMA_THROW( comma::exception, "failed to connect to " << name << ( blocking_ ? " (todo: implement blocking mode)" : "" ) ); }
         close_ = boost::bind( &boost::asio::ip::tcp::iostream::close, s );
         // todo: make unidirectional
+#if (BOOST_VERSION >= 106600)
+        fd_ = s->rdbuf()->native_handle();
+#else
         fd_ = s->rdbuf()->native();
+#endif
         stream_ = s;
     }
     else if( v[0] == "udp" )
@@ -311,7 +319,11 @@ stream< S >::stream( const std::string& name, mode::value m, mode::blocking_valu
         if( !( *ls ) ) { COMMA_THROW( comma::exception, "failed to open " << name_ << ( blocking_ ? " (todo: implement blocking)" : "" ) ); }
         close_ = boost::bind( &boost::asio::local::stream_protocol::iostream::close, ls );
         // todo: make unidirectional
+#if (BOOST_VERSION >= 106600)
+        fd_ = ls->rdbuf()->native_handle();
+#else
         fd_ = ls->rdbuf()->native();
+#endif
         stream_ = ls;
     }
 #endif

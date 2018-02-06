@@ -126,9 +126,17 @@ class socket_acceptor : public acceptor
             , acceptor_( m_service, socket_traits< S >::endpoint( name ) )
         {
 #ifndef WIN32
+#if (BOOST_VERSION >= 106600)
+            select_.read().add( acceptor_.native_handle() );
+#else
             select_.read().add( acceptor_.native() );
+#endif
+#else
+#if (BOOST_VERSION >= 106600)
+            SOCKET socket = acceptor_.native_handle();
 #else
             SOCKET socket = acceptor_.native();
+#endif
             select_.read().add( socket );
 #endif
         }
@@ -137,20 +145,36 @@ class socket_acceptor : public acceptor
         {
             select_.wait( timeout );
 #ifndef WIN32
+#if (BOOST_VERSION >= 106600)
+            if( !select_.read().ready( acceptor_.native_handle() ) ) { return NULL; }
+#else
             if( !select_.read().ready( acceptor_.native() ) ) { return NULL; }
+#endif
+#else
+#if (BOOST_VERSION >= 106600)
+            SOCKET socket = acceptor_.native_handle();
 #else
             SOCKET socket = acceptor_.native();
+#endif
             if( !select_.read().ready( socket ) ) { return NULL; }
 #endif
             typename socket_traits< S >::iostream* stream = new typename socket_traits< S >::iostream;
             acceptor_.accept( *( stream->rdbuf() ) );
+#if (BOOST_VERSION >= 106600)
+            return new io::ostream( stream, stream->rdbuf()->native_handle(), mode_, boost::bind( &socket_traits< S >::iostream::close, stream ) );
+#else
             return new io::ostream( stream, stream->rdbuf()->native(), mode_, boost::bind( &socket_traits< S >::iostream::close, stream ) );
+#endif
         }
 
         void close() { acceptor_.close(); }
 
 #ifndef WIN32
+#if (BOOST_VERSION >= 106600)
+        io::file_descriptor fd() const { return const_cast< typename socket_traits< S >::acceptor& >( acceptor_ ).native_handle(); }
+#else
         io::file_descriptor fd() const { return const_cast< typename socket_traits< S >::acceptor& >( acceptor_ ).native(); }
+#endif
 #else
         io::file_descriptor fd() const { return io::invalid_file_descriptor; }
 #endif
@@ -158,7 +182,11 @@ class socket_acceptor : public acceptor
     private:
         io::mode::value mode_;
         io::select select_;
+#if (BOOST_VERSION >= 106600)
+        boost::asio::io_context m_service;
+#else
         boost::asio::io_service m_service;
+#endif
         typename socket_traits< S >::acceptor acceptor_;
 };
 

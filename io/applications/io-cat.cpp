@@ -152,7 +152,11 @@ class udp_stream : public stream
         }
         
     private:
+#if (BOOST_VERSION >= 106600)
+        boost::asio::io_context service_;
+#else
         boost::asio::io_service service_;
+#endif
         mutable boost::asio::ip::udp::socket socket_; // boost::asio::ip::udp::socket::fd() is non-const for some reason
 };
 

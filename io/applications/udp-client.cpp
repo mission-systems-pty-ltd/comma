@@ -76,7 +76,11 @@ int main( int argc, char** argv )
     bool binary = !options.exists( "--ascii" );
     char delimiter = options.value( "--delimiter", ',' );
     std::vector< char > packet( options.value( "--size", 16384 ) );
+#if (BOOST_VERSION >= 106600)
+    boost::asio::io_context service;
+#else
     boost::asio::io_service service;
+#endif
     boost::asio::ip::udp::socket socket( service );
     socket.open( boost::asio::ip::udp::v4() );
     boost::system::error_code error;
