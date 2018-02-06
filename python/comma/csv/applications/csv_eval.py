@@ -406,7 +406,8 @@ def prepare_options(args):
             raise csv_eval_error("first record is empty - could not guess format")
         args.format = comma.csv.format.guess_format(args.first_line)
         args.binary = False
-        print >> sys.stderr, __name__ + ": guessed format", args.format
+        if args.verbose:
+            print >> sys.stderr, "{}: guessed format: {}".format(__name__, args.format)
     if args.select or args.exit_if:
         return
     var_names = assignment_variable_names(args.expressions)
