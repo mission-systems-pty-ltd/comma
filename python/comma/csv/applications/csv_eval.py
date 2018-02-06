@@ -402,6 +402,8 @@ def prepare_options(args):
         args.binary = False
     else:
         args.first_line = comma.io.readlines_unbuffered(1, sys.stdin)
+        if not args.first_line:
+            raise csv_eval_error("first record is empty - could not guess format")
         args.format = comma.csv.format.guess_format(args.first_line)
         args.binary = False
         print >> sys.stderr, __name__ + ": guessed format", args.format
