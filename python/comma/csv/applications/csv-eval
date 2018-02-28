@@ -30,4 +30,8 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from comma.csv.applications import csv_eval
-csv_eval.main()
+import sys, signal
+try:
+    csv_eval.main()
+except KeyboardInterrupt:
+    sys.exit( 128 + signal.SIGINT )
