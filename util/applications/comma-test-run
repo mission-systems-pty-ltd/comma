@@ -283,7 +283,7 @@ ${brown}White(and black)-listing tests${none}
 
 ${brown}White(and black)-listing pro hint${none}
     Assume some tests failed:
-        comma-test-run > comma-test-run.log 2>&1 ; echo $?
+        comma-test-run > comma-test-run.log 2>&1 ; echo \$?
         1
     Create a white list from log file:
         grep run comma-test-run.log | grep failed | sed 's@.*run: @@;s@:.*@@' > white.list
