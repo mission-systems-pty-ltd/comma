@@ -49,9 +49,6 @@ if( NOT WIN32 )
     install( TARGETS io-console RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
 endif( NOT WIN32 )
 
-if(comma_build_rabbitmq)
-    install( PROGRAMS rabbit-cat DESTINATION ${comma_INSTALL_BIN_DIR})
-endif()
-
+install( PROGRAMS rabbit-cat DESTINATION ${comma_INSTALL_BIN_DIR})
 install( PROGRAMS zero-publish DESTINATION ${comma_INSTALL_BIN_DIR})
 

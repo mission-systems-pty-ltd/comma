@@ -153,7 +153,6 @@ OPTION( BUILD_APPLICATIONS "build applications" ON )
 SET( comma_BUILD_APPLICATIONS ${BUILD_APPLICATIONS} )
 
 OPTION( comma_BUILD_ZEROMQ "build io with zeromq support" OFF )
-option( comma_build_rabbitmq "build rabit mq components" OFF )
 
 OPTION(BUILD_SHARED_LIBS "build with shared libraries" OFF)
 
