@@ -1,0 +1,265 @@
+# This file is part of comma, a generic and flexible library
+# Copyright (c) 2018 The University of Sydney
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of the University of Sydney nor the
+#    names of its contributors may be used to endorse or promote products
+#    derived from this software without specific prior written permission.
+#
+# NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+# GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+# HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+# BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+#!/usr/bin/python
+import argparse
+import sys
+import pika
+
+# TODO
+# implement operations: rpc-send, rpc-listen
+# implement --exec
+# ?formatted input e.g. "routing_key:message"
+# ? utility operations e.g. list-queues, list-exchanges ...
+# ? bash completion
+
+def command_line_options():
+    global application_name
+    description="""Rabbit MQ client: send/receive messages to/from rabbit mq server
+    
+rabbit-cat <operation> <connection_string> [ <options> ]
+
+operation:
+    send        read messages from stdin and send 
+    listen      receive messages and write to stdout, or run command with --exec
+"""
+    #rpc-send    <<NOT IMPLEMENTED>> send request and wait for reply
+    #rpc-listen  <<NOT IMPLEMENTED>> receive requests and send back reply
+#"""
+
+
+    epilog="""
+
+sample connection string:    
+# Set the connection parameters to connect to rabbit-server1 on port 5672
+# on the / virtual host using the username "guest" and password "guest"
+"amqp://guest:guest@rabbit-server1:5672/%2F"
+
+
+example 1: send message directly to a queue by name
+    rabbit-cat listen localhost --queue="queue1"
+    &
+    echo "hello world!" | rabbit-cat send localhost --queue="queue1" --routing-key="queue1"
+
+example 2: send message to work queue with multiple receivers (each message is received only by one listener)
+    rabbit-cat listen localhost --queue="task_queue1" --prefetch=1 --durable --ack
+    &
+    rabbit-cat listen localhost --queue="task_queue1" --prefetch=1 --durable --ack
+    &
+    (echo "task 1"; echo "task 2"; echo "task 3" ) | rabbit-cat send localhost --queue=task_queue1 --routing-key="task_queue1" --durable --persistent-message
+
+
+example 3: publish and subscribe
+    rabbit-cat listen localhost --fanout --exchange="exchange2" 
+    &
+    rabbit-cat listen localhost --fanout --exchange="exchange2"
+    &
+    (echo "message 1"; echo "message 2"; echo "message 3") | rabbit-cat send localhost --fanout --exchange="exchange2"
+
+example 4: binding (direct)
+    rabbit-cat listen localhost --exchange="exchange1" --bind "blue"
+    &
+    rabbit-cat listen localhost --exchange="exchange1" --bind "red" "yellow"
+    &
+    echo "red:sky" | rabbit-cat send localhost --exchange="exchange1" --routing-key="red"
+    echo "blue:fire" | rabbit-cat send localhost --exchange="exchange1" --routing-key="blue"
+    echo "yellow:dog" | rabbit-cat send localhost --exchange="exchange1" --routing-key="yellow"
+
+example 5: topic
+    rabbit-cat listen localhost  --topic --exchange="exchange3" --bind "*.error"
+    &
+    rabbit-cat listen localhost --topic --exchange="exchange3" --bind "red.error" "yellow.warning"
+    &
+    echo "red.error:sky" | rabbit-cat send localhost --topic --exchange="exchange3" --routing-key="red.error"
+    echo "blue.warning:fire" | rabbit-cat send localhost --topic --exchange="exchange3" --routing-key="blue.warning"
+    echo "yellow.warning:dog" | rabbit-cat send localhost --topic --exchange="exchange3" --routing-key="yellow.warning"
+    echo "yellow.error:dog" | rabbit-cat send localhost --topic --exchange="exchange3" --routing-key="yellow.error"
+
+
+    """
+#example 6: rpc
+    #<<NOT IMPMENETED>>
+    #rabbit-cat rpc-listen localhost --queue="queue1" --exec="bc"
+    #&
+    #echo "2+3" | rabbit-cat rpc-send localhost --queue="queue1" --routing-key="queue1"
+    
+
+    #"""
+
+
+    parser=argparse.ArgumentParser(description=description,epilog=epilog,formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('-v', '--verbose',help='verbose logging',action='store_true')
+    #parser.add_argument('operation',help='operation',choices=['send','listen','rpc-send','rpc-listen'])
+    parser.add_argument('operation',help='operation',choices=['send','listen'])
+    parser.add_argument('connection_string',help='[amqp://][<user>[:<password>]@]<host>[/<virtual_host>]')
+    parser.add_argument('--exchange',help='declare exchange by name, default use unnamed direct exchange')
+    parser.add_argument('--queue',help='declare queue by name, default create exclusive queue for receiver')
+    parser.add_argument('--durable',help='use durable flag for --queue, used in both sender and receiver',action='store_true')
+    parser.add_argument('--routing-key',help='(sender) routing key value',default='')
+    parser.add_argument('--fanout',help='use publish/subscribe mode (exhange type fanout), default direct',action='store_true')
+    parser.add_argument('--bind',nargs='*',help='(receiver) bind queue to routing key or topic, specify multiple keys separated by space')
+    parser.add_argument('--topic',help='use topic mode (see rabbit MQ help) use dot to seprate topics in routing key for sender, use * and # to match pattern of topics in reciver for binding key',action='store_true')
+    parser.add_argument('--end-of-message',help='separator string for input and output, default \\n',default='\n')
+    #parser.add_argument('--exec',dest='command',help='<<NOT IMPLEMENTED>> (receiver) run command once for each received message and pass the message as stdin, in rpc-listen mode read stdout and send back as reply')
+    parser.add_argument('--no-flush',help='(receiver) don\'t flush after writting to stdout',action='store_true')
+    parser.add_argument('--ack',help='(receiver) send ack for receiving messages, default no ack',action='store_true')
+    parser.add_argument('--prefetch',help='(receiver) set prefetch count for channel qos',type=int)
+    parser.add_argument('--persistent-message',help='(sender) use delivery_mode=2',action='store_true')
+    args=parser.parse_args()
+    application_name=parser.prog
+
+    return args
+
+args=command_line_options()
+
+def error_and_exit(s,exit_code=1):
+    sys.stderr.write('%s: error: %s\n'%(application_name,s))
+    sys.exit(exit_code)
+def log_verbose(s):
+    global args
+    if args.verbose:
+        sys.stderr.write('%s: %s\n'%(application_name,s))
+
+#log_verbose('args.connection_string: %s, type: %s'%(args.connection_string, type(args.connection_string)))
+
+def send_message(message):
+    if args.persistent_message:
+        channel.basic_publish(exchange=exchange_name,routing_key=args.routing_key,body=message,properties=pika.BasicProperties(delivery_mode=2))
+    else:
+        channel.basic_publish(exchange=exchange_name,routing_key=args.routing_key,body=message)
+    #log_verbose('sent')
+
+def run_send():
+    line=''
+    while 1:
+        try:
+            if args.end_of_message=='\n':
+                line=sys.stdin.readline()
+                if line:
+                    send_message(line)
+            else:
+                line+=sys.stdin.readline()
+                while 1:
+                    res=line.partition(args.end_of_message)
+                    if not res[1]:
+                        break
+                    send_message(res[0])
+                    line=res[2]
+        except KeyboardInterrupt:
+            break
+        if not line:
+            break
+    log_verbose('exiting')
+
+def on_receive(ch,method,properties,body):
+    #log_verbose('received')
+    sys.stdout.write('%s'%body)
+    sys.stdout.write(args.end_of_message)
+    if not args.no_flush:
+        sys.stdout.flush()
+    if args.ack:
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+
+def run_receive():
+    if args.prefetch:
+        channel.basic_qos(prefetch_count=args.prefetch)
+    channel.basic_consume(on_receive,queue=queue_name,no_ack=not args.ack)
+    log_verbose('Waiting for messages. To exit press CTRL+C')
+    try:
+        channel.start_consuming()
+    except KeyboardInterrupt:
+        pass
+    log_verbose('exiting')
+
+def make_queue():
+    if args.queue:
+        channel.queue_declare(queue=args.queue,durable=args.durable)
+        return args.queue
+    elif is_listener:
+        result=channel.queue_declare(exclusive=True)
+        return result.method.queue
+    return ''
+
+def make_exchange():
+    if args.exchange:
+        channel.exchange_declare(exchange=args.exchange,exchange_type=exchange_type)
+        return args.exchange
+    return ''
+
+def make_binding():
+    if not is_listener:
+        return
+    if args.bind:
+        for key in args.bind:
+            log_verbose('binding exchange, queue and key: %s; %s; %s'%(exchange_name,queue_name,key))
+            channel.queue_bind(exchange=exchange_name,queue=queue_name,routing_key=key)
+    elif exchange_name: # and queue_name listener always has a queue name
+        log_verbose('binding exchange and queue: %s; %s'%(exchange_name,queue_name))
+        channel.queue_bind(exchange=exchange_name,queue=queue_name)
+    
+is_listener=args.operation in ['listen','rpc-listen']
+#log_verbose('listener %s'%is_listener)
+#if args.operation in ['rpc-listen','rpc-send']:
+    #error_and_exit('operation NOT IMPLEMENTED: %s'%operation)
+#if args.command:
+    #error_and_exit('option NOT IMPLEMENTED: --exec')
+
+if args.fanout and args.topic:
+    error_and_exit('conflicting options: choose either --fanout or --topic')
+if args.fanout:
+    exchange_type='fanout'
+elif args.topic:
+    exchange_type='topic'
+else:
+    exchange_type='direct'
+
+#connection=pika.BlockingConnection(pika.ConnectionParameters(args.connection_string))
+url=args.connection_string
+if not '/' in url:
+    url+='/'
+if not '://' in url:
+    url='amqp://'+url
+log_verbose('url: '+url)
+# https://pika.readthedocs.io/en/0.9.6/connecting.html
+# for ssl options see http://pika.readthedocs.io/en/0.9.6/examples/using_urlparameters.html?highlight=ssl
+connection=pika.BlockingConnection(pika.connection.URLParameters(url))
+
+
+try:
+    channel=connection.channel()
+    queue_name=make_queue()
+    exchange_name=make_exchange()
+    make_binding()
+
+    if is_listener:
+        run_receive()
+    else:
+        run_send()
+finally:
+        connection.close()
