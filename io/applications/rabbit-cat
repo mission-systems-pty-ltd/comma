@@ -162,6 +162,8 @@ def run_send():
         try:
             if args.end_of_message=='\n':
                 line=sys.stdin.readline()
+                if line.endswith('\n'):
+                    line=line[0:len(line)-1]
                 if line:
                     send_message(line)
             else:
