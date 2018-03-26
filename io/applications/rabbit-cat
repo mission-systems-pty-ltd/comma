@@ -36,7 +36,7 @@ import pika
 # TODO
 # implement operations: rpc-send, rpc-listen
 # implement --exec
-# ?formatted input e.g. "routing_key:message"
+# ? formatted input e.g. "routing_key:message"
 # ? utility operations e.g. list-queues, list-exchanges ...
 # ? bash completion
 
@@ -119,19 +119,20 @@ example 5: topic
     #parser.add_argument('operation',help='operation',choices=['send','listen','rpc-send','rpc-listen'])
     parser.add_argument('operation',help='operation',choices=['send','listen'])
     parser.add_argument('connection_string',help='[amqp://][<user>[:<password>]@]<host>[/<virtual_host>]')
-    parser.add_argument('--exchange',help='declare exchange by name, default use unnamed direct exchange')
-    parser.add_argument('--queue',help='declare queue by name, default create exclusive queue for receiver')
-    parser.add_argument('--durable',help='use durable flag for --queue, used in both sender and receiver',action='store_true')
-    parser.add_argument('--routing-key',help='(sender) routing key value',default='')
-    parser.add_argument('--fanout',help='use publish/subscribe mode (exhange type fanout), default direct',action='store_true')
-    parser.add_argument('--bind',nargs='*',help='(receiver) bind queue to routing key or topic, specify multiple keys separated by space')
-    parser.add_argument('--topic',help='use topic mode (see rabbit MQ help) use dot to seprate topics in routing key for sender, use * and # to match pattern of topics in reciver for binding key',action='store_true')
-    parser.add_argument('--end-of-message',help='separator string for input and output, default \\n',default='\n')
-    #parser.add_argument('--exec',dest='command',help='<<NOT IMPLEMENTED>> (receiver) run command once for each received message and pass the message as stdin, in rpc-listen mode read stdout and send back as reply')
-    parser.add_argument('--no-flush',help='(receiver) don\'t flush after writting to stdout',action='store_true')
+    parser.add_argument('--all','--send-all-as-one-message',help='(publisher) read stdin till the end of stream, send everything as a single message, a convenience option',action='store_true')
     parser.add_argument('--ack',help='(receiver) send ack for receiving messages, default no ack',action='store_true')
-    parser.add_argument('--prefetch',help='(receiver) set prefetch count for channel qos',type=int)
+    parser.add_argument('--bind',nargs='*',help='(receiver) bind queue to routing key or topic, specify multiple keys separated by space')
+    parser.add_argument('--durable',help='use durable flag for --queue, used in both sender and receiver',action='store_true')
+    parser.add_argument('--end-of-message',help='separator string for input and output; currently works only with ascii line-based data, default \\n',default='\n')
+    parser.add_argument('--exchange',help='declare exchange by name, default use unnamed direct exchange')
+    #parser.add_argument('--exec',dest='command',help='<<NOT IMPLEMENTED>> (receiver) run command once for each received message and pass the message as stdin, in rpc-listen mode read stdout and send back as reply')
+    parser.add_argument('--fanout',help='use publish/subscribe mode (exhange type fanout), default direct',action='store_true')
+    parser.add_argument('--flush',help='(receiver) flush after writting to stdout',action='store_true')
     parser.add_argument('--persistent-message',help='(sender) use delivery_mode=2',action='store_true')
+    parser.add_argument('--prefetch',help='(receiver) set prefetch count for channel qos',type=int)
+    parser.add_argument('--queue',help='declare queue by name, default create exclusive queue for receiver')
+    parser.add_argument('--routing-key',help='(sender) routing key value',default='')
+    parser.add_argument('--topic',help='use topic mode (see rabbit MQ help) use dot to seprate topics in routing key for sender, use * and # to match pattern of topics in reciver for binding key',action='store_true')
     args=parser.parse_args()
     application_name=parser.prog
 
@@ -139,85 +140,73 @@ example 5: topic
 
 args=command_line_options()
 
-def error_and_exit(s,exit_code=1):
-    sys.stderr.write('%s: error: %s\n'%(application_name,s))
-    sys.exit(exit_code)
+def error_and_exit(s,exit_code=1): sys.stderr.write('%s: error: %s\n'%(application_name,s)); sys.exit(exit_code)
 def log_verbose(s):
     global args
-    if args.verbose:
-        sys.stderr.write('%s: %s\n'%(application_name,s))
+    if args.verbose: sys.stderr.write('%s: %s\n'%(application_name,s))
 
 #log_verbose('args.connection_string: %s, type: %s'%(args.connection_string, type(args.connection_string)))
 
 def send_message(message):
-    if args.persistent_message:
-        channel.basic_publish(exchange=exchange_name,routing_key=args.routing_key,body=message,properties=pika.BasicProperties(delivery_mode=2))
-    else:
-        channel.basic_publish(exchange=exchange_name,routing_key=args.routing_key,body=message)
+    if args.persistent_message: channel.basic_publish(exchange=exchange_name,routing_key=args.routing_key,body=message,properties=pika.BasicProperties(delivery_mode=2))
+    else: channel.basic_publish(exchange=exchange_name,routing_key=args.routing_key,body=message)
     #log_verbose('sent')
 
 def run_send():
-    line=''
-    while 1:
-        try:
-            if args.end_of_message=='\n':
-                line=sys.stdin.readline()
-                if line.endswith('\n'):
-                    line=line[0:len(line)-1]
-                if line:
-                    send_message(line)
-            else:
-                line+=sys.stdin.readline()
-                while 1:
-                    res=line.partition(args.end_of_message)
-                    if not res[1]:
-                        break
-                    send_message(res[0])
-                    line=res[2]
-        except KeyboardInterrupt:
-            break
-        if not line:
-            break
-    log_verbose('exiting')
+    try:
+        if args.all:
+            message = sys.stdin.read()
+            if message: send_message( message )
+            return
+        if args.end_of_message=='\n':
+            while True:            
+                line = sys.stdin.readline()
+                if not line: break
+                if line.endswith('\n'): send_message( line[:-1] )
+                else: send_message( line ) # last line, if no end of line at the end of input
+            return
+        accumulated = ''
+        while 1:
+            # todo
+            # - review all the implications of using readline; e.g. it will not work with binary data
+            # - echo "aXbXcXd" | rabbit-cat send localhost --queue="queue1" --routing-key="queue1" --end-of-message=X does not seem to exit on end of stdin
+            line = sys.stdin.readline()
+            accumulated += line
+            messages = accumulated.split( args.end_of_message )
+            for message in messages[:-1]: send_message( message )
+            accumulated = messages[-1]
+            if not line: break
+        if accumulated[:-1]: send_message( accumulated[:-1] )
+    except KeyboardInterrupt:
+        log_verbose('got keyboard interrupt; exit')
+    log_verbose('exit')
 
 def on_receive(ch,method,properties,body):
     #log_verbose('received')
     sys.stdout.write('%s'%body)
     sys.stdout.write(args.end_of_message)
-    if not args.no_flush:
-        sys.stdout.flush()
-    if args.ack:
-        ch.basic_ack(delivery_tag=method.delivery_tag)
+    if args.flush: sys.stdout.flush()
+    if args.ack: ch.basic_ack(delivery_tag=method.delivery_tag)
 
 def run_receive():
-    if args.prefetch:
-        channel.basic_qos(prefetch_count=args.prefetch)
+    if args.prefetch: channel.basic_qos(prefetch_count=args.prefetch)
     channel.basic_consume(on_receive,queue=queue_name,no_ack=not args.ack)
     log_verbose('Waiting for messages. To exit press CTRL+C')
-    try:
-        channel.start_consuming()
-    except KeyboardInterrupt:
-        pass
+    try: channel.start_consuming()
+    except KeyboardInterrupt: pass
     log_verbose('exiting')
 
 def make_queue():
-    if args.queue:
-        channel.queue_declare(queue=args.queue,durable=args.durable)
-        return args.queue
-    elif is_listener:
-        result=channel.queue_declare(exclusive=True)
-        return result.method.queue
+    if args.queue: channel.queue_declare(queue=args.queue,durable=args.durable); return args.queue
+    elif is_listener: result=channel.queue_declare(exclusive=True); return result.method.queue
     return ''
 
 def make_exchange():
-    if args.exchange:
-        channel.exchange_declare(exchange=args.exchange,exchange_type=exchange_type)
-        return args.exchange
+    if args.exchange: channel.exchange_declare(exchange=args.exchange,exchange_type=exchange_type); return args.exchange
     return ''
 
 def make_binding():
-    if not is_listener:
-        return
+    if not is_listener: return
     if args.bind:
         for key in args.bind:
             log_verbose('binding exchange, queue and key: %s; %s; %s'%(exchange_name,queue_name,key))
@@ -233,36 +222,25 @@ is_listener=args.operation in ['listen','rpc-listen']
 #if args.command:
     #error_and_exit('option NOT IMPLEMENTED: --exec')
 
-if args.fanout and args.topic:
-    error_and_exit('conflicting options: choose either --fanout or --topic')
-if args.fanout:
-    exchange_type='fanout'
-elif args.topic:
-    exchange_type='topic'
-else:
-    exchange_type='direct'
+if args.fanout and args.topic: error_and_exit('conflicting options: choose either --fanout or --topic')
+if args.fanout: exchange_type='fanout'
+elif args.topic: exchange_type='topic'
+else: exchange_type='direct'
 
 #connection=pika.BlockingConnection(pika.ConnectionParameters(args.connection_string))
 url=args.connection_string
-if not '/' in url:
-    url+='/'
-if not '://' in url:
-    url='amqp://'+url
+if not '/' in url: url+='/'
+if not '://' in url: url='amqp://'+url
 log_verbose('url: '+url)
 # https://pika.readthedocs.io/en/0.9.6/connecting.html
 # for ssl options see http://pika.readthedocs.io/en/0.9.6/examples/using_urlparameters.html?highlight=ssl
 connection=pika.BlockingConnection(pika.connection.URLParameters(url))
-
 
 try:
     channel=connection.channel()
     queue_name=make_queue()
     exchange_name=make_exchange()
     make_binding()
-
-    if is_listener:
-        run_receive()
-    else:
-        run_send()
-finally:
-        connection.close()
+    if is_listener: run_receive()
+    else: run_send()
+finally: connection.close()
