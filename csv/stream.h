@@ -419,11 +419,51 @@ class passed
             #ifdef WIN32
             if( is_.is_binary() && os == std::cout ) { _setmode( _fileno( stdout ), _O_BINARY ); }
             #endif // #ifdef WIN32
+// In using view-points in 'pass' mode there were issues with the write method.
+// How to reproduce: take some nav data in t,6d format. Store as in.bin and other.bin.
+//
+// cat in.bin | view-points "-;fields=,x,y,z;binary=t,6d;pass" "other.bin;fields=,x,y,z;binary=t,6d;colour=grey" > out.bin
+//
+// The files in.bin and out.bin are randomly different; out.bin misses some of the input records.
+//
+// The same problem was earlier seen in basler-cat utility from the snark library.
+// Quote:
+//
+// In testing basler-cat with the Pika XC2 camera we saw issues with the write() method.
+//
+// Specifically, using a command line like:
+//     basler-cat "log=log.bin" > stdout.bin
+// we would witness stdout.bin as corrupted, log.bin would be fine.
+//
+// Note that on the Pika XC2 the frame rate is high (150fps) and the image size large
+// (2354176 bytes) which might contribute to the problem. The target was an SSD drive.
+//
+// In detail:
+// * sometimes (every few seconds), the header (20 bytes) would be written but the body would not
+// * os.write( body) was called but os.tellp() would indicate that no frames were written
+// * os.fail() and os.bad() were always false
+// * strangely, writing a large (1M) amount of random data to another diskfile stopped the problem
+// * we tried various combinations of flushing data with no success
+// * switching from std::cout.write() to write( 1, ... ) was successful
+//
+// We don't understand why std::cout would exhibit this behaviour so for now we
+// will have a second method (below) that uses the c-style write() function.
+// This is used by pipeline::write_()
+//
+// End of quote.
+// The updated implementation handles std::cout explicitly by deferring to C-level write.
+            is_stdout_ = os.rdbuf() == std::cout.rdbuf();
         }
 
         void write()
         {
-            if( is_.is_binary() ) { os_.write( is_.binary().last(), is_.binary().size() ); }
+            if( is_.is_binary() ) {
+                if ( is_stdout_ ) {
+                    ::write( 1, is_.binary().last(), is_.binary().size() );
+                } else {
+                    os_.write( is_.binary().last(), is_.binary().size() );
+                }
+            }
             else os_ << comma::join( is_.ascii().last(), is_.ascii().ascii().delimiter() ) << std::endl;
             if(flush) { os_.flush(); }
         }
@@ -432,6 +472,7 @@ class passed
         const input_stream< S >& is_;
         std::ostream& os_;
         bool flush;
+        bool is_stdout_;
 };
 
 template < typename S >
