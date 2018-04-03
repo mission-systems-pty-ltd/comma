@@ -402,16 +402,9 @@ int main( int ac, char** av )
                 }
                 else
                 {
-                    if( force )
-                    {
-                        std::string d;
-                        for( unsigned int i = 0; i < count; d = delimiter, i++ ) { std::cout << d << v[i]; }
-                    }
-                    else
-                    {
-                        std::cerr << "csv-fields: make-fixed of " << count << " fields but found " << v.size() << " fields in line: \"" << line << "\". Use --force to crop line to " << count << " fields." << std::endl;
-                        return 1;
-                    }
+                    if( !force ) { std::cerr << "csv-fields: make-fixed of " << count << " fields but found " << v.size() << " fields in line: \"" << line << "\". Use --force to crop line to " << count << " fields." << std::endl; return 1; }
+                    std::string d;
+                    for( unsigned int i = 0; i < count; d = delimiter, ++i ) { std::cout << d << v[i]; }
                 }
                 std::cout << std::endl;
             }
