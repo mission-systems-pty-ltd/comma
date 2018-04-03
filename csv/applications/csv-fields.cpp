@@ -65,6 +65,7 @@ static void usage( bool )
     std::cerr << std::endl;
     std::cerr << "    cut: remove fields" << std::endl;
     std::cerr << "        --fields=<fields>: fields to remove" << std::endl;
+    std::cerr << "        --except=<fields>: fields to retain" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    default: set empty fields to default values" << std::endl;
     std::cerr << "        --values=<default values>: e.g: csv-fields default --values=',,,0,0,not-a-date-time'" << std::endl;
@@ -137,6 +138,8 @@ static void usage( bool )
     std::cerr << "        cut fields:" << std::endl;
     std::cerr << "        echo a,b,c,d | csv-fields cut --fields b,c" << std::endl;
     std::cerr << "        a,d" << std::endl;
+    std::cerr << "        echo a,b,c,d | csv-fields cut --except b,c" << std::endl;
+    std::cerr << "        b,c" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    has" << std::endl;
     std::cerr << "        echo a,b,c,d | csv-fields has --fields b,d && echo 'fields present'" << std::endl;
@@ -350,7 +353,8 @@ int main( int ac, char** av )
         }
         if( operation == "cut" )
         {
-            const std::string& f = options.value< std::string >( "--fields", "" );
+            bool except = options.exists( "--except" );
+            const std::string& f = except ? options.value< std::string >( "--except", "" ) : options.value< std::string >( "--fields", "" );
             const std::vector< std::string >& s = comma::split( f, delimiter );
             while( std::cin.good() )
             {
@@ -359,10 +363,7 @@ int main( int ac, char** av )
                 std::getline( std::cin, line );
                 if( line.empty() ) { continue; }
                 const std::vector< std::string >& v = comma::split( line, delimiter );
-                for( unsigned int i = 0; i < v.size(); ++i )
-                {
-                    if( v[i].empty() || std::find( s.begin(), s.end(), v[i] ) == s.end() ) { std::cout << comma << v[i]; comma = delimiter; }
-                }
+                for( unsigned int i = 0; i < v.size(); ++i ) { if( except == ( !v[i].empty() && std::find( s.begin(), s.end(), v[i] ) != s.end() ) ) { std::cout << comma << v[i]; comma = delimiter; } }
                 std::cout << std::endl;
             }
             return 0;
