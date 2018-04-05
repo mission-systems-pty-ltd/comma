@@ -31,7 +31,6 @@
 #include "verbose.h"
 
 namespace comma {
-    
 
 verbose_t verbose;
 verbose_t::verbose_t():enabled_(false),app_name_(""),start_of_line(false) { }
@@ -59,4 +58,4 @@ verbose_t& verbose_t::operator<<(std::basic_ostream<char>& (*pf)(std::basic_ostr
 }
 
 }//namespace comma {
-    
+
