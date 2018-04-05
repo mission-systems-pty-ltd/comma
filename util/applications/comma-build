@@ -192,6 +192,7 @@ function unique_()
     unset seen_
     declare -A seen_
     while read line ; do
+        [[ -z "$line" || "$line" =~ '#' ]] && continue
         [[ -z ${seen_[$line]} ]] || continue
         seen_[$line]="1"
         echo $line
