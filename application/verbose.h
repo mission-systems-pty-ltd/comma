@@ -30,7 +30,6 @@
 #pragma once
 
 #include <iostream>
-#include <boost/filesystem.hpp>
 
 //prototype for comma::verbose
 namespace comma {
