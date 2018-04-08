@@ -254,6 +254,7 @@ class binary_output_stream : public boost::noncopyable
         //char* cur_;
         std::vector< std::string > fields_;
         bool flush_;
+        bool is_stdout;
 };
 
 /// trivial generic csv input stream wrapper, less optimized, but more convenient
@@ -366,8 +367,18 @@ class output_stream : public boost::noncopyable
 template < typename S >
 inline void output_stream<S>::append(const std::string& line, const S& s)
 {
-    os().write(&line[0], line.size());
-    if(!is_binary()) { ascii().os_ << ascii().ascii().delimiter(); }
+    if(!is_binary()) {
+        ascii().os_.write(&line[0], line.size());
+        ascii().os_ << ascii().ascii().delimiter();
+    } else {
+        binary_output_stream< S >& bos = binary();
+        if ( bos.is_stdout ) {
+            // see the notes inside the passed implementation
+            ::write( 1, &line[0], line.size() );
+        } else {
+            bos.os_.write(&line[0], line.size());
+        }
+    }
     write(s);
 }
 
@@ -377,8 +388,14 @@ inline void append( const input_stream< S >& is, output_stream< T >& os, const D
 { 
     if( is.is_binary())
     {
-        os.binary().os_.write( is.binary().last(), is.binary().size() );
-        os.write( data );
+        binary_output_stream< S >& bos = os.binary();
+        if ( bos.is_stdout ) {
+            // see the notes inside the passed implementation
+            ::write( 1, is.binary().last(), is.binary().size() );
+        } else {
+            bos.os_.write( is.binary().last(), is.binary().size() );
+        }
+        os.write( data );  /// redirects to binary_output_stream.write
     }
     else
     {
@@ -647,6 +664,7 @@ inline binary_output_stream< S >::binary_output_stream( std::ostream& os, const 
     //, cur_( begin_ )
     , fields_( split( column_names, ',' ) )
     , flush_( flush )
+    , is_stdout( os.rdbuf() == std::cout.rdbuf() )
 {
     #ifdef WIN32
     if( &os == &std::cout ) { _setmode( _fileno( stdout ), _O_BINARY ); }
@@ -665,6 +683,7 @@ inline binary_output_stream< S >::binary_output_stream( std::ostream& os, const 
 //     , cur_( begin_ )
     , fields_( split( o.fields, ',' ) )
     , flush_( o.flush )
+    , is_stdout( os.rdbuf() == std::cout.rdbuf() )
 {
     #ifdef WIN32
     if( &os == &std::cout ) { _setmode( _fileno( stdout ), _O_BINARY ); }
@@ -686,7 +705,12 @@ template < typename S >
 inline void binary_output_stream< S >::write( const S& s )
 {
     binary_.put( s, &buf_[0] );
-    os_.write( &buf_[0], binary_.format().size() );
+    if ( is_stdout ) {
+        // see the notes inside the passed implementation
+        ::write( 1, &buf_[0], binary_.format().size() );
+    } else {
+        os_.write( &buf_[0], binary_.format().size() );
+    }
 //     binary_.put( s, cur_ );
 //     cur_ += binary_.format().size();
 //     if( cur_ == end_ ) { flush(); }
@@ -700,7 +724,7 @@ inline void binary_output_stream< S >::write( const S& s, const char* buf )
     write( s );
 //     ::memcpy( cur_, buf, binary_.format().size() );
 //     write( s );
-    if( flush_ ) { os_.flush(); }
+//    if( flush_ ) { os_.flush(); }
 }
 
 template < typename S >
