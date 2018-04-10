@@ -664,7 +664,7 @@ inline binary_output_stream< S >::binary_output_stream( std::ostream& os, const 
     //, cur_( begin_ )
     , fields_( split( column_names, ',' ) )
     , flush_( flush )
-    , is_stdout( os.rdbuf() == std::cout.rdbuf() )
+    , is_stdout( os_.rdbuf() == std::cout.rdbuf() )
 {
     #ifdef WIN32
     if( &os == &std::cout ) { _setmode( _fileno( stdout ), _O_BINARY ); }
@@ -683,7 +683,7 @@ inline binary_output_stream< S >::binary_output_stream( std::ostream& os, const 
 //     , cur_( begin_ )
     , fields_( split( o.fields, ',' ) )
     , flush_( o.flush )
-    , is_stdout( os.rdbuf() == std::cout.rdbuf() )
+    , is_stdout( os_.rdbuf() == std::cout.rdbuf() )
 {
     #ifdef WIN32
     if( &os == &std::cout ) { _setmode( _fileno( stdout ), _O_BINARY ); }
