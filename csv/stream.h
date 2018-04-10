@@ -100,7 +100,7 @@ class ascii_input_stream : public boost::noncopyable
         friend class tied;
         template < typename V, typename T, typename Data >
         friend void append( const input_stream< V >& is, output_stream< T >& os, const Data& data );
-        
+
         std::istream& is_;
         csv::ascii< S > ascii_;
         const S default_;
@@ -228,7 +228,7 @@ class binary_output_stream : public boost::noncopyable
 
         /// substitute corresponding fields in the buffer and write
         void write( const S& s, const char* buf );
-        
+
         /// flush
         void flush();
 
@@ -244,7 +244,7 @@ class binary_output_stream : public boost::noncopyable
         friend class output_stream< S >;
         template < typename V, typename T, typename Data >
         friend void append( const input_stream< V >& is, output_stream< T >& os, const Data& data );
-        
+
         std::ostream& os_;
         csv::binary< S > binary_;
         //const std::size_t size_;
@@ -287,15 +287,15 @@ class input_stream : public boost::noncopyable
         std::string last() const;
 
         const ascii_input_stream< S >& ascii() const { return *ascii_; }
-        
+
         const binary_input_stream< S >& binary() const { return *binary_; }
-        
+
         ascii_input_stream< S >& ascii() { return *ascii_; }
-        
+
         binary_input_stream< S >& binary() { return *binary_; }
-        
+
         bool is_binary() const { return bool( binary_ ); }
-        
+
         bool ready() const { return binary_ ? binary_->ready() : ascii_->ready(); }
 
     private:
@@ -319,7 +319,7 @@ class output_stream : public boost::noncopyable
 
         /// construct from csv options
         output_stream( std::ostream& os, const csv::options& o, const S& sample = S() );
-        
+
         output_stream( std::ostream& os, bool binary, bool full_xpath = false, bool flush = false, const S& sample = S() );
 
         /// write
@@ -340,23 +340,23 @@ class output_stream : public boost::noncopyable
         /// append record s to line and write them to output stream
         /// for ascii stream, line should not have end of line character at the end
         void append(const std::string& line, const S& s);
-        
+
         /// flush
         void flush() { if( ascii_ ) { ascii_->flush(); } else { binary_->flush(); } }
 
         /// return fields
         const std::vector< std::string >& fields() const { return ascii_ ? ascii_->fields() : binary_->fields(); }
-        
+
         const ascii_output_stream< S >& ascii() const { return *ascii_; }
-        
+
         const binary_output_stream< S >& binary() const { return *binary_; }
-        
+
         ascii_output_stream< S >& ascii() { return *ascii_; }
-        
+
         binary_output_stream< S >& binary() { return *binary_; }
-        
+
         bool is_binary() const { return bool( binary_ ); }
-        
+
         std::ostream& os() { return binary_ ? binary_->os_ : ascii_->os_; }
 
     private:
@@ -385,7 +385,7 @@ inline void output_stream<S>::append(const std::string& line, const S& s)
 /// append record s to last record from input stream and and write them to output
 template < typename S, typename T, typename Data >
 inline void append( const input_stream< S >& is, output_stream< T >& os, const Data& data )
-{ 
+{
     if( is.is_binary())
     {
         binary_output_stream< S >& bos = os.binary();
@@ -411,14 +411,14 @@ class tied
 {
     public:
         tied( const input_stream< S >& is, output_stream< T >& os ) : is_( is ), os_( os ) { }
-        
+
         /// append record s to last record from input stream and and write them to output
         void append( const T& data ) { os_.append(is_.last(),data); }
-        
+
     private:
         const input_stream< S >& is_;
         output_stream< T >& os_;
-        
+
 };
 
 template < typename S, typename T >
