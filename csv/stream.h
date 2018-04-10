@@ -373,7 +373,7 @@ inline void output_stream<S>::append(const std::string& line, const S& s)
     } else {
         binary_output_stream< S >& bos = binary();
         if ( bos.is_stdout ) {
-            // see the notes inside the passed implementation
+            // see the notes inside the passed<> implementation
             ::write( 1, &line[0], line.size() );
         } else {
             bos.os_.write(&line[0], line.size());
@@ -390,7 +390,7 @@ inline void append( const input_stream< S >& is, output_stream< T >& os, const D
     {
         binary_output_stream< S >& bos = os.binary();
         if ( bos.is_stdout ) {
-            // see the notes inside the passed implementation
+            // see the notes inside the passed<> implementation
             ::write( 1, is.binary().last(), is.binary().size() );
         } else {
             bos.os_.write( is.binary().last(), is.binary().size() );
@@ -706,7 +706,7 @@ inline void binary_output_stream< S >::write( const S& s )
 {
     binary_.put( s, &buf_[0] );
     if ( is_stdout ) {
-        // see the notes inside the passed implementation
+        // see the notes inside the passed<> implementation
         ::write( 1, &buf_[0], binary_.format().size() );
     } else {
         os_.write( &buf_[0], binary_.format().size() );
