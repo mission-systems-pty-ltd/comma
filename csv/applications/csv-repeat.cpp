@@ -239,7 +239,7 @@ int main( int ac, char** av )
                         // std::cout.write( write_position, record_size );
                         ::write( 1, write_position, record_size );
                         if( ostream ) { ostream->write( output_t( boost::posix_time::microsec_clock::universal_time(), false ) ); }
-                        else { std::cout.flush(); }
+                        else { std::cout.flush(); }  // TODO: why?
                         last_record = write_position;
                         write_position += record_size;
                     }
