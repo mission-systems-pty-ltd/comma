@@ -705,6 +705,7 @@ template < typename S >
 inline void binary_output_stream< S >::write( const S& s )
 {
     binary_.put( s, &buf_[0] );
+    // std::cerr << std::endl;
     if ( is_stdout ) {
         // see the notes inside the passed<> implementation
         ::write( 1, &buf_[0], binary_.format().size() );
