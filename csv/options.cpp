@@ -30,9 +30,10 @@
 
 /// @author vsevolod vlaskine
 
-#include "../string/split.h"
+#include <boost/regex.hpp>
 #include "../base/exception.h"
 #include "../csv/options.h"
+#include "../string/split.h"
 #include "../string/string.h"
 
 namespace comma { namespace csv {
@@ -112,6 +113,7 @@ std::string options::usage( const std::string& default_fields )
 
 bool options::has_field( const std::string& field ) const
 {
+    if( field.empty() ) { return false; }
     const std::vector< std::string >& v = split( fields, ',' );
     const std::vector< std::string >& f = split( field, ',' );
     for( unsigned int i = 0; i < f.size(); ++i ) { if( std::find( v.begin(), v.end(), f[i] ) == v.end() ) { return false; } }
@@ -120,15 +122,43 @@ bool options::has_field( const std::string& field ) const
 
 bool options::has_some_of_fields( const std::string& field ) const
 {
+    if( field.empty() ) { return false; }
     const std::vector< std::string >& v = split( fields, ',' );
     const std::vector< std::string >& f = split( field, ',' );
     for( unsigned int i = 0; i < f.size(); ++i ) { if( std::find( v.begin(), v.end(), f[i] ) != v.end() ) { return true; } }
     return false;
 }
 
-std::string options::valueless_options()
+bool options::has_paths( const std::string& paths ) const
 {
-    return "--full-xpath,--flush";
+    if( paths.empty() ) { return false; }
+    const std::vector< std::string >& v = split( fields, ',' );
+    const std::vector< std::string >& p = split( paths, ',' );
+    for( unsigned int i = 0; i < p.size(); ++i )
+    {
+        std::string regex_string = "^" + boost::regex_replace( boost::regex_replace( p[i], boost::regex( "\\[" ), "\\\\[" ), boost::regex( "\\]" ), "\\\\]" ) + "(([/\\[])(.*)){0,1}";
+        boost::regex regex( regex_string, boost::regex::extended );
+        bool found = false;
+        for( unsigned int j = 0; j < v.size() && !found; ++j ) { if( boost::regex_match( v[j], boost::regex( regex_string, boost::regex::extended ) ) ) { found = true; } }
+        if( !found ) { return false; }
+    }
+    return true;
 }
+
+bool options::has_some_of_paths( const std::string& paths ) const
+{
+    if( paths.empty() ) { return false; }
+    const std::vector< std::string >& v = split( fields, ',' );
+    const std::vector< std::string >& p = split( paths, ',' );
+    for( unsigned int i = 0; i < p.size(); ++i )
+    {
+        std::string regex_string = "^" + boost::regex_replace( boost::regex_replace( p[i], boost::regex( "\\[" ), "\\\\[" ), boost::regex( "\\]" ), "\\\\]" ) + "(([/\\[])(.*)){0,1}";
+        boost::regex regex( regex_string, boost::regex::extended );
+        for( unsigned int j = 0; j < v.size(); ++j ) { if( boost::regex_match( v[j], regex ) ) { return true; } }
+    }
+    return false;
+}
+
+std::string options::valueless_options() { return "--full-xpath,--flush"; }
 
 } } // namespace comma { namespace csv {
