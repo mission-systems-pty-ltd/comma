@@ -93,7 +93,7 @@ example 4: binding (direct)
     echo "yellow:dog" | rabbit-cat send localhost --exchange="exchange1" --routing-key="yellow"
 
 example 5: topic
-    rabbit-cat listen localhost  --topic --exchange="exchange3" --bind "*.error"
+    rabbit-cat listen localhost --topic --exchange="exchange3" --bind "*.error"
     &
     rabbit-cat listen localhost --topic --exchange="exchange3" --bind "red.error" "yellow.warning"
     &
@@ -126,7 +126,7 @@ example 5: topic
     parser.add_argument('--end-of-message',help='separator string for input and output; currently works only with ascii line-based data, default \\n',default='\n')
     parser.add_argument('--exchange',help='declare exchange by name, default use unnamed direct exchange')
     #parser.add_argument('--exec',dest='command',help='<<NOT IMPLEMENTED>> (receiver) run command once for each received message and pass the message as stdin, in rpc-listen mode read stdout and send back as reply')
-    parser.add_argument('--fanout',help='use publish/subscribe mode (exhange type fanout), default direct',action='store_true')
+    parser.add_argument('--fanout',help='use publish/subscribe mode (exchange type fanout), default direct',action='store_true')
     parser.add_argument('--flush',help='(receiver) flush after writting to stdout',action='store_true')
     parser.add_argument('--persistent-message',help='(sender) use delivery_mode=2',action='store_true')
     parser.add_argument('--prefetch',help='(receiver) set prefetch count for channel qos',type=int)
