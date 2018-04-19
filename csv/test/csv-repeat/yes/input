@@ -1,0 +1,7 @@
+command_line_options="( echo 0 | csv-repeat --yes | head -n5 | tr '\\\n' ';'; comma_status_ok || exit 1 )"
+ascii/test[0]="( echo | csv-repeat --period 0.2 --yes | head -n5 | tr '\\\n' ';'; comma_status_ok || exit 1 )"
+ascii/test[1]="( echo 0 | csv-repeat --period 0.1 --yes | head -n5 | tr '\\\n' ';'; comma_status_ok || exit 1 )"
+ascii/test[2]="( ( echo 0; echo 1 ) | csv-repeat --period 0.1 --yes | head -n5 | tr '\\\n' ';'; comma_status_ok || exit 1 )"
+binary/test[0]="( echo | csv-to-bin ui --flush | csv-repeat --period 0.1 --yes --binary ui | csv-from-bin ui --flush | head -n5 | tr '\\\n' ';'; comma_status_ok || exit 1 )"
+binary/test[1]="( echo 0 | csv-to-bin ui --flush | csv-repeat --period 0.1 --yes --binary ui | csv-from-bin ui --flush | head -n5 | tr '\\\n' ';'; comma_status_ok || exit 1 )"
+binary/test[2]="( ( echo 0; echo 1 ) | csv-to-bin ui --flush | csv-repeat --period 0.1 --yes --binary ui | csv-from-bin ui --flush | head -n5 | tr '\\\n' ';'; comma_status_ok || exit 1 )"

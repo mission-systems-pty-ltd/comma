@@ -31,8 +31,10 @@
 
 #include <iostream>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/thread/thread.hpp>
 #include "../../application/command_line_options.h"
 #include "../../application/contact_info.h"
+#include "../../application/signal_flag.h"
 #include "../../csv/options.h"
 #include "../../csv/stream.h"
 #include "../../io/select.h"
@@ -45,6 +47,7 @@ static void bash_completion( unsigned const ac, char const * const * av )
         " --timeout --period"
         " --append-fields --append -a"
         " --output-fields --output-format"
+        " --ignore-eof --ignore --yes"
         ;
     std::cout << completion_options << std::endl;
     exit( 0 );
@@ -59,14 +62,18 @@ void usage( bool verbose = false )
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
-    std::cerr << "    --timeout,-t=<seconds>: timeout before repeating the last record" << std::endl;
-    std::cerr << "    --period=[<seconds>]: period of repeated record" << std::endl;
     std::cerr << "    --append-fields,--append,-a=[<fields>]: add extra fields to output" << std::endl;
+    std::cerr << "    --ignore-eof,--ignoreeof,--yes: if --period specified, ignore end of stdin, keep repeating" << std::endl;
+    std::cerr << "                                    warning: currently, if you kill csv-repeat --yes with a signal" << std::endl;
+    std::cerr << "                                             it will not exit until period timer expires; this may" << std::endl;
+    std::cerr << "                                             be a problem for a large period timeout" << std::endl;
     std::cerr << "    --output-fields: print output fields and exit" << std::endl;
     std::cerr << "    --output-format: print output format and exit" << std::endl;
+    std::cerr << "    --period=[<seconds>]: period of repeated record" << std::endl;
+    std::cerr << "    --timeout,-t=[<seconds>]: timeout before repeating the last record; if not specified, timeout is set to --period" << std::endl;
     std::cerr << "    --verbose,-v: more output" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    if --period are not set --timeout acts as a watchdog. If no input is seen" << std::endl;
+    std::cerr << "    if --period is not set, --timeout acts as a watchdog. If no input is seen" << std::endl;
     std::cerr << "    within the timeout csv-repeat exits with an error." << std::endl;
     std::cerr << std::endl;
     std::cerr << "    --append fields are appended to output; supported fields are:" << std::endl;
@@ -130,9 +137,9 @@ int main( int ac, char** av )
     {
         comma::command_line_options options( ac, av, usage );
         if( options.exists( "--bash-completion" ) ) bash_completion( ac, av );
-
+        bool ignore_eof = options.exists( "--ignore-eof,--ignoreeof,--yes" );
+        if( ignore_eof && !options.exists( "--period" ) ) { std::cerr << "csv-repeat: got --ignore-oef, thus please specify --period" << std::endl; return 1; }
         comma::csv::options csv = comma::csv::options( options );
-
         std::size_t record_size = csv.binary() ? csv.format().size() : 0;
         std::vector< char > buffer( csv.binary() ? ( 65536ul / record_size + 1 ) * record_size : 0 );
         char* buffer_begin = &buffer[0];
@@ -140,14 +147,11 @@ int main( int ac, char** av )
         char* read_position = buffer_begin;
         char* write_position = buffer_begin;
         char* last_record = NULL;
-
         comma::io::select select;
         select.read().add( comma::io::stdin_fd );
         comma::io::istream is( "-", comma::io::mode::binary );
         boost::scoped_ptr< comma::csv::output_stream< output_t > > ostream;
-
         comma::csv::options output_csv;
-
         if( options.exists( "--append-fields,--append,-a" ) )
         {
             output_csv.fields = options.value< std::string >( "--append-fields,--append,-a", "" );
@@ -176,46 +180,31 @@ int main( int ac, char** av )
             output_csv.delimiter = csv.delimiter;
             ostream.reset( new comma::csv::output_stream< output_t >( std::cout, output_csv ) );
         }
-
-        if( options.exists( "--output-fields" ))
+        if( options.exists( "--output-fields" ) )
         {
-            if( options.exists( "--fields,-f" ))
-            {
-                std::cout << options.value< std::string >( "--fields,-f" );
-                if( !output_csv.fields.empty() ) { std::cout << csv.delimiter << output_csv.fields; }
-                std::cout << std::endl;
-                return 0;
-            }
-            else
-            {
-                std::cerr << "csv-repeat: --output-fields option requires --fields" << std::endl;
-                return 1;
-            }
+            if( !options.exists( "--fields,-f" ) ) { std::cerr << "csv-repeat: --output-fields option requires --fields" << std::endl; return 1; }
+            std::cout << options.value< std::string >( "--fields,-f" );
+            if( !output_csv.fields.empty() ) { std::cout << csv.delimiter << output_csv.fields; }
+            std::cout << std::endl;
+            return 0;
         }
-
-        if( options.exists( "--output-format" ))
+        if( options.exists( "--output-format" ) )
         {
-            if( options.exists( "--binary" ))
-            {
-                std::cout << options.value< std::string >( "--binary" );
-                if( options.exists( "--append-fields,--append,-a" )) { std::cout << csv.delimiter << output_csv.format().string(); }
-                std::cout << std::endl;
-                return 0;
-            }
-            else
-            {
-                std::cerr << "csv-repeat: --output-format option requires --binary" << std::endl;
-                return 1;
-            }
+            if( !options.exists( "--binary" ) ) { std::cerr << "csv-repeat: --output-format option requires --binary" << std::endl; return 1; }
+            std::cout << options.value< std::string >( "--binary" );
+            if( options.exists( "--append-fields,--append,-a" )) { std::cout << csv.delimiter << output_csv.format().string(); }
+            std::cout << std::endl;
+            return 0;
         }
-
-        boost::posix_time::time_duration timeout;
         boost::optional< boost::posix_time::time_duration > period;
-
-        timeout = boost::posix_time::microseconds( options.value< double >( "--timeout,-t" ) * 1000000 );
-        if( options.exists( "--period" )) { period = boost::posix_time::microseconds( options.value< double >( "--period" ) * 1000000 ); }
+        if( options.exists( "--period" ) ) { period = boost::posix_time::microseconds( options.value< double >( "--period" ) * 1000000 ); }
+        boost::posix_time::time_duration timeout;
+        boost::optional< double > timeout_seconds = options.optional< double >( "--timeout,-t" );
+        if( !period && !timeout_seconds ) { std::cerr << "csv-repeat: please specify either --period, or --timeout, or both" << std::endl; return 1; }
+        timeout = timeout_seconds ? boost::posix_time::microseconds( *timeout_seconds * 1000000 ) : *period;
         bool end_of_stream = false;
         std::string line;
+        std::string last_line;
         std::ios_base::sync_with_stdio( false ); // unsync to make rdbuf()->in_avail() working
         std::cin.tie( NULL ); // std::cin is tied to std::cout by default
         bool repeating = false;
@@ -244,13 +233,11 @@ int main( int ac, char** av )
                         last_record = write_position;
                         write_position += record_size;
                     }
-                    if( read_position == buffer_end )
-                    {
-                        read_position = write_position = buffer_begin;
-                    }
+                    if( read_position == buffer_end ) { read_position = write_position = buffer_begin; }
                 }
                 else
                 {
+                    if( ignore_eof ) { last_line = line; }
                     std::getline( std::cin, line );
                     if( line.empty() ) { break; }
                     std::cout << line;
@@ -263,9 +250,7 @@ int main( int ac, char** av )
                 }
                 end_of_stream = repeating = false;
             }
-
             if( !is->good() || end_of_stream ) { break; }
-
             if( repeating )
             {
                 if( !period ) { std::cerr << "csv-repeat: input data timed out" << std::endl; return 1; }
@@ -291,6 +276,31 @@ int main( int ac, char** av )
                         }
                         else { std::cout << std::endl; }
                     }
+                }
+                std::cout.flush();
+            }
+        }
+        if( ignore_eof )
+        {
+            comma::signal_flag is_shutdown;
+            while( !is_shutdown )
+            {
+                boost::this_thread::sleep( *period ); // quick and dirty
+                if( is_shutdown ) { break; }
+                if( csv.binary() )
+                {
+                    if( !last_record ) { break; }
+                    std::cout.write( last_record, record_size );
+                    /// do not do it! see the note inside csv::stream.h, search for passed<> class template
+                    /// ::write( 1, last_record, record_size );
+                    if( ostream ) { ostream->write( output_t( boost::posix_time::microsec_clock::universal_time(), true ) ); }
+                }
+                else
+                {
+                    if( last_line.empty() ) { break; }
+                    std::cout << last_line;
+                    if( ostream ) { std::cout << csv.delimiter; ostream->write( output_t( boost::posix_time::microsec_clock::universal_time(), true ) ); }
+                    else { std::cout << std::endl; }
                 }
                 std::cout.flush();
             }
