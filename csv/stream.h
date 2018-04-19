@@ -254,7 +254,7 @@ class binary_output_stream : public boost::noncopyable
         //char* cur_;
         std::vector< std::string > fields_;
         bool flush_;
-        bool is_stdout;
+        /// bool is_stdout;
 };
 
 /// trivial generic csv input stream wrapper, less optimized, but more convenient
@@ -372,12 +372,12 @@ inline void output_stream<S>::append(const std::string& line, const S& s)
         ascii().os_ << ascii().ascii().delimiter();
     } else {
         binary_output_stream< S >& bos = binary();
-        if ( bos.is_stdout ) {
-            // see the notes inside the passed<> implementation
-            ::write( 1, &line[0], line.size() );
-        } else {
+        /// if ( bos.is_stdout ) {
+            /// do not do it! see the notes inside the passed<> implementation
+            /// ::write( 1, &line[0], line.size() );
+        /// } else {
             bos.os_.write(&line[0], line.size());
-        }
+        /// }
     }
     write(s);
 }
@@ -389,12 +389,12 @@ inline void append( const input_stream< S >& is, output_stream< T >& os, const D
     if( is.is_binary())
     {
         binary_output_stream< S >& bos = os.binary();
-        if ( bos.is_stdout ) {
-            // see the notes inside the passed<> implementation
-            ::write( 1, is.binary().last(), is.binary().size() );
-        } else {
+        /// if ( bos.is_stdout ) {
+            /// do not do it! see the notes inside the passed<> implementation
+            /// ::write( 1, is.binary().last(), is.binary().size() );
+        /// } else {
             bos.os_.write( is.binary().last(), is.binary().size() );
-        }
+        /// }
         os.write( data );  /// redirects to binary_output_stream.write
     }
     else
@@ -468,7 +468,18 @@ class passed
 // This is used by pipeline::write_()
 //
 // End of quote.
-// The updated implementation handles std::cout explicitly by deferring to C-level write.
+//
+// We attempted a modified implementation that handles std::cout explicitly by deferring to C-level write.
+// However this approaches exhibits a very nasty side effect that renders it almost worse then the original
+// problem:
+//  - the user application may write to std::cout on its own, directly, not using csv::stream facilities
+//  - if so, there would be writes to file descriptor 1 (C-level write) and std::cout
+//  - these two streams are not synchronized; as the result, the output is randomly garbled and interleaved
+//  - there is no way to prohibit the application from using std::cout explicitly, and potentially
+//    there could be dozens of applications affected with with subtle effect
+//  - according to git grep, only view-points was using this class template at the moment; therefore,
+//    the change is very localized and we preserve it in this class
+//  - however, all the other similar modifications have been commented out using /// symbol
             is_stdout_ = os.rdbuf() == std::cout.rdbuf();
         }
 
@@ -665,7 +676,7 @@ inline binary_output_stream< S >::binary_output_stream( std::ostream& os, const 
     //, cur_( begin_ )
     , fields_( split( column_names, ',' ) )
     , flush_( flush )
-    , is_stdout( os_.rdbuf() == std::cout.rdbuf() )
+    /// , is_stdout( os_.rdbuf() == std::cout.rdbuf() )
 {
     #ifdef WIN32
     if( &os == &std::cout ) { _setmode( _fileno( stdout ), _O_BINARY ); }
@@ -684,7 +695,7 @@ inline binary_output_stream< S >::binary_output_stream( std::ostream& os, const 
 //     , cur_( begin_ )
     , fields_( split( o.fields, ',' ) )
     , flush_( o.flush )
-    , is_stdout( os_.rdbuf() == std::cout.rdbuf() )
+    /// , is_stdout( os_.rdbuf() == std::cout.rdbuf() )
 {
     #ifdef WIN32
     if( &os == &std::cout ) { _setmode( _fileno( stdout ), _O_BINARY ); }
@@ -706,14 +717,14 @@ template < typename S >
 inline void binary_output_stream< S >::write( const S& s )
 {
     binary_.put( s, &buf_[0] );
-    if ( is_stdout ) {
-        // see the notes inside the passed<> implementation
-        ::write( 1, &buf_[0], binary_.format().size() );
-        if( flush_ ) { ::fflush( stdout ); }
-    } else {
+    /// if ( is_stdout ) {
+        /// do not do it! see the notes inside the passed<> implementation
+        /// ::write( 1, &buf_[0], binary_.format().size() );
+        /// if( flush_ ) { ::fflush( stdout ); }
+    /// } else {
         os_.write( &buf_[0], binary_.format().size() );
         if( flush_ ) { os_.flush(); }
-    }
+    /// }
 //     binary_.put( s, cur_ );
 //     cur_ += binary_.format().size();
 //     if( cur_ == end_ ) { flush(); }

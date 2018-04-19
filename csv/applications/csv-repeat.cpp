@@ -236,8 +236,9 @@ int main( int ac, char** av )
                     read_position += bytes_read;
                     while( read_position - write_position >= ( std::ptrdiff_t )record_size )
                     {
-                        // std::cout.write( write_position, record_size );
-                        ::write( 1, write_position, record_size );
+                        std::cout.write( write_position, record_size );
+                        /// do not do it! see the note inside csv::stream.h, search for passed<> class template
+                        /// ::write( 1, write_position, record_size );
                         if( ostream ) { ostream->write( output_t( boost::posix_time::microsec_clock::universal_time(), false ) ); }
                         else { std::cout.flush(); }  // TODO: why?
                         last_record = write_position;
@@ -272,8 +273,9 @@ int main( int ac, char** av )
                 {
                     if( last_record )
                     {
-                        // std::cout.write( last_record, record_size );
-                        ::write( 1, last_record, record_size );
+                        std::cout.write( last_record, record_size );
+                        /// do not do it! see the note inside csv::stream.h, search for passed<> class template
+                        /// ::write( 1, last_record, record_size );
                         if( ostream ) { ostream->write( output_t( boost::posix_time::microsec_clock::universal_time(), true ) ); }
                     }
                 }
