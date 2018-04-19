@@ -365,37 +365,42 @@ class output_stream : public boost::noncopyable
 };
 
 template < typename S >
-inline void output_stream<S>::append(const std::string& line, const S& s)
+inline void output_stream< S >::append( const std::string& line, const S& s ) 
 {
-    if(!is_binary()) {
-        ascii().os_.write(&line[0], line.size());
+    if( !is_binary() )
+    {
+        ascii().os_.write( &line[0], line.size() );
         ascii().os_ << ascii().ascii().delimiter();
-    } else {
-        auto& bos = binary();
-        /// if ( bos.is_stdout ) {
-            /// do not do it! see the notes inside the passed<> implementation
-            /// ::write( 1, &line[0], line.size() );
-        /// } else {
-            bos.os_.write(&line[0], line.size());
-        /// }
     }
-    write(s);
+    else
+    {
+        /// do not do it unless a properly scalable solution devised; see generic backlog; also see the notes inside the passed<> implementation
+        /// auto& bos = binary();
+        /// if ( bos.is_stdout ) {
+        ///     ::write( 1, &line[0], line.size() );
+        /// } else {
+        ///    bos.os_.write(&line[0], line.size());
+        /// }
+        binary().os_.write( &line[0], line.size() );
+    }
+    write( s );
 }
 
 /// append record s to last record from input stream and and write them to output
 template < typename S, typename T, typename Data >
 inline void append( const input_stream< S >& is, output_stream< T >& os, const Data& data )
 {
-    if( is.is_binary())
+    if( is.is_binary() )
     {
-        auto& bos = os.binary();
+        /// do not do it unless a properly scalable solution devised; see generic backlog; also see the notes inside the passed<> implementation
+        /// auto& bos = os.binary();
         /// if ( bos.is_stdout ) {
-            /// do not do it! see the notes inside the passed<> implementation
-            /// ::write( 1, is.binary().last(), is.binary().size() );
+        ///     ::write( 1, is.binary().last(), is.binary().size() );
         /// } else {
-            bos.os_.write( is.binary().last(), is.binary().size() );
+        ///     bos.os_.write( is.binary().last(), is.binary().size() );
         /// }
-        os.write( data );  /// redirects to binary_output_stream.write
+        os.binary().os_.write( is.binary().last(), is.binary().size() );
+        os.write( data );  // todo: low-hanging fruit for append() only: add writing to stdout as a private method or alike (i.e. hide from the user) and still use ::write() for stdout
     }
     else
     {
@@ -405,7 +410,7 @@ inline void append( const input_stream< S >& is, output_stream< T >& os, const D
     }
 }
 
-/// use this class to append a columns of output to last record of input to write to output stream
+/// append a columns of output to last record of input to write to output stream
 template < typename S, typename T >
 class tied
 {
