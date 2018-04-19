@@ -371,7 +371,7 @@ inline void output_stream<S>::append(const std::string& line, const S& s)
         ascii().os_.write(&line[0], line.size());
         ascii().os_ << ascii().ascii().delimiter();
     } else {
-        binary_output_stream< S >& bos = binary();
+        auto& bos = binary();
         /// if ( bos.is_stdout ) {
             /// do not do it! see the notes inside the passed<> implementation
             /// ::write( 1, &line[0], line.size() );
@@ -388,7 +388,7 @@ inline void append( const input_stream< S >& is, output_stream< T >& os, const D
 {
     if( is.is_binary())
     {
-        binary_output_stream< S >& bos = os.binary();
+        auto& bos = os.binary();
         /// if ( bos.is_stdout ) {
             /// do not do it! see the notes inside the passed<> implementation
             /// ::write( 1, is.binary().last(), is.binary().size() );
