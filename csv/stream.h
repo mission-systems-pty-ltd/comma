@@ -477,12 +477,13 @@ class passed
             if( is_.is_binary() ) {
                 if ( is_stdout_ ) {
                     ::write( 1, is_.binary().last(), is_.binary().size() );
+                    if(flush) { ::fflush( stdout ); }
                 } else {
                     os_.write( is_.binary().last(), is_.binary().size() );
+                    if(flush) { os_.flush(); }
                 }
             }
             else os_ << comma::join( is_.ascii().last(), is_.ascii().ascii().delimiter() ) << std::endl;
-            if(flush) { os_.flush(); }
         }
 
     private:
@@ -709,13 +710,14 @@ inline void binary_output_stream< S >::write( const S& s )
     if ( is_stdout ) {
         // see the notes inside the passed<> implementation
         ::write( 1, &buf_[0], binary_.format().size() );
+        if( flush_ ) { ::fflush( stdout ); }
     } else {
         os_.write( &buf_[0], binary_.format().size() );
+        if( flush_ ) { os_.flush(); }
     }
 //     binary_.put( s, cur_ );
 //     cur_ += binary_.format().size();
 //     if( cur_ == end_ ) { flush(); }
-    if( flush_ ) { os_.flush(); }
 }
 
 template < typename S >
