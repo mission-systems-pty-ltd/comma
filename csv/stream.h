@@ -100,7 +100,7 @@ class ascii_input_stream : public boost::noncopyable
         friend class tied;
         template < typename V, typename T, typename Data >
         friend void append( const input_stream< V >& is, output_stream< T >& os, const Data& data );
-        
+
         std::istream& is_;
         csv::ascii< S > ascii_;
         const S default_;
@@ -228,7 +228,7 @@ class binary_output_stream : public boost::noncopyable
 
         /// substitute corresponding fields in the buffer and write
         void write( const S& s, const char* buf );
-        
+
         /// flush
         void flush();
 
@@ -244,7 +244,7 @@ class binary_output_stream : public boost::noncopyable
         friend class output_stream< S >;
         template < typename V, typename T, typename Data >
         friend void append( const input_stream< V >& is, output_stream< T >& os, const Data& data );
-        
+
         std::ostream& os_;
         csv::binary< S > binary_;
         //const std::size_t size_;
@@ -254,6 +254,7 @@ class binary_output_stream : public boost::noncopyable
         //char* cur_;
         std::vector< std::string > fields_;
         bool flush_;
+        /// bool is_stdout;
 };
 
 /// trivial generic csv input stream wrapper, less optimized, but more convenient
@@ -286,15 +287,15 @@ class input_stream : public boost::noncopyable
         std::string last() const;
 
         const ascii_input_stream< S >& ascii() const { return *ascii_; }
-        
+
         const binary_input_stream< S >& binary() const { return *binary_; }
-        
+
         ascii_input_stream< S >& ascii() { return *ascii_; }
-        
+
         binary_input_stream< S >& binary() { return *binary_; }
-        
+
         bool is_binary() const { return bool( binary_ ); }
-        
+
         bool ready() const { return binary_ ? binary_->ready() : ascii_->ready(); }
 
     private:
@@ -318,7 +319,7 @@ class output_stream : public boost::noncopyable
 
         /// construct from csv options
         output_stream( std::ostream& os, const csv::options& o, const S& sample = S() );
-        
+
         output_stream( std::ostream& os, bool binary, bool full_xpath = false, bool flush = false, const S& sample = S() );
 
         /// write
@@ -339,23 +340,23 @@ class output_stream : public boost::noncopyable
         /// append record s to line and write them to output stream
         /// for ascii stream, line should not have end of line character at the end
         void append(const std::string& line, const S& s);
-        
+
         /// flush
         void flush() { if( ascii_ ) { ascii_->flush(); } else { binary_->flush(); } }
 
         /// return fields
         const std::vector< std::string >& fields() const { return ascii_ ? ascii_->fields() : binary_->fields(); }
-        
+
         const ascii_output_stream< S >& ascii() const { return *ascii_; }
-        
+
         const binary_output_stream< S >& binary() const { return *binary_; }
-        
+
         ascii_output_stream< S >& ascii() { return *ascii_; }
-        
+
         binary_output_stream< S >& binary() { return *binary_; }
-        
+
         bool is_binary() const { return bool( binary_ ); }
-        
+
         std::ostream& os() { return binary_ ? binary_->os_ : ascii_->os_; }
 
     private:
@@ -364,21 +365,42 @@ class output_stream : public boost::noncopyable
 };
 
 template < typename S >
-inline void output_stream<S>::append(const std::string& line, const S& s)
+inline void output_stream< S >::append( const std::string& line, const S& s ) 
 {
-    os().write(&line[0], line.size());
-    if(!is_binary()) { ascii().os_ << ascii().ascii().delimiter(); }
-    write(s);
+    if( !is_binary() )
+    {
+        ascii().os_.write( &line[0], line.size() );
+        ascii().os_ << ascii().ascii().delimiter();
+    }
+    else
+    {
+        /// do not do it unless a properly scalable solution devised; see generic backlog; also see the notes inside the passed<> implementation
+        /// auto& bos = binary();
+        /// if ( bos.is_stdout ) {
+        ///     ::write( 1, &line[0], line.size() );
+        /// } else {
+        ///    bos.os_.write(&line[0], line.size());
+        /// }
+        binary().os_.write( &line[0], line.size() );
+    }
+    write( s );
 }
 
 /// append record s to last record from input stream and and write them to output
 template < typename S, typename T, typename Data >
 inline void append( const input_stream< S >& is, output_stream< T >& os, const Data& data )
-{ 
-    if( is.is_binary())
+{
+    if( is.is_binary() )
     {
+        /// do not do it unless a properly scalable solution devised; see generic backlog; also see the notes inside the passed<> implementation
+        /// auto& bos = os.binary();
+        /// if ( bos.is_stdout ) {
+        ///     ::write( 1, is.binary().last(), is.binary().size() );
+        /// } else {
+        ///     bos.os_.write( is.binary().last(), is.binary().size() );
+        /// }
         os.binary().os_.write( is.binary().last(), is.binary().size() );
-        os.write( data );
+        os.write( data );  // todo: low-hanging fruit for append() only: add writing to stdout as a private method or alike (i.e. hide from the user) and still use ::write() for stdout
     }
     else
     {
@@ -388,20 +410,20 @@ inline void append( const input_stream< S >& is, output_stream< T >& os, const D
     }
 }
 
-/// use this class to append a columns of output to last record of input to write to output stream
+/// append a columns of output to last record of input to write to output stream
 template < typename S, typename T >
 class tied
 {
     public:
         tied( const input_stream< S >& is, output_stream< T >& os ) : is_( is ), os_( os ) { }
-        
+
         /// append record s to last record from input stream and and write them to output
         void append( const T& data ) { os_.append(is_.last(),data); }
-        
+
     private:
         const input_stream< S >& is_;
         output_stream< T >& os_;
-        
+
 };
 
 template < typename S, typename T >
@@ -419,19 +441,72 @@ class passed
             #ifdef WIN32
             if( is_.is_binary() && os == std::cout ) { _setmode( _fileno( stdout ), _O_BINARY ); }
             #endif // #ifdef WIN32
+// In using view-points in 'pass' mode there were issues with the write method.
+// How to reproduce: take some nav data in t,6d format. Store as in.bin and other.bin.
+//
+// cat in.bin | view-points "-;fields=,x,y,z;binary=t,6d;pass" "other.bin;fields=,x,y,z;binary=t,6d;colour=grey" > out.bin
+//
+// The files in.bin and out.bin are randomly different; out.bin misses some of the input records.
+//
+// The same problem was earlier seen in basler-cat utility from the snark library.
+// Quote:
+//
+// In testing basler-cat with the Pika XC2 camera we saw issues with the write() method.
+//
+// Specifically, using a command line like:
+//     basler-cat "log=log.bin" > stdout.bin
+// we would witness stdout.bin as corrupted, log.bin would be fine.
+//
+// Note that on the Pika XC2 the frame rate is high (150fps) and the image size large
+// (2354176 bytes) which might contribute to the problem. The target was an SSD drive.
+//
+// In detail:
+// * sometimes (every few seconds), the header (20 bytes) would be written but the body would not
+// * os.write( body) was called but os.tellp() would indicate that no frames were written
+// * os.fail() and os.bad() were always false
+// * strangely, writing a large (1M) amount of random data to another diskfile stopped the problem
+// * we tried various combinations of flushing data with no success
+// * switching from std::cout.write() to write( 1, ... ) was successful
+//
+// We don't understand why std::cout would exhibit this behaviour so for now we
+// will have a second method (below) that uses the c-style write() function.
+// This is used by pipeline::write_()
+//
+// End of quote.
+//
+// We attempted a modified implementation that handles std::cout explicitly by deferring to C-level write.
+// However this approaches exhibits a very nasty side effect that renders it almost worse then the original
+// problem:
+//  - the user application may write to std::cout on its own, directly, not using csv::stream facilities
+//  - if so, there would be writes to file descriptor 1 (C-level write) and std::cout
+//  - these two streams are not synchronized; as the result, the output is randomly garbled and interleaved
+//  - there is no way to prohibit the application from using std::cout explicitly, and potentially
+//    there could be dozens of applications affected with with subtle effect
+//  - according to git grep, only view-points was using this class template at the moment; therefore,
+//    the change is very localized and we preserve it in this class
+//  - however, all the other similar modifications have been commented out using /// symbol
+            is_stdout_ = os.rdbuf() == std::cout.rdbuf();
         }
 
         void write()
         {
-            if( is_.is_binary() ) { os_.write( is_.binary().last(), is_.binary().size() ); }
+            if( is_.is_binary() ) {
+                if ( is_stdout_ ) {
+                    ::write( 1, is_.binary().last(), is_.binary().size() );
+                    if(flush) { ::fflush( stdout ); }
+                } else {
+                    os_.write( is_.binary().last(), is_.binary().size() );
+                    if(flush) { os_.flush(); }
+                }
+            }
             else os_ << comma::join( is_.ascii().last(), is_.ascii().ascii().delimiter() ) << std::endl;
-            if(flush) { os_.flush(); }
         }
 
     private:
         const input_stream< S >& is_;
         std::ostream& os_;
         bool flush;
+        bool is_stdout_;
 };
 
 template < typename S >
@@ -606,6 +681,7 @@ inline binary_output_stream< S >::binary_output_stream( std::ostream& os, const 
     //, cur_( begin_ )
     , fields_( split( column_names, ',' ) )
     , flush_( flush )
+    /// , is_stdout( os_.rdbuf() == std::cout.rdbuf() )
 {
     #ifdef WIN32
     if( &os == &std::cout ) { _setmode( _fileno( stdout ), _O_BINARY ); }
@@ -624,6 +700,7 @@ inline binary_output_stream< S >::binary_output_stream( std::ostream& os, const 
 //     , cur_( begin_ )
     , fields_( split( o.fields, ',' ) )
     , flush_( o.flush )
+    /// , is_stdout( os_.rdbuf() == std::cout.rdbuf() )
 {
     #ifdef WIN32
     if( &os == &std::cout ) { _setmode( _fileno( stdout ), _O_BINARY ); }
@@ -645,11 +722,17 @@ template < typename S >
 inline void binary_output_stream< S >::write( const S& s )
 {
     binary_.put( s, &buf_[0] );
-    os_.write( &buf_[0], binary_.format().size() );
+    /// if ( is_stdout ) {
+        /// do not do it! see the notes inside the passed<> implementation
+        /// ::write( 1, &buf_[0], binary_.format().size() );
+        /// if( flush_ ) { ::fflush( stdout ); }
+    /// } else {
+        os_.write( &buf_[0], binary_.format().size() );
+        if( flush_ ) { os_.flush(); }
+    /// }
 //     binary_.put( s, cur_ );
 //     cur_ += binary_.format().size();
 //     if( cur_ == end_ ) { flush(); }
-    if( flush_ ) { os_.flush(); }
 }
 
 template < typename S >
@@ -659,7 +742,7 @@ inline void binary_output_stream< S >::write( const S& s, const char* buf )
     write( s );
 //     ::memcpy( cur_, buf, binary_.format().size() );
 //     write( s );
-    if( flush_ ) { os_.flush(); }
+//    if( flush_ ) { os_.flush(); }
 }
 
 template < typename S >

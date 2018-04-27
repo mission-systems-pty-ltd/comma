@@ -98,6 +98,16 @@ class options
         /// return true, if fields have some given fields (convenience function, slow)
         /// @param field comma-separated fields, e.g. "x,y,z"
         bool has_some_of_fields( const std::string& fields_to_check ) const;
+        
+        /// return true, if fields have all given paths (convenience function, slow)
+        /// @param field comma-separated fields, e.g. fields "centre/position/x,centre/position/y,centre/position/z,..."
+        ///              have paths 'centre/position', 'centre', 'centre/position/x', etc
+        bool has_paths( const std::string& paths ) const;
+        
+        /// return true, if fields have some given paths (convenience function, slow)
+        /// @param field comma-separated fields, e.g. fields "centre/position/x,centre/position/y,centre/position/z,..."
+        ///              have paths 'centre/position', 'centre', 'centre/position/x', etc
+        bool has_some_of_paths( const std::string& paths ) const;
 
         /// returns comma separated list of valueless csv options that can be passed to command_line_options.unnamed
         static std::string valueless_options();

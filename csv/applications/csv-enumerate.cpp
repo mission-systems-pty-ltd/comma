@@ -44,12 +44,16 @@ static void usage( bool verbose )
     std::cerr << std::endl;
     std::cerr << "usage: cat data.csv | csv-enumerate <options>" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "todo: support floating point values" << std::endl;
+    std::cerr << "todo: support floating point values as input keys" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --fields,-f=<fields>; fields of interest, actual field names do not matter; e.g: --fields ,,,a,,b,,,c" << std::endl;
     std::cerr << "    --format=<binary format>; if input is ascii and deducing data types may be ambiguous, define field types explicitly, value as in --binary" << std::endl;
-    std::cerr << "    --output-map,--map: do not output input records, only the list of key values, corresponding ids (as ui), and value count (as ui)" << std::endl;
+    std::cerr << "    --output-map,--map: do not output input records, only an unsorted records" << std::endl;
+    std::cerr << "                        output fields" << std::endl;
+    std::cerr << "                            - list of input key values; in same binary as input" << std::endl;
+    std::cerr << "                            - corresponding enumeration index as ui" << std::endl;
+    std::cerr << "                            - number of values for this enumeration index as ui" << std::endl;
     std::cerr << std::endl;
     std::cerr << "csv options" << std::endl;
     if( verbose ) { std::cerr << comma::csv::options::usage() << std::endl; } else { std::cerr << "    run csv-enumerate --help --verbose for more..." << std::endl; }
@@ -67,6 +71,9 @@ int main( int ac, char** av )
         bool verbose = options.exists( "--verbose,-v" );
         bool output_map = options.exists( "--output-map,--map" );
         comma::csv::options csv( options );
+        bool has_non_empty_field = false;
+        for( const auto& f: comma::split( csv.fields, ',' ) ) { if( !f.empty() ) { has_non_empty_field = true; break; } }
+        if( !has_non_empty_field ) { std::cerr << "csv-enumerate: please specify at least one key in fields" << std::endl; return 1; }
         csv.full_xpath = true;
         std::string first_line;
         comma::csv::format f;
@@ -121,12 +128,13 @@ int main( int ac, char** av )
                 }
             }
         }
+        if( !output_map ) { return 0; }
         comma::csv::options output_csv;
         output_csv.delimiter = csv.delimiter;
         output_csv.full_xpath = true;
-        if( csv.binary() ) { output_csv.format( comma::csv::format::value< input_t >( default_input ) + "2ui" ); }
+        if( csv.binary() ) { output_csv.format( comma::csv::format::value< input_t >( default_input ) + ",2ui" ); }
         comma::csv::output_stream< map_t::value_type > ostream( std::cout, output_csv, std::make_pair( default_input, std::make_pair( 0, 0 ) ) );
-        if( output_map ) { for( map_t::const_iterator it = map.begin(); it != map.end(); ++it ) { ostream.write( *it ); } }
+        for( map_t::const_iterator it = map.begin(); it != map.end(); ++it ) { ostream.write( *it ); }
         return 0;
     }
     catch( std::exception& ex ) { std::cerr << "csv-enumerate: " << ex.what() << std::endl; }

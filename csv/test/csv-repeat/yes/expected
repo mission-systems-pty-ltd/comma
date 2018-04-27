@@ -1,0 +1,14 @@
+command_line_options/output=""
+command_line_options/status=1
+ascii/test[0]/output=""
+ascii/test[0]/status=0
+ascii/test[1]/output="0;0;0;0;0;"
+ascii/test[1]/status=0
+ascii/test[2]/output="0;1;1;1;1;"
+ascii/test[2]/status=0
+binary/test[0]/output=""
+binary/test[0]/status=0
+binary/test[1]/output="0;0;0;0;0;"
+binary/test[1]/status=0
+binary/test[2]/output="0;1;1;1;1;"
+binary/test[2]/status=0
