@@ -78,7 +78,7 @@ TEST( dispatch, test_basics )
     bref.dispatch_to( dref );
     EXPECT_TRUE( d.invoked() );
     EXPECT_EQ( d.value(), "d: got b" );
-    const_bref.dispatch_to( dref );
+    const_bref.dispatch_as_const_to( dref );
     EXPECT_TRUE( d.invoked() );
     EXPECT_EQ( d.value(), "d: got const b" );
 }
@@ -131,18 +131,18 @@ struct fish : public comma::dispatch::dispatched< fish > {};
 
 struct butterfly : public comma::dispatch::dispatched< butterfly > {};
 
-struct fisherman : public dispatch::handler_of< fish >
-                 , public dispatch::handler_of< butterfly >
+struct fisherman : public dispatch::handler_of_const< fish >
+                 , public dispatch::handler_of_const< butterfly >
 {
-    void handle( fish& f ) { std::cerr << "    caught a fish" << std::endl; }
-    void handle( butterfly& f ) { std::cerr << "    used butterfly as a bait" << std::endl; }
+    void handle( const fish& f ) { std::cerr << "    caught a fish" << std::endl; }
+    void handle( const butterfly& f ) { std::cerr << "    used butterfly as a bait" << std::endl; }
 };
 
-struct scientist : public dispatch::handler_of< fish >
-                 , public dispatch::handler_of< butterfly >
+struct scientist : public dispatch::handler_of_const< fish >
+                 , public dispatch::handler_of_const< butterfly >
 {
-    void handle( fish& f ) { std::cerr << "    does not care about fish" << std::endl; }
-    void handle( butterfly& f ) { std::cerr << "    pinned butterfly in his collection" << std::endl; }
+    void handle( const fish& f ) { std::cerr << "    does not care about fish" << std::endl; }
+    void handle( const butterfly& f ) { std::cerr << "    pinned butterfly in his collection" << std::endl; }
 };
 
 TEST( dispatch, DISABLED_invasive_example ) // enable to see it working
@@ -152,11 +152,11 @@ TEST( dispatch, DISABLED_invasive_example ) // enable to see it working
     comma::dispatch::dispatched_base* df = new fish;
     comma::dispatch::dispatched_base* db = new butterfly;
     std::cerr  << std::endl << "fisherman:" << std::endl;
-    df->dispatch_to( f );
-    db->dispatch_to( f );
+    df->dispatch_as_const_to( f );
+    db->dispatch_as_const_to( f );
     std::cerr  << std::endl << "scientist:" << std::endl;
-    df->dispatch_to( s );
-    db->dispatch_to( s );
+    df->dispatch_as_const_to( s );
+    db->dispatch_as_const_to( s );
 }
 
 } } // namespace comma { namespace test {

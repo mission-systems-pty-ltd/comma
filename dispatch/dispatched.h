@@ -59,13 +59,13 @@ struct dispatched_base
     virtual void dispatch_to( handler& d ) = 0;
     
     /// dispatch this to a handler of const
-    virtual void dispatch_to( handler& d ) const = 0;
+    virtual void dispatch_as_const_to( handler& d ) const = 0;
     
     /// dispatch this to a handler
     virtual void dispatch_to( handler* d ) = 0;
     
     /// dispatch this to a handler of const
-    virtual void dispatch_to( handler* d ) const = 0;    
+    virtual void dispatch_as_const_to( handler* d ) const = 0;    
 };
 
 /// handler of a type
@@ -108,9 +108,12 @@ struct handler_of_const : virtual public handler
 ///                 - double dispatching (using two dynamic casts) makes sure that
 ///                     the correct handlers are called
 /// 
-template < typename T >
-struct dispatched : public dispatched_base
+template < typename T, typename Base = dispatched_base >
+struct dispatched : public Base
 {
+    /// base type
+    typedef Base base_t;
+    
     /// dispatch this to a handler
     void dispatch_to( handler* d )
     {
@@ -118,7 +121,7 @@ struct dispatched : public dispatched_base
     }
     
     /// dispatch this to a handler of const
-    void dispatch_to( handler* d ) const
+    void dispatch_as_const_to( handler* d ) const
     {
         dynamic_cast< handler_of_const< T >* >( d )->handle( dynamic_cast< const T& >( *this ) );
     }
@@ -130,7 +133,7 @@ struct dispatched : public dispatched_base
     }
     
     /// dispatch this to a handler of const
-    void dispatch_to( handler& d ) const
+    void dispatch_as_const_to( handler& d ) const
     {
         dynamic_cast< handler_of_const< T >& >( d ).handle( dynamic_cast< const T& >( *this ) );
     }
