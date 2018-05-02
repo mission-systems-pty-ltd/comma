@@ -30,13 +30,17 @@
 
 /// @author cedric wohlleber
 
+#include <fcntl.h>
 #ifdef WIN32
 #include <stdio.h>
-#include <fcntl.h>
 #include <io.h>
+#else
+#include <sys/ioctl.h>
+#include <sys/types.h>
 #endif
 #include <iostream>
-
+#include <fstream>
+#include <boost/thread.hpp>
 #include "../../application/command_line_options.h"
 #include "../../application/contact_info.h"
 #include "../../application/signal_flag.h"
@@ -104,13 +108,59 @@ static void usage()
     exit( -1 );
 }
 
+class key_press_handler_t
+{
+public:
+    key_press_handler_t(): paused_( false ) {}
+    
+    void update()
+    {
+        boost::optional< char > c = key_press_.read();
+        if( !c ) { return; }
+        std::cerr << "--> b: got: " << *c << std::endl;
+        switch( *c )
+        {
+            case ' ': paused_ = !paused_; break;
+            default: break;
+        }
+    }
+    
+    bool paused() const { return paused_; }
+    
+private:
+    class key_press_t_
+    {
+    public:
+        key_press_t_( const std::string& tty = "/dev/tty" ): fd_( ::open( &tty[0], O_RDONLY | O_NONBLOCK ) ) {}
+        
+        ~key_press_t_() { ::close( fd_ ); }
+        
+        boost::optional< char > read()
+        {
+            // todo: debugging...
+            return boost::optional< char >();
+            
+            char c;
+            int count = ::read( fd_, &c, 1 );
+            std::cerr << "--> a: count: " << count << std::endl;
+            if( count == 1 ) { return c; }
+            return boost::optional< char >();
+        }
+        
+    private:
+        int fd_;
+    };
+    key_press_t_ key_press_;
+    bool paused_;
+};
+
 int main( int argc, char** argv )
 {
-    boost::scoped_ptr< comma::Multiplay > multiPlay;
+    boost::scoped_ptr< comma::Multiplay > multiplay;
     try
     {
         const boost::array< comma::signal_flag::signals, 2 > signals = { { comma::signal_flag::sigint, comma::signal_flag::sigterm } };
-        comma::signal_flag shutdownFlag( signals );
+        comma::signal_flag shutdown_flag( signals );
         comma::command_line_options options( argc, argv );
         if( options.exists( "--help,-h" ) ) { usage(); }
         options.assert_mutually_exclusive( "--speed,--slow,--slowdown" );
@@ -123,26 +173,33 @@ int main( int argc, char** argv )
         std::vector< std::string > configstrings = options.unnamed("--quiet,--flush,--no-flush","--slow,--slowdown,--speed,--resolution,--binary,--fields,--clients,--from,--to");
         if( configstrings.empty() ) { configstrings.push_back( "-;-" ); }
         comma::csv::options csvoptions( argc, argv );
-        comma::name_value::parser nameValue("filename,output", ';', '=', false );
+        comma::name_value::parser name_value("filename,output", ';', '=', false );
         std::vector< comma::Multiplay::SourceConfig > sourceConfigs( configstrings.size() );
         comma::Multiplay::SourceConfig defaultConfig( "-", options.value( "--clients", 0 ), csvoptions );
-        for( unsigned int i = 0U; i < configstrings.size(); ++i )
-        {
-            sourceConfigs[i] = nameValue.get< comma::Multiplay::SourceConfig >( configstrings[i], defaultConfig );
-        }
+        for( unsigned int i = 0U; i < configstrings.size(); ++i ) { sourceConfigs[i] = name_value.get< comma::Multiplay::SourceConfig >( configstrings[i], defaultConfig ); }
         boost::posix_time::ptime fromtime;
         if( !from.empty() ) { fromtime = boost::posix_time::from_iso_string( from ); }
         boost::posix_time::ptime totime;
         if( !to.empty() ) { totime = boost::posix_time::from_iso_string( to ); }
-        multiPlay.reset( new comma::Multiplay( sourceConfigs, 1.0 / speed, quiet, boost::posix_time::microseconds( resolution * 1000000 ), fromtime, totime, flush ) );
-        while( multiPlay->read() && !shutdownFlag && std::cout.good() && !std::cout.bad() &&!std::cout.eof() );
-        multiPlay->close();
-        multiPlay.reset();
-        if( shutdownFlag ) { std::cerr << "csv-play: interrupted by signal" << std::endl; return -1; }
+        multiplay.reset( new comma::Multiplay( sourceConfigs, 1.0 / speed, quiet, boost::posix_time::microseconds( resolution * 1000000 ), fromtime, totime, flush ) );
+        //key_press_handler_t key_press_handler;
+        while( !shutdown_flag && std::cout.good() && !std::cout.bad() && !std::cout.eof() )
+        {
+//             key_press_handler.update();
+//             if( key_press_handler.paused() )
+//             { 
+//                 boost::this_thread::sleep( boost::posix_time::millisec( 200 ) );
+//                 continue;
+//             }
+            multiplay->read();
+        }
+        multiplay->close();
+        multiplay.reset();
+        if( shutdown_flag ) { std::cerr << "csv-play: interrupted by signal" << std::endl; return -1; }
         return 0;
     }
     catch( std::exception& ex ) { std::cerr << "csv-play: " << ex.what() << std::endl; }
     catch( ... ) { std::cerr << "csv-play: unknown exception" << std::endl; }
-    try { if( multiPlay ) { multiPlay->close(); } } catch ( ... ) {} // windows thing
+    try { if( multiplay ) { multiplay->close(); } } catch ( ... ) {} // windows thing
     return 1;
 }
