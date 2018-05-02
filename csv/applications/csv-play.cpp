@@ -31,12 +31,18 @@
 /// @author cedric wohlleber
 
 #include <fcntl.h>
+#include <stdio.h>
 #ifdef WIN32
 #include <stdio.h>
 #include <io.h>
 #else
+#include <errno.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
+#include <termios.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #endif
 #include <iostream>
 #include <fstream>
@@ -44,6 +50,7 @@
 #include "../../application/command_line_options.h"
 #include "../../application/contact_info.h"
 #include "../../application/signal_flag.h"
+#include "../../base/exception.h"
 #include "../../csv/options.h"
 #include "../../csv/stream.h"
 #include "../../csv/traits.h"
@@ -117,10 +124,12 @@ public:
     {
         boost::optional< char > c = key_press_.read();
         if( !c ) { return; }
-        std::cerr << "--> b: got: " << *c << std::endl;
         switch( *c )
         {
-            case ' ': paused_ = !paused_; break;
+            case 10:
+                paused_ = !paused_;
+                std::cerr << "csv-play: " << ( paused_ ? "paused" : "resumed" ) << std::endl;
+                break;
             default: break;
         }
     }
@@ -131,18 +140,17 @@ private:
     class key_press_t_
     {
     public:
-        key_press_t_( const std::string& tty = "/dev/tty" ): fd_( ::open( &tty[0], O_RDONLY | O_NONBLOCK ) ) {}
+        key_press_t_( const std::string& tty = "/dev/tty" ): fd_( ::open( &tty[0], O_RDONLY | O_NONBLOCK | O_NOCTTY ) )
+        {
+            if( fd_ == -1 ) { COMMA_THROW( comma::exception, "failed to open '" << tty << "'" ); }
+        }
         
         ~key_press_t_() { ::close( fd_ ); }
         
         boost::optional< char > read()
         {
-            // todo: debugging...
-            return boost::optional< char >();
-            
             char c;
             int count = ::read( fd_, &c, 1 );
-            std::cerr << "--> a: count: " << count << std::endl;
             if( count == 1 ) { return c; }
             return boost::optional< char >();
         }
@@ -182,15 +190,15 @@ int main( int argc, char** argv )
         boost::posix_time::ptime totime;
         if( !to.empty() ) { totime = boost::posix_time::from_iso_string( to ); }
         multiplay.reset( new comma::Multiplay( sourceConfigs, 1.0 / speed, quiet, boost::posix_time::microseconds( resolution * 1000000 ), fromtime, totime, flush ) );
-        //key_press_handler_t key_press_handler;
+        key_press_handler_t key_press_handler;
         while( !shutdown_flag && std::cout.good() && !std::cout.bad() && !std::cout.eof() )
         {
-//             key_press_handler.update();
-//             if( key_press_handler.paused() )
-//             { 
-//                 boost::this_thread::sleep( boost::posix_time::millisec( 200 ) );
-//                 continue;
-//             }
+            key_press_handler.update();
+            if( key_press_handler.paused() )
+            {
+                boost::this_thread::sleep( boost::posix_time::millisec( 200 ) );
+                continue;
+            }
             multiplay->read();
         }
         multiplay->close();
