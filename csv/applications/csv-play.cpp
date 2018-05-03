@@ -44,6 +44,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #endif
+#include <termios.h>
+
 #include <iostream>
 #include <fstream>
 #include <boost/thread.hpp>
@@ -144,9 +146,18 @@ private:
             : fd_( ::open( &tty[0], O_RDONLY | O_NONBLOCK | O_NOCTTY ) )
         {
             if( fd_ == -1 ) { COMMA_THROW( comma::exception, "failed to open '" << tty << "'" ); }
+            struct termios new_termios;
+            ::tcgetattr( fd_, &old_termios_ );
+            new_termios = old_termios_;
+            new_termios.c_lflag &= ~( ICANON | ECHO );
+            ::tcsetattr( STDIN_FILENO, TCSANOW, &new_termios );
         }
         
-        ~key_press_t_() { ::close( fd_ ); }
+        ~key_press_t_()
+        { 
+            ::tcsetattr( STDIN_FILENO, TCSANOW, &old_termios_ ); // restore the console
+            ::close( fd_ );
+        }
         
         boost::optional< char > read()
         {
@@ -158,6 +169,7 @@ private:
         
     private:
         int fd_;
+        struct termios old_termios_;
     };
     key_press_t_ key_press_;
     bool paused_;
@@ -195,11 +207,7 @@ int main( int argc, char** argv )
         while( !shutdown_flag && std::cout.good() && !std::cout.bad() && !std::cout.eof() )
         {
             key_press_handler.update();
-            if( key_press_handler.paused() )
-            {
-                boost::this_thread::sleep( boost::posix_time::millisec( 200 ) );
-                continue;
-            }
+            if( key_press_handler.paused() ) { boost::this_thread::sleep( boost::posix_time::millisec( 200 ) ); continue; }
             if( !multiplay->read() ) { break; }
         }
         multiplay->close();
