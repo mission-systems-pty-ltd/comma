@@ -140,7 +140,8 @@ private:
     class key_press_t_
     {
     public:
-        key_press_t_( const std::string& tty = "/dev/tty" ): fd_( ::open( &tty[0], O_RDONLY | O_NONBLOCK | O_NOCTTY ) )
+        key_press_t_( const std::string& tty = "/dev/tty" )
+            : fd_( ::open( &tty[0], O_RDONLY | O_NONBLOCK | O_NOCTTY ) )
         {
             if( fd_ == -1 ) { COMMA_THROW( comma::exception, "failed to open '" << tty << "'" ); }
         }
@@ -199,7 +200,7 @@ int main( int argc, char** argv )
                 boost::this_thread::sleep( boost::posix_time::millisec( 200 ) );
                 continue;
             }
-            multiplay->read();
+            if( !multiplay->read() ) { break; }
         }
         multiplay->close();
         multiplay.reset();
