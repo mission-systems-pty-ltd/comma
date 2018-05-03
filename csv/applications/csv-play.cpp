@@ -80,6 +80,8 @@ static void usage()
     std::cerr << "               before playback starts; default 0" << std::endl;
     std::cerr << "               can be specified individually for each client, e.g." << std::endl;
     std::cerr << "               csv-play file1;pipe;clients=1 file2;tcp:1234;clients=3" << std::endl;
+    std::cerr << "    --interactive,-i: react to key presses:" << std::endl;
+    std::cerr << "                      <enter>: pause, resume" << std::endl;
     std::cerr << "    --no-flush : if present, do not flush the output stream ( use on high bandwidth sources )" << std::endl;
     std::cerr << "    --resolution=<second>: timestamp resolution; timestamps closer than this value will be" << std::endl;
     std::cerr << "                           played without delay; the rationale is that microsleep used in csv-play" << std::endl;
@@ -120,7 +122,7 @@ static void usage()
 class key_press_handler_t
 {
 public:
-    key_press_handler_t(): paused_( false ) {}
+    key_press_handler_t( bool interactive ): key_press_( interactive ), paused_( false ) {}
     
     void update()
     {
@@ -142,9 +144,10 @@ private:
     class key_press_t_
     {
     public:
-        key_press_t_( const std::string& tty = "/dev/tty" )
-            : fd_( ::open( &tty[0], O_RDONLY | O_NONBLOCK | O_NOCTTY ) )
+        key_press_t_( bool interactive = false, const std::string& tty = "/dev/tty" ) : interactive_( interactive )
         {
+            if( !interactive_ ) { return; }
+            fd_ = ::open( &tty[0], O_RDONLY | O_NONBLOCK | O_NOCTTY );
             if( fd_ == -1 ) { COMMA_THROW( comma::exception, "failed to open '" << tty << "'" ); }
             struct termios new_termios;
             ::tcgetattr( fd_, &old_termios_ );
@@ -154,13 +157,15 @@ private:
         }
         
         ~key_press_t_()
-        { 
+        {
+            if( !interactive_ ) { return; }
             ::tcsetattr( STDIN_FILENO, TCSANOW, &old_termios_ ); // restore the console
             ::close( fd_ );
         }
         
         boost::optional< char > read()
         {
+            if( !interactive_ ) { return boost::optional< char >(); }
             char c;
             int count = ::read( fd_, &c, 1 );
             if( count == 1 ) { return c; }
@@ -168,6 +173,7 @@ private:
         }
         
     private:
+        bool interactive_;
         int fd_;
         struct termios old_termios_;
     };
@@ -191,7 +197,7 @@ int main( int argc, char** argv )
         std::string to = options.value< std::string>( "--to", "" );
         bool quiet =  options.exists( "--quiet" );
         bool flush =  !options.exists( "--no-flush" );
-        std::vector< std::string > configstrings = options.unnamed("--quiet,--flush,--no-flush","--slow,--slowdown,--speed,--resolution,--binary,--fields,--clients,--from,--to");
+        std::vector< std::string > configstrings = options.unnamed("--interactive,-i--quiet,--flush,--no-flush","--slow,--slowdown,--speed,--resolution,--binary,--fields,--clients,--from,--to");
         if( configstrings.empty() ) { configstrings.push_back( "-;-" ); }
         comma::csv::options csvoptions( argc, argv );
         comma::name_value::parser name_value("filename,output", ';', '=', false );
@@ -203,7 +209,7 @@ int main( int argc, char** argv )
         boost::posix_time::ptime totime;
         if( !to.empty() ) { totime = boost::posix_time::from_iso_string( to ); }
         multiplay.reset( new comma::Multiplay( sourceConfigs, 1.0 / speed, quiet, boost::posix_time::microseconds( resolution * 1000000 ), fromtime, totime, flush ) );
-        key_press_handler_t key_press_handler;
+        key_press_handler_t key_press_handler( options.exists( "--interactive,-i" ) );
         while( !shutdown_flag && std::cout.good() && !std::cout.bad() && !std::cout.eof() )
         {
             key_press_handler.update();
