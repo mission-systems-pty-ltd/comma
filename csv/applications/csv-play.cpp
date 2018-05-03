@@ -81,7 +81,7 @@ static void usage()
     std::cerr << "               can be specified individually for each client, e.g." << std::endl;
     std::cerr << "               csv-play file1;pipe;clients=1 file2;tcp:1234;clients=3" << std::endl;
     std::cerr << "    --interactive,-i: react to key presses:" << std::endl;
-    std::cerr << "                      <enter>: pause, resume" << std::endl;
+    std::cerr << "                      <whitespace>: pause, resume" << std::endl;
     std::cerr << "    --no-flush : if present, do not flush the output stream ( use on high bandwidth sources )" << std::endl;
     std::cerr << "    --resolution=<second>: timestamp resolution; timestamps closer than this value will be" << std::endl;
     std::cerr << "                           played without delay; the rationale is that microsleep used in csv-play" << std::endl;
@@ -131,6 +131,7 @@ public:
         switch( *c )
         {
             case 10:
+            case ' ':
                 paused_ = !paused_;
                 std::cerr << "csv-play: " << ( paused_ ? "paused" : "resumed" ) << std::endl;
                 break;
@@ -148,12 +149,15 @@ private:
         {
             if( !interactive_ ) { return; }
             fd_ = ::open( &tty[0], O_RDONLY | O_NONBLOCK | O_NOCTTY );
+            if( !isatty( fd_ ) ) { COMMA_THROW( comma::exception, "'" << tty << "' is not tty" ); }
             if( fd_ == -1 ) { COMMA_THROW( comma::exception, "failed to open '" << tty << "'" ); }
             struct termios new_termios;
             ::tcgetattr( fd_, &old_termios_ );
             new_termios = old_termios_;
             new_termios.c_lflag &= ~( ICANON | ECHO );
-            ::tcsetattr( STDIN_FILENO, TCSANOW, &new_termios );
+            new_termios.c_iflag &= ~( BRKINT | ICRNL | INPCK | ISTRIP | IXON );
+            if( ::tcsetattr( fd_, TCSANOW, &new_termios ) < 0 ) { COMMA_THROW( comma::exception, "failed to set '" << tty << "'" ); }
+            std::cerr << "csv-play: running in interactive mode; press <whitespace> to pause or resume" << std::endl;
         }
         
         ~key_press_t_()
@@ -197,7 +201,7 @@ int main( int argc, char** argv )
         std::string to = options.value< std::string>( "--to", "" );
         bool quiet =  options.exists( "--quiet" );
         bool flush =  !options.exists( "--no-flush" );
-        std::vector< std::string > configstrings = options.unnamed("--interactive,-i--quiet,--flush,--no-flush","--slow,--slowdown,--speed,--resolution,--binary,--fields,--clients,--from,--to");
+        std::vector< std::string > configstrings = options.unnamed("--interactive,-i,--quiet,--flush,--no-flush","--slow,--slowdown,--speed,--resolution,--binary,--fields,--clients,--from,--to");
         if( configstrings.empty() ) { configstrings.push_back( "-;-" ); }
         comma::csv::options csvoptions( argc, argv );
         comma::name_value::parser name_value("filename,output", ';', '=', false );
