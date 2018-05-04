@@ -28,24 +28,19 @@
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-/// @author cedric wohlleber
+/// @authors cedric wohlleber, vsevolod vlaskine
 
-#ifndef COMMA_APPLICATION_NAME_VALUE_MAP_H
-#define COMMA_APPLICATION_NAME_VALUE_MAP_H
+#pragma once
 
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time/posix_time/ptime.hpp>
 #include <boost/date_time/posix_time/time_parsers.hpp>
-
 #include "impl/options.h"
 
-namespace comma
-{
-namespace name_value
-{
+namespace comma { namespace name_value {
 
 /// constructs a map of name-value pair from an input string
-/// TODO implement fullPathAsName ? 
+/// TODO implement full_path_as_name ? 
 class map
 {
     public:
@@ -55,6 +50,15 @@ class map
         map( const std::string& line, const std::string& fields, char delimiter = ';', char value_delimiter = '=' );
         /// constructor
         map( const std::string& line, const impl::options& options );
+        
+        /// return vector of name-value pairs in the given order
+        static std::vector< std::pair< std::string, std::string > > as_vector( const std::string& line, char delimiter = ';', char value_delimiter = '=' );
+        
+        /// return vector of name-value pairs in the given order
+        static std::vector< std::pair< std::string, std::string > > as_vector( const std::string& line, const std::string& fields, char delimiter = ';', char value_delimiter = '=' );
+        
+        /// return vector of name-value pairs in the given order
+        static std::vector< std::pair< std::string, std::string > > as_vector( const std::string& line, const impl::options& options );
 
         /// return true, if field exists
         bool exists( const std::string& name ) const;
@@ -78,39 +82,32 @@ class map
         const map_type& get() const { return m_map; }
 
     private:
-        void init( const comma::name_value::impl::options& options );
+        void init_( const comma::name_value::impl::options& options );
         const std::string m_line;
         map_type m_map;
 };
 
-inline map::map( const std::string& line, char delimiter, char value_delimiter ):
-    m_line( line )
-{
-    init( impl::options( delimiter, value_delimiter ) );
-}
+inline map::map( const std::string& line, char delimiter, char value_delimiter ): m_line( line ) { init_( impl::options( delimiter, value_delimiter ) ); }
 
-inline map::map( const std::string& line, const std::string& fields, char delimiter, char value_delimiter ):
-    m_line( line )
-{
-    init( impl::options( fields, delimiter, value_delimiter ) );
-}
+inline map::map( const std::string& line, const std::string& fields, char delimiter, char value_delimiter ): m_line( line ) { init_( impl::options( fields, delimiter, value_delimiter ) ); }
 
-inline map::map(const std::string& line, const comma::name_value::impl::options& options):
-    m_line( line )
-{
-    init( options );
-}
+inline map::map( const std::string& line, const comma::name_value::impl::options& options ): m_line( line ) { init_( options ); }
 
-
-inline void map::init( const comma::name_value::impl::options& options )
+inline static std::vector< std::string > get_named_values( const std::string& line, const comma::name_value::impl::options& options )
 {
-    std::vector< std::string > named_values = split_escaped( m_line, options.m_delimiter, &(options.m_quotes[0]), options.m_escape );
+    std::vector< std::string > named_values = split_escaped( line, options.m_delimiter, &(options.m_quotes[0]), options.m_escape );
     for( std::size_t i = 0; i < options.m_names.size() && i < named_values.size(); ++i )
     {
         if( options.m_names[i].empty() ) { continue; }
         if( split( named_values[i], options.m_value_delimiter ).size() != 1U ) { COMMA_THROW_STREAM( comma::exception, "expected unnamed value for " << options.m_names[i] << ", got: " << named_values[i] ); }
         named_values[i] = options.m_names[i] + options.m_value_delimiter + named_values[i];
     }
+    return named_values;
+}
+
+inline void map::init_( const comma::name_value::impl::options& options )
+{
+    const std::vector< std::string >& named_values = get_named_values( m_line, options );
     for( std::size_t i = 0; i < named_values.size(); ++i )
     {
         std::vector< std::string > pair = split_escaped( named_values[i], options.m_value_delimiter, &(options.m_quotes[0]), options.m_escape );
@@ -121,6 +118,27 @@ inline void map::init( const comma::name_value::impl::options& options )
             default: { COMMA_THROW_STREAM( comma::exception, "expected name-value pair, got: " << join( pair, options.m_value_delimiter ) ); }
         }
     }
+}
+
+inline std::vector< std::pair< std::string, std::string > > map::as_vector( const std::string& line, char delimiter, char value_delimiter ) { return as_vector( line, impl::options( delimiter, value_delimiter ) ); } 
+
+inline std::vector< std::pair< std::string, std::string > > map::as_vector( const std::string& line, const std::string& fields, char delimiter, char value_delimiter ) { return as_vector( line, impl::options( fields, delimiter, value_delimiter ) ); }
+
+inline std::vector< std::pair< std::string, std::string > > map::as_vector( const std::string& line, const impl::options& options )
+{
+    std::vector< std::pair< std::string, std::string > > v;
+    const std::vector< std::string >& named_values = get_named_values( line, options );
+    for( std::size_t i = 0; i < named_values.size(); ++i )
+    {
+        std::vector< std::string > pair = split_escaped( named_values[i], options.m_value_delimiter, &(options.m_quotes[0]), options.m_escape );
+        switch( pair.size() )
+        {
+            case 1: v.push_back( std::make_pair( pair[0], std::string() ) ); break; // quick and dirty
+            case 2: v.push_back( std::make_pair( pair[0], pair[1] ) ); break;
+            default: { COMMA_THROW_STREAM( comma::exception, "expected name-value pair, got: " << join( pair, options.m_value_delimiter ) ); }
+        }
+    }
+    return v;
 }
 
 inline bool map::exists( const std::string& name ) const { return m_map.find( name ) != m_map.end(); }
@@ -175,6 +193,4 @@ inline T map::value( const std::string& name ) const
     return v[0];
 }
 
-} }
-
-#endif // COMMA_APPLICATION_NAME_VALUE_MAP_H
+} } // namespace comma { namespace name_value {

@@ -78,10 +78,7 @@ inline options::options( const std::string& fields, char delimiter, char value_d
 {
     if( fields.empty() ) { COMMA_THROW( comma::exception, "expected fields, got empty string" ); }
     if( full_path_as_name ) { return; }
-    for( std::size_t i = 0; i < m_names.size(); ++i )
-    {
-        if( m_names[i] != "" ) { m_names[i] = xpath( m_names[i] ).elements.back().to_string(); }
-    }
+    for( std::size_t i = 0; i < m_names.size(); ++i ) { if( m_names[i] != "" ) { m_names[i] = xpath( m_names[i] ).elements.back().to_string(); } }
 }
 
 } } }

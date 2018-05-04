@@ -330,6 +330,22 @@ TEST( name_value, optional )
     }
 }
 
+TEST( name_value, as_vector )
+{
+    {
+        const auto& v = name_value::map::as_vector( "a=1;b;c=2;nested/d=blah" );
+        EXPECT_EQ( 4, v.size() );
+        EXPECT_EQ( "a", v[0].first );
+        EXPECT_EQ( "1", v[0].second );
+        EXPECT_EQ( "b", v[1].first );
+        EXPECT_EQ( "", v[1].second );
+        EXPECT_EQ( "c", v[2].first );
+        EXPECT_EQ( "2", v[2].second );
+        EXPECT_EQ( "nested/d", v[3].first );
+        EXPECT_EQ( "blah", v[3].second );
+    }
+}
+
 } } }
 
 int main( int argc, char* argv[] )
