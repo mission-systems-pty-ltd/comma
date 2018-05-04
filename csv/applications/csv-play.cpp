@@ -124,7 +124,7 @@ class key_press_handler_t
 public:
     key_press_handler_t( bool interactive ): key_press_( interactive ), paused_( false ) {}
     
-    void update()
+    void update( boost::posix_time::ptime t )
     {
         boost::optional< char > c = key_press_.read();
         if( !c ) { return; }
@@ -133,7 +133,7 @@ public:
             case 10:
             case ' ':
                 paused_ = !paused_;
-                std::cerr << "csv-play: " << ( paused_ ? "paused" : "resumed" ) << std::endl;
+                std::cerr << "csv-play: " << ( paused_ ? std::string ( "paused at " + boost::posix_time::to_iso_string( t ) ) : std::string( "resumed" ) ) << std::endl;
                 break;
             default: break;
         }
@@ -216,7 +216,7 @@ int main( int argc, char** argv )
         key_press_handler_t key_press_handler( options.exists( "--interactive,-i" ) );
         while( !shutdown_flag && std::cout.good() && !std::cout.bad() && !std::cout.eof() )
         {
-            key_press_handler.update();
+            key_press_handler.update( multiplay->now() );
             if( key_press_handler.paused() ) { boost::this_thread::sleep( boost::posix_time::millisec( 200 ) ); continue; }
             if( !multiplay->read() ) { break; }
         }

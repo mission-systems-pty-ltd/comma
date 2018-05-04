@@ -162,6 +162,7 @@ bool Multiplay::read()
     {
         return true;
     }
+    now_ = oldest;
     m_play.wait( oldest );
     if( m_configs[index].options.binary() )
     {

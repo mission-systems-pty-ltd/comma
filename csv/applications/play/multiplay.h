@@ -78,6 +78,8 @@ class Multiplay
         void close();
 
         bool read();
+        
+        boost::posix_time::ptime now() const { return now_; }
 
     private:
         std::vector<SourceConfig> m_configs;
@@ -86,6 +88,7 @@ class Multiplay
         std::vector< boost::shared_ptr< comma::io::publisher > > m_publishers;
         csv::impl::play m_play;
         std::vector< boost::posix_time::ptime > m_timestamps;
+        boost::posix_time::ptime now_;
         bool m_started;
         boost::posix_time::ptime m_from;
         boost::posix_time::ptime m_to;
