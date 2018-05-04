@@ -69,6 +69,8 @@ void usage( bool verbose = false )
     std::cerr << "                                             be a problem for a large period timeout" << std::endl;
     std::cerr << "    --output-fields: print output fields and exit" << std::endl;
     std::cerr << "    --output-format: print output format and exit" << std::endl;
+    std::cerr << "    --pace: output with a given --period, even if the input records are coming in at a higher pace" << std::endl;
+    std::cerr << "            warning: currently is very simplistic; see todo comments in the code to make it more robust" << std::endl;
     std::cerr << "    --period=[<seconds>]: period of repeated record" << std::endl;
     std::cerr << "    --timeout,-t=[<seconds>]: timeout before repeating the last record; if not specified, timeout is set to --period" << std::endl;
     std::cerr << "    --verbose,-v: more output" << std::endl;
@@ -208,6 +210,8 @@ int main( int ac, char** av )
         std::ios_base::sync_with_stdio( false ); // unsync to make rdbuf()->in_avail() working
         std::cin.tie( NULL ); // std::cin is tied to std::cout by default
         bool repeating = false;
+        bool pace = options.exists( "--pace" );
+        if( pace && !period ) { std::cerr << "csv-repeat: for --pace, please specify --period" << std::endl; return 1; }
         while( is->good() && !end_of_stream )
         {
             select.wait( repeating ? *period : timeout );
@@ -249,6 +253,7 @@ int main( int ac, char** av )
                     else { std::cout << std::endl; }
                 }
                 end_of_stream = repeating = false;
+                if( pace ) { boost::this_thread::sleep( *period ); } // todo: quick and dirty; fix it properly for --pace, to make sure sleep happens after each record only once
             }
             if( !is->good() || end_of_stream ) { break; }
             if( repeating )
