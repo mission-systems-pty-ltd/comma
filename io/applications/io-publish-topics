@@ -44,6 +44,8 @@ eof
 function usage()
 {
     cat >&2 <<eof
+    
+a simple topic publisher supporting tcp, local sockets, and zero-mq (i.e. whatever io-publish supports)
 
 start all the publishers listed on command line or in the config file
 
@@ -53,7 +55,27 @@ options
 $( description | sed 's/^/    /g' )
 
 examples
-    todo
+    run publisher with topics a and b, with b on demand
+        > io-publish-topics --config <( echo "a/command=csv-paste line-number"; echo "a/port=8888"; echo "b/command=csv-paste line-number"; echo "b/port=9999"; echo "b/on_demand=1" )
+        io-publish-topics: will run 'comma_execute_and_wait --group' with commands:
+        io-publish-topics:     io-publish tcp:8888   -- csv-paste line-number
+        io-publish-topics:     io-publish tcp:9999  --on-demand -- csv-paste line-number
+    
+    in a different shell, observe that topic a keeps running even if no-one is listening, whereas topic b runs only if at least one client is connected:
+        > socat tcp:localhost:8888 | head -n5 # will output something like:
+        16648534
+        16648535
+        16648536
+        16648537
+        16648538
+        
+        > socat tcp:localhost:9999 | head
+        socat tcp:localhost:9999 - | head -n5
+        0
+        1
+        2
+        3
+        4
 
 eof
     exit 0
