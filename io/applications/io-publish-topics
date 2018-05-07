@@ -69,8 +69,7 @@ examples
         16648537
         16648538
         
-        > socat tcp:localhost:9999 | head
-        socat tcp:localhost:9999 - | head -n5
+        > socat tcp:localhost:9999 - | head -n5
         0
         1
         2
