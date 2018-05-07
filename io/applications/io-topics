@@ -1,0 +1,163 @@
+#!/bin/bash
+
+scriptname=$( basename $0 )
+
+source $( type -p comma-application-util ) || { echo "io-topics: could not source 'comma-application-util'" >&2; exit 1; }
+source $( type -p comma-process-util ) || { echo "io-topics: could not source 'comma-process-util'" >&2; exit 1; }
+
+function description()
+{
+    cat <<EOF
+--help,-h; display help and exit
+--config=[<path>]; path to a json or path-value file specifying topic attributes, multiple --config options allowed, configs will be applied in the reverse order of --config options on command line (see examples)
+--dry-run,--dry; print final command and exit
+--topic-fields; output topic config fields and exit
+--topic-fields-help; output topic config fields help and exit
+--verbose,-v; print verbose information
+EOF
+}
+
+function publish_topic_fields()
+{
+    cat <<eof
+address
+binary
+command
+on_demand
+port
+size
+eof
+}
+
+function publish_topic_fields_help()
+{
+    cat <<eof
+address; if present, passed verbatim to io-publish, in this case port attribute ignored
+binary; if publisher publishes binary data, the binary format of the data, overrides size
+command; command for the publisher to run
+on_demand; if present, same meaning as io-publish --on-demand
+port; tcp port for publishing, unless address field is present
+size; if publisher publishes binary data, size of the binary record, if no binary attribute given
+eof
+}
+
+function cat_topic_fields()
+{
+    cat <<eof
+address
+binary
+command
+host
+port
+size
+eof
+}
+
+function cat_topic_fields_help()
+{
+    cat <<eof
+address; if present, passed verbatim to io-publish, in this case port attribute ignored
+binary; if publisher publishes binary data, the binary format of the data, overrides size
+command; command for the publisher to run
+host; tcp host for publishing, unless address field is present
+port; tcp port for publishing, unless address field is present
+size; if publisher publishes binary data, size of the binary record, if no binary attribute given
+eof
+}
+
+function usage()
+{
+    cat >&2 <<eof
+    
+a simple topic publisher supporting tcp, local sockets, and zero-mq (i.e. whatever io-publish supports)
+
+usage: io-topics <operation> [<topics>] <options>
+
+todo: debug zero-mq support
+
+operations
+    cat: receive and handle data on given topics
+    
+    log: log topics (todo)
+    
+    publish: start all the publishers listed on command line or in the config file (todo)
+
+options
+$( description | sed 's/^/    /g' )
+
+examples
+    publish
+        run publisher with topics a and b, with b on demand
+            > io-topics --config <( echo "a/command=csv-paste line-number"; echo "a/port=8888"; echo "b/command=csv-paste line-number"; echo "b/port=9999"; echo "b/on_demand=1" )
+            io-topics: will run 'comma_execute_and_wait --group' with commands:
+            io-topics:     io-publish tcp:8888   -- csv-paste line-number
+            io-topics:     io-publish tcp:9999  --on-demand -- csv-paste line-number
+        
+        in a different shell, observe that topic a keeps running even if no-one is listening, whereas topic b runs only if at least one client is connected:
+            > socat tcp:localhost:8888 | head -n5 # will output something like:
+            16648534
+            16648535
+            16648536
+            16648537
+            16648538
+            
+            > socat tcp:localhost:9999 - | head -n5
+            0
+            1
+            2
+            3
+            4
+
+eof
+    exit 0
+}
+
+function say() { echo "io-topics: $@" >&2 ; }
+function verbose() { (( options_verbose )) && say "$@"; }
+function warning() { say "warning: $1"; }
+function die() { say "$@"; exit 1; }
+
+function publish_command()
+{
+    [[ -n "$topic_command" ]] || die "command not specified for topic '$topic' in files ${configs[@]}"
+    [[ -n "$topic_address" || -n "$topic_port" ]] || die "neither address nor port specified for topic '$topic' in files ${configs[@]}"
+    [[ -n "$topic_address" ]] || topic_address="tcp:$topic_port"
+    if [[ -n "$topic_binary" ]]; then size_option="--size $( csv-size $topic_binary )"
+    elif [[ -n "$topic_size" ]]; then size_option="--size $topic_size"
+    else unset size_option; fi
+    if [[ -n "$topic_on_demand" ]]; then on_demand="--on-demand"; else unset on_demand; fi
+    local cmd="io-publish $topic_address $size_option $on_demand -- $topic_command"
+    verbose "$cmd"
+    echo "$cmd"
+}
+
+function cat_command()
+{
+    die "todo"
+}
+
+(( $( comma_options_has --help "$@" ) || $( comma_options_has -h "$@" ) )) && usage
+options="$( description | comma-options-to-name-value "$@"; comma_status_ok )" || die "invalid options"
+unnamed=( $( grep -v "=" <<< "$options" | sed 's#"##g' ) )
+operation=${unnamed[0]}
+[[ $( type -t ${operation}_topic_fields ) == "function" ]] || die "expected operation, got '$operation'" # quick and dirty
+topics=( ${unnamed[@]:1} )
+eval "$( grep "=" <<< "$options" | comma_path_value_mangle | sed 's#^#options_#' )"
+[[ -z "$options_topic_fields" ]] || { ${operation}_topic_fields; exit 0; }
+[[ -z "$options_topic_fields_help" ]] || { ${operation}_topic_fields_help; exit 0; }
+configs=( $( grep "=" <<< "$options" | grep "^config=" | cut -d= -f2 | sed 's#"##g' | tac ) )
+(( ${#configs[@]} > 0 )) || die "please specify at least one config"
+config=$( cat ${configs[@]} | name-value-convert ) # quick and dirty
+if (( ${#topics[@]} == 0 )); then topics=( $( grep "/command=" <<< "$config" | cut -d= -f1 | sed 's#/command$##' | uniq ) ); fi
+(( ${#topics[@]} > 0 )) || die "no topics in config files ${configs[@]}"
+commands=()
+for topic in ${topics[@]}; do
+    eval "$( ${operation}_topic_fields | sed 's#^#unset topic_#' )" # todo: quick and dirty, watch performance
+    eval "$( grep $topic <<< "$config" | sed "s#^$topic/#topic/#" | comma_path_value_mangle )"
+    cmd="$( ${operation}_command )" || die "$operation: on topic $topic: making command failed"
+    commands+=( "$cmd" )
+done
+say "will run 'comma_execute_and_wait --group' with commands:"
+for cmd in "${commands[@]}"; do say "    $cmd"; done
+[[ -z "$options_dry_run" ]] || exit
+comma_execute_and_wait --group "${commands[@]}"
