@@ -27,7 +27,7 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-/// @author cedric wohlleber
+/// @authors cedric wohlleber, vsevolod vlaskine, dave jennings
 
 #include <errno.h>
 #include <signal.h>
@@ -126,13 +126,12 @@ class publish
                , bool discard
                , bool flush
                , bool output_number_of_clients
-               , bool exit_on_no_clients
-               )
+               , bool report_no_clients )
             : buffer_( packet_size, '\0' )
             , packet_size_( packet_size )
             , output_number_of_clients_( output_number_of_clients )
-            , exit_on_no_clients_( exit_on_no_clients )
-            , got_first_client_( false )
+            , report_no_clients_( report_no_clients )
+            , got_first_client_ever_( false )
             , sizes_( filenames.size(), 0 )
             , num_clients_( 0 )
             , is_shutdown_( false )
@@ -179,14 +178,14 @@ class publish
             return handle_sizes_( t );
         }
 
-        unsigned int num_clients() { return num_clients_; }
+        unsigned int num_clients() const { return num_clients_; }
 
     private:
         bool is_binary_() const { return packet_size_ > 0; }
         
         bool handle_sizes_( transaction_t& t )
         {
-            if( !output_number_of_clients_ && !exit_on_no_clients_ ) { return true; }
+            if( !output_number_of_clients_ && !report_no_clients_ ) { return true; }
             unsigned int total = 0;
             bool changed = false;
             for( unsigned int i = 0; i < t->size(); ++i )
@@ -205,10 +204,10 @@ class publish
                 for( unsigned int i = 0; i < sizes_.size(); ++i ) { std::cout << ',' << sizes_[i]; }
                 std::cout << std::endl;
             }
-            if( exit_on_no_clients_ )
+            if( report_no_clients_ )
             {
-                if( total > 0 ) { got_first_client_ = true; }
-                else if( got_first_client_ ) { std::cerr << "io-publish: the last client exited" << std::endl; return false; }
+                if( total > 0 ) { got_first_client_ever_ = true; }
+                else if( got_first_client_ever_ ) { std::cerr << "io-publish: the last client exited" << std::endl; return false; }
             }
             return true;
         }
@@ -226,10 +225,7 @@ class publish
                 transaction_t t( publishers_ );
                 for( unsigned int i = 0; i < t->size(); ++i )
                 {
-                    if( select.read().ready( ( *t )[i].acceptor_file_descriptor() ) )
-                    {
-                        ( *t )[i].accept();
-                    }
+                    if( select.read().ready( ( *t )[i].acceptor_file_descriptor() ) ) { ( *t )[i].accept(); }
                 }
                 handle_sizes_( t );
             }
@@ -239,8 +235,8 @@ class publish
         std::string buffer_;
         unsigned int packet_size_;
         bool output_number_of_clients_;
-        bool exit_on_no_clients_;
-        bool got_first_client_;
+        bool report_no_clients_;
+        bool got_first_client_ever_;
         std::vector< unsigned int > sizes_;
         unsigned int num_clients_;
         boost::scoped_ptr< boost::thread > acceptor_thread_;
@@ -255,36 +251,34 @@ class command
             , child_pid_( -1 )
         {
             comma::verbose << "launching " << cmd << std::endl;
-            // create a pipe to send the child stdout to the parent stdin
             int fd[2];
-            if( pipe( fd ) == -1 ) { comma::last_error::to_exception( "couldn't open pipe" ); }
+            if( ::pipe( fd ) == -1 ) { comma::last_error::to_exception( "couldn't open pipe" ); } // create a pipe to send the child stdout to the parent stdin
             pid_t pid = fork();
             if( pid == -1 ) { comma::last_error::to_exception( "failed to fork()" ); }
             if( pid == 0 )
             {
-                setsid(); // make the child a process group leader
-                // connect pipe input to stdout in child
-                while(( dup2( fd[1], STDOUT_FILENO ) == -1 ) && ( errno == EINTR )) {}
-                close( fd[1] );     // no longer need fd[1], now that it's duped
-                close( fd[0] );     // don't need pipe output in the child
-                execlp( "bash", "bash", "-c", &cmd_[0], NULL );
+                ::setsid(); // make the child a process group leader
+                while( ( dup2( fd[1], STDOUT_FILENO ) == -1 ) && ( errno == EINTR ) ) {} // connect pipe input to stdout in child
+                ::close( fd[1] );     // no longer need fd[1], now that it's duped
+                ::close( fd[0] );     // don't need pipe output in the child
+                ::execlp( "bash", "bash", "-c", &cmd_[0], NULL );
                 std::cerr << "io-publish: failed to exec child: errno " << comma::last_error::value() << " - " << comma::last_error::to_string() << std::endl;
                 exit( 1 );
             }
             child_pid_ = pid;
-            // connect pipe output to stdin in parent
-            while(( dup2( fd[0], STDIN_FILENO ) == -1 ) && ( errno == EINTR )) {}
-            close( fd[0] );         // no longer need fd[0], now that it's duped
-            close( fd[1] );         // don't need pipe input in the parent
+            while( ( ::dup2( fd[0], STDIN_FILENO ) == -1 ) && ( errno == EINTR ) ) {} // connect pipe output to stdin in parent
+            ::close( fd[0] ); // no longer need fd[0], now that it's duped
+            ::close( fd[1] ); // don't need pipe input in the parent
         }
 
         ~command()
         {
-            comma::verbose << "killing child pid " << child_pid_ << " for " << cmd_ << std::endl;
-            kill( -child_pid_, SIGTERM );
-            comma::verbose << "waiting for pid " << child_pid_ << std::endl;
-            waitpid( -child_pid_, NULL, 0 );
-            comma::verbose << "finished waiting for pid " << child_pid_ << std::endl;
+            comma::verbose << "killing child pid " << child_pid_ << " for " << cmd_ << "..." << std::endl;
+            ::kill( -child_pid_, SIGTERM );
+            comma::verbose << "waiting for pid " << child_pid_ << "..." << std::endl;
+            if( ::waitpid( -child_pid_, NULL, 0 ) < 0 ) { comma::verbose << "warning: waiting for pid " << child_pid_ << " failed" << std::endl; }
+            while( std::getchar() >= 0 ); // todo: lame, but select or c-style reading produce bizarre results; investigate further
+            comma::verbose << "waiting for pid " << child_pid_ << " done" << std::endl;
         }
 
     private:
@@ -306,12 +300,13 @@ int main( int ac, char** av )
         const boost::array< comma::signal_flag::signals, 2 > signals = { { comma::signal_flag::sigint, comma::signal_flag::sigterm } };
         comma::signal_flag is_shutdown( signals );
         bool on_demand = options.exists( "--on-demand" );
+        bool exit_on_no_clients = options.exists( "--exit-on-no-clients,-e" );
         publish p( names
                  , options.value( "-s,--size", 0 ) * options.value( "-m,--multiplier", 1 )
                  , !options.exists( "--no-discard" )
                  , !options.exists( "--no-flush" )
                  , options.exists( "--output-number-of-clients,--clients" )
-                 , options.exists( "--exit-on-no-clients,-e" ) || on_demand );
+                 , exit_on_no_clients || on_demand );
         std::string exec_command = options.value< std::string >( "--exec", "" );
         if( !tail.empty() )
         {
@@ -321,7 +316,7 @@ int main( int ac, char** av )
         //ProfilerStart( "io-publish.prof" ); {
         if( exec_command.empty() )
         {
-            while( std::cin.good() && !is_shutdown && p.read( std::cin ));
+            while( std::cin.good() && !is_shutdown ) { if( !p.read( std::cin ) && exit_on_no_clients ) { break; } }
         }
         else
         {
@@ -331,12 +326,12 @@ int main( int ac, char** av )
                 if( !on_demand || p.num_clients() > 0 )
                 {
                     command cmd( exec_command );
-                    while( std::cin.good() && !is_shutdown && p.read( std::cin ));
+                    while( std::cin.good() && !is_shutdown && p.read( std::cin ) );
                     if( !on_demand ) { done = true; }
                 }
                 else
                 {
-                    sleep( 0.1 );
+                    ::sleep( 0.1 );
                 }
             }
         }
