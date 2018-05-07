@@ -53,9 +53,9 @@ class base
 };
 
 struct multi_handler : public dispatch::handler_of< alpha >
-             , public dispatch::handler_of< beta >
-             , public dispatch::handler_of_const< beta >
-             , public base
+                     , public dispatch::handler_of< beta >
+                     , public dispatch::handler_of_const< beta >
+                     , public base
 {
     void handle( alpha& ) { invoke( "d: got a" ); }
     void handle( beta& ) { invoke( "d: got b" ); }
