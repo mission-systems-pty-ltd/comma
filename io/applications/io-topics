@@ -47,6 +47,7 @@ function cat_topic_fields()
 address
 binary
 command
+flush
 host
 port
 size
@@ -119,12 +120,8 @@ function die() { say "$@"; exit 1; }
 
 function publish_command()
 {
-    [[ -n "$topic_command" ]] || die "command not specified for topic '$topic' in files ${configs[@]}"
     [[ -n "$topic_address" || -n "$topic_port" ]] || die "neither address nor port specified for topic '$topic' in files ${configs[@]}"
     [[ -n "$topic_address" ]] || topic_address="tcp:$topic_port"
-    if [[ -n "$topic_binary" ]]; then size_option="--size $( csv-size $topic_binary )"
-    elif [[ -n "$topic_size" ]]; then size_option="--size $topic_size"
-    else unset size_option; fi
     if [[ -n "$topic_on_demand" ]]; then on_demand="--on-demand"; else unset on_demand; fi
     local cmd="io-publish $topic_address $size_option $on_demand -- $topic_command"
     verbose "$cmd"
@@ -133,7 +130,16 @@ function publish_command()
 
 function cat_command()
 {
-    die "todo"
+    [[ -n "$topic_address" || ( -n "$topic_host" && -n "$topic_port" ) ]] || die "neither address nor host/port specified for topic '$topic' in files ${configs[@]}"
+    [[ -n "$topic_address" ]] || topic_address="tcp:$topic_host:$topic_port"
+    if [[ -n "$topic_on_demand" ]]; then on_demand="--on-demand"; else unset on_demand; fi
+    if [[ -n "$topic_flush" ]]; then flush_option="--flush"; else unset flush_option; fi
+    local cmd="io-cat $topic_address $size_option $flush_option | $topic_command"
+    
+    # todo? comma_execute_and_wait?
+    
+    verbose "$cmd"
+    echo "$cmd"
 }
 
 (( $( comma_options_has --help "$@" ) || $( comma_options_has -h "$@" ) )) && usage
@@ -154,6 +160,10 @@ commands=()
 for topic in ${topics[@]}; do
     eval "$( ${operation}_topic_fields | sed 's#^#unset topic_#' )" # todo: quick and dirty, watch performance
     eval "$( grep $topic <<< "$config" | sed "s#^$topic/#topic/#" | comma_path_value_mangle )"
+    [[ -n "$topic_command" ]] || die "command not specified for topic '$topic' in files ${configs[@]}"
+    if [[ -n "$topic_binary" ]]; then size_option="--size $( csv-size $topic_binary )"
+    elif [[ -n "$topic_size" ]]; then size_option="--size $topic_size"
+    else unset size_option; fi
     cmd="$( ${operation}_command )" || die "$operation: on topic $topic: making command failed"
     commands+=( "$cmd" )
 done
