@@ -78,7 +78,7 @@ TEST( dispatch, test_basics )
     bref.dispatch_to( dref );
     EXPECT_TRUE( d.invoked() );
     EXPECT_EQ( d.value(), "d: got b" );
-    const_bref.dispatch_as_const_to( dref );
+    //const_bref.dispatch_as_const_to( dref );
     //EXPECT_TRUE( d.invoked() );
     //EXPECT_EQ( d.value(), "d: got const b" );
 }
