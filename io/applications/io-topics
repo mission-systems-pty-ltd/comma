@@ -150,25 +150,6 @@ eof
 function log_topic_fields()
 {
     cat <<eof
-address; if present, passed verbatim to io-publish, in this case port attribute ignored
-binary; if data is binary, the binary format of the data, overrides size
-command; optional command for the logger to run instead of default logger
-dir; log directory, for each <topic>, actual log directory will be [<path>/]<dir>/<topic>
-flush; flush output on each record, default: buffer output
-host; tcp host for publishing, unless address field is present
-index; optional command to generate index file, default: fixed-width binary index for each binary record, ascii: no index file
-path; prefix path for log directory (e.g. if logs need to be split across multiple drives)
-period; split log files on a given number of seconds
-port; tcp port for publishing, unless address field is present
-restart; if data stream disconnects keep trying to reconnect
-size; if if data is binary, size of the binary record, if no binary attribute given
-suffix; optional log file suffix, default: bin for binary, csv for ascii
-eof
-}
-
-function log_topic_fields_help()
-{
-    cat <<eof
 address
 binary
 command
@@ -182,6 +163,25 @@ port
 restart
 size
 suffix
+eof
+}
+
+function log_topic_fields_help()
+{
+    cat <<eof
+address; if present, passed verbatim to io-publish, in this case port attribute ignored
+binary; if data is binary, the binary format of the data, overrides size
+command; optional command for the logger to run instead of default logger
+dir; log directory, for each <topic>, actual log directory will be [<path>/]<dir>/<topic>
+flush; flush output on each record, default: buffer output
+host; tcp host for publishing, unless address field is present
+index; optional command to generate index file, default: fixed-width binary index for each binary record, ascii: no index file
+path; prefix path for log directory (e.g. if logs need to be split across multiple drives)
+period; split log files on a given number of seconds
+port; tcp port for publishing, unless address field is present
+restart; if data stream disconnects keep trying to reconnect
+size; if if data is binary, size of the binary record, if no binary attribute given
+suffix; optional log file suffix, default: bin for binary, csv for ascii
 eof
 }
 
@@ -205,6 +205,30 @@ function cat_command()
     verbose "$cmd"
     echo "$cmd"
 }
+
+function log_run()
+{
+    local address="$1"
+    local command="$2"
+    local index="$3"
+    local period="$4"
+    local csv_split_options="$5"
+    local path="$6"
+    local flush_option="$7"
+    local restart="$8"
+    cd $path
+    while [[ -z $SHUTDOWN ]] ; do
+        if [[ $command ]]; then
+            bash -c "$command"
+        else
+            io-cat $address $flush_option | $index | csv-split -t $period $csv_split_options $flush_option
+        fi
+        (( restart )) || break
+        sleep 0.1
+    done
+}
+
+export -f log_run
 
 function log_command()
 {
