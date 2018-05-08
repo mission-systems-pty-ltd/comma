@@ -5,65 +5,19 @@ scriptname=$( basename $0 )
 source $( type -p comma-application-util ) || { echo "io-topics: could not source 'comma-application-util'" >&2; exit 1; }
 source $( type -p comma-process-util ) || { echo "io-topics: could not source 'comma-process-util'" >&2; exit 1; }
 
+# todo: --master-config: default behaviour: first config; --guess-by command: all configs
+
 function description()
 {
     cat <<EOF
 --help,-h; display help and exit
---config=[<path>]; path to a json or path-value file specifying topic attributes, multiple --config options allowed, configs will be applied in the reverse order of --config options on command line (see examples)
+--config=[<config>]; <config>: <dir>[:<path>], where <dir> is path to a json or path-value file specifying topic attributes, <path>: path inside config, multiple --config options allowed, configs will be applied in the reverse order of --config options on command line (see examples)
 --dry-run,--dry; print final command and exit
+--topics-from-all-configs,--all; take topics from all configs, default: take topics only from the first config ("master config")
 --topic-fields; output topic config fields and exit
 --topic-fields-help; output topic config fields help and exit
 --verbose,-v; print verbose information
 EOF
-}
-
-function publish_topic_fields()
-{
-    cat <<eof
-address
-binary
-command
-on_demand
-port
-size
-eof
-}
-
-function publish_topic_fields_help()
-{
-    cat <<eof
-address; if present, passed verbatim to io-publish, in this case port attribute ignored
-binary; if publisher publishes binary data, the binary format of the data, overrides size
-command; command for the publisher to run
-on_demand; if present, same meaning as io-publish --on-demand
-port; tcp port for publishing, unless address field is present
-size; if publisher publishes binary data, size of the binary record, if no binary attribute given
-eof
-}
-
-function cat_topic_fields()
-{
-    cat <<eof
-address
-binary
-command
-flush
-host
-port
-size
-eof
-}
-
-function cat_topic_fields_help()
-{
-    cat <<eof
-address; if present, passed verbatim to io-publish, in this case port attribute ignored
-binary; if publisher publishes binary data, the binary format of the data, overrides size
-command; command for the publisher to run
-host; tcp host for publishing, unless address field is present
-port; tcp port for publishing, unless address field is present
-size; if publisher publishes binary data, size of the binary record, if no binary attribute given
-eof
 }
 
 function usage()
@@ -78,6 +32,8 @@ todo: debug zero-mq support
 
 operations
     cat: receive and handle data on given topics
+    
+    list: list topics
     
     log: log topics (todo)
     
@@ -134,10 +90,100 @@ eof
     exit 0
 }
 
-function say() { echo "io-topics: $@" >&2 ; }
+function say() { if [[ -n "$operation" ]]; then echo "io-topics: $operation: $@"; else echo "io-topics: $@"; fi >&2; }
 function verbose() { (( options_verbose )) && say "$@"; }
 function warning() { say "warning: $1"; }
 function die() { say "$@"; exit 1; }
+
+function list_topic_fields() { :; }
+
+function publish_topic_fields()
+{
+    cat <<eof
+address
+binary
+command
+on_demand
+port
+size
+eof
+}
+
+function publish_topic_fields_help()
+{
+    cat <<eof
+address; if present, passed verbatim to io-publish, in this case port attribute ignored
+binary; if publisher publishes binary data, the binary format of the data, overrides size
+command; command for the publisher to run
+on_demand; if present, same meaning as io-publish --on-demand
+port; tcp port for publishing, unless address field is present
+size; if publisher publishes binary data, size of the binary record, if no binary attribute given
+eof
+}
+
+function cat_topic_fields()
+{
+    cat <<eof
+address
+binary
+command
+flush
+host
+port
+size
+eof
+}
+
+function cat_topic_fields_help()
+{
+    cat <<eof
+address; if present, passed verbatim to io-publish, in this case port attribute ignored
+binary; if data is binary, the binary format of the data, overrides size
+command; command for the client to run
+flush; flush output on each record, default: buffer output
+host; tcp host for publishing, unless address field is present
+port; tcp port for publishing, unless address field is present
+size; if if data is binary, size of the binary record, if no binary attribute given
+eof
+}
+
+function log_topic_fields()
+{
+    cat <<eof
+address; if present, passed verbatim to io-publish, in this case port attribute ignored
+binary; if data is binary, the binary format of the data, overrides size
+command; optional command for the logger to run instead of default logger
+dir; log directory, for each <topic>, actual log directory will be [<path>/]<dir>/<topic>
+flush; flush output on each record, default: buffer output
+host; tcp host for publishing, unless address field is present
+index; optional command to generate index file, default: fixed-width binary index for each binary record, ascii: no index file
+path; prefix path for log directory (e.g. if logs need to be split across multiple drives)
+period; split log files on a given number of seconds
+port; tcp port for publishing, unless address field is present
+restart; if data stream disconnects keep trying to reconnect
+size; if if data is binary, size of the binary record, if no binary attribute given
+suffix; optional log file suffix, default: bin for binary, csv for ascii
+eof
+}
+
+function log_topic_fields_help()
+{
+    cat <<eof
+address
+binary
+command
+dir
+flush
+host
+index
+path
+period
+port
+restart
+size
+suffix
+eof
+}
 
 function publish_command()
 {
@@ -160,20 +206,51 @@ function cat_command()
     echo "$cmd"
 }
 
+function log_command()
+{
+    die "todo"
+}
+
+function cat_config()
+{
+    local name path
+    IFS=: read name path <<< "$1"
+    if [[ -z "$path" ]]; then cat $name; else cat $name | name-value-convert | grep "^$path/" | sed "s#$path/##"; fi
+}
+
+function topics_from_config() # quick and dirty
+{
+    if [[ -n "$options_topics_from_all_configs" ]]; then egrep -e "/address=|/port=" <<< "$config" | cut -d= -f1 | sed -e 's#/address$##' -e 's#/port$##' | uniq; return; fi
+    grep '=""' <<< "$master_config" | cut -d= -f1
+    for path in $( grep -v '=""' <<< "$master_config" | cut -d= -f1 ); do dirname $path; done | uniq
+}
+
+function read_configs()
+{
+    configs=( $( grep "=" <<< "$options" | grep "^config=" | cut -d= -f2 | sed 's#"##g' | tac ) )
+    (( ${#configs[@]} > 0 )) || die "please specify at least one config"
+    master_config=$( cat_config ${configs[-1]} ) # quick and dirty
+    config=$( { for c in ${configs[@]}; do cat_config $c; done; echo "$master_config"; } | name-value-convert ) # quick and dirty
+}
+
+function get_topics()
+{
+    topics=( ${unnamed[@]:1} )
+    if (( ${#topics[@]} == 0 )); then topics=( $( topics_from_config ) ); fi
+    (( ${#topics[@]} > 0 )) || die "no topics in config files ${configs[@]}"
+}
+
 (( $( comma_options_has --help "$@" ) || $( comma_options_has -h "$@" ) )) && usage
 options="$( description | comma-options-to-name-value "$@"; comma_status_ok )" || die "invalid options"
 unnamed=( $( grep -v "=" <<< "$options" | sed 's#"##g' ) )
 operation=${unnamed[0]}
 [[ $( type -t ${operation}_topic_fields ) == "function" ]] || die "expected operation, got '$operation'" # quick and dirty
-topics=( ${unnamed[@]:1} )
 eval "$( grep "=" <<< "$options" | comma_path_value_mangle | sed 's#^#options_#' )"
 [[ -z "$options_topic_fields" ]] || { ${operation}_topic_fields; exit 0; }
 [[ -z "$options_topic_fields_help" ]] || { ${operation}_topic_fields_help; exit 0; }
-configs=( $( grep "=" <<< "$options" | grep "^config=" | cut -d= -f2 | sed 's#"##g' | tac ) )
-(( ${#configs[@]} > 0 )) || die "please specify at least one config"
-config=$( cat ${configs[@]} | name-value-convert ) # quick and dirty
-if (( ${#topics[@]} == 0 )); then topics=( $( grep "/command=" <<< "$config" | cut -d= -f1 | sed 's#/command$##' | uniq ) ); fi
-(( ${#topics[@]} > 0 )) || die "no topics in config files ${configs[@]}"
+read_configs
+get_topics
+if [[ $operation == "list" ]]; then for topic in ${topics[@]}; do echo $topic; done; exit; fi
 commands=()
 for topic in ${topics[@]}; do
     eval "$( ${operation}_topic_fields | sed 's#^#unset topic_#' )" # todo: quick and dirty, watch performance
@@ -182,7 +259,7 @@ for topic in ${topics[@]}; do
     if [[ -n "$topic_binary" ]]; then size_option="--size $( csv-size $topic_binary )"
     elif [[ -n "$topic_size" ]]; then size_option="--size $topic_size"
     else unset size_option; fi
-    cmd="$( ${operation}_command )" || die "$operation: on topic $topic: making command failed"
+    cmd="$( ${operation}_command )" || die "on topic $topic: making command failed"
     commands+=( "$cmd" )
 done
 say "will run 'comma_execute_and_wait --group' with commands:"
