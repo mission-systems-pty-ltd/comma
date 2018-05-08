@@ -89,7 +89,7 @@ $( description | sed 's/^/    /g' )
 examples
     publish
         run publisher with topics a and b, with b on demand
-            > io-topics --config <( echo "a/command=csv-paste line-number"; echo "a/port=8888"; echo "b/command=csv-paste line-number"; echo "b/port=9999"; echo "b/on_demand=1" )
+            > io-topics publish --config <( echo "a/command=csv-paste line-number"; echo "a/port=8888"; echo "b/command=csv-paste line-number"; echo "b/port=9999"; echo "b/on_demand=1" )
             io-topics: will run 'comma_execute_and_wait --group' with commands:
             io-topics:     io-publish tcp:8888   -- csv-paste line-number
             io-topics:     io-publish tcp:9999  --on-demand -- csv-paste line-number
@@ -103,6 +103,27 @@ examples
             16648538
             
             > socat tcp:localhost:9999 - | head -n5
+            0
+            1
+            2
+            3
+            4
+            
+    cat
+        run publisher
+            > io-topics publish --config <( echo "a/command=csv-paste line-number"; echo "a/port=8888"; echo "b/command=csv-paste line-number"; echo "b/port=9999"; echo "b/on_demand=1" )
+        
+        in a different shell, run clients
+            > io-topics cat --config <( echo "a/command=head -n5 > a.csv"; echo "a/address=tcp:localhost:8888"; echo "b/command=head -n5 > b.csv"; echo "b/address=tcp:localhost:9999" )
+            
+        check output
+            > cat a.csv 
+            203740462
+            203740463
+            203740464
+            203740465
+            203740466
+            > cat b.csv 
             0
             1
             2
@@ -133,11 +154,8 @@ function cat_command()
     [[ -n "$topic_address" || ( -n "$topic_host" && -n "$topic_port" ) ]] || die "neither address nor host/port specified for topic '$topic' in files ${configs[@]}"
     [[ -n "$topic_address" ]] || topic_address="tcp:$topic_host:$topic_port"
     if [[ -n "$topic_on_demand" ]]; then on_demand="--on-demand"; else unset on_demand; fi
-    if [[ -n "$topic_flush" ]]; then flush_option="--flush"; else unset flush_option; fi
-    local cmd="io-cat $topic_address $size_option $flush_option | $topic_command"
-    
-    # todo? comma_execute_and_wait?
-    
+    if [[ -n "$topic_flush" ]]; then flush_option="--flush"; else unset flush_option; fi # todo! make flush default?!
+    local cmd="bash -c io-cat $topic_address $size_option $flush_option | $topic_command" # todo? comma_execute_and_wait?
     verbose "$cmd"
     echo "$cmd"
 }
