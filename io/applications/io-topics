@@ -38,6 +38,8 @@ operations
     log: log topics (todo)
         options
 $( log_options | sed 's/^/            /g' )
+
+    play: play back logs, counterpart to log operation (todo)
     
     publish: start all the publishers listed on command line or in the config file (todo)
 
@@ -87,6 +89,12 @@ examples
             2
             3
             4
+            
+    log
+        run publisher as in previous examples and then run logging
+            > io/applications/io-topics log --dir my-log --config <( echo "a/address=tcp:localhost:8888"; echo "b/address=tcp:localhost:9999" )
+            > ls -al my-log/a
+            > ls -al my-log/b
 
 eof
     exit 0
@@ -177,7 +185,7 @@ flush; flush output on each record, default: buffer output
 host; tcp host for publishing, unless address field is present
 index; optional command to generate index file, default: fixed-width binary index for each binary record, ascii: no index file
 path; prefix path for log directory (e.g. if logs need to be split across multiple drives)
-period; split log files on a given number of seconds
+period; split log files on a given number of seconds, overrides --period
 port; tcp port for publishing, unless address field is present
 restart; if data stream disconnects keep trying to reconnect
 size; if if data is binary, size of the binary record, if no binary attribute given
@@ -189,11 +197,13 @@ function log_options()
 {
     cat <<eof
 --log-dir,--dir=[<path>]; log directory, for each topic, actual log directory will be [<path>/]<dir>/<topic>, see io-topics log --topic-fields-help
+--period=<seconds>; default=60; the log files will be split based on a given time period, settings for specific topic override this option
 eof
 }
 
 function publish_command()
 {
+    [[ -n "$topic_command" ]] || die "command not specified for topic '$topic' in files ${configs[@]}"
     [[ -n "$topic_address" || -n "$topic_port" ]] || die "neither address nor port specified for topic '$topic' in files ${configs[@]}"
     [[ -n "$topic_address" ]] || topic_address="tcp:$topic_port"
     if [[ -n "$topic_on_demand" ]]; then on_demand="--on-demand"; else unset on_demand; fi
@@ -210,6 +220,7 @@ function set_topic_address()
 
 function cat_command()
 {
+    [[ -n "$topic_command" ]] || die "command not specified for topic '$topic' in files ${configs[@]}"
     set_topic_address
     if [[ -n "$topic_on_demand" ]]; then on_demand="--on-demand"; else unset on_demand; fi
     if [[ -n "$topic_flush" ]]; then flush_option="--flush"; else unset flush_option; fi # todo! make flush default?!
@@ -218,30 +229,14 @@ function cat_command()
     echo "$cmd"
 }
 
-function log_run()
+function io_topics_log_run_forever()
 {
-    local address="$1"
-    local index="$2"
-    local period="$3"
-    local csv_split_options="$4"
-    local path="$5"
-    local flush_option="$6"
-    local restart="$7"
-    local cmd="$8"
     local is_shutdown=0
     trap "local is_shutdown=1" HUP INT TERM
-    (
-        cd $path
-        [[ -n "$cmd" ]] || cmd="io-cat $address $flush_option | $index | csv-split -t $period $csv_split_options $flush_option"
-        while (( ! is_shutdown )) ; do
-            bash -c "$cmd"
-            (( restart )) || break
-            sleep 0.1 # quick and dirty
-        done
-    )
+    while (( ! is_shutdown )) ; do bash -c "$@"; sleep 0.1; done # quick and dirty
 }
 
-export -f log_run
+export -f io_topics_log_run_forever
 
 function log_command()
 {
@@ -254,11 +249,15 @@ function log_command()
         local flush_option suffix_option
         (( topic_flush )) && flush_option="--flush"
         [[ -z "$topic_suffix" ]] || suffix_option="$topic_suffix"
-        cmd="io-cat $topic_address $flush_option | $topic_index | csv-split -t $topic_period $size_option $suffix_option $flush_option"
+        local period=$options_period
+        [[ -z "$topic_period" ]] || period=$topic_period
+        cmd="io-cat $topic_address $flush_option | $topic_index | csv-split -t $period $size_option $suffix_option $flush_option"
     fi
     local path
     [[ -z "$topic_path" ]] || path+="$topic_path/"
     path+="$options_log_dir/$topic"
+    [[ -z "$topic_restart" ]] || cmd="io_topics_log_run_forever $cmd"
+    mkdir -p $path || die "failed to make directory $path for topic $topic"
     cmd="( cd $path && $cmd )"
     echo "bash -c $cmd"
 }
@@ -297,7 +296,7 @@ operation=$1
 [[ $( type -t ${operation}_topic_fields ) == "function" ]] || die "expected operation, got '$operation'" # quick and dirty
 (( $( comma_options_has --topic-fields "$@" ) )) && { ${operation}_topic_fields; exit 0; }
 (( $( comma_options_has --topic-fields-help "$@" ) )) && { ${operation}_topic_fields_help; exit 0; }
-options="$( ( common_options; [[ $( type -t ${operation}_options ) == "function" ]] && ${operation}_options ) | comma-options-to-name-value "$@"; comma_status_ok )" || die "invalid options"
+options="$( ( common_options; if [[ $( type -t ${operation}_options ) == "function" ]]; then ${operation}_options; fi ) | comma-options-to-name-value "$@"; comma_status_ok )" || die "invalid options"
 unnamed=( $( grep -v "=" <<< "$options" | sed 's#"##g' ) )
 eval "$( grep "=" <<< "$options" | comma_path_value_mangle | sed 's#^#options_#' )"
 read_configs
@@ -307,7 +306,7 @@ commands=()
 for topic in ${topics[@]}; do
     eval "$( ${operation}_topic_fields | comma_path_mangle | sed 's#^#unset topic_#' )" # todo: quick and dirty, watch performance
     eval "$( grep $topic <<< "$config" | sed "s#^$topic/#topic/#" | comma_path_value_mangle )"
-    [[ -n "$topic_command" ]] || die "command not specified for topic '$topic' in files ${configs[@]}"
+    #[[ -n "$topic_command" ]] || die "command not specified for topic '$topic' in files ${configs[@]}"
     if [[ -n "$topic_binary" ]]; then size_option="--size $( csv-size $topic_binary )"
     elif [[ -n "$topic_size" ]]; then size_option="--size $topic_size"
     else unset size_option; fi
