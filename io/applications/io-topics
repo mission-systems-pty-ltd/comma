@@ -7,7 +7,7 @@ source $( type -p comma-process-util ) || { echo "io-topics: could not source 'c
 
 # todo: --master-config: default behaviour: first config; --guess-by command: all configs
 
-function description()
+function common_options()
 {
     cat <<EOF
 --help,-h; display help and exit
@@ -36,11 +36,13 @@ operations
     list: list topics
     
     log: log topics (todo)
+        options
+$( log_options | sed 's/^/            /g' )
     
     publish: start all the publishers listed on command line or in the config file (todo)
 
-options
-$( description | sed 's/^/    /g' )
+common options
+$( common_options | sed 's/^/    /g' )
 
 examples
     publish
@@ -153,7 +155,6 @@ function log_topic_fields()
 address
 binary
 command
-dir
 flush
 host
 index
@@ -172,7 +173,6 @@ function log_topic_fields_help()
 address; if present, passed verbatim to io-publish, in this case port attribute ignored
 binary; if data is binary, the binary format of the data, overrides size
 command; optional command for the logger to run instead of default logger
-dir; log directory, for each <topic>, actual log directory will be [<path>/]<dir>/<topic>
 flush; flush output on each record, default: buffer output
 host; tcp host for publishing, unless address field is present
 index; optional command to generate index file, default: fixed-width binary index for each binary record, ascii: no index file
@@ -182,6 +182,13 @@ port; tcp port for publishing, unless address field is present
 restart; if data stream disconnects keep trying to reconnect
 size; if if data is binary, size of the binary record, if no binary attribute given
 suffix; optional log file suffix, default: bin for binary, csv for ascii
+eof
+}
+
+function log_options()
+{
+    cat <<eof
+--log-dir,--dir=[<path>]; log directory, for each topic, actual log directory will be [<path>/]<dir>/<topic>, see io-topics log --topic-fields-help
 eof
 }
 
@@ -195,10 +202,15 @@ function publish_command()
     echo "$cmd"
 }
 
-function cat_command()
+function set_topic_address()
 {
     [[ -n "$topic_address" || ( -n "$topic_host" && -n "$topic_port" ) ]] || die "neither address nor host/port specified for topic '$topic' in files ${configs[@]}"
     [[ -n "$topic_address" ]] || topic_address="tcp:$topic_host:$topic_port"
+}
+
+function cat_command()
+{
+    set_topic_address
     if [[ -n "$topic_on_demand" ]]; then on_demand="--on-demand"; else unset on_demand; fi
     if [[ -n "$topic_flush" ]]; then flush_option="--flush"; else unset flush_option; fi # todo! make flush default?!
     local cmd="bash -c io-cat $topic_address $size_option $flush_option | $topic_command" # todo? comma_execute_and_wait?
@@ -209,30 +221,46 @@ function cat_command()
 function log_run()
 {
     local address="$1"
-    local command="$2"
-    local index="$3"
-    local period="$4"
-    local csv_split_options="$5"
-    local path="$6"
-    local flush_option="$7"
-    local restart="$8"
-    cd $path
-    while [[ -z $SHUTDOWN ]] ; do
-        if [[ $command ]]; then
-            bash -c "$command"
-        else
-            io-cat $address $flush_option | $index | csv-split -t $period $csv_split_options $flush_option
-        fi
-        (( restart )) || break
-        sleep 0.1
-    done
+    local index="$2"
+    local period="$3"
+    local csv_split_options="$4"
+    local path="$5"
+    local flush_option="$6"
+    local restart="$7"
+    local cmd="$8"
+    local is_shutdown=0
+    trap "local is_shutdown=1" HUP INT TERM
+    (
+        cd $path
+        [[ -n "$cmd" ]] || cmd="io-cat $address $flush_option | $index | csv-split -t $period $csv_split_options $flush_option"
+        while (( ! is_shutdown )) ; do
+            bash -c "$cmd"
+            (( restart )) || break
+            sleep 0.1 # quick and dirty
+        done
+    )
 }
 
 export -f log_run
 
 function log_command()
 {
-    die "todo"
+    [[ -n "$options_log_dir" ]] || die "please specify --log-dir"
+    local topic=$1
+    local cmd="$topic_command"
+    if [[ -z "$cmd" ]]; then
+        set_topic_address
+        [[ -n "$topic_index" ]] || topic_index="cat"
+        local flush_option suffix_option
+        (( topic_flush )) && flush_option="--flush"
+        [[ -z "$topic_suffix" ]] || suffix_option="$topic_suffix"
+        cmd="io-cat $topic_address $flush_option | $topic_index | csv-split -t $topic_period $size_option $suffix_option $flush_option"
+    fi
+    local path
+    [[ -z "$topic_path" ]] || path+="$topic_path/"
+    path+="$options_log_dir/$topic"
+    cmd="( cd $path && $cmd )"
+    echo "bash -c $cmd"
 }
 
 function cat_config()
@@ -265,25 +293,25 @@ function get_topics()
 }
 
 (( $( comma_options_has --help "$@" ) || $( comma_options_has -h "$@" ) )) && usage
-options="$( description | comma-options-to-name-value "$@"; comma_status_ok )" || die "invalid options"
-unnamed=( $( grep -v "=" <<< "$options" | sed 's#"##g' ) )
-operation=${unnamed[0]}
+operation=$1
 [[ $( type -t ${operation}_topic_fields ) == "function" ]] || die "expected operation, got '$operation'" # quick and dirty
+(( $( comma_options_has --topic-fields "$@" ) )) && { ${operation}_topic_fields; exit 0; }
+(( $( comma_options_has --topic-fields-help "$@" ) )) && { ${operation}_topic_fields_help; exit 0; }
+options="$( ( common_options; [[ $( type -t ${operation}_options ) == "function" ]] && ${operation}_options ) | comma-options-to-name-value "$@"; comma_status_ok )" || die "invalid options"
+unnamed=( $( grep -v "=" <<< "$options" | sed 's#"##g' ) )
 eval "$( grep "=" <<< "$options" | comma_path_value_mangle | sed 's#^#options_#' )"
-[[ -z "$options_topic_fields" ]] || { ${operation}_topic_fields; exit 0; }
-[[ -z "$options_topic_fields_help" ]] || { ${operation}_topic_fields_help; exit 0; }
 read_configs
 get_topics
 if [[ $operation == "list" ]]; then for topic in ${topics[@]}; do echo $topic; done; exit; fi
 commands=()
 for topic in ${topics[@]}; do
-    eval "$( ${operation}_topic_fields | sed 's#^#unset topic_#' )" # todo: quick and dirty, watch performance
+    eval "$( ${operation}_topic_fields | comma_path_mangle | sed 's#^#unset topic_#' )" # todo: quick and dirty, watch performance
     eval "$( grep $topic <<< "$config" | sed "s#^$topic/#topic/#" | comma_path_value_mangle )"
     [[ -n "$topic_command" ]] || die "command not specified for topic '$topic' in files ${configs[@]}"
     if [[ -n "$topic_binary" ]]; then size_option="--size $( csv-size $topic_binary )"
     elif [[ -n "$topic_size" ]]; then size_option="--size $topic_size"
     else unset size_option; fi
-    cmd="$( ${operation}_command )" || die "on topic $topic: making command failed"
+    cmd="$( ${operation}_command $topic )" || die "on topic $topic: making command failed"
     commands+=( "$cmd" )
 done
 say "will run 'comma_execute_and_wait --group' with commands:"
