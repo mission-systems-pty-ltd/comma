@@ -52,7 +52,10 @@ class options
         options( const comma::command_line_options& options, const std::string& defaultFields = "", bool set_full_xpath = false );
 
         /// return usage to incorporate into application usage
-        static std::string usage( const std::string& default_fields = "" );
+        static std::string usage( const std::string& default_fields = "", bool verbose = true );
+        
+        /// return usage to incorporate into application usage
+        static std::string usage( bool verbose ) { return usage( "", verbose ); }
 
         /// filename (optional)
         std::string filename;
