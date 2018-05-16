@@ -29,8 +29,7 @@
 
 /// @author vsevolod vlaskine
 
-#ifndef COMMA_CSV_OPTIONS_H_
-#define COMMA_CSV_OPTIONS_H_
+#pragma once
 
 #include <boost/optional.hpp>
 #include "../application/command_line_options.h"
@@ -120,5 +119,3 @@ class options
 };
 
 } } // namespace comma { namespace csv {
-
-#endif /*COMMA_CSV_OPTIONS_H_*/
