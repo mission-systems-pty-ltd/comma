@@ -292,10 +292,10 @@ class Values
         }
 };
 
-class asciiInput
+class ascii_input
 {
     public:
-        asciiInput( const comma::csv::options& csv, const boost::optional< comma::csv::format >& format ) : csv_( csv )
+        ascii_input( const comma::csv::options& csv, const boost::optional< comma::csv::format >& format ) : csv_( csv )
         {
             if( format ) { values_.reset( new Values( csv, *format ) ); }
         }
@@ -317,10 +317,10 @@ class asciiInput
         std::string line_;
 };
 
-class binaryInput
+class binary_input
 {
     public:
-        binaryInput( const comma::csv::options& csv )
+        binary_input( const comma::csv::options& csv )
             : csv_( csv )
             , values_( csv, csv.format() )
             , buffer_( csv.format().size() > 65536 ? csv.format().size() : 65536 / csv.format().size() * csv.format().size() )
@@ -1246,10 +1246,10 @@ int main( int ac, char** av )
         boost::optional< comma::csv::format > format;
         if( csv.binary() ) { format = csv.format(); }
         else if( options.exists( "--format" ) ) { format = comma::csv::format( options.value< std::string >( "--format" ) ); }
-        boost::scoped_ptr< asciiInput > ascii;
-        boost::scoped_ptr< binaryInput > binary;
-        if( csv.binary() ) { binary.reset( new binaryInput( csv ) ); }
-        else { ascii.reset( new asciiInput( csv, format ) ); }
+        boost::scoped_ptr< ascii_input > ascii;
+        boost::scoped_ptr< binary_input > binary;
+        if( csv.binary() ) { binary.reset( new binary_input( csv ) ); }
+        else { ascii.reset( new ascii_input( csv, format ) ); }
         OperationsMap operations;
         ResultsMap results;
         Inputs inputs;
@@ -1258,7 +1258,7 @@ int main( int ac, char** av )
         bool has_id = csv.has_field( "id" );
         bool append = options.exists("--append");
         
-        if (options.exists("--output-fields"))
+        if( options.exists( "--output-fields" ) )
         {
             std::vector < std::string > fields = comma::split(csv.fields, ',');
             std::vector < std::string > output_fields;
@@ -1280,7 +1280,7 @@ int main( int ac, char** av )
         }
         if (options.exists("--output-format"))
         {
-	    if ( !format ) { std::cerr << comma::verbose.app_name() << ": option --output-format requires input format to be specified, please use --format or --binary" << std::endl; return 1; }
+            if ( !format ) { std::cerr << comma::verbose.app_name() << ": option --output-format requires input format to be specified, please use --format or --binary" << std::endl; return 1; }
             boost::ptr_vector< Operationbase > ops;
             init_operations(ops, operations_parameters, Values(csv, *format).format());
             for ( std::size_t i = 0; i < ops.size(); ++i ) 
@@ -1296,7 +1296,7 @@ int main( int ac, char** av )
         while( std::cin.good() && !std::cin.eof() )
         {
             const Values* v = csv.binary() ? binary->read() : ascii->read();
-            if( v == NULL ) { break; }
+            if( v == NULL ) { if( csv.binary() ) { break; } else { continue; } } // quick and dirty: skip empty lines in ascii
             if( has_block )
             {
                 if( block && *block != v->block() ) 
@@ -1323,4 +1323,5 @@ int main( int ac, char** av )
     }
     catch( std::exception& ex ) { std::cerr << comma::verbose.app_name() << ": " << ex.what() << std::endl; }
     catch( ... ) { std::cerr << comma::verbose.app_name() << ": unknown exception" << std::endl; }
+    return 1;
 }
