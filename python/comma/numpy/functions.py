@@ -73,10 +73,13 @@ def shape_to_string(shape):
     return s
 
 
+# ATTENTION!!!
 # Nice idea but does not work. See https://github.com/numpy/numpy/issues/6359
 # for a discussion of descr purpuses and usages (TL;DR: obscure, undocumented,
 # intended for other purposes). See a unit test from 9e14edfa644d062 showing
 # problems with the current implementation.
+#
+# TODO: This function needs to be rewritten using official python api
 def types_of_dtype(dtype, unroll=False):
     """
     return a tuple of numpy type strings for a given dtype
