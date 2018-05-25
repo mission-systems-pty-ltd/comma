@@ -95,23 +95,35 @@ def types_of_dtype(dtype, unroll=False):
     >>> types_of_dtype(np.dtype([('a', 'S2'), ('b', [('c', '2f8'), ('d', 'u2')])]))
     ('S2', '2f8', 'u2')
     """
-    if len(dtype) == 0:
-        dtype = np.dtype([('', dtype)])
-    types = []
-    for descr in dtype.descr:
-        if isinstance(descr[1], list):
-            types.extend(types_of_dtype(np.dtype(descr[1]), unroll))
-            continue
-        single_type = strip_byte_order_prefix(descr[1])
-        shape = descr[2] if len(descr) > 2 else ()
-        if unroll:
-            unrolled_types = [single_type] * reduce(operator.mul, shape, 1)
-            types.extend(unrolled_types)
-        else:
-            type = shape_to_string(shape) + single_type if shape else single_type
-            types.append(type)
-    return tuple(types)
-
+    try:
+        if len(dtype) == 0:
+            dtype = np.dtype([('', dtype)])
+        types = []
+        for descr in dtype.descr:
+            if isinstance(descr[1], list):
+                types.extend(types_of_dtype(np.dtype(descr[1]), unroll))
+                continue
+            single_type = strip_byte_order_prefix(descr[1])
+            shape = descr[2] if len(descr) > 2 else ()
+            if unroll:
+                unrolled_types = [single_type] * reduce(operator.mul, shape, 1)
+                types.extend(unrolled_types)
+            else:
+                type = shape_to_string(shape) + single_type if shape else single_type
+                types.append(type)
+        return tuple(types)
+    except:
+        except:
+        import sys
+        print >>sys.stderr
+        print >>sys.stderr, "ATTENTION: types_of_dtype failed due to the version of numpy on this computer"
+        print >>sys.stderr, "           your applications using comma.csv will mostly work; sometimes they will fail"
+        print >>sys.stderr, "           early (meaning you will know straight away) until types_of_dtype is rewritten"
+        print >>sys.stderr, "           See todo comment in python/comma/numpy/functions.py"
+        print >>sys.stderr
+        for s in sys.exc_info(): print >>sys.stderr, "           " + str( s )
+        print >>sys.stderr
+        raise
 
 def structured_dtype(format_or_type):
     """

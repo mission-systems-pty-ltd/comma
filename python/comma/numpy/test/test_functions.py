@@ -181,7 +181,7 @@ class test_structured_dtype(unittest.TestCase):
             print >>sys.stderr, "ATTENTION: test_structure_out_of_order failed due to the version of numpy on this computer"
             print >>sys.stderr, "           your applications using comma.csv will mostly work; sometimes they will fail"
             print >>sys.stderr, "           early (meaning you will know straight away) until types_of_dtype is rewritten"
-            print >>sys.stderr, "           See todo comment in comma/numpy/functions.py"
+            print >>sys.stderr, "           See todo comment in python/comma/numpy/functions.py"
             print >>sys.stderr
             for s in sys.exc_info(): print >>sys.stderr, "           " + str( s )
             print >>sys.stderr
