@@ -112,8 +112,7 @@ def types_of_dtype(dtype, unroll=False):
                 type = shape_to_string(shape) + single_type if shape else single_type
                 types.append(type)
         return tuple(types)
-    except:
-        except:
+    except ValueError:
         import sys
         print >>sys.stderr
         print >>sys.stderr, "ATTENTION: types_of_dtype failed due to the version of numpy on this computer"

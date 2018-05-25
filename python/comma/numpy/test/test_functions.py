@@ -175,7 +175,7 @@ class test_structured_dtype(unittest.TestCase):
             self.assertEqual( len( ndtype2.descr ), 5 )  # shall be 4
             self.assertEqual( len( functions.types_of_dtype( ndtype1 ) ), 4 )
             self.assertEqual( len( functions.types_of_dtype( ndtype2 ) ), 5 )  # shall be 4
-        except:
+        except ValueError:
             import sys
             print >>sys.stderr
             print >>sys.stderr, "ATTENTION: test_structure_out_of_order failed due to the version of numpy on this computer"
