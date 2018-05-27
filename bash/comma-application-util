@@ -58,7 +58,18 @@ source $( type -p comma-name-value-util ) \
 # todo: there still may be trouble with option values with spaces inside; check and test it... later...
 #
 # example (try it)
-#      echo -e hello=\"\\\"world\\\"\"\\nverbose=\"true\" | comma_options_from_path_value
+#      echo -e hello=\"\\\"world\\\"\"\\nverbose=\"true\" | comma_options_from_name_value
+#
+# TODO: currently, seems to have strange underdocumented semantics with no unit test to verify
+#       seems to be used only at one place
+#       suggested fix (at least at the semantics level, implementation can be different):
+# function comma_options_from_path_value() # quick and dirty
+# {
+#     local valueless=$( all_options | cut -d';' -f1 | grep '=' -v )
+#     local options=$( while IFS='=' read name value; do echo "--${name//_/-}=$value"; done )
+#     echo "$options" | csv-join --delimiter '=' --fields 'id' --string <( echo "$valueless" )";fields=id" --matching | cut -d= -f1
+#     echo "$options" | csv-join --delimiter '=' --fields 'id' --string <( echo "$valueless" )";fields=id" --not-matching
+# }
 function comma_options_from_name_value()
 {
     local delimiter='\n'

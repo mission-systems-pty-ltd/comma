@@ -77,7 +77,7 @@ void usage()
     std::cerr << "        " << std::endl;
     std::cerr << "        echo $some_prefix_filename" << std::endl;
     std::cerr << std::endl;
-    exit( 1 );
+    exit( 0 );
 }
 
 int main( int ac, char** av )
@@ -108,11 +108,7 @@ int main( int ac, char** av )
             const std::string& stripped = comma::strip( comma::strip( d.names[0], '-' ), '-' );
             if( d.has_value )
             {
-                if( names.empty() && d.default_value )
-                {
-                    std::cout << stripped << "=\"" << comma::command_line_options::escaped( *d.default_value ) << "\"" << std::endl;
-                    continue;
-                }
+                if( names.empty() && d.default_value ) { std::cout << stripped << "=\"" << comma::command_line_options::escaped( *d.default_value ) << "\"" << std::endl; continue; }
                 for( unsigned int k = 0; k < names.size(); ++k )
                 {
                     const std::vector< std::string >& values = options.values< std::string >( names[k] );
@@ -128,13 +124,7 @@ int main( int ac, char** av )
         for( unsigned int i = 0; i < unnamed.size(); ++i ) { std::cout << '"' << comma::command_line_options::escaped( unnamed[i] ) << '"' << std::endl; }
         return 0;
     }
-    catch( std::exception& ex )
-    {
-        std::cerr << "comma-options-to-name-value: " << ex.what() << std::endl;
-    }
-    catch( ... )
-    {
-        std::cerr << "comma-options-to-name-value: unknown exception" << std::endl;
-    }
+    catch( std::exception& ex ) { std::cerr << "comma-options-to-name-value: " << ex.what() << std::endl; }
+    catch( ... ) { std::cerr << "comma-options-to-name-value: unknown exception" << std::endl; }
     return 1;
 }
