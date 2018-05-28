@@ -354,15 +354,6 @@ static boost::property_tree::ptree ptree_to_xml_(const boost::property_tree::ptr
     return out;
 }
 
-std::string trim(const std::string& s)
-{
-    std::string out="";
-    for(std::string::const_iterator i=s.begin();i!=s.end();i++)
-        if(!std::isspace(*i))
-            out+=*i;
-    return out;
-}
-
 static boost::property_tree::ptree xml_to_ptree_( boost::property_tree::ptree& ptree)
 {
     boost::property_tree::ptree out= boost::property_tree::ptree();
@@ -392,7 +383,7 @@ static boost::property_tree::ptree xml_to_ptree_( boost::property_tree::ptree& p
             }
         }
     }
-    out.put_value( trim( ptree.get_value<std::string>() ) );
+    out.put_value( comma::strip( ptree.get_value<std::string>(), " \n\t" ));
     return out;
 }
 
