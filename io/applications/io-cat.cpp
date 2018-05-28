@@ -37,6 +37,7 @@
 #include <vector>
 #include <boost/asio/ip/udp.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
+#include <boost/scoped_ptr.hpp>
 #include "../../application/command_line_options.h"
 #include "../../application/contact_info.h"
 #include "../../base/exception.h"
@@ -63,7 +64,7 @@ void usage( bool verbose = false )
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --exit-on-first-closed,-e: exit, if one of the streams finishes" << std::endl;
-    std::cerr << "    --flush,unbuffered,-u: flush output" << std::endl;
+    std::cerr << "    --flush,--unbuffered,-u: flush output" << std::endl;
     std::cerr << "    --round-robin=[<number of packets>]: todo: only for multiple inputs: read not more" << std::endl;
     std::cerr << "                                         than <number of packets> from an input at once," << std::endl;
     std::cerr << "                                         before checking other inputs" << std::endl;
@@ -73,6 +74,11 @@ void usage( bool verbose = false )
     std::cerr << "                                         packet at a time is always read" << std::endl;
     std::cerr << "    --size,-s=[<size>]: packet size, if binary data (required only for multiple sources)" << std::endl;
     std::cerr << "    --verbose,-v: more output" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "connect options" << std::endl;
+    std::cerr << "    --connect-max-attempts,--connect-attempts,--attempts,--max-attempts=<n>; default=1; number of attempts to reconnect or 'unlimited'" << std::endl;
+    std::cerr << "    --connect-period=<seconds>; default=1; how long to wait before the next connect attempt" << std::endl;
+    std::cerr << "    --permissive; run even if connection to some sources fails" << std::endl;
     std::cerr << std::endl;
     std::cerr << "supported address types: tcp, udp, local (unix) sockets, named pipes, files, zmq (todo)" << std::endl;
     std::cerr << std::endl;
@@ -104,7 +110,7 @@ void usage( bool verbose = false )
 class stream
 {
     public:
-        stream( const std::string address ) : address_( address ) {}
+        stream( const std::string& address ): address_( address ) {}
         virtual ~stream() {}
         virtual unsigned int read_available( std::vector< char >& buffer, unsigned int max_count ) = 0;
         virtual comma::io::file_descriptor fd() const = 0;
@@ -112,26 +118,22 @@ class stream
         virtual bool empty() const = 0;
         virtual void close() = 0;
         virtual bool closed() const = 0;
+        virtual bool connected() const = 0;
+        virtual void connect() = 0;
         const std::string& address() const { return address_; }
         
-    private:
+    protected:
         std::string address_;
 };
 
 class udp_stream : public stream
 {
     public:
-        udp_stream( const std::string& address ) : stream( address ), socket_( service_ )
+        udp_stream( const std::string& address ) : stream( address )
         {
             const std::vector< std::string >& v = comma::split( address, ':' );
-            if( v.size() != 2 ) { COMMA_THROW( comma::exception, "io-cat: expected udp:<port>, e.g. udp:12345, got" << address ); }
-            unsigned short port = boost::lexical_cast< unsigned short >( v[1] );
-            socket_.open( boost::asio::ip::udp::v4() );
-            boost::system::error_code error;
-            socket_.set_option( boost::asio::ip::udp::socket::broadcast( true ), error );
-            if( error ) { COMMA_THROW( comma::exception, "io-cat: udp failed to set broadcast option on port " << port ); }
-            socket_.bind( boost::asio::ip::udp::endpoint( boost::asio::ip::udp::v4(), port ), error );
-            if( error ) { COMMA_THROW( comma::exception, "io-cat: udp failed to bind port " << port ); }
+            if( v.size() != 2 ) { COMMA_THROW( comma::exception, "io-cat: expected udp:<port>, e.g. udp:12345, got '" << address << "'" ); }
+            port_ = boost::lexical_cast< unsigned short >( v[1] );
         }
         
         bool eof() const { return false; }
@@ -142,40 +144,45 @@ class udp_stream : public stream
         
         bool closed() const { return false; }
         
-        comma::io::file_descriptor fd() const { return socket_.native_handle(); }
+        comma::io::file_descriptor fd() const { return socket_->native_handle(); }
         
         unsigned int read_available( std::vector< char >& buffer, unsigned int )
         {
             boost::system::error_code error;
-            std::size_t size = socket_.receive( boost::asio::buffer( buffer ), 0, error );
+            std::size_t size = socket_->receive( boost::asio::buffer( buffer ), 0, error );
             return error ? 0 : size;
         }
         
+        bool connected() const { return bool( socket_ ); }
+        
+        void connect()
+        {
+            if( socket_ ) { return; }
+            socket_.reset( new boost::asio::ip::udp::socket( service_ ) );
+            socket_->open( boost::asio::ip::udp::v4() );
+            boost::system::error_code error;
+            socket_->set_option( boost::asio::ip::udp::socket::broadcast( true ), error );
+            if( error ) { socket_.reset(); COMMA_THROW( comma::exception, "io-cat: udp failed to set broadcast option on port " << port_ ); }
+            socket_->bind( boost::asio::ip::udp::endpoint( boost::asio::ip::udp::v4(), port_ ), error );
+            if( error ) { socket_.reset(); COMMA_THROW( comma::exception, "io-cat: udp failed to bind port " << port_ ); }
+        }
+        
     private:
+        unsigned short port_;
 #if (BOOST_VERSION >= 106600)
         boost::asio::io_context service_;
 #else
         boost::asio::io_service service_;
 #endif
-        mutable boost::asio::ip::udp::socket socket_; // boost::asio::ip::udp::socket::fd() is non-const for some reason
+        mutable boost::scoped_ptr< boost::asio::ip::udp::socket > socket_; // boost::asio::ip::udp::socket::fd() is non-const for some reason
 };
 
 class any_stream : public stream
 {
     public:
-        any_stream( const std::string& address, unsigned int size, bool binary )
-            : stream( address )
-            , istream_( address, comma::io::mode::binary, comma::io::mode::non_blocking )
-            , size_( size )
-            , binary_( binary )
-            , closed_( false )
-        {
-            if( istream_() != &std::cin ) { return; }
-            std::ios_base::sync_with_stdio( false ); // unsync to make rdbuf()->in_avail() working
-            std::cin.tie( NULL ); // std::cin is tied to std::cout by default
-        }
+        any_stream( const std::string& address, unsigned int size, bool binary ): stream( address ), size_( size ), binary_( binary ), closed_( false ) {}
         
-        comma::io::file_descriptor fd() const { return istream_.fd(); }
+        comma::io::file_descriptor fd() const { return ( *istream_ ).fd(); }
         
         unsigned int read_available( std::vector< char >& buffer, unsigned int max_count )
         {
@@ -187,13 +194,13 @@ class any_stream : public stream
                 if( max_count && count > max_count ) { count = max_count; }
                 if( count == 0 ) { count = 1; } // read at least one packet
                 unsigned int size = size_ ? count * size_ : std::min( available, buffer.size() );
-                istream_->read( &buffer[0], size );
-                return istream_->gcount() <= 0 ? 0 : istream_->gcount();
+                ( *istream_ )->read( &buffer[0], size );
+                return ( *istream_ )->gcount() <= 0 ? 0 : ( *istream_ )->gcount();
             }
             else
             {
                 std::string line; // quick and dirty, no-one expects ascii to be fast
-                std::getline( *istream_, line );
+                std::getline( *( *istream_ ), line );
                 if( line.empty() ) { return 0; }
                 if( line.size() >= buffer.size() ) { buffer.resize( line.size() + 1 ); }
                 ::memcpy( &buffer[0], &line[0], line.size() );
@@ -204,29 +211,41 @@ class any_stream : public stream
         
         bool empty() const { return closed_ || available_() == 0; }
         
-        bool eof() const { return !istream_->good() || istream_->eof(); }
+        bool eof() const { return !( *istream_ )->good() || ( *istream_ )->eof(); }
         
-        void close() { closed_ = true; istream_.close(); }
+        void close() { closed_ = true; ( *istream_ ).close(); }
         
         bool closed() const { return closed_; }
         
+        bool connected() const { return bool( istream_ ); }
+        
+        void connect()
+        {
+            if( istream_ ) { return; }
+            istream_.reset( new comma::io::istream( address_, comma::io::mode::binary, comma::io::mode::non_blocking ) );
+            if( ( *istream_ )() != &std::cin ) { return; }
+            std::ios_base::sync_with_stdio( false ); // unsync to make rdbuf()->in_avail() working
+            std::cin.tie( NULL ); // std::cin is tied to std::cout by default
+        }
+        
     private:
-        comma::io::istream istream_;
+        boost::scoped_ptr< comma::io::istream > istream_;
         unsigned int size_;
         bool binary_;
+        bool closed_;
+        
         std::size_t available_() const // seriously quick and dirty
         {
-            if( istream_() == NULL ) { return istream_.available_on_file_descriptor(); } // quick and dirty
-            std::streamsize s = istream_->rdbuf()->in_avail();
+            if( ( *istream_ )() == NULL ) { return ( *istream_ ).available_on_file_descriptor(); } // quick and dirty
+            std::streamsize s = ( *istream_ )->rdbuf()->in_avail();
             if( s < 0 ) { return 0; }
             // todo: it should be s + available_on_file_descriptor(), but it won't work for std::cin (and potentially for std::ifstream (we have not checked)
             //       if performance becomes a problem e.g. for tcp, check whether the stream is not std::cin and use sum instead of max
-            return std::max( static_cast< std::size_t >( s ), istream_.available_on_file_descriptor() );
+            return std::max( static_cast< std::size_t >( s ), ( *istream_ ).available_on_file_descriptor() );
         }
-        bool closed_;
 };
 
-stream* make_stream( const std::string& address, unsigned int size, bool binary )
+static stream* make_stream( const std::string& address, unsigned int size, bool binary )
 {
     const std::vector< std::string >& v = comma::split( address, ':' );
     if( v[0] == "udp" ) { return new udp_stream( address ); }
@@ -234,10 +253,50 @@ stream* make_stream( const std::string& address, unsigned int size, bool binary 
     return new any_stream( address, size, binary );
 }
 
-bool ready( const boost::ptr_vector< stream >& streams, comma::io::select& select )
+static bool ready( const boost::ptr_vector< stream >& streams, comma::io::select& select )
 {
-    for( unsigned int i = 0; i < streams.size(); ++i ) { if( !streams[i].empty() ) { select.check(); return true; } }
+    for( unsigned int i = 0; i < streams.size(); ++i ) { if( streams[i].connected() && !streams[i].empty() ) { select.check(); return true; } }
     return select.wait( boost::posix_time::seconds( 1 ) ) > 0;
+}
+
+static bool verbose;
+static unsigned int connect_max_attempts;
+static boost::posix_time::time_duration connect_timeout;
+static bool permissive;
+
+static void try_connect( boost::ptr_vector< stream >& streams, comma::io::select& select )
+{
+    static boost::posix_time::ptime next_connect;
+    static unsigned int attempts = 0;
+    static bool connected_all_we_could = false;
+    if( connected_all_we_could ) { return; }
+    boost::posix_time::ptime now = boost::posix_time::microsec_clock::universal_time();
+    if( !next_connect.is_not_a_date_time() && now < next_connect ) { return; }
+    next_connect = now + connect_timeout;
+    unsigned int unconnected_count = 0;    
+    std::string what;
+    for( unsigned int i = 0; i < streams.size(); ++i )
+    {
+        if( streams[i].connected() ) { continue; }
+        try
+        {
+            if( verbose ) { std::cerr << "io-cat: stream " << i << " (" << streams[i].address() << "): connecting, attempt " << ( attempts + 1 ) << " of " << ( connect_max_attempts == 0 ? std::string( "unlimited" ) : boost::lexical_cast< std::string >( connect_max_attempts ) ) << "..." << std::endl; }
+            streams[i].connect();
+            if( verbose ) { std::cerr << "io-cat: stream " << i << " (" << streams[i].address() << "): connected" << std::endl; }
+            select.read().add( streams[i] );
+            continue;
+        }
+        catch( std::exception& ex ) { what = ex.what(); }
+        catch( ... ) { what = "unknown exception"; }
+        if( verbose ) { std::cerr << "io-cat: stream " << i << " (" << streams[i].address() << "): failed to connect" << std::endl; }
+        ++unconnected_count;
+    }
+    ++attempts;
+    connected_all_we_could = unconnected_count == 0 || ( permissive && connect_max_attempts > 0 && attempts >= connect_max_attempts );
+    if( connected_all_we_could ) { return; }
+    if( connect_max_attempts == 0 || attempts < connect_max_attempts ) { return; }
+    std::cerr << "fatal: after " << attempts << " attempt(s): " << what << std::endl;
+    exit( 1 );
 }
 
 int main( int argc, char** argv )
@@ -251,37 +310,39 @@ int main( int argc, char** argv )
     {
         if( argc < 2 ) { usage(); }
         comma::command_line_options options( argc, argv, usage );
-        bool verbose = options.exists( "--verbose,-v" );
+        verbose = options.exists( "--verbose,-v" );
         unsigned int size = options.value( "--size,-s", 0 );
         bool unbuffered = options.exists( "--flush,--unbuffered,-u" );
         bool exit_on_first_closed = options.exists( "--exit-on-first-closed,-e" );
-        const std::vector< std::string >& unnamed = options.unnamed( "--exit-on-first-closed,-e,--flush,--unbuffered,-u", "-.+" );
+        std::string connect_max_attempts_string = options.value< std::string >( "--connect-max-attempts,--connect-attempts,--attempts,--max-attempts", "1" );
+        connect_max_attempts = connect_max_attempts_string == "unlimited" ? 0 : boost::lexical_cast< unsigned int >( connect_max_attempts_string );
+        double connect_timeout_seconds = options.value( "--connect-timeout", 1.0 );
+        connect_timeout = boost::posix_time::milliseconds( std::floor( connect_timeout_seconds * 1000 ) );
+        permissive = options.exists( "--permissive" );
+        const std::vector< std::string >& unnamed = options.unnamed( "--permissive,--exit-on-first-closed,-e,--flush,--unbuffered,-u,--verbose,-v", "-.+" );
         #ifdef WIN32
         if( size || unnamed.size() == 1 ) { _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
         if( unnamed.empty() ) { std::cerr << "io-cat: please specify at least one source" << std::endl; return 1; }
         boost::ptr_vector< stream > streams;
         comma::io::select select;
-        for( unsigned int i = 0; i < unnamed.size(); ++i )
-        { 
-            streams.push_back( make_stream( unnamed[i], size, size || unnamed.size() == 1 ) );
-            select.read().add( streams.back() );
-        }
+        for( unsigned int i = 0; i < unnamed.size(); ++i ) { streams.push_back( make_stream( unnamed[i], size, size || unnamed.size() == 1 ) ); }
         const unsigned int max_count = size ? ( size > 65536u ? 1 : 65536u / size ) : 0;
         std::vector< char > buffer( size ? size * max_count : 65536u );        
         unsigned int round_robin_count = unnamed.size() > 1 ? options.value( "--round-robin", 0 ) : 0;
         for( bool done = false; !done; )
         {
+            try_connect( streams, select );
             if( !ready( streams, select ) ) { continue; }
             done = true;
             for( unsigned int i = 0; i < streams.size(); ++i )
             {
-                if( streams[i].closed() ) { continue; }
+                if( streams[i].closed() || !streams[i].connected() ) { continue; }
                 bool ready = select.read().ready( streams[i].fd() );
                 bool empty = streams[i].empty();
                 if( empty && ( streams[i].eof() || ready ) )
                 { 
-                    if( verbose ) { std::cerr << "io-cat: stream " << i << " (" << unnamed[i] << ") closed" << std::endl; }
+                    if( verbose ) { std::cerr << "io-cat: stream " << i << " (" << unnamed[i] << "): closed" << std::endl; }
                     select.read().remove( streams[i].fd() );
                     streams[i].close();
                     if( exit_on_first_closed || select.read()().empty() ) { return 0; }
@@ -294,7 +355,7 @@ int main( int argc, char** argv )
                     unsigned int bytes_read = streams[i].read_available( buffer, countdown ? countdown : max_count );
                     if( bytes_read == 0 ) { break; }
                     done = false;
-                    if( size && bytes_read % size != 0 ) { std::cerr << "io-cat: expected " << size << " byte(s), got only " << ( bytes_read % size ) << " on " << streams[i].address() << std::endl; return 1; }
+                    if( size && bytes_read % size != 0 ) { std::cerr << "io-cat: stream " << i << " (" << streams[i].address() << "): expected " << size << " byte(s), got only " << ( bytes_read % size ) << std::endl; return 1; }
                     std::cout.write( &buffer[0], bytes_read );
                     if( unbuffered ) { std::cout.flush(); }
                     if( round_robin_count )
