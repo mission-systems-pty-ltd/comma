@@ -1,0 +1,58 @@
+#!/bin/bash
+source $( type -p comma-application-util )
+source $( type -p comma-process-util )
+
+function message_to_path_value()
+{
+    local name=$1
+    echo "sort | csv-paste line-number - | name-value-from-csv --indices message --fields message,content --prefix=$name"
+}
+
+function test_connect_attempts_on_socket
+{
+    local io_cat_command="bash -c io-cat --connect-attempts 5 local:output/socket --verbose | $( message_to_path_value test_connect_attempts_on_socket )"
+    local socat_command="bash -c sleep 0.5 && echo A | timeout -k 1 -s TERM 5 socat -u - unix-listen:output/socket"
+    local status=0
+    comma_execute_and_wait --group "$io_cat_command" "$socat_command"
+    comma_status_ok || status=1
+    rm -f output/socket
+    echo "test_connect_attempts_on_socket/status=$status"
+}
+
+function test_connect_attempts_on_socket_and_stdin
+{
+    {
+        local io_cat_command="bash -c echo A | io-cat --connect-attempts 5 - local:output/socket --verbose | $( message_to_path_value "test_connect_attempts_on_socket_and_stdin[0]" )"
+        local socat_command="bash -c sleep 0.5 && echo B | timeout -k 1 -s TERM 5 socat -u - unix-listen:output/socket"
+        local status=0
+        comma_execute_and_wait --group "$io_cat_command" "$socat_command"
+        comma_status_ok || status=1
+        rm -f output/socket
+        echo "test_connect_attempts_on_socket_and_stdin[0]/status=$status"
+    }
+    {
+        local io_cat_command="bash -c echo A | io-cat --connect-attempts 5 local:output/socket - --verbose | $( message_to_path_value "test_connect_attempts_on_socket_and_stdin[1]" )"
+        local socat_command="bash -c sleep 0.5 && echo B | timeout -k 1 -s TERM 5 socat -u - unix-listen:output/socket"
+        local status=0
+        comma_execute_and_wait --group "$io_cat_command" "$socat_command"
+        comma_status_ok || status=1
+        rm -f output/socket
+        echo "test_connect_attempts_on_socket_and_stdin[1]/status=$status"
+    }
+}
+
+function test_connect_attempts_on_multiple_sockets
+{
+    local io_cat_command="bash -c io-cat --connect-attempts 5 local:output/socket.0 local:output/socket.1 --verbose | $( message_to_path_value "test_connect_attempts_on_multiple_sockets" )"
+    local socat_command_0="bash -c sleep 0.5 && echo A | timeout -k 1 -s TERM 5 socat -u - unix-listen:output/socket.0"
+    local socat_command_1="bash -c sleep 1 && echo B | timeout -k 1 -s TERM 5 socat -u - unix-listen:output/socket.1"
+    local status=0
+    comma_execute_and_wait --group "$io_cat_command" "$socat_command_0" "$socat_command_1"
+    comma_status_ok || status=1
+    rm -f output/socket.0 output/socket.1
+    echo "test_connect_attempts_on_multiple_sockets/status=$status"
+}
+
+test_connect_attempts_on_socket
+test_connect_attempts_on_socket_and_stdin
+test_connect_attempts_on_multiple_sockets

@@ -1,0 +1,14 @@
+test_connect_attempts_on_socket/message[0]/content="A"
+test_connect_attempts_on_socket/status=0
+
+test_connect_attempts_on_socket_and_stdin[0]/message[0]/content="A"
+test_connect_attempts_on_socket_and_stdin[0]/message[1]/content="B"
+test_connect_attempts_on_socket_and_stdin[0]/status=0
+
+test_connect_attempts_on_socket_and_stdin[1]/message[0]/content="A"
+test_connect_attempts_on_socket_and_stdin[1]/message[1]/content="B"
+test_connect_attempts_on_socket_and_stdin[1]/status=0
+
+test_connect_attempts_on_multiple_sockets/message[0]/content="A"
+test_connect_attempts_on_multiple_sockets/message[1]/content="B"
+test_connect_attempts_on_multiple_sockets/status=0
