@@ -5,7 +5,7 @@ source $( type -p comma-process-util )
 function message_to_path_value()
 {
     local name=$1
-    echo "sort | csv-paste line-number - | name-value-from-csv --indices message --fields message,content --prefix=$name"
+    echo "sort | csv-paste line-number - | name-value-from-csv --indices message --fields message,content --prefix=$name" #  && comma_status_ok
 }
 
 function test_connect_attempts_on_socket
@@ -21,6 +21,7 @@ function test_connect_attempts_on_socket
 
 function test_connect_attempts_on_socket_and_stdin
 {
+    function stdin_and_socket()
     {
         local io_cat_command="bash -c echo A | io-cat --connect-attempts 5 - local:output/socket --verbose | $( message_to_path_value "test_connect_attempts_on_socket_and_stdin[0]" )"
         local socat_command="bash -c sleep 0.5 && echo B | timeout -k 1 -s TERM 5 socat -u - unix-listen:output/socket"
@@ -30,6 +31,8 @@ function test_connect_attempts_on_socket_and_stdin
         rm -f output/socket
         echo "test_connect_attempts_on_socket_and_stdin[0]/status=$status"
     }
+    
+    function socket_and_stdin()
     {
         local io_cat_command="bash -c echo A | io-cat --connect-attempts 5 local:output/socket - --verbose | $( message_to_path_value "test_connect_attempts_on_socket_and_stdin[1]" )"
         local socat_command="bash -c sleep 0.5 && echo B | timeout -k 1 -s TERM 5 socat -u - unix-listen:output/socket"
@@ -39,6 +42,9 @@ function test_connect_attempts_on_socket_and_stdin
         rm -f output/socket
         echo "test_connect_attempts_on_socket_and_stdin[1]/status=$status"
     }
+    
+    stdin_and_socket
+    socket_and_stdin
 }
 
 function test_connect_attempts_on_multiple_sockets
@@ -53,6 +59,43 @@ function test_connect_attempts_on_multiple_sockets
     echo "test_connect_attempts_on_multiple_sockets/status=$status"
 }
 
-test_connect_attempts_on_socket
-test_connect_attempts_on_socket_and_stdin
-test_connect_attempts_on_multiple_sockets
+function test_connect_attempts_could_not_connect
+{
+    function cannot_connect_exit_with_error()
+    {
+        io-cat --connect-attempts 3 --connect-period 0.5 local:output/socket.0 local:output/socket.1 --verbose | eval "$( message_to_path_value "test_connect_attempts_could_not_connect[0]" )"
+        comma_status_ok || status=1
+        echo "test_connect_attempts_could_not_connect[0]/status=$status"
+    }
+    
+    function connect_to_one_socket_fail_on_second_permissive_exit_with_success()
+    {
+        local io_cat_command="bash -c io-cat --connect-attempts 5 --connect-period 0.5 local:output/socket.0 local:output/socket.1 --permissive --verbose | $( message_to_path_value "test_connect_attempts_could_not_connect[1]" )"
+        local socat_command_0="bash -c echo A | timeout -k 1 -s TERM 5 socat -u - unix-listen:output/socket.0"
+        local status=0
+        comma_execute_and_wait --group "$io_cat_command" "$socat_command_0"
+        comma_status_ok || status=1
+        rm -f output/socket.0
+        echo "test_connect_attempts_could_not_connect[1]/status=$status"
+    }
+    
+    function connect_to_one_socket_fail_on_second_exit_with_error()
+    {
+        local io_cat_command="bash -c io-cat --connect-attempts 5 local:output/socket.0 local:output/socket.1 --verbose | $( message_to_path_value "test_connect_attempts_could_not_connect[2]" )"
+        local socat_command_0="bash -c echo A | timeout -k 1 -s TERM 5 socat -u - unix-listen:output/socket.0"
+        local status=0
+        comma_execute_and_wait --group "$socat_command_0" "$io_cat_command"
+        comma_status_ok || status=1
+        rm -f output/socket.0
+        echo "test_connect_attempts_could_not_connect[2]/status=$status"
+    }
+    
+    cannot_connect_exit_with_error
+    connect_to_one_socket_fail_on_second_permissive_exit_with_success
+    connect_to_one_socket_fail_on_second_exit_with_error
+}
+
+#test_connect_attempts_on_socket
+#test_connect_attempts_on_socket_and_stdin
+#test_connect_attempts_on_multiple_sockets
+test_connect_attempts_could_not_connect

@@ -259,10 +259,11 @@ static unsigned int connect_max_attempts;
 static boost::posix_time::time_duration connect_timeout;
 static bool permissive;
 
-static bool ready( const boost::ptr_vector< stream >& streams, comma::io::select& select )
+static bool ready( const boost::ptr_vector< stream >& streams, comma::io::select& select, bool connected_all_we_could )
 {
     for( unsigned int i = 0; i < streams.size(); ++i ) { if( !streams[i].empty() ) { select.check(); return true; } }
     if( !select.read()().empty() ) { return select.wait( boost::posix_time::seconds( 1 ) ) > 0; }
+    if( connected_all_we_could ) { return true; }
     boost::this_thread::sleep( connect_timeout );
     return false;
 }
@@ -298,7 +299,7 @@ static bool try_connect( boost::ptr_vector< stream >& streams, comma::io::select
     connected_all_we_could = unconnected_count == 0 || ( permissive && connect_max_attempts > 0 && attempts >= connect_max_attempts );
     if( connected_all_we_could ) { return connected_all_we_could; }
     if( connect_max_attempts == 0 || attempts < connect_max_attempts ) { return connected_all_we_could; }
-    std::cerr << "fatal: after " << attempts << " attempt(s): " << what << std::endl;
+    std::cerr << "io-cat: fatal: after " << attempts << " attempt(s): " << what << std::endl;
     exit( 1 );
 }
 
@@ -336,11 +337,11 @@ int main( int argc, char** argv )
         for( bool done = false; !done; )
         {
             bool connected_all_we_could = try_connect( streams, select );
-            if( !ready( streams, select ) ) { continue; }
+            if( !ready( streams, select, connected_all_we_could ) ) { continue; }
             done = true;
             for( unsigned int i = 0; i < streams.size(); ++i )
             {
-                if( !streams[i].connected() ) { done = false; continue; }
+                if( !streams[i].connected() ) { done = connected_all_we_could; continue; }
                 if( streams[i].closed() ) { continue; }
                 bool ready = select.read().ready( streams[i].fd() );
                 bool empty = streams[i].empty();
