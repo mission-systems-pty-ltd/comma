@@ -4,7 +4,6 @@ test_connect_attempts_on_socket/status=0
 test_connect_attempts_on_socket_and_stdin[0]/message[0]/content="A"
 test_connect_attempts_on_socket_and_stdin[0]/message[1]/content="B"
 test_connect_attempts_on_socket_and_stdin[0]/status=0
-
 test_connect_attempts_on_socket_and_stdin[1]/message[0]/content="A"
 test_connect_attempts_on_socket_and_stdin[1]/message[1]/content="B"
 test_connect_attempts_on_socket_and_stdin[1]/status=0
@@ -13,4 +12,8 @@ test_connect_attempts_on_multiple_sockets/message[0]/content="A"
 test_connect_attempts_on_multiple_sockets/message[1]/content="B"
 test_connect_attempts_on_multiple_sockets/status=0
 
-test_connect_attempts_on_multiple_sockets_negative[0]/status=1
+test_connect_attempts_could_not_connect[0]/status=1
+test_connect_attempts_could_not_connect[1]/message[0]/content="A"
+test_connect_attempts_could_not_connect[1]/status=0
+test_connect_attempts_could_not_connect[2]/message[0]/content="A"
+test_connect_attempts_could_not_connect[2]/status=1

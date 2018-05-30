@@ -5,7 +5,7 @@ source $( type -p comma-process-util )
 function message_to_path_value()
 {
     local name=$1
-    echo "sort | csv-paste line-number - | name-value-from-csv --indices message --fields message,content --prefix=$name" #  && comma_status_ok
+    echo "sort | csv-paste line-number - | name-value-from-csv --indices message --fields message,content --prefix=$name && comma_status_ok"
 }
 
 function test_connect_attempts_on_socket
@@ -95,7 +95,7 @@ function test_connect_attempts_could_not_connect
     connect_to_one_socket_fail_on_second_exit_with_error
 }
 
-#test_connect_attempts_on_socket
-#test_connect_attempts_on_socket_and_stdin
-#test_connect_attempts_on_multiple_sockets
+test_connect_attempts_on_socket
+test_connect_attempts_on_socket_and_stdin
+test_connect_attempts_on_multiple_sockets
 test_connect_attempts_could_not_connect
