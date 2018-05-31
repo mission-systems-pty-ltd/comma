@@ -234,7 +234,10 @@ if not '://' in url: url='amqp://'+url
 log_verbose('url: '+url)
 # https://pika.readthedocs.io/en/0.9.6/connecting.html
 # for ssl options see http://pika.readthedocs.io/en/0.9.6/examples/using_urlparameters.html?highlight=ssl
-connection=pika.BlockingConnection(pika.connection.URLParameters(url))
+try:
+    connection = pika.BlockingConnection( pika.connection.URLParameters( url ))
+except pika.exceptions.ConnectionClosed:
+    error_and_exit( "failed to connect to %s" % url )
 
 try:
     channel=connection.channel()
