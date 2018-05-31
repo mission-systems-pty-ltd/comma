@@ -138,8 +138,6 @@ example 5: topic
 
     return args
 
-args=command_line_options()
-
 def error_and_exit(s,exit_code=1): sys.stderr.write('%s: error: %s\n'%(application_name,s)); sys.exit(exit_code)
 def log_verbose(s):
     global args
@@ -147,23 +145,23 @@ def log_verbose(s):
 
 #log_verbose('args.connection_string: %s, type: %s'%(args.connection_string, type(args.connection_string)))
 
-def send_message(message):
+def send_message( channel, exchange_name, message ):
     if args.persistent_message: channel.basic_publish(exchange=exchange_name,routing_key=args.routing_key,body=message,properties=pika.BasicProperties(delivery_mode=2))
     else: channel.basic_publish(exchange=exchange_name,routing_key=args.routing_key,body=message)
     #log_verbose('sent')
 
-def run_send():
+def run_send( channel, exchange_name ):
     try:
         if args.all:
             message = sys.stdin.read()
-            if message: send_message( message )
+            if message: send_message( channel, exchange_name, message )
             return
         if args.end_of_message=='\n':
             while True:            
                 line = sys.stdin.readline()
                 if not line: break
-                if line.endswith('\n'): send_message( line[:-1] )
-                else: send_message( line ) # last line, if no end of line at the end of input
+                if line.endswith('\n'): send_message( channel, exchange_name, line[:-1] )
+                else: send_message( channel, exchange_name, line ) # last line, if no end of line at the end of input
             return
         accumulated = ''
         while 1:
@@ -173,10 +171,10 @@ def run_send():
             line = sys.stdin.readline()
             accumulated += line
             messages = accumulated.split( args.end_of_message )
-            for message in messages[:-1]: send_message( message )
+            for message in messages[:-1]: send_message( channel, exchange_name, message )
             accumulated = messages[-1]
             if not line: break
-        if accumulated[:-1]: send_message( accumulated[:-1] )
+        if accumulated[:-1]: send_message( channel, exchange_name, accumulated[:-1] )
     except KeyboardInterrupt:
         log_verbose('got keyboard interrupt; exit')
     log_verbose('exit')
@@ -188,7 +186,7 @@ def on_receive(ch,method,properties,body):
     if args.flush: sys.stdout.flush()
     if args.ack: ch.basic_ack(delivery_tag=method.delivery_tag)
 
-def run_receive():
+def run_receive( channel, queue_name ):
     if args.prefetch: channel.basic_qos(prefetch_count=args.prefetch)
     channel.basic_consume(on_receive,queue=queue_name,no_ack=not args.ack)
     log_verbose('Waiting for messages. To exit press CTRL+C')
@@ -196,16 +194,16 @@ def run_receive():
     except KeyboardInterrupt: pass
     log_verbose('exiting')
 
-def make_queue():
+def make_queue( channel, is_listener ):
     if args.queue: channel.queue_declare(queue=args.queue,durable=args.durable); return args.queue
     elif is_listener: result=channel.queue_declare(exclusive=True); return result.method.queue
     return ''
 
-def make_exchange():
+def make_exchange( channel, exchange_type ):
     if args.exchange: channel.exchange_declare(exchange=args.exchange,exchange_type=exchange_type); return args.exchange
     return ''
 
-def make_binding():
+def make_binding( channel, exchange_name, queue_name, is_listener ):
     if not is_listener: return
     if args.bind:
         for key in args.bind:
@@ -214,36 +212,44 @@ def make_binding():
     elif exchange_name: # and queue_name listener always has a queue name
         log_verbose('binding exchange and queue: %s; %s'%(exchange_name,queue_name))
         channel.queue_bind(exchange=exchange_name,queue=queue_name)
-    
-is_listener=args.operation in ['listen','rpc-listen']
-#log_verbose('listener %s'%is_listener)
-#if args.operation in ['rpc-listen','rpc-send']:
-    #error_and_exit('operation NOT IMPLEMENTED: %s'%operation)
-#if args.command:
-    #error_and_exit('option NOT IMPLEMENTED: --exec')
 
-if args.fanout and args.topic: error_and_exit('conflicting options: choose either --fanout or --topic')
-if args.fanout: exchange_type='fanout'
-elif args.topic: exchange_type='topic'
-else: exchange_type='direct'
 
-#connection=pika.BlockingConnection(pika.ConnectionParameters(args.connection_string))
-url=args.connection_string
-if not '/' in url: url+='/'
-if not '://' in url: url='amqp://'+url
-log_verbose('url: '+url)
-# https://pika.readthedocs.io/en/0.9.6/connecting.html
-# for ssl options see http://pika.readthedocs.io/en/0.9.6/examples/using_urlparameters.html?highlight=ssl
-try:
-    connection = pika.BlockingConnection( pika.connection.URLParameters( url ))
-except pika.exceptions.ConnectionClosed:
-    error_and_exit( "failed to connect to %s" % url )
+def main():
+    is_listener = args.operation in ['listen','rpc-listen']
+    #log_verbose('listener %s'%is_listener)
+    #if args.operation in ['rpc-listen','rpc-send']:
+        #error_and_exit('operation NOT IMPLEMENTED: %s'%operation)
+    #if args.command:
+        #error_and_exit('option NOT IMPLEMENTED: --exec')
 
-try:
-    channel=connection.channel()
-    queue_name=make_queue()
-    exchange_name=make_exchange()
-    make_binding()
-    if is_listener: run_receive()
-    else: run_send()
-finally: connection.close()
+    if args.fanout and args.topic: error_and_exit('conflicting options: choose either --fanout or --topic')
+    if args.fanout: exchange_type='fanout'
+    elif args.topic: exchange_type='topic'
+    else: exchange_type='direct'
+
+    #connection=pika.BlockingConnection(pika.ConnectionParameters(args.connection_string))
+    url=args.connection_string
+    if not '/' in url: url+='/'
+    if not '://' in url: url='amqp://'+url
+    log_verbose('url: '+url)
+    # https://pika.readthedocs.io/en/0.9.6/connecting.html
+    # for ssl options see http://pika.readthedocs.io/en/0.9.6/examples/using_urlparameters.html?highlight=ssl
+    try:
+        connection = pika.BlockingConnection( pika.connection.URLParameters( url ))
+    except pika.exceptions.ConnectionClosed:
+        error_and_exit( "failed to connect to %s" % url )
+
+    try:
+        channel = connection.channel()
+        queue_name = make_queue( channel, is_listener )
+        exchange_name = make_exchange( channel, exchange_type )
+        make_binding( channel, exchange_name, queue_name, is_listener )
+        if is_listener: run_receive( channel, queue_name )
+        else: run_send( channel, exchange_name )
+    finally: connection.close()
+
+
+args = command_line_options()
+
+if __name__ == '__main__':
+    main()
