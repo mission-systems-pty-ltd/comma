@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source $( which comma-process-util )
+source $( type -p comma-process-util )
 
 scriptname=$( basename "$0" )
 
