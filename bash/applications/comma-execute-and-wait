@@ -12,6 +12,8 @@ runs the provided command under comma_execute_and_wait
 
 rationale: to ensure that processes launched by the command are terminated
 
+usage: $scriptname <command> [<command-args>]
+
 example: $scriptname comma-nap 1
 
 EOF
