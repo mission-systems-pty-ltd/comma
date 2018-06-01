@@ -19,5 +19,6 @@ EOF
 }
 
 (( $# == 0 )) && usage
+[[ $1 == "-h" || $1 == "--help" ]] && usage
 command="bash -c eval \"$@\""
 comma_execute_and_wait --group "$command"
