@@ -30,6 +30,7 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import argparse
+import signal
 import sys
 import pika
 
@@ -215,6 +216,15 @@ def make_binding( channel, exchange_name, queue_name, is_listener ):
 
 
 def main():
+    # Reset SIGPIPE and SIGINT to their default OS behaviour.
+    # This stops python dumping a stack-trace on ctrl-c or broken pipe.
+    signal.signal( signal.SIGPIPE, signal.SIG_DFL )
+    s = signal.signal( signal.SIGINT, signal.SIG_DFL )
+    # but don't reset SIGINT if it's been assigned to something other
+    # than the Python default
+    if s != signal.default_int_handler:
+        signal.signal( signal.SIGINT, s )
+
     is_listener = args.operation in ['listen','rpc-listen']
     #log_verbose('listener %s'%is_listener)
     #if args.operation in ['rpc-listen','rpc-send']:
