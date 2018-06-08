@@ -184,8 +184,6 @@ int main( int ac, char** av )
         #ifdef WIN32
         if( binary ) { _setmode( _fileno( stdin ), _O_BINARY ); _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
-        
-        std::vector< std::string > v = options.unnamed( "--deterministic,-d", "-.*" );
 
         if( options.exists( "--fields" ))
         {
@@ -204,9 +202,12 @@ int main( int ac, char** av )
             }
             return 0;
         }
+        
+        std::vector< std::string > v;
 
         if( !period )
         {
+            v = options.unnamed( "--deterministic,-d", "-.*" );
             if( v.empty() ) { std::cerr << "csv-thin: please specify rate" << std::endl; usage(); }
             rate = boost::lexical_cast< double >( v[0] );
             if( comma::math::less( rate, 0 ) || comma::math::less( 1, rate ) ) { std::cerr << "csv-thin: expected rate between 0 and 1, got " << rate << std::endl; usage(); }
