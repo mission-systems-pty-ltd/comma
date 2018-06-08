@@ -59,7 +59,7 @@ static void usage(bool detail=false)
     std::cerr << "Read input data and thin them down by the given percentage;" << std::endl;
     std::cerr << "buffer handling optimized for a high-output producer" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "Usage: cat full.csv | csv-thin <rate> [<options>] > thinned.csv" << std::endl;
+    std::cerr << "Usage: cat full.csv | csv-thin [<rate>] [<options>] > thinned.csv" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options:" << std::endl;
     std::cerr << "    --binary,-b <size>: if given, data is packets of fixed size" << std::endl;
@@ -67,7 +67,8 @@ static void usage(bool detail=false)
     std::cerr << "    --deterministic,-d: if given, input is downsampled by a factor of int(1 / <rate>)." << std::endl;
     std::cerr << "                        That is, if <rate> is 0.33, output every third packet." << std::endl;
     std::cerr << "                        Default is to output each packet with a probability of <rate>." << std::endl;
-    std::cerr << "   --fps,--frames-per-second <d>: deprecated and removed" << std::endl;
+    std::cerr << "    --fps,--frames-per-second <d>: deprecated and removed" << std::endl;
+    std::cerr << "    --period=[<n>]: output once every <n> seconds, ignores <rate>" << std::endl;
     std::cerr << "    --size,-s <size>: if given, data is packets of fixed size" << std::endl;
     std::cerr << "                      otherwise data is expected line-wise" << std::endl;
     std::cerr << "                      alternatively use --binary" << std::endl;
@@ -83,8 +84,9 @@ static void usage(bool detail=false)
         std::cerr << "use -v or --verbose to see more detail" << std::endl;
         std::cerr << std::endl;
     }
-    std::cerr << "example:" << std::endl;
-    std::cerr << "    output 70% of data:  cat full.csv | csv-thin 0.7 > thinned.csv" << std::endl;
+    std::cerr << "examples:" << std::endl;
+    std::cerr << "    output 70% of data:          cat full.csv | csv-thin 0.7" << std::endl;
+    std::cerr << "    output once every 2 seconds: cat full.csv | csv-thin --period 2" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -93,9 +95,21 @@ static void usage(bool detail=false)
 
 static double rate;
 static bool deterministic;
+static boost::optional< boost::posix_time::microseconds > period;
 
 static bool ignore()
 {
+    if( period )
+    {
+        static boost::posix_time::ptime next_time = boost::posix_time::microsec_clock::universal_time();
+        boost::posix_time::ptime now = boost::posix_time::microsec_clock::universal_time();
+        if( now > next_time )
+        {
+            next_time += *period;
+            return false;
+        }
+        return true;
+    }
     if( deterministic )
     {
         /*
@@ -135,15 +149,19 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av, usage );
         bool binary = options.exists( "--size,-s,--binary,-b" );
         deterministic = options.exists( "--deterministic,-d" );
+        if( options.exists( "--period" )) { period = boost::posix_time::microseconds( options.value< double >( "--period" ) * 1000000 ); }
         if(options.exists("--fps,--frames-per-second")) { COMMA_THROW( comma::exception, "ERROR: --fps option is deprecated and removed! Please talk to software team if you are using it"); }
         #ifdef WIN32
         if( binary ) { _setmode( _fileno( stdin ), _O_BINARY ); _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
         
         std::vector< std::string > v = options.unnamed( "--deterministic,-d", "-.*" );
-        if( v.empty() ) { std::cerr << "csv-thin: please specify rate" << std::endl; usage(); }
-        rate = boost::lexical_cast< double >( v[0] );
-        if( comma::math::less( rate, 0 ) || comma::math::less( 1, rate ) ) { std::cerr << "csv-thin: expected rate between 0 and 1, got " << rate << std::endl; usage(); }
+        if( !period )
+        {
+            if( v.empty() ) { std::cerr << "csv-thin: please specify rate" << std::endl; usage(); }
+            rate = boost::lexical_cast< double >( v[0] );
+            if( comma::math::less( rate, 0 ) || comma::math::less( 1, rate ) ) { std::cerr << "csv-thin: expected rate between 0 and 1, got " << rate << std::endl; usage(); }
+        }
 
         if( binary ) // quick and dirty, improve performance by reading larger buffer
         {
