@@ -61,10 +61,7 @@ static void usage(bool detail=false)
     std::cerr << std::endl;
     std::cerr << "Usage: cat full.csv | csv-thin <rate> [<options>] > thinned.csv" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "e.g. output 70% of data:  cat full.csv | csv-thin 0.7 > thinned.csv" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "<options>" << std::endl;
-    std::cerr << std::endl;
+    std::cerr << "options:" << std::endl;
     std::cerr << "    --binary,-b <size>: if given, data is packets of fixed size" << std::endl;
     std::cerr << "                        alternatively use --size" << std::endl;
     std::cerr << "    --deterministic,-d: if given, input is downsampled by a factor of int(1 / <rate>)." << std::endl;
@@ -86,6 +83,9 @@ static void usage(bool detail=false)
         std::cerr << "use -v or --verbose to see more detail" << std::endl;
         std::cerr << std::endl;
     }
+    std::cerr << "example:" << std::endl;
+    std::cerr << "    output 70% of data:  cat full.csv | csv-thin 0.7 > thinned.csv" << std::endl;
+    std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 1 );
