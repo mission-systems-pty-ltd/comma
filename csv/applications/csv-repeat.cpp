@@ -44,7 +44,7 @@ static void bash_completion( unsigned const ac, char const * const * av )
 {
     static const char* completion_options =
         " --help -h --verbose -v"
-        " --timeout --period"
+        " --timeout --period --pace"
         " --append-fields --append -a"
         " --output-fields --output-format"
         " --ignore-eof --ignore --yes"
