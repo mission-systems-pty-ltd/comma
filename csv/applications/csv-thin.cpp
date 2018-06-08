@@ -67,6 +67,7 @@ static void usage(bool detail=false)
     std::cerr << "    --deterministic,-d: if given, input is downsampled by a factor of int(1 / <rate>)." << std::endl;
     std::cerr << "                        That is, if <rate> is 0.33, output every third packet." << std::endl;
     std::cerr << "                        Default is to output each packet with a probability of <rate>." << std::endl;
+    std::cerr << "    --fields=[<fields>]: use timestamp in fields to determine time for --period" << std::endl;
     std::cerr << "    --fps,--frames-per-second <d>: deprecated and removed" << std::endl;
     std::cerr << "    --period=[<n>]: output once every <n> seconds, ignores <rate>" << std::endl;
     std::cerr << "    --size,-s <size>: if given, data is packets of fixed size" << std::endl;
@@ -87,6 +88,7 @@ static void usage(bool detail=false)
     std::cerr << "examples:" << std::endl;
     std::cerr << "    output 70% of data:          cat full.csv | csv-thin 0.7" << std::endl;
     std::cerr << "    output once every 2 seconds: cat full.csv | csv-thin --period 2" << std::endl;
+    std::cerr << "     using timestamp from input: cat full.csv | csv-thin --period 2 --fields t" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
@@ -96,6 +98,23 @@ static void usage(bool detail=false)
 static double rate;
 static bool deterministic;
 static boost::optional< boost::posix_time::microseconds > period;
+
+struct timestamped
+{
+    boost::posix_time::ptime timestamp;
+    timestamped() {}
+    timestamped( const boost::posix_time::ptime& timestamp ) : timestamp( timestamp ) {}
+};
+
+namespace comma { namespace visiting {
+
+template <> struct traits< timestamped >
+{
+    template < typename K, typename V > static void visit( const K&, const timestamped& p, V& v ) { v.apply( "t", p.timestamp ); }
+    template < typename K, typename V > static void visit( const K&, timestamped& p, V& v ) { v.apply( "t", p.timestamp ); }
+};
+
+} } // namespace comma { namespace visiting {
 
 static bool ignore()
 {
@@ -142,6 +161,17 @@ static bool ignore()
     return do_ignore && random() > rate;
 }
 
+static bool ignore_with_timestamp( boost::posix_time::ptime timestamp )
+{
+    static boost::posix_time::ptime next_time = timestamp;
+    if( timestamp > next_time )
+    {
+        next_time += *period;
+        return false;
+    }
+    return true;
+}
+
 int main( int ac, char** av )
 {
     try
@@ -156,6 +186,25 @@ int main( int ac, char** av )
         #endif
         
         std::vector< std::string > v = options.unnamed( "--deterministic,-d", "-.*" );
+
+        if( options.exists( "--fields" ))
+        {
+            if( !period ) { COMMA_THROW( comma::exception, "--fields requires --period option" ); }
+            comma::csv::options csv( options );
+            comma::csv::input_stream< timestamped > istream( std::cin, csv );
+            while( std::cin.good() && !std::cin.eof() )
+            {
+                const timestamped* p = istream.read();
+                if( !p ) { break; }
+                if( !ignore_with_timestamp( p->timestamp ))
+                {
+                    if( istream.is_binary()) { std::cout.write( istream.binary().last(), istream.binary().size() ); }
+                    else { std::cout << comma::join( istream.ascii().last(), istream.ascii().ascii().delimiter() )<< std::endl; }
+                }
+            }
+            return 0;
+        }
+
         if( !period )
         {
             if( v.empty() ) { std::cerr << "csv-thin: please specify rate" << std::endl; usage(); }
