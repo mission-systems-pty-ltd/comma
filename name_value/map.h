@@ -32,9 +32,10 @@
 
 #pragma once
 
-#include <boost/lexical_cast.hpp>
 #include <boost/date_time/posix_time/ptime.hpp>
 #include <boost/date_time/posix_time/time_parsers.hpp>
+#include <boost/optional.hpp>
+#include <boost/lexical_cast.hpp>
 #include "impl/options.h"
 
 namespace comma { namespace name_value {
@@ -67,13 +68,17 @@ class map
         template < typename T >
         std::vector< T > values( const std::string& name ) const;
 
-        /// return value, if field exists; otherwise return default
+        /// return first available value, if field exists; otherwise return default
         template < typename T >
         T value( const std::string& name, const T& default_value ) const;
 
-        /// return value, if field exists; otherwise throw
+        /// return first available value, if field exists; otherwise throw
         template < typename T >
         T value( const std::string& name ) const;
+        
+        /// return first available value, if field exists; otherwise return empty optional
+        template < typename T >
+        boost::optional< T > optional( const std::string& name ) const;
 
         /// map type
         typedef std::multimap< std::string, std::string > map_type;
@@ -191,6 +196,13 @@ inline T map::value( const std::string& name ) const
     const std::vector< T >& v = values< T >( name );
     if( v.empty() ) { COMMA_THROW_STREAM( comma::exception, "'" << name << "' not found in \"" << m_line << "\"" ); }
     return v[0];
+}
+
+template < typename T >
+inline boost::optional< T > map::optional( const std::string& name ) const
+{
+    const std::vector< T >& v = values< T >( name );
+    return v.empty() ? boost::optional< T >() : boost::optional< T >( v[0] );
 }
 
 } } // namespace comma { namespace name_value {

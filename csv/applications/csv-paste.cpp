@@ -49,7 +49,7 @@
 #include <fcntl.h>
 #endif
 
-static void usage()
+static void usage( bool verbose )
 {
     std::cerr << std::endl;
     std::cerr << "join several csv sources and output to stdout, e.g.:" << std::endl;
@@ -73,12 +73,15 @@ static void usage()
     std::cerr << "    --delimiter,-d <delimiter> : default ','" << std::endl;
     std::cerr << "    <file> : <filename>[;size=<size>|binary=<format>]: file name or \"-\" for stdin; specify size or format, if binary" << std::endl;
     std::cerr << "    <value> : <csv values>[;binary=<format>]; specify size or format, if binary" << std::endl;
-    std::cerr << "    line-number : add the line number; as ui, if binary (quick and dirty, will override the file named \"line-number\")" << std::endl;
+    std::cerr << "    line-number[;<options>] : add the line number; as ui, if binary (quick and dirty, will override the file named \"line-number\")" << std::endl;
     std::cerr << "        options" << std::endl;
     std::cerr << "            --begin <index>: start line number count at <index>; default: 0" << std::endl;
+    std::cerr << "            --index; instead of block number output record index in the block" << std::endl;
+    std::cerr << "            --reverse; if --index, output index in descending order" << std::endl;
     std::cerr << "            --size,--block-size <size>: number of records with the same line number; default: 1" << std::endl;
-    std::cerr << "        example (try it)" << std::endl;
+    std::cerr << "        examples (try them)" << std::endl;
     std::cerr << "            seq 0 20 | csv-paste - line-number --begin 5 --size 3" << std::endl;
+    std::cerr << "            csv-paste line-number \"line-number;index;reverse\" --size 10 | head -n20" << std::endl;
     std::cerr << comma::csv::format::usage() << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
@@ -160,7 +163,49 @@ struct value : public source
 class line_number : public source
 {
     public:
-        line_number( bool is_binary, comma::uint32 begin = 0, comma::uint32 size = 1 ) : source( is_binary ? "binary=ui" : "" ), value_( begin ), count_( 0 ), size_( size ) {}
+        class options
+        {
+            public:
+                comma::uint32 size;
+                bool index;
+                bool reverse;
+                comma::uint32 begin;
+                
+                options( boost::optional< comma::uint32 > b = boost::optional< comma::uint32 >(), comma::uint32 size = 1, bool index = false, bool reverse = false )
+                    : size( size )
+                    , index( index )
+                    , reverse( reverse )
+                    , begin( begin_( b ) )
+                {
+                }
+                
+                options( const std::string& properties, const comma::command_line_options& o ) // quick and dirty: use visiting instead
+                {
+                    options defaults( boost::optional< comma::uint32 >(), o.value< comma::uint32 >( "--size,--block-size", 1 ), o.exists( "--index" ), o.exists( "--reverse" ) );
+                    comma::name_value::map map( properties, ';', '=' );
+                    size = map.value< comma::uint32 >( "size", defaults.size );
+                    index = map.value< bool >( "index", defaults.index );
+                    reverse = map.value< bool >( "reverse", defaults.reverse );
+                    auto b = map.optional< comma::uint32 >( "begin" );
+                    if( !b ) { b = o.optional< comma::uint32 >( "--begin" ); }
+                    begin = begin_( b );
+                }
+                
+            private:
+                comma::uint32 begin_( const boost::optional< comma::uint32 >& b )
+                {
+                    if( index && reverse && b && ( *b + 1 ) < size ) { COMMA_THROW( comma::exception, "for --reverse --index, for --size " << size << " expected --begin not less than " << ( size - 1 ) << "; got: " << *b ); }
+                    return b ? *b : reverse ? size - 1 : 0;
+                }
+        };
+        
+        line_number( bool is_binary, const options& options )
+            : source( is_binary ? "binary=ui" : "" )
+            , options_( options )
+            , count_( 0 )
+            , value_( options_.begin )
+        {
+        }
         
         const std::string* read()
         { 
@@ -177,17 +222,23 @@ class line_number : public source
         }
         
     private:
-        comma::uint32 value_;
+        options options_;
         comma::uint32 count_;
-        comma::uint32 size_;
+        comma::uint32 value_;
         std::string serialized_;
         
         void update_()
         {
             ++count_;
-            if( count_ < size_ ) { return; }
-            count_ = 0;
-            ++value_;
+            if( count_ < options_.size )
+            {
+                if( options_.index ) { value_ += options_.reverse ? -1 : 1; }
+            }
+            else
+            {
+                value_ = options_.index ? options_.begin : ( value_ + 1 );
+                count_ = 0;
+            }
         }
 };
 
@@ -195,16 +246,15 @@ int main( int ac, char** av )
 {
     try
     {
-        comma::command_line_options options( ac, av );
-        if( options.exists( "--help,-h" ) ) { usage(); }
+        comma::command_line_options options( ac, av, usage );
         char delimiter = options.value( "--delimiter,-d", ',' );
-        std::vector< std::string > unnamed = options.unnamed( "--flush", "--delimiter,-d,--begin,--size,--block-size" );
+        std::vector< std::string > unnamed = options.unnamed( "--flush,--index,--reverse", "--delimiter,-d,--begin,--size,--block-size" );
         boost::ptr_vector< source > sources;
         bool is_binary = false;
         for( unsigned int i = 0; i < unnamed.size(); ++i ) // quick and dirty
         {
             if( unnamed[i].substr( 0, 6 ) == "value=" ) { if( value( unnamed[i] ).binary() ) { is_binary = true; } }
-            else if( unnamed[i] == "line-number" ) { continue; }
+            else if( unnamed[i] == "line-number" || unnamed[i].substr( 0, 12 ) == "line-number;" ) { continue; } // quick and dirty
             if( stream( unnamed[i] ).binary() ) { is_binary = true; }
         }
         for( unsigned int i = 0; i < unnamed.size(); ++i )
@@ -215,15 +265,9 @@ int main( int ac, char** av )
                 s = new value( unnamed[i] );
                 if( is_binary != s->binary() ) { std::cerr << "csv-paste: one input is ascii, the other binary: " << sources.back().properties() << " vs " << s->properties() << std::endl; return 1; }
             }
-            else if( unnamed[i] == "line-number" )
-            { 
-                long long begin = 0;
-                if( options.exists( "--begin" ) ) 
-                { 
-                    begin = options.value( "--begin", 0 ); 
-                    if( begin < 0) { std::cerr << "csv-paste: expected non-negative --begin, got " << begin << std::endl; return 1; }
-                }
-                s = new line_number( is_binary, boost::lexical_cast< comma::uint32 >( begin ), options.value< comma::uint32 >( "--size,--block-size", 1 ) );
+            else if( unnamed[i] == "line-number" || unnamed[i].substr( 0, 12 ) == "line-number;" ) // quick and dirty
+            {
+                s = new line_number( is_binary, line_number::options( unnamed[i], options ) );
             }
             else
             {
