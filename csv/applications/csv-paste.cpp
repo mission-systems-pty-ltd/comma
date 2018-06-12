@@ -69,10 +69,14 @@ static void usage( bool verbose )
     std::cerr << "    cat file1.csv | csv-paste - line-number" << std::endl;
     std::cerr << "    cat file1.bin | csv-paste \"-;binary=d,d\" \"value=0;binary=ui\"" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "options:" << std::endl;
+    std::cerr << "options" << std::endl;
     std::cerr << "    --delimiter,-d <delimiter> : default ','" << std::endl;
+    std::cerr << "    --help,-h : help, --help --verbose for more help" << std::endl;
+    std::cerr << "    --verbose,-v; more debug output" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "inputs" << std::endl;
     std::cerr << "    <file> : <filename>[;size=<size>|binary=<format>]: file name or \"-\" for stdin; specify size or format, if binary" << std::endl;
-    std::cerr << "    <value> : <csv values>[;binary=<format>]; specify size or format, if binary" << std::endl;
+    std::cerr << "    value : value=<csv values>[;binary=<format>]; specify size or format, if binary" << std::endl;
     std::cerr << "    line-number[;<options>] : add the line number; as ui, if binary (quick and dirty, will override the file named \"line-number\")" << std::endl;
     std::cerr << "        options" << std::endl;
     std::cerr << "            --begin <index>: start line number count at <index>; default: 0" << std::endl;
@@ -80,9 +84,15 @@ static void usage( bool verbose )
     std::cerr << "            --reverse; if --index, output index in descending order" << std::endl;
     std::cerr << "            --size,--block-size <size>: number of records with the same line number; default: 1" << std::endl;
     std::cerr << "        examples (try them)" << std::endl;
-    std::cerr << "            seq 0 20 | csv-paste - line-number --begin 5 --size 3" << std::endl;
-    std::cerr << "            csv-paste line-number \"line-number;index;reverse\" --size 10 | head -n20" << std::endl;
-    std::cerr << comma::csv::format::usage() << std::endl;
+    std::cerr << "            line number" << std::endl;
+    std::cerr << "                seq 0 20 | csv-paste - line-number --begin 5 --size 3" << std::endl;
+    std::cerr << "                csv-paste line-number \"line-number;index;reverse\" --size 10 | head -n20" << std::endl;
+    std::cerr << "            value" << std::endl;
+    std::cerr << "                seq 0 20 | csv-paste - value=1,2,3" << std::endl;
+    std::cerr << "                seq 0 20 | csv-to-bin ui | csv-paste \"-;binary=ui\" value=\"1,2,3;binary=3ui\" | csv-from-bin 4ui" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "csv format parameters" << std::endl;
+    if( verbose ) { std::cerr << comma::csv::format::usage() << std::endl; } else { std::cerr << "    run csv-paste --help --verbose for more..." << std::endl; }
     std::cerr << std::endl;
     std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
