@@ -1,0 +1,4 @@
+csv-to-bin t,ui \
+    | csv-thin --period 0.1 --fields t --binary t,ui \
+    | csv-from-bin t,ui \
+    | name-value-from-csv --fields t,n --prefix output --line-number
