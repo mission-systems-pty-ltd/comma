@@ -1,0 +1,2 @@
+csv-paste line-number | head -20 | csv-thin 0.25 --deterministic \
+    | name-value-from-csv --fields n --prefix output --line-number
