@@ -38,8 +38,8 @@ TYPE = 'M8[' + UNIT + ']'
 DTYPE = np.dtype(TYPE)
 
 NOT_A_DATE_TIME = np.datetime64('NaT')
-POSITIVE_INFINITY = np.datetime64('294247-01-09T04:00:54.775807Z')
-NEGATIVE_INFINITY = np.datetime64('-290308-12-22T19:59:05.224191Z')
+POSITIVE_INFINITY = np.datetime64('294247-01-09T04:00:54.775807')
+NEGATIVE_INFINITY = np.datetime64('-290308-12-22T19:59:05.224191')
 
 
 def is_undefined(numpy_time):
