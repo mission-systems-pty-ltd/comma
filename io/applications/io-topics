@@ -266,7 +266,7 @@ function cat_config()
 {
     local name path
     IFS=: read name path <<< "$1"
-    if [[ -z "$path" ]]; then cat $name; else cat $name | name-value-convert | grep "^$path/" | sed "s#$path/##"; fi
+    if [[ -z "$path" ]]; then cat $name | name-value-convert; else cat $name | name-value-convert | grep "^$path/" | sed "s#$path/##"; fi
 }
 
 function topics_from_config() # quick and dirty
