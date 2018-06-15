@@ -306,11 +306,15 @@ commands=()
 for topic in ${topics[@]}; do
     eval "$( ${operation}_topic_fields | comma_path_mangle | sed 's#^#unset topic_#' )" # todo: quick and dirty, watch performance
     eval "$( grep $topic <<< "$config" | sed "s#^$topic/#topic/#" | comma_path_value_mangle )"
+
+    topic_command="$( grep ^$topic/command <<< "$config" | cut -d= -f1 --complement )"
+
     #[[ -n "$topic_command" ]] || die "command not specified for topic '$topic' in files ${configs[@]}"
     if [[ -n "$topic_binary" ]]; then size_option="--size $( csv-size $topic_binary )"
     elif [[ -n "$topic_size" ]]; then size_option="--size $topic_size"
     else unset size_option; fi
     cmd="$( ${operation}_command $topic )" || die "on topic $topic: making command failed"
+    say "--> cmd: <<<$cmd>>>"
     commands+=( "$cmd" )
 done
 say "will run 'comma_execute_and_wait --group' with commands:"
