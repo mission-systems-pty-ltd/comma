@@ -51,16 +51,17 @@ function execute()
     (( $( comma_options_has --bash-completion $@ ) )) && { bash_completion; exit 0; }
     (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) && usage
 
-    local mangle_text outfields ff
+    local mangle_text ff
     local -a files
     mangle_text=$( description | mangle_options "$@"; comma_status_ok ) || die "Invalid arguments."; eval "$mangle_text"
     mangle_text="files=( $( description | comma-options-to-name-value "$@" | grep '^"' ) )"; eval "$mangle_text"; unset mangle_text
 
-    [[ -n $options_source ]] && outfields='name,filename' || outfields='name,value'
-
-    { for ff in "${files[@]}"; do cat "$ff" | name-value-convert | sed "s~$~=\"$ff\"~g"; done |
-        name-value-convert --take-last | csv-shuffle --delimiter='=' --fields=name,value,filename --output=$outfields
-    }
+    for ff in "${files[@]}"
+    do
+        { name-value-convert < "$ff" |
+            { [[ -z $options_source ]] &&  cat - || cut -d = -f1 |  sed "s~$~=\"$ff\"~g";}
+        }
+    done | name-value-convert --take-last
 }
 
 [[ $( basename $0 ) != "name-value-apply" ]] || execute "$@"
