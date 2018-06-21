@@ -1,0 +1,67 @@
+#!/bin/bash
+
+
+source $( type -p comma-application-util )
+
+function say() { echo "$scriptname: $@" >&2; }
+function die() { say "$@"; exit 1; }
+function bye() { say "$@"; exit 0; }
+function mangle_options() { comma-options-to-name-value "$@" | { grep '='; :; } | comma_path_value_mangle | sed 's/^/local options_/g'; comma_status_ok; }
+
+function description()
+{
+    cat <<EOF
+--help,-h; output instructions for using this program and exit.
+--source; for each name, show the source config instead of its value.
+EOF
+}
+
+function bash_completion() { description | sed 's/=.*//g' | sed 's/;.*//g' | sed 's/,/\n/g' ; }
+
+function usage()
+{
+    cat >&2 <<EOF
+
+Derive a config from multiple input configs.
+
+Usage:
+    $scriptname <options> <files...> 
+
+Options:
+$( description | sed 's/^/    /' )
+
+Example:
+    > $scriptname robot/config/*
+
+    > $scriptname <( echo a=5; echo b=7; ) <( echo a=6; echo c=8 )
+    a="6"
+    b="7"
+    c="8"
+
+EOF
+    exit 0
+}
+
+function combine_files() { for ff in "${files[@]}"; do cat "$ff" | name-value-convert | sed "s~$~=\"$ff\"~g"; done; }
+
+function execute()
+{
+    local -r scriptname=$( basename "$0" )
+
+    (( $( comma_options_has --bash-completion $@ ) )) && { bash_completion; exit 0; }
+    (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) && usage
+
+    local mangle_text outfields ff
+    local -a files
+    mangle_text=$( description | mangle_options "$@"; comma_status_ok ) || die "Invalid arguments."; eval "$mangle_text"
+    mangle_text="files=( $( description | comma-options-to-name-value "$@" | grep '^"' ) )"; eval "$mangle_text"; unset mangle_text
+
+    [[ -n $options_source ]] && outfields='name,filename' || outfields='name,value'
+
+    { for ff in "${files[@]}"; do cat "$ff" | name-value-convert | sed "s~$~=\"$ff\"~g"; done |
+        name-value-convert --take-last | csv-shuffle --delimiter='=' --fields=name,value,filename --output=$outfields
+    }
+}
+
+[[ $( basename $0 ) != "name-value-apply" ]] || execute "$@"
+
