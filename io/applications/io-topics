@@ -314,7 +314,6 @@ for topic in ${topics[@]}; do
     elif [[ -n "$topic_size" ]]; then size_option="--size $topic_size"
     else unset size_option; fi
     cmd="$( ${operation}_command $topic )" || die "on topic $topic: making command failed"
-    say "--> cmd: <<<$cmd>>>"
     commands+=( "$cmd" )
 done
 say "will run 'comma_execute_and_wait --group' with commands:"
