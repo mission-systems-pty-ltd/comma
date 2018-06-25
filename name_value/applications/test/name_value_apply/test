@@ -1,0 +1,21 @@
+#!/bin/bash
+
+readonly output_dir=output
+readonly input_file=$output_dir/input.backup
+
+mkdir -p $output_dir
+cat > $input_file
+
+declare txt cfg format
+for cfg in config0 config1 config2
+do
+    txt=$( grep "$cfg/" < "$input_file" | sed "s@^$cfg/@@g" )
+    format=$( name-value-get format <<< "$txt" )
+
+    name-value-convert --to=$format <<< "$txt" > "$output_dir/$cfg.$format"
+done
+
+name-value-apply "$output_dir/config0.pv" "$output_dir/config1.json" "$output_dir/config2.xml" | sed 's@^@argument_list/@g'
+name-value-apply "$output_dir/config"*.* | sed 's@^@wildcard/@g'
+name-value-apply --source "$output_dir/config"* | sed 's@^@source/@g'
+

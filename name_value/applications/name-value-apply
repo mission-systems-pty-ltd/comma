@@ -25,7 +25,7 @@ function usage()
 Derive a config from multiple input configs.
 
 Usage:
-    $scriptname <options> <files...> 
+    $scriptname [<options>] <files...>
 
 Options:
 $( description | sed 's/^/    /' )

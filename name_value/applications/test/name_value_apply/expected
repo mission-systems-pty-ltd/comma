@@ -1,0 +1,26 @@
+# test name-value-apply functionality
+# - check with files as argument list
+# - check with wildcard arguments
+# - check with --source
+
+# - check with files as argument list
+argument_list/format="xml"
+argument_list/a="1"
+argument_list/b/c="4"
+argument_list/d="6"
+argument_list/e="7"
+
+# - check with wildcard arguments
+wildcard/format=argument_list/format
+wildcard/a=argument_list/a
+wildcard/b/c=argument_list/b/c
+wildcard/d=argument_list/d
+wildcard/e=argument_list/e
+
+# - check with --source
+source/format="output/config2.xml"
+source/a="output/config0.pv"
+source/b/c="output/config1.json"
+source/d="output/config2.xml"
+source/e="output/config2.xml"
+

@@ -1,0 +1,12 @@
+config0/format="pv"
+config0/a=1
+config0/b/c=2
+config0/d=3
+
+config1/format="json"
+config1/b/c=4
+config1/d=5
+
+config2/format="xml"
+config2/d=6
+config2/e=7
