@@ -31,12 +31,17 @@ Options:
 $( description | sed 's/^/    /' )
 
 Example:
-    > $scriptname robot/config/*
+    > ( echo a=5; echo b=7 ) > cfg1.pv; ( echo a=6; echo c=8 ) > cfg2.pv
 
-    > $scriptname <( echo a=5; echo b=7; ) <( echo a=6; echo c=8 )
+    > $scriptname cfg1.pv cfg2.pv
     a="6"
     b="7"
     c="8"
+
+    > $scriptname --source cfg*
+    a="cfg2.pv"
+    b="cfg1.pv"
+    c="cfg2.pv"
 
 EOF
     exit 0
