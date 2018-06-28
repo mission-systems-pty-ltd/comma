@@ -1,0 +1,2 @@
+publish --config config.json:publish
+cat --config config.json:cat

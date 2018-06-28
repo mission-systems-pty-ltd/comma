@@ -1,0 +1,19 @@
+{
+    "publish":
+    {
+        "topic1":
+        {
+            "command": "csv-paste line-number",
+            "port": 12345,
+            "on_demand": 1
+        }
+    },
+    "cat":
+    {
+        "topic1":
+        {
+            "command": "head -10 | tail -5 | csv-paste line-number - | sed 's#^#output[#;s#,#]=\"#;s#$#\"#' ",
+            "address": "tcp:localhost:12345"
+        }
+    }
+}

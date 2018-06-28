@@ -1,0 +1,14 @@
+#!/bin/bash
+
+source $( type -p comma-application-util )
+# source $( type -p comma-process-util )
+
+read server_args
+read client_args
+
+io-topics $server_args & server_pid=$!
+
+io-topics $client_args
+
+kill $server_pid
+
