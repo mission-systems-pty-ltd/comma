@@ -13,7 +13,7 @@ function common_options()
 --help,-h; display help and exit
 --config=[<config>]; <config>: <dir>[:<path>], where <dir> is path to a json or path-value file specifying topic attributes, <path>: path inside config, multiple --config options allowed, configs will be applied in the reverse order of --config options on command line (see examples)
 --dry-run,--dry; print final command and exit
---topics-from-all-configs,--all; take topics from all configs, default: take topics only from the first config ("master config")
+--topics-from-all-configs,--all; take topics from all configs and topic command values, default: take topics and topic command values only from the first config ("master config")
 --topic-fields; output topic config fields and exit
 --topic-fields-help; output topic config fields help and exit
 --verbose,-v; print verbose information
@@ -276,7 +276,7 @@ function cat_config()
 
 function topics_from_config() # quick and dirty
 {
-    if [[ -n "$options_topics_from_all_configs" ]]; then egrep -e "/address=|/port=" <<< "$config" | cut -d= -f1 | sed -e 's#/address$##' -e 's#/port$##' | uniq; return; fi
+    if [[ -n "$options_topics_from_all_configs" ]]; then egrep -e "/address=|/port=|/command=" <<< "$config" | cut -d= -f1 | sed -e 's#/address$##' -e 's#/port$##' -e 's#/command$##' | uniq; return; fi
     grep '=""' <<< "$master_config" | cut -d= -f1
     for path in $( grep -v '=""' <<< "$master_config" | cut -d= -f1 ); do dirname $path; done | uniq
 }
@@ -286,7 +286,7 @@ function read_configs()
     configs=( $( grep "=" <<< "$options" | grep "^config=" | cut -d= -f2 | sed 's#"##g' ) )
     (( ${#configs[@]} > 0 )) || die "please specify at least one config"
     master_config=$( cat_config ${configs[0]} )
-    config=$( { for (( i = $(( ${#configs[@]} - 1 )); i > 0; --i )); do cat_config ${configs[$i]}; done; echo "$master_config"; } | name-value-convert --take-last )
+    config=$( { for (( i = $(( ${#configs[@]} - 1 )); i > 0; --i )); do cat_config ${configs[$i]} | if [[ -z "$options_topics_from_all_configs" ]]; then grep -v '/command='; else cat; fi ; done; echo "$master_config"; } | name-value-convert --take-last )
 }
 
 function get_topics()
