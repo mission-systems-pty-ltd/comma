@@ -92,9 +92,14 @@ examples
             
     log
         run publisher as in previous examples and then run logging
-            > io/applications/io-topics log --dir my-log --config <( echo "a/address=tcp:localhost:8888"; echo "b/address=tcp:localhost:9999" )
+            > io-topics log --dir my-log --config <( echo "a/address=tcp:localhost:8888"; echo "b/address=tcp:localhost:9999" )
             > ls -al my-log/a
             > ls -al my-log/b
+            
+        run publisher as in previous examples and then run logging with a custom command
+            > io-topics log --dir my-log --config <( echo "a/address=tcp:localhost:12345"; echo 'b/command=socat tcp:localhost:12346 - > log.csv' )
+            > ls -al my-log/a
+            > head my-log/b/log.csv
 
 eof
     exit 0
