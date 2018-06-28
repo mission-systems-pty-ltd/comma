@@ -74,7 +74,7 @@ examples
             > io-topics publish --config <( echo "a/command=csv-paste line-number"; echo "a/port=12345"; echo "b/command=csv-paste line-number"; echo "b/port=12346"; echo "b/on_demand=1" )
         
         in a different shell, run clients
-            > io-topics cat --config <( echo "a/command=head -n5 > a.csv"; echo "a/address=tcp:localhost:12345"; echo "b/command=head -n5 > b.csv"; echo "b/address=tcp:localhost:12346" )
+            > io-topics cat --config <( echo "a/command=head -n5 | tee a.csv"; echo "a/address=tcp:localhost:12345"; echo "b/command=head -n5 | tee b.csv"; echo "b/address=tcp:localhost:12346" )
             
         check output
             > cat a.csv 
@@ -207,7 +207,7 @@ function publish_command()
     [[ -n "$topic_address" || -n "$topic_port" ]] || die "neither address nor port specified for topic '$topic' in files ${configs[@]}"
     [[ -n "$topic_address" ]] || topic_address="tcp:$topic_port"
     if [[ -n "$topic_on_demand" ]]; then on_demand="--on-demand"; else unset on_demand; fi
-    local cmd="io-publish $topic_address $size_option $on_demand -- bash -c $topic_command"
+    local cmd="io-publish $topic_address $size_option $on_demand -- $topic_command"
     verbose "$cmd"
     echo "$cmd"
 }
@@ -224,7 +224,7 @@ function cat_command()
     set_topic_address
     if [[ -n "$topic_on_demand" ]]; then on_demand="--on-demand"; else unset on_demand; fi
     if [[ -n "$topic_flush" ]]; then flush_option="--flush"; else unset flush_option; fi # todo! make flush default?!
-    local cmd="bash -c io-cat $topic_address $size_option $flush_option | bash -c $topic_command" # todo? comma_execute_and_wait?
+    local cmd="bash -c io-cat $topic_address $size_option $flush_option | $topic_command" # todo? comma_execute_and_wait?
     verbose "$cmd"
     echo "$cmd"
 }
@@ -278,14 +278,10 @@ function topics_from_config() # quick and dirty
 
 function read_configs()
 {
-    configs=( $( grep "=" <<< "$options" | grep "^config=" | cut -d= -f2 | sed 's#"##g' | tac ) )
+    configs=( $( grep "=" <<< "$options" | grep "^config=" | cut -d= -f2 | sed 's#"##g' ) )
     (( ${#configs[@]} > 0 )) || die "please specify at least one config"
-    master_config=$( cat_config ${configs[-1]} ) # quick and dirty
-    if [[ ${#configs[@]} == 1 ]]; then
-        config=$( echo "$master_config" | name-value-convert ) # quick and dirty
-    else
-        config=$( { for c in ${configs[@]}; do cat_config $c; done; echo "$master_config"; } | name-value-convert ) # quick and dirty
-    fi
+    master_config=$( cat_config ${configs[0]} )
+    config=$( { for (( i = $(( ${#configs[@]} - 1 )); i > 0; --i )); do cat_config ${configs[$i]}; done; echo "$master_config"; } | name-value-convert --take-last )
 }
 
 function get_topics()
@@ -311,7 +307,7 @@ for topic in ${topics[@]}; do
     eval "$( ${operation}_topic_fields | comma_path_mangle | sed 's#^#unset topic_#' )" # todo: quick and dirty, watch performance
     eval "$( grep $topic <<< "$config" | sed "s#^$topic/#topic/#" | comma_path_value_mangle )"
 
-    topic_command="$( grep ^$topic/command <<< "$config" | cut -d= -f1 --complement )"
+    topic_command="$( grep ^$topic/command <<< "$config" | cut -d= -f1 --complement | sed -e 's#^"##' -e 's#"$##'  )"
 
     #[[ -n "$topic_command" ]] || die "command not specified for topic '$topic' in files ${configs[@]}"
     if [[ -n "$topic_binary" ]]; then size_option="--size $( csv-size $topic_binary )"
