@@ -155,7 +155,7 @@ def custom_formatwarning(msg, *args):
 
 
 def add_csv_options(parser):
-    comma.csv.add_options(parser, defaults={'fields': 'x,y,z'})
+    comma.csv.add_options(parser) #comma.csv.add_options(parser, defaults={'fields': 'x,y,z'})
     parser.add_argument(
         '--format',
         default='',
@@ -462,7 +462,7 @@ class stream(object):
     def initialize_input(self):
         self.nonblank_input_fields = filter(None, self.args.fields)
         if not self.nonblank_input_fields:
-            raise csv_eval_error("specify input stream fields, e.g. --fields=x,y")
+            raise csv_eval_error("please specify input stream fields, e.g. --fields=x,y")
         check_fields(self.nonblank_input_fields)
         types = comma.csv.format.to_numpy(self.args.format)
         self.input_t = comma.csv.struct(','.join(self.args.fields), *types)
