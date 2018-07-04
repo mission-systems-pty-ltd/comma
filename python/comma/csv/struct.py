@@ -30,7 +30,6 @@
 import numpy as np
 from ..numpy import types_of_dtype, structured_dtype, type_to_string
 
-
 class struct(object):
     """
     see github.com/acfr/comma/wiki/python-csv-module for details

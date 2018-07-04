@@ -41,18 +41,11 @@ NOT_A_DATE_TIME = np.datetime64('NaT')
 POSITIVE_INFINITY = np.datetime64('294247-01-09T04:00:54.775807')
 NEGATIVE_INFINITY = np.datetime64('-290308-12-22T19:59:05.224191')
 
+def is_undefined(numpy_time): return str(numpy_time) == str(NOT_A_DATE_TIME)
 
-def is_undefined(numpy_time):
-    return str(numpy_time) == str(NOT_A_DATE_TIME)
+def is_positive_infinity(numpy_time): return numpy_time == POSITIVE_INFINITY
 
-
-def is_positive_infinity(numpy_time):
-    return numpy_time == POSITIVE_INFINITY
-
-
-def is_negative_infinity(numpy_time):
-    return numpy_time == NEGATIVE_INFINITY
-
+def is_negative_infinity(numpy_time): return numpy_time == NEGATIVE_INFINITY
 
 def to_numpy(t):
     """
@@ -69,22 +62,16 @@ def to_numpy(t):
     >>> to_numpy('')
     numpy.datetime64('NaT')
     """
-    if t in ['', 'not-a-date-time']:
-        return NOT_A_DATE_TIME
-    if t in ['+infinity', '+inf', 'infinity', 'inf']:
-        return POSITIVE_INFINITY
-    if t in ['-infinity', '-inf']:
-        return NEGATIVE_INFINITY
+    if t in ['', 'not-a-date-time']: return NOT_A_DATE_TIME
+    if t in ['+infinity', '+inf', 'infinity', 'inf']: return POSITIVE_INFINITY
+    if t in ['-infinity', '-inf']: return NEGATIVE_INFINITY
     if not (isinstance(t, basestring) and re.match(r'^(\d{8}T\d{6}(\.\d{0,6})?)$', t)):
         msg = "expected comma time, got '{}'".format(repr(t))
         raise TypeError(msg)
     v = list(t)
-    for i in [13, 11]:
-        v.insert(i, ':')
-    for i in [6, 4]:
-        v.insert(i, '-')
+    for i in [13, 11]: v.insert(i, ':')
+    for i in [6, 4]: v.insert(i, '-')
     return np.datetime64(''.join(v), UNIT)
-
 
 def from_numpy(t):
     """
@@ -107,31 +94,21 @@ def from_numpy(t):
     if not ((isinstance(t, np.datetime64) and t.dtype == DTYPE) or
             is_undefined(t) or
             isinstance(t, np.timedelta64)):
-        msg = "expected numpy time or timedelta of type '{}' or '{}', got '{}'" \
-            .format(repr(DTYPE), repr(np.timedelta64), repr(t))
+        msg = "expected numpy time or timedelta of type '{}' or '{}', got '{}'".format(repr(DTYPE), repr(np.timedelta64), repr(t))
         raise TypeError(msg)
-    if isinstance(t, np.timedelta64):
-        return str(t.astype('i8'))
-    if is_undefined(t):
-        return 'not-a-date-time'
-    if is_negative_infinity(t):
-        return '-infinity'
-    if is_positive_infinity(t):
-        return '+infinity'
+    if isinstance(t, np.timedelta64): return str(t.astype('i8'))
+    if is_undefined(t): return 'not-a-date-time'
+    if is_negative_infinity(t): return '-infinity'
+    if is_positive_infinity(t): return '+infinity'
     return re.sub(r'(\.0{6})?([-+]\d{4}|Z)?$', '', str(t)).translate(None, ':-')
-
 
 def ascii_converters(types):
     converters = {}
     for i, type in enumerate(types):
-        if np.dtype(type) == DTYPE:
-            converters[i] = to_numpy
+        if np.dtype(type) == DTYPE: converters[i] = to_numpy
     return converters
 
-
-def get_time_zone():
-    return os.environ.get('TZ')
-
+def get_time_zone(): return os.environ.get('TZ')
 
 def set_time_zone(name):
     if name:

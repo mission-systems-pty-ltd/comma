@@ -40,10 +40,7 @@ from .struct import struct
 
 DEFAULT_PRECISION = 12
 
-
-def custom_formatwarning(msg, *args):
-    return __name__ + " warning: " + str(msg) + '\n'
-
+def custom_formatwarning(msg, *args): return __name__ + " warning: " + str(msg) + '\n'
 
 class stream(object):
     """
@@ -112,12 +109,10 @@ class stream(object):
         """
         while True:
             s = self.read(size)
-            if s is None:
-                break
+            if s is None: break
             yield s
 
-    def __iter__(self):
-        return self.iter()
+    def __iter__(self): return self.iter()
 
     def read(self, size=None):
         """
@@ -128,25 +123,34 @@ class stream(object):
         if size is negative, all records from source are read
         if no records have been read, return None
         """
-        if size is None:
-            size = self.size
+        if size is None: size = self.size
         self._input_array = self._read(size)
-        if self._input_array.size == 0:
-            return
+        if self._input_array.size == 0: return
         return self._struct_array(self._input_array, self.missing_values)
 
+    def _genfromtxt( self ): # quick and dirty due to the ugliness of the change in numpy 1.14; see doc of encoding parameter in https://docs.scipy.org/doc/numpy-1.14.0/reference/generated/numpy.genfromtxt.html
+        if np.__version__ >= '1.14.0':
+            return np.genfromtxt( self._ascii_buffer
+                                , dtype = self.input_dtype
+                                , delimiter = self.delimiter
+                                , converters = self.ascii_converters
+                                , usecols = self.usecols
+                                , filling_values = self.filling_values
+                                , comments = None
+                                , encoding = None )
+        else:
+            return np.genfromtxt( self._ascii_buffer
+                                , dtype = self.input_dtype
+                                , delimiter = self.delimiter
+                                , converters = self.ascii_converters
+                                , usecols = self.usecols
+                                , filling_values = self.filling_values
+                                , comments = None )
+        
     def read_from_line(self, line):
         self._ascii_buffer = line
-        self._input_array = np.atleast_1d(np.genfromtxt(
-            self._ascii_buffer,
-            dtype=self.input_dtype,
-            delimiter=self.delimiter,
-            converters=self.ascii_converters,
-            usecols=self.usecols,
-            filling_values=self.filling_values,
-            comments=None))
-        if self._input_array.size == 0:
-            return
+        self._input_array = np.atleast_1d( self._genfromtxt() )
+        if self._input_array.size == 0: return
         return self._struct_array(self._input_array, self.missing_values)
 
     def _read(self, size):
@@ -160,14 +164,7 @@ class stream(object):
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore')
                 self._ascii_buffer = readlines_unbuffered(size, self.source)
-                return np.atleast_1d(np.genfromtxt(
-                    self._ascii_buffer,
-                    dtype=self.input_dtype,
-                    delimiter=self.delimiter,
-                    converters=self.ascii_converters,
-                    usecols=self.usecols,
-                    filling_values=self.filling_values,
-                    comments=None))
+                return np.atleast_1d( self._genfromtxt() )
 
     def _struct_array(self, input_array, missing_values):
         if not self.data_extraction_fields:
@@ -189,16 +186,13 @@ class stream(object):
             for field, value in self.default_values.iteritems():
                 name = dtype_name_of[field]
                 if self.missing_dtype[name] == csv_time.DTYPE:
-                    try:
-                        missing[name] = csv_time.to_numpy(value)
-                    except TypeError:
-                        missing[name] = value
+                    try: missing[name] = csv_time.to_numpy(value)
+                    except TypeError: missing[name] = value
                 else:
                     missing[name] = value
         return missing[0]
 
-    def numpy_scalar_to_string(self, scalar):
-        return numpy_scalar_to_string(scalar, precision=self.precision)
+    def numpy_scalar_to_string(self, scalar): return numpy_scalar_to_string(scalar, precision=self.precision)
 
     def write(self, s):
         """
@@ -216,46 +210,35 @@ class stream(object):
             msg = "size {} not equal to tied size {}".format(s.size, tied_size)
             raise ValueError(msg)
         if self.binary:
-            if self.tied:
-                self._tie_binary(self.tied._input_array, s).tofile(self.target)
-            else:
-                s.tofile(self.target)
+            if self.tied: self._tie_binary(self.tied._input_array, s).tofile(self.target)
+            else: s.tofile(self.target)
         else:
             unrolled_array = s.view(self.struct.unrolled_flat_dtype)
             #unrolled_array = s.view( self.unrolled_write_dtype )
-            if self.tied:
-                lines = self._tie_ascii(self.tied._ascii_buffer, unrolled_array)
-            else:
-                lines = (self._toline(scalars) for scalars in unrolled_array)
-            for line in lines:
-                print >> self.target, line
+            if self.tied: lines = self._tie_ascii(self.tied._ascii_buffer, unrolled_array)
+            else: lines = (self._toline(scalars) for scalars in unrolled_array)
+            for line in lines: print >> self.target, line
         self.target.flush()
 
-    def _tie_binary(self, tied_array, array):
-        return merge_arrays(tied_array, array)
+    def _tie_binary(self, tied_array, array): return merge_arrays(tied_array, array)
 
     def _tie_ascii(self, tied_buffer, unrolled_array):
-        for tied_line, scalars in itertools.izip(tied_buffer, unrolled_array):
-            yield self.delimiter.join([tied_line] + self._strings(scalars))
+        for tied_line, scalars in itertools.izip(tied_buffer, unrolled_array): yield self.delimiter.join([tied_line] + self._strings(scalars))
 
-    def _toline(self, scalars):
-        return self.delimiter.join(self._strings(scalars))
+    def _toline(self, scalars): return self.delimiter.join(self._strings(scalars))
 
     def dump(self, mask=None):
         """
         dump the data in the stream buffer to the output
         """
-        if mask is None:
-            self._dump()
-        else:
-            self._dump_with_mask(mask)
+        if mask is None: self._dump()
+        else: self._dump_with_mask(mask)
 
     def _dump(self):
         if self.binary:
             self._input_array.tofile(self.target)
         else:
-            for line in self._ascii_buffer:
-                print >> self.target, line
+            for line in self._ascii_buffer: print >> self.target, line
         self.target.flush()
 
     def _dump_with_mask(self, mask):
@@ -274,8 +257,7 @@ class stream(object):
             self._input_array[mask].tofile(self.target)
         else:
             for line, allowed in itertools.izip(self._ascii_buffer, mask):
-                if allowed:
-                    print >> self.target, line
+                if allowed: print >> self.target, line
         self.target.flush()
 
     def _warn(self, msg, verbose=True):
@@ -337,11 +319,9 @@ class stream(object):
             raise ValueError(msg)
 
     def _check_consistency_with_tied(self):
-        if not self.tied:
-            return
+        if not self.tied: return
         if not isinstance(self.tied, stream):
-            msg = "expected tied stream of type '{}', got '{}'" \
-                "".format(str(stream), repr(self.tied))
+            msg = "expected tied stream of type '{}', got '{}'".format(str(stream), repr(self.tied))
             raise TypeError(msg)
         if self.tied.binary != self.binary:
             msg = "expected tied stream to be {}, got {}" \
@@ -349,16 +329,14 @@ class stream(object):
                           "binary" if self.tied.binary else "ascii")
             raise ValueError(msg)
         if not self.binary and self.tied.delimiter != self.delimiter:
-            msg = "expected tied stream to have the same delimiter '{}', got '{}'" \
-                "".format(self.delimiter, self.tied.delimiter)
+            msg = "expected tied stream to have the same delimiter '{}', got '{}'".format(self.delimiter, self.tied.delimiter)
             raise ValueError(msg)
 
     def _input_dtype(self):
         if self.binary:
             input_dtype = structured_dtype(self.format)
             if len(self.fields) != len(input_dtype.names):
-                msg = "expected same number of fields and format types, got '{}' and '{}'" \
-                    "".format(','.join(self.fields), self.format)
+                msg = "expected same number of fields and format types, got '{}' and '{}'".format(','.join(self.fields), self.format)
                 raise ValueError(msg)
         else:
             type_of = self.struct.type_of_field.get
@@ -367,26 +345,20 @@ class stream(object):
         return input_dtype
 
     def _default_buffer_size(self):
-        if self.tied:
-            return self.tied.size
-        elif self.flush:
-            return 1
-        else:
-            return max(1, stream.buffer_size_in_bytes / self.input_dtype.itemsize)
+        if self.tied: return self.tied.size
+        elif self.flush: return 1
+        return max( 1, stream.buffer_size_in_bytes / self.input_dtype.itemsize ) # todo? too arbitrary for ascii?
 
     def _missing_fields(self):
         missing_fields = [field for field in self.struct.fields if field not in self.fields]
-        if not missing_fields:
-            return ()
+        if not missing_fields: return ()
         if self.verbose:
-            msg = "expected fields '{}' are not found in supplied fields '{}'" \
-                .format(','.join(missing_fields), ','.join(self.fields))
+            msg = "expected fields '{}' are not found in supplied fields '{}'".format(','.join(missing_fields), ','.join(self.fields))
             self._warn(msg)
         return tuple(missing_fields)
 
     def _missing_dtype(self):
-        if not self.missing_fields:
-            return
+        if not self.missing_fields: return
         n = len(self.input_dtype.names)
         missing_names = ['f{}'.format(n + i) for i in xrange(len(self.missing_fields))]
         type_of = self.struct.type_of_field.get
@@ -394,14 +366,11 @@ class stream(object):
         return np.dtype(zip(missing_names, missing_types))
 
     def _complete_dtype(self):
-        if self.missing_dtype:
-            return np.dtype(self.input_dtype.descr + self.missing_dtype.descr)
-        else:
-            return self.input_dtype
+        if self.missing_dtype: return np.dtype(self.input_dtype.descr + self.missing_dtype.descr)
+        else: return self.input_dtype
 
     def _default_values(self, default_values):
-        if not (self.missing_fields and default_values):
-            return
+        if not (self.missing_fields and default_values): return
         if self.full_xpath:
             default_fields_ = default_values.keys()
             default_values_ = default_values.copy()
@@ -427,8 +396,7 @@ class stream(object):
         return default_values_
 
     def _data_extraction_fields(self):
-        if self.fields == self.struct.fields:
-            return ()
+        if self.fields == self.struct.fields: return ()
         index_of = self.complete_fields.index
         return tuple('f{}'.format(index_of(field)) for field in self.struct.fields)
 
@@ -470,13 +438,9 @@ def numpy_scalar_to_string(scalar, precision=DEFAULT_PRECISION):
     >>> numpy_scalar_to_string(np.timedelta64(-123, 's'))
     '-123'
     """
-    if scalar.dtype.char in np.typecodes['AllInteger']:
-        return str(scalar)
-    elif scalar.dtype.char in np.typecodes['Float']:
-        return "{scalar:.{precision}g}".format(scalar=scalar, precision=precision)
-    elif scalar.dtype.char in np.typecodes['Datetime']:
-        return csv_time.from_numpy(scalar)
-    elif scalar.dtype.char in 'S':
-        return scalar
+    if scalar.dtype.char in np.typecodes['AllInteger']: return str(scalar)
+    elif scalar.dtype.char in np.typecodes['Float']: return "{scalar:.{precision}g}".format(scalar=scalar, precision=precision)
+    elif scalar.dtype.char in np.typecodes['Datetime']: return csv_time.from_numpy(scalar)
+    elif scalar.dtype.char in 'S': return scalar
     msg = "converting {} to string is not implemented".format(repr(scalar.dtype))
     raise NotImplementedError(msg)

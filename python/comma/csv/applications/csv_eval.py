@@ -560,8 +560,7 @@ def evaluate(stream):
             else:
                 stream.input.dump()
         input = stream.input.read()
-        if input is None:
-            break
+        if input is None: break
 
 def select(stream):
     input = None
