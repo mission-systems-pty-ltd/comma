@@ -1,0 +1,3 @@
+no_input_fields[0]="csv-eval 'a=0'"
+no_input_fields[1]="echo 1 | csv-eval 'a=0'"
+no_input_fields[2]="echo 1 | csv-to-bin ui | csv-eval 'a=0' --binary ui"

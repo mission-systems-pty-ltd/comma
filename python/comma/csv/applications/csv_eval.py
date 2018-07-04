@@ -155,7 +155,7 @@ def custom_formatwarning(msg, *args):
 
 
 def add_csv_options(parser):
-    comma.csv.add_options(parser) #comma.csv.add_options(parser, defaults={'fields': 'x,y,z'})
+    comma.csv.add_options(parser) # comma.csv.add_options(parser, defaults={'fields': 'x,y,z'})
     parser.add_argument(
         '--format',
         default='',
@@ -240,6 +240,7 @@ def get_args():
             parser.epilog += "\nfor more help run '%(prog)s -h -v'"
         parser.print_help()
         parser.exit(0)
+    if args.fields is None or args.fields == "": sys.exit( "csv-eval: please specify --fields" )
     return args
 
 

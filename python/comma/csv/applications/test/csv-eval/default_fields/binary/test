@@ -1,4 +1,0 @@
-#!/bin/bash
-
-csv-to-bin 3d | csv-eval --binary=3d 'a=x+y+z' | csv-from-bin 4d | name-value-from-csv x,y,z,a --line-number --prefix output | sed 's/"//g'
-echo "eps=1e-8"

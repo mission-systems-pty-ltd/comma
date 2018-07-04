@@ -1,9 +1,0 @@
-output[0]/x=1 +/- eps
-output[0]/y=2 +/- eps
-output[0]/z=3 +/- eps
-output[0]/a=6 +/- eps
-output[1]/x=4 +/- eps
-output[1]/y=5 +/- eps
-output[1]/z=6 +/- eps
-output[1]/a=15 +/- eps
-

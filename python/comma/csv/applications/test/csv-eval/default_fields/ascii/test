@@ -1,4 +1,0 @@
-#!/bin/bash
-
-csv-eval 'a=x+y+z' | name-value-from-csv x,y,z,a --line-number --prefix output | sed 's/"//g'
-echo "eps=1e-8"
