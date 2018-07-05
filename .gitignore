@@ -9,3 +9,5 @@ output
 stats
 stderr.log
 doc/generated
+tags
+compile_commands.json
