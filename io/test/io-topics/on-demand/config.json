@@ -14,8 +14,8 @@
         {
             "command": "head -10 | tail -5 | csv-paste line-number - | sed 's#^#output[#;s#,#]=\"#;s#$#\"#' ",
             "address": "tcp:localhost:12345",
-            "connect-attempts": 3,
-            "connect-period": 3
+            "connect_attempts": 3,
+            "connect_period": 3
         }
     }
 }
