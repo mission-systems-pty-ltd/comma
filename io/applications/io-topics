@@ -276,8 +276,8 @@ function log_command()
     local path
     [[ -z "$topic_path" ]] || path+="$topic_path/"
     path+="$options_log_dir/$topic"
-    [[ -z "$topic_restart" ]] || cmd="io_topics_log_run_forever $cmd"
-    mkdir -p $path || die "failed to make directory $path for topic $topic"
+    [[ -z "$topic_restart" ]] || cmd="io_topics_log_run_forever \"$cmd\""
+    (( "$options_dry_run" )) || mkdir -p $path || die "failed to make directory $path for topic $topic"
     cmd="( cd $path && $cmd )"
     echo "bash -c $cmd"
 }
