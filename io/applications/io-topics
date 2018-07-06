@@ -142,8 +142,8 @@ function cat_topic_fields()
 address
 binary
 command
-connect/attempts
-connect/period
+connect_attempts
+connect_period
 flush
 host
 port
@@ -157,6 +157,8 @@ function cat_topic_fields_help()
 address; if present, passed verbatim to io-publish, in this case port attribute ignored
 binary; if data is binary, the binary format of the data, overrides size
 command; command for the client to run
+connect_attempts; number of connect attemtps
+connect_period; time in seconds between connect attempts
 flush; flush output on each record, default: buffer output
 host; tcp host for publishing, unless address field is present
 port; tcp port for publishing, unless address field is present
@@ -170,8 +172,8 @@ function log_topic_fields()
 address
 binary
 command
-connect/attempts
-connect/period
+connect_attempts
+connect_period
 flush
 host
 index
@@ -190,6 +192,8 @@ function log_topic_fields_help()
 address; if present, passed verbatim to io-publish, in this case port attribute ignored
 binary; if data is binary, the binary format of the data, overrides size
 command; optional command for the logger to run instead of default logger
+connect_attempts; number of connect attemtps
+connect_period; time in seconds between connect attempts
 flush; flush output on each record, default: buffer output
 host; tcp host for publishing, unless address field is present
 index; optional command to generate index file, default: fixed-width binary index for each binary record, ascii: no index file
@@ -286,7 +290,7 @@ function topics_from_config() # quick and dirty
 {
     if [[ -n "$options_topics_from_all_configs" ]]; then egrep -e "/address=|/port=|/command=" <<< "$config" | cut -d= -f1 | sed -e 's#/address$##' -e 's#/port$##' -e 's#/command$##' | uniq; return; fi
     grep '=""' <<< "$master_config" | cut -d= -f1
-    for path in $( grep -v '=""' <<< "$master_config" | cut -d= -f1 ); do dirname $path; done | uniq
+    for path in $( grep -v '=""' <<< "$master_config" | cut -d= -f1 ); do dirname $path; done | uniq # todo: don't do it just through the dirname? join with operation fields and filter by them instead
 }
 
 function read_configs()
