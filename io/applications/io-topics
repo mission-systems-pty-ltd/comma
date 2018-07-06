@@ -142,6 +142,8 @@ function cat_topic_fields()
 address
 binary
 command
+connect/attempts
+connect/period
 flush
 host
 port
@@ -168,6 +170,8 @@ function log_topic_fields()
 address
 binary
 command
+connect/attempts
+connect/period
 flush
 host
 index
@@ -229,7 +233,9 @@ function cat_command()
     set_topic_address
     if [[ -n "$topic_on_demand" ]]; then on_demand="--on-demand"; else unset on_demand; fi
     if [[ -n "$topic_flush" ]]; then flush_option="--flush"; else unset flush_option; fi # todo! make flush default?!
-    local cmd="bash -c io-cat $topic_address $size_option $flush_option | $topic_command" # todo? comma_execute_and_wait?
+    if [[ -n "$topic_connect_attempts" ]]; then connect_attempts_option=$topic_connect_attempts; else unset connect_attempts_option; fi
+    if [[ -n "$topic_connect_period" ]]; then connect_period_option=$topic_connect_period; else unset connect_period_option; fi
+    local cmd="bash -c io-cat $topic_address $size_option $flush_option $connect_attempts_option $connect_period_option | $topic_command" # todo? comma_execute_and_wait?
     verbose "$cmd"
     echo "$cmd"
 }
@@ -256,7 +262,9 @@ function log_command()
         [[ -z "$topic_suffix" ]] || suffix_option="$topic_suffix"
         local period=$options_period
         [[ -z "$topic_period" ]] || period=$topic_period
-        cmd="io-cat $topic_address $flush_option | $topic_index | csv-split -t $period $size_option $suffix_option $flush_option"
+        if [[ -n "$topic_connect_attempts" ]]; then connect_attempts_option=$topic_connect_attempts; else unset connect_attempts_option; fi
+        if [[ -n "$topic_connect_period" ]]; then connect_period_option=$topic_connect_period; else unset connect_period_option; fi
+        cmd="io-cat $topic_address $flush_option $connect_attempts_option $connect_period_option | $topic_index | csv-split -t $period $size_option $suffix_option $flush_option"
     fi
     local path
     [[ -z "$topic_path" ]] || path+="$topic_path/"
