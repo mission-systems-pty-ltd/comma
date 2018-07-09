@@ -63,14 +63,14 @@ function test_connect_attempts_could_not_connect
 {
     function cannot_connect_exit_with_error()
     {
-        io-cat --connect-attempts 3 --connect-timeout 0.5 local:output/socket.0 local:output/socket.1 --verbose | eval "$( message_to_path_value "test_connect_attempts_could_not_connect[0]" )"
+        io-cat --connect-attempts 3 --connect-period 0.5 local:output/socket.0 local:output/socket.1 --verbose | eval "$( message_to_path_value "test_connect_attempts_could_not_connect[0]" )"
         comma_status_ok || status=1
         echo "test_connect_attempts_could_not_connect[0]/status=$status"
     }
     
     function connect_to_one_socket_fail_on_second_permissive_exit_with_success()
     {
-        local io_cat_command="bash -c io-cat --connect-attempts 5 --connect-timeout 0.5 local:output/socket.0 local:output/socket.1 --permissive --verbose | $( message_to_path_value "test_connect_attempts_could_not_connect[1]" )"
+        local io_cat_command="bash -c io-cat --connect-attempts 5 --connect-period 0.5 local:output/socket.0 local:output/socket.1 --permissive --verbose | $( message_to_path_value "test_connect_attempts_could_not_connect[1]" )"
         local socat_command_0="bash -c echo A | timeout -k 1 -s TERM 5 socat -u - unix-listen:output/socket.0"
         local status=0
         comma_execute_and_wait --group "$io_cat_command" "$socat_command_0"

@@ -78,7 +78,7 @@ void usage( bool verbose = false )
     std::cerr << std::endl;
     std::cerr << "connect options" << std::endl;
     std::cerr << "    --connect-max-attempts,--connect-attempts,--attempts,--max-attempts=<n>; default=1; number of attempts to reconnect or 'unlimited'" << std::endl;
-    std::cerr << "    --connect-timeout=<seconds>; default=1; how long to wait before the next connect attempt" << std::endl;
+    std::cerr << "    --connect-period=<seconds>; default=1; how long to wait before the next connect attempt" << std::endl;
     std::cerr << "    --permissive; run even if connection to some sources fails" << std::endl;
     std::cerr << std::endl;
     std::cerr << "supported address types: tcp, udp, local (unix) sockets, named pipes, files, zmq (todo)" << std::endl;
@@ -256,7 +256,7 @@ static stream* make_stream( const std::string& address, unsigned int size, bool 
 
 static bool verbose;
 static unsigned int connect_max_attempts;
-static boost::posix_time::time_duration connect_timeout;
+static boost::posix_time::time_duration connect_period;
 static bool permissive;
 
 static bool ready( const boost::ptr_vector< stream >& streams, comma::io::select& select, bool connected_all_we_could )
@@ -264,7 +264,7 @@ static bool ready( const boost::ptr_vector< stream >& streams, comma::io::select
     for( unsigned int i = 0; i < streams.size(); ++i ) { if( !streams[i].empty() ) { select.check(); return true; } }
     if( !select.read()().empty() ) { return select.wait( boost::posix_time::seconds( 1 ) ) > 0; }
     if( connected_all_we_could ) { return true; }
-    boost::this_thread::sleep( connect_timeout );
+    boost::this_thread::sleep( connect_period );
     return false;
 }
 
@@ -277,7 +277,7 @@ static bool try_connect( boost::ptr_vector< stream >& streams, comma::io::select
     if( connected_all_we_could ) { return connected_all_we_could; }
     boost::posix_time::ptime now = boost::posix_time::microsec_clock::universal_time();
     if( !next_connect_attempt_time.is_not_a_date_time() && now <= next_connect_attempt_time ) { return connected_all_we_could; }
-    next_connect_attempt_time = now + connect_timeout;
+    next_connect_attempt_time = now + connect_period;
     std::string what;
     for( unsigned int i = 0; i < streams.size(); ++i )
     {
@@ -320,8 +320,8 @@ int main( int argc, char** argv )
         bool exit_on_first_closed = options.exists( "--exit-on-first-closed,-e" );
         std::string connect_max_attempts_string = options.value< std::string >( "--connect-max-attempts,--connect-attempts,--attempts,--max-attempts", "1" );
         connect_max_attempts = connect_max_attempts_string == "unlimited" ? 0 : boost::lexical_cast< unsigned int >( connect_max_attempts_string );
-        double connect_timeout_seconds = options.value( "--connect-timeout", 1.0 );
-        connect_timeout = boost::posix_time::milliseconds( std::floor( connect_timeout_seconds * 1000 ) );
+        double connect_period_seconds = options.value( "--connect-period", 1.0 );
+        connect_period = boost::posix_time::milliseconds( std::floor( connect_period_seconds * 1000 ) );
         permissive = options.exists( "--permissive" );
         const std::vector< std::string >& unnamed = options.unnamed( "--permissive,--exit-on-first-closed,-e,--flush,--unbuffered,-u,--verbose,-v", "-.+" );
         #ifdef WIN32

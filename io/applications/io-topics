@@ -143,7 +143,7 @@ address
 binary
 command
 connect_attempts
-connect_timeout
+connect_period
 flush
 host
 port
@@ -158,7 +158,7 @@ address; if present, passed verbatim to io-publish, in this case port attribute 
 binary; if data is binary, the binary format of the data, overrides size
 command; command for the client to run
 connect_attempts; number of connect attemtps
-connect_timeout; time in seconds between connect attempts
+connect_period; time in seconds between connect attempts
 flush; flush output on each record, default: buffer output
 host; tcp host for publishing, unless address field is present
 port; tcp port for publishing, unless address field is present
@@ -173,7 +173,7 @@ address
 binary
 command
 connect_attempts
-connect_timeout
+connect_period
 flush
 host
 index
@@ -193,7 +193,7 @@ address; if present, passed verbatim to io-publish, in this case port attribute 
 binary; if data is binary, the binary format of the data, overrides size
 command; optional command for the logger to run instead of default logger
 connect_attempts; number of connect attemtps
-connect_timeout; time in seconds between connect attempts
+connect_period; time in seconds between connect attempts
 flush; flush output on each record, default: buffer output
 host; tcp host for publishing, unless address field is present
 index; optional command to generate index file, default: fixed-width binary index for each binary record, ascii: no index file
@@ -238,9 +238,9 @@ function cat_command()
     if [[ -n "$topic_on_demand" ]]; then on_demand="--on-demand"; else unset on_demand; fi
     if [[ -n "$topic_flush" ]]; then flush_option="--flush"; else unset flush_option; fi # todo! make flush default?!
     if [[ -n "$topic_connect_attempts" ]]; then connect_attempts_option="--connect-attempts=$topic_connect_attempts"; else unset connect_attempts_option; fi
-    if [[ -n "$topic_connect_timeout" ]]; then connect_timeout_option="--connect-timeout=$topic_connect_timeout"; else unset connect_timeout_option; fi
+    if [[ -n "$topic_connect_period" ]]; then connect_period_option="--connect-period=$topic_connect_period"; else unset connect_period_option; fi
     if [[ -n "$options_verbose" ]]; then verbose_option="--verbose"; else unset verbose_option; fi
-    local cmd="bash -c io-cat $topic_address $size_option $flush_option $connect_attempts_option $connect_timeout_option $verbose_option | $topic_command" # todo? comma_execute_and_wait?
+    local cmd="bash -c io-cat $topic_address $size_option $flush_option $connect_attempts_option $connect_period_option $verbose_option | $topic_command" # todo? comma_execute_and_wait?
     verbose "$cmd"
     echo "$cmd"
 }
@@ -268,10 +268,10 @@ function log_command()
         local period=$options_period
         [[ -z "$topic_period" ]] || period=$topic_period
         if [[ -n "$topic_connect_attempts" ]]; then connect_attempts_option="--connect-attempts=$topic_connect_attempts"; else unset connect_attempts_option; fi
-        if [[ -n "$topic_connect_timeout" ]]; then connect_timeout_option="--connect-timeout=$topic_connect_timeout"; else unset connect_timeout_option; fi
+        if [[ -n "$topic_connect_period" ]]; then connect_period_option="--connect-period=$topic_connect_period"; else unset connect_period_option; fi
         if [[ -n "$options_verbose" ]]; then verbose_option="--verbose"; else unset verbose_option; fi
         #if [[ -n "$options_verbose" ]]; then say "--> verbose set"; else say "--> verbose not set"; fi
-        cmd="io-cat $topic_address $flush_option $connect_attempts_option $connect_timeout_option $verbose_option | $topic_index | csv-split -t $period $size_option $suffix_option $flush_option"
+        cmd="io-cat $topic_address $flush_option $connect_attempts_option $connect_period_option $verbose_option | $topic_index | csv-split -t $period $size_option $suffix_option $flush_option"
     fi
     local path
     [[ -z "$topic_path" ]] || path+="$topic_path/"
