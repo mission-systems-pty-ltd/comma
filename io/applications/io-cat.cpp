@@ -78,7 +78,7 @@ void usage( bool verbose = false )
     std::cerr << std::endl;
     std::cerr << "connect options" << std::endl;
     std::cerr << "    --connect-max-attempts,--connect-attempts,--attempts,--max-attempts=<n>; default=1; number of attempts to reconnect or 'unlimited'" << std::endl;
-    std::cerr << "    --connect-period=<seconds>; default=1; how long to wait before the next connect attempt" << std::endl;
+    std::cerr << "    --connect-timeout=<seconds>; default=1; how long to wait before the next connect attempt" << std::endl;
     std::cerr << "    --permissive; run even if connection to some sources fails" << std::endl;
     std::cerr << std::endl;
     std::cerr << "supported address types: tcp, udp, local (unix) sockets, named pipes, files, zmq (todo)" << std::endl;
