@@ -39,9 +39,7 @@
 #include <sys/resource.h>
 #endif
 
-#include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/thread/thread_time.hpp>
 #include "../../../io/file_descriptor.h"
 #include "../../../base/exception.h"
 #include "split.h"
@@ -53,7 +51,7 @@ split< T >::split( boost::optional< boost::posix_time::time_duration > period
             , const std::string& suffix
             , const comma::csv::options& csv
             , bool pass )
-    : ofstream_( boost::bind( &split< T >::ofstream_by_time_, this ) )
+    : ofstream_( std::bind( &split< T >::ofstream_by_time_, this ) )
     , period_( period )
     , suffix_( suffix )
     , pass_ ( pass )
@@ -64,8 +62,8 @@ split< T >::split( boost::optional< boost::posix_time::time_duration > period
     if( csv.fields.empty() ) { return; }
     if( csv.binary() ) { binary_.reset( new comma::csv::binary< input >( csv ) ); }
     else { ascii_.reset( new comma::csv::ascii< input >( csv ) ); }
-    if( csv.has_field( "block" ) ) { ofstream_ = boost::bind( &split< T >::ofstream_by_block_, this ); }
-    else if( csv.has_field( "id" ) ) { ofstream_ = boost::bind( &split< T >::ofstream_by_id_, this ); }
+    if( csv.has_field( "block" ) ) { ofstream_ = std::bind( &split< T >::ofstream_by_block_, this ); }
+    else if( csv.has_field( "id" ) ) { ofstream_ = std::bind( &split< T >::ofstream_by_id_, this ); }
 }
 
 //to-do
@@ -85,16 +83,31 @@ split< T >::split( boost::optional< boost::posix_time::time_duration > period
             auto key_pos = si.find_first_of( ':' );
             if( std::string::npos == key_pos ) { COMMA_THROW( comma::exception, "please specify id in output streams in format <id>:<stream>, got: " << si ); }
 
-            auto key = si.substr( 0, key_pos );
-            auto val = si.substr( key_pos + 1 );
+            auto const keys = comma::split( si.substr( 0, key_pos ), ',' );
+            auto const address = si.substr( key_pos + 1 );
+            auto publisher = std::make_shared< comma::io::publisher >( address , csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii , false , csv.flush ); 
+
+            for( auto const& ki : keys )
+            {
+                if( "..." != ki )
+                {
+                    t->insert( std::make_pair( boost::lexical_cast< T >( ki ), publisher ) );
+                }
+                else
+                {
+                    if( default_publisher_ ) { COMMA_THROW( comma::exception, "dont specify more than one '...' publisher stream" ); }
+                    default_publisher_ = publisher;
+                    break;
+                }
+            }
  
-            t->insert( std::make_pair( boost::lexical_cast< T >( si.substr( 0, key_pos ) )
-                        , boost::shared_ptr< comma::io::publisher >( new comma::io::publisher( si.substr( key_pos+1 )
-                                , csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii
-                                , false
-                                , csv.flush ) ) ) );
+            //t->insert( std::make_pair( boost::lexical_cast< T >( si.substr( 0, key_pos ) )
+            //            , std::shared_ptr< comma::io::publisher >( new comma::io::publisher( si.substr( key_pos+1 )
+            //                    , csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii
+            //                    , false
+            //                    , csv.flush ) ) ) );
         }
-        acceptor_thread_.reset( new boost::thread( boost::bind( &split< T >::accept_, boost::ref( *this ))));
+        acceptor_thread_ = std::thread( std::bind( &split< T >::accept_, std::ref( *this )));
     }
 }
 
@@ -102,9 +115,9 @@ template < typename T >
 split< T >::~split()
 {
     is_shutdown_ = true;
-    if( acceptor_thread_ )
+    if( acceptor_thread_.joinable() )
     {
-        acceptor_thread_->join();
+        acceptor_thread_.join();
         transaction t( publishers_ );
         for( auto& ii : *t ) { ii.second->close(); } 
     }
@@ -117,13 +130,14 @@ void split< T >::accept_()
     {
         transaction t( publishers_ );
         for( auto& ii : *t ) { if( ii.second->acceptor_file_descriptor() != comma::io::invalid_file_descriptor ) { select.read().add( ii.second->acceptor_file_descriptor() ); } } 
+        if( default_publisher_ ) { if( default_publisher_->acceptor_file_descriptor() != comma::io::invalid_file_descriptor ) { select.read().add( default_publisher_->acceptor_file_descriptor() ); } }
     }
     while( !is_shutdown_ )
     {
         select.wait( boost::posix_time::millisec( 100 ) ); // arbitrary timeout
         transaction t( publishers_ );
-        for( auto& ii : *t ) { if( select.read().ready( ii.second->acceptor_file_descriptor() ) ) {  ii.second->accept(); }
-        }
+        for( auto& ii : *t ) { if( select.read().ready( ii.second->acceptor_file_descriptor() ) ) { ii.second->accept(); } }
+        if( default_publisher_ ) { if( select.read().ready( default_publisher_->acceptor_file_descriptor() ) ) { default_publisher_->accept(); } }
     }
 }
 
@@ -133,10 +147,12 @@ bool split< T >::published_on_stream( const char* data, unsigned int size )
 {
     transaction t( publishers_ );
     if( t->empty() ) { return false; }
+
     auto iter = t->find( current_.id );
-    if( t->end() == iter ) { return false; }
-    iter->second->write( data, size, false );
-    return true;
+    if( t->end() != iter ) { iter->second->write( data, size, false ); return true; }
+    if( default_publisher_ ) { default_publisher_->write( data, size, false ); return true; }
+
+    return false;
 }
 
 template < typename T >
@@ -227,7 +243,7 @@ std::ofstream& split< T >::ofstream_by_id_()
         if( seen_ids_.find( current_.id ) == seen_ids_.end() ) { seen_ids_.insert( current_.id ); }
         else { mode |= std::ofstream::app; }
         std::string name = make_filename_from_id( current_.id, suffix_);
-        boost::shared_ptr< std::ofstream > stmp( new std::ofstream( name.c_str(), mode ) );
+        std::shared_ptr< std::ofstream > stmp( new std::ofstream( name.c_str(), mode ) );
         it = files_.insert( std::make_pair( current_.id, stmp ) ).first;
     }
     return *it->second;
