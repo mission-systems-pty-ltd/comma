@@ -42,10 +42,13 @@
 #include <boost/static_assert.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
+#include <boost/thread.hpp>
 #include "../../../base/types.h"
 #include "../../../csv/ascii.h"
 #include "../../../csv/binary.h"
 #include "../../../visiting/traits.h"
+#include "../../../io/publisher.h"
+#include "../../../sync/synchronized.h"
 
 namespace comma { namespace csv { namespace applications {
 
@@ -85,6 +88,10 @@ template < typename T > struct traits
 {
     typedef boost::unordered_map< T, boost::shared_ptr< std::ofstream > > map;
     typedef boost::unordered_set< T > set;
+
+    //to-do
+    using publisher_map = comma::synchronized< boost::unordered_map< T, boost::shared_ptr< comma::io::publisher > > >;
+    using transaction = typename publisher_map::scoped_transaction;
 };
 
 template <> struct traits< boost::posix_time::ptime >
@@ -102,6 +109,10 @@ template <> struct traits< boost::posix_time::ptime >
 
     typedef boost::unordered_map< boost::posix_time::ptime, boost::shared_ptr< std::ofstream >, hash > map;
     typedef boost::unordered_set< boost::posix_time::ptime, hash > set;
+
+    //to-do
+    using publisher_map = comma::synchronized< boost::unordered_map< boost::posix_time::ptime, boost::shared_ptr< comma::io::publisher >, hash > >;
+    using transaction = publisher_map::scoped_transaction;
 };
 
 /// split data to files by time
@@ -116,8 +127,17 @@ class split
              , const std::string& suffix
              , const comma::csv::options& csv
              , bool passthrough );
+
         void write( const char* data, unsigned int size );
-        void write( const std::string& line );
+        void write( std::string line );
+
+        //to-do
+        split( boost::optional< boost::posix_time::time_duration > period
+             , const std::string& suffix
+             , const comma::csv::options& csv
+             , const std::vector< std::string >& streams
+             , bool passthrough );
+        ~split();
 
     private:
         std::ofstream& ofstream_by_time_();
@@ -125,6 +145,7 @@ class split
         std::ofstream& ofstream_by_id_();
         void update_( const char* data, unsigned int size );
         void update_( const std::string& line );
+        void accept_();
 
         boost::function< std::ofstream&() > ofstream_;
         boost::scoped_ptr< comma::csv::ascii< input > > ascii_;
@@ -141,6 +162,16 @@ class split
         ids_type_ seen_ids_;
         bool pass_;
         bool flush_;
+
+        //to-do
+        bool published_on_stream( const char* data, unsigned int size );
+
+        using publishers = typename traits< T >::publisher_map;
+        using transaction = typename traits< T >::transaction;
+
+        publishers publishers_;
+        boost::scoped_ptr< boost::thread > acceptor_thread_; //to-do
+        bool is_shutdown_;
 };
 
 } } } // namespace comma { namespace csv { namespace applications {

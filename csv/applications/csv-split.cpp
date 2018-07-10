@@ -44,6 +44,7 @@
 #include "split/split.h"
 
 comma::csv::options csv;
+std::vector< std::string > streams;
 boost::optional< boost::posix_time::time_duration > duration;
 std::string suffix;
 unsigned int size = 0;
@@ -52,7 +53,7 @@ bool passthrough;
 template < typename T >
 void run()
 {
-    comma::csv::applications::split< T > split( duration, suffix, csv, passthrough );
+    comma::csv::applications::split< T > split( duration, suffix, csv, streams, passthrough );
     if( size == 0 )
     {
         std::string line;
@@ -100,8 +101,27 @@ int main( int argc, char** argv )
         if ( vm.count( "help" ) || vm.count( "long-help" ) )
         {
             std::cerr << std::endl;
-            std::cerr << "read from stdin by packet or by line and split the data into files, named by field value or time (if split by time)" << std::endl;
-            std::cerr << "usage: csv-split [options]" << std::endl;
+            std::cerr << "read from stdin by packet or by line and split into files named by field value or time (if split by time)." << std::endl;
+            std::cerr << "if splitting by id, subset of the resulting sections can be output to streams" << std::endl;
+            std::cerr << std::endl;
+            std::cerr << "usage: csv-split [options] [outputs]*" << std::endl;
+            std::cerr << std::endl;
+            std::cerr << "use cases" << std::endl;
+            std::cerr << "    split by id field, output to files" << std::endl;
+            std::cerr << "        for each id value, output records with this id to a separate file, e.g. 0.csv, 1.csv, etc" << std::endl;
+            std::cerr << "        example: ( echo 0,a; echo 1,b; echo 0,c; echo 2,d ) | csv-split --fields id" << std::endl;
+            std::cerr << std::endl;
+            std::cerr << "    split by block field, output to files" << std::endl;
+            std::cerr << "        output records with this block to a separate file, on change of block, open a new file, e.g. 0.csv, 1.csv, etc" << std::endl;
+            std::cerr << "        example: ( echo 0,a; echo 1,b; echo 1,c; echo 2,d ) | csv-split --fields block" << std::endl;
+            std::cerr << std::endl;
+            std::cerr << "    split by t field, output to files" << std::endl;
+            std::cerr << "        separate records into different time periods, outputting in separate files" << std::endl;
+            std::cerr << "        example: ( echo 20170101T000001,a; echo 20170101T000003,b; echo 20170101T000007,c ) | csv-split --fields=t --period=4" << std::endl;
+            std::cerr << std::endl;
+            std::cerr << "    split by id field, output to streams" << std::endl;
+            std::cerr << "        output records with the given ids to the corresponding streams, while outputing the rest into files" << std::endl;
+            std::cerr << "        example: ( echo 0,a; echo 1,b; echo 0,c; echo 2,d ) | csv-split --fields id \"0:tcp:5999\" \"1:local:/tmp/named_fifo\"" << std::endl;
             std::cerr << std::endl;
             std::cerr << description << std::endl;
             std::cerr << std::endl;
@@ -110,6 +130,14 @@ int main( int argc, char** argv )
             std::cerr << "    id: split by id (same as block, except does not have to be contiguous by the price of worse performance)" << std::endl;
             std::cerr << "    t: if present, use timestamp from the packet; if absent, use system time" << std::endl;
             std::cerr << std::endl;
+	    std::cerr << "outputs: <key>:<stream>; to send records with id=<key> to this stream" << std::endl;
+            std::cerr << "    streams:" << std::endl;
+	    std::cerr << "        tcp:<port>: e.g. tcp:1234" << std::endl;
+	    std::cerr << "        udp:<port>: e.g. udp:1234 (todo)" << std::endl;
+	    std::cerr << "        local:<name>: linux/unix local server socket e.g. local:./tmp/my_socket" << std::endl;
+	    std::cerr << "        <named pipe name>: named pipe, which will be re-opened, if client reconnects" << std::endl;
+	    std::cerr << "        <filename>: a regular file" << std::endl;
+	    std::cerr << std::endl;
             std::cerr << comma::contact_info << std::endl;
             std::cerr << std::endl;
             return 1;
@@ -124,6 +152,10 @@ int main( int argc, char** argv )
         if( period > 0 ) { duration = boost::posix_time::microseconds( period * 1e6 ); }
         if( extension.empty() ) { suffix = csv.binary() || size > 0 ? ".bin" : ".csv"; }
         else { suffix += "."; suffix += extension; }
+
+        streams = boost::program_options::collect_unrecognized( parsed.options, boost::program_options::include_positional );
+        if( !streams.empty() && ( csv.has_field( "block" ) || id_is_time ) ) { std::cerr << "publisher streams are not compatible with splitting by block or timestamp." << std::endl; return 1; }
+
         if( id_is_string ) { run< std::string >(); }
         else if( id_is_time ) { run< boost::posix_time::ptime >(); }
         else { run< comma::uint32 >(); }

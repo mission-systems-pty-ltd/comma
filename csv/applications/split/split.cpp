@@ -42,6 +42,7 @@
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/thread/thread_time.hpp>
+#include "../../../io/file_descriptor.h"
 #include "../../../base/exception.h"
 #include "split.h"
 
@@ -57,6 +58,7 @@ split< T >::split( boost::optional< boost::posix_time::time_duration > period
     , suffix_( suffix )
     , pass_ ( pass )
     , flush_( csv.flush )
+    , is_shutdown_( false )
 {
     if( ( csv.has_field( "t" ) || csv.fields.empty() ) && !period ) { COMMA_THROW( comma::exception, "please specify --period" ); }
     if( csv.fields.empty() ) { return; }
@@ -66,28 +68,106 @@ split< T >::split( boost::optional< boost::posix_time::time_duration > period
     else if( csv.has_field( "id" ) ) { ofstream_ = boost::bind( &split< T >::ofstream_by_id_, this ); }
 }
 
+//to-do
+template < typename T >
+split< T >::split( boost::optional< boost::posix_time::time_duration > period
+            , const std::string& suffix
+            , const comma::csv::options& csv
+            , const std::vector< std::string >& streams //to-do
+            , bool pass )
+    : split( period, suffix, csv, pass )
+{
+    transaction t( publishers_ );
+    if( 0 < streams.size() )
+    {
+        for( auto const& si : streams )
+        {
+            auto key_pos = si.find_first_of( ':' );
+            if( std::string::npos == key_pos ) { COMMA_THROW( comma::exception, "please specify id in output streams in format <id>:<stream>, got: " << si ); }
+
+            auto key = si.substr( 0, key_pos );
+            auto val = si.substr( key_pos + 1 );
+ 
+            t->insert( std::make_pair( boost::lexical_cast< T >( si.substr( 0, key_pos ) )
+                        , boost::shared_ptr< comma::io::publisher >( new comma::io::publisher( si.substr( key_pos+1 )
+                                , csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii
+                                , false
+                                , csv.flush ) ) ) );
+        }
+        acceptor_thread_.reset( new boost::thread( boost::bind( &split< T >::accept_, boost::ref( *this ))));
+    }
+}
+
+template < typename T >
+split< T >::~split()
+{
+    is_shutdown_ = true;
+    if( acceptor_thread_ )
+    {
+        acceptor_thread_->join();
+        transaction t( publishers_ );
+        for( auto& ii : *t ) { ii.second->close(); } 
+    }
+}
+
+template < typename T >
+void split< T >::accept_()
+{
+    comma::io::select select;
+    {
+        transaction t( publishers_ );
+        for( auto& ii : *t ) { if( ii.second->acceptor_file_descriptor() != comma::io::invalid_file_descriptor ) { select.read().add( ii.second->acceptor_file_descriptor() ); } } 
+    }
+    while( !is_shutdown_ )
+    {
+        select.wait( boost::posix_time::millisec( 100 ) ); // arbitrary timeout
+        transaction t( publishers_ );
+        for( auto& ii : *t ) { if( select.read().ready( ii.second->acceptor_file_descriptor() ) ) {  ii.second->accept(); }
+        }
+    }
+}
+
+
+template < typename T >
+bool split< T >::published_on_stream( const char* data, unsigned int size )
+{
+    transaction t( publishers_ );
+    if( t->empty() ) { return false; }
+    auto iter = t->find( current_.id );
+    if( t->end() == iter ) { return false; }
+    iter->second->write( data, size, false );
+    return true;
+}
+
 template < typename T >
 void split< T >::write( const char* data, unsigned int size )
 {
     mode_ = std::ofstream::out | std::ofstream::binary;
     if( binary_ ) { binary_->get( current_, data ); }
     else { current_.timestamp = boost::get_system_time(); }
-    ofstream_().write( data, size );
-    if( flush_ ) { ofstream_().flush(); }
+    if( !published_on_stream( data, size ) )
+    {
+        ofstream_().write( data, size );
+        if( flush_ ) { ofstream_().flush(); }
+    }
     if ( pass_ ) { std::cout.write( data, size ); std::cout.flush(); }
 }
 
 template < typename T >
-void split< T >::write ( const std::string& line )
+void split< T >::write ( std::string line )
 {
     mode_ = std::ofstream::out; // quick and dirty
     if( ascii_ ) { ascii_->get( current_, line ); }
     else { current_.timestamp = boost::get_system_time(); }
-    std::ofstream& ofs = ofstream_();
-    ofs.write( &line[0], line.size() );
-    ofs.put( '\n' );
-    if( flush_ ) { ofs.flush(); }
-    if ( pass_ ) { std::cout.write( &line[0], line.size() ); std::cout.put('\n'); std::cout.flush(); }
+    line += '\n';
+    if( !published_on_stream( &line[0], line.size()) )
+    {
+        std::ofstream& ofs = ofstream_();
+        ofs.write( &line[0], line.size() );
+        //ofs.put( '\n' );
+        if( flush_ ) { ofs.flush(); }
+    }
+    if ( pass_ ) { std::cout.write( &line[0], line.size() ); /*std::cout.put('\n');*/ std::cout.flush(); }
 }
 
 template < typename T >
