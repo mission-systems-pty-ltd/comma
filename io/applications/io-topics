@@ -142,6 +142,8 @@ function cat_topic_fields()
 address
 binary
 command
+connect_attempts
+connect_period
 flush
 host
 port
@@ -155,6 +157,8 @@ function cat_topic_fields_help()
 address; if present, passed verbatim to io-publish, in this case port attribute ignored
 binary; if data is binary, the binary format of the data, overrides size
 command; command for the client to run
+connect_attempts; number of connect attemtps
+connect_period; time in seconds between connect attempts
 flush; flush output on each record, default: buffer output
 host; tcp host for publishing, unless address field is present
 port; tcp port for publishing, unless address field is present
@@ -168,6 +172,8 @@ function log_topic_fields()
 address
 binary
 command
+connect_attempts
+connect_period
 flush
 host
 index
@@ -186,6 +192,8 @@ function log_topic_fields_help()
 address; if present, passed verbatim to io-publish, in this case port attribute ignored
 binary; if data is binary, the binary format of the data, overrides size
 command; optional command for the logger to run instead of default logger
+connect_attempts; number of connect attemtps
+connect_period; time in seconds between connect attempts
 flush; flush output on each record, default: buffer output
 host; tcp host for publishing, unless address field is present
 index; optional command to generate index file, default: fixed-width binary index for each binary record, ascii: no index file
@@ -229,7 +237,10 @@ function cat_command()
     set_topic_address
     if [[ -n "$topic_on_demand" ]]; then on_demand="--on-demand"; else unset on_demand; fi
     if [[ -n "$topic_flush" ]]; then flush_option="--flush"; else unset flush_option; fi # todo! make flush default?!
-    local cmd="bash -c io-cat $topic_address $size_option $flush_option | $topic_command" # todo? comma_execute_and_wait?
+    if [[ -n "$topic_connect_attempts" ]]; then connect_attempts_option="--connect-attempts=$topic_connect_attempts"; else unset connect_attempts_option; fi
+    if [[ -n "$topic_connect_period" ]]; then connect_period_option="--connect-period=$topic_connect_period"; else unset connect_period_option; fi
+    if [[ -n "$options_verbose" ]]; then verbose_option="--verbose"; else unset verbose_option; fi
+    local cmd="bash -c io-cat $topic_address $size_option $flush_option $connect_attempts_option $connect_period_option $verbose_option | $topic_command" # todo? comma_execute_and_wait?
     verbose "$cmd"
     echo "$cmd"
 }
@@ -256,13 +267,17 @@ function log_command()
         [[ -z "$topic_suffix" ]] || suffix_option="$topic_suffix"
         local period=$options_period
         [[ -z "$topic_period" ]] || period=$topic_period
-        cmd="io-cat $topic_address $flush_option | $topic_index | csv-split -t $period $size_option $suffix_option $flush_option"
+        if [[ -n "$topic_connect_attempts" ]]; then connect_attempts_option="--connect-attempts=$topic_connect_attempts"; else unset connect_attempts_option; fi
+        if [[ -n "$topic_connect_period" ]]; then connect_period_option="--connect-period=$topic_connect_period"; else unset connect_period_option; fi
+        if [[ -n "$options_verbose" ]]; then verbose_option="--verbose"; else unset verbose_option; fi
+        #if [[ -n "$options_verbose" ]]; then say "--> verbose set"; else say "--> verbose not set"; fi
+        cmd="io-cat $topic_address $flush_option $connect_attempts_option $connect_period_option $verbose_option | $topic_index | csv-split -t $period $size_option $suffix_option $flush_option"
     fi
     local path
     [[ -z "$topic_path" ]] || path+="$topic_path/"
     path+="$options_log_dir/$topic"
-    [[ -z "$topic_restart" ]] || cmd="io_topics_log_run_forever $cmd"
-    mkdir -p $path || die "failed to make directory $path for topic $topic"
+    [[ -z "$topic_restart" ]] || cmd="io_topics_log_run_forever \"$cmd\""
+    (( "$options_dry_run" )) || mkdir -p $path || die "failed to make directory $path for topic $topic"
     cmd="( cd $path && $cmd )"
     echo "bash -c $cmd"
 }
@@ -278,7 +293,7 @@ function topics_from_config() # quick and dirty
 {
     if [[ -n "$options_topics_from_all_configs" ]]; then egrep -e "/address=|/port=|/command=" <<< "$config" | cut -d= -f1 | sed -e 's#/address$##' -e 's#/port$##' -e 's#/command$##' | uniq; return; fi
     grep '=""' <<< "$master_config" | cut -d= -f1
-    for path in $( grep -v '=""' <<< "$master_config" | cut -d= -f1 ); do dirname $path; done | uniq
+    for path in $( grep -v '=""' <<< "$master_config" | cut -d= -f1 ); do dirname $path; done | uniq # todo: don't do it just through the dirname? join with operation fields and filter by them instead
 }
 
 function read_configs()
@@ -310,10 +325,8 @@ if [[ $operation == "list" ]]; then for topic in ${topics[@]}; do echo $topic; d
 commands=()
 for topic in ${topics[@]}; do
     eval "$( ${operation}_topic_fields | comma_path_mangle | sed 's#^#unset topic_#' )" # todo: quick and dirty, watch performance
-    eval "$( grep $topic <<< "$config" | sed "s#^$topic/#topic/#" | comma_path_value_mangle )"
-
-    topic_command="$( grep ^$topic/command <<< "$config" | cut -d= -f1 --complement | sed -e 's#^"##' -e 's#"$##'  )"
-
+    eval "$( grep $topic <<< "$config" | grep -v "^$topic/command" | sed "s#^$topic/#topic/#" | comma_path_value_mangle )"
+    topic_command="$( grep ^$topic/command <<< "$master_config" | cut -d= -f1 --complement | sed -e 's#^"##' -e 's#"$##'  )"
     #[[ -n "$topic_command" ]] || die "command not specified for topic '$topic' in files ${configs[@]}"
     if [[ -n "$topic_binary" ]]; then size_option="--size $( csv-size $topic_binary )"
     elif [[ -n "$topic_size" ]]; then size_option="--size $topic_size"
