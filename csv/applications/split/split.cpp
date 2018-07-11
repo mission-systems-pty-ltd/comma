@@ -69,43 +69,46 @@ split< T >::split( boost::optional< boost::posix_time::time_duration > period
 //to-do
 template < typename T >
 split< T >::split( boost::optional< boost::posix_time::time_duration > period
-            , const std::string& suffix
-            , const comma::csv::options& csv
-            , const std::vector< std::string >& streams //to-do
-            , bool pass )
+                 , const std::string& suffix
+                 , const comma::csv::options& csv
+                 , const std::vector< std::string >& streams //to-do
+                 , bool pass )
     : split( period, suffix, csv, pass )
 {
-    transaction t( publishers_ );
     if( 0 < streams.size() )
     {
+        auto const io_mode = csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii;
+
         for( auto const& si : streams )
         {
-            auto key_pos = si.find_first_of( ':' );
-            if( std::string::npos == key_pos ) { COMMA_THROW( comma::exception, "please specify id in output streams in format <id>:<stream>, got: " << si ); }
-
-            auto const keys = comma::split( si.substr( 0, key_pos ), ',' );
-            auto const address = si.substr( key_pos + 1 );
-            auto publisher = std::make_shared< comma::io::publisher >( address , csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii , false , csv.flush ); 
-
-            for( auto const& ki : keys )
+            auto const stream_values = comma::split( si, ';' );
+            if( 2 > stream_values.size() || stream_values[ 0 ].empty() || stream_values[ 1 ].empty() )
             {
-                if( "..." != ki )
+                COMMA_THROW( comma::exception, "please specify <id> and output <stream> in format <id>;<stream>, got: " << si );
+            }
+
+            transaction t( publishers_ );
+            std::unique_ptr< comma::io::publisher > publisher( new comma::io::publisher( stream_values[1], io_mode, false, csv.flush ) );
+
+            if( "..." == stream_values[0] )
+            {
+                if( default_publisher_ ) { COMMA_THROW( comma::exception, "multiple output streams have the id: ..." ); }
+                default_publisher_ = std::move( publisher );
+            }
+            else
+            {
+                auto publisher_pos = t->insert( std::move( publisher ) );
+                auto const keys = comma::split( stream_values[0], ',' );
+
+                for( auto const& ki : keys )
                 {
-                    t->insert( std::make_pair( boost::lexical_cast< T >( ki ), publisher ) );
-                }
-                else
-                {
-                    if( default_publisher_ ) { COMMA_THROW( comma::exception, "dont specify more than one '...' publisher stream" ); }
-                    default_publisher_ = publisher;
-                    break;
+                    auto const kii = boost::lexical_cast< T >( ki );
+                    if( seen_ids_.end() !=  seen_ids_.find( kii ) ) { COMMA_THROW( comma::exception, "multiple output streams have the id: " << ki ); }
+                    seen_ids_.insert( kii );
+
+                    mapped_publishers_.insert( std::make_pair( kii, publisher_pos.first->get() ) );
                 }
             }
- 
-            //t->insert( std::make_pair( boost::lexical_cast< T >( si.substr( 0, key_pos ) )
-            //            , std::shared_ptr< comma::io::publisher >( new comma::io::publisher( si.substr( key_pos+1 )
-            //                    , csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii
-            //                    , false
-            //                    , csv.flush ) ) ) );
         }
         acceptor_thread_ = std::thread( std::bind( &split< T >::accept_, std::ref( *this )));
     }
@@ -119,7 +122,7 @@ split< T >::~split()
     {
         acceptor_thread_.join();
         transaction t( publishers_ );
-        for( auto& ii : *t ) { ii.second->close(); } 
+        for( auto& ii : *t ) { ii->close(); } 
     }
 }
 
@@ -129,14 +132,14 @@ void split< T >::accept_()
     comma::io::select select;
     {
         transaction t( publishers_ );
-        for( auto& ii : *t ) { if( ii.second->acceptor_file_descriptor() != comma::io::invalid_file_descriptor ) { select.read().add( ii.second->acceptor_file_descriptor() ); } } 
+        for( auto& ii : *t ) { if( ii->acceptor_file_descriptor() != comma::io::invalid_file_descriptor ) { select.read().add( ii->acceptor_file_descriptor() ); } } 
         if( default_publisher_ ) { if( default_publisher_->acceptor_file_descriptor() != comma::io::invalid_file_descriptor ) { select.read().add( default_publisher_->acceptor_file_descriptor() ); } }
     }
     while( !is_shutdown_ )
     {
         select.wait( boost::posix_time::millisec( 100 ) ); // arbitrary timeout
         transaction t( publishers_ );
-        for( auto& ii : *t ) { if( select.read().ready( ii.second->acceptor_file_descriptor() ) ) { ii.second->accept(); } }
+        for( auto& ii : *t ) { if( select.read().ready( ii->acceptor_file_descriptor() ) ) { ii->accept(); } }
         if( default_publisher_ ) { if( select.read().ready( default_publisher_->acceptor_file_descriptor() ) ) { default_publisher_->accept(); } }
     }
 }
@@ -146,13 +149,12 @@ template < typename T >
 bool split< T >::published_on_stream( const char* data, unsigned int size )
 {
     transaction t( publishers_ );
-    if( t->empty() ) { return false; }
+    if( t->empty() && !default_publisher_ ) { return false; }
 
-    auto iter = t->find( current_.id );
-    if( t->end() != iter ) { iter->second->write( data, size, false ); return true; }
+    auto iter = mapped_publishers_.find( current_.id );
+    if( mapped_publishers_.end() != iter ) { iter->second->write( data, size, false ); return true; }
     if( default_publisher_ ) { default_publisher_->write( data, size, false ); return true; }
-
-    return false;
+    return true;
 }
 
 template < typename T >
@@ -161,7 +163,7 @@ void split< T >::write( const char* data, unsigned int size )
     mode_ = std::ofstream::out | std::ofstream::binary;
     if( binary_ ) { binary_->get( current_, data ); }
     else { current_.timestamp = boost::get_system_time(); }
-    if( !published_on_stream( data, size ) )
+    if( !published_on_stream( data, size ) ) // todo? or bind write function on initialisation and call it here?
     {
         ofstream_().write( data, size );
         if( flush_ ) { ofstream_().flush(); }
@@ -176,7 +178,7 @@ void split< T >::write ( std::string line )
     if( ascii_ ) { ascii_->get( current_, line ); }
     else { current_.timestamp = boost::get_system_time(); }
     line += '\n';
-    if( !published_on_stream( &line[0], line.size()) )
+    if( !published_on_stream( &line[0], line.size()) ) // todo? or bind write function on initialisation and call it here?
     {
         std::ofstream& ofs = ofstream_();
         ofs.write( &line[0], line.size() );

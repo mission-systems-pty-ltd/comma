@@ -84,14 +84,14 @@ template < typename T > struct traits< comma::csv::applications::input< T > >
 
 namespace comma { namespace csv { namespace applications {
 
+using publisher_set = comma::synchronized< std::unordered_set< std::unique_ptr< comma::io::publisher > > >;
+using transaction = publisher_set::scoped_transaction;
+
 template < typename T > struct traits
 {
-    typedef std::unordered_map< T, std::shared_ptr< std::ofstream > > map;
-    typedef std::unordered_set< T > set;
-
-    //to-do
-    using publisher_map = comma::synchronized< std::unordered_map< T, std::shared_ptr< comma::io::publisher > > >;
-    using transaction = typename publisher_map::scoped_transaction;
+    using map = std::unordered_map< T, std::shared_ptr< std::ofstream > >;
+    using set = std::unordered_set< T >;
+    using publisher_map = std::unordered_map< T, comma::io::publisher* >;
 };
 
 template <> struct traits< boost::posix_time::ptime >
@@ -107,12 +107,9 @@ template <> struct traits< boost::posix_time::ptime >
         }
     };
 
-    typedef std::unordered_map< boost::posix_time::ptime, std::shared_ptr< std::ofstream >, hash > map;
-    typedef std::unordered_set< boost::posix_time::ptime, hash > set;
-
-    //to-do
-    using publisher_map = comma::synchronized< std::unordered_map< boost::posix_time::ptime, std::shared_ptr< comma::io::publisher >, hash > >;
-    using transaction = publisher_map::scoped_transaction;
+    using map = std::unordered_map< boost::posix_time::ptime, std::shared_ptr< std::ofstream >, hash >;
+    using set =  std::unordered_set< boost::posix_time::ptime, hash >;
+    using publisher_map = std::unordered_map< boost::posix_time::ptime, comma::io::publisher*, hash >;
 };
 
 /// split data to files by time
@@ -156,8 +153,11 @@ class split
         boost::optional< input > last_;
         std::ios_base::openmode mode_;
         std::ofstream file_;
-        typedef typename traits< T >::map Files;
-        typedef typename traits< T >::set ids_type_;
+
+        using Files = typename traits< T >::map;
+        using ids_type_ = typename traits< T >::set;
+        using publisher_map = typename traits< T >::publisher_map;
+
         Files files_;
         ids_type_ seen_ids_;
         bool pass_;
@@ -166,11 +166,9 @@ class split
         //to-do
         bool published_on_stream( const char* data, unsigned int size );
 
-        using publishers = typename traits< T >::publisher_map;
-        using transaction = typename traits< T >::transaction;
-
-        std::shared_ptr< comma::io::publisher > default_publisher_;
-        publishers publishers_;
+        std::unique_ptr< comma::io::publisher > default_publisher_;
+        publisher_set publishers_;
+        publisher_map mapped_publishers_;
         std::thread acceptor_thread_;
         bool is_shutdown_;
 };
