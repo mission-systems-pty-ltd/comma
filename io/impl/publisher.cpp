@@ -201,15 +201,9 @@ class zero_acceptor_ : public acceptor
 
         io::ostream* accept( boost::posix_time::time_duration )
         {
-            if( !accepted_ )
-            {
-                accepted_ = true;
-                return stream_;
-            }
-            else
-            {
-                return NULL;
-            }
+            if( accepted_ ) { return NULL; }
+            accepted_ = true;
+            return stream_;
         }
 
         void close() { stream_->close(); }
@@ -258,6 +252,12 @@ publisher::publisher( const std::string& name, io::mode::value mode, bool blocki
         else
         {
             acceptor_.reset( new file_acceptor( name, mode ) );
+            io::ostream* s = acceptor_->accept( boost::posix_time::time_duration() );
+            streams_.insert( boost::shared_ptr< io::ostream >( s ) ); // todo: should we simply abolish file_acceptor and do it in the same way as for stdout?
+            if( s->fd() == comma::io::invalid_file_descriptor ) { COMMA_THROW( comma::exception, "failed to open '" << name << "'" ); }
+#ifndef WIN32
+            select_.write().add( s->fd() );
+#endif
         }
     }
 }

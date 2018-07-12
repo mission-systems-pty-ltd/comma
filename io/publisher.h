@@ -50,8 +50,8 @@ class publisher : public boost::noncopyable
         ///     if tcp:<port>, create tcp server
         ///     @todo if udp:<port>, broadcast on udp
         ///     if <filename> is a regular file, just write to it
-        ///     if <filename> is named pipe, keep reopening it, if closed
-        ///     @todo if <filename> is Linux domain socket, create Linux domain socket server
+        ///     @todo if <filename> is named pipe, keep reopening it, if closed
+        ///     if <filename> is Linux domain socket, create Linux domain socket server
         /// @param mode ascii or binary, a hint for Windows
         /// @param blocking if true, blocking write to a client, otherwise discard, if client not ready
         publisher( const std::string& name, io::mode::value mode, bool blocking = false, bool flush = true );
