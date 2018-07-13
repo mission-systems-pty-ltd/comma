@@ -431,7 +431,7 @@ int main( int ac, char** av )
         if( unnamed.size() > 1 ) { std::cerr << "csv-join: expected one file or stream to join, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         comma::name_value::parser parser( "filename", ';', '=', false );
         filter_csv = parser.get< comma::csv::options >( unnamed[0] );
-        if( stdin_csv.binary() && !filter_csv.binary() ) { std::cerr << "csv-join: stdin stream binary and filter stream ascii: this combination is not supported" << std::endl; return 1; }
+        if( !matching && !not_matching && stdin_csv.binary() && !filter_csv.binary() ) { std::cerr << "csv-join: stdin stream binary and filter stream ascii: this combination is not supported" << std::endl; return 1; }
         return   options.exists( "--time" )
                ? join_impl_< boost::posix_time::ptime, true >::run( options )
                : options.exists( "--string,-s" )
