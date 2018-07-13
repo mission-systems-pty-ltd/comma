@@ -426,7 +426,7 @@ int main( int ac, char** av )
         options.assert_mutually_exclusive( "--tolerance,--epsilon,--first-matching" );
         options.assert_mutually_exclusive( "--tolerance,--epsilon,--string,-s,--double,--time" );
         stdin_csv = comma::csv::options( options );
-        std::vector< std::string > unnamed = options.unnamed( "--verbose,-v,--first-matching,--matching,--not-matching,--string,-s,--strict", "-.*" );
+        std::vector< std::string > unnamed = options.unnamed( "--verbose,-v,--first-matching,--matching,--not-matching,--string,-s,--time,--double,--strict", "-.*" );
         if( unnamed.empty() ) { std::cerr << "csv-join: please specify the second source" << std::endl; return 1; }
         if( unnamed.size() > 1 ) { std::cerr << "csv-join: expected one file or stream to join, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         comma::name_value::parser parser( "filename", ';', '=', false );
