@@ -411,9 +411,9 @@ template < typename K, bool Strict > input< K > join_impl_< K, Strict >::default
 
 int main( int ac, char** av )
 {
-        comma::command_line_options options( ac, av, usage );
     try
     {
+        comma::command_line_options options( ac, av, usage );
         verbose = options.exists( "--verbose,-v" );
         first_matching = options.exists( "--first-matching" );
         strict = options.exists( "--strict" );
@@ -444,6 +444,6 @@ int main( int ac, char** av )
     }
     catch( std::exception& ex ) { std::cerr << "csv-join: " << ex.what() << std::endl; }
     catch( ... ) { std::cerr << "csv-join: unknown exception" << std::endl; }
-    std::cerr << "csv-join: on call: " << comma::join(options.argv(), ' ') << std::endl;
+    std::cerr << "csv-join: called as: " << comma::join( av, ac, ' ' ) << std::endl;
     return 1;
 }
