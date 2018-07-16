@@ -85,6 +85,7 @@ static void usage()
     std::cerr << "                      left or down arrow key: output one record at a time" << std::endl;
     std::cerr << "                      shift left or down arrow key: TODO: output one block at a time" << std::endl;
     std::cerr << "    --no-flush : if present, do not flush the output stream ( use on high bandwidth sources )" << std::endl;
+    std::cerr << "    --paused-at-start,--paused; if --interactive, then start playback as paused" << std::endl;
     std::cerr << "    --resolution=<second>: timestamp resolution; timestamps closer than this value will be" << std::endl;
     std::cerr << "                           played without delay; the rationale is that microsleep used in csv-play" << std::endl;
     std::cerr << "                           (boost::this_thread::sleep()) is essentially imprecise and may create" << std::endl;
@@ -126,7 +127,7 @@ class key_press_handler_t
 public:
     enum states { running, paused, read_once, read_block };
     
-    key_press_handler_t( bool interactive ): key_press_( interactive ), paused_( false ), state_( running ) {}
+    key_press_handler_t( bool interactive, bool paused_at_start ): key_press_( interactive ), paused_( paused_at_start ), state_( paused_ ? paused : running ) { std::cerr << "csv-play: paused at start" << std::endl; }
     
     void update( boost::posix_time::ptime t )
     {
@@ -251,7 +252,7 @@ int main( int argc, char** argv )
         std::string to = options.value< std::string>( "--to", "" );
         bool quiet =  options.exists( "--quiet" );
         bool flush =  !options.exists( "--no-flush" );
-        std::vector< std::string > configstrings = options.unnamed("--interactive,-i,--quiet,--flush,--no-flush","--slow,--slowdown,--speed,--resolution,--binary,--fields,--clients,--from,--to");
+        std::vector< std::string > configstrings = options.unnamed("--interactive,-i,--paused,--paused-at-start,--quiet,--flush,--no-flush","--slow,--slowdown,--speed,--resolution,--binary,--fields,--clients,--from,--to");
         if( configstrings.empty() ) { configstrings.push_back( "-;-" ); }
         comma::csv::options csvoptions( argc, argv );
         comma::name_value::parser name_value("filename,output", ';', '=', false );
@@ -263,7 +264,7 @@ int main( int argc, char** argv )
         boost::posix_time::ptime totime;
         if( !to.empty() ) { totime = boost::posix_time::from_iso_string( to ); }
         multiplay.reset( new comma::Multiplay( sourceConfigs, 1.0 / speed, quiet, boost::posix_time::microseconds( resolution * 1000000 ), fromtime, totime, flush ) );
-        key_press_handler_t key_press_handler( options.exists( "--interactive,-i" ) );
+        key_press_handler_t key_press_handler( options.exists( "--interactive,-i" ), options.exists( "--paused,--paused-at-start" ) );
         while( !shutdown_flag && std::cout.good() && !std::cout.bad() && !std::cout.eof() )
         {
             key_press_handler.update( multiplay->now() );
