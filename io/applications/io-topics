@@ -264,7 +264,7 @@ function log_command()
         [[ -n "$topic_index" ]] || topic_index="cat"
         local flush_option suffix_option
         (( topic_flush )) && flush_option="--flush"
-        [[ -z "$topic_suffix" ]] || suffix_option="$topic_suffix"
+        [[ -z "$topic_suffix" ]] || suffix_option="--suffix=$topic_suffix"
         local period=$options_period
         [[ -z "$topic_period" ]] || period=$topic_period
         if [[ -n "$topic_connect_attempts" ]]; then connect_attempts_option="--connect-attempts=$topic_connect_attempts"; else unset connect_attempts_option; fi
