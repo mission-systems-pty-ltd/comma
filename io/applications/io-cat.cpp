@@ -362,6 +362,7 @@ int main( int argc, char** argv )
                     done = false;
                     if( size && bytes_read % size != 0 ) { std::cerr << "io-cat: stream " << i << " (" << streams[i].address() << "): expected " << size << " byte(s), got only " << ( bytes_read % size ) << std::endl; return 1; }
                     std::cout.write( &buffer[0], bytes_read );
+                    if( !std::cout.good() ) { done = true; break; }
                     if( unbuffered ) { std::cout.flush(); }
                     if( round_robin_count )
                     {
