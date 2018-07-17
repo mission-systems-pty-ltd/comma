@@ -41,6 +41,7 @@
 #include <boost/thread.hpp>
 #include "../../application/command_line_options.h"
 #include "../../application/contact_info.h"
+#include "../../application/signal_flag.h"
 #include "../../base/exception.h"
 #include "../../base/types.h"
 #include "../../io/stream.h"
@@ -314,6 +315,7 @@ int main( int argc, char** argv )
     {
         if( argc < 2 ) { usage(); }
         comma::command_line_options options( argc, argv, usage );
+        comma::signal_flag is_shutdown;
         verbose = options.exists( "--verbose,-v" );
         unsigned int size = options.value( "--size,-s", 0 );
         bool unbuffered = options.exists( "--flush,--unbuffered,-u" );
@@ -336,6 +338,7 @@ int main( int argc, char** argv )
         unsigned int round_robin_count = unnamed.size() > 1 ? options.value( "--round-robin", 0 ) : 0;
         for( bool done = false; !done; )
         {
+            if( is_shutdown ) { std::cerr << "io-cat: received signal" << std::endl; break; }
             bool connected_all_we_could = try_connect( streams, select );
             if( !ready( streams, select, connected_all_we_could ) ) { continue; }
             done = true;
@@ -355,7 +358,7 @@ int main( int argc, char** argv )
                 }
                 if( !ready && empty ) { done = false; continue; }
                 unsigned int countdown = round_robin_count;
-                while( !streams[i].eof() )
+                while( !streams[i].eof() ) // todo? check is_shutdown here as well?
                 {
                     unsigned int bytes_read = streams[i].read_available( buffer, countdown ? countdown : max_count );
                     if( bytes_read == 0 ) { break; }
