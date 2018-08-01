@@ -138,19 +138,27 @@ boost::optional< std::string > property_tree::get( const boost::property_tree::p
 
 namespace comma { namespace impl {
 
-static void ptree_output_value_( std::ostream& os, const std::string& value, bool is_begin, const xpath& path, char equal_sign, char delimiter, const std::string& root )
+static void ptree_output_value_( std::ostream& os, const std::string& value, bool is_begin, const xpath& path, char equal_sign, char delimiter, const std::string& root, bool const unquote_numbers )
 {
     if( !is_begin ) { os << delimiter; }
     if( root != "" ) { os << root << "/"; }
-    os << path.to_string() << equal_sign << '"' << value << '"';
+    os << path.to_string() << equal_sign;
+
+    bool quoted = true;
+    if( unquote_numbers )
+    { 
+        if( "true" == value || "false" == value ) { quoted = false; }
+        else { try { boost::lexical_cast< double >( value ); quoted = false; } catch ( ... ) {} }
+    }
+    if( quoted ) { os << '"' << value << '"'; } else { os << value; }
 }
 
 static void ptree_to_path_value_string_impl( std::ostream& os, boost::property_tree::ptree::const_iterator i, bool is_begin, xpath& path, xpath& display_path, 
-                                                    property_tree::path_mode mode, char equal_sign, char delimiter, const std::string& root )
+                                                    property_tree::path_mode mode, char equal_sign, char delimiter, const std::string& root, bool const unquote_numbers )
 {
     if( i->second.begin() == i->second.end() )
     {
-        ptree_output_value_( os, i->second.get_value< std::string >(), is_begin, display_path / i->first, equal_sign, delimiter, root );
+        ptree_output_value_( os, i->second.get_value< std::string >(), is_begin, display_path / i->first, equal_sign, delimiter, root, unquote_numbers );
     }
     else
     {
@@ -160,7 +168,7 @@ static void ptree_to_path_value_string_impl( std::ostream& os, boost::property_t
         if( v ) // quick and dirty
         {
             const std::string& stripped = comma::strip( *v );
-            if( !stripped.empty() )  { ptree_output_value_( os, stripped, is_begin, display_path, equal_sign, delimiter, root );  }
+            if( !stripped.empty() )  { ptree_output_value_( os, stripped, is_begin, display_path, equal_sign, delimiter, root, unquote_numbers );  }
         }
         
         comma::uint32 index=0;
@@ -169,7 +177,7 @@ static void ptree_to_path_value_string_impl( std::ostream& os, boost::property_t
             // Test if it is json array data, if so all keys are empty. If so display indices in path if requested
             if( mode == property_tree::without_brackets && j->first.empty()  ) { display_path /= boost::lexical_cast< std::string >( index++ ); }
             else if( mode == property_tree::with_brackets && j->first.empty() ) { display_path.elements.back().index = index++; }
-            ptree_to_path_value_string_impl( os, j, is_begin, path, display_path, mode, equal_sign, delimiter, root );
+            ptree_to_path_value_string_impl( os, j, is_begin, path, display_path, mode, equal_sign, delimiter, root, unquote_numbers );
             if( mode == property_tree::without_brackets && j->first.empty() ) { display_path = display_path.head(); }
             is_begin = false;
         }
@@ -182,7 +190,7 @@ static void ptree_to_path_value_string_impl( std::ostream& os, boost::property_t
 
 namespace comma {
 
-void property_tree::to_path_value( std::ostream& os, const boost::property_tree::ptree& ptree, path_mode mode, char equal_sign, char delimiter, const xpath& root )
+void property_tree::to_path_value( std::ostream& os, const boost::property_tree::ptree& ptree, path_mode mode, char equal_sign, char delimiter, const xpath& root, bool const unquote_numbers )
 {
     for( boost::property_tree::ptree::const_iterator i = ptree.begin(); i != ptree.end(); ++i )
     {
@@ -193,7 +201,7 @@ void property_tree::to_path_value( std::ostream& os, const boost::property_tree:
         // http://www.boost.org/doc/libs/1_41_0/doc/html/boost_propertytree/parsers.html#boost_propertytree.parsers.json_parser
         xpath path;
         xpath display_path;
-        impl::ptree_to_path_value_string_impl( os, i, i == ptree.begin(), path, display_path, mode, equal_sign, delimiter, root.to_string() ); // quick and dirty
+        impl::ptree_to_path_value_string_impl( os, i, i == ptree.begin(), path, display_path, mode, equal_sign, delimiter, root.to_string(), unquote_numbers ); // quick and dirty
     }
 }
 
@@ -211,10 +219,10 @@ void property_tree::from_path_value( std::istream& is, boost::property_tree::ptr
     ptree = comma::property_tree::from_path_value_string( s, equal_sign, delimiter, check_type, use_index );
 }
 
-std::string property_tree::to_path_value_string( const boost::property_tree::ptree& ptree, property_tree::path_mode mode, char equal_sign, char delimiter )
+std::string property_tree::to_path_value_string( const boost::property_tree::ptree& ptree, property_tree::path_mode mode, char equal_sign, char delimiter, bool const unquote_numbers )
 {
     std::ostringstream oss;
-    to_path_value( oss, ptree, mode, equal_sign, delimiter );
+    to_path_value( oss, ptree, mode, equal_sign, delimiter, xpath(), unquote_numbers );
     return oss.str();
 }
 

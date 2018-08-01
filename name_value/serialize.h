@@ -206,7 +206,7 @@ template < typename T > void write_xml( const T& t, std::ostream& stream );
 template < typename T > void write_path_value( const T& t, const std::string& filename, const xpath& root );
 template < typename T > void write_path_value( const T& t, const std::string& filename, const char* root );
 template < typename T > void write_path_value( const T& t, const std::string& filename );
-template < typename T > void write_path_value( const T& t, std::ostream& stream, const xpath& root );
+template < typename T > void write_path_value( const T& t, std::ostream& stream, const xpath& root, bool const unquote_numbers = false );
 template < typename T > void write_path_value( const T& t, std::ostream& stream, const char* root );
 template < typename T > void write_path_value( const T& t, std::ostream& stream );
 
@@ -420,13 +420,13 @@ template < typename T > inline void write_xml( const T& t, const std::string& fi
 template < typename T > inline void write_xml( const T& t, std::ostream& stream, const char* root ) { write_xml( t, stream, xpath( root ) ); }
 template < typename T > inline void write_xml( const T& t, std::ostream& stream ) { write_xml( t, stream, xpath() ); }
 
-template < typename T > inline void write_path_value( const T& t, std::ostream& stream, const xpath& root )
+template < typename T > inline void write_path_value( const T& t, std::ostream& stream, const xpath& root, bool const unquote_numbers )
 {
     boost::property_tree::ptree p;
     comma::to_ptree to_ptree( p, root );
     comma::visiting::apply( to_ptree ).to( t );
     stream.precision( 16 ); // quick and dirty
-    comma::property_tree::to_path_value( stream, p, comma::property_tree::disabled, '=', '\n' );
+    comma::property_tree::to_path_value( stream, p, comma::property_tree::disabled, '=', '\n', xpath(), unquote_numbers );
 }
 
 template < typename T > inline void write_path_value( const T& t, const std::string& filename, const xpath& root )

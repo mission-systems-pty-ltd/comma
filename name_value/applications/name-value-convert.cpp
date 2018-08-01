@@ -73,6 +73,7 @@ static void usage( bool verbose = false )
     std::cerr << "path-value options:" << std::endl;
     std::cerr << "    --take-last: if paths are repeated, take last path=value" << std::endl;
     std::cerr << "    --verify-unique,--unique-input: ensure that all input paths are unique (takes precedence over --take-last)" << std::endl;
+    std::cerr << "    --unquote-numbers,--unquote: unquote the numbers and booleans" << std::endl;
     std::cerr << std::endl;
     std::cerr <<      "warning: if paths are repeated, output value selected from these inputs in not deterministic" << std::endl;
     std::cerr << std::endl;
@@ -98,6 +99,7 @@ static char equal_sign;
 static char path_value_delimiter;
 static bool linewise;
 static bool minify_json;
+static bool unquote_numbers;
 typedef comma::property_tree::path_mode path_mode;
 static path_mode indices_mode = comma::property_tree::disabled;
 static bool use_index = true;
@@ -153,7 +155,7 @@ template <> struct traits< path_value > // quick and dirty
     }
     static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode mode )
     {
-        comma::property_tree::to_path_value( os, ptree, mode, equal_sign, path_value_delimiter );
+        comma::property_tree::to_path_value( os, ptree, mode, equal_sign, path_value_delimiter, comma::xpath(), unquote_numbers );
         if( path_value_delimiter == '\n' ) { os << path_value_delimiter; }
     }
 };
@@ -171,6 +173,7 @@ int main( int ac, char** av )
         equal_sign = options.value( "--equal-sign,-e", '=' );
         linewise = options.exists( "--linewise,-l" );
         minify_json = options.exists( "--minify" );
+        unquote_numbers = options.exists( "--unquote-numbers,--unquote" );
         if ( options.exists( "--take-last" ) ) check_type = comma::property_tree::path_value::take_last;
         if ( options.exists( "--verify-unique,--unique-input" ) ) check_type = comma::property_tree::path_value::unique_input;
         xml_writer_settings.indent_count = options.value( "--indent", options.exists( "--indented" ) ? 4 : 0 );

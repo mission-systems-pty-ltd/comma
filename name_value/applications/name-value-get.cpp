@@ -82,6 +82,7 @@ static void usage( bool verbose = false )
     std::cerr << "path-value options:" << std::endl;
     std::cerr << "    --take-last: if paths are repeated, take last path=value" << std::endl;
     std::cerr << "    --verify-unique,--unique-input: ensure that all input paths are unique (takes precedence over --take-last)" << std::endl;
+    std::cerr << "    --unquote-numbers,--unquote: unquote the numbers and booleans" << std::endl;
     std::cerr << "warning: if paths are repeated, output value selected from these inputs in not deterministic" << std::endl;
     std::cerr << std::endl;
     std::cerr << "data flow options:" << std::endl;
@@ -98,6 +99,7 @@ static char path_value_delimiter;
 static bool linewise;
 static bool option_regex;
 static bool output_path;
+static bool unquote_numbers;
 typedef comma::property_tree::path_mode path_mode;
 static path_mode indices_mode = comma::property_tree::disabled;
 static comma::property_tree::path_value::check_repeated_paths check_type( comma::property_tree::path_value::no_check );
@@ -149,7 +151,7 @@ template <> struct traits< path_value > // quick and dirty
         static bool first = true; // todo: will not work linewise, fix
         if( !first ) { std::cout << path_value_delimiter; }
         first = false;
-        comma::property_tree::to_path_value( os, ptree, indices_mode, equal_sign, path_value_delimiter, output_path ? path : std::string() );
+        comma::property_tree::to_path_value( os, ptree, indices_mode, equal_sign, path_value_delimiter, output_path ? path : std::string(), unquote_numbers );
     }
 };
 
@@ -255,6 +257,7 @@ int main( int ac, char** av )
         std::string to = options.value< std::string >( "--to", "path-value" );
         equal_sign = options.value( "--equal-sign,-e", '=' );
         linewise = options.exists( "--linewise,-l" );
+        unquote_numbers = options.exists( "--unquote-numbers,--unquote" );
         if ( options.exists( "--take-last" ) ) check_type = comma::property_tree::path_value::take_last;
         if ( options.exists( "--verify-unique,--unique-input" ) ) check_type = comma::property_tree::path_value::unique_input;
         boost::optional< char > delimiter = options.optional< char >( "--delimiter,-d" );
