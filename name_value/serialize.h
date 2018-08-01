@@ -41,6 +41,7 @@
 #include "../base/exception.h"
 #include "../xpath/xpath.h"
 #include "../visiting/apply.h"
+#include "impl/json_writer.h"
 
 #include "ptree.h"
 
@@ -389,7 +390,7 @@ template < typename T > inline void write_json( const T& t, std::ostream& stream
     comma::to_ptree to_ptree( p, root );
     comma::visiting::apply( to_ptree ).to( t );
     stream.precision( 16 ); // quick and dirty
-    boost::property_tree::write_json( stream, p );
+    comma::name_value::impl::write_json( stream, p );
 }
 
 template < typename T > inline void write_json( const T& t, const std::string& filename, const char* root ) { write_json( t, filename, xpath( root ) ); }

@@ -1,2 +1,0 @@
-#!/bin/bash
- name-value-convert --from path-value --to path-value

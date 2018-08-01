@@ -30,6 +30,7 @@
 
 #include <gtest/gtest.h>
 #include "../../name_value/parser.h"
+#include "../../name_value/serialize.h"
 
 struct nested
 {
@@ -59,6 +60,8 @@ struct struct_with_optional
     boost::optional< nested_with_optional > nested;
     struct_with_optional() : a( 0 ) {}
 };
+
+static std::string json_remove_quotes_wrapper( std::string json ) { comma::name_value::impl::json_remove_quotes( json ); return json; }
 
 namespace comma { namespace visiting {
 
@@ -292,6 +295,19 @@ TEST( name_value, exists )
         EXPECT_TRUE( map( ";c=x" ).exists( "c" ) );
         EXPECT_TRUE( map( "c" ).exists( "c" ) );
     }
+}
+
+TEST( name_value, serialize_json )
+{
+    EXPECT_EQ( "{ \"a\": \"a\", \"b\": \"b\" }", json_remove_quotes_wrapper( "{ \"a\": \"a\", \"b\": \"b\" }" ) );
+    EXPECT_EQ( "{ \"a\": 1, \"b\": \"val\" }", json_remove_quotes_wrapper( "{ \"a\": \"1\", \"b\": \"val\" }" ) );
+    EXPECT_EQ( "{ \"a\": [ 4.44, true, \"e\" ] }", json_remove_quotes_wrapper( "{ \"a\": [ \"4.44\", \"true\", \"e\" ] }" ) );
+    
+    EXPECT_EQ( "{ \"a\": [ { \"b\": { \"c\": [ { \"d\": 1, \"e\": false }, { \"d\":2, \"e\": true } ] } } ], \"p\": { \"q\": { \"r\": 3.9e8, \"s\": \"t\"} }, \"x\": { \"y\": [ \"z\", 0.1e-3 ] } }", json_remove_quotes_wrapper( "{ \"a\": [ { \"b\": { \"c\": [ { \"d\": \"1\", \"e\": \"false\" }, { \"d\":2, \"e\": \"true\" } ] } } ], \"p\": { \"q\": { \"r\": \"3.9e8\", \"s\": \"t\"} }, \"x\": { \"y\": [ \"z\", \"0.1e-3\" ] } }" ) );
+
+    //minify
+    EXPECT_EQ( "{\"a\":[{\"b\":{\"c\":[{\"d\":1,\"e\":false},{\"d\":2,\"e\":true}]}}],\"p\":{\"q\":{\"r\":3.9e8,\"s\":\"t\"}},\"x\":{\"y\":[\"z\",0.1e-3]}}", json_remove_quotes_wrapper( "{\"a\":[{\"b\":{\"c\":[{\"d\":\"1\",\"e\":\"false\"},{\"d\":\"2\",\"e\":\"true\"}]}}],\"p\":{\"q\":{\"r\":\"3.9e8\",\"s\":\"t\"}},\"x\":{\"y\":[\"z\",\"0.1e-3\"]}}" ) );
+
 }
 
 TEST( name_value, optional )

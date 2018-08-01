@@ -127,7 +127,7 @@ template <> struct traits< info >
 template <> struct traits< json >
 {
     static void input( std::istream& is, boost::property_tree::ptree& ptree ) { boost::property_tree::read_json( is, ptree ); }
-    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode ) { boost::property_tree::write_json( os, ptree, !minify_json ); }
+    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode ) { comma::name_value::impl::write_json( os, ptree, !minify_json ); }
 };
 
 template <> struct traits< xml >

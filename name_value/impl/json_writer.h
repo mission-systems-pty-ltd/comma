@@ -29,43 +29,58 @@
 
 /// @author vsevolod vlaskine
 
-#ifndef COMMA_NAME_VALUE_SERIALIZE_H_
-#define COMMA_NAME_VALUE_SERIALIZE_H_
+#ifndef COMMA_NAME_VALUE_JSON_WRITER_H_
+#define COMMA_NAME_VALUE_JSON_WRITER_H_
 
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <algorithm>
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/lexical_cast.hpp>
 #include "../../base/exception.h"
 
 
 namespace comma { namespace name_value { namespace impl {
 
-template< typename Ch > class tokenizer
+// NOTE: assume valid json.
+template< typename C > void json_remove_quotes( std::basic_string< C >& json_text )
 {
-pubic:
-    enum class token_type { space, string, punctuation, eof };
+    using string_type = std::basic_string< C >;
 
-    using text_type = std::basic_string< Ch >;
-    using size_type = text_type::size_type;
-    template< typename string_type, std::enable_if< std::is_constructable< std::basic_string< Ch >, string_type >::value, void >::type >
-    tokenizer( string_type && text ) : m_text( std::forward< string_type >( text ) ), m_pos( 0 ) {}
+    string_type const true_str( std::initializer_list< C >{ 't', 'r', 'u', 'e' } );
+    string_type const false_str( std::initializer_list< C >{ 'f', 'a', 'l', 's', 'e' } );
 
-    tokenizer( tokenizer& ) = default;
-    tokenizer( tokenizer&& ) = default;
-    tokenizer& operator=( tokenizer& ) = default;
-    tokenizer& operator=( tokenizer&& ) = default;
+    auto source = json_text.begin();
+    auto target = json_text.cbegin();
 
-    std::pair< token_type, std::basic_string< Ch > > next();
+    while( target != json_text.cend() )
+    {
+        auto value_begin = std::find( target, json_text.cend(), '"' );
+        while( target != value_begin ) { *source++ = *target++; }
+        if( json_text.cend() == value_begin ) { break; }
 
-private:
-    text_type m_text;
-    size_type m_pos;
-};
+        auto value_end = value_begin;
+        do { value_end = std::find( value_end + 1, json_text.cend(), '"' ); } while( '\\' == *( value_end - 1 ) );
+        auto next_token = std::find_if_not( value_end + 1, json_text.cend(), []( C ch ) { return ' ' == ch || '\t' == ch || '\n' == ch; } );
 
+        bool quoted = true;
+        if( ':' != *next_token )
+        {
+            auto const value = std::string( value_begin + 1, value_end );
+            if( true_str == value || false_str == value ) { quoted = false; }
+            else { try { boost::lexical_cast< double >( value ); quoted = false; } catch ( ... ) {} }
+        }
 
-
-
+        if( !quoted ) { value_begin++; }
+        while( value_begin != value_end ) { *source++ = *value_begin++; }
+        if( !quoted ) { value_end++; } 
+        while( value_end != next_token ) { *source++ = *value_end++; }
+        *source++ = *next_token++;
+        target = next_token;
+    }
+    json_text.erase( source, json_text.cend() );
+}
 
 inline void remove_quotes( std::string& s )
 {
@@ -75,7 +90,8 @@ inline void remove_quotes( std::string& s )
     std::string value;
     struct looking_for { enum what { first_quote, second_quote, escaped, colon }; };
     looking_for::what state = looking_for::first_quote;
-    while( char* source = &s[0]; source != end; ++source )
+
+    for( char* source = &s[0]; source != end; ++source )
     {
         switch( state )
         {
@@ -93,23 +109,16 @@ inline void remove_quotes( std::string& s )
             case looking_for::colon:
             {
                 bool quoted = true;
-                bool skip;
+                bool skip = false;
                 switch( *source )
                 {
-                    case ' ': case: '\t' case: '\n':
+                    case ' ': case '\t': case '\n':
+                        skip=true;
                         // todo
                         break;
                     case ':':
-                        *target++ = '"';
-                        ::memcpy( target, &value[0], value.size() );
-                        target += value.size();
-                        *target++ = '"';
-                        *target++ = ':';
-                        size += 3 + value.size();
-                        value.clear();
                         break;
                     default:
-                        bool quoted = true;
                         try { boost::lexical_cast< double >( value ); quoted = false; } catch ( ... ) {} // hyper quick and dirty for now
                         
                 }
@@ -130,56 +139,15 @@ inline void remove_quotes( std::string& s )
     s.resize( size );
 }
 
-
-
-
-
-template< typename Ch > std::pair< typename tokenizer< Ch >::token_type, std::basic_string< Ch > > tokenizer< Ch >::next()
-{
-    if( m_pos >= m_text.size() ) return std::make_pair( token_type::eof, std::string() );
-    size_type new_pos;
-    switch( m_text[ m_pos ] )
-    {
-        case ' ':
-        case '\t':
-        case '\n':
-            new_pos = m_text.find_first_not_of( " \t\n", m_pos + 1 );
-            if( std::basic_string< Ch >::npos == new_pos )
-            {
-                m_pos = m_text.size();
-                return std::make_pair( token_type::space, m_text.substr( m_pos ) );
-            }
-            else
-            {
-                auto size = new_pos - m_pos + 1;
-                m_pos = new_pos + 1;
-                return std::make_pair( token_type::space, m_text.substr( m_pos, size ) );
-            }
-            break;
-        case ':':
-        case ',':
-        case '{':
-        case '}':
-        case '[':
-        case ']':
-            auto ch = m_text[ m_pos++ ];
-            return std::make_pair( token_type::punctuation, std::string( 1, ch ) );
-            break;
-
-        case '"':
-            new_pos = m_pos;
-            do { new_pos = m_text.find_first_of( '"', new_pos + 1 ); } while( '\\' == m_text[ new_pos - 1 ] );
-            auto size 
-            return std::make_pair( token_type::string, m_text.substr( m_pos + 1, new_pos - m_
-            break;
-    }
-}
-
-template<class Ptree> void write_json(std::basic_ostream< typename Ptree::key_type::value_type > &stream, const Ptree &pt, bool const pretty )
+template<class Ptree> void write_json(std::basic_ostream< typename Ptree::key_type::value_type > &stream, const Ptree &ptree, bool const pretty = true )
 {
     std::basic_ostringstream< typename Ptree::key_type::value_type > string_stream;
-    boost::write_json( string_stream, ptree );
-    stream << write_json( string_strm.str() ) << std::flush;
+    boost::property_tree::write_json( string_stream, ptree, pretty );
+    auto json_text = string_stream.str();
+    json_remove_quotes( json_text );
+    stream << json_text << std::flush;
 }
  
-}
+} } }
+
+#endif //COMMA_NAME_VALUE_JSON_WRITER_H_
