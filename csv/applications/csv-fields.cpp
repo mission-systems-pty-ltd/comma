@@ -56,6 +56,7 @@ static void usage( bool )
     std::cerr << "        --fill: number even empty fields, e.g. try: echo ,, | csv-fields numbers --fill" << std::endl;
     std::cerr << "        --from=<value>: start field numbering from <value>; default=1" << std::endl;
     std::cerr << "                        to keep it consistent with linux cut utility" << std::endl;
+    std::cerr << "        --prefix: if --fill, field name prefix, e.g. try: echo ,, | csv-fields numbers --fill --prefix f" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    clear: clear some of the field values" << std::endl;
     std::cerr << "        --keep,--except=<fields>: keep given fields by name" << std::endl;
@@ -174,6 +175,7 @@ int main( int ac, char** av )
         {
             int from = options.value( "--from", 1 );
             bool fill = options.exists( "--fill" );
+            std::string prefix = options.value< std::string >( "--prefix", "" );
             while( std::cin.good() )
             {
                 std::string line;
@@ -185,7 +187,7 @@ int main( int ac, char** av )
                 for( unsigned int i = 0; i < v.size(); ++i )
                 {
                     if( v[i].empty() && !fill ) { continue; }
-                    std::cout << comma << ( i + from );
+                    std::cout << comma << prefix << ( i + from );
                     comma = ',';
                 }
                 std::cout << std::endl;
