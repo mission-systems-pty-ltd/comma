@@ -250,6 +250,7 @@ template < typename T > static void output_last_( comma::csv::input_stream< T >&
 {
     if( csv.binary() ) { std::cout.write( istream.binary().last(), csv.format().size() ); }
     else { std::cout << comma::join( istream.ascii().last(), csv.delimiter ) << std::endl; }
+    if( csv.flush ) { std::cout.flush(); }
 }
 
 template < typename T > static void output_( T t )
