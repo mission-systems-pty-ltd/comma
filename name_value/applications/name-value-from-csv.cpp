@@ -48,7 +48,7 @@ static void usage( bool verbose = false )
     std::cerr << "    --strict: don't accept lines with more fields than expected" << std::endl;
     std::cerr << "    --no-brackets: use with --line-number option above, it does not output line numbers in square brackets." << std::endl;
     std::cerr << "    --output-line-number,--line-number,-n: output line numbers (see examples)" << std::endl;
-    std::cerr << "    --prefix,-p <prefix>: append this prefix to all paths" << std::endl;
+    std::cerr << "    --prefix,-p <prefix>: prepend this prefix to all paths" << std::endl;
     std::cerr << "    --indices=<fields>: comma-separated list of fields to use as indices (see examples)" << std::endl;
     std::cerr << std::endl;
     std::cerr << "todo: support escaped strings (e.g. currently string values cannot have <delimiter> in them)" << std::endl;
