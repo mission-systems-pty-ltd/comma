@@ -45,6 +45,7 @@ static void usage( bool verbose )
     std::cerr << "                       if --unquote, unquote only given fields" << std::endl;
     std::cerr << "    --force=<fields>: quote given fields, if their values are numbers" << std::endl;
     std::cerr << "    --escaped: escape quotes with backslash" << std::endl;
+    std::cerr << "    --mangle-delimiter=<what>: mangle delimiter inside of the quotes (to unmangle later e.g. with sed)" << std::endl;
     std::cerr << "    --quote=<quote sign>; default: double quote" << std::endl;
     std::cerr << "    --unquote; remove quotes" << std::endl;
     std::cerr << std::endl;
@@ -62,6 +63,32 @@ int main( int ac, char** av )
     try
     {
         comma::command_line_options options( ac, av, usage );
+        char delimiter = options.value( "--delimiter,-d", ',' );
+        if( options.exists( "--mangle-delimiter" ) )
+        {
+            std::string mangled = options.value< std::string >( "--mangle-delimiter" );
+            while( std::cin.good() )
+            {
+                std::string line;
+                std::getline( std::cin, line );
+                if( line.empty() ) { continue; }
+                bool quoted = false;
+                bool escaped = false;
+                for( char c: line ) // quick and dirty; performance should be OK, since std::cout gets flushed only on std::endl
+                {
+                    if( quoted && c == delimiter ) { std::cout << mangled; continue; }
+                    switch( c )
+                    {
+                        case '\\': escaped = !escaped; break;
+                        case '"': if( !escaped ) { quoted = !quoted; escaped = false; } break;
+                        default: if( escaped ) { escaped = false; } break;
+                    }
+                    std::cout << c;
+                }
+                std::cout << std::endl;
+            }
+            return 0;
+        }
         std::set< std::size_t > fields;
         {
             const std::vector< std::string >& v = comma::split( options.value< std::string >( "--fields", "" ), ',' );
@@ -72,11 +99,10 @@ int main( int ac, char** av )
             const std::vector< std::string >& v = comma::split( options.value< std::string >( "--force", "" ), ',' );
             for( unsigned int i = 0; i < v.size(); ++i ) { if( !v[i].empty() ) { forced.insert( i ); } }
         }
-        char delimiter = options.value( "--delimiter,-d", ',' );
         char quote = options.value( "--quote", '\"' );
         bool unquote = options.exists( "--unquote" );
         std::string backslash;
-        std::vector<std::string> format;
+        std::vector< std::string > format;
         if (options.exists("--format") ) { format = comma::split(options.value<std::string>("--format"), ','); }
         if( options.exists( "--escape" ) ) { backslash = "\\"; }
         while( std::cin.good() )
