@@ -31,8 +31,10 @@
       - recode
       
   - name: "comma: make source directory at {{ base }}"
-    file: path={{ base }}/src state=directory
-    file: path={{ base }}/build state=directory
+    file: path={{ base }}/{{ item }} state=directory
+    with_items:
+        - src
+        - build
     
   - name: "comma: clone"
     git:
