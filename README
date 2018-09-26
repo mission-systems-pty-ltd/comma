@@ -5,13 +5,14 @@ of CSV and binary data, protocol packets, structured data (e.g. JSON), etc
 
 INSTALLATION
 
-Currently only building from source using CMake is available. (You can
-generate deb packages using CPack, though.)
+Currently only building from source using CMake is available. (After building
+from source, you can generate deb package using CPack, though.)
 
 Quickest way:
 
-> sudo apt-get install ansible curl
-> curl https://gitlab.com/orthographic/comma/blob/master/system/ansible/install.yml > install.yml
-> ansible-playbook install.yml
+> mkdir ~/src
+> cd ~/src
+> git clone https://gitlab.com/orthographic/comma.git
+> ansible-playbook system/ansible/install.yml
 
-Read install.yml, if interested in how to build manually.
+Read install.yml, if interested in tweaking build configuration or building manually.
