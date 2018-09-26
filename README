@@ -1,10 +1,12 @@
-comma, a generic library of C++ and python components and command-line utilities for quick and efficient
-data manipulation, especially streams of CSV and binary data, protocol packets, structured data (e.g. JSON), etc
+comma, a generic library of C++ and python components and command-line
+utilities for quick and efficient data manipulation, especially streams
+of CSV and binary data, protocol packets, structured data (e.g. JSON), etc
 
 
 INSTALLATION
 
-Currently only building from source using CMake is available. (You can generate deb packages using CPack, though.)
+Currently only building from source using CMake is available. (You can
+generate deb packages using CPack, though.)
 
 Quickest way:
 
@@ -12,4 +14,4 @@ Quickest way:
 > curl https://gitlab.com/orthographic/comma/blob/master/system/ansible/install.yml > install.yml
 > ansible-playbook install.yml
 
-Read install.yml, if interested in manual build.
+Read install.yml, if interested in how to build manually.
