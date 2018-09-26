@@ -1,7 +1,8 @@
 comma, a generic library of C++ and python components and command-line utilities for quick and efficient
 data manipulation, especially streams of CSV and binary data, protocol packets, structured data (e.g. JSON), etc
 
-== Installation ==
+
+INSTALLATION
 
 Currently only building from source using CMake is available. (You can generate deb packages using CPack, though.)
 
