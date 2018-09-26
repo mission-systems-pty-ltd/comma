@@ -13,6 +13,6 @@ Quickest way:
 > mkdir ~/src
 > cd ~/src
 > git clone https://gitlab.com/orthographic/comma.git
-> ansible-playbook system/ansible/install.yml
+> ansible-playbook comma/system/ansible/install.yml --ask-become-pass
 
 Read install.yml, if interested in tweaking build configuration or building manually.
