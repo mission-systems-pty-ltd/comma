@@ -4,11 +4,9 @@
 - hosts: localhost
   connection: local
   vars:
-  - build_j: 6
-  - base: "{{ ansible_env.HOME }}"
-  - src_dir: "{{ base }}/src/comma"
-  - build_dir: "{{ base }}/build/comma"
-  - cmake_options: "-DBUILD_TESTS=ON -DINSTALL_TESTS=ON -DINSTALL_BASH_COMPLETION=ON -Dcomma_BUILD_XML=ON -Dcomma_BUILD_ZEROMQ=ON -Dcomma_INSTALL_WEB_SHELL=OFF"
+    - base: "{{ ansible_env.HOME }}"
+    - make_j: 6
+    - comma_cmake_options: "-DBUILD_TESTS=ON -DINSTALL_TESTS=ON -DINSTALL_BASH_COMPLETION=ON -Dcomma_BUILD_XML=ON -Dcomma_BUILD_ZEROMQ=ON -Dcomma_INSTALL_WEB_SHELL=OFF"
 
   tasks:
   - name: "install comma dependencies"
@@ -44,19 +42,21 @@
         update: yes
         
   - name: "comma: make build directory at {{ base }}"
-    file: dest="{{ build_dir }}" state=directory
+    file: dest="{{ base }}/build/comma" state=directory
 
   - name: "comma: cmake"
-    shell: "/usr/bin/cmake {{ cmake_options }} {{ src_dir }} chdir={{ build_dir }}"
+    vars:
+        - comma_cmake_options: "-DBUILD_TESTS=ON -DINSTALL_TESTS=ON -DINSTALL_BASH_COMPLETION=ON -Dcomma_BUILD_XML=ON -Dcomma_BUILD_ZEROMQ=ON -Dcomma_INSTALL_WEB_SHELL=OFF"
+    shell: "/usr/bin/cmake {{ comma_cmake_options }} {{ base }}/src/comma chdir={{ base }}/build/comma"
 
   - name: "comma: make"
     make:
-        chdir: "{{ build_dir }}"
+        chdir: "{{ base }}/build/comma"
         params:
-            MAKEFLAGS: "-j {{ build_j }}"
+            MAKEFLAGS: "-j {{ make_j }}"
 
   - name: "comma: install"
     become: true
     make:
-        chdir: "{{ build_dir }}"
+        chdir: "{{ base }}/build/comma"
         target: "install"
