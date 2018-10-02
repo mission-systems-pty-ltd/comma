@@ -36,8 +36,6 @@ from ..numpy import types_of_dtype
 from .time import TYPE as numpy_datetime_type
 from .time import to_numpy as parse_time
 
-import sys
-
 COMMA_TO_NUMPY_TYPE = OrderedDict([
     ('b', 'i1'),
     ('ub', 'u1'),
