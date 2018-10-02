@@ -36,6 +36,7 @@ from ..numpy import types_of_dtype
 from .time import TYPE as numpy_datetime_type
 from .time import to_numpy as parse_time
 
+import sys
 
 COMMA_TO_NUMPY_TYPE = OrderedDict([
     ('b', 'i1'),
@@ -50,10 +51,23 @@ COMMA_TO_NUMPY_TYPE = OrderedDict([
     ('d', 'f8'),
     ('t', numpy_datetime_type)])
 
+NUMPY_TO_COMMA_TYPE = OrderedDict([
+    ('b1', 'b'),
+    ('i1', 'b'),
+    ('u1', 'ub'),
+    ('i2', 'w'),
+    ('u2', 'uw'),
+    ('i4', 'i'),
+    ('u4', 'ui'),
+    ('i8', 'l'),
+    ('u8', 'ul'),
+    ('f4', 'f'),
+    ('f8', 'd'),
+    (numpy_datetime_type, 't')])
+
 COMMA_TYPES = tuple(COMMA_TO_NUMPY_TYPE.keys())
 NUMPY_TYPES = tuple(COMMA_TO_NUMPY_TYPE.values())
-NUMPY_TO_COMMA_TYPE = OrderedDict(zip(NUMPY_TYPES, COMMA_TYPES))
-
+#NUMPY_TO_COMMA_TYPE = OrderedDict( zip( NUMPY_TYPES_FULL, COMMA_TYPES_FULL ) )
 
 def to_numpy_type(comma_type):
     """
@@ -100,7 +114,6 @@ def to_comma_type(numpy_type):
         if m:
             length = m.group(1)
             return 's[' + length + ']'
-
     dtype = np.dtype(numpy_type)
     if len(dtype) != 0:
         msg = "expected single numpy type, got {}".format(numpy_type)
