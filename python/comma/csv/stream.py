@@ -438,9 +438,11 @@ def numpy_scalar_to_string(scalar, precision=DEFAULT_PRECISION):
     >>> numpy_scalar_to_string(np.timedelta64(-123, 's'))
     '-123'
     """
+    
     if scalar.dtype.char in np.typecodes['AllInteger']: return str(scalar)
     elif scalar.dtype.char in np.typecodes['Float']: return "{scalar:.{precision}g}".format(scalar=scalar, precision=precision)
     elif scalar.dtype.char in np.typecodes['Datetime']: return csv_time.from_numpy(scalar)
     elif scalar.dtype.char in 'S': return scalar
+    elif scalar.dtype.char in '?': return str( int( scalar ) ) #elif scalar.dtype.char in '?': return str( map( int, scalar ) )
     msg = "converting {} to string is not implemented".format(repr(scalar.dtype))
     raise NotImplementedError(msg)
