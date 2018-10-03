@@ -1,6 +1,9 @@
 basics[0]="echo 1,2,3 | name-value-from-csv a,b,c --eol ';' ; echo"
 basics[1]="echo 1,2,3 | name-value-from-csv a,b,c/d --eol ';' ; echo"
 
+unquote[0]="echo 1,true,2.1,blah | name-value-from-csv a,b,c,d --eol ';' ; echo"
+unquote[1]="echo 1,true,2.1,blah | name-value-from-csv a,b,c,d --eol ';' --unquote-numbers ; echo"
+
 last_line[0]="echo -n 1,2,3 | name-value-from-csv a,b,c/d --eol ';' ; echo"
 
 white_space[0]="echo '1,2,   3' | name-value-from-csv a,b,c/d --eol ';' ; echo"
