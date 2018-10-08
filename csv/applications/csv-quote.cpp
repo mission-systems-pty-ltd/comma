@@ -41,6 +41,7 @@ static void usage( bool verbose )
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --delimiter,-d=<delimiter>; default: ," << std::endl;
+    std::cerr << "    --do-not-quote-empty-fields,--do-not-quote-empty; do not quote empty fields, unless they are quoted in the input, i.e: a,,b -> \"a\",,\"b\"" << std::endl;
     std::cerr << "    --fields=<fields>: quote given fields, even if their values are numbers" << std::endl;
     std::cerr << "                       if --unquote, unquote only given fields" << std::endl;
     std::cerr << "    --force=<fields>: quote given fields, if their values are numbers" << std::endl;
@@ -99,6 +100,7 @@ int main( int ac, char** av )
             const std::vector< std::string >& v = comma::split( options.value< std::string >( "--force", "" ), ',' );
             for( unsigned int i = 0; i < v.size(); ++i ) { if( !v[i].empty() ) { forced.insert( i ); } }
         }
+        bool do_not_quote_empty_fields = options.exists( "--do-not-quote-empty-fields,--do-not-quote-empty" );
         char quote = options.value( "--quote", '\"' );
         bool unquote = options.exists( "--unquote" );
         std::string backslash;
@@ -111,10 +113,7 @@ int main( int ac, char** av )
             std::getline( std::cin, line );
             if( line.empty() ) { continue; }
             const std::vector< std::string >& v = comma::split( line, delimiter );
-            if (!format.empty() && format.size() != v.size())
-            {
-                COMMA_THROW(comma::exception, "--format \"" << options.value<std::string>("--format") << "\" has " << format.size() << " fields but input line \"" << line << "\" has " << v.size() << " fields");
-            }
+            if (!format.empty() && format.size() != v.size()) { COMMA_THROW(comma::exception, "--format \"" << options.value<std::string>("--format") << "\" has " << format.size() << " fields but input line \"" << line << "\" has " << v.size() << " fields"); }
             std::string comma;
             for( std::size_t i = 0; i < v.size(); ++i )
             {
@@ -127,30 +126,24 @@ int main( int ac, char** av )
                 }
                 else
                 {
-                    const std::string& value = comma::strip( v[i], quote );
                     bool do_quote = false;
+                    const std::string& value = comma::strip( v[i], quote );
                     if( has_field )
                     {
-                        if (!format.empty())
+                        if( format.empty() )
                         {
-                            do_quote = (format[i][0] == 's');
-                        } 
-                        else
-                        {
-                            do_quote = true;
-                            if( format.empty() && forced.find( i ) == forced.end() )
+                            if( !( do_not_quote_empty_fields && v[i].empty() ) )
                             {
-                                try
-                                {
-                                    boost::lexical_cast< double >( value );
-                                    do_quote = false;
-                                }
-                                catch( ... ) {}
+                                do_quote = true;
+                                if( forced.find( i ) == forced.end() ) { try { boost::lexical_cast< double >( value ); do_quote = false; } catch( ... ) {} }
                             }
                         }
+                        else
+                        {
+                            do_quote = ( format[i][0] == 's' ); // quick and dirty
+                        }
                     }
-                    if( do_quote ) { std::cout << backslash << quote << value << backslash << quote; }
-                    else { std::cout << value; }
+                    if( do_quote ) { std::cout << backslash << quote << value << backslash << quote; } else { std::cout << value; }
                 }
             }
             std::cout << std::endl;
