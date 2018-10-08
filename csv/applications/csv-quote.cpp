@@ -42,7 +42,7 @@ static void usage( bool verbose )
     std::cerr << "options" << std::endl;
     std::cerr << "    --delimiter,-d=<delimiter>; default: ," << std::endl;
     std::cerr << "    --do-not-quote-empty-fields,--do-not-quote-empty; do not quote empty fields, unless they are quoted in the input, i.e: a,,b -> \"a\",,\"b\"" << std::endl;
-    std::cerr << "    --fields=<fields>: quote given fields, even if their values are numbers" << std::endl;
+    std::cerr << "    --fields=<fields>: quote given fields, if their values are not numbers, additionally use --force to override" << std::endl;
     std::cerr << "                       if --unquote, unquote only given fields" << std::endl;
     std::cerr << "    --force=<fields>: quote given fields, if their values are numbers" << std::endl;
     std::cerr << "    --escaped: escape quotes with backslash" << std::endl;
