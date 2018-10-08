@@ -128,6 +128,12 @@ defaults[7]/output=",2,"
 defaults[7]/status=0
 defaults[8]/output="1,,"
 defaults[8]/status=0
+defaults[9]/output="1,1,1"
+defaults[9]/status=0
+defaults[10]/output="none,none,none"
+defaults[10]/status=0
+defaults[11]/output="1,a,1"
+defaults[11]/status=0
 
 cut/fields[0]/output="b,c,d,e"
 cut/fields[0]/status=0
