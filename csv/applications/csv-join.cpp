@@ -58,7 +58,11 @@
 static void usage( bool more )
 {
     std::cerr << std::endl;
-    std::cerr << "join two csv files or streams by one or several keys" << std::endl;
+    std::cerr << "join two csv files or streams by one or several key fields" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "if no key fields specified, join each line of stdin input with each line of the second stream" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "if block field present, read and join block by block" << std::endl;
     std::cerr << std::endl;
     std::cerr << "usage: cat something.csv | csv-join \"something_else.csv[,options]\" [<options>]" << std::endl;
     std::cerr << std::endl;
@@ -314,8 +318,8 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
             }
         }
         bool do_full_join = no_stdin_key_fields && no_filter_key_fields;
-        //if( default_input_keys_count == 0 && !do_full_join ) { std::cerr << "csv-join: please specify at least one common key; fields: " << stdin_csv.fields << "; filter fields: " << filter_csv.fields << std::endl; return 1; }
-        if( default_input_keys_count == 0 ) { std::cerr << "csv-join: please specify at least one common key; fields: " << stdin_csv.fields << "; filter fields: " << filter_csv.fields << std::endl; return 1; }
+        if( default_input_keys_count == 0 && !do_full_join ) { std::cerr << "csv-join: please specify at least one common key; fields: " << stdin_csv.fields << "; filter fields: " << filter_csv.fields << std::endl; return 1; }
+        //if( default_input_keys_count == 0 ) { std::cerr << "csv-join: please specify at least one common key; fields: " << stdin_csv.fields << "; filter fields: " << filter_csv.fields << std::endl; return 1; }
         K state = options.value< K >( "--initial-state,--state", K() );
         std::size_t state_index;
         if( is_state_machine )
@@ -330,7 +334,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
         if( do_full_join )
         {
             if( stdin_csv.fields.empty() ) { stdin_csv.fields = "stdin/dummy"; }
-            if( filter_csv.fields.empty() ) { stdin_csv.fields = "filter/dummy"; }
+            if( filter_csv.fields.empty() ) { filter_csv.fields = "filter/dummy"; }
         }
         comma::csv::input_stream< input< K > > stdin_stream( std::cin, stdin_csv, default_input );
         filter_transport.reset( new comma::io::istream( filter_csv.filename, filter_csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii ) );
