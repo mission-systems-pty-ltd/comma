@@ -176,6 +176,7 @@ struct input
 
     bool operator<( const input& rhs ) const
     {
+        if( keys.empty() ) { COMMA_THROW( comma::exception, "if --tolerance given, expected exactly one key, got none" ); }
         if( keys.size() > 1 ) { COMMA_THROW( comma::exception, "if --tolerance given, expected one key, got: " << keys.size() ); }
         return comma::math::less( keys[0], rhs.keys[0], *tolerance );
     }
@@ -295,29 +296,34 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
             if( w[k] == "next_state" ) { got_next_state = true; continue; }
         }
         bool is_state_machine = got_state && got_next_state;
-        std::size_t default_input_keys = 0;
+        std::size_t default_input_keys_count = 0;
+        bool no_stdin_key_fields = true;
+        bool no_filter_key_fields = true;
         for( std::size_t i = 0; i < v.size(); ++i ) // quick and dirty, wasteful, but who cares
         {
             if( v[i].empty() || v[i] == "block" ) { continue; }
+            no_stdin_key_fields = false;
             for( std::size_t k = 0; k < w.size(); ++k )
             {
-                if( is_state_machine && ( w[k] == "state" || w[k] == "next_state" ) ) { continue; }
+                if( is_state_machine && ( w[k] == "state" || w[k] == "next_state" ) ) { no_filter_key_fields = false; continue; }
+                if( !w[k].empty() && w[k] != "block" ) { no_filter_key_fields = false; }
                 if( v[i] != w[k] ) { continue; }
-                v[i] = "keys[" + boost::lexical_cast< std::string >( default_input_keys ) + "]";
-                w[k] = "keys[" + boost::lexical_cast< std::string >( default_input_keys ) + "]";
-                ++default_input_keys;
+                v[i] = "keys[" + boost::lexical_cast< std::string >( default_input_keys_count ) + "]";
+                w[k] = "keys[" + boost::lexical_cast< std::string >( default_input_keys_count ) + "]";
+                ++default_input_keys_count;
             }
         }
-        if( !default_input_keys ) { std::cerr << "csv-join: please specify at least one common key; fields: " << stdin_csv.fields << "; filter fields: " << filter_csv.fields << std::endl; return 1; }
+        bool do_full_join = no_stdin_key_fields && no_filter_key_fields;
+        if( default_input_keys_count == 0 && !do_full_join ) { std::cerr << "csv-join: please specify at least one common key; fields: " << stdin_csv.fields << "; filter fields: " << filter_csv.fields << std::endl; return 1; }
         K state = options.value< K >( "--initial-state,--state", K() );
         std::size_t state_index;
         if( is_state_machine )
         {
-            state_index = default_input_keys;
+            state_index = default_input_keys_count;
             w[filter_state_index] = "keys[" + boost::lexical_cast< std::string >( state_index ) + "]";
-            ++default_input_keys;
+            ++default_input_keys_count;
         }
-        default_input.keys.resize( default_input_keys );
+        default_input.keys.resize( default_input_keys_count );
         stdin_csv.fields = comma::join( v, ',' );
         filter_csv.fields = comma::join( w, ',' );
         comma::csv::input_stream< input< K > > stdin_stream( std::cin, stdin_csv, default_input );
