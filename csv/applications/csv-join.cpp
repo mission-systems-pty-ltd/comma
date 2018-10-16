@@ -65,12 +65,12 @@ static void usage( bool more )
     std::cerr << "options" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
     std::cerr << "    --first-matching: output only the first matching record (a bit of hack for now, but we needed it)" << std::endl;
-    std::cerr << "    --not-matching: not matching records as read from stdin, no join performed" << std::endl;
-    std::cerr << "    --matching: output only matching records from stdin" << std::endl;
     std::cerr << "    --flag-matching: output all records, with 1 appended to matching records and 0 appended to not-matching records" << std::endl;
-    std::cerr << "    --unique,--unique-matches: expect only unique matches, exit with error otherwise" << std::endl;
+    std::cerr << "    --matching: output only matching records from stdin" << std::endl;
+    std::cerr << "    --not-matching: not matching records as read from stdin, no join performed" << std::endl;
     std::cerr << "    --strict: fail, if id on stdin is not found" << std::endl;
     std::cerr << "    --tolerance,--epsilon=<value>; compare keys with given tolerance" << std::endl;
+    std::cerr << "    --unique,--unique-matches: expect only unique matches, exit with error otherwise" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
     std::cerr << std::endl;
     std::cerr << "key field options" << std::endl;
