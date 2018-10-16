@@ -315,7 +315,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
         }
         bool do_full_join = no_stdin_key_fields && no_filter_key_fields;
         //if( default_input_keys_count == 0 && !do_full_join ) { std::cerr << "csv-join: please specify at least one common key; fields: " << stdin_csv.fields << "; filter fields: " << filter_csv.fields << std::endl; return 1; }
-        if( default_input_keys_count == 0 || do_full_join ) { std::cerr << "csv-join: please specify at least one common key; fields: " << stdin_csv.fields << "; filter fields: " << filter_csv.fields << std::endl; return 1; }
+        if( default_input_keys_count == 0 ) { std::cerr << "csv-join: please specify at least one common key; fields: " << stdin_csv.fields << "; filter fields: " << filter_csv.fields << std::endl; return 1; }
         K state = options.value< K >( "--initial-state,--state", K() );
         std::size_t state_index;
         if( is_state_machine )
@@ -327,6 +327,11 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
         default_input.keys.resize( default_input_keys_count );
         stdin_csv.fields = comma::join( v, ',' );
         filter_csv.fields = comma::join( w, ',' );
+        if( do_full_join )
+        {
+            if( stdin_csv.fields.empty() ) { stdin_csv.fields = "stdin/dummy"; }
+            if( filter_csv.fields.empty() ) { stdin_csv.fields = "filter/dummy"; }
+        }
         comma::csv::input_stream< input< K > > stdin_stream( std::cin, stdin_csv, default_input );
         filter_transport.reset( new comma::io::istream( filter_csv.filename, filter_csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii ) );
         if( filter_transport->fd() == comma::io::invalid_file_descriptor ) { std::cerr << "csv-join: failed to open \"" << filter_csv.filename << "\"" << std::endl; return 1; }
