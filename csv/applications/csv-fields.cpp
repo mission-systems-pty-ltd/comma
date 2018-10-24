@@ -67,6 +67,7 @@ static void usage( bool )
     std::cerr << "    cut: remove fields" << std::endl;
     std::cerr << "        --fields=<fields>: fields to remove" << std::endl;
     std::cerr << "        --except=<fields>: fields to retain" << std::endl;
+    std::cerr << "        --empty: remove empty fields, e.g. csv-fields cut --empty <<< 'a,,,b,,c' will output a,b,c" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    default: set empty fields to default values" << std::endl;
     std::cerr << "        --value=<default value>: fill all empty fields with the same value" << std::endl;
@@ -366,7 +367,9 @@ int main( int ac, char** av )
         }
         if( operation == "cut" )
         {
+            options.assert_mutually_exclusive( "--except,--fields", "--empty" );
             bool except = options.exists( "--except" );
+            bool empty = options.exists( "--empty" );
             const std::string& f = except ? options.value< std::string >( "--except", "" ) : options.value< std::string >( "--fields", "" );
             const std::vector< std::string >& s = comma::split( f, delimiter );
             while( std::cin.good() )
@@ -376,7 +379,18 @@ int main( int ac, char** av )
                 std::getline( std::cin, line );
                 if( line.empty() ) { continue; }
                 const std::vector< std::string >& v = comma::split( line, delimiter );
-                for( unsigned int i = 0; i < v.size(); ++i ) { if( except == ( !v[i].empty() && std::find( s.begin(), s.end(), v[i] ) != s.end() ) ) { std::cout << comma << v[i]; comma = delimiter; } }
+                for( unsigned int i = 0; i < v.size(); ++i )
+                {
+                    if( empty )
+                    {
+                        if( v[i].empty() ) { continue; }
+                    }
+                    else
+                    { 
+                        if( except != ( !v[i].empty() && std::find( s.begin(), s.end(), v[i] ) != s.end() ) ) { continue; }
+                    }
+                    std::cout << comma << v[i]; comma = delimiter;
+                }
                 std::cout << std::endl;
             }
             return 0;
