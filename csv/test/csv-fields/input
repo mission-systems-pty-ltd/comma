@@ -91,6 +91,7 @@ cut/except_fields[6]="echo ,b,,d,e | csv-fields cut --except b,d"
 cut/except_fields[7]="echo ,b,c,d,, | csv-fields cut --except b,d"
 cut/except_fields[8]="echo ,b,c,d,, | csv-fields cut --except"
 cut/empty[0]="echo ,b,,c,,,,d,, | csv-fields cut --empty"
+cut/empty[1]="echo ,,,,,,,,, | csv-fields cut --empty"
 
 rename[0]="echo a,b,a,d,a | csv-fields rename --fields a --to z"
 rename[1]="echo a | csv-fields rename --fields a --to z"

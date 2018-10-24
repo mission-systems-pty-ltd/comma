@@ -171,6 +171,8 @@ cut/except_fields[8]/output=""
 cut/except_fields[8]/status=0
 cut/empty[0]/output="b,c,d"
 cut/empty[0]/status=0
+cut/empty[1]/output=""
+cut/empty[1]/status=0
 
 rename[0]/output="z,b,z,d,z"
 rename[0]/status=0
