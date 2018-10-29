@@ -147,3 +147,5 @@ precision[5]/status=0
 precision[6]/output="19700101T000000.000001"
 precision[6]/status=0
 
+format[0]/output="20180102T123456"
+format[1]/output="623"

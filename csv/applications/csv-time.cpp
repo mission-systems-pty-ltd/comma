@@ -77,10 +77,8 @@ static void usage( bool )
         "\n            a special input format - try to convert from all those supported,"
         "\n            default input format, will be slower"
         "\n    - format"
-        "\n            user given time format, for e.g 'format;%Y%m%dT%H%M%S' will also convert to/from iso format."
-        "\n            see date manual for details about time format specifications."
-        "\n            note: format is implemented as a thin wrapper of boost time format; the conversions may not be"
-        "\n                  correct, if %Y or %m or %d not present, e.g. for %M%S - blame boost"
+        "\n            user given time format, for e.g 'format;%Y%m%dT%H%M%S' will also convert to/from iso format"
+        "\n            see man date for details about time format specifications"
         "\n    - iso, iso-8601-basic"
         "\n            YYYYMMDDTHHMMSS.FFFFFF, e.g. 20140101T001122.333000"
         "\n    - iso-always-with-fractions"
@@ -272,12 +270,21 @@ static boost::posix_time::ptime from_string( const std::string& s, const what_t 
 
         case format:
         {
+            bool is_duration = from_format.find( "%Y" ) == std::string::npos; // quick and dirty
+            auto tif = new boost::posix_time::time_input_facet( from_format );
+            if( is_duration ) { tif->time_duration_format( &from_format[0] ); }
             std::istringstream is( s );
             is.exceptions( std::ios_base::failbit );
-            is.imbue( std::locale( std::cin.getloc(), new boost::posix_time::time_input_facet( from_format ) ) );
-            boost::posix_time::ptime pt;
-            is >> pt;
-            return pt;
+            is.imbue( std::locale( std::cin.getloc(), tif ) );
+            if( is_duration )
+            {
+                boost::posix_time::time_duration d;
+                is >> d;
+                return boost::posix_time::ptime( comma::csv::impl::epoch, d );
+            }
+            boost::posix_time::ptime t;
+            is >> t;
+            return t;
         }
 
         case guess:
