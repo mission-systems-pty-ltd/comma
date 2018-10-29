@@ -350,9 +350,9 @@ std::string to_string( const boost::posix_time::ptime& t, what_t w )
             const boost::posix_time::time_duration d = t - base;
             comma::int64 microseconds = d.total_microseconds();
             //std::ostringstream oss;
-            // oss << ( microseconds < 0 ? "-" : "" ) << microseconds;
+            //oss << ( microseconds < 0 ? "-" : "" ) << microseconds;
             //return oss.str();
-            boost::lexical_cast< std::string >( microseconds );
+            return boost::lexical_cast< std::string >( microseconds );
         }
 
         case sql:
