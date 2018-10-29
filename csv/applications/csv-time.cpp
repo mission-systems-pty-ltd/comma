@@ -79,6 +79,8 @@ static void usage( bool )
         "\n    - format"
         "\n            user given time format, for e.g 'format;%Y%m%dT%H%M%S' will also convert to/from iso format."
         "\n            see date manual for details about time format specifications."
+        "\n            note: format is implemented as a thin wrapper of boost time format; the conversions may not be"
+        "\n                  correct, if %Y or %m or %d not present, e.g. for %M%S - blame boost"
         "\n    - iso, iso-8601-basic"
         "\n            YYYYMMDDTHHMMSS.FFFFFF, e.g. 20140101T001122.333000"
         "\n    - iso-always-with-fractions"
@@ -271,9 +273,9 @@ static boost::posix_time::ptime from_string( const std::string& s, const what_t 
         case format:
         {
             std::istringstream is( s );
-            boost::posix_time::ptime pt;
-            is.exceptions(std::ios_base::failbit);
+            is.exceptions( std::ios_base::failbit );
             is.imbue( std::locale( std::cin.getloc(), new boost::posix_time::time_input_facet( from_format ) ) );
+            boost::posix_time::ptime pt;
             is >> pt;
             return pt;
         }
@@ -297,10 +299,7 @@ static boost::posix_time::ptime from_string( const std::string& s, const what_t 
                     }
                     catch( ... )
                     {
-                        try
-                        { 
-                            return from_string( s, seconds );
-                        }
+                        try { return from_string( s, seconds ); }
                         catch( std::exception& ex ) { COMMA_THROW( comma::exception, "expected time, got: \"" << s << "\"; " << ex.what() ); }
                         catch( ... ) { COMMA_THROW( comma::exception, "expected time, got: \"" << s << "\"; unknown exception" ); }
                     }
