@@ -73,11 +73,23 @@ static void usage( bool )
         "\nNote: no --binary option, do not use this utility on binary; instead read as unsigned long-long (time in microseconds)"
         "\n"
         "\nTime formats"
+        "\n    - any, guess"
+        "\n            a special input format - try to convert from all those supported,"
+        "\n            default input format, will be slower"
+        "\n    - format"
+        "\n            user given time format, for e.g 'format;%Y%m%dT%H%M%S' will also convert to/from iso format."
+        "\n            see date manual for details about time format specifications."
         "\n    - iso, iso-8601-basic"
         "\n            YYYYMMDDTHHMMSS.FFFFFF, e.g. 20140101T001122.333000"
         "\n    - iso-always-with-fractions"
         "\n            YYYYMMDDTHHMMSS.FFFFFF"
         "\n            output 20140101T000000.000000, not 20140101T000000"
+        "\n    - local"
+        "\n            same as iso but converts from/to local time adjusted using current machine settings"
+        "\n    - microseconds, us"
+        "\n            microseconds since UNIX epoch as integer"
+        "\n    - seconds"
+        "\n            seconds since UNIX epoch as double"
         "\n    - sql, posix, ieee-std-1003.1"
         "\n            e.g. 2014-01-01 00:11:22"
         "\n    - xsd, iso-8601-extended"
@@ -86,18 +98,6 @@ static void usage( bool )
         "\n                 2014-12-25T00:00:00.000+11:00"
         "\n                 2014-12-25T00:00:00.000+1100"
         "\n                 2014-12-25T00:00:00.000+11"
-        "\n    - seconds"
-        "\n            seconds since UNIX epoch as double"
-        "\n    - microseconds, us"
-        "\n            microseconds since UNIX epoch as integer"
-        "\n    - any, guess"
-        "\n            a special input format - try to convert from all those supported,"
-        "\n            default input format, will be slower"
-        "\n    - format"
-        "\n            user given time format, for e.g 'format;%Y%m%dT%H%M%S' will also convert to/from iso format."
-        "\n            see date manual for details about time format specifications."
-        "\n    local"
-        "\n            same as iso but converts from/to local time adjusted using current machine settings"
         "\n"
         "\nDeprecated options:"
         "\n    --to-seconds,--sec,-s: iso input expected; use --from, --to"
@@ -349,9 +349,10 @@ std::string to_string( const boost::posix_time::ptime& t, what_t w )
             const boost::posix_time::ptime base( comma::csv::impl::epoch );
             const boost::posix_time::time_duration d = t - base;
             comma::int64 microseconds = d.total_microseconds();
-            std::ostringstream oss;
-            oss << ( microseconds < 0 ? "-" : "" ) << microseconds;
-            return oss.str();
+            //std::ostringstream oss;
+            // oss << ( microseconds < 0 ? "-" : "" ) << microseconds;
+            //return oss.str();
+            boost::lexical_cast< std::string >( microseconds );
         }
 
         case sql:
@@ -363,7 +364,7 @@ std::string to_string( const boost::posix_time::ptime& t, what_t w )
         case format:
         {
             std::ostringstream os;
-            os.imbue( std::locale( std::cout.getloc(), new boost::posix_time::time_facet( to_format.c_str() ) ) );
+            os.imbue( std::locale( std::cout.getloc(), new boost::posix_time::time_facet( &to_format[0] ) ) );
             os << t;
             return os.str();
         }
