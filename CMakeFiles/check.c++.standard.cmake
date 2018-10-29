@@ -21,11 +21,12 @@
     include( CheckCXXCompilerFlag )
     IF( ${CXX_STANDARD_TO_USE} MATCHES "0x" )
         message( WARNING "
- ################################################################################
- #### you have chosen to use C++0X; compilation may fail for some C++${CXX_STANDARD_DEFAULT} code ####
- ####              proceed at your own risk, the build may fail              ####
- ####     consider using 'make --keep-going' to build at least something     ####
- ################################################################################" )
+ #########################################################################
+ ##  you have chosen to use C++${CXX_STANDARD_TO_USE}; compilation may fail for C++${CXX_STANDARD_DEFAULT} code  ##
+ ##             proceed at your own risk, the build may fail            ##
+ ##   consider using 'make --keep-going' to build at least something    ##
+ #########################################################################
+" )
     ENDIF()
     FOREACH( STANDARD ${CXX_STANDARDS} )
         # message( "Check if using C++${STANDARD}" )
