@@ -133,6 +133,7 @@ variables=
 output_vars_option=
 input=
 tmpdir="."
+# python_cmd="python2"
 python_cmd="python"
 
 while [[ $# -gt 0 ]]; do

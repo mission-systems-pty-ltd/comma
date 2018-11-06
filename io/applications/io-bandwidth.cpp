@@ -133,10 +133,10 @@ int main( int ac, char** av )
         boost::optional< std::size_t > record_size = boost::make_optional< std::size_t >( false, 0 );
         if( options.exists( "--size,-s" )) { record_size = options.value< std::size_t >( "--size,-s" ); }
 
-        boost::posix_time::time_duration update_interval = boost::posix_time::microseconds( options.value< double >( "--update,-u", default_update_interval ) * 1000000 );
+        boost::posix_time::time_duration update_interval = boost::posix_time::microseconds( static_cast<unsigned int> (options.value< double >( "--update,-u", default_update_interval ) * 1000000) );
         double window = options.value< double >( "--window,-w", default_window );
         double bucket_width = options.value< double >( "--resolution,-r", default_window_resolution );
-        boost::posix_time::time_duration bucket_duration = boost::posix_time::microseconds( bucket_width * 1000000 );
+        boost::posix_time::time_duration bucket_duration = boost::posix_time::microseconds( static_cast<unsigned int> (bucket_width * 1000000) );
         char delimiter = options.value( "--delimiter,-d", default_delimiter );
 
         comma::io::select select;

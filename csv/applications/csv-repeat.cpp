@@ -199,11 +199,11 @@ int main( int ac, char** av )
             return 0;
         }
         boost::optional< boost::posix_time::time_duration > period;
-        if( options.exists( "--period" ) ) { period = boost::posix_time::microseconds( options.value< double >( "--period" ) * 1000000 ); }
+        if( options.exists( "--period" ) ) { period = boost::posix_time::microseconds( static_cast<unsigned int> (options.value< double >( "--period" ) * 1000000 )); }
         boost::posix_time::time_duration timeout;
         boost::optional< double > timeout_seconds = options.optional< double >( "--timeout,-t" );
         if( !period && !timeout_seconds ) { std::cerr << "csv-repeat: please specify either --period, or --timeout, or both" << std::endl; return 1; }
-        timeout = timeout_seconds ? boost::posix_time::microseconds( *timeout_seconds * 1000000 ) : *period;
+        timeout = timeout_seconds ? boost::posix_time::microseconds( static_cast<unsigned int>(*timeout_seconds * 1000000 )) : *period;
         bool end_of_stream = false;
         std::string line;
         std::string last_line;

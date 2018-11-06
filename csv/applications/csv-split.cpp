@@ -157,7 +157,7 @@ int main( int argc, char** argv )
         passthrough = vm.count("passthrough");
         
         if( id_is_string && id_is_time ) { std::cerr << "csv-split: either --string or --time" << std::endl; }
-        if( period > 0 ) { duration = boost::posix_time::microseconds( period * 1e6 ); }
+        if( period > 0 ) { duration = boost::posix_time::microseconds( static_cast<unsigned int> (period * 1e6 )); }
         if( extension.empty() ) { suffix = csv.binary() || size > 0 ? ".bin" : ".csv"; }
         else { suffix += "."; suffix += extension; }
 
