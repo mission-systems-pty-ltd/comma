@@ -71,6 +71,7 @@ static void usage( bool more )
     std::cerr << "    --first-matching: output only the first matching record (a bit of hack for now, but we needed it)" << std::endl;
     std::cerr << "    --flag-matching: output all records, with 1 appended to matching records and 0 appended to not-matching records" << std::endl;
     std::cerr << "    --matching: output only matching records from stdin" << std::endl;
+    std::cerr << "    --nearest: if --tolerance specified, output only nearest record" << std::endl;
     std::cerr << "    --not-matching: not matching records as read from stdin, no join performed" << std::endl;
     std::cerr << "    --strict: fail, if id on stdin is not found" << std::endl;
     std::cerr << "    --tolerance,--epsilon=<value>; compare keys with given tolerance" << std::endl;
@@ -142,6 +143,7 @@ static void usage( bool more )
 
 static bool verbose;
 static bool first_matching;
+static bool nearest;
 static bool unique;
 static bool strict;
 static bool not_matching;
@@ -182,7 +184,7 @@ struct input
     {
         if( keys.empty() ) { COMMA_THROW( comma::exception, "if --tolerance given, expected exactly one key, got none" ); }
         if( keys.size() > 1 ) { COMMA_THROW( comma::exception, "if --tolerance given, expected one key, got: " << keys.size() ); }
-        return comma::math::less( keys[0], rhs.keys[0], *tolerance );
+        return comma::math::less( keys[0], rhs.keys[0] ); //, *tolerance );
     }
 
     struct hash : public std::unary_function< input, std::size_t >
@@ -203,7 +205,7 @@ template < typename K, bool Strict = true > struct traits
 {
     typedef typename input< K >::unordered_map map;
     typedef std::pair< typename map::const_iterator, typename map::const_iterator > pair;
-    static pair find( map& m, const input< K >& k )
+    static pair find( map& m, const input< K >& k, bool )
     {
         typename map::const_iterator it = m.find( k );
         if( it == m.end() ) { return std::make_pair( it, it ); }
@@ -213,12 +215,55 @@ template < typename K, bool Strict = true > struct traits
     }
 };
 
+template < typename K > struct type_traits
+{
+    template < typename Map >
+    static typename std::pair< typename Map::iterator, typename Map::iterator > bounds( Map& m, const input< K >& k ) // quick and dirty
+    {
+        COMMA_THROW( comma::exception, "todo" );
+    }
+    
+    template < typename Map >
+    static typename Map::iterator nearest( Map& m, const input< K >& k ) // quick and dirty
+    { 
+        auto begin = m.lower_bound( k );
+        auto end = m.upper_bound( k );
+        typename Map::iterator min = begin;
+        for( typename Map::iterator it = begin; it != end; ++it )
+        {
+            if( std::abs( min->first.keys[0] - k.keys[0] ) > std::abs( it->first.keys[0] - k.keys[0] ) ) { min = it; }
+        }
+        return min;
+    }
+};
+
+template <> struct type_traits< std::string > // quick and dirty
+{
+    template < typename Map >
+    static std::pair< typename Map::iterator, typename Map::iterator > bounds( Map& m, const input< std::string >& k ) { COMMA_THROW( comma::exception, "never here" ); }    
+    template < typename Map > static typename Map::iterator nearest( Map& m, const input< std::string >& ) { COMMA_THROW( comma::exception, "never here" ); }
+};
+
+template <> struct type_traits< boost::posix_time::ptime > // quick and dirty
+{
+    template < typename Map >
+    static typename std::pair< typename Map::iterator, typename Map::iterator > bounds( Map& m, const input< boost::posix_time::ptime >& k ) { COMMA_THROW( comma::exception, "never here" ); }
+    template < typename Map >
+    static typename Map::iterator nearest( Map& m, const input< boost::posix_time::ptime >& ) { COMMA_THROW( comma::exception, "never here" ); }
+};
+
 template < typename K > struct traits< K, false >
 {
     typedef typename input< K >::map map;
-    //typedef std::pair< typename map::const_iterator, typename map::const_iterator > pair;
-    typedef std::pair< typename map::iterator, typename map::iterator > pair;
-    static pair find( map& m, const input< K >& k ) { return std::make_pair( m.lower_bound( k ), m.upper_bound( k ) ); }
+    typedef std::pair< typename map::iterator, typename map::iterator > pair; //typedef std::pair< typename map::const_iterator, typename map::const_iterator > pair;
+    static pair find( map& m, const input< K >& k, bool nearest )
+    {
+        if( !nearest ) { return type_traits< K >::bounds( m, k ); } //if( !nearest ) { return std::make_pair( m.lower_bound( k ), m.upper_bound( k ) ); }
+        auto n = type_traits< K >::nearest( m, k );
+        if( n == m.end() ) { return std::make_pair( n, n ); }
+        auto end = n;
+        return std::make_pair( n, ++end );
+    }
 };
 
 namespace comma { namespace visiting {
@@ -350,12 +395,15 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
             if( !p ) { break; }
             if( block != p->block ) { read_filter_block(); }
             typename traits< K, Strict >::pair pair;
-            if( !is_state_machine ) { pair = traits< K, Strict >::find( filter_map, *p ); }
-            else
+            if( is_state_machine )
             {
                 input< K > q( *p );
                 q.keys[ state_index ] = state;
-                pair = traits< K, Strict >::find( filter_map, q );
+                pair = traits< K, Strict >::find( filter_map, q, false );
+            }
+            else
+            {
+                pair = traits< K, Strict >::find( filter_map, *p, nearest );
             }
             if( pair.first == filter_map.end() ) // if( it == filter_map.end() || it->second.empty() )
             {
@@ -438,6 +486,8 @@ int main( int ac, char** av )
         matching = options.exists( "--matching" );
         flag_matching = options.exists( "--flag-matching" );
         tolerance = options.optional< double >( "--tolerance,--epsilon" );
+        nearest = options.exists( "--nearest" );
+        if( nearest && !tolerance ) { std::cerr << "csv-join: if using --nearest, please specify --tolerance" << std::endl; return 1; }
         options.assert_mutually_exclusive( "--matching,--not-matching,--flag-matching" );
         options.assert_mutually_exclusive( "--tolerance,--epsilon,--first-matching" );
         options.assert_mutually_exclusive( "--tolerance,--epsilon,--string,-s,--double,--time" );

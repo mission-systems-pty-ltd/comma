@@ -175,7 +175,7 @@ boost::optional< boost::posix_time::time_duration > bound;
 
 typedef std::pair< boost::posix_time::ptime, std::string > timestring_t;
 
-boost::posix_time::ptime get_time (const Point p)
+boost::posix_time::ptime get_time( const Point& p )
 {
     return p.timestamp ? *p.timestamp : boost::posix_time::microsec_clock::universal_time();
 }
