@@ -71,10 +71,10 @@ static void usage( bool more )
     std::cerr << "    --first-matching: output only the first matching record (a bit of hack for now, but we needed it)" << std::endl;
     std::cerr << "    --flag-matching: output all records, with 1 appended to matching records and 0 appended to not-matching records" << std::endl;
     std::cerr << "    --matching: output only matching records from stdin" << std::endl;
-    std::cerr << "    --nearest: if --tolerance specified, output only nearest record" << std::endl;
+    std::cerr << "    --nearest: if --radius specified, output only nearest record" << std::endl;
     std::cerr << "    --not-matching: not matching records as read from stdin, no join performed" << std::endl;
     std::cerr << "    --strict: fail, if id on stdin is not found" << std::endl;
-    std::cerr << "    --tolerance,--epsilon=<value>; compare keys with given tolerance" << std::endl;
+    std::cerr << "    --radius,--epsilon=<value>; compare keys in given radius; the keys will be interpreted as floating point numbers" << std::endl;
     std::cerr << "    --unique,--unique-matches: expect only unique matches, exit with error otherwise" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
     std::cerr << std::endl;
@@ -153,7 +153,7 @@ static comma::csv::options stdin_csv;
 static comma::csv::options filter_csv;
 boost::scoped_ptr< comma::io::istream > filter_transport;
 static comma::uint32 block = 0;
-static boost::optional< double > tolerance;
+static boost::optional< double > radius;
 
 static void hash_combine_( std::size_t& seed, boost::posix_time::ptime key )
 {
@@ -182,9 +182,9 @@ struct input
 
     bool operator<( const input& rhs ) const
     {
-        if( keys.empty() ) { COMMA_THROW( comma::exception, "if --tolerance given, expected exactly one key, got none" ); }
-        if( keys.size() > 1 ) { COMMA_THROW( comma::exception, "if --tolerance given, expected one key, got: " << keys.size() ); }
-        return comma::math::less( keys[0], rhs.keys[0] ); //, *tolerance );
+        if( keys.empty() ) { COMMA_THROW( comma::exception, "if --radius given, expected exactly one key, got none" ); }
+        if( keys.size() > 1 ) { COMMA_THROW( comma::exception, "if --radius given, expected one key, got: " << keys.size() ); }
+        return comma::math::less( keys[0], rhs.keys[0] ); //, *radius );
     }
 
     struct hash : public std::unary_function< input, std::size_t >
@@ -220,16 +220,19 @@ template < typename K > struct type_traits
     template < typename Map >
     static typename std::pair< typename Map::iterator, typename Map::iterator > bounds( Map& m, const input< K >& k ) // quick and dirty
     {
-        COMMA_THROW( comma::exception, "todo" );
+        input< K > l = k; // quick and dirty; lame
+        input< K > u = k;
+        l.keys[0] -= *radius;
+        u.keys[0] += *radius;
+        return std::make_pair( m.lower_bound( l ), m.upper_bound( u ) );
     }
     
     template < typename Map >
     static typename Map::iterator nearest( Map& m, const input< K >& k ) // quick and dirty
     { 
-        auto begin = m.lower_bound( k );
-        auto end = m.upper_bound( k );
-        typename Map::iterator min = begin;
-        for( typename Map::iterator it = begin; it != end; ++it )
+        auto b = type_traits< K >::bounds( m, k );
+        typename Map::iterator min = b.first;
+        for( typename Map::iterator it = b.first; it != b.second; ++it )
         {
             if( std::abs( min->first.keys[0] - k.keys[0] ) > std::abs( it->first.keys[0] - k.keys[0] ) ) { min = it; }
         }
@@ -258,7 +261,7 @@ template < typename K > struct traits< K, false >
     typedef std::pair< typename map::iterator, typename map::iterator > pair; //typedef std::pair< typename map::const_iterator, typename map::const_iterator > pair;
     static pair find( map& m, const input< K >& k, bool nearest )
     {
-        if( !nearest ) { return type_traits< K >::bounds( m, k ); } //if( !nearest ) { return std::make_pair( m.lower_bound( k ), m.upper_bound( k ) ); }
+        if( !nearest ) { return type_traits< K >::bounds( m, k ); }
         auto n = type_traits< K >::nearest( m, k );
         if( n == m.end() ) { return std::make_pair( n, n ); }
         auto end = n;
@@ -485,12 +488,12 @@ int main( int ac, char** av )
         unique = options.exists( "--unique,--unique-matches" );
         matching = options.exists( "--matching" );
         flag_matching = options.exists( "--flag-matching" );
-        tolerance = options.optional< double >( "--tolerance,--epsilon" );
+        radius = options.optional< double >( "--radius,--epsilon" );
         nearest = options.exists( "--nearest" );
-        if( nearest && !tolerance ) { std::cerr << "csv-join: if using --nearest, please specify --tolerance" << std::endl; return 1; }
+        if( nearest && !radius ) { std::cerr << "csv-join: if using --nearest, please specify --radius" << std::endl; return 1; }
         options.assert_mutually_exclusive( "--matching,--not-matching,--flag-matching" );
-        options.assert_mutually_exclusive( "--tolerance,--epsilon,--first-matching" );
-        options.assert_mutually_exclusive( "--tolerance,--epsilon,--string,-s,--double,--time" );
+        options.assert_mutually_exclusive( "--radius,--epsilon,--first-matching" );
+        options.assert_mutually_exclusive( "--radius,--epsilon,--string,-s,--double,--time" );
         stdin_csv = comma::csv::options( options );
         std::vector< std::string > unnamed = options.unnamed( "--verbose,-v,--first-matching,--matching,--not-matching,--string,-s,--time,--double,--strict", "-.*" );
         if( unnamed.empty() ) { std::cerr << "csv-join: please specify the second source" << std::endl; return 1; }
@@ -504,7 +507,7 @@ int main( int ac, char** av )
                ? join_impl_< std::string, true >::run( options )
                : options.exists( "--double" )
                ? join_impl_< double, true >::run( options )
-               : tolerance
+               : radius
                ? join_impl_< double, false >::run( options )
                : join_impl_< comma::int64, true >::run( options );
     }
