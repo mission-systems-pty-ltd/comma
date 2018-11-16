@@ -73,7 +73,7 @@ static void usage( bool more )
     std::cerr << "    --matching: output only matching records from stdin" << std::endl;
     std::cerr << "    --nearest: if --radius specified, output only nearest record" << std::endl;
     std::cerr << "    --not-matching: not matching records as read from stdin, no join performed" << std::endl;
-    std::cerr << "    --strict: fail, if id on stdin is not found" << std::endl;
+    std::cerr << "    --strict: fail, if id on stdin is not found, or there are multiple filter keys on --unique, etc" << std::endl;
     std::cerr << "    --radius,--epsilon=<value>; compare keys in given radius; the keys will be interpreted as floating point numbers" << std::endl;
     std::cerr << "    --unique,--unique-matches: expect only unique matches, exit with error otherwise" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
@@ -435,11 +435,15 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
             if( not_matching ) { continue; }
             for( typename traits< K, Strict >::map::const_iterator it = pair.first; it != pair.second; ++it )
             {
-                if( unique && it->second.size() > 1 ) { std::cerr << "csv-join: with --unique option, expected unique entries, got more than one filter entry on the key: " << keys_as_string( it->first ) << std::endl; return 1; }
+                if( unique && it->second.size() > 1 )
+                {
+                    if( strict ) { std::cerr << "csv-join: with --unique option, expected unique entries, got more than one filter entry on the key: " << keys_as_string( it->first ) << std::endl; return 1; }
+                    if( verbose ) { std::cerr << "csv-join: got --unique option, but more than one filter entry on the key: " << keys_as_string( it->first ) << "; only the first entry will be output; use --strict to make it fatal error" << std::endl; }
+                }
                 if( is_state_machine && it->second.size() > 1 ) { std::cerr << "csv-join: finite state machine, expected unique entries, got more than one state transition entry on the key: " << keys_as_string( it->first ) << std::endl; return 1; }
                 if( stdin_stream.is_binary() )
                 {
-                    for( std::size_t i = 0; i < ( first_matching ? 1 : it->second.size() ); ++i )
+                    for( std::size_t i = 0; i < ( first_matching || unique ? 1 : it->second.size() ); ++i )
                     {
                         std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() );
                         if( is_state_machine ) { state = it->first.next_state; }
@@ -452,7 +456,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
                 }
                 else
                 {
-                    for( std::size_t i = 0; i < ( first_matching ? 1 : it->second.size() ); ++i )
+                    for( std::size_t i = 0; i < ( first_matching || unique ? 1 : it->second.size() ); ++i )
                     {
                         std::cout << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter );
                         if( is_state_machine ) { state = it->first.next_state; }
