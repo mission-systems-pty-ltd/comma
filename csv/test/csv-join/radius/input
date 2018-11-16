@@ -1,0 +1,4 @@
+radius/all[0]="( echo 0; echo 1 ) | csv-join --fields v <( echo 0; echo 1; echo 2 )";fields=v" --radius 0.5"
+radius/all[1]="( echo 0.1; echo 0.9 ) | csv-join --fields v <( echo 0; echo 1; echo 2 )";fields=v" --radius 1"
+radius/nearest[0]="( echo 0.1; echo 0.9; echo 1.1; echo 1.9; echo 3.1 ) | csv-join --fields v <( echo 0; echo 1; echo 2 )";fields=v" --radius 1 --nearest"
+radius/nearest[1]="( echo 2.9; echo 3.1 ) | csv-join --fields v <( echo 0; echo 1; echo 2 )";fields=v" --radius 1 --nearest"
