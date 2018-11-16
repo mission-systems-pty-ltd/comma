@@ -75,6 +75,7 @@ static void usage( bool more )
     std::cerr << "    --not-matching: not matching records as read from stdin, no join performed" << std::endl;
     std::cerr << "    --strict: fail, if id on stdin is not found, or there are multiple filter keys on --unique, etc" << std::endl;
     std::cerr << "    --radius,--epsilon=<value>; compare keys in given radius; the keys will be interpreted as floating point numbers" << std::endl;
+    std::cerr << "    --swap-output,--swap; output filter records first with the stdin record appended, a convenience option" << std::endl;
     std::cerr << "    --unique,--unique-matches: expect only unique matches, exit with error otherwise" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
     std::cerr << std::endl;
@@ -149,6 +150,7 @@ static bool strict;
 static bool not_matching;
 static bool matching;
 static bool flag_matching;
+static bool swap_output;
 static comma::csv::options stdin_csv;
 static comma::csv::options filter_csv;
 boost::scoped_ptr< comma::io::istream > filter_transport;
@@ -445,11 +447,12 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
                 {
                     for( std::size_t i = 0; i < ( first_matching || unique ? 1 : it->second.size() ); ++i )
                     {
-                        std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() );
+                        if( !swap_output ) { std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() ); }
                         if( is_state_machine ) { state = it->first.next_state; }
                         if( flag_matching ) { char match = 1; std::cout.write( &match, 1 ); break; }
                         if( matching ) { break; }
                         std::cout.write( &( it->second[i][0] ), filter_csv.format().size() );
+                        if( swap_output ) { std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() ); }
                         std::cout.flush();
                     }
                     std::cout.flush();
@@ -458,14 +461,16 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
                 {
                     for( std::size_t i = 0; i < ( first_matching || unique ? 1 : it->second.size() ); ++i )
                     {
-                        std::cout << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter );
+                        if( !swap_output ) { std::cout << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ); }
                         if( is_state_machine ) { state = it->first.next_state; }
                         if( flag_matching ) { std::cout << stdin_csv.delimiter << 1 << std::endl; break; }
                         if( matching ) { std::cout << std::endl; break; }
-                        std::cout << stdin_csv.delimiter
-                                  << ( filter_csv.binary()
+                        if( !swap_output ) { std::cout << stdin_csv.delimiter; }
+                        std::cout << ( filter_csv.binary()
                                      ? filter_csv.format().bin_to_csv( &it->second[i][0], stdin_csv.delimiter )
-                                     : it->second[i] ) << std::endl;
+                                     : it->second[i] );
+                        if( swap_output ) { std::cout << stdin_csv.delimiter << comma::join( stdin_stream.ascii().last(), stdin_csv.delimiter ); }
+                        std::cout << std::endl;
                     }
                 }
                 if( first_matching ) { break; }
@@ -494,12 +499,13 @@ int main( int ac, char** av )
         flag_matching = options.exists( "--flag-matching" );
         radius = options.optional< double >( "--radius,--epsilon" );
         nearest = options.exists( "--nearest" );
+        swap_output = options.exists( "--swap-output,--swap" );
         if( nearest && !radius ) { std::cerr << "csv-join: if using --nearest, please specify --radius" << std::endl; return 1; }
-        options.assert_mutually_exclusive( "--matching,--not-matching,--flag-matching" );
+        options.assert_mutually_exclusive( "--matching,--not-matching,--flag-matching,--swap-output,--swap" );
         options.assert_mutually_exclusive( "--radius,--epsilon,--first-matching" );
         options.assert_mutually_exclusive( "--radius,--epsilon,--string,-s,--double,--time" );
         stdin_csv = comma::csv::options( options );
-        std::vector< std::string > unnamed = options.unnamed( "--verbose,-v,--first-matching,--matching,--not-matching,--string,-s,--time,--double,--strict", "-.*" );
+        std::vector< std::string > unnamed = options.unnamed( "--verbose,-v,--first-matching,--matching,--not-matching,--string,-s,--time,--double,--strict,--swap-output,--swap", "-.*" );
         if( unnamed.empty() ) { std::cerr << "csv-join: please specify the second source" << std::endl; return 1; }
         if( unnamed.size() > 1 ) { std::cerr << "csv-join: expected one file or stream to join, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         comma::name_value::parser parser( "filename", ';', '=', false );
