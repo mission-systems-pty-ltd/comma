@@ -55,16 +55,15 @@ function comma_path_value_mangle()
 {
     local delimiter="$1"
     [[ -n "$delimiter" ]] || delimiter="_"
-    local path name value mangled
+    local path name value
     while IFS='=' read -r path value || [[ -n "$path" ]]; do
         [[ -n "$path" && ! "$path" =~ ^[#\"] ]] || continue
         name=${path//\//$delimiter}
         name=${name//-/$delimiter}
         value=${value#\"}
         value=${value%\"}
-        mangled+="$name='$value'\n"
+        echo "$name='$value'"
     done
-    echo -e -n $mangled
 }
 export -f comma_path_value_mangle
 
@@ -75,14 +74,13 @@ function comma_path_mangle()
 {
     local delimiter="$1"
     [[ -n "$delimiter" ]] || delimiter="_"
-    local path name mangled
+    local path name
     while IFS='=' read -r path _ || [[ -n "$path" ]]; do
         [[ -n "$path" && ! "$path" =~ ^[#\"] ]] || continue
         name=${path//\//$delimiter}
         name=${name//-/$delimiter}
-        mangled+="$name\n"
+        echo "$name"
     done
-    echo -e -n $mangled
 }
 export -f comma_path_mangle
 
@@ -134,7 +132,7 @@ function comma_path_mangle_sed()
 {
     local delimiter="$1"
     [[ -n "$delimiter" ]] || delimiter="_"
-    local path name mangled
+    local path name
     # sed -e '/^$/d' -e '/^#/d' -e "s/^/$prefix/g" -e "s/[/-]/$delimiter/g"
     # sed -e '/^$/d' -e '/^#/d' -e "s/[/-]/$delimiter/g"
     sed -f <( comma_path_mangle_sed_command "$delimiter" )
