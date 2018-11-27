@@ -72,6 +72,7 @@ static void usage( bool more )
     std::cerr << "               block: if present; output minimum for each contiguous block" << std::endl;
     std::cerr << "    --max: output record(s) with maximum value, same semantics as --min" << std::endl;
     std::cerr << "           --min and --max may be used together." << std::endl;
+    std::cerr << "    --numeric-keys-are-floats,--floats; in ascii, if --format not present, assume that numeric fields are floating point numbers" << std::endl;
     std::cerr << "    --order <fields>: order in which to sort fields; default is input field order" << std::endl;
     std::cerr << "    --reverse,--descending,-r: sort in reverse order" << std::endl;
     std::cerr << "    --sliding-window,--window=<size>: sort last <size> entries" << std::endl;
@@ -429,7 +430,7 @@ int handle_operations_with_ids( const comma::command_line_options& options )
     {
         while( std::cin.good() && first_line.empty() ) { std::getline( std::cin, first_line ); }
         if( first_line.empty() ) { return 0; }
-        f = comma::csv::impl::unstructured::guess_format( first_line, csv.delimiter );
+        f = comma::csv::impl::unstructured::guess_format( first_line, csv.delimiter, options.exists( "--numeric-keys-are-floats,--floats" ) );
     }
     comma::uint32 keys_size = 0;
     for( std::size_t k=0; k<v.size(); ++k )
@@ -598,7 +599,7 @@ static int sort( const comma::command_line_options& options )
     {
         while( std::cin.good() && first_line.empty() ) { std::getline( std::cin, first_line ); }
         if( first_line.empty() ) { return 0; }
-        f = comma::csv::impl::unstructured::guess_format( first_line, csv.delimiter );
+        f = comma::csv::impl::unstructured::guess_format( first_line, csv.delimiter, options.exists( "--numeric-keys-are-floats,--floats" ) );
         if( verbose ) { std::cerr << "csv-sort: guessed format: " << f.string() << std::endl; }
     }
     for( std::size_t i = 0; i < order.size(); ++i ) // quick and dirty, wasteful, but who cares
