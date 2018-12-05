@@ -31,6 +31,7 @@
 /// @author Vinny Do
 
 #include <iostream>
+#include <limits>
 #include <set>
 #include <string>
 #include <boost/icl/interval.hpp>
@@ -104,20 +105,23 @@ static void usage( bool verbose = false )
     std::cerr << "    --format: input format (ascii only), also affects the --limits option; if not given the format is guessed" << std::endl;
     std::cerr << "    --intervals-only: only output the intervals, ignore payload if any" << std::endl;
     std::cerr << "    --limits,-l: replace empty bounds with type limits" << std::endl;
-    std::cerr << "                  b  : " << (int)limits< char >::lowest() << " " << (int)limits< char >::max() << std::endl;
-    std::cerr << "                  ub : " << (int)limits< unsigned char >::lowest() << " " << (int)limits< unsigned char >::max() << std::endl;
-    std::cerr << "                  w  : " << limits< comma::int16 >::lowest() << " " << limits< comma::int16 >::max() << std::endl;
-    std::cerr << "                  uw : " << limits< comma::uint16 >::lowest() << " " << limits< comma::uint16 >::max() << std::endl;
-    std::cerr << "                  i  : " << limits< comma::int32 >::lowest() << " " << limits< comma::int32 >::max() << std::endl;
-    std::cerr << "                  ui : " << limits< comma::uint32 >::lowest() << " " << limits< comma::uint32 >::max() << std::endl;
-    std::cerr << "                  l  : " << limits< comma::int64 >::lowest() << " " << limits< comma::int64 >::max() << std::endl;
-    std::cerr << "                  ul : " << limits< comma::uint64 >::lowest() << " " << limits< comma::uint64 >::max() << std::endl;
-    std::cerr << "                  c  : " << (int)limits< char >::lowest() << " " << (int)limits< char >::max() << std::endl;
-    std::cerr << "                  f  : " << limits< float >::lowest() << " " << limits< float >::max() << std::endl;
-    std::cerr << "                  d  : " << limits< double >::lowest() << " " << limits< double >::max() << std::endl;
-    std::cerr << "                  s  : \"" << limits< std::string >::lowest() << "\" \"" << limits< std::string >::max() << "\"" << std::endl;
-    std::cerr << "                  t  : " << limits< boost::posix_time::ptime >::lowest() << " " << limits< boost::posix_time::ptime >::max() << std::endl;
-    std::cerr << "                  lt : " << limits< boost::posix_time::ptime >::lowest() << " " << limits< boost::posix_time::ptime >::max() << std::endl;
+    std::cerr << "                 b  : " << (int)limits< char >::lowest() << " " << (int)limits< char >::max() << std::endl;
+    std::cerr << "                 ub : " << (int)limits< unsigned char >::lowest() << " " << (int)limits< unsigned char >::max() << std::endl;
+    std::cerr << "                 w  : " << limits< comma::int16 >::lowest() << " " << limits< comma::int16 >::max() << std::endl;
+    std::cerr << "                 uw : " << limits< comma::uint16 >::lowest() << " " << limits< comma::uint16 >::max() << std::endl;
+    std::cerr << "                 i  : " << limits< comma::int32 >::lowest() << " " << limits< comma::int32 >::max() << std::endl;
+    std::cerr << "                 ui : " << limits< comma::uint32 >::lowest() << " " << limits< comma::uint32 >::max() << std::endl;
+    std::cerr << "                 l  : " << limits< comma::int64 >::lowest() << " " << limits< comma::int64 >::max() << std::endl;
+    std::cerr << "                 ul : " << limits< comma::uint64 >::lowest() << " " << limits< comma::uint64 >::max() << std::endl;
+    std::cerr << "                 c  : " << (int)limits< char >::lowest() << " " << (int)limits< char >::max() << std::endl;
+    std::cerr << "                 f  : " << limits< float >::lowest() << " " << limits< float >::max() << std::endl;
+    std::cerr << "                 d  : " << limits< double >::lowest() << " " << limits< double >::max() << std::endl;
+    std::cerr << "                 s  : \"" << limits< std::string >::lowest() << "\" \"" << limits< std::string >::max() << "\"" << std::endl;
+    std::cerr << "                 t  : " << limits< boost::posix_time::ptime >::lowest() << " " << limits< boost::posix_time::ptime >::max() << std::endl;
+    std::cerr << "                 lt : " << limits< boost::posix_time::ptime >::lowest() << " " << limits< boost::posix_time::ptime >::max() << std::endl;
+    std::cerr << "    --overlap-count=[<count>]; output only intervals with <count> overlaps" << std::endl;
+    std::cerr << "    --overlap-count-min,--min-overlap-count=[<count>]; output only intervals with at least <count> overlaps" << std::endl;
+    std::cerr << "    --overlap-count-max,--max-overlap-count=[<count>]; output only intervals with not more than <count> overlaps" << std::endl;
     std::cerr << std::endl;
     std::cerr << "ascii notes" << std::endl;
     std::cerr << "    unbounded intervals may be indicated by no value (e.g. ,3 \u2261 -\u221e,3), both sides unbounded is also supported" << std::endl;
@@ -270,7 +274,6 @@ struct intervals
     typedef typename bound_traits< From >::type bound_type;
     typedef std::set< std::string > set_t;
     typedef boost::icl::interval_map< bound_t< bound_type >, set_t > map_t;
-
     const comma::command_line_options& options;
     comma::csv::options csv;
     comma::csv::options ocsv;
@@ -279,6 +282,8 @@ struct intervals
     bool intervals_only;
     bool use_limits;
     map_t map;
+    unsigned int min_overlap_count;
+    unsigned int max_overlap_count;
 
     intervals( const comma::command_line_options& options ) : options( options )
                                                             , csv( options )
@@ -297,6 +302,16 @@ struct intervals
         ascii_csv.fields = ocsv.fields;
         ascii_csv.quote = boost::none;
         if( verbose ) { std::cerr << app_name << ": empty: "; empty ? std::cerr << *empty : std::cerr << "<none>"; std::cerr << std::endl; }
+        options.assert_mutually_exclusive( "overlap-count-min,overlap-count-max", "overlap-count" );
+        if( options.exists( "--overlap-count" ) )
+        {
+            min_overlap_count = max_overlap_count = options.value< unsigned int >( "--overlap-count" );
+        }
+        else
+        {
+            min_overlap_count = options.value( "--overlap-count-min", 0 );
+            max_overlap_count = options.value( "--overlap-count-max", std::numeric_limits< unsigned int >::max() );
+        }
     }
 
     void add( const bound_t< bound_type >& from, const bound_t< bound_type >& to, const std::string& payload )
@@ -327,6 +342,7 @@ struct intervals
             else if( empty ) { interval.to.value = static_cast< To >( *empty ); }
             else { to_has_value = false; }
             const set_t& s = it->second;
+            if( s.size() < min_overlap_count || s.size() > max_overlap_count ) { continue; }
             if( csv.binary() )
             {
                 if( intervals_only ) { ostream.write( interval ); ostream.flush(); continue; }
@@ -494,13 +510,7 @@ int main( int ac, char** av )
         }
         return 0;
     }
-    catch( std::exception& ex )
-    {
-        std::cerr << app_name << ": " << ex.what() << std::endl;
-    }
-    catch( ... )
-    {
-        std::cerr << app_name << ": unknown exception" << std::endl;
-    }
+    catch( std::exception& ex ) { std::cerr << app_name << ": " << ex.what() << std::endl; }
+    catch( ... ) { std::cerr << app_name << ": unknown exception" << std::endl; }
     return 1;
 }
