@@ -1,0 +1,10 @@
+basics[0]/output/line[0]="a,0"
+basics[0]/output/line[1]="a,1"
+basics[0]/output/line[2]="b,0"
+basics[0]/output/line[3]="b,1"
+basics[0]/status=0
+block[0]/output/line[0]="a,0,s,0"
+block[0]/output/line[1]="a,0,t,0"
+block[0]/output/line[2]="b,1,s,0"
+block[0]/output/line[3]="b,1,t,0"
+block[0]/status=0

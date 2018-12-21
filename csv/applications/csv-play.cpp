@@ -127,7 +127,7 @@ class key_press_handler_t
 public:
     enum states { running, paused, read_once, read_block };
     
-    key_press_handler_t( bool interactive, bool paused_at_start ): key_press_( interactive ), paused_( paused_at_start ), state_( paused_ ? paused : running ) { std::cerr << "csv-play: paused at start" << std::endl; }
+    key_press_handler_t( bool interactive, bool paused_at_start ): key_press_( interactive ), paused_( paused_at_start ), state_( paused_ ? paused : running ) { if( paused_at_start ) { std::cerr << "csv-play: paused at start" << std::endl; } }
     
     void update( boost::posix_time::ptime t )
     {
@@ -263,7 +263,7 @@ int main( int argc, char** argv )
         if( !from.empty() ) { fromtime = boost::posix_time::from_iso_string( from ); }
         boost::posix_time::ptime totime;
         if( !to.empty() ) { totime = boost::posix_time::from_iso_string( to ); }
-        multiplay.reset( new comma::Multiplay( sourceConfigs, 1.0 / speed, quiet, boost::posix_time::microseconds( resolution * 1000000 ), fromtime, totime, flush ) );
+        multiplay.reset( new comma::Multiplay( sourceConfigs, 1.0 / speed, quiet, boost::posix_time::microseconds( static_cast<unsigned int> (resolution * 1000000) ), fromtime, totime, flush ) );
         key_press_handler_t key_press_handler( options.exists( "--interactive,-i" ), options.exists( "--paused,--paused-at-start" ) );
         while( !shutdown_flag && std::cout.good() && !std::cout.bad() && !std::cout.eof() )
         {

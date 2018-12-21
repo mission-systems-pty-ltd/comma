@@ -45,11 +45,12 @@ static void usage( bool verbose = false )
     std::cerr << "    --delimiter,-d <delimiter>: default: ," << std::endl;
     std::cerr << "    --end-of-line,--eol <delimiter>: end of line output delimiter; default: end of line" << std::endl;
     std::cerr << "    --fields,-f <fields>: comma-separated field names, same as unnamed parameter for backward compatibility" << std::endl;
-    std::cerr << "    --strict: don't accept lines with more fields than expected" << std::endl;
+    std::cerr << "    --indices=<fields>: comma-separated list of fields to use as indices (see examples)" << std::endl;
     std::cerr << "    --no-brackets: use with --line-number option above, it does not output line numbers in square brackets." << std::endl;
     std::cerr << "    --output-line-number,--line-number,-n: output line numbers (see examples)" << std::endl;
     std::cerr << "    --prefix,-p <prefix>: prepend this prefix to all paths" << std::endl;
-    std::cerr << "    --indices=<fields>: comma-separated list of fields to use as indices (see examples)" << std::endl;
+    std::cerr << "    --strict: don't accept lines with more fields than expected" << std::endl;
+    std::cerr << "    --unquote-numbers,--unquote: unquote the numbers and booleans" << std::endl;
     std::cerr << std::endl;
     std::cerr << "todo: support escaped strings (e.g. currently string values cannot have <delimiter> in them)" << std::endl;
     std::cerr << std::endl;
@@ -98,6 +99,7 @@ int main( int ac, char** av )
         bool strict = options.exists( "--strict" );
         bool no_brackets = options.exists( "--no-brackets" );
         bool output_line_numbers = options.exists( "--output-line-number,--line-number,-n" );
+        bool unquote_numbers = options.exists( "--unquote-numbers,--unquote" );
         std::string prefix = options.value< std::string >( "--prefix,-p", "" );
         if( !prefix.empty() && ( no_brackets || !output_line_numbers ) ) { prefix += '/'; }
         std::string left_bracket, right_bracket;
@@ -139,19 +141,20 @@ int main( int ac, char** av )
                 if( overshot && strict ) { std::cerr << "name-value-from-csv: line " << i << ": expected not more than " << paths.size() << " value[s], got " << values.size() << std::endl; return 1; }
                 if( overshot || paths[k].empty() ) { continue; }
                 if ( std::find( indices.begin(), indices.end(), k ) != indices.end() ) continue;
-                std::cout << prefix << index << paths[k] << "=\"" << comma::strip( comma::strip( values[k], '"' ), ' ' ) << "\"" << end_of_line;
+                const std::string& value = comma::strip( comma::strip( values[k], '"' ), ' ' );
+                std::string quote = "\"";
+                if( unquote_numbers )
+                { 
+                    if( "true" == value || "false" == value ) { quote = ""; }
+                    else { try { boost::lexical_cast< double >( value ); quote = ""; } catch ( ... ) {} }
+                }
+                std::cout << prefix << index << paths[k] << "=" << quote << comma::strip( comma::strip( values[k], '"' ), ' ' ) << quote << end_of_line;
                 std::cout.flush();
             }
         }
         return 0;
     }
-    catch( std::exception& ex )
-    { 
-        std::cerr << "name-value-from-csv: " << ex.what() << std::endl;
-    }
-    catch( ... )
-    { 
-        std::cerr << "name-value-from-csv: unknown exception" << std::endl;
-    }
+    catch( std::exception& ex ) { std::cerr << "name-value-from-csv: " << ex.what() << std::endl; }
+    catch( ... ) { std::cerr << "name-value-from-csv: unknown exception" << std::endl; }
     return 1;
 }

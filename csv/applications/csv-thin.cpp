@@ -179,7 +179,7 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av, usage );
         bool binary = options.exists( "--size,-s,--binary,-b" );
         deterministic = options.exists( "--deterministic,-d" );
-        if( options.exists( "--period" )) { period = boost::posix_time::microseconds( options.value< double >( "--period" ) * 1000000 ); }
+        if( options.exists( "--period" )) { period = boost::posix_time::microseconds( static_cast<unsigned int> (options.value< double >( "--period" ) * 1000000 )); }
         if(options.exists("--fps,--frames-per-second")) { COMMA_THROW( comma::exception, "ERROR: --fps option is deprecated and removed! Please talk to software team if you are using it"); }
         #ifdef WIN32
         if( binary ) { _setmode( _fileno( stdin ), _O_BINARY ); _setmode( _fileno( stdout ), _O_BINARY ); }

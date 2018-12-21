@@ -163,7 +163,7 @@ struct unstructured
         return p;
     }
         
-    static comma::csv::format guess_format( const std::string& sample, char delimiter = ',' )
+    static comma::csv::format guess_format( const std::string& sample, char delimiter = ',', bool floating_point_only = false )
     {
         comma::csv::format f;
         std::vector< std::string > v = comma::split( sample, delimiter );
@@ -177,21 +177,20 @@ struct unstructured
             }
             catch( ... )
             { 
-                try
+                if( floating_point_only )
                 {
-                    boost::lexical_cast< comma::int64 >( v[i] );
-                    f += "l";
+                    try { boost::lexical_cast< double >( v[i] ); f += "d"; } catch ( ... ) { f += "s[1024]"; }
                 }
-                catch( ... )
+                else
                 {
                     try
                     {
-                        boost::lexical_cast< double >( v[i] );
-                        f += "d";
+                        boost::lexical_cast< comma::int64 >( v[i] );
+                        f += "l";
                     }
-                    catch ( ... ) // way quick and dirty
+                    catch( ... )
                     {
-                        f += "s[1024]";
+                        try { boost::lexical_cast< double >( v[i] ); f += "d"; } catch ( ... ) { f += "s[1024]"; } // way quick and dirty
                     }
                 }
             }

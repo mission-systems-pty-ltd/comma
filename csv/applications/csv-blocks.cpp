@@ -249,6 +249,12 @@ static void output_reverse_indexing( std::deque< std::string >& block_records, b
     block_records.clear();
 }
 
+static bool empty_( const std::string& s ) // quick and dirty
+{
+    for( unsigned int i = 0; i < s.size(); ++i ) { if( s[i] != ' ' ) { return false; } }
+    return true;
+}
+
 template < typename T > static void set_fields( const comma::command_line_options& options, std::string& first_line, T& default_input )
 {
     std::vector< std::string > v = comma::split( csv.fields, ',' );
@@ -257,8 +263,8 @@ template < typename T > static void set_fields( const comma::command_line_option
     else if( options.exists( "--format,--binary" ) ) { f = comma::csv::format( options.value< std::string >( "--format,--binary" ) ); }
     else
     {
-        while( std::cin.good() && first_line.empty() ) { std::getline( std::cin, first_line ); }
-        if( first_line.empty() ) { std::cerr << name() << "--format= is missing however the first line is empty" ; exit( 1 ); }
+        while( std::cin.good() && empty_( first_line ) ) { std::getline( std::cin, first_line ); }
+        if( !std::cin.good() ) { exit( 0 ); }
         f = comma::csv::impl::unstructured::guess_format( first_line, csv.delimiter );
         if( verbose ) { std::cerr << name() << "guessed format: " << f.string() << std::endl; }
     }

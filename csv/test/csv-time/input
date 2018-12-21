@@ -82,3 +82,7 @@ precision[3]="echo 19691231T235959.999999 | csv-time --from=iso --to=seconds | c
 precision[4]="echo 19691231T235959.123456 | csv-time --from=iso --to=seconds | csv-time --from=seconds --to=iso"
 precision[5]="echo 19700101T000000 | csv-time --from=iso --to=seconds | csv-time --from=seconds --to=iso"
 precision[6]="echo 19700101T000000.000001 | csv-time --from=iso --to=seconds | csv-time --from=seconds --to=iso"
+
+format[0]="echo 20180102T123456 | csv-time --from 'format;%Y%m%dT%H%M%S'"
+format[1]="echo 10m23s | csv-time --from 'format;%Mm%S' --to seconds"
+

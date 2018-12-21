@@ -1,0 +1,10 @@
+append[0]/output/line[0]="0,5,a,0,2"
+append[0]/output/line[1]="0,5,a,2,4"
+append[0]/output/line[2]="2,8,c,2,4"
+append[0]/output/line[3]="0,5,a,4,5"
+append[0]/output/line[4]="2,8,c,4,5"
+append[0]/output/line[5]="4,7,b,4,5"
+append[0]/output/line[6]="2,8,c,5,7"
+append[0]/output/line[7]="4,7,b,5,7"
+append[0]/output/line[8]="2,8,c,7,8"
+append[0]/status=0

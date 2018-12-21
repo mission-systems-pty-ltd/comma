@@ -175,7 +175,7 @@ boost::optional< boost::posix_time::time_duration > bound;
 
 typedef std::pair< boost::posix_time::ptime, std::string > timestring_t;
 
-boost::posix_time::ptime get_time (const Point p)
+boost::posix_time::ptime get_time( const Point& p )
 {
     return p.timestamp ? *p.timestamp : boost::posix_time::microsec_clock::universal_time();
 }
@@ -251,7 +251,7 @@ int main( int ac, char** av )
         if( select_only && timestamp_only ) { std::cerr << "csv-time-join: --timestamp-only specified with --select, ignoring --timestamp-only" << std::endl; }
         bool discard_bounding = options.exists( "--discard-bounding" );
         boost::optional< unsigned int > buffer_size = options.optional< unsigned int >( "--buffer" );
-        if( options.exists( "--bound" ) ) { bound = boost::posix_time::microseconds( options.value< double >( "--bound" ) * 1000000 ); }
+        if( options.exists( "--bound" ) ) { bound = boost::posix_time::microseconds( static_cast<unsigned int>(options.value< double >( "--bound" ) * 1000000 )); }
         stdin_csv = comma::csv::options( options, "t" );
 
         std::vector< std::string > unnamed = options.unnamed(

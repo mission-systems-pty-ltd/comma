@@ -1,0 +1,9 @@
+swap/ascii[0]/output/line[0]="0,c,0,a"
+swap/ascii[0]/output/line[1]="1,d,1,b"
+swap/ascii[0]/status=0
+swap/ascii[1]/output/line[0]="0,c,0,a"
+swap/ascii[1]/output/line[1]="1,d,1,b"
+swap/ascii[1]/status=0
+swap/binary[0]/output/line[0]="0,c,0,a"
+swap/binary[0]/output/line[1]="1,d,1,b"
+swap/binary[0]/status=0

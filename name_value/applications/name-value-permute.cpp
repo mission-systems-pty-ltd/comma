@@ -232,7 +232,7 @@ int main( int ac, char** av )
                         {
                             std::string s = boost::posix_time::to_iso_string(i);
                             map.values.push_back(s);
-                            i += boost::posix_time::seconds(step);
+                            i += boost::posix_time::seconds(static_cast<unsigned int>(step));
                         } while ( ( sign > 0 && i < stop ) || ( sign < 0 && i > stop ) );
                     }
                 }

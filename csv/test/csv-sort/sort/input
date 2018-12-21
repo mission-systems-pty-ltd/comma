@@ -12,3 +12,5 @@ descending/all[3]="( echo 1,1; echo 0,1; echo 1,0; echo 0,0 ) | csv-sort --uniqu
 descending/block[0]="( echo 1,0; echo 0,0; echo 1,0 ; echo 1,1; echo 0,1; echo 1,1 ) | csv-sort --unique --fields a,block --reverse | tr \'\\\n\' \';\'"
 descending/block[2]="( echo 1,0; echo 0,0; echo 1,0 ; echo 1,1; echo 0,1; echo 1,1 ) | csv-sort --unique --fields a,block --reverse --format 2ui | tr \'\\\n\' \';\'"
 
+numeric_keys_are_floats[0]="( echo 5; echo 4; echo 3.1; echo 2 ) | csv-sort --fields a"
+numeric_keys_are_floats[1]="( echo 5; echo 4; echo 3.1; echo 2 ) | csv-sort --fields a --numeric-keys-are-floats"

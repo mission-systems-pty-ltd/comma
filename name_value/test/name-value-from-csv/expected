@@ -1,6 +1,9 @@
 basics[0]/output='a="1";b="2";c="3";'
 basics[1]/output='a="1";b="2";c/d="3";'
 
+unquote[0]/output='a="1";b="true";c="2.1";d="blah";'
+unquote[1]/output='a=1;b=true;c=2.1;d="blah";'
+
 last_line[0]/output='a="1";b="2";c/d="3";'
 
 white_space[0]/output='a="1";b="2";c/d="3";'

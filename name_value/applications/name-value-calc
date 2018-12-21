@@ -155,6 +155,7 @@ function logical_op()
 
 function python_converter()
 {
+    # todo? python2 -c "import operator...
     python -c "import operator
 from sys import stdin
 filesep = '$file_separator'
