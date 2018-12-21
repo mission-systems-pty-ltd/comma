@@ -83,6 +83,12 @@ examples:
 
     # using default values
     ( echo 1,2 ; echo 3,4 ) | %(prog)s --fields=,y "a=x+y" --default-values="x=0;y=0"
+    
+    # using init values: calculate triangular numbers
+    seq 0 10 | %(prog)s --fields=v "sum=sum+v" --init-values="sum=0"
+    
+    # using init values: calculate fibonacci numbers
+    seq 0 10 | %(prog)s --fields=v "c=b;b=a+b;a=c" --output-fields a,b --init-values="a=0;b=1"
 
     # operating on time (internally represented in microseconds)
     echo 20171112T224515.5 | %(prog)s --format=t --fields=t1 "t2=t1+1000000" --output-format t
@@ -214,6 +220,12 @@ def get_args():
         metavar='<assignments>',
         help='default values for variables in expressions but not in input stream')
     parser.add_argument(
+        '--init-values',
+        '--init',
+        default='',
+        metavar='<assignments>',
+        help='init values, applied only once, todo')
+    parser.add_argument(
         '--with-error',
         default='',
         metavar='<message>',
@@ -241,8 +253,8 @@ def get_args():
         parser.print_help()
         parser.exit(0)
     if args.fields is None or args.fields == "": sys.exit( "csv-eval: please specify --fields" )
+    if args.init_values == '' and args.verbose: print >>sys.stderr, "csv-eval: --init currently reads one record at a time, which may be slow"
     return args
-
 
 def ingest_deprecated_options(args):
     if args.append_binary:
@@ -259,7 +271,6 @@ def ingest_deprecated_options(args):
             with comma.util.warning(custom_formatwarning) as warn:
                 msg = "--append-fields is deprecated, consider using --output-fields"
                 warn(msg)
-
 
 def check_options(args):
     if not (args.expressions or args.select or args.exit_if):
@@ -457,21 +468,18 @@ class stream(object):
             verbose=self.args.verbose)
         self.initialize_input()
         self.initialize_update_and_output()
-        if self.args.verbose:
-            self.print_info()
+        if self.args.verbose: self.print_info()
 
     def initialize_input(self):
         self.nonblank_input_fields = filter(None, self.args.fields)
-        if not self.nonblank_input_fields:
-            raise csv_eval_error("please specify input stream fields, e.g. --fields=x,y")
+        if not self.nonblank_input_fields: raise csv_eval_error("please specify input stream fields, e.g. --fields=x,y")
         check_fields(self.nonblank_input_fields)
         types = comma.csv.format.to_numpy(self.args.format)
         self.input_t = comma.csv.struct(','.join(self.args.fields), *types)
         self.input = comma.csv.stream(self.input_t, **self.csv_options)
 
     def initialize_update_and_output(self):
-        if self.args.select or self.args.exit_if:
-            return
+        if self.args.select or self.args.exit_if: return
         if self.args.update_fields:
             all_types = comma.csv.format.to_numpy(self.args.format)
             index = self.args.fields.index
@@ -483,9 +491,7 @@ class stream(object):
             output_types = comma.csv.format.to_numpy(self.args.output_format)
             output_fields = ','.join(self.args.output_fields)
             self.output_t = comma.csv.struct(output_fields, *output_types)
-            self.output = comma.csv.stream(self.output_t,
-                                           tied=self.input,
-                                           **self.csv_options)
+            self.output = comma.csv.stream(self.output_t, tied=self.input, **self.csv_options)
 
     def print_info(self, file=sys.stderr):
         fields = ','.join(self.input_t.nondefault_fields)
@@ -508,13 +514,9 @@ class stream(object):
 
 def check_fields(fields, allow_numpy_names=True):
     for field in fields:
-        if not re.match(r'^[a-z_]\w*$', field, re.I):
-            raise csv_eval_error("'{}' is not a valid field name".format(field))
-        if field in ['_input', '_update', '_output']:
-            raise csv_eval_error("'{}' is a reserved name".format(field))
-        if not allow_numpy_names and field in np.__dict__:
-            raise csv_eval_error("'{}' is a reserved numpy name".format(field))
-
+        if not re.match(r'^[a-z_]\w*$', field, re.I): raise csv_eval_error("'{}' is not a valid field name".format(field))
+        if field in ['_input', '_update', '_output']: raise csv_eval_error("'{}' is a reserved name".format(field))
+        if not allow_numpy_names and field in np.__dict__: raise csv_eval_error("'{}' is a reserved numpy name".format(field))
 
 def check_output_fields(fields, input_fields):
     check_fields(fields)
@@ -524,17 +526,26 @@ def check_output_fields(fields, input_fields):
             .format(','.join(invalid_output_fields), ','.join(input_fields))
         raise csv_eval_error(msg)
 
-
 def evaluate(stream):
-    def disperse(var, fields):
-        return '\n'.join("{f} = {v}['{f}']".format(v=var, f=f) for f in fields)
-    def collect(var, fields):
-        return '\n'.join("{v}['{f}'] = {f}".format(v=var, f=f) for f in fields)
+    def disperse(var, fields): return '\n'.join("{f} = {v}['{f}']".format(v=var, f=f) for f in fields)
+    def collect(var, fields): return '\n'.join("{v}['{f}'] = {f}".format(v=var, f=f) for f in fields)
+    if stream.args.init_values == '':
+        read_size = None
+        init_code_string = ''
+    else:
+        read_size = 1
+        init_code_string = '\n'.join([stream.args.default_values,
+                                stream.args.init_values,
+                                disperse('_input', stream.nonblank_input_fields),
+                                collect('_update', stream.args.update_fields),
+                                collect('_output', stream.args.output_fields)])
     code_string = '\n'.join([stream.args.default_values,
                              disperse('_input', stream.nonblank_input_fields),
+                             disperse('_output', stream.args.output_fields),
                              stream.args.expressions,
                              collect('_update', stream.args.update_fields),
                              collect('_output', stream.args.output_fields)])
+    init_code = compile(init_code_string, '<string>', 'exec')
     code = compile(code_string, '<string>', 'exec')
     env = np.__dict__ if stream.args.permissive else restricted_numpy_env()
     size = None
@@ -542,24 +553,19 @@ def evaluate(stream):
     output = None
     input = None
     is_shutdown = comma.signal.is_shutdown()
-    if stream.args.first_line:
-        input = stream.input.read_from_line(stream.args.first_line)
+    if stream.args.first_line: input = stream.input.read_from_line(stream.args.first_line)
     while not is_shutdown:
         if input is not None:
             if size != input.size:
                 size = input.size
-                if stream.args.update_fields:
-                    update = stream.update_t(size)
-                if stream.args.output_fields:
-                    output = stream.output_t(size)
+                if stream.args.update_fields: update = stream.update_t(size)
+                if stream.args.output_fields: output = stream.output_t(size)
+                exec init_code in env, {'_input': input, '_update': update, '_output': output}
             exec code in env, {'_input': input, '_update': update, '_output': output}
-            if stream.args.update_fields:
-                update_buffer(stream.input, update)
-            if stream.args.output_fields:
-                stream.output.write(output)
-            else:
-                stream.input.dump()
-        input = stream.input.read()
+            if stream.args.update_fields: update_buffer(stream.input, update)
+            if stream.args.output_fields: stream.output.write(output)
+            else: stream.input.dump()
+        input = stream.input.read( read_size )
         if input is None: break
 
 def select(stream):
@@ -576,8 +582,7 @@ def select(stream):
             mask = eval(code, env, {f: input[f] for f in fields})
             stream.input.dump(mask=mask)
         input = stream.input.read()
-        if input is None:
-            break
+        if input is None: break
 
 def exit_if(stream):
     input = None
@@ -586,8 +591,7 @@ def exit_if(stream):
     fields = stream.input.fields
     code = compile(stream.args.exit_if, '<string>', 'eval')
     is_shutdown = comma.signal.is_shutdown()
-    if stream.args.first_line:
-        input = stream.input.read_from_line(stream.args.first_line)
+    if stream.args.first_line: input = stream.input.read_from_line(stream.args.first_line)
     while not is_shutdown:
         if input is not None:
             mask = eval(code, env, {f: input[f] for f in fields})
@@ -597,7 +601,7 @@ def exit_if(stream):
                 print >> sys.stderr, "{} error: {}".format(name, stream.args.with_error)
                 sys.exit(1)
             stream.input.dump()
-        input = stream.input.read(size=1)
+        input = stream.input.read()
         if input is None:
             break
 
