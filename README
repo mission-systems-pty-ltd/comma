@@ -10,9 +10,19 @@ from source, you can generate deb package using CPack, though.)
 
 Quickest way (works on Ubuntu 18.04 or higher with ansible playbook version 2.5 or higher):
 
-> mkdir ~/src
-> cd ~/src
-> git clone https://gitlab.com/orthographic/comma.git
+> mkdir src
+> cd src
+> git clone <repo>
 > ansible-playbook comma/system/ansible/install.yml --ask-become-pass
 
-Read install.yml, if interested in tweaking build configuration or building manually.
+Manual way:
+
+> mkdir -p src build/comma
+> cd src
+> git clone <repo>
+> cd ../build/comma
+> cmake ../../src/comma
+> make
+> sudo make install
+
+Read install.yml, if interested in tweaking build configuration.
