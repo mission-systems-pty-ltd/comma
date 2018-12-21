@@ -1,0 +1,1 @@
+fibonacci="seq 0 5 | csv-eval --fields=v 'c=b;b=a+b;a=c' --output-fields a,b --init-values='a=0;b=1'"

@@ -1,0 +1,7 @@
+fibonacci/output/line[0]="0,1,1"
+fibonacci/output/line[1]="1,1,2"
+fibonacci/output/line[2]="2,2,3"
+fibonacci/output/line[3]="3,3,5"
+fibonacci/output/line[4]="4,5,8"
+fibonacci/output/line[5]="5,8,13"
+fibonacci/status=0
