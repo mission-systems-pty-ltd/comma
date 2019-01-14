@@ -45,6 +45,10 @@ fi
 [[ $test_duration ]] || test_duration=10
 [[ $report_interval ]] || report_interval=1
 
+echo "path to bc: $( type -p bc )" >&2
+bc_test=$( echo "2+2" | bc -l )
+echo "bc_test=$bc_test" >&2
+
 loops=$( echo "$test_duration / $report_interval" | bc -l | sed 's/\.[0-9]*$//' )
 
 for i in $( seq 1 $loops ); do
