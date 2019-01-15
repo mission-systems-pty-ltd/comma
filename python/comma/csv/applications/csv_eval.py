@@ -225,7 +225,7 @@ def get_args():
         '--init',
         default='',
         metavar='<assignments>',
-        help='init values, applied only once, todo')
+        help='init values, applied only once')
     parser.add_argument(
         '--with-error',
         default='',
