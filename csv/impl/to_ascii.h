@@ -33,11 +33,14 @@
 #define COMMA_CSV_IMPL_TOASCII_HEADER_GUARD_
 
 #include <vector>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/type_traits.hpp>
+#include "../../base/exception.h"
+#include "../../string/string.h"
 #include "../../visiting/visit.h"
 #include "../../visiting/while.h"
 
