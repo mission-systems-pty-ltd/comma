@@ -27,7 +27,6 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author vsevolod vlaskine
 
 #ifndef COMMA_CSV_IMPL_TOASCII_HEADER_GUARD_
@@ -84,6 +83,7 @@ class to_ascii
         std::size_t index_;
         boost::optional< unsigned int > precision_;
         boost::optional< char > quote_;
+
         std::string as_string_( const boost::posix_time::ptime& v ) { return to_iso_string( v ); }
         std::string as_string_( const std::string& v ) { return quote_ ? *quote_ + v + *quote_ : v; } // todo: escape/unescape
         // todo: better output semantics for char/unsigned char
