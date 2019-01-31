@@ -92,11 +92,13 @@ class to_ascii
         // todo: better output semantics for char/unsigned char
         std::string as_string_( const char& v ) { std::ostringstream oss; oss << static_cast< int >( v ); return oss.str(); }
         std::string as_string_( const unsigned char& v ) { std::ostringstream oss; oss << static_cast< unsigned int >( v ); return oss.str(); }
+        void set_precision_( std::ostringstream& oss ) const;
+
         template < typename T >
         std::string as_string_( T v )
         {
             std::ostringstream oss;
-            if( precision_ ) { oss.precision( *precision_ ); }
+            set_precision_( oss );
             oss << v;
             return oss.str();
         }
