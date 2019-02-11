@@ -36,6 +36,7 @@
 #ifndef WIN32
 #include <stdlib.h>
 #endif
+#include <array>
 #include <map>
 #include <set>
 #include <string>
@@ -158,6 +159,23 @@ struct traits< std::set< T > >
     {
         Impl::visit_non_associative_container( key, t, v );
     }    
+};
+
+/// std array visiting traits
+template < typename T, std::size_t S >
+struct traits< std::array< T, S > >
+{
+    /// visit
+    template < typename K, typename V > static void visit( const K& key, std::array< T, S >& t, V& v )
+    {
+        Impl::visit_non_associative_container( key, t, v );
+    }
+
+    /// visit const
+    template < typename K, typename V > static void visit( const K& key, const std::array< T, S >& t, V& v )
+    {
+        Impl::visit_non_associative_container( key, t, v );
+    }
 };
 
 /// boost array visiting traits
