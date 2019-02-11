@@ -222,17 +222,6 @@ TEST( visiting, containter )
 
 } } } /// namespace comma { namespace visiting { namespace test {
 
-namespace comma { namespace visiting { namespace test {
-
-struct struct_with_containers
-{
-    std::size_t size;
-    std::vector< double > vector;
-    boost::array< std::size_t, 5 > array;
-};
-
-} } } // namespace comma { namespace visiting { namespace test {
-
 int main( int argc, char* argv[] )
 {
     ::testing::InitGoogleTest(&argc, argv);
