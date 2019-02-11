@@ -34,7 +34,9 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <boost/array.hpp>
 #include <boost/noncopyable.hpp>
+#include "../../base/types.h"
 #include "../apply.h"
 #include "../visit.h"
 
@@ -163,6 +165,7 @@ struct containers
     std::vector< std::string > vector;
     std::set< int > set;
     std::map< std::string, double > map;
+    boost::array< comma::int32, 3 > array;
 };
 
 } } } // namespace comma { namespace visiting { namespace test {
@@ -179,6 +182,7 @@ struct traits< test::containers >
         v.apply( "vector", p.vector );
         v.apply( "set", p.set );
         v.apply( "map", p.map );
+        v.apply( "array", p.array );
     }
     
     template < typename Key, typename visitor >
@@ -188,6 +192,7 @@ struct traits< test::containers >
         v.apply( "vector", p.vector );
         v.apply( "set", p.set );
         v.apply( "map", p.map );
+        v.apply( "array", p.array );
     }
 };
 
@@ -205,11 +210,12 @@ TEST( visiting, containter )
     p.set.insert( 222 );
     p.map.insert( std::make_pair( "jupiter", 888 ) );
     p.map.insert( std::make_pair( "saturn", 999 ) );        
+    for( std::size_t i = 0; i < 3; i++ ) { p.array[i] = i; }
     {
         std::ostringstream oss;
         o_stream_visitor v( oss );
         visiting::apply( v, p );
-        EXPECT_EQ( oss.str(), "{ object:pair={ string:first=\"blah\" int:second=111 } object:vector={ string:0=\"first\" string:1=\"second\" } object:set={ int:0=111 int:1=222 } object:map={ double:jupiter=888 double:saturn=999 } }" );
+        EXPECT_EQ( oss.str(), "{ object:pair={ string:first=\"blah\" int:second=111 } object:vector={ string:0=\"first\" string:1=\"second\" } object:set={ int:0=111 int:1=222 } object:map={ double:jupiter=888 double:saturn=999 } object:array={ int:0=0 int:1=1 int:2=2 } }" );
         //std::cerr << oss.str() << std::endl;
     }
 }
