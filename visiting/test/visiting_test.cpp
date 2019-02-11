@@ -143,7 +143,7 @@ struct traits< test::old_plain::nested >
 
 namespace comma { namespace visiting { namespace test {
 
-TEST( visiting, nestedConst )
+TEST( visiting, nested )
 {
     {
         old_plain p;
@@ -200,7 +200,7 @@ struct traits< test::containers >
 
 namespace comma { namespace visiting { namespace test {
 
-TEST( visiting, containter )
+TEST( visiting, container )
 {
     containers p;
     p.pair = std::make_pair( "blah", 111 );
