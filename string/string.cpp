@@ -112,7 +112,7 @@ std::string unescape_and_unquote( const std::string & s, char esc, const char* q
     std::string v;
     const char* begin( &s[0] );
     const char* const end( begin + s.length() );
-    boost::optional<char> quoted;
+    boost::optional<char> quoted = boost::make_optional< char >( false, 0 );
     for( const char* p = begin; p < end; ++p )
     {
         if( esc == *p )

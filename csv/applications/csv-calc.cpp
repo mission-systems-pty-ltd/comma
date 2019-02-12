@@ -1253,7 +1253,7 @@ int main( int ac, char** av )
         OperationsMap operations;
         ResultsMap results;
         Inputs inputs;
-        boost::optional< comma::uint32 > block;
+        boost::optional< comma::uint32 > block = boost::make_optional< comma::uint32 >( false, 0 );
         bool has_block = csv.has_field( "block" );
         bool has_id = csv.has_field( "id" );
         bool append = options.exists("--append");
