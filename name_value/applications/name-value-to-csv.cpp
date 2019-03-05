@@ -32,7 +32,9 @@
 
 #include <iostream>
 #include <map>
+#include <sstream>
 #include <unordered_map>
+#include <unordered_set>
 #include <boost/optional.hpp>
 #include "../../application/command_line_options.h"
 #include "../../string.h"
@@ -50,7 +52,7 @@ static void usage( bool )
     std::cerr << "    --equal-sign,-e=<equal_sign>; default='='; equal sign" << std::endl;
     std::cerr << "    --fields,-f=<fields>; fields to output" << std::endl;
     std::cerr << "    --prefix,--path,-p=[<prefix>]; optional prefix" << std::endl;
-    std::cerr << "    --unindexed,--no-index; take unindexed path-value pairs, output as csv, convenience option" << std::endl;
+    std::cerr << "    --unindexed-fields=<fields>; if no --fields specified, output unindexed fields once, if --fields specified, append given unindexed fields to all records" << std::endl;
     std::cerr << "    --unsorted; the input data is not sorted by index" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
@@ -69,28 +71,21 @@ static void usage( bool )
     std::cerr << "        a,10,0" << std::endl;
     std::cerr << "        b,20,1" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    unindexed data" << std::endl;
-    std::cerr << "        cat <<EOF | sed 's@^my/test@[0]@' | $scriptname --fields=name,value,status" << std::endl;
-    std::cerr << "        my/test/status=0" << std::endl;
-    std::cerr << "        my/test/value=10" << std::endl;
-    std::cerr << "        my/test/name=a" << std::endl;
-    std::cerr << "        EOF" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "        yields:" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "        a,10,0" << std::endl;
+    std::cerr << "    unindexed fields" << std::endl;
+    std::cerr << "        todo" << std::endl;
     std::cerr << std::endl;
     exit( 0 );
 }
 
 typedef std::unordered_map< std::string, std::string > values_t;
 
-static void output( const std::vector< std::string >& fields, values_t& values, char delimiter )
+static std::string join( const std::vector< std::string >& fields, values_t& values, char delimiter )
 {
+    std::ostringstream oss;
     std::string comma;
-    for( const auto& f: fields ) { std::cout << comma << values[f]; comma = delimiter; } // quick and dirty as everything else
-    std::cout << std::endl;
+    for( const auto& f: fields ) { oss << comma << values[f]; comma = delimiter; } // quick and dirty as everything else
     values.clear();
+    return oss.str();
 }
 
 int main( int ac, char** av )
@@ -98,10 +93,22 @@ int main( int ac, char** av )
     try
     {
         comma::command_line_options options( ac, av, usage );
-        const std::vector< std::string >& fields = comma::split( options.value< std::string >( "--fields,-f" ), ',' );
+        std::string fs = options.value< std::string >( "--fields,-f", "" );
+        std::vector< std::string > fields = comma::split( fs, ',' );
+        std::vector< std::string > unindexed_fields;
+        std::string ufs = options.value< std::string >( "--unindexed-fields", "" );
+        std::unordered_set< std::string > unindexed_fields_set;
+        if( !ufs.empty() )
+        { 
+            unindexed_fields = comma::split( ufs, ',' );
+            for( const auto& f: unindexed_fields ) { unindexed_fields_set.insert( f ); }
+        }
+        if( fields[0].empty() && unindexed_fields.empty() ) { std::cerr << "name-value-to-csv: please specify --fields or --unindexed-fields" << std::endl; return 1; }
+        bool unindexed = fields[0].empty();
+        values_t unindexed_values;
         options.assert_mutually_exclusive( "--unsorted", "--unindexed,--no-index" );
+        options.assert_mutually_exclusive( "--unindexed,--no-index", "--unindexed-fields" );
         bool unsorted = options.exists( "--unsorted" );
-        bool unindexed = options.exists( "--unindexed,--no-index" );
         char delimiter = options.value( "--delimiter,-d", ',' );
         char equal_sign = options.value( "--equal-sign,-e", '=' );
         std::string prefix = options.value< std::string >( "--prefix,--path,-p", "" );
@@ -116,6 +123,7 @@ int main( int ac, char** av )
             auto e = s.find_first_of( equal_sign ); // todo: use boost::spirit
             if( e == std::string::npos ) { std::cerr << "name-value-to-csv: expected path-value pair; got: '" << s << "'" << std::endl; return 1; }
             std::string name = s.substr( 0, e );
+            if( unindexed_fields_set.find( name ) != unindexed_fields_set.end() ) { unindexed_values[name] = s.substr( e + 1 ); continue; }
             if( name.substr( 0, prefix.size() ) != prefix ) { continue; }
             if( unindexed )
             {
@@ -128,14 +136,31 @@ int main( int ac, char** av )
             if( b == std::string::npos ) { std::cerr << "name-value-to-csv: expected path-value pair with valid indices; got: '" << s << "'" << std::endl; return 1; }
             if( s[ b + 1 ] != '/' ) { continue; }
             unsigned int current_index = boost::lexical_cast< unsigned int >( name.substr( prefix.size() + 1, b - prefix.size() - 1 ) );
-            if( unsorted ) { map[current_index][name.substr( b + 2 )] = s.substr( e + 1 ); continue; }
+            if( unsorted || !unindexed_fields.empty() ) { map[current_index][name.substr( b + 2 )] = s.substr( e + 1 ); continue; }
             if( index && current_index < *index ) { std::cerr << "name-value-to-csv: expected sorted index, got index " << current_index << " after " << *index << " in line: '" << comma::strip( s ) << "'" << std::endl; return 1; }
-            if( index && current_index > *index ) { output( fields, values, delimiter ); }
+            if( index && current_index > *index ) { std::cout << join( fields, values, delimiter ) << std::endl; }
             values[name.substr( b + 2 )] = s.substr( e + 1 );
             index = current_index;
         }
-        if( unsorted ) { for( auto v: map ) { output( fields, v.second, delimiter ); } }
-        else { if( index || unindexed ) { output( fields, values, delimiter ); } }
+        if( unindexed )
+        { 
+            std::cout << join( unindexed_fields, unindexed_values, delimiter ) << std::endl;
+        }
+        else if( unsorted || !unindexed_fields.empty() )
+        { 
+            std::string u;
+            if( !unindexed_fields.empty() ) { u = join( unindexed_fields, unindexed_values, delimiter ); }
+            for( auto v: map )
+            {
+                std::cout << join( fields, v.second, delimiter );
+                if( !unindexed_fields.empty() ) { std::cout << delimiter << u; }
+                std::cout << std::endl;
+            }
+        }
+        else if( index )
+        {
+            std::cout << join( fields, values, delimiter ) << std::endl;
+        }
         return 0;
     }
     catch( std::exception& ex ) { std::cerr << "name-value-to-csv: " << ex.what() << std::endl; }
