@@ -2,6 +2,7 @@
 
 # This file is part of comma, a generic and flexible library
 # Copyright (c) 2011 The University of Sydney
+# Copyright (c) 2019 Vsevolod Vlaskine
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,92 +30,85 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-readonly scriptname=$( basename $0 )
-readonly default_delimiter=,
-
 function usage
 {
     cat <<END >&2
 
 take indexed path-value entries (with optional prefix) on stdin and output them as csv sorted by index to stdout according to the provided fields
 
-options:
-    --fields <fields>: path-value fields of each entry
-    --prefix <prefix>: optional prefix
-    --path <path>: same as --prefix
-    --unbuffered,-u: assume that input stream is sorted by index and use no buffering
-    --delimiter,-d <delimiter>: default $default_delimiter
+options
+$( options_description | sed 's#^#    #' )
 
-example 1:
+examples
+    indexed data
+        cat <<EOF | $scriptname --fields=name,value,status --prefix=my/test
+        my/test[0]/name=a
+        my/test[0]/value=10
+        my/test[0]/status=0
+        my/test[1]/name=b
+        my/test[1]/value=20
+        my/test[1]/status=1
+        EOF
 
-    cat <<EOF | $scriptname --fields=name,value,status --prefix=my/test
-my/test[0]/name=a
-my/test[0]/value=10
-my/test[0]/status=0
-my/test[1]/name=b
-my/test[1]/value=20
-my/test[1]/status=1
-EOF
+        yields:
 
-    yields
+        a,10,0
+        b,20,1
 
-a,10,0
-b,20,1
+    unindexed data
+        cat <<EOF | sed 's@^my/test@[0]@' | $scriptname --fields=name,value,status
+        my/test/status=0
+        my/test/value=10
+        my/test/name=a
+        EOF
 
-example 2:
+        yields:
 
-    cat <<EOF | sed 's@^my/test@[0]@' | $scriptname --fields=name,value,status
-my/test/status=0
-my/test/value=10
-my/test/name=a
-EOF
-
-    yields
-
-a,10,0
+        a,10,0
 
 END
-    exit
+    exit 0
 }
+
+function options_description()
+{
+    cat<<eof
+--delimiter,-d=<delimiter>; default=,; csv delimiter
+--fields,-f=<values>; field names
+--prefix,--path=[<prefix>]; optional prefix
+--unbuffered,-u; assume that input stream is sorted by index and use no buffering
+eof
+}
+
+source $( type -p comma-application-util )
+source $( type -p comma-name-value-util )
+
+function say() { echo "name-value-to-csv: $@" >&2; }
+function die() { say "$@"; exit 1; }
 
 function parse_input
 {
-    sed $option_unbuffered -r -n 's@^'"$option_prefix"'\[([0-9]+)\]/([^=]+)=([^#]*)[[:space:]]*(#.*)?$@\1 \2 \3@p; $a\' \
-        | if [[ -n "$option_unbuffered" ]]; then cat; else sort -k 1,1 -n; fi
+    (( options_unbuffered )) || unbuffered_option='-u'
+    sed $unbuffered_option -r -n 's@^'"$options_prefix"'\[([0-9]+)\]/([^=]+)=([^#]*)[[:space:]]*(#.*)?$@\1 \2 \3@p; $a\' \
+        | if (( options_unbuffered )); then cat; else sort -k 1,1 -n; fi
 }
 
-function output_line
-{
-    for f in ${fields[@]}; do echo ${csv[$f]}; done | paste -s -d${option_delimiter::1}
-}
+function output_line { for f in ${fields[@]}; do echo ${csv[$f]}; done | paste -s -d${options_delimiter::1}; }
 
-option_delimiter=$default_delimiter
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --help|-h)  usage ;;
-        --fields=*) option_fields="${1#*=}" ;;
-        --fields) shift; option_fields="$1" ;;
-        --prefix=*|--path=*) option_prefix="${1#*=}" ;;
-        --prefix|--path) shift; option_prefix="$1" ;;
-        --delimiter=*|-d=*) option_delimiter="${1#*=}" ;;
-        --delimiter|-d) shift; option_delimiter="$1" ;;
-        --unbuffered|-u) option_unbuffered=-u ;;
-    esac
-    shift
-done
-
-if [[ -z "$option_fields" ]]; then echo "$scriptname: fields are not specified" >&2; exit 1; fi
-fields=( $( echo "$option_fields" | tr ',' '\n' ) )
+comma_options_help $@ && usage
+options=$( options_description | comma-options-to-name-value "$@" ) || die "invalid options"
+eval "$( sed 's#^#options_#' <<< "$options" | comma_path_value_mangle )"
+fields=( $( echo "$options_fields" | tr ',' '\n' ) )
 declare -A csv
 while read index field value; do
     [[ -z "$index" ]] && break
     [[ -z "$current_index" ]] && current_index=$index
-    if (( index < current_index )); then echo "$scriptname: expected input sorted by index, but got index $index < previous index of $current_index" >&2; exit 1; fi
+    (( index >= current_index )) || die "expected input sorted by index; got index $index < previous index $current_index"
     if (( index > current_index )); then
         output_line
         csv=()
         current_index=$index
     fi
-    [[ -n "$field" ]] && csv[$field]=$value
+    [[ -z "$field" ]] || csv[$field]=$value
 done < <( parse_input )
 if [[ -n "$current_index" ]]; then output_line; fi
