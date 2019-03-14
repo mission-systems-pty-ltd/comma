@@ -182,7 +182,6 @@ static std::pair< entry_t, comma::csv::options > make_input_( const comma::csv::
         else { vf.push_back( "" ); }
     }
     p.second.fields = comma::join( vf, ',' );
-    p.second.full_xpath = true;
     return p;
 }
 

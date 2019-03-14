@@ -94,7 +94,6 @@ namespace comma { namespace csv { namespace stream_test {
 TEST( csv, container )
 {
 	comma::csv::options csv;
-     csv.full_xpath = true;
 	{
         std::string s( "2,3,,,6" );
         std::istringstream iss( s );

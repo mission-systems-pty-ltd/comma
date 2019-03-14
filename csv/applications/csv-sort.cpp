@@ -678,7 +678,6 @@ int main( int ac, char** av )
         options.assert_mutually_exclusive( "--discard-out-of-order,--discard-unsorted,--first,--max,--sliding-window,--window,--unique" );
         verbose = options.exists( "--verbose,-v" );
         csv = comma::csv::options( options );
-        csv.full_xpath = true;
         return options.exists( "--first,--min,--max" ) ? handle_operations_with_ids( options ) : sort( options );
     }
     catch( std::exception& ex ) { std::cerr << "csv-sort: " << ex.what() << std::endl; }

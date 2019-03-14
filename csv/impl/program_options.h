@@ -55,7 +55,6 @@ inline boost::program_options::options_description program_options::description(
         ( "fields", boost::program_options::value< std::string >()->default_value( default_fields ), "csv fields" )
         ( "binary,b", boost::program_options::value< std::string >(), "csv binary format" )
         ( "delimiter,d", boost::program_options::value< char >()->default_value( ',' ), "csv delimiter" )
-        ( "full-xpath", "expect full xpaths as field names" )
         ( "precision", boost::program_options::value< unsigned int >()->default_value( 12 ), "floating point precision" )
         ( "quote", boost::program_options::value< std::string >()->default_value( "\"" ), "quote sign to quote strings (ascii only)" )
         ( "flush", "flush output stream after each record" );
@@ -69,7 +68,6 @@ inline csv::options program_options::get( const boost::program_options::variable
     if( vm.count( "delimiter ") ) { csv.delimiter = vm[ "delimiter" ].as< char >(); }
     if( vm.count( "precision" ) ) { csv.precision = vm[ "precision" ].as< unsigned int >(); }
     if( vm.count( "binary" ) ) { csv.format( vm[ "binary" ].as< std::string >() ); }
-    csv.full_xpath = vm.count( "full-xpath" ) > 0;
     csv.flush = vm.count( "flush" ) > 0;
     if( vm.count( "quote" ) )
     {

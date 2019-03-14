@@ -36,7 +36,6 @@ _comma_opts()
 --delimiter
 --fields
 --flush
---full-xpath
 --help
 --output-fields
 --precision

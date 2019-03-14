@@ -413,7 +413,6 @@ int main( int ac, char** av )
         verbose = options.exists( "--verbose,-v" );
         strict = options.exists( "--strict" );
         csv = comma::csv::options( options );
-        csv.full_xpath = true;
         csv.quote.reset();
         comma::csv::options csv_out;
         if( csv.binary() ) { csv_out.format( comma::csv::format("ui") ); }

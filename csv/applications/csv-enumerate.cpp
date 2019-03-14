@@ -74,7 +74,6 @@ int main( int ac, char** av )
         bool has_non_empty_field = false;
         for( const auto& f: comma::split( csv.fields, ',' ) ) { if( !f.empty() ) { has_non_empty_field = true; break; } }
         if( !has_non_empty_field ) { std::cerr << "csv-enumerate: please specify at least one key in fields" << std::endl; return 1; }
-        csv.full_xpath = true;
         std::string first_line;
         comma::csv::format f;
         if( csv.binary() ) { f = csv.format(); }
@@ -131,7 +130,6 @@ int main( int ac, char** av )
         if( !output_map ) { return 0; }
         comma::csv::options output_csv;
         output_csv.delimiter = csv.delimiter;
-        output_csv.full_xpath = true;
         if( csv.binary() ) { output_csv.format( comma::csv::format::value< input_t >( default_input ) + ",2ui" ); }
         comma::csv::output_stream< map_t::value_type > ostream( std::cout, output_csv, std::make_pair( default_input, std::make_pair( 0, 0 ) ) );
         for( map_t::const_iterator it = map.begin(); it != map.end(); ++it ) { ostream.write( *it ); }

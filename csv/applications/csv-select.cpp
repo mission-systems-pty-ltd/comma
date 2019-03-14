@@ -338,7 +338,6 @@ static void init_input( const comma::csv::format& format, const comma::command_l
         }
     }
     csv.fields = comma::join( fields, ',' );
-    csv.full_xpath = true;
 }
 
 int main( int ac, char** av )

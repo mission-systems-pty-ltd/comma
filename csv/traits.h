@@ -45,7 +45,6 @@ template <> struct traits< comma::csv::options >
         v.apply( "filename", p.filename );
         v.apply( "delimiter", p.delimiter );
         v.apply( "fields", p.fields );
-        v.apply( "full-xpath", p.full_xpath );
         v.apply( "precision", p.precision );
         v.apply( "quote", p.quote ? std::string( 1, *p.quote ) : std::string() );
         v.apply( "flush", p.flush );
@@ -59,7 +58,6 @@ template <> struct traits< comma::csv::options >
         v.apply( "filename", p.filename );
         v.apply( "delimiter", p.delimiter );
         v.apply( "fields", p.fields );
-        v.apply( "full-xpath", p.full_xpath );
         v.apply( "precision", p.precision );
         std::string quote = p.quote ? std::string( 1, *p.quote ) : std::string();
         v.apply( "quote", p.quote );

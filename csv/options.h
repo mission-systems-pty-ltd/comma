@@ -45,10 +45,10 @@ class options
         options();
 
         /// constructor
-        options( int argc, char** argv, const std::string& defaultFields = "" );
+        options( int argc, char** argv, const std::string& defaultFields = "", bool full_xpath = true );
 
         /// constructor
-        options( const comma::command_line_options& options, const std::string& defaultFields = "", bool set_full_xpath = false );
+        options( const comma::command_line_options& options, const std::string& defaultFields = "", bool full_xpath = true );
 
         /// return usage to incorporate into application usage
         static std::string usage( const std::string& default_fields = "", bool verbose = true );

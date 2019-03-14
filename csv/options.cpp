@@ -27,7 +27,6 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author vsevolod vlaskine
 
 #include <boost/regex.hpp>
@@ -50,17 +49,14 @@ bool options::binary() const { return static_cast< bool >( format_ ); }
 
 namespace impl {
 
-inline static void init( comma::csv::options& csv_options, const comma::command_line_options& options, const std::string& defaultFields )
+inline static void init( comma::csv::options& csv_options, const comma::command_line_options& options, const std::string& defaultFields, bool full_xpath )
 {
-    csv_options.full_xpath = options.exists( "--full-xpath" );
+    csv_options.full_xpath = full_xpath;
     csv_options.fields = options.value( "--fields,-f", defaultFields );
     if( options.exists( "--binary,-b" ) )
     {
         boost::optional< std::string > format = options.optional< std::string >( "--binary,-b" );
-        if( format )
-        {
-            csv_options.format( options.value< std::string >( "--binary,-b" ) );
-        }
+        if( format ) { csv_options.format( options.value< std::string >( "--binary,-b" ) ); }
     }
     csv_options.precision = options.value< unsigned int >( "--precision", 12 );
     csv_options.delimiter = options.exists( "--delimiter" ) ? options.value( "--delimiter", ',' ) : options.value( "-d", ',' );
@@ -79,18 +75,11 @@ inline static void init( comma::csv::options& csv_options, const comma::command_
 
 } // namespace impl {
 
-options::options() : full_xpath( false ), delimiter( ',' ), precision( 12 ), quote( '"' ), flush( false ) {}
+options::options() : full_xpath( true ), delimiter( ',' ), precision( 12 ), quote( '"' ), flush( false ) {}
 
-options::options( int argc, char** argv, const std::string& defaultFields )
-{
-    impl::init( *this, comma::command_line_options( argc, argv ), defaultFields );
-}
+options::options( int argc, char** argv, const std::string& defaultFields, bool full_xpath ) { impl::init( *this, comma::command_line_options( argc, argv ), defaultFields, full_xpath ); }
 
-options::options( const comma::command_line_options& options, const std::string& defaultFields, bool set_full_xpath )
-{
-    impl::init( *this, options, defaultFields );
-    if(set_full_xpath) { full_xpath = true; }
-}
+options::options( const comma::command_line_options& options, const std::string& defaultFields, bool full_xpath ) { impl::init( *this, options, defaultFields, full_xpath ); }
 
 std::string options::usage( const std::string& default_fields, bool verbose )
 {
@@ -101,9 +90,6 @@ std::string options::usage( const std::string& default_fields, bool verbose )
         oss << "    --fields,-f <names>: comma-separated field names";
         if( !default_fields.empty() ) { oss << "; default: " << default_fields; }
         oss << std::endl;
-        oss << "    --full-xpath: expect full xpaths as field names; default: false" << std::endl;
-        oss << "                  default false was a wrong choice, but changing it" << std::endl;
-        oss << "                  to true now may break too many things" << std::endl;
         oss << "    --precision <precision>: floating point precision; default: 12" << std::endl;
         oss << "    --quote=[<quote_character>]: quote sign to quote strings (ascii only); default: '\"'" << std::endl;
         oss << "    --flush: if present, flush output stream after each record" << std::endl;
@@ -174,6 +160,6 @@ bool options::has_some_of_paths( const std::string& paths ) const
     return false;
 }
 
-std::string options::valueless_options() { return "--full-xpath,--flush"; }
+std::string options::valueless_options() { return "--flush"; }
 
 } } // namespace comma { namespace csv {

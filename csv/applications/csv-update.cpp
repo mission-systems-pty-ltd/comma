@@ -256,7 +256,6 @@ static input_t::input_stream_t* make_filter_stream()
     if( filter_transport ) { return new input_t::input_stream_t( **filter_transport, csv, default_input ); }
     if( filter_line.empty() ) { return NULL; }
     comma::csv::options c;
-    c.full_xpath = true;
     c.fields = csv.fields;
     static std::istringstream iss( filter_line );
     return new input_t::input_stream_t( iss, c, default_input );
@@ -390,7 +389,6 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av, usage );
         verbose = options.exists( "--verbose,-v" );
         csv = comma::csv::options( options );
-        csv.full_xpath = true;
         csv.quote.reset();
         last_only = options.exists( "--last-only,--last" );
         last_block = options.exists( "--last-block" );
@@ -448,7 +446,6 @@ int main( int ac, char** av )
             std::string s = options.value< std::string >( "--empty" ) + std::string( f.count(), ',' );
             std::istringstream iss( s );
             comma::csv::options c;
-            c.full_xpath = true;
             c.fields = csv.fields;
             comma::csv::input_stream< input_t > isstream( iss, c, default_input );
             empty = ( isstream.read() )->value;
@@ -460,7 +457,6 @@ int main( int ac, char** av )
             std::string s = options.value< std::string >( "--remove,--reset,--unset,--erase" ) + std::string( f.count(), ',' );
             std::istringstream iss( s );
             comma::csv::options c;
-            c.full_xpath = true;
             c.fields = csv.fields;
             comma::csv::input_stream< input_t > isstream( iss, c, default_input );
             erase = ( isstream.read() )->value;

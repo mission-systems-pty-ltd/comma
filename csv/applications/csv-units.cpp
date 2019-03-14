@@ -461,7 +461,6 @@ static void init_input()
         fields += init_input_field( v[i] );
     }
     csv.fields = fields;
-    csv.full_xpath = true;
     input.values.resize( input_fields.size() ); //input.values.resize( size );
 }
 
