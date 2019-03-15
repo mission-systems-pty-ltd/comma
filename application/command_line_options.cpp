@@ -30,19 +30,18 @@
 
 /// @author vsevolod vlaskine
 
-#include "../string/split.h"
-#include "../application/command_line_options.h"
-#include "../base/exception.h"
+#include <algorithm>
 #include <sstream>
 #include <set>
+#include <unordered_map>
 #include <boost/bind.hpp>
 #include <boost/config/warning_disable.hpp>
 #include <boost/optional.hpp>
 #include <boost/regex.hpp>
 #include <boost/spirit/include/qi.hpp>
-#include <boost/unordered_set.hpp>
-
-#include <algorithm>
+#include "../string/split.h"
+#include "../application/command_line_options.h"
+#include "../base/exception.h"
 
 namespace comma {
 
@@ -192,9 +191,14 @@ void command_line_options::assert_valid( const std::vector< description >& d, bo
 {
     for( unsigned int i = 0; i < d.size(); ++i ) { d[i].assert_valid( *this ); }
     if( !unknown_options_invalid ) { return; }
-    boost::unordered_set< std::string > s; // real quick and dirty, just to make it work
-    for( unsigned int i = 0; i < d.size(); ++i ) { for( unsigned int j = 0; j < d[i].names.size(); s.insert( d[i].names[j] ), ++j ); }
-    for( unsigned int i = 0; i < names_.size(); ++i ) { if( s.find( names_[i] ) == s.end() ) { COMMA_THROW( comma::exception, "unknown option " << names_[i] ); } }
+    std::unordered_map< std::string, bool > m; // real quick and dirty, just to make it work
+    for( unsigned int i = 0; i < d.size(); ++i ) { for( unsigned int j = 0; j < d[i].names.size(); ++j ) { m[ d[i].names[j] ] = d[i].has_value; } }
+    for( unsigned int i = 1; i < argv_.size(); ++i )
+    {
+        auto it = m.find( argv_[i] );
+        if( it == m.end() ) { COMMA_THROW( comma::exception, "unknown option " << argv_[i] ); }
+        if( it->second ) { ++i; }
+    }
 }
 
 namespace impl {
