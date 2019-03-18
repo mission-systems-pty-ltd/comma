@@ -64,7 +64,7 @@ class ascii_input_stream : public boost::noncopyable
 {
     public:
         /// constructor
-        ascii_input_stream( std::istream& is, const std::string& column_names = "", char delimiter = ',', bool full_path_as_name = false, const S& sample = S() );
+        ascii_input_stream( std::istream& is, const std::string& column_names = "", char delimiter = ',', bool full_path_as_name = true, const S& sample = S() );
 
         /// constructor from csv options
         ascii_input_stream( std::istream& is, const options& o, const S& sample = S() );
@@ -115,7 +115,7 @@ class ascii_output_stream : public boost::noncopyable
 {
     public:
         /// constructor
-        ascii_output_stream( std::ostream& os, const std::string& column_names = "", char delimiter = ',', bool full_path_as_name = false, const S& sample = S() );
+        ascii_output_stream( std::ostream& os, const std::string& column_names = "", char delimiter = ',', bool full_path_as_name = true, const S& sample = S() );
 
         /// constructor from csv options
         ascii_output_stream( std::ostream& os, const options& o, const S& sample = S() );
@@ -166,7 +166,7 @@ class binary_input_stream : public boost::noncopyable
 {
     public:
         /// constructor
-        binary_input_stream( std::istream& is, const std::string& format = "", const std::string& column_names = "", bool full_path_as_name = false, const S& sample = S() );
+        binary_input_stream( std::istream& is, const std::string& format = "", const std::string& column_names = "", bool full_path_as_name = true, const S& sample = S() );
 
         /// constructor from options
         binary_input_stream( std::istream& is, const options& o, const S& sample = S() );
@@ -215,7 +215,7 @@ class binary_output_stream : public boost::noncopyable
 {
     public:
         /// constructor
-        binary_output_stream( std::ostream& os, const std::string& format = "", const std::string& column_names = "", bool full_path_as_name = false, bool flush = false, const S& sample = S() );
+        binary_output_stream( std::ostream& os, const std::string& format = "", const std::string& column_names = "", bool full_path_as_name = true, bool flush = false, const S& sample = S() );
 
         /// constructor from options
         binary_output_stream( std::ostream& os, const options& o, const S& sample = S() );
@@ -320,7 +320,7 @@ class output_stream : public boost::noncopyable
         /// construct from csv options
         output_stream( std::ostream& os, const csv::options& o, const S& sample = S() );
 
-        output_stream( std::ostream& os, bool binary, bool full_xpath = false, bool flush = false, const S& sample = S() );
+        output_stream( std::ostream& os, bool binary, bool full_xpath = true, bool flush = false, const S& sample = S() );
 
         /// write
         void write( const S& s ) { if( ascii_ ) { ascii_->write( s ); } else { binary_->write( s ); } }
