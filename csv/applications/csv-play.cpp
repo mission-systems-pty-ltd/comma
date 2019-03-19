@@ -254,10 +254,11 @@ int main( int argc, char** argv )
         bool flush =  !options.exists( "--no-flush" );
         std::vector< std::string > configstrings = options.unnamed("--interactive,-i,--paused,--paused-at-start,--quiet,--flush,--no-flush","--slow,--slowdown,--speed,--resolution,--binary,--fields,--clients,--from,--to");
         if( configstrings.empty() ) { configstrings.push_back( "-;-" ); }
-        comma::csv::options csvoptions( argc, argv );
+        comma::csv::options csv( argc, argv );
+        csv.full_xpath = false;
         comma::name_value::parser name_value("filename,output", ';', '=', false );
         std::vector< comma::Multiplay::SourceConfig > sourceConfigs( configstrings.size() );
-        comma::Multiplay::SourceConfig defaultConfig( "-", options.value( "--clients", 0 ), csvoptions );
+        comma::Multiplay::SourceConfig defaultConfig( "-", options.value( "--clients", 0 ), csv );
         for( unsigned int i = 0U; i < configstrings.size(); ++i ) { sourceConfigs[i] = name_value.get< comma::Multiplay::SourceConfig >( configstrings[i], defaultConfig ); }
         boost::posix_time::ptime fromtime;
         if( !from.empty() ) { fromtime = boost::posix_time::from_iso_string( from ); }
