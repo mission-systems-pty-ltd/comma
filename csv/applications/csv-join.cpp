@@ -295,6 +295,7 @@ template < typename T > static std::string keys_as_string( const input< T >& i )
 {
     std::ostringstream oss;
     comma::csv::options csv;
+    csv.full_xpath = false;
     csv.fields = "keys";
     comma::csv::ascii_output_stream< input< T > > os( oss, csv, i );
     os.write( i );
@@ -430,6 +431,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
                 if( !strict ) { ++discarded; continue; }
                 std::string s;
                 comma::csv::options c;
+                c.full_xpath = false;
                 c.fields = "keys";
                 std::cerr << "csv-join: match not found for key(s): " << comma::csv::ascii< input< K > >( c, default_input ).put( *p, s ) << ", block: " << block << std::endl;
                 return 1;

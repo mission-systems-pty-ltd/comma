@@ -90,6 +90,7 @@ int main( int ac, char** av )
         microseconds *= sign;
         boost::posix_time::time_duration delay = boost::posix_time::minutes( minutes ) + boost::posix_time::seconds( seconds ) + boost::posix_time::microseconds( microseconds );
         comma::csv::options csv( options );
+        csv.full_xpath = false;
         comma::csv::input_stream< Point > istream( std::cin, csv );
         comma::csv::output_stream< Point > ostream( std::cout, csv );
         while( std::cin.good() && !std::cin.eof() )

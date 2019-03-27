@@ -476,6 +476,7 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av, usage );
         accept_empty = options.exists( "--empty-as-not-a-date-time,--accept-empty,-e" );
         csv = comma::csv::options( options );
+        csv.full_xpath = false;
         csv.precision = 16;
         if( csv.fields.empty() ) { csv.fields="a"; }
         init_input();

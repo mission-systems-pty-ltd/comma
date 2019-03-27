@@ -154,6 +154,7 @@ int main( int ac, char** av )
         comma::io::istream is( "-", comma::io::mode::binary );
         boost::scoped_ptr< comma::csv::output_stream< output_t > > ostream;
         comma::csv::options output_csv;
+        output_csv.full_xpath = false;
         if( options.exists( "--append-fields,--append,-a" ) )
         {
             output_csv.fields = options.value< std::string >( "--append-fields,--append,-a", "" );

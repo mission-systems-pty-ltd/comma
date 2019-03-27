@@ -63,7 +63,7 @@ class Multiplay
                 outputFileName( output ), minNumberOfClients( 0 ), options( csv ) {}
             SourceConfig( const std::string& output, std::size_t n, const csv::options& csv ) :
                 outputFileName( output ), minNumberOfClients( n ), options( csv ) {}
-            SourceConfig() {};
+            SourceConfig() { options.full_xpath = false; };
         };
 
         Multiplay( const std::vector< SourceConfig >& configs

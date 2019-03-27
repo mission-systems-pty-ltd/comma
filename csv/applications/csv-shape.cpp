@@ -249,6 +249,7 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av, usage );
         std::vector< std::string > unnamed = options.unnamed( "--size,-n,--sliding-window,-w,--step,--verbose,-v", "-.*" );
         comma::csv::options csv( options );
+        csv.full_xpath = false;
         if (csv.fields.empty()) { csv.fields="a"; }
         is_binary = csv.binary();
         if( unnamed.empty() ) { std::cerr << comma::verbose.app_name() << ": please specify operations" << std::endl; exit( 1 ); }

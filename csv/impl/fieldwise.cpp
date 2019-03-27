@@ -42,6 +42,7 @@ fieldwise::fieldwise( const std::string& fields, char delimiter )
     , binary_( this )
 {
     csv::options o;
+    o.full_xpath = false;
     o.fields = fields;
     o.delimiter = delimiter;
     init_( o, split( fields, ',' ) );

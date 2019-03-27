@@ -476,6 +476,7 @@ int main( int ac, char** av )
         if( options.exists( "--input-fields" ) ) { std::cout << comma::join( comma::csv::names< interval_t< double > >(), ',' ) << std::endl; return 0; }
         if( options.exists( "--output-fields" ) ) { std::cout << comma::join( comma::csv::names< interval_t< double > >(), ',' ) << std::endl; return 0; }
         comma::csv::options csv( options );
+        csv.full_xpath = false;
         if( csv.fields.empty() ) { csv.fields = comma::join( comma::csv::names< interval_t< double > >(), ',' ); }
         if( !csv.has_field( "from,to" ) ) { COMMA_THROW( comma::exception, "expected from and to fields" ); }
         options.assert_mutually_exclusive( "--binary,--format" );

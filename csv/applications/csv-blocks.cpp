@@ -415,6 +415,7 @@ int main( int ac, char** av )
         csv = comma::csv::options( options );
         csv.quote.reset();
         comma::csv::options csv_out;
+        csv_out.full_xpath = false;
         if( csv.binary() ) { csv_out.format( comma::csv::format("ui") ); }
         std::vector< std::string > unnamed = options.unnamed( "--help,-h,--reverse,--verbose,-v", "-.*" );
         if( unnamed.empty() ) { std::cerr << name() << "please specify operation" << std::endl; return 1; }

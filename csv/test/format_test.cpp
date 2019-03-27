@@ -349,6 +349,7 @@ TEST( csv, unstructured )
     EXPECT_EQ( "l,l,l,l", comma::csv::impl::unstructured::guess_format( "1,2,3,4" ).string() );
     EXPECT_EQ( "l,d,t,s[1024]", comma::csv::impl::unstructured::guess_format( "1,2.1,20121212T000000,blah" ).string() );
     comma::csv::options csv;
+    csv.full_xpath = false;
     csv.fields = "a,,,b,,,c";
     csv.delimiter = ',';
     EXPECT_EQ( "l,s[1024],s[1024],s[1024],s[1024],s[1024],t", comma::csv::impl::unstructured::guess_format( "1,,,blah,,,20121212T000000" ).string() );

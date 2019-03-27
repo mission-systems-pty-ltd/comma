@@ -36,6 +36,7 @@ TEST( options, has_paths )
 {
     {
         comma::csv::options csv;
+        csv.full_xpath = false;
         csv.fields = "a,b/c,d/e/f,p[0],q[0]/x,s/t/y[0],s/t/y[1]/z";
         EXPECT_TRUE( csv.has_paths( "a" ) );
         EXPECT_TRUE( csv.has_paths( "b" ) );
@@ -66,6 +67,7 @@ TEST( options, has_paths )
     }
     {
         comma::csv::options csv;
+        csv.full_xpath = false;
         csv.fields = "a,b/c,d/e/f,p[0],q[0]/x,s/t/y[0],s/t/y[1]/z";
         EXPECT_TRUE( csv.has_some_of_paths( "a" ) );
         EXPECT_TRUE( csv.has_some_of_paths( "a,blah" ) );

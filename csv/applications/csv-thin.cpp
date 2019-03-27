@@ -189,6 +189,7 @@ int main( int ac, char** av )
         {
             if( !period ) { COMMA_THROW( comma::exception, "--fields requires --period option" ); }
             comma::csv::options csv( options );
+            csv.full_xpath = false;
             comma::csv::input_stream< timestamped > istream( std::cin, csv );
             while( std::cin.good() && !std::cin.eof() )
             {

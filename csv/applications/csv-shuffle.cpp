@@ -93,6 +93,7 @@ int main( int ac, char** av )
         bool verbose = options.exists( "--verbose,-v" );
         if( options.exists( "--help,-h" ) ) { usage( verbose ); }
         comma::csv::options csv( options );
+        csv.full_xpath = false;
         std::string f = options.value< std::string >( "--input-fields", "" );
         if( !f.empty() ) { csv.fields = f; }
         std::vector< std::string > input_fields = comma::split( csv.fields, ',' );

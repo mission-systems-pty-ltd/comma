@@ -148,6 +148,7 @@ int main( int ac, char** av )
         if( options.exists( "--help,-h" ) ) { usage( true ); }
 
         comma::csv::options csv( options );
+        csv.full_xpath = false;
         if ( csv.binary() ) { std::cerr << app_name << ": binary not handled" << std::endl; return 1; }
 
         std::string null_value = default_null_value;

@@ -361,6 +361,7 @@ int main( int ac, char** av )
     {
         command_line_options options( ac, av, usage );
         comma::csv::options csv( options );
+        csv.full_xpath = false;
         std::vector< std::string > files = options.unnamed( "--help,-h,--verbose,-v,--flush,--read-all,--force-read", "--fields,-f,--output-fields,--output,-o,--binary,-b,--skip,--count" );
         if( !csv.binary() )
         {

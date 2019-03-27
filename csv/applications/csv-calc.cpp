@@ -1231,6 +1231,7 @@ int main( int ac, char** av )
         if( options.exists( "--bash-completion" ) ) bash_completion( ac, av );
         std::vector< std::string > unnamed = options.unnamed( "", "--binary,-b,--delimiter,-d,--format,--fields,-f,--output-fields" );
         comma::csv::options csv( options );
+        csv.full_xpath = false;
         #ifdef WIN32
         if( csv.binary() ) { _setmode( _fileno( stdin ), _O_BINARY ); _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
