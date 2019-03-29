@@ -53,7 +53,7 @@
 
 using namespace comma;
 
-static void usage(bool detail=false)
+static void usage( bool verbose = false )
 {
     std::cerr << std::endl;
     std::cerr << "Read input data and thin them down by the given percentage;" << std::endl;
@@ -68,22 +68,13 @@ static void usage(bool detail=false)
     std::cerr << "                That is, if <rate> is 0.33, output every third packet." << std::endl;
     std::cerr << "                Default is to output each packet with a probability of <rate>." << std::endl;
     std::cerr << "    --fields=<fields>: use timestamp in fields to determine time for --period" << std::endl;
-    std::cerr << "    --fps,--frames-per-second=<d>: deprecated and removed" << std::endl;
     std::cerr << "    --period=<n>: output once every <n> seconds, ignores <rate>" << std::endl;
     std::cerr << "    --size,-s=<size>: data is packets of fixed size, otherwise data is expected" << std::endl;
     std::cerr << "                      line-wise. Alternatively use --binary" << std::endl;
     std::cerr << std::endl;
-    if( detail )
-    {
-        std::cerr << "csv options:" << std::endl;
-        std::cerr<< comma::csv::options::usage() << std::endl;
-        std::cerr << std::endl;
-    }
-    else
-    {
-        std::cerr << "use -v or --verbose to see more detail" << std::endl;
-        std::cerr << std::endl;
-    }
+    std::cerr << "csv options:" << std::endl;
+    std::cerr << comma::csv::options::usage( verbose ) << std::endl;
+    std::cerr << std::endl;
     std::cerr << "examples:" << std::endl;
     std::cerr << "    output 70% of data:          cat full.csv | csv-thin 0.7" << std::endl;
     std::cerr << "    output once every 2 seconds: cat full.csv | csv-thin --period 2" << std::endl;
@@ -122,12 +113,9 @@ static bool ignore()
     {
         static boost::posix_time::ptime next_time = boost::posix_time::microsec_clock::universal_time();
         boost::posix_time::ptime now = boost::posix_time::microsec_clock::universal_time();
-        if( now > next_time )
-        {
-            next_time += *period;
-            return false;
-        }
-        return true;
+        if( now <= next_time ) { return true; }
+        next_time += *period;
+        return false;
     }
     if( deterministic )
     {
@@ -161,15 +149,12 @@ static bool ignore()
     return do_ignore && random() > rate;
 }
 
-static bool ignore_with_timestamp( boost::posix_time::ptime timestamp )
+static bool ignore_by_timestamp( boost::posix_time::ptime timestamp )
 {
     static boost::posix_time::ptime next_time = timestamp;
-    if( timestamp > next_time )
-    {
-        next_time += *period;
-        return false;
-    }
-    return true;
+    if( timestamp <= next_time ) { return true; }
+    next_time += *period;
+    return false;
 }
 
 int main( int ac, char** av )
@@ -180,7 +165,6 @@ int main( int ac, char** av )
         bool binary = options.exists( "--size,-s,--binary,-b" );
         deterministic = options.exists( "--deterministic,-d" );
         if( options.exists( "--period" )) { period = boost::posix_time::microseconds( static_cast<unsigned int> (options.value< double >( "--period" ) * 1000000 )); }
-        if(options.exists("--fps,--frames-per-second")) { COMMA_THROW( comma::exception, "ERROR: --fps option is deprecated and removed! Please talk to software team if you are using it"); }
         #ifdef WIN32
         if( binary ) { _setmode( _fileno( stdin ), _O_BINARY ); _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
@@ -188,24 +172,18 @@ int main( int ac, char** av )
         if( options.exists( "--fields" ))
         {
             if( !period ) { COMMA_THROW( comma::exception, "--fields requires --period option" ); }
-            comma::csv::options csv( options );
-            csv.full_xpath = false;
-            comma::csv::input_stream< timestamped > istream( std::cin, csv );
+            comma::csv::input_stream< timestamped > istream( std::cin, comma::csv::options( options ) );
             while( std::cin.good() && !std::cin.eof() )
             {
                 const timestamped* p = istream.read();
                 if( !p ) { break; }
-                if( !ignore_with_timestamp( p->timestamp ))
-                {
-                    if( istream.is_binary()) { std::cout.write( istream.binary().last(), istream.binary().size() ); }
-                    else { std::cout << comma::join( istream.ascii().last(), istream.ascii().ascii().delimiter() )<< std::endl; }
-                }
+                if( ignore_by_timestamp( p->timestamp ) ) { continue; }
+                if( istream.is_binary()) { std::cout.write( istream.binary().last(), istream.binary().size() ); }
+                else { std::cout << comma::join( istream.ascii().last(), istream.ascii().ascii().delimiter() )<< std::endl; }
             }
             return 0;
         }
-        
         std::vector< std::string > v;
-
         if( !period )
         {
             v = options.unnamed( "--deterministic,-d", "-.*" );
