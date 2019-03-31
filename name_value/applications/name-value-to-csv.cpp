@@ -1,6 +1,5 @@
 // This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// Copyright (c) 2019 Vsevolod Vlaskine
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
