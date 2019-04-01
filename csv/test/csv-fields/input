@@ -13,6 +13,7 @@ numbers/fields[1]="echo a,,, | csv-fields numbers --fields=a"
 numbers/fields[2]="echo ,a,, | csv-fields numbers --fields=a"
 numbers/fields[3]="echo ,a,b, | csv-fields numbers --fields=a"
 numbers/fields[4]="echo ,a,b, | csv-fields numbers --fields=a,b"
+numbers/fields[5]="echo ,a,a,a | csv-fields numbers --fields=a"
 
 clear/keep[0]="echo a,b,c,d | csv-fields clear --keep ,,,"
 clear/keep[1]="echo a,b,c,d | csv-fields clear --keep a"

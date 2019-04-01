@@ -28,6 +28,8 @@ numbers/fields[3]/output="2"
 numbers/fields[3]/status=0
 numbers/fields[4]/output="2,3"
 numbers/fields[4]/status=0
+numbers/fields[5]/output="2,3,4"
+numbers/fields[5]/status=0
 
 clear/keep[0]/output=",,,"
 clear/keep[0]/status=0
