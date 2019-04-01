@@ -53,6 +53,7 @@ static void usage( bool )
     std::cerr << "    numbers (default): convert comma-separated field names to field numbers" << std::endl;
     std::cerr << "                       e.g. for combining with cut or csv-bin-cut" << std::endl;
     std::cerr << "        --count,--size: output the total number of fields" << std::endl;
+    std::cerr << "        --fields=[<fields>]: number only fields with given names, same as csv-fields clear --except ... | csv-fields numbers" << std::endl;
     std::cerr << "        --fill: number even empty fields, e.g. try: echo ,, | csv-fields numbers --fill" << std::endl;
     std::cerr << "        --from=<value>: start field numbering from <value>; default=1" << std::endl;
     std::cerr << "                        to keep it consistent with linux cut utility" << std::endl;
@@ -177,7 +178,10 @@ int main( int ac, char** av )
         {
             int from = options.value( "--from", 1 );
             bool fill = options.exists( "--fill" );
-            std::string prefix = options.value< std::string >( "--prefix", "" );
+            options.assert_mutually_exclusive( "--fill,--fields" );
+            const auto& v = comma::split( options.value< std::string >( "--fields", "" ), ',', true );
+            std::set< std::string > fields( v.begin(), v.end() );
+            std::string prefix = options.value< std::string >( "--prefix", "" );            
             while( std::cin.good() )
             {
                 std::string line;
@@ -189,6 +193,7 @@ int main( int ac, char** av )
                 for( unsigned int i = 0; i < v.size(); ++i )
                 {
                     if( v[i].empty() && !fill ) { continue; }
+                    if( !fields.empty() && fields.find( v[i] ) == fields.end() ) { continue; }
                     std::cout << comma << prefix << ( i + from );
                     comma = ',';
                 }

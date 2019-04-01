@@ -18,6 +18,16 @@ numbers/fill[2]/output="f1,f2,f3,f4"
 numbers/fill[2]/status=0
 numbers/fill[3]/output="f1,f2,f3,f4"
 numbers/fill[3]/status=0
+numbers/fields[0]/output=""
+numbers/fields[0]/status=0
+numbers/fields[1]/output="1"
+numbers/fields[1]/status=0
+numbers/fields[2]/output="2"
+numbers/fields[2]/status=0
+numbers/fields[3]/output="2"
+numbers/fields[3]/status=0
+numbers/fields[4]/output="2,3"
+numbers/fields[4]/status=0
 
 clear/keep[0]/output=",,,"
 clear/keep[0]/status=0

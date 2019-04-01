@@ -45,26 +45,24 @@ bool string::is_one_of( char c, const char * characters )
     return false;
 }
 
-std::vector< std::string > split( const std::string & s, const char * separators )
+std::vector< std::string > split( const std::string & s, const char * separators, bool empty_if_empty_input )
 {
     std::vector< std::string > v;
+    if( empty_if_empty_input && s.empty() ) { return v; }
     const char* begin( &s[0] );
     const char* end( begin + s.length() );
     v.push_back( std::string() );
     for( const char* p = begin; p < end; ++p )
     {
-        if( string::is_one_of( *p, separators ) )
-            v.push_back( std::string() );
-        else
-            v.back() += *p;
+        if( string::is_one_of( *p, separators ) ) { v.push_back( std::string() ); } else { v.back() += *p; }
     }
     return v;
 }
 
-std::vector< std::string > split( const std::string & s, char separator )
+std::vector< std::string > split( const std::string & s, char separator, bool empty_if_empty_input )
 {
     const char separators[] = { separator, 0 };
-    return split( s, separators );
+    return split( s, separators, empty_if_empty_input );
 }
 
 std::vector< std::string > split_escaped( const std::string & s, const char * separators, const char * quotes, char escape )

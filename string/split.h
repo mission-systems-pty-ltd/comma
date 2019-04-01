@@ -39,15 +39,16 @@
 namespace comma {
 
 namespace string {
-    // Used for escaping / unescaping to maybe find a character in a list of specials
-    bool is_one_of( char c, const char * characters );
-}
+    
+bool is_one_of( char c, const char* characters );
+
+} // namespace string {
 
 /// split string into tokens (a quick implementation); always contains at least one element
-std::vector< std::string > split( const std::string& s, const char* separators = " " );
+std::vector< std::string > split( const std::string& s, const char* separators = " ", bool empty_if_empty_input = false );
 
 /// split string into tokens (a quick implementation); always contains at least one element
-std::vector< std::string > split( const std::string& s, char separator );
+std::vector< std::string > split( const std::string& s, char separator, bool empty_if_empty_input = false );
 
 /// Split string into tokens; always contains at least one element;
 /// skips backslash escaped separator, handle non-nested quotes;
@@ -64,10 +65,10 @@ std::vector< std::string > split( const std::string& s, char separator );
 /// quote must be paired with an end quote, or an exception is thrown.
 /// Quotes don't nest and can not be mixed; e.g. a ' will not close a " quoted string.
 /// However "'" and '"' are perfectly legal strings of ' and "
-std::vector< std::string > split_escaped( const std::string & s, const char * separators = " ", const char * quotes = "\"\'", char escape = '\\' );
+std::vector< std::string > split_escaped( const std::string& s, const char * separators = " ", const char * quotes = "\"\'", char escape = '\\' );
 /// split string into tokens; always contains at least one element;
 /// skips backslash escaped seperator, handle boolean quotes 
-std::vector< std::string > split_escaped( const std::string & s, char separator, const char * quotes = "\"\'", char escape = '\\' );
+std::vector< std::string > split_escaped( const std::string& s, char separator, const char * quotes = "\"\'", char escape = '\\' );
 
 } // namespace comma {
 
