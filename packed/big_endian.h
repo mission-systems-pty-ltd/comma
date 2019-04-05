@@ -39,74 +39,11 @@
 #include "../base/exception.h"
 #include "../base/types.h"
 #include "../packed/field.h"
+#include "detail/endian.h"
 
 namespace comma { namespace packed {
 
 namespace detail {
-
-template < typename T > struct net_traits {};
-
-template <> struct net_traits< comma::uint16 >
-{
-    static comma::uint16 hton( comma::uint16 v ) { return htons( v ); }
-    static comma::uint16 ntoh( comma::uint16 v ) { return ntohs( v ); }
-};
-
-template <> struct net_traits< comma::int16 >
-{
-    static comma::int16 hton( comma::int16 v ) { return htons( v ); }
-    static comma::int16 ntoh( comma::int16 v ) { return ntohs( v ); }
-};
-
-template <> struct net_traits< comma::uint32 >
-{
-    static comma::uint32 hton( comma::uint32 v ) { return htonl( v ); }
-    static comma::uint32 ntoh( comma::uint32 v ) { return ntohl( v ); }
-};
-
-template <> struct net_traits< comma::int32 >
-{
-    static comma::int32 hton( comma::int32 v ) { return htonl( v ); }
-    static comma::int32 ntoh( comma::int32 v ) { return ntohl( v ); }
-};
-
-BOOST_STATIC_ASSERT( sizeof( float ) == 4 );
-BOOST_STATIC_ASSERT( sizeof( double ) == 8 );
-
-template < typename type, typename uint_of_same_size >
-inline type pack_float( type value )
-{
-    char storage[sizeof(type)];
-    uint_of_same_size* p = reinterpret_cast< uint_of_same_size* >( &value );
-    for( unsigned int i = 0; i < sizeof( type ); ++i, *p >>= 8 ) { storage[sizeof(type)-i-1] = *p & 0xff; } 
-    const type* result = reinterpret_cast< const type* >( &storage );
-    return *result;
-}
-
-template< typename type, typename uint_of_same_size >
-inline type unpack_float( type value ) 
-{
-    const char* storage = reinterpret_cast< const char* >( &value ); 
-    uint_of_same_size v = 0;
-    unsigned int shift = 0;
-    for( unsigned int i = 0; i < sizeof( type ); ++i, shift += 8 ) { v += static_cast< uint_of_same_size >( ( unsigned char )( storage[sizeof(type)-i-1] ) ) << shift; }
-    const type* result = reinterpret_cast< const type* >( &v );
-    return *result;
-}
-
-template <> struct net_traits< float >
-{
-    typedef comma::uint32 uint_of_same_size;
-    static float hton( float value ) { return pack_float< float, uint_of_same_size >( value ); }
-    static float ntoh( float value ) { return unpack_float< float, uint_of_same_size >( value ); }
-};
-
-template <> struct net_traits< double >
-{
-    typedef comma::uint64 uint_of_same_size;
-    static double hton( double value ) { return pack_float< double, uint_of_same_size >( value ); }
-    static double ntoh( double value ) { return unpack_float< double, uint_of_same_size >( value ); }
-};
 
 template < typename T >
 class big_endian : public packed::field< big_endian< T >, T, sizeof( T ) >
