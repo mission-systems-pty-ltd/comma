@@ -31,74 +31,31 @@
 /// @author Matthew Herrmann 2007
 /// @author Vsevolod Vlaskine 2010-2011
 
-#ifndef COMMA_PACKED_BIG_ENDIAN_H_
-#define COMMA_PACKED_BIG_ENDIAN_H_
+#pragma once
 
-#include <algorithm>
-#include <boost/static_assert.hpp>
-#include "../base/exception.h"
-#include "../base/types.h"
-#include "../packed/field.h"
 #include "detail/endian.h"
 
 namespace comma { namespace packed {
 
-namespace detail {
-
-template < typename T >
-class big_endian : public packed::field< big_endian< T >, T, sizeof( T ) >
-{
-    public:
-        enum { size = sizeof( T ) };
-
-        typedef T type;
-
-        typedef packed::field< big_endian< T >, T, size > base_type;
-
-        static type default_value() { return 0; }
-
-        static void pack( char* storage, type value )
-        {
-            type v( net_traits< type >::hton( value ) );
-            ::memcpy( storage, ( void* )&v, size );
-        }
-
-        static type unpack( const char* storage )
-        {
-            type value;
-            ::memcpy( ( void* )&value, storage, size );
-            return net_traits< type >::ntoh( value );
-        }
-
-        const big_endian& operator=( const big_endian& rhs ) { return base_type::operator=( rhs ); }
-
-        const big_endian& operator=( type rhs ) { return base_type::operator=( rhs ); }
-};
-
-} // namespace detail {
-
 /// big endian 16-bit integers
-typedef detail::big_endian< comma::uint16 > big_endian_uint16;
-typedef detail::big_endian< comma::int16 > big_endian_int16;
+typedef detail::endian< detail::big, 2, false > big_endian_uint16;
+typedef detail::endian< detail::big, 2, true > big_endian_int16;
 /// aliases for big endian 16-bit integers
 typedef big_endian_uint16 net_uint16;
 typedef big_endian_int16 net_int16;
 /// big endian 32-bit integers
-typedef detail::big_endian< comma::uint32 > big_endian_uint32;
-typedef detail::big_endian< comma::int32 > big_endian_int32;
+typedef detail::endian< detail::big, 4, false > big_endian_uint32;
+typedef detail::endian< detail::big, 4, true > big_endian_int32;
 /// aliases for big endian 32-bit integers
 typedef big_endian_uint32 net_uint32;
 typedef big_endian_int32 net_int32;
 /// big endian float and double
-typedef detail::big_endian< float > big_endian_float32;
-typedef detail::big_endian< double > big_endian_float64;
+typedef detail::endian< detail::big, 4, true, true > big_endian_float32;
+typedef detail::endian< detail::big, 8, true, true > big_endian_float64;
 typedef big_endian_float64 big_endian_double;
 /// aliases for big endian float and double
 typedef big_endian_float32 net_float32;
 typedef big_endian_float64 net_float64;
 typedef net_float64 net_double;
 
-
 } } // namespace comma { namespace packed {
-
-#endif // #ifndef COMMA_PACKED_BIG_ENDIAN_H_

@@ -32,10 +32,6 @@
 
 #pragma once
 
-#include <boost/static_assert.hpp>
-#include "../base/exception.h"
-#include "../base/types.h"
-#include "field.h"
 #include "detail/endian.h"
 
 namespace comma { namespace packed {
