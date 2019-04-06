@@ -78,7 +78,7 @@ template < endiannes Endianness > struct endian_traits< Endianness, 3, false > {
 template < endiannes Endianness > struct endian_traits< Endianness, 4, true, true > { typedef float type; typedef comma::uint32 uint_of_same_size; };
 template < endiannes Endianness > struct endian_traits< Endianness, 8, true, true > { typedef double type; typedef comma::uint64 uint_of_same_size; };
 
-template < typename T > struct net_traits {};
+template < typename T > struct net_traits;
 
 template <> struct net_traits< comma::uint16 >
 {
@@ -104,6 +104,23 @@ template <> struct net_traits< comma::uint64 >
     static comma::uint64 letoh( comma::uint64 v ) { return le64toh( v ); }
 };
 
+template < endiannes Endianness > struct convert;
+
+template <> struct convert< packed::detail::little >
+{
+    template < typename T > static T from_host( T t ) { return net_traits< T >::htole( t ); }
+    template < typename T > static T to_host( T t ) { return net_traits< T >::letoh( t ); }
+};
+
+template <> struct convert< packed::detail::big >
+{
+    template < typename T > static T from_host( T t ) { return net_traits< T >::htobe( t ); }
+    template < typename T > static T to_host( T t ) { return net_traits< T >::betoh( t ); }
+};
+
+template < unsigned int Size > struct ff { enum { value = ff< Size - 1 >::value << 8 + 0xff }; };
+template <> struct ff< 1 > { enum { value = 0xff }; };
+
 template < endiannes Endianness, unsigned int Size, bool Signed, bool Floating = false >
 struct endian : public packed::field< endian< Endianness, Size, Signed, Floating >, typename endian_traits< Endianness, Size, Signed, Floating >::type, Size >
 {
@@ -112,6 +129,8 @@ struct endian : public packed::field< endian< Endianness, Size, Signed, Floating
     typedef typename endian_traits< Endianness, Size, Signed, Floating >::type type;
     
     BOOST_STATIC_ASSERT( size <= sizeof( type ) );
+    
+    BOOST_STATIC_ASSERT( Signed || !Floating ); // unsigned floats don't make sense
 
     typedef packed::field< endian< Endianness, Size, Signed, Floating >, typename endian_traits< Endianness, Size, Signed, Floating >::type, Size > base_type;
 
@@ -122,42 +141,26 @@ struct endian : public packed::field< endian< Endianness, Size, Signed, Floating
     static void pack( char* storage, type value )
     {
         uint_of_same_size* p = reinterpret_cast< uint_of_same_size* >( &value );
-        if( Endianness == packed::detail::little ) // no point for further generics; should be optimized by compiler anyway
+        *p = convert< Endianness >::from_host( *p );
+        if( sizeof( uint_of_same_size ) == size ) // no point for further generics; should be optimized by compiler anyway
         {
-            uint_of_same_size* p = reinterpret_cast< uint_of_same_size* >( &value );
+            ::memcpy( storage, ( void* )p, size );
+        }
+        else
+        {
+            // todo! 24-bit big endian!!!
+            // todo: test signed big endian
+            
             for( unsigned int i = 0; i < size; ++i, *p >>= 8 ) { storage[i] = *p & 0xff; }
         }
-        else
-        {
-            uint_of_same_size i = net_traits< uint_of_same_size >::htobe( *p );
-            ::memcpy( storage, ( void* )&i, size );
-        }
     }
-
+    
     static type unpack( const char* storage ) // for floats it is a real hack, since there is no standard
     {
-        uint_of_same_size v = 0;
-        if( Endianness == packed::detail::little ) // no point for further generics; should be optimized by compiler anyway
-        {
-            unsigned int shift = 0;
-            unsigned int i = 0;
-            for( ; i < size; ++i, shift += 8 )
-            {
-                v += static_cast< uint_of_same_size >( ( unsigned char )( storage[i] ) ) << shift;
-            }
-            if( !Floating && Signed && ( storage[ size - 1 ] & 0x80 ) )
-            {            
-                for( ; i < sizeof( type ); ++i, shift += 8 ) { v +=  static_cast< uint_of_same_size >( 0xff ) << shift; } 
-            }
-            const type* result = reinterpret_cast< const type* >( &v );
-            return *result;
-        }
-        else
-        {
-            ::memcpy( ( void* )&v, storage, size );
-            v = net_traits< uint_of_same_size >::betoh( v );
-            return *( reinterpret_cast< type* >( &v ) );
-        }
+        uint_of_same_size i = ( !Floating && Signed && ( storage[ Endianness == little ? size - 1 : 0 ] & 0x80 ) ) ? -1 : 0;
+        ::memcpy( ( void* )&i + ( Endianness == little ? 0 : sizeof( uint_of_same_size ) - size ), storage, size );
+        i = convert< Endianness >::to_host( i );
+        return *( reinterpret_cast< type* >( &i ) );
     }
 
     const endian& operator=( const endian& rhs ) { return base_type::operator=( rhs ); }
