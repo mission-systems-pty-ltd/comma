@@ -37,25 +37,41 @@
 
 namespace comma { namespace packed {
 
-/// big endian 16-bit integers
 typedef detail::endian< detail::big, 2, false > big_endian_uint16;
 typedef detail::endian< detail::big, 2, true > big_endian_int16;
-/// aliases for big endian 16-bit integers
 typedef big_endian_uint16 net_uint16;
 typedef big_endian_int16 net_int16;
-/// big endian 32-bit integers
+typedef detail::endian< detail::big, 3, false > big_endian_uint24;
+typedef detail::endian< detail::big, 3, true > big_endian_int24;
+typedef big_endian_uint24 net_uint24;
+typedef big_endian_int24 net_int24;
 typedef detail::endian< detail::big, 4, false > big_endian_uint32;
 typedef detail::endian< detail::big, 4, true > big_endian_int32;
-/// aliases for big endian 32-bit integers
 typedef big_endian_uint32 net_uint32;
 typedef big_endian_int32 net_int32;
-/// big endian float and double
 typedef detail::endian< detail::big, 4, true, true > big_endian_float32;
 typedef detail::endian< detail::big, 8, true, true > big_endian_float64;
+typedef big_endian_float32 big_endian_float;
 typedef big_endian_float64 big_endian_double;
-/// aliases for big endian float and double
 typedef big_endian_float32 net_float32;
 typedef big_endian_float64 net_float64;
+typedef net_float32 net_float;
 typedef net_float64 net_double;
+
+// all types above deprecated; use namespacing below
+namespace big_endian { // i love namespacing
+
+typedef detail::endian< detail::big, 2, false > uint16;
+typedef detail::endian< detail::big, 2, true > int16;
+typedef detail::endian< detail::big, 3, false > uint24;
+typedef detail::endian< detail::big, 3, true > int24;
+typedef detail::endian< detail::big, 4, false > uint32;
+typedef detail::endian< detail::big, 4, true > int32;
+typedef detail::endian< detail::big, 8, false > uint64;
+typedef detail::endian< detail::big, 8, true > int64;
+typedef detail::endian< detail::big, 4, true, true > float32;
+typedef detail::endian< detail::big, 8, true, true > float64;
+
+} // namespace big_endian {
 
 } } // namespace comma { namespace packed {

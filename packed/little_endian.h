@@ -36,30 +36,41 @@
 
 namespace comma { namespace packed {
 
-/// packed little endian 16-bit integers
 typedef detail::endian< detail::little, 2, true > little_endian16;
 typedef detail::endian< detail::little, 2, false > little_endian_uint16;
 typedef little_endian16 int16;
 typedef little_endian_uint16 uint16;
-/// packed little endian 24-bit integers (strangely, there are protocols using it)
 typedef detail::endian< detail::little, 3, true > little_endian24;
 typedef detail::endian< detail::little, 3, false > little_endian_uint24;
 typedef little_endian24 int24;
 typedef little_endian_uint24 uint24;
-/// packed little endian 32-bit integers
 typedef detail::endian< detail::little, 4, true > little_endian32;
 typedef detail::endian< detail::little, 4, false > little_endian_uint32;
 typedef little_endian32 int32;
 typedef little_endian_uint32 uint32;
-/// packed little endian 32-bit integers
 typedef detail::endian< detail::little, 8, true > little_endian64;
 typedef detail::endian< detail::little, 8, false > little_endian_uint64;
 typedef little_endian64 int64;
 typedef little_endian_uint64 uint64;
-/// packed floating point number (does it even make sense?)
 typedef detail::endian< detail::little, 4, true, true > little_endian_float32;
 typedef detail::endian< detail::little, 8, true, true > little_endian_float64;
 typedef little_endian_float32 float32;
 typedef little_endian_float64 float64;
+
+// all types above deprecated; use namespacing below
+namespace little_endian { // i love namespacing
+
+typedef detail::endian< detail::little, 2, false > uint16;
+typedef detail::endian< detail::little, 2, true > int16;
+typedef detail::endian< detail::little, 3, false > uint24;
+typedef detail::endian< detail::little, 3, true > int24;
+typedef detail::endian< detail::little, 4, false > uint32;
+typedef detail::endian< detail::little, 4, true > int32;
+typedef detail::endian< detail::little, 8, false > uint64;
+typedef detail::endian< detail::little, 8, true > int64;
+typedef detail::endian< detail::little, 4, true, true > float32;
+typedef detail::endian< detail::little, 8, true, true > float64;
+
+} // namespace little_endian {
 
 } } // namespace comma { namespace packed {

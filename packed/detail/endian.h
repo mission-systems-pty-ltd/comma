@@ -142,17 +142,7 @@ struct endian : public packed::field< endian< Endianness, Size, Signed, Floating
     {
         uint_of_same_size* p = reinterpret_cast< uint_of_same_size* >( &value );
         *p = convert< Endianness >::from_host( *p );
-        if( sizeof( uint_of_same_size ) == size ) // no point for further generics; should be optimized by compiler anyway
-        {
-            ::memcpy( storage, ( void* )p, size );
-        }
-        else
-        {
-            // todo! 24-bit big endian!!!
-            // todo: test signed big endian
-            
-            for( unsigned int i = 0; i < size; ++i, *p >>= 8 ) { storage[i] = *p & 0xff; }
-        }
+        ::memcpy( storage, ( void* )p + ( Endianness == little ? 0 : sizeof( uint_of_same_size ) - size ), size );
     }
     
     static type unpack( const char* storage ) // for floats it is a real hack, since there is no standard

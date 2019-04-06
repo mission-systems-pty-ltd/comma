@@ -47,8 +47,8 @@ struct test_packed_struct_t : public comma::packed::packed_struct< test_packed_s
 {
     comma::packed::string< 4 > hello;
     comma::packed::string< 5 > world;
-    comma::packed::net_uint16 int16;
-    comma::packed::net_uint32 int32;
+    comma::packed::big_endian::uint16 int16;
+    comma::packed::big_endian::uint32 int32;
     comma::packed::byte byte;
 };
 
@@ -75,8 +75,7 @@ TEST( packed_struct, test_packed_struct )
     EXPECT_EQ( s.byte(), 3 );
 }
 
-template < typename T >
-void test_packed_int( comma::int64 value )
+template < typename T > static void test_packed_int( comma::int64 value )
 {
     T t;
     EXPECT_EQ( true, t == 0 );
@@ -85,8 +84,7 @@ void test_packed_int( comma::int64 value )
     EXPECT_EQ( value, t() );
 }
 
-template < typename T >
-void test_packed_uint( comma::uint64 value )
+template < typename T > static void test_packed_uint( comma::uint64 value )
 {
     T t;
     EXPECT_EQ( true, t == 0 );
@@ -94,43 +92,46 @@ void test_packed_uint( comma::uint64 value )
     EXPECT_EQ( true, t == value );
     EXPECT_EQ( value, t() );
 }
-
 
 TEST( test_packed_struct_test, test_little_endian )
 {
-    test_packed_uint< comma::packed::uint16 >( 1231 );
-    test_packed_uint< comma::packed::uint16 >( 65535 );
-    test_packed_uint< comma::packed::uint24 >( 1232 );
-    test_packed_uint< comma::packed::uint24 >( 16777215 );
-    test_packed_uint< comma::packed::uint32 >( 1233 );
-    test_packed_uint< comma::packed::uint32 >( 4294967295 );
-    test_packed_uint< comma::packed::uint64 >( 4321 );
-    test_packed_uint< comma::packed::uint64 >( comma::uint64( std::numeric_limits< comma::uint64 >::max() ) );
-    test_packed_uint< comma::packed::uint64 >( comma::uint64( 0x1BCDEF1213141500ULL ) );
+    test_packed_uint< comma::packed::little_endian::uint16 >( 1231 );
+    test_packed_uint< comma::packed::little_endian::uint16 >( 65535 );
+    test_packed_uint< comma::packed::little_endian::uint24 >( 1232 );
+    test_packed_uint< comma::packed::little_endian::uint24 >( 16777215 );
+    test_packed_uint< comma::packed::little_endian::uint32 >( 1233 );
+    test_packed_uint< comma::packed::little_endian::uint32 >( 4294967295 );
+    test_packed_uint< comma::packed::little_endian::uint64 >( 4321 );
+    test_packed_uint< comma::packed::little_endian::uint64 >( comma::uint64( std::numeric_limits< comma::uint64 >::max() ) );
+    test_packed_uint< comma::packed::little_endian::uint64 >( comma::uint64( 0x1BCDEF1213141500ULL ) );
 
-    test_packed_int< comma::packed::int16 >( 1234 );
-    test_packed_int< comma::packed::int24 >( 1235 );
-    test_packed_int< comma::packed::int24 >( 8388607 );
-    test_packed_int< comma::packed::int32 >( 8388607 );
-    test_packed_int< comma::packed::int32 >( 1236 );
-    test_packed_int< comma::packed::int16 >( -1231 );
-    test_packed_int< comma::packed::int24 >( -1232 );
-    test_packed_int< comma::packed::int24 >( -8388608 );
-    test_packed_int< comma::packed::int32 >( -1233 );
-    test_packed_int< comma::packed::int64 >( -4321 );
-    test_packed_int< comma::packed::int64 >( comma::int64( std::numeric_limits< comma::int64 >::min() ) );
+    test_packed_int< comma::packed::little_endian::int16 >( 1234 );
+    test_packed_int< comma::packed::little_endian::int24 >( 1235 );
+    test_packed_int< comma::packed::little_endian::int24 >( 8388607 );
+    test_packed_int< comma::packed::little_endian::int32 >( 8388607 );
+    test_packed_int< comma::packed::little_endian::int32 >( 1236 );
+    test_packed_int< comma::packed::little_endian::int16 >( -1231 );
+    test_packed_int< comma::packed::little_endian::int24 >( -1232 );
+    test_packed_int< comma::packed::little_endian::int24 >( -8388608 );
+    test_packed_int< comma::packed::little_endian::int32 >( -1233 );
+    test_packed_int< comma::packed::little_endian::int64 >( -4321 );
+    test_packed_int< comma::packed::little_endian::int64 >( comma::int64( std::numeric_limits< comma::int64 >::min() ) );
 }
 
 TEST( test_packed_struct_test, test_big_endian )
 {
-    test_packed_int< comma::packed::net_uint16 >( 1234 );
-    test_packed_int< comma::packed::net_uint16 >( 65535 );
-    test_packed_int< comma::packed::net_uint32 >( 1234 );
-    test_packed_int< comma::packed::net_uint32 >( 4294967295 );
-    test_packed_int< comma::packed::net_int16 >( 1234 );
-    test_packed_int< comma::packed::net_int32 >( 1234 );
-    test_packed_int< comma::packed::net_int16 >( -1234 );
-    test_packed_int< comma::packed::net_int32 >( -1234 );
+    test_packed_int< comma::packed::big_endian::uint16 >( 1234 );
+    test_packed_int< comma::packed::big_endian::uint16 >( 65535 );
+    test_packed_uint< comma::packed::big_endian::uint24 >( 1232 );
+    test_packed_uint< comma::packed::big_endian::uint24 >( 16777215 );
+    test_packed_int< comma::packed::big_endian::uint32 >( 1234 );
+    test_packed_int< comma::packed::big_endian::uint32 >( 4294967295 );
+    test_packed_int< comma::packed::big_endian::int16 >( 1234 );
+    test_packed_int< comma::packed::big_endian::int32 >( 1234 );
+    test_packed_int< comma::packed::big_endian::int16 >( -1234 );
+    test_packed_int< comma::packed::big_endian::int32 >( -1234 );
+    test_packed_int< comma::packed::big_endian::int24 >( -1232 );
+    test_packed_int< comma::packed::big_endian::int24 >( -8388608 );
 }
 
 template< typename T >
@@ -151,7 +152,7 @@ static void test_int64_byte_order( comma::int64 value, char byte0, char byte1, c
 TEST( test_packed_struct_test, test_int64_byte_order )
 {
     comma::int64 i = 0xFBCDEF1213141500LL;
-    test_int64_byte_order< comma::packed::uint64 >( i, 0x00, 0x15, 0x14, 0x13, 0x12, 0xEF, 0xCD, 0xFB );
+    test_int64_byte_order< comma::packed::little_endian::uint64 >( i, 0x00, 0x15, 0x14, 0x13, 0x12, 0xEF, 0xCD, 0xFB );
 }
 
 template< typename T >
@@ -172,12 +173,12 @@ static void test_uint64_byte_order( comma::uint64 value, char byte0, char byte1,
 TEST( test_packed_struct_test, test_uint64_byte_order )
 {
     comma::uint64 i = 0xABCDEF1213141500ULL;
-    test_uint64_byte_order< comma::packed::uint64 >( i, 0x00, 0x15, 0x14, 0x13, 0x12, 0xEF, 0xCD, 0xAB );
+    test_uint64_byte_order< comma::packed::little_endian::uint64 >( i, 0x00, 0x15, 0x14, 0x13, 0x12, 0xEF, 0xCD, 0xAB );
 }
 
 static void test_int24_byte_order( int value, char byte0, char byte1, char byte2 )
 {
-    comma::packed::int24 a;
+    comma::packed::little_endian::int24 a;
     a = value;
     EXPECT_EQ( ( 0xff & a.data()[0] ), ( 0xff & byte0 ) );
     EXPECT_EQ( ( 0xff & a.data()[1] ), ( 0xff & byte1 ) );
@@ -201,10 +202,10 @@ TEST( test_packed_struct_test, test_int24_byte_order )
 
 struct test_packed_struct_floats_t : public comma::packed::packed_struct< test_packed_struct_floats_t, 24 >
 {
-    comma::packed::float32 f32;
-    comma::packed::float64 f64;
-    comma::packed::net_float32 nf32;
-    comma::packed::net_float64 nf64;
+    comma::packed::little_endian::float32 f32;
+    comma::packed::little_endian::float64 f64;
+    comma::packed::big_endian::float32 nf32;
+    comma::packed::big_endian::float64 nf64;
 };
 
 TEST( packed_struct, test_packed_struct_floats )
@@ -218,7 +219,7 @@ TEST( packed_struct, test_packed_struct_floats )
     EXPECT_DOUBLE_EQ( 1.23456789, s.f64() );
 }
 
-TEST( packed_struct, test_packed_struct_net_floats )
+TEST( packed_struct, test_packed_struct_big_endian_floats )
 {
     test_packed_struct_floats_t s;
     EXPECT_FLOAT_EQ( true, s.nf32 == 0 );
@@ -231,25 +232,25 @@ TEST( packed_struct, test_packed_struct_net_floats )
 
 TEST( test_packed_struct_test, test_little_endian_floats )
 {
-    comma::packed::float32 a;
+    comma::packed::little_endian::float32 a;
     EXPECT_FLOAT_EQ( 0, a() );
     a = 1.2345;
     EXPECT_FLOAT_EQ( 1.2345, a() );
 
-    comma::packed::float64 b;
+    comma::packed::little_endian::float64 b;
     EXPECT_DOUBLE_EQ( 0, b() );
     b = 1.23456789;
     EXPECT_DOUBLE_EQ( 1.23456789, b() );
 }
 
-TEST( test_packed_struct_test, test_net_floats )
+TEST( test_packed_struct_test, test_big_endian_floats )
 {
-    comma::packed::net_float32 a;
+    comma::packed::big_endian::float32 a;
     EXPECT_FLOAT_EQ( 0, a() );
     a = 1.2345;
     EXPECT_FLOAT_EQ( 1.2345, a() );
 
-    comma::packed::net_float64 b;
+    comma::packed::big_endian::float64 b;
     EXPECT_DOUBLE_EQ( 0, b() );
     b = 1.23456789;
     EXPECT_DOUBLE_EQ( 1.23456789, b() );
@@ -268,14 +269,14 @@ static void test_float32_byte_order( float value, char byte0, char byte1, char b
 
 TEST( test_packed_struct_test, test_float32_byte_order )
 {
-    test_float32_byte_order< comma::packed::float32 >( 5.2, 0x66, 0x66, 0xA6, 0x40 );
-    test_float32_byte_order< comma::packed::float32 >( -5.2, 0x66, 0x66, 0xA6, 0xC0 );
+    test_float32_byte_order< comma::packed::little_endian::float32 >( 5.2, 0x66, 0x66, 0xA6, 0x40 );
+    test_float32_byte_order< comma::packed::little_endian::float32 >( -5.2, 0x66, 0x66, 0xA6, 0xC0 );
 }
 
-TEST( test_packed_struct_test, test_net_float32_byte_order )
+TEST( test_packed_struct_test, test_big_endian_float32_byte_order )
 {
-    test_float32_byte_order< comma::packed::net_float32 >( 5.2, 0x40, 0xA6, 0x66, 0x66 );
-    test_float32_byte_order< comma::packed::net_float32 >( -5.2, 0xC0, 0xA6, 0x66, 0x66 );
+    test_float32_byte_order< comma::packed::big_endian::float32 >( 5.2, 0x40, 0xA6, 0x66, 0x66 );
+    test_float32_byte_order< comma::packed::big_endian::float32 >( -5.2, 0xC0, 0xA6, 0x66, 0x66 );
 }
 
 template< typename T >
@@ -295,18 +296,18 @@ static void test_float64_byte_order( double value, char byte0, char byte1, char 
 
 TEST( test_packed_struct_test, test_float64_byte_order )
 {
-    test_float64_byte_order< comma::packed::float64 >( 5.2, 0xCD, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0x14, 0x40 );
-    test_float64_byte_order< comma::packed::float64 >( -5.2, 0xCD, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0x14, 0xC0 );
-    test_float64_byte_order< comma::packed::float64 >( -1.2e-123, 0x4E, 0x57, 0x04, 0xD1, 0x71, 0x62, 0x69, 0xA6 );
-    test_float64_byte_order< comma::packed::float64 >( -1.2e+123, 0x21, 0xBD, 0xC3, 0x60, 0x60, 0x0B, 0x7D, 0xD9 );
+    test_float64_byte_order< comma::packed::little_endian::float64 >( 5.2, 0xCD, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0x14, 0x40 );
+    test_float64_byte_order< comma::packed::little_endian::float64 >( -5.2, 0xCD, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0x14, 0xC0 );
+    test_float64_byte_order< comma::packed::little_endian::float64 >( -1.2e-123, 0x4E, 0x57, 0x04, 0xD1, 0x71, 0x62, 0x69, 0xA6 );
+    test_float64_byte_order< comma::packed::little_endian::float64 >( -1.2e+123, 0x21, 0xBD, 0xC3, 0x60, 0x60, 0x0B, 0x7D, 0xD9 );
 }
 
-TEST( test_packed_struct_test, test_net_float64_byte_order )
+TEST( test_packed_struct_test, test_big_endian_float64_byte_order )
 {
-    test_float64_byte_order< comma::packed::net_float64 >( 5.2, 0x40, 0x14, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCD );
-    test_float64_byte_order< comma::packed::net_float64 >( -5.2, 0xC0, 0x14, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCD );
-    test_float64_byte_order< comma::packed::net_float64 >( -1.2e-123, 0xA6, 0x69, 0x62, 0x71, 0xD1, 0x04, 0x57, 0x4E );
-    test_float64_byte_order< comma::packed::net_float64 >( -1.2e+123, 0xD9, 0x7D, 0x0B, 0x60, 0x60, 0xC3, 0xBD, 0x21 );
+    test_float64_byte_order< comma::packed::big_endian::float64 >( 5.2, 0x40, 0x14, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCD );
+    test_float64_byte_order< comma::packed::big_endian::float64 >( -5.2, 0xC0, 0x14, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCD );
+    test_float64_byte_order< comma::packed::big_endian::float64 >( -1.2e-123, 0xA6, 0x69, 0x62, 0x71, 0xD1, 0x04, 0x57, 0x4E );
+    test_float64_byte_order< comma::packed::big_endian::float64 >( -1.2e+123, 0xD9, 0x7D, 0x0B, 0x60, 0x60, 0xC3, 0xBD, 0x21 );
 }
 
 static boost::array< std::string, 16 > hex_digits_u = { { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F" } };
