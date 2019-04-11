@@ -95,6 +95,7 @@ static void usage( bool )
     std::cerr << std::endl;
     std::cerr << "    make-fixed: normalise input to a fixed number of fields" << std::endl;
     std::cerr << "        --count,--size=<n>: number of output fields" << std::endl;
+    std::cerr << "        --values=[<values>]: if present, fill missing fields with given values" << std::endl;
     std::cerr << "        --force: chop input to <n> fields if larger" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
@@ -155,6 +156,11 @@ static void usage( bool )
     std::cerr << "        { echo a,b,c,d; echo x,y,z; } | csv-fields make-fixed --count=6" << std::endl;
     std::cerr << "        a,b,c,d,," << std::endl;
     std::cerr << "        x,y,z,,," << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    make-fixed" << std::endl;
+    std::cerr << "        { echo a,b; echo x,y,z; } | csv-fields make-fixed --count=6 --fields=A,B,C,D,E,F" << std::endl;
+    std::cerr << "        a,b,C,D,E,F" << std::endl;
+    std::cerr << "        x,y,z,D,E,F" << std::endl;
     std::cerr << std::endl;
     std::cerr << "        { echo a,b,c,d; echo x,y,z; } | csv-fields make-fixed --count=3 --force" << std::endl;
     std::cerr << "        a,b,c" << std::endl;
@@ -421,6 +427,7 @@ int main( int ac, char** av )
         {
             const unsigned int count = options.value< unsigned int >( "--count,--size" );
             bool force = options.exists( "--force" );
+            const std::vector< std::string >& values = comma::split( options.value< std::string >( "--values", "" ), ',', true );
             while( std::cin.good() )
             {
                 std::string line;
@@ -430,7 +437,7 @@ int main( int ac, char** av )
                 if( v.size() <= count )
                 {
                     std::cout << line;
-                    for( unsigned int i = v.size(); i < count; i++ ) { std::cout << delimiter; }
+                    for( unsigned int i = v.size(); i < count; i++ ) { std::cout << delimiter << ( i < values.size() ? values[i] : std::string() ); }
                 }
                 else
                 {

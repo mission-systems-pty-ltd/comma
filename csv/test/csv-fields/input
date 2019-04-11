@@ -109,5 +109,8 @@ make_fixed[0]="echo a,b,c,d | csv-fields make-fixed --count=6"
 make_fixed[1]="echo a,b,c,d | csv-fields make-fixed --count=3"
 make_fixed[2]="echo a,b,c,d | csv-fields make-fixed --count=3 --force"
 make_fixed[3]="echo a:b:c:d | csv-fields make-fixed --count=6 --delimiter=:"
-
-
+make_fixed[4]="echo a,b,c | csv-fields make-fixed --count=6 --values 1,2,3,4,5,6"
+make_fixed[5]="echo a,b,c | csv-fields make-fixed --count=6 --values 1,2,3,4,5"
+make_fixed[6]="echo a,b,c | csv-fields make-fixed --count=6 --values 1,2,3"
+make_fixed[7]="echo a,b,c | csv-fields make-fixed --count=6 --values 1"
+make_fixed[8]="echo a,b, | csv-fields make-fixed --count=6 --values 1,2,3,4,5,6"
