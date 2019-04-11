@@ -95,7 +95,8 @@ static void usage( bool )
     std::cerr << std::endl;
     std::cerr << "    make-fixed: normalise input to a fixed number of fields" << std::endl;
     std::cerr << "        --count,--size=<n>: number of output fields" << std::endl;
-    std::cerr << "        --values=[<values>]: if present, fill missing fields with given values" << std::endl;
+    std::cerr << "        --values=[<values>]: fill missing fields with given values" << std::endl;
+    std::cerr << "                             if --count not specified, use number of <values> as desired number of fields" << std::endl;
     std::cerr << "        --force: chop input to <n> fields if larger" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
@@ -425,9 +426,10 @@ int main( int ac, char** av )
         }
         if( operation == "make-fixed" )
         {
-            const unsigned int count = options.value< unsigned int >( "--count,--size" );
-            bool force = options.exists( "--force" );
             const std::vector< std::string >& values = comma::split( options.value< std::string >( "--values", "" ), ',', true );
+            const unsigned int count = options.value< unsigned int >( "--count,--size", values.size() );
+            if( count == 0 ) { std::cerr << "csv-fields: make-fixed: please specify either --count or --values" << std::endl; }
+            bool force = options.exists( "--force" );
             while( std::cin.good() )
             {
                 std::string line;
