@@ -255,7 +255,16 @@ static bool empty_( const std::string& s ) // quick and dirty
     return true;
 }
 
-template < typename T > static void set_fields( const comma::command_line_options& options, std::string& first_line, T& default_input )
+static double diff( const input_t& from, const input_t& to ) // quick and dirty
+{
+    if( from.key.longs.size() == 1 ) { return std::abs( double( from.key.longs[0] ) - to.key.longs[0] ); }
+    if( from.key.doubles.size() == 1 ) { return std::abs( from.key.doubles[0] - to.key.doubles[0] ); }
+    if( from.key.time.size() == 1 ) { return std::abs( double( ( from.key.time[0] - to.key.time[0] ).total_microseconds() ) / 1000000 ); }
+    if( from.key.strings.size() == 1 ) { COMMA_THROW( comma::exception, "difference for strings: not implemented" ); }
+    COMMA_THROW( comma::exception, "never here" );
+}
+
+template < typename T > static bool set_fields( const comma::command_line_options& options, std::string& first_line, T& default_input )
 {
     std::vector< std::string > v = comma::split( csv.fields, ',' );
     comma::csv::format f;
@@ -270,8 +279,29 @@ template < typename T > static void set_fields( const comma::command_line_option
     }
     // This is to load the keys into input_t structure
     unsigned int size = f.count();
-    for( std::size_t i = 0; i < size; ++i ) { if( i < v.size() ) { if( v[i] == "id" ) { v[i] = "key/" + default_input.key.append( f.offset( i ).type ); continue; } } }
+    bool has_id = false;
+    bool has_scalar = false;
+    for( std::size_t i = 0; i < size; ++i )
+    { 
+        if( i < v.size() )
+        { 
+            if( v[i] == "id" )
+            {
+                has_id = true;
+                v[i] = "key/" + default_input.key.append( f.offset( i ).type );
+            }
+            else if( v[i] == "scalar" )
+            {
+                if( has_scalar ) { COMMA_THROW( comma::exception, "expected not more than one scalar in --fields; got: \"" << csv.fields << "\"" ); }
+                has_scalar = true;
+                v[i] = "key/" + default_input.key.append( f.offset( i ).type );
+            }
+        }
+    }
+    if( !has_id && !has_scalar ) { COMMA_THROW( comma::exception, "please specify at least one id or scalar in --fields; got: \"" << csv.fields << "\"" ); }
+    if( has_id && has_scalar ) { COMMA_THROW( comma::exception, "expected either id or scalar in --fields; got both in: \"" << csv.fields << "\"" ); }
     csv.fields = comma::join( v, ',' );
+    return has_id;
 }
 
 #ifndef WIN32
@@ -472,21 +502,20 @@ int main( int ac, char** av )
         if( operation == "group" || operation == "make-blocks" )
         {
             current_block = options.value< comma::uint32 >( "--starting-block,--from", 0 ); // default is 0
-            
             std::string first_line;
             input_t default_input;
-            set_fields( options, first_line, default_input );
-            if( verbose ) { std::cerr << name() << "csv fields: " << csv.fields << std::endl; }
-            if ( default_input.key.empty() ) { std::cerr << name() << "please specify at least one id field" << std::endl; return 1; }
-            
+            bool has_id = set_fields( options, first_line, default_input );
+            if( !has_id ) { std::cerr << "csv-blocks: scalar field support: todo" << std::endl; }
+            if( verbose ) { std::cerr << name() << "csv fields: " << csv.fields << "; making blocks by " << ( has_id ? "id" : "scalar" ) << std::endl; }
+            double gap;
+            if( !has_id ) { gap = options.value< double >( "--min-gap-between-blocks,--min-gap,--gap" ); }
             comma::csv::input_stream< input_t > istream( std::cin, csv, default_input );
             comma::csv::output_stream< appended_column > ostream( std::cout, csv_out );
             comma::csv::tied< input_t, appended_column > tied( istream, ostream );
-            
             if( !first_line.empty() ) 
             { 
                 input_t p = comma::csv::ascii< input_t >( csv, default_input ).get( first_line ); 
-                if( !(keys == p.key) ) { ++current_block; }
+                if( !( keys == p.key ) ) { ++current_block; }
                 keys = p.key;
                 // This is needed because the record wasnt read in by istream
                 // Write it out
@@ -499,7 +528,7 @@ int main( int ac, char** av )
             {
                 const input_t* p = istream.read();
                 if( !p ) { break; }
-                if( !(keys == p->key) ) { ++current_block; }
+                if( !( keys == p->key ) ) { ++current_block; }
                 keys = p->key;
                 tied.append( appended_column( current_block ) );
                 if( csv.flush ) { std::cout.flush(); }
