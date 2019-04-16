@@ -139,8 +139,14 @@ static void usage( bool more )
     std::cerr << "        attention: output does not preserve input order, since there is no reasonable tradeof there" << std::endl;
     std::cerr << "                   use csv-sort for post-processing, if required" << std::endl;
     std::cerr << "    group|make-blocks" << std::endl;
-    std::cerr << "        cat something.csv | csv-blocks group --fields=,id, " << std::endl;
+    std::cerr << "        usage: cat something.csv | csv-blocks group --fields=,id, " << std::endl;
     std::cerr << "            appends group's block field based on specified id key or keys" << std::endl;
+    std::cerr << "        options" << std::endl;
+    std::cerr << "            --fields=<fields>" << std::endl;
+    std::cerr << "                id: any number of id fields to group by" << std::endl;
+    std::cerr << "                scalar: group by scalar, which can be integer, floating point number, or time" << std::endl;
+    std::cerr << "            --block-gap,--gap=<value>; minimum gap in values between blocks, double (for time: seconds as double), see examples" << std::endl;
+    std::cerr << "            --block-span,--span=<value>; maximum block span, double (for time: seconds as double), see examples" << std::endl;
     std::cerr << "    head" << std::endl;
     std::cerr << "        reads records from first block to stdout, if --num-of-blocks=<num> specified, read more than one blocks" << std::endl;
     std::cerr << "        requires the index from 'index' mode in the inputs" << std::endl;
@@ -181,10 +187,16 @@ static void usage( bool more )
     std::cerr << "    ( echo \"a,1,2,3\"; echo \"a,4,2,3\"; echo \"b,5,5,6\"; echo \"c,7,5,6\"; echo \"c,7,8,9\"; echo \"c,7,8,9\" ) >$block_csv" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    group|make-blocks" << std::endl;
-    std::cerr << "        cat $block_csv | csv-blocks group --fields=id" << std::endl;
-    std::cerr << "            unique ascending block number are assigned based on one id field" << std::endl;
-    std::cerr << "        cat $block_csv | csv-blocks group --fields=id,,id" << std::endl;
-    std::cerr << "            unique ascending block number are assigned based on two id fields" << std::endl;
+    std::cerr << "        unique ascending block number are assigned based on one id field" << std::endl;
+    std::cerr << "            cat $block_csv | csv-blocks group --fields=id" << std::endl;
+    std::cerr << "        unique ascending block number are assigned based on two id fields" << std::endl;
+    std::cerr << "            cat $block_csv | csv-blocks group --fields=id,,id" << std::endl;
+    std::cerr << "        group by scalar span - try it" << std::endl;
+    std::cerr << "            seq 20 | csv-blocks group --fields=scalar --span 5" << std::endl;
+    std::cerr << "            seq 1 3 20 | csv-blocks group --fields scalar --span 4" << std::endl;
+    std::cerr << "        group by scalar gap - try it" << std::endl;
+    std::cerr << "            seq 20 | csv-blocks group --fields=scalar --gap 1" << std::endl;
+    std::cerr << "            seq 20 | csv-blocks group --fields=scalar --gap 2" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    index" << std::endl;
     std::cerr << "        cat $block_csv | csv-blocks group --fields=id | csv-blocks index --fields=,,,,block" << std::endl;
@@ -511,8 +523,8 @@ int main( int ac, char** av )
             boost::optional< double > span;
             if( how == how_t::by_scalar )
             { 
-                options.assert_mutually_exclusive( "--min-gap-between-blocks,--min-gap,--gap", "--block-span,--span" );
-                gap = options.optional< double >( "--min-gap-between-blocks,--min-gap,--gap" );
+                options.assert_mutually_exclusive( "--block-gap,--gap", "--block-span,--span" );
+                gap = options.optional< double >( "--block-gap,--gap" );
                 span = options.optional< double >( "--block-span,--span" );
             }
             comma::csv::input_stream< input_t > istream( std::cin, csv, default_input );
