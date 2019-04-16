@@ -27,7 +27,7 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-/// @author dewey nguyen
+/// @authors dewey nguyen, vsevolod vlaskine
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -218,7 +218,6 @@ static comma::csv::options csv;
 static bool reverse_index = false;
 // All the data for this block
 static std::deque< std::string > block_records;
-static comma::csv::impl::unstructured keys;
 static comma::uint32 current_block = 1;
 static comma::int32 increment_step = 1;
 
@@ -264,7 +263,9 @@ static double diff( const input_t& from, const input_t& to ) // quick and dirty
     COMMA_THROW( comma::exception, "never here" );
 }
 
-template < typename T > static bool set_fields( const comma::command_line_options& options, std::string& first_line, T& default_input )
+struct how_t { enum values { none, by_id, by_scalar }; };
+
+template < typename T > static how_t::values set_fields( const comma::command_line_options& options, std::string& first_line, T& default_input )
 {
     std::vector< std::string > v = comma::split( csv.fields, ',' );
     comma::csv::format f;
@@ -279,29 +280,29 @@ template < typename T > static bool set_fields( const comma::command_line_option
     }
     // This is to load the keys into input_t structure
     unsigned int size = f.count();
-    bool has_id = false;
-    bool has_scalar = false;
+    how_t::values how = how_t::none;
     for( std::size_t i = 0; i < size; ++i )
     { 
         if( i < v.size() )
         { 
             if( v[i] == "id" )
             {
-                has_id = true;
+                if( how == how_t::by_scalar ) { COMMA_THROW( comma::exception, "expected either id or scalar in --fields; got both in: \"" << csv.fields << "\"" ); }
+                how = how_t::by_id;
                 v[i] = "key/" + default_input.key.append( f.offset( i ).type );
             }
             else if( v[i] == "scalar" )
             {
-                if( has_scalar ) { COMMA_THROW( comma::exception, "expected not more than one scalar in --fields; got: \"" << csv.fields << "\"" ); }
-                has_scalar = true;
+                if( how == how_t::by_id ) { COMMA_THROW( comma::exception, "expected either id or scalar in --fields; got both in: \"" << csv.fields << "\"" ); }
+                if( how == how_t::by_scalar ) { COMMA_THROW( comma::exception, "expected not more than one scalar in --fields; got: \"" << csv.fields << "\"" ); }
+                how = how_t::by_scalar;
                 v[i] = "key/" + default_input.key.append( f.offset( i ).type );
             }
         }
     }
-    if( !has_id && !has_scalar ) { COMMA_THROW( comma::exception, "please specify at least one id or scalar in --fields; got: \"" << csv.fields << "\"" ); }
-    if( has_id && has_scalar ) { COMMA_THROW( comma::exception, "expected either id or scalar in --fields; got both in: \"" << csv.fields << "\"" ); }
+    if( how == how_t::none ) { COMMA_THROW( comma::exception, "please specify at least one id or scalar in --fields; got: \"" << csv.fields << "\"" ); }
     csv.fields = comma::join( v, ',' );
-    return has_id;
+    return how;
 }
 
 #ifndef WIN32
@@ -501,24 +502,52 @@ int main( int ac, char** av )
         }
         if( operation == "group" || operation == "make-blocks" )
         {
-            current_block = options.value< comma::uint32 >( "--starting-block,--from", 0 ); // default is 0
+            current_block = options.value< comma::uint32 >( "--starting-block,--from", 0 );
             std::string first_line;
             input_t default_input;
-            bool has_id = set_fields( options, first_line, default_input );
-            if( !has_id ) { std::cerr << "csv-blocks: scalar field support: todo" << std::endl; }
-            if( verbose ) { std::cerr << name() << "csv fields: " << csv.fields << "; making blocks by " << ( has_id ? "id" : "scalar" ) << std::endl; }
-            double gap;
-            if( !has_id ) { gap = options.value< double >( "--min-gap-between-blocks,--min-gap,--gap" ); }
+            auto how = set_fields( options, first_line, default_input );
+            if( verbose ) { std::cerr << name() << "csv fields: " << csv.fields << "; making blocks by " << ( how == how_t::by_id ? "id" : "scalar" ) << std::endl; }
+            boost::optional< double > gap;
+            boost::optional< double > span;
+            if( how == how_t::by_scalar )
+            { 
+                options.assert_mutually_exclusive( "--min-gap-between-blocks,--min-gap,--gap", "--block-span,--span" );
+                gap = options.optional< double >( "--min-gap-between-blocks,--min-gap,--gap" );
+                span = options.optional< double >( "--block-span,--span" );
+            }
             comma::csv::input_stream< input_t > istream( std::cin, csv, default_input );
             comma::csv::output_stream< appended_column > ostream( std::cout, csv_out );
             comma::csv::tied< input_t, appended_column > tied( istream, ostream );
+            auto update_block = [&]( const input_t& p )
+            {
+                static boost::optional< input_t > last;
+                switch( how )
+                {
+                    case how_t::by_id:
+                        if( last && !( last->key == p.key ) ) { ++current_block; }
+                        last = p;
+                        break;
+                    case how_t::by_scalar:
+                        if( gap )
+                        {
+                            if( last && diff( *last, p ) >= *gap ) { ++current_block; }
+                            last = p;
+                        }
+                        else if( span )
+                        {
+                            if( !last ) { last = p; }
+                            else if( diff( *last, p ) >= *span ) { ++current_block; last = p; }
+                        }
+                        break;
+                    case how_t::none: // never here
+                        break;
+                }
+                    
+            };
             if( !first_line.empty() ) 
             { 
                 input_t p = comma::csv::ascii< input_t >( csv, default_input ).get( first_line ); 
-                if( !( keys == p.key ) ) { ++current_block; }
-                keys = p.key;
-                // This is needed because the record wasnt read in by istream
-                // Write it out
+                update_block( p );
                 if( istream.is_binary() ) { std::cout.write( (char*)&p, istream.binary().size() ); }
                 else { std::cout << first_line << istream.ascii().ascii().delimiter(); }
                 ostream.write( appended_column( current_block ) );
@@ -528,8 +557,7 @@ int main( int ac, char** av )
             {
                 const input_t* p = istream.read();
                 if( !p ) { break; }
-                if( !( keys == p->key ) ) { ++current_block; }
-                keys = p->key;
+                update_block( *p );
                 tied.append( appended_column( current_block ) );
                 if( csv.flush ) { std::cout.flush(); }
             }            
