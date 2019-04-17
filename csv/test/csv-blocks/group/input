@@ -1,0 +1,15 @@
+group/scalar/gap[0]="( echo 1.1; echo 2; echo 5; echo 5.9 ) | csv-blocks group --fields scalar --gap 0.5"
+group/scalar/gap[1]="( echo 1.1; echo 2; echo 5; echo 5.9 ) | csv-blocks group --fields scalar --gap 1"
+group/scalar/gap[2]="( echo 1.1; echo 2; echo 5; echo 5.9 ) | csv-blocks group --fields scalar --gap 5"
+group/scalar/gap[3]="( echo 1.1; echo 2; echo 5; echo 5.9 ) | csv-time --from seconds | csv-blocks group --fields scalar --gap 0.5"
+group/scalar/gap[4]="( echo 1.1; echo 2; echo 5; echo 5.9 ) | csv-time --from seconds | csv-blocks group --fields scalar --gap 1"
+group/scalar/gap[5]="( echo 1.1; echo 2; echo 5; echo 5.9 ) | csv-time --from seconds | csv-blocks group --fields scalar --gap 5"
+
+group/scalar/span[0]="( echo 1.1; echo 2; echo 5; echo 5.9 ) | csv-blocks group --fields scalar --span 0.5"
+group/scalar/span[1]="( echo 1.1; echo 2; echo 5; echo 5.9 ) | csv-blocks group --fields scalar --span 1"
+group/scalar/span[2]="( echo 1.1; echo 2; echo 5; echo 5.9 ) | csv-blocks group --fields scalar --span 4"
+group/scalar/span[3]="( echo 1.1; echo 2; echo 5; echo 5.9 ) | csv-time --from seconds | csv-blocks group --fields scalar --span 0.5"
+group/scalar/span[4]="( echo 1.1; echo 2; echo 5; echo 5.9 ) | csv-time --from seconds | csv-blocks group --fields scalar --span 1"
+group/scalar/span[5]="( echo 1.1; echo 2; echo 5; echo 5.9 ) | csv-time --from seconds | csv-blocks group --fields scalar --span 5"
+
+group/scalar/gap_and_span[0]="( echo 1; echo 2; echo 5; echo 6; echo 7; echo 8; echo 9 ) | csv-blocks group --fields scalar --gap 2 --span 4"
