@@ -523,7 +523,6 @@ int main( int ac, char** av )
             boost::optional< double > span;
             if( how == how_t::by_scalar )
             { 
-                options.assert_mutually_exclusive( "--block-gap,--gap", "--block-span,--span" );
                 gap = options.optional< double >( "--block-gap,--gap" );
                 span = options.optional< double >( "--block-span,--span" );
             }
@@ -532,28 +531,20 @@ int main( int ac, char** av )
             comma::csv::tied< input_t, appended_column > tied( istream, ostream );
             auto update_block = [&]( const input_t& p )
             {
-                static boost::optional< input_t > last;
+                static input_t first = p;
+                static input_t last = p;
                 switch( how )
                 {
                     case how_t::by_id:
-                        if( last && !( last->key == p.key ) ) { ++current_block; }
-                        last = p;
+                        if( !( last.key == p.key ) ) { ++current_block; }
                         break;
                     case how_t::by_scalar:
-                        if( gap )
-                        {
-                            if( last && diff( *last, p ) >= *gap ) { ++current_block; }
-                            last = p;
-                        }
-                        else if( span )
-                        {
-                            if( !last ) { last = p; }
-                            else if( diff( *last, p ) >= *span ) { ++current_block; last = p; }
-                        }
+                        if( ( gap && diff( last, p ) >= *gap ) || ( span && diff( first, p ) >= *span ) ) { ++current_block; first = p; }
                         break;
                     case how_t::none: // never here
                         break;
                 }
+                last = p;
                     
             };
             if( !first_line.empty() ) 
