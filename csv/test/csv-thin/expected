@@ -1,0 +1,4 @@
+random/deterministic[0]/output="1,3,5,7,9,"
+random/deterministic[0]/status=0
+random/inverted[0]/output="1,2,3,4,5,6,7,8,9,10,"
+random/inverted[0]/status=0

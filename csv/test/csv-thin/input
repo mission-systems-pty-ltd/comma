@@ -1,0 +1,2 @@
+random/deterministic[0]="seq 10 | csv-thin 0.5 --invert --deterministic | tr '\\\n' ','"
+random/inverted[0]="( seq 10 | csv-thin 0.5; seq 10 | csv-thin 0.5 --invert ) | csv-sort --fields i | tr '\\\n' ','"
