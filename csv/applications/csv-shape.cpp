@@ -40,6 +40,26 @@
 
 using namespace comma;
 
+void bash_completion( unsigned const ac, char const * const * av )
+{
+    static const char* completion_options =
+        " concatenate flatten loop repeat"
+        " --help -h --verbose -v"
+        " --binary -b --delimeter -d"
+        " --size,-n"
+        " --step"
+        " --expected-records"
+        " --bidirectional"
+        " --reverse"
+        " --sliding-window,-w"
+        " --bidirectional"
+        " --reverse"
+        " --header --output"
+        ;
+    std::cout << completion_options << std::endl;
+    exit( 0 );
+}
+
 static void usage( bool verbose=false )
 {
     std::cerr << std::endl;
@@ -433,6 +453,7 @@ int main( int ac, char** av )
     try
     {
         comma::command_line_options options( ac, av, usage );
+        if( options.exists( "--bash-completion" ) ) bash_completion( ac, av );
         std::vector< std::string > unnamed = options.unnamed( "--size,-n,--sliding-window,-w,--step,--verbose,-v", "-.*" );
         comma::csv::options csv( options );
         csv.full_xpath = false;
