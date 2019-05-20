@@ -81,7 +81,10 @@ template < typename T > static void test_packed_int( comma::int64 value )
     EXPECT_EQ( true, t == 0 );
     t = value;
     EXPECT_EQ( true, t == value );
+    std::cerr << "-------------------------------------------------" << std::endl;
+    std::cerr << "--> a: value: " << value << " t: " << t() << std::endl;
     EXPECT_EQ( value, t() );
+    std::cerr << "-------------------------------------------------" << std::endl;
 }
 
 template < typename T > static void test_packed_uint( comma::uint64 value )
@@ -90,7 +93,10 @@ template < typename T > static void test_packed_uint( comma::uint64 value )
     EXPECT_EQ( true, t == 0 );
     t = value;
     EXPECT_EQ( true, t == value );
+    std::cerr << "-------------------------------------------------" << std::endl;
+    std::cerr << "--> b: value: " << value << " t: " << t() << std::endl;
     EXPECT_EQ( value, t() );
+    std::cerr << "-------------------------------------------------" << std::endl;
 }
 
 TEST( test_packed_struct_test, test_little_endian )
@@ -106,12 +112,24 @@ TEST( test_packed_struct_test, test_little_endian )
     test_packed_uint< comma::packed::little_endian::uint64 >( comma::uint64( 0x1BCDEF1213141500ULL ) );
 
     test_packed_int< comma::packed::little_endian::int16 >( 1234 );
+    test_packed_int< comma::packed::little_endian::int16 >( 256 * 128 - 1 );
+    test_packed_int< comma::packed::little_endian::int16 >( 0 );
+    test_packed_int< comma::packed::little_endian::int16 >( -1 );
+    test_packed_int< comma::packed::little_endian::int16 >( -2 );
+    test_packed_int< comma::packed::little_endian::int16 >( -256 * 128 + 1 );
+    //for( comma::int16 i = 256 * 128 - 1; i > 0; --i ) { test_packed_uint< comma::packed::little_endian::int16 >( i ); }
+    //for( comma::int16 i = 256 * 128 - 1; i > 0; --i ) { test_packed_int< comma::packed::little_endian::int16 >( -i ); }
     test_packed_int< comma::packed::little_endian::int24 >( 1235 );
     test_packed_int< comma::packed::little_endian::int24 >( 8388607 );
     test_packed_int< comma::packed::little_endian::int32 >( 8388607 );
     test_packed_int< comma::packed::little_endian::int32 >( 1236 );
     test_packed_int< comma::packed::little_endian::int16 >( -1231 );
+    test_packed_int< comma::packed::little_endian::int24 >( -1 );
+    test_packed_int< comma::packed::little_endian::int24 >( -2 );
+    test_packed_int< comma::packed::little_endian::int24 >( -256 );
     test_packed_int< comma::packed::little_endian::int24 >( -1232 );
+    //for( unsigned int i = 0; i < 8388608; ++i ) { test_packed_int< comma::packed::little_endian::int24 >( -i ); }
+    test_packed_int< comma::packed::little_endian::int24 >( -1000000 );
     test_packed_int< comma::packed::little_endian::int24 >( -8388608 );
     test_packed_int< comma::packed::little_endian::int32 >( -1233 );
     test_packed_int< comma::packed::little_endian::int64 >( -4321 );
@@ -130,7 +148,10 @@ TEST( test_packed_struct_test, test_big_endian )
     test_packed_int< comma::packed::big_endian::int32 >( 1234 );
     test_packed_int< comma::packed::big_endian::int16 >( -1234 );
     test_packed_int< comma::packed::big_endian::int32 >( -1234 );
+    test_packed_int< comma::packed::big_endian::int24 >( -1 );
+    test_packed_int< comma::packed::big_endian::int24 >( -2 );
     test_packed_int< comma::packed::big_endian::int24 >( -1232 );
+    test_packed_int< comma::packed::big_endian::int24 >( -8388607 );
     test_packed_int< comma::packed::big_endian::int24 >( -8388608 );
 }
 
