@@ -50,6 +50,7 @@ static void usage( bool verbose=false )
     std::cerr << "    loop:        same as concatenate, but with an additional last record:" << std::endl;
     std::cerr << "                 last input record concatenated with the first record (hence, 'loop')" << std::endl;
     std::cerr << "                 this mode always uses the sliding window for overlapping groups" << std::endl;
+    std::cerr << "    repeat:      repeat input given number of times, e.g. csv-shape repeat --size 5" << std::endl;
     std::cerr << std::endl;
     std::cerr << "Usage: cat data.csv | csv-shape <operation> [<options>]" << std::endl;
     std::cerr << std::endl;
@@ -109,11 +110,11 @@ static void simple_binary_pass_through(const comma::csv::format& f, bool flush=f
 
 bool is_binary;
 
-class concatenate_impl_
+class concatenate_
 {
 public:
 
-    concatenate_impl_() 
+    concatenate_() 
         : use_sliding_window_(false)
         , bidirectional_(false)
         , reverse_(false)
@@ -139,7 +140,7 @@ public:
         if( size_ < 2 ) { std::cerr <<  comma::verbose.app_name() << ": expected --size,-n= value to be greater than 1" << std::endl; return 1; }
         expected_records_ = step_ * ( size_ - 1 ) + 1;
         if( options.exists("--expected-records") ) { std::cout << expected_records_ << std::endl; return 0; };
-        comma::csv::input_stream< input_t > istream(std::cin, csv);
+        comma::csv::input_stream< input_t > istream( std::cin, csv );
         std::deque< std::string > deque;
         std::deque< std::string > first;
         bool has_block_ = csv.has_field( "block" );
@@ -169,12 +170,9 @@ public:
         return 0;
     }
 
-    struct input_t {
-        comma::uint32 block = 0;
-    };
+    struct input_t { comma::uint32 block = 0; };
 
 private:
-
     bool use_sliding_window_;
     bool bidirectional_;
     bool reverse_;
@@ -234,13 +232,41 @@ private:
 
 namespace comma { namespace visiting {
 
-template <> struct traits< concatenate_impl_::input_t >
+template <> struct traits< concatenate_::input_t >
 {
-    template < typename K, typename V > static void visit( const K&, const concatenate_impl_::input_t& p, V& v ) { v.apply("block", p.block); }
-    template < typename K, typename V > static void visit( const K&, concatenate_impl_::input_t& p, V& v ) { v.apply("block", p.block); }
+    template < typename K, typename V > static void visit( const K&, const concatenate_::input_t& p, V& v ) { v.apply("block", p.block); }
+    template < typename K, typename V > static void visit( const K&, concatenate_::input_t& p, V& v ) { v.apply("block", p.block); }
 };
 
 } } // namespace comma { namespace visiting {
+
+static int repeat_( const comma::command_line_options& options, const comma::csv::options& csv )
+{
+    unsigned int size = options.value< unsigned int >( "--size,-n" );
+    if( csv.binary() )
+    {
+        typedef concatenate_::input_t input_t; // quick and dirty
+        comma::csv::input_stream< input_t > is( std::cin, csv ); // quick and dirty, will be slow on ascii
+        while( is.ready() || ( std::cin.good() && !std::cin.eof() ) )
+        {
+            const input_t* p = is.read();
+            if( !p ) { break; }
+            for( unsigned int i = 0; i < size; ++i ) { std::cout.write( is.binary().last(), csv.format().size() ); }
+            if( csv.flush ) { std::cout.flush(); }
+        }
+    }
+    else
+    {
+        while( std::cin.good() && !std::cin.eof() )
+        {
+            std::string line;
+            std::getline( std::cin, line );
+            if( comma::strip( line ).empty() ) { continue; }
+            for( unsigned int i = 0; i < size; ++i ) { std::cout << line << std::endl; }
+        }
+    }
+    return 0;
+}
 
 int main( int ac, char** av )
 {
@@ -254,10 +280,8 @@ int main( int ac, char** av )
         is_binary = csv.binary();
         if( unnamed.empty() ) { std::cerr << comma::verbose.app_name() << ": please specify operations" << std::endl; exit( 1 ); }
         std::string operation = unnamed[0];
-        if( operation == "concatenate" || operation == "loop" )
-        {
-            return concatenate_impl_().run(options, csv);
-        }
+        if( operation == "concatenate" || operation == "loop" ) { return concatenate_().run(options, csv); }
+        if( operation == "repeat" ) { return repeat_( options, csv ); }
         std::cerr << comma::verbose.app_name() << ": operation not supported or unknown: '" << operation << '\'' << std::endl;
         return 1;
     }

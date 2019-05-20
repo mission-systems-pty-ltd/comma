@@ -1,0 +1,17 @@
+ascii/output/line[0]="hello"
+ascii/output/line[1]="hello"
+ascii/output/line[2]="hello"
+ascii/output/line[3]="world"
+ascii/output/line[4]="world"
+ascii/output/line[5]="world"
+ascii/status=0
+binary/output/line[0]="1"
+binary/output/line[1]="1"
+binary/output/line[2]="1"
+binary/output/line[3]="2"
+binary/output/line[4]="2"
+binary/output/line[5]="2"
+binary/output/line[6]="3"
+binary/output/line[7]="3"
+binary/output/line[8]="3"
+binary/status=0

@@ -1,0 +1,2 @@
+ascii="( echo hello; echo; echo world ) | csv-shape repeat --size 3"
+binary="( echo 1; echo 2; echo 3 ) | csv-to-bin ui | csv-shape repeat --size 3 --binary ui | csv-from-bin ui"
