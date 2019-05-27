@@ -394,9 +394,9 @@ struct intervals
         }
     }
 
-    void run()
+    void read( std::istream& is = std::cin )
     {
-        comma::csv::input_stream< interval_t< From, To > > istream( std::cin, csv );
+        comma::csv::input_stream< interval_t< From, To > > istream( is, csv );
         comma::csv::ascii< interval_t< std::string > > ascii( csv.fields );
         if( !first_line.empty() )
         {
@@ -413,7 +413,7 @@ struct intervals
             if( verbose ) { std::cerr << app_name << ": from: " << from << " to: " << to << " payload: " << payload << std::endl; }
             add( from, to, payload );
         }
-        while( istream.ready() || std::cin.good()  )
+        while( istream.ready() || is.good()  )
         {
             const interval_t< From, To >* interval = istream.read();
             if( !interval ) { break; }
@@ -441,7 +441,12 @@ struct intervals
             if( verbose ) { std::cerr << app_name << ": from: " << from << " to: " << to << " payload: " << ( csv.binary() ? "<binary>" : payload ) << std::endl; }
             add( from, to, payload );
         }
-        write();
+    }
+
+    void run()
+    {
+        this->read();
+        this->write();
     }
 };
 
