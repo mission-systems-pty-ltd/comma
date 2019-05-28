@@ -40,8 +40,12 @@
 #include "../../application/command_line_options.h"
 #include "../../base/exception.h"
 #include "../../csv/stream.h"
-#include "../../visiting/traits.h"
+#include "../../csv/traits.h"
 #include "../../csv/impl/unstructured.h"
+#include "../../io/stream.h"
+#include "../../name_value/map.h"
+#include "../../name_value/parser.h"
+#include "../../visiting/traits.h"
 
 static const std::string app_name = "csv-interval";
 
@@ -444,10 +448,17 @@ struct intervals
         }
     }
 
-    void make( const std::string& first_line )
+    int make( const std::string& first_line )
     {
         this->read( std::cin, first_line );
         this->write();
+        return 0;
+    }
+    
+    int select( const std::string& first_line )
+    {
+        this->read( std::cin, first_line );
+        std::cerr << "csv-interval select: todo" << std::endl; exit( 1 );
     }
 };
 
@@ -508,26 +519,54 @@ int main( int ac, char** av )
             std::string first_line = std::get< 1 >( t );
             switch( to_type )
             {
-                case comma::csv::format::int8:          intervals< char >( options ).make( first_line ); break;
-                case comma::csv::format::uint8:         intervals< unsigned char >( options ).make( first_line ); break;
-                case comma::csv::format::int16:         intervals< comma::int16 >( options ).make( first_line ); break;
-                case comma::csv::format::uint16:        intervals< comma::uint16 >( options ).make( first_line ); break;
-                case comma::csv::format::int32:         intervals< comma::int32 >( options ).make( first_line ); break;
-                case comma::csv::format::uint32:        intervals< comma::uint32 >( options ).make( first_line ); break;
-                case comma::csv::format::int64:         intervals< comma::int64 >( options ).make( first_line ); break;
-                case comma::csv::format::uint64:        intervals< comma::uint64 >( options ).make( first_line ); break;
-                case comma::csv::format::char_t:        intervals< char >( options ).make( first_line ); break;
-                case comma::csv::format::float_t:       intervals< float >( options ).make( first_line ); break;
-                case comma::csv::format::double_t:      intervals< double >( options ).make( first_line ); break;
+                case comma::csv::format::int8:          intervals< char >( options ).make( first_line ); return 0;
+                case comma::csv::format::uint8:         intervals< unsigned char >( options ).make( first_line ); return 0;
+                case comma::csv::format::int16:         intervals< comma::int16 >( options ).make( first_line ); return 0;
+                case comma::csv::format::uint16:        intervals< comma::uint16 >( options ).make( first_line ); return 0;
+                case comma::csv::format::int32:         intervals< comma::int32 >( options ).make( first_line ); return 0;
+                case comma::csv::format::uint32:        intervals< comma::uint32 >( options ).make( first_line ); return 0;
+                case comma::csv::format::int64:         intervals< comma::int64 >( options ).make( first_line ); return 0;
+                case comma::csv::format::uint64:        intervals< comma::uint64 >( options ).make( first_line ); return 0;
+                case comma::csv::format::char_t:        intervals< char >( options ).make( first_line ); return 0;
+                case comma::csv::format::float_t:       intervals< float >( options ).make( first_line ); return 0;
+                case comma::csv::format::double_t:      intervals< double >( options ).make( first_line ); return 0;
                 case comma::csv::format::time:
-                case comma::csv::format::long_time:     intervals< boost::posix_time::ptime >( options ).make( first_line ); break;
-                case comma::csv::format::fixed_string:  intervals< std::string >( options ).make( first_line ); break;            
-                default:                                COMMA_THROW( comma::exception, "invalid type" ); break; // never here
+                case comma::csv::format::long_time:     intervals< boost::posix_time::ptime >( options ).make( first_line ); return 0;
+                case comma::csv::format::fixed_string:  intervals< std::string >( options ).make( first_line ); return 0;            
+                default:                                COMMA_THROW( comma::exception, "invalid type" ); return 0; // never here
             }
             return 0;
         }
         if( operation == "select" )
         {
+            // todo
+            //if( options.exists( "--input-fields" ) ) { std::cout << comma::join( comma::csv::names< interval_t< double > >(), ',' ) << std::endl; return 0; }
+            //if( options.exists( "--output-fields" ) ) { std::cout << comma::join( comma::csv::names< interval_t< double > >(), ',' ) << std::endl; return 0; }
+            auto i = options.value< std::string >( "--intervals" );
+            comma::csv::options csv = comma::name_value::parser().get< comma::csv::options >( i );
+            std::string format = comma::name_value::map( i ).value< std::string >( "format", "" );
+            comma::io::istream is( csv.filename );
+            auto t = interval_type( *is, csv, format );
+            const comma::csv::format::types_enum to_type = std::get< 0 >( t );
+            std::string first_line = std::get< 1 >( t );
+            switch( to_type )
+            {
+                case comma::csv::format::int8:          intervals< char >( options ).select( first_line ); return 0;
+                case comma::csv::format::uint8:         intervals< unsigned char >( options ).select( first_line ); return 0;
+                case comma::csv::format::int16:         intervals< comma::int16 >( options ).select( first_line ); return 0;
+                case comma::csv::format::uint16:        intervals< comma::uint16 >( options ).select( first_line ); return 0;
+                case comma::csv::format::int32:         intervals< comma::int32 >( options ).select( first_line ); return 0;
+                case comma::csv::format::uint32:        intervals< comma::uint32 >( options ).select( first_line ); return 0;
+                case comma::csv::format::int64:         intervals< comma::int64 >( options ).select( first_line ); return 0;
+                case comma::csv::format::uint64:        intervals< comma::uint64 >( options ).select( first_line ); return 0;
+                case comma::csv::format::char_t:        intervals< char >( options ).select( first_line ); return 0;
+                case comma::csv::format::float_t:       intervals< float >( options ).select( first_line ); return 0;
+                case comma::csv::format::double_t:      intervals< double >( options ).select( first_line ); return 0;
+                case comma::csv::format::time:
+                case comma::csv::format::long_time:     intervals< boost::posix_time::ptime >( options ).select( first_line ); return 0;
+                case comma::csv::format::fixed_string:  intervals< std::string >( options ).select( first_line ); return 0;            
+                default:                                COMMA_THROW( comma::exception, "invalid type" ); return 0; // never here
+            }
             std::cerr << "csv-interval: select: todo" << std::endl;
             return 1;
         }
