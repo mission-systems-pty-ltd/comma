@@ -1,0 +1,3 @@
+#!/bin/bash
+
+csv-intervals make $( cat options ) | gawk '{ printf( "interval[%d]=%s\n", NR, $0 ); }'

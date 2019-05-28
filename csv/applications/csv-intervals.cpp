@@ -30,6 +30,7 @@
 
 /// @author Vinny Do
 
+#include <fstream>
 #include <iostream>
 #include <limits>
 #include <set>
@@ -47,7 +48,7 @@
 #include "../../name_value/parser.h"
 #include "../../visiting/traits.h"
 
-static const std::string app_name = "csv-interval";
+static const std::string app_name = "csv-intervals";
 
 static bool verbose;
 static bool debug;
@@ -95,21 +96,22 @@ static void usage( bool verbose = false )
 {
     std::cerr << "takes csv intervals and separates them at points of overlap if any" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "usage: cat intervals.csv | " << app_name << " [OPTIONS...]" << std::endl;
+    std::cerr << "usage: cat intervals.csv | csv-intervals <operation> [<options>]" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "operations" << std::endl;
+    std::cerr << "    contain: given a set of intervals, take scalars on stdin, append 1 if contained in the intervals, 0 if not" << std::endl;
+    std::cerr << "    make: make intervals" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --help,-h: show help; --help --verbose for more help" << std::endl;
     std::cerr << "    --verbose,-v: more info" << std::endl;
-    std::cerr << "    --append,-a: append output intervals instead of outputting them in place" << std::endl;
-    std::cerr << "    --debug: print debug" << std::endl;
+    std::cerr << "    --debug: more debug output" << std::endl;
     std::cerr << "    --input-fields: print input fields and exit" << std::endl;
     // std::cerr << "    --input-format: print input format and exit" << std::endl;
     std::cerr << "    --output-fields: print output fields and exit" << std::endl;
     // std::cerr << "    --output-format: print output format and exit" << std::endl;
     std::cerr << "    --empty=[<empty-value>]: empty value used to signify unbounded intervals" << std::endl;
     std::cerr << "             default for time is \"not-a-date-time\"" << std::endl;
-    std::cerr << "    --format=[<format>]: input format (ascii only), also affects the --limits option; if not given the format is guessed" << std::endl;
-    std::cerr << "    --intervals-only: only output the intervals, ignore payload if any" << std::endl;
     std::cerr << "    --limits,-l: replace empty bounds with type limits" << std::endl;
     std::cerr << "                 b  : " << (int)limits< char >::lowest() << " " << (int)limits< char >::max() << std::endl;
     std::cerr << "                 ub : " << (int)limits< unsigned char >::lowest() << " " << (int)limits< unsigned char >::max() << std::endl;
@@ -125,9 +127,21 @@ static void usage( bool verbose = false )
     std::cerr << "                 s  : \"" << limits< std::string >::lowest() << "\" \"" << limits< std::string >::max() << "\"" << std::endl;
     std::cerr << "                 t  : " << limits< boost::posix_time::ptime >::lowest() << " " << limits< boost::posix_time::ptime >::max() << std::endl;
     std::cerr << "                 lt : " << limits< boost::posix_time::ptime >::lowest() << " " << limits< boost::posix_time::ptime >::max() << std::endl;
-    std::cerr << "    --overlap-count=[<count>]; output only intervals with <count> overlaps" << std::endl;
-    std::cerr << "    --overlap-count-min,--min-overlap-count=[<count>]; output only intervals with at least <count> overlaps" << std::endl;
-    std::cerr << "    --overlap-count-max,--max-overlap-count=[<count>]; output only intervals with not more than <count> overlaps" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "operation details" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    contain" << std::endl;
+    std::cerr << "        options" << std::endl;
+    std::cerr << "            --intervals=<filename>: file or stream name" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    make" << std::endl;
+    std::cerr << "        options" << std::endl;
+    std::cerr << "            --append,-a: append output intervals instead of outputting them in place" << std::endl;
+    std::cerr << "            --format=[<format>]: input format (ascii only), also affects the --limits option; if not given the format is guessed" << std::endl;
+    std::cerr << "            --intervals-only: only output the intervals, ignore payload if any" << std::endl;    
+    std::cerr << "            --overlap-count=[<count>]; output only intervals with <count> overlaps" << std::endl;
+    std::cerr << "            --overlap-count-min,--min-overlap-count=[<count>]; output only intervals with at least <count> overlaps" << std::endl;
+    std::cerr << "            --overlap-count-max,--max-overlap-count=[<count>]; output only intervals with not more than <count> overlaps" << std::endl;
     std::cerr << std::endl;
     std::cerr << "ascii notes" << std::endl;
     std::cerr << "    unbounded intervals may be indicated by no value (e.g. ,3 \u2261 -\u221e,3), both sides unbounded is also supported" << std::endl;
@@ -252,6 +266,13 @@ struct interval_t
     to_t< To > to;
 };
 
+template < typename T > struct scalar_t
+{ 
+    T scalar;
+    scalar_t() {}
+    scalar_t( const T& t ): scalar( t ) {}
+};
+
 namespace comma { namespace visiting {
 
 template < typename T > struct traits< from_t< T > >
@@ -270,6 +291,12 @@ template < typename From, typename To > struct traits< interval_t< From, To > >
 {
     template < typename K, typename V > static void visit( const K&, interval_t< From, To >& p, V& v ) { v.apply( "", p.from ); v.apply( "", p.to ); }
     template < typename K, typename V > static void visit( const K&, const interval_t< From, To >& p, V& v ) { v.apply( "", p.from ); v.apply( "", p.to ); }
+};
+
+template < typename T > struct traits< scalar_t< T > >
+{
+    template < typename K, typename V > static void visit( const K&, scalar_t< T >& p, V& v ) { v.apply( "scalar", p.scalar ); }
+    template < typename K, typename V > static void visit( const K&, const scalar_t< T >& p, V& v ) { v.apply( "scalar", p.scalar ); }
 };
 
 } } // namespace comma { namespace visiting {
@@ -455,10 +482,29 @@ struct intervals
         return 0;
     }
     
-    int select( const std::string& first_line )
+    int contain( std::istream& is, const std::string& first_line )
     {
-        this->read( std::cin, first_line );
-        std::cerr << "csv-interval select: todo" << std::endl; exit( 1 );
+        comma::csv::options icsv( options, "", false );
+        comma::csv::input_stream< scalar_t< From > > istream( std::cin, icsv );
+        comma::csv::output_stream< scalar_t< bool > > ostream( std::cout, icsv.binary() );
+        auto tied = comma::csv::make_tied( istream, ostream );
+        this->read( is, first_line ); // todo: support block
+        while( istream.ready() || std::cin.good() )
+        {
+            auto p = istream.read();
+            if( !p ) { break; }
+            bool contained = false; // todo? use boost::...::query
+            for( typename map_t::iterator it = map.begin(); it != map.end() && !contained; ++it )
+            {
+                const bound_t< bound_type >& from = it->first.lower();
+                const bound_t< bound_type >& to = it->first.upper();
+                contained = ( !from.value || p->scalar >= *from.value ) && ( !to.value || p->scalar < *to.value );
+            }
+            tied.append( scalar_t< bool >( contained ) );
+            if( icsv.flush ) { std::cout.flush(); }
+        }
+        std::cout.flush();
+        return 0;
     }
 };
 
@@ -472,7 +518,7 @@ static std::tuple< comma::csv::format::types_enum, std::string > interval_type( 
     {
         if( format.empty() )
         {
-            while( std::cin.good() && first_line.empty() ) { std::getline( is, first_line ); }
+            while( is.good() && first_line.empty() ) { std::getline( is, first_line ); }
             if( first_line.empty() ) { exit( 0 ); } // quick and dirty
             csv.format( comma::csv::impl::unstructured::guess_format( first_line, csv.delimiter ) );
             if( verbose ) { std::cerr << app_name << ": guessed format: " << csv.format().string() << std::endl;; }
@@ -537,13 +583,12 @@ int main( int ac, char** av )
             }
             return 0;
         }
-        if( operation == "select" )
+        if( operation == "contain" )
         {
-            // todo
-            //if( options.exists( "--input-fields" ) ) { std::cout << comma::join( comma::csv::names< interval_t< double > >(), ',' ) << std::endl; return 0; }
-            //if( options.exists( "--output-fields" ) ) { std::cout << comma::join( comma::csv::names< interval_t< double > >(), ',' ) << std::endl; return 0; }
+            if( options.exists( "--input-fields" ) ) { std::cout << comma::join( comma::csv::names< scalar_t< double > >(), ',' ) << std::endl; return 0; }
+            if( options.exists( "--output-fields" ) ) { std::cout << comma::join( comma::csv::names< scalar_t< double > >(), ',' ) << std::endl; return 0; }
             auto i = options.value< std::string >( "--intervals" );
-            comma::csv::options csv = comma::name_value::parser().get< comma::csv::options >( i );
+            comma::csv::options csv = comma::name_value::parser( "filename" ).get< comma::csv::options >( i );
             std::string format = comma::name_value::map( i ).value< std::string >( "format", "" );
             comma::io::istream is( csv.filename );
             auto t = interval_type( *is, csv, format );
@@ -551,28 +596,27 @@ int main( int ac, char** av )
             std::string first_line = std::get< 1 >( t );
             switch( to_type )
             {
-                case comma::csv::format::int8:          intervals< char >( options ).select( first_line ); return 0;
-                case comma::csv::format::uint8:         intervals< unsigned char >( options ).select( first_line ); return 0;
-                case comma::csv::format::int16:         intervals< comma::int16 >( options ).select( first_line ); return 0;
-                case comma::csv::format::uint16:        intervals< comma::uint16 >( options ).select( first_line ); return 0;
-                case comma::csv::format::int32:         intervals< comma::int32 >( options ).select( first_line ); return 0;
-                case comma::csv::format::uint32:        intervals< comma::uint32 >( options ).select( first_line ); return 0;
-                case comma::csv::format::int64:         intervals< comma::int64 >( options ).select( first_line ); return 0;
-                case comma::csv::format::uint64:        intervals< comma::uint64 >( options ).select( first_line ); return 0;
-                case comma::csv::format::char_t:        intervals< char >( options ).select( first_line ); return 0;
-                case comma::csv::format::float_t:       intervals< float >( options ).select( first_line ); return 0;
-                case comma::csv::format::double_t:      intervals< double >( options ).select( first_line ); return 0;
+                case comma::csv::format::int8:          intervals< char >( options ).contain( *is, first_line ); return 0;
+                case comma::csv::format::uint8:         intervals< unsigned char >( options ).contain( *is, first_line ); return 0;
+                case comma::csv::format::int16:         intervals< comma::int16 >( options ).contain( *is, first_line ); return 0;
+                case comma::csv::format::uint16:        intervals< comma::uint16 >( options ).contain( *is, first_line ); return 0;
+                case comma::csv::format::int32:         intervals< comma::int32 >( options ).contain( *is, first_line ); return 0;
+                case comma::csv::format::uint32:        intervals< comma::uint32 >( options ).contain( *is, first_line ); return 0;
+                case comma::csv::format::int64:         intervals< comma::int64 >( options ).contain( *is, first_line ); return 0;
+                case comma::csv::format::uint64:        intervals< comma::uint64 >( options ).contain( *is, first_line ); return 0;
+                case comma::csv::format::char_t:        intervals< char >( options ).contain( *is, first_line ); return 0;
+                case comma::csv::format::float_t:       intervals< float >( options ).contain( *is, first_line ); return 0;
+                case comma::csv::format::double_t:      intervals< double >( options ).contain( *is, first_line ); return 0;
                 case comma::csv::format::time:
-                case comma::csv::format::long_time:     intervals< boost::posix_time::ptime >( options ).select( first_line ); return 0;
-                case comma::csv::format::fixed_string:  intervals< std::string >( options ).select( first_line ); return 0;            
-                default:                                COMMA_THROW( comma::exception, "invalid type" ); return 0; // never here
+                case comma::csv::format::long_time:     intervals< boost::posix_time::ptime >( options ).contain( *is, first_line ); return 0;
+                case comma::csv::format::fixed_string:  intervals< std::string >( options ).contain( *is, first_line ); return 0;            
+                default:                                COMMA_THROW( comma::exception, "invalid type" ); // never here
             }
-            std::cerr << "csv-interval: select: todo" << std::endl;
-            return 1;
+            return 0;
         }
-        std::cerr << "csv-interval: expected operation, got: '" << operation << "'" << std::endl;
+        std::cerr << "csv-intervals: expected operation, got: '" << operation << "'" << std::endl;
     }
-    catch( std::exception& ex ) { std::cerr << app_name << ": " << ex.what() << std::endl; }
-    catch( ... ) { std::cerr << app_name << ": unknown exception" << std::endl; }
+    catch( std::exception& ex ) { std::cerr << "csv-invervals: " << ex.what() << std::endl; }
+    catch( ... ) { std::cerr << "csv-invervals: unknown exception" << std::endl; }
     return 1;
 }

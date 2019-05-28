@@ -1,3 +1,0 @@
-append[0]="( echo 0,5,a; echo 4,7,b; echo 2,8,c ) | csv-interval --append"
-
-

@@ -102,9 +102,9 @@ add_executable( csv-enumerate ${dir}/csv-enumerate.cpp )
 target_link_libraries ( csv-enumerate ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io comma_string comma_xpath comma_csv )
 install( TARGETS csv-enumerate RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
 
-add_executable( csv-interval ${dir}/csv-interval.cpp )
-target_link_libraries ( csv-interval ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_io comma_xpath )
-install( TARGETS csv-interval RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
+add_executable( csv-intervals ${dir}/csv-intervals.cpp )
+target_link_libraries ( csv-intervals ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_io comma_xpath )
+install( TARGETS csv-intervals RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
          
 add_executable( csv-units ${dir}/csv-units.cpp )
 target_link_libraries ( csv-units ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_io comma_xpath comma_string )
