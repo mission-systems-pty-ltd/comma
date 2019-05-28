@@ -34,6 +34,7 @@
 #include <limits>
 #include <set>
 #include <string>
+#include <tuple>
 #include <boost/icl/interval.hpp>
 #include <boost/icl/interval_map.hpp>
 #include "../../application/command_line_options.h"
@@ -46,7 +47,6 @@ static const std::string app_name = "csv-interval";
 
 static bool verbose;
 static bool debug;
-static std::string first_line;
 static bool append;
 
 template < typename T > struct limits
@@ -102,9 +102,9 @@ static void usage( bool verbose = false )
     // std::cerr << "    --input-format: print input format and exit" << std::endl;
     std::cerr << "    --output-fields: print output fields and exit" << std::endl;
     // std::cerr << "    --output-format: print output format and exit" << std::endl;
-    std::cerr << "    --empty: empty value used to signify unbounded intervals" << std::endl;
+    std::cerr << "    --empty=[<empty-value>]: empty value used to signify unbounded intervals" << std::endl;
     std::cerr << "             default for time is \"not-a-date-time\"" << std::endl;
-    std::cerr << "    --format: input format (ascii only), also affects the --limits option; if not given the format is guessed" << std::endl;
+    std::cerr << "    --format=[<format>]: input format (ascii only), also affects the --limits option; if not given the format is guessed" << std::endl;
     std::cerr << "    --intervals-only: only output the intervals, ignore payload if any" << std::endl;
     std::cerr << "    --limits,-l: replace empty bounds with type limits" << std::endl;
     std::cerr << "                 b  : " << (int)limits< char >::lowest() << " " << (int)limits< char >::max() << std::endl;
@@ -295,6 +295,7 @@ struct intervals
                                                             , intervals_only( options.exists( "--intervals-only" ) )
                                                             , use_limits( options.exists( "--limits,-l" ) )
     {
+        csv.full_xpath = false;
         if( csv.fields.empty() ) { csv.fields = comma::join( comma::csv::names< interval_t< From, To > >(), ',' ); }
         if( ocsv.fields.empty() || intervals_only )
         {
@@ -394,7 +395,7 @@ struct intervals
         }
     }
 
-    void read( std::istream& is = std::cin )
+    void read( std::istream& is, const std::string& first_line ) // preparing for adding operations
     {
         comma::csv::input_stream< interval_t< From, To > > istream( is, csv );
         comma::csv::ascii< interval_t< std::string > > ascii( csv.fields );
@@ -443,107 +444,94 @@ struct intervals
         }
     }
 
-    void run()
+    void make( const std::string& first_line )
     {
-        this->read();
+        this->read( std::cin, first_line );
         this->write();
     }
 };
 
-// template < typename From > static void run( const comma::command_line_options& options, const comma::csv::format::types_enum to_type )
-// {
-//     switch( to_type )
-//     {
-//         case comma::csv::format::int8:          intervals< From, char >( options ).run(); break;
-//         case comma::csv::format::uint8:         intervals< From, unsigned char >( options ).run(); break;
-//         case comma::csv::format::int16:         intervals< From, comma::int16 >( options ).run(); break;
-//         case comma::csv::format::uint16:        intervals< From, comma::uint16 >( options ).run(); break;
-//         case comma::csv::format::int32:         intervals< From, comma::int32 >( options ).run(); break;
-//         case comma::csv::format::uint32:        intervals< From, comma::uint32 >( options ).run(); break;
-//         case comma::csv::format::int64:         intervals< From, comma::int64 >( options ).run(); break;
-//         case comma::csv::format::uint64:        intervals< From, comma::uint64 >( options ).run(); break;
-//         case comma::csv::format::char_t:        intervals< From, char >( options ).run(); break;
-//         case comma::csv::format::float_t:       intervals< From, float >( options ).run(); break;
-//         case comma::csv::format::double_t:      intervals< From, double >( options ).run(); break;
-//         default:                                COMMA_THROW( comma::exception, "from/to type mismatch" ); break;
-//     }
-// }
+static std::tuple< comma::csv::format::types_enum, std::string > interval_type( std::istream& is, comma::csv::options csv, const std::string& format )
+{
+    if( csv.fields.empty() ) { csv.fields = comma::join( comma::csv::names< interval_t< double > >(), ',' ); }
+    if( !csv.has_field( "from,to" ) ) { COMMA_THROW( comma::exception, "expected from and to fields" ); }
+    std::string first_line;
+    csv.full_xpath = false;
+    if( !csv.binary() )
+    {
+        if( format.empty() )
+        {
+            while( std::cin.good() && first_line.empty() ) { std::getline( is, first_line ); }
+            if( first_line.empty() ) { exit( 0 ); } // quick and dirty
+            csv.format( comma::csv::impl::unstructured::guess_format( first_line, csv.delimiter ) );
+            if( verbose ) { std::cerr << app_name << ": guessed format: " << csv.format().string() << std::endl;; }
+        }
+        else
+        {
+            csv.format( format );
+        }
+    }
+    const std::vector< std::string >& fields = comma::split( csv.fields, ',' );
+    unsigned int from_index = 0;
+    unsigned int to_index = 1;
+    for( unsigned int i = 0; i < fields.size(); ++i ) { if( fields[i] == "from" ) { from_index = i; break; } }
+    for( unsigned int i = 0; i < fields.size(); ++i ) { if( fields[i] == "to" ) { to_index = i; break; } }
+    const comma::csv::format::types_enum from_type = csv.format().offset( from_index ).type;
+    const comma::csv::format::types_enum to_type = csv.format().offset( to_index ).type;
+    if( ( ( from_type == comma::csv::format::time || from_type == comma::csv::format::long_time ) && ( to_type != comma::csv::format::time && to_type != comma::csv::format::long_time ) ) ||
+    ( ( ( from_type != comma::csv::format::time && from_type != comma::csv::format::long_time ) && ( to_type == comma::csv::format::time || to_type == comma::csv::format::long_time ) ) ) )
+    { COMMA_THROW( comma::exception, "from/to type mismatch; time" ); }
+    if( ( from_type == comma::csv::format::fixed_string || to_type == comma::csv::format::fixed_string ) && from_type != to_type )
+    { COMMA_THROW( comma::exception, "from/to type mismatch; string" ); }
+    if( from_type != to_type ) { std::cerr << app_name << ": support only from and to of the same type, got from: " << comma::csv::format::to_format( from_type ) << ", to: " << comma::csv::format::to_format( to_type ) << std::endl; exit( 1 ); }
+    return std::tie( to_type, first_line );
+}
 
 int main( int ac, char** av )
 {
     try
     {
-        comma::command_line_options options( ac, av );
+        comma::command_line_options options( ac, av, usage );
         verbose = options.exists( "--verbose,-v" );
         debug = options.exists( "--debug" );
-        append = options.exists( "--append,-a" );
-        if( options.exists( "--help,-h" ) ) { usage( verbose ); }
-        if( options.exists( "--input-fields" ) ) { std::cout << comma::join( comma::csv::names< interval_t< double > >(), ',' ) << std::endl; return 0; }
-        if( options.exists( "--output-fields" ) ) { std::cout << comma::join( comma::csv::names< interval_t< double > >(), ',' ) << std::endl; return 0; }
-        comma::csv::options csv( options );
-        csv.full_xpath = false;
-        if( csv.fields.empty() ) { csv.fields = comma::join( comma::csv::names< interval_t< double > >(), ',' ); }
-        if( !csv.has_field( "from,to" ) ) { COMMA_THROW( comma::exception, "expected from and to fields" ); }
         options.assert_mutually_exclusive( "--binary,--format" );
-        if( options.exists( "--binary,-b" ) ) {}
-        else if( options.exists( "--format" ) ) { csv.format( options.value< std::string >( "--format" ) ); }
-        else
+        const auto& unnamed = options.unnamed( "--append,-a,--debug,--flush,--input-fields,--output-fields,--intervals-only,--limits,-l", "-.*" );
+        std::string operation = unnamed.empty() ? "make" : unnamed[0];
+        if( operation == "make" )
         {
-            while( std::cin.good() && first_line.empty() ) { std::getline( std::cin, first_line ); }
-            if( first_line.empty() ) { return 0; }
-            csv.format( comma::csv::impl::unstructured::guess_format( first_line, csv.delimiter ) );
-            if( verbose ) { std::cerr << app_name << ": guessed format: " << csv.format().string() << std::endl;; }
+            append = options.exists( "--append,-a" );
+            if( options.exists( "--input-fields" ) ) { std::cout << comma::join( comma::csv::names< interval_t< double > >(), ',' ) << std::endl; return 0; }
+            if( options.exists( "--output-fields" ) ) { std::cout << comma::join( comma::csv::names< interval_t< double > >(), ',' ) << std::endl; return 0; }
+            comma::csv::options csv( options );
+            auto t = interval_type( std::cin, comma::csv::options( options ), options.value< std::string >( "--format,-f", "" ) );
+            const comma::csv::format::types_enum to_type = std::get< 0 >( t );
+            std::string first_line = std::get< 1 >( t );
+            switch( to_type )
+            {
+                case comma::csv::format::int8:          intervals< char >( options ).make( first_line ); break;
+                case comma::csv::format::uint8:         intervals< unsigned char >( options ).make( first_line ); break;
+                case comma::csv::format::int16:         intervals< comma::int16 >( options ).make( first_line ); break;
+                case comma::csv::format::uint16:        intervals< comma::uint16 >( options ).make( first_line ); break;
+                case comma::csv::format::int32:         intervals< comma::int32 >( options ).make( first_line ); break;
+                case comma::csv::format::uint32:        intervals< comma::uint32 >( options ).make( first_line ); break;
+                case comma::csv::format::int64:         intervals< comma::int64 >( options ).make( first_line ); break;
+                case comma::csv::format::uint64:        intervals< comma::uint64 >( options ).make( first_line ); break;
+                case comma::csv::format::char_t:        intervals< char >( options ).make( first_line ); break;
+                case comma::csv::format::float_t:       intervals< float >( options ).make( first_line ); break;
+                case comma::csv::format::double_t:      intervals< double >( options ).make( first_line ); break;
+                case comma::csv::format::time:
+                case comma::csv::format::long_time:     intervals< boost::posix_time::ptime >( options ).make( first_line ); break;
+                case comma::csv::format::fixed_string:  intervals< std::string >( options ).make( first_line ); break;            
+                default:                                COMMA_THROW( comma::exception, "invalid type" ); break; // never here
+            }
+            return 0;
         }
-        const std::vector< std::string >& fields = comma::split( csv.fields, ',' );
-        unsigned int from_index = 0;
-        unsigned int to_index = 1;
-        for( unsigned int i = 0; i < fields.size(); ++i ) { if( fields[i] == "from" ) { from_index = i; break; } }
-        for( unsigned int i = 0; i < fields.size(); ++i ) { if( fields[i] == "to" ) { to_index = i; break; } }
-        const comma::csv::format::types_enum from_type = csv.format().offset( from_index ).type;
-        const comma::csv::format::types_enum to_type = csv.format().offset( to_index ).type;
-        if( ( ( from_type == comma::csv::format::time || from_type == comma::csv::format::long_time ) && ( to_type != comma::csv::format::time && to_type != comma::csv::format::long_time ) ) ||
-          ( ( ( from_type != comma::csv::format::time && from_type != comma::csv::format::long_time ) && ( to_type == comma::csv::format::time || to_type == comma::csv::format::long_time ) ) ) )
-        { COMMA_THROW( comma::exception, "from/to type mismatch; time" ); }
-        if( ( from_type == comma::csv::format::fixed_string || to_type == comma::csv::format::fixed_string ) && from_type != to_type )
-        { COMMA_THROW( comma::exception, "from/to type mismatch; string" ); }
-//         switch( from_type )
-//         {
-//             case comma::csv::format::int8:          run< char >( options, to_type ); break;
-//             case comma::csv::format::uint8:         run< unsigned char >( options, to_type ); break;
-//             case comma::csv::format::int16:         run< comma::int16 >( options, to_type ); break;
-//             case comma::csv::format::uint16:        run< comma::uint16 >( options, to_type ); break;
-//             case comma::csv::format::int32:         run< comma::int32 >( options, to_type ); break;
-//             case comma::csv::format::uint32:        run< comma::uint32 >( options, to_type ); break;
-//             case comma::csv::format::int64:         run< comma::int64 >( options, to_type ); break;
-//             case comma::csv::format::uint64:        run< comma::uint64 >( options, to_type ); break;
-//             case comma::csv::format::char_t:        run< char >( options, to_type ); break;
-//             case comma::csv::format::float_t:       run< float >( options, to_type ); break;
-//             case comma::csv::format::double_t:      run< double >( options, to_type ); break;
-//             case comma::csv::format::time:
-//             case comma::csv::format::long_time:     intervals< boost::posix_time::ptime >( options ).run(); break;
-//             case comma::csv::format::fixed_string:  intervals< std::string >( options ).run(); break;
-//             default:                                COMMA_THROW( comma::exception, "unknown type" ); break;
-//         }
-        if( from_type != to_type ) { std::cerr << app_name << ": support only from and to of the same type, got from: " << comma::csv::format::to_format( from_type ) << ", to: " << comma::csv::format::to_format( to_type ) << std::endl; return 1; }
-        switch( to_type )
+        if( operation == "select" )
         {
-            case comma::csv::format::int8:          intervals< char >( options ).run(); break;
-            case comma::csv::format::uint8:         intervals< unsigned char >( options ).run(); break;
-            case comma::csv::format::int16:         intervals< comma::int16 >( options ).run(); break;
-            case comma::csv::format::uint16:        intervals< comma::uint16 >( options ).run(); break;
-            case comma::csv::format::int32:         intervals< comma::int32 >( options ).run(); break;
-            case comma::csv::format::uint32:        intervals< comma::uint32 >( options ).run(); break;
-            case comma::csv::format::int64:         intervals< comma::int64 >( options ).run(); break;
-            case comma::csv::format::uint64:        intervals< comma::uint64 >( options ).run(); break;
-            case comma::csv::format::char_t:        intervals< char >( options ).run(); break;
-            case comma::csv::format::float_t:       intervals< float >( options ).run(); break;
-            case comma::csv::format::double_t:      intervals< double >( options ).run(); break;
-            case comma::csv::format::time:
-            case comma::csv::format::long_time:     intervals< boost::posix_time::ptime >( options ).run(); break;
-            case comma::csv::format::fixed_string:  intervals< std::string >( options ).run(); break;            
-            default:                                COMMA_THROW( comma::exception, "from/to type mismatch" ); break;
+            std::cerr << "csv-interval: select: todo" << std::endl;
+            return 1;
         }
-        return 0;
+        std::cerr << "csv-interval: expected operation, got: '" << operation << "'" << std::endl;
     }
     catch( std::exception& ex ) { std::cerr << app_name << ": " << ex.what() << std::endl; }
     catch( ... ) { std::cerr << app_name << ": unknown exception" << std::endl; }
