@@ -1,0 +1,7 @@
+contain/ascii[0]="( echo 1; echo 5; echo 9; echo 11 ) | csv-intervals contain --intervals <( echo 0,2; echo 9,11 )"
+contain/ascii[1]="( echo 1; echo 5 ) | csv-intervals --fields scalar contain --intervals <( echo 0,2 )"
+contain/fields[0]="( echo ,1; echo ,5 ) | csv-intervals --fields ,scalar contain --intervals <( echo 0,2 )"
+contain/fields[1]="( echo ,1; echo ,5 ) | csv-intervals --fields ,scalar contain --intervals <( echo ,0,2 )';fields=,from,to'"
+contain/binary[0]="( echo 1; echo 5 ) | csv-to-bin ui | csv-intervals contain --binary ui --intervals <( echo 0,2; echo 9,11 ) | csv-from-bin ui,b"
+contain/binary[1]="( echo 1; echo 5 ) | csv-to-bin ui | csv-intervals contain --binary ui --intervals <( ( echo 0,2; echo 9,11 ) | csv-to-bin 2ui )';binary=2ui' | csv-from-bin ui,b"
+contain/binary[2]="( echo 1; echo 5 ) | csv-intervals contain --intervals <( ( echo 0,2; echo 9,11 ) | csv-to-bin 2ui )';binary=2ui'"
