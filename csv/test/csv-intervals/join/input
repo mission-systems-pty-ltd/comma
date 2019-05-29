@@ -1,0 +1,5 @@
+join/ascii[0]="( echo 1; echo 5; echo 9; echo 11 ) | csv-intervals join --intervals <( echo 0,2,a; echo 9,11,b )"
+join/ascii[1]="( echo 9 ) | csv-intervals join --intervals <( echo 0,2,a; echo 0,10,b; echo 0,10,c; echo 0,20,d )"
+join/fields[0]="( echo ,1; echo ,5 ) | csv-intervals --fields ,scalar join --intervals <( echo 0,2,a )"
+join/fields[1]="( echo ,1; echo ,5 ) | csv-intervals --fields ,scalar join --intervals <( echo a,0,2,b )';fields=,from,to'"
+join/binary[0]="( echo 9 ) | csv-to-bin ui | csv-intervals join --binary ui --intervals <( ( echo 0,10,0; echo 0,10,1; echo 5,20,2 ) | csv-to-bin 3ui )';binary=3ui' | csv-from-bin 4ui"

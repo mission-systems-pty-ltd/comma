@@ -46,9 +46,8 @@
 #include "../../io/stream.h"
 #include "../../name_value/map.h"
 #include "../../name_value/parser.h"
+#include "../../string/string.h"
 #include "../../visiting/traits.h"
-
-static const std::string app_name = "csv-intervals";
 
 static bool verbose;
 static bool debug;
@@ -100,6 +99,7 @@ static void usage( bool verbose = false )
     std::cerr << std::endl;
     std::cerr << "operations" << std::endl;
     std::cerr << "    contain: given a set of intervals, take scalars on stdin, append 1 if contained in the intervals, 0 if not" << std::endl;
+    std::cerr << "    join: given a set of intervals, take scalars on stdin, append payloads of the intervals the scalars are contained in" << std::endl;
     std::cerr << "    make: make intervals" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
@@ -133,6 +133,9 @@ static void usage( bool verbose = false )
     std::cerr << "    contain" << std::endl;
     std::cerr << "        options" << std::endl;
     std::cerr << "            --intervals=<filename>: file or stream name" << std::endl;
+    std::cerr << "    join" << std::endl;
+    std::cerr << "        options" << std::endl;
+    std::cerr << "            --intervals=<filename>: file or stream name" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    make" << std::endl;
     std::cerr << "        options" << std::endl;
@@ -146,7 +149,7 @@ static void usage( bool verbose = false )
     std::cerr << "ascii notes" << std::endl;
     std::cerr << "    unbounded intervals may be indicated by no value (e.g. ,3 \u2261 -\u221e,3), both sides unbounded is also supported" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "for examples see verbose help: " << app_name << " --help --verbose" << std::endl;
+    std::cerr << "for examples see verbose help: csv-intervals --help --verbose" << std::endl;
     std::cerr << std::endl;
     if( verbose )
     {
@@ -161,7 +164,7 @@ static void usage( bool verbose = false )
         std::cerr << "        B:      [2      4]"           << std::endl;
         std::cerr << "        C:           [3           6]" << std::endl;
         std::cerr << std::endl;
-        std::cerr << "        echo -e '1,5,A\\n2,4,B\\n3,6,C' | " << app_name << std::endl;
+        std::cerr << "        echo -e '1,5,A\\n2,4,B\\n3,6,C' | csv-intervals make" << std::endl;
         std::cerr << std::endl;
         std::cerr << "        A: [1 2][2 3][3 4][4 5]"      << std::endl;
         std::cerr << "        B:      [2 3][3 4]"           << std::endl;
@@ -175,7 +178,7 @@ static void usage( bool verbose = false )
         std::cerr << "        D:            [3           8]"                    << std::endl;
         std::cerr << "        Z: [-\u221e                          +\u221e]"    << std::endl;
         std::cerr << std::endl;
-        std::cerr << "        echo -e ',4,A\\n2,4,B\\n3,6,C\\n3,8,D\\n,,Z' | " << app_name << " --format 2i" << std::endl;
+        std::cerr << "        echo -e ',4,A\\n2,4,B\\n3,6,C\\n3,8,D\\n,,Z' | csv-intervals make" << " --format 2i" << std::endl;
         std::cerr << std::endl;
         std::cerr << "        A: [-\u221e 2][2 3][3 4]"                         << std::endl;
         std::cerr << "        B:       [2 3][3 4]"                              << std::endl;
@@ -190,7 +193,7 @@ static void usage( bool verbose = false )
         std::cerr << "        C:                                                                                       [20140916T190000 +\u221e]" << std::endl;
         std::cerr << "        Z: [-\u221e                                                                                                    +\u221e]" << std::endl;
         std::cerr << std::endl;
-        std::cerr << "        echo -e ',20140916T030000.000000,A\\n20140916T010000.000000,20140916T190000.000000,B\\n20140916T190000.000000,,C\\n,,Z' | " << app_name << " --format 2t" << std::endl;
+        std::cerr << "        echo -e ',20140916T030000.000000,A\\n20140916T010000.000000,20140916T190000.000000,B\\n20140916T190000.000000,,C\\n,,Z' | csv-intervals make" << " --format 2t" << std::endl;
         std::cerr << std::endl;
         std::cerr << "        A: [-\u221e 20140916T010000][20140916T010000 20140916T030000]" << std::endl;
         std::cerr << "        B:                     [20140916T010000 20140916T030000][20140916T030000 20140916T190000]" << std::endl;
@@ -336,7 +339,7 @@ struct intervals
         }
         ascii_csv.fields = ocsv.fields;
         ascii_csv.quote = boost::none;
-        if( verbose ) { std::cerr << app_name << ": empty: "; empty ? std::cerr << *empty : std::cerr << "<none>"; std::cerr << std::endl; }
+        if( verbose ) { std::cerr << "csv-intervals: empty: "; empty ? std::cerr << *empty : std::cerr << "<none>"; std::cerr << std::endl; }
         options.assert_mutually_exclusive( "overlap-count-min,overlap-count-max", "overlap-count" );
         if( options.exists( "--overlap-count" ) )
         {
@@ -443,7 +446,7 @@ struct intervals
             if( !first.to.value.empty() && ( !empty || interval.to.value != *empty  ) ) { to.value = interval.to.value; }
             payload = first_line;
             if( !intervals_only && !append ) { ascii.put( interval_t< std::string >(), payload ); } // blank out interval from payload
-            if( verbose ) { std::cerr << app_name << ": from: " << from << " to: " << to << " payload: " << payload << std::endl; }
+            if( verbose ) { std::cerr << "csv-intervals: from: " << from << " to: " << to << " payload: " << payload << std::endl; }
             add( from, to, payload );
         }
         while( istream.ready() || is.good()  )
@@ -471,18 +474,11 @@ struct intervals
                 if( !intervals_only && !append ) { ascii.put( interval_t< std::string >(), buf ); } // blank out interval from payload
                 payload = comma::join( buf, csv.delimiter );
             }
-            if( verbose ) { std::cerr << app_name << ": from: " << from << " to: " << to << " payload: " << ( csv.binary() ? "<binary>" : payload ) << std::endl; }
+            if( verbose ) { std::cerr << "csv-intervals: from: " << from << " to: " << to << " payload: " << ( csv.binary() ? "<binary>" : payload ) << std::endl; }
             add( from, to, payload );
         }
     }
 
-    int make( const std::string& first_line )
-    {
-        this->read( std::cin, first_line );
-        this->write();
-        return 0;
-    }
-    
     int contain( std::istream& is, const std::string& first_line )
     {
         comma::csv::options icsv( options );
@@ -495,8 +491,8 @@ struct intervals
         {
             auto p = istream.read();
             if( !p ) { break; }
-            bool contained = false; // todo? use boost::...::query
-            for( typename map_t::iterator it = map.begin(); it != map.end() && !contained; ++it )
+            bool contained = false;
+            for( typename map_t::iterator it = map.begin(); it != map.end() && !contained; ++it ) // todo! quadratic complexity; how the heck to query icl map? use boost::...::query?
             {
                 const bound_t< bound_type >& from = it->first.lower();
                 const bound_t< bound_type >& to = it->first.upper();
@@ -505,7 +501,52 @@ struct intervals
             tied.append( scalar_t< bool >( contained ) );
             if( icsv.flush ) { std::cout.flush(); }
         }
-        std::cout.flush();
+        return 0;
+    }
+    
+    int join( std::istream& is, const std::string& first_line )
+    {
+        comma::csv::options icsv( options );
+        if( csv.binary() != icsv.binary() ) { COMMA_THROW( comma::exception, "expected both inputs ascii or both binary; got stdin " << ( icsv.binary() ? "binary" : "ascii" ) << " while --intervals " << ( csv.binary() ? "binary" : "ascii" ) ); }
+        icsv.full_xpath = false;
+        comma::csv::input_stream< scalar_t< From > > istream( std::cin, icsv );
+        append = true;
+        this->read( is, first_line ); // todo: support block
+        while( istream.ready() || std::cin.good() )
+        {
+            auto p = istream.read();
+            if( !p ) { break; }
+            for( typename map_t::iterator it = map.begin(); it != map.end(); ++it ) // todo! quadratic complexity; how the heck to query icl map? use boost::...::query?
+            {
+                const bound_t< bound_type >& from = it->first.lower();
+                const bound_t< bound_type >& to = it->first.upper();
+                if( ( !from.value || p->scalar >= *from.value ) && ( !to.value || p->scalar < *to.value ) )
+                {
+                    std::string joined = csv.binary() ? "" : comma::join( istream.ascii().last(), icsv.delimiter );
+                    for( const auto& s: it->second )
+                    {
+                        if( csv.binary() )
+                        {
+                            std::cout.write( istream.binary().last(), icsv.format().size() );
+                            std::cout.write( &s[0], s.size() );
+                        }
+                        else
+                        {
+                            std::cout << joined << icsv.delimiter << s << std::endl;
+                        }
+                    }
+                    break;
+                }
+            }
+            if( icsv.flush ) { std::cout.flush(); }
+        }
+        return 0;
+    }
+    
+    int make( const std::string& first_line )
+    {
+        this->read( std::cin, first_line );
+        this->write();
         return 0;
     }
 };
@@ -523,7 +564,7 @@ static std::tuple< comma::csv::format::types_enum, std::string > interval_type( 
             while( is.good() && first_line.empty() ) { std::getline( is, first_line ); }
             if( first_line.empty() ) { exit( 0 ); } // quick and dirty
             csv.format( comma::csv::impl::unstructured::guess_format( first_line, csv.delimiter ) );
-            if( verbose ) { std::cerr << app_name << ": guessed format: " << csv.format().string() << std::endl;; }
+            if( verbose ) { std::cerr << "csv-intervals: guessed format: " << csv.format().string() << std::endl;; }
         }
         else
         {
@@ -538,11 +579,11 @@ static std::tuple< comma::csv::format::types_enum, std::string > interval_type( 
     const comma::csv::format::types_enum from_type = csv.format().offset( from_index ).type;
     const comma::csv::format::types_enum to_type = csv.format().offset( to_index ).type;
     if( ( ( from_type == comma::csv::format::time || from_type == comma::csv::format::long_time ) && ( to_type != comma::csv::format::time && to_type != comma::csv::format::long_time ) ) ||
-    ( ( ( from_type != comma::csv::format::time && from_type != comma::csv::format::long_time ) && ( to_type == comma::csv::format::time || to_type == comma::csv::format::long_time ) ) ) )
-    { COMMA_THROW( comma::exception, "from/to type mismatch; time" ); }
+        ( ( ( from_type != comma::csv::format::time && from_type != comma::csv::format::long_time ) && ( to_type == comma::csv::format::time || to_type == comma::csv::format::long_time ) ) ) )
+        { COMMA_THROW( comma::exception, "from/to type mismatch; time" ); }
     if( ( from_type == comma::csv::format::fixed_string || to_type == comma::csv::format::fixed_string ) && from_type != to_type )
-    { COMMA_THROW( comma::exception, "from/to type mismatch; string" ); }
-    if( from_type != to_type ) { std::cerr << app_name << ": support only from and to of the same type, got from: " << comma::csv::format::to_format( from_type ) << ", to: " << comma::csv::format::to_format( to_type ) << std::endl; exit( 1 ); }
+        { COMMA_THROW( comma::exception, "from/to type mismatch; string" ); }
+    if( from_type != to_type ) { std::cerr << "csv-intervals: support only from and to of the same type, got from: " << comma::csv::format::to_format( from_type ) << ", to: " << comma::csv::format::to_format( to_type ) << std::endl; exit( 1 ); }
     return std::tie( to_type, first_line );
 }
 
@@ -617,9 +658,40 @@ int main( int ac, char** av )
             }
             return 0;
         }
+        if( operation == "join" )
+        {
+            if( options.exists( "--input-fields" ) ) { std::cout << comma::join( comma::csv::names< scalar_t< double > >(), ',' ) << std::endl; return 0; }
+            if( options.exists( "--output-fields" ) ) { std::cerr << "csv-intervals join: does not have --output-fields" << std::endl; return 1; }
+            auto i = options.value< std::string >( "--intervals" );
+            comma::csv::options csv = comma::name_value::parser( "filename" ).get< comma::csv::options >( i );
+            std::string format = comma::name_value::map( i ).value< std::string >( "format", "" );
+            comma::io::istream is( csv.filename );
+            auto t = interval_type( *is, csv, format );
+            const comma::csv::format::types_enum to_type = std::get< 0 >( t );
+            std::string first_line = std::get< 1 >( t );
+            switch( to_type )
+            {
+                case comma::csv::format::int8:          intervals< char >( options, csv ).join( *is, first_line ); return 0;
+                case comma::csv::format::uint8:         intervals< unsigned char >( options, csv ).join( *is, first_line ); return 0;
+                case comma::csv::format::int16:         intervals< comma::int16 >( options, csv ).join( *is, first_line ); return 0;
+                case comma::csv::format::uint16:        intervals< comma::uint16 >( options, csv ).join( *is, first_line ); return 0;
+                case comma::csv::format::int32:         intervals< comma::int32 >( options, csv ).join( *is, first_line ); return 0;
+                case comma::csv::format::uint32:        intervals< comma::uint32 >( options, csv ).join( *is, first_line ); return 0;
+                case comma::csv::format::int64:         intervals< comma::int64 >( options, csv ).join( *is, first_line ); return 0;
+                case comma::csv::format::uint64:        intervals< comma::uint64 >( options, csv ).join( *is, first_line ); return 0;
+                case comma::csv::format::char_t:        intervals< char >( options, csv ).join( *is, first_line ); return 0;
+                case comma::csv::format::float_t:       intervals< float >( options, csv ).join( *is, first_line ); return 0;
+                case comma::csv::format::double_t:      intervals< double >( options, csv ).join( *is, first_line ); return 0;
+                case comma::csv::format::time:
+                case comma::csv::format::long_time:     intervals< boost::posix_time::ptime >( options, csv ).join( *is, first_line ); return 0;
+                case comma::csv::format::fixed_string:  intervals< std::string >( options, csv ).join( *is, first_line ); return 0;            
+                default:                                COMMA_THROW( comma::exception, "invalid type" ); // never here
+            }
+            return 0;
+        }
         std::cerr << "csv-intervals: expected operation, got: '" << operation << "'" << std::endl;
     }
-    catch( std::exception& ex ) { std::cerr << "csv-invervals: " << ex.what() << std::endl; }
-    catch( ... ) { std::cerr << "csv-invervals: unknown exception" << std::endl; }
+    catch( std::exception& ex ) { std::cerr << "csv-intervals: " << ex.what() << std::endl; }
+    catch( ... ) { std::cerr << "csv-intervals: unknown exception" << std::endl; }
     return 1;
 }
