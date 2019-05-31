@@ -20,9 +20,9 @@ pipeline/stdout/matches="true"
 
 # commands (with quotes transformed to strings)
 
-basic_test/command="bash -c (SQUOTE)grep (DQUOTE)one two(DQUOTE) > out(SQUOTE)"
-function_call_test/command="bash -c (SQUOTE)example_function (DQUOTE)two (DQUOTE) (DQUOTE)one(DQUOTE) > out(SQUOTE)"
-unbuffered_test/command="bash -c (SQUOTE)grep (DQUOTE)one two(DQUOTE) > out(SQUOTE)"
-unbuffered_fn_test/command="bash -c (SQUOTE)example_function (DQUOTE)two (DQUOTE) (DQUOTE)one(DQUOTE) > out(SQUOTE)"
-pipeline/command="bash -c (SQUOTE)grep (SQUOTE)\(SQUOTE)(SQUOTE)^t(SQUOTE)\(SQUOTE)(SQUOTE) | grep (DQUOTE)o$(DQUOTE) > out(SQUOTE)"
+basic_test/command="bash -c (SQUOTE)grep (DQUOTE)one two(DQUOTE) > (DQUOTE)out(DQUOTE)(SQUOTE)"
+function_call_test/command="bash -c (SQUOTE)example_function (DQUOTE)two (DQUOTE) (DQUOTE)one(DQUOTE) > (DQUOTE)out(DQUOTE)(SQUOTE)"
+unbuffered_test/command="bash -c (SQUOTE)grep (DQUOTE)one two(DQUOTE) > (DQUOTE)out(DQUOTE)(SQUOTE)"
+unbuffered_fn_test/command="bash -c (SQUOTE)example_function (DQUOTE)two (DQUOTE) (DQUOTE)one(DQUOTE) > (DQUOTE)out(DQUOTE)(SQUOTE)"
+pipeline/command="bash -c (SQUOTE)grep (SQUOTE)\(SQUOTE)(SQUOTE)^t(SQUOTE)\(SQUOTE)(SQUOTE) | grep (DQUOTE)o$(DQUOTE) > (DQUOTE)out(DQUOTE)(SQUOTE)"
 
