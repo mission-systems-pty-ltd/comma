@@ -24,3 +24,5 @@ line_number/parametrized[8]="csv-paste 'line-number;size=5;index;reverse;begin=3
 line_number/multiple[0]="csv-paste line-number 'line-number;begin=4' --begin=5 | head | tr '\\n' ';'; comma_status_ok && exit 0 || exit 1"
 line_number/multiple[1]="csv-paste line-number 'line-number;size=5' --size=6 | head | tr '\\n' ';'; comma_status_ok && exit 0 || exit 1"
 line_number/multiple[2]="csv-paste line-number 'line-number;index' --size=5 | head | tr '\\n' ';'; comma_status_ok && exit 0 || exit 1"
+
+line_number/binary[0]="csv-paste 'line-number;binary=ui' | csv-from-bin ui | head -n4; comma_status_ok && exit 0 || exit 1"

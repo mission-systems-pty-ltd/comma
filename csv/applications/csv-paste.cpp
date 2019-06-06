@@ -114,7 +114,7 @@ class source
         virtual const std::string* read() = 0;
         virtual const char* read( char* buf ) = 0;
         bool binary() const { return binary_; }
-        virtual const bool is_stream() const { return false; }
+        virtual bool is_stream() const { return false; }
         const std::string& properties() const { return properties_; }
         std::size_t size() const { return value_.size(); }
         
@@ -151,7 +151,7 @@ class stream : public source
             return stream_->gcount() == int( value_.size() ) ? buf : NULL;
         }
         
-        const bool is_stream() { return true; }
+        bool is_stream() const { return true; }
         
     private:
         comma::io::istream stream_;
@@ -180,6 +180,7 @@ class line_number : public source
                 bool index;
                 bool reverse;
                 comma::uint32 begin;
+                std::string format;
                 
                 options( boost::optional< comma::uint32 > b = boost::optional< comma::uint32 >(), comma::uint32 size = 1, bool index = false, bool reverse = false )
                     : size( size )
@@ -199,6 +200,8 @@ class line_number : public source
                     auto b = map.optional< comma::uint32 >( "begin" );
                     if( !b ) { b = o.optional< comma::uint32 >( "--begin" ); }
                     begin = begin_( b );
+                    format = map.value< std::string >( "binary", "" );
+                    if( !format.empty() && format != "ui" ) { std::cerr << "csv-paste: currently only ui supported for line-number; got: '" << format << "'" << std::endl; exit( 1 ); } // quick and dirty for now
                 }
                 
             private:
@@ -210,7 +213,7 @@ class line_number : public source
         };
         
         line_number( bool is_binary, const options& options )
-            : source( is_binary ? "binary=ui" : "" )
+            : source( options.format.empty() ? ( is_binary ? "binary=ui" : "" ) : "binary=" + options.format ) // quick and dirty
             , options_( options )
             , count_( 0 )
             , value_( options_.begin )
@@ -261,11 +264,11 @@ int main( int ac, char** av )
         std::vector< std::string > unnamed = options.unnamed( "--flush,--index,--reverse", "--delimiter,-d,--begin,--size,--block-size" );
         boost::ptr_vector< source > sources;
         bool is_binary = false;
-        for( unsigned int i = 0; i < unnamed.size(); ++i ) // quick and dirty
+        for( unsigned int i = 0; i < unnamed.size(); ++i ) // quick and dirty; really lousy code duplication
         {
             if( unnamed[i].substr( 0, 6 ) == "value=" ) { if( value( unnamed[i] ).binary() ) { is_binary = true; } }
-            else if( unnamed[i] == "line-number" || unnamed[i].substr( 0, 12 ) == "line-number;" ) { continue; } // quick and dirty
-            if( stream( unnamed[i] ).binary() ) { is_binary = true; }
+            else if( unnamed[i] == "line-number" || unnamed[i].substr( 0, 12 ) == "line-number;" ) { if( line_number( is_binary, line_number::options( unnamed[i], options ) ).binary() ) { is_binary = true; } } // quick and dirty
+            else if( stream( unnamed[i] ).binary() ) { is_binary = true; }
         }
         for( unsigned int i = 0; i < unnamed.size(); ++i )
         {
