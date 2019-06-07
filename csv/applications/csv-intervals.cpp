@@ -27,7 +27,6 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author Vinny Do
 
 #include <fstream>
@@ -136,6 +135,8 @@ static void usage( bool verbose = false )
     std::cerr << "    join" << std::endl;
     std::cerr << "        options" << std::endl;
     std::cerr << "            --intervals=<filename>: file or stream name" << std::endl;
+    std::cerr << "            --matching: output matching input records, do not append the intervals" << std::endl;
+    std::cerr << "            --not-matching: output not matching input records" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    make" << std::endl;
     std::cerr << "        options" << std::endl;
@@ -506,8 +507,12 @@ struct intervals
     
     int join( std::istream& is, const std::string& first_line )
     {
+        options.assert_mutually_exclusive( "--matching,--not-matching" );
+        bool matching = options.exists( "--matching" );
+        bool not_matching = options.exists( "--not-matching" );
+        bool output_joined = !matching && !not_matching;
         comma::csv::options icsv( options );
-        if( csv.binary() != icsv.binary() ) { COMMA_THROW( comma::exception, "expected both inputs ascii or both binary; got stdin " << ( icsv.binary() ? "binary" : "ascii" ) << " while --intervals " << ( csv.binary() ? "binary" : "ascii" ) ); }
+        if( output_joined && csv.binary() != icsv.binary() ) { std::cerr << "csv-intervals: join: expected both inputs ascii or both binary; got stdin " << ( icsv.binary() ? "binary" : "ascii" ) << " while --intervals " << ( csv.binary() ? "binary" : "ascii" ) << std::endl; return 1; }
         icsv.full_xpath = false;
         comma::csv::input_stream< scalar_t< From > > istream( std::cin, icsv );
         append = true;
@@ -516,11 +521,18 @@ struct intervals
         {
             auto p = istream.read();
             if( !p ) { break; }
-            for( typename map_t::iterator it = map.begin(); it != map.end(); ++it ) // todo! quadratic complexity; how the heck to query icl map? use boost::...::query?
+            bool found = false;
+            typename map_t::iterator it;
+            for( it = map.begin(); it != map.end(); ++it ) // todo! quadratic complexity; how the heck to query icl map? use boost::...::query?
             {
                 const bound_t< bound_type >& from = it->first.lower();
                 const bound_t< bound_type >& to = it->first.upper();
-                if( ( !from.value || p->scalar >= *from.value ) && ( !to.value || p->scalar < *to.value ) )
+                found = ( !from.value || p->scalar >= *from.value ) && ( !to.value || p->scalar < *to.value );
+                if( found ) { break; }
+            }
+            if( output_joined )
+            {
+                if( found )
                 {
                     std::string joined = csv.binary() ? "" : comma::join( istream.ascii().last(), icsv.delimiter );
                     for( const auto& s: it->second )
@@ -535,8 +547,12 @@ struct intervals
                             std::cout << joined << icsv.delimiter << s << std::endl;
                         }
                     }
-                    break;
                 }
+            }
+            else if( matching == found )
+            {
+                if( icsv.binary() ) { std::cout.write( istream.binary().last(), icsv.format().size() ); }
+                else { std::cout << comma::join( istream.ascii().last(), icsv.delimiter ) << std::endl; }
             }
             if( icsv.flush ) { std::cout.flush(); }
         }
@@ -595,7 +611,7 @@ int main( int ac, char** av )
         verbose = options.exists( "--verbose,-v" );
         debug = options.exists( "--debug" );
         options.assert_mutually_exclusive( "--binary,--format" );
-        const auto& unnamed = options.unnamed( "--append,-a,--debug,--flush,--input-fields,--output-fields,--intervals-only,--limits,-l", "-.*" );
+        const auto& unnamed = options.unnamed( "--append,-a,--debug,--flush,--input-fields,--matching,--not-matching,--output-fields,--intervals-only,--limits,-l", "-.*" );
         if( unnamed.empty() ) { std::cerr << "csv-intervals: please specify operation" << std::endl; return 1; }
         std::string operation = unnamed[0];
         if( operation == "make" )

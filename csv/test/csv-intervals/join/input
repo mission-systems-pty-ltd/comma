@@ -3,3 +3,7 @@ join/ascii[1]="( echo 9 ) | csv-intervals join --intervals <( echo 0,2,a; echo 0
 join/fields[0]="( echo ,1; echo ,5 ) | csv-intervals --fields ,scalar join --intervals <( echo 0,2,a )"
 join/fields[1]="( echo ,1; echo ,5 ) | csv-intervals --fields ,scalar join --intervals <( echo a,0,2,b )';fields=,from,to'"
 join/binary[0]="( echo 9 ) | csv-to-bin ui | csv-intervals join --binary ui --intervals <( ( echo 0,10,0; echo 0,10,1; echo 5,20,2 ) | csv-to-bin 3ui )';binary=3ui' | csv-from-bin 4ui"
+join/matching[0]="( echo 1; echo 5; echo 9; echo 11 ) | csv-intervals join --intervals <( echo 0,2,a; echo 9,11,b ) --matching"
+join/matching[1]="( echo 1; echo 5; echo 9; echo 11 ) | csv-to-bin ui | csv-intervals join --intervals <( echo 0,2,a; echo 9,11,b ) --matching --binary ui | csv-from-bin ui"
+join/not_matching[0]="( echo 1; echo 5; echo 9; echo 11 ) | csv-intervals join --intervals <( echo 0,2,a; echo 9,11,b ) --not-matching"
+join/not_matching[1]="( echo 1; echo 5; echo 9; echo 11 ) | csv-to-bin ui | csv-intervals join --intervals <( echo 0,2,a; echo 9,11,b ) --not-matching --binary ui | csv-from-bin ui"
