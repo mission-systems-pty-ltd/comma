@@ -27,16 +27,12 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author vsevolod vlaskine
 
-#ifndef COMMA_APPLICATION_CONTACT_INFO_H_
-#define COMMA_APPLICATION_CONTACT_INFO_H_
+#pragma once
 
 namespace comma {
 
-static const char* contact_info = "more info: https://github.com/acfr/comma#readme";
+static const char* contact_info = "more info: https://gitlab.com/orthographic/comma#readme";
     
 } // namespace comma {
-    
-#endif // #ifndef COMMA_APPLICATION_CONTACT_INFO_H_
