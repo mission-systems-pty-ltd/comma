@@ -63,18 +63,15 @@ public:
         //sort, ugly
         std::multimap< std::size_t, std::size_t > sorted;
         std::size_t sum=0;
-        
         for(std::map< std::size_t, std::size_t >::const_iterator it=histogram_.begin(), end=histogram_.end(); it!=end; ++it )
         {
             sorted.insert( std::make_pair(it->second,it->first) );
             sum += it->second;
-        }
-        
+        }        
         for(std::multimap< std::size_t, std::size_t >::const_reverse_iterator it=sorted.rbegin(), end=sorted.rend(); it!=end; ++it )
         {
             os << it->second << "," << it->first << "," << (double)((double)(it->first)/(double)sum) << std::endl;
         }
-    
         return os;
     }
 
@@ -84,12 +81,9 @@ private:
     std::map< std::size_t, std::size_t > histogram_; //length, count
 };
 
-std::ostream& operator<<(std::ostream& os, const histogram & h)
-{
-    return h.print_sorted(os);
-}
+std::ostream& operator<<(std::ostream& os, const histogram & h) { return h.print_sorted(os); }
 
-static void usage()
+static void usage( bool )
 {
     std::cerr << std::endl;
     std::cerr << "Analyse binary data to guess message lengths in unknown binary stream: output candidate lengths, repeat counts and normalised probabilities" << std::endl;
@@ -133,33 +127,22 @@ int main( int ac, char** av )
         #ifdef WIN32
             _setmode( _fileno( stdin ), _O_BINARY );
         #endif
-
-        command_line_options options( ac, av );
-        if( ac > 1 || options.exists( "--help" ) || options.exists( "-h" ) ) { usage(); } //could just say ac > 1... but leave for future args
-
-        histogram h;
-
-        const std::size_t read_size=65535; //todo: better way?
+        command_line_options options( ac, av, usage );
+        const std::size_t read_size = 65535; // todo? better way?
         std::vector< unsigned char > data( read_size );
-        std::size_t offset=0;
-
-        //read as many bytes as available on stdin
-        while( std::cin.good() && !std::cin.eof() )
+        std::size_t offset = 0;
+        histogram h;
+        while( std::cin.good() && !std::cin.eof() ) //read as many bytes as available on stdin
         {
             int bytes_read = ::read( 0, &data[0], read_size );
             if( bytes_read <= 0 ) { break; }
-                        
-            for( int i=0; i<bytes_read; ++i )
-            {
-                h.observe(data[i],offset+i);
-            }
-            offset+=bytes_read;
+            for( int i = 0; i < bytes_read; ++i ) { h.observe( data[i], offset + i ); }
+            offset += bytes_read;
         }
-       
         std::cout << h;
         return 0;
     }
     catch( std::exception& ex ) { std::cerr << "csv-analyse: " << ex.what() << std::endl; }
     catch( ... ) { std::cerr << "csv-analyse: unknown exception" << std::endl; }
-    usage();
+    return 1;
 }
