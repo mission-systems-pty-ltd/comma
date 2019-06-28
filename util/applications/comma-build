@@ -33,6 +33,9 @@
 
 source $( type -p comma-application-util ) || { echo "$basename: cannot source 'comma-application-util'" >&2; exit 1; }
 
+function say() { echo "comma-build: $@" >&2; }
+function die() { say $@; exit 1; }
+
 function description()
 {
     cat <<eof
@@ -216,12 +219,29 @@ function sudo_make_install() { cmake "../../src/$( basename $( pwd ) )" $@ && ma
 
 function run_build_command()
 {
-    local build_dir="../../build/$1"
     local src_dir="../../src/$1"
     local command=$2
-    mkdir "$build_dir" -p || { echo "comma-build: $command: failed to create '$build_dir'" >&2 ; exit 1 ; }
-    echo "comma-build: $command: running in $build_dir: ${@:2}" >&2
-    ( cd "$build_dir" && ${@:2} )
+    if [[ -f "$src_dir/CMakeLists.txt" ]]; then
+        local build_dir="../../build/$1"
+        mkdir "$build_dir" -p || { echo "comma-build: $command: failed to create '$build_dir'" >&2 ; exit 1 ; }
+        echo "comma-build: $command: running in $build_dir: ${@:2}" >&2
+        ( cd "$build_dir" && ${@:2} )
+    elif [[ -f "$src_dir/setup.py" ]]; then # quick and dirty
+        case "$command" in
+            make_install) echo "comma-build: $command: running in $src_dir on python3 setup: ${@:2}" >&2
+                          ( cd "$src_dir" && python3 setup.py install ) 
+                          ;;
+            make_only) echo "comma-build: $command: no CMakeLists.txt in $src_dir, but found setup.py; skipped" >&2
+                       ;;
+            sudo_make_install) echo "comma-build: $command: running in $src_dir on python3 setup: ${@:2}" >&2
+                               ( cd "$src_dir" && sudo python3 setup.py install ) 
+                               ;;
+            *) die "$command: on $src_dir: do not know how to handle command for python3 installations"
+               ;;
+        esac
+    else
+        die "$command: on $src_dir: CMakeLists.txt or setup.py not found; don't know how to handle"
+    fi
 }
 
 function run_cmake()
@@ -312,13 +332,13 @@ function run_pack() # quick and dirty
         [[ ! -f $src_dir/dependencies.cmake-cache ]] || cmake_options+=( -C$src_dir/dependencies.cmake-cache )
         comma-build install ${cmake_options[@]}
         if [[ -f $src_dir/dependencies.cpack-options ]]; then
-		cpack_make_opts=$(cat $src_dir/dependencies.cpack-options )
-		# The user specified different options for packing. Re-run the make so that the Cmake files are regenerated.
-		# This is primarily done so that software can be built as a standard user, and installations that would otherwise go into system directories (eg /etc/systemd) can be redirected to /usr/local/...
-		# When the software is packed however, you'd want it to go to install location (/etc).
-		comma-build make ${cpack_make_opts}
-	fi		
-	comma-build cpack -G RPM ${@:3} || exit 1 #-D CPACK_RPM_PACKAGE_RELOCATABLE=ON || exit 1 #-D CPACK_PACKAGING_INSTALL_PREFIX=$pack_dir/rpm
+            cpack_make_opts=$(cat $src_dir/dependencies.cpack-options )
+            # The user specified different options for packing. Re-run the make so that the Cmake files are regenerated.
+            # This is primarily done so that software can be built as a standard user, and installations that would otherwise go into system directories (eg /etc/systemd) can be redirected to /usr/local/...
+            # When the software is packed however, you'd want it to go to install location (/etc).
+            comma-build make ${cpack_make_opts}
+        fi
+        comma-build cpack -G RPM ${@:3} || exit 1 #-D CPACK_RPM_PACKAGE_RELOCATABLE=ON || exit 1 #-D CPACK_PACKAGING_INSTALL_PREFIX=$pack_dir/rpm
     ) || { echo "comma-build: pack failed" >&2 ; exit 1 ; }
     cat dependencies.commits | while IFS=, read what commit ; do cp $pack_dir/build/$what/*.rpm $pack_dir/rpm ; done
     cp $pack_dir/build/$top_repository/*.rpm $pack_dir/rpm
