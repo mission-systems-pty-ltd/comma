@@ -3,7 +3,7 @@
 
 source $( type -p comma-application-util )
 
-function say() { echo "$scriptname: $@" >&2; }
+function say() { echo "name-value-apply: $@" >&2; }
 function die() { say "$@"; exit 1; }
 function bye() { say "$@"; exit 0; }
 function mangle_options() { comma-options-to-name-value "$@" | { grep '='; :; } | comma_path_value_mangle | sed 's/^/local options_/g'; comma_status_ok; }
@@ -11,8 +11,9 @@ function mangle_options() { comma-options-to-name-value "$@" | { grep '='; :; } 
 function description()
 {
     cat <<EOF
---help,-h; output instructions for using this program and exit.
---source; for each name, show the source config instead of its value.
+--help,-h; output instructions for using this program and exit
+--source; for each name, show the source config instead of its value
+--unquote-numbers,-u; unquote numbers
 EOF
 }
 
@@ -22,23 +23,23 @@ function usage()
 {
     cat >&2 <<EOF
 
-Derive a config from multiple input configs.
+derive a config from multiple input configs
 
-Usage:
-    $scriptname [<options>] <files...>
+usage
+    name-value-apply [<options>] <files...>
 
-Options:
+options
 $( description | sed 's/^/    /' )
 
-Example:
+example
     > ( echo a=5; echo b=7 ) > cfg1.pv; ( echo a=6; echo c=8 ) > cfg2.pv
 
-    > $scriptname cfg1.pv cfg2.pv
+    > name-value-apply cfg1.pv cfg2.pv
     a="6"
     b="7"
     c="8"
 
-    > $scriptname --source cfg*
+    > name-value-apply --source cfg*
     a="cfg2.pv"
     b="cfg1.pv"
     c="cfg2.pv"
@@ -51,23 +52,18 @@ function combine_files() { for ff in "${files[@]}"; do cat "$ff" | name-value-co
 
 function execute()
 {
-    local -r scriptname=$( basename "$0" )
-
     (( $( comma_options_has --bash-completion $@ ) )) && { bash_completion; exit 0; }
     (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) && usage
-
     local mangle_text ff
     local -a files
     mangle_text=$( description | mangle_options "$@"; comma_status_ok ) || die "Invalid arguments."; eval "$mangle_text"
     mangle_text="files=( $( description | comma-options-to-name-value "$@" | grep '^"' ) )"; eval "$mangle_text"; unset mangle_text
-
-    for ff in "${files[@]}"
-    do
-        { name-value-convert < "$ff" |
-            { [[ -z $options_source ]] &&  cat - || cut -d = -f1 |  sed "s~$~=\"$ff\"~g";}
-        }
-    done | name-value-convert --take-last
+    local unquote_numbers_option
+    (( !options_unquote_numbers )) || unquote_numbers_option="--unquote-numbers"
+    
+    for ff in "${files[@]}"; do
+        name-value-convert < "$ff" | { [[ -z $options_source ]] &&  cat - || cut -d = -f1 |  sed "s~$~=\"$ff\"~g"; }
+    done | name-value-convert --take-last $unquote_numbers_option
 }
 
 [[ $( basename $0 ) != "name-value-apply" ]] || execute "$@"
-
