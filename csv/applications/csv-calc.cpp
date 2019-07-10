@@ -1079,7 +1079,7 @@ struct Operation : public Operationbase
         for( std::size_t i = 0; i < input_elements_.size(); ++i )
         {
             comma::csv::format::types_enum output_type = input_elements_[i].type;
-            switch( E ) // quick and dirty, implement in operations::traits, just no time
+            switch( E ) // quick and dirty, operations::traits would be better, but likely to be optimized by compiler anyway
             {
                 case Operations::Enum::radius:
                 case Operations::Enum::diameter:
@@ -1215,7 +1215,7 @@ static void calculate( const comma::csv::options& csv, OperationsMap& operations
         {
             ( *it->second )[i].calculate();
             if( csv.binary() ) { r.append( ( *it->second )[i].buffer(), ( *it->second )[i].output_format().size() ); }
-            else { if( i > 0 ) { r += csv.delimiter; } r.append(( *it->second )[i].output_format().bin_to_csv( ( *it->second )[i].buffer(), csv.delimiter, 12 )); }
+            else { if( i > 0 ) { r += csv.delimiter; } r.append(( *it->second )[i].output_format().bin_to_csv( ( *it->second )[i].buffer(), csv.delimiter, csv.precision )); }
         }
         results[it->first] = r;
     }
@@ -1232,6 +1232,7 @@ int main( int ac, char** av )
         std::vector< std::string > unnamed = options.unnamed( "", "--binary,-b,--delimiter,-d,--format,--fields,-f,--output-fields" );
         comma::csv::options csv( options );
         csv.full_xpath = false;
+        std::cout.precision( csv.precision );
         #ifdef WIN32
         if( csv.binary() ) { _setmode( _fileno( stdin ), _O_BINARY ); _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
