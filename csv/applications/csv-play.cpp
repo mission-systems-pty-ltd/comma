@@ -122,6 +122,10 @@ static void usage( bool )
     std::cerr << "        > #in another shell, run" << std::endl;
     std::cerr << "        > socat tcp:localhost:8888 - | csv-from-bin t,2ui" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "    pause and step through output:" << std::endl;
+    std::cerr << "        echo 0 | csv-repeat --period 0.1 --yes | csv-paste - line-number \\" << std::endl;
+    std::cerr << "            | csv-time-stamp | csv-play --interactive" << std::endl;
+    std::cerr << std::endl;
     exit( 0 );
 }
 
