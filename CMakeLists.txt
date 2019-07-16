@@ -55,7 +55,7 @@ ELSE() # Probably windows; gets hardcoded patch version
 ENDIF()
 
 if( NOT CMAKE_BUILD_TYPE )
-  set( CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel." FORCE )
+  set( CMAKE_BUILD_TYPE Release CACHE STRING "options are: None Debug Release RelWithDebInfo MinSizeRel." FORCE )
 endif( NOT CMAKE_BUILD_TYPE )
 
 IF(WIN32)
