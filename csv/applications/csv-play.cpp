@@ -298,7 +298,7 @@ int main( int argc, char** argv )
         std::string to = options.value< std::string>( "--to", "" );
         bool quiet =  options.exists( "--quiet" );
         bool flush =  !options.exists( "--no-flush" );
-        std::vector< std::string > configstrings = options.unnamed("--interactive,-i,--paused,--paused-at-start,--quiet,--flush,--no-flush","--slow,--slowdown,--speed,--resolution,--binary,--fields,--clients,--from,--to");
+        std::vector< std::string > configstrings = options.unnamed( "--verbose,-v,--interactive,-i,--paused,--paused-at-start,--quiet,--flush,--no-flush","--slow,--slowdown,--speed,--resolution,--binary,--fields,--clients,--from,--to" );
         if( configstrings.empty() ) { configstrings.push_back( "-;-" ); }
         comma::csv::options csv( argc, argv );
         csv.full_xpath = false;
