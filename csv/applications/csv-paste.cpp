@@ -283,7 +283,7 @@ int main( int ac, char** av )
     {
         comma::command_line_options options( ac, av, usage );
         char delimiter = options.value( "--delimiter,-d", ',' );
-        std::vector< std::string > unnamed = options.unnamed( "--flush,--index,--reverse", "-.*" );
+        std::vector< std::string > unnamed = options.unnamed( "--flush,--index,--reverse", "--delimiter,-d,--begin,--size,--block-size" );
         boost::ptr_vector< source > sources;
         bool is_binary = false;
         for( unsigned int i = 0; i < unnamed.size(); ++i ) // quick and dirty; really lousy code duplication
