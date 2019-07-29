@@ -75,14 +75,19 @@ static void usage( bool verbose )
     std::cerr << "    --verbose,-v; more debug output" << std::endl;
     std::cerr << std::endl;
     std::cerr << "inputs" << std::endl;
-    std::cerr << "    <file> : <filename>[;size=<size>|binary=<format>]: file name or \"-\" for stdin; specify size or format, if binary" << std::endl;
+    std::cerr << "    <file> : <filename>[;<properties>]: file name or \"-\" for stdin; specify size or format, if binary" << std::endl;
+    std::cerr << "        properties" << std::endl;
+    std::cerr << "            binary=<format>: if input is binary, record binary format; or use 'size'" << std::endl;
+    std::cerr << "            block-size=<block-size>; repeat each record <block-size> times" << std::endl;
+    std::cerr << "            size=<size>; if input is binary, record size in bytes; or use 'binary'" << std::endl;
     std::cerr << "    value : value=<csv values>[;binary=<format>]; specify size or format, if binary" << std::endl;
     std::cerr << "    line-number[;<options>] : add the line number; as ui, if binary (quick and dirty, will override the file named \"line-number\")" << std::endl;
     std::cerr << "        options" << std::endl;
     std::cerr << "            --begin <index>: start line number count at <index>; default: 0" << std::endl;
+    std::cerr << "            --block-size,--size=<size>: number of records with the same line number; default: 1" << std::endl;
+    std::cerr << "                 WARNING: --size: deprecated, since it is confusing for files" << std::endl;
     std::cerr << "            --index; instead of block number output record index in the block" << std::endl;
-    std::cerr << "            --reverse; if --index, output index in descending order" << std::endl;
-    std::cerr << "            --size,--block-size <size>: number of records with the same line number; default: 1" << std::endl;
+    std::cerr << "            --reverse; if --index, output index in descending order" << std::endl;    
     std::cerr << "        examples (try them)" << std::endl;
     std::cerr << "            line number" << std::endl;
     std::cerr << "                seq 0 20 | csv-paste - line-number --begin 5 --size 3" << std::endl;
@@ -102,13 +107,14 @@ static void usage( bool verbose )
 class source
 {
     public:
-        source( const std::string& properties = "" ) : properties_( properties )
+        source( const std::string& properties = "" ) : properties_( properties ), block_count_( 0 ), buf_( nullptr )
         {
             comma::name_value::map map( properties, ';', '=' );
             format_ = comma::csv::format( map.value< std::string >( "binary", "" ) );
             unsigned int size = map.value< unsigned int >( "size", format_.size() );
             binary_ = size > 0;
             value_ = std::string( size, 0 );
+            block_size_ = map.value< unsigned int >( "block-size", 1 );
         }
         virtual ~source() {}
         virtual const std::string* read() = 0;
@@ -123,6 +129,9 @@ class source
         bool binary_;
         comma::csv::format format_;
         std::string properties_;
+        unsigned int block_size_;
+        unsigned int block_count_;
+        const char* buf_;
 };
 
 class stream : public source
@@ -136,19 +145,32 @@ class stream : public source
         
         const std::string* read()
         {
-            while( stream_->good() && !stream_->eof() )
+            if( block_count_ == block_size_ || value_.empty() )
             {
-                std::getline( *stream_, value_ );
-                if( !value_.empty() && *value_.rbegin() == '\r' ) { value_ = value_.substr( 0, value_.length() - 1 ); } // windows... sigh...
-                if( !value_.empty() ) { return &value_; }
+                block_count_ = 1;
+                while( stream_->good() && !stream_->eof() )
+                {
+                    std::getline( *stream_, value_ );
+                    if( !value_.empty() && *value_.rbegin() == '\r' ) { value_ = value_.substr( 0, value_.length() - 1 ); } // windows... sigh...
+                    if( !value_.empty() ) { return &value_; }
+                }
+                return nullptr;
             }
-            return NULL;
+            ++block_count_;
+            return &value_;
         }
 
         const char* read( char* buf )
         {
-            stream_->read( buf, value_.size() );
-            return stream_->gcount() == int( value_.size() ) ? buf : NULL;
+            if( block_count_ == block_size_ || buf_ == nullptr )
+            {
+                block_count_ = 1;
+                buf_ = buf; // quick and dirty
+                stream_->read( buf, value_.size() );
+                return stream_->gcount() == int( value_.size() ) ? buf : nullptr;
+            }
+            ++block_count_;
+            return buf_;
         }
         
         bool is_stream() const { return true; }
@@ -192,9 +214,9 @@ class line_number : public source
                 
                 options( const std::string& properties, const comma::command_line_options& o ) // quick and dirty: use visiting instead
                 {
-                    options defaults( boost::optional< comma::uint32 >(), o.value< comma::uint32 >( "--size,--block-size", 1 ), o.exists( "--index" ), o.exists( "--reverse" ) );
+                    options defaults( boost::optional< comma::uint32 >(), o.value< comma::uint32 >( "--block-size,--size", 1 ), o.exists( "--index" ), o.exists( "--reverse" ) );
                     comma::name_value::map map( properties, ';', '=' );
-                    size = map.value< comma::uint32 >( "size", defaults.size );
+                    size = map.value< comma::uint32 >( map.get().find( "block-size" ) != map.get().end() ? "block-size" : "size", defaults.size ); // quick and dirty
                     index = map.value< bool >( "index", defaults.index );
                     reverse = map.value< bool >( "reverse", defaults.reverse );
                     auto b = map.optional< comma::uint32 >( "begin" );
@@ -261,7 +283,7 @@ int main( int ac, char** av )
     {
         comma::command_line_options options( ac, av, usage );
         char delimiter = options.value( "--delimiter,-d", ',' );
-        std::vector< std::string > unnamed = options.unnamed( "--flush,--index,--reverse", "--delimiter,-d,--begin,--size,--block-size" );
+        std::vector< std::string > unnamed = options.unnamed( "--flush,--index,--reverse", "-.*" );
         boost::ptr_vector< source > sources;
         bool is_binary = false;
         for( unsigned int i = 0; i < unnamed.size(); ++i ) // quick and dirty; really lousy code duplication
@@ -304,7 +326,7 @@ int main( int ac, char** av )
                 char* p = &buffer[0];
                 for( unsigned int i = 0; i < sources.size(); p += sources[i].size(), ++i )
                 {
-                    if( sources[i].read( p ) == NULL )
+                    if( sources[i].read( p ) == nullptr )
                     {
                         if( streams == 0 ) { return 0; }
                         std::cerr << "csv-paste: unexpected end of file in " << unnamed[i] << std::endl;
@@ -325,12 +347,12 @@ int main( int ac, char** av )
                 for( unsigned int i = 0; i < sources.size(); ++i )
                 {
                     const std::string* s = sources[i].read();
-                    if( s == NULL )
+                    if( s == nullptr )
                     {
                         if( streams == 0 ) { return 0; }
                         std::cerr << "csv-paste: unexpected end of file in " << unnamed[i] << std::endl; return 1;
                     }
-                    if (sources[i].is_stream()) ++streams;
+                    if( sources[i].is_stream() ) { ++streams; }
                     if( i > 0 ) { oss << delimiter; }
                     oss << *s;
                 }
@@ -343,124 +365,3 @@ int main( int ac, char** av )
     catch( ... ) { std::cerr << "csv-paste: unknown exception" << std::endl; }
     return 1;
 }
-
-
-// int main( int ac, char** av )
-// {
-//     bool show_usage = true;
-//     try
-//     {
-//         comma::command_line_options options( ac, av );
-//         if( options.exists( "--help,-h" ) ) { usage(); }
-//         char delimiter = options.value( "--delimiter,-d", ',' );
-//         std::vector< std::string > unnamed = options.unnamed( "", "--delimiter,-d" );
-//         boost::ptr_vector< std::istream > files;
-//         std::vector< std::pair< std::istream*, std::size_t > > sources;
-//         bool binary = false;
-//         for( unsigned int i = 0; i < unnamed.size(); ++i )
-//         {
-//             std::string filename = unnamed[i];
-//             std::size_t size = 0;
-//             std::vector< std::string > v = comma::split( unnamed[i], ';' );
-//             filename = v[0];
-//             for( std::size_t j = 1; j < v.size(); ++j )
-//             {
-//                 std::vector< std::string > w = comma::split( v[j], '=' );
-//                 if( w.size() != 2 ) { COMMA_THROW( comma::exception, "expected filename and options, got \"" << unnamed[i] << "\"" ); }
-//                 if( w[0] == "binary" )
-//                 {
-//                     if( i == 0 ) { binary = true; }
-//                     else if( !binary ) { COMMA_THROW( comma::exception, unnamed[0] << " is ascii, but " << filename << " is binary" ); }
-//                     size = comma::csv::format( w[1] ).size();
-//                 }
-//                 else if( w[0] == "size" )
-//                 {
-//                     if( i == 0 ) { binary = true; }
-//                     else if( !binary ) { COMMA_THROW( comma::exception, unnamed[0] << " is ascii, but " << filename << " is binary" ); }
-//                     size = boost::lexical_cast< std::size_t >( w[1] );
-//                 }
-//             }
-//             if( binary && size == 0 ) { COMMA_THROW( comma::exception, "in binary mode, please specify size or format for \"" << filename << "\"" ); }
-//             if( filename == "-" )
-//             {
-//                 sources.push_back( std::make_pair( &std::cin, size ) );
-//             }
-//             else
-//             {
-//                 files.push_back( new std::ifstream( filename.c_str() ) );
-//                 if( !files.back().good() || files.back().eof() ) { COMMA_THROW( comma::exception, "failed to open " << unnamed[i] ); }
-//                 sources.push_back( std::make_pair( &files.back(), size ) );
-//             }
-//         }
-//         if( sources.empty() ) { usage(); }
-//         #ifdef WIN32
-//         if( binary ) { _setmode( _fileno( stdin ), _O_BINARY ); }
-//         #endif
-//         show_usage = false;
-//         if( binary )
-//         {
-//             std::size_t size = 0;
-//             for( unsigned int i = 0; i < sources.size(); ++i ) { size += sources[i].second; }
-//             while( true )
-//             {
-//                 for( unsigned int i = 0; i < sources.size(); ++i )
-//                 {
-//                     std::string s( sources[i].second, 0 );
-//                     char* buf = &s[0];
-//                     sources[i].first->read( buf, sources[i].second );
-//                     int count = sources[i].first->gcount();
-//                     if( count != 0 && (unsigned int)count != sources[i].second ) { COMMA_THROW( comma::exception, unnamed[i] << ": expected " << sources[i].second << " bytes, got " << count ); }
-//                     if( !sources[i].first->good() || sources[i].first->eof() )
-//                     {
-//                         bool ok = true;
-//                         for( unsigned int j = 0; j < sources.size() && ok; ++j )
-//                         {
-//                             if( j > i ) { sources[j].first->peek(); }
-//                             ok = !sources[j].first->good() || sources[j].first->eof();
-//                         }
-//                         if( ok ) { return 0; }
-//                         else { COMMA_THROW( comma::exception, unnamed[i] << ": unexpected end of file" ); }
-//                     }
-//                     std::cout << s;
-//                 }
-//             }
-//         }
-//         else
-//         {
-//             while( true )
-//             {
-//                 bool first = true;
-//                 for( unsigned int i = 0; i < sources.size(); ++i )
-//                 {
-//                     std::string s;
-//                     std::getline( *sources[i].first, s );
-//                     if( !sources[i].first->good() || sources[i].first->eof() )
-//                     {
-//                         bool ok = true;
-//                         for( unsigned int j = 0; j < sources.size() && ok; ++j )
-//                         {
-//                             if( j > i ) { sources[j].first->peek(); }
-//                             ok = !sources[j].first->good() || sources[j].first->eof();
-//                         }
-//                         if( ok ) { return 0; }
-//                         else { COMMA_THROW( comma::exception, unnamed[i] << ": unexpected end of file" ); }
-//                     }
-//                     if( !s.empty() && *s.rbegin() == '\r' ) { s = s.substr( 0, s.length() - 1 ); } // windows... sigh...
-//                     if( s.empty() ) { continue; }
-//                     if( !first ) { std::cout << delimiter; } else { first = false; }
-//                     std::cout << s;
-//                 }
-//                 std::cout << std::endl;
-//             }
-//         }
-//     }
-//     catch( std::exception& ex )
-//     {
-//         std::cerr << "csv-paste: " << ex.what() << std::endl;
-//     }
-//     catch( ... )
-//     {
-//         std::cerr << "csv-paste: unknown exception" << std::endl;
-//     }
-//     if( show_usage ) { usage(); }
-// }
