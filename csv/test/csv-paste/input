@@ -29,3 +29,12 @@ line_number/binary[0]="csv-paste 'line-number;binary=ui' | csv-from-bin ui | hea
 
 block_size/ascii[0]="csv-paste <( echo a; echo b )';block-size=4' <( echo 0; echo 1; echo 2; echo 3 )';block-size=2'"
 block_size/binary[0]="csv-paste <( { echo 0; echo 1; } | csv-to-bin ui )';size=4;block-size=4' <( { echo 0; echo 1; echo 2; echo 3; } | csv-to-bin ui )';size=4;block-size=2' | csv-from-bin 2ui"
+
+line_number/step[0]="csv-paste line-number --step 2 | head -n4; comma_status_ok && exit 0 || exit 1"
+line_number/step[1]="csv-paste "line-number;step=2" | head -n4; comma_status_ok && exit 0 || exit 1"
+line_number/step[2]="csv-paste "line-number;step=2" --step 3 | head -n4; comma_status_ok && exit 0 || exit 1"
+line_number/step[3]="csv-paste "line-number;block-size=5;step=2" | head; comma_status_ok && exit 0 || exit 1"
+line_number/step[4]="csv-paste "line-number;block-size=5;index;step=2" | head; comma_status_ok && exit 0 || exit 1"
+line_number/step[5]="csv-paste "line-number;block-size=5;index;reverse;step=2" | head; comma_status_ok && exit 0 || exit 1"
+line_number/step[6]="csv-paste "line-number;block-size=5;index;reverse;begin=20;step=2" | head; comma_status_ok && exit 0 || exit 1"
+line_number/step[7]="csv-paste "line-number;block-size=5;index;reverse;begin=4;step=2" | head; comma_status_ok && exit 0 || exit 1"

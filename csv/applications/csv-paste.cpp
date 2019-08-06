@@ -87,7 +87,8 @@ static void usage( bool verbose )
     std::cerr << "            --block-size,--size=<size>: number of records with the same line number; default: 1" << std::endl;
     std::cerr << "                 WARNING: --size: deprecated, since it is confusing for files" << std::endl;
     std::cerr << "            --index; instead of block number output record index in the block" << std::endl;
-    std::cerr << "            --reverse; if --index, output index in descending order" << std::endl;    
+    std::cerr << "            --reverse; if --index, output index in descending order" << std::endl;
+    std::cerr << "            --step=<value>; default=1; line number increment/decrement step" << std::endl;        
     std::cerr << "        examples (try them)" << std::endl;
     std::cerr << "            line number" << std::endl;
     std::cerr << "                seq 0 20 | csv-paste - line-number --begin 5 --size 3" << std::endl;
@@ -201,24 +202,27 @@ class line_number : public source
                 comma::uint32 size;
                 bool index;
                 bool reverse;
+                comma::uint32 step;
                 comma::uint32 begin;
                 std::string format;
                 
-                options( boost::optional< comma::uint32 > b = boost::optional< comma::uint32 >(), comma::uint32 size = 1, bool index = false, bool reverse = false )
+                options( boost::optional< comma::uint32 > b = boost::optional< comma::uint32 >(), comma::uint32 size = 1, bool index = false, bool reverse = false, unsigned int s = 1 )
                     : size( size )
                     , index( index )
                     , reverse( reverse )
+                    , step( s )
                     , begin( begin_( b ) )
                 {
                 }
                 
                 options( const std::string& properties, const comma::command_line_options& o ) // quick and dirty: use visiting instead
                 {
-                    options defaults( boost::optional< comma::uint32 >(), o.value< comma::uint32 >( "--block-size,--size", 1 ), o.exists( "--index" ), o.exists( "--reverse" ) );
+                    options defaults( boost::optional< comma::uint32 >(), o.value< comma::uint32 >( "--block-size,--size", 1 ), o.exists( "--index" ), o.exists( "--reverse" ), o.value< comma::uint32 >( "--step", 1 ) );
                     comma::name_value::map map( properties, ';', '=' );
                     size = map.value< comma::uint32 >( map.get().find( "block-size" ) != map.get().end() ? "block-size" : "size", defaults.size ); // quick and dirty
                     index = map.value< bool >( "index", defaults.index );
                     reverse = map.value< bool >( "reverse", defaults.reverse );
+                    step = map.value< comma::uint32 >( "step", defaults.step );
                     auto b = map.optional< comma::uint32 >( "begin" );
                     if( !b ) { b = o.optional< comma::uint32 >( "--begin" ); }
                     begin = begin_( b );
@@ -229,8 +233,8 @@ class line_number : public source
             private:
                 comma::uint32 begin_( const boost::optional< comma::uint32 >& b )
                 {
-                    if( index && reverse && b && ( *b + 1 ) < size ) { COMMA_THROW( comma::exception, "for --reverse --index, for --size " << size << " expected --begin not less than " << ( size - 1 ) << "; got: " << *b ); }
-                    return b ? *b : reverse ? size - 1 : 0;
+                    if( index && reverse && b && ( *b + step ) < size * step ) { COMMA_THROW( comma::exception, "for --reverse --index, for --size " << size << " expected --begin not less than " << ( size - 1 ) << "; got: " << *b ); }
+                    return b ? *b : reverse ? ( size - 1 ) * step : 0;
                 }
         };
         
@@ -264,14 +268,14 @@ class line_number : public source
         
         void update_()
         {
-            ++count_;
+            ++count_; //count_ += options_.step;
             if( count_ < options_.size )
             {
-                if( options_.index ) { value_ += options_.reverse ? -1 : 1; }
+                if( options_.index ) { value_ += options_.reverse ? -options_.step : options_.step; }
             }
             else
             {
-                value_ = options_.index ? options_.begin : ( value_ + 1 );
+                value_ = options_.index ? options_.begin : ( value_ + options_.step );
                 count_ = 0;
             }
         }
@@ -283,7 +287,7 @@ int main( int ac, char** av )
     {
         comma::command_line_options options( ac, av, usage );
         char delimiter = options.value( "--delimiter,-d", ',' );
-        std::vector< std::string > unnamed = options.unnamed( "--flush,--index,--reverse", "--delimiter,-d,--begin,--size,--block-size" );
+        std::vector< std::string > unnamed = options.unnamed( "--flush,--index,--reverse", "--delimiter,-d,--begin,--size,--step,--block-size" );
         boost::ptr_vector< source > sources;
         bool is_binary = false;
         for( unsigned int i = 0; i < unnamed.size(); ++i ) // quick and dirty; really lousy code duplication
