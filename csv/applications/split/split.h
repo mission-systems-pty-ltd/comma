@@ -30,8 +30,7 @@
 /// @author vsevolod vlaskine
 /// @author cedric wohlleber
 
-#ifndef COMMA_CSV_SPLIT_H
-#define COMMA_CSV_SPLIT_H
+#pragma once
 
 #include <fstream>
 #include <fstream>
@@ -119,23 +118,20 @@ class split
 {
     public:
         typedef applications::input< T > input;
-
         split( boost::optional< boost::posix_time::time_duration > period
              , const std::string& suffix
              , const comma::csv::options& csv
-             , bool passthrough );
-
-        void write( const char* data, unsigned int size );
-        void write( std::string line );
-
-        //to-do
+             , bool passthrough
+             , const std::string& filenames );
         split( boost::optional< boost::posix_time::time_duration > period
              , const std::string& suffix
              , const comma::csv::options& csv
              , const std::vector< std::string >& streams
-             , bool passthrough );
+             , bool passthrough
+             , const std::string& filenames );
         ~split();
-
+        void write( const char* data, unsigned int size );
+        void write( std::string line );
     private:
         std::ofstream& ofstream_by_time_();
         std::ofstream& ofstream_by_block_();
@@ -162,6 +158,7 @@ class split
         ids_type_ seen_ids_;
         bool pass_;
         bool flush_;
+        std::unique_ptr< std::ifstream > filenames_;
 
         //to-do
         bool published_on_stream( const char* data, unsigned int size );
@@ -174,5 +171,3 @@ class split
 };
 
 } } } // namespace comma { namespace csv { namespace applications {
-
-#endif // COMMA_CSV_SPLIT_H

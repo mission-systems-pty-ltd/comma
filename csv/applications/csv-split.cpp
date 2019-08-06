@@ -27,7 +27,6 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author vsevolod vlaskine
 
 #ifdef WIN32
@@ -43,17 +42,17 @@
 #include "../../csv/traits.h"
 #include "split/split.h"
 
-comma::csv::options csv;
-std::vector< std::string > streams;
-boost::optional< boost::posix_time::time_duration > duration;
-std::string suffix;
-unsigned int size = 0;
-bool passthrough;
+static comma::csv::options csv;
+static std::vector< std::string > streams;
+static boost::optional< boost::posix_time::time_duration > duration;
+static std::string suffix;
+static unsigned int size = 0;
+static bool passthrough;
+static std::string files;
 
-template < typename T >
-void run()
+template < typename T > static void run()
 {
-    comma::csv::applications::split< T > split( duration, suffix, csv, streams, passthrough );
+    comma::csv::applications::split< T > split( duration, suffix, csv, streams, passthrough, files );
     if( size == 0 )
     {
         std::string line;
@@ -87,16 +86,17 @@ int main( int argc, char** argv )
         boost::program_options::options_description description( "options" );
         description.add_options()
             ( "help,h", "display help message" )
-            ( "size,c", boost::program_options::value< unsigned int >( &size ), "packet size, only full packets will be written" )
+            ( "files", boost::program_options::value< std::string >( &files ), "if 'block' field present, list of files to save blocks; todo: --files for id field" )
+            ( "passthrough,pass", "pass data through to stdout" )
             ( "period,t", boost::program_options::value< double >( &period ), "period in seconds after which a new file is created" )
-            ( "suffix,s", boost::program_options::value< std::string >( &extension ), "filename extension; default will be csv or bin, depending whether it is ascii or binary" )
+            ( "size,c", boost::program_options::value< unsigned int >( &size ), "packet size, only full packets will be written" )
             ( "string", "id is string; default: 32-bit integer" )
-            ( "time", "id is time; default: 32-bit integer" )
-            ( "passthrough,pass", "pass data through to stdout" );
+            ( "suffix,s", boost::program_options::value< std::string >( &extension ), "filename extension; default will be csv or bin, depending whether it is ascii or binary" )
+            ( "time", "id is time; default: 32-bit integer" );
         description.add( comma::csv::program_options::description() );
         boost::program_options::variables_map vm;
         boost::program_options::store( boost::program_options::parse_command_line( argc, argv, description), vm );
-        boost::program_options::parsed_options parsed = boost::program_options::command_line_parser(argc, argv).options( description ).allow_unregistered().run();
+        boost::program_options::parsed_options parsed = boost::program_options::command_line_parser( argc, argv ).options( description ).allow_unregistered().run();
         boost::program_options::notify( vm );
         if ( vm.count( "help" ) || vm.count( "long-help" ) )
         {
@@ -154,16 +154,13 @@ int main( int argc, char** argv )
         if( csv.binary() ) { size = csv.format().size(); }
         bool id_is_string = vm.count( "string" );
         bool id_is_time = vm.count( "time" );
-        passthrough = vm.count("passthrough");
-        
+        passthrough = vm.count("passthrough");        
         if( id_is_string && id_is_time ) { std::cerr << "csv-split: either --string or --time" << std::endl; }
-        if( period > 0 ) { duration = boost::posix_time::microseconds( static_cast<unsigned int> (period * 1e6 )); }
+        if( period > 0 ) { duration = boost::posix_time::microseconds( static_cast< unsigned int >( period * 1e6 )); }
         if( extension.empty() ) { suffix = csv.binary() || size > 0 ? ".bin" : ".csv"; }
         else { suffix += "."; suffix += extension; }
-
         streams = boost::program_options::collect_unrecognized( parsed.options, boost::program_options::include_positional );
         if( !streams.empty() && ( csv.has_field( "block" ) || id_is_time ) ) { std::cerr << "publisher streams are not compatible with splitting by block or timestamp." << std::endl; return 1; }
-
         if( id_is_string ) { run< std::string >(); }
         else if( id_is_time ) { run< boost::posix_time::ptime >(); }
         else { run< comma::uint32 >(); }

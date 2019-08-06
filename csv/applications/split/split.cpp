@@ -27,7 +27,6 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author vsevolod vlaskine
 
 #ifdef WIN32
@@ -39,9 +38,10 @@
 #include <sys/resource.h>
 #endif
 
+#include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
-#include "../../../io/file_descriptor.h"
 #include "../../../base/exception.h"
+#include "../../../io/file_descriptor.h"
 #include "split.h"
 
 namespace comma { namespace csv { namespace applications {
@@ -50,7 +50,8 @@ template < typename T >
 split< T >::split( boost::optional< boost::posix_time::time_duration > period
             , const std::string& suffix
             , const comma::csv::options& csv
-            , bool pass )
+            , bool pass
+            , const std::string& filenames )
     : ofstream_( std::bind( &split< T >::ofstream_by_time_, this ) )
     , period_( period )
     , suffix_( suffix )
@@ -62,8 +63,20 @@ split< T >::split( boost::optional< boost::posix_time::time_duration > period
     if( csv.fields.empty() ) { return; }
     if( csv.binary() ) { binary_.reset( new comma::csv::binary< input >( csv ) ); }
     else { ascii_.reset( new comma::csv::ascii< input >( csv ) ); }
-    if( csv.has_field( "block" ) ) { ofstream_ = std::bind( &split< T >::ofstream_by_block_, this ); }
-    else if( csv.has_field( "id" ) ) { ofstream_ = std::bind( &split< T >::ofstream_by_id_, this ); }
+    if( csv.has_field( "block" ) )
+    {
+        ofstream_ = std::bind( &split< T >::ofstream_by_block_, this );
+        if( !filenames.empty() )
+        {
+            filenames_.reset( new std::ifstream( filenames ) );
+            if( !filenames_->is_open() ) { COMMA_THROW( comma::exception, "failed to open '" << filenames << "'" ); }
+        }
+    }
+    else
+    {
+        if( !filenames.empty() ) { COMMA_THROW( comma::exception, "--files given, but no block field specified in --fields" ); }
+        if( csv.has_field( "id" ) ) { ofstream_ = std::bind( &split< T >::ofstream_by_id_, this ); }
+    }
 }
 
 //to-do
@@ -72,46 +85,39 @@ split< T >::split( boost::optional< boost::posix_time::time_duration > period
                  , const std::string& suffix
                  , const comma::csv::options& csv
                  , const std::vector< std::string >& streams //to-do
-                 , bool pass )
-    : split( period, suffix, csv, pass )
+                 , bool pass
+                 , const std::string& filenames )
+    : split( period, suffix, csv, pass, filenames )
 {
-    if( 0 < streams.size() )
+    if( streams.empty() ) { return; }
+    auto const io_mode = csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii;
+    for( auto const& si : streams )
     {
-        auto const io_mode = csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii;
-
-        for( auto const& si : streams )
+        auto const stream_values = comma::split( si, ';' );
+        if( 2 > stream_values.size() || stream_values[ 0 ].empty() || stream_values[ 1 ].empty() ) { COMMA_THROW( comma::exception, "please specify <id> and output <stream> in format <id>;<stream>, got: " << si ); }
+        transaction t( publishers_ );
+        std::unique_ptr< comma::io::publisher > publisher( new comma::io::publisher( stream_values[1], io_mode, false, csv.flush ) );
+        if( "..." == stream_values[0] )
         {
-            auto const stream_values = comma::split( si, ';' );
-            if( 2 > stream_values.size() || stream_values[ 0 ].empty() || stream_values[ 1 ].empty() )
+            if( default_publisher_ ) { COMMA_THROW( comma::exception, "multiple output streams have the id: ..." ); }
+            default_publisher_ = std::move( publisher );
+        }
+        else
+        {
+            auto publisher_pos = t->insert( std::move( publisher ) );
+            auto const keys = comma::split( stream_values[0], ',' );
+
+            for( auto const& ki : keys )
             {
-                COMMA_THROW( comma::exception, "please specify <id> and output <stream> in format <id>;<stream>, got: " << si );
-            }
+                auto const kii = boost::lexical_cast< T >( ki );
+                if( seen_ids_.end() !=  seen_ids_.find( kii ) ) { COMMA_THROW( comma::exception, "multiple output streams have the id: " << ki ); }
+                seen_ids_.insert( kii );
 
-            transaction t( publishers_ );
-            std::unique_ptr< comma::io::publisher > publisher( new comma::io::publisher( stream_values[1], io_mode, false, csv.flush ) );
-
-            if( "..." == stream_values[0] )
-            {
-                if( default_publisher_ ) { COMMA_THROW( comma::exception, "multiple output streams have the id: ..." ); }
-                default_publisher_ = std::move( publisher );
-            }
-            else
-            {
-                auto publisher_pos = t->insert( std::move( publisher ) );
-                auto const keys = comma::split( stream_values[0], ',' );
-
-                for( auto const& ki : keys )
-                {
-                    auto const kii = boost::lexical_cast< T >( ki );
-                    if( seen_ids_.end() !=  seen_ids_.find( kii ) ) { COMMA_THROW( comma::exception, "multiple output streams have the id: " << ki ); }
-                    seen_ids_.insert( kii );
-
-                    mapped_publishers_.insert( std::make_pair( kii, publisher_pos.first->get() ) );
-                }
+                mapped_publishers_.insert( std::make_pair( kii, publisher_pos.first->get() ) );
             }
         }
-        acceptor_thread_ = std::thread( std::bind( &split< T >::accept_, std::ref( *this )));
     }
+    acceptor_thread_ = std::thread( std::bind( &split< T >::accept_, std::ref( *this )));
 }
 
 template < typename T >
@@ -208,23 +214,29 @@ std::ofstream& split< T >::ofstream_by_block_()
     if( !last_ || last_->block != current_.block )
     {
         file_.close();
-        std::string name = boost::lexical_cast< std::string >( current_.block ) + suffix_;
-        file_.open( name.c_str(), mode_ );
+        std::string filename;
+        if( filenames_ )
+        {
+            while( std::cin.good() && !is_shutdown_ )
+            {
+                std::getline( *filenames_, filename );
+                if( filename.empty() ) { continue; }
+                const auto& dirname = boost::filesystem::path( filename ).parent_path();
+                if( dirname.empty() || boost::filesystem::is_directory( dirname ) || boost::filesystem::create_directories( dirname ) ) { break; }
+                COMMA_THROW( comma::exception, "failed to create directory '" << dirname << "' for file: '" << filename << "'" );
+            }
+        }
+        if( filename.empty() ) { filename = boost::lexical_cast< std::string >( current_.block ) + suffix_; }
+        file_.open( &filename[0], mode_ );
+        if( !file_.is_open() ) { COMMA_THROW( comma::exception, "failed to open '" << filename << "'" ); }
         last_ = current_;
     }
     return file_;
 }
 
-template < typename T >
-static std::string make_filename_from_id(const T& id, std::string suffix )
-{
-    return boost::lexical_cast< std::string >( id ) + suffix;
-}
+template < typename T > static std::string make_filename_from_id( const T& id, const std::string& suffix ) { return boost::lexical_cast< std::string >( id ) + suffix; }
 
-static std::string make_filename_from_id(const boost::posix_time::ptime& id, std::string suffix )
-{
-    return boost::posix_time::to_iso_string( id ) + suffix;
-}
+static std::string make_filename_from_id( const boost::posix_time::ptime& id, const std::string& suffix ) { return boost::posix_time::to_iso_string( id ) + suffix; }
 
 template < typename T >
 std::ofstream& split< T >::ofstream_by_id_()
