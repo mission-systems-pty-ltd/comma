@@ -29,10 +29,13 @@
 
 /// @authors matthew imhoff, dewey nguyen, vsevolod vlaskine
 
+#include <algorithm>
 #include <string.h>
 #include <deque>
 #include <iostream>
 #include <map>
+#include <memory>
+#include <random>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -73,7 +76,9 @@ static void usage( bool more )
     std::cerr << "    --max: output record(s) with maximum value, same semantics as --min" << std::endl;
     std::cerr << "           --min and --max may be used together." << std::endl;
     std::cerr << "    --numeric-keys-are-floats,--floats; in ascii, if --format not present, assume that numeric fields are floating point numbers" << std::endl;
-    std::cerr << "    --order <fields>: order in which to sort fields; default is input field order" << std::endl;
+    std::cerr << "    --order=<fields>: order in which to sort fields; default is input field order" << std::endl;
+    std::cerr << "    --random: output input records in pseudo-random order" << std::endl;
+    std::cerr << "    --random-seed,--seed=[<int>]; random seed for --random" << std::endl;
     std::cerr << "    --reverse,--descending,-r: sort in reverse order" << std::endl;
     std::cerr << "    --sliding-window,--window=<size>: sort last <size> entries" << std::endl;
     std::cerr << "    --string,-s: keys are strings; a quick and dirty option to support strings" << std::endl;
@@ -577,9 +582,74 @@ int handle_operations_with_ids( const comma::command_line_options& options )
         }
         
     }
-    
     output_current_block( min_map, max_map );
-    
+    return 0;
+}
+
+static int random( const comma::command_line_options& options )
+{
+    auto seed = options.optional< int >( "--random-seed,--seed" );
+    std::default_random_engine generator = seed ? std::default_random_engine( *seed ) : std::default_random_engine();
+    std::deque< std::string > records;
+    if( csv.has_field( "block" ) )
+    {
+        comma::csv::input_stream< input_with_block > is( std::cin, csv );
+        comma::uint32 block = 0;
+        while( is.ready() || std::cin.good() )
+        {
+            const input_with_block* p = is.read();
+            if( !p || p->block != block )
+            {
+                std::uniform_int_distribution< int > distribution( 0, records.size() - 1 ); // quick and dirty
+                std::random_shuffle( records.begin(), records.end(), [&]( int ) -> int { return distribution( generator ); } ); // quick and dirty, watch performance
+                for( const auto& r: records ) { std::cout.write( &r[0], r.size() ); }
+                if( csv.flush ) { std::cout.flush(); }
+                records.clear();
+                if( p ) { block = p->block; }
+            }
+            if( !p ) { break; }
+            if( csv.binary() )
+            {
+                records.push_back( std::string() );
+                records.back().resize( csv.format().size() );
+                std::memcpy( &records.back()[0], is.binary().last(), csv.format().size() );
+            }
+            else
+            {
+                records.push_back( comma::join( is.ascii().last(), csv.delimiter ) + "\n" );
+            }
+        }
+    }
+    else
+    {
+        // todo: quick and dirty, code duplication
+        // todo: implement --sliding-window
+        if( csv.binary() )
+        {
+            std::string s( csv.format().size(), 0 );
+            while( std::cin.good() )
+            {
+                std::cin.read( &s[0], s.size() );
+                if( std::cin.gcount() == 0 ) { break; }
+                if( std::cin.gcount() != int( s.size() ) ) { std::cerr << "csv-sort: --random: expected " << s.size() << " bytes; got " << std::cin.gcount() << std::endl; return 1; }
+                records.push_back( std::string() );
+                records.back().resize( csv.format().size() );
+                std::memcpy( &records.back()[0], &s[0], csv.format().size() );
+            }
+        }
+        else
+        {
+            while( std::cin.good() )
+            {
+                std::string s;
+                std::getline( std::cin, s );
+                if( !s.empty() ) { records.push_back( s + "\n" ); }
+            }
+        }
+        std::uniform_int_distribution< int > distribution( 0, records.size() - 1 ); // quick and dirty
+        std::random_shuffle( records.begin(), records.end(), [&]( int ) -> int { return distribution( generator ); } ); // quick and dirty, watch performance
+        for( const auto& r: records ) { std::cout.write( &r[0], r.size() ); }
+    }
     return 0;
 }
 
@@ -674,11 +744,15 @@ int main( int ac, char** av )
     try
     {
         comma::command_line_options options( ac, av, usage );
-        options.assert_mutually_exclusive( "--discard-out-of-order,--discard-unsorted,--first,--min,--sliding-window,--window,--unique" );
-        options.assert_mutually_exclusive( "--discard-out-of-order,--discard-unsorted,--first,--max,--sliding-window,--window,--unique" );
+        options.assert_mutually_exclusive( "--discard-out-of-order,--discard-unsorted,--first,--min,--sliding-window,--window,--unique,--random" );
+        options.assert_mutually_exclusive( "--discard-out-of-order,--discard-unsorted,--first,--max,--sliding-window,--window,--unique,--random" );
         verbose = options.exists( "--verbose,-v" );
         csv = comma::csv::options( options );
-        return options.exists( "--first,--min,--max" ) ? handle_operations_with_ids( options ) : sort( options );
+        return   options.exists( "--first,--min,--max" )
+               ? handle_operations_with_ids( options )
+               : options.exists( "--random" )
+               ? random( options )
+               : sort( options );
     }
     catch( std::exception& ex ) { std::cerr << "csv-sort: " << ex.what() << std::endl; }
     catch( ... ) { std::cerr << "csv-sort: unknown exception" << std::endl; }
