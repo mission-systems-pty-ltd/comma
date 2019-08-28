@@ -1,5 +1,5 @@
-// This file is provided in addition to snark and is not an integral
-// part of snark library.
+// This file is provided in addition to comma and is not an integral
+// part of comma library.
 // Copyright (c) 2018 Vsevolod Vlaskine
 // All rights reserved.
 //
@@ -25,7 +25,7 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-// snark is a generic and flexible library for robotics research
+// comma is a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
 // All rights reserved.
 //
