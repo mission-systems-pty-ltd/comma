@@ -74,67 +74,23 @@
 #include "../../string/string.h"
 #include "../../visiting/traits.h"
 
-static void usage( bool more )
+static void usage( bool verbose )
 {
     std::cerr << std::endl;
-    std::cerr << "Sort a csv file using one or several keys" << std::endl;
+    std::cerr << "random operations on input stream" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "Usage: cat something.csv | csv-random [<options>]" << std::endl;
+    std::cerr << "options" << std::endl;
+    std::cerr << "    --seed=[<int>]; random seed" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "Options:" << std::endl;
-    std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
-    std::cerr << "    --discard-out-of-order,--discard-unsorted: instead of sorting, discard records out of order" << std::endl;
-    std::cerr << "    --first: first line matching given keys; first line in the block, if block field present; no sorting will be done; if sorting required, use unique instead" << std::endl;
-    std::cerr << "           fields" << std::endl;
-    std::cerr << "               id: if present, multiple id fields accepted; output first record for each set of ids in a given block; e.g. --fields=id,a,,id" << std::endl;
-    std::cerr << "               block: if present; output minimum for each contiguous block" << std::endl;
-    std::cerr << "    --min: output only record(s) with minimum value for a given field." << std::endl;
-    std::cerr << "           fields" << std::endl;
-    std::cerr << "               id: if present, multiple id fields accepted; output minimum for each set of ids in a given block; e.g. --fields=id,a,,id" << std::endl;
-    std::cerr << "               block: if present; output minimum for each contiguous block" << std::endl;
-    std::cerr << "    --max: output record(s) with maximum value, same semantics as --min" << std::endl;
-    std::cerr << "           --min and --max may be used together." << std::endl;
-    std::cerr << "    --numeric-keys-are-floats,--floats; in ascii, if --format not present, assume that numeric fields are floating point numbers" << std::endl;
-    std::cerr << "    --order=<fields>: order in which to sort fields; default is input field order" << std::endl;
-    std::cerr << "    --random: output input records in pseudo-random order" << std::endl;
-    std::cerr << "    --random-seed,--seed=[<int>]; random seed for --random" << std::endl;
-    std::cerr << "    --reverse,--descending,-r: sort in reverse order" << std::endl;
-    std::cerr << "    --sliding-window,--window=<size>: sort last <size> entries" << std::endl;
-    std::cerr << "    --string,-s: keys are strings; a quick and dirty option to support strings" << std::endl;
-    std::cerr << "                 default: double" << std::endl;
-    std::cerr << "    --unique,-u: sort input, output only the first line matching given keys; if no sorting required, use --first for better performance" << std::endl;
-    std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
+    std::cerr << "operations" << std::endl;
+    std::cerr << "    shuffle: output input records in pseudo-random order" << std::endl;
+    std::cerr << "        options" << std::endl;
+    std::cerr << "            --fields=[<fields>]; if 'block' field present shuffle each block, otherwise read whole input and then shuffle" << std::endl;
+    std::cerr << "            --sliding-window,--window=[<size>]; shuffle on sliding window of <size> records" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "examples" << std::endl;
-    std::cerr << "    sort by first field:" << std::endl;
-    std::cerr << "        echo -e \"2\\n1\\n3\" | csv-random --fields=a" << std::endl;
-    std::cerr << "    sort by second field:" << std::endl;
-    std::cerr << "        echo -e \"2,3\\n1,1\\n3,2\" | csv-random --fields=,b" << std::endl;
-    std::cerr << "    sort by second field then first field:" << std::endl;
-    std::cerr << "        echo -e \"2,3\\n3,1\\n1,1\\n2,2\\n1,3\" | csv-random --fields=a,b --order=b,a" << std::endl;
-    std::cerr << "    minimum (using maximum would be the same):" << std::endl;
-    std::cerr << "        basic use" << std::endl;
-    std::cerr << "            ( echo 1,a,2; echo 2,a,2; echo 3,a,3; ) | csv-random --min --fields=,,a" << std::endl;
-    std::cerr << "        using single id" << std::endl;
-    std::cerr << "            ( echo 1,a,2; echo 2,a,2; echo 3,b,3; ) | csv-random --min --fields=a,id" << std::endl;
-    std::cerr << "        using multiple id fields" << std::endl;
-    std::cerr << "            ( echo 1,a,1; echo 1,b,1; echo 3,b,5; echo 3,b,5; ) | csv-random --min --fields=id,a,id" << std::endl;
-    std::cerr << "        using block" << std::endl;
-    std::cerr << "            ( echo 0,a,2; echo 0,a,2; echo 0,b,3; echo 0,b,1; echo 1,c,3; echo 1,c,2; ) | csv-random --min --fields=block,,a" << std::endl;
-    std::cerr << "        using block and id" << std::endl;
-    std::cerr << "            ( echo 0,a,2; echo 0,a,2; echo 0,b,3; echo 0,b,1; echo 1,c,3; echo 1,c,2; ) | csv-random --min --fields=block,id,a" << std::endl;
-    std::cerr << "    minimum and maximum:" << std::endl;
-    std::cerr << "        basic use" << std::endl;
-    std::cerr << "            ( echo 1,a,2; echo 2,a,2; echo 3,b,3; echo 5,b,7; echo 3,b,9 ) | csv-random --max --min --fields=,,a" << std::endl;
-    std::cerr << "        using id" << std::endl;
-    std::cerr << "            ( echo 1,a,2; echo 2,a,2; echo 3,b,3; echo 5,b,7; echo 3,b,9 ) | csv-random --max --min --fields=,id,a" << std::endl;
+    std::cerr << "csv options:" << std::endl;
+    std::cerr << comma::csv::options::usage( "", verbose ) << std::endl;
     std::cerr << std::endl;
-    if( more )
-    {
-        std::cerr << std::endl;
-        std::cerr << "csv options:" << std::endl;
-        std::cerr << comma::csv::options::usage() << std::endl;
-    }
     exit( 0 );
 }
 
@@ -168,8 +124,16 @@ static int run( const comma::command_line_options& options )
 {
     std::default_random_engine generator = seed ? std::default_random_engine( *seed ) : std::default_random_engine();
     std::deque< std::string > records;
+    auto output = []( std::deque< std::string >& records )
+    { 
+        for( const auto& r: records ) { std::cout.write( &r[0], r.size() ); }
+        records.clear();
+        if( ::csv.flush ) { std::cout.flush(); }
+    };
+    auto sliding_window = options.optional< unsigned int >( "--sliding-window,--window" );
     if( ::csv.has_field( "block" ) )
     {
+        if( sliding_window ) { std::cerr << "csv-random: shuffle: expected either block field or --sliding-window; got both" << std::endl; return 1; }
         comma::csv::input_stream< input > is( std::cin, ::csv );
         comma::uint32 block = 0;
         while( is.ready() || std::cin.good() )
@@ -179,9 +143,7 @@ static int run( const comma::command_line_options& options )
             {
                 std::uniform_int_distribution< int > distribution( 0, records.size() - 1 ); // quick and dirty
                 std::random_shuffle( records.begin(), records.end(), [&]( int ) -> int { return distribution( generator ); } ); // quick and dirty, watch performance
-                for( const auto& r: records ) { std::cout.write( &r[0], r.size() ); }
-                if( ::csv.flush ) { std::cout.flush(); }
-                records.clear();
+                output( records );
                 if( p ) { block = p->block; }
             }
             if( !p ) { break; }
@@ -197,10 +159,9 @@ static int run( const comma::command_line_options& options )
             }
         }
     }
-    else
+    else // quick and dirty
     {
-        // todo: quick and dirty, code duplication
-        // todo: implement --sliding-window
+        if( sliding_window ) { std::cerr << "csv-random: shuffle: --sliding-window: todo" << std::endl; return 1; }
         if( ::csv.binary() )
         {
             std::string s( ::csv.format().size(), 0 );
@@ -225,7 +186,7 @@ static int run( const comma::command_line_options& options )
         }
         std::uniform_int_distribution< int > distribution( 0, records.size() - 1 ); // quick and dirty
         std::random_shuffle( records.begin(), records.end(), [&]( int ) -> int { return distribution( generator ); } ); // quick and dirty, watch performance
-        for( const auto& r: records ) { std::cout.write( &r[0], r.size() ); }
+        output( records );
     }
     return 0;
 }
