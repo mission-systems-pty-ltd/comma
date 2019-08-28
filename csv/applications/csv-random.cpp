@@ -84,9 +84,12 @@ static void usage( bool verbose )
     std::cerr << std::endl;
     std::cerr << "operations" << std::endl;
     std::cerr << "    shuffle: output input records in pseudo-random order" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "        usage: cat records.csv | csv-random shuffle [<options>] > shuffled.csv" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "        options" << std::endl;
     std::cerr << "            --fields=[<fields>]; if 'block' field present shuffle each block, otherwise read whole input and then shuffle" << std::endl;
-    std::cerr << "            --sliding-window,--window=[<size>]; shuffle on sliding window of <size> records" << std::endl;
+    std::cerr << "            --sliding-window,--window=[<size>]; todo: shuffle on sliding window of <size> records" << std::endl;
     std::cerr << std::endl;
     std::cerr << "csv options:" << std::endl;
     std::cerr << comma::csv::options::usage( "", verbose ) << std::endl;
