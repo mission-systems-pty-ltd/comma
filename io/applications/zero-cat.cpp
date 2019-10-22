@@ -272,7 +272,7 @@ int main(int argc, char* argv[])
                 else { socket.bind( &endpoints[i][0] ); }
             }
             // we convert to milliseconds as converting to second floors the number so 0.99 becomes 0
-            if( wait_after_connect > 0 ) { boost::this_thread::sleep(boost::posix_time::milliseconds(wait_after_connect * 1000.0)); }
+            if( wait_after_connect > 0 ) { boost::this_thread::sleep(boost::posix_time::milliseconds( static_cast< long >( wait_after_connect * 1000.0 ) ) ); }
             
             std::string buffer;
             if( binary ) { buffer.resize( size ); }
@@ -311,7 +311,7 @@ int main(int argc, char* argv[])
                 else { socket.connect( endpoints[i].c_str() ); }
             }
             socket.setsockopt( ZMQ_SUBSCRIBE, "", 0 );
-            if( wait_after_connect > 0 ) { boost::this_thread::sleep( boost::posix_time::milliseconds( wait_after_connect * 1000.0 ) ); }
+            if( wait_after_connect > 0 ) { boost::this_thread::sleep( boost::posix_time::milliseconds( static_cast< long >( wait_after_connect * 1000.0 ) ) ); }
             if( vm.count( "server" ) )
             {
                 comma::io::publisher publisher( server, comma::io::mode::binary, true, false );
