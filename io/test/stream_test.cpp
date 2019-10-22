@@ -30,6 +30,7 @@
 #include <cstdio>
 #include <fstream>
 #include <gtest/gtest.h>
+#include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/local/stream_protocol.hpp>
 #include <boost/filesystem/operations.hpp>
@@ -147,3 +148,4 @@ int main( int argc, char* argv[] )
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
+
