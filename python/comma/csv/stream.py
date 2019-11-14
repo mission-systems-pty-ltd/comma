@@ -27,6 +27,7 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from __future__ import print_function
 import numpy as np
 import sys
 import itertools
@@ -95,8 +96,8 @@ class stream(object):
                                                 self.data_extraction_fields)
         #self.write_dtype = self._write_dtype()
         #self.unrolled_write_dtype = structured_dtype( ','.join( types_of_dtype( self.write_dtype, unroll=True ) ) )
-        #print >>sys.stderr, "self.write_dtype.descr = %s" % str(self.write_dtype.descr)
-        #print >>sys.stderr, "self.unrolled_write_dtype = %s" % str(self.unrolled_write_dtype)
+        #print( "self.write_dtype.descr = %s" % str(self.write_dtype.descr), file = sys.stderr )
+        #print( "self.unrolled_write_dtype = %s" % str(self.unrolled_write_dtype), file = sys.stderr )
         self._input_array = None
         self._ascii_buffer = None
         self._strings = functools.partial(map, self.numpy_scalar_to_string)
@@ -217,7 +218,7 @@ class stream(object):
             #unrolled_array = s.view( self.unrolled_write_dtype )
             if self.tied: lines = self._tie_ascii(self.tied._ascii_buffer, unrolled_array)
             else: lines = (self._toline(scalars) for scalars in unrolled_array)
-            for line in lines: print >> self.target, line
+            for line in lines: print( line, file = self.target )
         self.target.flush()
 
     def _tie_binary(self, tied_array, array): return merge_arrays(tied_array, array)
@@ -238,7 +239,7 @@ class stream(object):
         if self.binary:
             self._input_array.tofile(self.target)
         else:
-            for line in self._ascii_buffer: print >> self.target, line
+            for line in self._ascii_buffer: print( line, file = self.target )
         self.target.flush()
 
     def _dump_with_mask(self, mask):
@@ -257,7 +258,7 @@ class stream(object):
             self._input_array[mask].tofile(self.target)
         else:
             for line, allowed in itertools.izip(self._ascii_buffer, mask):
-                if allowed: print >> self.target, line
+                if allowed: print( line, file = self.target )
         self.target.flush()
 
     def _warn(self, msg, verbose=True):

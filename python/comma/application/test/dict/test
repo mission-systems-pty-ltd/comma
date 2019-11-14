@@ -11,6 +11,7 @@ function main()
     local value_type
     value_type=${input_value_type:+"value_type=$input_value_type, "}
     python -c "
+from __future__ import print_function
 import comma.application
 import argparse
 
@@ -23,7 +24,7 @@ for k, v in args.dict.iteritems():
             return '\"%s\"' % v
         else:
             return v
-    print '%s=%s' % ( k, quote_if_string( v ) )
+    print( '%s=%s' % ( k, quote_if_string( v ) ) )
 " $input_args
 }
 

@@ -27,6 +27,7 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from __future__ import print_function
 import sys
 import os
 import argparse
@@ -253,7 +254,7 @@ def get_args():
         parser.print_help()
         parser.exit(0)
     if args.fields is None or args.fields == "": sys.exit( "csv-eval: please specify --fields" )
-    if args.init_values == '' and args.verbose: print >>sys.stderr, "csv-eval: --init currently reads one record at a time, which may be slow"
+    if args.init_values == '' and args.verbose: print( "csv-eval: --init currently reads one record at a time, which may be slow", file = sys.stderr )
     return args
 
 def ingest_deprecated_options(args):
@@ -419,7 +420,7 @@ def prepare_options(args):
         args.format = comma.csv.format.guess_format(args.first_line)
         args.binary = False
         if args.verbose:
-            print >> sys.stderr, "{}: guessed format: {}".format(__name__, args.format)
+            print( "{}: guessed format: {}".format(__name__, args.format), file = sys.stderr )
     if args.select or args.exit_if:
         return
     var_names = assignment_variable_names(args.expressions)
@@ -496,20 +497,20 @@ class stream(object):
     def print_info(self, file=sys.stderr):
         fields = ','.join(self.input_t.nondefault_fields)
         format = self.input_t.format
-        print >> file, "expressions: '{}'".format(self.args.expressions)
-        print >> file, "select: '{}'".format(self.args.select)
-        print >> file, "exit_if: '{}'".format(self.args.exit_if)
-        print >> file, "default values: '{}'".format(self.args.default_values)
-        print >> file, "input fields: '{}'".format(fields)
-        print >> file, "input format: '{}'".format(format)
+        print( "expressions: '{}'".format(self.args.expressions), file = file )
+        print( "select: '{}'".format(self.args.select), file = file )
+        print( "exit_if: '{}'".format(self.args.exit_if), file = file )
+        print( "default values: '{}'".format(self.args.default_values), file = file )
+        print( "input fields: '{}'".format(fields), file = file )
+        print( "input format: '{}'".format(format), file = file )
         if self.args.select or self.args.exit_if:
             return
         update_fields = ','.join(self.update_t.fields) if self.args.update_fields else ''
         output_fields = ','.join(self.output_t.fields) if self.args.output_fields else ''
         output_format = self.output_t.format if self.args.output_fields else ''
-        print >> file, "update fields: '{}'".format(update_fields)
-        print >> file, "output fields: '{}'".format(output_fields)
-        print >> file, "output format: '{}'".format(output_format)
+        print( "update fields: '{}'".format(update_fields), file = file )
+        print( "output fields: '{}'".format(output_fields), file = file )
+        print( "output format: '{}'".format(output_format), file = file )
 
 
 def check_fields(fields, allow_numpy_names=True):
@@ -598,7 +599,7 @@ def exit_if(stream):
             if mask:
                 if not stream.args.with_error: sys.exit()
                 name = os.path.basename(sys.argv[0])
-                print >> sys.stderr, "{} error: {}".format(name, stream.args.with_error)
+                print( "{} error: {}".format(name, stream.args.with_error), file = sys.stderr )
                 sys.exit(1)
             stream.input.dump()
         input = stream.input.read()
@@ -618,7 +619,7 @@ def main():
             evaluate(stream(args))
     except csv_eval_error as e:
         name = os.path.basename(sys.argv[0])
-        print >> sys.stderr, "{} error: {}".format(name, e)
+        print( "{} error: {}".format(name, e), file = sys.stderr )
         sys.exit(1)
     except StandardError as e:
         import traceback

@@ -28,6 +28,7 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import absolute_import
+from __future__ import print_function
 import signal
 import sys
 import os
@@ -42,7 +43,7 @@ class is_shutdown(object):
 
     def switch_on( self, signum, frame ):
         self.state = True
-        if self.verbose: print >> sys.stderr, os.path.basename(sys.argv[0]), "caught signal:", signum
+        if self.verbose: print( os.path.basename(sys.argv[0]), "caught signal:", signum, file = sys.stderr )
 
     def __nonzero__( self ): return self.state
 
