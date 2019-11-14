@@ -5,6 +5,7 @@ source $( which comma-application-util )
 function process_records
 {
     python -c "$( cat <<END
+from __future__ import print_function
 import comma
 import numpy
 
@@ -17,7 +18,7 @@ try:
     for r in record_stream.iter( size=-1 ):
         pass
 except ValueError:
-    print "exception=ValueError"
+    print( "exception=ValueError" )
 END
 )"
 }
