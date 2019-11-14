@@ -1,3 +1,4 @@
+from __future__ import print_function
 import unittest
 import numpy as np
 from comma.numpy import *
@@ -177,34 +178,34 @@ class test_structured_dtype(unittest.TestCase):
             self.assertEqual( len( functions.types_of_dtype( ndtype2 ) ), 5 )  # shall be 4
         except ValueError:
             import sys
-            print >>sys.stderr
-            print >>sys.stderr, "ATTENTION: test_structure_out_of_order failed due to the version of numpy on this computer"
-            print >>sys.stderr, "           your applications using comma.csv will mostly work; sometimes they will fail"
-            print >>sys.stderr, "           early (meaning you will know straight away) until types_of_dtype is rewritten"
-            print >>sys.stderr, "           See todo comment in python/comma/numpy/functions.py"
-            print >>sys.stderr
-            for s in sys.exc_info(): print >>sys.stderr, "           " + str( s )
-            print >>sys.stderr
+            print( file = sys.stderr )
+            print( "ATTENTION: test_structure_out_of_order failed due to the version of numpy on this computer", file = sys.stderr )
+            print( "           your applications using comma.csv will mostly work; sometimes they will fail", file = sys.stderr )
+            print( "           early (meaning you will know straight away) until types_of_dtype is rewritten", file = sys.stderr )
+            print( "           See todo comment in python/comma/numpy/functions.py", file = sys.stderr )
+            print( file = sys.stderr )
+            for s in sys.exc_info(): print( "           " + str( s ), file = sys.stderr )
+            print( file = sys.stderr )
 
         if False:
             import sys
             self.assertEqual( sorted( ndtype1.descr ), sorted( ndtype2.descr ) )
             self.assertEqual( sorted( functions.types_of_dtype( ndtype1 ) ), sorted( functions.types_of_dtype( ndtype2 ) ) )
 
-            print >>sys.stderr, "observe the differences:"
+            print( "observe the differences:", file = sys.stderr )
 
-            print >>sys.stderr, "ndtype1: ", ndtype1
-            print >>sys.stderr, "ndtype2: ", ndtype2
+            print( "ndtype1: " + str( ndtype1 ), file = sys.stderr )
+            print( "ndtype2: " + str( ndtype2 ), file = sys.stderr )
 
-            print >>sys.stderr, "ndtype1.fields: ", ndtype1.fields
-            print >>sys.stderr, "ndtype2.fields: ", ndtype2.fields
-            print >>sys.stderr, "fields identical: ", sorted_fields1 == sorted_fields2
+            print( "ndtype1.fields: " + str( ndtype1.fields ), file = sys.stderr )
+            print( "ndtype2.fields: " + str( ndtype2.fields ), file = sys.stderr )
+            print( "fields identical: " + str( sorted_fields1 == sorted_fields2 ), file = sys.stderr )
 
-            print >>sys.stderr, "ndtype1.descr: ", ndtype1.descr
-            print >>sys.stderr, "ndtype2.descr: ", ndtype2.descr
+            print( "ndtype1.descr: " + str( ndtype1.descr ), file = sys.stderr )
+            print( "ndtype2.descr: " + str( ndtype2.descr ), file = sys.stderr )
 
-            print >>sys.stderr, "types_of_dtype( ndtype1 ): ", comma.numpy.functions.types_of_dtype( ndtype1 )
-            print >>sys.stderr, "types_of_dtype( ndtype2 ): ", comma.numpy.functions.types_of_dtype( ndtype2 )
+            print( "types_of_dtype( ndtype1 ): " + str( comma.numpy.functions.types_of_dtype( ndtype1 ) ), file = sys.stderr )
+            print( "types_of_dtype( ndtype2 ): " + str( comma.numpy.functions.types_of_dtype( ndtype2 ) ), file = sys.stderr )
 
 
 if __name__ == '__main__':

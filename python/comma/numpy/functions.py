@@ -28,6 +28,7 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import absolute_import
+from __future__ import print_function
 import numpy as np
 import operator
 import re
@@ -114,14 +115,14 @@ def types_of_dtype(dtype, unroll=False):
         return tuple(types)
     except ValueError:
         import sys
-        print >>sys.stderr
-        print >>sys.stderr, "ATTENTION: types_of_dtype failed due to the version of numpy on this computer"
-        print >>sys.stderr, "           your applications using comma.csv will mostly work; sometimes they will fail"
-        print >>sys.stderr, "           early (meaning you will know straight away) until types_of_dtype is rewritten"
-        print >>sys.stderr, "           See todo comment in python/comma/numpy/functions.py"
-        print >>sys.stderr
-        for s in sys.exc_info(): print >>sys.stderr, "           " + str( s )
-        print >>sys.stderr
+        print( file = sys.stderr )
+        print( "ATTENTION: types_of_dtype failed due to the version of numpy on this computer", file = sys.stderr )
+        print( "           your applications using comma.csv will mostly work; sometimes they will fail", file = sys.stderr )
+        print( "           early (meaning you will know straight away) until types_of_dtype is rewritten", file = sys.stderr )
+        print( "           See todo comment in python/comma/numpy/functions.py", file = sys.stderr )
+        print( file = sys.stderr )
+        for s in sys.exc_info(): print( "           " + str( s ), file = sys.stderr )
+        print( file = sys.stderr )
         raise
 
 def structured_dtype(format_or_type):
@@ -140,8 +141,7 @@ def structured_dtype(format_or_type):
     >>> np.dtype('f8').names
     """
     dtype = np.dtype(format_or_type)
-    if len(dtype) != 0:
-        return dtype
+    if len(dtype) != 0: return dtype
     return np.dtype([('', format_or_type)])
 
 
