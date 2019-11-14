@@ -43,7 +43,7 @@
 static const char *exec_name = "";
 static std::string kwd_expect = "expect";
 
-void usage()
+void usage(bool)
 {
     std::cerr << "Usage: " << exec_name << " [-h|--help] [-a|--assign] [-t|--test] [-o|--output-variables=<file>] [-d|--demangle] [<input_file>]\n"
 "\n"
@@ -133,6 +133,7 @@ void usage()
 "    rules. Normally all variables that are assigned any value in the rules are output, but this can be\n"
 "    restricted to the variables listed in a file (one per line) using --output-variables.\n"
 "\n";
+exit( 0 );
 }
 
 // command line options
@@ -957,22 +958,22 @@ void process_test(std::vector<Token> &tokens, const std::string &original_line,
 
             std::cout
                 << spaces(leading_spaces)
-                << "    print '" << i->first << "/expected=" << quote(expr_str, '"') << "'\n"
+                << "    print( '" << i->first << "/expected=" << quote(expr_str, '"') << "' )\n"
                 << spaces(leading_spaces)
                 << "    sys.stdout.write('" << i->first << "/actual=\"')\n"
                 << spaces(leading_spaces)
-                << "    if __builtin__.type(" << i->second << ") == __builtin__.type({}): print dict_str(" << i->second << ")+'\"'\n"
+                << "    if __builtin__.type(" << i->second << ") == __builtin__.type({}): print( dict_str(" << i->second << ")+'\"' )\n"
                 << spaces(leading_spaces)
                 // use a Python trick to force repr() to use double quotes instead of single
                 // (for an explanation, see: http://www.gossamer-threads.com/lists/python/python/157285
                 // -- search that page for "Python delimits a string it by single quotes preferably")
-                << "    else: print repr(\"'\\0\"+str(" << i->second << "))[6:]\n";
+                << "    else: print( repr(\"'\\0\"+str(" << i->second << "))[6:] )\n";
         }
     }
     else
     {
         std::cout << spaces(leading_spaces)
-            << "    print 'false=" << quote(input_line, '\"') << "'\n";
+            << "    print( 'false=" << quote(input_line, '\"') << "' )\n";
     }
 }
 
@@ -1023,8 +1024,8 @@ void print_header()
         << "    res_val = math.sin(lat_delta / 2.0) * math.sin(lat_delta / 2.0) + math.cos(phi1) * math.cos(phi2) * math.sin(lon_delta / 2.0) * math.sin(lon_delta / 2.0)\n"
         << "    return 6366.70702 * 2.0 * math.atan2(math.sqrt(res_val), math.sqrt(1.0 - res_val))\n"
         << "def sphere_distance_nm(lat1, lon1, lat2, lon2): return km_to_nm(sphere_distance_km(lat1, lon1, lat2, lon2))\n"
-        << "def err_expr_not_bool(): print >> sys.stderr, 'File \"?\", line ' + str(inspect.currentframe().f_back.f_lineno) + '\\nTypeError: expected a true or false expression'\n"
-        << "def err_var_is_obj(v_name): print >> sys.stderr, 'TypeError: variable \"' + v_name + '\" is used in an expression but is an object (example: \"a/b = 3; a < 0\")'\n"
+        << "def err_expr_not_bool(): print( 'File \"?\", line ' + str(inspect.currentframe().f_back.f_lineno) + '\\nTypeError: expected a true or false expression', file = sys.stderr )\n"
+        << "def err_var_is_obj(v_name): print( 'TypeError: variable \"' + v_name + '\" is used in an expression but is an object (example: \"a/b = 3; a < 0\")', file = sys.stderr )\n"
         << "def dict_str(d): return \"<array of size \" + str(len(d.keys())) + \">\"\n";
         // note: err_expr_not_bool() imitates standard Python error printing:
         // 'File "name", line n' on one line, followed by the error message
@@ -1039,7 +1040,7 @@ void print_assigned_variables(const Varmap &assigned_vars)
     {
         // i->first is the demangled (original) name, i->second is the mangled name
         // (repr() puts single quotes around strings; replace with double quotes)
-        std::cout << "print '" << i->first << "='+repr(" << i->second << ").replace(\"'\", '\"')\n";
+        std::cout << "print( '" << i->first << "='+repr(" << i->second << ").replace(\"'\", '\"') )\n";
     }
 }
 
@@ -1123,49 +1124,32 @@ void process(const std::string &filename, const Options &opt, const std::set<std
 void read_restrict_vars(const std::string &filename, std::set<std::string> &restrict_vars)
 {
     std::ifstream file(filename.c_str());
-
-    if (!file)
-    {
-        std::cerr << exec_name << ": cannot open " << filename << '\n';
-        exit(1);
-    }
-
+    if (!file.is_open()) { std::cerr << exec_name << ": cannot open " << filename << '\n'; exit(1); }
     std::string line;
     while (std::getline(file, line))
     {
         std::string var_name = trim_spaces(line);
         if (!var_name.empty()) { restrict_vars.insert(mangle_id(var_name)); }
     }
-
-    if (restrict_vars.size() == 0)
-    {
-        std::cerr << exec_name << ": empty --output-variables file: " << filename << '\n';
-        exit(1);
-    }
+    if(restrict_vars.size() == 0) { std::cerr << exec_name << ": empty --output-variables file: " << filename << '\n'; exit(1); }
 }
 
 int main(int argc, char* argv[])
 {
     exec_name = argv[0];
-    comma::command_line_options options(argc, argv);
-    if (options.exists("-h,--help")) { usage(); return 0; }
-
-    // get flags
+    comma::command_line_options options(argc, argv, usage);
     Options opt;
     opt.assign = options.exists("-a,--assign");
     opt.test = options.exists("-t,--test");
     opt.restrict_vars = options.exists("-o,--output-variables");
     opt.command = !(opt.assign || opt.test);
     opt.demangle = options.exists("-d,--demangle");
-
     if (opt.test)
     {
         if (opt.assign) { std::cerr << exec_name << ": cannot have --assign and --test\n"; exit(1); }
         if (opt.restrict_vars) { std::cerr << exec_name << ": cannot have --output-variables and --test\n"; exit(1); }
     }
-
-    if (opt.demangle && (opt.assign || opt.test))
-    { std::cerr << exec_name << ": cannot use --demangle with --assign or --test\n"; exit(1); }
+    if (opt.demangle && (opt.assign || opt.test)) { std::cerr << exec_name << ": cannot use --demangle with --assign or --test\n"; exit(1); }
 
     // get unnamed options
     const char *valueless_options = "-a,--assign,-t,--test,-d,--demangle";
@@ -1173,21 +1157,19 @@ int main(int argc, char* argv[])
     std::vector<std::string> unnamed = options.unnamed(valueless_options, options_with_values);
     std::set<std::string> restrict_vars;
     std::string filename;
-
     for (size_t i = 0;i < unnamed.size();++i)
     {
         if (unnamed[i][0] == '-') { std::cerr << exec_name << ": unknown option \"" << unnamed[i] << "\"\n"; exit(1); }
         else if (filename.empty()) { filename = unnamed[i]; }
         else { std::cerr << exec_name << ": unexpected argument \"" << unnamed[i] << "\"\n"; exit(1); }
     }
-
+    
     if (opt.restrict_vars)
     {
         std::string restrict_filename = options.value<std::string> ("-o,--output-variables");
         if (restrict_filename.empty()) { std::cerr << exec_name << ": expected filename for --output-variables\n"; exit(1); }
         read_restrict_vars(restrict_filename, restrict_vars);
     }
-
     if (!opt.assign && !opt.demangle) { print_header(); }
     process(filename, opt, restrict_vars);
     return 0;

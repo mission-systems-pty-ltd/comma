@@ -191,7 +191,8 @@ else name-value-eval-preparse --assign > $tmp_vars; fi
 preparse_options=$output_vars_option
 if (( test_option )); then preparse_options+=" --test"; fi
 
-( cat "$tmp_vars";
+( echo "from __future__ import print_function" # uber quick and dirty
+  cat "$tmp_vars";
   if [[ -n "$input" ]]; then name-value-eval-preparse $preparse_options "$input"
   else name-value-eval-preparse $preparse_options; fi ) > $python_input
   
