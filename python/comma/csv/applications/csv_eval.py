@@ -561,8 +561,8 @@ def evaluate(stream):
                 size = input.size
                 if stream.args.update_fields: update = stream.update_t(size)
                 if stream.args.output_fields: output = stream.output_t(size)
-                exec init_code in env, {'_input': input, '_update': update, '_output': output}
-            exec code in env, {'_input': input, '_update': update, '_output': output}
+                exec( init_code, env, {'_input': input, '_update': update, '_output': output} )
+            exec( code, env, {'_input': input, '_update': update, '_output': output} )
             if stream.args.update_fields: update_buffer(stream.input, update)
             if stream.args.output_fields: stream.output.write(output)
             else: stream.input.dump()
@@ -572,7 +572,7 @@ def evaluate(stream):
 def select(stream):
     input = None
     env = restricted_numpy_env()
-    exec stream.args.default_values in env
+    exec( stream.args.default_values, env )
     fields = stream.input.fields
     code = compile(stream.args.select, '<string>', 'eval')
     is_shutdown = comma.signal.is_shutdown()
@@ -588,7 +588,7 @@ def select(stream):
 def exit_if(stream):
     input = None
     env = restricted_numpy_env()
-    exec stream.args.default_values in env
+    exec( stream.args.default_values, env )
     fields = stream.input.fields
     code = compile(stream.args.exit_if, '<string>', 'eval')
     is_shutdown = comma.signal.is_shutdown()
