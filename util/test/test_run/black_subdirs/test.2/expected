@@ -1,5 +1,5 @@
 #python
 
 expect len(expected) == 9
-expect locals().has_key('output') == False
-expect locals().has_key('stdout_log') == False
+expect ( 'output' in locals() ) == False
+expect ( 'stdout_log' in locals() ) == False

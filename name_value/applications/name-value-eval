@@ -197,6 +197,9 @@ if (( test_option )); then preparse_options+=" --test"; fi
   else name-value-eval-preparse $preparse_options; fi ) > $python_input
   
 if (( debug )); then cat $python_input | sed 's/^/debug: /g' > /dev/tty; fi
+
+#cat "$python_input" > ./python_input
+
 $python_cmd $python_input 2> $err > $out
 
 exit_code=0

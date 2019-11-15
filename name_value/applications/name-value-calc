@@ -156,7 +156,10 @@ function logical_op()
 function python_converter()
 {
     # todo? python2 -c "import operator...
-    python -c "import operator
+    python -c "
+from __future__ import division
+from __future__ import print_function
+import operator
 from sys import stdin
 filesep = '$file_separator'
 what = '$operation'
@@ -174,11 +177,12 @@ operands = {
              '==' : operator.eq,
              '<>' : operator.ne,
              '!=' : operator.ne,
-             '/'  : operator.div,
+             '/'  : operator.truediv,
+             '//' : operator.floordiv,
              '*'  : operator.mul,
            }
 
-arithmetic = [ '+', '-', '/', '*' ]
+arithmetic = [ '+', '-', '/', '//', '*' ]
 
 names = {}
 ordered_names = []
@@ -216,7 +220,7 @@ while True:
             names[n] = ( False, v )
             ordered_names.append( n )
     else:
-        if names.has_key( n ):
+        if n in names:
             try:
                 names[n] = ( True, op(names[n][1], v) )
             except TypeError:
@@ -225,7 +229,7 @@ while True:
 
 for n in ordered_names:
     v = names[n]
-    print '%s=\"%s\"' % ( n, str(output(v[0], v[1], logical)) )
+    print( '%s=\"%s\"' % ( n, str(output(v[0], v[1], logical)) ) )
 "
 }
 
@@ -249,31 +253,32 @@ debug=1
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        -h|--help)               usage 0;;
-        --add)                   operation="+";;
-        --sub|--subtract)        operation="-";;
-        --mul|--mult|--multiply) operation="*";;
-        --div|--divide)          operation="/";;
-        --less)                  operation="<";;
-        --less-or-equal)         operation="<=";;
-        --more)                  operation=">";;
-        --more-or-equal)         operation=">=";;
-        --equal)                 operation="==";;
-        --non-equal)             operation="!=";;
-        --not-equal)             operation="!=";;
-        --json)                  json_format=1;;
-        --strict)                strict=1;;
-        --detailed)              detailed=1;;
-        --debug)                 debug=1;;
-        --no-debug)              debug=0;;
-        --exclude)               shift; if [[ $# == 0 ]] ; then echo "$name: --exclude lack argument" >&2; exit 1; fi; excluded+=( "$1" );;
-        -*)                      echo "$name: unrecognized option '$1'" >&2; exit 1;;
-        *)                       input_files+=( "$1" );;
+        -h|--help)                usage 0;;
+        --add)                    operation="+";;
+        --sub|--subtract)         operation="-";;
+        --mul|--mult|--multiply)  operation="*";;
+        --div|--divide|--truediv) operation="/";;
+        --floordiv)               operation="//";;
+        --less)                   operation="<";;
+        --less-or-equal)          operation="<=";;
+        --more)                   operation=">";;
+        --more-or-equal)          operation=">=";;
+        --equal)                  operation="==";;
+        --non-equal)              operation="!=";;
+        --not-equal)              operation="!=";;
+        --json)                   json_format=1;;
+        --strict)                 strict=1;;
+        --detailed)               detailed=1;;
+        --debug)                  debug=1;;
+        --no-debug)               debug=0;;
+        --exclude)                shift; if [[ $# == 0 ]] ; then echo "$name: --exclude lack argument" >&2; exit 1; fi; excluded+=( "$1" );;
+        -*)                       echo "$name: unrecognized option '$1'" >&2; exit 1;;
+        *)                        input_files+=( "$1" );;
     esac
     shift
 done
 
-binary_operands=( "-" "/" "<" "<=" ">" ">=" "==" "!=" )
+binary_operands=( "-" "/" "//" "<" "<=" ">" ">=" "==" "!=" )
 logical_operands=( "<" "<=" ">" ">=" "==" "!=" )
 
 if [[ ${#input_files[@]} == 0 ]]; then simple_usage 1; fi
