@@ -32,6 +32,7 @@ from __future__ import print_function
 import numpy as np
 import operator
 import re
+from functools import reduce
 
 
 def merge_arrays(first, second):

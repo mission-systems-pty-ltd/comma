@@ -162,14 +162,14 @@ class test_structured_dtype(unittest.TestCase):
             itemsize = 43
 
             ndtype1 = np.dtype( dict( names=names1, formats=formats1, offsets=offsets1, itemsize=itemsize ) )
-            sorted_fields1 = sorted( list( ndtype1.fields.iteritems() ), key = lambda t: t[1] )
+            sorted_fields1 = sorted( list( ndtype1.fields.items() ), key = lambda t: t[1] )
 
             names2 = ['a3', 'word', 'a2', 'byte' ]
             formats2 = [np.dtype(('<f8', (3,))), np.dtype('uint16'), np.dtype(('<f8', (2,))), np.dtype('uint8') ]
             offsets2 = [2, 0, 27, 26 ]
 
             ndtype2 = np.dtype( dict( names=names2, formats=formats2, offsets=offsets2, itemsize=itemsize ) )
-            sorted_fields2 = sorted( list( ndtype2.fields.iteritems() ), key = lambda t: t[1] )
+            sorted_fields2 = sorted( list( ndtype2.fields.items() ), key = lambda t: t[1] )
 
             self.assertEqual( sorted_fields1, sorted_fields2 )
             self.assertEqual( len( ndtype1.descr ), 4 )
