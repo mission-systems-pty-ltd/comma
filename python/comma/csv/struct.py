@@ -107,7 +107,7 @@ class struct(object):
 
     def _assign( self, data, fields_map, convert ):
         functors = {}
-        for k, v in fields_map.iteritems():
+        for k, v in fields_map.items():
             if len( v ) > 0:
                 functors[k] = self._assign( getattr( data, k ), v, convert )
             else:
@@ -115,7 +115,7 @@ class struct(object):
                     setattr( data, key, value if convert is None else convert( value ) )
                 functors[k] = functor
         def apply_functors( record ):
-            for k, f in functors.iteritems(): f( record[k] )
+            for k, f in functors.items(): f( record[k] )
         return apply_functors
     
     def _nondefault_fields(self):
@@ -172,7 +172,7 @@ class struct(object):
                 continue
             fields_of_type = [name + '/' + field for field in type.fields]
             shorthand[name] = tuple(fields_of_type)
-            for subname, subfields in type.shorthand.iteritems():
+            for subname, subfields in type.shorthand.items():
                 xpath = name + '/' + subname
                 shorthand[xpath] = tuple(name + '/' + field for field in subfields)
         return shorthand

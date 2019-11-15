@@ -184,7 +184,7 @@ class stream(object):
         missing = np.zeros(1, dtype=self.missing_dtype)
         if self.default_values:
             dtype_name_of = dict(zip(self.missing_fields, self.missing_dtype.names))
-            for field, value in self.default_values.iteritems():
+            for field, value in self.default_values.items():
                 name = dtype_name_of[field]
                 if self.missing_dtype[name] == csv_time.DTYPE:
                     try: missing[name] = csv_time.to_numpy(value)
