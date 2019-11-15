@@ -1,5 +1,7 @@
 #python
 
+from functools import reduce
+
 # iterate through a path of attributes: "obj/data/member/value"
 def deepgetattr(obj, attr):
     """Recurses through an attribute chain to get the ultimate value."""
