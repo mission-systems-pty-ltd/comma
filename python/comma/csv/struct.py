@@ -87,7 +87,7 @@ class struct(object):
         >>> outer.expand_shorthand('in')
         ('in/i', 'in/j')
         """
-        if isinstance(compressed_fields, basestring):
+        if isinstance(compressed_fields, str): #if isinstance(compressed_fields, basestring):
             compressed_fields = compressed_fields.split(',')
         expand = self.shorthand.get
         field_tuples = map(lambda name: expand(name) or (name,), compressed_fields)
@@ -123,7 +123,7 @@ class struct(object):
         return tuple(map(lambda f: '' if f.startswith(default_name) else f, self.fields))
 
     def _fill_blanks(self, fields):
-        if isinstance(fields, basestring):
+        if isinstance(fields, str): # if isinstance(fields, basestring):
             fields = fields.split(',')
         ntypes = len(self.concise_types)
         if len(fields) > ntypes:
