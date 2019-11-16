@@ -334,7 +334,7 @@ def format_without_blanks(format, fields=[], unnamed_fields=True):
         if len(maybe_types) > len(fields):
             msg = "format '{}' is longer than fields '{}'".format(format, ','.join(fields))
             raise ValueError(msg)
-    maybe_typed_fields = itertools.izip_longest(maybe_types, fields)
+    maybe_typed_fields = itertools.zip_longest(maybe_types, fields) if sys.version_info.major > 2 else itertools.izip_longest(maybe_types, fields) # uber quick and dirty
     types = [comma_type(maybe_type, field) for maybe_type, field in maybe_typed_fields]
     return ','.join(types)
 
@@ -621,7 +621,7 @@ def main():
         name = os.path.basename(sys.argv[0])
         print( "{} error: {}".format(name, e), file = sys.stderr )
         sys.exit(1)
-    except StandardError as e:
+    except Exception as e: #except StandardError as e:
         import traceback
         traceback.print_exc(file=sys.stderr)
         sys.exit(1)

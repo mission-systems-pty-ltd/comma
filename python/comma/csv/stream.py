@@ -289,7 +289,7 @@ class stream(object):
         return tuple(xpath(name) or name for name in fields.split(','))
 
     def _format(self, binary, format):
-        if isinstance(binary, basestring):
+        if isinstance(binary, str): # if isinstance(binary, basestring):
             if self.verbose and binary and format and binary != format:
                 msg = "ignoring '{}' and using '{}' since binary keyword has priority" \
                     .format(format, binary)
