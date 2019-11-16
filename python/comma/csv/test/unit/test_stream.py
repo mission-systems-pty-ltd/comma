@@ -1,3 +1,4 @@
+from __future__ import print_function
 import unittest
 import numpy as np
 import sys
@@ -16,7 +17,8 @@ class test_stream(unittest.TestCase):
         self.assertTrue(s.full_xpath)
 
     def test_override_defaults(self):
-        from cStringIO import StringIO
+        if sys.version_info.major < 3: from cStringIO import StringIO # quick and dirty, sigh...
+        else: from io import StringIO
         source = StringIO("")
         target = StringIO("")
         t = comma.csv.stream(comma.csv.struct('id', 'S4'), delimiter=';')

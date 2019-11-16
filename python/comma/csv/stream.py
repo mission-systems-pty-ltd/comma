@@ -361,10 +361,10 @@ class stream(object):
     def _missing_dtype(self):
         if not self.missing_fields: return
         n = len(self.input_dtype.names)
-        missing_names = ['f{}'.format(n + i) for i in xrange(len(self.missing_fields))]
+        missing_names = ['f{}'.format(n + i) for i in range(len(self.missing_fields))] # missing_names = ['f{}'.format(n + i) for i in xrange(len(self.missing_fields))]
         type_of = self.struct.type_of_field.get
         missing_types = [type_of(name) for name in self.missing_fields]
-        return np.dtype(zip(missing_names, missing_types))
+        return np.dtype(list(zip(missing_names, missing_types)))
 
     def _complete_dtype(self):
         if self.missing_dtype: return np.dtype(self.input_dtype.descr + self.missing_dtype.descr)
@@ -438,12 +438,12 @@ def numpy_scalar_to_string(scalar, precision=DEFAULT_PRECISION):
     '20150102T123456.123456'
     >>> numpy_scalar_to_string(np.timedelta64(-123, 's'))
     '-123'
-    """
-    
+    """    
     if scalar.dtype.char in np.typecodes['AllInteger']: return str(scalar)
     elif scalar.dtype.char in np.typecodes['Float']: return "{scalar:.{precision}g}".format(scalar=scalar, precision=precision)
     elif scalar.dtype.char in np.typecodes['Datetime']: return csv_time.from_numpy(scalar)
     elif scalar.dtype.char in 'S': return scalar
+    elif scalar.dtype.char in 'U': return scalar
     elif scalar.dtype.char in '?': return str( int( scalar ) ) #elif scalar.dtype.char in '?': return str( map( int, scalar ) )
     msg = "converting {} to string is not implemented".format(repr(scalar.dtype))
     raise NotImplementedError(msg)

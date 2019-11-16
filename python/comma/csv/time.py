@@ -31,6 +31,7 @@ from __future__ import absolute_import
 import numpy as np
 import re
 import os
+import sys
 import time
 
 UNIT = 'us'
@@ -40,6 +41,7 @@ DTYPE = np.dtype(TYPE)
 NOT_A_DATE_TIME = np.datetime64('NaT')
 POSITIVE_INFINITY = np.datetime64('294247-01-09T04:00:54.775807')
 NEGATIVE_INFINITY = np.datetime64('-290308-12-22T19:59:05.224191')
+BASESTRING = basestring if sys.version_info.major < 3 else str # sigh...
 
 def is_undefined(numpy_time): return str(numpy_time) == str(NOT_A_DATE_TIME)
 
@@ -65,7 +67,7 @@ def to_numpy(t):
     if t in ['', 'not-a-date-time']: return NOT_A_DATE_TIME
     if t in ['+infinity', '+inf', 'infinity', 'inf']: return POSITIVE_INFINITY
     if t in ['-infinity', '-inf']: return NEGATIVE_INFINITY
-    if not (isinstance(t, basestring) and re.match(r'^(\d{8}T\d{6}(\.\d{0,6})?)$', t)):
+    if not (isinstance(t, BASESTRING) and re.match(r'^(\d{8}T\d{6}(\.\d{0,6})?)$', t)):
         msg = "expected comma time, got '{}'".format(repr(t))
         raise TypeError(msg)
     v = list(t)
@@ -100,7 +102,9 @@ def from_numpy(t):
     if is_undefined(t): return 'not-a-date-time'
     if is_negative_infinity(t): return '-infinity'
     if is_positive_infinity(t): return '+infinity'
-    return re.sub(r'(\.0{6})?([-+]\d{4}|Z)?$', '', str(t)).translate(None, ':-')
+    s = re.sub(r'(\.0{6})?([-+]\d{4}|Z)?$', '', str(t))
+    #return re.sub(r'(\.0{6})?([-+]\d{4}|Z)?$', '', str(t)).translate(None, ':-')
+    return s.translate(str.maketrans('', '', ':-')) if sys.version_info.major > 2 else s.translate(None, ':-') # sigh... cannot believe i am going this...
 
 def ascii_converters(types):
     converters = {}
