@@ -8,10 +8,12 @@ function get_default_size
     local type=$2
     python -c "$( cat <<END
 from __future__ import print_function
+import sys
 import comma
 fields='$fields'
 types = ('$type',) * len( fields.split(',') )
 print( comma.csv.stream( comma.csv.struct( fields, *types ) ).size )
+sys.stdout.flush() # have to flush, since stdout gets highjacked by comma.csv.stream (which kind of make sense)
 END
 )"
 }

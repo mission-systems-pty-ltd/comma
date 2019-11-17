@@ -164,7 +164,6 @@ class stream(object):
                         return np.fromstring( self.source.read(), dtype = self.input_dtype )
                     else:
                         b = sys.stdin.buffer.read( self.input_dtype.itemsize * size )
-                        # print( "--> a: len(b):", len(b), "size:", size, "self.input_dtype.itemsize:", self.input_dtype.itemsize, file = sys.stderr )
                         # todo! test on streams where bytes come with irregular delays!
                         if len(b) % self.input_dtype.itemsize != 0: raise TypeError( "expected records of size {}, got {} bytes, which is not divisible by record size".format( self.input_dtype.itemsize, len( b ) ) )
                         return np.frombuffer( b, dtype = self.input_dtype, count = len( b ) // self.input_dtype.itemsize )
@@ -460,7 +459,7 @@ def numpy_scalar_to_string(scalar, precision=DEFAULT_PRECISION):
     if scalar.dtype.char in np.typecodes['AllInteger']: return str(scalar)
     elif scalar.dtype.char in np.typecodes['Float']: return "{scalar:.{precision}g}".format(scalar=scalar, precision=precision)
     elif scalar.dtype.char in np.typecodes['Datetime']: return csv_time.from_numpy(scalar)
-    elif scalar.dtype.char in 'S': return str(scalar) # quick and dirty, python3, sigh...
+    elif scalar.dtype.char in 'Sa': return scalar.decode('UTF-8') # quick and dirty, python3, sigh...
     elif scalar.dtype.char in 'U': return str(scalar) # quick and dirty, python3, sigh...
     elif scalar.dtype.char in '?': return str( int( scalar ) ) #elif scalar.dtype.char in '?': return str( map( int, scalar ) )
     msg = "converting {} to string is not implemented".format(repr(scalar.dtype))
