@@ -28,7 +28,8 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import sys
-import itertools
+if sys.version_info.major < 3: from itertools import ifilter
+else: ifilter = filter # quick and dirty, tired of googling...
 
 
 def readlines_unbuffered(size, source=sys.stdin, skip_blank_lines=True):
@@ -54,7 +55,7 @@ def readlines_unbuffered(size, source=sys.stdin, skip_blank_lines=True):
             number_of_lines += 1
         return lines
     if skip_blank_lines:
-        source_ = itertools.ifilter(lambda line: line.strip(), source)
+        source_ = ifilter(lambda line: line.strip(), source)
     else:
         source_ = source
     return [line.rstrip('\n') for line in source_]
