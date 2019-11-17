@@ -160,13 +160,10 @@ class stream(object):
         if self.binary:
             if np.__version__ >= '1.16.0': # sigh...
                 if self.source == sys.stdin:
-                    if size < 0:
-                        return np.fromstring( self.source.read(), dtype = self.input_dtype )
-                    else:
-                        b = sys.stdin.buffer.read( self.input_dtype.itemsize * size )
-                        # todo! test on streams where bytes come with irregular delays!
-                        if len(b) % self.input_dtype.itemsize != 0: raise TypeError( "expected records of size {}, got {} bytes, which is not divisible by record size".format( self.input_dtype.itemsize, len( b ) ) )
-                        return np.frombuffer( b, dtype = self.input_dtype, count = len( b ) // self.input_dtype.itemsize )
+                    b = sys.stdin.buffer.read( self.input_dtype.itemsize * ( size if size > 0 else self.size ) )
+                    # todo! test on streams where bytes come with irregular delays!
+                    if len(b) % self.input_dtype.itemsize != 0: raise TypeError( "expected records of size {}, got {} bytes, which is not divisible by record size".format( self.input_dtype.itemsize, len( b ) ) )
+                    return np.frombuffer( b, dtype = self.input_dtype, count = len( b ) // self.input_dtype.itemsize )
                 else:
                     return np.fromfile( self.source, dtype = self.input_dtype, count = -1 if size < 0 else size ) # this line may not be covered by regression test
             else:
