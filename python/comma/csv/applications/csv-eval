@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/python
+# todo: once fully ported to python3: !/usr/bin/env python
 
 # This file is part of comma, a generic and flexible library
 # Copyright (c) 2011 The University of Sydney
