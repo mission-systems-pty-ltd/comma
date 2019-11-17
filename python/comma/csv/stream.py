@@ -28,10 +28,11 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import print_function
-import numpy as np
-import sys
-import itertools
 import functools
+import itertools
+import numpy as np
+import os
+import sys
 import warnings
 from ..util import warning
 from ..io import readlines_unbuffered
@@ -69,6 +70,7 @@ class stream(object):
         self.flush = flush
         self.source = source
         self.target = target
+        if target == sys.stdout: self.stdout = os.fdopen( sys.stdout.fileno(), "wb" )
         self.tied = tied
         self.full_xpath = full_xpath
         self.verbose = verbose
@@ -156,11 +158,24 @@ class stream(object):
 
     def _read(self, size):
         if self.binary:
-            if size < 0 and self.source == sys.stdin:
-                return np.fromstring(self.source.read(), dtype=self.input_dtype)
+            if np.__version__ >= '1.16.0': # sigh...
+                if self.source == sys.stdin:
+                    if size < 0:
+                        return np.fromstring( self.source.read(), dtype = self.input_dtype )
+                    else:
+                        b = sys.stdin.buffer.read( self.input_dtype.itemsize * size )
+                        # print( "--> a: len(b):", len(b), "size:", size, "self.input_dtype.itemsize:", self.input_dtype.itemsize, file = sys.stderr )
+                        # todo! test on streams where bytes come with irregular delays!
+                        if len(b) % self.input_dtype.itemsize != 0: raise TypeError( "expected records of size {}, got {} bytes, which is not divisible by record size".format( self.input_dtype.itemsize, len( b ) ) )
+                        return np.frombuffer( b, dtype = self.input_dtype, count = len( b ) // self.input_dtype.itemsize )
+                else:
+                    return np.fromfile( self.source, dtype = self.input_dtype, count = -1 if size < 0 else size ) # this line may not be covered by regression test
             else:
-                count = -1 if size < 0 else size
-                return np.fromfile(self.source, dtype=self.input_dtype, count=count)
+                if size < 0 and self.source == sys.stdin:
+                    return np.fromstring(self.source.read(), dtype=self.input_dtype)
+                else:
+                    count = -1 if size < 0 else size
+                    return np.fromfile(self.source, dtype=self.input_dtype, count=count)
         else:
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore')
@@ -211,8 +226,11 @@ class stream(object):
             msg = "size {} not equal to tied size {}".format(s.size, tied_size)
             raise ValueError(msg)
         if self.binary:
-            if self.tied: self._tie_binary(self.tied._input_array, s).tofile(self.target)
-            else: s.tofile(self.target)
+            if np.__version__ >= '1.16.0' and self.target == sys.stdout: # sigh...
+                self.stdout.write( self._tie_binary(self.tied._input_array, s).tobytes() if self.tied else s.tobytes() )
+            else:
+                if self.tied: self._tie_binary(self.tied._input_array, s).tofile(self.target)
+                else: s.tofile(self.target)
         else:
             unrolled_array = s.view(self.struct.unrolled_flat_dtype)
             #unrolled_array = s.view( self.unrolled_write_dtype )
