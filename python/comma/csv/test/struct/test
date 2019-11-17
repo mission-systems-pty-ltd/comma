@@ -122,7 +122,7 @@ class test_class:
 
 nested_struct = comma.csv.struct( 'a', 'uint32' )
 #test_struct = comma.csv.struct( 'a,b,c,d,e,f,g', 'uint32', 'float32', 'datetime64[us]', 'S4', nested_struct, 'uint32', ( nested_struct, ( 2, ) ) )
-test_struct = comma.csv.struct( 'a,b,c,d,e', 'uint32', 'float32', 'datetime64[us]', 'S4', nested_struct )
+test_struct = comma.csv.struct( 'a,b,c,d,e', 'uint32', 'float32', 'datetime64[us]', 'U4', nested_struct )
 t = test_struct()
 t['a'] = 10
 t['b'] = 20
@@ -135,6 +135,7 @@ t['e']['a'] = 40
 c = test_class()
 assign = test_struct.assign( c )
 assign( t[0] )
+
 print( 'assign/basic/output/a=' + str( c.a ) )
 print( 'assign/basic/output/b=' + str( c.b ) )
 print( 'assign/basic/output/c=\"' + str( c.c ).split( '+' )[0] + '\"' )
