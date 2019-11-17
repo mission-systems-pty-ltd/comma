@@ -162,7 +162,7 @@ class stream(object):
                 if self.source == sys.stdin:
                     b = sys.stdin.buffer.read( self.input_dtype.itemsize * ( size if size > 0 else self.size ) )
                     # todo! test on streams where bytes come with irregular delays!
-                    if len(b) % self.input_dtype.itemsize != 0: raise TypeError( "expected records of size {}, got {} bytes, which is not divisible by record size".format( self.input_dtype.itemsize, len( b ) ) )
+                    if len(b) % self.input_dtype.itemsize != 0: raise ValueError( "expected records of size {}, got {} bytes, which is not divisible by record size".format( self.input_dtype.itemsize, len( b ) ) )
                     return np.frombuffer( b, dtype = self.input_dtype, count = len( b ) // self.input_dtype.itemsize )
                 else:
                     return np.fromfile( self.source, dtype = self.input_dtype, count = -1 if size < 0 else size ) # this line may not be covered by regression test
