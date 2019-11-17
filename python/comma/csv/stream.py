@@ -70,7 +70,7 @@ class stream(object):
         self.flush = flush
         self.source = source
         self.target = target
-        if np.__version__ >= '1.16.0' and target == sys.stdout: self.stdout = os.fdopen( sys.stdout.fileno(), "wb" )
+        #if np.__version__ >= '1.16.0' and target == sys.stdout: self.stdout = os.fdopen( sys.stdout.fileno(), "wb" )
         self.tied = tied
         self.full_xpath = full_xpath
         self.verbose = verbose
@@ -226,7 +226,8 @@ class stream(object):
             raise ValueError(msg)
         if self.binary:
             if np.__version__ >= '1.16.0' and self.target == sys.stdout: # sigh...
-                self.stdout.write( self._tie_binary(self.tied._input_array, s).tobytes() if self.tied else s.tobytes() )
+                #self.stdout.write( self._tie_binary(self.tied._input_array, s).tobytes() if self.tied else s.tobytes() )
+                sys.stdout.write( self._tie_binary(self.tied._input_array, s).tobytes() if self.tied else s.tobytes() )
             else:
                 if self.tied: self._tie_binary(self.tied._input_array, s).tofile(self.target)
                 else: s.tofile(self.target)
