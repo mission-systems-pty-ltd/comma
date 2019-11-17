@@ -70,7 +70,7 @@ class stream(object):
         self.flush = flush
         self.source = source
         self.target = target
-        if target == sys.stdout: self.stdout = os.fdopen( sys.stdout.fileno(), "wb" )
+        if np.__version__ >= '1.16.0' and target == sys.stdout: self.stdout = os.fdopen( sys.stdout.fileno(), "wb" )
         self.tied = tied
         self.full_xpath = full_xpath
         self.verbose = verbose
