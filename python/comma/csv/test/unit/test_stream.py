@@ -135,11 +135,11 @@ class test_stream(unittest.TestCase):
         s = comma.csv.struct('x,id', 'f8', 'u4')
         tied = comma.csv.stream(comma.csv.struct('i', 'u2'))
         t1 = comma.csv.stream(s)
-        self.assertEqual(t1.size, comma.csv.stream.buffer_size_in_bytes / 12)
+        self.assertEqual(t1.size, comma.csv.stream.buffer_size_in_bytes // 12)
         t2 = comma.csv.stream(s, flush=True)
         self.assertEqual(t2.size, 1)
         t3 = comma.csv.stream(s, tied=tied)
-        self.assertEqual(t3.size, comma.csv.stream.buffer_size_in_bytes / 2)
+        self.assertEqual(t3.size, comma.csv.stream.buffer_size_in_bytes // 2)
 
     def test_ascii_simple_single_field(self):
         s = comma.csv.struct('x', 'f8')
