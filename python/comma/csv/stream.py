@@ -160,8 +160,7 @@ class stream(object):
 
     def _read(self, size):
         if self.binary:
-            #if np.__version__ >= '1.16.0': # sigh...
-            if sys.version_info.major > 2:
+            if sys.version_info.major > 2: #if np.__version__ >= '1.16.0': # sigh...
                 if self.source == sys.stdin:
                     b = sys.stdin.buffer.read( self.input_dtype.itemsize * ( size if size > 0 else self.size ) )
                     # todo! test on streams where bytes come with irregular delays!
@@ -225,7 +224,7 @@ class stream(object):
             msg = "size {} not equal to tied size {}".format(s.size, tied_size)
             raise ValueError(msg)
         if self.binary:
-            if sys.version_info > 2 and self.target == sys.stdout: # sigh...
+            if sys.version_info.major > 2 and self.target == sys.stdout: # sigh...
                 #self.stdout.write( self._tie_binary(self.tied._input_array, s).tobytes() if self.tied else s.tobytes() )
                 sys.stdout.buffer.write( self._tie_binary(self.tied._input_array, s).tobytes() if self.tied else s.tobytes() )
             else:
