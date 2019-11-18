@@ -43,8 +43,10 @@ class is_shutdown(object):
 
     def switch_on( self, signum, frame ):
         self.state = True
-        if self.verbose: print( os.path.basename(sys.argv[0]), "caught signal:", signum, file = sys.stderr )
+        if self.verbose: print( os.path.basename( sys.argv[0] ), ": caught signal:", signum, file = sys.stderr )
 
-    def __nonzero__( self ): return self.state
+    def __bool__( self ): return self.state
+
+    __nonzero__ = __bool__
 
 signal.signal( signal.SIGPIPE, signal.SIG_DFL )

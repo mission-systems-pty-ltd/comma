@@ -553,9 +553,12 @@ def evaluate(stream):
     update = None
     output = None
     input = None
-    is_shutdown = comma.signal.is_shutdown()
+    is_shutdown = comma.signal.is_shutdown( verbose = stream.args.verbose )
+    if is_shutdown: print( '--> a: is shutdown', file = sys.stderr )
     if stream.args.first_line: input = stream.input.read_from_line(stream.args.first_line)
+    print( '--> b', file = sys.stderr )
     while not is_shutdown:
+        print( '--> c', file = sys.stderr )
         if input is not None:
             if size != input.size:
                 size = input.size
@@ -568,6 +571,7 @@ def evaluate(stream):
             else: stream.input.dump()
         input = stream.input.read( read_size )
         if input is None: break
+    print( '--> d', file = sys.stderr )
 
 def select(stream):
     input = None
