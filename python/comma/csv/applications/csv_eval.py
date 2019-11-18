@@ -472,7 +472,7 @@ class stream(object):
         if self.args.verbose: self.print_info()
 
     def initialize_input(self):
-        self.nonblank_input_fields = filter(None, self.args.fields)
+        self.nonblank_input_fields = list( filter( None, self.args.fields ) )
         if not self.nonblank_input_fields: raise csv_eval_error("please specify input stream fields, e.g. --fields=x,y")
         check_fields(self.nonblank_input_fields)
         types = comma.csv.format.to_numpy(self.args.format)
@@ -528,50 +528,46 @@ def check_output_fields(fields, input_fields):
         raise csv_eval_error(msg)
 
 def evaluate(stream):
-    def disperse(var, fields): return '\n'.join("{f} = {v}['{f}']".format(v=var, f=f) for f in fields)
-    def collect(var, fields): return '\n'.join("{v}['{f}'] = {f}".format(v=var, f=f) for f in fields)
+    def disperse( var, fields ): return '\n'.join("{f} = {v}['{f}']".format( v = var, f = f ) for f in fields )
+    def collect( var, fields ): return '\n'.join("{v}['{f}'] = {f}".format( v = var, f = f ) for f in fields )
     if stream.args.init_values == '':
         read_size = None
         init_code_string = ''
     else:
         read_size = 1
-        init_code_string = '\n'.join([stream.args.default_values,
-                                stream.args.init_values,
-                                disperse('_input', stream.nonblank_input_fields),
-                                collect('_update', stream.args.update_fields),
-                                collect('_output', stream.args.output_fields)])
-    code_string = '\n'.join([stream.args.default_values,
-                             disperse('_input', stream.nonblank_input_fields),
-                             disperse('_output', stream.args.output_fields),
-                             stream.args.expressions,
-                             collect('_update', stream.args.update_fields),
-                             collect('_output', stream.args.output_fields)])
-    init_code = compile(init_code_string, '<string>', 'exec')
-    code = compile(code_string, '<string>', 'exec')
-    env = np.__dict__ if stream.args.permissive else restricted_numpy_env()
+        init_code_string = '\n'.join( [ stream.args.default_values,
+                                        stream.args.init_values,
+                                        disperse( '_input', stream.nonblank_input_fields ),
+                                        collect( '_update', stream.args.update_fields ),
+                                        collect( '_output', stream.args.output_fields ) ] )
+    code_string = '\n'.join( [ stream.args.default_values,
+                               disperse( '_input', stream.nonblank_input_fields ),
+                               disperse( '_output', stream.args.output_fields ),
+                               stream.args.expressions,
+                               collect( '_update', stream.args.update_fields ),
+                               collect( '_output', stream.args.output_fields ) ] )
+    init_code = compile( init_code_string, '<string>', 'exec' )
+    code = compile( code_string, '<string>', 'exec' )
+    env = np.__dict__ if stream.args.permissive else restricted_numpy_env()    
     size = None
     update = None
     output = None
     input = None
     is_shutdown = comma.signal.is_shutdown( verbose = stream.args.verbose )
-    #if is_shutdown: print( '--> a: is shutdown', file = sys.stderr )
-    if stream.args.first_line: input = stream.input.read_from_line(stream.args.first_line)
-    #print( '--> b', file = sys.stderr )
+    if stream.args.first_line: input = stream.input.read_from_line( stream.args.first_line )
     while not is_shutdown:
-        #print( '--> c', file = sys.stderr )
         if input is not None:
             if size != input.size:
                 size = input.size
                 if stream.args.update_fields: update = stream.update_t(size)
                 if stream.args.output_fields: output = stream.output_t(size)
-                exec( init_code, env, {'_input': input, '_update': update, '_output': output} )
-            exec( code, env, {'_input': input, '_update': update, '_output': output} )
+                exec( init_code, env, { '_input': input, '_update': update, '_output': output } )
+            exec( code, env, { '_input': input, '_update': update, '_output': output } )
             if stream.args.update_fields: update_buffer(stream.input, update)
             if stream.args.output_fields: stream.output.write(output)
             else: stream.input.dump()
         input = stream.input.read( read_size )
         if input is None: break
-    #print( '--> d', file = sys.stderr )
 
 def select(stream):
     input = None
