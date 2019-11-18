@@ -158,7 +158,8 @@ class stream(object):
 
     def _read(self, size):
         if self.binary:
-            if np.__version__ >= '1.16.0': # sigh...
+            #if np.__version__ >= '1.16.0': # sigh...
+            if sys.version_info.major > 2:
                 if self.source == sys.stdin:
                     b = sys.stdin.buffer.read( self.input_dtype.itemsize * ( size if size > 0 else self.size ) )
                     # todo! test on streams where bytes come with irregular delays!
