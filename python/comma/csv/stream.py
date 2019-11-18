@@ -34,6 +34,8 @@ import numpy as np
 import os
 import sys
 import warnings
+if sys.version_info.major < 3: from itertools import izip
+else: izip = zip # todo! watch performance! it's reported python3 zip is some 30% slower than izip
 from ..util import warning
 from ..io import readlines_unbuffered
 from ..numpy import merge_arrays, types_of_dtype, structured_dtype
@@ -240,7 +242,7 @@ class stream(object):
     def _tie_binary(self, tied_array, array): return merge_arrays(tied_array, array)
 
     def _tie_ascii(self, tied_buffer, unrolled_array):
-        for tied_line, scalars in itertools.izip(tied_buffer, unrolled_array): yield self.delimiter.join([tied_line] + self._strings(scalars))
+        for tied_line, scalars in izip(tied_buffer, unrolled_array): yield self.delimiter.join([tied_line] + self._strings(scalars))
 
     def _toline(self, scalars): return self.delimiter.join(self._strings(scalars))
 
@@ -273,7 +275,7 @@ class stream(object):
         if self.binary:
             self._input_array[mask].tofile(self.target)
         else:
-            for line, allowed in itertools.izip(self._ascii_buffer, mask):
+            for line, allowed in izip(self._ascii_buffer, mask):
                 if allowed: print( line, file = self.target )
         self.target.flush()
 

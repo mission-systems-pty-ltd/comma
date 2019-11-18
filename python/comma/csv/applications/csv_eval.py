@@ -28,13 +28,15 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import print_function
-import sys
-import os
 import argparse
-import numpy as np
-import re
-import itertools
 import ast
+import itertools
+import numpy as np
+import os
+import re
+import sys
+if sys.version_info.major < 3: from itertools import izip
+else: izip = zip # todo! watch performance! it's reported python3 zip is some 30% slower than izip
 import comma
 
 description = """
@@ -449,7 +451,7 @@ def update_buffer(stream, update_array):
             stream._input_array[fields[index(f)]] = update_array[f]
     else:
         def updated_lines():
-            for line, scalars in itertools.izip(stream._ascii_buffer, update_array):
+            for line, scalars in izip(stream._ascii_buffer, update_array):
                 values = line.split(stream.delimiter)
                 for f, s in zip(update_array.dtype.names, stream._strings(scalars)):
                     values[index(f)] = s
