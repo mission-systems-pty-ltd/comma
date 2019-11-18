@@ -242,9 +242,9 @@ class stream(object):
     def _tie_binary(self, tied_array, array): return merge_arrays(tied_array, array)
 
     def _tie_ascii(self, tied_buffer, unrolled_array):
-        for tied_line, scalars in izip(tied_buffer, unrolled_array): yield self.delimiter.join([tied_line] + self._strings(scalars))
+        for tied_line, scalars in izip(tied_buffer, unrolled_array): yield self.delimiter.join([tied_line] + list(self._strings(scalars)))
 
-    def _toline(self, scalars): return self.delimiter.join(self._strings(scalars))
+    def _toline(self, scalars): return list(self.delimiter.join(self._strings(scalars)))
 
     def dump(self, mask=None):
         """
