@@ -223,7 +223,7 @@ class stream(object):
             msg = "size {} not equal to tied size {}".format(s.size, tied_size)
             raise ValueError(msg)
         if self.binary:
-            if np.__version__ >= '1.16.0' and self.target == sys.stdout: # sigh...
+            if sys.version_info > 2 and self.target == sys.stdout: # sigh...
                 #self.stdout.write( self._tie_binary(self.tied._input_array, s).tobytes() if self.tied else s.tobytes() )
                 sys.stdout.buffer.write( self._tie_binary(self.tied._input_array, s).tobytes() if self.tied else s.tobytes() )
             else:
