@@ -97,8 +97,7 @@ class stream(object):
         self.default_values = self._default_values(default_values)
         self.missing_values = self._missing_values()
         self.data_extraction_fields = self._data_extraction_fields()
-        self.struct_and_extraction_fields = zip(self.struct.flat_dtype.names,
-                                                self.data_extraction_fields)
+        self.struct_and_extraction_fields = list( zip( self.struct.flat_dtype.names, self.data_extraction_fields ) )
         #self.write_dtype = self._write_dtype()
         #self.unrolled_write_dtype = structured_dtype( ','.join( types_of_dtype( self.write_dtype, unroll=True ) ) )
         #print( "self.write_dtype.descr = %s" % str(self.write_dtype.descr), file = sys.stderr )
@@ -280,7 +279,10 @@ class stream(object):
             msg = "mask size {} not equal to data size {}".format(mask.size, data_size)
             raise ValueError(msg)
         if self.binary:
-            self._input_array[mask].tofile(self.target)
+            if sys.version_info.major > 2 and self.target == sys.stdout: # sigh...
+                sys.stdout.buffer.write( self._input_array[mask].tobytes() )
+            else:
+                self._input_array[mask].tofile(self.target)
         else:
             for line, allowed in izip(self._ascii_buffer, mask):
                 if allowed: print( line, file = self.target )
