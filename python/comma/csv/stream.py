@@ -28,6 +28,7 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import print_function
+import copy
 import functools
 import itertools
 import numpy as np
@@ -129,7 +130,7 @@ class stream(object):
         if no records have been read, return None
         """
         if size is None: size = self.size
-        self._input_array = self._read(size)
+        self._input_array = copy.deepcopy( self._read( size ) ) if sys.version_info.major > 2 else self._read( size ) # todo! watch performance in python3!
         if self._input_array.size == 0: return
         return self._struct_array(self._input_array, self.missing_values)
 
@@ -258,7 +259,10 @@ class stream(object):
 
     def _dump(self):
         if self.binary:
-            self._input_array.tofile(self.target)
+            if sys.version_info.major > 2 and self.target == sys.stdout: # sigh...
+                sys.stdout.buffer.write( self._input_array.tobytes() )
+            else:
+                self._input_array.tofile( self.target )
         else:
             for line in self._ascii_buffer: print( line, file = self.target )
         self.target.flush()
