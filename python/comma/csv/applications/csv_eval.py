@@ -142,9 +142,14 @@ bitwise functions:
 
 string functions:
     http://docs.scipy.org/doc/numpy/reference/routines.char.html
-
+    
     ( echo 'a'; echo 'a/b' ) | %(prog)s --fields=path --format=s[36] 'n=char.count(path,"/")' --output-format=ui
     ( echo 'a'; echo 'a/b' ) | %(prog)s --fields=path --format=s[36] 'r=char.replace(path,"/","_")' --output-format=s[36]
+    
+    LIMITATION: in python3, csv-eval represents strings as np.bytes_ (for consistent binary support)
+        python2: you could write: ( echo 'a'; echo 'a/b' ) | %(prog)s --fields=path --format=s[36] 'n=char.count(path,"/")' --output-format=ui
+        python3: you should write: ( echo 'a'; echo 'a/b' ) | %(prog)s --fields=path --format=s[36] 'n=char.count(char.decode(path),"/")' --output-format=ui
+                 for backward compatibility, use the latter variant
 
 time arithmetic:
     http://docs.scipy.org/doc/numpy/reference/arrays.datetime.html#datetime-and-timedelta-arithmetic
