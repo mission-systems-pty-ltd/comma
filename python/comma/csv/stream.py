@@ -290,8 +290,10 @@ class stream(object):
 
     def _warn(self, msg, verbose=True):
         if verbose:
-            with warning(custom_formatwarning) as warn:
-                warn(msg)
+            if sys.version_info.major < 3: # sigh, something is broken at least in python3.7; dumb it down for now
+                with warning(custom_formatwarning) as warn: warn(msg)
+            else:
+                print( 'stream.py: warning:', msg, file=sys.stderr )
 
     def _struct(self, s):
         if not isinstance(s, struct):
