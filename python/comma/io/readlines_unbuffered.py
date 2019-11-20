@@ -42,7 +42,6 @@ def readlines_unbuffered(size, source=sys.stdin, skip_blank_lines=True):
         - a blank line is a line that has only whitespace characters or no characters
         - blank lines are not counted towards size
     """
-    print( '--> readlines_unbuffered(): size:', size, file=sys.stderr )
     if size >= 0:
         lines = []
         number_of_lines = 0
