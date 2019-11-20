@@ -150,6 +150,10 @@ string functions:
         python2: you could write: ( echo 'a'; echo 'a/b' ) | %(prog)s --fields=path --format=s[36] 'n=char.count(path,"/")' --output-format=ui
         python3: you should write: ( echo 'a'; echo 'a/b' ) | %(prog)s --fields=path --format=s[36] 'n=char.count(char.decode(path),"/")' --output-format=ui
                  for backward compatibility, use the latter variant
+        it may lead to ugly constructs for python3:
+            python2: csv-eval --fields=s --format s[36] 'u=char.upper(name)' --output-format=s[36]
+            python3: csv-eval --fields=s --format s[36] 'u=char.encode(char.upper(char.decode(name)))' --output-format=s[36]
+        but unfortunately, this limitation is unlikely to go away
 
 time arithmetic:
     http://docs.scipy.org/doc/numpy/reference/arrays.datetime.html#datetime-and-timedelta-arithmetic

@@ -1,3 +1,3 @@
 #!/bin/bash
 
-csv-eval --fields=,path,x,name --format ,s[36],,s[4] 'n=char.count(path,"/");y=x+1;uname=char.upper(name)' --output-format=s[36],,s[4] | name-value-from-csv blank,path,x,name,n,y,uname --line-number --prefix output | tr -d '"'
+csv-eval --fields=,path,x,name --format ,s[36],,s[4] 'n=char.count(char.decode(path),"/");y=x+1;uname=char.encode(char.upper(char.decode(name)))' --output-format=s[36],,s[4] | name-value-from-csv blank,path,x,name,n,y,uname --line-number --prefix output | tr -d '"'
