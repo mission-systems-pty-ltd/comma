@@ -11,7 +11,8 @@ if [[ ! -d "$data_dir" ]]; then
 fi
 
 tmpdir="output/tmp"
-mkdir $tmpdir
+rm -rf $tmpdir
+mkdir $tmpdir -p
 verbose=0
 
 while [[ $# -gt 0 ]]; do
@@ -27,6 +28,8 @@ done
 variables="$data_dir/variable_vals"
 pass_count=0
 total_count=0
+python_version="$( python -c "from __future__ import print_function; import sys; print( sys.version_info.major )" )" # sigh...
+python_prefix="python${python_version}:"
 
 for input in $data_dir/input*; do
     (( ++total_count ))
@@ -34,13 +37,18 @@ for input in $data_dir/input*; do
     if (( verbose )); then echo "$name: running test $suffix" >&2; fi
     stdout="$tmpdir/stdout.$suffix"
     stderr="$tmpdir/stderr.$suffix"
+    if grep -q "$python_prefix" < "$data_dir/stderr_$suffix"; then
+        expected_stderr="$( grep "^$python_prefix" < "$data_dir/stderr_$suffix" | sed "s#^$python_prefix##" )" # quick and dirty; sigh...
+    else
+        expected_stderr="$( cat "$data_dir/stderr_$suffix" )"
+    fi
     cat $input | name-value-eval --variables=$variables --test > $stdout 2> $stderr
+    actual_stderr=$( cat $stderr )
     if ! cmp --quiet $stdout $data_dir/stdout_$suffix; then
         echo "$name: test failed for input_$suffix (stdout is different):" >&2
         diff $stdout $data_dir/stdout_$suffix >&2
-    elif ! cmp --quiet $stderr $data_dir/stderr_$suffix; then
-        echo "$name: test failed for input_$suffix (stderr is different):" >&2
-        diff $stderr $data_dir/stderr_$suffix >&2
+    elif ! cmp --quiet <( echo "$actual_stderr" ) <( echo "$expected_stderr" ); then
+        diff <( echo "$actual_stderr" ) <( echo "$expected_stderr" ) >&2
     else
         (( ++pass_count ))
         if (( verbose )); then echo "$name: test $suffix passed" >&2; fi

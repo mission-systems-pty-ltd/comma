@@ -1,1 +1,2 @@
-name-value-eval: line 2: AttributeError: OBJ instance has no attribute '__getitem__'
+python2:name-value-eval: line 2: AttributeError: OBJ instance has no attribute '__getitem__'
+python3:name-value-eval: line 2: TypeError: 'OBJ' object does not support indexing
