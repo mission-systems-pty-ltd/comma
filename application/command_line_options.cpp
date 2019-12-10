@@ -195,6 +195,7 @@ void command_line_options::assert_valid( const std::vector< description >& d, bo
     for( unsigned int i = 0; i < d.size(); ++i ) { for( unsigned int j = 0; j < d[i].names.size(); ++j ) { m[ d[i].names[j] ] = d[i].has_value; } }
     for( unsigned int i = 1; i < argv_.size(); ++i )
     {
+        if( !boost::regex_match( argv_[i], boost::regex( "-.+" ) ) ) { continue; }
         auto it = m.find( argv_[i] );
         if( it == m.end() ) { COMMA_THROW( comma::exception, "unknown option " << argv_[i] ); }
         if( it->second ) { ++i; }
