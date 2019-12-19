@@ -100,7 +100,7 @@ TEST( csv, container )
         test_container sample; sample.vector = std::vector< int >( 5, 1 );
         comma::csv::input_stream< test_container > istream( iss, csv, sample );
         const test_container *c = istream.read();
-        EXPECT_EQ( c->vector.size(), 5 );
+        EXPECT_EQ( int( c->vector.size() ), 5 );
         std::string so = comma::join( c->vector, ',' );
         EXPECT_EQ( so, "2,3,1,1,6" );
     }
@@ -111,8 +111,30 @@ TEST( csv, container )
         c.vector[1] = 5;
         c.vector[2] = 3;
         ostream.write( c );
-        EXPECT_EQ( c.vector.size(), 5 );
+        EXPECT_EQ( int( c.vector.size() ), 5 );
         EXPECT_EQ( oss.str(), "1,5,3,1,1\n" );
+    }
+}
+
+TEST( csv, passed_ascii )
+{
+    {
+        std::istringstream iss( "1,2\n3,4" );
+        comma::csv::input_stream< test_struct > is( iss );
+        std::ostringstream oss;
+        comma::csv::passed< test_struct > p( is, oss );
+        is.read();
+        p.write();
+        EXPECT_EQ( "1,2\n", oss.str() );
+        is.read();
+        p.write();
+        EXPECT_EQ( "1,2\n3,4\n", oss.str() );
+        is.read();
+        p.write( test_struct( 10, 20 ) );
+        EXPECT_EQ( "1,2\n3,4\n10,20\n", oss.str() );
+    }
+    {
+        // todo! binary test
     }
 }
 

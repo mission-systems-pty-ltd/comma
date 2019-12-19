@@ -436,11 +436,26 @@ template < typename S >
 class passed
 {
     public:
-        passed( const input_stream< S >& is, std::ostream& os, bool flush=false ) : is_( is ), os_( os ), flush(flush)
-        {
-            #ifdef WIN32
-            if( is_.is_binary() && os == std::cout ) { _setmode( _fileno( stdout ), _O_BINARY ); }
-            #endif // #ifdef WIN32
+        passed( const input_stream< S >& is, std::ostream& os, bool flush = false );
+
+        void write();
+        
+        void write( const S& s );
+
+    private:
+        const input_stream< S >& is_;
+        std::ostream& os_;
+        std::string buffer_;
+        bool flush;
+        bool is_stdout_;
+};
+
+template < typename S >
+inline passed< S >::passed( const input_stream< S >& is, std::ostream& os, bool flush ) : is_( is ), os_( os ), flush( flush )
+{
+    #ifdef WIN32
+    if( is_.is_binary() && os == std::cout ) { _setmode( _fileno( stdout ), _O_BINARY ); }
+    #endif // #ifdef WIN32
 // In using view-points in 'pass' mode there were issues with the write method.
 // How to reproduce: take some nav data in t,6d format. Store as in.bin and other.bin.
 //
@@ -485,29 +500,57 @@ class passed
 //  - according to git grep, only view-points was using this class template at the moment; therefore,
 //    the change is very localized and we preserve it in this class
 //  - however, all the other similar modifications have been commented out using /// symbol
-            is_stdout_ = os.rdbuf() == std::cout.rdbuf();
-        }
+    is_stdout_ = os.rdbuf() == std::cout.rdbuf();
+}
 
-        void write()
+template < typename S >
+inline void passed< S >::write()
+{
+    if( is_.is_binary() )
+    {
+        if( is_stdout_ )
         {
-            if( is_.is_binary() ) {
-                if ( is_stdout_ ) {
-                    ::write( 1, is_.binary().last(), is_.binary().size() );
-                    if(flush) { ::fflush( stdout ); }
-                } else {
-                    os_.write( is_.binary().last(), is_.binary().size() );
-                    if(flush) { os_.flush(); }
-                }
-            }
-            else os_ << comma::join( is_.ascii().last(), is_.ascii().ascii().delimiter() ) << std::endl;
+            ::write( 1, is_.binary().last(), is_.binary().size() );
+            if( flush ) { ::fflush( stdout ); }
         }
+        else
+        {
+            os_.write( is_.binary().last(), is_.binary().size() );
+            if( flush ) { os_.flush(); }
+        }
+    }
+    else
+    {
+        os_ << comma::join( is_.ascii().last(), is_.ascii().ascii().delimiter() ) << std::endl;
+    }
+}
 
-    private:
-        const input_stream< S >& is_;
-        std::ostream& os_;
-        bool flush;
-        bool is_stdout_;
-};
+template < typename S >
+inline void passed< S >::write( const S& s )
+{
+    if( is_.is_binary() )
+    {
+        buffer_.resize( is_.binary().size() );
+        ::memcpy( &buffer_[0], is_.binary().last(), is_.binary().size() ); // quick and dirty
+        is_.binary().binary().put( s, &buffer_[0] );
+        if( is_stdout_ )
+        {
+            ::write( 1, &buffer_[0], is_.binary().size() );
+            if( flush ) { ::fflush( stdout ); }
+        }
+        else
+        {
+            os_.write( &buffer_[0], is_.binary().size() );
+            if( flush ) { os_.flush(); }
+        }
+    }
+    else
+    {
+        std::vector< std::string > v = is_.ascii().last();
+        is_.ascii().ascii().put( s, v );
+        os_ << comma::join( v, is_.ascii().ascii().delimiter() ) << std::endl;
+    }
+}
 
 template < typename S >
 inline ascii_input_stream< S >::ascii_input_stream( std::istream& is, const std::string& column_names, char delimiter, bool full_path_as_name, const S& sample )
