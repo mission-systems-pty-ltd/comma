@@ -118,6 +118,32 @@ TEST( application, unnamed )
             EXPECT_EQ( free[5], "free5" );
         }
     }
+    {
+        std::vector< std::string > argv;
+        argv.push_back( "application" );
+        argv.push_back( "--no-value" );
+        argv.push_back( "--value" );
+        argv.push_back( "some-value" );
+        comma::command_line_options options( argv );
+        {
+            std::vector< std::string > unnamed = options.unnamed( "--no-value", "-.*" );
+            EXPECT_EQ( 0u, unnamed.size() );
+        }
+    }
+    {
+        std::vector< std::string > argv;
+        argv.push_back( "application" );
+        argv.push_back( "unnamed" );
+        argv.push_back( "--no-value" );
+        argv.push_back( "--value" );
+        argv.push_back( "x,y,z" );
+        comma::command_line_options options( argv );
+        {
+            std::vector< std::string > unnamed = options.unnamed( "--no-value", "-.*" );
+            EXPECT_EQ( 1u, unnamed.size() );
+            EXPECT_EQ( "unnamed", unnamed[0] );
+        }
+    }
     // TODO: definitely more tests!
 }
 
@@ -180,7 +206,7 @@ TEST( application, command_line_options_description_parsing )
 {
     {
         comma::command_line_options::description d = comma::command_line_options::description::from_string( "--verbose" );
-        EXPECT_EQ( 1, d.names.size() );
+        EXPECT_EQ( 1u, d.names.size() );
         EXPECT_EQ( "--verbose", d.names[0] );
         EXPECT_FALSE( d.has_value );
         EXPECT_TRUE( d.is_optional );
@@ -188,7 +214,7 @@ TEST( application, command_line_options_description_parsing )
     }
     {
         comma::command_line_options::description d = comma::command_line_options::description::from_string( "--verbose,-v" );
-        EXPECT_EQ( 2, d.names.size() );
+        EXPECT_EQ( 2u, d.names.size() );
         EXPECT_EQ( "--verbose", d.names[0] );
         EXPECT_EQ( "-v", d.names[1] );
         EXPECT_FALSE( d.has_value );
@@ -197,7 +223,7 @@ TEST( application, command_line_options_description_parsing )
     }
     {
         comma::command_line_options::description d = comma::command_line_options::description::from_string( "--filename,-f=<filename>; some filename" );
-        EXPECT_EQ( 2, d.names.size() );
+        EXPECT_EQ( 2u, d.names.size() );
         EXPECT_EQ( "--filename", d.names[0] );
         EXPECT_EQ( "-f", d.names[1] );
         EXPECT_TRUE( d.has_value );
@@ -207,7 +233,7 @@ TEST( application, command_line_options_description_parsing )
     }
     {
         comma::command_line_options::description d = comma::command_line_options::description::from_string( "--filename,-f=[<filename>]; some filename" );
-        EXPECT_EQ( 2, d.names.size() );
+        EXPECT_EQ( 2u, d.names.size() );
         EXPECT_EQ( "--filename", d.names[0] );
         EXPECT_EQ( "-f", d.names[1] );
         EXPECT_TRUE( d.has_value );
@@ -226,7 +252,7 @@ void check_default_value( const std::string& line, const std::string& default_va
 {
     typedef comma::command_line_options::description description;
     description d = description::from_string( line );
-    EXPECT_EQ( 2, d.names.size() );
+    EXPECT_EQ( 2u, d.names.size() );
     EXPECT_EQ( "--filename", d.names[0] );
     EXPECT_EQ( "-f", d.names[1] );
     EXPECT_TRUE( d.has_value );
