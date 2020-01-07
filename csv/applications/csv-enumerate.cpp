@@ -54,9 +54,10 @@ static void usage( bool verbose )
     std::cerr << "                            - list of input key values; in same binary as input" << std::endl;
     std::cerr << "                            - corresponding enumeration index as ui" << std::endl;
     std::cerr << "                            - number of values for this enumeration index as ui" << std::endl;
+    std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
     std::cerr << std::endl;
     std::cerr << "csv options" << std::endl;
-    if( verbose ) { std::cerr << comma::csv::options::usage() << std::endl; } else { std::cerr << "    run csv-enumerate --help --verbose for more..." << std::endl; }
+    std::cerr << comma::csv::options::usage( verbose ) << std::endl;
     std::cerr << std::endl;
     exit( 0 );
 }
