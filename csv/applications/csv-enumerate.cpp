@@ -61,6 +61,22 @@ static void usage( bool verbose )
     exit( 0 );
 }
 
+struct output
+{
+    comma::uint32 id;
+    output( comma::uint32 id = 0 ): id( id ) {}
+};
+
+namespace comma { namespace visiting {
+
+template <> struct traits< output >
+{
+    template < typename K, typename V > static void visit( const K&, const output& p, V& v ) { v.apply( "id", p.id ); }
+    template < typename K, typename V > static void visit( const K&, output& p, V& v ) { v.apply( "id", p.id ); }
+};
+
+} } // namespace comma { namespace visiting {
+
 int main( int ac, char** av )
 {
     typedef comma::csv::impl::unstructured input_t;
@@ -94,10 +110,6 @@ int main( int ac, char** av )
         }
         if( verbose ) { std::cerr << "csv-enumerate: fields " << csv.fields << " interpreted as: " << comma::join( v, ',' ) << std::endl; }
         csv.fields = comma::join( v, ',' );
-        comma::csv::input_stream< input_t > istream( std::cin, csv, default_input );
-        #ifdef WIN32
-        if( istream.is_binary() ) { _setmode( _fileno( stdout ), _O_BINARY ); }
-        #endif
         static map_t map;
         comma::uint32 id = 0;
         if( !first_line.empty() )
@@ -106,6 +118,15 @@ int main( int ac, char** av )
             map[ comma::csv::ascii< input_t >( csv, default_input ).get( first_line ) ] = std::make_pair( id++, 1 );
             if( !output_map ) { std::cout << first_line << csv.delimiter << 0 << std::endl; }
         }
+        comma::csv::options output_csv;
+        output_csv.delimiter = csv.delimiter;
+        if( csv.binary() ) { output_csv.format( comma::csv::format::value< output >() ); }
+        comma::csv::input_stream< input_t > istream( std::cin, csv, default_input );
+        comma::csv::output_stream< output > ostream( std::cout, output_csv );
+        comma::csv::tied< input_t, output > tied( istream, ostream );
+        #ifdef WIN32
+        if( istream.is_binary() ) { _setmode( _fileno( stdout ), _O_BINARY ); }
+        #endif
         while( istream.ready() || std::cin.good() )
         {
             const input_t* p = istream.read();
@@ -113,26 +134,14 @@ int main( int ac, char** av )
             map_t::iterator it = map.find( *p );
             comma::uint32 cur = id;
             if( it == map.end() ) { map[ *p ] = std::make_pair( id++, 1 ); } else { cur = it->second.first; ++( it->second.second ); }
-            if( !output_map )
-            {
-                if( csv.binary() )
-                {
-                    std::cout.write( istream.binary().last(), csv.format().size() );
-                    std::cout.write( reinterpret_cast< const char* >( &cur ), sizeof( comma::uint32 ) );
-                    if( csv.flush ) { std::cout.flush(); }
-                }
-                else
-                {
-                    std::cout << comma::join( istream.ascii().last(), csv.delimiter ) << csv.delimiter << cur << std::endl;
-                }
-            }
+            if( !output_map ) { tied.append( output( cur ) ); }
         }
         if( !output_map ) { return 0; }
-        comma::csv::options output_csv;
-        output_csv.delimiter = csv.delimiter;
-        if( csv.binary() ) { output_csv.format( comma::csv::format::value< input_t >( default_input ) + ",2ui" ); }
-        comma::csv::output_stream< map_t::value_type > ostream( std::cout, output_csv, std::make_pair( default_input, std::make_pair( 0, 0 ) ) );
-        for( map_t::const_iterator it = map.begin(); it != map.end(); ++it ) { ostream.write( *it ); }
+        comma::csv::options output_map_csv;
+        output_map_csv.delimiter = csv.delimiter;
+        if( csv.binary() ) { output_map_csv.format( comma::csv::format::value< input_t >( default_input ) + ",2ui" ); }
+        comma::csv::output_stream< map_t::value_type > omstream( std::cout, output_map_csv, std::make_pair( default_input, std::make_pair( 0, 0 ) ) );
+        for( map_t::const_iterator it = map.begin(); it != map.end(); ++it ) { omstream.write( *it ); }
         return 0;
     }
     catch( std::exception& ex ) { std::cerr << "csv-enumerate: " << ex.what() << std::endl; }
