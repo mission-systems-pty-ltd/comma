@@ -118,30 +118,32 @@ class split
 {
     public:
         typedef applications::input< T > input;
-        split( boost::optional< boost::posix_time::time_duration > period
+        split( const boost::optional< boost::posix_time::time_duration >& period
              , const std::string& suffix
              , const comma::csv::options& csv
              , bool passthrough
-             , const std::string& filenames );
-        split( boost::optional< boost::posix_time::time_duration > period
+             , const std::string& filenames
+             , const std::string& default_filename = "" );
+        split( const boost::optional< boost::posix_time::time_duration >& period
              , const std::string& suffix
              , const comma::csv::options& csv
              , const std::vector< std::string >& streams
              , bool passthrough
-             , const std::string& filenames );
+             , const std::string& filenames
+             , const std::string& default_filename = "" );
         ~split();
         void write( const char* data, unsigned int size );
         void write( std::string line );
     private:
-        std::ofstream& ofstream_by_time_();
-        std::ofstream& ofstream_by_block_();
-        std::ofstream& ofstream_by_id_();
+        std::ofstream* ofstream_by_time_();
+        std::ofstream* ofstream_by_block_();
+        std::ofstream* ofstream_by_id_();
         std::string filename_from_id_( const T& id );
         void update_( const char* data, unsigned int size );
         void update_( const std::string& line );
         void accept_();
 
-        std::function< std::ofstream&() > ofstream_;
+        std::function< std::ofstream*() > ofstream_;
         std::unique_ptr< comma::csv::ascii< input > > ascii_;
         std::unique_ptr< comma::csv::binary< input > > binary_;
         boost::optional< boost::posix_time::time_duration > period_;
@@ -160,6 +162,7 @@ class split
         bool pass_;
         bool flush_;
         std::unordered_map< comma::uint32, std::string > filenames_;
+        // todo? std::unique_ptr< comma::io::publisher > default_file_;
         bool filenames_have_id_;
 
         //to-do

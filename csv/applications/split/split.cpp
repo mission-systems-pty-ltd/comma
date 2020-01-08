@@ -104,11 +104,12 @@ std::pair< std::unordered_map< comma::uint32, std::string >, bool > static filen
 }
     
 template < typename T >
-split< T >::split( boost::optional< boost::posix_time::time_duration > period
+split< T >::split( const boost::optional< boost::posix_time::time_duration >& period
                  , const std::string& suffix
                  , const comma::csv::options& csv
                  , bool pass
-                 , const std::string& filenames )
+                 , const std::string& filenames
+                 , const std::string& default_filename )
     : ofstream_( std::bind( &split< T >::ofstream_by_time_, this ) )
     , period_( period )
     , suffix_( suffix )
@@ -139,13 +140,14 @@ split< T >::split( boost::optional< boost::posix_time::time_duration > period
 }
 
 template < typename T >
-split< T >::split( boost::optional< boost::posix_time::time_duration > period
+split< T >::split( const boost::optional< boost::posix_time::time_duration >& period
                  , const std::string& suffix
                  , const comma::csv::options& csv
                  , const std::vector< std::string >& streams //to-do
                  , bool pass
-                 , const std::string& filenames )
-    : split( period, suffix, csv, pass, filenames )
+                 , const std::string& filenames
+                 , const std::string& default_filename )
+    : split( period, suffix, csv, pass, filenames, default_filename )
 {
     if( streams.empty() ) { return; }
     auto const io_mode = csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii;
@@ -227,8 +229,12 @@ void split< T >::write( const char* data, unsigned int size )
     else { current_.timestamp = boost::get_system_time(); }
     if( !published_on_stream( data, size ) ) // todo? or bind write function on initialisation and call it here?
     {
-        ofstream_().write( data, size );
-        if( flush_ ) { ofstream_().flush(); }
+        auto ofs = ofstream_();
+        if( ofs )
+        {
+            ofs->write( data, size );
+            if( flush_ ) { ofs->flush(); }
+        }
     }
     if ( pass_ ) { std::cout.write( data, size ); std::cout.flush(); }
 }
@@ -242,16 +248,19 @@ void split< T >::write ( std::string line )
     line += '\n';
     if( !published_on_stream( &line[0], line.size()) ) // todo? or bind write function on initialisation and call it here?
     {
-        std::ofstream& ofs = ofstream_();
-        ofs.write( &line[0], line.size() );
-        //ofs.put( '\n' );
-        if( flush_ ) { ofs.flush(); }
+        auto ofs = ofstream_();
+        if( ofs )
+        {
+            ofs->write( &line[0], line.size() );
+            //ofs.put( '\n' );
+            if( flush_ ) { ofs->flush(); }
+        }
     }
     if ( pass_ ) { std::cout.write( &line[0], line.size() ); /*std::cout.put('\n');*/ std::cout.flush(); }
 }
 
 template < typename T >
-std::ofstream& split< T >::ofstream_by_time_()
+std::ofstream* split< T >::ofstream_by_time_()
 {
     if( !last_ || current_.timestamp > ( last_->timestamp + *period_ ) )
     {
@@ -261,11 +270,11 @@ std::ofstream& split< T >::ofstream_by_time_()
         file_.open( ( time + suffix_ ).c_str(), mode_ );
         last_ = current_;
     }
-    return file_;
+    return &file_;
 }
 
 template < typename T >
-std::ofstream& split< T >::ofstream_by_block_()
+std::ofstream* split< T >::ofstream_by_block_()
 {
     static comma::uint32 id = 0;
     if( !last_ || last_->block != current_.block )
@@ -275,7 +284,7 @@ std::ofstream& split< T >::ofstream_by_block_()
         if( !filenames_.empty() )
         {
             auto it = filenames_.find( filenames_have_id_ ? current_.block : id );
-            if( it == filenames_.end() ) { COMMA_THROW( comma::exception, "filename not found for block " << current_.block << "; todo: skipping blocks with no matching filenames" ); }
+            if( it == filenames_.end() ) { return nullptr; }
             filename = it->second;
             const auto& dirname = boost::filesystem::path( filename ).parent_path();
             if( !( dirname.empty() || boost::filesystem::is_directory( dirname ) || boost::filesystem::create_directories( dirname ) ) )
@@ -289,7 +298,7 @@ std::ofstream& split< T >::ofstream_by_block_()
         last_ = current_;
         ++id;
     }
-    return file_;
+    return &file_;
 }
 
 template < typename T > static std::string to_string( const T& v ) { return boost::lexical_cast< std::string >( v ); }
@@ -301,15 +310,14 @@ template < typename T, typename M > static std::string find_( const M& m, const 
 template <> std::string find_< comma::uint32, std::unordered_map< comma::uint32, std::string > >( const std::unordered_map< comma::uint32, std::string >& m, const comma::uint32& id )
 {
     auto it = m.find( id );
-    if( it == m.end() ) { COMMA_THROW( comma::exception, "filename not found for id " << id << "; todo: skipping id with no matching filenames" ); }
-    return it->second;
+    return it == m.end() ? std::string() : it->second;
 }
 
 template < typename T >
 std::string split< T >::filename_from_id_( const T& id ) { return filenames_.empty() ? to_string( id ) + suffix_ : find_( filenames_, id ); }
 
 template < typename T >
-std::ofstream& split< T >::ofstream_by_id_()
+std::ofstream* split< T >::ofstream_by_id_()
 {
     typename Files::iterator it = files_.find( current_.id );
     if( it == files_.end() )
@@ -327,10 +335,11 @@ std::ofstream& split< T >::ofstream_by_id_()
         if( seen_ids_.find( current_.id ) == seen_ids_.end() ) { seen_ids_.insert( current_.id ); }
         else { mode |= std::ofstream::app; }
         std::string name = filename_from_id_( current_.id );
+        if( name.empty() ) { return nullptr; }
         std::shared_ptr< std::ofstream > stmp( new std::ofstream( &name[0], mode ) );
         it = files_.insert( std::make_pair( current_.id, stmp ) ).first;
     }
-    return *it->second;
+    return it->second.get();
 }
 
 template class split< comma::uint32 >;

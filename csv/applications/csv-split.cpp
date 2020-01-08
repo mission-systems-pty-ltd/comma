@@ -48,6 +48,7 @@ static std::string suffix;
 static unsigned int size = 0;
 static bool passthrough;
 static std::string files;
+static std::string default_filename;
 
 template < typename T > static void run()
 {
@@ -85,7 +86,8 @@ int main( int argc, char** argv )
         boost::program_options::options_description description( "options" );
         description.add_options()
             ( "help,h", "display help message" )
-            ( "files", boost::program_options::value< std::string >( &files ), "if 'block' field present, list of files to save blocks; todo: --files for id field" )
+            ( "default-file", boost::program_options::value< std::string >( &default_filename ), "todo: if --files present, unmatched ids will be put in the file with a given name; otherwise, unmatched values will be ignored" )
+            ( "files", boost::program_options::value< std::string >( &files ), "if 'block' or 'id' field present, list of output files (see examples below)" )
             ( "passthrough,pass", "pass data through to stdout" )
             ( "period,t", boost::program_options::value< double >( &period ), "period in seconds after which a new file is created" )
             ( "size,c", boost::program_options::value< unsigned int >( &size ), "packet size, only full packets will be written" )
@@ -109,17 +111,22 @@ int main( int argc, char** argv )
             std::cerr << "    split by id field, output to files" << std::endl;
             std::cerr << "        if id field present in --fields:" << std::endl;
             std::cerr << "        for each id value, output records with this id to a separate file, e.g. 0.csv, 1.csv, etc" << std::endl;
-            std::cerr << "        example: ( echo 0,a; echo 1,b; echo 0,c; echo 2,d ) | csv-split --fields id" << std::endl;
+            std::cerr << "        - by id with default filenames, e.g:" << std::endl;
+            std::cerr << "              ( echo 0,a; echo 1,b; echo 1,c; echo 2,d ) | csv-split --fields id" << std::endl;
+            std::cerr << "        - by id with specified filenames" << std::endl;
+            std::cerr << "              ( echo 0; echo 1; echo 2 ) | csv-split --fields id --files <( echo a; echo b; echo c )" << std::endl;
+            std::cerr << "        - by id with filenames mapped to block ids" << std::endl;
+            std::cerr << "              ( echo 0; echo 1; echo 2 ) | csv-split --fields id --files <( echo 0,a; echo 1,b; echo 2,c )';fields=id,filename'" << std::endl;
             std::cerr << std::endl;
             std::cerr << "    split by block field, output to files" << std::endl;
             std::cerr << "        if block field present in --fields:" << std::endl;
             std::cerr << "        output records with this block to a separate file, on change of block, open a new file, e.g. 0.csv, 1.csv, etc" << std::endl;
-            std::cerr << "        by block with default filenames, e.g:" << std::endl;
-            std::cerr << "            ( echo 0,a; echo 1,b; echo 1,c; echo 2,d ) | csv-split --fields block" << std::endl;
-            std::cerr << "        by block with specified filenames" << std::endl;
-            std::cerr << "            ( echo 0; echo 1; echo 2 ) | csv-split --fields block --files <( echo a; echo b; echo c )" << std::endl;
-            std::cerr << "        by block with filenames mapped to block ids" << std::endl;
-            std::cerr << "            ( echo 0; echo 1; echo 2 ) | csv-split --fields block --files <( echo 0,a; echo 1,b; echo 2,c )';fields=id,filename'" << std::endl;
+            std::cerr << "        - by block with default filenames, e.g:" << std::endl;
+            std::cerr << "              ( echo 0,a; echo 1,b; echo 1,c; echo 2,d ) | csv-split --fields block" << std::endl;
+            std::cerr << "        - by block with specified filenames" << std::endl;
+            std::cerr << "              ( echo 0; echo 1; echo 2 ) | csv-split --fields block --files <( echo a; echo b; echo c )" << std::endl;
+            std::cerr << "        - by block with filenames mapped to block ids" << std::endl;
+            std::cerr << "              ( echo 0; echo 1; echo 2 ) | csv-split --fields block --files <( echo 0,a; echo 1,b; echo 2,c )';fields=id,filename'" << std::endl;
             std::cerr << std::endl;
             std::cerr << "    split by t field, output to files" << std::endl;
             std::cerr << "        if t (timestamp) field present in --fields:" << std::endl;
@@ -153,6 +160,7 @@ int main( int argc, char** argv )
             return 0;
         }
         csv = comma::csv::program_options::get( vm );
+        if( !default_filename.empty() ) { std::cerr << "csv-split: --default-filename: todo, just ask" << std::endl; }
         if( csv.binary() ) { size = csv.format().size(); }
         bool id_is_string = vm.count( "string" );
         bool id_is_time = vm.count( "time" );
