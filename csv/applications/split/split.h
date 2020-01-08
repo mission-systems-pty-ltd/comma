@@ -158,7 +158,8 @@ class split
         ids_type_ seen_ids_;
         bool pass_;
         bool flush_;
-        std::unique_ptr< std::ifstream > filenames_;
+        std::unordered_map< comma::uint32, std::string > filenames_;
+        bool filenames_with_id_;
 
         //to-do
         bool published_on_stream( const char* data, unsigned int size );

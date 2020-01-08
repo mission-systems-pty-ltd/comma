@@ -38,20 +38,75 @@
 #include <sys/resource.h>
 #endif
 
+#include <unordered_map>
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 #include "../../../base/exception.h"
+#include "../../../csv/stream.h"
+#include "../../../csv/traits.h"
 #include "../../../io/file_descriptor.h"
+#include "../../../name_value/parser.h"
+#include "../../../visiting/traits.h"
 #include "split.h"
 
 namespace comma { namespace csv { namespace applications {
 
+struct filename_record
+{
+    comma::uint32 id;
+    std::string filename;
+    filename_record( comma::uint32 id = 0, const std::string& filename = "" ): id( id ), filename( filename ) {}
+};
+
+} } } // namespace comma { namespace csv { namespace applications {
+
+namespace comma { namespace visiting {
+
+template <> struct traits< comma::csv::applications::filename_record >
+{
+    template< typename K, typename V > static void visit( const K& k, comma::csv::applications::filename_record& t, V& v )
+    {
+        v.apply( "id", t.id );
+        v.apply( "filename", t.filename );
+    }
+
+    template< typename K, typename V > static void visit( const K& k, const comma::csv::applications::filename_record& t, V& v )
+    {
+        v.apply( "id", t.id );
+        v.apply( "filename", t.filename );
+    }
+};
+
+} } // namespace comma { namespace visiting {
+
+namespace comma { namespace csv { namespace applications {
+
+std::pair< std::unordered_map< comma::uint32, std::string >, bool > static filenames( const std::string& filename )
+{
+    auto csv = comma::name_value::parser( "filename" ).get< comma::csv::options >( filename );
+    if( csv.fields.empty() ) { csv.fields = "filename"; }
+    std::ifstream ifs( csv.filename );
+    if( !ifs.is_open() ) { COMMA_THROW( comma::exception, "could not open --files='" << csv.filename << "'" ); }
+    comma::csv::input_stream< filename_record > is( ifs, csv );
+    comma::uint32 id = 0;
+    std::pair< std::unordered_map< comma::uint32, std::string >, bool > r;
+    r.second = csv.has_field( "id" );
+    while( is.ready() || ifs.good() )
+    {
+        auto p = is.read();
+        if( p == nullptr ) { break; }
+        r.first[ r.second ? p->id : id++ ] = p->filename; // quick and dirty
+    }
+    if( r.first.empty() ) { COMMA_THROW( comma::exception, "got no filenames from '" << csv.filename << "'" ); }
+    return r;
+}
+    
 template < typename T >
 split< T >::split( boost::optional< boost::posix_time::time_duration > period
-            , const std::string& suffix
-            , const comma::csv::options& csv
-            , bool pass
-            , const std::string& filenames )
+                 , const std::string& suffix
+                 , const comma::csv::options& csv
+                 , bool pass
+                 , const std::string& filenames )
     : ofstream_( std::bind( &split< T >::ofstream_by_time_, this ) )
     , period_( period )
     , suffix_( suffix )
@@ -66,11 +121,7 @@ split< T >::split( boost::optional< boost::posix_time::time_duration > period
     if( csv.has_field( "block" ) )
     {
         ofstream_ = std::bind( &split< T >::ofstream_by_block_, this );
-        if( !filenames.empty() )
-        {
-            filenames_.reset( new std::ifstream( filenames ) );
-            if( !filenames_->is_open() ) { COMMA_THROW( comma::exception, "failed to open '" << filenames << "'" ); }
-        }
+        if( !filenames.empty() ) { boost::tie( filenames_, filenames_with_id_ ) = applications::filenames( filenames ); }
     }
     else
     {
@@ -211,18 +262,19 @@ std::ofstream& split< T >::ofstream_by_time_()
 template < typename T >
 std::ofstream& split< T >::ofstream_by_block_()
 {
+    static comma::uint32 id = 0;
     if( !last_ || last_->block != current_.block )
     {
         file_.close();
         std::string filename;
-        if( filenames_ )
+        if( !filenames_.empty() )
         {
-            while( std::cin.good() && !is_shutdown_ )
+            auto it = filenames_.find( filenames_with_id_ ? current_.block : id );
+            if( it == filenames_.end() ) { COMMA_THROW( comma::exception, "filename not found for block " << current_.block << "; todo: skipping blocks with no matching filenames" ); }
+            filename = it->second;
+            const auto& dirname = boost::filesystem::path( filename ).parent_path();
+            if( !( dirname.empty() || boost::filesystem::is_directory( dirname ) || boost::filesystem::create_directories( dirname ) ) )
             {
-                std::getline( *filenames_, filename );
-                if( filename.empty() ) { continue; }
-                const auto& dirname = boost::filesystem::path( filename ).parent_path();
-                if( dirname.empty() || boost::filesystem::is_directory( dirname ) || boost::filesystem::create_directories( dirname ) ) { break; }
                 COMMA_THROW( comma::exception, "failed to create directory '" << dirname << "' for file: '" << filename << "'" );
             }
         }
@@ -230,6 +282,7 @@ std::ofstream& split< T >::ofstream_by_block_()
         file_.open( &filename[0], mode_ );
         if( !file_.is_open() ) { COMMA_THROW( comma::exception, "failed to open '" << filename << "'" ); }
         last_ = current_;
+        ++id;
     }
     return file_;
 }

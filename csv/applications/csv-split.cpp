@@ -37,7 +37,6 @@
 
 #include <boost/optional.hpp>
 #include <boost/program_options.hpp>
-#include "../../application/contact_info.h"
 #include "../../csv/impl/program_options.h"
 #include "../../csv/traits.h"
 #include "split/split.h"
@@ -115,7 +114,12 @@ int main( int argc, char** argv )
             std::cerr << "    split by block field, output to files" << std::endl;
             std::cerr << "        if block field present in --fields:" << std::endl;
             std::cerr << "        output records with this block to a separate file, on change of block, open a new file, e.g. 0.csv, 1.csv, etc" << std::endl;
-            std::cerr << "        example: ( echo 0,a; echo 1,b; echo 1,c; echo 2,d ) | csv-split --fields block" << std::endl;
+            std::cerr << "        by block with default filenames, e.g:" << std::endl;
+            std::cerr << "            ( echo 0,a; echo 1,b; echo 1,c; echo 2,d ) | csv-split --fields block" << std::endl;
+            std::cerr << "        by block with specified filenames" << std::endl;
+            std::cerr << "            ( echo 0; echo 1; echo 2 ) | csv-split --fields block --files <( echo a; echo b; echo c )" << std::endl;
+            std::cerr << "        by block with filenames mapped to block ids" << std::endl;
+            std::cerr << "            ( echo 0; echo 1; echo 2 ) | csv-split --fields block --files <( echo 0,a; echo 1,b; echo 2,c )';fields=id,filename'" << std::endl;
             std::cerr << std::endl;
             std::cerr << "    split by t field, output to files" << std::endl;
             std::cerr << "        if t (timestamp) field present in --fields:" << std::endl;
@@ -126,17 +130,17 @@ int main( int argc, char** argv )
             std::cerr << "        if output streams (see example below) are present on the command line and id field present in --fields:" << std::endl;
             std::cerr << "        output records with the given ids to the corresponding streams, while outputing the rest into files" << std::endl;
             std::cerr << "        records with ids for which output stream is not specified will be discarded, unless ... stream is specified:" << std::endl;
-	    std::cerr << std::endl;
-	    std::cerr << "        outputs: <keys>;<stream>; to send records with a given set of ids to this stream" << std::endl;
+            std::cerr << std::endl;
+            std::cerr << "        outputs: <keys>;<stream>; to send records with a given set of ids to this stream" << std::endl;
             std::cerr << "            keys:" << std::endl;
             std::cerr << "                <id>[,<id>]*: comma-separated list of ids, e.g: '5' or '2,5,7', etc" << std::endl;
             std::cerr << "                ...: three dots mean: send to this stream all the records with ids for which no other stream is specified (see example below)" << std::endl;
             std::cerr << "            stream:" << std::endl;
-	    std::cerr << "                tcp:<port>: e.g. tcp:1234" << std::endl;
-	    std::cerr << "                udp:<port>: e.g. udp:1234 (todo)" << std::endl;
-	    std::cerr << "                local:<name>: linux/unix local server socket e.g. local:./tmp/my_socket" << std::endl;
-	    std::cerr << "                <named pipe name>: named pipe, which will be re-opened, if client reconnects" << std::endl;
-	    std::cerr << "                <filename>: a regular file" << std::endl;
+            std::cerr << "                tcp:<port>: e.g. tcp:1234" << std::endl;
+            std::cerr << "                udp:<port>: e.g. udp:1234 (todo)" << std::endl;
+            std::cerr << "                local:<name>: linux/unix local server socket e.g. local:./tmp/my_socket" << std::endl;
+            std::cerr << "                <named pipe name>: named pipe, which will be re-opened, if client reconnects" << std::endl;
+            std::cerr << "                <filename>: a regular file" << std::endl;
             std::cerr << "        example: ( echo 0,a; echo 1,b; echo 0,c; echo 2,d ) | csv-split --fields id \"0,1;tcp:5999\" \"...;local:/tmp/named_fifo\"" << std::endl;
             std::cerr << std::endl;
             std::cerr << description << std::endl;
@@ -145,10 +149,8 @@ int main( int argc, char** argv )
             std::cerr << "    block: split on the block number change" << std::endl;
             std::cerr << "    id: split by id (same as block, except does not have to be contiguous by the price of worse performance)" << std::endl;
             std::cerr << "    t: if present, use timestamp from the packet; if absent, use system time" << std::endl;
-	    std::cerr << std::endl;
-            std::cerr << comma::contact_info << std::endl;
             std::cerr << std::endl;
-            return 1;
+            return 0;
         }
         csv = comma::csv::program_options::get( vm );
         if( csv.binary() ) { size = csv.format().size(); }
