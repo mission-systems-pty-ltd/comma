@@ -51,26 +51,26 @@
 
 namespace comma { namespace csv { namespace applications {
 
-struct filename_record
+template < typename T > struct filename_record
 {
-    comma::uint32 id;
+    T id;
     std::string filename;
-    filename_record( comma::uint32 id = 0, const std::string& filename = "" ): id( id ), filename( filename ) {}
+    filename_record( const T& id = 0, const std::string& filename = "" ): id( id ), filename( filename ) {}
 };
 
 } } } // namespace comma { namespace csv { namespace applications {
 
 namespace comma { namespace visiting {
 
-template <> struct traits< comma::csv::applications::filename_record >
+template < typename T > struct traits< comma::csv::applications::filename_record< T > >
 {
-    template< typename K, typename V > static void visit( const K& k, comma::csv::applications::filename_record& t, V& v )
+    template< typename K, typename V > static void visit( const K& k, comma::csv::applications::filename_record< T >& t, V& v )
     {
         v.apply( "id", t.id );
         v.apply( "filename", t.filename );
     }
 
-    template< typename K, typename V > static void visit( const K& k, const comma::csv::applications::filename_record& t, V& v )
+    template< typename K, typename V > static void visit( const K& k, const comma::csv::applications::filename_record< T >& t, V& v )
     {
         v.apply( "id", t.id );
         v.apply( "filename", t.filename );
@@ -83,13 +83,15 @@ namespace comma { namespace csv { namespace applications {
 
 std::pair< std::unordered_map< comma::uint32, std::string >, bool > static filenames( const std::string& filename )
 {
+    std::pair< std::unordered_map< comma::uint32, std::string >, bool > r;
+    r.second = false;
+    if( filename.empty() ) { return r; }
     auto csv = comma::name_value::parser( "filename" ).get< comma::csv::options >( filename );
     if( csv.fields.empty() ) { csv.fields = "filename"; }
     std::ifstream ifs( csv.filename );
     if( !ifs.is_open() ) { COMMA_THROW( comma::exception, "could not open --files='" << csv.filename << "'" ); }
-    comma::csv::input_stream< filename_record > is( ifs, csv );
+    comma::csv::input_stream< filename_record< comma::uint32 > > is( ifs, csv ); // quick and dirty; todo: support templated map
     comma::uint32 id = 0;
-    std::pair< std::unordered_map< comma::uint32, std::string >, bool > r;
     r.second = csv.has_field( "id" );
     while( is.ready() || ifs.good() )
     {
@@ -118,15 +120,21 @@ split< T >::split( boost::optional< boost::posix_time::time_duration > period
     if( csv.fields.empty() ) { return; }
     if( csv.binary() ) { binary_.reset( new comma::csv::binary< input >( csv ) ); }
     else { ascii_.reset( new comma::csv::ascii< input >( csv ) ); }
+    boost::tie( filenames_, filenames_have_id_ ) = applications::filenames( filenames );
     if( csv.has_field( "block" ) )
     {
         ofstream_ = std::bind( &split< T >::ofstream_by_block_, this );
-        if( !filenames.empty() ) { boost::tie( filenames_, filenames_with_id_ ) = applications::filenames( filenames ); }
     }
     else
     {
-        if( !filenames.empty() ) { COMMA_THROW( comma::exception, "--files given, but no block field specified in --fields" ); }
-        if( csv.has_field( "id" ) ) { ofstream_ = std::bind( &split< T >::ofstream_by_id_, this ); }
+        if( csv.has_field( "id" ) )
+        { 
+            ofstream_ = std::bind( &split< T >::ofstream_by_id_, this );
+        }
+        else
+        {    
+            if( !filenames_.empty() ) { COMMA_THROW( comma::exception, "--files given, but no block field specified in --fields" ); }
+        }
     }
 }
 
@@ -266,7 +274,7 @@ std::ofstream& split< T >::ofstream_by_block_()
         std::string filename;
         if( !filenames_.empty() )
         {
-            auto it = filenames_.find( filenames_with_id_ ? current_.block : id );
+            auto it = filenames_.find( filenames_have_id_ ? current_.block : id );
             if( it == filenames_.end() ) { COMMA_THROW( comma::exception, "filename not found for block " << current_.block << "; todo: skipping blocks with no matching filenames" ); }
             filename = it->second;
             const auto& dirname = boost::filesystem::path( filename ).parent_path();
@@ -284,14 +292,21 @@ std::ofstream& split< T >::ofstream_by_block_()
     return file_;
 }
 
-template < typename T > std::string to_string( const T& v ) { return boost::lexical_cast< std::string >( v ); }
+template < typename T > static std::string to_string( const T& v ) { return boost::lexical_cast< std::string >( v ); }
+
 template <> std::string to_string< boost::posix_time::ptime >( const boost::posix_time::ptime& v ) { return boost::posix_time::to_iso_string( v ); }
 
-template < typename T >
-std::string split< T >::filename_from_id_( const T& id )
-{ 
-    return to_string( id ) + suffix_;
+template < typename T, typename M > static std::string find_( const M& m, const T& id ) { COMMA_THROW( comma::exception, "id-to-filename map not implemented for this type" ); }
+
+template <> std::string find_< comma::uint32, std::unordered_map< comma::uint32, std::string > >( const std::unordered_map< comma::uint32, std::string >& m, const comma::uint32& id )
+{
+    auto it = m.find( id );
+    if( it == m.end() ) { COMMA_THROW( comma::exception, "filename not found for id " << id << "; todo: skipping id with no matching filenames" ); }
+    return it->second;
 }
+
+template < typename T >
+std::string split< T >::filename_from_id_( const T& id ) { return filenames_.empty() ? to_string( id ) + suffix_ : find_( filenames_, id ); }
 
 template < typename T >
 std::ofstream& split< T >::ofstream_by_id_()
@@ -312,7 +327,7 @@ std::ofstream& split< T >::ofstream_by_id_()
         if( seen_ids_.find( current_.id ) == seen_ids_.end() ) { seen_ids_.insert( current_.id ); }
         else { mode |= std::ofstream::app; }
         std::string name = filename_from_id_( current_.id );
-        std::shared_ptr< std::ofstream > stmp( new std::ofstream( name.c_str(), mode ) );
+        std::shared_ptr< std::ofstream > stmp( new std::ofstream( &name[0], mode ) );
         it = files_.insert( std::make_pair( current_.id, stmp ) ).first;
     }
     return *it->second;

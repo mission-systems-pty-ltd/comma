@@ -160,7 +160,7 @@ class split
         bool pass_;
         bool flush_;
         std::unordered_map< comma::uint32, std::string > filenames_;
-        bool filenames_with_id_;
+        bool filenames_have_id_;
 
         //to-do
         bool published_on_stream( const char* data, unsigned int size );
