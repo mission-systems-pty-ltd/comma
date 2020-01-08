@@ -130,7 +130,6 @@ split< T >::split( boost::optional< boost::posix_time::time_duration > period
     }
 }
 
-//to-do
 template < typename T >
 split< T >::split( boost::optional< boost::posix_time::time_duration > period
                  , const std::string& suffix
@@ -157,13 +156,11 @@ split< T >::split( boost::optional< boost::posix_time::time_duration > period
         {
             auto publisher_pos = t->insert( std::move( publisher ) );
             auto const keys = comma::split( stream_values[0], ',' );
-
             for( auto const& ki : keys )
             {
                 auto const kii = boost::lexical_cast< T >( ki );
                 if( seen_ids_.end() !=  seen_ids_.find( kii ) ) { COMMA_THROW( comma::exception, "multiple output streams have the id: " << ki ); }
                 seen_ids_.insert( kii );
-
                 mapped_publishers_.insert( std::make_pair( kii, publisher_pos.first->get() ) );
             }
         }
@@ -287,9 +284,14 @@ std::ofstream& split< T >::ofstream_by_block_()
     return file_;
 }
 
-template < typename T > static std::string make_filename_from_id( const T& id, const std::string& suffix ) { return boost::lexical_cast< std::string >( id ) + suffix; }
+template < typename T > std::string to_string( const T& v ) { return boost::lexical_cast< std::string >( v ); }
+template <> std::string to_string< boost::posix_time::ptime >( const boost::posix_time::ptime& v ) { return boost::posix_time::to_iso_string( v ); }
 
-static std::string make_filename_from_id( const boost::posix_time::ptime& id, const std::string& suffix ) { return boost::posix_time::to_iso_string( id ) + suffix; }
+template < typename T >
+std::string split< T >::filename_from_id_( const T& id )
+{ 
+    return to_string( id ) + suffix_;
+}
 
 template < typename T >
 std::ofstream& split< T >::ofstream_by_id_()
@@ -309,7 +311,7 @@ std::ofstream& split< T >::ofstream_by_id_()
         std::ios_base::openmode mode = mode_;
         if( seen_ids_.find( current_.id ) == seen_ids_.end() ) { seen_ids_.insert( current_.id ); }
         else { mode |= std::ofstream::app; }
-        std::string name = make_filename_from_id( current_.id, suffix_);
+        std::string name = filename_from_id_( current_.id );
         std::shared_ptr< std::ofstream > stmp( new std::ofstream( name.c_str(), mode ) );
         it = files_.insert( std::make_pair( current_.id, stmp ) ).first;
     }

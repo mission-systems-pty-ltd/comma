@@ -136,6 +136,7 @@ class split
         std::ofstream& ofstream_by_time_();
         std::ofstream& ofstream_by_block_();
         std::ofstream& ofstream_by_id_();
+        std::string filename_from_id_( const T& id );
         void update_( const char* data, unsigned int size );
         void update_( const std::string& line );
         void accept_();
