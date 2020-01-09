@@ -87,6 +87,9 @@ class ascii
         
         /// return quote sign
         boost::optional< char > quote() const { return quote_; }
+        
+        /// return default value
+        const S& sample() const { return sample_; }
 
     private:
         char delimiter_;
