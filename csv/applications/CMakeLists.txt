@@ -114,6 +114,10 @@ add_executable( csv-random ${dir}/csv-random.cpp )
 target_link_libraries ( csv-random ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io comma_string comma_xpath comma_csv )
 install( TARGETS csv-random RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
 
+add_executable( csv-strings ${dir}/csv-strings.cpp )
+target_link_libraries ( csv-strings ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io comma_string comma_xpath comma_csv )
+install( TARGETS csv-strings RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
+
 add_executable( csv-update ${dir}/csv-update.cpp )
 target_link_libraries ( csv-update ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io comma_string comma_xpath comma_csv )
 install( TARGETS csv-update RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
