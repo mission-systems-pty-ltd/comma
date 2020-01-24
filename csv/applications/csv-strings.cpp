@@ -76,7 +76,7 @@ static void usage( bool verbose )
     std::cerr << "operations" << std::endl;
     std::cerr << "    path-basename,basename" << std::endl;
     std::cerr << "    path-dirname,dirname" << std::endl;
-    std::cerr << "    path-realpath,path-canonical,canonical" << std::endl;
+    std::cerr << "    path-real,path-canonical,canonical" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --emplace; perform operation emplace" << std::endl;
@@ -96,7 +96,7 @@ static void usage( bool verbose )
     std::cerr << "        --fixed-depth=[<depth>]; output paths of fixed depth starting from root" << std::endl;
     std::cerr << "        --path-delimiter,-p=<delimiter>; default=/" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "path-realpath,path-canonical,canonical" << std::endl;
+    std::cerr << "path-real,path-canonical,canonical" << std::endl;
     std::cerr << "    options" << std::endl;
     std::cerr << "        --base=[<path>]; base path, default: current directory" << std::endl;
     std::cerr << std::endl;
@@ -272,7 +272,7 @@ int main( int ac, char** av )
         csv = comma::csv::options( options );
         if( operation == "path-basename" || operation == "basename" ) { return comma::applications::strings::path::run< comma::applications::strings::path::basename >( options ); }
         if( operation == "path-dirname" || operation == "dirname" ) { return comma::applications::strings::path::run< comma::applications::strings::path::dirname >( options ); }
-        if( operation == "path-realpath" || operation == "path-canonical" || operation == "canonical" ) { return comma::applications::strings::path::run< comma::applications::strings::path::canonical >( options ); }
+        if( operation == "path-real" || operation == "path-canonical" || operation == "canonical" ) { return comma::applications::strings::path::run< comma::applications::strings::path::canonical >( options ); }
         std::cerr << "csv-strings: expection operation; got: '" << operation << "'" << std::endl;
         return 1;
     }
