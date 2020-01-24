@@ -60,6 +60,7 @@
 #include <iostream>
 #include <boost/lexical_cast.hpp>
 #include "../../application/command_line_options.h"
+#include "../../base/exception.h"
 #include "../../csv/stream.h"
 #include "../../csv/traits.h"
 #include "../../string/string.h"
@@ -72,12 +73,14 @@ static void usage( bool verbose )
     std::cerr << "    usage: cat input.csv | csv-strings <operation> [<options>] > output.csv" << std::endl;
     std::cerr << std::endl;
     std::cerr << "operations" << std::endl;
-    std::cerr << "    path-basename" << std::endl;
-    std::cerr << "    path-dirname" << std::endl;
+    std::cerr << "    path-basename,basename" << std::endl;
+    std::cerr << "    path-dirname,dirname" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    options" << std::endl;
-    std::cerr << "        --fields=[<fields>]; will perform operation on any non-empty fields" << std::endl;
-    std::cerr << "                             unless different semantics specified for operation" << std::endl;
+    std::cerr << "options" << std::endl;
+    std::cerr << "    --fields=[<fields>]; will perform operation on any non-empty fields" << std::endl;
+    std::cerr << "                         unless different semantics specified for operation" << std::endl;
+    std::cerr << "                         default: perform operation on the first field" << std::endl;
+    std::cerr << "    --strict; exit on strings on which operation does not make sense" << std::endl;
     std::cerr << std::endl;
     std::cerr << "path-basename" << std::endl;
     std::cerr << "    options" << std::endl;
@@ -98,6 +101,7 @@ static void usage( bool verbose )
     exit( 0 );
 }
 
+static bool strict;
 static comma::csv::options csv;
 
 namespace comma { namespace applications { namespace strings { namespace path {
@@ -129,22 +133,24 @@ static int run( const comma::command_line_options& options )
     unsigned int n = 0;
     for( unsigned int i = 0; i < v.size(); ++i )
     {
-        if( v.empty() ) { continue; }
-        v[i] = "strings[" + boost::lexical_cast< std::string >( i ) + "]";
+        if( v[i].empty() ) { continue; }
+        v[i] = "strings[" + boost::lexical_cast< std::string >( n ) + "]";
         ++n;
     }
-    if( n == 0 ) { std::cerr << "csv-strings: path-" << T::name() << ": please specify at least one non-empty field" << std::endl; exit( 1 ); }
-    ::csv.fields = comma::join( v, ',' );
+    ::csv.fields = n == 0 ? std::string( "strings[0]" ) : comma::join( v, ',' );
+    if( n == 0 ) { ++n; }
+    char delimiter = options.value( "--path-delimiter,-p", '/' );
     comma::csv::input_stream< input > istream( std::cin, ::csv, input( n ) );
     std::function< void( const input& p ) > write;
     auto run_ = [&]()->int
     {
+        T t( options );
         while( istream.ready() || std::cin.good() )
         {
             const input* p = istream.read();
             if( !p ) { break; }
             input r( n );
-            for( unsigned int i = 0; i < p->strings.size(); ++i ) { r.strings[i] = T::convert( p->strings[i] ); }
+            for( unsigned int i = 0; i < p->strings.size(); ++i ) { r.strings[i] = t.convert( comma::split( p->strings[i], delimiter ) ); }
             write( r );
             if( ::csv.flush ) { std::cout.flush(); }
         }
@@ -167,14 +173,62 @@ static int run( const comma::command_line_options& options )
 
 struct basename
 {
+    unsigned int depth;
+    char delimiter;
+    
     static const char* name() { return "basename"; }
-    static std::string convert( const std::string& s ) { return "basename: todo"; }
+    
+    basename( const comma::command_line_options& options )
+        : depth( options.value( "--depth", 1 ) )
+        , delimiter( options.value( "--path-delimiter,-p", '/' ) )
+    {
+    }
+    
+    std::string convert( const std::vector< std::string >& s )
+    {
+        if( s.size() < depth )
+        {
+            if( strict ) { COMMA_THROW( comma::exception, "expected path depth at least " << depth << "; got: '" << comma::join( s, delimiter ) << "'" ); }
+            return "";
+        }
+        return comma::join( s.end() - depth, s.end(), delimiter );
+    }
 };
 
 struct dirname
 {
+    unsigned int depth;
+    unsigned int fixed_depth;
+    char delimiter;
+    
     static const char* name() { return "dirname"; }
-    static std::string convert( const std::string& s ) { return "dirname: todo"; }
+    
+    dirname( const comma::command_line_options& options )
+        : depth( options.value( "--depth", 1 ) )
+        , fixed_depth( options.value( "--fixed-depth", 0 ) )
+        , delimiter( options.value( "--path-delimiter,-p", '/' ) )
+    {
+        options.assert_mutually_exclusive( "--depth,--fixed-depth" );
+    }
+    
+    std::string convert( const std::vector< std::string >& s )
+    {
+        if( fixed_depth > 0 )
+        {
+            if( s.size() < fixed_depth )
+            {
+                if( strict ) { COMMA_THROW( comma::exception, "expected path depth at least " << fixed_depth << "; got: '" << comma::join( s, delimiter ) << "'" ); }
+                return "";
+            }
+            return comma::join( s, fixed_depth, delimiter );
+        }
+        if( s.size() < depth )
+        {
+            if( strict ) { COMMA_THROW( comma::exception, "expected path depth at least " << depth << "; got: '" << comma::join( s, '/' ) << "'" ); }
+            return "";
+        }
+        return comma::join( s.begin(), s.end() - depth, delimiter );
+    }
 };
 
 } } } } // namespace comma { namespace applications { namespace strings { namespace path {
@@ -187,9 +241,10 @@ int main( int ac, char** av )
         const auto& unnamed = options.unnamed( "--flush,--verbose,-v,--emplace", "-.*" );
         if( unnamed.empty() ) { std::cerr << "csv-strings: please specify operation" << std::endl; return 1; }
         std::string operation = unnamed[0];
+        strict = options.exists( "--strict" );
         csv = comma::csv::options( options );
-        if( operation == "path-basename" ) { return comma::applications::strings::path::run< comma::applications::strings::path::basename >( options ); }
-        if( operation == "path-dirname" ) { return comma::applications::strings::path::run< comma::applications::strings::path::dirname >( options ); }
+        if( operation == "path-basename" || operation == "basename" ) { return comma::applications::strings::path::run< comma::applications::strings::path::basename >( options ); }
+        if( operation == "path-dirname" || operation == "dirname" ) { return comma::applications::strings::path::run< comma::applications::strings::path::dirname >( options ); }
         std::cerr << "csv-strings: expection operation; got: '" << operation << "'" << std::endl;
         return 1;
     }
