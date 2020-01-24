@@ -70,7 +70,7 @@ std::vector< std::string > split_escaped( const std::string & s, const char * se
     std::vector< std::string > v;
     const char* begin( &s[0] );
     const char* const end( begin + s.length() );
-    boost::optional<char> quoted;
+    boost::optional< char > quoted;
     v.push_back( std::string() );
     for( const char* p = begin; p < end; ++p )
     {
@@ -107,5 +107,43 @@ std::vector< std::string > split_escaped( const std::string & s, char separator,
     const char separators[] = { separator, 0 };
     return split_escaped( s, separators, quotes, escape );
 }
+
+std::vector< std::string > split_bracketed( const std::string& s, const char* separators, char lbracket, char rbracket )
+{
+    std::vector< std::string > v;
+    const char* begin( &s[0] );
+    const char* const end( begin + s.length() );
+    unsigned int depth = 0;
+    v.push_back( std::string() );
+    for( const char* p = begin; p < end; ++p )
+    {
+        if( lbracket == *p )
+        {
+            ++depth;
+            v.back() += *p;
+        }
+        else if( rbracket == *p )
+        {
+            if( depth > 0 ) { --depth; }
+            v.back() += *p;
+        }
+        else if( depth == 0 && string::is_one_of( *p, separators ) )
+        {
+            v.push_back( std::string() );
+        }
+        else
+        {
+            v.back() += *p;
+        }
+    }
+    return v;
+}
+
+std::vector< std::string > split_bracketed( const std::string& s, char separator, char lbracket, char rbracket )
+{
+    const char separators[] = { separator, 0 };
+    return split_bracketed( s, separators, lbracket, rbracket );
+}
+
 
 } // namespace comma {

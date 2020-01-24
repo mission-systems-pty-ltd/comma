@@ -282,6 +282,39 @@ TEST( string, split_escaped_quoted )
     }
 }
 
+TEST( string, split_bracketed )
+{
+    {
+        std::vector< std::string > v( split_bracketed( "" ) );
+        EXPECT_EQ( 1u, v.size() );
+        EXPECT_EQ( "", v[0] );
+    }
+    {
+        std::vector< std::string > v( split_bracketed( ")()" ) );
+        EXPECT_EQ( 1u, v.size() );
+        EXPECT_EQ( ")()", v[0] );
+    }
+    {
+        std::vector< std::string > v( split_bracketed( ")(,)" ) );
+        EXPECT_EQ( 1u, v.size() );
+        EXPECT_EQ( ")(,)", v[0] );
+    }
+    {
+        std::vector< std::string > v( split_bracketed( "a[,b,c],d", ',', '[', ']' ) );
+        EXPECT_EQ( 2u, v.size() );
+        EXPECT_EQ( "a[,b,c]", v[0] );
+        EXPECT_EQ( "d", v[1] );
+    }
+    {
+        std::vector< std::string > v( split_bracketed( "a,( b, c, d ),e( f ( g, h ) ), i", ',' ) );
+        EXPECT_EQ( 4u, v.size() );
+        EXPECT_EQ( "a", v[0] );
+        EXPECT_EQ( "( b, c, d )", v[1] );
+        EXPECT_EQ( "e( f ( g, h ) )", v[2] );
+        EXPECT_EQ( " i", v[3] );
+    }
+}
+
 TEST( string, strip )
 {
     EXPECT_EQ( strip( "", ";" ), "" );

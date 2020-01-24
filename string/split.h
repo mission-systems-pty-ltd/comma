@@ -27,11 +27,9 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author vsevolod vlaskine
 
-#ifndef COMMA_STRING_SPLIT_H_
-#define COMMA_STRING_SPLIT_H_
+#pragma once
 
 #include <string>
 #include <vector>
@@ -59,7 +57,7 @@ std::vector< std::string > split( const std::string& s, char separator, bool emp
 /// An escape character will only escape a delimiter, quote or escape character;
 /// escaping any other character will result in both being kept;
 /// e.g. c:\windows\ will be kept as c:\windows\ with the trailing backslash
-/// e.g. fname;delimiter=\\;field=a,b will be kept as fname;delimiter=\;field=a,b 
+/// e.g. filename;delimiter=\\;fields=a,b will be kept as filename;delimiter=\;fields=a,b 
 ///
 /// A quote may be anywhere in a string. Quotes must be closed; i.e Each start
 /// quote must be paired with an end quote, or an exception is thrown.
@@ -69,7 +67,10 @@ std::vector< std::string > split_escaped( const std::string& s, const char * sep
 /// split string into tokens; always contains at least one element;
 /// skips backslash escaped seperator, handle boolean quotes 
 std::vector< std::string > split_escaped( const std::string& s, char separator, const char * quotes = "\"\'", char escape = '\\' );
+/// skips bracketed separators
+std::vector< std::string > split_bracketed( const std::string& s, const char * separators = " ", char lbracket = '(', char rbrackets = ')' );
+/// skips bracketed separators
+std::vector< std::string > split_bracketed( const std::string& s, char separator, char lbracket = '(', char rbracket = ')' );
 
 } // namespace comma {
 
-#endif // COMMA_STRING_SPLIT_H_
