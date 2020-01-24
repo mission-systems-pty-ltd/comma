@@ -58,6 +58,7 @@
 
 #include <functional>
 #include <iostream>
+#include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 #include "../../application/command_line_options.h"
 #include "../../base/exception.h"
@@ -75,25 +76,29 @@ static void usage( bool verbose )
     std::cerr << "operations" << std::endl;
     std::cerr << "    path-basename,basename" << std::endl;
     std::cerr << "    path-dirname,dirname" << std::endl;
+    std::cerr << "    path-realpath,path-canonical,canonical" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
+    std::cerr << "    --emplace; perform operation emplace" << std::endl;
     std::cerr << "    --fields=[<fields>]; will perform operation on any non-empty fields" << std::endl;
     std::cerr << "                         unless different semantics specified for operation" << std::endl;
     std::cerr << "                         default: perform operation on the first field" << std::endl;
     std::cerr << "    --strict; exit on strings on which operation does not make sense" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "path-basename" << std::endl;
+    std::cerr << "path-basename,basename" << std::endl;
     std::cerr << "    options" << std::endl;
     std::cerr << "        --depth=<depth>; default=1; if path length less than depth, output empty string" << std::endl;
-    std::cerr << "        --emplace; perform operation emplace" << std::endl;
     std::cerr << "        --path-delimiter,-p=<delimiter>; default=/" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "path-dirname" << std::endl;
+    std::cerr << "path-dirname,dirname" << std::endl;
     std::cerr << "    options" << std::endl;
     std::cerr << "        --depth=<depth>; default=1; if path length less than depth, output empty string" << std::endl;
-    std::cerr << "        --emplace; perform operation emplace" << std::endl;
     std::cerr << "        --fixed-depth=[<depth>]; output paths of fixed depth starting from root" << std::endl;
     std::cerr << "        --path-delimiter,-p=<delimiter>; default=/" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "path-realpath,path-canonical,canonical" << std::endl;
+    std::cerr << "    options" << std::endl;
+    std::cerr << "        --base=[<path>]; base path, default: current directory" << std::endl;
     std::cerr << std::endl;
     std::cerr << "csv options:" << std::endl;
     std::cerr << comma::csv::options::usage( "", verbose ) << std::endl;
@@ -139,7 +144,6 @@ static int run( const comma::command_line_options& options )
     }
     ::csv.fields = n == 0 ? std::string( "strings[0]" ) : comma::join( v, ',' );
     if( n == 0 ) { ++n; }
-    char delimiter = options.value( "--path-delimiter,-p", '/' );
     comma::csv::input_stream< input > istream( std::cin, ::csv, input( n ) );
     std::function< void( const input& p ) > write;
     auto run_ = [&]()->int
@@ -150,7 +154,7 @@ static int run( const comma::command_line_options& options )
             const input* p = istream.read();
             if( !p ) { break; }
             input r( n );
-            for( unsigned int i = 0; i < p->strings.size(); ++i ) { r.strings[i] = t.convert( comma::split( p->strings[i], delimiter ) ); }
+            for( unsigned int i = 0; i < p->strings.size(); ++i ) { r.strings[i] = t.convert( p->strings[i] ); }
             write( r );
             if( ::csv.flush ) { std::cout.flush(); }
         }
@@ -184,8 +188,9 @@ struct basename
     {
     }
     
-    std::string convert( const std::vector< std::string >& s )
+    std::string convert( const std::string& t )
     {
+        const auto& s = comma::split( t, delimiter );
         if( s.size() < depth )
         {
             if( strict ) { COMMA_THROW( comma::exception, "expected path depth at least " << depth << "; got: '" << comma::join( s, delimiter ) << "'" ); }
@@ -211,8 +216,9 @@ struct dirname
         options.assert_mutually_exclusive( "--depth,--fixed-depth" );
     }
     
-    std::string convert( const std::vector< std::string >& s )
+    std::string convert( const std::string& t )
     {
+        const auto& s = comma::split( t, delimiter );
         if( fixed_depth > 0 )
         {
             if( s.size() < fixed_depth )
@@ -231,6 +237,27 @@ struct dirname
     }
 };
 
+struct canonical
+{
+    boost::filesystem::path base;
+    
+    static const char* name() { return "canonical"; }
+    
+    canonical( const comma::command_line_options& options )
+        : base( options.exists( "--base" )
+        ? boost::filesystem::path( options.value< std::string >( "--base" ) )
+        : boost::filesystem::current_path() )
+    {
+        if( ( options.value( "--path-delimiter,-p", '/' ) ) != '/' ) { COMMA_THROW( comma::exception, "path-canonical: expected path delimiter '/'; got: '" << options.value( "--path-delimiter,-p", '/' ) << "'" ); }
+    }
+    
+    std::string convert( const std::string& s )
+    {
+        try { return boost::filesystem::canonical( boost::filesystem::path( s ), base ).string(); } catch( ... ) { if( strict ) { throw; } }
+        return s;
+    }
+};
+
 } } } } // namespace comma { namespace applications { namespace strings { namespace path {
 
 int main( int ac, char** av )
@@ -245,6 +272,7 @@ int main( int ac, char** av )
         csv = comma::csv::options( options );
         if( operation == "path-basename" || operation == "basename" ) { return comma::applications::strings::path::run< comma::applications::strings::path::basename >( options ); }
         if( operation == "path-dirname" || operation == "dirname" ) { return comma::applications::strings::path::run< comma::applications::strings::path::dirname >( options ); }
+        if( operation == "path-realpath" || operation == "path-canonical" || operation == "canonical" ) { return comma::applications::strings::path::run< comma::applications::strings::path::canonical >( options ); }
         std::cerr << "csv-strings: expection operation; got: '" << operation << "'" << std::endl;
         return 1;
     }
