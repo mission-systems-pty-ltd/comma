@@ -108,7 +108,7 @@ std::vector< std::string > split_escaped( const std::string & s, char separator,
     return split_escaped( s, separators, quotes, escape );
 }
 
-std::vector< std::string > split_bracketed( const std::string& s, const char* separators, char lbracket, char rbracket )
+std::vector< std::string > split_bracketed( const std::string& s, const char* separators, char lbracket, char rbracket, bool strip_brackets )
 {
     std::vector< std::string > v;
     const char* begin( &s[0] );
@@ -119,13 +119,20 @@ std::vector< std::string > split_bracketed( const std::string& s, const char* se
     {
         if( lbracket == *p )
         {
+            if( strip_brackets && depth == 0 )
+            {
+                if( !v.back().empty() ) { COMMA_THROW( comma::exception, "asked to strip brackets; expected opening bracket immediately following separator, got'" << s << "'" ); }
+            }
+            else
+            {
+                v.back() += *p;
+            }
             ++depth;
-            v.back() += *p;
         }
         else if( rbracket == *p )
         {
+            if( !strip_brackets || depth > 1 ) { v.back() += *p; }
             if( depth > 0 ) { --depth; }
-            v.back() += *p;
         }
         else if( depth == 0 && string::is_one_of( *p, separators ) )
         {
@@ -139,10 +146,10 @@ std::vector< std::string > split_bracketed( const std::string& s, const char* se
     return v;
 }
 
-std::vector< std::string > split_bracketed( const std::string& s, char separator, char lbracket, char rbracket )
+std::vector< std::string > split_bracketed( const std::string& s, char separator, char lbracket, char rbracket, bool strip_brackets )
 {
     const char separators[] = { separator, 0 };
-    return split_bracketed( s, separators, lbracket, rbracket );
+    return split_bracketed( s, separators, lbracket, rbracket, strip_brackets );
 }
 
 

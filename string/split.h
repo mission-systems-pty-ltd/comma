@@ -68,9 +68,9 @@ std::vector< std::string > split_escaped( const std::string& s, const char * sep
 /// skips backslash escaped seperator, handle boolean quotes 
 std::vector< std::string > split_escaped( const std::string& s, char separator, const char * quotes = "\"\'", char escape = '\\' );
 /// skips bracketed separators
-std::vector< std::string > split_bracketed( const std::string& s, const char * separators = " ", char lbracket = '(', char rbrackets = ')' );
+std::vector< std::string > split_bracketed( const std::string& s, const char * separators = " ", char lbracket = '(', char rbrackets = ')', bool strip_brackets = true );
 /// skips bracketed separators
-std::vector< std::string > split_bracketed( const std::string& s, char separator, char lbracket = '(', char rbracket = ')' );
+std::vector< std::string > split_bracketed( const std::string& s, char separator, char lbracket = '(', char rbracket = ')', bool strip_brackets = true );
 
 } // namespace comma {
 
