@@ -267,22 +267,6 @@ struct canonical
     }
 };
 
-// struct is_leaf // todo: refactor, reuse generic run
-// {
-//     typedef record< unsigned int > output_t;
-//     
-//     std::string last;
-//     
-//     static const char* name() { return "is-leaf"; }
-//     
-//     is_leaf( const comma::command_line_options& ) {}
-//     
-//     unsigned int convert( const std::string& s )
-//     {
-//         bool r = s 
-//     }
-// };
-
 } } } } // namespace comma { namespace applications { namespace strings { namespace path {
 
 int main( int ac, char** av )
@@ -297,7 +281,6 @@ int main( int ac, char** av )
         csv = comma::csv::options( options );
         if( operation == "path-basename" || operation == "basename" ) { return comma::applications::strings::path::run< comma::applications::strings::path::basename >( options ); }
         if( operation == "path-dirname" || operation == "dirname" ) { return comma::applications::strings::path::run< comma::applications::strings::path::dirname >( options ); }
-        if( operation == "path-is-leaf" || operation == "is-leaf" ) {} //{ return comma::applications::strings::path::run< comma::applications::strings::path::dirname >( options ); }
         if( operation == "path-real" || operation == "path-canonical" || operation == "canonical" ) { return comma::applications::strings::path::run< comma::applications::strings::path::canonical >( options ); }
         std::cerr << "csv-strings: expection operation; got: '" << operation << "'" << std::endl;
         return 1;
