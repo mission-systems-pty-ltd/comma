@@ -111,20 +111,23 @@ static comma::csv::options csv;
 
 namespace comma { namespace applications { namespace strings { namespace path {
 
-struct input
+template < typename T >
+struct record
 { 
-    std::vector< std::string > strings;
-    input( unsigned int n = 0 ): strings( n ) {}
+    std::vector< T > values;
+    record( unsigned int n = 0 ): values( n ) {}
 };
+
+typedef record< std::string > input;
 
 } } } } // namespace comma { namespace applications { namespace strings { namespace path {
 
 namespace comma { namespace visiting {
 
-template <> struct traits< comma::applications::strings::path::input >
+template < typename T > struct traits< comma::applications::strings::path::record< T > >
 {
-    template < typename K, typename V > static void visit( const K&, const comma::applications::strings::path::input& p, V& v ) { v.apply( "strings", p.strings ); }
-    template < typename K, typename V > static void visit( const K&, comma::applications::strings::path::input& p, V& v ) { v.apply( "strings", p.strings ); }
+    template < typename K, typename V > static void visit( const K&, const comma::applications::strings::path::record< T >& p, V& v ) { v.apply( "values", p.values ); }
+    template < typename K, typename V > static void visit( const K&, comma::applications::strings::path::record< T >& p, V& v ) { v.apply( "values", p.values ); }
 };
 
 } } // namespace comma { namespace visiting {
@@ -139,10 +142,10 @@ static int run( const comma::command_line_options& options )
     for( unsigned int i = 0; i < v.size(); ++i )
     {
         if( v[i].empty() ) { continue; }
-        v[i] = "strings[" + boost::lexical_cast< std::string >( n ) + "]";
+        v[i] = "values[" + boost::lexical_cast< std::string >( n ) + "]";
         ++n;
     }
-    ::csv.fields = n == 0 ? std::string( "strings[0]" ) : comma::join( v, ',' );
+    ::csv.fields = n == 0 ? std::string( "values[0]" ) : comma::join( v, ',' );
     if( n == 0 ) { ++n; }
     comma::csv::input_stream< input > istream( std::cin, ::csv, input( n ) );
     std::function< void( const input& p ) > write;
@@ -153,8 +156,8 @@ static int run( const comma::command_line_options& options )
         {
             const input* p = istream.read();
             if( !p ) { break; }
-            input r( n );
-            for( unsigned int i = 0; i < p->strings.size(); ++i ) { r.strings[i] = t.convert( p->strings[i] ); }
+            typename T::output_t r( n );
+            for( unsigned int i = 0; i < p->values.size(); ++i ) { r.values[i] = t.convert( p->values[i] ); }
             write( r );
             if( ::csv.flush ) { std::cout.flush(); }
         }
@@ -167,16 +170,18 @@ static int run( const comma::command_line_options& options )
         return run_();
     }
     comma::csv::options output_csv = ::csv;
-    output_csv.fields = "strings";
+    output_csv.fields = "values";
     if( ::csv.binary() ) { std::cerr << "csv-strings: path-" << T::name() << ": binary mode supported only for --emplace; todo, just ask" << std::endl; exit( 1 ); }
-    comma::csv::output_stream< input > ostream( std::cout, output_csv, input( n ) );
-    comma::csv::tied< input, input > tied( istream, ostream );
-    write = [&]( const input& p ) { tied.append( p ); };
+    comma::csv::output_stream< typename T::output_t > ostream( std::cout, output_csv, input( n ) );
+    comma::csv::tied< input, typename T::output_t > tied( istream, ostream );
+    write = [&]( const typename T::output_t& p ) { tied.append( p ); };
     return run_();
 }
 
 struct basename
 {
+    typedef input output_t;
+    
     unsigned int depth;
     char delimiter;
     
@@ -202,6 +207,8 @@ struct basename
 
 struct dirname
 {
+    typedef input output_t;
+    
     unsigned int depth;
     unsigned int fixed_depth;
     char delimiter;
@@ -239,6 +246,8 @@ struct dirname
 
 struct canonical
 {
+    typedef input output_t;
+    
     boost::filesystem::path base;
     
     static const char* name() { return "canonical"; }
@@ -258,6 +267,22 @@ struct canonical
     }
 };
 
+// struct is_leaf // todo: refactor, reuse generic run
+// {
+//     typedef record< unsigned int > output_t;
+//     
+//     std::string last;
+//     
+//     static const char* name() { return "is-leaf"; }
+//     
+//     is_leaf( const comma::command_line_options& ) {}
+//     
+//     unsigned int convert( const std::string& s )
+//     {
+//         bool r = s 
+//     }
+// };
+
 } } } } // namespace comma { namespace applications { namespace strings { namespace path {
 
 int main( int ac, char** av )
@@ -272,6 +297,7 @@ int main( int ac, char** av )
         csv = comma::csv::options( options );
         if( operation == "path-basename" || operation == "basename" ) { return comma::applications::strings::path::run< comma::applications::strings::path::basename >( options ); }
         if( operation == "path-dirname" || operation == "dirname" ) { return comma::applications::strings::path::run< comma::applications::strings::path::dirname >( options ); }
+        if( operation == "path-is-leaf" || operation == "is-leaf" ) {} //{ return comma::applications::strings::path::run< comma::applications::strings::path::dirname >( options ); }
         if( operation == "path-real" || operation == "path-canonical" || operation == "canonical" ) { return comma::applications::strings::path::run< comma::applications::strings::path::canonical >( options ); }
         std::cerr << "csv-strings: expection operation; got: '" << operation << "'" << std::endl;
         return 1;
