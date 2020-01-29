@@ -87,13 +87,14 @@ static void usage( bool verbose )
     std::cerr << std::endl;
     std::cerr << "path-basename,basename" << std::endl;
     std::cerr << "    options" << std::endl;
-    std::cerr << "        --depth=<depth>; default=1; if path length less than depth, output empty string" << std::endl;
+    std::cerr << "        --head=<depth>; default=0; number of path elements at the beginning of the path to remove" << std::endl;
+    std::cerr << "        --tail=<depth>; default=1; number of path elements at the end of the path to keep" << std::endl;
     std::cerr << "        --path-delimiter,-p=<delimiter>; default=/" << std::endl;
     std::cerr << std::endl;
     std::cerr << "path-dirname,dirname" << std::endl;
     std::cerr << "    options" << std::endl;
-    std::cerr << "        --depth=<depth>; default=1; if path length less than depth, output empty string" << std::endl;
-    std::cerr << "        --fixed-depth=[<depth>]; output paths of fixed depth starting from root" << std::endl;
+    std::cerr << "        --head=<depth>; default=0; number of path elements at the beginning of the path to keep" << std::endl;
+    std::cerr << "        --tail=<depth>; default=1; number of path elements at the end of the path to remove" << std::endl;
     std::cerr << "        --path-delimiter,-p=<delimiter>; default=/" << std::endl;
     std::cerr << std::endl;
     std::cerr << "path-real,path-canonical,canonical" << std::endl;
@@ -182,26 +183,32 @@ struct basename
 {
     typedef input output_t;
     
-    unsigned int depth;
+    unsigned int head;
+    unsigned int tail;
     char delimiter;
     
     static const char* name() { return "basename"; }
     
     basename( const comma::command_line_options& options )
-        : depth( options.value( "--depth", 1 ) )
+        : head( options.value( "--head", 0 ) )
+        , tail( options.value( "--tail", 1 ) )
         , delimiter( options.value( "--path-delimiter,-p", '/' ) )
     {
+        options.assert_mutually_exclusive( "--head,--tail" );
     }
     
     std::string convert( const std::string& t )
     {
         const auto& s = comma::split( t, delimiter );
-        if( s.size() < depth )
+        if( head > 0 )
         {
-            if( strict ) { COMMA_THROW( comma::exception, "expected path depth at least " << depth << "; got: '" << comma::join( s, delimiter ) << "'" ); }
+            if( s.size() >= head ) { return comma::join( s.begin() + head, s.end(), delimiter ); }
+            if( strict ) { COMMA_THROW( comma::exception, "expected path depth at least " << head << "; got: '" << comma::join( s, delimiter ) << "'" ); }
             return "";
         }
-        return comma::join( s.end() - depth, s.end(), delimiter );
+        if( s.size() >= tail ) { return comma::join( s.end() - tail, s.end(), delimiter ); }
+        if( strict ) { COMMA_THROW( comma::exception, "expected path depth at least " << tail << "; got: '" << comma::join( s, delimiter ) << "'" ); }
+        return "";
     }
 };
 
@@ -209,38 +216,32 @@ struct dirname
 {
     typedef input output_t;
     
-    unsigned int depth;
-    unsigned int fixed_depth;
+    unsigned int head;
+    unsigned int tail;
     char delimiter;
     
     static const char* name() { return "dirname"; }
     
     dirname( const comma::command_line_options& options )
-        : depth( options.value( "--depth", 1 ) )
-        , fixed_depth( options.value( "--fixed-depth", 0 ) )
+        : head( options.value( "--head", 0 ) )
+        , tail( options.value( "--tail", 1 ) )
         , delimiter( options.value( "--path-delimiter,-p", '/' ) )
     {
-        options.assert_mutually_exclusive( "--depth,--fixed-depth" );
+        options.assert_mutually_exclusive( "--head,--tail" );
     }
     
     std::string convert( const std::string& t )
     {
         const auto& s = comma::split( t, delimiter );
-        if( fixed_depth > 0 )
+        if( head > 0 )
         {
-            if( s.size() < fixed_depth )
-            {
-                if( strict ) { COMMA_THROW( comma::exception, "expected path depth at least " << fixed_depth << "; got: '" << comma::join( s, delimiter ) << "'" ); }
-                return "";
-            }
-            return comma::join( s, fixed_depth, delimiter );
-        }
-        if( s.size() < depth )
-        {
-            if( strict ) { COMMA_THROW( comma::exception, "expected path depth at least " << depth << "; got: '" << comma::join( s, '/' ) << "'" ); }
+            if( s.size() >= head ) { return comma::join( s.begin(), s.begin() + head, delimiter ); }
+            if( strict ) { COMMA_THROW( comma::exception, "expected path depth at least " << head << "; got: '" << comma::join( s, delimiter ) << "'" ); }
             return "";
         }
-        return comma::join( s.begin(), s.end() - depth, delimiter );
+        if( s.size() >= tail ) { return comma::join( s.begin(), s.end() - tail, delimiter ); }
+        if( strict ) { COMMA_THROW( comma::exception, "expected path depth at least " << tail << "; got: '" << comma::join( s, delimiter ) << "'" ); }
+        return "";
     }
 };
 
@@ -274,7 +275,7 @@ int main( int ac, char** av )
     try
     {
         comma::command_line_options options( ac, av, usage );
-        const auto& unnamed = options.unnamed( "--flush,--verbose,-v,--emplace", "-.*" );
+        const auto& unnamed = options.unnamed( "--flush,--verbose,-v,--emplace,--strict", "-.*" );
         if( unnamed.empty() ) { std::cerr << "csv-strings: please specify operation" << std::endl; return 1; }
         std::string operation = unnamed[0];
         strict = options.exists( "--strict" );
