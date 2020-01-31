@@ -156,7 +156,7 @@ int main( int ac, char** av )
                 {
                     std::cout.write( &buf[ elements[k].offset ], elements[k].size );
                 }
-                std::cout.flush(); // todo: flushing too often?
+                if( csv.flush ) { std::cout.flush(); }
             }
         }
         else
@@ -192,13 +192,7 @@ int main( int ac, char** av )
         }
         return 0;
     }
-    catch( std::exception& ex )
-    {
-        std::cerr << "csv-shuffle: " << ex.what() << std::endl;
-    }
-    catch( ... )
-    {
-        std::cerr << "csv-shuffle: unknown exception" << std::endl;
-    }
+    catch( std::exception& ex ) { std::cerr << "csv-shuffle: " << ex.what() << std::endl; }
+    catch( ... ) { std::cerr << "csv-shuffle: unknown exception" << std::endl; }
     return 1;
 }
