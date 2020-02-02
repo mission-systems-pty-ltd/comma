@@ -148,7 +148,9 @@ int main( int argc, char** argv )
             std::cerr << "                local:<name>: linux/unix local server socket e.g. local:./tmp/my_socket" << std::endl;
             std::cerr << "                <named pipe name>: named pipe, which will be re-opened, if client reconnects" << std::endl;
             std::cerr << "                <filename>: a regular file" << std::endl;
-            std::cerr << "        example: ( echo 0,a; echo 1,b; echo 0,c; echo 2,d ) | csv-split --fields id \"0,1;tcp:5999\" \"...;local:/tmp/named_fifo\"" << std::endl;
+            std::cerr << "        examples" << std::endl;
+            std::cerr << "            ( echo 0,a; echo 1,b; echo 0,c; echo 2,d ) | csv-split --fields id \"0,1;tcp:5999\" \"...;local:/tmp/named_fifo\"" << std::endl;
+            std::cerr << "            ( echo 0,a; echo 1,b ) | csv-split --fields id --files <( echo '1,one.csv'; echo '0,zero.csv' )';fields=id,filename'" << std::endl;
             std::cerr << std::endl;
             std::cerr << description << std::endl;
             std::cerr << std::endl;
