@@ -125,6 +125,58 @@ int main( int ac, char** av )
             if( !fields[i].input_index ) { std::cerr << "csv-shuffle: \"" << fields[i].name << "\" not found in input fields " << csv.fields << std::endl; return 1; }
         }
         if( csv.binary() )
+//         {
+//             #ifdef WIN32
+//             _setmode( _fileno( stdin ), _O_BINARY );
+//             _setmode( _fileno( stdout ), _O_BINARY );
+//             #endif
+//             std::vector< char > in( csv.format().size() );
+//             std::vector< comma::csv::format::element > elements;
+//             elements.reserve( csv.format().count() ); // quick and dirty, can be really wasteful on large things like images
+//             for( unsigned int i = 0; i < elements.capacity(); ++i )
+//             {
+//                 elements.push_back( csv.format().offset( i ) );
+//             }
+//             unsigned int previous_index = 0;
+//             unsigned int output_size = 0;
+//             for( unsigned int i = 0; i < fields.size(); ++i ) // quick and dirty
+//             {
+//                 for( unsigned int k = previous_index; k < fields[i].index && k < elements.size(); ++k ) { output_size += elements[k].size; }
+//                 output_size += fields[i].size;
+//                 previous_index = fields[i].index + 1;
+//             }
+//             for( unsigned int k = previous_index; output_trailing_fields && k < elements.size(); ++k ) { output_size += elements[k].size; }
+//             std::vector< char > out( output_size );
+//             while( std::cin.good() && !std::cin.eof() )
+//             {
+//                 // todo: quick and dirty; if performance is an issue, you could read more than
+//                 // one record every time see comma::csv::binary_input_stream::read() for reference
+//                 std::cin.read( &in[0], csv.format().size() );
+//                 if( std::cin.gcount() == 0 ) { continue; }
+//                 if( std::cin.gcount() < int( csv.format().size() ) ) { std::cerr << "csv-shuffle: expected " << csv.format().size() << " bytes, got only " << std::cin.gcount() << std::endl; return 1; }
+//                 unsigned int offset = 0;
+//                 unsigned int previous_index = 0;
+//                 for( unsigned int i = 0; i < fields.size(); ++i ) // quick and dirty
+//                 {
+//                     for( unsigned int k = previous_index; k < fields[i].index && k < elements.size(); ++k )
+//                     {
+//                         std::memcpy( &out[offset], &in[ elements[k].offset ], elements[k].size ); // std::cout.write( &in[ elements[k].offset ], elements[k].size );
+//                         offset += elements[k].size;
+//                     }
+//                     std::memcpy( &out[offset], &in[ fields[i].input_offset ], fields[i].size ); // std::cout.write( &in[ fields[i].input_offset ], fields[i].size );
+//                     offset += fields[i].size;
+//                     previous_index = fields[i].index + 1;
+//                 }
+//                 //std::cerr << "--> previous_index: " << previous_index << " elements.size(): " << elements.size() << std::endl;
+//                 for( unsigned int k = previous_index; output_trailing_fields && k < elements.size(); ++k )
+//                 {
+//                     std::memcpy( &out[offset], &in[ elements[k].offset ], elements[k].size ); // std::cout.write( &in[ elements[k].offset ], elements[k].size );
+//                     offset += elements[k].size;
+//                 }
+//                 std::cout.write( &out[0], out.size() );
+//                 if( csv.flush ) { std::cout.flush(); }
+//             }
+//         }
         {
             #ifdef WIN32
             _setmode( _fileno( stdin ), _O_BINARY );
