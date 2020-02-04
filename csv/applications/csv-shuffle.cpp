@@ -147,6 +147,7 @@ int main( int ac, char** av )
 //             }
 //             for( unsigned int k = previous_index; output_trailing_fields && k < elements.size(); ++k ) { output_size += elements[k].size; }
 //             std::vector< char > out( output_size );
+//             if( !csv.flush ) { std::cin.tie( NULL ); } // quick and dirty; std::cin is tied to std::cout by default, which is thread-unsafe now
 //             while( std::cin.good() && !std::cin.eof() )
 //             {
 //                 // todo: quick and dirty; if performance is an issue, you could read more than
@@ -186,6 +187,7 @@ int main( int ac, char** av )
             std::vector< comma::csv::format::element > elements;
             elements.reserve( csv.format().count() ); // quick and dirty, can be really wasteful on large things like images
             for( unsigned int i = 0; i < elements.capacity(); ++i ) { elements.push_back( csv.format().offset( i ) ); }
+            if( !csv.flush ) { std::cin.tie( NULL ); } // quick and dirty; std::cin is tied to std::cout by default, which is thread-unsafe now
             while( std::cin.good() && !std::cin.eof() )
             {
                 // todo: quick and dirty; if performance is an issue, you could read more than
