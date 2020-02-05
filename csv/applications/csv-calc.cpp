@@ -1181,7 +1181,7 @@ static void output( const comma::csv::options& csv, ResultsMap& results, boost::
         {
             if( has_id )  { std::cout.write( reinterpret_cast< const char* >( &it->first ), sizeof( comma::uint32 ) ); } // quick and dirty
             if( has_block ) { std::cout.write( reinterpret_cast< const char* >( &( *block ) ), sizeof( comma::uint32 ) ); } // quick and dirty
-            std::cout.flush();
+            if( csv.flush ) { std::cout.flush(); }
         }
         else
         {
@@ -1201,6 +1201,7 @@ static void append_and_output( const comma::csv::options& csv, Inputs& inputs, R
         if (!csv.binary()) { std::cout << csv.delimiter; }
         std::cout << results.find(inputs[i].first)->second;
         if (!csv.binary()) { std::cout << std::endl; }
+        if( csv.flush ) { std::cout.flush(); }
     }
     results.clear();
     inputs.clear();
@@ -1294,7 +1295,8 @@ int main( int ac, char** av )
             if (has_block && !append) { std::cout << csv.delimiter << "ui"; }
             std::cout << std::endl;
             return 0;
-        } 
+        }
+        if( !csv.flush && csv.binary() ) { std::cin.tie( NULL ); }
         while( std::cin.good() && !std::cin.eof() )
         {
             const Values* v = csv.binary() ? binary->read() : ascii->read();

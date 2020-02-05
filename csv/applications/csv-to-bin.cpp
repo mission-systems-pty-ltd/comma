@@ -76,7 +76,8 @@ int main( int ac, char** av )
         char delimiter = options.value( "--delimiter", ',' );
         bool flush = options.exists( "--flush" );
         comma::csv::format format( av[1] );
-        //{ ProfilerStart( "csv-to-bin.prof" );
+        if( !flush ) { std::cin.tie( NULL ); }
+        //{ ProfilerStart( "csvg-to-bin.prof" );
         while( std::cin.good() && !std::cin.eof() )
         {
             std::getline( std::cin, line );
