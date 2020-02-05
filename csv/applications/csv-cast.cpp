@@ -55,6 +55,7 @@ static void usage()
     std::cerr << std::endl;
     std::cerr << "    --binary,-b,--from: input binary format" << std::endl;
     std::cerr << "    --output-binary,--output,-o,--to: output binary format" << std::endl;
+    std::cerr << "    --flush: flush stdout after each record" << std::endl;
     std::cerr << "    --force: allow narrowing conversions" << std::endl;
     std::cerr << std::endl;
     std::cerr << comma::csv::format::usage() << std::endl;
@@ -262,15 +263,18 @@ int main( int ac, char** av )
         comma::csv::format iformat( options.value< std::string >( "--binary,-b,--from", av[1] ) );
         comma::csv::format oformat( options.value< std::string >( "--output-binary,--output,-o,--to", av[2] ) );
         check_conversions( iformat, oformat, options.exists( "--force" ) );
+        bool flush = options.exists( "--flush" );
         std::vector< char > in( iformat.size() );
         std::vector< char > out( oformat.size() );
+        if( !flush ) { std::cin.tie( NULL ); }
         while( std::cin.good() )
         {
             std::cin.read( &in[0], iformat.size() );
             if( std::cin.gcount() == 0 ) { break; }
             if( std::cin.gcount() < static_cast< int >( iformat.size() ) ) { COMMA_THROW( comma::exception, "expected " << iformat.size() << " bytes, got only " << std::cin.gcount() ); }
             cast( iformat, in, oformat, out );
-            std::cout.write( &out[0], oformat.size() ).flush();
+            std::cout.write( &out[0], oformat.size() );
+            if( flush ) { std::cout.flush(); }
         }
         return 0;
     }
