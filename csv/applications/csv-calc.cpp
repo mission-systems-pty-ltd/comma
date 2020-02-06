@@ -309,7 +309,7 @@ class ascii_input
             return values_.get();
         }
 
-        const std::string line() { return line_; }
+        const std::string& line() const { return line_; }
         
     private:
         comma::csv::options csv_;
@@ -334,10 +334,15 @@ class binary_input
         {
             while( true )
             {
+                //std::cin.read( &buffer_[0], csv_.format().size() );
+                //if( std::cin.gcount() == 0 ) { return NULL; }
+                //if( std::cin.gcount() != int( csv_.format().size() ) ) { COMMA_THROW( comma::exception, "expected " << csv_.format().size() << " bytes; got " << std::cin.gcount() ); }
+                //values_.set( &buffer_[0] );
+                //return &values_;
                 if( offset_ >= csv_.format().size() )
                 {
                     values_.set( cur_ );
-                    line_ = std::string(cur_, csv_.format().size());
+                    line_ = std::string( cur_, csv_.format().size() );
                     cur_ += csv_.format().size();
                     offset_ -= csv_.format().size();
                     if( cur_ == end_ ) { cur_ = &buffer_[0]; offset_ = 0; }
@@ -348,7 +353,8 @@ class binary_input
                 offset_ += count;
             }
         }
-        const std::string line() { return line_; }
+        
+        const std::string& line() const { return line_; }
 
     private:
         comma::csv::options csv_;
@@ -1035,13 +1041,13 @@ namespace Operations
     template <> struct traits< Enum::kurtosis > { template < typename T, comma::csv::format::types_enum F > struct FromEnum { typedef Kurtosis< T, F > Type; }; };
 } // namespace Operations
 
-class Operationbase
+class operation_base
 {
     public:
-        virtual ~Operationbase() {}
+        virtual ~operation_base() {}
         virtual void push( const char* buf ) = 0;
         virtual void calculate() = 0;
-        virtual Operationbase* clone() const = 0;
+        virtual operation_base* clone() const = 0;
         const comma::csv::format& output_format() const { return output_format_; }
         const char* buffer() const { return &buffer_[0]; }
 
@@ -1053,7 +1059,7 @@ class Operationbase
         std::vector< comma::csv::format::element > output_elements_;
         std::vector< char > buffer_;
 
-        Operationbase* deep_copy_to_( Operationbase* lhs ) const
+        operation_base* deep_copy_to_( operation_base* lhs ) const
         {
             lhs->input_format_ = input_format_;
             lhs->input_elements_ = input_elements_;
@@ -1066,7 +1072,7 @@ class Operationbase
 };
 
 template < Operations::Enum::Values E >
-struct Operation : public Operationbase
+struct Operation : public operation_base
 {
     Operation() {}
     Operation( const comma::csv::format& format
@@ -1132,18 +1138,18 @@ struct Operation : public Operationbase
         for( std::size_t i = 0; i < operations_.size(); ++i ) { operations_[i].calculate( &buffer_[0] + output_elements_[i].offset ); }
     }
 
-    Operationbase* clone() const { Operation< E >* op = new Operation< E >; return deep_copy_to_( op ); }
+    operation_base* clone() const { Operation< E >* op = new Operation< E >; return deep_copy_to_( op ); }
 };
 
-typedef boost::unordered_map< comma::uint32, boost::ptr_vector< Operationbase >* > OperationsMap;
-typedef boost::unordered_map< comma::uint32, std::string > ResultsMap;
+typedef boost::unordered_map< comma::uint32, boost::ptr_vector< operation_base >* > operations_map_t;
+typedef boost::unordered_map< comma::uint32, std::string > results_map_t;
 typedef std::vector< std::pair < comma::uint32, std::string > > Inputs;
 
-static void init_operations( boost::ptr_vector< Operationbase >& operations
+static void init_operations( boost::ptr_vector< operation_base >& operations
                            , const std::vector< Operations::operation_parameters >& operations_parameters
                            , const comma::csv::format& format )
 {
-    static boost::ptr_vector< Operationbase > sample;
+    static boost::ptr_vector< operation_base > sample;
     if( sample.empty() )
     {
         sample.reserve( operations_parameters.size() );
@@ -1169,14 +1175,15 @@ static void init_operations( boost::ptr_vector< Operationbase >& operations
         }
     }
     operations.clear();
-    for( std::size_t i = 0; i < sample.size(); ++i ) { operations.push_back( sample[i].clone() ); }
+    operations.reserve( sample.size() );
+    for( auto& s: sample ) { operations.push_back( s.clone() ); } // todo! this is really slow, if there are many ids
 }
 
-static void output( const comma::csv::options& csv, ResultsMap& results, boost::optional< comma::uint32 > block, bool has_block, bool has_id )
+static void output( const comma::csv::options& csv, results_map_t& results, boost::optional< comma::uint32 > block, bool has_block, bool has_id )
 {
-    for( ResultsMap::iterator it = results.begin(); it != results.end(); ++it )
+    for( results_map_t::iterator it = results.begin(); it != results.end(); ++it )
     {
-        std::cout << it->second;
+        std::cout.write( &it->second[0], it->second.size() );
         if( csv.binary() )
         {
             if( has_id )  { std::cout.write( reinterpret_cast< const char* >( &it->first ), sizeof( comma::uint32 ) ); } // quick and dirty
@@ -1193,34 +1200,48 @@ static void output( const comma::csv::options& csv, ResultsMap& results, boost::
     results.clear();
 }
 
-static void append_and_output( const comma::csv::options& csv, Inputs& inputs, ResultsMap& results )
-{    
+static void append_and_output( const comma::csv::options& csv, Inputs& inputs, results_map_t& results )
+{
     for ( size_t i = 0; i < inputs.size(); ++i )
     {
         std::cout << inputs[i].second;
-        if (!csv.binary()) { std::cout << csv.delimiter; }
-        std::cout << results.find(inputs[i].first)->second;
-        if (!csv.binary()) { std::cout << std::endl; }
+        if( !csv.binary() ) { std::cout << csv.delimiter; }
+        const auto& r = results.find( inputs[i].first )->second;
+        std::cout.write( &r[0], r.size() );
+        if( !csv.binary() ) { std::cout << std::endl; }
         if( csv.flush ) { std::cout.flush(); }
     }
     results.clear();
     inputs.clear();
 }
 
-static void calculate( const comma::csv::options& csv, OperationsMap& operations, ResultsMap& results )
+static void calculate( const comma::csv::options& csv, operations_map_t& operations, results_map_t& results )
 {
-    for( OperationsMap::iterator it = operations.begin(); it != operations.end(); ++it )
+    for( operations_map_t::iterator it = operations.begin(); it != operations.end(); ++it )
     {
         std::string r;
+        if( csv.binary() )
+        {
+            unsigned int size = 0;
+            for( std::size_t i = 0; i < it->second->size(); ++i ) { size += ( *it->second )[i].output_format().size(); }
+            r.reserve( size );
+        }
         for( std::size_t i = 0; i < it->second->size(); ++i )
         {
             ( *it->second )[i].calculate();
-            if( csv.binary() ) { r.append( ( *it->second )[i].buffer(), ( *it->second )[i].output_format().size() ); }
-            else { if( i > 0 ) { r += csv.delimiter; } r.append(( *it->second )[i].output_format().bin_to_csv( ( *it->second )[i].buffer(), csv.delimiter, csv.precision )); }
+            if( csv.binary() )
+            { 
+                r.append( ( *it->second )[i].buffer(), ( *it->second )[i].output_format().size() );
+            }
+            else
+            {
+                if( i > 0 ) { r += csv.delimiter; }
+                r.append( ( *it->second )[i].output_format().bin_to_csv( ( *it->second )[i].buffer(), csv.delimiter, csv.precision ) );
+            }
         }
-        results[it->first] = r;
+        results[ it->first ] = r;
     }
-    for( OperationsMap::iterator it = operations.begin(); it != operations.end(); ++it ) { delete it->second; } // quick and dirty
+    for( operations_map_t::iterator it = operations.begin(); it != operations.end(); ++it ) { delete it->second; } // quick and dirty
     operations.clear();
 }
 
@@ -1230,13 +1251,14 @@ int main( int ac, char** av )
     {
         comma::command_line_options options( ac, av, usage );
         if( options.exists( "--bash-completion" ) ) bash_completion( ac, av );
-        std::vector< std::string > unnamed = options.unnamed( "", "--binary,-b,--delimiter,-d,--format,--fields,-f,--output-fields" );
+        std::vector< std::string > unnamed = options.unnamed( "--append,--flush,--output-fields,--output-format", "--binary,-b,--delimiter,-d,--format,--fields,-f,--output-fields" );
         comma::csv::options csv( options );
         csv.full_xpath = false;
         std::cout.precision( csv.precision );
         #ifdef WIN32
         if( csv.binary() ) { _setmode( _fileno( stdin ), _O_BINARY ); _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
+        if( !csv.flush && csv.binary() ) { std::cin.tie( NULL ); std::ios_base::sync_with_stdio( false ); } // todo? quick and dirty, redesign binary_input instead?
         if( unnamed.empty() ) { std::cerr << comma::verbose.app_name() << ": please specify operations" << std::endl; exit( 1 ); }
         std::vector< std::string > v = comma::split( unnamed[0], ',' );
         std::vector< Operations::operation_parameters > operations_parameters( v.size() );
@@ -1253,14 +1275,13 @@ int main( int ac, char** av )
         boost::scoped_ptr< binary_input > binary;
         if( csv.binary() ) { binary.reset( new binary_input( csv ) ); }
         else { ascii.reset( new ascii_input( csv, format ) ); }
-        OperationsMap operations;
-        ResultsMap results;
+        operations_map_t operations;
+        results_map_t results;
         Inputs inputs;
         boost::optional< comma::uint32 > block = boost::make_optional< comma::uint32 >( false, 0 );
         bool has_block = csv.has_field( "block" );
         bool has_id = csv.has_field( "id" );
-        bool append = options.exists("--append");
-        
+        bool append = options.exists( "--append" );
         if( options.exists( "--output-fields" ) )
         {
             std::vector < std::string > fields = comma::split(csv.fields, ',');
@@ -1270,33 +1291,32 @@ int main( int ac, char** av )
                 std::replace(v[op].begin(), v[op].end(), '=', '_');
                 std::replace(v[op].begin(), v[op].end(), '.', '_');
                 std::replace(v[op].begin(), v[op].end(), ':', '_');
-                for (std::size_t f = 0; f < fields.size(); f++ )
+                for( std::size_t f = 0; f < fields.size(); f++ )
                 {
-                    if (fields[f] == "" || fields[f] == "id" || fields[f] == "block") { continue; }
-                    output_fields.push_back(fields[f] + "/" + v[op]);
+                    if( fields[f] == "" || fields[f] == "id" || fields[f] == "block" ) { continue; }
+                    output_fields.push_back( fields[f] + "/" + v[op] );
                 }
             }
-            if (has_id && !append) { output_fields.push_back("id"); }
-            if (has_block && !append ) { output_fields.push_back("block"); }
-            std::cout << comma::join(output_fields, ',') << std::endl;
+            if( has_id && !append ) { output_fields.push_back( "id" ); }
+            if( has_block && !append ) { output_fields.push_back( "block" ); }
+            std::cout << comma::join( output_fields, ',' ) << std::endl;
             return 0;
         }
-        if (options.exists("--output-format"))
+        if( options.exists( "--output-format" ) )
         {
             if ( !format ) { std::cerr << comma::verbose.app_name() << ": option --output-format requires input format to be specified, please use --format or --binary" << std::endl; return 1; }
-            boost::ptr_vector< Operationbase > ops;
-            init_operations(ops, operations_parameters, Values(csv, *format).format());
+            boost::ptr_vector< operation_base > ops;
+            init_operations( ops, operations_parameters, Values(csv, *format).format() );
             for ( std::size_t i = 0; i < ops.size(); ++i ) 
             { 
                 if ( i > 0 ) { std::cout << csv.delimiter; }
                 std::cout << ops[i].output_format().string();
             }
-            if (has_id && !append) { std::cout << csv.delimiter << "ui"; }
-            if (has_block && !append) { std::cout << csv.delimiter << "ui"; }
+            if( has_id && !append ) { std::cout << csv.delimiter << "ui"; }
+            if( has_block && !append ) { std::cout << csv.delimiter << "ui"; }
             std::cout << std::endl;
             return 0;
         }
-        if( !csv.flush && csv.binary() ) { std::cin.tie( NULL ); }
         while( std::cin.good() && !std::cin.eof() )
         {
             const Values* v = csv.binary() ? binary->read() : ascii->read();
@@ -1305,23 +1325,23 @@ int main( int ac, char** av )
             {
                 if( block && *block != v->block() ) 
                 { 
-                    calculate(csv, operations, results);
-                    if ( append ) { append_and_output(csv, inputs, results); inputs.clear(); }
+                    calculate( csv, operations, results );
+                    if ( append ) { append_and_output( csv, inputs, results ); inputs.clear(); }
                     else { output( csv, results, block, has_block, has_id ); }
                 }
                 block = v->block();
             }
-            OperationsMap::iterator it = operations.find( v->id() );
+            operations_map_t::iterator it = operations.find( v->id() );
             if( it == operations.end() )
             {
-                it = operations.insert( std::make_pair( v->id(), new boost::ptr_vector< Operationbase > ) ).first;
+                it = operations.insert( std::make_pair( v->id(), new boost::ptr_vector< operation_base > ) ).first;
                 init_operations( *it->second, operations_parameters, v->format() );
             }
-            if (append) { inputs.push_back( std::make_pair( v->id(), csv.binary() ? binary->line() : ascii->line() ) ); }
+            if( append ) { inputs.push_back( std::make_pair( v->id(), csv.binary() ? binary->line() : ascii->line() ) ); }
             for( std::size_t i = 0; i < it->second->size(); ++i ) { ( *it->second )[i].push( v->buffer() ); }
         }
-        calculate(csv, operations, results);
-        if ( append ) { append_and_output(csv, inputs, results); }
+        calculate( csv, operations, results );
+        if ( append ) { append_and_output( csv, inputs, results ); }
         else { output( csv, results, block, has_block, has_id ); }
         return 0;
     }
