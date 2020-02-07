@@ -27,7 +27,6 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author vsevolod vlaskine
 
 #ifdef WIN32
@@ -437,6 +436,7 @@ namespace Operations
     struct base
     {
         virtual ~base() {}
+        virtual void reset() = 0;
         virtual void push( const char* ) = 0;
         virtual void calculate( char* ) = 0;
         virtual base* clone() const = 0;
@@ -451,6 +451,7 @@ namespace Operations
     class Min : public base
     {
         public:
+            void reset() { min_ = boost::optional< T >(); }
             void push( const char* buf )
             {
                 const T& t = comma::csv::format::traits< T, F >::from_bin( buf );
@@ -469,6 +470,7 @@ namespace Operations
     class Max : public base
     {
         public:
+            void reset() { max_ = boost::optional< T >(); }
             void push( const char* buf )
             {
                 T t = comma::csv::format::traits< T, F >::from_bin( buf );
@@ -487,6 +489,7 @@ namespace Operations
     class Sum : public base
     {
         public:
+            void reset() { sum_ = boost::optional< T >(); }
             void push( const char* buf )
             {
                 T t = comma::csv::format::traits< T, F >::from_bin( buf );
@@ -501,6 +504,7 @@ namespace Operations
     template < comma::csv::format::types_enum F >
     class Sum< boost::posix_time::ptime, F > : public base
     {
+        void reset() { COMMA_THROW( comma::exception, "sum not defined for time" ); }
         void push( const char* ) { COMMA_THROW( comma::exception, "sum not defined for time" ); }
         void calculate( char* ) { COMMA_THROW( comma::exception, "sum not defined for time" ); }
         base* clone() const { COMMA_THROW( comma::exception, "sum not defined for time" ); }
@@ -510,6 +514,7 @@ namespace Operations
     class Centre : public base
     {
         public:
+            void reset() { min_ = Min< T, F >(); max_ = Max< T, F >(); }
             void push( const char* buf ) { min_.push( buf ); max_.push( buf ); }
             void calculate( char* buf ) { if( min_.min_ ) { comma::csv::format::traits< T, F >::to_bin( *min_.min_ + ( *max_.max_ - *min_.min_ ) / 2, buf ); } }
             base* clone() const { return new Centre< T, F >( *this ); }
@@ -525,6 +530,7 @@ namespace Operations
     class Mode : public base
     {
         public:
+            void reset() { value_count_ = impl::value_count< T >(); }
             void push( const char* buf ) { value_count_.update( comma::csv::format::traits< T, F >::from_bin( buf ) ); }
             void calculate( char* buf ) { if( !value_count_.map().empty() ) { comma::csv::format::traits< T, F >::to_bin( static_cast< T >( value_count_.mode().first ), buf ); } }
             base* clone() const { return new Mode< T, F >( *this ); }
@@ -537,6 +543,7 @@ namespace Operations
     {
         public:
             Mean() : count_( 0 ) {}
+            void reset() { mean_ = boost::none; count_ = 0; }
             void push( const char* buf )
             {
                 T t = comma::csv::format::traits< T, F >::from_bin( buf );
@@ -641,6 +648,8 @@ namespace Operations
             }
 
             base* clone() const { return new Percentile< T, F >( *this ); }
+            
+            void reset() { values_.clear(); percentile_ = 0; }
 
         private:
             std::multiset< T > values_;
@@ -651,6 +660,7 @@ namespace Operations
     template < comma::csv::format::types_enum F >
     class Percentile< boost::posix_time::ptime, F > : public base
     {
+        void reset() { COMMA_THROW( comma::exception, "percentile not implemented for time, todo" ); }
         void push( const char* ) { COMMA_THROW( comma::exception, "percentile not implemented for time, todo" ); }
         void calculate( char* ) { COMMA_THROW( comma::exception, "percentile not implemented for time, todo" ); }
         base* clone() const { COMMA_THROW( comma::exception, "percentile not implemented for time, todo" ); }
@@ -728,6 +738,8 @@ namespace Operations
             
             typename result_traits< T >::type mean() const { return previous_.mean(); }
             
+            void reset() { previous_.reset(); value_ = 0; count_ = 0; }
+            
         private:
             Moment< T, M - 1 > previous_;
             typename result_traits< T >::type value_;
@@ -739,6 +751,7 @@ namespace Operations
     {
         public:
             Moment() : value_( 0 ), count_( 0 ) {}
+            
             void update ( const T t )
             {   
                 ++count_;
@@ -746,6 +759,8 @@ namespace Operations
             }
             
             typename result_traits< T >::type mean() const { return value_; }
+            
+            void reset() { value_ = 0; count_ = 0; }
             
         private:
             typename result_traits< T >::type value_;
@@ -768,6 +783,7 @@ namespace Operations
             void update( const T t ) { moments_.update(t); }
             void calculate( char* buf ) { if( moments_.count() > 0 ) { comma::csv::format::traits< T, F >::to_bin( static_cast< T >( std::sqrt( static_cast< long double >( moments_.value() / ( sample_ ? moments_.count() - 1 : moments_.count() )  ) ) ), buf ); } }
             base* clone() const { return new Stddev< T, F >( *this ); }
+            void reset() { moments_.reset(); first_ = boost::none; }
         private:
             Moment< T, 2 > moments_;
             boost::optional<T> first_;
@@ -788,6 +804,7 @@ namespace Operations
             }
             void calculate( char* buf ) { stddev_.calculate(buf); }
             base* clone() const { return new Stddev< boost::posix_time::ptime, F >( *this ); }
+            void reset() { stddev_.reset(); first_ = boost::none; }
         private:
             Stddev< double, F > stddev_;
             boost::optional<boost::posix_time::ptime> first_;
@@ -809,6 +826,7 @@ namespace Operations
             void update( const T t ) { moments_.update(t); }
             void calculate( char* buf ) { if( moments_.count() > 0 ) { comma::csv::format::traits< T, F >::to_bin( static_cast< T >( moments_.value() / ( sample_ ? moments_.count() - 1 : moments_.count() ) ), buf ); } }
             base* clone() const { return new Variance< T, F >( *this ); }
+            void reset() { moments_.reset(); first_ = boost::none; }
         private:
             Moment< T, 2 > moments_;
             boost::optional<T> first_;
@@ -829,9 +847,10 @@ namespace Operations
             }
             void calculate( char* buf ) { variance_.calculate(buf); }
             base* clone() const { return new Variance< boost::posix_time::ptime, F >( *this ); }
+            void reset() { variance_.reset(); first_ = boost::none; }
         private:
-            Variance< double, F> variance_;
-            boost::optional<boost::posix_time::ptime> first_;
+            Variance< double, F > variance_;
+            boost::optional< boost::posix_time::ptime > first_;
     };
     
     template < typename T, comma::csv::format::types_enum F = comma::csv::format::type_to_enum< T >::value >
@@ -852,7 +871,6 @@ namespace Operations
                 if( moments_.count() > 0 ) 
                 { 
                     typename result_traits< T >::type n = moments_.count();
-                    
                     // corrected sample skew requires at least 3 samples
                     typename result_traits< T >::type correction = sample_ ? sqrt( n * ( n - 1 ) ) / ( n - 2 ) : 1 ;
                     typename result_traits< T >::type m2 = moments_.previous().value();
@@ -861,9 +879,10 @@ namespace Operations
                 } 
             }
             base* clone() const { return new Skew< T, F >( *this ); }
+            void reset() { moments_.reset(); first_ = boost::none; }
         private:
             Moment< T, 3 > moments_;
-            boost::optional<T> first_;
+            boost::optional< T > first_;
             bool sample_;
     };
 
@@ -881,9 +900,10 @@ namespace Operations
             }
             void calculate( char* buf ) { skew_.calculate(buf); }
             base* clone() const { return new Skew< boost::posix_time::ptime, F >( *this ); }
+            void reset() { skew_.reset(); first_ = boost::none; }
         private:
-            Skew< double, F> skew_;
-            boost::optional<boost::posix_time::ptime> first_;
+            Skew< double, F > skew_;
+            boost::optional< boost::posix_time::ptime > first_;
     };
     
     template < typename T, comma::csv::format::types_enum F = comma::csv::format::type_to_enum< T >::value >
@@ -895,8 +915,8 @@ namespace Operations
             { 
                 for (std::size_t i = 0; i < options.size(); i++) 
                 {
-                    if ( options[i] == "sample" ) { sample_ = true; }
-                    else if ( options[i] == "excess" ) { excess_ = true; }
+                    if( options[i] == "sample" ) { sample_ = true; }
+                    else if( options[i] == "excess" ) { excess_ = true; }
                 }
             }
             void push( const char* buf ) 
@@ -923,9 +943,10 @@ namespace Operations
                 } 
             }
             base* clone() const { return new Kurtosis< T, F >( *this ); }
+            void reset() { moments_.reset(); first_ = boost::none; }
         private:
             Moment< T, 4 > moments_;
-            boost::optional<T> first_;
+            boost::optional< T > first_;
             bool sample_;
             bool excess_;
     };
@@ -944,9 +965,10 @@ namespace Operations
             }
             void calculate( char* buf ) { kurtosis_.calculate(buf); }
             base* clone() const { return new Kurtosis< boost::posix_time::ptime, F >( *this ); }
+            void reset() { kurtosis_.reset(); first_ = boost::none; }
         private:
-            Kurtosis< double, F> kurtosis_;
-            boost::optional<boost::posix_time::ptime> first_;
+            Kurtosis< double, F > kurtosis_;
+            boost::optional< boost::posix_time::ptime > first_;
     };
     
     template < typename T > struct Diff
@@ -968,6 +990,7 @@ namespace Operations
             void push( const char* buf ) { min_.push( buf ); max_.push( buf ); }
             void calculate( char* buf ) { if( min_.min_ ) { comma::csv::format::traits< typename Diff< T >::Type >::to_bin( Diff< T >::subtract( *max_.max_, *min_.min_ ), buf ); } }
             base* clone() const { return new Diameter< T, F >( *this ); }
+            void reset() { min_ = Min< T, F >(); max_ = Max< T, F >(); }
         private:
             Min< T, F > min_;
             Max< T, F > max_;
@@ -980,6 +1003,7 @@ namespace Operations
             void push( const char* buf ) { min_.push( buf ); max_.push( buf ); }
             void calculate( char* buf ) { if( min_.min_ ) { comma::csv::format::traits< typename Diff< T >::Type >::to_bin( Diff< T >::subtract( *max_.max_, *min_.min_ ) / 2, buf ); } }
             base* clone() const { return new Radius< T, F >( *this ); }
+            void reset() { min_ = Min< T, F >(); max_ = Max< T, F >(); }
         private:
             Min< T, F > min_;
             Max< T, F > max_;
@@ -993,6 +1017,7 @@ namespace Operations
             void push( const char* ) { ++count_; }
             void calculate( char* buf ) { comma::csv::format::traits< comma::uint32 >::to_bin( count_, buf ); }
             base* clone() const { return new Size< T, F >( *this ); }
+            void reset() { count_ = 0; }
         private:
             std::size_t count_;
     };
@@ -1048,6 +1073,7 @@ class operation_base
         virtual void push( const char* buf ) = 0;
         virtual void calculate() = 0;
         virtual operation_base* clone() const = 0;
+        virtual void reset() = 0;
         const comma::csv::format& output_format() const { return output_format_; }
         const char* buffer() const { return &buffer_[0]; }
 
@@ -1137,48 +1163,74 @@ struct Operation : public operation_base
     {
         for( std::size_t i = 0; i < operations_.size(); ++i ) { operations_[i].calculate( &buffer_[0] + output_elements_[i].offset ); }
     }
+    
+    void reset() { for( auto& o: operations_ ) { o.reset(); } }
 
     operation_base* clone() const { Operation< E >* op = new Operation< E >; return deep_copy_to_( op ); }
 };
 
-typedef boost::unordered_map< comma::uint32, boost::ptr_vector< operation_base >* > operations_map_t;
+typedef boost::unordered_map< comma::uint32, std::vector< operation_base* >* > operations_map_t;
 typedef boost::unordered_map< comma::uint32, std::string > results_map_t;
 typedef std::vector< std::pair < comma::uint32, std::string > > Inputs;
 
-static void init_operations( boost::ptr_vector< operation_base >& operations
-                           , const std::vector< Operations::operation_parameters >& operations_parameters
-                           , const comma::csv::format& format )
+class operations_battery_farm_t // all this pain is because operations polymorhism is too slow when there are a lot of ids
 {
-    static boost::ptr_vector< operation_base > sample;
-    if( sample.empty() )
-    {
-        sample.reserve( operations_parameters.size() );
-        for( std::size_t i = 0; i < operations_parameters.size(); ++i )
-        {
-            switch( operations_parameters[i].type )
-            {
-                case Operations::Enum::min: sample.push_back( new Operation< Operations::Enum::min >( format ) ); break;
-                case Operations::Enum::max: sample.push_back( new Operation< Operations::Enum::max >( format ) ); break;
-                case Operations::Enum::centre: sample.push_back( new Operation< Operations::Enum::centre >( format ) ); break;
-                case Operations::Enum::mean: sample.push_back( new Operation< Operations::Enum::mean >( format ) ); break;
-                case Operations::Enum::mode: sample.push_back( new Operation< Operations::Enum::mode >( format ) ); break;
-                case Operations::Enum::percentile: sample.push_back( new Operation< Operations::Enum::percentile >( format, operations_parameters[i].options ) ); break;
-                case Operations::Enum::radius: sample.push_back( new Operation< Operations::Enum::radius >( format ) ); break;
-                case Operations::Enum::diameter: sample.push_back( new Operation< Operations::Enum::diameter >( format ) ); break;
-                case Operations::Enum::variance: sample.push_back( new Operation< Operations::Enum::variance >( format, operations_parameters[i].options ) ); break;
-                case Operations::Enum::stddev: sample.push_back( new Operation< Operations::Enum::stddev >( format, operations_parameters[i].options ) ); break;
-                case Operations::Enum::skew: sample.push_back( new Operation< Operations::Enum::skew >( format, operations_parameters[i].options ) ); break;
-                case Operations::Enum::kurtosis: sample.push_back( new Operation< Operations::Enum::kurtosis >( format, operations_parameters[i].options ) ); break;
-                case Operations::Enum::sum: sample.push_back( new Operation< Operations::Enum::sum >( format ) ); break;
-                case Operations::Enum::size: sample.push_back( new Operation< Operations::Enum::size >( format ) ); break;
-            }
+    public:
+        typedef std::vector< operation_base* > operations_t;
+        
+        operations_battery_farm_t(): end_( 0 ) {}
+        
+        ~operations_battery_farm_t()
+        { 
+            for( auto& sample: operations_ ) { for( auto& s: sample ) { delete s; } } // quick and dirty; shame on me
         }
-    }
-    operations.clear();
-    operations.reserve( sample.size() );
-    for( auto& s: sample ) { operations.push_back( s.clone() ); } // todo! this is really slow, if there are many ids
-}
+        
+        operations_t& make( const std::vector< Operations::operation_parameters >& operations_parameters, const comma::csv::format& format )
+        {
+            if( operations_.empty() )
+            {
+                operations_.push_back( operations_t() );
+                operations_[0].reserve( operations_parameters.size() );
+                for( std::size_t i = 0; i < operations_parameters.size(); ++i )
+                {
+                    switch( operations_parameters[i].type )
+                    {
+                        case Operations::Enum::min: operations_[0].push_back( new Operation< Operations::Enum::min >( format ) ); break;
+                        case Operations::Enum::max: operations_[0].push_back( new Operation< Operations::Enum::max >( format ) ); break;
+                        case Operations::Enum::centre: operations_[0].push_back( new Operation< Operations::Enum::centre >( format ) ); break;
+                        case Operations::Enum::mean: operations_[0].push_back( new Operation< Operations::Enum::mean >( format ) ); break;
+                        case Operations::Enum::mode: operations_[0].push_back( new Operation< Operations::Enum::mode >( format ) ); break;
+                        case Operations::Enum::percentile: operations_[0].push_back( new Operation< Operations::Enum::percentile >( format, operations_parameters[i].options ) ); break;
+                        case Operations::Enum::radius: operations_[0].push_back( new Operation< Operations::Enum::radius >( format ) ); break;
+                        case Operations::Enum::diameter: operations_[0].push_back( new Operation< Operations::Enum::diameter >( format ) ); break;
+                        case Operations::Enum::variance: operations_[0].push_back( new Operation< Operations::Enum::variance >( format, operations_parameters[i].options ) ); break;
+                        case Operations::Enum::stddev: operations_[0].push_back( new Operation< Operations::Enum::stddev >( format, operations_parameters[i].options ) ); break;
+                        case Operations::Enum::skew: operations_[0].push_back( new Operation< Operations::Enum::skew >( format, operations_parameters[i].options ) ); break;
+                        case Operations::Enum::kurtosis: operations_[0].push_back( new Operation< Operations::Enum::kurtosis >( format, operations_parameters[i].options ) ); break;
+                        case Operations::Enum::sum: operations_[0].push_back( new Operation< Operations::Enum::sum >( format ) ); break;
+                        case Operations::Enum::size: operations_[0].push_back( new Operation< Operations::Enum::size >( format ) ); break;
+                    }
+                }
+            }
+            if( end_ == operations_.size() )
+            {
+                operations_.push_back( operations_t() );
+                for( auto& s: operations_[0] ) { operations_.back().push_back( s->clone() ); }
+            }
+            for( auto& s: operations_[end_] ) { s->reset(); }
+            return operations_[ end_++ ];
+        }
+        
+        void reset() { end_ = 0; }
+        
+    private:
+        typedef std::deque< operations_t > operations_t_;
+        operations_t_ operations_;
+        unsigned int end_;
+};
 
+static operations_battery_farm_t operations_battery_farm;
+        
 static void output( const comma::csv::options& csv, results_map_t& results, boost::optional< comma::uint32 > block, bool has_block, bool has_id )
 {
     for( results_map_t::iterator it = results.begin(); it != results.end(); ++it )
@@ -1223,26 +1275,26 @@ static void calculate( const comma::csv::options& csv, operations_map_t& operati
         if( csv.binary() )
         {
             unsigned int size = 0;
-            for( std::size_t i = 0; i < it->second->size(); ++i ) { size += ( *it->second )[i].output_format().size(); }
+            for( std::size_t i = 0; i < it->second->size(); ++i ) { size += ( *it->second )[i]->output_format().size(); }
             r.reserve( size );
         }
         for( std::size_t i = 0; i < it->second->size(); ++i )
         {
-            ( *it->second )[i].calculate();
+            ( *it->second )[i]->calculate();
             if( csv.binary() )
             { 
-                r.append( ( *it->second )[i].buffer(), ( *it->second )[i].output_format().size() );
+                r.append( ( *it->second )[i]->buffer(), ( *it->second )[i]->output_format().size() );
             }
             else
             {
                 if( i > 0 ) { r += csv.delimiter; }
-                r.append( ( *it->second )[i].output_format().bin_to_csv( ( *it->second )[i].buffer(), csv.delimiter, csv.precision ) );
+                r.append( ( *it->second )[i]->output_format().bin_to_csv( ( *it->second )[i]->buffer(), csv.delimiter, csv.precision ) );
             }
         }
         results[ it->first ] = r;
     }
-    for( operations_map_t::iterator it = operations.begin(); it != operations.end(); ++it ) { delete it->second; } // quick and dirty
     operations.clear();
+    operations_battery_farm.reset();
 }
 
 int main( int ac, char** av )
@@ -1305,15 +1357,11 @@ int main( int ac, char** av )
         if( options.exists( "--output-format" ) )
         {
             if ( !format ) { std::cerr << comma::verbose.app_name() << ": option --output-format requires input format to be specified, please use --format or --binary" << std::endl; return 1; }
-            boost::ptr_vector< operation_base > ops;
-            init_operations( ops, operations_parameters, Values(csv, *format).format() );
-            for ( std::size_t i = 0; i < ops.size(); ++i ) 
-            { 
-                if ( i > 0 ) { std::cout << csv.delimiter; }
-                std::cout << ops[i].output_format().string();
-            }
-            if( has_id && !append ) { std::cout << csv.delimiter << "ui"; }
-            if( has_block && !append ) { std::cout << csv.delimiter << "ui"; }
+            auto ops = operations_battery_farm.make( operations_parameters, Values( csv, *format ).format() );
+            std::cout << ops[0]->output_format().string();
+            for( std::size_t i = 1; i < ops.size(); ++i ) { std::cout << ',' << ops[i]->output_format().string(); }
+            if( has_id && !append ) { std::cout << ",ui"; }
+            if( has_block && !append ) { std::cout << ",ui"; }
             std::cout << std::endl;
             return 0;
         }
@@ -1324,7 +1372,7 @@ int main( int ac, char** av )
             if( has_block )
             {
                 if( block && *block != v->block() ) 
-                { 
+                {
                     calculate( csv, operations, results );
                     if ( append ) { append_and_output( csv, inputs, results ); inputs.clear(); }
                     else { output( csv, results, block, has_block, has_id ); }
@@ -1334,11 +1382,10 @@ int main( int ac, char** av )
             operations_map_t::iterator it = operations.find( v->id() );
             if( it == operations.end() )
             {
-                it = operations.insert( std::make_pair( v->id(), new boost::ptr_vector< operation_base > ) ).first;
-                init_operations( *it->second, operations_parameters, v->format() );
+                it = operations.insert( std::make_pair( v->id(), &operations_battery_farm.make( operations_parameters, v->format() ) ) ).first;
             }
             if( append ) { inputs.push_back( std::make_pair( v->id(), csv.binary() ? binary->line() : ascii->line() ) ); }
-            for( std::size_t i = 0; i < it->second->size(); ++i ) { ( *it->second )[i].push( v->buffer() ); }
+            for( std::size_t i = 0; i < it->second->size(); ++i ) { ( *it->second )[i]->push( v->buffer() ); }
         }
         calculate( csv, operations, results );
         if ( append ) { append_and_output( csv, inputs, results ); }
