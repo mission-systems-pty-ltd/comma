@@ -1077,7 +1077,7 @@ class operation_base
             lhs->output_format_ = output_format_;
             lhs->output_elements_ = output_elements_;
             lhs->buffer_ = buffer_;
-            for( std::size_t i = 0; i < operations_.size(); ++i ) { lhs->operations_.push_back( operations_[i].clone() ); }
+            for( auto& o: operations_ ) { lhs->operations_.push_back( o.clone() ); }
             return lhs;
         }
 };
