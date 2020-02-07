@@ -543,7 +543,7 @@ namespace Operations
     {
         public:
             Mean() : count_( 0 ) {}
-            void reset() { mean_ = boost::none; count_ = 0; }
+            void reset() { mean_.reset(); count_ = 0; }
             void push( const char* buf )
             {
                 T t = comma::csv::format::traits< T, F >::from_bin( buf );
@@ -565,83 +565,71 @@ namespace Operations
 
             Percentile() : percentile_( 0.0 ), method_( nearest ) {}
 
-            void push( const char* buf )
-            {
-                values_.insert( comma::csv::format::traits< T, F >::from_bin( buf ));
-            }
+            void push( const char* buf ) { values_.insert( comma::csv::format::traits< T, F >::from_bin( buf ) ); }
 
             void set_options( const std::vector< std::string >& options )
             {
-                if( options.size() == 0 ) {
-                    std::cerr << comma::verbose.app_name() << ": percentile operation requires a percentile" << std::endl;
-                    exit( 1 );
-                }
-
+                if( options.empty() ) { std::cerr << comma::verbose.app_name() << ": percentile operation requires a percentile" << std::endl; exit( 1 ); }
                 percentile_ = boost::lexical_cast< double >( options[0] );
-                if( percentile_ < 0.0 || percentile_ > 1.0 ) {
-                    std::cerr << comma::verbose.app_name() << ": percentile value should be between 0 and 1, got " << percentile_ << std::endl;
-                    exit( 1 );
-                }
-
-                if( options.size() == 2 ) {
-                    if( options[1] == "nearest" ) method_ = nearest;
-                    else if( options[1] == "interpolate" ) method_ = interpolate;
-                    else {
-                        std::cerr << comma::verbose.app_name() << ": expected percentile method, got " << options[1] << std::endl;
-                        exit( 1 );
-                    }
-                }
+                if( percentile_ < 0.0 || percentile_ > 1.0 ) { std::cerr << comma::verbose.app_name() << ": percentile value should be between 0 and 1, got " << percentile_ << std::endl; exit( 1 ); }
+                if( options.size() < 2 ) { return; }
+                if( options[1] == "nearest" ) { method_ = nearest; }
+                else if( options[1] == "interpolate" ) { method_ = interpolate; }
+                else { std::cerr << comma::verbose.app_name() << ": expected percentile method, got '" << options[1] << "'" << std::endl; exit( 1 ); }
             }
 
             void calculate( char* buf )
             {
+                if( values_.empty() ) { return; }
                 std::size_t count = values_.size();
-                if( count > 0 )
+                comma::verbose << "calculating " << percentile_*100 << "th percentile using ";
+                T value;
+                typename std::multiset< T >::iterator it = values_.begin();
+                switch( method_ )
                 {
-                    comma::verbose << "calculating " << percentile_*100 << "th percentile using ";
-                    T value;
-                    typename std::multiset< T >::iterator it = values_.begin();
-                    switch( method_ )
-                    {
-                        std::size_t rank;
-                        
-                        case nearest:
-                            // https://en.wikipedia.org/wiki/Percentile#The_Nearest_Rank_method
-                            comma::verbose << "nearest rank method" << std::endl;
-                            comma::verbose << "see https://en.wikipedia.org/wiki/Percentile#The_Nearest_Rank_method" << std::endl;
-                            rank = ( percentile_ == 0.0 ? 1 : std::ceil( count * percentile_ ));
-                            comma::verbose << "n = " << rank << std::endl;
-                            std::advance( it, rank - 1 );
-                            value = *it;
-                            break;
+                    std::size_t rank;
+                    
+                    case nearest:
+                        // https://en.wikipedia.org/wiki/Percentile#The_Nearest_Rank_method
+                        comma::verbose << "nearest rank method" << std::endl;
+                        comma::verbose << "see https://en.wikipedia.org/wiki/Percentile#The_Nearest_Rank_method" << std::endl;
+                        rank = ( percentile_ == 0.0 ? 1 : std::ceil( count * percentile_ ));
+                        comma::verbose << "n = " << rank << std::endl;
+                        std::advance( it, rank - 1 );
+                        value = *it;
+                        break;
 
-                        case interpolate:
-                            // https://en.wikipedia.org/wiki/Percentile#The_Linear_Interpolation_Between_Closest_Ranks_method
-                            // (third method in that section)
-                            comma::verbose << "NIST linear interpolation method" << std::endl;
-                            comma::verbose << "see http://www.itl.nist.gov/div898/handbook/prc/section2/prc262.htm" << std::endl;
-                            double x = percentile_ * ( count + 1 );
-                            comma::verbose << "p = " << percentile_ << "; N = " << count << "; p(N + 1) = " << x;
-                            if( x <= 1.0 ) {
-                                comma::verbose << "; below 1 - choosing smallest value" << std::endl;
-                                value = *it;
-                            } else if( x >= count ) {
-                                comma::verbose << "; above N - choosing largest value" << std::endl;
-                                value = *( values_.rbegin() );
-                            } else {
-                                rank = x;
-                                double remainder = x - rank;
-                                comma::verbose << "; k = " << rank << "; d = " << remainder << std::endl;
-                                std::advance( it, rank - 1 );
-                                double v1 = *it;
-                                double v2 = *++it;
-                                value = v1 + ( v2 - v1 ) * remainder;
-                                comma::verbose << "v1 = " << v1 << "; v2 = " << v2 << "; result = " << value << std::endl;
-                            }
-                            break;
-                    }
-                    comma::csv::format::traits< T, F >::to_bin( static_cast< T >( value ), buf );
+                    case interpolate:
+                        // https://en.wikipedia.org/wiki/Percentile#The_Linear_Interpolation_Between_Closest_Ranks_method
+                        // (third method in that section)
+                        comma::verbose << "NIST linear interpolation method" << std::endl;
+                        comma::verbose << "see http://www.itl.nist.gov/div898/handbook/prc/section2/prc262.htm" << std::endl;
+                        double x = percentile_ * ( count + 1 );
+                        comma::verbose << "p = " << percentile_ << "; N = " << count << "; p(N + 1) = " << x;
+                        if( x <= 1.0 )
+                        {
+                            comma::verbose << "; below 1 - choosing smallest value" << std::endl;
+                            value = *it;
+                        }
+                        else if( x >= count )
+                        {
+                            comma::verbose << "; above N - choosing largest value" << std::endl;
+                            value = *( values_.rbegin() );
+                        }
+                        else
+                        {
+                            rank = x;
+                            double remainder = x - rank;
+                            comma::verbose << "; k = " << rank << "; d = " << remainder << std::endl;
+                            std::advance( it, rank - 1 );
+                            double v1 = *it;
+                            double v2 = *++it;
+                            value = v1 + ( v2 - v1 ) * remainder;
+                            comma::verbose << "v1 = " << v1 << "; v2 = " << v2 << "; result = " << value << std::endl;
+                        }
+                        break;
                 }
+                comma::csv::format::traits< T, F >::to_bin( static_cast< T >( value ), buf );
             }
 
             base* clone() const { return new Percentile< T, F >( *this ); }
