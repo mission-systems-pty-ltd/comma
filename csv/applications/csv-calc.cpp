@@ -596,7 +596,6 @@ namespace Operations
             void calculate( char* buf )
             {
                 std::size_t count = values_.size();
-
                 if( count > 0 )
                 {
                     comma::verbose << "calculating " << percentile_*100 << "th percentile using ";
@@ -1180,7 +1179,7 @@ class operations_battery_farm_t // all this pain is because operations polymorhi
         
         ~operations_battery_farm_t()
         { 
-            for( auto& sample: operations_ ) { for( auto& s: sample ) { delete s; } } // quick and dirty; shame on me
+            for( auto& operation: operations_ ) { for( auto& o: operation ) { delete o; } } // quick and dirty; shame on me
         }
         
         operations_t& make( const std::vector< Operations::operation_parameters >& operations_parameters, const comma::csv::format& format )
@@ -1212,8 +1211,8 @@ class operations_battery_farm_t // all this pain is because operations polymorhi
             }
             if( end_ == operations_.size() )
             {
-                operations_.push_back( operations_t() );
-                for( auto& s: operations_[0] ) { operations_.back().push_back( s->clone() ); }
+                operations_.push_back( operations_t( operations_[0].size() ) );
+                for( unsigned int i = 0; i < operations_[0].size(); ++i ) { operations_.back()[i] = operations_[0][i]->clone(); }
             }
             for( auto& s: operations_[end_] ) { s->reset(); }
             return operations_[ end_++ ];
