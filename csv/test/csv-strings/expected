@@ -134,3 +134,6 @@ fields[4]/output/line[2]="m,,a/b,,x/y"
 fields[5]/output/line[0]="k,,,,"
 fields[5]/output/line[1]="l,,,,"
 fields[5]/output/line[2]="m,,a,,x"
+
+add[0]/output="a,b,xay,xby"
+add[1]/output="xay,xby"

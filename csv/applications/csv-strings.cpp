@@ -74,6 +74,7 @@ static void usage( bool verbose )
     std::cerr << "    usage: cat input.csv | csv-strings <operation> [<options>] > output.csv" << std::endl;
     std::cerr << std::endl;
     std::cerr << "operations" << std::endl;
+    std::cerr << "    add" << std::endl;
     std::cerr << "    path-basename,basename" << std::endl;
     std::cerr << "    path-dirname,dirname" << std::endl;
     std::cerr << "    path-real,path-canonical,canonical" << std::endl;
@@ -84,6 +85,11 @@ static void usage( bool verbose )
     std::cerr << "                         unless different semantics specified for operation" << std::endl;
     std::cerr << "                         default: perform operation on the first field" << std::endl;
     std::cerr << "    --strict; exit on strings on which operation does not make sense" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "add" << std::endl;
+    std::cerr << "    options" << std::endl;
+    std::cerr << "        --prefix=[<prefix>]; add prefix" << std::endl;
+    std::cerr << "        --suffix=[<suffix>]; add suffix" << std::endl;
     std::cerr << std::endl;
     std::cerr << "path-basename,basename" << std::endl;
     std::cerr << "    options" << std::endl;
@@ -110,7 +116,7 @@ static void usage( bool verbose )
 static bool strict;
 static comma::csv::options csv;
 
-namespace comma { namespace applications { namespace strings { namespace path {
+namespace comma { namespace applications { namespace strings {
 
 template < typename T >
 struct record
@@ -121,19 +127,19 @@ struct record
 
 typedef record< std::string > input;
 
-} } } } // namespace comma { namespace applications { namespace strings { namespace path {
+} } } // namespace comma { namespace applications { namespace strings {
 
 namespace comma { namespace visiting {
 
-template < typename T > struct traits< comma::applications::strings::path::record< T > >
+template < typename T > struct traits< comma::applications::strings::record< T > >
 {
-    template < typename K, typename V > static void visit( const K&, const comma::applications::strings::path::record< T >& p, V& v ) { v.apply( "values", p.values ); }
-    template < typename K, typename V > static void visit( const K&, comma::applications::strings::path::record< T >& p, V& v ) { v.apply( "values", p.values ); }
+    template < typename K, typename V > static void visit( const K&, const comma::applications::strings::record< T >& p, V& v ) { v.apply( "values", p.values ); }
+    template < typename K, typename V > static void visit( const K&, comma::applications::strings::record< T >& p, V& v ) { v.apply( "values", p.values ); }
 };
 
 } } // namespace comma { namespace visiting {
 
-namespace comma { namespace applications { namespace strings { namespace path {
+namespace comma { namespace applications { namespace strings {
 
 template < typename T >
 static int run( const comma::command_line_options& options )
@@ -178,6 +184,8 @@ static int run( const comma::command_line_options& options )
     write = [&]( const typename T::output_t& p ) { tied.append( p ); };
     return run_();
 }
+
+namespace path {
 
 struct basename
 {
@@ -268,7 +276,19 @@ struct canonical
     }
 };
 
-} } } } // namespace comma { namespace applications { namespace strings { namespace path {
+} // namespace path {
+
+struct add
+{
+    typedef input output_t;
+    std::string prefix;
+    std::string suffix;
+    static const char* name() { return "add"; }
+    add( const comma::command_line_options& options ): prefix( options.value( "--prefix", std::string() ) ), suffix( options.value( "--suffix", std::string() ) ) {}
+    std::string convert( const std::string& t ) { return prefix + t + suffix; }
+};
+    
+} } } // namespace comma { namespace applications { namespace strings {
 
 int main( int ac, char** av )
 {
@@ -280,9 +300,10 @@ int main( int ac, char** av )
         std::string operation = unnamed[0];
         strict = options.exists( "--strict" );
         csv = comma::csv::options( options );
-        if( operation == "path-basename" || operation == "basename" ) { return comma::applications::strings::path::run< comma::applications::strings::path::basename >( options ); }
-        if( operation == "path-dirname" || operation == "dirname" ) { return comma::applications::strings::path::run< comma::applications::strings::path::dirname >( options ); }
-        if( operation == "path-real" || operation == "path-canonical" || operation == "canonical" ) { return comma::applications::strings::path::run< comma::applications::strings::path::canonical >( options ); }
+        if( operation == "add" ) { return comma::applications::strings::run< comma::applications::strings::add >( options ); }
+        if( operation == "path-basename" || operation == "basename" ) { return comma::applications::strings::run< comma::applications::strings::path::basename >( options ); }
+        if( operation == "path-dirname" || operation == "dirname" ) { return comma::applications::strings::run< comma::applications::strings::path::dirname >( options ); }
+        if( operation == "path-real" || operation == "path-canonical" || operation == "canonical" ) { return comma::applications::strings::run< comma::applications::strings::path::canonical >( options ); }
         std::cerr << "csv-strings: expection operation; got: '" << operation << "'" << std::endl;
         return 1;
     }

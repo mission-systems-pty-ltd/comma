@@ -52,3 +52,6 @@ fields[2]="( echo k,,a,,x; echo l,,a/b,,x/y; echo m,,a/b/c,,x/y/z ) | csv-string
 fields[3]="( echo k,,a,,x; echo l,,a/b,,x/y; echo m,,a/b/c,,x/y/z ) | csv-strings path-dirname --fields ,,m,,n"
 fields[4]="( echo k,,a,,x; echo l,,a/b,,x/y; echo m,,a/b/c,,x/y/z ) | csv-strings path-dirname --fields ,,m,,n --emplace"
 fields[5]="( echo k,,a,,x; echo l,,a/b,,x/y; echo m,,a/b/c,,x/y/z ) | csv-strings path-dirname --fields ,,m,,n --emplace --tail 2"
+
+add[0]="echo a,b | csv-strings add --prefix x --suffix y --fields a,b"
+add[1]="echo a,b | csv-strings add --prefix x --suffix y --fields a,b --emplace"
