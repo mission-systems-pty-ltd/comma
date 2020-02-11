@@ -336,6 +336,11 @@ std::ofstream* split< T >::ofstream_by_id_()
         else { mode |= std::ofstream::app; }
         std::string name = filename_from_id_( current_.id );
         if( name.empty() ) { return nullptr; }
+        const auto& dirname = boost::filesystem::path( name ).parent_path();
+        if( !( dirname.empty() || boost::filesystem::is_directory( dirname ) || boost::filesystem::create_directories( dirname ) ) )
+        {
+            COMMA_THROW( comma::exception, "failed to create directory '" << dirname << "' for file: '" << name << "'" );
+        }
         std::shared_ptr< std::ofstream > stmp( new std::ofstream( &name[0], mode ) );
         it = files_.insert( std::make_pair( current_.id, stmp ) ).first;
     }
