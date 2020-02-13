@@ -108,10 +108,10 @@ load_options $@
 
 if [[ $dot_output && $dot_output != "dot" ]]; then
     type -p dot > /dev/null || {
-        echo "$basename requires graphviz"
-        echo "Install on Ubuntu with:"
-        echo "$ sudo apt-get install graphviz"
-        exit
+        echo "$basename: requires graphviz" >&2
+        echo "$basename: install on ubuntu with:" >&2
+        echo "$basename: sudo apt-get install graphviz" >&2
+        exit 1
     }
     output_fn="dot -T$dot_output"
 else
