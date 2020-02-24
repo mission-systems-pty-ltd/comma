@@ -17,7 +17,6 @@
 	 MARK_AS_ADVANCED( FORCE CXX_STANDARD_FLAGS )
     ENDIF()
 
-    # A much better way to do this is with CXX_STANDARD but that requires CMake 3.1
     include( CheckCXXCompilerFlag )
     IF( ${CXX_STANDARD_TO_USE} MATCHES "0x" )
         message( WARNING "
@@ -36,14 +35,14 @@
         UNSET( compiler_flag_to_check CACHE )
         SET( compiler_flag_to_check "-std=c++${CXX_STANDARD_TO_USE}" )
         if ( CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND ${CXX_STANDARD_TO_USE} MATCHES "11" )
-            set( compiler_flag_to_check "${compiler_flag_to_check} -Wc++11-narrowing" )
+            set( extra_compiler_flags "${compiler_flag_to_check} -Wc++11-narrowing" )
         endif()
-        CHECK_CXX_COMPILER_FLAG( "${compiler_flag_to_check}" compiler_supports_standard )
+        CHECK_CXX_COMPILER_FLAG( "${compiler_flag_to_check} ${extra_compiler_flags}" compiler_supports_standard )
         if( NOT compiler_supports_standard )
             message( FATAL_ERROR "attempt to use C++ standard ${CXX_STANDARD_TO_USE} but ${CMAKE_CXX_COMPILER} does not support it" )
         endif()
-        STRING( REPLACE " ${CXX_STANDARD_FLAGS}" "" CXX_FLAGS_NO_STANDARD "${CMAKE_CXX_FLAGS}" )
-        SET( CXX_STANDARD_FLAGS ${compiler_flag_to_check} CACHE STRING "updating compiler flags selecting C++ standard" FORCE )
         SET( CXX_STANDARD_LAST ${CXX_STANDARD_TO_USE} CACHE STRING "updating C++ standard to use option" FORCE )
-        set( CMAKE_CXX_FLAGS "${CXX_FLAGS_NO_STANDARD} ${compiler_flag_to_check}" CACHE STRING "" FORCE )
+        set( CMAKE_CXX_FLAGS "${extra_compiler_flags}" CACHE STRING "" FORCE )
     ENDIF()
+
+    set( CMAKE_CXX_STANDARD ${CXX_STANDARD_TO_USE} )

@@ -10,7 +10,7 @@ endif( USE_ARM_TOOLCHAIN )
 
 PROJECT( "comma" )
 
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required( VERSION 3.1 )
 
 # option( USE_ARM_TOOLCHAIN "Cross compile using arm toolchain" OFF )
 # if( USE_ARM_TOOLCHAIN )
