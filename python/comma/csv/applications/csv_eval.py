@@ -34,6 +34,7 @@ import itertools
 import numpy as np
 import os
 import re
+import signal
 import sys
 if sys.version_info.major < 3: from itertools import izip
 else: izip = zip # todo! watch performance! it's reported python3 zip is some 30% slower than izip
@@ -619,6 +620,7 @@ def exit_if(stream):
 
 def main():
     try:
+        signal.signal( signal.SIGPIPE, signal.SIG_DFL )
         comma.csv.time.zone('UTC')
         args = get_args()
         prepare_options(args)

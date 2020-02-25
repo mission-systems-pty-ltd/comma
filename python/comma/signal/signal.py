@@ -49,4 +49,4 @@ class is_shutdown(object):
 
     __nonzero__ = __bool__
 
-signal.signal( signal.SIGPIPE, signal.SIG_DFL )
+# signal.signal( signal.SIGPIPE, signal.SIG_DFL )
