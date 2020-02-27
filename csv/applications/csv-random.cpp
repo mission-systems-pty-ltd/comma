@@ -83,6 +83,17 @@ static void usage( bool verbose )
     std::cerr << "    --seed=[<int>]; random seed" << std::endl;
     std::cerr << std::endl;
     std::cerr << "operations" << std::endl;
+    std::cerr << "    make: output pseudo-random numbers" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "        usage: csv-random make <options> > random.csv" << std::endl;
+    std::cerr << "               cat records.csv | csv-random make --append <options> > appended.csv" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "        options" << std::endl;
+    std::cerr << "            --append; append random numbers to stdin input" << std::endl;
+    std::cerr << "            --distribution=<distribution>; default=uniform; values: uniform, more todo, just ask" << std::endl;
+    std::cerr << "            --range=[<min>,<max>]; desired value range, default: whatever stl defines (usually numeric limits)" << std::endl;
+    std::cerr << "            --type=<type>; default=i; supported values: i, ui, f, d" << std::endl;
+    std::cerr << std::endl;
     std::cerr << "    shuffle: output input records in pseudo-random order" << std::endl;
     std::cerr << std::endl;
     std::cerr << "        usage: cat records.csv | csv-random shuffle [<options>] > shuffled.csv" << std::endl;
@@ -121,7 +132,97 @@ template <> struct traits< comma::applications::random::shuffle::input >
 
 } } // namespace comma { namespace visiting {
 
-namespace comma { namespace applications { namespace random { namespace shuffle {
+namespace comma { namespace applications { namespace random {
+
+namespace make {
+
+template < typename T, typename Distribution >
+static int run_impl( Distribution& distribution, bool append )
+{
+    std::default_random_engine generator = seed ? std::default_random_engine( *seed ) : std::default_random_engine();
+    if( !::csv.flush ) { std::cin.tie( NULL ); }
+    if( append )
+    {
+        if( ::csv.binary() )
+        {
+            std::vector< char > buf( ::csv.format().size() );
+            while( std::cin.good() )
+            {
+                std::cin.read( &buf[0], buf.size() );
+                if( std::cin.gcount() == 0 ) { break; }
+                if( std::cin.gcount() != int( buf.size() ) ) { std::cerr << "csv-random: make: expected " << buf.size() << " bytes; got " << std::cin.gcount() << std::endl; return 1; }
+                std::cout.write( &buf[0], buf.size() );
+                T r = distribution( generator );
+                std::cout.write( reinterpret_cast< char* >( &r ), sizeof( T ) );
+                if( ::csv.flush ) { std::cout.flush(); }
+            }
+        }
+        else
+        {
+            while( std::cin.good() )
+            {
+                std::string s;
+                std::getline( std::cin, s );
+                if( s.empty() ) { continue; }
+                std::cout << s << ::csv.delimiter << distribution( generator ) << std::endl;
+                if( ::csv.flush ) { std::cout.flush(); }
+            }
+        }
+    }
+    else
+    {
+        while( std::cout.good() )
+        {
+            T r = distribution( generator );
+            if( ::csv.binary() ) { std::cout.write( reinterpret_cast< char* >( &r ), sizeof( T ) ); }
+            else { std::cout << r << std::endl; }
+            if( ::csv.flush ) { std::cout.flush(); }
+        }
+    }
+    return 0;
+}
+
+template < typename T, template < typename > class Distribution >
+static int run_impl( const comma::command_line_options& options )
+{
+    bool append = options.exists( "--append" );
+    auto r = options.optional< std::string >( "--range" );
+    auto range = comma::csv::ascii< std::pair< T, T > >().get( *r );
+    auto distribution = r ? Distribution< T >( range.first, range.second ) : Distribution< T >();
+    return run_impl< T >( distribution, append );
+}
+    
+static int run( const comma::command_line_options& options ) // quick and dirty
+{
+    auto distribution = options.value< std::string >( "--distribution", "uniform" );
+    auto type = options.value< std::string >( "--type", "int" );
+    if( type == "i" )
+    {
+        if( distribution == "uniform" ) { return run_impl< comma::int32, std::uniform_int_distribution >( options ); }
+        std::cerr << "csv-random make: expected distribution; got: '" << distribution << "'" << std::endl;
+    }
+    if( type == "ui" )
+    {
+        if( distribution == "uniform" ) { return run_impl< comma::int32, std::uniform_int_distribution >( options ); }
+        std::cerr << "csv-random make: expected distribution; got: '" << distribution << "'" << std::endl;
+    }
+    if( type == "f" )
+    {
+        if( distribution == "uniform" ) { return run_impl< float, std::uniform_real_distribution >( options ); }
+        std::cerr << "csv-random make: expected distribution; got: '" << distribution << "'" << std::endl;
+    }
+    if( type == "d" )
+    {
+        if( distribution == "uniform" ) { return run_impl< double, std::uniform_real_distribution >( options ); }
+        std::cerr << "csv-random make: expected distribution; got: '" << distribution << "'" << std::endl;
+    }
+    std::cerr << "csv-random make: expected type; got: '" << type << "'" << std::endl;
+    return 1;
+}
+
+} // namespace make {
+
+namespace shuffle {
 
 static int run( const comma::command_line_options& options )
 {
@@ -194,7 +295,9 @@ static int run( const comma::command_line_options& options )
     return 0;
 }
 
-} } } } // namespace comma { namespace applications { namespace random { namespace shuffle {
+} // namespace shuffle {
+
+} } } // namespace comma { namespace applications { namespace random {
 
 int main( int ac, char** av )
 {
@@ -203,10 +306,11 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av, usage );
         const auto& unnamed = options.unnamed( "--flush,--verbose,-v", "-.*" );
         if( unnamed.empty() ) { std::cerr << "csv-random: please specify operation" << std::endl; return 1; }
-        csv = comma::csv::options( options );
+        ::csv = comma::csv::options( options );
         seed = options.optional< int >( "--seed" );
-        verbose = options.exists( "--verbose,-v" );
+        ::verbose = options.exists( "--verbose,-v" );
         std::string operation = unnamed[0];
+        if( operation == "make" ) { return comma::applications::random::make::run( options ); }
         if( operation == "shuffle" ) { return comma::applications::random::shuffle::run( options ); }
         std::cerr << "csv-random: expection operation; got: '" << operation << "'" << std::endl;
         return 1;
