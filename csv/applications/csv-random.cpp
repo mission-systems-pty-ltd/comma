@@ -91,8 +91,9 @@ static void usage( bool verbose )
     std::cerr << "        options" << std::endl;
     std::cerr << "            --append; append random numbers to stdin input" << std::endl;
     std::cerr << "            --distribution=<distribution>; default=uniform; values: uniform, more todo, just ask" << std::endl;
+    std::cerr << "            --output-binary; output random numbers as binary, or specify --binary=<format> for stdin input" << std::endl;
     std::cerr << "            --range=[<min>,<max>]; desired value range, default: whatever stl defines (usually numeric limits)" << std::endl;
-    std::cerr << "            --type=<type>; default=i; supported values: i, ui, f, d" << std::endl;
+    std::cerr << "            --type=<type>; default=ui; supported values: b, ub, w, uw, i, ui, f, d" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    shuffle: output input records in pseudo-random order" << std::endl;
     std::cerr << std::endl;
@@ -108,9 +109,11 @@ static void usage( bool verbose )
     exit( 0 );
 }
 
+static bool output_binary;
 static bool verbose;
 static comma::csv::options csv;
 static boost::optional< int > seed;
+
 
 namespace comma { namespace applications { namespace random { namespace shuffle {
 
@@ -136,8 +139,26 @@ namespace comma { namespace applications { namespace random {
 
 namespace make {
 
+template < typename T >
+struct type_traits
+{
+    static T cast( T t ) { return t; }
+};
+
+template <>
+struct type_traits< char >
+{
+    static int cast( char t ) { return static_cast< int >( t ); }
+};
+
+template <>
+struct type_traits< unsigned char >
+{
+    static unsigned int cast( unsigned char t ) { return static_cast< int >( t ); }
+};
+    
 template < typename T, typename Distribution >
-static int run_impl( Distribution& distribution, bool append )
+static int run_impl( Distribution& distribution, bool append, bool binary )
 {
     std::default_random_engine generator = seed ? std::default_random_engine( *seed ) : std::default_random_engine();
     if( !::csv.flush ) { std::cin.tie( NULL ); }
@@ -164,7 +185,7 @@ static int run_impl( Distribution& distribution, bool append )
                 std::string s;
                 std::getline( std::cin, s );
                 if( s.empty() ) { continue; }
-                std::cout << s << ::csv.delimiter << distribution( generator ) << std::endl;
+                std::cout << s << ::csv.delimiter << type_traits< T >::cast( distribution( generator ) ) << std::endl;
                 if( ::csv.flush ) { std::cout.flush(); }
             }
         }
@@ -174,8 +195,8 @@ static int run_impl( Distribution& distribution, bool append )
         while( std::cout.good() )
         {
             T r = distribution( generator );
-            if( ::csv.binary() ) { std::cout.write( reinterpret_cast< char* >( &r ), sizeof( T ) ); }
-            else { std::cout << r << std::endl; }
+            if( binary ) { std::cout.write( reinterpret_cast< char* >( &r ), sizeof( T ) ); }
+            else { std::cout << type_traits< T >::cast( r ) << std::endl; }
             if( ::csv.flush ) { std::cout.flush(); }
         }
     }
@@ -186,16 +207,42 @@ template < typename T, template < typename > class Distribution >
 static int run_impl( const comma::command_line_options& options )
 {
     bool append = options.exists( "--append" );
-    auto r = options.optional< std::string >( "--range" );
-    auto range = comma::csv::ascii< std::pair< T, T > >().get( *r );
-    auto distribution = r ? Distribution< T >( range.first, range.second ) : Distribution< T >();
-    return run_impl< T >( distribution, append );
+    bool binary = options.exists( "--output-binary" ) || ::csv.binary();
+    auto r = options.optional< std::string >( "--range" ); // todo: parse distribution parameters
+    if( r )
+    {
+        auto range = comma::csv::ascii< std::pair< T, T > >().get( *r );
+        Distribution< T > distribution( range.first, range.second );
+        return run_impl< T >( distribution, append, binary );
+    }
+    Distribution< T > distribution;
+    return run_impl< T >( distribution, append, binary );
 }
     
 static int run( const comma::command_line_options& options ) // quick and dirty
 {
     auto distribution = options.value< std::string >( "--distribution", "uniform" );
-    auto type = options.value< std::string >( "--type", "int" );
+    auto type = options.value< std::string >( "--type", "ui" );
+    if( type == "b" )
+    {
+        if( distribution == "uniform" ) { return run_impl< char, std::uniform_int_distribution >( options ); }
+        std::cerr << "csv-random make: expected distribution; got: '" << distribution << "'" << std::endl;
+    }
+    if( type == "ub" )
+    {
+        if( distribution == "uniform" ) { return run_impl< unsigned char, std::uniform_int_distribution >( options ); }
+        std::cerr << "csv-random make: expected distribution; got: '" << distribution << "'" << std::endl;
+    }
+    if( type == "w" )
+    {
+        if( distribution == "uniform" ) { return run_impl< comma::int16, std::uniform_int_distribution >( options ); }
+        std::cerr << "csv-random make: expected distribution; got: '" << distribution << "'" << std::endl;
+    }
+    if( type == "uw" )
+    {
+        if( distribution == "uniform" ) { return run_impl< comma::uint16, std::uniform_int_distribution >( options ); }
+        std::cerr << "csv-random make: expected distribution; got: '" << distribution << "'" << std::endl;
+    }
     if( type == "i" )
     {
         if( distribution == "uniform" ) { return run_impl< comma::int32, std::uniform_int_distribution >( options ); }
@@ -304,7 +351,7 @@ int main( int ac, char** av )
     try
     {
         comma::command_line_options options( ac, av, usage );
-        const auto& unnamed = options.unnamed( "--flush,--verbose,-v", "-.*" );
+        const auto& unnamed = options.unnamed( "--append,--flush,--verbose,-v", "-.*" );
         if( unnamed.empty() ) { std::cerr << "csv-random: please specify operation" << std::endl; return 1; }
         ::csv = comma::csv::options( options );
         seed = options.optional< int >( "--seed" );
