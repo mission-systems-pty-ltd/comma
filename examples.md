@@ -6,7 +6,7 @@
 
 generate sample file with velocity a m/sec at each given time:
 
-```
+```bash
 cat <<eof > velocities.csv
 20200101T000000,0.7
 20200101T000001,1.1
@@ -19,7 +19,7 @@ eof
 
 append distance travelled to each data point:
 
-```
+```bash
 cat velocities.csv \
     | csv-shuffle --fields t,v --output-fields t,t,v \
     | csv-time --to seconds --fields ,t \
