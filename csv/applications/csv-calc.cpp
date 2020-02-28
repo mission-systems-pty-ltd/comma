@@ -1377,7 +1377,7 @@ int main( int ac, char** av )
         else { output( csv, results, block, has_block, has_id ); }
         return 0;
     }
-    catch( std::exception& ex ) { std::cerr << comma::verbose.app_name() << ": " << ex.what() << std::endl; }
-    catch( ... ) { std::cerr << comma::verbose.app_name() << ": unknown exception" << std::endl; }
+    catch( std::exception& ex ) { std::cerr << "csv-calc: " << ex.what() << std::endl; }
+    catch( ... ) { std::cerr << "csv-calc: unknown exception" << std::endl; }
     return 1;
 }
