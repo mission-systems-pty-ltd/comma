@@ -52,6 +52,7 @@ def is_negative_infinity(numpy_time): return numpy_time == NEGATIVE_INFINITY
 def to_numpy(t):
     """
     return numpy datetime64 scalar corresponding to the given comma time string
+    if t has nanoseconds, it will be trunkated (rather than rounded) to microseconds
 
     >>> import numpy as np
     >>> from comma.csv.time import to_numpy
@@ -67,7 +68,7 @@ def to_numpy(t):
     if t in ['', 'not-a-date-time']: return NOT_A_DATE_TIME
     if t in ['+infinity', '+inf', 'infinity', 'inf']: return POSITIVE_INFINITY
     if t in ['-infinity', '-inf']: return NEGATIVE_INFINITY
-    if not (isinstance(t, BASESTRING) and re.match(r'^(\d{8}T\d{6}(\.\d{0,6})?)$', t)):
+    if not (isinstance(t, BASESTRING) and re.match(r'^(\d{8}T\d{6}(\.\d{0,12})?)$', t)):
         msg = "expected comma time, got '{}'".format(repr(t))
         raise TypeError(msg)
     v = list(t)
