@@ -77,8 +77,8 @@ void usage( bool verbose = false )
     std::cerr << "    --timestamped: use input timestamp for repeating; currently, would do blocking read" << std::endl;
     std::cerr << "                   convenient for filling holes in data in offline processing" << std::endl;
     std::cerr << "      --timestamped options" << std::endl;
-    std::cerr << "          --from=[<time>]; if first timestamp greater than <time>, fill the hole with the first record" << std::endl;
-    std::cerr << "          --to=[<time>]; if last timestamp less than <time>, fill the hole with the last record" << std::endl;
+    std::cerr << "          --at-least-from,--from=[<time>]; if first timestamp greater than <time>, fill the hole with the first record" << std::endl;
+    std::cerr << "          --at-least-to,--to=[<time>]; if last timestamp less than <time>, fill the hole with the last record" << std::endl;
     std::cerr << "    --verbose,-v: more output" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    if --period is not set, --timeout acts as a watchdog. If no input is seen" << std::endl;
@@ -219,9 +219,9 @@ int main( int ac, char** av )
             if( options.exists( "--timeout,-t" ) ) { std::cerr << "csv-repeat: for --timestamped: --timeout not supported" << std::endl; return 1; }
             comma::csv::input_stream< input_t > istream( std::cin, csv );
             boost::posix_time::ptime last;
-            if( options.exists( "--from" ) ) { last = boost::posix_time::from_iso_string( options.value< std::string >( "--from" ) ); }
+            if( options.exists( "--from" ) ) { last = boost::posix_time::from_iso_string( options.value< std::string >( "--at-least-from,--from" ) ); }
             boost::posix_time::ptime to;
-            if( options.exists( "--to" ) ) { to = boost::posix_time::from_iso_string( options.value< std::string >( "--to" ) ); }
+            if( options.exists( "--to" ) ) { to = boost::posix_time::from_iso_string( options.value< std::string >( "--at-least-to,--to" ) ); }
             std::string last_record;
             if( csv.binary() ) { last_record = std::string( csv.format().size(), 0 ); }
             auto pass = [&]( const output_t& )
@@ -236,14 +236,22 @@ int main( int ac, char** av )
             };
             std::function< void( const output_t& p ) > write;
             if( ostream ) { write = append; } else { write = pass; }
+            auto write_last = [&]( boost::posix_time::ptime t )
+            {
+                std::cout.write( &last_record[0], last_record.size() );
+                if( !csv.binary() ) { std::cout << csv.delimiter; }
+                if( ostream ) { ostream->write( output_t( t, true ) ); }
+                else if( !csv.binary() ) { std::cout << std::endl; }
+            };
             auto repeat = [&]( boost::posix_time::ptime now )
             {
                 if( now.is_not_a_date_time() || last.is_not_a_date_time() ) { return; }
-                for( boost::posix_time::ptime t = last + *period; t < now; t += *period )
+                for( boost::posix_time::ptime t = last + *period; t <= now; )
                 {
-                    std::cout.write( &last_record[0], last_record.size() );
-                    if( !csv.binary() ) { std::cout << csv.delimiter; }
-                    if( ostream ) { ostream->write( output_t( t, true ) ); }
+                    write_last( t );
+                    if( t == now ) { break; }
+                    t += *period;
+                    if( t > now ) { t = now; }
                 }
             };
             auto set_last_record = [&]()
@@ -256,7 +264,7 @@ int main( int ac, char** av )
                 const input_t* p = istream.read();
                 if( !p ) { break; }
                 if( p->time.is_not_a_date_time() ) { std::cerr << "csv-repeat: expected timestamp, got not a date/time" << std::endl; return 1; }
-                if( last_record.empty() && !last.is_not_a_date_time() ) { set_last_record(); } // quick and dirty
+                if( last_record.empty() && !last.is_not_a_date_time() ) { set_last_record(); write_last( last ); } // quick and dirty
                 repeat( p->time );
                 write( output_t( p->time, false ) );
                 last = p->time;

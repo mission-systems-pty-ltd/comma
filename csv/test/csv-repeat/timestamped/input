@@ -1,0 +1,5 @@
+timestamped[0]="( echo 20200101T000010,a; echo 20200101T000020,b ) | csv-repeat --timestamped --period 3"
+timestamped[1]="( echo 20200101T000010,a; echo 20200101T000020,b ) | csv-repeat --timestamped --period 3 --append time,repeating"
+timestamped[2]="( echo 20200101T000010,a; echo 20200101T000020,b ) | csv-repeat --timestamped --period 3 --append time,repeating --from 20200101T000000"
+timestamped[3]="( echo 20200101T000010,a; echo 20200101T000020,b ) | csv-repeat --timestamped --period 3 --append time,repeating --to 20200101T000030"
+timestamped[4]="( echo 20200101T000010,a; echo 20200101T000020,b ) | csv-repeat --timestamped --period 3 --append time,repeating --to 20200101T000030 --from 20200101T000000"
