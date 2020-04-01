@@ -151,8 +151,8 @@ static void usage( bool more )
     std::cerr << "                            --block-span,--span=<value>; maximum block span, double (for time: seconds as" << std::endl;
     std::cerr << "                                                         double), see examples" << std::endl;
     std::cerr << "                            --discard-out-of-range; discard input records with scalar out of range defined by --min and --max" << std::endl;
-    std::cerr << "                            --min=[<value>]; min value for the scalar range, see examples" << std::endl;
-    std::cerr << "                            --max=[<value>]; max value for the scalar range, see examples" << std::endl;
+    std::cerr << "                            --min=[<value>]; convenience option: min value for the scalar range, see examples" << std::endl;
+    std::cerr << "                            --max=[<value>]; convenience option: max value for the scalar range, see examples" << std::endl;
     std::cerr << "    head" << std::endl;
     std::cerr << "        reads records from first block to stdout, if --num-of-blocks=<num> specified, read more than one blocks" << std::endl;
     std::cerr << "        requires the index from 'index' mode in the inputs" << std::endl;
@@ -567,7 +567,7 @@ int main( int ac, char** av )
                         else
                         {
                             static bool last_in_range = false;
-                            static bool discard_output_out_of_range = !options.exists( "--discard-out-of-range" );
+                            static bool discard_output_out_of_range = options.exists( "--discard-out-of-range" );
                             double v = to_double( p );
                             bool in_range = ( !min || !comma::math::less( v, *min ) ) && ( !max || !comma::math::less( *max, v ) );
                             static bool first_record = true;
