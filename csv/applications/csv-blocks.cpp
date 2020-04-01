@@ -145,8 +145,14 @@ static void usage( bool more )
     std::cerr << "            --fields=<fields>" << std::endl;
     std::cerr << "                id: any number of id fields to group by" << std::endl;
     std::cerr << "                scalar: group by scalar, which can be integer, floating point number, or time" << std::endl;
-    std::cerr << "            --block-gap,--gap=<value>; minimum gap in values between blocks, double (for time: seconds as double), see examples" << std::endl;
-    std::cerr << "            --block-span,--span=<value>; maximum block span, double (for time: seconds as double), see examples" << std::endl;
+    std::cerr << "                        options" << std::endl;
+    std::cerr << "                            --block-gap,--gap=<value>; minimum gap in values between block" << std::endl;
+    std::cerr << "                                                       double (for time: seconds as double), see examples" << std::endl;
+    std::cerr << "                            --block-span,--span=<value>; maximum block span, double (for time: seconds as" << std::endl;
+    std::cerr << "                                                         double), see examples" << std::endl;
+    std::cerr << "                            --discard-out-of-range; discard input records with scalar out of range defined by --min and --max" << std::endl;
+    std::cerr << "                            --min=[<value>]; min value for the scalar range, see examples" << std::endl;
+    std::cerr << "                            --max=[<value>]; max value for the scalar range, see examples" << std::endl;
     std::cerr << "    head" << std::endl;
     std::cerr << "        reads records from first block to stdout, if --num-of-blocks=<num> specified, read more than one blocks" << std::endl;
     std::cerr << "        requires the index from 'index' mode in the inputs" << std::endl;
@@ -230,7 +236,6 @@ static comma::csv::options csv;
 static bool reverse_index = false;
 // All the data for this block
 static std::deque< std::string > block_records;
-static comma::uint32 current_block = 1;
 static comma::int32 increment_step = 1;
 
 static void output_record_and_index( const std::string& input, comma::uint32 index, bool is_binary, char delimiter )
@@ -266,12 +271,21 @@ static bool empty_( const std::string& s ) // quick and dirty
     return true;
 }
 
-static double diff( const input_t& from, const input_t& to ) // quick and dirty
+static double to_double( const input_t& lhs ) // quick and dirty
 {
-    if( from.key.longs.size() == 1 ) { return std::abs( double( from.key.longs[0] ) - to.key.longs[0] ); }
-    if( from.key.doubles.size() == 1 ) { return std::abs( from.key.doubles[0] - to.key.doubles[0] ); }
-    if( from.key.time.size() == 1 ) { return std::abs( double( ( from.key.time[0] - to.key.time[0] ).total_microseconds() ) / 1000000 ); }
-    if( from.key.strings.size() == 1 ) { COMMA_THROW( comma::exception, "difference for strings: not implemented" ); }
+    if( lhs.key.longs.size() == 1 ) { return lhs.key.longs[0]; }
+    if( lhs.key.doubles.size() == 1 ) { return lhs.key.doubles[0]; }
+    if( lhs.key.time.size() == 1 ) { COMMA_THROW( comma::exception, "cannot convert time to double" ); }
+    if( lhs.key.strings.size() == 1 ) { COMMA_THROW( comma::exception, "cannot convert strings to double" ); }
+    COMMA_THROW( comma::exception, "never here" );
+}
+
+static double diff( const input_t& lhs, const input_t& rhs ) // quick and dirty
+{
+    if( lhs.key.longs.size() == 1 ) { return std::abs( double( lhs.key.longs[0] ) - rhs.key.longs[0] ); }
+    if( lhs.key.doubles.size() == 1 ) { return std::abs( lhs.key.doubles[0] - rhs.key.doubles[0] ); }
+    if( lhs.key.time.size() == 1 ) { return std::abs( double( ( lhs.key.time[0] - rhs.key.time[0] ).total_microseconds() ) / 1000000 ); }
+    if( lhs.key.strings.size() == 1 ) { COMMA_THROW( comma::exception, "difference for strings: not implemented" ); }
     COMMA_THROW( comma::exception, "never here" );
 }
 
@@ -460,12 +474,10 @@ int main( int ac, char** av )
         comma::csv::options csv_out;
         csv_out.full_xpath = false;
         if( csv.binary() ) { csv_out.format( comma::csv::format("ui") ); }
-        std::vector< std::string > unnamed = options.unnamed( "--help,-h,--reverse,--verbose,-v", "-.*" );
+        std::vector< std::string > unnamed = options.unnamed( "--help,-h,--reverse,--verbose,-v,--discard-out-of-range", "-.*" );
         if( unnamed.empty() ) { std::cerr << name() << "please specify operation" << std::endl; return 1; }
         const std::string  operation = unnamed.front();
-        
         if( verbose ) { std::cerr << name() << "csv fields: " << csv.fields << std::endl; }
-        
         if( operation == "accumulate" )
         {
             std::string first_line;
@@ -514,55 +526,93 @@ int main( int ac, char** av )
         }
         if( operation == "group" || operation == "make-blocks" )
         {
-            current_block = options.value< comma::uint32 >( "--starting-block,--from", 0 );
+            comma::uint32 current_block = options.value< comma::uint32 >( "--starting-block,--from", 0 );
             std::string first_line;
             input_t default_input;
             auto how = set_fields( options, first_line, default_input );
             if( verbose ) { std::cerr << name() << "csv fields: " << csv.fields << "; making blocks by " << ( how == how_t::by_id ? "id" : "scalar" ) << std::endl; }
             boost::optional< double > gap;
             boost::optional< double > span;
+            boost::optional< double > min;
+            boost::optional< double > max;
             if( how == how_t::by_scalar )
-            { 
+            {
+                options.assert_mutually_exclusive( "--gap,--span", "--min,--max" ); // for now
                 gap = options.optional< double >( "--block-gap,--gap" );
                 span = options.optional< double >( "--block-span,--span" );
+                min = options.optional< double >( "--min" );
+                max = options.optional< double >( "--max" );
             }
             comma::csv::input_stream< input_t > istream( std::cin, csv, default_input );
             comma::csv::output_stream< appended_column > ostream( std::cout, csv_out );
             comma::csv::tied< input_t, appended_column > tied( istream, ostream );
-            auto update_block = [&]( const input_t& p )
+            auto update_block = [&]( const input_t& p )->bool
             {
-                static input_t first = p;
                 static input_t last = p;
                 switch( how )
                 {
                     case how_t::by_id:
                         if( !( last.key == p.key ) ) { ++current_block; }
-                        break;
+                        last = p;
+                        return true;
                     case how_t::by_scalar:
-                        if( ( gap && diff( last, p ) >= *gap ) || ( span && diff( first, p ) >= *span ) ) { ++current_block; first = p; }
-                        break;
+                    {
+                        static input_t first = p;
+                        if( gap || span )
+                        {
+                            if( ( gap && diff( last, p ) >= *gap ) || ( span && diff( first, p ) >= *span ) ) { ++current_block; first = p; }
+                            last = p;
+                            return true;
+                        }
+                        else
+                        {
+                            static bool last_in_range = false;
+                            static bool discard_output_out_of_range = !options.exists( "--discard-out-of-range" );
+                            double v = to_double( p );
+                            bool in_range = ( !min || !comma::math::less( v, *min ) ) && ( !max || !comma::math::less( *max, v ) );
+                            static bool first_record = true;
+                            if( !first_record ) // quick and dirty
+                            {
+                                if( discard_output_out_of_range )
+                                {
+                                    if( last_in_range && !in_range ) { ++current_block; }
+                                }
+                                else
+                                {
+                                    if( last_in_range != in_range ) { ++current_block; } // quick and dirty
+                                }
+                            }
+                            last = p;
+                            last_in_range = in_range;
+                            first_record = false;
+                            return in_range || !discard_output_out_of_range;
+                        }
+                    }
                     case how_t::none: // never here
-                        break;
+                        return true;
                 }
-                last = p;
-                    
+                return true; // never here
             };
             if( !first_line.empty() ) 
             { 
                 input_t p = comma::csv::ascii< input_t >( csv, default_input ).get( first_line ); 
-                update_block( p );
-                if( istream.is_binary() ) { std::cout.write( (char*)&p, istream.binary().size() ); }
-                else { std::cout << first_line << istream.ascii().ascii().delimiter(); }
-                ostream.write( appended_column( current_block ) );
-                if( csv.flush ) { std::cout.flush(); }
+                if( update_block( p ) )
+                {
+                    if( istream.is_binary() ) { std::cout.write( (char*)&p, istream.binary().size() ); }
+                    else { std::cout << first_line << istream.ascii().ascii().delimiter(); }
+                    ostream.write( appended_column( current_block ) );
+                    if( csv.flush ) { std::cout.flush(); }
+                }
             }
             while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
             {
                 const input_t* p = istream.read();
                 if( !p ) { break; }
-                update_block( *p );
-                tied.append( appended_column( current_block ) );
-                if( csv.flush ) { std::cout.flush(); }
+                if( update_block( *p ) )
+                {
+                    tied.append( appended_column( current_block ) );
+                    if( csv.flush ) { std::cout.flush(); }
+                }
             }            
             return 0;
         }
@@ -606,60 +656,51 @@ int main( int ac, char** av )
         else if( operation == "index" )
         {
             reverse_index = options.exists("--reverse");
-            
             comma::csv::input_stream< input_with_block > istream( std::cin, csv );
-            
             char delimiter = istream.is_binary() ? ',' : istream.ascii().ascii().delimiter();
             comma::uint32 block = 0;
             comma::uint32 index = 0;
             std::string buffer;
             if( istream.is_binary() ) { buffer.resize( istream.binary().size() ); }
-            
             while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
             {
                 const input_with_block* p = istream.read();
                 if( !p ) { break; }
-                
                 if( block != p->block ) 
                 { 
                     if ( reverse_index ) { output_reverse_indexing( block_records, istream.is_binary(), delimiter  ); }
                     else { index = 0; }
                 }
                 block = p->block;
-                
                 if ( reverse_index )
                 {
-                    // Reverse index mode - accumulate whole block before indexing
                     if( istream.is_binary() )  
                     { 
                         ::memcpy( &buffer[0], istream.binary().last(),  istream.binary().size() ); 
                         block_records.push_back( buffer );
                     }
-                    else { block_records.push_back( comma::join( istream.ascii().last(), delimiter ) ); }
+                    else
+                    {
+                        block_records.push_back( comma::join( istream.ascii().last(), delimiter ) );
+                    }
                 }
                 else
                 {
-                    // Forward index mode - append index to each record
                     if( istream.is_binary() ) { ::memcpy( &buffer[0], istream.binary().last(),  istream.binary().size() ); }
                     else { buffer = comma::join( istream.ascii().last(), delimiter ); }
                     output_record_and_index( buffer, index, istream.is_binary(), delimiter );
                     index++;
                 }
             }
-            
-            // flushes the last block
             if ( reverse_index ) { output_reverse_indexing( block_records, istream.is_binary(), delimiter  ); }
-            
             return 0;
         }
         else if( operation == "increment" )    // operation is head
         {
             increment_step = options.value< comma::int32 >( "--step", 1 );
-            
             comma::csv::input_stream< input_with_block > istream( std::cin, csv );
             comma::csv::output_stream< appended_column > ostream( std::cout, csv_out );
             comma::csv::tied< input_with_block, appended_column > tied( istream, ostream );
-            
             appended_column incremented;
             while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
             {
@@ -669,7 +710,6 @@ int main( int ac, char** av )
                 tied.append( incremented );
                 if( csv.flush ) { std::cout.flush(); }
             }
-            
             return 0;
         }
         else if( operation == "read-until" )
