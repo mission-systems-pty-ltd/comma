@@ -190,12 +190,6 @@ int main( int ac, char** av )
             output_csv.delimiter = csv.delimiter;
             ostream.reset( new comma::csv::output_stream< output_t >( std::cout, output_csv ) );
         }
-        boost::optional< boost::posix_time::time_duration > period;
-        if( options.exists( "--period" ) ) { period = boost::posix_time::microseconds( static_cast<unsigned int> (options.value< double >( "--period" ) * 1000000 )); }
-        boost::posix_time::time_duration timeout;
-        boost::optional< double > timeout_seconds = options.optional< double >( "--timeout,-t" );
-        if( !period && !timeout_seconds ) { std::cerr << "csv-repeat: please specify either --period, or --timeout, or both" << std::endl; return 1; }
-        timeout = timeout_seconds ? boost::posix_time::microseconds( static_cast<unsigned int>(*timeout_seconds * 1000000 )) : *period;
         if( options.exists( "--output-fields" ) )
         {
             if( !options.exists( "--fields,-f" ) ) { std::cerr << "csv-repeat: --output-fields option requires --fields" << std::endl; return 1; }
@@ -212,6 +206,12 @@ int main( int ac, char** av )
             std::cout << std::endl;
             return 0;
         }
+        boost::optional< boost::posix_time::time_duration > period;
+        if( options.exists( "--period" ) ) { period = boost::posix_time::microseconds( static_cast<unsigned int> (options.value< double >( "--period" ) * 1000000 )); }
+        boost::posix_time::time_duration timeout;
+        boost::optional< double > timeout_seconds = options.optional< double >( "--timeout,-t" );
+        if( !period && !timeout_seconds ) { std::cerr << "csv-repeat: please specify either --period, or --timeout, or both" << std::endl; return 1; }
+        timeout = timeout_seconds ? boost::posix_time::microseconds( static_cast<unsigned int>(*timeout_seconds * 1000000 )) : *period;
         std::cin.tie( NULL );
         if( options.exists( "--timestamped" ) )
         {
