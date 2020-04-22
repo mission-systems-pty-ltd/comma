@@ -10,6 +10,7 @@ valid_options/valued[2]="echo '--file,-f=<v>' | comma-options-validate 4 -f -5"
 valid_options/valued[3]="echo '--file,-f=<v>' | comma-options-validate 4 -f -5 6"
 valid_options/valued[4]="echo '--file,-f=<v>' | comma-options-validate -f -5 -"
 valid_options/valued[5]="echo '--file,-f=<v>' | comma-options-validate - -f -5"
+valid_options/equals_sign[0]="echo '--file,-f=<v>' | comma-options-validate -f=-5"
 
 invalid_options/valueless[0]="echo '--verbose,-v' | comma-options-validate -v -g"
 invalid_options/valueless[1]="echo '--verbose,-v' | comma-options-validate hello -g -v"

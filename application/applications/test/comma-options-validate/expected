@@ -10,6 +10,7 @@ valid_options/valued[2]/status=0
 valid_options/valued[3]/status=0
 valid_options/valued[4]/status=0
 valid_options/valued[5]/status=0
+valid_options/equals_sign[0]/status=0
 invalid_options/valueless[0]/status=1
 invalid_options/valueless[1]/status=1
 invalid_options/valueless[2]/status=1
