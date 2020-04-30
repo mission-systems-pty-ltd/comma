@@ -8,11 +8,15 @@ basename/emplace[1]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-basenam
 basename/emplace[2]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-basename --tail 3 --emplace"
 basename/emplace[3]="( echo a,; echo a/b,; echo a/b/c, ) | csv-strings path-basename --tail 4 --emplace"
 
+basename/binary/emplace[0]="( echo a; echo a/b; echo a/b/c ) | csv-to-bin s[6] | csv-strings path-basename --emplace --binary s[6] | csv-from-bin s[6]"
+
 basename/head/append[0]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-basename --head 1"
 basename/head/append[1]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-basename --head 2"
 
 basename/head/emplace[0]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-basename --head 1 --emplace"
 basename/head/emplace[1]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-basename --head 2 --emplace"
+
+basename/binary/head/emplace[0]="( echo a; echo a/b; echo a/b/c ) | csv-to-bin s[6] | csv-strings path-basename --head 1 --emplace --binary s[6] | csv-from-bin s[6]"
 
 dirname/tail/append[0]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-dirname"
 dirname/tail/append[1]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-dirname --tail 2"
@@ -24,6 +28,8 @@ dirname/tail/emplace[1]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-dir
 dirname/tail/emplace[2]="( echo a,; echo a/b,; echo a/b/c, ) | csv-strings path-dirname --tail 3 --emplace"
 dirname/tail/emplace[3]="( echo a,; echo a/b,; echo a/b/c, ) | csv-strings path-dirname --tail 4 --emplace"
 
+dirname/binary/tail/emplace[0]="( echo a; echo a/b; echo a/b/c ) | csv-to-bin s[6] | csv-strings path-dirname --emplace --binary s[6] | csv-from-bin s[6]"
+
 dirname/head/append[0]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-dirname"
 dirname/head/append[1]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-dirname --head 2"
 dirname/head/append[2]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-dirname --head 3"
@@ -33,6 +39,8 @@ dirname/head/emplace[0]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-dir
 dirname/head/emplace[1]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-dirname --head 2 --emplace"
 dirname/head/emplace[2]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-dirname --head 3 --emplace"
 dirname/head/emplace[3]="( echo a,; echo a/b,; echo a/b/c, ) | csv-strings path-dirname --head 4 --emplace"
+
+dirname/binary/head/emplace[0]="( echo a; echo a/b; echo a/b/c ) | csv-to-bin s[6] | csv-strings path-dirname --emplace --binary s[6] | csv-from-bin s[6]"
 
 delimiter[0]="( echo a; echo a.b; echo a.b/c.d/e ) | csv-strings path-basename --delimiter=."
 delimiter[1]="( echo a; echo a.b; echo a.b/c.d/e ) | csv-strings path-basename --delimiter=. --emplace"
@@ -55,3 +63,22 @@ fields[5]="( echo k,,a,,x; echo l,,a/b,,x/y; echo m,,a/b/c,,x/y/z ) | csv-string
 
 add[0]="echo a,b | csv-strings add --prefix x --suffix y --fields a,b"
 add[1]="echo a,b | csv-strings add --prefix x --suffix y --fields a,b --emplace"
+
+path_common/once[0]="{ echo a/b/c; echo a/b/d; echo a/b/e; } | csv-strings path-common --once"
+path_common/once[1]="{ echo /a/b/c; echo /a/b/d; echo /a/b/e; } | csv-strings path-common --once"
+path_common/once[2]="{ echo a; echo a; echo a; } | csv-strings path-common --once"
+path_common/once[3]="{ echo /a; echo /a; echo /a; } | csv-strings path-common --once"
+path_common/once[4]="{ echo a/b; echo a/b; echo a/b; } | csv-strings path-common --once"
+path_common/once[5]="{ echo a; } | csv-strings path-common --once"
+path_common/once[6]="{ echo /a/b/c; } | csv-strings path-common --once"
+path_common/once[7]="{ echo /a/b; echo /c/d; } | csv-strings path-common --once"
+path_common/once[8]="{ echo; echo; } | csv-strings path-common --once"
+path_common/once[9]="{ echo a/b/c,d/e/f,g/h/i; echo a/b/d,d/e,g/h/k; echo a/b/z,d/e/x,g/h/y; } | csv-strings path-common --fields a,b,c --once"
+path_common/once[10]="{ echo a/b/c,d/e/f,g/h/i; echo a/b/d,d/e,g/h/k; echo a/b/z,d/e/x,g/h/y; } | csv-strings path-common --fields ,,c --once"
+path_common/once[11]="{ echo a/b/c,d/e/f,g/h/i; echo a/b/d,d/e,g/h/k; echo a/b/z,d/e/x,g/h/y; } | csv-strings path-common --fields a,,c --once"
+
+path_common/delimiter[0]="{ echo a-b-c,d-e-f,g-h-i; echo a-b-d,d-e,g-h-k; echo a-b-z,d-e-x,g-h-y; } | csv-strings path-common --fields a,,c --once --path-delimiter -"
+
+path_common/fields[0]="{ echo a/b/c,d/e/f,g/h/i; echo a/b/d,d/e,g/h/k; echo a/b/z,d/e/x,g/h/y; } | csv-strings path-common --fields a,b,c"
+path_common/fields[1]="{ echo a/b/c,d/e/f,g/h/i; echo a/b/d,d/e,g/h/k; echo a/b/z,d/e/x,g/h/y; } | csv-strings path-common --fields a,,c"
+path_common/fields[2]="{ echo a/b/c,d/e/f,g/h/i; echo a/b/d,d/e,g/h/k; echo a/b/z,d/e/x,g/h/y; } | csv-strings path-common --fields ,,c"
