@@ -47,15 +47,23 @@ std::string strip( const std::string& s, const char* characters = " \t\r\n" );
 /// strip given character from the beginning and end
 std::string strip( const std::string& s, char character );
 
-// Escape given character and escape characters by preceding them with escape charcter.
+// escape given character and escape characters by preceding them with escape charcter.
 std::string escape( const std::string & s, char character = '\'', char esc = '\\' );
-// Escape any of the given characters and escape character by preceding them with escape character
+// escape any of the given characters and escape character by preceding them with escape character
 std::string escape( const std::string & s, const char* characters, char esc = '\\' );
 
-// Escape given character and escape characters by preceding them with escape charcter.
+// escape given character and escape characters by preceding them with escape charcter.
 std::string unescape( const std::string & s, char character = '\'', char esc = '\\' );
-// Escape any of the given characters and escape character by preceding them with escape character
+// escape any of the given characters and escape character by preceding them with escape character
 std::string unescape( const std::string & s, const char* characters, char esc = '\\' );
+
+/// return common initial part of two strings
+/// e.g. for abc and abd return ab; for abc and def return empty string
+std::string common_front( const std::string& s, const std::string& t );
+
+/// return common initial part of two strings as xpaths with a delimiter (probably should be in xpath)
+/// e.g. for abc and abd return ab; for abc and def return empty string
+std::string common_front( const std::string& s, const std::string& t, char delimiter ); 
 
 /// join array elements into a string with given delimiter
 template < typename A >

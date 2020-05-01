@@ -350,6 +350,50 @@ TEST( string, strip )
     EXPECT_EQ( strip( ";,;abc;;,", ";," ), "abc" );
 }
 
+TEST( string, common_head )
+{
+    EXPECT_EQ( "", common_front( "", "" ) );
+    EXPECT_EQ( "", common_front( "", "a" ) );
+    EXPECT_EQ( "", common_front( "", "ab" ) );
+    EXPECT_EQ( "", common_front( "", "abc" ) );
+    EXPECT_EQ( "", common_front( "a", "" ) );
+    EXPECT_EQ( "", common_front( "ab", "" ) );
+    EXPECT_EQ( "", common_front( "abc", "" ) );
+    EXPECT_EQ( "", common_front( "a", "b" ) );
+    EXPECT_EQ( "", common_front( "abc", "def" ) );
+    EXPECT_EQ( "a", common_front( "ab", "ac" ) );
+    EXPECT_EQ( "ab", common_front( "abc", "abd" ) );
+}
+
+TEST( string, common_head_delimiter )
+{
+    EXPECT_EQ( common_front( "", "", '/' ), "" );
+    EXPECT_EQ( common_front( "a", "b", '/' ), "" );
+    EXPECT_EQ( common_front( "ab", "cd", '/' ), "" );
+    EXPECT_EQ( common_front( "ab", "abc", '/' ), "" );
+    EXPECT_EQ( common_front( "/", "/", '/' ), "/" );
+    EXPECT_EQ( common_front( "/a", "/b", '/' ), "/" );
+    EXPECT_EQ( common_front( "/ab", "/cd", '/' ), "/" );
+    EXPECT_EQ( common_front( "/ab", "/abc", '/' ), "/" );
+    EXPECT_EQ( common_front( "/ab/", "/abc", '/' ), "/" );
+    EXPECT_EQ( common_front( "/ab/", "/abc/", '/' ), "/" );
+    EXPECT_EQ( common_front( "a/b", "a/c", '/' ), "a" );
+    EXPECT_EQ( common_front( "a/b/", "a/c", '/' ), "a" );
+    EXPECT_EQ( common_front( "a/b", "a/c/", '/' ), "a" );
+    EXPECT_EQ( common_front( "a/b/", "a/c/", '/' ), "a" );
+    EXPECT_EQ( common_front( "/a/b", "/a/c", '/' ), "/a" );
+    EXPECT_EQ( common_front( "ab/cd", "ab/cd", '/' ), "ab/cd" );
+    EXPECT_EQ( common_front( "ab/cd/", "ab/cd/", '/' ), "ab/cd" );
+    EXPECT_EQ( common_front( "ab/cd/ef", "ab/cd/xy", '/' ), "ab/cd" );
+    EXPECT_EQ( common_front( "ab/cd/", "ab/cd", '/' ), "ab/cd" );
+    EXPECT_EQ( common_front( "ab/cd", "ab/cd/", '/' ), "ab/cd" );
+    EXPECT_EQ( common_front( "ab/cd/ef", "ab/cd", '/' ), "ab/cd" );
+    EXPECT_EQ( common_front( "ab/cd", "ab/cd/ef", '/' ), "ab/cd" );
+    EXPECT_EQ( common_front( "ab/cd/ef/", "ab/cd", '/' ), "ab/cd" );
+    EXPECT_EQ( common_front( "ab/cd/ef/", "ab/cd/", '/' ), "ab/cd" );
+    EXPECT_EQ( common_front( "ab/cd/ef", "ab/cd/", '/' ), "ab/cd" );
+}
+
 } // namespace comma {
 
 int main( int argc, char* argv[] )

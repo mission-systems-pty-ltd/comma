@@ -294,24 +294,8 @@ static int run( const comma::command_line_options& options )
         auto p = istream.read();
         if( !p ) { break; }
         if( !once ) { inputs.emplace_back( istream.last() ); }
-        for( const auto& s: p->values )
-        {
-            if( s.size() > 1 && s.back() == delimiter ) { std::cerr << "csv-strings: path-common: handling trailing path delimiter not implemented; got;'" << s << "'" << std::endl; exit( 1 ); }
-        }
         if( output.values.empty() ) { output.values = p->values; continue; }
-        for( std::size_t i = 0; i < p->values.size(); ++i )
-        {
-            if( ( output.values[i][0] == delimiter ) != ( p->values[i][0] == delimiter ) ) { std::cerr << "csv-string: path-common: expected all paths absolute or all relative; got: '" << output.values[i][0] << "' and '" << p->values[i][0] << "'" << std::endl; exit( 1 ); }
-            unsigned int j = 0;
-            for( ; j < output.values[i].size() && j < p->values[i].size() && output.values[i][j] == p->values[i][j]; ++j );
-            if( ( j < output.values[i].size() && output.values[i][j] != delimiter ) || ( j < p->values[i].size() && p->values[i][j] != delimiter ) )
-            {
-                j = output.values[i].substr( 0, j ).find_last_of( delimiter );
-                if( j == std::string::npos ) { j = 0; }
-                else if( j == 0 ) { j = 1; } // root only
-            }
-            output.values[i] = output.values[i].substr( 0, j );
-        }
+        for( std::size_t i = 0; i < p->values.size(); ++i ) { output.values[i] = comma::common_front( output.values[i], p->values[i], delimiter ); }
     }
     if( once )
     {

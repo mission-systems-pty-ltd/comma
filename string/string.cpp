@@ -37,6 +37,8 @@
 #include "../base/exception.h"
 #include "string.h"
 
+#include <iostream>
+
 namespace comma {
 
 std::string strip( const std::string& s, char character )
@@ -138,5 +140,36 @@ std::string unescape_and_unquote( const std::string & s, char esc, const char* q
     if( quoted ) COMMA_THROW( comma::exception, "comma::unescape - quote not closed before end of string" );
     return v;
 }
+
+std::string common_front( const std::string& s, const std::string& t )
+{
+    std::string::size_type i = 0;
+    for( ; i < s.size() && i < t.size() && s[i] == t[i]; ++i );
+    return s.substr( 0, i );
+}
+
+std::string common_front( const std::string& s, const std::string& t, char delimiter )
+{
+    bool s_abs = !s.empty() && s[0] == delimiter;
+    bool t_abs = !t.empty() && t[0] == delimiter;
+    if( s_abs != t_abs ) { COMMA_THROW( comma::exception, "expected both paths absolute or both relative; got '" << s << "' and '" << t << "'" ); }
+    std::string::size_type i = 0;
+    std::string::size_type d = 0;
+    for( ; i < s.size() && i < t.size() && s[i] == t[i]; ++i );
+    if( i < s.size() && s[i] != delimiter )
+    {
+        i = s.find_last_of( delimiter, i );
+        if( i == 0 ) { i = 1; } // root only
+    }
+    else if( i < t.size() && t[i] != delimiter )
+    {
+        i = t.find_last_of( delimiter, i );
+        if( i == 0 ) { i = 1; } // root only
+    }
+    if( i == std::string::npos ) { i = 0; }
+    else if( i == s.size() && s.size() > 1 && s.back() == delimiter ) { --i; }
+    return s.substr( 0, i );
+}
+
 
 } // namespace comma {
