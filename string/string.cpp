@@ -1,5 +1,6 @@
 // This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
+// Copyright (c) 2019 Vsevolod Vlaskine
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -32,8 +33,6 @@
 /// @author mathew hounsell
 
 #include <boost/optional.hpp>
-
-// Don't use <> foc comma as that requires the code to be installed first.
 #include "../base/exception.h"
 #include "string.h"
 
@@ -154,7 +153,6 @@ std::string common_front( const std::string& s, const std::string& t, char delim
     bool t_abs = !t.empty() && t[0] == delimiter;
     if( s_abs != t_abs ) { COMMA_THROW( comma::exception, "expected both paths absolute or both relative; got '" << s << "' and '" << t << "'" ); }
     std::string::size_type i = 0;
-    std::string::size_type d = 0;
     for( ; i < s.size() && i < t.size() && s[i] == t[i]; ++i );
     if( i < s.size() && s[i] != delimiter )
     {
