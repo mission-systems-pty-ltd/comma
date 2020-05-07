@@ -73,6 +73,10 @@ static void usage( bool verbose )
     std::cerr << "path-common\n";
     std::cerr << "    options\n";
     std::cerr << "        --once; output only the common path, do not append or emplace\n";
+    std::cerr << "        --dirname-on-single-record; if only one input record, output its 'dirname'; e.g: on a single\n";
+    std::cerr << "                                    input record 'a/b/c' output 'a/b'\n";
+    std::cerr << "        --dirname-on-full-match; if there is an input record that fully matches the common path\n";
+    std::cerr << "                                 output its 'dirname'; e.g: on 'a/b/c' and 'a/b/c/d' output 'a/b'\n";
     std::cerr << "        --path-delimiter,-p=<delimiter>; default: '/'\n";
     std::cerr << '\n';
     std::cerr << "path-dirname,dirname\n";
@@ -257,19 +261,6 @@ namespace common {
 
 typedef input output_t;
 
-// todo
-// - fix code so that failing test pass
-// - add more tests, something like
-//   - echo abc; echo ab
-//   - echo ab; echo abc
-//   - echo /a; echo /a/b
-//   - echo /ab; echo /ac
-//   - echo /b; echo /c
-//   - echo /bb; echo /cc
-//   - echo /a; echo /
-//   - echo /; echo /a
-//   - etc
-
 static int run( const comma::command_line_options& options )
 {
     if( ::csv.binary() ) { std::cerr << "csv-strings: path-common: binary mode: todo, just ask" << std::endl; exit( 1 ); }
@@ -289,13 +280,24 @@ static int run( const comma::command_line_options& options )
     output_t output;
     char delimiter = options.value( "--path-delimiter,-p", '/' );
     bool once = options.exists( "--once" );
+    bool dirname_on_single_record = options.exists( "--dirname-on-single-record" );
+    bool dirname_on_full_match = options.exists( "--dirname-on-full-match" );
+    if( dirname_on_full_match || dirname_on_single_record ) { std::cerr << "csv-strings: path-common: --dirname-on-...: todo" << std::endl; return 1; }
+    std::vector< char > full_match( output.values.size(), true );
+    unsigned int count = 0;
     while( istream.ready() || std::cin.good() )
     {
         auto p = istream.read();
         if( !p ) { break; }
         if( !once ) { inputs.emplace_back( istream.last() ); }
         if( output.values.empty() ) { output.values = p->values; continue; }
-        for( std::size_t i = 0; i < p->values.size(); ++i ) { output.values[i] = comma::common_front( output.values[i], p->values[i], delimiter ); }
+        for( std::size_t i = 0; i < p->values.size(); ++i )
+        {
+            const std::string& common = comma::common_front( output.values[i], p->values[i], delimiter );
+            if( dirname_on_single_record || dirname_on_full_match ) { full_match[i] = ( full_match[i] && output.values[i] == common ) || ( !full_match[i] && p->values[i] == common ); }
+            output.values[i] = common;
+        }
+        ++count;
     }
     if( once )
     {
@@ -349,7 +351,7 @@ int main( int ac, char** av )
     try
     {
         comma::command_line_options options( ac, av, usage );
-        const auto& unnamed = options.unnamed( "--flush,--verbose,-v,--emplace,--strict,--once", "-.*" );
+        const auto& unnamed = options.unnamed( "--flush,--verbose,-v,--emplace,--strict,--once,--dirname-on-single-record,--dirname-on-full-match", "-.*" );
         if( unnamed.empty() ) { std::cerr << "csv-strings: please specify operation\n"; return 1; }
         std::string operation = unnamed[0];
         strict = options.exists( "--strict" );
