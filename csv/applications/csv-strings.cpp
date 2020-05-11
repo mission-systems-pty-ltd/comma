@@ -261,6 +261,14 @@ namespace common {
 
 typedef input output_t;
 
+// todo
+// - path-common --dirname-on-single-record
+//   - test case: expected / on ( echo /a ) | csv-strings path-common --dirname-on-single-record --field x
+//   - fix
+// - path-dirname
+//   - test case: expected / on ( echo /a ) | csv-strings path-common --dirname-on-single-record --field x
+//   - fix
+
 static int run( const comma::command_line_options& options )
 {
     if( ::csv.binary() ) { std::cerr << "csv-strings: path-common: binary mode: todo, just ask" << std::endl; exit( 1 ); }
@@ -282,8 +290,7 @@ static int run( const comma::command_line_options& options )
     bool once = options.exists( "--once" );
     bool dirname_on_single_record = options.exists( "--dirname-on-single-record" );
     bool dirname_on_full_match = options.exists( "--dirname-on-full-match" );
-    if( dirname_on_full_match || dirname_on_single_record ) { std::cerr << "csv-strings: path-common: --dirname-on-...: todo" << std::endl; return 1; }
-    std::vector< char > full_match( output.values.size(), true );
+    std::vector< char > full_match( n, true );
     unsigned int count = 0;
     while( istream.ready() || std::cin.good() )
     {
@@ -294,39 +301,47 @@ static int run( const comma::command_line_options& options )
         for( std::size_t i = 0; i < p->values.size(); ++i )
         {
             const std::string& common = comma::common_front( output.values[i], p->values[i], delimiter );
-            if( dirname_on_single_record || dirname_on_full_match ) { full_match[i] = ( full_match[i] && output.values[i] == common ) || ( !full_match[i] && p->values[i] == common ); }
+            if( dirname_on_full_match ) { full_match[i] = ( full_match[i] && output.values[i] == common ) || ( !full_match[i] && p->values[i] == common ); }
             output.values[i] = common;
         }
         ++count;
     }
+    if( dirname_on_full_match || ( dirname_on_single_record && count < 2 ) )
+    {
+        for( unsigned int i = 0; i < output.values.size(); ++i )
+        {
+            if( !full_match[i] ) { continue; }
+            const auto& s = comma::split( output.values[i], delimiter );
+            output.values[i] = comma::join( s.begin(), s.end() - 1, delimiter );
+        }
+    }
     if( once )
     {
-        std::string comma;
-        for( auto& value : output.values ) { std::cout << comma << value; comma = ::csv.delimiter; }
-        std::cout << std::endl;
+        if( ::csv.binary() ) { COMMA_THROW( comma::exception, "todo" ); }
+        else
+        {
+            std::string comma;
+            for( std::size_t i = 0; i < output.values.size(); ++i )
+            {
+                std::cout << comma << output.values[i];
+                comma = ::csv.delimiter;
+            }
+            std::cout << std::endl;
+        }
     }
     else
     {
         for( const auto& input : inputs )
         {
             std::cout.write( &input[0], input.size() );
-            if( ::csv.binary() )
-            {
-                COMMA_THROW( comma::exception, "todo" );
-            }
-            else
-            {
-                for( const auto& value: output.values ) { std::cout << ::csv.delimiter << value; }
-                std::cout << std::endl;
-            }
+            for( std::size_t i = 0; i < output.values.size(); ++i ) { std::cout << ::csv.delimiter << output.values[i]; }
+            std::cout << std::endl;
         }
     }
     return 0;
 }
 
-} // namespace common {
-
-} // namespace path {
+} } // namespace common { namespace path {
 
 struct add
 {
