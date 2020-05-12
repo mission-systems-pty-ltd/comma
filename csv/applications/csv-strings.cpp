@@ -194,11 +194,11 @@ struct basename
         {
             if( s.size() >= head ) { return comma::join( s.begin() + head, s.end(), delimiter ); }
             if( strict ) { COMMA_THROW( comma::exception, "expected path depth at least " << head << "; got: '" << comma::join( s, delimiter ) << "'" ); }
-            return t;
+            return "";
         }
         if( s.size() >= tail ) { return comma::join( s.end() - tail, s.end(), delimiter ); }
         if( strict ) { COMMA_THROW( comma::exception, "expected path depth at least " << tail << "; got: '" << comma::join( s, delimiter ) << "'" ); }
-        return "";
+        return t;
     }
 };
 
