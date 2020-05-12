@@ -221,14 +221,25 @@ struct dirname
 
     std::string convert( const std::string& t ) const
     {
+        bool is_absolute = t[0] == delimiter;
         const auto& s = comma::split( t, delimiter );
         if( head > 0 )
         {
-            if( s.size() >= head ) { return comma::join( s.begin(), s.begin() + head, delimiter ); }
+            if( s.size() >= head )
+            {
+                auto o = comma::join( s.begin(), s.begin() + head, delimiter );
+                if( is_absolute && o.empty() ) { o = std::string( 1, delimiter ); }
+                return o;
+            }
             if( strict ) { COMMA_THROW( comma::exception, "expected path depth at least " << head << "; got: '" << comma::join( s, delimiter ) << "'" ); }
             return {};
         }
-        if( s.size() >= tail ) { return comma::join( s.begin(), s.end() - tail, delimiter ); }
+        if( s.size() >= tail )
+        {
+            auto o = comma::join( s.begin(), s.end() - tail, delimiter );
+            if( is_absolute && o.empty() ) { o = std::string( 1, delimiter ); }
+            return o;
+        }
         if( strict ) { COMMA_THROW( comma::exception, "expected path depth at least " << tail << "; got: '" << comma::join( s, delimiter ) << "'" ); }
         return {};
     }
@@ -260,14 +271,6 @@ struct canonical
 namespace common {
 
 typedef input output_t;
-
-// todo
-// - path-common --dirname-on-single-record
-//   - test case: expected / on ( echo /a ) | csv-strings path-common --dirname-on-single-record --field x
-//   - fix
-// - path-dirname
-//   - test case: expected / on ( echo /a ) | csv-strings path-common --dirname-on-single-record --field x
-//   - fix
 
 static int run( const comma::command_line_options& options )
 {
@@ -311,8 +314,10 @@ static int run( const comma::command_line_options& options )
         for( unsigned int i = 0; i < output.values.size(); ++i )
         {
             if( !full_match[i] ) { continue; }
+            bool is_absolute = output.values[i][0] == delimiter;
             const auto& s = comma::split( output.values[i], delimiter );
             output.values[i] = comma::join( s.begin(), s.end() - 1, delimiter );
+            if ( is_absolute && output.values[i].empty() ) { output.values[i] = std::string( 1, delimiter ); }
         }
     }
     if( once )
@@ -356,10 +361,19 @@ struct add
         : prefix( options.value( "--prefix", std::string() ) )
         , suffix( options.value( "--suffix", std::string() ) ) {}
 
-    inline std::string convert( const std::string& t ) const { return prefix + t + suffix; }
+    std::string convert( const std::string& t ) const { return prefix + t + suffix; }
 };
     
 } } } // namespace comma { namespace applications { namespace strings {
+
+// todo
+// - basename
+//   - fix absolute path behaviour
+//   - fix --head; add tests
+//   - fix --tail; add tests
+// - dirname
+//   - fix --head; add tests
+//   - fix --tail; add tests
 
 int main( int ac, char** av )
 {

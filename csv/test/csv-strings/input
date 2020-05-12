@@ -18,6 +18,9 @@ basename/head/emplace[1]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-ba
 
 basename/binary/head/emplace[0]="( echo a; echo a/b; echo a/b/c ) | csv-to-bin s[6] | csv-strings path-basename --head 1 --emplace --binary s[6] | csv-from-bin s[6]"
 
+dirname/append[0]="( echo /; echo /a; echo /a/; echo /a/b; echo /a/b/c; echo /aaa/bbb; echo /aaa/bbb/ccc; ) | csv-strings path-dirname"
+dirname/append[1]="( echo a; echo a/; echo a/b; echo a/b/c; echo aaa/bbb; echo aaa/bbb/ccc; ) | csv-strings path-dirname"
+
 dirname/tail/append[0]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-dirname"
 dirname/tail/append[1]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-dirname --tail 2"
 dirname/tail/append[2]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-dirname --tail 3"
@@ -79,21 +82,31 @@ path_common/fields[0]="{ echo a/b/c,d/e/f,g/h/i; echo a/b/d,d/e,g/h/k; echo a/b/
 path_common/fields[1]="{ echo a/b/c,d/e/f,g/h/i; echo a/b/d,d/e,g/h/k; echo a/b/z,d/e/x,g/h/y; } | csv-strings path-common --fields a,,c"
 path_common/fields[2]="{ echo a/b/c,d/e/f,g/h/i; echo a/b/d,d/e,g/h/k; echo a/b/z,d/e/x,g/h/y; } | csv-strings path-common --fields ,,c"
 
-path_common/dirname_on_single_record[0]="{ echo a/b/c; } | csv-strings path-common --dirname-on-single-record --once"
-path_common/dirname_on_single_record[1]="{ echo abc/def/ghi; } | csv-strings path-common --dirname-on-single-record --once"
-path_common/dirname_on_single_record[2]="{ echo a/b/c; echo a/b/d; echo a/b/e; } | csv-strings path-common --dirname-on-single-record --once"
-path_common/dirname_on_single_record[3]="{ echo a/b/c,d/e/f,g/h/i; } | csv-strings path-common --dirname-on-single-record --once --fields a,b,c"
-path_common/dirname_on_single_record[4]="{ echo a/b/c,d/e/f,g/h/i; echo a/b/d,d/e/g,g/h/j; echo a/b/x,d/e/y,g/h/z; } | csv-strings path-common --dirname-on-single-record --once --fields a,b,c"
-path_common/dirname_on_single_record[5]="{ echo abc/def/ghi,abc/abc/abc,abc/def/abc; echo abc/deg/hij,abc/abc/abb,abc/def/hij; echo abc/dgh/ijk,abc/abc/xyz,abc/d/ijk; } | csv-strings path-common --dirname-on-single-record --once --fields a,b,c"
-path_common/dirname_on_single_record[6]="{ echo abc; } | csv-strings path-common --dirname-on-single-record --once"
-path_common/dirname_on_single_record[7]="{ echo a/b/c,d/e/f,g/h/i; echo a/b/d,d/e,g/h/k; echo a/b/z,d/e/x,g/h/y; } | csv-strings path-common --fields a,b,c --dirname-on-single-record"
-path_common/dirname_on_single_record[8]="{ echo a/b/c; echo a/b/d; echo a/b/z; } | csv-strings path-common --dirname-on-single-record"
+path_common/dirname[0]="{ echo /; } | csv-strings path-common --dirname-on-single-record --once"
+path_common/dirname[1]="{ echo /a; } | csv-strings path-common --dirname-on-single-record --once"
+path_common/dirname[2]="{ echo /aaa; } | csv-strings path-common --dirname-on-single-record --once"
+path_common/dirname[3]="{ echo /aaa/; } | csv-strings path-common --dirname-on-single-record --once"
+path_common/dirname[4]="{ echo /aaa/bbb; } | csv-strings path-common --dirname-on-single-record --once
+path_common/dirname[5]="{ echo /aaa/bbb/ccc; } | csv-strings path-common --dirname-on-single-record --once"
+path_common/dirname[6]="{ echo a; } | csv-strings path-common --dirname-on-single-record --once"
+path_common/dirname[7]="{ echo aaa; } | csv-strings path-common --dirname-on-single-record --once"
+path_common/dirname[8]="{ echo aaa/; } | csv-strings path-common --dirname-on-single-record --once"
+path_common/dirname[9]="{ echo aaa/bbb; } | csv-strings path-common --dirname-on-single-record --once"
+path_common/dirname[10]="{ echo aaa/bbb/ccc; } | csv-strings path-common --dirname-on-single-record --once"
 
-path_common/dirname_on_full_match[0]="{ echo a/b/c; } | csv-strings path-common --dirname-on-full-match --once"
-path_common/dirname_on_full_match[1]="{ echo abc/def/ghi; } | csv-strings path-common --dirname-on-full-match --once"
-path_common/dirname_on_full_match[2]="{ echo a/b; echo a/b/c; echo a/b/d; echo a/b/e; } | csv-strings path-common --dirname-on-full-match --once"
-path_common/dirname_on_full_match[3]="{ echo a/b/c; echo a/b/d; echo a/b/e; } | csv-strings path-common --dirname-on-full-match --once"
-path_common/dirname_on_full_match[4]="{ echo a/b/c,d/e/f,g/h/i; } | csv-strings path-common --dirname-on-full-match --once --fields a,b,c"
-path_common/dirname_on_full_match[5]="{ echo abc/def/ghi,abc/abc/abc,abc/def/abc; echo abc/deg/hij,abc/abc/abb,abc/def/hij; echo abc/dgh/ijk,abc/abc/xyz,abc/d/ijk; echo abc,abc/abc,abc; } | csv-strings path-common --dirname-on-full-match --once --fields a,b,c"
-path_common/dirname_on_full_match[6]="{ echo abc/def/ghi; echo abc/deg/hij; echo abc/dgh/ijk; echo abc; } | csv-strings path-common --dirname-on-full-match"
-path_common/dirname_on_full_match[7]="{ echo abc/def/ghi,abc/abc/abc,abc/def/abc; echo abc/deg/hij,abc/abc/abb,abc/def/hij; echo abc/dgh/ijk,abc/abc/xyz,abc/d/ijk; echo abc,abc/abc,abc; } | csv-strings path-common --dirname-on-full-match --fields a,b,c"
+path_common/dirname_on_single_record[0]="{ echo a/b/c; } | csv-strings path-common --dirname-on-single-record --once"
+path_common/dirname_on_single_record[1]="{ echo a/b/c; echo a/b/d; echo a/b/e; } | csv-strings path-common --dirname-on-single-record --once"
+
+path_common/dirname_on_single_record[2]/fields[0]="{ echo a/b/c,d/e/f,g/h/i; } | csv-strings path-common --dirname-on-single-record --once --fields a,b,c"
+path_common/dirname_on_single_record[2]/fields[1]="{ echo a/b/c,d/e/f,g/h/i; echo a/b/d,d/e/g,g/h/j; echo a/b/x,d/e/y,g/h/z; } | csv-strings path-common --dirname-on-single-record --once --fields a,b,c"
+
+path_common/dirname_on_single_record[2]/append[0]="{ echo a/b/c; echo a/b/d; echo a/b/z; } | csv-strings path-common --dirname-on-single-record"
+path_common/dirname_on_single_record[2]/append[1]="{ echo a/b/c,d/e/f,g/h/i; echo a/b/d,d/e,g/h/k; echo a/b/z,d/e/x,g/h/y; } | csv-strings path-common --fields a,b,c --dirname-on-single-record"
+
+path_common/dirname_on_full_match[0]="{ echo a/b/c; echo a/b/d; echo a/b/e; } | csv-strings path-common --dirname-on-full-match --once"
+path_common/dirname_on_full_match[1]="{ echo a/b/c; echo a/b/d; echo a/b/e; echo a/b; } | csv-strings path-common --dirname-on-full-match --once"
+
+path_common/dirname_on_full_match[2]/fields[0]="{ echo abc/def/ghi,abc/abc/abc,abc/def/abc; echo abc/deg/hij,abc/abc/abb,abc/def/hij; echo abc/dgh/ijk,abc/abc/xyz,abc/d/ijk; echo abc,abc/abc,abc; } | csv-strings path-common --dirname-on-full-match --once --fields a,b,c"
+
+path_common/dirname_on_full_match[3]/append[0]="{ echo abc/def/ghi; echo abc/deg/hij; echo abc/dgh/ijk; echo abc; } | csv-strings path-common --dirname-on-full-match"
+path_common/dirname_on_full_match[3]/append[1]="{ echo abc/def/ghi,abc/abc/abc,abc/def/abc; echo abc/deg/hij,abc/abc/abb,abc/def/hij; echo abc/dgh/ijk,abc/abc/xyz,abc/d/ijk; echo abc,abc/abc,abc; } | csv-strings path-common --dirname-on-full-match --fields a,b,c"
