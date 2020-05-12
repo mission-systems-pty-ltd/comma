@@ -372,6 +372,7 @@ struct add
 //   - fix --head; add tests
 //   - fix --tail; add tests
 // - dirname
+//   - fix absolute path behaviour
 //   - fix --head; add tests
 //   - fix --tail; add tests
 
