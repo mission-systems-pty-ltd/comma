@@ -177,7 +177,7 @@ struct basename
     unsigned int tail;
     char delimiter;
 
-    static constexpr char const* name() { return "basename"; }
+    static const char* name() { return "basename"; }
 
     basename( const comma::command_line_options& options )
         : head( options.value( "--head", 0 ) )
@@ -194,11 +194,11 @@ struct basename
         {
             if( s.size() >= head ) { return comma::join( s.begin() + head, s.end(), delimiter ); }
             if( strict ) { COMMA_THROW( comma::exception, "expected path depth at least " << head << "; got: '" << comma::join( s, delimiter ) << "'" ); }
-            return {};
+            return t;
         }
         if( s.size() >= tail ) { return comma::join( s.end() - tail, s.end(), delimiter ); }
         if( strict ) { COMMA_THROW( comma::exception, "expected path depth at least " << tail << "; got: '" << comma::join( s, delimiter ) << "'" ); }
-        return {};
+        return "";
     }
 };
 
@@ -209,7 +209,7 @@ struct dirname
     unsigned int tail;
     char delimiter;
 
-    static constexpr char const* name() { return "dirname"; }
+    static const char* name() { return "dirname"; }
 
     dirname( const comma::command_line_options& options )
         : head( options.value( "--head", 0 ) )
@@ -232,7 +232,7 @@ struct dirname
                 return o;
             }
             if( strict ) { COMMA_THROW( comma::exception, "expected path depth at least " << head << "; got: '" << comma::join( s, delimiter ) << "'" ); }
-            return {};
+            return t;
         }
         if( s.size() >= tail )
         {
@@ -241,7 +241,7 @@ struct dirname
             return o;
         }
         if( strict ) { COMMA_THROW( comma::exception, "expected path depth at least " << tail << "; got: '" << comma::join( s, delimiter ) << "'" ); }
-        return {};
+        return "";
     }
 };
 
