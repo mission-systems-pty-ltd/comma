@@ -2,16 +2,24 @@ basename/append[0]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-basename
 basename/append[1]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-basename --tail 2"
 basename/append[2]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-basename --tail 3"
 basename/append[3]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-basename --tail 4"
+basename/append[4]="( echo /; echo /aaa; echo /aaa/bbb; ) | csv-strings path-basename --tail 1"
+basename/append[5]="( echo /; echo /aaa; echo /aaa/bbb; ) | csv-strings path-basename --tail 2"
+basename/append[6]="( echo /; echo /aaa; echo /aaa/bbb; ) | csv-strings path-basename --tail 3"
+basename/append[7]="( echo /; echo /aaa; echo /aaa/bbb; ) | csv-strings path-basename --tail 100"
 
 basename/emplace[0]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-basename --emplace"
 basename/emplace[1]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-basename --tail 2 --emplace"
 basename/emplace[2]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-basename --tail 3 --emplace"
-basename/emplace[3]="( echo a,; echo a/b,; echo a/b/c, ) | csv-strings path-basename --tail 4 --emplace"
+basename/emplace[3]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-basename --tail 4 --emplace"
 
 basename/binary/emplace[0]="( echo a; echo a/b; echo a/b/c ) | csv-to-bin s[6] | csv-strings path-basename --emplace --binary s[6] | csv-from-bin s[6]"
 
 basename/head/append[0]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-basename --head 1"
 basename/head/append[1]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-basename --head 2"
+basename/head/append[2]="( echo /; echo /aaa; echo /aaa/bbb; ) | csv-strings path-basename --head 1"
+basename/head/append[3]="( echo /; echo /aaa; echo /aaa/bbb; ) | csv-strings path-basename --head 2"
+basename/head/append[4]="( echo /; echo /aaa; echo /aaa/bbb; ) | csv-strings path-basename --head 3"
+basename/head/append[5]="( echo /; echo /aaa; echo /aaa/bbb; ) | csv-strings path-basename --head 100"
 
 basename/head/emplace[0]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-basename --head 1 --emplace"
 basename/head/emplace[1]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-basename --head 2 --emplace"
@@ -25,6 +33,10 @@ dirname/tail/append[0]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-dirn
 dirname/tail/append[1]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-dirname --tail 2"
 dirname/tail/append[2]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-dirname --tail 3"
 dirname/tail/append[3]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-dirname --tail 4"
+dirname/tail/append[4]="( echo /; echo /aaa; echo /aaa/bbb; ) | csv-strings path-dirname --tail 1"
+dirname/tail/append[5]="( echo /; echo /aaa; echo /aaa/bbb; ) | csv-strings path-dirname --tail 2"
+dirname/tail/append[6]="( echo /; echo /aaa; echo /aaa/bbb; ) | csv-strings path-dirname --tail 3"
+dirname/tail/append[7]="( echo /; echo /aaa; echo /aaa/bbb; ) | csv-strings path-dirname --tail 100"
 
 dirname/tail/emplace[0]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-dirname --emplace"
 dirname/tail/emplace[1]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-dirname --tail 2 --emplace"
@@ -37,6 +49,10 @@ dirname/head/append[0]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-dirn
 dirname/head/append[1]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-dirname --head 2"
 dirname/head/append[2]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-dirname --head 3"
 dirname/head/append[3]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-dirname --head 4"
+dirname/head/append[4]="( echo /; echo /aaa; echo /aaa/bbb; ) | csv-strings path-dirname --head 1"
+dirname/head/append[5]="( echo /; echo /aaa; echo /aaa/bbb; ) | csv-strings path-dirname --head 2"
+dirname/head/append[6]="( echo /; echo /aaa; echo /aaa/bbb; ) | csv-strings path-dirname --head 3"
+dirname/head/append[7]="( echo /; echo /aaa; echo /aaa/bbb; ) | csv-strings path-dirname --head 100"
 
 dirname/head/emplace[0]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-dirname --emplace"
 dirname/head/emplace[1]="( echo a; echo a/b; echo a/b/c ) | csv-strings path-dirname --head 2 --emplace"

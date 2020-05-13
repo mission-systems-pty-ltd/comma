@@ -189,6 +189,7 @@ struct basename
 
     std::string convert( const std::string& t ) const
     {
+        bool is_absolute = !t.empty() && t[0] == delimiter;
         const auto& s = comma::split( t, delimiter );
         if( head > 0 )
         {
@@ -196,7 +197,12 @@ struct basename
             if( strict ) { COMMA_THROW( comma::exception, "expected path depth at least " << head << "; got: '" << comma::join( s, delimiter ) << "'" ); }
             return "";
         }
-        if( s.size() >= tail ) { return comma::join( s.end() - tail, s.end(), delimiter ); }
+        if( s.size() >= tail )
+        {
+            auto o = comma::join( s.end() - tail, s.end(), delimiter );
+            if ( is_absolute && o.empty() ) { o = delimiter; }
+            return o;
+        }
         if( strict ) { COMMA_THROW( comma::exception, "expected path depth at least " << tail << "; got: '" << comma::join( s, delimiter ) << "'" ); }
         return t;
     }
@@ -221,14 +227,14 @@ struct dirname
 
     std::string convert( const std::string& t ) const
     {
-        bool is_absolute = t[0] == delimiter;
+        bool is_absolute = !t.empty() && t[0] == delimiter;
         const auto& s = comma::split( t, delimiter );
         if( head > 0 )
         {
             if( s.size() >= head )
             {
                 auto o = comma::join( s.begin(), s.begin() + head, delimiter );
-                if( is_absolute && o.empty() ) { o = std::string( 1, delimiter ); }
+                if( is_absolute && o.empty() ) { o = delimiter; }
                 return o;
             }
             if( strict ) { COMMA_THROW( comma::exception, "expected path depth at least " << head << "; got: '" << comma::join( s, delimiter ) << "'" ); }
@@ -237,11 +243,11 @@ struct dirname
         if( s.size() >= tail )
         {
             auto o = comma::join( s.begin(), s.end() - tail, delimiter );
-            if( is_absolute && o.empty() ) { o = std::string( 1, delimiter ); }
+            if( is_absolute && o.empty() ) { o = delimiter; }
             return o;
         }
         if( strict ) { COMMA_THROW( comma::exception, "expected path depth at least " << tail << "; got: '" << comma::join( s, delimiter ) << "'" ); }
-        return "";
+        return is_absolute ? std::string( 1, delimiter ) : "";
     }
 };
 
