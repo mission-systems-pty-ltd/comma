@@ -89,7 +89,7 @@ static void usage( bool verbose )
     std::cerr << "        <n> is the desired percentile (e.g. 0.9)" << std::endl;
     std::cerr << "        <method> is one of 'nearest' or 'interpolate' (default: nearest)" << std::endl;
     std::cerr << "        see --help --verbose for more details" << std::endl;
-    std::cerr << "    radius: size / 2" << std::endl;
+    std::cerr << "    radius: diameter / 2" << std::endl;
     std::cerr << "    size: number of values" << std::endl;
     std::cerr << "    skew[=sample]: skew" << std::endl;
     std::cerr << "         sample: use sample skew (default: population stddev)" << std::endl;
