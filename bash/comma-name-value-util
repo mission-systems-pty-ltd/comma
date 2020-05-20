@@ -267,15 +267,15 @@ function comma_path_value_to_var()
         name=${name//-/$delimiter}
         # we are occasionally passed bad data in JSON etc
         # don't attempt to eval anything that is not a legal variable name
-        [[ "$name" =~ $regex ]] || { echo "comma-application-util: comma_path_value_to_var skipping invalid variable name '$name'" >&2 ; ret_code=1 ; continue ; }
+        [[ "$name" =~ $regex ]] || { echo "comma-name-value-util: comma_path_value_to_var skipping invalid variable name '$name'" >&2 ; ret_code=1 ; continue ; }
         # Strip quotes then add them back. This ensures consistent behaviour.
         value=${value#\"}
         value=\"${value%\"}\"
         eval "$export_variable $name=$value" \
-            || { echo "comma-application-util: comma_path_value_to_var failed '$export_variable $name=$value'" >&2 ; ret_code=1 ; }
+            || { echo "comma-name-value-util: comma_path_value_to_var failed '$export_variable $name=$value'" >&2 ; ret_code=1 ; }
     done
     if (( $ret_code != 0 )) ; then
-        echo "comma-application-util: comma_path_value_to_var encountered an error, callstack:" >&2
+        echo "comma-name-value-util: comma_path_value_to_var encountered an error, callstack:" >&2
         comma_stacktrace >&2
     fi
     return $ret_code
