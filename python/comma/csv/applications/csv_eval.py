@@ -225,13 +225,13 @@ def get_args():
         '--default',
         default='',
         metavar='<assignments>',
-        help='default values for variables in expressions but not in input stream')
+        help='default values for variables in expressions but not in input stream, applied to every input record')
     parser.add_argument(
         '--init-values',
         '--init',
         default='',
         metavar='<assignments>',
-        help='init values, applied only once')
+        help='init values, applied only once on csv-eval start')
     parser.add_argument(
         '--with-error',
         default='',
@@ -407,10 +407,7 @@ def prepare_options(args):
         return
     var_names = assignment_variable_names(args.expressions)
     args.update_fields = [f for f in var_names if f in args.fields]
-    if args.output_fields is None:
-        args.output_fields = [f for f in var_names if f not in args.fields]
-    else:
-        args.output_fields = split_fields(args.output_fields)
+    args.output_fields = [f for f in var_names if f not in args.fields] if args.output_fields is None else split_fields(args.output_fields)
     args.output_format = format_without_blanks( args.output_format, args.output_fields, unnamed_fields = False )
 
 def restricted_numpy_env():
