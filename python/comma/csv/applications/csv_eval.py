@@ -44,7 +44,6 @@ description = """
 evaluate numerical expressions and append computed values to csv stream
 """
 
-
 notes_and_examples = """
 input fields:
     1) slashes are replaced by underscores if --full-xpath is given, otherwise basenames are used
@@ -164,14 +163,9 @@ time arithmetic:
     echo 20151231T000000,20160515T120000 | %(prog)s --fields=t1,t2 --format=2t "dt = (t2-t1)/timedelta64(1,'D')"
 """
 
+class csv_eval_error(Exception): pass
 
-class csv_eval_error(Exception):
-    pass
-
-
-def custom_formatwarning(msg, *args):
-    return __name__ + " warning: " + str(msg) + '\n'
-
+def custom_formatwarning(msg, *args): return __name__ + " warning: " + str(msg) + '\n'
 
 def add_csv_options(parser):
     comma.csv.add_options(parser) # comma.csv.add_options(parser, defaults={'fields': 'x,y,z'})
@@ -185,7 +179,7 @@ def add_csv_options(parser):
         '-o',
         default=None,
         metavar='<names>',
-        help="do not infer output fields from expressions; use specified fields instead")
+        help="do not infer output fields from expressions; output specified fields appended to input instead")
     parser.add_argument(
         '--output-format',
         default='',
@@ -259,10 +253,7 @@ def get_args():
         help='select and output records of input stream that satisfy the condition')
     args = parser.parse_args()
     if args.help:
-        if args.verbose:
-            parser.epilog += numpy_functions
-        else:
-            parser.epilog += "\nfor more help run '%(prog)s -h -v'"
+        parser.epilog += numpy_functions if args.verbose else "\nfor more help run '%(prog)s -h -v'"
         parser.print_help()
         parser.exit(0)
     if args.fields is None or args.fields == "": sys.exit( "csv-eval: please specify --fields" )
@@ -274,34 +265,22 @@ def ingest_deprecated_options(args):
         args.output_format = args.append_binary
         del args.append_binary
         if args.verbose:
-            with comma.util.warning(custom_formatwarning) as warn:
-                msg = "--append-binary is deprecated, consider using --output-format"
-                warn(msg)
+            with comma.util.warning(custom_formatwarning) as warn: warn( "--append-binary is deprecated, consider using --output-format" )
     if args.append_fields:
         args.output_fields = args.append_fields
         del args.append_fields
         if args.verbose:
-            with comma.util.warning(custom_formatwarning) as warn:
-                msg = "--append-fields is deprecated, consider using --output-fields"
-                warn(msg)
+            with comma.util.warning(custom_formatwarning) as warn: warn( "--append-fields is deprecated, consider using --output-fields" )
 
 def check_options(args):
-    if not (args.expressions or args.select or args.exit_if):
-        raise csv_eval_error("no expressions are given")
-    if args.binary and args.format:
-        raise csv_eval_error("--binary and --format are mutually exclusive")
+    if not (args.expressions or args.select or args.exit_if): raise csv_eval_error( "please specify expression" )
+    if args.binary and args.format: raise csv_eval_error("--binary and --format are mutually exclusive")
     if args.select or args.exit_if:
-        if args.expressions:
-            msg = "--select <condition> and --exit-if <condition> cannot be used with expressions"
-            raise csv_eval_error(msg)
-        if args.output_fields or args.output_format:
-            msg = "--select and --exit-if cannot be used with --output-fields or --output-format"
-            raise csv_eval_error(msg)
+        if args.expressions: raise csv_eval_error( "--select <condition> and --exit-if <condition> cannot be used with expressions" )
+        if args.output_fields: raise csv_eval_error( "--select and --exit-if cannot be used with --output-fields" )
+        if args.output_format: raise csv_eval_error( "--select and --exit-if cannot be used with --output-format" )
     if args.with_error:
-        if not args.exit_if:
-            msg = "--with-error is only used with --exit-if"
-            raise csv_eval_error(msg)
-
+        if not args.exit_if: raise csv_eval_error( "--with-error can only be used with --exit-if" )
 
 def format_without_blanks(format, fields=[], unnamed_fields=True):
     """
@@ -333,23 +312,16 @@ def format_without_blanks(format, fields=[], unnamed_fields=True):
      ...
     ValueError: format 'ui,t,d' is longer than fields 'a,b'
     """
-    def comma_type(maybe_type, field, default_type='d', type_of_unnamed_field='s[0]'):
-        return type_of_unnamed_field if not field else maybe_type or default_type
+    def comma_type(maybe_type, field, default_type='d', type_of_unnamed_field='s[0]'): return type_of_unnamed_field if not field else maybe_type or default_type
 
-    if not format and not fields:
-        return ''
+    if not format and not fields: return ''
     maybe_types = comma.csv.format.expand(format).split(',')
     if not unnamed_fields:
-        if '' in fields:
-            msg = "expected all fields to be named, got '{}'".format(','.join(fields))
-            raise ValueError(msg)
-        if len(maybe_types) > len(fields):
-            msg = "format '{}' is longer than fields '{}'".format(format, ','.join(fields))
-            raise ValueError(msg)
+        if '' in fields: raise ValueError( "expected all fields to be named, got '{}'".format(','.join(fields)) )
+        if len(maybe_types) > len(fields): raise ValueError( "format '{}' is longer than fields '{}'".format(format, ','.join(fields)) )
     maybe_typed_fields = itertools.zip_longest(maybe_types, fields) if sys.version_info.major > 2 else itertools.izip_longest(maybe_types, fields) # uber quick and dirty
     types = [comma_type(maybe_type, field) for maybe_type, field in maybe_typed_fields]
     return ','.join(types)
-
 
 def assignment_variable_names(expressions):
     """
@@ -427,12 +399,10 @@ def prepare_options(args):
         args.binary = False
     else:
         args.first_line = comma.io.readlines_unbuffered(1, sys.stdin)
-        if not args.first_line:
-            raise csv_eval_error("first record is empty - could not guess format")
+        if not args.first_line: raise csv_eval_error("first record is empty - could not guess format")
         args.format = comma.csv.format.guess_format(args.first_line)
         args.binary = False
-        if args.verbose:
-            print( "{}: guessed format: {}".format(__name__, args.format), file = sys.stderr )
+        if args.verbose: print( "{}: guessed format: {}".format(__name__, args.format), file = sys.stderr )
     if args.select or args.exit_if:
         return
     var_names = assignment_variable_names(args.expressions)
@@ -441,10 +411,7 @@ def prepare_options(args):
         args.output_fields = [f for f in var_names if f not in args.fields]
     else:
         args.output_fields = split_fields(args.output_fields)
-    args.output_format = format_without_blanks(args.output_format,
-                                               args.output_fields,
-                                               unnamed_fields=False)
-
+    args.output_format = format_without_blanks( args.output_format, args.output_fields, unnamed_fields = False )
 
 def restricted_numpy_env():
     d = np.__dict__.copy()
@@ -452,13 +419,11 @@ def restricted_numpy_env():
     d.pop('sys', None)
     return d
 
-
 def update_buffer(stream, update_array):
     index = stream.fields.index
     if stream.binary:
         fields = stream._input_array.dtype.names
-        for f in update_array.dtype.names:
-            stream._input_array[fields[index(f)]] = update_array[f]
+        for f in update_array.dtype.names: stream._input_array[fields[index(f)]] = update_array[f]
     else:
         def updated_lines():
             for line, scalars in izip(stream._ascii_buffer, update_array):
@@ -467,7 +432,6 @@ def update_buffer(stream, update_array):
                     values[index(f)] = s
                 yield stream.delimiter.join(values)
         stream._ascii_buffer = list(updated_lines())
-
 
 class stream(object):
     def __init__(self, args):
@@ -515,15 +479,13 @@ class stream(object):
         print( "default values: '{}'".format(self.args.default_values), file = file )
         print( "input fields: '{}'".format(fields), file = file )
         print( "input format: '{}'".format(format), file = file )
-        if self.args.select or self.args.exit_if:
-            return
+        if self.args.select or self.args.exit_if: return
         update_fields = ','.join(self.update_t.fields) if self.args.update_fields else ''
         output_fields = ','.join(self.output_t.fields) if self.args.output_fields else ''
         output_format = self.output_t.format if self.args.output_fields else ''
         print( "update fields: '{}'".format(update_fields), file = file )
         print( "output fields: '{}'".format(output_fields), file = file )
         print( "output format: '{}'".format(output_format), file = file )
-
 
 def check_fields(fields, allow_numpy_names=True):
     for field in fields:
@@ -534,10 +496,7 @@ def check_fields(fields, allow_numpy_names=True):
 def check_output_fields(fields, input_fields):
     check_fields(fields)
     invalid_output_fields = set(fields).intersection(input_fields)
-    if invalid_output_fields:
-        msg = "output fields '{}' are present in input fields '{}'" \
-            .format(','.join(invalid_output_fields), ','.join(input_fields))
-        raise csv_eval_error(msg)
+    if invalid_output_fields: raise csv_eval_error( "output fields '{}' are present in input fields '{}'".format(','.join(invalid_output_fields), ','.join(input_fields)) )
 
 def evaluate(stream):
     def disperse( var, fields ): return '\n'.join("{f} = {v}['{f}']".format( v = var, f = f ) for f in fields )
@@ -615,8 +574,7 @@ def exit_if(stream):
                 sys.exit(1)
             stream.input.dump()
         input = stream.input.read()
-        if input is None:
-            break
+        if input is None: break
 
 def main():
     try:
@@ -639,5 +597,4 @@ def main():
         traceback.print_exc(file=sys.stderr)
         sys.exit(1)
 
-if __name__ == '__main__':
-    main()
+if __name__ == '__main__': main()
