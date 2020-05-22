@@ -1,31 +1,4 @@
-# This file is part of comma, a generic and flexible library
 # Copyright (c) 2011 The University of Sydney
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-# 1. Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright
-#    notice, this list of conditions and the following disclaimer in the
-#    documentation and/or other materials provided with the distribution.
-# 3. Neither the name of the University of Sydney nor the
-#    names of its contributors may be used to endorse or promote products
-#    derived from this software without specific prior written permission.
-#
-# NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-# GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-# HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-# BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import print_function
 import argparse
@@ -46,13 +19,13 @@ evaluate numerical expressions and append computed values to csv stream
 
 notes_and_examples = """
 input fields:
-    1) slashes are replaced by underscores if --full-xpath is given, otherwise basenames are used
-    2) for ascii streams, input fields are treated as floating point numbers, unless --format is given
+    - slashes are replaced by underscores if --full-xpath is given, otherwise basenames are used
+    - for ascii streams, input fields are treated as floating point numbers, unless --format is given
 
 output fields:
-    1) inferred from expressions (by default) or specified by --output-fields
-    2) appended to possibly modified input
-    3) treated as floating point numbers, unless --output-format is given
+    - inferred from the names assigned in expression unless specified by --output-fields
+    - appended to input record (input field values can be modified by expression, too)
+    - treated as 64-bit floating point numbers, unless --output-format is given
 
 examples:
     # basic
@@ -80,18 +53,18 @@ examples:
     # update input stream values in place
     ( echo 1,2 ; echo 3,4 ) | %(prog)s --fields=x,y "x=x+y; y=y-1"
 
-    # using full xpaths
+    # full xpaths
     ( echo 1,2 ; echo 3,4 ) | %(prog)s --fields=one/x,two/y "x+=1; y-=1"
     ( echo 1,2 ; echo 3,4 ) | %(prog)s --fields=one/x,two/y "one_x+=1; two_y-=1" --full-xpath
 
-    # using default values
+    # default values
     ( echo 1,2 ; echo 3,4 ) | %(prog)s --fields=,y "a=x+y" --default-values="x=0;y=0"
     
-    # using init values: calculate triangular numbers
-    seq 0 10 | %(prog)s --fields=v "sum=sum+v" --init-values="sum=0"
+    # init values: calculate triangular numbers
+    seq 0 10 | csv-eval --fields=v "sum=sum+v" --init-values="sum=0"
     
-    # using init values: calculate fibonacci numbers
-    seq 0 10 | %(prog)s --fields=v "c=b;b=a+b;a=c" --output-fields a,b --init-values="a=0;b=1"
+    # init values: calculate fibonacci numbers
+    seq 0 10 | csv-eval --fields v "a,b=b,a+b" --init-values "a=0;b=1" --output-fields a
 
     # operating on time (internally represented in microseconds)
     echo 20171112T224515.5 | %(prog)s --format=t --fields=t1 "t2=t1+1000000" --output-format t
@@ -185,11 +158,8 @@ def add_csv_options(parser):
         default='',
         metavar='<format>',
         help="format of output fields (default: 'd' for each)")
-    # the options defined below are left for compatibility
-    # use --output-fields and --output-format instead
-    parser.add_argument('--append-fields', '-F', help=argparse.SUPPRESS)
-    parser.add_argument('--append-binary', '-B', help=argparse.SUPPRESS)
-
+    parser.add_argument('--append-fields', '-F', help=argparse.SUPPRESS) # backward compatibility; use --output-fields instead
+    parser.add_argument('--append-binary', '-B', help=argparse.SUPPRESS) # backward compatibility; use --output-format instead
 
 def get_args():
     parser = argparse.ArgumentParser(
@@ -232,6 +202,11 @@ def get_args():
         default='',
         metavar='<assignments>',
         help='init values, applied only once on csv-eval start')
+    parser.add_argument(
+        '--init-format',
+        default='',
+        metavar='<format>',
+        help='format of init non-output variables in the order of appearance in expression (default: "d" for each)')
     parser.add_argument(
         '--with-error',
         default='',
@@ -339,6 +314,7 @@ def assignment_variable_names(expressions):
     >>> assignment_variable_names("x=1; x=2; y+=1; y+=2; z=1; z+=2")
     ['x', 'y', 'z']
     """
+    if expressions is None: return []
     tree = ast.parse(expressions, '<string>', mode='exec')
     fields = []
     for child in ast.iter_child_nodes(tree):
@@ -380,9 +356,7 @@ def normalise_full_xpath(fields, full_xpath=True):
     ['', 'b', '', 'c', 'e', '']
     """
     full_xpath_fields = split_fields(fields)
-    if full_xpath:
-        return [f.replace('/', '_') for f in full_xpath_fields]
-    return [f.split('/')[-1] for f in full_xpath_fields]
+    return [f.replace('/', '_') for f in full_xpath_fields] if full_xpath else [f.split('/')[-1] for f in full_xpath_fields]
 
 def prepare_options(args):
     ingest_deprecated_options(args)
@@ -403,11 +377,15 @@ def prepare_options(args):
         args.format = comma.csv.format.guess_format(args.first_line)
         args.binary = False
         if args.verbose: print( "{}: guessed format: {}".format(__name__, args.format), file = sys.stderr )
-    if args.select or args.exit_if:
-        return
+    if args.select or args.exit_if: return
     var_names = assignment_variable_names(args.expressions)
     args.update_fields = [f for f in var_names if f in args.fields]
     args.output_fields = [f for f in var_names if f not in args.fields] if args.output_fields is None else split_fields(args.output_fields)
+    init_var_names = assignment_variable_names(args.init_values)
+    args.init_fields = [f for f in init_var_names if f not in args.output_fields]
+    if args.init_fields:
+        init_types = format_without_blanks( args.init_format, args.init_fields, unnamed_fields = False )
+        args.init_t = comma.csv.struct( ','.join( args.init_fields ), *comma.csv.format.to_numpy( init_types ) )
     args.output_format = format_without_blanks( args.output_format, args.output_fields, unnamed_fields = False )
 
 def restricted_numpy_env():
@@ -487,50 +465,60 @@ class stream(object):
 def check_fields(fields, allow_numpy_names=True):
     for field in fields:
         if not re.match(r'^[a-z_]\w*$', field, re.I): raise csv_eval_error("'{}' is not a valid field name".format(field))
-        if field in ['_input', '_update', '_output']: raise csv_eval_error("'{}' is a reserved name".format(field))
+        if field in ['_init', '_input', '_update', '_output']: raise csv_eval_error("'{}' is a reserved name".format(field))
         if not allow_numpy_names and field in np.__dict__: raise csv_eval_error("'{}' is a reserved numpy name".format(field))
 
 def check_output_fields(fields, input_fields):
     check_fields(fields)
     invalid_output_fields = set(fields).intersection(input_fields)
-    if invalid_output_fields: raise csv_eval_error( "output fields '{}' are present in input fields '{}'".format(','.join(invalid_output_fields), ','.join(input_fields)) )
+    if invalid_output_fields: raise csv_eval_error( "output field(s) '{}' should not contain input fields '{}'".format(','.join(invalid_output_fields), ','.join(input_fields)) )
 
 def evaluate(stream):
-    def disperse( var, fields ): return '\n'.join("{f} = {v}['{f}']".format( v = var, f = f ) for f in fields )
+    def disperse( var, fields, do_copy = False ):
+        if do_copy: return '\n'.join( "{f} = copy( {v}['{f}'] )".format( v = var, f = f ) for f in fields )
+        else: return '\n'.join( "{f} = {v}['{f}']".format( v = var, f = f ) for f in fields )
     def collect( var, fields ): return '\n'.join("{v}['{f}'] = {f}".format( v = var, f = f ) for f in fields )
     if stream.args.init_values == '':
         read_size = None
         init_code_string = ''
     else:
         read_size = 1
-        init_code_string = '\n'.join( [ stream.args.default_values,
+        init_code_string = '\n'.join( [ disperse( '_input', stream.nonblank_input_fields, stream.args.init_values ),
+                                        disperse( '_output', stream.args.output_fields, stream.args.init_values ),
+                                        stream.args.default_values,
                                         stream.args.init_values,
-                                        disperse( '_input', stream.nonblank_input_fields ),
+                                        collect( '_init', stream.args.init_fields ),
                                         collect( '_update', stream.args.update_fields ),
                                         collect( '_output', stream.args.output_fields ) ] )
     code_string = '\n'.join( [ stream.args.default_values,
+                               disperse( '_init', stream.args.init_fields, stream.args.init_values ),
                                disperse( '_input', stream.nonblank_input_fields ),
-                               disperse( '_output', stream.args.output_fields ),
+                               disperse( '_output', stream.args.output_fields, stream.args.init_values ),
                                stream.args.expressions,
+                               collect( '_init', stream.args.init_fields ),
                                collect( '_update', stream.args.update_fields ),
                                collect( '_output', stream.args.output_fields ) ] )
+    #print( "-------- init_code_string --------\n" + init_code_string + "\n--------\n", file=sys.stderr )
+    #print( "-------- code_string --------\n" + code_string + "\n--------\n", file=sys.stderr )
     init_code = compile( init_code_string, '<string>', 'exec' )
     code = compile( code_string, '<string>', 'exec' )
     env = np.__dict__ if stream.args.permissive else restricted_numpy_env()    
     size = None
+    init = None
+    input = None
     update = None
     output = None
-    input = None
     is_shutdown = comma.signal.is_shutdown( verbose = stream.args.verbose )
     if stream.args.first_line: input = stream.input.read_from_line( stream.args.first_line )
     while not is_shutdown:
         if input is not None:
             if size != input.size:
                 size = input.size
+                if stream.args.init_fields: init = stream.args.init_t(size)
                 if stream.args.update_fields: update = stream.update_t(size)
                 if stream.args.output_fields: output = stream.output_t(size)
-                exec( init_code, env, { '_input': input, '_update': update, '_output': output } )
-            exec( code, env, { '_input': input, '_update': update, '_output': output } )
+                exec( init_code, env, { '_init': init, '_input': input, '_update': update, '_output': output } )
+            exec( code, env, { '_init': init, '_input': input, '_update': update, '_output': output } )
             if stream.args.update_fields: update_buffer(stream.input, update)
             if stream.args.output_fields: stream.output.write(output)
             else: stream.input.dump()
@@ -544,8 +532,7 @@ def select(stream):
     fields = stream.input.fields
     code = compile(stream.args.select, '<string>', 'eval')
     is_shutdown = comma.signal.is_shutdown()
-    if stream.args.first_line:
-        input = stream.input.read_from_line(stream.args.first_line)
+    if stream.args.first_line: input = stream.input.read_from_line(stream.args.first_line)
     while not is_shutdown:
         if input is not None: 
             mask = eval(code, env, {f: input[f] for f in fields})
@@ -579,12 +566,9 @@ def main():
         comma.csv.time.zone('UTC')
         args = get_args()
         prepare_options(args)
-        if args.select:
-            select(stream(args))
-        elif args.exit_if:
-            exit_if(stream(args))
-        else:
-            evaluate(stream(args))
+        if args.select: select(stream(args))
+        elif args.exit_if: exit_if(stream(args))
+        else: evaluate(stream(args))
     except csv_eval_error as e:
         name = os.path.basename(sys.argv[0])
         print( "{} error: {}".format(name, e), file = sys.stderr )

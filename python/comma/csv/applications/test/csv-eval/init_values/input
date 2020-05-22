@@ -1,1 +1,5 @@
-fibonacci="seq 0 5 | csv-eval --fields=v 'c=b;b=a+b;a=c' --output-fields a,b --init-values='a=0;b=1'"
+fibonacci[0]="seq 0 5 | csv-eval --fields=v 'a,b=b,a+b' --init-values='a=0;b=1'"
+fibonacci[1]="seq 0 5 | csv-eval --fields=v 'a,b=b,a+b' --output-fields a,b --init-values='a=0;b=1'"
+fibonacci[2]="seq 0 5 | csv-eval --fields=v 'a,b=b,a+b' --output-fields b,a --init-values='a=0;b=1'"
+fibonacci[3]="seq 0 5 | csv-eval --fields=v 'a,b=b,a+b' --output-fields a --init-values='a=0;b=1'"
+fibonacci[4]="seq 0 5 | csv-eval --fields=v 'a,b=b,a+b' --output-fields b --init-values='a=0;b=1'"
