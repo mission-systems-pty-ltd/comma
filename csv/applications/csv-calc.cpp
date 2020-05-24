@@ -36,6 +36,7 @@
 #endif
 
 #include <iostream>
+#include <type_traits>
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
 #include <boost/optional.hpp>
@@ -378,7 +379,7 @@ template < typename V > struct map_traits< boost::posix_time::ptime, V >
     {
         std::size_t operator()( const boost::posix_time::ptime& t ) const
         {
-            BOOST_STATIC_ASSERT( sizeof( t ) == sizeof( comma::uint64 ) );
+            static_assert( sizeof( t ) == sizeof( comma::uint64 ), "expected 8-byte time" );
             std::size_t seed = 0;
             boost::hash_combine( seed, reinterpret_cast< const comma::uint64& >( t ) ); // quick and dirty
             return seed;

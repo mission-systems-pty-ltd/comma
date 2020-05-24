@@ -36,10 +36,10 @@
 
 #include <limits>
 #include <string.h>
-#include <boost/static_assert.hpp>
+#include <type_traits>
+#include <boost/type_traits.hpp>
 #include "../packed/field.h"
 #include "../base/types.h"
-#include <boost/type_traits.hpp>
 
 namespace comma { namespace packed {
 
@@ -81,7 +81,7 @@ struct bits : public packed::field< bits< B, Default >, B, sizeof( typename comm
 
 template< typename T > inline void reverse_bits( T& v )
 {
-    BOOST_STATIC_ASSERT( boost::is_unsigned< T >::value );
+    static_assert( boost::is_unsigned< T >::value, "expected unsigned value" );
     unsigned int s = std::numeric_limits< T >::digits - 1;
     T r = v;
     for( v >>= 1; v; v >>= 1 )

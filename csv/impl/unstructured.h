@@ -33,8 +33,8 @@
 #pragma once
 
 #include <string>
+#include <type_traits>
 #include <vector>
-#include <boost/static_assert.hpp>
 #include <boost/date_time/posix_time/ptime.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/lexical_cast.hpp>
@@ -80,7 +80,7 @@ struct unstructured
         private:
             static void hash_combine_impl_( std::size_t& s, const boost::posix_time::ptime& t ) // quick and dirty
             {
-                BOOST_STATIC_ASSERT( sizeof( boost::posix_time::ptime ) == 8 ); // quick and dirty
+                static_assert( sizeof( boost::posix_time::ptime ) == 8, "expected time of size 8" ); // quick and dirty
                 boost::hash_combine( s, reinterpret_cast< const comma::uint64& >( t ) );
             }
             

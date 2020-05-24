@@ -43,7 +43,7 @@
 #endif
 #endif
 
-#include <boost/static_assert.hpp>
+#include <type_traits>
 #include "field.h"
 
 namespace comma { namespace packed {
@@ -53,7 +53,7 @@ struct byte : public packed::field< byte, unsigned char, sizeof( unsigned char )
 {
     enum { size = sizeof( unsigned char ) };
 
-    BOOST_STATIC_ASSERT( size == 1 );
+    static_assert( size == 1, "expected size 1" );
 
     typedef unsigned char type;
 
@@ -76,7 +76,7 @@ struct const_byte : public packed::field< const_byte< C >, unsigned char, sizeof
 {
     enum { size = sizeof( unsigned char ) };
 
-    BOOST_STATIC_ASSERT( size == 1 );
+    static_assert( size == 1, "expected size 1" );
 
     typedef unsigned char type;
 

@@ -45,7 +45,7 @@
 
 #include <cmath>
 #include <limits>
-#include <boost/static_assert.hpp>
+#include <type_traits>
 
 namespace comma {
 
@@ -70,12 +70,12 @@ typedef __int32 int32;
 typedef __int64 int64;
 
 // Windows, you know...
-BOOST_STATIC_ASSERT( sizeof( uint16 ) == 2 );
-BOOST_STATIC_ASSERT( sizeof( uint32 ) == 4 );
-BOOST_STATIC_ASSERT( sizeof( uint64 ) == 8 );
-BOOST_STATIC_ASSERT( sizeof( int16 ) == 2 );
-BOOST_STATIC_ASSERT( sizeof( int32 ) == 4 );
-BOOST_STATIC_ASSERT( sizeof( int64 ) == 8 );
+static_assert( sizeof( uint16 ) == 2, "expected uint16 of size 2" );
+static_assert( sizeof( uint32 ) == 4, "expected uint32 of size 4" );
+static_assert( sizeof( uint64 ) == 8, "expected uint64 of size 8" );
+static_assert( sizeof( int16 ) == 2, "expected int16 of size 2" );
+static_assert( sizeof( int32 ) == 4, "expected int32 of size 4" );
+static_assert( sizeof( int64 ) == 8, "expected int64 of size 8" );
 
 #endif
 

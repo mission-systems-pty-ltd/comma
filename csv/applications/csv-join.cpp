@@ -34,13 +34,13 @@
 #include <map>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <vector>
 #include <boost/array.hpp>
 #include <boost/date_time/posix_time/ptime.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
-#include <boost/static_assert.hpp>
 #include <boost/unordered_map.hpp>
 #include "../../application/command_line_options.h"
 #include "../../application/contact_info.h"
@@ -159,7 +159,7 @@ static boost::optional< double > radius;
 
 static void hash_combine_( std::size_t& seed, boost::posix_time::ptime key )
 {
-    BOOST_STATIC_ASSERT( sizeof( boost::posix_time::ptime ) == 8 );
+    static_assert( sizeof( boost::posix_time::ptime ) == 8, "expected time of size 8" );
     boost::hash_combine( seed, *reinterpret_cast< const long long* >( &key ) );
 }
 

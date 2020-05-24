@@ -34,11 +34,11 @@
 #include <stdlib.h>
 #endif
 #include <iostream>
+#include <type_traits>
 #include <boost/array.hpp>
 #include <boost/asio/ip/udp.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/noncopyable.hpp>
-#include <boost/static_assert.hpp>
 #include "../../application/contact_info.h"
 #include "../../application/command_line_options.h"
 #include "../../base/types.h"
@@ -109,7 +109,7 @@ int main( int argc, char** argv )
         if( timestamped )
         {
             boost::posix_time::ptime timestamp = boost::posix_time::microsec_clock::universal_time();
-            BOOST_STATIC_ASSERT( sizeof( boost::posix_time::ptime ) == sizeof( comma::uint64 ) );
+            static_assert( sizeof( boost::posix_time::ptime ) == sizeof( comma::uint64 ), "expected time of size 8" );
             if( binary )
             { 
                 static char buf[ sizeof( comma::int64 ) ];

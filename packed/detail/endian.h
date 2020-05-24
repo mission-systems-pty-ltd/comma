@@ -60,15 +60,15 @@
 
 #include <endian.h>
 #include <algorithm>
-#include <boost/static_assert.hpp>
+#include <type_traits>
 #include "../../base/exception.h"
 #include "../../base/types.h"
 #include "../field.h"
 
 namespace comma { namespace packed { namespace detail {
 
-BOOST_STATIC_ASSERT( sizeof( float ) == 4 );
-BOOST_STATIC_ASSERT( sizeof( double ) == 8 );
+static_assert( sizeof( float ) == 4, "expected float of 4 bytes" );
+static_assert( sizeof( double ) == 8, "expected double of 8 bytes" );
 
 enum endiannes { little = 0, big = 1 };
     
@@ -128,9 +128,9 @@ struct endian : public packed::field< endian< Endianness, Size, Signed, Floating
 
     typedef typename endian_traits< Endianness, Size, Signed, Floating >::type type;
     
-    BOOST_STATIC_ASSERT( size <= sizeof( type ) );
+    static_assert( size <= sizeof( type ), "expected size less than size of type" );
     
-    BOOST_STATIC_ASSERT( Signed || !Floating ); // unsigned floats don't make sense
+    static_assert( Signed || !Floating, "expected signed or non-floating point type" ); // unsigned floats don't make sense
 
     typedef packed::field< endian< Endianness, Size, Signed, Floating >, typename endian_traits< Endianness, Size, Signed, Floating >::type, Size > base_type;
 

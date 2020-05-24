@@ -37,6 +37,7 @@
 #include <cmath>
 #include <iomanip>
 #include <string>
+#include <type_traits>
 #include <boost/lexical_cast.hpp>
 #include "../base/exception.h"
 #include "../string/string.h"
@@ -150,7 +151,7 @@ template < typename T, std::size_t S, char Padding = ' ' >
 class ascii_hex : public packed::field< ascii_hex< T, S, Padding >, T, S >
 {
 public:
-    BOOST_STATIC_ASSERT( boost::is_unsigned< T >::value );
+    static_assert( boost::is_unsigned< T >::value, "expected unsigned type" );
     enum { size = S };
     
     typedef T Type;

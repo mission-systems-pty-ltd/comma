@@ -36,12 +36,12 @@
 #include <fstream>
 #include <functional>
 #include <memory>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <thread>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/optional.hpp>
-#include <boost/static_assert.hpp>
 #include "../../../base/types.h"
 #include "../../../csv/ascii.h"
 #include "../../../csv/binary.h"
@@ -99,7 +99,7 @@ template <> struct traits< boost::posix_time::ptime >
     {
         std::size_t operator()( const boost::posix_time::ptime& t ) const
         {
-            BOOST_STATIC_ASSERT( sizeof( t ) == sizeof( comma::uint64 ) );
+            static_assert( sizeof( t ) == sizeof( comma::uint64 ), "expected time of size 8" );
             std::size_t seed = 0;
             boost::hash_combine( seed, reinterpret_cast< const comma::uint64& >( t ) ); // quick and dirty
             return seed;

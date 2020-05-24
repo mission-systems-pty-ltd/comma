@@ -35,7 +35,7 @@
 #define COMMA_PACKED_STRUCT_HPP_
 
 #include <cstring>
-#include <boost/static_assert.hpp>
+#include <type_traits>
 
 namespace comma { namespace packed {
 
@@ -46,7 +46,7 @@ class packed_struct
     public:
         enum { size = S };
 
-        packed_struct() throw() { BOOST_STATIC_ASSERT( sizeof( Derived ) == size ); }
+        packed_struct() throw() { static_assert( sizeof( Derived ) == size, "expected derived of provided size" ); }
 
         const char* data() const throw() { return reinterpret_cast< const char* >( this ); }
 
