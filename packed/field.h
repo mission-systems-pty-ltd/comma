@@ -35,7 +35,7 @@
 #define COMMA_PACKED_FIELD_H_
 
 #include <string.h>
-#include <boost/static_assert.hpp>
+#include <type_traits> // #include <boost/static_assert.hpp>
 
 namespace comma { namespace packed {
 
@@ -46,25 +46,25 @@ class field
     public:
         enum { size = S };
 
-        BOOST_STATIC_ASSERT( size > 0 );
+        static_assert( size > 0, "expected positive size" );
 
         typedef T type;
 
         field()
         {
-            BOOST_STATIC_ASSERT( sizeof( field ) == size );
+            static_assert( sizeof( field ) == size, "field size does not match stated size" );
             Derived::pack( storage_, Derived::default_value() );
         }
 
         field( const type& t )
         {
-            BOOST_STATIC_ASSERT( sizeof( field ) == size );
+            static_assert( sizeof( field ) == size, "field size does not match stated size" );
             Derived::pack( storage_, t );
         }
 
         field( const field& rhs )
         {
-            BOOST_STATIC_ASSERT( sizeof( field ) == size );
+            static_assert( sizeof( field ) == size, "field size does not match stated size" );
             operator=( rhs );
         }
 
