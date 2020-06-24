@@ -33,6 +33,7 @@
 
 #include <string>
 #include <vector>
+#include <boost/lexical_cast.hpp>
 
 namespace comma {
 
@@ -47,6 +48,14 @@ std::vector< std::string > split( const std::string& s, const char* separators =
 
 /// split string into tokens (a quick implementation); always contains at least one element
 std::vector< std::string > split( const std::string& s, char separator, bool empty_if_empty_input = false );
+
+/// split string into tokens (a quick implementation) and cast to a given type; always contains at least one element
+template < typename T >
+std::vector< T > split_as( const std::string& s, const char* separators );
+
+/// split string into tokens (a quick implementation) and cast to a given type; always contains at least one element
+template < typename T >
+std::vector< T > split_as( const std::string& s, char separator );
 
 /// Split string into tokens; always contains at least one element;
 /// skips backslash escaped separator, handle non-nested quotes;
@@ -71,6 +80,21 @@ std::vector< std::string > split_escaped( const std::string& s, char separator, 
 std::vector< std::string > split_bracketed( const std::string& s, const char * separators = " ", char lbracket = '(', char rbrackets = ')', bool strip_brackets = true );
 /// skips bracketed separators
 std::vector< std::string > split_bracketed( const std::string& s, char separator, char lbracket = '(', char rbracket = ')', bool strip_brackets = true );
+
+template < typename T >
+inline std::vector< T > split_as( const std::string& s, const char* separators )
+{
+    const auto& v = split( s, separators, true );
+    std::vector< T > t( v.size() );
+    for( unsigned int i = 0; i < v.size(); ++i ) { t[i] = boost::lexical_cast< T >( v[i] ); }
+    return t;
+}
+
+template < typename T > inline std::vector< T > split_as( const std::string& s, char separator )
+{
+    const char separators[] = { separator, 0 };
+    return split_as< T >( s, separators );
+}
 
 } // namespace comma {
 
