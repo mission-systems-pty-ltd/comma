@@ -36,7 +36,7 @@
 #include <unordered_set>
 #include <boost/optional.hpp>
 #include "../../application/command_line_options.h"
-#include "../../string.h"
+#include "../../string/string.h"
 #include "../../xpath/xpath.h"
 
 static void usage( bool )
