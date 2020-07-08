@@ -90,10 +90,16 @@ static void usage( bool verbose )
     std::cerr << std::endl;
     std::cerr << "        options" << std::endl;
     std::cerr << "            --append; append random numbers to stdin input" << std::endl;
-    std::cerr << "            --distribution=<distribution>; default=uniform; values: uniform, more todo, just ask" << std::endl;
+    std::cerr << "            --distribution=<distribution>; default=uniform; todo: more distributions to plug in, just ask" << std::endl;
+    std::cerr << "            --engine=<engine>; default=mt19937_64; values: minstd_rand0, minstd_rand, mt19937, mt19937_64, ranlux24_base, ranlux48_base, ranlux24, ranlux48, knuth_b, default_random_engine" << std::endl;
     std::cerr << "            --output-binary; output random numbers as binary, or specify --binary=<format> for stdin input" << std::endl;
     std::cerr << "            --range=[<min>,<max>]; desired value range, default: whatever stl defines (usually numeric limits)" << std::endl;
     std::cerr << "            --type=<type>; default=ui; supported values: b, ub, w, uw, i, ui, f, d" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    true-random" << std::endl;
+    std::cerr << "        todo" << std::endl;
+    std::cerr << "        example" << std::endl;
+    std::cerr << "            > csv-random make --seed=$( csv-random true-random --once )" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    shuffle: output input records in pseudo-random order" << std::endl;
     std::cerr << std::endl;
@@ -109,7 +115,7 @@ static void usage( bool verbose )
     exit( 0 );
 }
 
-static bool output_binary;
+//static bool output_binary;
 static bool verbose;
 static comma::csv::options csv;
 static boost::optional< int > seed;
@@ -157,10 +163,9 @@ struct type_traits< unsigned char >
     static unsigned int cast( unsigned char t ) { return static_cast< int >( t ); }
 };
     
-template < typename T, typename Distribution >
-static int run_impl( Distribution& distribution, bool append, bool binary )
-{
-    std::default_random_engine generator = seed ? std::default_random_engine( *seed ) : std::default_random_engine();
+template < typename T, typename Distribution, typename Engine >
+static int run_impl( Distribution& distribution, Engine engine, bool append, bool binary )
+{;
     if( !::csv.flush ) { std::cin.tie( NULL ); }
     if( append )
     {
@@ -173,7 +178,7 @@ static int run_impl( Distribution& distribution, bool append, bool binary )
                 if( std::cin.gcount() == 0 ) { break; }
                 if( std::cin.gcount() != int( buf.size() ) ) { std::cerr << "csv-random: make: expected " << buf.size() << " bytes; got " << std::cin.gcount() << std::endl; return 1; }
                 std::cout.write( &buf[0], buf.size() );
-                T r = distribution( generator );
+                T r = distribution( engine );
                 std::cout.write( reinterpret_cast< char* >( &r ), sizeof( T ) );
                 if( ::csv.flush ) { std::cout.flush(); }
             }
@@ -185,7 +190,7 @@ static int run_impl( Distribution& distribution, bool append, bool binary )
                 std::string s;
                 std::getline( std::cin, s );
                 if( s.empty() ) { continue; }
-                std::cout << s << ::csv.delimiter << type_traits< T >::cast( distribution( generator ) ) << std::endl;
+                std::cout << s << ::csv.delimiter << type_traits< T >::cast( distribution( engine ) ) << std::endl;
                 if( ::csv.flush ) { std::cout.flush(); }
             }
         }
@@ -194,7 +199,7 @@ static int run_impl( Distribution& distribution, bool append, bool binary )
     {
         while( std::cout.good() )
         {
-            T r = distribution( generator );
+            T r = distribution( engine );
             if( binary ) { std::cout.write( reinterpret_cast< char* >( &r ), sizeof( T ) ); }
             else { std::cout << type_traits< T >::cast( r ) << std::endl; }
             if( ::csv.flush ) { std::cout.flush(); }
@@ -208,17 +213,28 @@ static int run_impl( const comma::command_line_options& options )
 {
     bool append = options.exists( "--append" );
     bool binary = options.exists( "--output-binary" ) || ::csv.binary();
+    auto engine = options.value< std::string >( "--engine", "mt19937_64" );
     auto r = options.optional< std::string >( "--range" ); // todo: parse distribution parameters
+    Distribution< T > distribution;
     if( r )
     {
         auto range = comma::csv::ascii< std::pair< T, T > >().get( *r );
-        Distribution< T > distribution( range.first, range.second );
-        return run_impl< T >( distribution, append, binary );
+        distribution = Distribution< T >( range.first, range.second );
     }
-    Distribution< T > distribution;
-    return run_impl< T >( distribution, append, binary );
+    if( engine == "minstd_rand0" ) { return run_impl< T >( distribution, seed ? std::minstd_rand0( *seed ) : std::minstd_rand0() , append, binary ); }
+    if( engine == "minstd_rand" ) { return run_impl< T >( distribution, seed ? std::minstd_rand( *seed ) : std::minstd_rand() , append, binary ); }
+    if( engine == "mt19937" ) { return run_impl< T >( distribution, seed ? std::mt19937( *seed ) : std::mt19937(), append, binary ); }
+    if( engine == "mt19937_64" ) { return run_impl< T >( distribution, seed ? std::mt19937_64( *seed ) : std::mt19937_64(), append, binary ); }
+    if( engine == "ranlux24_base" ) { return run_impl< T >( distribution, seed ? std::ranlux24_base( *seed ) : std::ranlux24_base() , append, binary ); }
+    if( engine == "ranlux48_base" ) { return run_impl< T >( distribution, seed ? std::ranlux48_base( *seed ) : std::ranlux48_base() , append, binary ); }
+    if( engine == "ranlux24" ) { return run_impl< T >( distribution, seed ? std::ranlux24( *seed ) : std::ranlux24() , append, binary ); }
+    if( engine == "ranlux48" ) { return run_impl< T >( distribution, seed ? std::ranlux48( *seed ) : std::ranlux48() , append, binary ); }
+    if( engine == "knuth_b" ) { return run_impl< T >( distribution, seed ? std::knuth_b( *seed ) : std::knuth_b() , append, binary ); }
+    if( engine == "default_random_engine" ) { return run_impl< T >( distribution, seed ? std::default_random_engine( *seed ) : std::default_random_engine() , append, binary ); }
+    std::cerr << "csv-random make: expected engine; got: '" << engine << "'" << std::endl;
+    return 1;
 }
-    
+
 static int run( const comma::command_line_options& options ) // quick and dirty
 {
     auto distribution = options.value< std::string >( "--distribution", "uniform" );
@@ -273,7 +289,7 @@ namespace shuffle {
 
 static int run( const comma::command_line_options& options )
 {
-    std::default_random_engine generator = seed ? std::default_random_engine( *seed ) : std::default_random_engine();
+    auto engine = seed ? std::default_random_engine( *seed ) : std::default_random_engine();
     std::deque< std::string > records;
     auto output = []( std::deque< std::string >& records )
     { 
@@ -293,7 +309,7 @@ static int run( const comma::command_line_options& options )
             if( !p || p->block != block )
             {
                 std::uniform_int_distribution< int > distribution( 0, records.size() - 1 ); // quick and dirty
-                std::random_shuffle( records.begin(), records.end(), [&]( int ) -> int { return distribution( generator ); } ); // quick and dirty, watch performance
+                std::random_shuffle( records.begin(), records.end(), [&]( int ) -> int { return distribution( engine ); } ); // quick and dirty, watch performance
                 output( records );
                 if( p ) { block = p->block; }
             }
@@ -336,7 +352,7 @@ static int run( const comma::command_line_options& options )
             }
         }
         std::uniform_int_distribution< int > distribution( 0, records.size() - 1 ); // quick and dirty
-        std::random_shuffle( records.begin(), records.end(), [&]( int ) -> int { return distribution( generator ); } ); // quick and dirty, watch performance
+        std::random_shuffle( records.begin(), records.end(), [&]( int ) -> int { return distribution( engine ); } ); // quick and dirty, watch performance
         output( records );
     }
     return 0;
