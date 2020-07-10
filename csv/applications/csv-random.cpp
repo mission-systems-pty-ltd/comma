@@ -88,14 +88,14 @@ static void usage( bool verbose )
     std::cerr << "            --engine=<engine>; default=mt19937_64; supported values: minstd_rand0, minstd_rand, mt19937, mt19937_64, ranlux24_base, ranlux48_base, ranlux24, ranlux48, knuth_b, default_random_engine" << std::endl;
     std::cerr << "            --output-binary; output random numbers as binary, or specify --binary=<format> for stdin input" << std::endl;
     std::cerr << "            --range=[<min>,<max>]; desired value range, default: whatever stl defines (usually numeric limits)" << std::endl;
-    std::cerr << "            --type=<type>; default=ui; supported values: b, ub, w, uw, i, ui, l, ul, f, d" << std::endl;
+    std::cerr << "            --type=<type>; default=ui; supported values: b, ub, w, uw, i, ui, l, ul, f, d; can have more than one <type> i.e. 3ui" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    true-random: produces non-deterministic random numbers (if non-deterministic source is not available, may be pseudo-random)" << std::endl;
+    std::cerr << "    true-random: output non-deterministic random numbers (if non-deterministic source is not available, e.g. a hardware device, output will be pseudo-random). output is unsigned int" << std::endl;
     std::cerr << std::endl;
     std::cerr << "        usage: csv-random true-random [<options>]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "        options" << std::endl;
-    std::cerr << "            --append; append random unsigned longs to stdin input" << std::endl;
+    std::cerr << "            --append; append random number to stdin input" << std::endl;
     std::cerr << "            --once; output random number only once" << std::endl;
     std::cerr << std::endl;
     std::cerr << "        example" << std::endl;
@@ -411,7 +411,9 @@ static int run( const comma::command_line_options& options )
     bool binary = options.exists( "--output-binary" ) || ::csv.binary();
     if( options.exists( "--once" ) )
     {
-        std::cout << rd() << std::endl;
+        auto r = rd();
+        if ( binary ) { std::cout.write( reinterpret_cast< char * >( &r ), sizeof( r ) ); }
+        else { std::cout << r << std::endl; }
         return 0;
     }
     if( options.exists( "--append" ) )
@@ -426,7 +428,7 @@ static int run( const comma::command_line_options& options )
                 if( std::cin.gcount() != static_cast< int >( buf.size() ) ) { std::cerr << "csv-random true-random: expected " << buf.size() << " bytes; got " << std::cin.gcount() << std::endl; return 1; }
                 std::cout.write( &buf[0], buf.size() );
                 auto r = rd();
-                std::cout.write( reinterpret_cast< char* >( &r ), sizeof( decltype( r ) ) );
+                std::cout.write( reinterpret_cast< char* >( &r ), sizeof( r ) );
                 if( ::csv.flush ) { std::cout.flush(); }
             }
         }
@@ -447,7 +449,7 @@ static int run( const comma::command_line_options& options )
         while( std::cout.good() )
         {
             auto r = rd();
-            if( binary ) { std::cout.write( reinterpret_cast< char* >( &r ), sizeof( decltype ( r ) ) ); }
+            if( binary ) { std::cout.write( reinterpret_cast< char* >( &r ), sizeof( r ) ); }
             else { std::cout << r << std::endl; }
             if( ::csv.flush ) { std::cout.flush(); }
         }
@@ -467,7 +469,7 @@ int main( int ac, char** av )
         const auto& unnamed = options.unnamed( "--append,--flush,--verbose,-v", "-.*" );
         if( unnamed.empty() ) { std::cerr << "csv-random: please specify operation" << std::endl; return 1; }
         ::csv = comma::csv::options( options );
-        std::cout.precision(::csv.precision);
+        std::cout.precision( ::csv.precision );
         ::seed = options.optional< int >( "--seed" );
         ::verbose = options.exists( "--verbose,-v" );
         std::string operation = unnamed[0];
