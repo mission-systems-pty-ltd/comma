@@ -90,13 +90,15 @@ static void usage( bool verbose )
     std::cerr << "            --range=[<min>,<max>]; desired value range, default: whatever stl defines (usually numeric limits)" << std::endl;
     std::cerr << "            --type=<type>; default=ui; supported values: b, ub, w, uw, i, ui, l, ul, f, d; can have more than one <type> i.e. 3ui" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    true-random: output non-deterministic random numbers (if non-deterministic source is not available, e.g. a hardware device, output will be pseudo-random). output is unsigned int" << std::endl;
+    std::cerr << "    true-random: output non-deterministic uniformly distributed unsigned int random numbers (if non-deterministic source is not available" << std::endl;
+    std::cerr << "                 e.g. a hardware device, output will be pseudo-random" << std::endl;
     std::cerr << std::endl;
     std::cerr << "        usage: csv-random true-random [<options>]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "        options" << std::endl;
     std::cerr << "            --append; append random number to stdin input" << std::endl;
     std::cerr << "            --once; output random number only once" << std::endl;
+    std::cerr << "            --type=<type>; default=ui; todo: supported values: ui; e.g: --type=3ui; --type=ui,ui,ui; etc" << std::endl;
     std::cerr << std::endl;
     std::cerr << "        example" << std::endl;
     std::cerr << "            > csv-random make --seed=$( csv-random true-random --once )" << std::endl;
@@ -141,7 +143,6 @@ template <> struct traits< comma::applications::random::shuffle::input >
 } } // namespace comma { namespace visiting {
 
 namespace comma { namespace applications { namespace random {
-
 
 template < typename T >
 struct type_traits
