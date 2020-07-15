@@ -1,0 +1,62 @@
+---
+# sample ansible-playbook script to install comma dependencies and build comma from source; include it as it is or copy to your playbook
+
+- hosts: localhost
+  connection: local
+  vars:
+    - base: "{{ ansible_env.HOME }}"
+    - make_j: 6
+    - comma_cmake_options: "-DBUILD_TESTS=ON -DINSTALL_TESTS=ON -DINSTALL_BASH_COMPLETION=ON -Dcomma_BUILD_XML=ON -Dcomma_BUILD_ZEROMQ=ON -Dcomma_INSTALL_WEB_SHELL=OFF -DPYTHON=/usr/bin/python3"
+
+  tasks:
+  - name: "install comma dependencies"
+    become: true
+    apt: pkg={{ item }} state=present update_cache=yes
+    with_items:
+      - build-essential 
+      - git
+      - cmake-curses-gui
+      - cmake
+      - perl
+      - python
+      - libboost-all-dev
+      - socat
+      - libzmq3-dev
+      - libgtest-dev
+      - python3-dev
+      - python3-numpy
+      - libprocps-dev
+      - recode
+      
+  - name: "comma: make source directory at {{ base }}"
+    file: path={{ base }}/{{ item }} state=directory
+    with_items:
+        - src
+        - build
+    
+  - name: "comma: clone"
+    git:
+        repo: "https://gitlab.com/orthographic/comma.git"
+        dest: "{{ base }}/src/comma"
+        clone: yes
+        update: yes
+        
+  - name: "comma: make build directory at {{ base }}"
+    file: dest="{{ base }}/build/comma" state=directory
+
+  - name: "comma: cmake"
+    vars:
+        - comma_cmake_options: "-DBUILD_TESTS=ON -DINSTALL_TESTS=ON -DINSTALL_BASH_COMPLETION=ON -Dcomma_BUILD_XML=ON -Dcomma_BUILD_ZEROMQ=ON -Dcomma_INSTALL_WEB_SHELL=OFF -DPYTHON=/usr/bin/python3"
+    shell: "/usr/bin/cmake {{ comma_cmake_options }} {{ base }}/src/comma chdir={{ base }}/build/comma"
+
+  - name: "comma: make"
+    make:
+        chdir: "{{ base }}/build/comma"
+        params:
+            MAKEFLAGS: "-j {{ make_j }}"
+
+  - name: "comma: install"
+    become: true
+    make:
+        chdir: "{{ base }}/build/comma"
+        target: "install"
