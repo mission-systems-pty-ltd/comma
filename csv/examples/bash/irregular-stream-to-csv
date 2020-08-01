@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# suppose we have an ascii stream (e.g. produced by a sensor) that mixes severals
+# values appearing in the stream at various times and we can distinguish different
+# input record types by some keywords
+#
+# we want to convert it into a csv stream with each record containing
+# the latest values
+#
+# notes
+# - the same is possible with a bit more effort with binary data
+# - --unbuffered in sed is required, if your stream has to be realtime
+
+function test-input()
+{
+    cat <<eof
+greeting: hello
+which: holy
+who: cow
+greeting: bye
+which: wicked
+greeting: hi
+which: lazy
+who: fox
+greeting: jump
+which: brown
+eof
+}
+
+test-input \
+    | sed -e 's#\(greeting: .*\)#\1,,#' \
+          -e 's#\(which: .*\)#,\1,#' \
+          -e 's#\(who: .*\)#,,\1#' \
+          --unbuffered \
+    | csv-update --update-non-empty \
+    | sed -e 's#greeting: ##' \
+          -e 's#which: ##' \
+          -e 's#who: ##' \
+          --unbuffered \
+    | tr ',' ' '
