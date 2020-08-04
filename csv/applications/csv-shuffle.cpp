@@ -1,31 +1,5 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// Copyright (c) 2020 Vsevolod Vlaskine
 
 #ifdef WIN32
 #include <fcntl.h>
@@ -71,7 +45,7 @@ static void usage( bool verbose )
     std::cerr << "        output trailing fields: swap x and y, output z" << std::endl;
     std::cerr << "            cat xyz.csv | csv-shuffle --fields=x,y --output-fields=y,x,..." << std::endl;
     std::cerr << std::endl;
-    exit( 1 );
+    exit( 0 );
 }
 
 struct field
@@ -89,13 +63,9 @@ int main( int ac, char** av )
 {
     try
     {
-        comma::command_line_options options( ac, av );
-        bool verbose = options.exists( "--verbose,-v" );
-        if( options.exists( "--help,-h" ) ) { usage( verbose ); }
+        comma::command_line_options options( ac, av, usage );
         comma::csv::options csv( options );
-        csv.full_xpath = false;
-        std::string f = options.value< std::string >( "--input-fields", "" );
-        if( !f.empty() ) { csv.fields = f; }
+        csv.fields = options.value< std::string >( "--input-fields,--fields,-f", "" );
         std::vector< std::string > input_fields = comma::split( csv.fields, ',' );
         std::vector< std::string > output_fields = comma::split( options.value< std::string >( "--output-fields,--output,-o" ), ',' );
         bool output_trailing_fields = output_fields.back() == "...";
@@ -103,23 +73,32 @@ int main( int ac, char** av )
         std::vector< field > fields;
         for( unsigned int i = 0; i < output_fields.size(); ++i )
         {
-            if( output_fields[i].empty() ) { continue; }
-            fields.push_back( field( output_fields[i], i ) );
+            if( !output_fields[i].empty() ) { fields.push_back( field( output_fields[i], i ) ); }
         }
-        if( fields.empty() ) { std::cerr << "csv-shuffle: please define at least one output field" << std::endl; return 1; }
-        for( unsigned int i = 0; i < input_fields.size(); ++i )
+        if( csv.binary() )
         {
-            for( unsigned int j = 0; j < fields.size(); ++j )
+            for( unsigned int i = 0; i < input_fields.size(); ++i )
             {
-                if( fields[j].name != input_fields[i] ) { continue; }
-                fields[j].input_index = i;
-                if( csv.binary() )
+                for( unsigned int j = 0; j < fields.size(); ++j )
                 {
+                    if( fields[j].name != input_fields[i] ) { continue; }
+                    fields[j].input_index = i;
                     fields[j].input_offset = csv.format().offset( i ).offset;
                     fields[j].size = csv.format().offset( i ).size;
                 }
             }
         }
+        else
+        {
+            for( unsigned int i = 0; i < input_fields.size(); ++i )
+            {
+                for( unsigned int j = 0; j < fields.size(); ++j )
+                {
+                    if( fields[j].name == input_fields[i] ) { fields[j].input_index = i; }
+                }
+            }
+        }
+        if( fields.empty() ) { std::cerr << "csv-shuffle: please define at least one output field" << std::endl; return 1; }
         for( unsigned int i = 0; i < fields.size(); ++i )
         {
             if( !fields[i].input_index ) { std::cerr << "csv-shuffle: \"" << fields[i].name << "\" not found in input fields " << csv.fields << std::endl; return 1; }
@@ -198,18 +177,12 @@ int main( int ac, char** av )
                 unsigned int previous_index = 0;
                 for( unsigned int i = 0; i < fields.size(); ++i ) // quick and dirty
                 {
-                    for( unsigned int k = previous_index; k < fields[i].index && k < elements.size(); ++k )
-                    {
-                        std::cout.write( &buf[ elements[k].offset ], elements[k].size );
-                    }
+                    for( unsigned int k = previous_index; k < fields[i].index && k < elements.size(); ++k ) { std::cout.write( &buf[ elements[k].offset ], elements[k].size ); }
                     std::cout.write( &buf[ fields[i].input_offset ], fields[i].size );
                     previous_index = fields[i].index + 1;
                 }
                 //std::cerr << "--> previous_index: " << previous_index << " elements.size(): " << elements.size() << std::endl;
-                for( unsigned int k = previous_index; output_trailing_fields && k < elements.size(); ++k )
-                {
-                    std::cout.write( &buf[ elements[k].offset ], elements[k].size );
-                }
+                for( unsigned int k = previous_index; output_trailing_fields && k < elements.size(); ++k ) { std::cout.write( &buf[ elements[k].offset ], elements[k].size ); }
                 if( csv.flush ) { std::cout.flush(); }
             }
         }
