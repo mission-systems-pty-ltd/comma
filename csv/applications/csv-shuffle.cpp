@@ -42,28 +42,28 @@ static void usage( bool verbose )
     exit( 0 );
 }
 
-static unsigned int find_( const std::string& n, const std::vector< std::string >& v )
-{
-    unsigned int j = 0;
-    for( ; j < v.size(); ++j ) { if( v[j] == n ) { return j; } }
-    COMMA_THROW( comma::exception, "output field '" << n << "' not found in input fields '" << comma::join( v, ',' ) << "'" );
-}
-
 int main( int ac, char** av )
 {
     try
     {
         comma::command_line_options options( ac, av, usage );
-        comma::csv::options csv( options, options.value< std::string >( "--input-fields,--fields,-f", "" ) );
+        comma::csv::options csv( options, options.value< std::string >( "--fields,-f,--input-fields" ) );
         std::vector< std::string > input_fields = comma::split( csv.fields, ',', true );
         std::vector< std::string > output_fields = comma::split( options.value< std::string >( "--output-fields,--output,-o", csv.fields ), ',', true );
         if( output_fields.back() == "..." ) { std::cerr << "csv-shuffle: support for trailing fields has been removed for now; please specify input/output fields explicitly" << std::endl; return 1; }
+        auto find_ = [&]( const std::string& n )->unsigned int
+        {
+            if( n.empty() ) { COMMA_THROW( comma::exception, "got empty fields in output fields '" << comma::join( output_fields, ',' ) << "'" ); }
+            unsigned int j = 0;
+            for( ; j < input_fields.size(); ++j ) { if( input_fields[j] == n ) { return j; } }
+            COMMA_THROW( comma::exception, "output field '" << n << "' not found in input fields '" << csv.fields << "'" );
+        };
         if( csv.binary() )
         {
             std::vector< std::pair< unsigned int, unsigned int > > offsets;
             for( unsigned int i = 0; i < output_fields.size(); )
             {
-                unsigned int j = find_( output_fields[i], input_fields );
+                unsigned int j = find_( output_fields[i] );
                 offsets.push_back( std::make_pair( csv.format().offset( j ).offset, 0 ) );
                 for( ; i < output_fields.size() && j < input_fields.size() && input_fields[j] == output_fields[i]; ++i, ++j ) { offsets.back().second += csv.format().offset( j ).size; }
             }
@@ -85,7 +85,7 @@ int main( int ac, char** av )
         else
         {
             std::vector< unsigned int > indices;
-            for( const auto& field: output_fields ) { indices.push_back( find_( field, input_fields ) ); }
+            for( const auto& field: output_fields ) { indices.push_back( find_( field ) ); }
             while( std::cin.good() && !std::cin.eof() )
             {
                 std::string line;
