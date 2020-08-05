@@ -1,0 +1,10 @@
+ascii[0]="echo 0,1,2,3,4,5 | csv-shuffle --fields 0,1,2,3,4,5 --output-fields 0"
+ascii[1]="echo 0,1,2,3,4,5 | csv-shuffle --fields 0,1,2,3,4,5 --output-fields 0,0"
+ascii[2]="echo 0,1,2,3,4,5 | csv-shuffle --fields 0,1,2,3,4,5 --output-fields 5"
+ascii[3]="echo 0,1,2,3,4,5 | csv-shuffle --fields 0,1,2,3,4,5 --output-fields 5,4"
+ascii[4]="echo 0,1,2,3,4,5 | csv-shuffle --fields 0,1,2,3,4,5 --output-fields 1,3,1,3"
+
+binary[0]="echo 0,1,2,3,4,5 | csv-to-bin 3ui,3uw | csv-shuffle --binary 3ui,3uw --fields 0,1,2,3,4,5 --output-fields 0 | csv-from-bin ui"
+binary[1]="echo 0,1,2,3,4,5 | csv-to-bin 3ui,3uw | csv-shuffle --binary 3ui,3uw --fields 0,1,2,3,4,5 --output-fields 3,4,5,0,1,2 | csv-from-bin 3uw,3ui"
+binary[2]="echo 0,1,2,3,4,5 | csv-to-bin 3ui,3uw | csv-shuffle --binary 3ui,3uw --fields 0,1,2,3,4,5 --output-fields 4,5,2,3,0,1 | csv-from-bin 2uw,ui,uw,2ui"
+binary[3]="echo 0,1,2,3,4,5 | csv-to-bin 3ui,3uw | csv-shuffle --binary 3ui,3uw --fields 0,1,2,3,4,5 --output-fields 1,2,1,2,1,2 | csv-from-bin 6ui"
