@@ -9,6 +9,7 @@
 #include <iostream>
 #include <vector>
 #include "../../application/command_line_options.h"
+#include "../../base/exception.h"
 #include "../../csv/options.h"
 #include "../../string/string.h"
 
@@ -41,39 +42,31 @@ static void usage( bool verbose )
     exit( 0 );
 }
 
-struct field
+static unsigned int find_( const std::string& n, const std::vector< std::string >& v )
 {
-    std::string name;
-    unsigned int index;
-    boost::optional< unsigned int > input_index;
-    unsigned int input_offset;
-    unsigned int size;
-    field( const std::string& name, unsigned int index ) : name( name ), index( index ), input_offset( 0 ), size( 0 ) {}
-};
+    unsigned int j = 0;
+    for( ; j < v.size(); ++j ) { if( v[j] == n ) { return j; } }
+    COMMA_THROW( comma::exception, "output field '" << n << "' not found in input fields '" << comma::join( v, ',' ) << "'" );
+}
 
 int main( int ac, char** av )
 {
     try
     {
         comma::command_line_options options( ac, av, usage );
-        comma::csv::options csv( options );
-        csv.fields = options.value< std::string >( "--input-fields,--fields,-f", "" );
+        comma::csv::options csv( options, options.value< std::string >( "--input-fields,--fields,-f", "" ) );
         std::vector< std::string > input_fields = comma::split( csv.fields, ',', true );
         std::vector< std::string > output_fields = comma::split( options.value< std::string >( "--output-fields,--output,-o", csv.fields ), ',', true );
         if( output_fields.back() == "..." ) { std::cerr << "csv-shuffle: support for trailing fields has been removed for now; please specify input/output fields explicitly" << std::endl; return 1; }
-        std::vector< field > fields;
         if( csv.binary() )
         {
+            std::vector< std::pair< unsigned int, unsigned int > > offsets;
             for( unsigned int i = 0; i < output_fields.size(); )
             {
-                fields.push_back( field( output_fields[i], i ) );
-                unsigned int j = 0;
-                for( ; j < input_fields.size() && input_fields[j] != output_fields[i]; ++j );
-                if( j >= input_fields.size() ) { std::cerr << "csv-shuffle: output field '" << output_fields[i] << "' not found in input fields '" << csv.fields << "'" << std::endl; return 1; }
-                fields.back().input_offset = csv.format().offset( j ).offset;
-                for( ; i < output_fields.size() && j < input_fields.size() && input_fields[j] == output_fields[i]; ++i, ++j ) { fields.back().size += csv.format().offset( j ).size; }
+                unsigned int j = find_( output_fields[i], input_fields );
+                offsets.push_back( std::make_pair( csv.format().offset( j ).offset, 0 ) );
+                for( ; i < output_fields.size() && j < input_fields.size() && input_fields[j] == output_fields[i]; ++i, ++j ) { offsets.back().second += csv.format().offset( j ).size; }
             }
-            //for( unsigned int i = 0; i < fields.size(); ++i ) { std::cerr << "--> i: " << i << " fields[i].name: " << fields[i].name << " fields[i].input_offset: " << fields[i].input_offset << " fields[i].size: " << fields[i].size << std::endl; }
             #ifdef WIN32
             _setmode( _fileno( stdin ), _O_BINARY );
             _setmode( _fileno( stdout ), _O_BINARY );
@@ -85,45 +78,23 @@ int main( int ac, char** av )
                 std::cin.read( &buf[0], csv.format().size() );
                 if( std::cin.gcount() == 0 ) { continue; }
                 if( std::cin.gcount() < int( csv.format().size() ) ) { std::cerr << "csv-shuffle: expected " << csv.format().size() << " bytes, got only " << std::cin.gcount() << std::endl; return 1; }
-                for( unsigned int i = 0; i < fields.size(); ++i ) { std::cout.write( &buf[ fields[i].input_offset ], fields[i].size ); }
+                for( const auto& offset: offsets ) { std::cout.write( &buf[ offset.first ], offset.second ); }
                 if( csv.flush ) { std::cout.flush(); }
             }
         }
         else
         {
-            for( unsigned int i = 0; i < output_fields.size(); ++i ) { fields.push_back( field( output_fields[i], i ) ); }
-            for( unsigned int i = 0; i < input_fields.size(); ++i )
-            {
-                for( unsigned int j = 0; j < fields.size(); ++j )
-                {
-                    if( fields[j].name == input_fields[i] ) { fields[j].input_index = i; }
-                }
-            }
-            for( unsigned int i = 0; i < fields.size(); ++i )
-            {
-                if( !fields[i].input_index ) { std::cerr << "csv-shuffle: \"" << fields[i].name << "\" not found in input fields " << csv.fields << std::endl; return 1; }
-            }
+            std::vector< unsigned int > indices;
+            for( const auto& field: output_fields ) { indices.push_back( find_( field, input_fields ) ); }
             while( std::cin.good() && !std::cin.eof() )
             {
                 std::string line;
                 std::getline( std::cin, line );
                 if( !line.empty() && *line.rbegin() == '\r' ) { line = line.substr( 0, line.length() - 1 ); } // windows... sigh...
                 if( line.empty() ) { continue; }
-                std::vector< std::string > v = comma::split( line, csv.delimiter );
+                const auto& v = comma::split( line, csv.delimiter );
                 std::string delimiter;
-                unsigned int previous_index = 0;
-                for( unsigned int i = 0; i < fields.size(); ++i ) // quick and dirty
-                {
-                    for( unsigned int k = previous_index; k < fields[i].index && k < v.size(); ++k )
-                    {
-                        std::cout << delimiter << v[k];
-                        delimiter = csv.delimiter;
-                    }
-                    previous_index = fields[i].index + 1;
-                    std::cout << delimiter;
-                    if ( *fields[i].input_index < v.size() ) { std::cout << v[ *fields[i].input_index ]; }
-                    delimiter = csv.delimiter;
-                }
+                for( auto index: indices ) { std::cout << delimiter << v[index]; delimiter = csv.delimiter; }
                 std::cout << std::endl;
             }
         }
