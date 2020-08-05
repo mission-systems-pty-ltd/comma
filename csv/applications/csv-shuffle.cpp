@@ -20,8 +20,9 @@ static void usage( bool verbose )
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
-    std::cerr << "    --fields,-f,--input-fields <fields>: input fields" << std::endl;
-    std::cerr << "    --output-fields,--output,-o <fields>: output fields" << std::endl;
+    std::cerr << "    --fields,-f,--input-fields=<fields>; input fields" << std::endl;
+    std::cerr << "    --output-fields,--output,-o=<fields>; output fields, if not specified, will be set" << std::endl;
+    std::cerr << "                                          to --input-fields, which would chops off trailing input fields" << std::endl;
     std::cerr << "    --verbose,-v: more output" << std::endl;
     if( verbose ) { std::cerr << std::endl << comma::csv::options::usage() << std::endl; }
     std::cerr << std::endl;
@@ -29,13 +30,13 @@ static void usage( bool verbose )
     std::cerr << "    operations (for now): append, remove, swap" << std::endl;
     std::cerr << "    semantics:" << std::endl;
     std::cerr << "        remove:" << std::endl;
-    std::cerr << "            cat xyz.csv | csv-shuffle --fields=x,y,z --output-fields=x,z" << std::endl;
+    std::cerr << "            echo 0,1,2 | csv-shuffle --fields=x,y,z" << std::endl;
     std::cerr << "        append:" << std::endl;
-    std::cerr << "            cat xyz.csv | csv-shuffle --fields=x,y,z --output-fields=x,y,z,x" << std::endl;
+    std::cerr << "            echo 0,1,2 | csv-shuffle --fields=x,y,z --output-fields=x,y,z,x" << std::endl;
     std::cerr << "        swap:" << std::endl;
-    std::cerr << "            cat xyz.csv | csv-shuffle --fields=x,y,z --output-fields=y,z,x" << std::endl;
+    std::cerr << "            echo 0,1,2 | csv-shuffle --fields=x,y,z --output-fields=y,z,x" << std::endl;
     std::cerr << "        remove x, swap y,z, append z two times:" << std::endl;
-    std::cerr << "            cat xyz.csv | csv-shuffle --fields=x,y,z --output-fields=z,y,z,z" << std::endl;
+    std::cerr << "            echo 0,1,2 | csv-shuffle --fields=x,y,z --output-fields=z,y,z,z" << std::endl;
     std::cerr << std::endl;
     exit( 0 );
 }
@@ -58,11 +59,9 @@ int main( int ac, char** av )
         comma::csv::options csv( options );
         csv.fields = options.value< std::string >( "--input-fields,--fields,-f", "" );
         std::vector< std::string > input_fields = comma::split( csv.fields, ',', true );
-        std::vector< std::string > output_fields = comma::split( options.value< std::string >( "--output-fields,--output,-o" ), ',', true );
-        if( output_fields.empty() ) { std::cerr << "csv-shuffle: please specify at least one output field" << std::endl; return 1; }
-        if( output_fields.back() == "..." ) { std::cerr << "csv-shuffle: support for trailing fields has been removed; please specify input/output fields explicitly" << std::endl; return 1; }
+        std::vector< std::string > output_fields = comma::split( options.value< std::string >( "--output-fields,--output,-o", csv.fields ), ',', true );
+        if( output_fields.back() == "..." ) { std::cerr << "csv-shuffle: support for trailing fields has been removed for now; please specify input/output fields explicitly" << std::endl; return 1; }
         std::vector< field > fields;
-        unsigned size = 0;
         if( csv.binary() )
         {
             for( unsigned int i = 0; i < output_fields.size(); )
@@ -73,7 +72,6 @@ int main( int ac, char** av )
                 if( j >= input_fields.size() ) { std::cerr << "csv-shuffle: output field '" << output_fields[i] << "' not found in input fields '" << csv.fields << "'" << std::endl; return 1; }
                 fields.back().input_offset = csv.format().offset( j ).offset;
                 for( ; i < output_fields.size() && j < input_fields.size() && input_fields[j] == output_fields[i]; ++i, ++j ) { fields.back().size += csv.format().offset( j ).size; }
-                size += fields.back().size;
             }
             //for( unsigned int i = 0; i < fields.size(); ++i ) { std::cerr << "--> i: " << i << " fields[i].name: " << fields[i].name << " fields[i].input_offset: " << fields[i].input_offset << " fields[i].size: " << fields[i].size << std::endl; }
             #ifdef WIN32
