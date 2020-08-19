@@ -373,11 +373,11 @@ def prepare_options(args):
         args.binary = False
     else:
         args.first_line = comma.io.readlines_unbuffered(1, sys.stdin)
-        if not args.first_line: raise csv_eval_error("first record is empty - could not guess format")
+        if not args.first_line: return False
         args.format = comma.csv.format.guess_format(args.first_line)
         args.binary = False
         if args.verbose: print( "{}: guessed format: {}".format(__name__, args.format), file = sys.stderr )
-    if args.select or args.exit_if: return
+    if args.select or args.exit_if: return True
     var_names = assignment_variable_names(args.expressions)
     args.update_fields = [f for f in var_names if f in args.fields]
     args.output_fields = [f for f in var_names if f not in args.fields] if args.output_fields is None else split_fields(args.output_fields)
@@ -387,6 +387,7 @@ def prepare_options(args):
         init_types = format_without_blanks( args.init_format, args.init_fields, unnamed_fields = False )
         args.init_t = comma.csv.struct( ','.join( args.init_fields ), *comma.csv.format.to_numpy( init_types ) )
     args.output_format = format_without_blanks( args.output_format, args.output_fields, unnamed_fields = False )
+    return True
 
 def restricted_numpy_env():
     d = np.__dict__.copy()
@@ -565,7 +566,7 @@ def main():
         signal.signal( signal.SIGPIPE, signal.SIG_DFL )
         comma.csv.time.zone('UTC')
         args = get_args()
-        prepare_options(args)
+        if not prepare_options( args ): sys.exit( 0 ) # no data on stdin
         if args.select: select(stream(args))
         elif args.exit_if: exit_if(stream(args))
         else: evaluate(stream(args))
