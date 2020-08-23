@@ -1,31 +1,4 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /// @author vsevolod vlaskine
 
@@ -73,9 +46,9 @@ static void usage( bool more )
     std::cerr << "    --matching: output only matching records from stdin" << std::endl;
     std::cerr << "    --nearest: if --radius specified, output only nearest record" << std::endl;
     std::cerr << "    --not-matching: not matching records as read from stdin, no join performed" << std::endl;
-    std::cerr << "    --strict: fail, if id on stdin is not found, or there are multiple filter keys on --unique, etc" << std::endl;
+    std::cerr << "    --output-swap,--swap-output,--swap; output filter records first with the stdin record appended, a convenience option" << std::endl;
     std::cerr << "    --radius,--epsilon=<value>; compare keys in given radius; the keys will be interpreted as floating point numbers" << std::endl;
-    std::cerr << "    --swap-output,--swap; output filter records first with the stdin record appended, a convenience option" << std::endl;
+    std::cerr << "    --strict: fail, if id on stdin is not found, or there are multiple filter keys on --unique, etc" << std::endl;
     std::cerr << "    --unique,--unique-matches: expect only unique matches, exit with error otherwise" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
     std::cerr << std::endl;
@@ -501,13 +474,13 @@ int main( int ac, char** av )
         flag_matching = options.exists( "--flag-matching" );
         radius = options.optional< double >( "--radius,--epsilon" );
         nearest = options.exists( "--nearest" );
-        swap_output = options.exists( "--swap-output,--swap" );
+        swap_output = options.exists( "--output-swap,--swap-output,--swap" );
         if( nearest && !radius ) { std::cerr << "csv-join: if using --nearest, please specify --radius" << std::endl; return 1; }
-        options.assert_mutually_exclusive( "--matching,--not-matching,--flag-matching,--swap-output,--swap" );
+        options.assert_mutually_exclusive( "--matching,--not-matching,--flag-matching,--swap-output,--swap,--output-swap" );
         options.assert_mutually_exclusive( "--radius,--epsilon,--first-matching" );
         options.assert_mutually_exclusive( "--radius,--epsilon,--string,-s,--double,--time" );
         stdin_csv = comma::csv::options( options );
-        std::vector< std::string > unnamed = options.unnamed( "--verbose,-v,--first-matching,--matching,--not-matching,--string,-s,--time,--double,--strict,--swap-output,--swap", "-.*" );
+        std::vector< std::string > unnamed = options.unnamed( "--verbose,-v,--first-matching,--matching,--not-matching,--string,-s,--time,--double,--strict,--swap-output,--swap,--output-swap,--nearest", "-.*" );
         if( unnamed.empty() ) { std::cerr << "csv-join: please specify the second source" << std::endl; return 1; }
         if( unnamed.size() > 1 ) { std::cerr << "csv-join: expected one file or stream to join, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         comma::name_value::parser parser( "filename", ';', '=', false );
