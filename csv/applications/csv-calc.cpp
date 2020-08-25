@@ -1,31 +1,5 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// Copyright (c) 2020 Vsevolod Vlaskine
 
 /// @author vsevolod vlaskine
 
@@ -35,8 +9,11 @@
 #include <io.h>
 #endif
 
+#include <deque>
 #include <iostream>
+#include <map>
 #include <type_traits>
+#include <unordered_set>
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
 #include <boost/optional.hpp>
@@ -102,6 +79,7 @@ static void usage( bool verbose )
     std::cerr << std::endl;
     std::cerr << "<options>" << std::endl;
     std::cerr << "    --append: append statistics to each input line" << std::endl;
+    std::cerr << "    --append-once,--append-to-first: append statistics to first input line for each block and/or each id" << std::endl;
     std::cerr << "    --delimiter,-d <delimiter> : default ','" << std::endl;
     std::cerr << "    --fields,-f: field names for which the extents should be computed, default: all fields" << std::endl;
     std::cerr << "                 if 'block' field present, calculate block-wise" << std::endl;
@@ -1157,7 +1135,7 @@ struct Operation : public operation_base
 
 typedef boost::unordered_map< comma::uint32, std::vector< operation_base* >* > operations_map_t;
 typedef boost::unordered_map< comma::uint32, std::string > results_map_t;
-typedef std::vector< std::pair < comma::uint32, std::string > > Inputs;
+typedef std::deque< std::pair < comma::uint32, std::string > > inputs_t;
 
 class operations_battery_farm_t // all this pain is because operations polymorhism is too slow when there are a lot of ids
 {
@@ -1238,7 +1216,7 @@ static void output( const comma::csv::options& csv, results_map_t& results, boos
     results.clear();
 }
 
-static void append_and_output( const comma::csv::options& csv, Inputs& inputs, results_map_t& results )
+static void append_and_output( const comma::csv::options& csv, inputs_t& inputs, results_map_t& results, std::unordered_set< comma::uint32 >& ids )
 {
     for ( size_t i = 0; i < inputs.size(); ++i )
     {
@@ -1247,10 +1225,11 @@ static void append_and_output( const comma::csv::options& csv, Inputs& inputs, r
         const auto& r = results.find( inputs[i].first )->second;
         std::cout.write( &r[0], r.size() );
         if( !csv.binary() ) { std::cout << std::endl; }
-        if( csv.flush ) { std::cout.flush(); }
     }
+    if( csv.flush ) { std::cout.flush(); }
     results.clear();
     inputs.clear();
+    ids.clear();
 }
 
 static void calculate( const comma::csv::options& csv, operations_map_t& operations, results_map_t& results )
@@ -1289,7 +1268,7 @@ int main( int ac, char** av )
     {
         comma::command_line_options options( ac, av, usage );
         if( options.exists( "--bash-completion" ) ) bash_completion( ac, av );
-        std::vector< std::string > unnamed = options.unnamed( "--append,--flush,--output-fields,--output-format", "--binary,-b,--delimiter,-d,--format,--fields,-f,--output-fields" );
+        std::vector< std::string > unnamed = options.unnamed( "--append,--append-once,--append-to-first,--flush,--output-fields,--output-format", "--binary,-b,--delimiter,-d,--format,--fields,-f,--output-fields" );
         comma::csv::options csv( options );
         csv.full_xpath = false;
         std::cout.precision( csv.precision );
@@ -1315,11 +1294,13 @@ int main( int ac, char** av )
         else { ascii.reset( new ascii_input( csv, format ) ); }
         operations_map_t operations;
         results_map_t results;
-        Inputs inputs;
+        inputs_t inputs;
+        std::unordered_set< comma::uint32 > ids; // quick and dirty
         boost::optional< comma::uint32 > block = boost::make_optional< comma::uint32 >( false, 0 );
         bool has_block = csv.has_field( "block" );
         bool has_id = csv.has_field( "id" );
-        bool append = options.exists( "--append" );
+        bool append_once = options.exists( "--append-once,--append-to-first" );
+        bool append = options.exists( "--append" ) || append_once;
         if( options.exists( "--output-fields" ) )
         {
             std::vector < std::string > fields = comma::split(csv.fields, ',');
@@ -1360,21 +1341,21 @@ int main( int ac, char** av )
                 if( block && *block != v->block() ) 
                 {
                     calculate( csv, operations, results );
-                    if ( append ) { append_and_output( csv, inputs, results ); inputs.clear(); }
-                    else { output( csv, results, block, has_block, has_id ); }
+                    if ( append ) { append_and_output( csv, inputs, results, ids ); } else { output( csv, results, block, has_block, has_id ); }
                 }
                 block = v->block();
             }
             operations_map_t::iterator it = operations.find( v->id() );
-            if( it == operations.end() )
+            if( it == operations.end() ) { it = operations.insert( std::make_pair( v->id(), &operations_battery_farm.make( operations_parameters, v->format() ) ) ).first; }
+            if( append )
             {
-                it = operations.insert( std::make_pair( v->id(), &operations_battery_farm.make( operations_parameters, v->format() ) ) ).first;
+                if( !append_once || ids.find( v->id() ) == ids.end() ) { inputs.push_back( std::make_pair( v->id(), csv.binary() ? binary->line() : ascii->line() ) ); }
+                ids.insert( v->id() ); // quick and dirty
             }
-            if( append ) { inputs.push_back( std::make_pair( v->id(), csv.binary() ? binary->line() : ascii->line() ) ); }
             for( std::size_t i = 0; i < it->second->size(); ++i ) { ( *it->second )[i]->push( v->buffer() ); }
         }
         calculate( csv, operations, results );
-        if ( append ) { append_and_output( csv, inputs, results ); }
+        if ( append ) { append_and_output( csv, inputs, results, ids ); }
         else { output( csv, results, block, has_block, has_id ); }
         return 0;
     }
