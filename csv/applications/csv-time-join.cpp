@@ -92,10 +92,10 @@ static void usage( bool verbose )
     std::cerr << "    --binary,-b <format>:       binary format" << std::endl;
     std::cerr << "    --delimiter,-d <delimiter>: ascii only; default ','" << std::endl;
     std::cerr << "    --fields,-f <fields>:       input fields; default: t" << std::endl;
-    std::cerr << "    --bound=<seconds>:          output only points within given bound" << std::endl;
+    std::cerr << "    --bound=[<seconds>]:        output only points within given bound" << std::endl;
     std::cerr << "    --do-not-append,--select:   do not append any field from the second input" << std::endl;
     std::cerr << "    --timestamp-only:           append only timestamp from the second input" << std::endl;
-    std::cerr << "    --buffer:                   bounding data buffer size; default: infinite" << std::endl;
+    std::cerr << "    --buffer=[<records>]:       bounding data buffer size; default: infinite" << std::endl;
     std::cerr << "    --discard-bounding:         discard bounding data if buffer size reached;" << std::endl;
     std::cerr << "                                default is to block until stdin catches up" << std::endl;
     std::cerr << std::endl;
