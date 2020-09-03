@@ -1,31 +1,4 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /// @authors matthew imhoff, dewey nguyen, vsevolod vlaskine
 
@@ -69,7 +42,8 @@ static void usage( bool more )
     std::cerr << "           fields" << std::endl;
     std::cerr << "               id: if present, multiple id fields accepted; output first record for each set of ids in a given block; e.g. --fields=id,a,,id" << std::endl;
     std::cerr << "               block: if present; output minimum for each contiguous block" << std::endl;
-    std::cerr << "    --min: output only record(s) with minimum value for a given field." << std::endl;
+    std::cerr << "    --last: last line matching given keys; last line in the block, if block field present; no sorting will be done; if sorting required, use unique instead" << std::endl;
+    std::cerr << "    --min: output only record(s) with minimum value for a given field" << std::endl;
     std::cerr << "           fields" << std::endl;
     std::cerr << "               id: if present, multiple id fields accepted; output minimum for each set of ids in a given block; e.g. --fields=id,a,,id" << std::endl;
     std::cerr << "               block: if present; output minimum for each contiguous block" << std::endl;
@@ -313,6 +287,30 @@ static int handle_first( comma::csv::input_stream< input_with_ids_t >& istream, 
     return 0;
 }
 
+// todo?
+// static int handle_last( comma::csv::input_stream< input_with_ids_t >& istream, const std::string& first_line, const input_with_ids_t& default_input )
+// {
+//     typedef boost::unordered_set< comma::csv::impl::unstructured, comma::csv::impl::unstructured::hash > set_t;
+//     typedef boost::unordered_map< comma::csv::impl::unstructured, set_t, comma::csv::impl::unstructured::hash > map_t;
+//     map_t keys;
+//     comma::uint32 block = 0;
+//     if( !first_line.empty() )
+//     { 
+//         input_with_ids_t input = comma::csv::ascii< input_with_ids_t >( csv, default_input ).get( first_line );
+//         block = input.block;
+//         keys[ input.ids ].insert( input.keys );
+//         //std::cout << first_line << std::endl;
+//     }
+//     while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
+//     {
+//         const input_with_ids_t* p = istream.read();
+//         if( !p ) { break; }
+//         if( p->block != block ) { block = p->block; keys.clear(); }
+//         if( keys[ p->ids ].insert( p->keys ).second ) { output_last_( istream ); }
+//     }
+//     return 0;
+// }
+
 static int handle_sliding_window( comma::csv::input_stream< input_with_block >& istream, const std::string& first_line, const input_with_block& default_input, bool reverse, unsigned int sliding_window )
 {
     if( sliding_window < 2 ) { std::cerr << "csv-sort: expected sliding window greater than 1, got: " << sliding_window << std::endl; return 1; }
@@ -396,28 +394,20 @@ std::vector< comma::csv::impl::unstructured > input_order;
 
 void output_current_block( const limit_map_t& min, const limit_map_t& max )
 {
-    for( std::size_t i=0; i<input_order.size(); ++i )
+    for( std::size_t i = 0; i < input_order.size(); ++i )
     {
         const comma::csv::impl::unstructured& ids = input_order[i];
-        
         if( is_min )
         {
-            const limit_data_t& data = min.at(ids);
-            for ( std::size_t i=0; i<data.records.size(); ++i) {
-                std::cout.write( &( data.records[i][0] ), csv.binary() ? csv.format().size() : data.records[i].length() );
-            }
+            const limit_data_t& data = min.at( ids );
+            for( std::size_t i = 0; i < data.records.size(); ++i ) { std::cout.write( &( data.records[i][0] ), csv.binary() ? csv.format().size() : data.records[i].length() ); }
         }
-        
-        if( is_min && is_max && is_same_map[ ids ] ) { continue; }
-        
+        if( is_min && is_max && is_same_map[ids] ) { continue; }
         if( is_max )
         {
-            const limit_data_t& data = max.at(ids);
-            for ( std::size_t i=0; i<data.records.size(); ++i) {
-                std::cout.write( &( data.records[i][0] ), csv.binary() ? csv.format().size() : data.records[i].length() );
-            }
+            const limit_data_t& data = max.at( ids );
+            for( std::size_t i = 0; i < data.records.size(); ++i ) { std::cout.write( &( data.records[i][0] ), csv.binary() ? csv.format().size() : data.records[i].length() ); }
         }
-        
         if( csv.flush ) { std::cout.flush(); }
     }
 }
@@ -565,13 +555,11 @@ int handle_operations_with_ids( const comma::command_line_options& options )
                 }
                 else
                 {
-//                     std::cerr  << "found ids: " << p->ids.strings[0] << std::endl;
                     limit_data_t& data = iter->second;
                     if( *p < data.keys ) {}
                     else if( data.keys == *p ) { data.add_current_record( stdin_stream ); } //  std::cerr  << "equals " << std::endl; } // Else If equals then append
                     else
                     {
-//                         std::cerr  << "new max: " << p->ids.strings[0] << " " << p->keys.longs[0] << " " << data.keys.keys.longs[0] << std::endl;
                         data.keys = *p;
                         data.records.clear();
                         data.add_current_record( stdin_stream );
