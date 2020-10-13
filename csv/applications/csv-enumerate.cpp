@@ -49,7 +49,7 @@ static void usage( bool verbose )
     std::cerr << "options" << std::endl;
     std::cerr << "    --fields,-f=<fields>; fields of interest, actual field names do not matter; e.g: --fields ,,,a,,b,,,c" << std::endl;
     std::cerr << "    --format=<binary format>; if input is ascii and deducing data types may be ambiguous, define field types explicitly, value as in --binary" << std::endl;
-    std::cerr << "    --output-map,--map: do not output input records, only an unsorted records" << std::endl;
+    std::cerr << "    --output-map,--map: do not output input records, only an unsorted list of keys" << std::endl;
     std::cerr << "                        output fields" << std::endl;
     std::cerr << "                            - list of input key values; in same binary as input" << std::endl;
     std::cerr << "                            - corresponding enumeration index as ui" << std::endl;
@@ -104,11 +104,16 @@ int main( int ac, char** av )
         }
         input_t default_input;
         std::vector< std::string > v = comma::split( csv.fields, ',' );
+        std::vector< std::string > format; // quick and dirty
+        std::vector< std::string > s;
+        if( csv.binary() ) { format = comma::split( csv.format().expanded_string(), ',' ); }
         for( unsigned int i = 0; i < v.size(); ++i )
         {
             if( v[i].empty() ) { continue; }
             v[i] = default_input.append( f.offset( i ).type );
+            s.push_back( format[i] );
         }
+        std::string map_output_binary_format = comma::join( s, ',' );
         if( verbose ) { std::cerr << "csv-enumerate: fields " << csv.fields << " interpreted as: " << comma::join( v, ',' ) << std::endl; }
         csv.fields = comma::join( v, ',' );
         static map_t map;
@@ -140,7 +145,11 @@ int main( int ac, char** av )
         if( !output_map ) { return 0; }
         comma::csv::options output_map_csv;
         output_map_csv.delimiter = csv.delimiter;
-        if( csv.binary() ) { output_map_csv.format( comma::csv::format::value< input_t >( default_input ) + ",2ui" ); }
+        if( csv.binary() )
+        { 
+            output_map_csv.format( map_output_binary_format + ",2ui" ); //output_map_csv.format( comma::csv::format::value< input_t >( default_input ) + ",2ui" );
+            std::cerr << "csv-enumerate: binary output format for map: \"" << output_map_csv.format().string() << "\"" << std::endl;
+        }
         comma::csv::output_stream< map_t::value_type > omstream( std::cout, output_map_csv, std::make_pair( default_input, std::make_pair( 0, 0 ) ) );
         for( map_t::const_iterator it = map.begin(); it != map.end(); ++it ) { omstream.write( *it ); }
         return 0;
