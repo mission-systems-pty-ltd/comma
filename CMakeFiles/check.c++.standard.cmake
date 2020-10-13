@@ -42,7 +42,7 @@
             message( FATAL_ERROR "attempt to use C++ standard ${CXX_STANDARD_TO_USE} but ${CMAKE_CXX_COMPILER} does not support it" )
         endif()
         SET( CXX_STANDARD_LAST ${CXX_STANDARD_TO_USE} CACHE STRING "updating C++ standard to use option" FORCE )
-        set( CMAKE_CXX_FLAGS "${extra_compiler_flags}" CACHE STRING "" FORCE )
+        set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${extra_compiler_flags}" CACHE STRING "" FORCE )
     ENDIF()
 
     set( CMAKE_CXX_STANDARD ${CXX_STANDARD_TO_USE} )
