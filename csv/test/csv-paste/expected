@@ -134,3 +134,11 @@ line_number/step[6]/output/line[8]="14"
 line_number/step[6]/output/line[9]="12"
 line_number/step[6]/status=0
 line_number/step[7]/status=1
+
+head[0]/output=""
+head[0]/status=0
+head[1]/output="0"
+head[1]/status=0
+head[2]/output/line[0]="0"
+head[2]/output/line[1]="1"
+head[2]/status=0

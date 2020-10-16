@@ -38,3 +38,7 @@ line_number/step[4]="csv-paste "line-number;block-size=5;index;step=2" | head; c
 line_number/step[5]="csv-paste "line-number;block-size=5;index;reverse;step=2" | head; comma_status_ok && exit 0 || exit 1"
 line_number/step[6]="csv-paste "line-number;block-size=5;index;reverse;begin=20;step=2" | head; comma_status_ok && exit 0 || exit 1"
 line_number/step[7]="csv-paste "line-number;block-size=5;index;reverse;begin=4;step=2" | head; comma_status_ok && exit 0 || exit 1"
+
+head[0]="csv-paste 'line-number;size=10;index' --head=0"
+head[1]="csv-paste 'line-number;size=10;index' --head=1"
+head[2]="csv-paste 'line-number;size=10;index' --head=2"

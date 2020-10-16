@@ -71,6 +71,9 @@ static void usage( bool verbose )
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --delimiter,-d <delimiter> : default ','" << std::endl;
+    std::cerr << "    --flush; flush stdout on every record" << std::endl;
+    std::cerr << "    --head=[<n>]; output first <n> records and exit; convenience option, e.g. try:" << std::endl;
+    std::cerr << "        csv-paste 'line-number;size=4' 'line-number;size=4;index' --head=16" << std::endl;
     std::cerr << "    --help,-h : help, --help --verbose for more help" << std::endl;
     std::cerr << "    --verbose,-v; more debug output" << std::endl;
     std::cerr << std::endl;
@@ -287,9 +290,11 @@ int main( int ac, char** av )
     {
         comma::command_line_options options( ac, av, usage );
         char delimiter = options.value( "--delimiter,-d", ',' );
-        std::vector< std::string > unnamed = options.unnamed( "--flush,--index,--reverse", "--delimiter,-d,--begin,--size,--step,--block-size" );
+        std::vector< std::string > unnamed = options.unnamed( "--flush,--index,--reverse", "--delimiter,-d,--begin,--size,--step,--block-size,--head" );
+        bool flush = options.exists( "--flush" );
         boost::ptr_vector< source > sources;
         bool is_binary = false;
+        boost::optional< comma::uint32 > head = options.optional< comma::uint32 >( "--head" );
         for( unsigned int i = 0; i < unnamed.size(); ++i ) // quick and dirty; really lousy code duplication
         {
             if( unnamed[i].substr( 0, 6 ) == "value=" ) { if( value( unnamed[i] ).binary() ) { is_binary = true; } }
@@ -324,7 +329,7 @@ int main( int ac, char** av )
             std::size_t size = 0;
             for( unsigned int i = 0; i < sources.size(); ++i ) { size += sources[i].size(); }
             std::vector< char > buffer( size );
-            while( true )
+            while( !head || ( *head )-- )
             {
                 unsigned int streams = 0;
                 char* p = &buffer[0];
@@ -339,12 +344,12 @@ int main( int ac, char** av )
                     if( sources[i].is_stream() ) { ++streams; }
                 }
                 std::cout.write( &buffer[0], buffer.size() );
-                std::cout.flush();
+                if( flush ) { std::cout.flush(); }
             }
         }
         else
         {
-            while( true )
+            while( !head || ( *head )-- )
             {
                 std::ostringstream oss;
                 unsigned int streams = 0;
