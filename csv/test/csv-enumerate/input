@@ -1,0 +1,10 @@
+ascii[0]="( echo 0,x,a ; echo 1,y,b; echo 0,x,c ) | csv-enumerate"
+ascii[1]="( echo 0,x,a ; echo 1,y,b; echo 0,x,c ) | csv-enumerate --fields a,b"
+ascii[2]="( echo 0,1,a ; echo 1,y,b; echo 0,1,c ) | csv-enumerate --fields a,b --format ui,s[16],s[16]"
+
+binary[0]="( echo 0,1,a ; echo 1,y,b; echo 0,1,c ) | csv-to-bin ui,s[16],s[16] | csv-enumerate --fields a,b --binary ui,s[16],s[16] | csv-from-bin ui,s[16],s[16],ui"
+
+map[0]="( echo 0,x,a ; echo 1,y,b; echo 0,x,c ) | csv-enumerate --fields a,b --map | sed 's#\"##g' "
+map[1]="( echo 0,x,a ; echo 1,y,b; echo 0,x,c ) | csv-to-bin ui,s[16],s[16] | csv-enumerate --fields a,b --map --binary ui,s[16],s[16] | csv-from-bin ui,s[16],2ui | sed 's#\"##g' "
+
+
