@@ -1,43 +1,15 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /// @author vsevolod vlaskine
 
+#include <functional>
 #include <iostream>
 #include <string>
 #include <set>
 #include <map>
-#include "../../application/contact_info.h"
+#include <unordered_map>
 #include "../../application/command_line_options.h"
 #include "../../string/string.h"
-
-using namespace comma;
 
 static void usage( bool )
 {
@@ -95,9 +67,9 @@ static void usage( bool )
     std::cerr << std::endl;
     std::cerr << "    make-fixed: normalise input to a fixed number of fields" << std::endl;
     std::cerr << "        --count,--size=<n>: number of output fields" << std::endl;
+    std::cerr << "        --force: chop input to <n> fields if larger" << std::endl;
     std::cerr << "        --values=[<values>]: fill missing fields with given values" << std::endl;
     std::cerr << "                             if --count not specified, use number of <values> as desired number of fields" << std::endl;
-    std::cerr << "        --force: chop input to <n> fields if larger" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << "    numbers" << std::endl;
@@ -167,21 +139,19 @@ static void usage( bool )
     std::cerr << "        a,b,c" << std::endl;
     std::cerr << "        x,y,z" << std::endl;
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
-    std::cerr << std::endl;
-    exit( 1 );
+    exit( 0 );
 }
 
 int main( int ac, char** av )
 {
     try
     {
-        command_line_options options( ac, av, usage );
+        comma::command_line_options options( ac, av, usage );
         std::string operation = "numbers";
         const std::vector< std::string > unnamed = options.unnamed( "--help,-h", "-.*" );
         char delimiter = options.value( "--delimiter,-d", ',' );
         if( !unnamed.empty() ) { operation = unnamed[0]; }
-        if( operation == "numbers" )
+        auto numbers = [&]()->int
         {
             int from = options.value( "--from", 1 );
             bool fill = options.exists( "--fill" );
@@ -207,8 +177,8 @@ int main( int ac, char** av )
                 std::cout << std::endl;
             }
             return 0;
-        }
-        if( operation == "clear" )
+        };
+        auto clear = [&]()->int
         {
             options.assert_mutually_exclusive( "--except,--keep,--mask,--remove,--inverted-mask,--complement-mask,--unmask,--unmasked" );
             std::string keep = options.value< std::string >( "--keep,--except", "" );
@@ -261,8 +231,8 @@ int main( int ac, char** av )
                 std::cout << std::endl;
             }
             return 0;
-        }
-        if( operation == "default" )
+        };
+        auto default_operation = [&]()->int
         {
             options.assert_mutually_exclusive( "--value,--values" );
             std::vector< std::string > defaults;
@@ -288,8 +258,8 @@ int main( int ac, char** av )
                 std::cout << std::endl;
             }
             return 0;
-        }
-        if( operation == "prefix" )
+        };
+        auto prefix = [&]()->int
         {
             options.assert_mutually_exclusive( "--fields,--except" );
             const std::string& e = options.value< std::string >( "--except", "" );
@@ -321,8 +291,8 @@ int main( int ac, char** av )
                 std::cout << std::endl;
             }
             return 0;
-        }
-        if( operation == "rename" )
+        };
+        auto rename = [&]()->int
         {
             const std::vector< std::string >& fields = comma::split( options.value< std::string >( "--fields" ), ',' );
             const std::vector< std::string >& to = comma::split( options.value< std::string >( "--to" ), ',' );
@@ -346,8 +316,8 @@ int main( int ac, char** av )
                 std::cout << std::endl;
             }
             return 0;
-        }
-        if( operation == "strip" )
+        };
+        auto strip = [&]()->int
         {
             options.assert_mutually_exclusive( "--fields,--except" );
             const std::string& e = options.value< std::string >( "--except", "" );
@@ -376,8 +346,8 @@ int main( int ac, char** av )
                 std::cout << std::endl;
             }
             return 0;
-        }
-        if( operation == "cut" )
+        };
+        auto cut = [&]()->int
         {
             options.assert_mutually_exclusive( "--except,--fields", "--empty" );
             bool except = options.exists( "--except" );
@@ -406,8 +376,8 @@ int main( int ac, char** av )
                 std::cout << std::endl;
             }
             return 0;
-        }
-        if( operation == "has" )
+        };
+        auto has = [&]()->int
         {
             const std::string& f = options.value< std::string >( "--fields" );
             const std::vector< std::string >& v = comma::split( f, delimiter );
@@ -423,8 +393,8 @@ int main( int ac, char** av )
             if( !matches ) { return 1; }
             if( any ) { return 0; }
             return matches == fields.size() ? 0 : 1;
-        }
-        if( operation == "make-fixed" )
+        };
+        auto make_fixed = [&]()->int
         {
             const std::vector< std::string >& values = comma::split( options.value< std::string >( "--values", "" ), ',', true );
             const unsigned int count = options.value< unsigned int >( "--count,--size", values.size() );
@@ -450,8 +420,19 @@ int main( int ac, char** av )
                 std::cout << std::endl;
             }
             return 0;
-        }
-        std::cerr << "csv-fields: expected operation, got: \"" << operation << "\"" << std::endl;
+        };
+        std::unordered_map< std::string, std::function< int() > > operations = { { "clear", clear }
+                                                                               , { "cut", cut }
+                                                                               , { "default", default_operation }
+                                                                               , { "has", has }
+                                                                               , { "make-fixed", make_fixed }
+                                                                               , { "numbers", numbers }
+                                                                               , { "prefix", prefix }
+                                                                               , { "rename", rename }
+                                                                               , { "strip", strip } };
+        auto o = operations.find( operation );
+        if( o != operations.end() ) { return o->second(); }
+        std::cerr << "csv-fields: expected operation, got '" << operation << "'" << std::endl;
         return 1;
     }
     catch( std::exception& ex ) { std::cerr << "csv-fields: " << ex.what() << std::endl; }
