@@ -32,6 +32,7 @@ int main( int ac, char** av )
 {
     try
     {
+        std::cerr << "csv-size: DEPRECATED, use echo <format> | csv-format size" << std::endl;
         command_line_options options( ac, av, usage );
         if( ac < 2 ) { usage(); }
         comma::csv::format format( options.unnamed( "--count,-c", "" )[0] );
