@@ -1,46 +1,19 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
 
 /// @author vsevolod vlaskine
 
 #include <iostream>
 #include "../../application/command_line_options.h"
-#include "../../application/contact_info.h"
 #include "../../csv/format.h"
 
 using namespace comma;
 
-static void usage()
+static void usage( bool verbose = false )
 {
     std::cerr << std::endl;
     std::cerr << "a convenience utility: output to stdout size of given binary format" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "DEPRECATED: use csv-format size" << std::endl;
     std::cerr << std::endl;
     std::cerr << "Usage: csv-size <format> [<options>]" << std::endl;
     std::cerr << std::endl;
@@ -52,22 +25,20 @@ static void usage()
     std::cerr << "      csv-size 2d will output 16" << std::endl;
     std::cerr << "      csv-size 2d --count will output 2" << std::endl;
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
-    std::cerr << std::endl;
-    exit( -1 );
+    exit( 0 );
 }
 
 int main( int ac, char** av )
 {
     try
     {
-        command_line_options options( ac, av );
-        if( ac < 2 || options.exists( "--help" ) || options.exists( "-h" ) ) { usage(); }
+        command_line_options options( ac, av, usage );
+        if( ac < 2 ) { usage(); }
         comma::csv::format format( options.unnamed( "--count,-c", "" )[0] );
         std::cout << ( options.exists( "--count,-c" ) ? format.count() : format.size() ) << std::endl;
         return 0;
     }
     catch( std::exception& ex ) { std::cerr << "csv-size: " << ex.what() << std::endl; }
     catch( ... ) { std::cerr << "csv-size: unknown exception" << std::endl; }
-    usage();
+    return 1;
 }
