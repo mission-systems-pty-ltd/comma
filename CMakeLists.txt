@@ -332,6 +332,7 @@ set( CPACK_PACKAGE_VERSION_MAJOR "1" CACHE STRING "cpack version major" )
 set( CPACK_PACKAGE_VERSION_MINOR ${COMMITDATE} CACHE STRING "cpack version minor" )
 set( CPACK_PACKAGE_VERSION_PATCH ${COMMITHASH} CACHE STRING "cpack version patch" )
 set( CPACK_DEBIAN_PACKAGE_DEPENDS "libzmq5 (>= 4.2.5-1), libprocps6 (>= 2:3.3.0), libboost-all-dev (>=1.65), recode (>=3.6), socat, python3-numpy" )
+set( CPACK_PACKAGE_CONTACT "vsevolod.vlaskine@gmail.com" )
 
 # this code needs a brush-up
 # If the user builds shared, make sure that the RPM package (that might be generated) runs ldconfig when it's installed.
