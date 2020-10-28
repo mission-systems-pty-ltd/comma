@@ -323,32 +323,30 @@ ADD_SUBDIRECTORY( python )
 #if we set them up to install to bin they might be packaged through, e.g. roughly (using GLOB):
 #install(FILES "${Boost_LIBRARY_DIRS}/*.dll" DESTINATION bin )
 
-#the following set up optional parameters for cpack
-SET(CPACK_PACKAGE_NAME "comma")
-SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Command line utilities to manipulate various structured and unstructured data from offline or real time data.")
-SET(CPACK_PACKAGE_VENDOR "Australian Centre for Field Robotics")
-SET(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/COPYING")
-SET(CPACK_PACKAGE_VERSION_MAJOR "1")
-SET(CPACK_PACKAGE_VERSION_MINOR ${COMMITDATE})
-SET(CPACK_PACKAGE_VERSION_PATCH ${COMMITHASH})
-SET(CPACK_PACKAGE_CONTACT "t.teo@acfr.usyd.edu.au")
+set( CPACK_PACKAGE_NAME "comma" )
+set( CPACK_PACKAGE_DESCRIPTION_SUMMARY "command line utilities to manipulate various structured and unstructured data from offline or realtime data" )
+set( CPACK_PACKAGE_VENDOR "orthographic" )
+set( CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/COPYING" )
+set( CPACK_GENERATOR "PRM" CACHE STRING "cpack generator: PRM or DEB" )
+set( CPACK_PACKAGE_VERSION_MAJOR "1" CACHE STRING "cpack version major" )
+set( CPACK_PACKAGE_VERSION_MINOR ${COMMITDATE} CACHE STRING "cpack version minor" )
+set( CPACK_PACKAGE_VERSION_PATCH ${COMMITHASH} CACHE STRING "cpack version patch" )
+set( CPACK_DEBIAN_PACKAGE_DEPENDS "libzmq5 (>= 4.2.5-1), libprocps6 (>= 2:3.3.0), libboost-all-dev (>=1.65), recode (>=3.6), socat, python3-numpy" )
 
+# this code needs a brush-up
 # If the user builds shared, make sure that the RPM package (that might be generated) runs ldconfig when it's installed.
 IF( BUILD_SHARED_LIBS )
-	SET(CPACK_RPM_SPEC_MORE_DEFINE "%posttrans -p /sbin/ldconfig")
+    SET(CPACK_RPM_SPEC_MORE_DEFINE "%posttrans -p /sbin/ldconfig")
 ENDIF( BUILD_SHARED_LIBS )
-
-
 IF( BUILD_PYTHON_PACKAGES AND ADD_PYTHON_PACKAGES_TO_RPM )
     SET(CPACK_RPM_PACKAGE_REQUIRES "boost-thread recode socat psmisc python numpy")
     SET(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/python/comma-rpm-post-install.sh" )
     SET(CPACK_RPM_PRE_INSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/python/comma-rpm-pre-install.sh" )
-	# Prevents /tmp from permission change when installing RPM package
-	SET(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "/tmp" )
+    # Prevents /tmp from permission change when installing RPM package
+    SET(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "/tmp" )
 ELSE( BUILD_PYTHON_PACKAGES AND ADD_PYTHON_PACKAGES_TO_RPM )
     SET(CPACK_RPM_PACKAGE_REQUIRES "boost-thread socat psmisc recode")
 ENDIF( BUILD_PYTHON_PACKAGES AND ADD_PYTHON_PACKAGES_TO_RPM )
-
 
 #this line finds the appropriate Visual Studio DLLS in windows. Maybe it would find other dlls if a different build tool were used. Probably should be windows only.
 INCLUDE( InstallRequiredSystemLibraries )
