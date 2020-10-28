@@ -1,0 +1,20 @@
+#!/bin/bash
+
+version_major=$1
+version_minor=$2
+version_patch=$3
+comma_dir="$4"
+[[ -n "$comma_dir" ]] || comma_dir=$( realpath ~/src/comma )
+[[ -n "$version_patch" ]] || { echo "usage: $0 <comma version major> <comma version minor> <comma version patch> [<comma dir>]" >&2; exit 1; }
+echo "$0: running ansible-playbook '$comma_dir/system/ansible/install.python3.yml'..." >&2
+ansible-playbook "$comma_dir/system/ansible/install.python3.yml"
+(
+    cd ~/src/comma/build
+    echo "$0: running cmake in $( pwd )" >&2
+    cmake -DCPACK_GENERATOR=DEB -DCPACK_PACKAGE_VERSION_MAJOR=$version_major -DCPACK_PACKAGE_VERSION_MINOR=$version_minor -DCPACK_PACKAGE_VERSION_PATCH=$version_patch
+    echo "$0: running cpack in $( pwd )" >&2
+    cmake cpack
+    cd ~/src/comma/python
+    echo "$0: setting up python in $( pwd )" >&2
+    python3 setup.py --command-packages=stdeb.command bdist_deb
+)
