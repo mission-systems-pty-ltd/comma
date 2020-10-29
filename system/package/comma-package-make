@@ -2,20 +2,27 @@
 
 function die() { echo "$0: $@" >&2; exit 1; }
 
-version_major=$1
-version_minor=$2
-version_patch=$3
-comma_dir="$4"
+ubuntu_version=$1
+version_major=$2
+version_minor=$3
+version_patch=$4
+comma_dir="$5"
 [[ -n "$comma_dir" ]] || comma_dir=$( realpath ~/src/comma )
-[[ -n "$version_patch" ]] || { echo "usage: $0 <comma version major> <comma version minor> <comma version patch> [<comma dir>]" >&2; exit 1; }
+[[ -n "$version_patch" ]] || { echo "usage: $0 <ubuntu version> <comma version major> <comma version minor> <comma version patch> [<comma dir>]" >&2; exit 1; }
 cd ~
 echo "$0: running ansible-playbook '$comma_dir/system/ansible/install.python3.yml' in $( pwd )..." >&2
 ansible-playbook "$comma_dir/system/ansible/install.python3.yml" || die "failed"
+case $ubuntu_version in
+    18.04) libproc_version="libprocps6 (>= 2:3.3.0)" ;;
+    20.04) libproc_version="libprocps8 (>= 1)" ;;
+    *) libproc_version="libprocps8 (>= 1)" ;; # for now
+esac
 (
     cd ~/build/comma
     echo "$0: running cmake in $( pwd )" >&2
     cmake . -DCPACK_GENERATOR=DEB \
             -DADD_PYTHON_PACKAGES_TO_RPM=ON \
+            -DCPACK_DEPENDENCIES_LIBPROCPS="$libproc_version" \
             -DCPACK_PACKAGE_VERSION_MAJOR=$version_major \
             -DCPACK_PACKAGE_VERSION_MINOR=$version_minor \
             -DCPACK_PACKAGE_VERSION_PATCH=$version_patch  || die "failed"
