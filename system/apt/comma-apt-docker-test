@@ -2,9 +2,10 @@
 
 function die() { echo "$0: $@" >&2; exit 1; }
 
-package="$1"
-comma_dir="$2"
-[[ -n "$package" ]] || { echo "usage: $0 <package> [<comma dir>]" >&2; exit 1; }
+ubuntu_version="$1"
+package="$2"
+comma_dir="$3"
+[[ -n "$package" ]] || { echo "usage: $0 <ubuntu version> <package> [<comma dir>]" >&2; exit 1; }
 [[ -s "$package" ]] || die "file not found or empty: '$package'"
 [[ -n "$comma_dir" ]] || comma_dir="$( realpath ~/src/comma )"
 package_dir=$( dirname "$( realpath "$package" )" )
