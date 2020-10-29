@@ -46,7 +46,7 @@
 
   - name: "comma: cmake"
     vars:
-        - comma_cmake_options: "-DBUILD_TESTS=ON -DINSTALL_TESTS=ON -DINSTALL_BASH_COMPLETION=ON -Dcomma_BUILD_XML=ON -Dcomma_BUILD_ZEROMQ=ON -Dcomma_INSTALL_WEB_SHELL=OFF -DPYTHON=/usr/bin/python3"
+        - comma_cmake_options: "-DBUILD_TESTS=ON -DINSTALL_TESTS=ON -DINSTALL_BASH_COMPLETION=ON -Dcomma_BUILD_XML=ON -Dcomma_BUILD_ZEROMQ=ON -DBUILD_PYTHON_PACKAGES=ON -Dcomma_INSTALL_WEB_SHELL=OFF -DPYTHON=/usr/bin/python3"
     shell: "/usr/bin/cmake {{ comma_cmake_options }} {{ base }}/src/comma chdir={{ base }}/build/comma"
 
   - name: "comma: make"
