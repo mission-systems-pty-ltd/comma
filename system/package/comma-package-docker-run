@@ -14,6 +14,6 @@ docker run \
        --mount "type=bind,source=$comma_dir,target=/mnt/comma" \
        --mount "type=bind,source=$( pwd )/build,target=/root/build/comma" \
        ubuntu.$ubuntu_version.build.basics \
-       /mnt/comma/system/apt/comma-apt-package-make $comma_version_major $comma_version_minor $comma_version_patch /mnt/comma || { echo "$0: failed" >&2; exit 1; }
+       /mnt/comma/system/package/comma-package-make $comma_version_major $comma_version_minor $comma_version_patch /mnt/comma || { echo "$0: failed" >&2; exit 1; }
 cp build/comma-$comma_version_major.$comma_version_minor.$comma_version_patch-Linux.deb .
 sudo rm -rf build

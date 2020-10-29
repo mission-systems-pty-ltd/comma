@@ -1,8 +1,10 @@
 #!/bin/bash
 
+function die() { echo "$0: $@" >&2; exit 1; }
+
 package="$1"
 [[ -n "$package" ]] || { echo "usage: $0 <package>" >&2; exit 1; }
-apt install --yes "$package"
+apt install --yes "$package" || die "failed to install package '$package'"
 
 echo '======================================' >&2
 ls /usr/bin/csv-* | cat >&2

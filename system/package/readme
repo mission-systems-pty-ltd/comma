@@ -1,19 +1,19 @@
 to build docker that has ansible, cmake, etc, run (you may need to run as sudo - am not sure why; try without sudo first):
 
-> ./comma-apt-docker-build 18.04 # ubuntu 18.04
-> ./comma-apt-docker-build 20.04 # ubuntu 20.04
+> ./comma-package-docker-build 18.04 # ubuntu 18.04
+> ./comma-package-docker-build 20.04 # ubuntu 20.04
 
 to build deb package e.g. for comma version 1.2.3 for ubuntu 20.04 run:
 
-> ./comma-apt-docker-build 20.04 1 2 3
+> ./comma-package-docker-build 20.04 1 2 3
 
 if your comma reposity is not in ~/src/comma, but e.g. in ~/my/src/comma, run:
 
-> ./comma-apt-docker-run 20.04 1 2 3 ~/my/src/comma
+> ./comma-package-docker-run 20.04 1 2 3 ~/my/src/comma
 
 debian package will be built in your current directory
 
-test that package is ok
+test that package is ok, e.g:
 
-> ./comma-apt-docker-test comma-1.0.0-Linux.deb
+> ./comma-package-docker-test 20.04 comma-1.0.0-Linux.deb
 
