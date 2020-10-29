@@ -34,3 +34,5 @@ esac
     python3 setup.py --command-packages=stdeb.command bdist_deb || die "failed"
     echo "$0: done" >&2
 )
+cp ~/build/comma-$version_major.$version_minor.$version_patch-Linux.deb output
+cp ~/src/comma/python/deb_dist/python3-comma*.deb output
