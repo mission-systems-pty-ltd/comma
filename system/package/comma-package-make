@@ -21,6 +21,7 @@ esac
     cd ~/build/comma
     echo "$0: running cmake in $( pwd )" >&2
     cmake . -DCPACK_GENERATOR=DEB \
+            -DBUILD_PYTHON_PACKAGES=ON \
             -DADD_PYTHON_PACKAGES_TO_RPM=ON \
             -DCPACK_DEPENDENCIES_LIBPROCPS="$libproc_version" \
             -DCPACK_PACKAGE_VERSION_MAJOR=$version_major \
