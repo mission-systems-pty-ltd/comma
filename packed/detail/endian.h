@@ -71,7 +71,7 @@ static_assert( sizeof( float ) == 4, "expected float of 4 bytes" );
 static_assert( sizeof( double ) == 8, "expected double of 8 bytes" );
 
 enum endiannes { little = 0, big = 1 };
-    
+
 template < endiannes Endianness, unsigned int Size, bool Signed, bool Floating = false > struct endian_traits { typedef typename comma::integer< Size, Signed >::type type; typedef typename comma::integer< Size, false >::type uint_of_same_size; };
 template < endiannes Endianness > struct endian_traits< Endianness, 3, true > { typedef comma::int32 type; typedef comma::uint32 uint_of_same_size; };
 template < endiannes Endianness > struct endian_traits< Endianness, 3, false > { typedef comma::uint32 type; typedef comma::uint32 uint_of_same_size; };
@@ -127,9 +127,9 @@ struct endian : public packed::field< endian< Endianness, Size, Signed, Floating
     static const unsigned int size = Size;
 
     typedef typename endian_traits< Endianness, Size, Signed, Floating >::type type;
-    
+
     static_assert( size <= sizeof( type ), "expected size less than size of type" );
-    
+
     static_assert( Signed || !Floating, "expected signed or non-floating point type" ); // unsigned floats don't make sense
 
     typedef packed::field< endian< Endianness, Size, Signed, Floating >, typename endian_traits< Endianness, Size, Signed, Floating >::type, Size > base_type;
@@ -137,18 +137,18 @@ struct endian : public packed::field< endian< Endianness, Size, Signed, Floating
     static type default_value() { return 0; }
 
     typedef typename endian_traits< Endianness, size, Signed, Floating >::uint_of_same_size uint_of_same_size;
-    
+
     static void pack( char* storage, type value )
     {
         uint_of_same_size* p = reinterpret_cast< uint_of_same_size* >( &value );
         *p = convert< Endianness >::from_host( *p );
-        ::memcpy( storage, ( void* )p + ( Endianness == little ? 0 : sizeof( uint_of_same_size ) - size ), size );
+        ::memcpy( storage, reinterpret_cast< char * >( p ) + ( Endianness == little ? 0 : sizeof( uint_of_same_size ) - size ), size );
     }
-    
+
     static type unpack( const char* storage ) // for floats it is a real hack, since there is no standard
     {
         uint_of_same_size i = ( !Floating && Signed && ( storage[ Endianness == little ? size - 1 : 0 ] & 0x80 ) ) ? -1 : 0;
-        ::memcpy( ( void* )&i + ( Endianness == little ? 0 : sizeof( uint_of_same_size ) - size ), storage, size );
+        ::memcpy( reinterpret_cast< char * >( &i ) + ( Endianness == little ? 0 : sizeof( uint_of_same_size ) - size ), storage, size );
         i = convert< Endianness >::to_host( i );
         return *( reinterpret_cast< type* >( &i ) );
     }
