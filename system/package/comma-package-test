@@ -3,7 +3,9 @@
 function die() { echo "$0: $@" >&2; exit 1; }
 
 package="$1"
-[[ -n "$package" ]] || { echo "usage: $0 <package>" >&2; exit 1; }
+python_package="$2"
+[[ -n "$python_package" ]] || { echo "usage: $0 <package> <python package>" >&2; exit 1; }
+apt install --yes "$python_package" || die "failed to install package '$python_package'"
 apt install --yes "$package" || die "failed to install package '$package'"
 
 echo "$0: testing basic csv utilities..."
