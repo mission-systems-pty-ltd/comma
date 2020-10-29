@@ -7,6 +7,7 @@ setup(
         name                = 'comma',
         version             = comma.version.__version__,
         description         = 'comma python utilties',
+        install_requires    = [ 'numpy' ],
         url                 = 'https://gitlab.com/orthographic/comma',
         license             = 'BSD 3-Clause',
         scripts             = ["comma/csv/applications/csv-eval"],

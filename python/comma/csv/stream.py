@@ -134,7 +134,7 @@ class stream(object):
         return self._struct_array(self._input_array, self.missing_values)
 
     def _genfromtxt( self ): # quick and dirty due to the ugliness of the change in numpy 1.14; see doc of encoding parameter in https://docs.scipy.org/doc/numpy-1.14.0/reference/generated/numpy.genfromtxt.html
-        if np.__version__ >= '1.14.0':
+        if np.__version__ >= '1.13.0': # if np.__version__ >= '1.14.0':
             return np.genfromtxt( self._ascii_buffer
                                 , dtype = self.input_dtype
                                 , delimiter = self.delimiter
