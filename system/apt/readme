@@ -12,3 +12,8 @@ if your comma reposity is not in ~/src/comma, but e.g. in ~/my/src/comma, run:
 > ./comma-apt-docker-run 20.04 1 2 3 ~/my/src/comma
 
 debian package will be built in your current directory
+
+test that package is ok
+
+> ./comma-apt-docker-test comma-1.0.0-Linux.deb
+

@@ -1,0 +1,13 @@
+#!/bin/bash
+
+package="$1"
+[[ -n "$package" ]] || { echo "usage: $0 <package>" >&2; exit 1; }
+apt install --yes "$package"
+
+echo '======================================' >&2
+ls /usr/bin/csv-* | cat >&2
+echo '======================================' >&2
+
+csv-paste line-number | csv-to-bin ui | csv-from-bin ui | head >&2
+
+echo '======================================' >&2
