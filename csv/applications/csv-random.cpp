@@ -79,8 +79,8 @@ static void usage( bool verbose )
     std::cerr << "operations" << std::endl;
     std::cerr << "    make: output pseudo-random numbers" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "        usage: csv-random make <options> > random.csv" << std::endl;
-    std::cerr << "               cat records.csv | csv-random make --append <options> > appended.csv" << std::endl;
+    std::cerr << "        usage: csv-random make [<options>] > random.csv" << std::endl;
+    std::cerr << "               cat records.csv | csv-random make --append [<options>] > appended.csv" << std::endl;
     std::cerr << std::endl;
     std::cerr << "        options" << std::endl;
     std::cerr << "            --append; append random numbers to stdin input" << std::endl;
@@ -94,10 +94,12 @@ static void usage( bool verbose )
     std::cerr << "                 e.g. a hardware device, output will be pseudo-random" << std::endl;
     std::cerr << std::endl;
     std::cerr << "        usage: csv-random true-random [<options>]" << std::endl;
+    std::cerr << "               cat records.csv | csv-random true-random --append <options> > appended.csv" << std::endl;
     std::cerr << std::endl;
     std::cerr << "        options" << std::endl;
     std::cerr << "            --append; append random number to stdin input" << std::endl;
     std::cerr << "            --once; output random number only once" << std::endl;
+    std::cerr << "            --output-binary; output random numbers as binary, or specify --binary=<format> for stdin input" << std::endl;
     std::cerr << "            --type=<type>; default=ui; todo: supported values: ui; e.g: --type=3ui; --type=ui,ui,ui; etc" << std::endl;
     std::cerr << std::endl;
     std::cerr << "        example" << std::endl;
@@ -147,19 +149,19 @@ namespace comma { namespace applications { namespace random {
 template < typename T >
 struct type_traits
 {
-    static T cast( T t ) { return t; }
+    static T cast( const T t ) { return t; }
 };
 
 template <>
 struct type_traits< char >
 {
-    static int cast( char t ) { return static_cast< int >( t ); }
+    static int cast( const char t ) { return static_cast< int >( t ); }
 };
 
 template <>
 struct type_traits< unsigned char >
 {
-    static unsigned int cast( unsigned char t ) { return static_cast< int >( t ); }
+    static unsigned int cast( const unsigned char t ) { return static_cast< int >( t ); }
 };
 
 namespace make {
@@ -406,56 +408,80 @@ static int run( const comma::command_line_options& options )
 
 namespace true_random {
 
-static int run( const comma::command_line_options& options )
+template < typename T >
+static int run_impl( const comma::command_line_options& options, std::size_t count )
 {
     std::random_device rd;
-    bool binary = options.exists( "--output-binary" ) || ::csv.binary();
-    if( options.exists( "--once" ) )
+    const bool binary = options.exists( "--output-binary" ) || ::csv.binary();
+    const bool flush = options.exists( "--flush" ) || ::csv.flush;
+    auto output_line_to_stdout = [&]( std::string&& initial_delimiter )
     {
-        auto r = rd();
-        if ( binary ) { std::cout.write( reinterpret_cast< char * >( &r ), sizeof( r ) ); }
-        else { std::cout << r << std::endl; }
-        return 0;
-    }
+        for( std::size_t i = 0; i < count; ++i )
+        {
+            const T r = rd();
+            if( binary ) { std::cout.write( reinterpret_cast< const char* >( &r ), sizeof( T ) ); }
+            else { std::cout << std::exchange( initial_delimiter, ::csv.delimiter ) << type_traits< T >::cast( r ); }
+        }
+        if( !binary ) { std::cout << std::endl; }
+        if( flush ) { std::cout << std::flush; }
+    };
     if( options.exists( "--append" ) )
     {
-        if( ::csv.binary() )
+        while( std::cin.good() )
         {
-            std::vector< char > buf( ::csv.format().size() );
-            while( std::cin.good() )
+            auto buf = ::csv.binary() ? std::string( ::csv.format().size(), {} ) : std::string{};
+            if( ::csv.binary() )
             {
                 std::cin.read( &buf[0], buf.size() );
-                if( std::cin.gcount() == 0 ) { break; }
-                if( std::cin.gcount() != static_cast< int >( buf.size() ) ) { std::cerr << "csv-random true-random: expected " << buf.size() << " bytes; got " << std::cin.gcount() << std::endl; return 1; }
-                std::cout.write( &buf[0], buf.size() );
-                auto r = rd();
-                std::cout.write( reinterpret_cast< char* >( &r ), sizeof( r ) );
-                if( ::csv.flush ) { std::cout.flush(); }
+                if( std::cin.gcount() == 0 ) { return 0; }
+                if( std::cin.gcount() != static_cast< int >( buf.size() ) )
+                {
+                    std::cerr << "csv-random true-random: expected " << buf.size() << " bytes; got " << std::cin.gcount() << std::endl;
+                    return 1;
+                }
             }
-        }
-        else
-        {
-            while( std::cin.good() )
+            else
             {
-                std::string s;
-                std::getline( std::cin, s );
-                if( s.empty() ) { continue; }
-                std::cout << s << ::csv.delimiter << rd() << std::endl;
-                if( ::csv.flush ) { std::cout.flush(); }
+                std::getline( std::cin, buf );
+                if( buf.empty() ) { continue; }
             }
+            std::cout.write( &buf[0], buf.size() );
+            output_line_to_stdout( { ::csv.delimiter } );
         }
     }
     else
     {
         while( std::cout.good() )
         {
-            auto r = rd();
-            if( binary ) { std::cout.write( reinterpret_cast< char* >( &r ), sizeof( r ) ); }
-            else { std::cout << r << std::endl; }
-            if( ::csv.flush ) { std::cout.flush(); }
+            output_line_to_stdout( {} );
+            if( options.exists( "--once" ) ) { break; }
         }
     }
     return 0;
+}
+
+static int run( const comma::command_line_options& options )
+{
+    const auto format = comma::csv::format( options.value< std::string >( "--type", "ui" ) );
+    if( format.collapsed_string().find( ',' ) != std::string::npos )
+    {
+        std::cerr << "csv-random true-random: --type must be homogeneous i.e. ui or 2ui or 3ui" << std::endl;
+        return 1;
+    }
+    switch( format.offset( 0 ).type ) {
+        case csv::format::int8: return run_impl< char >( options, format.count() );
+        case csv::format::uint8: return run_impl< unsigned char >( options, format.count() );
+        case csv::format::int16: return run_impl< comma::int16 >( options, format.count() );
+        case csv::format::uint16: return run_impl< comma::uint16 >( options, format.count() );
+        case csv::format::int32: return run_impl< comma::int32 >( options, format.count() );
+        case csv::format::uint32: return run_impl< comma::uint32 >( options, format.count() );
+        case csv::format::int64: return run_impl< comma::int64 >( options, format.count() );
+        case csv::format::uint64: return run_impl< comma::uint64 >( options, format.count() );
+        case csv::format::float_t: return run_impl< float >( options, format.count() );
+        case csv::format::double_t: return run_impl< double >( options, format.count() );
+        default: std::cerr << "csv-random true-random: expected type; got: '" << format.string() << "'" << std::endl;
+    }
+    return 1;
 }
 
 } // namespace true_random {
