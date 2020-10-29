@@ -5,7 +5,7 @@ function die() { echo "$0: $@" >&2; exit 1; }
 package="$1"
 python_package="$2"
 [[ -n "$python_package" ]] || { echo "usage: $0 <package> <python package>" >&2; exit 1; }
-pip3 install numpy # todo! very unfortunate, but python deb package installs python3-numpy, which is wrong version and we gave up for now
+# pip3 install numpy # todo! very unfortunate, but python deb package installs python3-numpy, which is wrong version and we gave up for now
 apt install --yes "$python_package" || die "failed to install package '$python_package'"
 apt install --yes "$package" || die "failed to install package '$package'"
 
