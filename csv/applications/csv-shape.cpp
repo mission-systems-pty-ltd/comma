@@ -55,18 +55,14 @@ static void usage( bool verbose=false )
     std::cerr << "Usage: cat data.csv | csv-shape <operation> [<options>]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
-    std::cerr << "    --binary,-b=[<format>]: in binary mode: format string of the input csv data types" << std::endl;
-    std::cerr << "    --delimiter,-d=[<char>]; default=','; in ascii mode, field separating character." << std::endl;
+    std::cerr << "    --expected-records; output the expected records for given --size and --step, and exit" << std::endl;
     std::cerr << "    --help,-h;  see this usage message" << std::endl;
+    std::cerr << "    --size,-n=<num>; number of input records in each grouping, range: 2 and above" << std::endl;
+    std::cerr << "    --step=<num>; default=1; relative offset of the records to be concatenated" << std::endl;
     std::cerr << "    --verbose,-v: more output to stderr, shows examples with --help,-h" << std::endl;
     std::cerr << std::endl;
-    if( verbose ) { std::cerr << comma::csv::format::usage() << std::endl; }
     std::cerr << "operations options" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "   common options" << std::endl;
-    std::cerr << "      --size,-n=<num>; number of input records in each grouping, range: 2 and above" << std::endl;
-    std::cerr << "      --step=<num>; default=1; relative offset of the records to be concatenated" << std::endl;
-    std::cerr << "      --expected-records; output the expected records for given --size and --step, and exit" << std::endl;
     std::cerr << "   concatenate" << std::endl;
     std::cerr << "      --bidirectional; output records in both directions (e.g. a,b; b,a)" << std::endl;
     std::cerr << "      --reverse; output records in reverse order (e.g. b,a)" << std::endl;
@@ -77,9 +73,9 @@ static void usage( bool verbose=false )
     std::cerr << std::endl;
     if( verbose )
     {
-        std::cerr << "examples" << std::endl;   
+        std::cerr << "examples" << std::endl;
         std::cerr << "   concatenate" << std::endl;
-        std::cerr << "      non overlaping groups:" << std::endl;
+        std::cerr << "      non-overlapping groups:" << std::endl;
         std::cerr << "          concatenate each group of 5 input records into one output record." << std::endl;
         std::cerr << "          input records 1 to 5 create the first output record, input records 6-10 create the second output record, and so forth." << std::endl;
         std::cerr << "              seq 1 15 | csv-shape concatenate -n 5" << std::endl;
@@ -87,6 +83,9 @@ static void usage( bool verbose=false )
         std::cerr << "          move a sliding window of size 5 along the input records, every time the sliding window moves, make an output record from window" << std::endl;
         std::cerr << "          input records 1 to 5 create the first output record, input records 2 to 6 create the second record, input records 3 to 7 create the third record, and so forth" << std::endl;
         std::cerr << "              seq 1 10 | csv-shape concatenate -n 5 --sliding-window" << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "csv options" << std::endl;
+        std::cerr << comma::csv::options::usage() << std::endl;
     }
     else
     {
@@ -114,7 +113,7 @@ class concatenate_
 {
 public:
 
-    concatenate_() 
+    concatenate_()
         : use_sliding_window_(false)
         , bidirectional_(false)
         , reverse_(false)
@@ -153,7 +152,7 @@ public:
                 if (!verify(deque)) { return 1; }
                 count_ = 0;
                 if ( looping_ ) { output_loop(deque, first, csv); }
-                deque.clear();  
+                deque.clear();
             }
             block_ = p->block;
             deque.push_back( istream.last() );
@@ -184,17 +183,17 @@ private:
     comma::uint32 expected_records_;
 
     bool verify( const std::deque<std::string>& deque )
-    { 
+    {
         if( use_sliding_window_ && count_ < step_ * ( size_ - 1 ) + 1 )
-        { 
+        {
             std::cerr << comma::verbose.app_name() << ": --size,-n=" << size_ << ", --step=" << step_ << ", expected records count (" << step_ * ( size_ - 1 ) + 1
-                      << ") is bigger than total number of input records: " << count_ << std::endl; 
-            return false; 
+                      << ") is bigger than total number of input records: " << count_ << std::endl;
+            return false;
         }
-        if ( !use_sliding_window_ && !deque.empty() ) 
-        { 
-            std::cerr << comma::verbose.app_name() << ": error, leftover tail input record found: " << deque.size() << " lines." << std::endl; 
-            return false; 
+        if ( !use_sliding_window_ && !deque.empty() )
+        {
+            std::cerr << comma::verbose.app_name() << ": error, leftover tail input record found: " << deque.size() << " lines." << std::endl;
+            return false;
         }
         return true;
     }
@@ -209,7 +208,7 @@ private:
             if(!is_binary){ std::cout << std::endl; }
             if (csv.flush) { std::cout.flush(); }
         }
-        if (bidirectional_ || reverse_ ) 
+        if (bidirectional_ || reverse_ )
         {
             std::cout.write( &( deque.back()[0] ), deque.back().size() );
             auto is = deque.crbegin(); while( ( is + 1 ) != deque.crend() ) { if(!is_binary){ std::cout << csv.delimiter; } is += step_; std::cout.write( &(*is)[0], is->size() ); }
