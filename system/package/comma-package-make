@@ -14,8 +14,8 @@ echo "$0: running ansible-playbook '$comma_dir/system/ansible/install.python3.ym
 ansible-playbook "$comma_dir/system/ansible/install.python3.yml" || die "failed"
 case $ubuntu_version in
     18.04) libproc_version="libprocps6 (>= 2:3.3.0)" ;;
-    20.04) libproc_version="libprocps8 (>= 1)" ;;
-    *) libproc_version="libprocps8 (>= 1)" ;; # for now
+    20.04) libproc_version="libprocps8" ;;
+    *) libproc_version="libprocps8" ;; # for now
 esac
 (
     cd ~/build/comma

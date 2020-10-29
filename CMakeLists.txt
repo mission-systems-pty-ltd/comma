@@ -331,7 +331,7 @@ set( CPACK_GENERATOR "PRM" CACHE STRING "cpack generator: PRM or DEB" )
 set( CPACK_PACKAGE_VERSION_MAJOR "1" CACHE STRING "cpack version major" )
 set( CPACK_PACKAGE_VERSION_MINOR ${COMMITDATE} CACHE STRING "cpack version minor" )
 set( CPACK_PACKAGE_VERSION_PATCH ${COMMITHASH} CACHE STRING "cpack version patch" )
-set( CPACK_DEPENDENCIES_LIBPROCPS "libprocps6 (>= 2:3.3.0)" CACHE STRING "libprocps versions: libprocps6 (>= 2:3.3.0) for Ubuntu 18.04; libprocps8 (>= 1) for Ubuntu 20.04" )
+set( CPACK_DEPENDENCIES_LIBPROCPS "libprocps6 (>= 2:3.3.0)" CACHE STRING "libprocps versions: libprocps6 (>= 2:3.3.0) for Ubuntu 18.04; libprocps8 for Ubuntu 20.04" )
 set( CPACK_DEBIAN_PACKAGE_DEPENDS "${CPACK_DEPENDENCIES_LIBPROCPS}, libzmq5 (>= 4.2.5-1), libboost-all-dev (>=1.65), recode (>=3.6), socat, python3-numpy" )
 set( CPACK_PACKAGE_CONTACT "vsevolod.vlaskine@gmail.com" )
 
