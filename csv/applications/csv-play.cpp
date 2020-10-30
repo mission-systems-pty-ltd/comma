@@ -1,32 +1,4 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
 
 /// @author cedric wohlleber
 
@@ -50,7 +22,6 @@
 #include <fstream>
 #include <boost/thread.hpp>
 #include "../../application/command_line_options.h"
-#include "../../application/contact_info.h"
 #include "../../application/signal_flag.h"
 #include "../../base/exception.h"
 #include "../../csv/options.h"
@@ -60,7 +31,7 @@
 #include "../../csv/applications/play/play.h"
 #include "../../csv/applications/play/multiplay.h"
 
-static void usage()
+static void usage( bool )
 {
     std::cerr << std::endl;
     std::cerr << "play back timestamped data from standard input in a real time manner" << std::endl;
@@ -117,9 +88,14 @@ static void usage()
     std::cerr << "    output multiple inputs of the same format to stdout:" << std::endl;
     std::cerr << "        csv-play \"file1.csv;-\" \"file2.csv;-\" &" << std::endl;
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
+    std::cerr << "    use binary data (try it)" << std::endl;
+    std::cerr << "        > csv-play <( csv-paste line-number | csv-repeat --pace --period 1 | csv-time-amp | csv-to-bin t,ui --flush )';-;binary=t,ui' \\" << std::endl;
+    std::cerr << "                 <( csv-paste line-number value=0 | csv-repeat --pace --period 1 | csv-time-stamp | csv-to-bin t,2ui --flush )';tcp:8888;binary=t,2ui' \\" << std::endl;
+    std::cerr << "            | csv-from-bin t,ui" << std::endl;
+    std::cerr << "        > #in another shell, run" << std::endl;
+    std::cerr << "        > socat tcp:localhost:8888 - | csv-from-bin t,2ui" << std::endl;
     std::cerr << std::endl;
-    exit( -1 );
+    exit( 0 );
 }
 
 class key_press_handler_t
@@ -243,8 +219,7 @@ int main( int argc, char** argv )
     {
         const boost::array< comma::signal_flag::signals, 2 > signals = { { comma::signal_flag::sigint, comma::signal_flag::sigterm } };
         comma::signal_flag shutdown_flag( signals );
-        comma::command_line_options options( argc, argv );
-        if( options.exists( "--help,-h" ) ) { usage(); }
+        comma::command_line_options options( argc, argv, usage );
         options.assert_mutually_exclusive( "--speed,--slow,--slowdown" );
         double speed = options.value( "--speed", 1.0 / options.value< double >( "--slow,--slowdown", 1.0 ) );
         double resolution = options.value< double >( "--resolution", 0.01 );
