@@ -39,7 +39,6 @@
 #include <stdlib.h>
 #include <iostream>
 #include "../../application/command_line_options.h"
-#include "../../application/contact_info.h"
 #include "../../base/exception.h"
 #include "../../csv/format.h"
 #include "../../string/string.h"
@@ -54,7 +53,6 @@ static void usage()
     std::cerr << "--precision: set precision (number of mantissa digits) for floating point types" << std::endl;
     std::cerr << csv::format::usage() << std::endl;
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 0 );
 }

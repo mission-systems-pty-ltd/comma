@@ -31,7 +31,6 @@
 
 #include <iostream>
 #include <boost/lexical_cast.hpp>
-#include "../../application/contact_info.h"
 #include "../../application/command_line_options.h"
 #include "../../string/split.h"
 
@@ -82,7 +81,6 @@ static void usage( bool verbose = false )
     std::cerr << "    a[1]/foo/bar/baz[\"aa\"]/c=3" << std::endl;
     std::cerr << "    a[4]/foo/bar/baz[\"bb\"]/c=6" << std::endl;
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 0 );
 }

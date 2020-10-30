@@ -36,7 +36,6 @@
 #include <boost/circular_buffer.hpp>
 #include <boost/thread.hpp>
 #include "../../application/command_line_options.h"
-#include "../../application/contact_info.h"
 #include "../../io/select.h"
 #include "../../io/stream.h"
 
@@ -105,7 +104,6 @@ void usage( bool verbose = false )
     std::cerr << "            dd if=/dev/urandom bs=100 count=1 2> /dev/null; sleep 0.1" << std::endl;
     std::cerr << "        done | io-bandwidth 2> >( io-publish tcp:8888 ) | hexdump" << std::endl;
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 0 );
 }

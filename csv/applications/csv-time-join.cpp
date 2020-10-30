@@ -36,7 +36,6 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/optional.hpp>
 #include "../../application/command_line_options.h"
-#include "../../application/contact_info.h"
 #include "../../application/signal_flag.h"
 #include "../../base/types.h"
 #include "../../csv/stream.h"
@@ -135,7 +134,6 @@ static void usage( bool verbose )
         std::cerr << "    try --help --verbose for more examples" << std::endl;
     }
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 0 );
 }

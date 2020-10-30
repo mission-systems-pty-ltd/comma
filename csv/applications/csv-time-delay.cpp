@@ -33,7 +33,6 @@
 #include <iostream>
 #include <string>
 #include "../../application/command_line_options.h"
-#include "../../application/contact_info.h"
 #include "../../base/types.h"
 #include "../../csv/stream.h"
 #include "../../name_value/parser.h"
@@ -50,7 +49,6 @@ static void usage()
     std::cerr << "<options>" << std::endl;
     std::cerr << comma::csv::options::usage( "t" ) << std::endl;
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( -1 );
 }

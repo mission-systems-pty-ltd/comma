@@ -47,7 +47,6 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/assign/list_of.hpp>
 
-#include "../../application/contact_info.h"
 #include "../../application/command_line_options.h"
 #include "../../base/exception.h"
 #include "../../base/types.h"
@@ -183,7 +182,6 @@ void usage( bool )
         "\n            exit with error"
         "\n"
         "\n";
-    std::cerr << msg_general << comma::contact_info << std::endl << std::endl;
     exit( 0 );
 }
 

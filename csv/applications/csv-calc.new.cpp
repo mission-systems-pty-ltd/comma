@@ -39,7 +39,6 @@
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
 #include "../../application/command_line_options.h"
-#include "../../application/contact_info.h"
 #include "../../base/types.h"
 #include "../../csv/stream.h"
 #include "../../csv/impl/unstructured.h"
@@ -82,7 +81,6 @@ static void usage()
     std::cerr << "examples" << std::endl;
     std::cerr << "    todo" << std::endl;
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 1 );
 }

@@ -37,7 +37,6 @@
 #include <iostream>
 #include <map>
 #include "../../application/command_line_options.h"
-#include "../../application/contact_info.h"
 
 using namespace comma;
 
@@ -115,7 +114,6 @@ static void usage( bool )
     std::cerr << std::endl;
     std::cerr << "See also: \"csv-size\", \"csv-bin-cut\"" << std::endl;
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( -1 );
 }

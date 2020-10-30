@@ -1,35 +1,6 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-/// @author vsevolod vlaskine
-/// @author mathew hounsell
+/// @authors vsevolod vlaskine mathew hounsell
 
 #include <string.h>
 #include <time.h>
@@ -43,7 +14,6 @@
 #include <boost/date_time/posix_time/ptime.hpp>
 #include <boost/date_time/local_time/local_time.hpp>
 #include <boost/date_time/c_local_time_adjustor.hpp>
-#include "../../application/contact_info.h"
 #include "../../application/command_line_options.h"
 #include "../../base/exception.h"
 #include "../../base/types.h"
@@ -54,57 +24,55 @@
 
 static void usage( bool )
 {
-    static char const * const msg_general =
-        "\n"
-        "\nConvert between a couple of common time representation"
-        "\n"
-        "\nUsage:"
-        "\n    cat log.csv | csv-time <options> > converted.csv"
-        "\n"
-        "\nOptions"
-        "\n    --from <what>: input format: any, iso, seconds, sql, xsd, local; default iso"
-        "\n    --to <what>: output format: iso, seconds, sql, xsd, local; default iso"
-        "\n    --delimiter,-d <delimiter> : default: ','"
-        "\n    --fields <fields> : time field names or field numbers as in \"cut\""
-        "\n                        e.g. \"1,5,7\" or \"a,b,,d\""
-        "\n                        defaults to \"a\" (first field only is datetime)"
-        "\n    --empty-as-not-a-date-time,--accept-empty,-e: if time field is empty, consider it as not-a-date-time"
-        "\n"
-        "\nNote: no --binary option, do not use this utility on binary; instead read as unsigned long-long (time in microseconds)"
-        "\n"
-        "\nTime formats"
-        "\n    - any, guess"
-        "\n            a special input format - try to convert from all those supported,"
-        "\n            default input format, will be slower"
-        "\n    - format"
-        "\n            user given time format, for e.g 'format;%Y%m%dT%H%M%S' will also convert to/from iso format"
-        "\n            see man date for details about time format specifications"
-        "\n    - iso, iso-8601-basic"
-        "\n            YYYYMMDDTHHMMSS.FFFFFF, e.g. 20140101T001122.333000"
-        "\n    - iso-always-with-fractions"
-        "\n            YYYYMMDDTHHMMSS.FFFFFF"
-        "\n            output 20140101T000000.000000, not 20140101T000000"
-        "\n    - local"
-        "\n            same as iso but converts from/to local time adjusted using current machine settings"
-        "\n    - microseconds, us"
-        "\n            microseconds since UNIX epoch as integer"
-        "\n    - seconds"
-        "\n            seconds since UNIX epoch as double"
-        "\n    - sql, posix, ieee-std-1003.1"
-        "\n            e.g. 2014-01-01 00:11:22"
-        "\n    - xsd, iso-8601-extended"
-        "\n            used in xsd:dateTime, xs:dateTime, gml and derivatives"
-        "\n            e.g. 2014-12-25T00:00:00.000Z"
-        "\n                 2014-12-25T00:00:00.000+11:00"
-        "\n                 2014-12-25T00:00:00.000+1100"
-        "\n                 2014-12-25T00:00:00.000+11"
-        "\n"
-        "\nDeprecated options:"
-        "\n    --to-seconds,--sec,-s: iso input expected; use --from, --to"
-        "\n    --to-iso-string,--iso,-i: input as seconds expected; use --from, --to"
-        "\n"
-        "\n";
-    std::cerr << msg_general << comma::contact_info << std::endl << std::endl;
+    std::cerr << "\n"
+                 "\nConvert between a couple of common time representation"
+                 "\n"
+                 "\nUsage:"
+                 "\n    cat log.csv | csv-time <options> > converted.csv"
+                 "\n"
+                 "\nOptions"
+                 "\n    --from <what>: input format: any, iso, seconds, sql, xsd, local; default iso"
+                 "\n    --to <what>: output format: iso, seconds, sql, xsd, local; default iso"
+                 "\n    --delimiter,-d <delimiter> : default: ','"
+                 "\n    --fields <fields> : time field names or field numbers as in \"cut\""
+                 "\n                        e.g. \"1,5,7\" or \"a,b,,d\""
+                 "\n                        defaults to \"a\" (first field only is datetime)"
+                 "\n    --empty-as-not-a-date-time,--accept-empty,-e: if time field is empty, consider it as not-a-date-time"
+                 "\n"
+                 "\nNote: no --binary option, do not use this utility on binary; instead read as unsigned long-long (time in microseconds)"
+                 "\n"
+                 "\nTime formats"
+                 "\n    - any, guess"
+                 "\n            a special input format - try to convert from all those supported,"
+                 "\n            default input format, will be slower"
+                 "\n    - format"
+                 "\n            user given time format, for e.g 'format;%Y%m%dT%H%M%S' will also convert to/from iso format"
+                 "\n            see man date for details about time format specifications"
+                 "\n    - iso, iso-8601-basic"
+                 "\n            YYYYMMDDTHHMMSS.FFFFFF, e.g. 20140101T001122.333000"
+                 "\n    - iso-always-with-fractions"
+                 "\n            YYYYMMDDTHHMMSS.FFFFFF"
+                 "\n            output 20140101T000000.000000, not 20140101T000000"
+                 "\n    - local"
+                 "\n            same as iso but converts from/to local time adjusted using current machine settings"
+                 "\n    - microseconds, us"
+                 "\n            microseconds since UNIX epoch as integer"
+                 "\n    - seconds"
+                 "\n            seconds since UNIX epoch as double"
+                 "\n    - sql, posix, ieee-std-1003.1"
+                 "\n            e.g. 2014-01-01 00:11:22"
+                 "\n    - xsd, iso-8601-extended"
+                 "\n            used in xsd:dateTime, xs:dateTime, gml and derivatives"
+                 "\n            e.g. 2014-12-25T00:00:00.000Z"
+                 "\n                 2014-12-25T00:00:00.000+11:00"
+                 "\n                 2014-12-25T00:00:00.000+1100"
+                 "\n                 2014-12-25T00:00:00.000+11"
+                 "\n"
+                 "\nDeprecated options:"
+                 "\n    --to-seconds,--sec,-s: iso input expected; use --from, --to"
+                 "\n    --to-iso-string,--iso,-i: input as seconds expected; use --from, --to"
+                 "\n"
+                 "\n";
     exit( 0 );
 }
 
@@ -187,11 +155,8 @@ static what_t what( const std::string& option, const comma::command_line_options
 static boost::posix_time::ptime from_string_xsd( const std::string& s )
 {
     std::string t = s;
-
-    // Set the delimiter between date and time to be what time_from_string expects
-    const size_t idx_t = t.find( 'T' );
+    const size_t idx_t = t.find( 'T' ); // Set the delimiter between date and time to be what time_from_string expects
     if ( std::string::npos != idx_t ) t[idx_t] = ' ';
-
     // Determine the timezone offset. Could be any of Z,+-hh:mm,+-hhmm,+-hh
     signed hrs = 0;
     signed mins = 0;
@@ -220,7 +185,7 @@ static boost::posix_time::ptime from_string_xsd( const std::string& s )
     }
     // Construct the time from the string and apply the offset
     boost::posix_time::ptime result = boost::posix_time::time_from_string( t );
-    result += boost::posix_time::hours(hrs) + boost::posix_time::minutes(mins);
+    result += boost::posix_time::hours( hrs ) + boost::posix_time::minutes( mins );
     return result;
 }
 
@@ -388,7 +353,6 @@ namespace comma { namespace visiting {
 template <> struct traits< input_t >
 {
     template < typename K, typename V > static void visit( const K&, const input_t& p, V& v ) { v.apply( "values", p.values ); }
-
     template < typename K, typename V > static void visit( const K&, input_t& p, V& v ) { v.apply( "values", p.values ); }
 };
 
@@ -434,8 +398,7 @@ static void init_input()
         {
             fields += comma;
             comma = ",";
-            if( keep[i] )
-                fields += "values[" + boost::lexical_cast< std::string >( size++ ) + "]";
+            if( keep[i] ) { fields += "values[" + boost::lexical_cast< std::string >( size++ ) + "]"; }
         }
     }
     else
@@ -444,9 +407,7 @@ static void init_input()
         {
             fields += comma;
             comma = ",";
-
-            if( ! names[i].empty() )
-                fields += "values[" + boost::lexical_cast< std::string >( size++ ) + "]";
+            if( ! names[i].empty() ) { fields += "values[" + boost::lexical_cast< std::string >( size++ ) + "]"; }
         }
     }
 

@@ -40,7 +40,6 @@
 #include <string>
 #include <boost/optional.hpp>
 #include "../../application/command_line_options.h"
-#include "../../application/contact_info.h"
 #include "../../base/types.h"
 #include "../../csv/format.h"
 
@@ -62,7 +61,6 @@ static void usage()
     std::cerr << "    cat input.bin | csv-time-stamp --binary=3ui" << std::endl;
     std::cerr << "    cat input.bin | csv-time-stamp --size=12" << std::endl;
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( -1 );
 }

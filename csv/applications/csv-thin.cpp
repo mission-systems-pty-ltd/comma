@@ -42,7 +42,6 @@
 #include <boost/random/uniform_real.hpp>
 #include <boost/random/variate_generator.hpp>
 #include "../../application/command_line_options.h"
-#include "../../application/contact_info.h"
 #include "../../base/exception.h"
 #include "../../base/types.h"
 #include "../../io/file_descriptor.h"
@@ -83,7 +82,6 @@ static void usage( bool verbose = false )
     std::cerr << "    using timestamp from input:  cat full.csv | csv-thin --period 2 --fields t" << std::endl;
     std::cerr << "    binary data:                 cat full.bin | csv-thin 0.1 --binary 3d" << std::endl;
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 1 );
 }

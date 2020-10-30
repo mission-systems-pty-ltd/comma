@@ -39,7 +39,6 @@
 #include <boost/asio/ip/udp.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/noncopyable.hpp>
-#include "../../application/contact_info.h"
 #include "../../application/command_line_options.h"
 #include "../../base/types.h"
 #include "../../csv/format.h"
@@ -60,7 +59,6 @@ void usage()
     std::cerr << "    --reuse-addr,--reuseaddr: reuse udp address/port" << std::endl;
     std::cerr << "    --timestamp: output packet timestamp (currently just system time)" << std::endl;
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 1 );
 }

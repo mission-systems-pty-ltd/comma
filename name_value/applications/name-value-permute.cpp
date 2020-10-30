@@ -32,7 +32,6 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include "../../base/exception.h"
-#include "../../application/contact_info.h"
 #include "../../application/command_line_options.h"
 #include "../../string/split.h"
 
@@ -68,7 +67,6 @@ static void usage( bool verbose = false )
     std::cerr << "          string=\"a,\";b;c" << std::endl;
     std::cerr << "          unchanged=unchanged' | name-value-permute --stdout --delimiter=';'" << std::endl;
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 0 );
 }

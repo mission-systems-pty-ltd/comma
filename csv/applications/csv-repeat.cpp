@@ -34,7 +34,6 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/thread/thread.hpp>
 #include "../../application/command_line_options.h"
-#include "../../application/contact_info.h"
 #include "../../application/signal_flag.h"
 #include "../../csv/options.h"
 #include "../../csv/stream.h"
@@ -108,7 +107,6 @@ void usage( bool verbose = false )
     std::cerr << std::endl;
     std::cerr << "    { echo -e \"1\\n2\\n3\"; sleep 10; } | csv-repeat --timeout=3" << std::endl;
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 0 );
 }

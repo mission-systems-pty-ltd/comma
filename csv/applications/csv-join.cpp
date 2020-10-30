@@ -16,7 +16,6 @@
 #include <boost/optional.hpp>
 #include <boost/unordered_map.hpp>
 #include "../../application/command_line_options.h"
-#include "../../application/contact_info.h"
 #include "../../application/signal_flag.h"
 #include "../../base/exception.h"
 #include "../../base/types.h"
@@ -110,7 +109,6 @@ static void usage( bool more )
     std::cerr << "        <input:3>" << std::endl;
     std::cerr << "        <input:3>" << std::endl;
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 0 );
 }

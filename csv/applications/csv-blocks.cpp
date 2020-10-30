@@ -41,7 +41,6 @@
 
 #include <boost/unordered_map.hpp>
 #include "../../application/command_line_options.h"
-#include "../../application/contact_info.h"
 #include "../../base/types.h"
 #include "../../csv/stream.h"
 #include "../../csv/impl/unstructured.h"
@@ -225,7 +224,6 @@ static void usage( bool more )
     std::cerr << "            After indexing the input in reverse order, the stream is read block-by-block, with the first line given the maximal" << std::endl;
     std::cerr << "            element id in the block, essentially, the block size" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "contact info: " << comma::contact_info <<std::endl;
     std::cerr << std::endl;
     exit(0);
 }

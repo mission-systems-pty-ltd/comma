@@ -38,7 +38,6 @@
 #include <string>
 #include <vector>
  
-#include "../../application/contact_info.h"
 #include "../../application/command_line_options.h"
 #include "../../base/exception.h"
 
@@ -79,7 +78,6 @@ void usage( bool const verbose = false )
         "\n    ( echo xxx ; echo yy ; echo zzzz ) | io-line length | while true ; do echo 'read line:' ; io-line get || break ; done"
         "\n"
         "\n";
-    std::cerr << message << comma::contact_info << '\n' << std::endl;
     std::exit( 0 );
 }
 

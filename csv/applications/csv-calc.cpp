@@ -21,7 +21,6 @@
 #include <boost/scoped_ptr.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
-#include "../../application/contact_info.h"
 #include "../../application/verbose.h"
 #include "../../base/exception.h"
 #include "../../csv/format.h"
@@ -122,7 +121,6 @@ static void usage( bool verbose )
     std::cerr << std::endl;
     std::cerr << "    {(seq 1 500 | csv-paste \"-\" \"value=0\") ; (seq 1 100 | csv-paste \"-\" \"value=1\") ; (seq 501 1000 | csv-paste \"-\" \"value=0\")} | " << comma::verbose.app_name() << " --fields=a,id percentile=0.9" << std::endl;
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( -1 );
 }

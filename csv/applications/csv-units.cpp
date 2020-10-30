@@ -53,7 +53,6 @@
 #include <boost/units/base_units/angle/degree.hpp>
 
 #include "../../application/command_line_options.h"
-#include "../../application/contact_info.h"
 #include "../../base/exception.h"
 #include "../../csv/stream.h"
 #include "../../visiting/traits.h"
@@ -114,7 +113,6 @@ static void usage(char const * const txt = "")
     std::cerr << msg_general << std::endl; // endl to make this function easier to debug by flushing
     std::cerr << "\ncsv options\n" << comma::csv::options::usage() << std::endl;
     std::cerr << msg_examples << std::endl;
-    std::cerr << '\n' << comma::contact_info << '\n' << std::endl;
     exit( 1 );
 }
 

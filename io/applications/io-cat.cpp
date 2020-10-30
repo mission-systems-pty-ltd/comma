@@ -40,7 +40,6 @@
 #include <boost/scoped_ptr.hpp>
 #include <boost/thread.hpp>
 #include "../../application/command_line_options.h"
-#include "../../application/contact_info.h"
 #include "../../application/signal_flag.h"
 #include "../../base/exception.h"
 #include "../../base/types.h"
@@ -104,7 +103,6 @@ void usage( bool verbose = false )
     std::cerr << "        merge line-based input with stdin" << std::endl;
     std::cerr << "            echo hello | io-cat tcp:localhost:55555 -" << std::endl;
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 0 );
 }

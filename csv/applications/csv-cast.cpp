@@ -39,7 +39,6 @@
 #include <cstring>
 #include <iostream>
 #include "../../application/command_line_options.h"
-#include "../../application/contact_info.h"
 #include "../../base/exception.h"
 #include "../../csv/format.h"
 
@@ -76,7 +75,6 @@ static void usage()
     std::cerr << "    lexical cast, convert s[22],s[10],s[6] to t,2d (creates sample binary data)" << std::endl;
     std::cerr << "        echo {0..9}.2345789,3.1415 | fmt -1 | csv-time-stamp | csv-to-bin s[22],s[10],s[6] | csv-cast s[22],s[10],s[6] t,2d | csv-from-bin t,2d" << std::endl;
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
 }
 

@@ -40,7 +40,6 @@
 #include <fstream>
 #include <numeric>
 #include "../../application/command_line_options.h"
-#include "../../application/contact_info.h"
 #include "../../csv/format.h"
 #include "../../csv/options.h"
 #include "../../string/string.h"
@@ -150,7 +149,6 @@ namespace {
             std::cerr << "Format specifications:" << std::endl;
             std::cerr << csv::format::usage() << std::endl;
         }
-        std::cerr << comma::contact_info << std::endl;
         std::cerr << std::endl;
         exit( 0 );
     }

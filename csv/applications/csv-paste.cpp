@@ -37,7 +37,6 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include "../../application/command_line_options.h"
-#include "../../application/contact_info.h"
 #include "../../base/exception.h"
 #include "../../csv/format.h"
 #include "../../io/stream.h"
@@ -103,7 +102,6 @@ static void usage( bool verbose )
     std::cerr << "csv format parameters" << std::endl;
     if( verbose ) { std::cerr << comma::csv::format::usage() << std::endl; } else { std::cerr << "    run csv-paste --help --verbose for more..." << std::endl; }
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 0 );
 }

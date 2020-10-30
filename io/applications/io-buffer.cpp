@@ -48,7 +48,6 @@
 #include <boost/interprocess/sync/scoped_lock.hpp>
 #include <boost/algorithm/string.hpp>
 #include "../../application/command_line_options.h"
-#include "../../application/contact_info.h"
 #include "../../base/exception.h"
 #include "../../base/types.h"
 #include "../../io/stream.h"
@@ -102,7 +101,6 @@ void usage( bool verbose = false )
     std::cerr << "          See 'out' operation, in this mode, the program write to standard output and exits when buffer is full." << std::endl;
     std::cerr << "          Call io-buffer multiple times to read more input data." << std::endl;
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 0 );
 }

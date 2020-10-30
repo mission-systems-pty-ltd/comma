@@ -40,7 +40,6 @@
 #include <boost/regex.hpp>
 #include <boost/version.hpp>
 #include "../../base/exception.h"
-#include "../../application/contact_info.h"
 #include "../../application/command_line_options.h"
 #include "../../name_value/ptree.h"
 #include "../../name_value/serialize.h"
@@ -88,7 +87,6 @@ static void usage( bool verbose = false )
     std::cerr << "    --linewise,-l: if present, treat each input line as a record" << std::endl;
     std::cerr << "                   if absent, treat all of the input as one record" << std::endl;
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 1 );
 }

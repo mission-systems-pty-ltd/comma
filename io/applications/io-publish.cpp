@@ -39,7 +39,6 @@
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/thread.hpp>
-#include "../../application/contact_info.h"
 #include "../../application/command_line_options.h"
 #include "../../application/signal_flag.h"
 #include "../../base/last_error.h"
@@ -109,7 +108,6 @@ static void usage( bool verbose = false )
     std::cerr << "    io-publish tcp:1234 --size 24000 --on-demand --exec \"camera-cat arg1 arg2\"" << std::endl;
     std::cerr << "    io-publish tcp:1234 --size 24000 --on-demand -- camera-cat arg1 arg2" << std::endl;
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 0 );
 }

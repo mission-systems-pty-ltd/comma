@@ -16,7 +16,6 @@
 #include <boost/unordered_set.hpp>
 #include <boost/lexical_cast.hpp>
 #include "../../application/command_line_options.h"
-#include "../../application/contact_info.h"
 #include "../../base/exception.h"
 #include "../../base/types.h"
 #include "../../csv/stream.h"
@@ -84,7 +83,6 @@ static void usage( bool more )
     std::cerr << "        using id" << std::endl;
     std::cerr << "            ( echo 1,a,2; echo 2,a,2; echo 3,b,3; echo 5,b,7; echo 3,b,9 ) | csv-sort --max --min --fields=,id,a" << std::endl;
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     if( more )
     {

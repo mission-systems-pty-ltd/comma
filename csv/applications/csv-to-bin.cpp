@@ -38,7 +38,6 @@
 
 #include <stdlib.h>
 #include <iostream>
-#include "../../application/contact_info.h"
 #include "../../application/command_line_options.h"
 #include "../../csv/format.h"
 #include "../../string/string.h"
@@ -58,7 +57,6 @@ static void usage( bool )
     std::cerr << std::endl;
     std::cerr << csv::format::usage() << std::endl;
     std::cerr << std::endl;
-    std::cerr << comma::contact_info << std::endl;
     std::cerr << std::endl;
     exit( 0 );
 }
