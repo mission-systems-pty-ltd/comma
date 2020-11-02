@@ -15,5 +15,5 @@ debian package will be built in your current directory
 
 test that package is ok, e.g:
 
-> ./comma-package-docker-test 20.04 comma-1.0.0-Linux.deb
+> ./comma-package-docker-test 20.04 comma-1.0.0-Linux.deb python3-comma_1.0.0-1_all.deb
 
