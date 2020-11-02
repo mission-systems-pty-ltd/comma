@@ -6,7 +6,7 @@ ubuntu_version="$1"
 package="$2"
 python_package="$3"
 comma_dir="$4"
-[[ -n "$package" ]] || { echo "usage: $0 <ubuntu version> <package> <python package> [<comma dir>]" >&2; exit 1; }
+[[ -n "$python_package" ]] || { echo "usage: $0 <ubuntu version> <package> <python package> [<comma dir>]" >&2; exit 1; }
 [[ -s "$package" ]] || die "file not found or empty: '$package'"
 [[ -s "$python_package" ]] || die "file not found or empty: '$python_package'"
 [[ -n "$comma_dir" ]] || comma_dir="$( realpath ~/src/comma )"
