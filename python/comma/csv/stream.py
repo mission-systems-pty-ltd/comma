@@ -135,7 +135,7 @@ class stream(object):
         return self._struct_array(self._input_array, self.missing_values)
 
     def _genfromtxt( self ): # quick and dirty due to the ugliness of the change in numpy 1.14; see doc of encoding parameter in https://docs.scipy.org/doc/numpy-1.14.0/reference/generated/numpy.genfromtxt.html
-        if NUMPY_VERSION_MAJOR_ >= 1 or NUMPY_VERSION_MINOR_ >= 14: # quick and dirty, since ubuntu 18.04 python3-numpy still install numpy 1.13; remove once move on with the version since it's waste of cpu cycles
+        if NUMPY_VERSION_MAJOR_ > 1 or NUMPY_VERSION_MINOR_ >= 14: # quick and dirty, since ubuntu 18.04 python3-numpy still install numpy 1.13; remove once move on with the version since it's waste of cpu cycles
             return np.genfromtxt( self._ascii_buffer
                                 , dtype = self.input_dtype
                                 , delimiter = self.delimiter
