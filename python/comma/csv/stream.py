@@ -44,6 +44,7 @@ from . import time as csv_time
 from .struct import struct
 
 DEFAULT_PRECISION = 12
+NUMPY_VERSION_MAJOR_, NUMPY_VERSION_MINOR_, NUMPY_VERSION_PATH_ = ( int( _ ) for _ in np.__version__.split( '.' ) )
 
 def custom_formatwarning(msg, *args): return __name__ + " warning: " + str(msg) + '\n'
 
@@ -134,7 +135,7 @@ class stream(object):
         return self._struct_array(self._input_array, self.missing_values)
 
     def _genfromtxt( self ): # quick and dirty due to the ugliness of the change in numpy 1.14; see doc of encoding parameter in https://docs.scipy.org/doc/numpy-1.14.0/reference/generated/numpy.genfromtxt.html
-        if np.__version__ >= '1.14.0':
+        if NUMPY_VERSION_MAJOR_ >= 1 or NUMPY_VERSION_MINOR_ >= 14: # quick and dirty, since ubuntu 18.04 python3-numpy still install numpy 1.13; remove once move on with the version since it's waste of cpu cycles
             return np.genfromtxt( self._ascii_buffer
                                 , dtype = self.input_dtype
                                 , delimiter = self.delimiter
@@ -144,7 +145,9 @@ class stream(object):
                                 , comments = None
                                 , encoding = None )
         else:
-            return np.genfromtxt( self._ascii_buffer
+            # https://github.com/numpy/numpy/issues/10511 genfromtxt issue in numpy 1.13.x
+            from io import BytesIO
+            return np.genfromtxt( BytesIO( bytes( '\n'.join( self._ascii_buffer ).encode( 'utf-8' ) ) ) if major == 1 and minor == 13 else self._ascii_buffer
                                 , dtype = self.input_dtype
                                 , delimiter = self.delimiter
                                 , converters = self.ascii_converters

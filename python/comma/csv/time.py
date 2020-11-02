@@ -42,6 +42,7 @@ NOT_A_DATE_TIME = np.datetime64('NaT')
 POSITIVE_INFINITY = np.datetime64('294247-01-09T04:00:54.775807')
 NEGATIVE_INFINITY = np.datetime64('-290308-12-22T19:59:05.224191')
 BASESTRING = basestring if sys.version_info.major < 3 else str # sigh...
+NUMPY_VERSION_MAJOR_, NUMPY_VERSION_MINOR_, NUMPY_VERSION_PATH_ = ( int( _ ) for _ in np.__version__.split( '.' ) )
 
 def is_undefined(numpy_time): return str(numpy_time) == str(NOT_A_DATE_TIME)
 
@@ -65,6 +66,7 @@ def to_numpy(t):
     >>> to_numpy('')
     numpy.datetime64('NaT')
     """
+    if NUMPY_VERSION_MAJOR_ == 1 and NUMPY_VERSION_MAJOR_ < 14 and isinstance( t, bytes ): t = t.decode( 'utf-8' ) # quick and dirty, since ubuntu 18.04 python3-numpy still install numpy 1.13; remove once move on with the version since it's waste of cpu cycles
     if t in ['', 'not-a-date-time']: return NOT_A_DATE_TIME
     if t in ['+infinity', '+inf', 'infinity', 'inf']: return POSITIVE_INFINITY
     if t in ['-infinity', '-inf']: return NEGATIVE_INFINITY
