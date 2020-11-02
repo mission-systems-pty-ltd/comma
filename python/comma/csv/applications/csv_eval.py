@@ -15,7 +15,8 @@ import comma
 
 description = """
 evaluate numerical expressions and append computed values to csv stream
-"""
+
+using numpy version """ + np.__version__ + "\n"
 
 notes_and_examples = """
 input fields:
