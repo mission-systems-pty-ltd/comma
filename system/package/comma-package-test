@@ -9,18 +9,21 @@ python_package="$2"
 apt install --yes "$python_package" || die "failed to install package '$python_package'"
 apt install --yes "$package" || die "failed to install package '$package'"
 
-echo "$0: testing basic csv utilities..."
+echo "$0: testing basic csv utilities..." >&2
 output=$( csv-paste line-number | head | csv-to-bin ui | csv-from-bin ui ) || die "failed: failed to run"
 expected=$( seq 0 9 )
 [[ "$output" == "$expected" ]] || die "failed: unexpected output: $output"
-echo "$0: testing basic csv utilities: done"
+echo "$0: testing basic csv utilities: done" >&2
 
 echo "$0: testing bash utils..."
 type -p comma-application-util || die "failed: failed"
-echo "$0: testing bash utils: done"
+echo "$0: testing bash utils: done" >&2
 
-echo "$0: testing csv-eval..."
+echo "$0: running csv-eval --help (for reference)..." >&2
+csv-eval --help
+
+echo "$0: testing csv-eval..." >&2
 output=$( seq 0 9 | csv-eval --fields a "a+=1" || exit ) || die "failed: failed to run"
 expected=$( seq 1 10 )
 [[ "$output" == "$expected" ]] || die "failed: unexpected output: $output"
-echo "$0: testing csv-eval: done"
+echo "$0: testing csv-eval: done" >&2
