@@ -20,7 +20,7 @@ type -p comma-application-util || die "failed: failed"
 echo "$0: testing bash utils: done"
 
 echo "$0: testing csv-eval..."
-output=$( csv-paste line-number | head | csv-eval --fields a "a+=1" || exit ) || die "failed: failed to run"
+output=$( seq 0 9 | csv-eval --fields a "a+=1" || exit ) || die "failed: failed to run"
 expected=$( seq 1 10 )
 [[ "$output" == "$expected" ]] || die "failed: unexpected output: $output"
 echo "$0: testing csv-eval: done"
