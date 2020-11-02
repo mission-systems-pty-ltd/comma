@@ -120,7 +120,7 @@ class stream(object):
         else:
             # https://github.com/numpy/numpy/issues/10511 genfromtxt issue in numpy 1.13.x
             from io import BytesIO
-            return np.genfromtxt( BytesIO( bytes( '\n'.join( self._ascii_buffer ).encode( 'utf-8' ) ) ) if major == 1 and minor == 13 else self._ascii_buffer
+            return np.genfromtxt( BytesIO( bytes( '\n'.join( self._ascii_buffer ).encode( 'utf-8' ) ) ) if NUMPY_VERSION_MAJOR_ == 1 and NUMPY_VERSION_MINOR_ == 13 else self._ascii_buffer
                                 , dtype = self.input_dtype
                                 , delimiter = self.delimiter
                                 , converters = self.ascii_converters
