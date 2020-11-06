@@ -23,7 +23,10 @@ function usage()
 {
     cat >&2 <<EOF
 
-derive a config from multiple input configs
+take multiple path-value inputs, apply on top of each other
+    
+e.g: assume we have a default config file and then the user would like to set just some values and leave
+     the rest as default; then we simply apply the user's config on top of default as in examples below
 
 usage
     name-value-apply [<options>] <files...>
