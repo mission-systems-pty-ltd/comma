@@ -1,1 +1,2 @@
 unindexed_stream/basics[0]="( echo a=1; echo c=3; echo b=3; echo a=2; echo b=4 ) | name-value-to-csv --unindexed-fields a,b --unindexed-stream"
+unindexed_stream/basics[1]="( echo a=1; echo c=3; echo b=3; echo a=2; echo b=4 ) | name-value-to-csv --unindexed-fields a,b --unindexed-stream-update"

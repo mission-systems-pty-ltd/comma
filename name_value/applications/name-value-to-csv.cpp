@@ -26,7 +26,8 @@ static void usage( bool )
     std::cerr << "    --fields,-f=<fields>; fields to output" << std::endl;
     std::cerr << "    --prefix,--path,-p=[<prefix>]; optional prefix" << std::endl;
     std::cerr << "    --unindexed-fields=<fields>; if no --fields specified, output unindexed fields once, if --fields specified, append given unindexed fields to all records" << std::endl;
-    std::cerr << "    --unindexed-stream; read a stream of key-value pairs, on every input record output all up-to-date values of fields present in --unindexed-fields, see example below" << std::endl;
+    std::cerr << "    --unindexed-stream,--stream; read a stream of key-value pairs, on every input record output csv record with the field value set and other fields empty, see example below" << std::endl;
+    std::cerr << "    --unindexed-stream-update,--update; read a stream of key-value pairs, on every input record output all up-to-date values of fields present in --unindexed-fields, see example below" << std::endl;
     std::cerr << "    --unsorted; the input data is not sorted by index" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
@@ -48,6 +49,12 @@ static void usage( bool )
     std::cerr << "    unindexed fields" << std::endl;
     std::cerr << "        todo" << std::endl;
     std::cerr << "    unindexed fields with --unindexed-stream" << std::endl;
+    std::cerr << "        > ( echo a=1; echo c=3; echo b=3; echo a=2; echo b=4 ) | name-value-to-csv --unindexed-fields a,b --unindexed-stream" << std::endl;
+    std::cerr << "        1," << std::endl;
+    std::cerr << "        ,3" << std::endl;
+    std::cerr << "        2," << std::endl;
+    std::cerr << "        ,4" << std::endl;
+    std::cerr << "    unindexed fields with --unindexed-stream-update" << std::endl;
     std::cerr << "        > ( echo a=1; echo c=3; echo b=3; echo a=2; echo b=4 ) | name-value-to-csv --unindexed-fields a,b --unindexed-stream" << std::endl;
     std::cerr << "        1," << std::endl;
     std::cerr << "        1,3" << std::endl;
@@ -73,12 +80,13 @@ int main( int ac, char** av )
     try
     {
         comma::command_line_options options( ac, av, usage );
-        options.assert_mutually_exclusive( "--fields", "--unindexed-stream" );
+        options.assert_mutually_exclusive( "--fields", "--unindexed-stream,--stream,--unindexed-stream-update,--update" );
         std::string fs = options.value< std::string >( "--fields,-f", "" );
         std::vector< std::string > fields = comma::split( fs, ',' );
         std::vector< std::string > unindexed_fields;
         std::string ufs = options.value< std::string >( "--unindexed-fields", "" );
-        bool unindexed_stream = options.exists( "--unindexed-stream" );
+        bool unindexed_stream_update = options.exists( "--unindexed-stream-update,--update" );
+        bool unindexed_stream = options.exists( "--unindexed-stream,--stream" ) || unindexed_stream_update;
         std::unordered_set< std::string > unindexed_fields_set;
         if( !ufs.empty() )
         { 
@@ -106,7 +114,7 @@ int main( int ac, char** av )
             if( unindexed_fields_set.find( name ) != unindexed_fields_set.end() )
             {
                 unindexed_values[name] = s.substr( e + 1 );
-                if( unindexed_stream ) { std::cout << join( unindexed_fields, unindexed_values, delimiter, false ) << std::endl; }
+                if( unindexed_stream ) { std::cout << join( unindexed_fields, unindexed_values, delimiter, !unindexed_stream_update ) << std::endl; }
                 continue;
             }
             if( name.substr( 0, prefix.size() ) != prefix ) { continue; }
