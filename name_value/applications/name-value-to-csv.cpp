@@ -1,31 +1,5 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// Copyright (c) 2020 Vsevolod Vlaskine
 
 /// @author vsevolod vlaskine
 
@@ -52,6 +26,7 @@ static void usage( bool )
     std::cerr << "    --fields,-f=<fields>; fields to output" << std::endl;
     std::cerr << "    --prefix,--path,-p=[<prefix>]; optional prefix" << std::endl;
     std::cerr << "    --unindexed-fields=<fields>; if no --fields specified, output unindexed fields once, if --fields specified, append given unindexed fields to all records" << std::endl;
+    std::cerr << "    --unindexed-stream; read a stream of key-value pairs, on every input record output all up-to-date values of fields present in --unindexed-fields, see example below" << std::endl;
     std::cerr << "    --unsorted; the input data is not sorted by index" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
@@ -72,18 +47,24 @@ static void usage( bool )
     std::cerr << std::endl;
     std::cerr << "    unindexed fields" << std::endl;
     std::cerr << "        todo" << std::endl;
+    std::cerr << "    unindexed fields with --unindexed-stream" << std::endl;
+    std::cerr << "        > ( echo a=1; echo c=3; echo b=3; echo a=2; echo b=4 ) | name-value-to-csv --unindexed-fields a,b --unindexed-stream" << std::endl;
+    std::cerr << "        1," << std::endl;
+    std::cerr << "        1,3" << std::endl;
+    std::cerr << "        2,3" << std::endl;
+    std::cerr << "        2,4" << std::endl;
     std::cerr << std::endl;
     exit( 0 );
 }
 
 typedef std::unordered_map< std::string, std::string > values_t;
 
-static std::string join( const std::vector< std::string >& fields, values_t& values, char delimiter )
+static std::string join( const std::vector< std::string >& fields, values_t& values, char delimiter, bool clear = true )
 {
     std::ostringstream oss;
     std::string comma;
     for( const auto& f: fields ) { oss << comma << values[f]; comma = delimiter; } // quick and dirty as everything else
-    values.clear();
+    if( clear ) { values.clear(); }
     return oss.str();
 }
 
@@ -92,10 +73,12 @@ int main( int ac, char** av )
     try
     {
         comma::command_line_options options( ac, av, usage );
+        options.assert_mutually_exclusive( "--fields", "--unindexed-stream" );
         std::string fs = options.value< std::string >( "--fields,-f", "" );
         std::vector< std::string > fields = comma::split( fs, ',' );
         std::vector< std::string > unindexed_fields;
         std::string ufs = options.value< std::string >( "--unindexed-fields", "" );
+        bool unindexed_stream = options.exists( "--unindexed-stream" );
         std::unordered_set< std::string > unindexed_fields_set;
         if( !ufs.empty() )
         { 
@@ -105,8 +88,6 @@ int main( int ac, char** av )
         if( fields[0].empty() && unindexed_fields.empty() ) { std::cerr << "name-value-to-csv: please specify --fields or --unindexed-fields" << std::endl; return 1; }
         bool unindexed = fields[0].empty();
         values_t unindexed_values;
-        options.assert_mutually_exclusive( "--unsorted", "--unindexed,--no-index" );
-        options.assert_mutually_exclusive( "--unindexed,--no-index", "--unindexed-fields" );
         bool unsorted = options.exists( "--unsorted" );
         char delimiter = options.value( "--delimiter,-d", ',' );
         char equal_sign = options.value( "--equal-sign,-e", '=' );
@@ -122,7 +103,12 @@ int main( int ac, char** av )
             auto e = s.find_first_of( equal_sign ); // todo: use boost::spirit
             if( e == std::string::npos ) { std::cerr << "name-value-to-csv: expected path-value pair; got: '" << s << "'" << std::endl; return 1; }
             std::string name = s.substr( 0, e );
-            if( unindexed_fields_set.find( name ) != unindexed_fields_set.end() ) { unindexed_values[name] = s.substr( e + 1 ); continue; }
+            if( unindexed_fields_set.find( name ) != unindexed_fields_set.end() )
+            {
+                unindexed_values[name] = s.substr( e + 1 );
+                if( unindexed_stream ) { std::cout << join( unindexed_fields, unindexed_values, delimiter, false ) << std::endl; }
+                continue;
+            }
             if( name.substr( 0, prefix.size() ) != prefix ) { continue; }
             if( unindexed )
             {
@@ -141,7 +127,7 @@ int main( int ac, char** av )
             values[name.substr( b + 2 )] = s.substr( e + 1 );
             index = current_index;
         }
-        if( unindexed )
+        if( unindexed && !unindexed_stream )
         { 
             std::cout << join( unindexed_fields, unindexed_values, delimiter ) << std::endl;
         }
