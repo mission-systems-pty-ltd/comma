@@ -2,6 +2,9 @@
 
 # Copyright (c) 2020 Vsevolod Vlaskine
 
+[[ -n "$comma_application_swiss_util_include_guard_" ]] && return 0
+readonly comma_application_swiss_util_include_guard_=1
+
 source $( type -p comma-application-util )
 
 function comma-application-swiss-init()
