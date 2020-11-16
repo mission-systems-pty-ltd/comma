@@ -1,4 +1,3 @@
-install( PROGRAMS comma-application-swiss-util DESTINATION ${comma_INSTALL_BIN_DIR} )
 install( PROGRAMS comma-application-util DESTINATION ${comma_INSTALL_BIN_DIR} )
 install( PROGRAMS comma-log-util DESTINATION ${comma_INSTALL_BIN_DIR} )
 install( PROGRAMS comma-name-value-util DESTINATION ${comma_INSTALL_BIN_DIR} )
