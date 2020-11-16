@@ -203,20 +203,55 @@ function comma_tee_function()
 }
 export -f comma_tee_function
 
+function comma-application-init()
+{
+    local name=$( basename "$0" )
+    local prologue="$1"
+    local epilogue="$2"
+    local common_options=$( cat )
+    if comma_options_help $@; then
+    
+        [[ -z "$prologue" ]] || $prologue >&2
+        cat <<eof >&2
+
+usage: $name [<options>]
+
+options
+$( "$common_options" | sed 's#^#    #' )
+
+eof
+        [[ -z "$epilogue" ]] || $epilogue >&2
+        exit 0
+    fi
+    function say() { echo "$name: $@" >&2; }
+    function die() { say "$@"; exit 1; }
+    local options; options=$( echo "$common_options" | comma-options-to-name-value "$@" ) || die "invalid options"
+    eval "$( grep -v '^"' <<< "$options" | sed 's#^#options_#' | comma_path_value_mangle )"
+    declare -a options_unnamed
+    mapfile -t options_unnamed < <( grep '^"' <<< "$options" )
+    
+}
+
+export -f comma-application-init
+
 function comma-application-swiss-init()
 {
     local name=$( basename "$0" )
+    local prologue="$1"
+    local epilogue="$2"
     local common_options=$( cat )
     [[ -n "$1" ]] || { echo "$name: please specify operation" >&2; exit 1; }
     comma_application_swiss_operation="$1"
     if comma_options_help $@; then
         if [[ "${comma_application_swiss_operation}" == "--help" || "${comma_application_swiss_operation}" == "-h" ]]; then
-            if [[ $( type -t usage ) == "function" ]]; then usage; else comma-application-swiss-usage; fi
+            [[ -z "$prologue" ]] || $prologue >&2
+            comma-application-swiss-usage
+            [[ -z "$epilogue" ]] || $epilogue >&2
         else
             echo
             echo "usage: $( basename $0 ) ${comma_application_swiss_operation} [<options>]"
             echo
-            comma-application-swiss-usage-operation "${comma_application_swiss_operation}"
+            echo "$common_options" | comma-application-swiss-usage-operation "${comma_application_swiss_operation}"
             echo
         fi >&2
         exit 0
