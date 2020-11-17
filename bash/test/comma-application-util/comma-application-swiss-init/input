@@ -1,0 +1,10 @@
+help[0]="./application --help 2>&1"
+help[1]="./application lol --help 2>&1"
+help[2]="./application roll --help 2>&1"
+help[3]="./application fall --help 2>&1"
+
+run/lol[0]="./application lol"
+run/lol[1]="./application lol --some-common-option blah --how-loud=120"
+run/roll[0]="./application roll"
+run/roll[1]="./application roll --screaming"
+run/fall[0]="./application fall"

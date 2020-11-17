@@ -1,0 +1,24 @@
+#!/bin/bash
+
+source $( type -p comma-application-util )
+
+operations=( lol roll )
+
+function prologue() { echo "sample application: for a given operation, print parsed command line option values and exit"; }
+
+function epilogue() { echo "example: ./application lol"; }
+
+function options-description() { echo "--some-common-option=[<value>]; default=hello; a sample common option"; }
+
+function lol-description() { echo "laugh out loud"; }
+function lol-usage() { echo "specialised usage: ./application lol [<options>]"; }
+function lol-options() { echo "--how-loud=<value>; default=0; how loud to laugh in dB"; }
+function lol-run() { echo "lol/options/how_loud=$options_how_loud"; }
+
+function roll-description() { echo "roll on the floor"; }
+function roll-options() { echo "--screaming; roll on the floor screaming"; }
+function roll-run() { echo "roll/options/screaming=$options_screaming"; }
+
+comma-application-swiss-init $@ < <( options-description ) || exit 1
+echo "options/some_common_option=$options_some_common_option"
+comma-application-swiss-run $@
