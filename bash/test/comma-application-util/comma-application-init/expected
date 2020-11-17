@@ -1,0 +1,60 @@
+help/output/line[0]=""
+help/output/line[1]="sample application: print parsed command line option values and exit"
+help/output/line[2]=""
+help/output/line[3]="usage: application [<options>]"
+help/output/line[4]=""
+help/output/line[5]="options"
+help/output/line[6]="--defaulting,-d=<value>; default=hello; default value"
+help/output/line[7]="--flag; flag option"
+help/output/line[8]="--mandatory,-m=<value>; this is mandatory option"
+help/output/line[9]="--optional,-o=[<value>]; this is optional option"
+help/output/line[10]=""
+help/output/line[11]="example: ./application some unnamed --mandatory blah stuff"
+help/status=0
+
+options/mandatory[0]/output/line[0]="options/defaulting=hello"
+options/mandatory[0]/output/line[1]="options/flag="
+options/mandatory[0]/output/line[2]="options/mandatory=blah"
+options/mandatory[0]/output/line[3]="options/optional="
+options/mandatory[0]/status=0
+options/mandatory[1]/output=""
+options/mandatory[1]/status=1
+
+options/optional[0]/output/line[0]="options/defaulting=hello"
+options/optional[0]/output/line[1]="options/flag="
+options/optional[0]/output/line[2]="options/mandatory=blah"
+options/optional[0]/output/line[3]="options/optional="
+options/optional[0]/status=0
+options/optional[1]/output/line[0]="options/defaulting=hello"
+options/optional[1]/output/line[1]="options/flag="
+options/optional[1]/output/line[2]="options/mandatory=blah"
+options/optional[1]/output/line[3]="options/optional=bye"
+options/optional[1]/status=0
+
+options/flag[0]/output/line[0]="options/defaulting=hello"
+options/flag[0]/output/line[1]="options/flag="
+options/flag[0]/output/line[2]="options/mandatory=blah"
+options/flag[0]/output/line[3]="options/optional="
+options/flag[0]/status=0
+options/flag[1]/output/line[0]="options/defaulting=hello"
+options/flag[1]/output/line[1]="options/flag=1"
+options/flag[1]/output/line[2]="options/mandatory=blah"
+options/flag[1]/output/line[3]="options/optional="
+options/flag[1]/status=0
+
+options/unnamed[0]/output/line[0]="options/defaulting=hello"
+options/unnamed[0]/output/line[1]="options/flag="
+options/unnamed[0]/output/line[2]="options/mandatory=blah"
+options/unnamed[0]/output/line[3]="options/optional="
+options/unnamed[0]/output/line[4]="options/unnamed[0]=a"
+options/unnamed[0]/output/line[5]="options/unnamed[1]=b"
+options/unnamed[0]/output/line[6]="options/unnamed[2]=c"
+options/unnamed[0]/status=0
+options/unnamed[1]/output/line[0]="options/defaulting=hello"
+options/unnamed[1]/output/line[1]="options/flag=1"
+options/unnamed[1]/output/line[2]="options/mandatory=blah"
+options/unnamed[1]/output/line[3]="options/optional="
+options/unnamed[1]/output/line[4]="options/unnamed[0]=a"
+options/unnamed[1]/output/line[5]="options/unnamed[1]=b"
+options/unnamed[1]/output/line[6]="options/unnamed[2]=c"
+options/unnamed[1]/status=0

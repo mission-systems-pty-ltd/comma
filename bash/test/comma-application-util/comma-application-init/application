@@ -1,0 +1,24 @@
+#!/bin/bash
+
+source $( type -p comma-application-util )
+
+function prologue() { echo "sample application: print parsed command line option values and exit"; }
+
+function epilogue() { echo "example: ./application some unnamed --mandatory blah stuff"; }
+
+function options-description()
+{
+    cat <<eof
+--defaulting,-d=<value>; default=hello; default value
+--flag; flag option
+--mandatory,-m=<value>; this is mandatory option
+--optional,-o=[<value>]; this is optional option
+eof
+}
+
+comma-application-init $@ < <( options-description ) || exit 1
+echo "options/defaulting=$options_defaulting"
+echo "options/flag=$options_flag"
+echo "options/mandatory=$options_mandatory"
+echo "options/optional=$options_optional"
+for (( i = 0; i < ${#options_unnamed[@]}; ++i )); do echo "options/unnamed[$i]=${options_unnamed[$i]}"; done

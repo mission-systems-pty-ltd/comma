@@ -226,8 +226,8 @@ eof
     function die() { say "$@"; exit 1; }
     local options; options=$( echo "$common_options" | comma-options-to-name-value "$@" ) || die "invalid options"
     eval "$( grep -v '^"' <<< "$options" | sed 's#^#options_#' | comma_path_value_mangle )"
-    declare -a options_unnamed
-    mapfile -t options_unnamed < <( grep '^"' <<< "$options" )
+    # declare -a options_unnamed
+    mapfile -t options_unnamed < <( grep '^"' <<< "$options" | sed -e 's#^"##' -e 's#"$##' )
 }
 
 export -f comma-application-init
