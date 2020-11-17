@@ -237,17 +237,14 @@ function comma-application-swiss-init()
     local name=$( basename "$0" )
     local common_options=$( cat )
     [[ -n "$1" ]] || { echo "$name: please specify operation" >&2; exit 1; }
-    comma_application_swiss_operation="$1"
+    comma_application_swiss_operation="$1" # todo? quick and dirty, allow --help anywhere on the command line?
     if comma_options_help $@; then
         if [[ "${comma_application_swiss_operation}" == "--help" || "${comma_application_swiss_operation}" == "-h" ]]; then
             [[ "$( type -p prologue )" == "function" ]] || { echo; prologue; } >&2
             comma-application-swiss-usage
             [[ "$( type -p epilogue )" == "function" ]] || { epilogue; echo; } >&2
         else
-            echo
-            echo "usage: $( basename $0 ) ${comma_application_swiss_operation} [<options>]"
-            echo
-            echo "$common_options" | comma-application-swiss-usage-operation "${comma_application_swiss_operation}"
+            echo "$common_options" | comma-application-swiss-usage-operation "${comma_application_swiss_operation}" || exit 1
             echo
         fi >&2
         exit 0
@@ -275,16 +272,20 @@ export -f comma-application-swiss-init
 function comma-application-swiss-usage-operation()
 {
     local operation="$1"
+    [[ $( type -t ${operation}-run ) == "function" ]] || { echo "$( basename $0 ): expected operation, got: '${comma_application_swiss_operation}', see --help with no other options for more information" >&2; return 1; } # quick and dirty
     local common_options=$( cat )
     local found=0
-    echo "${comma_application_swiss_operation}"
-    [[ $( type -t ${comma_application_swiss_operation}-description ) != "function" ]] || { ${comma_application_swiss_operation}-description | sed 's#^#    #'; found=1; }
-    [[ $( type -t ${comma_application_swiss_operation}-usage ) != "function" ]] || { echo "    usage"; ${comma_application_swiss_operation}-usage | sed 's#^#        #'; found=1; }
+    echo
+    echo "usage: $( basename $0 ) ${comma_application_swiss_operation} [<options>]"
+    echo
+    echo "${operation}"
+    [[ $( type -t ${operation}-description ) != "function" ]] || { ${operation}-description | sed 's#^#    #'; found=1; }
+    [[ $( type -t ${operation}-usage ) != "function" ]] || { echo "    usage"; ${operation}-usage | sed 's#^#        #'; found=1; }
     [[ -z "$common_options" ]] || { echo "    common options"; sed 's#^#        #' <<< "$common_options"; found=1; }
-    [[ $( type -t ${comma_application_swiss_operation}-options ) != "function" ]] || { echo "    options"; ${comma_application_swiss_operation}-options | sed 's#^#        #'; found=1; }
-    [[ $( type -t ${comma_application_swiss_operation}-examples ) != "function" ]] || { echo "    examples"; ${comma_application_swiss_operation}-examples | sed 's#^#        #'; found=1; }
+    [[ $( type -t ${operation}-options ) != "function" ]] || { echo "    options"; ${operation}-options | sed 's#^#        #'; found=1; }
+    [[ $( type -t ${operation}-examples ) != "function" ]] || { echo "    examples"; ${operation}-examples | sed 's#^#        #'; found=1; }
     (( ! found )) || return 0
-    echo "    expected operation, got: '${comma_application_swiss_operation}', see --help with no other options for more information"
+    echo "$( basename $0 ): expected operation, got: '${operation}', see --help with no other options for more information" >&2
     return 1
 }
 
@@ -296,10 +297,10 @@ function comma-application-swiss-usage()
     echo
     echo "usage: $( basename "$0" ) <operation> <options>"
     [[ -z "$common_options" ]] || { echo; echo "common options"; echo "$common_options" | sed 's#^#   #'; }
-    echo; echo "available operations: $@"
+    echo; echo "available operations: ${operations[@]}"
     echo; echo "operations"
-    for operation in $@; do
-        comma-application-swiss-usage-operation "${comma_application_swiss_operation}" | sed 's#^#    #'
+    for operation in ${operations[@]}; do
+        comma-application-swiss-usage-operation "${operation}" | sed 's#^#    #'
         echo
     done
 }
