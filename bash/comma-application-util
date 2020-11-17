@@ -210,7 +210,7 @@ function comma-application-init()
     local epilogue="$2"
     local common_options=$( cat )
     if comma_options_help $@; then
-        [[ "$( type -p prologue )" == "function" ]] || { echo; prologue; } >&2
+        [[ "$( type -t prologue )" != "function" ]] || { echo; prologue; } >&2
         cat <<eof >&2
 
 usage: $name [<options>]
@@ -219,7 +219,7 @@ options
 $( sed 's#^#    #' <<< "$common_options" )
 
 eof
-        [[ "$( type -p epilogue )" == "function" ]] || { epilogue; echo; } >&2
+        [[ "$( type -t epilogue )" != "function" ]] || { epilogue; echo; } >&2
         exit 0
     fi
     function say() { echo "$name: $@" >&2; }
@@ -240,9 +240,9 @@ function comma-application-swiss-init()
     comma_application_swiss_operation="$1" # todo? quick and dirty, allow --help anywhere on the command line?
     if comma_options_help $@; then
         if [[ "${comma_application_swiss_operation}" == "--help" || "${comma_application_swiss_operation}" == "-h" ]]; then
-            [[ "$( type -p prologue )" == "function" ]] || { echo; prologue; } >&2
+            [[ "$( type -t prologue )" != "function" ]] || { echo; prologue; } >&2
             comma-application-swiss-usage
-            [[ "$( type -p epilogue )" == "function" ]] || { epilogue; echo; } >&2
+            [[ "$( type -t epilogue )" != "function" ]] || { epilogue; echo; } >&2
         else
             echo "$common_options" | comma-application-swiss-usage-operation "${comma_application_swiss_operation}" || exit 1
             echo

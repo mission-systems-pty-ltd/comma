@@ -1,0 +1,3 @@
+#!/bin/bash
+source $( type -p comma-test-util )
+comma_test_commands
