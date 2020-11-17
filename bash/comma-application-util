@@ -210,17 +210,16 @@ function comma-application-init()
     local epilogue="$2"
     local common_options=$( cat )
     if comma_options_help $@; then
-    
-        [[ -z "$prologue" ]] || $prologue >&2
+        [[ "$( type -p prologue )" == "function" ]] || { echo; prologue; } >&2
         cat <<eof >&2
 
 usage: $name [<options>]
 
 options
-$( "$common_options" | sed 's#^#    #' )
+$( sed 's#^#    #' <<< "$common_options" )
 
 eof
-        [[ -z "$epilogue" ]] || $epilogue >&2
+        [[ "$( type -p epilogue )" == "function" ]] || { epilogue; echo; } >&2
         exit 0
     fi
     function say() { echo "$name: $@" >&2; }
@@ -229,7 +228,6 @@ eof
     eval "$( grep -v '^"' <<< "$options" | sed 's#^#options_#' | comma_path_value_mangle )"
     declare -a options_unnamed
     mapfile -t options_unnamed < <( grep '^"' <<< "$options" )
-    
 }
 
 export -f comma-application-init
@@ -237,16 +235,14 @@ export -f comma-application-init
 function comma-application-swiss-init()
 {
     local name=$( basename "$0" )
-    local prologue="$1"
-    local epilogue="$2"
     local common_options=$( cat )
     [[ -n "$1" ]] || { echo "$name: please specify operation" >&2; exit 1; }
     comma_application_swiss_operation="$1"
     if comma_options_help $@; then
         if [[ "${comma_application_swiss_operation}" == "--help" || "${comma_application_swiss_operation}" == "-h" ]]; then
-            [[ -z "$prologue" ]] || $prologue >&2
+            [[ "$( type -p prologue )" == "function" ]] || { echo; prologue; } >&2
             comma-application-swiss-usage
-            [[ -z "$epilogue" ]] || $epilogue >&2
+            [[ "$( type -p epilogue )" == "function" ]] || { epilogue; echo; } >&2
         else
             echo
             echo "usage: $( basename $0 ) ${comma_application_swiss_operation} [<options>]"
@@ -284,7 +280,7 @@ function comma-application-swiss-usage-operation()
     echo "${comma_application_swiss_operation}"
     [[ $( type -t ${comma_application_swiss_operation}-description ) != "function" ]] || { ${comma_application_swiss_operation}-description | sed 's#^#    #'; found=1; }
     [[ $( type -t ${comma_application_swiss_operation}-usage ) != "function" ]] || { echo "    usage"; ${comma_application_swiss_operation}-usage | sed 's#^#        #'; found=1; }
-    [[ -z "$common_options" ]] || { echo "    common options"; echo "$common_options" | sed 's#^#        #'; found=1; }
+    [[ -z "$common_options" ]] || { echo "    common options"; sed 's#^#        #' <<< "$common_options"; found=1; }
     [[ $( type -t ${comma_application_swiss_operation}-options ) != "function" ]] || { echo "    options"; ${comma_application_swiss_operation}-options | sed 's#^#        #'; found=1; }
     [[ $( type -t ${comma_application_swiss_operation}-examples ) != "function" ]] || { echo "    examples"; ${comma_application_swiss_operation}-examples | sed 's#^#        #'; found=1; }
     (( ! found )) || return 0
