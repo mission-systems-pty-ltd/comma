@@ -205,7 +205,7 @@ export -f comma_tee_function
 
 function comma-application-init()
 {
-    local name=$( basename "$0" )
+    comma_application_name=$( basename "$0" )
     local prologue="$1"
     local epilogue="$2"
     local common_options=$( cat )
@@ -222,7 +222,7 @@ eof
         [[ "$( type -t epilogue )" != "function" ]] || { epilogue; echo; } >&2
         exit 0
     fi
-    function say() { echo "$name: $@" >&2; }
+    function say() { echo "$comma_application_name: $@" >&2; }
     function die() { say "$@"; exit 1; }
     local options; options=$( echo "$common_options" | comma-options-to-name-value "$@" ) || die "invalid options"
     eval "$( grep -v '^"' <<< "$options" | sed 's#^#options_#' | comma_path_value_mangle )"
