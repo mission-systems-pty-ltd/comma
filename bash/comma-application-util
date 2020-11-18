@@ -213,7 +213,7 @@ function comma-application-init()
         [[ "$( type -t prologue )" != "function" ]] || { echo; prologue; } >&2
         cat <<eof >&2
 
-usage: $name [<options>]
+usage: $comma_application_name [<options>]
 
 options
 $( sed 's#^#    #' <<< "$common_options" )
