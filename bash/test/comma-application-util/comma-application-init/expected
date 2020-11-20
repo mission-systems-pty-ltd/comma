@@ -8,8 +8,9 @@ help/output/line[6]="--defaulting,-d=<value>; default=hello; default value"
 help/output/line[7]="--flag; flag option"
 help/output/line[8]="--mandatory,-m=<value>; this is mandatory option"
 help/output/line[9]="--optional,-o=[<value>]; this is optional option"
-help/output/line[10]=""
-help/output/line[11]="example: ./application some unnamed --mandatory blah stuff"
+help/output/line[10]="--verbose,-v; output more messages to stderr"
+help/output/line[11]=""
+help/output/line[12]="example: ./application some unnamed --mandatory blah stuff"
 help/status=0
 
 options/mandatory[0]/output/line[0]="options/defaulting=hello"

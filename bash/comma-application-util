@@ -203,6 +203,15 @@ function comma_tee_function()
 }
 export -f comma_tee_function
 
+function comma-application-common-options()
+{
+    cat <<eof
+--verbose,-v; output more messages to stderr
+eof
+}
+
+export -f comma-application-common-options
+
 function comma-application-init()
 {
     comma_application_name=$( basename "$0" )
@@ -216,7 +225,7 @@ function comma-application-init()
 usage: $comma_application_name [<options>]
 
 options
-$( sed 's#^#    #' <<< "$common_options" )
+$( ( [[ -z "$common_options" ]] || echo "$common_options"; comma-application-common-options ) | sed 's#^#    #' )
 
 eof
         [[ "$( type -t epilogue )" != "function" ]] || { epilogue; echo; } >&2
@@ -226,7 +235,7 @@ eof
     function saymore() { (( ! options_verbose )) || echo "$comma_application_name: $@" >&2; }
     function verbose() { (( ! options_verbose )) || echo "$comma_application_name: $@" >&2; }
     function die() { say "$@"; exit 1; }
-    local options; options=$( echo "$common_options" | comma-options-to-name-value "$@" ) || die "invalid options"
+    local options; options=$( ( echo "$common_options"; comma-application-common-options ) | comma-options-to-name-value "$@" ) || die "invalid options"
     eval "$( grep -v '^"' <<< "$options" | sed 's#^#options_#' | comma_path_value_mangle )"
     # declare -a options_unnamed
     mapfile -t options_unnamed < <( grep '^"' <<< "$options" | sed -e 's#^"##' -e 's#"$##' )
@@ -242,11 +251,11 @@ function comma-application-swiss-init()
     comma_application_swiss_operation="$1" # todo? quick and dirty, allow --help anywhere on the command line?
     if comma_options_help $@; then
         if [[ "${comma_application_swiss_operation}" == "--help" || "${comma_application_swiss_operation}" == "-h" ]]; then
-            [[ "$( type -t prologue )" != "function" ]] || { echo; prologue; } >&2
-            comma-application-swiss-usage
-            [[ "$( type -t epilogue )" != "function" ]] || { epilogue; echo; } >&2
+            [[ "$( type -t prologue )" != "function" ]] || { echo; prologue; }
+            echo "$common_options" | comma-application-swiss-usage >&2
+            [[ "$( type -t epilogue )" != "function" ]] || { epilogue; echo; }
         else
-            echo "$common_options" | comma-application-swiss-usage-operation "${comma_application_swiss_operation}" || exit 1
+            { [[ -z "$common_options" ]] || echo "$common_options"; comma-application-common-options; } | comma-application-swiss-usage-operation "${comma_application_swiss_operation}" || exit 1
             echo
         fi >&2
         exit 0
@@ -256,15 +265,13 @@ function comma-application-swiss-init()
     function verbose() { (( ! options_verbose )) || echo "$name: ${comma_application_swiss_operation}: $@" >&2; }
     function die() { say "$@"; exit 1; }
     [[ $( type -t ${comma_application_swiss_operation}-run ) == "function" ]] || die "expected operation, got '${comma_application_swiss_operation}'" # quick and dirty
-    if [[ -n "$common_options" ]]; then
-        local options; options=$( echo "$common_options" | comma-options-to-name-value "$@" ) || die "invalid options"
-        eval "$( grep -v '^"' <<< "$options" | sed 's#^#options_#' | comma_path_value_mangle )"
-        #(( !options_verbose )) || verbose_option="--verbose"
-        #(( !options_input_fields )) || { eval "echo \$${operation//-/_}_input_fields"; exit 0; } # quick and dirty
-        #(( !options_input_format )) || { eval "echo \$${operation//-/_}_input_format"; exit 0; } # quick and dirty
-        #(( !options_output_fields )) || { eval "echo \$${operation//-/_}_output_fields"; exit 0; } # quick and dirty
-        #(( !options_output_format )) || { eval "echo \$${operation//-/_}_output_format"; exit 0; } # quick and dirty
-    fi
+    local options; options=$( ( echo "$common_options"; comma-application-common-options ) | comma-options-to-name-value "$@" ) || die "invalid options"
+    eval "$( grep -v '^"' <<< "$options" | sed 's#^#options_#' | comma_path_value_mangle )"
+    #(( !options_verbose )) || verbose_option="--verbose"
+    #(( !options_input_fields )) || { eval "echo \$${operation//-/_}_input_fields"; exit 0; } # quick and dirty
+    #(( !options_input_format )) || { eval "echo \$${operation//-/_}_input_format"; exit 0; } # quick and dirty
+    #(( !options_output_fields )) || { eval "echo \$${operation//-/_}_output_fields"; exit 0; } # quick and dirty
+    #(( !options_output_format )) || { eval "echo \$${operation//-/_}_output_format"; exit 0; } # quick and dirty
     if [[ $( type -t ${comma_application_swiss_operation}-options ) == "function" ]]; then
         local operation_options; operation_options=$( ${comma_application_swiss_operation}-options | comma-options-to-name-value "$@" ) || die "invalid options"
         eval "$( grep -v '^"' <<< "$operation_options" | sed 's#^#options_#' | comma_path_value_mangle )"
@@ -279,13 +286,11 @@ function comma-application-swiss-usage-operation()
     [[ $( type -t ${operation}-run ) == "function" ]] || { echo "$( basename $0 ): expected operation, got: '${comma_application_swiss_operation}', see --help with no other options for more information" >&2; return 1; } # quick and dirty
     local common_options=$( cat )
     local found=0
-    echo
-    echo "usage: $( basename $0 ) ${comma_application_swiss_operation} [<options>]"
-    echo
-    echo "${operation}"
+    if [[ -z "$common_options" ]]; then echo "${operation}"; else echo "$( basename "$0" ) ${operation}"; fi # uber quick and dirty for now
     [[ $( type -t ${operation}-description ) != "function" ]] || { ${operation}-description | sed 's#^#    #'; found=1; }
-    [[ $( type -t ${operation}-usage ) != "function" ]] || { echo "    usage"; ${operation}-usage | sed 's#^#        #'; found=1; }
-    [[ -z "$common_options" ]] || { echo "    common options"; sed 's#^#        #' <<< "$common_options"; found=1; }
+    if [[ $( type -t ${operation}-usage ) == "function" ]]; then echo "    usage"; ${operation}-usage | sed 's#^#        #'; found=1
+    else echo "    usage: $( basename $0 ) ${comma_application_swiss_operation} [<options>]"; fi
+    [[ -z "$common_options" ]] || { echo "    common options"; echo "$common_options" | sed 's#^#        #'; }
     [[ $( type -t ${operation}-options ) != "function" ]] || { echo "    options"; ${operation}-options | sed 's#^#        #'; found=1; }
     [[ $( type -t ${operation}-examples ) != "function" ]] || { echo "    examples"; ${operation}-examples | sed 's#^#        #'; found=1; }
     (( ! found )) || return 0
@@ -300,7 +305,8 @@ function comma-application-swiss-usage()
     local common_options=$( cat )
     echo
     echo "usage: $( basename "$0" ) <operation> <options>"
-    [[ -z "$common_options" ]] || { echo; echo "common options"; echo "$common_options" | sed 's#^#   #'; }
+    echo; echo "common options"
+    { [[ -z "$common_options" ]] || echo "$common_options"; comma-application-common-options; } | sed 's#^#   #'
     echo; echo "available operations: ${operations[@]}"
     echo; echo "operations"
     for operation in ${operations[@]}; do
