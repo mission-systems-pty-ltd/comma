@@ -1,32 +1,4 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
 
 /// @author vsevolod vlaskine
 
@@ -85,7 +57,7 @@ static void usage( bool verbose )
     std::cerr << "    value : value=<csv values>[;binary=<format>]; specify size or format, if binary" << std::endl;
     std::cerr << "    line-number[;<options>] : add the line number; as ui, if binary (quick and dirty, will override the file named \"line-number\")" << std::endl;
     std::cerr << "        options" << std::endl;
-    std::cerr << "            --begin <index>: start line number count at <index>; default: 0" << std::endl;
+    std::cerr << "            --begin <index>: start line number count at <index>, can be negative; default: 0" << std::endl;
     std::cerr << "            --block-size,--size=<size>: number of records with the same line number; default: 1" << std::endl;
     std::cerr << "                 WARNING: --size: deprecated, since it is confusing for files" << std::endl;
     std::cerr << "            --index; instead of block number output record index in the block" << std::endl;
@@ -203,11 +175,11 @@ class line_number : public source
                 comma::uint32 size;
                 bool index;
                 bool reverse;
-                comma::uint32 step;
-                comma::uint32 begin;
+                comma::int32 step;
+                comma::int32 begin;
                 std::string format;
                 
-                options( boost::optional< comma::uint32 > b = boost::optional< comma::uint32 >(), comma::uint32 size = 1, bool index = false, bool reverse = false, unsigned int s = 1 )
+                options( const boost::optional< comma::int32 >& b = boost::optional< comma::int32 >(), comma::uint32 size = 1, bool index = false, bool reverse = false, int s = 1 )
                     : size( size )
                     , index( index )
                     , reverse( reverse )
@@ -218,23 +190,23 @@ class line_number : public source
                 
                 options( const std::string& properties, const comma::command_line_options& o ) // quick and dirty: use visiting instead
                 {
-                    options defaults( boost::optional< comma::uint32 >(), o.value< comma::uint32 >( "--block-size,--size", 1 ), o.exists( "--index" ), o.exists( "--reverse" ), o.value< comma::uint32 >( "--step", 1 ) );
+                    options defaults( boost::optional< comma::int32 >(), o.value< comma::uint32 >( "--block-size,--size", 1 ), o.exists( "--index" ), o.exists( "--reverse" ), o.value< comma::int32 >( "--step", 1 ) );
                     comma::name_value::map map( properties, ';', '=' );
                     size = map.value< comma::uint32 >( map.get().find( "block-size" ) != map.get().end() ? "block-size" : "size", defaults.size ); // quick and dirty
                     index = map.value< bool >( "index", defaults.index );
                     reverse = map.value< bool >( "reverse", defaults.reverse );
-                    step = map.value< comma::uint32 >( "step", defaults.step );
-                    auto b = map.optional< comma::uint32 >( "begin" );
-                    if( !b ) { b = o.optional< comma::uint32 >( "--begin" ); }
+                    step = map.value< comma::int32 >( "step", defaults.step );
+                    auto b = map.optional< comma::int32 >( "begin" );
+                    if( !b ) { b = o.optional< comma::int32 >( "--begin" ); }
                     begin = begin_( b );
                     format = map.value< std::string >( "binary", "" );
                     if( !format.empty() && format != "ui" ) { std::cerr << "csv-paste: currently only ui supported for line-number; got: '" << format << "'" << std::endl; exit( 1 ); } // quick and dirty for now
                 }
                 
             private:
-                comma::uint32 begin_( const boost::optional< comma::uint32 >& b )
+                comma::int32 begin_( const boost::optional< comma::int32 >& b ) // todo! handle size correctly for negative values for begin and step
                 {
-                    if( index && reverse && b && ( *b + step ) < size * step ) { COMMA_THROW( comma::exception, "for --reverse --index, for --size " << size << " expected --begin not less than " << ( size - 1 ) << "; got: " << *b ); }
+                    if( index && reverse && b && ( *b + step ) < int( size ) * step ) { COMMA_THROW( comma::exception, "for --reverse --index, for --size " << size << " expected --begin not less than " << ( size - 1 ) << "; got: " << *b ); }
                     return b ? *b : reverse ? ( size - 1 ) * step : 0;
                 }
         };
@@ -256,7 +228,7 @@ class line_number : public source
         
         const char* read( char* buf ) // quick and dirty
         {
-            comma::csv::format::traits< comma::uint32 >::to_bin( value_, buf );
+            comma::csv::format::traits< comma::int32 >::to_bin( value_, buf );
             update_();
             return buf;
         }
@@ -264,7 +236,7 @@ class line_number : public source
     private:
         options options_;
         comma::uint32 count_;
-        comma::uint32 value_;
+        comma::int32 value_;
         std::string serialized_;
         
         void update_()
