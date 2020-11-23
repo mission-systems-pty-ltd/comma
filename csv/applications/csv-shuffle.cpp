@@ -81,22 +81,21 @@ int main( int ac, char** av )
                 for( const auto& offset: offsets ) { std::cout.write( &buf[ offset.first ], offset.second ); }
                 if( csv.flush ) { std::cout.flush(); }
             }
+            return 0;
         }
-        else
+        std::vector< unsigned int > indices;
+        for( const auto& field: output_fields ) { indices.push_back( find_( field ) ); }
+        while( std::cin.good() && !std::cin.eof() )
         {
-            std::vector< unsigned int > indices;
-            for( const auto& field: output_fields ) { indices.push_back( find_( field ) ); }
-            while( std::cin.good() && !std::cin.eof() )
-            {
-                std::string line;
-                std::getline( std::cin, line );
-                if( !line.empty() && *line.rbegin() == '\r' ) { line = line.substr( 0, line.length() - 1 ); } // windows... sigh...
-                if( line.empty() ) { continue; }
-                const auto& v = comma::split( line, csv.delimiter );
-                std::string delimiter;
-                for( auto index: indices ) { std::cout << delimiter << v[index]; delimiter = csv.delimiter; }
-                std::cout << std::endl;
-            }
+            std::string line;
+            std::getline( std::cin, line );
+            if( !line.empty() && *line.rbegin() == '\r' ) { line = line.substr( 0, line.length() - 1 ); } // windows... sigh...
+            if( line.empty() ) { continue; }
+            const auto& v = comma::split( line, csv.delimiter );
+            if( v.size() < input_fields.size() ) { std::cerr << "csv-shuffle: expected at least " << input_fields.size() << " fields, got only " << v.size() << " in record \"" << line << "\"" << std::endl; return 1; }
+            std::string delimiter;
+            for( auto index: indices ) { std::cout << delimiter << v[index]; delimiter = csv.delimiter; }
+            std::cout << std::endl;
         }
         return 0;
     }
