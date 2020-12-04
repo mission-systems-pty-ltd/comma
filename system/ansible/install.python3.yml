@@ -19,7 +19,6 @@
       - cmake
       - gawk
       - perl
-      - net-tools
       - python
       - libboost-all-dev
       - socat
@@ -29,6 +28,12 @@
       - python3-numpy
       - libprocps-dev
       - recode
+      
+  - name: "install comma regressions test dependencies"
+    become: true
+    apt: pkg={{ item }} state=present update_cache=yes
+    with_items:
+      - net-tools
       
   - name: "comma: make source directory at {{ base }}"
     file: path={{ base }}/{{ item }} state=directory
