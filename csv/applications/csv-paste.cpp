@@ -316,27 +316,26 @@ int main( int ac, char** av )
                 std::cout.write( &buffer[0], buffer.size() );
                 if( flush ) { std::cout.flush(); }
             }
+            return 0;
         }
-        else
+        while( !head || ( *head )-- )
         {
-            while( !head || ( *head )-- )
+            std::ostringstream oss;
+            unsigned int streams = 0;
+            for( unsigned int i = 0; i < sources.size(); ++i )
             {
-                std::ostringstream oss;
-                unsigned int streams = 0;
-                for( unsigned int i = 0; i < sources.size(); ++i )
+                const std::string* s = sources[i].read();
+                if( s == nullptr )
                 {
-                    const std::string* s = sources[i].read();
-                    if( s == nullptr )
-                    {
-                        if( streams == 0 ) { return 0; }
-                        std::cerr << "csv-paste: unexpected end of file in " << unnamed[i] << std::endl; return 1;
-                    }
-                    if( sources[i].is_stream() ) { ++streams; }
-                    if( i > 0 ) { oss << delimiter; }
-                    oss << *s;
+                    if( streams == 0 ) { return 0; }
+                    std::cerr << "csv-paste: unexpected end of file in " << unnamed[i] << std::endl;
+                    return 1;
                 }
-                std::cout << oss.str() << std::endl;
+                if( sources[i].is_stream() ) { ++streams; }
+                if( i > 0 ) { oss << delimiter; }
+                oss << *s;
             }
+            std::cout << oss.str() << std::endl;
         }
         return 0;
     }
