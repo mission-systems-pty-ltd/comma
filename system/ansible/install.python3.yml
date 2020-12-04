@@ -33,8 +33,9 @@
     become: true
     apt: pkg={{ item }} state=present update_cache=yes
     with_items:
-      - net-tools
       - moreutils
+      - net-tools
+      - pv
       
   - name: "comma: make source directory at {{ base }}"
     file: path={{ base }}/{{ item }} state=directory
