@@ -18,6 +18,7 @@
       - cmake-curses-gui
       - cmake
       - gawk
+      - net-tools
       - perl
       - python
       - libboost-all-dev
