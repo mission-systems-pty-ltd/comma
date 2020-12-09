@@ -19,6 +19,7 @@
 #include "../../base/last_error.h"
 #include "../../io/file_descriptor.h"
 #include "../../io/publisher.h"
+#include "../../name_value/map.h"
 #include "../../string/string.h"
 #include "../../sync/synchronized.h"
 
@@ -94,7 +95,14 @@ class publish
         
         typedef publishers_t::scoped_transaction transaction_t;
         
-        publish( const std::vector< std::string >& filenames
+        struct endpoint
+        {
+            std::string address;
+            bool secondary;
+            endpoint( const std::string& address = "", bool secondary = false ): secondary( secondary ) {}
+        };
+        
+        publish( const std::vector< std::string >& endpoints
                , unsigned int packet_size
                , bool discard
                , bool flush
@@ -105,23 +113,25 @@ class publish
             , output_number_of_clients_( output_number_of_clients )
             , report_no_clients_( report_no_clients )
             , got_first_client_ever_( false )
-            , sizes_( filenames.size(), 0 )
+            , sizes_( endpoints.size(), 0 )
             , num_clients_( 0 )
             , is_shutdown_( false )
         {
+            for( unsigned int i = 0; i < endpoints.size(); ++i )
+            {
+                comma::name_value::map m( endpoints[i], "address", ';', '=' );
+                endpoints_.push_back( endpoint( m.value< std::string >( "address" ), !m.exists( "primary" ) && m.exists( "secondary" ) ) ); // todo? quick and dirty; better usage semantics?
+            }
             struct sigaction new_action, old_action;
             new_action.sa_handler = SIG_IGN;
             sigemptyset( &new_action.sa_mask );
             sigaction( SIGPIPE, NULL, &old_action );
             sigaction( SIGPIPE, &new_action, NULL );
             transaction_t t( publishers_ );
-            t->resize( filenames.size() );
-            for( std::size_t i = 0; i < filenames.size(); ++i )
+            t->resize( endpoints.size() );
+            for( std::size_t i = 0; i < endpoints.size(); ++i )
             {
-                ( *t )[i].reset( new comma::io::publisher( filenames[i]
-                                                         , is_binary_() ? comma::io::mode::binary : comma::io::mode::ascii
-                                                         , !discard
-                                                         , flush ) );
+                if( !endpoints_[i].secondary ) { ( *t )[i].reset( new comma::io::publisher( endpoints[i], is_binary_() ? comma::io::mode::binary : comma::io::mode::ascii, !discard, flush ) ); }
             }
             acceptor_thread_.reset( new boost::thread( boost::bind( &publish::accept_, boost::ref( *this ))));
         }
@@ -131,7 +141,7 @@ class publish
             is_shutdown_ = true;
             acceptor_thread_->join();
             transaction_t t( publishers_ );
-            { for( std::size_t i = 0; i < t->size(); ++i ) { ( *t )[i]->close(); } }
+            { for( std::size_t i = 0; i < t->size(); ++i ) { if( ( *t )[i] ) { ( *t )[i]->close(); } } }
         }
         
         bool read( std::istream& input )
@@ -148,7 +158,7 @@ class publish
                 if( !input.good() ) { return false; }
             }
             transaction_t t( publishers_ );
-            for( std::size_t i = 0; i < t->size(); ++i ) { ( *t )[i]->write( &buffer_[0], buffer_.size(), false ); }
+            for( std::size_t i = 0; i < t->size(); ++i ) { if( ( *t )[i] ) { ( *t )[i]->write( &buffer_[0], buffer_.size(), false ); } }
             return handle_sizes_( t );
         }
 
@@ -162,10 +172,12 @@ class publish
             if( !output_number_of_clients_ && !report_no_clients_ ) { return true; }
             unsigned int total = 0;
             bool changed = false;
+            has_primary_clients_ = false;
             for( unsigned int i = 0; i < t->size(); ++i )
             {
-                unsigned int size = ( *t )[i]->size();
+                unsigned int size = ( *t )[i] ? ( *t )[i]->size() : 0;
                 total += size;
+                if( !endpoints_[i].secondary && size > 0 ) { has_primary_clients_ = true; }
                 if( sizes_[i] == size ) { continue; }
                 sizes_[i] = size;
                 changed = true;
@@ -191,7 +203,11 @@ class publish
             comma::io::select select;
             {
                 transaction_t t( publishers_ );
-                for( unsigned int i = 0; i < t->size(); ++i ) { if( ( *t )[i]->acceptor_file_descriptor() != comma::io::invalid_file_descriptor ) { select.read().add( ( *t )[i]->acceptor_file_descriptor() ); } }
+                for( unsigned int i = 0; i < t->size(); ++i )
+                {
+                    if( !( *t )[i] ) { continue; }
+                    if( ( *t )[i]->acceptor_file_descriptor() != comma::io::invalid_file_descriptor ) { select.read().add( ( *t )[i]->acceptor_file_descriptor() ); }
+                }
             }
             while( !is_shutdown_ )
             {
@@ -199,12 +215,22 @@ class publish
                 transaction_t t( publishers_ );
                 for( unsigned int i = 0; i < t->size(); ++i )
                 {
+                    if( !( *t )[i] ) { continue; }
                     if( select.read().ready( ( *t )[i]->acceptor_file_descriptor() ) ) { ( *t )[i]->accept(); }
                 }
                 handle_sizes_( t );
+                if( has_primary_clients_ )
+                {
+                    // todo: restore secondary acceptors
+                }
+                else
+                {
+                    // todo: reset secondary acceptors
+                }
             }
         }
         
+        std::vector< endpoint > endpoints_;
         publishers_t publishers_;
         std::string buffer_;
         unsigned int packet_size_;
@@ -212,6 +238,7 @@ class publish
         bool report_no_clients_;
         bool got_first_client_ever_;
         std::vector< unsigned int > sizes_;
+        bool has_primary_clients_;
         unsigned int num_clients_;
         boost::scoped_ptr< boost::thread > acceptor_thread_;
         bool is_shutdown_;
