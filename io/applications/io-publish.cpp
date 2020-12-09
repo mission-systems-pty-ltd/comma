@@ -291,7 +291,7 @@ int main( int ac, char** av )
         //ProfilerStart( "io-publish.prof" ); {
         if( exec_command.empty() )
         {
-            if( on_demand ) { std::cerr << "io-publish: got --on-demand; please specify --exec <command> or -- <command>" << std::endl; return 1; }
+            if( on_demand ) { std::cerr << "io-publish: got --on-demand; please specify --exec <command> or -- <command>, or remove --on-demand" << std::endl; return 1; }
             while( std::cin.good() && !is_shutdown ) { if( !p.read( std::cin ) && exit_on_no_clients ) { break; } }
         }
         else
