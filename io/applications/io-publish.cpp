@@ -7,12 +7,11 @@
 #include <signal.h>
 #include <sys/wait.h>
 #include <unistd.h>
-
+#include <memory>
 #include <boost/bind.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
-#include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/thread.hpp>
 #include "../../application/command_line_options.h"
@@ -91,7 +90,7 @@ static void usage( bool verbose = false )
 class publish
 {
     public:
-        typedef comma::synchronized< boost::ptr_vector< comma::io::publisher > > publishers_t;
+        typedef comma::synchronized< std::vector< std::unique_ptr< comma::io::publisher > > > publishers_t;
         
         typedef publishers_t::scoped_transaction transaction_t;
         
@@ -116,12 +115,13 @@ class publish
             sigaction( SIGPIPE, NULL, &old_action );
             sigaction( SIGPIPE, &new_action, NULL );
             transaction_t t( publishers_ );
+            t->resize( filenames.size() );
             for( std::size_t i = 0; i < filenames.size(); ++i )
             {
-                t->push_back( new comma::io::publisher( filenames[i]
-                                                      , is_binary_() ? comma::io::mode::binary : comma::io::mode::ascii
-                                                      , !discard
-                                                      , flush ));
+                ( *t )[i].reset( new comma::io::publisher( filenames[i]
+                                                         , is_binary_() ? comma::io::mode::binary : comma::io::mode::ascii
+                                                         , !discard
+                                                         , flush ) );
             }
             acceptor_thread_.reset( new boost::thread( boost::bind( &publish::accept_, boost::ref( *this ))));
         }
@@ -131,7 +131,7 @@ class publish
             is_shutdown_ = true;
             acceptor_thread_->join();
             transaction_t t( publishers_ );
-            { for( std::size_t i = 0; i < t->size(); ++i ) { ( *t )[i].close(); } }
+            { for( std::size_t i = 0; i < t->size(); ++i ) { ( *t )[i]->close(); } }
         }
         
         bool read( std::istream& input )
@@ -148,7 +148,7 @@ class publish
                 if( !input.good() ) { return false; }
             }
             transaction_t t( publishers_ );
-            for( std::size_t i = 0; i < t->size(); ++i ) { ( *t )[i].write( &buffer_[0], buffer_.size(), false ); }
+            for( std::size_t i = 0; i < t->size(); ++i ) { ( *t )[i]->write( &buffer_[0], buffer_.size(), false ); }
             return handle_sizes_( t );
         }
 
@@ -157,14 +157,14 @@ class publish
     private:
         bool is_binary_() const { return packet_size_ > 0; }
         
-        bool handle_sizes_( transaction_t& t )
+        bool handle_sizes_( transaction_t& t ) // todo? why pass transaction? it doen not seem going out of scope at the point of call; remove?
         {
             if( !output_number_of_clients_ && !report_no_clients_ ) { return true; }
             unsigned int total = 0;
             bool changed = false;
             for( unsigned int i = 0; i < t->size(); ++i )
             {
-                unsigned int size = ( *t )[i].size();
+                unsigned int size = ( *t )[i]->size();
                 total += size;
                 if( sizes_[i] == size ) { continue; }
                 sizes_[i] = size;
@@ -191,7 +191,7 @@ class publish
             comma::io::select select;
             {
                 transaction_t t( publishers_ );
-                for( unsigned int i = 0; i < t->size(); ++i ) { if( ( *t )[i].acceptor_file_descriptor() != comma::io::invalid_file_descriptor ) { select.read().add( ( *t )[i].acceptor_file_descriptor() ); } }
+                for( unsigned int i = 0; i < t->size(); ++i ) { if( ( *t )[i]->acceptor_file_descriptor() != comma::io::invalid_file_descriptor ) { select.read().add( ( *t )[i]->acceptor_file_descriptor() ); } }
             }
             while( !is_shutdown_ )
             {
@@ -199,7 +199,7 @@ class publish
                 transaction_t t( publishers_ );
                 for( unsigned int i = 0; i < t->size(); ++i )
                 {
-                    if( select.read().ready( ( *t )[i].acceptor_file_descriptor() ) ) { ( *t )[i].accept(); }
+                    if( select.read().ready( ( *t )[i]->acceptor_file_descriptor() ) ) { ( *t )[i]->accept(); }
                 }
                 handle_sizes_( t );
             }
