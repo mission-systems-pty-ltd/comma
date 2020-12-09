@@ -3,7 +3,7 @@ period=0.1
 append="time"
 format=ui
 data="
-0,123
+0.20,123
 0.01,456
 0.01,789
 0.55,123
