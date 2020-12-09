@@ -72,12 +72,19 @@ static void usage( bool verbose = false )
     std::cerr << "               but might take a while to notice that a client has gone." << std::endl;
     std::cerr << "               This affects --output-number-of-clients and --on-demand." << std::endl;
     std::cerr << std::endl;
-    std::cerr << "output streams" << std::endl;
-    std::cerr << "    tcp:<port>: e.g. tcp:1234" << std::endl;
-    std::cerr << "    udp:<port>: e.g. udp:1234 (todo)" << std::endl;
-    std::cerr << "    local:<name>: linux/unix local server socket e.g. local:./tmp/my_socket" << std::endl;
-    std::cerr << "    <named pipe name>: named pipe, which will be re-opened, if client reconnects" << std::endl;
-    std::cerr << "    <filename>: a regular file" << std::endl;
+    std::cerr << "output streams: <address>[,<options>]" << std::endl;
+    std::cerr << "    <address>" << std::endl;
+    std::cerr << "        tcp:<port>: e.g. tcp:1234" << std::endl;
+    std::cerr << "        udp:<port>: e.g. udp:1234 (todo)" << std::endl;
+    std::cerr << "        local:<name>: linux/unix local server socket e.g. local:./tmp/my_socket" << std::endl;
+    std::cerr << "        <named pipe name>: named pipe, which will be re-opened, if client reconnects" << std::endl;
+    std::cerr << "        <filename>: a regular file" << std::endl;
+    std::cerr << "        -: stdout" << std::endl;
+    std::cerr << "    <options>" << std::endl;
+    std::cerr << "        primary (default): clients always can connect to the 'primary' stream" << std::endl;
+    std::cerr << "        secondary: clients can connect to the 'secondary' stream, only if there are existing clients on a primary stream" << std::endl;
+    std::cerr << "                   if a client connects to a 'primary' stream, 'secondary' streams will be opened" << std::endl;
+    std::cerr << "                   if last client on a 'primary' stream disconnects, 'secondary' streams will be closed" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << "    cat data | io-publish tcp:1234 --size 100" << std::endl;
@@ -99,7 +106,7 @@ class publish
         {
             std::string address;
             bool secondary;
-            endpoint( const std::string& address = "", bool secondary = false ): secondary( secondary ) {}
+            endpoint( const std::string& address = "", bool secondary = false ): address( address ), secondary( secondary ) {}
         };
         
         publish( const std::vector< std::string >& endpoints
@@ -108,7 +115,9 @@ class publish
                , bool flush
                , bool output_number_of_clients
                , bool report_no_clients )
-            : buffer_( packet_size, '\0' )
+            : discard_( discard )
+            , flush_( flush )
+            , buffer_( packet_size, '\0' )
             , packet_size_( packet_size )
             , output_number_of_clients_( output_number_of_clients )
             , report_no_clients_( report_no_clients )
@@ -117,11 +126,15 @@ class publish
             , num_clients_( 0 )
             , is_shutdown_( false )
         {
+            bool has_primary_stream = false;
             for( unsigned int i = 0; i < endpoints.size(); ++i )
             {
                 comma::name_value::map m( endpoints[i], "address", ';', '=' );
-                endpoints_.push_back( endpoint( m.value< std::string >( "address" ), !m.exists( "primary" ) && m.exists( "secondary" ) ) ); // todo? quick and dirty; better usage semantics?
+                bool secondary = !m.exists( "primary" ) && m.exists( "secondary" );
+                endpoints_.push_back( endpoint( m.value< std::string >( "address" ), secondary ) ); // todo? quick and dirty; better usage semantics?
+                if( !secondary ) { has_primary_stream = true; }
             }
+            if( !has_primary_stream ) { std::cerr << "io-publish: please specify at least one primary stream" << std::endl; exit( 1 ); }
             struct sigaction new_action, old_action;
             new_action.sa_handler = SIG_IGN;
             sigemptyset( &new_action.sa_mask );
@@ -131,7 +144,7 @@ class publish
             t->resize( endpoints.size() );
             for( std::size_t i = 0; i < endpoints.size(); ++i )
             {
-                if( !endpoints_[i].secondary ) { ( *t )[i].reset( new comma::io::publisher( endpoints[i], is_binary_() ? comma::io::mode::binary : comma::io::mode::ascii, !discard, flush ) ); }
+                if( !endpoints_[i].secondary ) { ( *t )[i].reset( new comma::io::publisher( endpoints_[i].address, is_binary_() ? comma::io::mode::binary : comma::io::mode::ascii, !discard, flush ) ); }
             }
             acceptor_thread_.reset( new boost::thread( boost::bind( &publish::accept_, boost::ref( *this ))));
         }
@@ -141,7 +154,7 @@ class publish
             is_shutdown_ = true;
             acceptor_thread_->join();
             transaction_t t( publishers_ );
-            { for( std::size_t i = 0; i < t->size(); ++i ) { if( ( *t )[i] ) { ( *t )[i]->close(); } } }
+            for( std::size_t i = 0; i < t->size(); ++i ) { if( ( *t )[i] ) { ( *t )[i]->close(); } }
         }
         
         bool read( std::istream& input )
@@ -215,22 +228,33 @@ class publish
                 transaction_t t( publishers_ );
                 for( unsigned int i = 0; i < t->size(); ++i )
                 {
-                    if( !( *t )[i] ) { continue; }
-                    if( select.read().ready( ( *t )[i]->acceptor_file_descriptor() ) ) { ( *t )[i]->accept(); }
+                    if( ( *t )[i] && select.read().ready( ( *t )[i]->acceptor_file_descriptor() ) ) { ( *t )[i]->accept(); }
                 }
                 handle_sizes_( t );
                 if( has_primary_clients_ )
                 {
-                    // todo: restore secondary acceptors
+                    for( unsigned int i = 0; i < t->size(); ++i )
+                    {
+                        if( !endpoints_[i].secondary || ( *t )[i] ) { continue; }
+                        ( *t )[i].reset( new comma::io::publisher( endpoints_[i].address, is_binary_() ? comma::io::mode::binary : comma::io::mode::ascii, !discard_, flush_ ) );
+                        if( ( *t )[i]->acceptor_file_descriptor() != comma::io::invalid_file_descriptor ) { select.read().add( ( *t )[i]->acceptor_file_descriptor() ); }
+                    }
                 }
                 else
                 {
-                    // todo: reset secondary acceptors
+                    for( unsigned int i = 0; i < t->size(); ++i )
+                    {
+                        if( !endpoints_[i].secondary || !( *t )[i] ) { continue; }
+                        select.read().remove( ( *t )[i]->acceptor_file_descriptor() );
+                        ( *t )[i].reset();
+                    }
                 }
             }
         }
         
         std::vector< endpoint > endpoints_;
+        bool discard_;
+        bool flush_;
         publishers_t publishers_;
         std::string buffer_;
         unsigned int packet_size_;
