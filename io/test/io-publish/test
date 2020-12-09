@@ -37,6 +37,7 @@ echo "test: io_publish_pid: $io_publish_pid port: $port" >&2
 
 if [[ $( type -t client_cmd ) == "function" ]]; then
     sleep 1                     # allow time for io-publish to open the port
+    echo "test: running client command..." >&2
     client_cmd > /dev/null &
     client_cmd_pid=$!
     echo "client_cmd_pid=$client_cmd_pid" >&2
@@ -64,5 +65,6 @@ echo "test: killing io-publish: $io_publish_pid" >&2
 kill_pid_and_children $io_publish_pid
 
 if [[ -f client.out ]]; then
+    echo "test: outputting $( realpath client.out )" >&2
     cat client.out | name-value-from-csv line --prefix output -n -d @
 fi

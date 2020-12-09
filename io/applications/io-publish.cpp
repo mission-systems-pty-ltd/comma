@@ -1,31 +1,5 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// Copyright (c) 2020 Vsevolod Vlaskine
 
 /// @authors cedric wohlleber, vsevolod vlaskine, dave jennings
 
@@ -36,6 +10,8 @@
 
 #include <boost/bind.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/iostreams/device/file_descriptor.hpp>
+#include <boost/iostreams/stream.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/thread.hpp>
@@ -69,9 +45,9 @@ static void usage( bool verbose = false )
     std::cerr << "    --multiplier,-m: multiplier for packet size, default is 1. The actual packet size will be m * s" << std::endl;
     std::cerr << "    --no-discard: if present, do blocking write to every open stream" << std::endl;
     std::cerr << "    --no-flush: if present, do not flush the output stream (use on high bandwidth sources)" << std::endl;
-    std::cerr << "    --exec=[<cmd>]: read from cmd rather than stdin" << std::endl;
-    std::cerr << "    -- [<cmd>]: alternate syntax for specifying a command (simplifies quoting)" << std::endl;
-    std::cerr << "    --on-demand: only run <cmd> when a client is connected" << std::endl;
+    std::cerr << "    --exec=[<command>]: read from <command> rather than stdin" << std::endl;
+    std::cerr << "    -- [<command>]: alternate syntax for specifying a command (simplifies quoting)" << std::endl;
+    std::cerr << "    --on-demand: only run <command> when a client is connected" << std::endl;
     std::cerr << std::endl;
     std::cerr << "client options" << std::endl;
     std::cerr << "    --exit-on-no-clients,-e: once the last client disconnects, exit" << std::endl;
@@ -244,13 +220,12 @@ class publish
 class command
 {
     public:
-        command( const std::string& cmd )
-            : cmd_( cmd )
-            , child_pid_( -1 )
+        command( const std::string& command ): command_( command ), child_pid_( -1 )
         {
-            comma::verbose << "launching " << cmd << std::endl;
+            comma::verbose << "launching command: " << command << std::endl;
             int fd[2];
             if( ::pipe( fd ) == -1 ) { comma::last_error::to_exception( "couldn't open pipe" ); } // create a pipe to send the child stdout to the parent stdin
+            fd_ = fd[0];
             pid_t pid = fork();
             if( pid == -1 ) { comma::last_error::to_exception( "failed to fork()" ); }
             if( pid == 0 )
@@ -259,36 +234,38 @@ class command
                 while( ( dup2( fd[1], STDOUT_FILENO ) == -1 ) && ( errno == EINTR ) ) {} // connect pipe input to stdout in child
                 ::close( fd[1] );     // no longer need fd[1], now that it's duped
                 ::close( fd[0] );     // don't need pipe output in the child
-                ::execlp( "bash", "bash", "-c", &cmd_[0], NULL );
+                ::execlp( "bash", "bash", "-c", &command_[0], NULL );
                 std::cerr << "io-publish: failed to exec child: errno " << comma::last_error::value() << " - " << comma::last_error::to_string() << std::endl;
                 exit( 1 );
             }
             child_pid_ = pid;
-            while( ( ::dup2( fd[0], STDIN_FILENO ) == -1 ) && ( errno == EINTR ) ) {} // connect pipe output to stdin in parent
-            ::close( fd[0] ); // no longer need fd[0], now that it's duped
+            comma::verbose << "launched command with pid: " << pid << std::endl;
+            ::close( STDIN_FILENO );
             ::close( fd[1] ); // don't need pipe input in the parent
         }
+        
+        int fd() const { return fd_; }
 
         ~command()
         {
-            comma::verbose << "killing child pid " << child_pid_ << " for " << cmd_ << "..." << std::endl;
+            comma::verbose << "killing child pid " << child_pid_ << " for " << command_ << "..." << std::endl;
             ::kill( -child_pid_, SIGTERM );
             comma::verbose << "waiting for pid " << child_pid_ << "..." << std::endl;
             if( ::waitpid( -child_pid_, NULL, 0 ) < 0 ) { comma::verbose << "warning: waiting for pid " << child_pid_ << " failed" << std::endl; }
-            while( std::getchar() >= 0 ); // todo: lame, but select or c-style reading produce bizarre results; investigate further
+            while( std::getchar() >= 0 ); // todo: lame, but select or c-style reading produce bizarre results; investigate sometime
             comma::verbose << "waiting for pid " << child_pid_ << " done" << std::endl;
         }
 
     private:
-        std::string cmd_;
+        std::string command_;
         pid_t child_pid_;
+        int fd_;
 };
 
 int main( int ac, char** av )
 {
     try
     {
-        //comma::command_line_options options( ac, av, usage );
         std::vector< std::string > head, tail;
         for( int i = 0; i < ac && std::string( "--" ) != av[i]; ++i ) { head.push_back( av[i] ); }
         for( int i = head.size() + 1; i < ac; ++i ) { tail.push_back( av[i] ); }
@@ -319,18 +296,17 @@ int main( int ac, char** av )
         else
         {
             bool done = false;
+            int fd[2];
+            if( ::pipe( fd ) == -1 ) { comma::last_error::to_exception( "couldn't open pipe" ); } // create a pipe to send the child stdout to the parent stdin
             while( !done && !is_shutdown )
             {
-                if( !on_demand || p.num_clients() > 0 )
-                {
-                    command cmd( exec_command );
-                    while( std::cin.good() && !is_shutdown && p.read( std::cin ) );
-                    if( !on_demand ) { done = true; }
-                }
-                else
-                {
-                    ::sleep( 0.1 );
-                }
+                if( on_demand && p.num_clients() == 0 ) { ::sleep( 0.1 ); continue; }
+                comma::verbose << "number of clients: " << p.num_clients() << std::endl;
+                command cmd( exec_command );
+                typedef boost::iostreams::file_descriptor_source fd_t;
+                boost::iostreams::stream< fd_t > is( fd_t( cmd.fd(), boost::iostreams::never_close_handle ) );
+                while( is.good() && !is_shutdown && p.read( is ) );
+                if( !on_demand ) { break; }
             }
         }
         //ProfilerStop(); }
