@@ -33,7 +33,8 @@ cat $input \
     | if [[ $options =~ --realtime ]]; then
           sed 's/[^,]//g' | wc -lc | tr -s ' ' | sed 's/^ //' | tr ' ' , \
               | csv-eval --fields=lines,chars "chars = chars / lines" \
-              | name-value-from-csv -f num_records,num_fields
+              | name-value-from-csv -f num_records,num_fields \
+              | csv-quote --unquote -d =
       else
           name-value-from-csv -f line -d : -n -p output
       fi
