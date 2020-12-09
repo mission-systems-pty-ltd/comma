@@ -85,6 +85,7 @@ static void usage( bool verbose = false )
     std::cerr << "        secondary: clients can connect to the 'secondary' stream, only if there are existing clients on a primary stream" << std::endl;
     std::cerr << "                   if a client connects to a 'primary' stream, 'secondary' streams will be opened" << std::endl;
     std::cerr << "                   if last client on a 'primary' stream disconnects, 'secondary' streams will be closed" << std::endl;
+    std::cerr << "                   e.g: io-publish tcp:8888 'tcp:9999;secondary'" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << "    cat data | io-publish tcp:1234 --size 100" << std::endl;
