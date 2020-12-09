@@ -14,24 +14,24 @@ time_fields=t,$( csv-fields clear --except time <<< $output_fields )
 
 for mode in ascii binary; do
 
-    now=$( echo "1" | csv-time-stamp | csv-shuffle --fields=t, --output-fields=t | csv-time --to seconds )
+    csv_eval_expr="t-=init_t"
+    [[ $append =~ time ]] && csv_eval_expr+="; time-=init_t"
 
-    csv_eval_expr="t-=$now"
-    [[ $append =~ time ]] && csv_eval_expr+="; time-=$now"
-
-    while IFS=, read data pause; do
-        echo $data
+    while IFS=, read pause data; do
         sleep $pause
+        echo $data
     done <<< "$data" \
         | if [[ $mode == "binary" ]]; then
               csv-to-bin $format --flush \
                   | csv-repeat --timeout=$timeout $period_option $append_option --binary=$format \
-                  | csv-from-bin $output_format --flush
+                  | csv-time-stamp --binary $output_format \
+                  | csv-from-bin t,$output_format --flush
           else
-              csv-repeat --timeout=$timeout $period_option $append_option
+              csv-repeat --timeout=$timeout $period_option $append_option | csv-time-stamp
           fi \
-        | csv-time-stamp | csv-time --fields $time_fields --to seconds \
-        | csv-eval --fields=$time_fields "$csv_eval_expr" --flush \
+        | csv-time --fields $time_fields --to seconds \
+        | gawk 'BEGIN { FS="," } { if( init_t == 0 ) init_t=$1; print $0,init_t }' OFS=, \
+        | csv-eval --fields=$time_fields,init_t "$csv_eval_expr" --flush \
         | name-value-from-csv --fields=timestamp,$output_fields --line-number --prefix=$mode \
         | csv-quote -d = --unquote
 
