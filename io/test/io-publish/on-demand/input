@@ -1,10 +1,11 @@
 # because we source these files into the test script, we can use functions from the test script
 
-port=42643
+port=42743
 options="--on-demand"
 test_duration=40
 report_interval=0.5
 
+# yes | csv-repeat --pace --period 0.25
 function exec_cmd()
 {
     yes
@@ -13,25 +14,32 @@ export -f exec_cmd
 
 function read_port()
 {
-    echo "test: creating reader" >&2
+    echo "test: creating reader..." >&2
     socat tcp:localhost:$port -
+    echo "test: created reader" >&2
 }
 
 function client_cmd()
 {
     sleep 5
+    echo "test: starting client 1 of 3..." >&2
     read_port &
     first_client_pid=$!
+    echo "test: started client 1 of 3 with pid $first_client_pid" >&2
     sleep 5
+    echo "test: starting client 2 of 3..." >&2
     read_port &
     second_client_pid=$!
+    echo "test: started client 2 of 3 with pid $second_client_pid" >&2
     sleep 5
     kill_pid_and_children $first_client_pid
     sleep 5
     kill_pid_and_children $second_client_pid
     sleep 5
+    echo "test: starting client 3 of 3..." >&2
     read_port &
     third_client_pid=$!
+    echo "test: started client 3 of 3 with pid $third_client_pid" >&2
     sleep 5
     kill_pid_and_children $third_client_pid
     sleep 5

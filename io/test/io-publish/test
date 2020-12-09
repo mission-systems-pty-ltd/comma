@@ -15,11 +15,11 @@ function kill_pid_and_children()
 {
     pid=$1
     local child_pids=$( pgrep -P $pid )
-    echo "killing children: $child_pids" >&2
-    [[ $child_pids ]] && kill $child_pids
-    echo "killing $pid" >&2
+    if [[ -n "$child_pids" ]]; then echo "killing children with pid(s): $child_pids" >&2; kill $child_pids; fi
+    echo "test: killing $pid" >&2
     kill $pid 2> /dev/null
     wait $pid
+    echo "test: killed $pid" >&2
 }
 
 [[ -d output ]] || mkdir output
@@ -33,7 +33,7 @@ else
     io-publish tcp:$port $options &
 fi
 io_publish_pid=$!
-echo "io_publish_pid=$io_publish_pid" >&2
+echo "test: io_publish_pid: $io_publish_pid port: $port" >&2
 
 if [[ $( type -t client_cmd ) == "function" ]]; then
     sleep 1                     # allow time for io-publish to open the port
@@ -60,7 +60,7 @@ done | sed 's/,$//;s/,[^,]* <defunct>//g' | grep -v ",bash$" | uniq \
 if [[ $client_cmd_pid ]]; then
     kill_pid_and_children $client_cmd_pid
 fi
-echo "killing io-publish: $io_publish_pid" >&2
+echo "test: killing io-publish: $io_publish_pid" >&2
 kill_pid_and_children $io_publish_pid
 
 if [[ -f client.out ]]; then
