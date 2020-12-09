@@ -17,9 +17,9 @@ for mode in ascii binary; do
     csv_eval_expr="t-=init_t"
     [[ $append =~ time ]] && csv_eval_expr+="; time-=init_t"
 
-    while IFS=, read data pause; do
-        echo $data
+    while IFS=, read pause data; do
         sleep $pause
+        echo $data
     done <<< "$data" \
         | if [[ $mode == "binary" ]]; then
               csv-to-bin $format --flush \
