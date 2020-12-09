@@ -4,8 +4,6 @@ source $( type -p comma-application-util )
 
 comma_path_value_to_var < <( cat )
 
-now=$( date -u +%Y%m%dT%H%M%S.%N | csv-time --from iso --to seconds )
-
 input_fn=cat
 output_fn=cat
 if [[ $options =~ --binary|--size ]]; then
@@ -13,13 +11,22 @@ if [[ $options =~ --binary|--size ]]; then
     output_fn="csv-from-bin t,$format"
 fi
 
+function timestamper()
+{
+    local now=$( date -u +%Y%m%dT%H%M%S.%N | csv-time --from iso --to seconds )
+    $input_fn \
+        | csv-time-stamp $options \
+        | $output_fn | csv-time --from iso --to seconds \
+        | csv-eval --fields=t "d=t-$now" \
+        | name-value-from-csv --prefix=output --line-number --fields=t,$fields,d \
+        | csv-quote --unquote --delimiter='='
+}
+
+# prime the system to load everything from disk, so that timestamp comparison is more accurate
+
+echo "dummy" | timestamper >/dev/null 2>&1
+
 # put a small delay between the outputting of each line,
 # so the timestamps are different
 
-echo -e $input | while read line; do echo $line; sleep 0.1; done \
-    | $input_fn \
-    | csv-time-stamp $options \
-    | $output_fn | csv-time --from iso --to seconds \
-    | csv-eval --fields=t "d=t-$now" \
-    | name-value-from-csv --prefix=output --line-number --fields=t,$fields,d \
-    | csv-quote --unquote --delimiter='='
+echo -e $input | while read line; do echo $line; sleep 0.1; done | timestamper
