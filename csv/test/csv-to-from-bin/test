@@ -1,0 +1,7 @@
+#!/bin/bash
+
+while read format data; do
+    for x in $( tr , ' ' <<< $data ); do
+        echo $format,$x,$( echo $x | csv-to-bin $format | csv-from-bin $format )
+    done
+done | name-value-from-csv format,input,output --prefix test --line-number
