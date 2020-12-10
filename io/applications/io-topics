@@ -69,6 +69,12 @@ examples
             3
             4
             
+        secondary address or port with --dry-run (try it without dry run)
+            > io-topics publish --config <( echo "a/command=csv-paste line-number"; echo "a/port=12345"; echo "b/command=csv-paste line-number"; echo "b/port=12346"; echo "b/secondary/port=8888"; echo "b/on_demand=1" ) --dry-run
+            io-topics: publish: will run 'comma_execute_and_wait --group' with commands:
+            io-topics: publish:     io-publish tcp:12345    -- csv-paste line-number
+            io-topics: publish:     io-publish tcp:12346 tcp:8888;secondary  --on-demand -- csv-paste line-number
+            
     cat
         run publisher
             > io-topics publish --config <( echo "a/command=csv-paste line-number"; echo "a/port=12345"; echo "b/command=csv-paste line-number"; echo "b/port=12346"; echo "b/on_demand=1" )
