@@ -42,6 +42,14 @@ TEST( csv, format )
         try { comma::csv::format f( "blah" ); EXPECT_TRUE( false ); } catch ( ... ) {}
     }
     {
+        comma::csv::format f( "%ub" );
+        EXPECT_EQ( f.bin_to_csv( f.csv_to_bin( "64" ) ), "64" );
+    }
+    {
+        comma::csv::format f( "%b" );
+        EXPECT_EQ( f.bin_to_csv( f.csv_to_bin( "-64" ) ), "-64" );
+    }
+    {
         comma::csv::format f( "%uw" );
         EXPECT_EQ( f.bin_to_csv( f.csv_to_bin( "1234" ) ), "1234" );
     }
