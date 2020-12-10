@@ -120,6 +120,8 @@ binary
 command
 on_demand
 port
+secondary/address
+secondary/port
 size
 eof
 }
@@ -132,6 +134,8 @@ binary; if publisher publishes binary data, the binary format of the data, overr
 command; command for the publisher to run
 on_demand; if present, same meaning as io-publish --on-demand
 port; tcp port for publishing, unless address field is present
+secondary/address; if present, passed verbatim to io-publish as '<address>;secondary', in this case port attribute ignored
+secondary/port; if present, secondary tcp port for publishing, unless address field is present, io-publish as 'tcp:<port>;secondary'
 size; if publisher publishes binary data, size of the binary record, if no binary attribute given
 eof
 }
@@ -216,24 +220,26 @@ eof
 
 function publish_command()
 {
-    [[ -n "$topic_command" ]] || die "command not specified for topic '$topic' in files ${configs[@]}"
-    [[ -n "$topic_address" || -n "$topic_port" ]] || die "neither address nor port specified for topic '$topic' in files ${configs[@]}"
+    [[ -n "$topic_command" ]] || die "topic '$topic': command not specified in files ${configs[@]}"
+    [[ -n "$topic_address" || -n "$topic_port" ]] || die "topic '$topic': neither address nor port specified in files ${configs[@]}"
     [[ -n "$topic_address" ]] || topic_address="tcp:$topic_port"
+    [[ -n "$topic_secondary_address" ]] || { [[ -z "$topic_secondary_port" ]] || topic_secondary_address="tcp:$topic_secondary_port"; }
+    [[ -z "$topic_secondary_address" ]] || topic_secondary_address="$topic_secondary_address;secondary"
     if [[ -n "$topic_on_demand" ]]; then on_demand="--on-demand"; else unset on_demand; fi
-    local cmd="io-publish $topic_address $size_option $on_demand -- $topic_command"
+    local cmd="io-publish $topic_address $topic_secondary_address $size_option $on_demand -- $topic_command"
     verbose "$cmd"
     echo "$cmd"
 }
 
 function set_topic_address()
 {
-    [[ -n "$topic_address" || ( -n "$topic_host" && -n "$topic_port" ) ]] || die "neither address nor host/port specified for topic '$topic' in files ${configs[@]}"
+    [[ -n "$topic_address" || ( -n "$topic_host" && -n "$topic_port" ) ]] || die "topic '$topic': neither address nor host/port specified in files ${configs[@]}"
     [[ -n "$topic_address" ]] || topic_address="tcp:$topic_host:$topic_port"
 }
 
 function cat_command()
 {
-    [[ -n "$topic_command" ]] || die "command not specified for topic '$topic' in files ${configs[@]}"
+    [[ -n "$topic_command" ]] || die "topic '$topic': command not specified in files ${configs[@]}"
     set_topic_address
     if [[ -n "$topic_on_demand" ]]; then on_demand="--on-demand"; else unset on_demand; fi
     if [[ -n "$topic_flush" ]]; then flush_option="--flush"; else unset flush_option; fi # todo! make flush default?!
@@ -270,14 +276,13 @@ function log_command()
         if [[ -n "$topic_connect_attempts" ]]; then connect_attempts_option="--connect-attempts=$topic_connect_attempts"; else unset connect_attempts_option; fi
         if [[ -n "$topic_connect_period" ]]; then connect_period_option="--connect-period=$topic_connect_period"; else unset connect_period_option; fi
         if [[ -n "$options_verbose" ]]; then verbose_option="--verbose"; else unset verbose_option; fi
-        #if [[ -n "$options_verbose" ]]; then say "--> verbose set"; else say "--> verbose not set"; fi
         cmd="io-cat $topic_address $flush_option $connect_attempts_option $connect_period_option $verbose_option | $topic_index | csv-split -t $period $size_option $suffix_option $flush_option"
     fi
     local path
     [[ -z "$topic_path" ]] || path+="$topic_path/"
     path+="$options_log_dir/$topic"
     [[ -z "$topic_restart" ]] || cmd="io_topics_log_run_forever \"$cmd\""
-    (( "$options_dry_run" )) || mkdir -p $path || die "failed to make directory $path for topic $topic"
+    (( "$options_dry_run" )) || mkdir -p $path || die "topic '$topic': failed to make directory $path"
     cmd="( cd $path && $cmd )"
     echo "bash -c $cmd"
 }
@@ -291,9 +296,13 @@ function cat_config()
 
 function topics_from_config() # quick and dirty
 {
-    if [[ -n "$options_topics_from_all_configs" ]]; then egrep -e "/address=|/port=|/command=" <<< "$config" | cut -d= -f1 | sed -e 's#/address$##' -e 's#/port$##' -e 's#/command$##' | uniq; return; fi
-    grep '=""' <<< "$master_config" | cut -d= -f1
-    for path in $( grep -v '=""' <<< "$master_config" | cut -d= -f1 ); do dirname $path; done | uniq # todo: don't do it just through the dirname? join with operation fields and filter by them instead
+    local expression="/address=|/port=|/command=|/secondary/address=|/secondary/port="
+    function grep_by_topic_config_fields() { egrep -e "$expression" | cut -d= -f1 | sed -e 's#/secondary/address$##' -e 's#/secondary/port$##' -e 's#/address$##' -e 's#/port$##' -e 's#/command$##'; }
+    [[ -z "$options_topics_from_all_configs" ]] || { grep_by_topic_config_fields <<< "$config" | sort --unique; return; }
+    {
+        { grep '=""' <<< "$master_config"; grep -v '=""' <<< "$master_config" | egrep -v -e "$expression" | csv-strings dirname --emplace; } | cut -d= -f1 # quick and dirty, is it even correct?
+        grep_by_topic_config_fields <<< "$master_config"
+    } | sort --unique
 }
 
 function read_configs()
@@ -331,7 +340,7 @@ for topic in ${topics[@]}; do
     if [[ -n "$topic_binary" ]]; then size_option="--size $( csv-size $topic_binary )"
     elif [[ -n "$topic_size" ]]; then size_option="--size $topic_size"
     else unset size_option; fi
-    cmd="$( ${operation}_command $topic )" || die "on topic $topic: making command failed"
+    cmd="$( ${operation}_command $topic )" || die "topic $topic: making command failed"
     commands+=( "$cmd" )
 done
 say "will run 'comma_execute_and_wait --group' with commands:"
