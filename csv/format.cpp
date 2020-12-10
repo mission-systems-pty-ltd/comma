@@ -302,7 +302,7 @@ static std::size_t bin_to_csv( std::ostringstream& oss, const char* buf, format:
     switch( type ) // todo: tear down bin_to_csv, use format::traits
     {
         case format::int8:
-            oss << static_cast< int >( *buf );
+            oss << static_cast< int >( static_cast< signed char >( *buf ));
             return sizeof( char );
         case format::uint8:
             oss << static_cast< unsigned int >( static_cast< unsigned char >( *buf ) );
