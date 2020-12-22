@@ -302,8 +302,8 @@ function cat_config()
 
 function topics_from_config() # quick and dirty
 {
-    local expression="/address=|/port=|/command=|/secondary/address=|/secondary/port="
-    function grep_by_topic_config_fields() { egrep -e "$expression" | cut -d= -f1 | sed -e 's#/secondary/address$##' -e 's#/secondary/port$##' -e 's#/address$##' -e 's#/port$##' -e 's#/command$##'; }
+    local expression="/address=|/host=|/port=|/command=|/secondary/address=|/secondary/host|/secondary/port="
+    function grep_by_topic_config_fields() { egrep -e "$expression" | cut -d= -f1 | sed -e 's#/secondary/address$##' -e 's#/secondary/host$##' -e 's#/secondary/port$##' -e 's#/address$##' -e 's#/host$##' -e 's#/port$##' -e 's#/command$##'; }
     [[ -z "$options_topics_from_all_configs" ]] || { grep_by_topic_config_fields <<< "$config" | sort --unique; return; }
     {
         { grep '=""' <<< "$master_config"; grep -v '=""' <<< "$master_config" | egrep -v -e "$expression" | csv-strings dirname --emplace; } | cut -d= -f1 # quick and dirty, is it even correct?
@@ -324,6 +324,7 @@ function get_topics()
     topics=( ${unnamed[@]:1} )
     if (( ${#topics[@]} == 0 )); then topics=( $( topics_from_config ) ); fi
     (( ${#topics[@]} > 0 )) || die "no topics in config files ${configs[@]}"
+    verbose "topics: ${topics[@]}"
 }
 
 (( $( comma_options_has --help "$@" ) || $( comma_options_has -h "$@" ) )) && usage
