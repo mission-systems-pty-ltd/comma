@@ -148,12 +148,13 @@ function die() { say "$@"; exit 1; }
 
 function list_topic_fields() { :; }
 
-function publish_topic_fields()
+function publish_topic_fields() # todo: flush field? flush is default behaviour in io-publish, which is inconsistent with log and cat operations and thus introducing flush in publish might be confusing
 {
     cat <<eof
 address
 binary
 command
+input
 on_demand
 port
 secondary/address
@@ -168,6 +169,7 @@ function publish_topic_fields_help()
 address; if present, passed verbatim to io-publish, in this case port attribute ignored
 binary; if publisher publishes binary data, the binary format of the data, overrides size
 command; command for the publisher to run
+input; input topic for publish command to read on stdin
 on_demand; if present, same meaning as io-publish --on-demand
 port; tcp port for publishing, unless address field is present
 secondary/address; if present, passed verbatim to io-publish as '<address>;secondary', in this case port attribute ignored
@@ -263,6 +265,7 @@ function publish_command()
     [[ -z "$topic_secondary_address" ]] || topic_secondary_address="$topic_secondary_address;secondary"
     if [[ -n "$topic_on_demand" ]]; then on_demand="--on-demand"; else unset on_demand; fi
     local cmd="io-publish $topic_address $topic_secondary_address $size_option $on_demand -- $topic_command"
+    [[ -z "$topic_input" ]] || cmd="$( set_topic_variables "cat" "$topic_input"; cat_command "$topic_input" 1 ) --connect-period=1 --connect-attempts=unlimited --flush | $cmd" # todo! quick and dirty, expose connect parameters and flush (?) in config?
     verbose "$cmd"
     echo "$cmd"
 }
@@ -275,14 +278,17 @@ function set_topic_address()
 
 function cat_command()
 {
-    [[ -n "$topic_command" ]] || die "topic '$topic': command not specified in files ${configs[@]}"
+    local topic=$1
+    local ignore_command=$2
+    (( ignore_command )) || [[ -n "$topic_command" ]] || die "topic '$topic': command not specified in files ${configs[@]}"
     set_topic_address
     if [[ -n "$topic_on_demand" ]]; then on_demand="--on-demand"; else unset on_demand; fi
     if [[ -n "$topic_flush" ]]; then flush_option="--flush"; else unset flush_option; fi # todo! make flush default?!
     if [[ -n "$topic_connect_attempts" ]]; then connect_attempts_option="--connect-attempts=$topic_connect_attempts"; else unset connect_attempts_option; fi
     if [[ -n "$topic_connect_period" ]]; then connect_period_option="--connect-period=$topic_connect_period"; else unset connect_period_option; fi
     if [[ -n "$options_verbose" ]]; then verbose_option="--verbose"; else unset verbose_option; fi
-    local cmd="bash -c io-cat $topic_address $size_option $flush_option $connect_attempts_option $connect_period_option $verbose_option | $topic_command" # todo? comma_execute_and_wait?
+    local cmd="bash -c io-cat $topic_address $size_option $flush_option $connect_attempts_option $connect_period_option $verbose_option" # todo? comma_execute_and_wait?
+    (( ignore_command )) || cmd+=" | $topic_command"
     verbose "$cmd"
     echo "$cmd"
 }
@@ -358,6 +364,18 @@ function get_topics()
     verbose "topics: ${topics[@]}"
 }
 
+function set_topic_variables()
+{
+    local operation="$1"
+    local topic="$2"
+    eval "$( ${operation}_topic_fields | comma_path_mangle | sed 's#^#unset topic_#' )" # todo: quick and dirty, watch performance
+    eval "$( grep $topic <<< "$config" | grep -v "^$topic/command" | sed "s#^$topic/#topic/#" | comma_path_value_mangle )"
+    topic_command="$( grep ^$topic/command <<< "$master_config" | cut -d= -f1 --complement | sed -e 's#^"##' -e 's#"$##'  )" # quick and dirty
+    if [[ -n "$topic_binary" ]]; then size_option="--size $( csv-size $topic_binary )"
+    elif [[ -n "$topic_size" ]]; then size_option="--size $topic_size"
+    else unset size_option; fi
+}
+
 (( $( comma_options_has --help "$@" ) || $( comma_options_has -h "$@" ) )) && usage
 operation=$1
 [[ $( type -t ${operation}_topic_fields ) == "function" ]] || die "expected operation, got '$operation'" # quick and dirty
@@ -371,13 +389,7 @@ get_topics
 if [[ $operation == "list" ]]; then for topic in ${topics[@]}; do echo $topic; done; exit; fi
 commands=()
 for topic in ${topics[@]}; do
-    eval "$( ${operation}_topic_fields | comma_path_mangle | sed 's#^#unset topic_#' )" # todo: quick and dirty, watch performance
-    eval "$( grep $topic <<< "$config" | grep -v "^$topic/command" | sed "s#^$topic/#topic/#" | comma_path_value_mangle )"
-    topic_command="$( grep ^$topic/command <<< "$master_config" | cut -d= -f1 --complement | sed -e 's#^"##' -e 's#"$##'  )"
-    #[[ -n "$topic_command" ]] || die "command not specified for topic '$topic' in files ${configs[@]}"
-    if [[ -n "$topic_binary" ]]; then size_option="--size $( csv-size $topic_binary )"
-    elif [[ -n "$topic_size" ]]; then size_option="--size $topic_size"
-    else unset size_option; fi
+    set_topic_variables "$operation" "$topic"
     cmd="$( ${operation}_command $topic )" || die "topic $topic: making command failed"
     commands+=( "$cmd" )
 done
