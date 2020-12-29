@@ -49,7 +49,7 @@
 #include <boost/units/base_units/us/mile.hpp>
 #include <boost/units/base_units/metric/knot.hpp>
 #include <boost/units/base_units/angle/radian.hpp>
-// Copyright (c) 2011 The University of Sydney#include <boost/units/base_units/angle/degree.hpp>
+#include <boost/units/base_units/angle/degree.hpp>
 
 #include "../../application/command_line_options.h"
 #include "../../base/exception.h"
