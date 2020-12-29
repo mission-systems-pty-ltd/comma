@@ -336,7 +336,8 @@ function topics_from_config() # quick and dirty
     function grep_by_topic_config_fields() { egrep -e "$expression" | cut -d= -f1 | sed -e 's#/secondary/address$##' -e 's#/secondary/host$##' -e 's#/secondary/port$##' -e 's#/address$##' -e 's#/host$##' -e 's#/port$##' -e 's#/command$##'; }
     [[ -z "$options_topics_from_all_configs" ]] || { grep_by_topic_config_fields <<< "$config" | sort --unique; return; }
     {
-        { grep '=""' <<< "$master_config"; grep -v '=""' <<< "$master_config" | egrep -v -e "$expression" | csv-strings dirname --emplace; } | cut -d= -f1 # quick and dirty, is it even correct?
+        grep '=""' <<< "$master_config" | cut -d= -f1
+        grep -v '=""' <<< "$master_config" | egrep -v -e "$expression" | cut -d= -f1 | csv-strings dirname --emplace # quick and dirty, is it even correct?
         grep_by_topic_config_fields <<< "$master_config"
     } | sort --unique
 }
