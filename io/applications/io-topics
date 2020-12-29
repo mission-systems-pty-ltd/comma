@@ -264,8 +264,9 @@ function publish_command()
     [[ -n "$topic_secondary_address" ]] || { [[ -z "$topic_secondary_port" ]] || topic_secondary_address="tcp:$topic_secondary_port"; }
     [[ -z "$topic_secondary_address" ]] || topic_secondary_address="$topic_secondary_address;secondary"
     if [[ -n "$topic_on_demand" ]]; then on_demand="--on-demand"; else unset on_demand; fi
-    local cmd="io-publish $topic_address $topic_secondary_address $size_option $on_demand -- $topic_command"
-    [[ -z "$topic_input" ]] || cmd="$( set_topic_variables "cat" "$topic_input"; cat_command "$topic_input" 1 ) --connect-period=1 --connect-attempts=unlimited --flush | $cmd" # todo! quick and dirty, expose connect parameters and flush (?) in config?
+    local cmd="io-publish $topic_address $topic_secondary_address $size_option $on_demand -- "
+    if [[ -z "$topic_input" ]]; then local cmd+="$topic_command"
+    else cmd+="bash -c '$( set_topic_variables "cat" "$topic_input"; cat_command "$topic_input" 1 ) --connect-period=1 --connect-attempts=unlimited --flush --verbose | $topic_command'"; fi # todo! quick and dirty, expose connect parameters and flush (?) in config?
     verbose "$cmd"
     echo "$cmd"
 }
@@ -287,8 +288,8 @@ function cat_command()
     if [[ -n "$topic_connect_attempts" ]]; then connect_attempts_option="--connect-attempts=$topic_connect_attempts"; else unset connect_attempts_option; fi
     if [[ -n "$topic_connect_period" ]]; then connect_period_option="--connect-period=$topic_connect_period"; else unset connect_period_option; fi
     if [[ -n "$options_verbose" ]]; then verbose_option="--verbose"; else unset verbose_option; fi
-    local cmd="bash -c io-cat $topic_address $size_option $flush_option $connect_attempts_option $connect_period_option $verbose_option" # todo? comma_execute_and_wait?
-    (( ignore_command )) || cmd+=" | $topic_command"
+    if (( ignore_command )); then local cmd="io-cat $topic_address $size_option $flush_option $connect_attempts_option $connect_period_option $verbose_option"
+    else local cmd="bash -c io-cat $topic_address $size_option $flush_option $connect_attempts_option $connect_period_option $verbose_option | $topic_command"; fi # todo? comma_execute_and_wait?
     verbose "$cmd"
     echo "$cmd"
 }
