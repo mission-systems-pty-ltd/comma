@@ -27,7 +27,6 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author vsevolod vlaskine
 /// @author kai huang
 
@@ -50,7 +49,7 @@
 #include <boost/units/base_units/us/mile.hpp>
 #include <boost/units/base_units/metric/knot.hpp>
 #include <boost/units/base_units/angle/radian.hpp>
-#include <boost/units/base_units/angle/degree.hpp>
+// Copyright (c) 2011 The University of Sydney#include <boost/units/base_units/angle/degree.hpp>
 
 #include "../../application/command_line_options.h"
 #include "../../base/exception.h"
