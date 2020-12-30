@@ -293,13 +293,8 @@ function publish_command()
     [[ -z "$topic_secondary_address" ]] || topic_secondary_address="$topic_secondary_address;secondary"
     if [[ -n "$topic_on_demand" ]]; then on_demand="--on-demand"; else unset on_demand; fi
     local cmd="io-publish $topic_address $topic_secondary_address $size_option $on_demand -- "
-    if [[ -z "$topic_input" ]]; then
-        cmd+="$topic_command"
-    else
-        #cmd+="bash -c '$( set_topic_variables "cat" "$topic_input"; cat_command "$topic_input" 1 ) --connect-period=1 --connect-attempts=1 --flush --verbose | $topic_command'" || die "topic '$topic': failed to configure input topic '$topic_input'" # todo! quick and dirty, expose connect parameters and flush (?) in config?
-        cmd+="$( set_topic_variables "cat" "$topic_input"; cat_command "$topic_input" 1 ) --connect-period=1 --connect-attempts=1 --flush --verbose | $topic_command" || die "topic '$topic': failed to configure input topic '$topic_input'"
-        cmd="bash -c io_topics_restart_topic '$cmd'"
-    fi
+    if [[ -z "$topic_input" ]]; then cmd+="$topic_command"
+    else cmd+="$( set_topic_variables "cat" "$topic_input"; cat_command "$topic_input" 1 ) --flush --verbose | $topic_command" || die "topic '$topic': failed to configure input topic '$topic_input'"; fi
     verbose "$cmd"
     echo "$cmd"
 }
