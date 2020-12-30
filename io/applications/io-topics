@@ -256,6 +256,34 @@ function log_options()
 eof
 }
 
+function io_topics_restart_topic()
+{
+    local is_shutdown=0
+    trap "local is_shutdown=1" HUP INT TERM
+    while (( ! is_shutdown )) ; do bash -c "$@"; sleep 0.1; done # quick and dirty
+}
+
+export -f io_topics_restart_topic
+
+function set_topic_address()
+{
+    [[ -n "$topic_address" || ( -n "$topic_host" && -n "$topic_port" ) ]] || die "topic '$topic': neither address nor host/port specified in files ${configs[@]}"
+    [[ -n "$topic_address" ]] || topic_address="tcp:$topic_host:$topic_port"
+    [[ -n "$topic_address" ]] || die "topic: '$topic': failed to set topic address"
+}
+
+function set_topic_variables()
+{
+    local operation="$1"
+    local topic="$2"
+    eval "$( ${operation}_topic_fields | comma_path_mangle | sed 's#^#unset topic_#' )" # todo: quick and dirty, watch performance
+    eval "$( grep $topic <<< "$config" | grep -v "^$topic/command" | sed "s#^$topic/#topic/#" | comma_path_value_mangle )"
+    topic_command="$( grep ^$topic/command <<< "$master_config" | cut -d= -f1 --complement | sed -e 's#^"##' -e 's#"$##'  )" # quick and dirty
+    if [[ -n "$topic_binary" ]]; then size_option="--size $( csv-size $topic_binary )"
+    elif [[ -n "$topic_size" ]]; then size_option="--size $topic_size"
+    else unset size_option; fi
+}
+
 function publish_command()
 {
     [[ -n "$topic_command" ]] || die "topic '$topic': command not specified in files ${configs[@]}"
@@ -265,16 +293,15 @@ function publish_command()
     [[ -z "$topic_secondary_address" ]] || topic_secondary_address="$topic_secondary_address;secondary"
     if [[ -n "$topic_on_demand" ]]; then on_demand="--on-demand"; else unset on_demand; fi
     local cmd="io-publish $topic_address $topic_secondary_address $size_option $on_demand -- "
-    if [[ -z "$topic_input" ]]; then local cmd+="$topic_command"
-    else cmd+="bash -c '$( set_topic_variables "cat" "$topic_input"; cat_command "$topic_input" 1 ) --connect-period=1 --connect-attempts=unlimited --flush --verbose | $topic_command'"; fi # todo! quick and dirty, expose connect parameters and flush (?) in config?
+    if [[ -z "$topic_input" ]]; then
+        cmd+="$topic_command"
+    else
+        #cmd+="bash -c '$( set_topic_variables "cat" "$topic_input"; cat_command "$topic_input" 1 ) --connect-period=1 --connect-attempts=1 --flush --verbose | $topic_command'" || die "topic '$topic': failed to configure input topic '$topic_input'" # todo! quick and dirty, expose connect parameters and flush (?) in config?
+        cmd+="$( set_topic_variables "cat" "$topic_input"; cat_command "$topic_input" 1 ) --connect-period=1 --connect-attempts=1 --flush --verbose | $topic_command" || die "topic '$topic': failed to configure input topic '$topic_input'"
+        cmd="bash -c io_topics_restart_topic '$cmd'"
+    fi
     verbose "$cmd"
     echo "$cmd"
-}
-
-function set_topic_address()
-{
-    [[ -n "$topic_address" || ( -n "$topic_host" && -n "$topic_port" ) ]] || die "topic '$topic': neither address nor host/port specified in files ${configs[@]}"
-    [[ -n "$topic_address" ]] || topic_address="tcp:$topic_host:$topic_port"
 }
 
 function cat_command()
@@ -293,15 +320,6 @@ function cat_command()
     verbose "$cmd"
     echo "$cmd"
 }
-
-function io_topics_log_run_forever()
-{
-    local is_shutdown=0
-    trap "local is_shutdown=1" HUP INT TERM
-    while (( ! is_shutdown )) ; do bash -c "$@"; sleep 0.1; done # quick and dirty
-}
-
-export -f io_topics_log_run_forever
 
 function log_command()
 {
@@ -324,7 +342,7 @@ function log_command()
     local path
     [[ -z "$topic_path" ]] || path+="$topic_path/"
     path+="$options_log_dir/$topic"
-    [[ -z "$topic_restart" ]] || cmd="io_topics_log_run_forever \"$cmd\""
+    [[ -z "$topic_restart" ]] || cmd="io_topics_restart_topic \"$cmd\""
     (( "$options_dry_run" )) || mkdir -p $path || die "topic '$topic': failed to make directory $path"
     cmd="( cd $path && $cmd )"
     echo "bash -c $cmd"
@@ -365,18 +383,6 @@ function get_topics()
     verbose "topics: ${topics[@]}"
 }
 
-function set_topic_variables()
-{
-    local operation="$1"
-    local topic="$2"
-    eval "$( ${operation}_topic_fields | comma_path_mangle | sed 's#^#unset topic_#' )" # todo: quick and dirty, watch performance
-    eval "$( grep $topic <<< "$config" | grep -v "^$topic/command" | sed "s#^$topic/#topic/#" | comma_path_value_mangle )"
-    topic_command="$( grep ^$topic/command <<< "$master_config" | cut -d= -f1 --complement | sed -e 's#^"##' -e 's#"$##'  )" # quick and dirty
-    if [[ -n "$topic_binary" ]]; then size_option="--size $( csv-size $topic_binary )"
-    elif [[ -n "$topic_size" ]]; then size_option="--size $topic_size"
-    else unset size_option; fi
-}
-
 (( $( comma_options_has --help "$@" ) || $( comma_options_has -h "$@" ) )) && usage
 operation=$1
 [[ $( type -t ${operation}_topic_fields ) == "function" ]] || die "expected operation, got '$operation'" # quick and dirty
@@ -391,7 +397,7 @@ if [[ $operation == "list" ]]; then for topic in ${topics[@]}; do echo $topic; d
 commands=()
 for topic in ${topics[@]}; do
     set_topic_variables "$operation" "$topic"
-    cmd="$( ${operation}_command $topic )" || die "topic $topic: making command failed"
+    cmd="$( ${operation}_command $topic )" || die "topic '$topic': making command failed"
     commands+=( "$cmd" )
 done
 say "will run 'comma_execute_and_wait --group' with commands:"
