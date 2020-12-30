@@ -75,6 +75,9 @@ class publisher : public boost::noncopyable
 
         /// close
         void close();
+        
+        /// disconnect all existing clients
+        void disconnect_all();
 
         /// return current number of connected clients
         std::size_t size() const;

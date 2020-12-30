@@ -44,6 +44,8 @@ unsigned int publisher::accept() { return pimpl_->accept(); }
 
 void publisher::close() { pimpl_->close(); }
 
+void publisher::disconnect_all() { pimpl_->disconnect_all(); }
+
 std::size_t publisher::size() const { return pimpl_->size(); }
 
 file_descriptor publisher::acceptor_file_descriptor() const { return pimpl_->acceptor_ ? pimpl_->acceptor().fd() : comma::io::invalid_file_descriptor; }

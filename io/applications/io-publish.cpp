@@ -142,13 +142,13 @@ class publish
                , bool discard
                , bool flush
                , bool output_number_of_clients
-               , bool report_no_clients )
+               , bool update_no_clients )
             : discard_( discard )
             , flush_( flush )
             , buffer_( packet_size, '\0' )
             , packet_size_( packet_size )
             , output_number_of_clients_( output_number_of_clients )
-            , report_no_clients_( report_no_clients )
+            , update_no_clients_( update_no_clients )
             , got_first_client_ever_( false )
             , sizes_( endpoints.size(), 0 )
             , num_clients_( 0 )
@@ -185,6 +185,13 @@ class publish
             for( std::size_t i = 0; i < t->size(); ++i ) { if( ( *t )[i] ) { ( *t )[i]->close(); } }
         }
         
+        void disconnect_all()
+        {
+            transaction_t t( publishers_ );
+            for( auto& p: *t ) { if( p ) { p->disconnect_all(); } }
+            handle_sizes_( t ); // quick and dirty
+        }
+        
         bool read( std::istream& input )
         {
             if( is_binary_() )
@@ -199,10 +206,10 @@ class publish
                 if( !input.good() ) { return false; }
             }
             transaction_t t( publishers_ );
-            for( std::size_t i = 0; i < t->size(); ++i ) { if( ( *t )[i] ) { ( *t )[i]->write( &buffer_[0], buffer_.size(), false ); } }
+            for( auto& p: *t ) { if( p ) { p->write( &buffer_[0], buffer_.size(), false ); } } // for( std::size_t i = 0; i < t->size(); ++i ) { if( ( *t )[i] ) { ( *t )[i]->write( &buffer_[0], buffer_.size(), false ); } }
             return handle_sizes_( t );
         }
-
+        
         unsigned int num_clients() const { return num_clients_; }
 
     private:
@@ -210,7 +217,7 @@ class publish
         
         bool handle_sizes_( transaction_t& t ) // todo? why pass transaction? it doen not seem going out of scope at the point of call; remove?
         {
-            if( !output_number_of_clients_ && !report_no_clients_ ) { return true; }
+            if( !output_number_of_clients_ && !update_no_clients_ ) { return true; }
             unsigned int total = 0;
             bool changed = false;
             has_primary_clients_ = false;
@@ -231,7 +238,7 @@ class publish
                 for( unsigned int i = 0; i < sizes_.size(); ++i ) { std::cout << ',' << sizes_[i]; }
                 std::cout << std::endl;
             }
-            if( report_no_clients_ )
+            if( update_no_clients_ )
             {
                 if( total > 0 ) { got_first_client_ever_ = true; }
                 else if( got_first_client_ever_ ) { std::cerr << "io-publish: the last client exited" << std::endl; return false; }
@@ -252,7 +259,7 @@ class publish
             }
             while( !is_shutdown_ )
             {
-                select.wait( boost::posix_time::millisec( 100 ) ); // arbitrary timeout
+                select.wait( boost::posix_time::millisec( 100 ) ); // todo? make timeout configurable?
                 transaction_t t( publishers_ );
                 for( unsigned int i = 0; i < t->size(); ++i )
                 {
@@ -287,7 +294,7 @@ class publish
         std::string buffer_;
         unsigned int packet_size_;
         bool output_number_of_clients_;
-        bool report_no_clients_;
+        bool update_no_clients_;
         bool got_first_client_ever_;
         std::vector< unsigned int > sizes_;
         bool has_primary_clients_;
@@ -380,13 +387,14 @@ int main( int ac, char** av )
             if( ::pipe( fd ) == -1 ) { comma::last_error::to_exception( "couldn't open pipe" ); } // create a pipe to send the child stdout to the parent stdin
             while( !done && !is_shutdown )
             {
-                if( on_demand && p.num_clients() == 0 ) { ::sleep( 0.1 ); continue; }
+                if( on_demand && p.num_clients() == 0 ) { ::sleep( 0.1 ); continue; } // todo? make timeout configurable?
                 comma::verbose << "number of clients: " << p.num_clients() << std::endl;
                 command cmd( exec_command );
                 typedef boost::iostreams::file_descriptor_source fd_t;
                 boost::iostreams::stream< fd_t > is( fd_t( cmd.fd(), boost::iostreams::never_close_handle ) );
                 while( is.good() && !is_shutdown && p.read( is ) );
                 if( !on_demand ) { break; }
+                p.disconnect_all();
             }
         }
         //ProfilerStop(); }
