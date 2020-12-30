@@ -196,7 +196,7 @@ eof
 function cat_topic_fields_help()
 {
     cat <<eof
-address; if present, passed verbatim to io-publish, in this case port attribute ignored
+address; if present, passed verbatim to io-cat, in this case port attribute ignored
 binary; if data is binary, the binary format of the data, overrides size
 command; command for the client to run
 connect_attempts; number of connect attemtps
@@ -231,7 +231,7 @@ eof
 function log_topic_fields_help()
 {
     cat <<eof
-address; if present, passed verbatim to io-publish, in this case port attribute ignored
+address; if present, passed verbatim to io-cat, in this case port attribute ignored
 binary; if data is binary, the binary format of the data, overrides size
 command; optional command for the logger to run instead of default logger
 connect_attempts; number of connect attemtps
