@@ -1,4 +1,6 @@
-to build docker that has ansible, cmake, etc, run (you may need to run as sudo - am not sure why; try without sudo first):
+to build docker that has ansible, cmake, etc, run
+
+(you may need to run as sudo, unless you set up your docker running without sudo; see e.g: https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-20-04)
 
 > ./comma-package-docker-build 18.04 # ubuntu 18.04
 > ./comma-package-docker-build 20.04 # ubuntu 20.04

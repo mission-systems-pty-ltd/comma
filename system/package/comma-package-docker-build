@@ -3,4 +3,6 @@ version=$1
 comma_dir="$2"
 [[ -n "$version" ]] || { echo "usage: $0 <ubuntu version> [<comma dir>]; e.g. $0 20.04" >&2; exit 1; }
 [[ -n "$comma_dir" ]] || comma_dir=$( realpath ~/src/comma )
+[[ -n "$comma_dir" ]] || { echo "usage: $0 please specify <comma dir> explicitly" >&2; exit 1; }
+echo "docker build -t ubuntu.$version.build.basics --build-arg version=$version --no-cache -f '$comma_dir/system/package/Dockerfile' ." >&2
 docker build -t ubuntu.$version.build.basics --build-arg version=$version --no-cache -f "$comma_dir/system/package/Dockerfile" .
