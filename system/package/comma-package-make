@@ -32,6 +32,7 @@ esac
     cd ~/src/comma/python
     echo "$0: setting up python in $( pwd )" >&2
     python3 setup.py --command-packages=stdeb.command bdist_deb || die "failed"
+    # todo: optionally run full regression test
     echo "$0: done" >&2
 )
 cp ~/build/comma/comma-$version_major.$version_minor.$version_patch-Linux.deb output

@@ -11,6 +11,8 @@ comma_dir="$4"
 [[ -s "$python_package" ]] || die "file not found or empty: '$python_package'"
 [[ -n "$comma_dir" ]] || comma_dir="$( realpath ~/src/comma )"
 package_dir=$( dirname "$( realpath "$package" )" )
+[[ -d "$comma_dir" ]] || { echo "usage: $0 please specify <comma dir> explicitly (since you seem to either run with sudo or have comma not in '$comma_dir')" >&2; exit 1; }
+# todo: optionally run full regression test
 
 docker run \
        --mount "type=bind,source=$comma_dir,target=/mnt/comma" \
