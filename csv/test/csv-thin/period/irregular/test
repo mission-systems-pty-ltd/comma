@@ -1,0 +1,1 @@
+csv-thin --period 1 --fields t | name-value-from-csv --fields t,n --prefix output --line-number
