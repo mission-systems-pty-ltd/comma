@@ -153,7 +153,7 @@ static bool skip_by_timestamp( boost::posix_time::ptime timestamp )
 {
     static boost::posix_time::ptime next_time = timestamp;
     if( timestamp < next_time ) { return true; }
-    next_time += *period;
+    while( next_time <= timestamp ) { next_time += *period; }
     return false;
 }
 
