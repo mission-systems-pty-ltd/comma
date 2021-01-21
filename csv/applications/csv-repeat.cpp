@@ -155,6 +155,8 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av, usage );
         if( options.exists( "--bash-completion" ) ) bash_completion( ac, av );
         bool ignore_eof = options.exists( "--ignore-eof,--ignoreeof,--yes" );
+        options.assert_mutually_exclusive( "--pace", "--ignore-eof,--ignoreeof,--yes" );
+        options.assert_mutually_exclusive( "--timestamped,pace" );
         if( ignore_eof && !options.exists( "--period" ) ) { std::cerr << "csv-repeat: got --ignore-oef, thus please specify --period" << std::endl; return 1; }
         comma::csv::options csv = comma::csv::options( options );
         boost::scoped_ptr< comma::csv::output_stream< output_t > > ostream;
@@ -271,6 +273,39 @@ int main( int ac, char** av )
             repeat( to );
             return 0;
         }
+        if( options.exists( "--pace" ) )
+        {
+            if( !period ) { std::cerr << "csv-repeat: for --pace, please specify --period" << std::endl; return 1; }
+            std::size_t record_size = csv.binary() ? csv.format().size() : 0;
+            if( record_size == 0 )
+            {
+                while( std::cin.good() && !std::cin.eof() )
+                {
+                    std::string line;
+                    std::getline( std::cin, line );
+                    if( line.empty() ) { break; }
+                    std::cout << line;
+                    if( ostream ) { std::cout << csv.delimiter; ostream->write( output_t( boost::posix_time::microsec_clock::universal_time(), false ) ); }
+                    else { std::cout << std::endl; }
+                    boost::this_thread::sleep( *period );
+                }
+            }
+            else
+            {
+                std::vector< char > buf( record_size );
+                while( std::cin.good() && !std::cin.eof() ) // todo? quick and dirty; improve reading performance
+                {
+                    std::cin.read( &buf[0], record_size );
+                    if( std::cin.gcount() <= 0 ) { break; }
+                    if( std::cin.gcount() < int( record_size ) ) { std::cerr << "csv-repeat: expected " << record_size << " byte(s); got only: " << std::cin.gcount() << std::endl; return 1; }
+                    std::cout.write( &buf[0], record_size );
+                    std::cout.flush();
+                    if( ostream ) { ostream->write( output_t( boost::posix_time::microsec_clock::universal_time(), false ) ); }
+                    boost::this_thread::sleep( *period );
+                }
+            }
+            return 0;
+        }
         std::size_t record_size = csv.binary() ? csv.format().size() : 0;
         std::vector< char > buffer( csv.binary() ? ( 65536ul / record_size + 1 ) * record_size : 0 );
         char* buffer_begin = &buffer[0];
@@ -286,8 +321,6 @@ int main( int ac, char** av )
         std::string last_line;
         std::ios_base::sync_with_stdio( false ); // unsync to make rdbuf()->in_avail() working
         bool repeating = false;
-        bool pace = options.exists( "--pace" );
-        if( pace && !period ) { std::cerr << "csv-repeat: for --pace, please specify --period" << std::endl; return 1; }
         while( is->good() && !end_of_stream )
         {
             select.wait( repeating ? *period : timeout );
@@ -329,7 +362,6 @@ int main( int ac, char** av )
                     else { std::cout << std::endl; }
                 }
                 end_of_stream = repeating = false;
-                if( pace ) { boost::this_thread::sleep( *period ); } // todo: quick and dirty; fix it properly for --pace, to make sure sleep happens after each record only once
             }
             if( !is->good() || end_of_stream ) { break; }
             if( repeating )
