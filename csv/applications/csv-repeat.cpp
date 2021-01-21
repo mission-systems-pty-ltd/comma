@@ -299,8 +299,8 @@ int main( int ac, char** av )
                     if( std::cin.gcount() <= 0 ) { break; }
                     if( std::cin.gcount() < int( record_size ) ) { std::cerr << "csv-repeat: expected " << record_size << " byte(s); got only: " << std::cin.gcount() << std::endl; return 1; }
                     std::cout.write( &buf[0], record_size );
-                    std::cout.flush();
                     if( ostream ) { ostream->write( output_t( boost::posix_time::microsec_clock::universal_time(), false ) ); }
+                    std::cout.flush();
                     boost::this_thread::sleep( *period );
                 }
             }
