@@ -475,6 +475,15 @@ def check_output_fields(fields, input_fields):
     invalid_output_fields = set(fields).intersection(input_fields)
     if invalid_output_fields: raise csv_eval_error( "output field(s) '{}' should not contain input fields '{}'".format(','.join(invalid_output_fields), ','.join(input_fields)) )
 
+def _numbered( s, line ):
+    t = s.split( '\n' )
+    return '\n'.join( [ '          {} {}\t{}'.format( '*' if i + 1 == line else ' ', i + 1, t[i] ) for i in range( len( t ) ) ] )
+
+def _code_error( what, c, e ):
+    t = e.__traceback__
+    while t is not None: line = t.tb_lineno; t = t.tb_next # todo: quick and dirty, is there a better way?
+    print( "csv-eval: {}: line {}: {}: {}\n{}".format( what, line, type( e ).__name__, str( e ), _numbered( c, line ) ), file = sys.stderr )
+
 def evaluate(stream):
     def disperse( var, fields, do_copy = False ):
         if do_copy: return '\n'.join( "{f} = copy( {v}['{f}'] )".format( v = var, f = f ) for f in fields )
@@ -519,8 +528,10 @@ def evaluate(stream):
                 if stream.args.init_fields: init = stream.args.init_t(size)
                 if stream.args.update_fields: update = stream.update_t(size)
                 if stream.args.output_fields: output = stream.output_t(size)
-                exec( init_code, env, { '_init': init, '_input': input, '_update': update, '_output': output } )
-            exec( code, env, { '_init': init, '_input': input, '_update': update, '_output': output } )
+                try: exec( init_code, env, { '_init': init, '_input': input, '_update': update, '_output': output } )
+                except Exception as e: _code_error( "init expressions", init_code_string, e ); raise
+            try: exec( code, env, { '_init': init, '_input': input, '_update': update, '_output': output } )
+            except Exception as e: _code_error( "expressions", code_string, e ); raise
             if stream.args.update_fields: update_buffer(stream.input, update)
             if stream.args.output_fields: stream.output.write(output)
             else: stream.input.dump()
@@ -536,8 +547,9 @@ def select(stream):
     is_shutdown = comma.signal.is_shutdown()
     if stream.args.first_line: input = stream.input.read_from_line(stream.args.first_line)
     while not is_shutdown:
-        if input is not None: 
-            mask = eval(code, env, {f: input[f] for f in fields})
+        if input is not None:
+            try: mask = eval(code, env, {f: input[f] for f in fields})
+            except Exception as e: _code_error( "select expression", stream.args.select, e ); raise
             stream.input.dump(mask=mask)
         input = stream.input.read()
         if input is None: break
@@ -552,7 +564,8 @@ def exit_if(stream):
     if stream.args.first_line: input = stream.input.read_from_line(stream.args.first_line)
     while not is_shutdown:
         if input is not None:
-            mask = eval(code, env, {f: input[f] for f in fields})
+            try: mask = eval( code, env, { f: input[f] for f in fields } )
+            except Exception as e: _code_error( "exit-if expression", stream.args.select, e ); raise
             if mask:
                 if not stream.args.with_error: sys.exit()
                 name = os.path.basename(sys.argv[0])
