@@ -42,21 +42,8 @@ template< typename C > inline void json_remove_quotes( std::basic_string< C >& j
         if( ':' != *next_token )
         {
             auto const value = std::string( value_begin + 1, value_end );
-            if( true_str == value || false_str == value )
-            {
-                quoted = false;
-            }
-            else if( !boost::regex_match( value, number_like_string ) ) // to avoid unquoting strings like "01234"
-            {
-                try // todo? try to avoid lexical_cast+exception to improve performace?
-                {
-                    boost::lexical_cast< double >( value );
-                    quoted = false;
-                }
-                catch ( ... )
-                {
-                }
-            } 
+            if( true_str == value || false_str == value ) { quoted = false; }
+            else if( !boost::regex_match( value, number_like_string ) ) { try { boost::lexical_cast< double >( value ); quoted = false; } catch ( ... ) {} } // todo? try to avoid lexical_cast+exception to improve performace?
         }
         if( !quoted ) { value_begin++; }
         while( value_begin != value_end ) { *source++ = *value_begin++; }

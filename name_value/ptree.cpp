@@ -27,7 +27,6 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author cedric wohlleber
 /// @author vsevolod vlaskine
 
@@ -40,6 +39,7 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/property_tree/ini_parser.hpp>
+#include <boost/regex.hpp>
 #include <boost/unordered_set.hpp>
 #include "../base/exception.h"
 #include "../base/types.h"
@@ -47,7 +47,6 @@
 #include "../xpath/xpath.h"
 #include "../visiting/visit.h"
 #include "../visiting/while.h"
-
 #include "ptree.h"
 
 namespace comma {
@@ -140,15 +139,15 @@ namespace comma { namespace impl {
 
 static void ptree_output_value_( std::ostream& os, const std::string& value, bool is_begin, const xpath& path, char equal_sign, char delimiter, const std::string& root, bool const unquote_numbers )
 {
+    static boost::regex number_like_string( "^0[0-9][0-9]*$" );
     if( !is_begin ) { os << delimiter; }
     if( root != "" ) { os << root << "/"; }
     os << path.to_string() << equal_sign;
-
     bool quoted = true;
     if( unquote_numbers )
     { 
         if( "true" == value || "false" == value ) { quoted = false; }
-        else { try { boost::lexical_cast< double >( value ); quoted = false; } catch ( ... ) {} }
+        else if( !boost::regex_match( value, number_like_string ) ) { try { boost::lexical_cast< double >( value ); quoted = false; } catch ( ... ) {} }
     }
     if( quoted ) { os << '"' << value << '"'; } else { os << value; }
 }
