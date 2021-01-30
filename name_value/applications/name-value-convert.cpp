@@ -27,7 +27,6 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author vsevolod vlaskine
 
 #include <iostream>
@@ -63,21 +62,24 @@ static void usage( bool verbose = false )
     std::cerr << "    xml: xml data" << std::endl;
     std::cerr << "    path-value: path=value-style data; e.g. x/a=1,x/b=2,y=3" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "name/path-value options:" << std::endl;
+    std::cerr << "name/path-value options" << std::endl;
     std::cerr << "    --equal-sign,-e=<equal sign>: default '='" << std::endl;
     std::cerr << "    --delimiter,-d=<delimiter>: default ','" << std::endl;
     std::cerr << "    --no-brackets: show indices as path elements e.g. y/0/x/z/1=\"a\"" << std::endl;
-    std::cerr << "          by default array items will be shown with index e.g. y[0]/x/z[1]=\"a\"" << std::endl;
+    std::cerr << "                   by default array items will be shown with index e.g. y[0]/x/z[1]=\"a\"" << std::endl;
+    std::cerr << "    --unquote-numbers,--unquote: unquote the numbers and booleans" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "path-value options:" << std::endl;
+    std::cerr << "path-value output options" << std::endl;
     std::cerr << "    --take-last: if paths are repeated, take last path=value" << std::endl;
     std::cerr << "    --verify-unique,--unique-input: ensure that all input paths are unique (takes precedence over --take-last)" << std::endl;
-    std::cerr << "    --unquote-numbers,--unquote: unquote the numbers and booleans" << std::endl;
     std::cerr << std::endl;
     std::cerr <<      "warning: if paths are repeated, output value selected from these inputs in not deterministic" << std::endl;
     std::cerr << std::endl;
     std::cerr << "json options" << std::endl;
     std::cerr << "    --minify: if present, output minified json" << std::endl;
+    std::cerr << "    --quote-numbers,--quote: force quoting the numbers and booleans" << std::endl;
+    std::cerr << "                             unfortunately, historically path-value and xml quote numbers by default and json unquotes numbers by default" << std::endl;
+    std::cerr << "                             this default behaviour is left unchaged to keep backward compatibility" << std::endl;
     std::cerr << std::endl;
     std::cerr << "xml options" << std::endl;
     std::cerr << "    --indented: if present, output indented xml" << std::endl;
@@ -87,17 +89,16 @@ static void usage( bool verbose = false )
     std::cerr << "    --linewise,-l: if present, treat each input line as a record" << std::endl;
     std::cerr << "                   if absent, treat all of the input as one record" << std::endl;
     std::cerr << std::endl;
-    std::cerr << std::endl;
-    exit( 1 );
+    exit( 0 );
 }
 
 static comma::property_tree::xml_writer_settings_t xml_writer_settings;
-
 static char equal_sign;
 static char path_value_delimiter;
 static bool linewise;
 static bool minify_json;
 static bool unquote_numbers;
+static bool quote_numbers;
 typedef comma::property_tree::path_mode path_mode;
 static path_mode indices_mode = comma::property_tree::disabled;
 static bool use_index = true;
@@ -127,19 +128,13 @@ template <> struct traits< info >
 template <> struct traits< json >
 {
     static void input( std::istream& is, boost::property_tree::ptree& ptree ) { boost::property_tree::read_json( is, ptree ); }
-    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode ) { comma::name_value::impl::write_json( os, ptree, !minify_json ); }
+    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode ) { comma::name_value::impl::write_json( os, ptree, !minify_json, !quote_numbers ); }
 };
 
 template <> struct traits< xml >
 {
-    static void input( std::istream& is, boost::property_tree::ptree& ptree ) 
-    { 
-        comma::property_tree::read_xml( is, ptree ); 
-    }
-    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode )
-    {
-        comma::property_tree::write_xml( os, ptree, xml_writer_settings);
-    }
+    static void input( std::istream& is, boost::property_tree::ptree& ptree ) { comma::property_tree::read_xml( is, ptree ); }
+    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode ) { comma::property_tree::write_xml( os, ptree, xml_writer_settings ); }
 };
 
 template <> struct traits< path_value > // quick and dirty
@@ -171,7 +166,9 @@ int main( int ac, char** av )
         equal_sign = options.value( "--equal-sign,-e", '=' );
         linewise = options.exists( "--linewise,-l" );
         minify_json = options.exists( "--minify" );
+        options.assert_mutually_exclusive( "--unquote-numbers,--unquote", "--quote-numbers,--quote" );
         unquote_numbers = options.exists( "--unquote-numbers,--unquote" );
+        quote_numbers = options.exists( "--quote-numbers,--quote" ) && !unquote_numbers; // todo: quick and dirty, combine logic, it sucks now that there is different logic for json and everything else
         if ( options.exists( "--take-last" ) ) check_type = comma::property_tree::path_value::take_last;
         if ( options.exists( "--verify-unique,--unique-input" ) ) check_type = comma::property_tree::path_value::unique_input;
         xml_writer_settings.indent_count = options.value( "--indent", options.exists( "--indented" ) ? 4 : 0 );
@@ -240,26 +237,10 @@ int main( int ac, char** av )
         }
         return 0;
     }
-    catch( boost::property_tree::ptree_bad_data& ex )
-    {
-        std::cerr << "name-value-convert: bad data: " << ex.what() << std::endl;
-    }
-    catch( boost::property_tree::ptree_bad_path& ex )
-    {
-        std::cerr << "name-value-convert: bad path: " << ex.what() << std::endl;
-    }
-    catch( boost::property_tree::ptree_error& ex )
-    {
-        boost::regex e( "<unspecified file>" );
-        std::cerr << "name-value-convert: parsing error: " << boost::regex_replace( std::string( ex.what() ), e, "line" ) << std::endl;
-    }
-    catch( std::exception& ex )
-    {
-        std::cerr << "name-value-convert: " << ex.what() << std::endl;
-    }
-    catch( ... )
-    {
-        std::cerr << "name-value-convert: unknown exception" << std::endl;
-    }
+    catch( boost::property_tree::ptree_bad_data& ex ) { std::cerr << "name-value-convert: bad data: " << ex.what() << std::endl; }
+    catch( boost::property_tree::ptree_bad_path& ex ) { std::cerr << "name-value-convert: bad path: " << ex.what() << std::endl; }
+    catch( boost::property_tree::ptree_error& ex ) { boost::regex e( "<unspecified file>" ); std::cerr << "name-value-convert: parsing error: " << boost::regex_replace( std::string( ex.what() ), e, "line" ) << std::endl; }
+    catch( std::exception& ex ) { std::cerr << "name-value-convert: " << ex.what() << std::endl; }
+    catch( ... ) { std::cerr << "name-value-convert: unknown exception" << std::endl; }
     return 1;
 }

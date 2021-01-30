@@ -71,18 +71,22 @@ static void usage( bool verbose = false )
     std::cerr << "    xml: xml data" << std::endl;
     std::cerr << "    path-value: path=value-style data; e.g. x/a=1,x/b=2,y=3" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "name/path-value options:" << std::endl;
+    std::cerr << "name/path-value options" << std::endl;
     std::cerr << "    --equal-sign,-e=<equal sign>: default '='" << std::endl;
     std::cerr << "    --delimiter,-d=<delimiter>: default ','" << std::endl;
-    std::cerr << "    --output-path: if path-value, output path (for regex)" << std::endl;
+    std::cerr << "    --minify: if present, output minified json" << std::endl;
     std::cerr << "    --no-brackets: show indices as path elements e.g. y/0/x/z/1=\"a\"" << std::endl;
-    std::cerr << "          by default array items will be shown with index e.g. y[0]/x/z[1]=\"a\"" << std::endl;
+    std::cerr << "                   by default array items will be shown with index e.g. y[0]/x/z[1]=\"a\"" << std::endl;
+    std::cerr << "    --output-path: if path-value, output path (for regex)" << std::endl;
+    std::cerr << "    --quote-numbers,--quote: force quoting the numbers and booleans" << std::endl;
+    std::cerr << "                             unfortunately, historically path-value and xml quote numbers by default and json unquotes numbers by default" << std::endl;
+    std::cerr << "                             this default behaviour is left unchaged to keep backward compatibility" << std::endl;
+    std::cerr << "    --unquote-numbers,--unquote: unquote the numbers and booleans" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "path-value options:" << std::endl;
+    std::cerr << "path-value output options" << std::endl;
     std::cerr << "    --take-last: if paths are repeated, take last path=value" << std::endl;
     std::cerr << "    --verify-unique,--unique-input: ensure that all input paths are unique (takes precedence over --take-last)" << std::endl;
-    std::cerr << "    --unquote-numbers,--unquote: unquote the numbers and booleans" << std::endl;
-    std::cerr << "warning: if paths are repeated, output value selected from these inputs in not deterministic" << std::endl;
+    std::cerr << "    warning: if paths are repeated, output value selected from these inputs in not deterministic" << std::endl;
     std::cerr << std::endl;
     std::cerr << "data flow options:" << std::endl;
     std::cerr << "    --linewise,-l: if present, treat each input line as a record" << std::endl;
@@ -95,9 +99,11 @@ static void usage( bool verbose = false )
 static char equal_sign;
 static char path_value_delimiter;
 static bool linewise;
+static bool minify;
 static bool option_regex;
 static bool output_path;
 static bool unquote_numbers;
+static bool quote_numbers;
 typedef comma::property_tree::path_mode path_mode;
 static path_mode indices_mode = comma::property_tree::disabled;
 static comma::property_tree::path_value::check_repeated_paths check_type( comma::property_tree::path_value::no_check );
@@ -126,7 +132,7 @@ template <> struct traits< info >
 template <> struct traits< json >
 {
     static void input( std::istream& is, boost::property_tree::ptree& ptree ) { boost::property_tree::read_json( is, ptree ); }
-    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const std::string& ) { comma::name_value::impl::write_json( os, ptree ); }
+    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const std::string& ) { comma::name_value::impl::write_json( os, ptree, minify, !quote_numbers ); }
 };
 
 template <> struct traits< xml >
@@ -233,7 +239,7 @@ int main( int ac, char** av )
     try
     {
         comma::command_line_options options( ac, av, usage );
-        path_strings = options.unnamed( "--linewise,-l,--output-path,--use-buffer,--regex", "--from,--to,--equal-sign,-e,--delimiter,-d" );
+        path_strings = options.unnamed( "--linewise,-l,--minify,--output-path,--use-buffer,--regex,--quote-numbers,--quote,--unquote-numbers,--unquote", "-.*" );
         if( path_strings.empty() ) { std::cerr << std::endl << "name-value-get: xpath missing" << std::endl; usage(); }
         path_regex.resize( path_strings.size() );
         paths.resize( path_strings.size() );
@@ -241,21 +247,17 @@ int main( int ac, char** av )
         option_regex = options.exists( "--regex" );
         for( std::size_t i = 0; i < path_strings.size(); ++i )
         {
-            if ( is_regex_(path_strings[i]) )
-            {
-                path_regex[i] = boost::regex( path_strings[i], boost::regex::extended );
-                has_regex = true;
-            }
-            else
-            { 
-                paths[i] = boost::property_tree::ptree::path_type( path_strings[i], '/' ); 
-            }
+            if( is_regex_( path_strings[i] ) ) { path_regex[i] = boost::regex( path_strings[i], boost::regex::extended ); has_regex = true; }
+            else {  paths[i] = boost::property_tree::ptree::path_type( path_strings[i], '/' ); }
         }
         boost::optional< std::string > from = options.optional< std::string >( "--from" );
         std::string to = options.value< std::string >( "--to", "path-value" );
         equal_sign = options.value( "--equal-sign,-e", '=' );
         linewise = options.exists( "--linewise,-l" );
+        minify = options.exists( "--minify" );
+        options.assert_mutually_exclusive( "--unquote-numbers,--unquote", "--quote-numbers,--quote" );
         unquote_numbers = options.exists( "--unquote-numbers,--unquote" );
+        quote_numbers = options.exists( "--quote-numbers,--quote" ) && !unquote_numbers; // todo: quick and dirty, combine logic, it sucks now that there is different logic for json and everything else
         if ( options.exists( "--take-last" ) ) check_type = comma::property_tree::path_value::take_last;
         if ( options.exists( "--verify-unique,--unique-input" ) ) check_type = comma::property_tree::path_value::unique_input;
         boost::optional< char > delimiter = options.optional< char >( "--delimiter,-d" );
@@ -308,7 +310,6 @@ int main( int ac, char** av )
                         case '"' : quoted = !quoted; break;
                         case '\n': if( !quoted ) { s[i] = ' '; } break;
                     }
-
                 }
                 std::cout << s << std::endl;
             }
@@ -319,29 +320,12 @@ int main( int ac, char** av )
             input( std::cin, ptree );
             if( has_regex ) { match_regex_( std::cout, ptree ); } else { match_( std::cout, ptree ); }
         }
+        return 0;
     }
-    catch( boost::property_tree::ptree_bad_data& ex )
-    {
-        std::cerr << "name-value-convert: bad data: " << ex.what() << std::endl;
-    }
-    catch( boost::property_tree::ptree_bad_path& ex )
-    {
-        std::cerr << "name-value-convert: bad path: " << ex.what() << std::endl;
-    }
-    catch( boost::property_tree::ptree_error& ex )
-    {
-        boost::regex e( "<unspecified file>" );
-        std::cerr << "name-value-convert: parsing error: " << boost::regex_replace( std::string( ex.what() ), e, "line" ) << std::endl;
-    }
-    catch( std::exception& ex )
-    {
-        std::cerr << std::endl << "name-value-get: " << ex.what() << std::endl << std::endl;
-        return 1;
-    }
-    catch( ... )
-    {
-        std::cerr << std::endl << "name-value-get: unknown exception" << std::endl << std::endl;
-        return 1;
-    }
-    return 0;
+    catch( boost::property_tree::ptree_bad_data& ex ) { std::cerr << "name-value-convert: bad data: " << ex.what() << std::endl; }
+    catch( boost::property_tree::ptree_bad_path& ex ) { std::cerr << "name-value-convert: bad path: " << ex.what() << std::endl; }
+    catch( boost::property_tree::ptree_error& ex ) { boost::regex e( "<unspecified file>" ); std::cerr << "name-value-convert: parsing error: " << boost::regex_replace( std::string( ex.what() ), e, "line" ) << std::endl; }
+    catch( std::exception& ex ) { std::cerr << std::endl << "name-value-get: " << ex.what() << std::endl << std::endl; }
+    catch( ... ) { std::cerr << std::endl << "name-value-get: unknown exception" << std::endl << std::endl; }
+    return 1;
 }

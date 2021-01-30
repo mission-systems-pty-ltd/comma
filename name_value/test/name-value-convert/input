@@ -1,0 +1,4 @@
+quoting[0]="echo a=01 | name-value-convert --to json --minify"
+quoting[1]="echo a=1 | name-value-convert --to json --quote-numbers --minify"
+quoting[2]="echo a=1 | name-value-convert --to json --minify | name-value-convert"
+quoting[3]="echo a=1 | name-value-convert --to json --quote-numbers --minify | name-value-convert"

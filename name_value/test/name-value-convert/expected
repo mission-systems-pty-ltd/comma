@@ -1,0 +1,4 @@
+quoting[0]/output='{"a":"01"}'
+quoting[1]/output='{"a":"1"}'
+quoting[2]/output='a="1"'
+quoting[3]/output='a="1"'
