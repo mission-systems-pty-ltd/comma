@@ -24,6 +24,10 @@ esac
             -DBUILD_PYTHON_PACKAGES=ON \
             -DADD_PYTHON_PACKAGES_TO_RPM=ON \
             -DBUILD_SHARED_LIBS=ON \
+            -DBUILD_TESTS=OFF \
+            -DBUILD_TESTS=OFF \
+            -DCMAKE_INSTALL_PREFIX=/usr \
+            -DINSTALL_TESTS=OFF \
             -DCPACK_DEPENDENCIES_LIBPROCPS="$libproc_version" \
             -DCPACK_PACKAGE_VERSION_MAJOR=$version_major \
             -DCPACK_PACKAGE_VERSION_MINOR=$version_minor \
