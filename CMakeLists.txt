@@ -252,33 +252,33 @@ SET( comma_ALL_LIBRARIES
         debug comma_name_value-d
         optimized comma_name_value )
 
-IF(WIN32)
-    SET( comma_ALL_EXTERNAL_LIBRARIES Ws2_32.lib )
-ENDIF(WIN32)
+if(WIN32)
+    set( comma_ALL_EXTERNAL_LIBRARIES Ws2_32.lib )
+endif(WIN32)
 
-IF(UNIX AND NOT QNXNTO AND NOT APPLE)
-    SET( comma_ALL_EXTERNAL_LIBRARIES rt pthread )
-ENDIF(UNIX AND NOT QNXNTO AND NOT APPLE)
+if( UNIX AND NOT QNXNTO AND NOT APPLE )
+    set( comma_ALL_EXTERNAL_LIBRARIES rt pthread c )
+endif( UNIX AND NOT QNXNTO AND NOT APPLE )
 
-SET( comma_ALL_EXTERNAL_LIBRARIES ${Boost_LIBRARIES} ${comma_ALL_EXTERNAL_LIBRARIES} )
+set( comma_ALL_EXTERNAL_LIBRARIES ${Boost_LIBRARIES} ${comma_ALL_EXTERNAL_LIBRARIES} )
 
-IF( comma_BUILD_ZEROMQ )
-    SET( comma_ALL_EXTERNAL_LIBRARIES ${comma_ALL_EXTERNAL_LIBRARIES} ${ZeroMQ_LIBRARY} )
-ENDIF( comma_BUILD_ZEROMQ )
+if( comma_BUILD_ZEROMQ )
+    set( comma_ALL_EXTERNAL_LIBRARIES ${comma_ALL_EXTERNAL_LIBRARIES} ${ZeroMQ_LIBRARY} )
+endif( comma_BUILD_ZEROMQ )
 
-IF( BUILD_CPP_PYTHON_BINDINGS )
-    SET( comma_ALL_EXTERNAL_LIBRARIES ${comma_ALL_EXTERNAL_LIBRARIES} ${PYTHON_LIBRARY} )
-ENDIF( BUILD_CPP_PYTHON_BINDINGS )
+if( BUILD_CPP_PYTHON_BINDINGS )
+    set( comma_ALL_EXTERNAL_LIBRARIES ${comma_ALL_EXTERNAL_LIBRARIES} ${PYTHON_LIBRARY} )
+endif( BUILD_CPP_PYTHON_BINDINGS )
 
-SET( comma_ALL_LIBRARIES ${comma_ALL_LIBRARIES} ${comma_ALL_LIBRARIES} ${comma_ALL_EXTERNAL_LIBRARIES} ) # as gcc parses library list only once
-SET( comma_EXTERNAL_INCLUDES ${Boost_INCLUDE_DIRS} )
+set( comma_ALL_LIBRARIES ${comma_ALL_LIBRARIES} ${comma_ALL_LIBRARIES} ${comma_ALL_EXTERNAL_LIBRARIES} ) # as gcc parses library list only once
+set( comma_EXTERNAL_INCLUDES ${Boost_INCLUDE_DIRS} )
 
 CONFIGURE_FILE(
     "${CMAKE_CURRENT_SOURCE_DIR}/CMakeFiles/cmake_uninstall.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
     IMMEDIATE @ONLY)
 
-ADD_CUSTOM_TARGET(uninstall COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+ADD_CUSTOM_TARGET( uninstall COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake )
 
 FILE( GLOB comma_PACKAGE_CMAKEFILES ${CMAKE_CURRENT_SOURCE_DIR}/CMakeFiles/*.cmake )
 
@@ -328,7 +328,9 @@ add_subdirectory( python )
 set( CPACK_PACKAGE_NAME "comma" )
 set( CPACK_PACKAGE_DESCRIPTION_SUMMARY "command line utilities to manipulate various structured and unstructured data from offline or realtime data" )
 set( CPACK_PACKAGE_VENDOR "orthographic" )
+set( CPACK_DEBIAN_PACKAGE_DESCRIPTION "command line utilities to manipulate various structured and unstructured data from offline or realtime data" ) # lintian gets upset
 set( CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://gitlab.com/orthographic/comma" )
+set( CPACK_DEBIAN_PACKAGE_MAINTAINER "vsevolod vlaskine" )
 set( CPACK_PACKAGE_CONTACT "vsevolod.vlaskine@gmail.com" )
 set( CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/COPYING" )
 set( CPACK_GENERATOR "PRM" CACHE STRING "cpack generator: PRM or DEB" )
