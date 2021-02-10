@@ -287,9 +287,8 @@ INCLUDE( ${CMAKE_CURRENT_SOURCE_DIR}/CMakeFiles/generate_${PROJECT_NAME}_config.
 CONFIGURE_FILE( ${PROJECT_SOURCE_DIR}/CMakeFiles/use_${PROJECT_NAME}.cmake.in
                 ${PROJECT_BINARY_DIR}/CMakeFiles/use_${PROJECT_NAME}.cmake COPYONLY IMMEDIATE )
 
-SET( comma_PACKAGE_CMAKEFILES ${comma_PACKAGE_CMAKEFILES} ${PROJECT_BINARY_DIR}/CMakeFiles/use_${PROJECT_NAME}.cmake )
-INSTALL( FILES ${comma_PACKAGE_CMAKEFILES}
-         DESTINATION ${comma_INSTALL_PACKAGE_DIR} )
+set( comma_PACKAGE_CMAKEFILES ${comma_PACKAGE_CMAKEFILES} ${PROJECT_BINARY_DIR}/CMakeFiles/use_${PROJECT_NAME}.cmake )
+install( FILES ${comma_PACKAGE_CMAKEFILES} DESTINATION ${comma_INSTALL_PACKAGE_DIR} )
 
 #-----------------------------------------------------------------------------
 # add sources
@@ -315,9 +314,12 @@ if( comma_BUILD_XML )
 endif( comma_BUILD_XML )
 add_subdirectory( xpath )
 
-ADD_SUBDIRECTORY( etc/bash_completion.d )
+option( INSTALL_BASH_COMPLETION "install the BASH completion scripts" ON )
+if( INSTALL_BASH_COMPLETION )
+    add_subdirectory( etc/bash_completion.d )
+endif( INSTALL_BASH_COMPLETION )
 
-ADD_SUBDIRECTORY( python )
+add_subdirectory( python )
 
 #in future, may need to add third party dlls somehow, if they are linked as dlls. Not needed for statically linking to boost.
 #if we set them up to install to bin they might be packaged through, e.g. roughly (using GLOB):
