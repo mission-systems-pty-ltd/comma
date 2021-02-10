@@ -289,6 +289,7 @@ CONFIGURE_FILE( ${PROJECT_SOURCE_DIR}/CMakeFiles/use_${PROJECT_NAME}.cmake.in
 
 set( comma_PACKAGE_CMAKEFILES ${comma_PACKAGE_CMAKEFILES} ${PROJECT_BINARY_DIR}/CMakeFiles/use_${PROJECT_NAME}.cmake )
 install( FILES ${comma_PACKAGE_CMAKEFILES} DESTINATION ${comma_INSTALL_PACKAGE_DIR} )
+install( FILES ${PROJECT_SOURCE_DIR}/copyright DESTINATION share/doc/comma ) # quick and dirty
 
 #-----------------------------------------------------------------------------
 # add sources
@@ -332,7 +333,7 @@ set( CPACK_DEBIAN_PACKAGE_DESCRIPTION "command line utilities to manipulate vari
 set( CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://gitlab.com/orthographic/comma" )
 set( CPACK_DEBIAN_PACKAGE_MAINTAINER "vsevolod vlaskine" )
 set( CPACK_PACKAGE_CONTACT "vsevolod.vlaskine@gmail.com" )
-set( CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/COPYING" )
+set( CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/copyright" )
 set( CPACK_GENERATOR "PRM" CACHE STRING "cpack generator: PRM or DEB" )
 set( CPACK_PACKAGE_VERSION_MAJOR "1" CACHE STRING "cpack version major" )
 set( CPACK_PACKAGE_VERSION_MINOR ${COMMITDATE} CACHE STRING "cpack version minor" )
