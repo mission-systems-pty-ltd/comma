@@ -22,7 +22,7 @@ esac
     echo "$0: running cmake in $( pwd )" >&2
     cmake . -DCPACK_GENERATOR=DEB \
             -DBUILD_PYTHON_PACKAGES=ON \
-            -DADD_PYTHON_PACKAGES_TO_RPM=ON \
+            -DADD_PYTHON_PACKAGES_TO_RPM=OFF \
             -DBUILD_SHARED_LIBS=ON \
             -DBUILD_TESTS=OFF \
             -DBUILD_TESTS=OFF \
