@@ -20,7 +20,7 @@ esac
 (
     cd ~/src/comma/python
     echo "$0: setting up python in $( pwd )" >&2
-    python3 setup.py --command-packages=stdeb.command --copyright-file=../COPYING bdist_deb || die "failed"
+    python3 setup.py --command-packages=stdeb.command bdist_deb || die "failed"
     cd ~/build/comma
     echo "$0: running cmake in $( pwd )" >&2
     cmake . -DCPACK_GENERATOR=DEB \

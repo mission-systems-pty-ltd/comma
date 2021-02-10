@@ -7,7 +7,6 @@ setup(
         name                = 'comma',
         version             = comma.version.__version__,
         classifiers = [
-          'Development Status :: 4 - Beta',
           'Environment :: Console',
           'Intended Audience :: End Users/Desktop',
           'Intended Audience :: Developers',
@@ -18,10 +17,11 @@ setup(
           'Programming Language :: Python',
           'Topic :: Communications :: Email'
         ],
-        description         = 'comma python utilties',
+        description         = 'comma python utilities',
         install_requires    = [ 'numpy' ],
         url                 = 'https://gitlab.com/orthographic/comma',
         license             = 'BSD 3-Clause',
+        long_description    = 'comma python utilities for offline and streamed csv and fixed width data',
         maintainer          = 'vsevolod vlaskine',
         maintainer_email    = 'vsevolod.vlaskine@gmail.com',
         packages            = [ 'comma', 'comma.csv', 'comma.csv.applications', 'comma.io', 'comma.numpy', 'comma.signal', 'comma.util', 'comma.cpp_bindings', 'comma.application' ],
