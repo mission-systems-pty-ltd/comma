@@ -18,6 +18,9 @@ case $ubuntu_version in
     *) libproc_version="libprocps8 (>= 1)" ;; # for now
 esac
 (
+    cd ~/src/comma/python
+    echo "$0: setting up python in $( pwd )" >&2
+    python3 setup.py --command-packages=stdeb.command --copyright-file=../COPYING bdist_deb || die "failed"
     cd ~/build/comma
     echo "$0: running cmake in $( pwd )" >&2
     cmake . -DCPACK_GENERATOR=DEB \
@@ -35,9 +38,6 @@ esac
             -DCPACK_PACKAGE_VERSION_PATCH=$version_patch  || die "failed"
     echo "$0: running cpack in $( pwd )" >&2
     cpack || die "failed"
-    cd ~/src/comma/python
-    echo "$0: setting up python in $( pwd )" >&2
-    python3 setup.py --command-packages=stdeb.command bdist_deb || die "failed"
     # todo: optionally run full regression test
     echo "$0: done" >&2
 )
