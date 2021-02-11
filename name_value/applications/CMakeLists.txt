@@ -12,6 +12,11 @@ TARGET_LINK_LIBRARIES( name-value-get comma_application comma_string comma_xpath
 TARGET_LINK_LIBRARIES( name-value-eval-preparse comma_application comma_name_value )
 TARGET_LINK_LIBRARIES( name-value-permute comma_application comma_string comma_xpath comma_name_value )
 
+set_target_properties( name-value-convert PROPERTIES LINK_FLAGS_RELEASE -s )
+set_target_properties( name-value-get PROPERTIES LINK_FLAGS_RELEASE -s )
+set_target_properties( name-value-eval-preparse PROPERTIES LINK_FLAGS_RELEASE -s )
+set_target_properties( name-value-permute PROPERTIES LINK_FLAGS_RELEASE -s )
+
 INSTALL( TARGETS name-value-convert name-value-get name-value-eval-preparse name-value-permute
          RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR}
          COMPONENT Runtime )
@@ -20,8 +25,10 @@ install( PROGRAMS name-value-eval name-value-calc name-value-apply DESTINATION $
          
 add_executable( name-value-from-csv ${dir}/name-value-from-csv.cpp )
 target_link_libraries( name-value-from-csv comma_application comma_string )
+set_target_properties( name-value-from-csv PROPERTIES LINK_FLAGS_RELEASE -s )
 install( TARGETS name-value-from-csv RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
 
 add_executable( name-value-to-csv ${dir}/name-value-to-csv.cpp )
 target_link_libraries( name-value-to-csv comma_application comma_string )
+set_target_properties( name-value-to-csv PROPERTIES LINK_FLAGS_RELEASE -s )
 install( TARGETS name-value-to-csv RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )

@@ -12,6 +12,7 @@ SOURCE_GROUP( ${TARGET_NAME} FILES ${source} ${includes} ${impl_includes} )
 ADD_LIBRARY( ${TARGET_NAME} ${source} ${includes} ${impl_source} ${impl_includes} )
 SET_TARGET_PROPERTIES( ${TARGET_NAME} PROPERTIES ${comma_LIBRARY_PROPERTIES} )
 TARGET_LINK_LIBRARIES( ${TARGET_NAME} comma_application comma_xpath ${comma_ALL_EXTERNAL_LIBRARIES} )
+set_target_properties( ${TARGET_NAME} PROPERTIES LINK_FLAGS_RELEASE -s )
 
 INSTALL( FILES ${includes} DESTINATION ${comma_INSTALL_INCLUDE_DIR}/${PROJECT}/ )
 INSTALL( FILES ${impl_includes} DESTINATION ${comma_INSTALL_INCLUDE_DIR}/${PROJECT}/impl )
