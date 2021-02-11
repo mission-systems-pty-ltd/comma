@@ -327,11 +327,12 @@ add_subdirectory( python )
 #install(FILES "${Boost_LIBRARY_DIRS}/*.dll" DESTINATION bin )
 
 set( CPACK_PACKAGE_NAME "comma" )
-set( CPACK_PACKAGE_DESCRIPTION_SUMMARY "command line utilities to manipulate various structured and unstructured data from offline or realtime data" )
+#set( CPACK_PACKAGE_DESCRIPTION_SUMMARY "command line utilities to manipulate various structured and unstructured data from offline or realtime data" )
 set( CPACK_PACKAGE_VENDOR "orthographic" )
-set( CPACK_DEBIAN_PACKAGE_DESCRIPTION "command line utilities to manipulate various structured and unstructured data from offline or realtime data" ) # lintian gets upset
+set( CPACK_DEBIAN_PACKAGE_DESCRIPTION "command line utilities for structured or fixed-width offline or realtime data" ) # lintian gets upset
 set( CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://gitlab.com/orthographic/comma" )
-set( CPACK_DEBIAN_PACKAGE_MAINTAINER "vsevolod vlaskine" )
+set( CPACK_DEBIAN_PACKAGE_MAINTAINER "vsevolod vlaskine <vsevolod.vlaskine@gmail.com>" )
+set( CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${PROJECT_SOURCE_DIR}/system/package/debian/changelog" )
 set( CPACK_PACKAGE_CONTACT "vsevolod.vlaskine@gmail.com" )
 set( CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/copyright" )
 set( CPACK_GENERATOR "PRM" CACHE STRING "cpack generator: PRM or DEB" )
@@ -341,11 +342,11 @@ set( CPACK_PACKAGE_VERSION_PATCH ${COMMITHASH} CACHE STRING "cpack version patch
 set( CPACK_DEPENDENCIES_LIBPROCPS "libprocps6 (>= 2:3.3.0)" CACHE STRING "libprocps versions: libprocps6 (>= 2:3.3.0) for Ubuntu 18.04; libprocps8 (>= 1) for Ubuntu 20.04" )
 set( CPACK_DEBIAN_PACKAGE_DEPENDS "python3-comma, ${CPACK_DEPENDENCIES_LIBPROCPS}, libzmq5 (>= 4.2.5-1), libboost-all-dev (>=1.65), recode (>=3.6), socat, python3-numpy (>=1.14.1)" )
 
-# this code needs a brush-up
-# If the user builds shared, make sure that the RPM package (that might be generated) runs ldconfig when it's installed.
-IF( BUILD_SHARED_LIBS )
-    SET(CPACK_RPM_SPEC_MORE_DEFINE "%posttrans -p /sbin/ldconfig")
-ENDIF( BUILD_SHARED_LIBS )
+# if the user builds shared, make sure that the RPM package (that might be generated) runs ldconfig when it's installed.
+if( BUILD_SHARED_LIBS )
+    set( CPACK_RPM_SPEC_MORE_DEFINE "%posttrans -p /sbin/ldconfig" )
+    set( CPACK_RPM_POST_INSTALL_SCRIPT_FILE "/sbin/ldconfig" )
+endif( BUILD_SHARED_LIBS )
 IF( BUILD_PYTHON_PACKAGES AND ADD_PYTHON_PACKAGES_TO_RPM )
     SET( CPACK_RPM_PACKAGE_REQUIRES "boost-thread recode socat psmisc python numpy" )
     SET( CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/python/comma-rpm-post-install.sh" )

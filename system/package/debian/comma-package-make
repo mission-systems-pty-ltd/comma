@@ -29,6 +29,7 @@ esac
             -DBUILD_SHARED_LIBS=ON \
             -DBUILD_TESTS=OFF \
             -DBUILD_TESTS=OFF \
+            -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=/usr \
             -DINSTALL_BASH_COMPLETION=OFF \
             -DINSTALL_TESTS=OFF \
