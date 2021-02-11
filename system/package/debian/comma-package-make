@@ -36,7 +36,8 @@ esac
             -DCPACK_DEPENDENCIES_LIBPROCPS="$libproc_version" \
             -DCPACK_PACKAGE_VERSION_MAJOR=$version_major \
             -DCPACK_PACKAGE_VERSION_MINOR=$version_minor \
-            -DCPACK_PACKAGE_VERSION_PATCH=$version_patch  || die "failed"
+            -DCPACK_PACKAGE_VERSION_PATCH=$version_patch  \
+            -Dcomma_build_io_rabbit_cat=OFF || die "failed"
     echo "$0: running cpack in $( pwd )" >&2
     cpack || die "failed"
     # todo: optionally run full regression test

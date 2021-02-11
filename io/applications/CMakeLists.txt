@@ -50,6 +50,9 @@ if( NOT WIN32 )
 endif( NOT WIN32 )
 
 install( PROGRAMS io-topics DESTINATION ${comma_INSTALL_BIN_DIR})
-install( PROGRAMS rabbit-cat DESTINATION ${comma_INSTALL_BIN_DIR})
+option( comma_build_io_rabbit_cat "build rabbit-cat" ON )
+if( comma_build_io_rabbit_cat )
+    install( PROGRAMS rabbit-cat DESTINATION ${comma_INSTALL_BIN_DIR})
+endif( comma_build_io_rabbit_cat )
 install( PROGRAMS zero-publish DESTINATION ${comma_INSTALL_BIN_DIR})
 
