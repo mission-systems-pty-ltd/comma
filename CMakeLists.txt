@@ -126,9 +126,7 @@ IF( NOT comma_INSTALL_INCLUDE_DIR )
     SET( comma_INSTALL_INCLUDE_DIR include/${PROJECT_NAME} )
 ENDIF( NOT comma_INSTALL_INCLUDE_DIR )
 
-IF( NOT comma_INSTALL_LIB_DIR)
-  SET( comma_INSTALL_LIB_DIR lib )
-ENDIF( NOT comma_INSTALL_LIB_DIR )
+set( comma_INSTALL_LIB_DIR lib CACHE PATH "library install directory" )
 
 IF( NOT comma_INSTALL_PACKAGE_DIR )
   SET( comma_INSTALL_PACKAGE_DIR CMakeFiles )
@@ -143,7 +141,7 @@ ENDIF( APPLE )
 OPTION( BUILD_TESTS "build unit tests" OFF )
 SET( comma_BUILD_TESTS ${BUILD_TESTS} )
 
-OPTION( BUILD_PYTHON_PACKAGES "install comma python packages" ON )
+option( BUILD_PYTHON_PACKAGES "install comma python packages" ON )
 
 INCLUDE( CMakeDependentOption )
 CMAKE_DEPENDENT_OPTION( ADD_PYTHON_PACKAGES_TO_RPM "add comma python packages to rpm" OFF "BUILD_PYTHON_PACKAGES" ON )
@@ -350,6 +348,7 @@ set( CPACK_PACKAGE_VERSION_MINOR ${COMMITDATE} CACHE STRING "cpack version minor
 set( CPACK_PACKAGE_VERSION_PATCH ${COMMITHASH} CACHE STRING "cpack version patch" )
 set( CPACK_DEPENDENCIES_LIBPROCPS "libprocps6 (>= 2:3.3.0)" CACHE STRING "libprocps versions: libprocps6 (>= 2:3.3.0) for Ubuntu 18.04; libprocps8 (>= 1) for Ubuntu 20.04" )
 set( CPACK_DEBIAN_PACKAGE_DEPENDS "python3-comma, ${CPACK_DEPENDENCIES_LIBPROCPS}, libzmq5 (>= 4.2.5-1), libboost-all-dev (>=1.65), recode (>=3.6), socat, python3-numpy (>=1.14.1), libc (>=6)" )
+#set( CPACK_DEBIAN_PACKAGE_GENERATE_SHLIBS ON )
 
 # if the user builds shared, make sure that the RPM package (that might be generated) runs ldconfig when it's installed.
 if( BUILD_SHARED_LIBS )
