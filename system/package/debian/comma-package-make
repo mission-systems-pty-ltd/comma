@@ -22,14 +22,23 @@ esac
     echo "$0: setting up python in $( pwd )" >&2
     #python3 setup.py --command-packages=stdeb.command bdist_deb || die "failed"
     echo "$0: running python3 setup.py ..." >&2
-    python3 setup.py --command-packages=stdeb.command sdist_dsc --copyright-file ../copyright || die "failed"
+    python3 setup.py --command-packages=stdeb.command sdist_dsc --copyright-file ../copyright --suite focal  || die "failed"
+    # todo: mount gpg key
+    # debsign -k 79BF9724F37751A39B08698DB3CB85AF5FB6E9F1 deb_dist/python3-comma_1.0.0-1.dsc
+    # mkdir tmp
+    # cd tmp
+    # dpkg-source -x ../deb_dist/python3-comma_1.0.0-1.dsc
+    # cd python3-comma-1.0.0
+    # debuild -S -sa
+    # dput ppa:orthographic/ppa ../python3-comma_1.0.0-1_source.changes
+    # ? debsign -k 79BF9724F37751A39B08698DB3CB85AF5FB6E9F1 ../../deb_dist/python3-comma_1.0.0-1_source.changes
+    # 
+    # ...
     echo "$0: building package..." >&2
     cd deb_dist/comma-$version_major.$version_minor.$version_patch || die "failed"
     dpkg-buildpackage -rfakeroot -uc -us || die "failed"
     #https://shallowsky.com/blog/programming/packaging-launchpad-ppas.html
-    # todo? optionally gpg key
-    # todo? add lintian check?
-    # todo? or do all above outside of this script using:
+    # todo? or do all above outside of this script using something like (but also see above):
     #       debsigs --sign=origin -k 79BF9724F37751A39B08698DB3CB85AF5FB6E9F1 comma-1.0.0-Linux.deb
     cd ~/build/comma
     echo "$0: running cmake in $( pwd )" >&2

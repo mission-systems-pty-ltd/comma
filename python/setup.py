@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
-from distutils.core import setup # from setuptools import setup
+from distutils.core import setup
+#from setuptools import setup
 import comma.version
 
 setup(
-        name                = 'comma',
+        name                = 'python3-comma', # quick and dirty to make python packaging work
         version             = comma.version.__version__,
         classifiers = [
           'Environment :: Console',
@@ -18,7 +19,7 @@ setup(
           'Topic :: Communications :: Email'
         ],
         description         = 'comma python utilities',
-        install_requires    = [ 'numpy' ],
+        #install_requires    = [ 'numpy' ],
         url                 = 'https://gitlab.com/orthographic/comma',
         license             = 'BSD 3-Clause',
         long_description    = 'comma python utilities for offline and streamed csv and fixed width data',
