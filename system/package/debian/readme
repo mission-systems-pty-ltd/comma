@@ -19,3 +19,9 @@ test that package is ok, e.g:
 
 > ./comma-package-docker-test 20.04 comma-1.2.3-Linux.deb python3-comma_1.2.3-1_all.deb
 
+sign packages, e.g:
+
+> debsigs --sign=origin -k 79BF9724F37751A39B08698DB3CB85AF5FB6E9F1 comma-1.0.0-Linux.deb
+> debsigs --sign=origin -k 79BF9724F37751A39B08698DB3CB85AF5FB6E9F1 python3-comma_1.0.0-1_all.deb
+
+todo: fix lintian misplaced-extra-member-in-deb, which happens after gpg-signing
