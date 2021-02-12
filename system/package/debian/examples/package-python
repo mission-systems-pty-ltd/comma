@@ -2,11 +2,11 @@
 
 cd ~/src/comma/python
 rm -rf deb_dist dist tmp
-python3 setup.py --command-packages=stdeb.command sdist_dsc --copyright-file ../copyright --suite focal --package python3-comma
+python3 setup.py --command-packages=stdeb.command sdist_dsc --copyright-file ../copyright --suite focal --package python3-comma --build-depends python3-numpy
 debsign -k 79BF9724F37751A39B08698DB3CB85AF5FB6E9F1 deb_dist/python3-comma_1.0.0-1.dsc
 mkdir tmp
 cd tmp
 dpkg-source -x ../deb_dist/python3-comma_1.0.0-1.dsc
 cd python3-comma-1.0.0
 debuild -S -sa
-dput ppa:orthographic/ppa ../python3-comma_1.0.0-1_source.changes
+dput ppa:orthographic/test-ppa ../python3-comma_1.0.0-1_source.changes #dput ppa:orthographic/ppa ../python3-comma_1.0.0-1_source.changes
