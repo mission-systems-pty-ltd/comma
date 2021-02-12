@@ -331,6 +331,7 @@ if( CMAKE_COMPILER_IS_GNUCXX )
     endif( CMAKE_BUILD_TYPE STREQUAL "Release" )
 endif( CMAKE_COMPILER_IS_GNUCXX )
 install( FILES "${PROJECT_SOURCE_DIR}/system/package/debian/changelog.gz" DESTINATION share/doc/comma )
+install( FILES "${PROJECT_SOURCE_DIR}/copyright" DESTINATION share/doc/comma )
 
 set( CPACK_PACKAGE_NAME "comma" )
 #set( CPACK_PACKAGE_DESCRIPTION "cli utilities for structured or fixed-width offline or realtime data" )

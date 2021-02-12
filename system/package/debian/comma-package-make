@@ -21,11 +21,17 @@ esac
     cd ~/src/comma/python
     echo "$0: setting up python in $( pwd )" >&2
     python3 setup.py --command-packages=stdeb.command bdist_deb || die "failed"
+    
+    
+    #https://shallowsky.com/blog/programming/packaging-launchpad-ppas.html
+    # todo: python3 setup.py --command-packages=stdeb.command sdist_dsc --copyright-file ../copyright
+    # todo: optionally gpg key
+    # todo? add lintian check?
+    # todo? or do all above outside of this script?
+    
+    
     cd ~/build/comma
     echo "$0: running cmake in $( pwd )" >&2
-    
-    # todo? -Dcomma_INSTALL_LIB_DIR=lib/x86_64-linux-gnu
-    
     cmake . -DCPACK_GENERATOR=DEB \
             -DBUILD_PYTHON_PACKAGES=ON \
             -DADD_PYTHON_PACKAGES_TO_RPM=OFF \
@@ -40,6 +46,7 @@ esac
             -DCPACK_PACKAGE_VERSION_MAJOR=$version_major \
             -DCPACK_PACKAGE_VERSION_MINOR=$version_minor \
             -DCPACK_PACKAGE_VERSION_PATCH=$version_patch  \
+            -Dcomma_INSTALL_LIB_DIR=lib/x86_64-linux-gnu \
             -Dcomma_build_io_rabbit_cat=OFF || die "failed"
     echo "$0: running cpack in $( pwd )" >&2
     cpack || die "failed"
