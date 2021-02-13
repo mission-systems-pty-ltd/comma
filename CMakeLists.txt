@@ -54,14 +54,9 @@ ELSE() # Probably windows; gets hardcoded patch version
 	SET ( COMMITHASH "abc" )
 ENDIF()
 
-# ---------------------------------------------------------------------------
-# set compiler and linker flags and variables
-
-IF(NOT CMAKE_BUILD_TYPE)
-  SET(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
-      "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel."
-      FORCE)
-ENDIF(NOT CMAKE_BUILD_TYPE)
+if( NOT CMAKE_BUILD_TYPE )
+  set( CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel." FORCE )
+endif( NOT CMAKE_BUILD_TYPE )
 
 IF(WIN32)
   SET(CMAKE_CXX_WARNING_LEVEL 4)
@@ -158,7 +153,7 @@ SET( comma_BUILD_APPLICATIONS ${BUILD_APPLICATIONS} )
 
 OPTION( comma_BUILD_ZEROMQ "build io with zeromq support" OFF )
 
-OPTION(BUILD_SHARED_LIBS "build with shared libraries" OFF)
+option( BUILD_SHARED_LIBS "build with shared libraries" ON ) # option( BUILD_SHARED_LIBS "build with shared libraries" OFF )
 
 OPTION( comma_BUILD_XML "build xml" OFF )
 
@@ -293,7 +288,7 @@ CONFIGURE_FILE( ${PROJECT_SOURCE_DIR}/CMakeFiles/use_${PROJECT_NAME}.cmake.in
 
 set( comma_PACKAGE_CMAKEFILES ${comma_PACKAGE_CMAKEFILES} ${PROJECT_BINARY_DIR}/CMakeFiles/use_${PROJECT_NAME}.cmake )
 install( FILES ${comma_PACKAGE_CMAKEFILES} DESTINATION ${comma_INSTALL_PACKAGE_DIR} )
-install( FILES ${PROJECT_SOURCE_DIR}/copyright DESTINATION share/doc/comma ) # quick and dirty
+#install( FILES ${PROJECT_SOURCE_DIR}/copyright DESTINATION share/doc/comma ) # quick and dirty
 
 #-----------------------------------------------------------------------------
 # add sources
@@ -336,8 +331,8 @@ if( CMAKE_COMPILER_IS_GNUCXX )
         set( CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s" )
     endif( CMAKE_BUILD_TYPE STREQUAL "Release" )
 endif( CMAKE_COMPILER_IS_GNUCXX )
-install( FILES "${PROJECT_SOURCE_DIR}/system/package/debian/changelog.gz" DESTINATION share/doc/comma ) # todo: remove - cannot use cpack for ubuntu ppa anyway
-install( FILES "${PROJECT_SOURCE_DIR}/copyright" DESTINATION share/doc/comma ) # todo: remove - cannot use cpack for ubuntu ppa anyway
+#install( FILES "${PROJECT_SOURCE_DIR}/system/package/debian/changelog.gz" DESTINATION share/doc/comma ) # todo: remove - cannot use cpack for ubuntu ppa anyway
+#install( FILES "${PROJECT_SOURCE_DIR}/copyright" DESTINATION share/doc/comma ) # todo: remove - cannot use cpack for ubuntu ppa anyway
 
 set( CPACK_PACKAGE_NAME "comma" )
 #set( CPACK_PACKAGE_DESCRIPTION "cli utilities for structured or fixed-width offline or realtime data" )
@@ -348,7 +343,7 @@ set( CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://gitlab.com/orthographic/comma/-/wiki
 set( CPACK_DEBIAN_PACKAGE_MAINTAINER "vsevolod vlaskine <vsevolod.vlaskine@gmail.com>" )
 set( CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${PROJECT_SOURCE_DIR}/system/package/debian/changelog" )
 set( CPACK_PACKAGE_CONTACT "vsevolod.vlaskine@gmail.com" )
-set( CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/copyright" )
+set( CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/COPYING" )
 set( CPACK_GENERATOR "DEB" CACHE STRING "cpack generator: PRM or DEB" )
 set( CPACK_PACKAGE_VERSION_MAJOR ${comma_version_major} CACHE STRING "cpack version major" )
 set( CPACK_PACKAGE_VERSION_MINOR ${comma_version_minor} CACHE STRING "cpack version minor" )
