@@ -14,7 +14,7 @@ ADD_LIBRARY( ${TARGET_NAME} ${source} ${includes} )
 SET_TARGET_PROPERTIES( ${TARGET_NAME} PROPERTIES ${comma_LIBRARY_PROPERTIES} )
 TARGET_LINK_LIBRARIES( ${TARGET_NAME} comma_application comma_string comma_xpath ${comma_ALL_EXTERNAL_LIBRARIES} )
 set_target_properties( ${TARGET_NAME} PROPERTIES LINK_FLAGS_RELEASE -s )
-set_target_properties( ${TARGET_NAME} PROPERTIES SOVERSION ${CPACK_PACKAGE_VERSION_MAJOR} ${CPACK_PACKAGE_VERSION_MINOR} ${CPACK_PACKAGE_VERSION_PATCH} )
+set_target_properties( ${TARGET_NAME} PROPERTIES SOVERSION ${comma_version_major} ${comma_version_minor} ${comma_version_patch} )
 INSTALL(
     TARGETS ${TARGET_NAME}
     RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime     # .exe, .dll

@@ -116,6 +116,10 @@ SET( EXECUTABLE_OUTPUT_PATH
      ${PROJECT_BINARY_DIR}/bin CACHE PATH
      "Single output directory for building all executables." )
 
+set( comma_version_major "1" ) # quick and dirty
+set( comma_version_minor "0" ) # quick and dirty
+set( comma_version_patch "0" ) # quick and dirty
+     
 SET( comma_LIBRARY_PROPERTIES ${comma_LIBRARY_PROPERTIES} DEBUG_POSTFIX "-d" )
 
 IF( NOT comma_INSTALL_BIN_DIR )
@@ -126,7 +130,9 @@ IF( NOT comma_INSTALL_INCLUDE_DIR )
     SET( comma_INSTALL_INCLUDE_DIR include/${PROJECT_NAME} )
 ENDIF( NOT comma_INSTALL_INCLUDE_DIR )
 
-set( comma_INSTALL_LIB_DIR lib CACHE PATH "library install directory" )
+if( NOT comma_INSTALL_LIB_DIR ) # voodoo
+  set( comma_INSTALL_LIB_DIR lib )
+endif( NOT comma_INSTALL_LIB_DIR )
 
 IF( NOT comma_INSTALL_PACKAGE_DIR )
   SET( comma_INSTALL_PACKAGE_DIR CMakeFiles )
@@ -330,8 +336,8 @@ if( CMAKE_COMPILER_IS_GNUCXX )
         set( CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s" )
     endif( CMAKE_BUILD_TYPE STREQUAL "Release" )
 endif( CMAKE_COMPILER_IS_GNUCXX )
-install( FILES "${PROJECT_SOURCE_DIR}/system/package/debian/changelog.gz" DESTINATION share/doc/comma )
-install( FILES "${PROJECT_SOURCE_DIR}/copyright" DESTINATION share/doc/comma )
+install( FILES "${PROJECT_SOURCE_DIR}/system/package/debian/changelog.gz" DESTINATION share/doc/comma ) # todo: remove - cannot use cpack for ubuntu ppa anyway
+install( FILES "${PROJECT_SOURCE_DIR}/copyright" DESTINATION share/doc/comma ) # todo: remove - cannot use cpack for ubuntu ppa anyway
 
 set( CPACK_PACKAGE_NAME "comma" )
 #set( CPACK_PACKAGE_DESCRIPTION "cli utilities for structured or fixed-width offline or realtime data" )
@@ -344,9 +350,9 @@ set( CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${PROJECT_SOURCE_DIR}/system/package/de
 set( CPACK_PACKAGE_CONTACT "vsevolod.vlaskine@gmail.com" )
 set( CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/copyright" )
 set( CPACK_GENERATOR "DEB" CACHE STRING "cpack generator: PRM or DEB" )
-set( CPACK_PACKAGE_VERSION_MAJOR "1" CACHE STRING "cpack version major" )
-set( CPACK_PACKAGE_VERSION_MINOR "0" CACHE STRING "cpack version minor" )
-set( CPACK_PACKAGE_VERSION_PATCH "0" CACHE STRING "cpack version patch" )
+set( CPACK_PACKAGE_VERSION_MAJOR ${comma_version_major} CACHE STRING "cpack version major" )
+set( CPACK_PACKAGE_VERSION_MINOR ${comma_version_minor} CACHE STRING "cpack version minor" )
+set( CPACK_PACKAGE_VERSION_PATCH ${comma_version_patch} CACHE STRING "cpack version patch" )
 set( CPACK_DEPENDENCIES_LIBPROCPS "libprocps6 (>= 2:3.3.0)" CACHE STRING "libprocps versions: libprocps6 (>= 2:3.3.0) for Ubuntu 18.04; libprocps8 (>= 1) for Ubuntu 20.04" )
 #set( CPACK_DEBIAN_PACKAGE_DEPENDS "python3-comma, ${CPACK_DEPENDENCIES_LIBPROCPS}, libzmq5 (>= 4.2.5-1), libboost-all-dev (>=1.65), recode (>=3.6), socat, python3-numpy (>=1.14.1), libc (>=6)" )
 set( CPACK_DEBIAN_PACKAGE_DEPENDS "${CPACK_DEPENDENCIES_LIBPROCPS}, libzmq5 (>= 4.2.5-1), libboost-all-dev (>=1.65), recode (>=3.6), socat, python3-numpy (>=1.14.1), libc (>=6)" )

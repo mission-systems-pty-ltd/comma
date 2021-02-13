@@ -9,7 +9,7 @@ SOURCE_GROUP( ${TARGET_NAME} FILES ${source} ${includes} )
 ADD_LIBRARY( ${TARGET_NAME} ${source} ${includes} )
 SET_TARGET_PROPERTIES( ${TARGET_NAME} PROPERTIES ${comma_LIBRARY_PROPERTIES} )
 set_target_properties( ${TARGET_NAME} PROPERTIES LINK_FLAGS_RELEASE -s )
-set_target_properties( ${TARGET_NAME} PROPERTIES SOVERSION ${CPACK_PACKAGE_VERSION_MAJOR} ${CPACK_PACKAGE_VERSION_MINOR} ${CPACK_PACKAGE_VERSION_PATCH} )
+set_target_properties( ${TARGET_NAME} PROPERTIES SOVERSION ${comma_version_major} ${comma_version_minor} ${comma_version_patch} )
 TARGET_LINK_LIBRARIES( ${TARGET_NAME} comma_base comma_string )
 
 INSTALL( FILES ${includes} DESTINATION ${comma_INSTALL_INCLUDE_DIR}/${PROJECT} )
