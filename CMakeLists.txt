@@ -331,11 +331,8 @@ if( CMAKE_COMPILER_IS_GNUCXX )
         set( CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s" )
     endif( CMAKE_BUILD_TYPE STREQUAL "Release" )
 endif( CMAKE_COMPILER_IS_GNUCXX )
-if( BUILD_SHARED_LIBS )
-    install( CODE "execute_process( COMMAND \"/sbin/ldconfig\" )" ) # is it the right way? does it run at the right time?
-endif( BUILD_SHARED_LIBS )
-#install( FILES "${PROJECT_SOURCE_DIR}/system/package/debian/changelog.gz" DESTINATION share/doc/comma ) # todo: remove - cannot use cpack for ubuntu ppa anyway
-#install( FILES "${PROJECT_SOURCE_DIR}/copyright" DESTINATION share/doc/comma ) # todo: remove - cannot use cpack for ubuntu ppa anyway
+
+add_subdirectory( CMakeFiles/post_install ) # uber-quick and dirty
 
 set( CPACK_PACKAGE_NAME "comma" )
 #set( CPACK_PACKAGE_DESCRIPTION "cli utilities for structured or fixed-width offline or realtime data" )
@@ -398,5 +395,3 @@ INCLUDE( InstallRequiredSystemLibraries )
 
 #this line does all the work. Actually, even if this is the only line, you get all but the dlls...
 INCLUDE( CPack )
-
-
