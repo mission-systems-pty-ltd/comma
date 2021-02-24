@@ -241,7 +241,7 @@ class publish
             if( update_no_clients_ )
             {
                 if( total > 0 ) { got_first_client_ever_ = true; }
-                else if( got_first_client_ever_ ) { std::cerr << "io-publish: the last client exited" << std::endl; return false; }
+                else if( got_first_client_ever_ ) { comma::verbose << "the last client exited" << std::endl; return false; }
             }
             return true;
         }

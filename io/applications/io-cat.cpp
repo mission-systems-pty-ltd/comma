@@ -336,7 +336,7 @@ int main( int argc, char** argv )
         unsigned int round_robin_count = unnamed.size() > 1 ? options.value( "--round-robin", 0 ) : 0;
         for( bool done = false; !done; )
         {
-            if( is_shutdown ) { std::cerr << "io-cat: received signal" << std::endl; break; }
+            if( is_shutdown ) { if( verbose ) { std::cerr << "io-cat: received signal" << std::endl; }; break; }
             bool connected_all_we_could = try_connect( streams, select );
             if( !ready( streams, select, connected_all_we_could ) ) { continue; }
             done = true;
