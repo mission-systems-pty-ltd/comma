@@ -1,6 +1,6 @@
 timeout=0.3
 period=0.1
-append="repeating,time,count"
+append="count"
 format=ui
 data="
 0.20,123
@@ -8,4 +8,5 @@ data="
 0.01,789
 0.55,123
 0.01,456
-0.55,999"
+0.55,999
+"
