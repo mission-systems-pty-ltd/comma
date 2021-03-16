@@ -177,6 +177,8 @@ void command_line_options::assert_mutually_exclusive( const std::string& names )
     }
 }
 
+void command_line_options::assert_exists( const std::string& names ) const { if( !exists( names ) ) { COMMA_THROW( comma::exception, "please specify one of the following: " << names  ); } }
+
 void command_line_options::assert_mutually_exclusive( const std::string& first, const std::string& second ) const
 {
     const std::vector< std::string >& v = comma::split( first, ',' );

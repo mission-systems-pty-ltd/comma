@@ -124,6 +124,9 @@ class command_line_options
         
         /// throw, if at least one option from each set is present
         void assert_mutually_exclusive( const std::string& first, const std::string& second ) const;
+        
+        /// throw, if not at least one of options in the list exists, trivial convenience method
+        void assert_exists( const std::string& comma_separated_names ) const;
 
         /// description
         struct description
