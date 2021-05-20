@@ -279,7 +279,7 @@ function set_topic_variables()
     eval "$( ${operation}_topic_fields | comma_path_mangle | sed 's#^#unset topic_#' )" # todo: quick and dirty, watch performance
     eval "$( grep $topic <<< "$config" | grep -v "^$topic/command" | sed "s#^$topic/#topic/#" | comma_path_value_mangle )"
     topic_command="$( grep ^$topic/command <<< "$master_config" | cut -d= -f1 --complement | sed -e 's#^"##' -e 's#"$##'  )" # quick and dirty
-    if [[ -n "$topic_binary" ]]; then size_option="--size $( csv-size $topic_binary )"
+    if [[ -n "$topic_binary" ]]; then size_option="--size $( echo $topic_binary | csv-format size )"
     elif [[ -n "$topic_size" ]]; then size_option="--size $topic_size"
     else unset size_option; fi
 }
