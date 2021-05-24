@@ -161,6 +161,7 @@ int main( int ac, char** av )
     {
         comma::command_line_options options( ac, av, usage );
         bool binary = options.exists( "--size,-s,--binary,-b" );
+        bool flush = options.exists( "--flush" );
         deterministic = options.exists( "--deterministic,-d" );
         invert = options.exists( "--invert,-i" );
         seed = options.optional< comma::uint32 >( "--seed" );
@@ -178,8 +179,12 @@ int main( int ac, char** av )
                 const timestamped* p = istream.read();
                 if( !p ) { break; }
                 if( skip_by_timestamp( p->timestamp ) != invert ) { continue; }
-                if( istream.is_binary()) { std::cout.write( istream.binary().last(), istream.binary().size() ); }
-                else { std::cout << comma::join( istream.ascii().last(), istream.ascii().ascii().delimiter() )<< std::endl; }
+                if( istream.is_binary())
+                {
+                    std::cout.write( istream.binary().last(), istream.binary().size() );
+                    if( flush ) { std::cout.flush(); }
+                }
+                else { std::cout << comma::join( istream.ascii().last(), istream.ascii().ascii().delimiter() ) << std::endl; }
             }
             return 0;
         }
