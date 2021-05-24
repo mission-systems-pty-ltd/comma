@@ -75,13 +75,11 @@ static void usage( bool verbose = false )
     std::cerr << std::endl;
     std::cerr << "csv options" << std::endl;
     std::cerr << comma::csv::options::usage( verbose ) << std::endl;
-    std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << "    output 70% of data:          cat full.csv | csv-thin 0.7" << std::endl;
     std::cerr << "    output once every 2 seconds: cat full.csv | csv-thin --period 2" << std::endl;
     std::cerr << "    using timestamp from input:  cat full.csv | csv-thin --period 2 --fields t" << std::endl;
     std::cerr << "    binary data:                 cat full.bin | csv-thin 0.1 --binary 3d" << std::endl;
-    std::cerr << std::endl;
     std::cerr << std::endl;
     exit( 1 );
 }
