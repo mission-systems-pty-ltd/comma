@@ -20,7 +20,7 @@ static void usage( bool verbose )
     std::cerr << "random operations on input stream" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
-    std::cerr << "    --seed=[<int>]; random seed" << std::endl;
+    std::cerr << "    --seed=[<unsigned int>]; random seed" << std::endl;
     std::cerr << std::endl;
     std::cerr << "operations" << std::endl;
     std::cerr << "    make: output pseudo-random numbers" << std::endl;
@@ -443,7 +443,7 @@ int main( int ac, char** av )
         if( unnamed.empty() ) { std::cerr << "csv-random: please specify operation" << std::endl; return 1; }
         ::csv = comma::csv::options( options );
         std::cout.precision( ::csv.precision );
-        ::seed = options.optional< int >( "--seed" );
+        ::seed = options.optional< comma::uint32 >( "--seed" );
         ::verbose = options.exists( "--verbose,-v" );
         std::string operation = unnamed[0];
         if( operation == "make" ) { return comma::applications::random::make::run( options ); }
