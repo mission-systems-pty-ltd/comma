@@ -205,66 +205,69 @@ function list_topic_fields() { :; }
 # log and cat operations and thus introducing flush in publish might be confusing
 function publish_topic_fields()
 {
-    publish_topic_fields_help | cut -f1 -d';'
+    publish_topic_fields_help | grep -v '^ ' | cut -f1 -d';'
 }
 
 function publish_topic_fields_help()
 {
     cat <<eof
-address; if present, passed verbatim to io-publish, in this case port attribute ignored
-binary; if publisher publishes binary data, the binary format of the data, overrides size
-command; command for the publisher to run
-input; input topic for publish command to read on stdin
-on_demand; if present, same meaning as io-publish --on-demand
-port; tcp port for publishing, unless address field is present
-secondary/address; if present, passed verbatim to io-publish as '<address>;secondary', in this case port attribute ignored
-secondary/port; if present, secondary tcp port for publishing, unless address field is present, io-publish as 'tcp:<port>;secondary'
-size; if publisher publishes binary data, size of the binary record, if no binary attribute given
+address;           passed verbatim to io-publish, port attribute will be ignored
+binary;            for binary data, binary format of data, overrides size
+command;           command for the publisher to run
+input;             input topic for publish command to read on stdin
+on_demand;         same meaning as io-publish --on-demand
+port;              tcp port for publishing, unless address field is present
+secondary/address; passed verbatim to io-publish as '<address>;secondary',
+                   in this case port attribute ignored
+secondary/port;    secondary tcp port for publishing, unless address field is
+                   present, io-publish as 'tcp:<port>;secondary'
+size;              for binary data, size of the binary record
 eof
 }
 
 function cat_topic_fields()
 {
-    cat_topic_fields_help | cut -f1 -d';'
+    cat_topic_fields_help | grep -v '^ ' | cut -f1 -d';'
 }
 
 function cat_topic_fields_help()
 {
     cat <<eof
-address; if present, passed verbatim to io-cat, in this case port attribute ignored
-binary; if data is binary, the binary format of the data, overrides size
-command; command for the client to run
+address;          passed verbatim to io-cat, port attribute will be ignored
+binary;           if data is binary, binary format of data, overrides size
+command;          command for the client to run
 connect_attempts; number of connect attempts
-connect_period; time in seconds between connect attempts
-flush; flush output on each record, default: buffer output
-host; tcp host for publishing, unless address field is present
-port; tcp port for publishing, unless address field is present
-size; if if data is binary, size of the binary record, if no binary attribute given
+connect_period;   time in seconds between connect attempts
+flush;            flush output on each record, default: buffer output
+host;             tcp host for publishing, unless address field is present
+port;             tcp port for publishing, unless address field is present
+size;             if data is binary, size of the binary record
 eof
 }
 
 function log_topic_fields()
 {
-    log_topic_fields_help | cut -f1 -d';'
+    log_topic_fields_help | grep -v '^ ' | cut -f1 -d';'
 }
 
 function log_topic_fields_help()
 {
     cat <<eof
-address; if present, passed verbatim to io-cat, in this case port attribute ignored
-binary; if data is binary, the binary format of the data, overrides size
-command; optional command for the logger to run instead of default logger
+address;          passed verbatim to io-cat, in this case port attribute ignored
+binary;           if data is binary, binary format of data, overrides size
+command;          optional command for logger to run instead of default logger
 connect_attempts; number of connect attempts
-connect_period; time in seconds between connect attempts
-flush; flush output on each record, default: buffer output
-host; tcp host for publishing, unless address field is present
-index; optional command to generate index file, default: fixed-width binary index for each binary record, ascii: no index file
-path; prefix path for log directory (e.g. if logs need to be split across multiple drives)
-period; split log files on a given number of seconds, overrides --period
-port; tcp port for publishing, unless address field is present
-restart; if data stream disconnects keep trying to reconnect
-size; if if data is binary, size of the binary record, if no binary attribute given
-suffix; optional log file suffix, default: bin for binary, csv for ascii
+connect_period;   time in seconds between connect attempts
+flush;            flush output on each record, default: buffer output
+host;             tcp host for publishing, unless address field is present
+index;            optional command to generate index file, default: fixed-width
+                  binary index for each binary record, ascii: no index file
+path;             prefix path for log directory (to split logs across drives)
+period;           split log files at given number of seconds, overrides --period
+port;             tcp port for publishing, unless address field is present
+restart;          if data stream disconnects keep trying to reconnect
+size;             if data is binary, size of the binary record
+suffix;           optional log suffix, default: bin for binary, csv for ascii
 eof
 }
 
