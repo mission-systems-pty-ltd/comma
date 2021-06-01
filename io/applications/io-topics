@@ -52,6 +52,7 @@ EOF
 
 function usage()
 {
+    local verbose=$1
     cat >&2 <<eof
     
 a simple topic publisher supporting tcp, local sockets, and zero-mq (i.e. whatever io-publish supports)
@@ -76,6 +77,9 @@ $( log_options | sed 's/^/            /g' )
 common options
 $( common_options | sed 's/^/    /g' )
 
+eof
+    if (( verbose )); then
+        cat >&2 <<eof
 examples
     publish
         run publisher with topics a and b, with b on demand
@@ -136,8 +140,11 @@ examples
             > io-topics log --dir my-log --config <( echo "a/address=tcp:localhost:12345"; echo 'b/command=socat tcp:localhost:12346 - > log.csv' )
             > ls -al my-log/a
             > head my-log/b/log.csv
-
 eof
+    else
+        echo "use \"$scriptname --help --verbose\" for examples"
+    fi
+    echo
     exit 0
 }
 
@@ -378,7 +385,11 @@ function get_topics()
     verbose "topics: ${topics[@]}"
 }
 
-(( $( comma_options_has --help "$@" ) || $( comma_options_has -h "$@" ) )) && usage
+if (( $( comma_options_has --help "$@" ) || $( comma_options_has -h "$@" ) )); then
+    (( $( comma_options_has --verbose "$@" ) || $( comma_options_has -v "$@" ) )) && verbose=1 || verbose=0
+    usage $verbose
+fi
+
 operation=$1
 [[ $( type -t ${operation}_topic_fields ) == "function" ]] || die "expected operation, got '$operation'" # quick and dirty
 (( $( comma_options_has --topic-fields "$@" ) )) && { ${operation}_topic_fields; exit 0; }
