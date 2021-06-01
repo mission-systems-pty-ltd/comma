@@ -201,19 +201,11 @@ function die() { say "$@"; exit 1; }
 
 function list_topic_fields() { :; }
 
-function publish_topic_fields() # todo: flush field? flush is default behaviour in io-publish, which is inconsistent with log and cat operations and thus introducing flush in publish might be confusing
+# todo: flush field? flush is default behaviour in io-publish, which is inconsistent with
+# log and cat operations and thus introducing flush in publish might be confusing
+function publish_topic_fields()
 {
-    cat <<eof
-address
-binary
-command
-input
-on_demand
-port
-secondary/address
-secondary/port
-size
-eof
+    publish_topic_fields_help | cut -f1 -d';'
 }
 
 function publish_topic_fields_help()
@@ -233,17 +225,7 @@ eof
 
 function cat_topic_fields()
 {
-    cat <<eof
-address
-binary
-command
-connect_attempts
-connect_period
-flush
-host
-port
-size
-eof
+    cat_topic_fields_help | cut -f1 -d';'
 }
 
 function cat_topic_fields_help()
@@ -263,22 +245,7 @@ eof
 
 function log_topic_fields()
 {
-    cat <<eof
-address
-binary
-command
-connect_attempts
-connect_period
-flush
-host
-index
-path
-period
-port
-restart
-size
-suffix
-eof
+    log_topic_fields_help | cut -f1 -d';'
 }
 
 function log_topic_fields_help()
