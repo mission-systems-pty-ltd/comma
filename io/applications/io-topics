@@ -40,13 +40,19 @@ source $( type -p comma-process-util ) || { echo "io-topics: could not source 'c
 function common_options()
 {
     cat <<EOF
---help,-h; display help and exit
---config=[<config>]; <config>: <dir>[:<path>], where <dir> is path to a json or path-value file specifying topic attributes, <path>: path inside config, multiple --config options allowed, configs will be applied in the reverse order of --config options on command line (see examples)
---dry-run,--dry; print final command and exit
---topics-from-all-configs,--all; take topics from all configs and topic command values, default: take topics and topic command values only from the first config ("master config")
---topic-fields; output topic config fields and exit
+--help,-h;           display help and exit
+--config=[<config>]; <config>: <dir>[:<path>], where <dir> is path to a
+                     json or path-value file specifying topic attributes,
+                     <path>: path inside config, multiple --config options
+                     allowed, configs will be applied in the reverse order
+                     of --config options on command line (see examples)
+--dry-run,--dry;     print final command and exit
+--topics-from-all-configs,--all; take topics from all configs and topic
+                     command values, default: take topics and topic command
+                     values only from the first config ("master config")
+--topic-fields;      output topic config fields and exit
 --topic-fields-help; output topic config fields help and exit
---verbose,-v; print verbose information
+--verbose,-v;        print verbose information
 EOF
 }
 
@@ -55,91 +61,122 @@ function usage()
     local verbose=$1
     cat >&2 <<eof
     
-a simple topic publisher supporting tcp, local sockets, and zero-mq (i.e. whatever io-publish supports)
+a simple topic publisher supporting tcp, local sockets, and zero-mq
+(i.e. whatever io-publish supports)
 
 usage: io-topics <operation> [<topics>] <options>
 
 todo: debug zero-mq support
 
 operations
-    cat: receive and handle data on given topics
-    
-    list: list topics
-    
-    log: log topics (todo)
-        options
-$( log_options | sed 's/^/            /g' )
-
-    play: play back logs, counterpart to log operation (todo)
-    
-    publish: start all the publishers listed on command line or in the config file (todo)
+    cat:     receive and handle data on given topics
+    list:    list topics
+    log:     log topics (todo)
+    play:    play back logs, counterpart to log operation (todo)
+    publish: start all the publishers listed on command line or config file (todo)
 
 common options
 $( common_options | sed 's/^/    /g' )
+
+log operation options
+$( log_options | sed 's/^/    /g' )
 
 eof
     if (( verbose )); then
         cat >&2 <<eof
 examples
-    publish
-        run publisher with topics a and b, with b on demand
-            > io-topics publish --config <( echo "a/command=csv-paste line-number"; echo "a/port=8888"; echo "b/command=csv-paste line-number"; echo "b/port=9999"; echo "b/on_demand=1" )
+    --- publish ---
+        run publisher with topics a and b, with b on demand:
+            $ io-topics publish --config <( sed 's/^ *//' <<EOF
+                  a/command=csv-paste line-number
+                  a/port=8888
+                  b/command=csv-paste line-number
+                  b/port=9999
+                  b/on_demand=1
+EOF
+)
             io-topics: will run 'comma_execute_and_wait --group' with commands:
-            io-topics:     io-publish tcp:8888   -- csv-paste line-number
-            io-topics:     io-publish tcp:9999  --on-demand -- csv-paste line-number
+            io-topics: io-publish tcp:8888   -- csv-paste line-number
+            io-topics: io-publish tcp:9999  --on-demand -- csv-paste line-number
         
-        in a different shell, observe that topic a keeps running even if no-one is listening, whereas topic b runs only if at least one client is connected:
-            > socat tcp:localhost:8888 | head -n5 # will output something like:
+        in a different shell, observe that topic a keeps running even if no-one
+        is listening, whereas topic b runs only if at least one client is
+        connected:
+            $ socat tcp:localhost:8888 - | head -n5    # outputs something like:
             16648534
             16648535
             16648536
             16648537
             16648538
-            
-            > socat tcp:localhost:9999 - | head -n5
+            $ socat tcp:localhost:9999 - | head -n5
             0
             1
             2
             3
             4
             
-        secondary address or port with --dry-run (try it without dry run)
-            > io-topics publish --config <( echo "a/command=csv-paste line-number"; echo "a/port=12345"; echo "b/command=csv-paste line-number"; echo "b/port=12346"; echo "b/secondary/port=8888"; echo "b/on_demand=1" ) --dry-run
-            io-topics: publish: will run 'comma_execute_and_wait --group' with commands:
-            io-topics: publish:     io-publish tcp:12345    -- csv-paste line-number
-            io-topics: publish:     io-publish tcp:12346 tcp:8888;secondary  --on-demand -- csv-paste line-number
+        secondary address or port with --dry-run (try it without dry run):
+            $ io-topics publish --config <( sed 's/^ *//' <<EOF
+                  a/command=csv-paste line-number
+                  a/port=12345
+                  b/command=csv-paste line-number
+                  b/port=12346
+                  b/secondary/port=8888
+                  b/on_demand=1
+EOF
+) --dry-run
+            io-topics: publish: will run 'comma_execute_and_wait --group'
+                                with commands:
+            io-topics: publish: io-publish tcp:12345 -- csv-paste line-number
+            io-topics: publish: io-publish tcp:12346 tcp:8888;secondary
+                                           --on-demand -- csv-paste line-number
             
-    cat
-        run publisher
-            > io-topics publish --config <( echo "a/command=csv-paste line-number"; echo "a/port=12345"; echo "b/command=csv-paste line-number"; echo "b/port=12346"; echo "b/on_demand=1" )
-        
-        in a different shell, run clients
-            > io-topics cat --config <( echo "a/command=head -n5 | tee a.csv"; echo "a/address=tcp:localhost:12345"; echo "b/command=head -n5 | tee b.csv"; echo "b/address=tcp:localhost:12346" )
-            
-        check output
-            > cat a.csv 
+    --- cat ---
+        run publisher:
+            $ io-topics publish --config <( sed 's/^ *//' <<EOF
+                  a/command=csv-paste line-number
+                  a/port=12345
+                  b/command=csv-paste line-number
+                  b/port=12346
+                  b/on_demand=1
+EOF
+)
+        in a different shell, run clients:
+            $ io-topics cat --config <( sed 's/^ *//' <<EOF
+                  a/command=head -n5 | tee a.csv
+                  a/address=tcp:localhost:12345
+                  b/command=head -n5 | tee b.csv
+                  b/address=tcp:localhost:12346
+EOF
+)
+        check output:
+            $ cat a.csv 
             203740462
             203740463
             203740464
             203740465
             203740466
-            > cat b.csv 
+            $ cat b.csv 
             0
             1
             2
             3
             4
             
-    log
-        run publisher as in previous examples and then run logging
-            > io-topics log --dir my-log --config <( echo "a/address=tcp:localhost:8888"; echo "b/address=tcp:localhost:9999" )
-            > ls -al my-log/a
-            > ls -al my-log/b
+    --- log ---
+        run publisher as in first example and then run logging:
+            $ io-topics log --dir my-log --config <(
+                  echo "a/address=tcp:localhost:8888"
+                  echo "b/address=tcp:localhost:9999" )
+            $ ls -al my-log/a
+            $ ls -al my-log/b
             
-        run publisher as in previous examples and then run logging with a custom command
-            > io-topics log --dir my-log --config <( echo "a/address=tcp:localhost:12345"; echo 'b/command=socat tcp:localhost:12346 - > log.csv' )
-            > ls -al my-log/a
-            > head my-log/b/log.csv
+        run publisher as in second example and then log with a custom command:
+            $ io-topics log --dir my-log --config <(
+                  echo "a/address=tcp:localhost:12345"
+                  echo 'b/command=socat tcp:localhost:12346 - > log.csv' )
+            $ ls -al my-log/a
+            $ head my-log/b/log.csv
 eof
     else
         echo "use \"$scriptname --help --verbose\" for examples"
@@ -258,8 +295,12 @@ eof
 function log_options()
 {
     cat <<eof
---log-dir,--dir=[<path>]; log directory, for each topic, actual log directory will be [<path>/]<dir>/<topic>, see io-topics log --topic-fields-help
---period=<seconds>; default=60; the log files will be split based on a given time period, settings for specific topic override this option
+--log-dir,--dir=[<path>]; log directory, for each topic, actual log
+                          directory will be [<path>/]<dir>/<topic>,
+                          see io-topics log --topic-fields-help
+--period=<seconds>;       default=60; the log files will be split based
+                          on a given time period, settings for specific
+                          topic override this option
 eof
 }
 
