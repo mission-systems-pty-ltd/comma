@@ -71,9 +71,9 @@ todo: debug zero-mq support
 operations
     cat:     receive and handle data on given topics
     list:    list topics
-    log:     log topics (todo)
+    log:     log topics
     play:    play back logs, counterpart to log operation (todo)
-    publish: start all the publishers listed on command line or config file (todo)
+    publish: start all the publishers listed on command line or config file
 
 common options
 $( common_options | sed 's/^/    /g' )
