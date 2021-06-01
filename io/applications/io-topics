@@ -37,6 +37,15 @@ source $( type -p comma-process-util ) || { echo "io-topics: could not source 'c
 
 # todo: --master-config: default behaviour: first config; --guess-by command: all configs
 
+function bash_completion()
+{
+    echo "cat list log publish"
+    {
+        common_options
+        log_options
+    } | comma_options_to_bash_completion
+}
+
 function common_options()
 {
     cat <<EOF
@@ -425,6 +434,8 @@ function get_topics()
     (( ${#topics[@]} > 0 )) || die "no topics in config files ${configs[@]}"
     verbose "topics: ${topics[@]}"
 }
+
+(( $( comma_options_has "--bash-completion" $@ ) )) && { bash_completion; exit 0; }
 
 if (( $( comma_options_has --help "$@" ) || $( comma_options_has -h "$@" ) )); then
     (( $( comma_options_has --verbose "$@" ) || $( comma_options_has -v "$@" ) )) && verbose=1 || verbose=0

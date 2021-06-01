@@ -141,3 +141,4 @@ complete -F _comma_bash_completion csv-repeat
 complete -F _comma_bash_completion csv-time-join
 complete -F _comma_bash_completion csv-units
 complete -F _comma_bash_completion io-bandwidth
+complete -F _comma_bash_completion io-topics
