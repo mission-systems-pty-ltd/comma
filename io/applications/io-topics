@@ -215,6 +215,7 @@ address;           passed verbatim to io-publish, port attribute will be ignored
 binary;            for binary data, binary format of data, overrides size
 command;           command for the publisher to run
 input;             input topic for publish command to read on stdin
+multiplier;        passed to io-publish
 on_demand;         same meaning as io-publish --on-demand
 port;              tcp port for publishing, unless address field is present
 secondary/address; passed verbatim to io-publish as '<address>;secondary',
@@ -318,8 +319,9 @@ function publish_command()
     [[ -n "$topic_address" ]] || topic_address="tcp:$topic_port"
     [[ -n "$topic_secondary_address" ]] || { [[ -z "$topic_secondary_port" ]] || topic_secondary_address="tcp:$topic_secondary_port"; }
     [[ -z "$topic_secondary_address" ]] || topic_secondary_address="$topic_secondary_address;secondary"
+    if [[ -n "$topic_multiplier" ]]; then multiplier="--multiplier $topic_multiplier"; else unset multiplier; fi
     if [[ -n "$topic_on_demand" ]]; then on_demand="--on-demand"; else unset on_demand; fi
-    local cmd="io-publish $topic_address $topic_secondary_address $size_option $on_demand -- "
+    local cmd="io-publish $topic_address $topic_secondary_address $size_option $multiplier $on_demand -- "
     if [[ -z "$topic_input" ]]; then cmd+="$topic_command"
     else cmd+="$( set_topic_variables "cat" "$topic_input"; cat_command "$topic_input" 1 ) --flush --verbose | $topic_command" || die "topic '$topic': failed to configure input topic '$topic_input'"; fi
     verbose "$cmd"
