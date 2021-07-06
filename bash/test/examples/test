@@ -1,3 +1,4 @@
 #!/bin/bash
 source $( type -p comma-test-util ) # test framework stuff
+source my-util # bash utils under test
 comma_test_commands # execute tests defined in file called 'input' and match output agains values in file called 'expected'
