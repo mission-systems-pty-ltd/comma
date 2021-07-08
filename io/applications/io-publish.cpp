@@ -334,7 +334,7 @@ class command
 
         ~command()
         {
-            comma::verbose << "killing child pid " << child_pid_ << " for " << command_ << "..." << std::endl;
+            comma::verbose << "sending SIGTERM to " << comma::split( command_ )[0] << " (pid " << child_pid_ << ")..." << std::endl;
             ::kill( -child_pid_, SIGTERM );
             comma::verbose << "waiting for pid " << child_pid_ << "..." << std::endl;
             if( ::waitpid( -child_pid_, NULL, 0 ) < 0 ) { comma::verbose << "warning: waiting for pid " << child_pid_ << " failed" << std::endl; }
