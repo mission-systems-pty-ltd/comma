@@ -334,6 +334,8 @@ class command
 
         ~command()
         {
+            comma::verbose << "closing file descriptor " << fd_ << " for " << comma::split( command_ )[0] << "..." << std::endl;
+            ::close( fd_ );
             comma::verbose << "sending SIGTERM to " << comma::split( command_ )[0] << " (pid " << child_pid_ << ")..." << std::endl;
             ::kill( -child_pid_, SIGTERM );
             comma::verbose << "waiting for pid " << child_pid_ << "..." << std::endl;
