@@ -1,17 +1,10 @@
 # Copyright (c) 2011 The University of Sydney
 
 from __future__ import print_function
-import argparse
-import ast
-import itertools
-import numpy as np
-import os
-import re
-import signal
-import sys
+import argparse, ast, itertools, numpy as np, os, re, signal, sys
 if sys.version_info.major < 3: from itertools import izip
 else: izip = zip # todo! watch performance! it's reported python3 zip is some 30% slower than izip
-import comma
+import comma # should not it be a relative path?
 
 description = """
 evaluate numerical expressions and append computed values to csv stream
@@ -588,6 +581,8 @@ def main():
         name = os.path.basename(sys.argv[0])
         print( "{} error: {}".format(name, e), file = sys.stderr )
         sys.exit(1)
+    except KeyboardInterrupt:
+        sys.exit(128 + signal.SIGINT)
     except Exception as e: #except StandardError as e:
         import traceback
         traceback.print_exc(file=sys.stderr)

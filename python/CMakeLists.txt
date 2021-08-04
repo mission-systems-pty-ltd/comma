@@ -79,11 +79,15 @@ set_python_build_lib_directory()
 ADD_SUBDIRECTORY( comma )
 
 ADD_CUSTOM_TARGET( python_build ALL
-                ${PYTHON} ${SETUP_PY} build --build-base ${BUILD_BASE}
-                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+                   ${PYTHON} ${SETUP_PY} build --build-base ${BUILD_BASE}
+                   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+
+#INSTALL( CODE "EXECUTE_PROCESS(
+#                    COMMAND ${PYTHON} ${SETUP_PY} build --build-base ${BUILD_BASE} install ${INSTALL_PREFIX_OPTION} --force
+#                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )" )
 
 INSTALL( CODE "EXECUTE_PROCESS(
-                    COMMAND ${PYTHON} ${SETUP_PY} build --build-base ${BUILD_BASE} install ${INSTALL_PREFIX_OPTION} --force
+                    COMMAND ${PYTHON} -m pip install ${CMAKE_CURRENT_SOURCE_DIR} --ignore-installed
                     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )" )
 
 SET_DIRECTORY_PROPERTIES( PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES build )

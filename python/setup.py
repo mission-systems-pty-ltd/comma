@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
-#from setuptools import setup
+import setuptools #from distutils.core import setup
 import comma.version
 
-setup(
+setuptools.setup(
         name                = 'python3-comma', # quick and dirty to make python packaging work
         version             = comma.version.__version__,
         classifiers = [
@@ -19,14 +18,18 @@ setup(
           'Topic :: Communications :: Email'
         ],
         description         = 'comma python utilities',
-        #install_requires    = [ 'numpy' ],
         url                 = 'https://gitlab.com/orthographic/comma',
         license             = 'BSD 3-Clause',
         long_description    = 'comma python utilities for offline and streamed csv and fixed width data',
         maintainer          = 'vsevolod vlaskine',
         maintainer_email    = 'vsevolod.vlaskine@gmail.com',
+        python_requires     = '>=3.6',
+        install_requires    = ['numpy'], # todo?
         packages            = [ 'comma', 'comma.csv', 'comma.csv.applications', 'comma.io', 'comma.numpy', 'comma.signal', 'comma.util', 'comma.cpp_bindings', 'comma.application' ],
-        package_dir         = { 'comma.cpp_bindings': 'comma/cpp_bindings' },
+        package_dir         = { 'comma': 'comma', 'comma.cpp_bindings': 'comma/cpp_bindings' },
         package_data        = { 'comma.cpp_bindings': [ '*.so', '*.dll' ] },
-        scripts             = [ "comma/csv/applications/csv-eval" ]
+        entry_points        = { 'console_scripts': ['csv-eval=comma.csv.applications.csv_eval:main'] },
+        #scripts             = [ "comma/csv/applications/csv-eval" ]
      )
+
+# "console_scripts": [ 'sxm-detect=jfab.stm.imaging.scripts.sxm_detect:main'
