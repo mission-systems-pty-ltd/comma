@@ -759,6 +759,7 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av, usage );
         options.assert_mutually_exclusive( "--discard-out-of-order,--discard-unsorted,--first,--min,--sliding-window,--window,--unique,--random" );
         options.assert_mutually_exclusive( "--discard-out-of-order,--discard-unsorted,--first,--max,--sliding-window,--window,--unique,--random" );
+        if( options.exists( "--last" ) ) { std::cerr << "csv-sort: --last: not implemented; todo" << std::endl; return 1; }
         verbose = options.exists( "--verbose,-v" );
         csv = comma::csv::options( options );
         return   options.exists( "--first,--min,--max" )
