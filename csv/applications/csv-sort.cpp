@@ -68,7 +68,7 @@ static void usage( bool more )
     std::cerr << "           fields" << std::endl;
     std::cerr << "               id: if present, multiple id fields accepted; output first record for each set of ids in a given block; e.g. --fields=id,a,,id" << std::endl;
     std::cerr << "               block: if present; output minimum for each contiguous block" << std::endl;
-    std::cerr << "    --last: last line matching given keys; last line in the block, if block field present; no sorting will be done; if sorting required, use unique instead" << std::endl;
+    std::cerr << "    --last: to be implemented: last line matching given keys; last line in the block, if block field present; no sorting will be done; if sorting required, use unique instead" << std::endl;
     std::cerr << "    --min: output only record(s) with minimum value for a given field" << std::endl;
     std::cerr << "           fields" << std::endl;
     std::cerr << "               id: if present, multiple id fields accepted; output minimum for each set of ids in a given block; e.g. --fields=id,a,,id" << std::endl;
