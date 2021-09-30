@@ -1,3 +1,4 @@
+#include <endian.h>
 #include <array>
 #include <memory>
 #include <numeric>
@@ -18,14 +19,14 @@ void usage( bool )
     std::cerr << "operations: from-csv (unpack), to-csv (pack)" << std::endl;
     std::cerr << std::endl;
     std::cerr << "operations" << std::endl;
-    std::cerr << "    from-csv (pack): todo; convert csv to packed bits" << std::endl;
+    std::cerr << "    from-csv (pack): todo; convert csv to packed bits in big endian order" << std::endl;
     std::cerr << "        options" << std::endl;
-    std::cerr << "            --endian=<which>; default=big; endianness of input: big or little" << std::endl;
+    std::cerr << "            --endian=<which>; default=big; todo: endianness of input: big or little" << std::endl;
     std::cerr << "            --sizes=<sizes>; comma-separated bit field sizes (todo: support multiplier)" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    to-csv (unpack): todo; convert packed bits to csv" << std::endl;
+    std::cerr << "    to-csv (unpack): convert packed bits to csv; input bits are expected in big endian order" << std::endl;
     std::cerr << "        options" << std::endl;
-    std::cerr << "            --endian=<which>; default=big; endianness of output: big or little" << std::endl;
+    //std::cerr << "            --endian=<which>; default=big; todo: endianness of output: big or little" << std::endl;
     std::cerr << "            --sizes=<sizes>; comma-separated bit field sizes (todo: support multiplier)" << std::endl;
     std::cerr << std::endl;
     exit( 0 );
@@ -34,6 +35,7 @@ void usage( bool )
 // todo
 //   - document on gitlab
 //   - to-csv
+//     - sort out endianness: big endian vs transparent semantic use in the mainstream use case
 //     - unit test
 //     - support uint64
 //   - from-csv
@@ -81,13 +83,10 @@ struct field
         //std::cerr << "--> b: p[0]: " << int( p[0] ) << " r: " << r << std::endl;
         p[0] &= begin_mask;
         //std::cerr << "--> c: p[0]: " << int( p[0] ) << " r: " << r << std::endl;
-        r >>= shift;
-        //std::cerr << "--> d: r: " << r << std::endl;
-        if( !little_endian )
-        {
-            // todo
-        }
-        return r;
+        // todo: something like: r = little_endian ? le64toh( r ) : be64toh( r );
+        comma::uint64 s = htobe64( r ) >> shift;
+        //std::cerr << "--> d: s: " << s << std::endl;
+        return s;
     }
 };
 
