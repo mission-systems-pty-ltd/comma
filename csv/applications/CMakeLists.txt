@@ -169,3 +169,8 @@ add_executable( csv-bin-reverse ${dir}/csv-bin-reverse.cpp )
 target_link_libraries ( csv-bin-reverse ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_xpath comma_csv )
 set_target_properties( csv-bin-reverse PROPERTIES LINK_FLAGS_RELEASE -s )
 install( TARGETS csv-bin-reverse RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
+
+add_executable( csv-bits ${dir}/csv-bits.cpp )
+target_link_libraries ( csv-bits ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_string )
+set_target_properties( csv-bits PROPERTIES LINK_FLAGS_RELEASE -s )
+install( TARGETS csv-bits RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )

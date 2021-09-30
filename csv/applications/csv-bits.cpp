@@ -51,13 +51,13 @@ struct field
 {
     unsigned int begin;
     unsigned int begin_byte;
-    char begin_mask;
+    unsigned char begin_mask;
     unsigned int size;
     unsigned int bytes;
     unsigned int shift;
     bool little_endian;
 
-    static std::array< comma::uint32, 32 > begin_masks;
+    static std::array< unsigned char, 8 > begin_masks;
 
     field() = default;
     field( unsigned int begin, unsigned int size, bool little_endian )
@@ -65,11 +65,12 @@ struct field
         , begin_byte( begin / 8 )
         , begin_mask( begin_masks[ begin % 8 ] )
         , size( size )
-        , bytes( size % 8 + int( size % 8 > 0 ) )
+        , bytes( size / 8 + int( size % 8 > 0 ) )
         , shift( 64 - begin % 8 - size )
         , little_endian( little_endian )
     {
         if( size > sizeof( comma::uint32 ) * 8 ) { COMMA_THROW( comma::exception, "expected size up to " << ( sizeof( comma::uint32 ) * 8 ) << " bits; got: " << size ); }
+        //std::cerr << "--> a: begin: " << begin << " begin byte: " << begin_byte << " bytes: " << bytes << " size: " << size << " begin mask: " << ( unsigned int )begin_mask << " shift: " << shift << std::endl;
     }
 
     comma::uint32 get( const std::vector< char >& buf ) const // todo: quick and dirty, watch performance
@@ -77,8 +78,11 @@ struct field
         comma::uint64 r = 0;
         char* p = reinterpret_cast< char* >( &r );
         std::memcpy( p, &buf[ begin_byte ], bytes );
+        //std::cerr << "--> b: p[0]: " << int( p[0] ) << " r: " << r << std::endl;
         p[0] &= begin_mask;
+        //std::cerr << "--> c: p[0]: " << int( p[0] ) << " r: " << r << std::endl;
         r >>= shift;
+        //std::cerr << "--> d: r: " << r << std::endl;
         if( !little_endian )
         {
             // todo
@@ -87,7 +91,7 @@ struct field
     }
 };
 
-std::array< comma::uint32, 32 > field::begin_masks = { 255, 127, 63, 31, 15, 7, 3, 1 }; // todo: use constexpr
+std::array< unsigned char, 8 > field::begin_masks = { 255, 127, 63, 31, 15, 7, 3, 1 }; // todo: use constexpr
 
 } } // namespace comma { namespace csv_bits {
 

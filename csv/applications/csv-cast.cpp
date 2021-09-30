@@ -44,7 +44,7 @@
 
 static const std::string app_name = "csv-cast";
 
-static void usage()
+static void usage( bool verbose = false )
 {
     std::cerr << "reads binary in the given input format and writes binary in the given output format" << std::endl;
     std::cerr << std::endl;
@@ -76,6 +76,7 @@ static void usage()
     std::cerr << "        echo {0..9}.2345789,3.1415 | fmt -1 | csv-time-stamp | csv-to-bin s[22],s[10],s[6] | csv-cast s[22],s[10],s[6] t,2d | csv-from-bin t,2d" << std::endl;
     std::cerr << std::endl;
     std::cerr << std::endl;
+    exit(0);
 }
 
 static void check_conversions( const comma::csv::format& iformat, const comma::csv::format& oformat, const bool force )
@@ -255,8 +256,7 @@ int main( int ac, char** av )
 #endif
     try
     {
-        comma::command_line_options options( ac, av );
-        if( options.exists( "--help,-h" ) ) { usage(); return 0; }
+        comma::command_line_options options( ac, av, usage );
         if( ac < 3 ) { usage(); return 1; }
         comma::csv::format iformat( options.value< std::string >( "--binary,-b,--from", av[1] ) );
         comma::csv::format oformat( options.value< std::string >( "--output-binary,--output,-o,--to", av[2] ) );
