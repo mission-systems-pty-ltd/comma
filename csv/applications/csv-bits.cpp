@@ -10,7 +10,7 @@
 #include "../stream.h"
 #include "../traits.h"
 
-void usage( bool )
+void usage( bool verbose )
 {
     std::cerr << "converting between bits and csv and other bit operations" << std::endl;
     std::cerr << std::endl;
@@ -19,21 +19,27 @@ void usage( bool )
     std::cerr << "operations: from-csv (unpack), to-csv (pack)" << std::endl;
     std::cerr << std::endl;
     std::cerr << "operations" << std::endl;
-    std::cerr << "    from-csv (pack): todo; convert csv to packed bits in big endian order" << std::endl;
+    std::cerr << "    from-csv (pack): todo; convert input csv as to packed bits in big endian order" << std::endl;
     std::cerr << "        options" << std::endl;
-    std::cerr << "            --endian=<which>; default=big; todo: endianness of input: big or little" << std::endl;
+    //std::cerr << "            --endian=<which>; default=big; todo: endianness of input: big or little" << std::endl;
+    std::cerr << "            --binary,-b=[<format>]; input is binary; see details below" << std::endl;
+    std::cerr << "            --flush; see below" << std::endl;
     std::cerr << "            --sizes=<sizes>; comma-separated bit field sizes (todo: support multiplier)" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    to-csv (unpack): convert packed bits to csv; input bits are expected in big endian order" << std::endl;
+    std::cerr << "    to-csv (unpack): convert packed bits to integers as csv; input bits are expected in big endian order" << std::endl;
     std::cerr << "        options" << std::endl;
     //std::cerr << "            --endian=<which>; default=big; todo: endianness of output: big or little" << std::endl;
+    std::cerr << "            --binary,-b=[<format>]; output is binary; see details below" << std::endl;
+    std::cerr << "            --flush; see below" << std::endl;
     std::cerr << "            --sizes=<sizes>; comma-separated bit field sizes (todo: support multiplier)" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "csv options" << std::endl;
+    std::cerr << comma::csv::options::usage( verbose ) << std::endl;
     std::cerr << std::endl;
     exit( 0 );
 }
 
 // todo
-//   - document on gitlab
 //   - to-csv
 //     - sort out endianness: big endian vs transparent semantic use in the mainstream use case
 //     - unit test
@@ -72,7 +78,6 @@ struct field
         , little_endian( little_endian )
     {
         if( size > sizeof( comma::uint32 ) * 8 ) { COMMA_THROW( comma::exception, "expected size up to " << ( sizeof( comma::uint32 ) * 8 ) << " bits; got: " << size ); }
-        //std::cerr << "--> a: begin: " << begin << " begin byte: " << begin_byte << " bytes: " << bytes << " size: " << size << " begin mask: " << ( unsigned int )begin_mask << " shift: " << shift << std::endl;
     }
 
     comma::uint32 get( const std::vector< char >& buf ) const // todo: quick and dirty, watch performance
@@ -80,12 +85,9 @@ struct field
         comma::uint64 r = 0;
         char* p = reinterpret_cast< char* >( &r );
         std::memcpy( p, &buf[ begin_byte ], bytes );
-        //std::cerr << "--> b: p[0]: " << int( p[0] ) << " r: " << r << std::endl;
         p[0] &= begin_mask;
-        //std::cerr << "--> c: p[0]: " << int( p[0] ) << " r: " << r << std::endl;
         // todo: something like: r = little_endian ? le64toh( r ) : be64toh( r );
         comma::uint64 s = htobe64( r ) >> shift;
-        //std::cerr << "--> d: s: " << s << std::endl;
         return s;
     }
 };
