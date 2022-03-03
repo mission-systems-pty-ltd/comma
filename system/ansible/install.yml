@@ -26,6 +26,7 @@
       - libgtest-dev
       - python-dev
       - python-numpy
+      - python-pip
       - libprocps-dev
       - recode
 
