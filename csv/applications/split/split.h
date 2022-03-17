@@ -1,5 +1,6 @@
 // This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
+// Copyright (c) 2022 Vsevolod Vlaskine
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -45,6 +46,7 @@
 #include "../../../base/types.h"
 #include "../../../csv/ascii.h"
 #include "../../../csv/binary.h"
+#include "../../../csv/stream.h"
 #include "../../../visiting/traits.h"
 #include "../../../io/publisher.h"
 #include "../../../sync/synchronized.h"
@@ -57,6 +59,8 @@ template < typename T > struct input // quick and dirty
     comma::uint32 block;
     T id;
 };
+
+struct timestamp { boost::posix_time::ptime t; };
 
 } } } // namespace comma { namespace csv { namespace applications {
 
@@ -123,14 +127,16 @@ class split
              , const comma::csv::options& csv
              , bool passthrough
              , const std::string& filenames
-             , const std::string& default_filename = "" );
+             , const std::string& default_filename = ""
+             , const std::string& timestamps = "" );
         split( const boost::optional< boost::posix_time::time_duration >& period
              , const std::string& suffix
              , const comma::csv::options& csv
              , const std::vector< std::string >& streams
              , bool passthrough
              , const std::string& filenames
-             , const std::string& default_filename = "" );
+             , const std::string& default_filename = ""
+             , const std::string& timestamps = "" );
         ~split();
         void write( const char* data, unsigned int size );
         void write( std::string line );
@@ -142,6 +148,8 @@ class split
         void update_( const char* data, unsigned int size );
         void update_( const std::string& line );
         void accept_();
+        void timestamps_stream_make_( const std::string& timestamps );
+        bool timestamps_stream_seek_( boost::posix_time::ptime t );
 
         std::function< std::ofstream*() > ofstream_;
         std::unique_ptr< comma::csv::ascii< input > > ascii_;
@@ -152,6 +160,9 @@ class split
         boost::optional< input > last_;
         std::ios_base::openmode mode_;
         std::ofstream file_;
+        std::unique_ptr< std::ifstream > timestamps_ifstream_;
+        std::unique_ptr< comma::csv::input_stream< applications::timestamp > > timestamps_;
+        std::pair< boost::posix_time::ptime, boost::posix_time::ptime > timestamps_last_;
 
         using Files = typename traits< T >::map;
         using ids_type_ = typename traits< T >::set;

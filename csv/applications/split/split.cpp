@@ -77,6 +77,12 @@ template < typename T > struct traits< comma::csv::applications::filename_record
     }
 };
 
+template <> struct traits< comma::csv::applications::timestamp >
+{
+    template< typename K, typename V > static void visit( const K&, comma::csv::applications::timestamp& t, V& v ) { v.apply( "t", t.t ); }
+    template< typename K, typename V > static void visit( const K&, const comma::csv::applications::timestamp& t, V& v ) { v.apply( "t", t.t ); }
+};
+
 } } // namespace comma { namespace visiting {
 
 namespace comma { namespace csv { namespace applications {
@@ -102,25 +108,53 @@ std::pair< std::unordered_map< comma::uint32, std::string >, bool > static filen
     if( r.first.empty() ) { COMMA_THROW( comma::exception, "got no filenames from '" << csv.filename << "'" ); }
     return r;
 }
-    
+
+template < typename T >
+void split< T >::timestamps_stream_make_( const std::string& timestamps )
+{
+    if( timestamps.empty() ) { return; }
+    auto csv = comma::name_value::parser( "filename", ';', '=', false ).get< comma::csv::options >( timestamps );
+    timestamps_ifstream_.reset( new std::ifstream( csv.filename ) );
+    if( !timestamps_ifstream_->is_open() ) { COMMA_THROW( comma::exception, "could not open --timestamps='" << csv.filename << "'" ); }
+    timestamps_.reset( new comma::csv::input_stream< csv::applications::timestamp >( *timestamps_ifstream_, csv ) );
+    auto p = timestamps_->read();
+    if( !p ) { COMMA_THROW( comma::exception, "could not read from --timestamps='" << csv.filename << "'" ); } // quick and dirty
+    timestamps_last_.second = p->t;
+    //std::cerr << "--> a: interval: " << boost::posix_time::to_iso_string( timestamps_last_.first ) << " - " << boost::posix_time::to_iso_string( timestamps_last_.second ) << std::endl;
+}
+
+template < typename T >
+bool split< T >::timestamps_stream_seek_( boost::posix_time::ptime t )
+{
+    bool changed = false;
+    while( t >= timestamps_last_.second && !timestamps_last_.second.is_pos_infinity() )
+    {
+        auto p = timestamps_->read();
+        timestamps_last_.first = timestamps_last_.second;
+        timestamps_last_.second = p ? p->t : boost::posix_time::pos_infin;
+        changed = true;
+    }
+    return changed;
+}
+
 template < typename T >
 split< T >::split( const boost::optional< boost::posix_time::time_duration >& period
                  , const std::string& suffix
                  , const comma::csv::options& csv
                  , bool pass
                  , const std::string& filenames
-                 , const std::string& default_filename )
+                 , const std::string& default_filename
+                 , const std::string& timestamps )
     : ofstream_( std::bind( &split< T >::ofstream_by_time_, this ) )
     , period_( period )
     , suffix_( suffix )
+    , timestamps_last_( boost::posix_time::neg_infin, boost::posix_time::not_a_date_time )
     , pass_ ( pass )
     , flush_( csv.flush )
     , is_shutdown_( false )
 {
-    if( ( csv.has_field( "t" ) || csv.fields.empty() ) && !period ) { COMMA_THROW( comma::exception, "please specify --period" ); }
     if( csv.fields.empty() ) { return; }
-    if( csv.binary() ) { binary_.reset( new comma::csv::binary< input >( csv ) ); }
-    else { ascii_.reset( new comma::csv::ascii< input >( csv ) ); }
+    if( csv.binary() ) { binary_.reset( new comma::csv::binary< input >( csv ) ); } else { ascii_.reset( new comma::csv::ascii< input >( csv ) ); }
     boost::tie( filenames_, filenames_have_id_ ) = applications::filenames( filenames );
     if( csv.has_field( "block" ) )
     {
@@ -128,15 +162,10 @@ split< T >::split( const boost::optional< boost::posix_time::time_duration >& pe
     }
     else
     {
-        if( csv.has_field( "id" ) )
-        { 
-            ofstream_ = std::bind( &split< T >::ofstream_by_id_, this );
-        }
-        else
-        {    
-            if( !filenames_.empty() ) { COMMA_THROW( comma::exception, "--files given, but no block field specified in --fields" ); }
-        }
+        if( csv.has_field( "id" ) ) { ofstream_ = std::bind( &split< T >::ofstream_by_id_, this ); }
+        else { if( !filenames_.empty() ) { COMMA_THROW( comma::exception, "--files given, but no block field specified in --fields" ); } }
     }
+    timestamps_stream_make_( timestamps );
 }
 
 template < typename T >
@@ -146,8 +175,9 @@ split< T >::split( const boost::optional< boost::posix_time::time_duration >& pe
                  , const std::vector< std::string >& streams //to-do
                  , bool pass
                  , const std::string& filenames
-                 , const std::string& default_filename )
-    : split( period, suffix, csv, pass, filenames, default_filename )
+                 , const std::string& default_filename
+                 , const std::string& timestamps )
+    : split( period, suffix, csv, pass, filenames, default_filename, timestamps )
 {
     if( streams.empty() ) { return; }
     auto const io_mode = csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii;
@@ -186,7 +216,7 @@ split< T >::~split()
     {
         acceptor_thread_.join();
         transaction t( publishers_ );
-        for( auto& ii : *t ) { ii->close(); } 
+        for( auto& ii : *t ) { ii->close(); }
     }
 }
 
@@ -196,7 +226,7 @@ void split< T >::accept_()
     comma::io::select select;
     {
         transaction t( publishers_ );
-        for( auto& ii : *t ) { if( ii->acceptor_file_descriptor() != comma::io::invalid_file_descriptor ) { select.read().add( ii->acceptor_file_descriptor() ); } } 
+        for( auto& ii : *t ) { if( ii->acceptor_file_descriptor() != comma::io::invalid_file_descriptor ) { select.read().add( ii->acceptor_file_descriptor() ); } }
         if( default_publisher_ ) { if( default_publisher_->acceptor_file_descriptor() != comma::io::invalid_file_descriptor ) { select.read().add( default_publisher_->acceptor_file_descriptor() ); } }
     }
     while( !is_shutdown_ )
@@ -240,7 +270,7 @@ void split< T >::write( const char* data, unsigned int size )
 }
 
 template < typename T >
-void split< T >::write ( std::string line )
+void split< T >::write( std::string line )
 {
     mode_ = std::ofstream::out; // quick and dirty
     if( ascii_ ) { ascii_->get( current_, line ); }
@@ -262,10 +292,11 @@ void split< T >::write ( std::string line )
 template < typename T >
 std::ofstream* split< T >::ofstream_by_time_()
 {
-    if( !last_ || current_.timestamp > ( last_->timestamp + *period_ ) )
+    bool changed = period_ ? !last_ || current_.timestamp > last_->timestamp + *period_ : timestamps_stream_seek_( current_.timestamp );
+    if( !last_ || changed )
     {
         file_.close();
-        std::string time = boost::posix_time::to_iso_string( current_.timestamp );
+        std::string time = boost::posix_time::to_iso_string( period_ || timestamps_last_.first.is_neg_infinity() ? current_.timestamp : timestamps_last_.first );
         if( time.find_first_of( '.' ) == std::string::npos ) { time += ".000000"; }
         file_.open( ( time + suffix_ ).c_str(), mode_ );
         last_ = current_;
@@ -287,10 +318,7 @@ std::ofstream* split< T >::ofstream_by_block_()
             if( it == filenames_.end() ) { return nullptr; }
             filename = it->second;
             const auto& dirname = boost::filesystem::path( filename ).parent_path();
-            if( !( dirname.empty() || boost::filesystem::is_directory( dirname ) || boost::filesystem::create_directories( dirname ) ) )
-            {
-                COMMA_THROW( comma::exception, "failed to create directory '" << dirname << "' for file: '" << filename << "'" );
-            }
+            if( !( dirname.empty() || boost::filesystem::is_directory( dirname ) || boost::filesystem::create_directories( dirname ) ) ) { COMMA_THROW( comma::exception, "failed to create directory '" << dirname << "' for file: '" << filename << "'" ); }
         }
         if( filename.empty() ) { filename = boost::lexical_cast< std::string >( current_.block ) + suffix_; }
         file_.open( &filename[0], mode_ );

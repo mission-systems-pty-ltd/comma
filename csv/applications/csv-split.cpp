@@ -49,10 +49,11 @@ static unsigned int size = 0;
 static bool passthrough;
 static std::string files;
 static std::string default_filename;
+static std::string timestamps;
 
 template < typename T > static void run()
 {
-    comma::csv::applications::split< T > split( duration, suffix, csv, streams, passthrough, files );
+    comma::csv::applications::split< T > split( duration, suffix, csv, streams, passthrough, files, default_filename, timestamps );
     if( size == 0 )
     {
         std::string line;
@@ -93,7 +94,8 @@ int main( int argc, char** argv )
             ( "size,c", boost::program_options::value< unsigned int >( &size ), "packet size, only full packets will be written" )
             ( "string", "id is string; default: 32-bit integer" )
             ( "suffix,s", boost::program_options::value< std::string >( &extension ), "filename extension; default will be csv or bin, depending whether it is ascii or binary" )
-            ( "time", "id is time; default: 32-bit integer" );
+            ( "time", "id is time; default: 32-bit integer" )
+            ( "timestamps", boost::program_options::value< std::string >( &timestamps ), "<filename>[;<csv options>]: split by timestamps (assuming both input and timestamps are in ascending order)" );
         description.add( comma::csv::program_options::description() );
         boost::program_options::variables_map vm;
         boost::program_options::store( boost::program_options::parse_command_line( argc, argv, description), vm );
@@ -162,17 +164,19 @@ int main( int argc, char** argv )
             return 0;
         }
         csv = comma::csv::program_options::get( vm );
+        if( vm.count( "period" ) && vm.count( "timestamps" ) ) { std::cerr << "csv-split: --period and --timestamps are mutually exclusive (todo? combine them? just ask)" << std::endl; return 1; }
         if( !default_filename.empty() ) { std::cerr << "csv-split: --default-filename: todo, just ask" << std::endl; }
         if( csv.binary() ) { size = csv.format().size(); }
         bool id_is_string = vm.count( "string" );
         bool id_is_time = vm.count( "time" );
-        passthrough = vm.count("passthrough");        
-        if( id_is_string && id_is_time ) { std::cerr << "csv-split: either --string or --time" << std::endl; }
+        passthrough = vm.count("passthrough");
+        if( id_is_string && id_is_time ) { std::cerr << "csv-split: --string and --time are mutually exclusive" << std::endl; return 1; }
         if( period > 0 ) { duration = boost::posix_time::microseconds( static_cast< unsigned int >( period * 1e6 )); }
         if( extension.empty() ) { suffix = csv.binary() || size > 0 ? ".bin" : ".csv"; }
         else { suffix += "."; suffix += extension; }
         streams = boost::program_options::collect_unrecognized( parsed.options, boost::program_options::include_positional );
         if( !streams.empty() && ( csv.has_field( "block" ) || id_is_time ) ) { std::cerr << "publisher streams are not compatible with splitting by block or timestamp." << std::endl; return 1; }
+        if( ( csv.has_field( "t" ) || csv.fields.empty() ) && !period && timestamps.empty() ) { COMMA_THROW( comma::exception, "got fields '" << csv.fields << "' meaning split by time; thus please specify either --period or --timestamps" ); }
         if( id_is_string ) { run< std::string >(); }
         else if( id_is_time ) { run< boost::posix_time::ptime >(); }
         else { run< comma::uint32 >(); }
@@ -182,4 +186,3 @@ int main( int argc, char** argv )
     catch( ... ) { std::cerr << argv[0] << ": unknown exception" << std::endl; }
     return 1;
 }
-
