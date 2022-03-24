@@ -16,7 +16,7 @@ cmake_minimum_required( VERSION 3.1 )
 # if( USE_ARM_TOOLCHAIN )
 #     set(CMAKE_TOOLCHAIN_FILE ${SOURCE_CODE_BASE_DIR}/CMakeFiles/arm.toolchain.cmake)
 # endif( USE_ARM_TOOLCHAIN )
-# 
+#
 # option(my_test_option "whatever" OFF)
 # if(my_test_option)
 #     set(my_other_option "is set")
@@ -50,7 +50,7 @@ IF (UNIX AND NOT APPLE)
 		SET ( COMMITHASH "abc" )
 	ENDIF()
 ELSE() # Probably windows; gets hardcoded patch version
-	SET ( COMMITDATE 1 ) 
+	SET ( COMMITDATE 1 )
 	SET ( COMMITHASH "abc" )
 ENDIF()
 
@@ -114,7 +114,7 @@ SET( EXECUTABLE_OUTPUT_PATH
 set( comma_version_major "1" ) # quick and dirty
 set( comma_version_minor "0" ) # quick and dirty
 set( comma_version_patch "0" ) # quick and dirty
-     
+
 SET( comma_LIBRARY_PROPERTIES ${comma_LIBRARY_PROPERTIES} DEBUG_POSTFIX "-d" )
 
 IF( NOT comma_INSTALL_BIN_DIR )
@@ -181,7 +181,7 @@ IF( comma_BUILD_TESTS )
 
     # todo: maybe else clause is actually the right way to do things
     IF( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR ${CMAKE_SYSTEM_NAME} MATCHES "Windows" )
-        FIND_PATH( GTest_SOURCE_DIR NAMES CMakeLists.txt HINTS /usr/src/gtest DOC "source code of gtest" )
+        FIND_PATH( GTest_SOURCE_DIR NAMES CMakeLists.txt HINTS /usr/src/googletest/googletest DOC "source code of gtest" ) # FIND_PATH( GTest_SOURCE_DIR NAMES CMakeLists.txt HINTS /usr/src/gtest DOC "source code of gtest" )
         ADD_SUBDIRECTORY( ${GTest_SOURCE_DIR} gtest )
         INCLUDE_DIRECTORIES( src ${GTest_SOURCE_DIR}/include ${GTest_SOURCE_DIR} )
         SET( GTEST_BOTH_LIBRARIES gtest gtest_main )
@@ -189,7 +189,7 @@ IF( comma_BUILD_TESTS )
         FIND_PACKAGE( GTest )
         INCLUDE_DIRECTORIES( ${GTEST_INCLUDE_DIRS} )
     ENDIF( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR ${CMAKE_SYSTEM_NAME} MATCHES "Windows" )
-	
+
 #TT: Install tests to dir. This allows them to be packed by CPack.
 #Note: if your source tree is dirty (eg you've already run tests there and have output/ directories)
 #those will also be installed too.
@@ -198,13 +198,13 @@ OPTION( INSTALL_TESTS "Install the tests into the nominated directory" OFF )
 IF( INSTALL_TESTS )
     SET ( comma_CPP_TESTS_INSTALL_DIR bin CACHE PATH "Install directory for cpp unit tests" )
     SET ( comma_INSTALL_COMMA_TESTS_DIR share/test )
-	
+
 # Get the list of test directories (using glob).
-FILE ( GLOB_RECURSE all_files 
+FILE ( GLOB_RECURSE all_files
 		# RELATIVE is tricky. When you use it, you need to specify the path you expect the output to be RELATIVE to. (Yes, that path could be considerably non-relative to the file that is found.)
-		RELATIVE ${CMAKE_SOURCE_DIR} 
+		RELATIVE ${CMAKE_SOURCE_DIR}
 		* )
-		
+
 SET ( test_dirs )
 FOREACH ( i ${all_files} )
 	if ( ${i} MATCHES "[\\/]test[\\/]" )
@@ -220,7 +220,7 @@ ENDFOREACH (i)
                         IF( NOT skip )
 			# See that slash there? 		 vvv It's really important.
 			INSTALL ( 	DIRECTORY ${dest_dir}/
-						DESTINATION ${comma_INSTALL_COMMA_TESTS_DIR}/${CMAKE_PROJECT_NAME}/unit/${dest_dir} 
+						DESTINATION ${comma_INSTALL_COMMA_TESTS_DIR}/${CMAKE_PROJECT_NAME}/unit/${dest_dir}
 						USE_SOURCE_PERMISSIONS
                             PATTERN "output" EXCLUDE )
                         ENDIF( NOT skip )
