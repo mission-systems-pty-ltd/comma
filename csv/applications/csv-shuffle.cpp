@@ -1,33 +1,5 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
 // Copyright (c) 2020 Vsevolod Vlaskine
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// Copyright (c) 2011 The University of Sydney
 
 /// @author vsevolod vlaskine
 
@@ -51,9 +23,12 @@ static void usage( bool verbose )
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
+    std::cerr << "    --drop-empty,-e; e.g. csv-shuffle --fields a,b,,,c --drop-empty is equivalent to" << std::endl;
+    std::cerr << "                          csv-shuffle --fields a,b,,,c --output-fields a,b,c" << std::endl;
     std::cerr << "    --fields,-f,--input-fields=<fields>; input fields" << std::endl;
     std::cerr << "    --output-fields,--output,-o=<fields>; output fields, if not specified, will be set" << std::endl;
-    std::cerr << "                                          to --input-fields, which would chops off trailing input fields" << std::endl;
+    std::cerr << "                                          to --input-fields, which would chop off trailing input fields" << std::endl;
+    std::cerr << "                                          see also --drop-empty" << std::endl;
     std::cerr << "    --verbose,-v: more output" << std::endl;
     if( verbose ) { std::cerr << std::endl << comma::csv::options::usage() << std::endl; }
     std::cerr << std::endl;
@@ -80,10 +55,17 @@ int main( int ac, char** av )
         comma::csv::options csv( options, options.value< std::string >( "--fields,-f,--input-fields" ) );
         std::vector< std::string > input_fields = comma::split( csv.fields, ',', true );
         std::vector< std::string > output_fields = comma::split( options.value< std::string >( "--output-fields,--output,-o", csv.fields ), ',', true );
+        if( options.exists( "--drop-empty,-e" ) )
+        {
+            std::vector< std::string > v;
+            for( auto s: output_fields ) { if( !s.empty() ) { v.push_back( s ); } }
+            output_fields = v;
+        }
+        if( output_fields.empty() ) { std::cerr << "csv-shuffle: please specify --output-fields or --drop-empty" << std::endl; return 1; }
         if( output_fields.back() == "..." ) { std::cerr << "csv-shuffle: support for trailing fields has been removed for now; please specify input/output fields explicitly" << std::endl; return 1; }
         auto find_ = [&]( const std::string& n )->unsigned int
         {
-            if( n.empty() ) { COMMA_THROW( comma::exception, "got empty fields in output fields '" << comma::join( output_fields, ',' ) << "'" ); }
+            if( n.empty() ) { COMMA_THROW( comma::exception, "got empty fields in output fields '" << comma::join( output_fields, ',' ) << "'; you may need to use --drop-empty" ); }
             unsigned int j = 0;
             for( ; j < input_fields.size(); ++j ) { if( input_fields[j] == n ) { return j; } }
             COMMA_THROW( comma::exception, "output field '" << n << "' not found in input fields '" << csv.fields << "'" );
