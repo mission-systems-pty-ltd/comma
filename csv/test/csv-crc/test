@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# read individual test parameters and data
+input=$( cat )
+eval "$( grep = <<< $input )"
+data=$( grep -v = <<< $input )
+
+[[ $operation ]] || exit 1
+[[ $data ]] || exit 1
+
+function run_test()
+{
+    if [[ $binary ]]; then
+        size=$( echo $binary | csv-format size )
+        output_format=$binary
+        [[ $operation == wrap ]] && output_format=$output_format,uw
+        echo "$data" | csv-to-bin $binary | csv-crc $operation --size $size $args | csv-from-bin $output_format
+    else
+        echo "$data" | csv-crc $operation $args
+    fi
+}
+
+output=$( run_test )
+echo "$output" | name-value-from-csv -f line -d : --line-number -p output
+echo count=$( wc -l <<< $output )
