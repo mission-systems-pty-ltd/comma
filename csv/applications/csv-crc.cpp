@@ -185,6 +185,7 @@ static bool run_()
                     {
                         if( recovered ) { std::cerr << "csv-crc: crc check failed" << ( !give_up_after || *give_up_after > 0 ? "; recovering..." : "" ) << std::endl; }
                         recovered = false;
+                        if( give_up_after && recovered_byte_count >= *give_up_after ) { break; }
                         ++recovered_byte_count;
                     }
                 }
