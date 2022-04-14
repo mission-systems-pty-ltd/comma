@@ -1,3 +1,11 @@
-output[0]/line="1,2,3,37878"
-output[1]/line="4,5,6,58890"
-count=2
+output[0]/line="0,0,0,34041"
+output[1]/line="1,1,1,46827"
+output[2]/line="2,2,2,57565"
+output[3]/line="3,3,3,53967"
+output[4]/line="4,4,4,19633"
+output[5]/line="5,5,5,32419"
+output[6]/line="6,6,6,10389"
+output[7]/line="7,7,7,6791"
+output[8]/line="8,8,8,1096"
+output[9]/line="9,9,9,13914"
+count=10
