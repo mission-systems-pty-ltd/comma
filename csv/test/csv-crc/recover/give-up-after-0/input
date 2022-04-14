@@ -1,5 +1,6 @@
 operation=recover
 binary=3ui,uw
+args="--give-up-after 0"
 0,0,0,34041
 1,1,1,0
 2,2,2,57565
