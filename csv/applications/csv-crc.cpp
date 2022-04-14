@@ -146,6 +146,7 @@ static bool run_()
         bool recovered = true;
         std::size_t recovered_count = 0;
         std::size_t recovered_byte_count = 0;
+        std::size_t current_recovered_byte_count = 0;
         std::vector< char > recovery_buffer( recover_after * size );
         while( std::cin.good() && !std::cin.eof() )
         {
@@ -167,6 +168,7 @@ static bool run_()
                     if( big_endian ) { expected = traits< typename Crc::value_type >::hton( expected ); }
                     if( crc == expected )
                     {
+                        bool output_input_buffer = true;
                         if( !recovered )
                         {
                             if( recovered_count == recover_after )
@@ -176,27 +178,34 @@ static bool run_()
                                 recovered = true;
                                 recovered_count = 0;
                                 recovered_byte_count = 0;
+                                current_recovered_byte_count = 0;
                             }
                             else
                             {
                                 ::memcpy( &recovery_buffer[ recovered_count * size ], p, size );
                                 ++recovered_count;
+                                output_input_buffer = false;        // we're just stashing them until we check
                             }
                         }
-                        std::cout.write( p, size );
+                        if( output_input_buffer ) { std::cout.write( p, size ); }
                         std::cout.flush();
                     }
                     else // quick and dirty: lots of code duplication, but just to make it working
                     {
+                        if( current_recovered_byte_count / size > recovered_count )
+                        {
+                            recovered_count = 0;
+                            current_recovered_byte_count = 0;
+                        }
                         if( recovered ) { std::cerr << "csv-crc: crc check failed" << ( !give_up_after || *give_up_after > 0 ? "; recovering..." : "" ) << std::endl; }
                         recovered = false;
                         if( give_up_after && recovered_byte_count >= *give_up_after ) { break; }
-                        ++recovered_byte_count;
                     }
                 }
                 unsigned int step = recovered ? size : 1;
                 p += step;
                 offset -= step;
+                if( !recovered ) { recovered_byte_count += step; current_recovered_byte_count += step; }
                 if( end - p < int( size ) )
                 {
                     ::memcpy( begin, p, offset ); // todo: quick and dirty, check if works in case of overlapping
