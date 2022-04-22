@@ -30,6 +30,9 @@
 
 #include <gtest/gtest.h>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#if ( BOOST_VERSION >= 107400 ) // quick and dirty; fixing trivial compilation error
+#include <boost/optional/optional_io.hpp>
+#endif
 #include "../../csv/ascii.h"
 #include "../../string/string.h"
 
