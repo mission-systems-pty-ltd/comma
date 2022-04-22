@@ -63,8 +63,8 @@ TEST( application, command_line_options )
     EXPECT_TRUE( !options.exists( "--d" ) );
     EXPECT_TRUE( options.values< int >( "-x" ).empty() );
     EXPECT_TRUE( options.values< int >( "-x,-y,-z" ).empty() );
-    EXPECT_EQ( options.optional< int >( "-x" ), boost::optional< int >() );
-    EXPECT_EQ( options.optional< int >( "-x,-y,-z" ), boost::optional< int >() );
+    EXPECT_FALSE( bool( options.optional< int >( "-x" ) ) );
+    EXPECT_FALSE( bool( options.optional< int >( "-x,-y,-z" ) ) );
     EXPECT_EQ( options.value< std::string >( "-a" ), "b" );
     EXPECT_EQ( options.value< bool >( "--a" ), true );
     EXPECT_EQ( options.value< int >( "--b" ), 15 );
@@ -290,7 +290,7 @@ TEST( application, command_line_options_description_default_values_double_quotes
     check_default_value( "--filename,-f=[<filename>]; default=\"blah=\\\"$var\\\"\" ; some filename", "blah=\"$var\"" );
     check_default_value( "--filename,-f=[<filename>]; default=\"blah with space \"; some filename", "blah with space " );
 }
-    
+
 int main( int argc, char* argv[] )
 {
     ::testing::InitGoogleTest( &argc, argv );

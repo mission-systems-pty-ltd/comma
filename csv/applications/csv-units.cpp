@@ -33,6 +33,7 @@
 #include <iostream>
 #include <boost/array.hpp>
 #include <boost/bind.hpp>
+#include <boost/optional.hpp>
 #include <boost/unordered/unordered_map.hpp>
 
 #include <boost/units/systems/si.hpp>
@@ -130,7 +131,7 @@ typedef boost::units::absolute< boost::units::si::temperature > kelvin_t;
 typedef boost::units::absolute< boost::units::celsius::temperature > celsius_t;
 typedef boost::units::absolute< boost::units::fahrenheit::temperature > fahrenheit_t;
 
-/// Converts the given value between the two template measurement units 
+/// Converts the given value between the two template measurement units
 template < typename From, typename To >
 double cast( double input )
 {
@@ -198,7 +199,7 @@ namespace units {
               count,
               invalid
     };
-    
+
     static boost::array< et, count > metric = {{ kelvin
                                                , radians
                                                , kelvin
@@ -251,7 +252,7 @@ namespace units {
     /// returns a name even if the value is invalid
     std::string debug_name( const et val ) { return val < 0 || val > invalid ? "ERROR:" + boost::lexical_cast<std::string>(val) : name( val ); }
 
-    /// Given a canonical name or an alias of a measurement unit 
+    /// Given a canonical name or an alias of a measurement unit
     /// retrieve the canonical enumeration.
     et value( std::string const & str )
     {
@@ -295,18 +296,18 @@ namespace units {
         if( map.cend() != citr ) { return citr->second; }
         COMMA_THROW( comma::exception, "expected unit name, got \"" << str << "\"" );
     }
-    
+
     /// A type to allow a lookup table for converting units
     //typedef double (* cast_function)( double );
     typedef boost::function< double( double ) > cast_function;
-    
+
     /// Retrieve a function that will convert between the two given
     /// measurement units.
     /// @returns NULL if the conversion is not supported.
     cast_function cast_lookup( const et from, const et to ) // quick and dirty
     {
         if ( from < 0 || from >= count ) { COMMA_THROW( comma::exception, "can not cast lookup for invalid unit (from) " << from ); }
-        if ( to < 0 || to >= count ) { COMMA_THROW( comma::exception, "can not cast lookup for invalid unit (to) " << to ); }        
+        if ( to < 0 || to >= count ) { COMMA_THROW( comma::exception, "can not cast lookup for invalid unit (to) " << to ); }
         static cast_function map[count][count] = { { NULL, }, };
         static bool initialised = false;
         if (! initialised )
@@ -348,7 +349,7 @@ namespace units {
         }
         return map[from][to];
     }
-    
+
     /// Test if the conversion between two measurement units is supported.
     bool can_convert( const et from, const et to ) { return NULL != cast_lookup(from, to); }
 }
@@ -376,7 +377,7 @@ struct item_t
 
 struct input_t
 {
-    std::vector< item_t > values;    
+    std::vector< item_t > values;
 };
 
 namespace comma { namespace visiting {
@@ -420,7 +421,7 @@ static std::string init_input_field( const std::string& v )
 {
     const std::string stripped( comma::strip( v, ' ' ) );
     if( stripped.empty() ) { return std::string(); }
-    
+
     const size_t pos = stripped.rfind( '/' );
     std::string head, tail;
     if ( std::string::npos == pos ) // just a
@@ -438,11 +439,11 @@ static std::string init_input_field( const std::string& v )
             tail = "value";
         }
     }
-    
+
     unsigned idx = input_fields.size();
     if ( input_fields.cend() == input_fields.find( head ) ) { input_fields[head] = idx; }
     else { idx = input_fields.at( head ); }
-    
+
     return "values[" + boost::lexical_cast< std::string >( idx ) + "]/" + tail;
 }
 
@@ -483,7 +484,7 @@ static int run( const units::et from, const units::et to )
 
     units::cast_function const default_cast_function = units::cast_lookup( from, to );
     if (NULL == default_cast_function) { COMMA_THROW( comma::exception, "unsupported default conversion from " << debug_name(from) << " to " << debug_name(to) ); }
-    
+
     unsigned line = 0;
     while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) )
     {
@@ -514,7 +515,7 @@ int main( int ac, char** av )
     {
         comma::command_line_options options( ac, av );
         if( options.exists( "--bash-completion" ) ) bash_completion( ac, av );
-        
+
         if( options.exists( "--help,-h" ) ) usage();
         verbose = options.exists( "--verbose,-v" );
         csv = comma::csv::options( options );
