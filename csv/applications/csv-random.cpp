@@ -111,6 +111,7 @@ struct type_traits< unsigned char >
 };
 
 namespace make {
+
 template < typename T, template < typename > class Distribution, typename Engine >
 static int run_impl( Distribution< T >& distribution, bool append, bool binary, std::size_t count )
 {
@@ -125,11 +126,7 @@ static int run_impl( Distribution< T >& distribution, bool append, bool binary, 
             {
                 std::cin.read( &buf[0], buf.size() );
                 if( std::cin.gcount() == 0 ) { break; }
-                if( std::cin.gcount() != static_cast< int >( buf.size() ) )
-                {
-                    std::cerr << "csv-random make: expected " << buf.size() << " bytes; got " << std::cin.gcount() << std::endl;
-                    return 1;
-                }
+                if( std::cin.gcount() != static_cast< int >( buf.size() ) ) { std::cerr << "csv-random make: expected " << buf.size() << " bytes; got " << std::cin.gcount() << std::endl; return 1; }
                 std::cout.write( &buf[0], buf.size() );
                 for( std::size_t i = 0; i < count; ++i )
                 {
@@ -213,45 +210,23 @@ static int run( const comma::command_line_options& options ) // quick and dirty
 {
     const auto& distribution = options.value< std::string >( "--distribution", "uniform" );
     const auto& format = comma::csv::format( options.value< std::string >( "--type", "ui" ) );
-    if ( format.collapsed_string().find( ',' ) != std::string::npos )
+    if ( format.collapsed_string().find( ',' ) != std::string::npos ) { std::cerr << "csv-random make: --type must be homogeneous i.e. ui or 2ui or 3ui" << std::endl; return 1; }
+    if( distribution == "uniform" )
     {
-        std::cerr << "csv-random make: --type must be homogeneous i.e. ui or 2ui or 3ui" << std::endl;
-        return 1;
-    }
-    switch ( format.offset( 0 ).type ) {
-        case csv::format::int8:
-            if( distribution == "uniform" ) { return run_impl< char, std::uniform_int_distribution >( options ); }
-            break;
-        case csv::format::uint8:
-            if( distribution == "uniform" ) { return run_impl< unsigned char, std::uniform_int_distribution >( options ); }
-            break;
-        case csv::format::int16:
-            if( distribution == "uniform" ) { return run_impl< comma::int16, std::uniform_int_distribution >( options ); }
-            break;
-        case csv::format::uint16:
-            if( distribution == "uniform" ) { return run_impl< comma::uint16, std::uniform_int_distribution >( options ); }
-            break;
-        case csv::format::int32:
-            if( distribution == "uniform" ) { return run_impl< comma::int32, std::uniform_int_distribution >( options ); }
-            break;
-        case csv::format::uint32:
-            if( distribution == "uniform" ) { return run_impl< comma::uint32, std::uniform_int_distribution >( options ); }
-            break;
-        case csv::format::int64:
-            if( distribution == "uniform" ) { return run_impl< comma::int64, std::uniform_int_distribution >( options ); }
-            break;
-        case csv::format::uint64:
-            if( distribution == "uniform" ) { return run_impl< comma::uint64, std::uniform_int_distribution >( options ); }
-            break;
-        case csv::format::float_t:
-            if( distribution == "uniform" ) { return run_impl< float, std::uniform_real_distribution >( options ); }
-            break;
-        case csv::format::double_t:
-            if( distribution == "uniform" ) { return run_impl< double, std::uniform_real_distribution >( options ); }
-            break;
-        default:
-            std::cerr << "csv-random make: expected type; got: '" << format.string() << "'" << std::endl;
-            return 1;
+        switch ( format.offset( 0 ).type )
+        {
+            case csv::format::int8: return run_impl< char, std::uniform_int_distribution >( options );
+            case csv::format::uint8: return run_impl< unsigned char, std::uniform_int_distribution >( options );
+            case csv::format::int16: return run_impl< comma::int16, std::uniform_int_distribution >( options );
+            case csv::format::uint16: return run_impl< comma::uint16, std::uniform_int_distribution >( options );
+            case csv::format::int32: return run_impl< comma::int32, std::uniform_int_distribution >( options );
+            case csv::format::uint32: return run_impl< comma::uint32, std::uniform_int_distribution >( options );
+            case csv::format::int64: return run_impl< comma::int64, std::uniform_int_distribution >( options );
+            case csv::format::uint64: return run_impl< comma::uint64, std::uniform_int_distribution >( options );
+            case csv::format::float_t: return run_impl< float, std::uniform_real_distribution >( options );
+            case csv::format::double_t: return run_impl< double, std::uniform_real_distribution >( options );
+            default: std::cerr << "csv-random make: expected type; got: '" << format.string() << "'" << std::endl; return 1;
+        }
     }
     std::cerr << "csv-random make: expected distribution; got: '" << distribution << "'" << std::endl;
     return 1;
