@@ -160,7 +160,7 @@ SET( comma_BUILD_APPLICATIONS ${BUILD_APPLICATIONS} )
 
 OPTION( comma_BUILD_ZEROMQ "build io with zeromq support" OFF )
 
-option( BUILD_SHARED_LIBS "build with shared libraries" ON ) # option( BUILD_SHARED_LIBS "build with shared libraries" OFF )
+option( BUILD_SHARED_LIBS "build with shared libraries" ON )
 
 OPTION( comma_BUILD_PYTHON "build python" ON )
 
@@ -384,7 +384,7 @@ set( CPACK_DEBIAN_PACKAGE_GENERATE_SHLIBS_POLICY ON )
 # if the user builds shared, make sure that the RPM package (that might be generated) runs ldconfig when it's installed.
 if( BUILD_SHARED_LIBS )
     #set( CPACK_RPM_SPEC_MORE_DEFINE "%posttrans -p /sbin/ldconfig" )
-    set( CPACK_RPM_POST_INSTALL_SCRIPT_FILE "%posttrans -p /sbin/ldconfig" )
+    set( CPACK_RPM_POST_INSTALL_SCRIPT_FILE "%posttrans -p /sbin/ldconfig" ) # this line works but commented out to avoid lintian error
     #set( SHLIBS_FILE "${CMAKE_CURRENT_BINARY_DIR}/shlibs" )
     # witchcraft from here: https://github.com/roboception/rcdiscover/blob/master/cmake/package_debian.cmake
     set( TRIGGERS_FILE "${CMAKE_CURRENT_BINARY_DIR}/triggers" )
@@ -407,6 +407,7 @@ if( BUILD_SHARED_LIBS )
         set( CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA};${SHLIBS_FILE};${TRIGGERS_FILE}" )
     endif ( CPACK_DEB_COMPONENT_INSTALL )
 endif( BUILD_SHARED_LIBS )
+
 IF( BUILD_PYTHON_PACKAGES AND ADD_PYTHON_PACKAGES_TO_RPM )
     SET( CPACK_RPM_PACKAGE_REQUIRES "boost-thread recode socat psmisc python numpy" )
     SET( CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${CMAKE_SOURCE_DIR}/python/comma-rpm-post-install.sh" )
