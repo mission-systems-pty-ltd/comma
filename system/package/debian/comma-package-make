@@ -32,9 +32,9 @@ esac
             -DINSTALL_BASH_COMPLETION=OFF \
             -DINSTALL_TESTS=OFF \
             -DCPACK_DEPENDENCIES_LIBPROCPS="$libproc_version" \
-            -DCPACK_PACKAGE_VERSION_MAJOR=$version_major \
-            -DCPACK_PACKAGE_VERSION_MINOR=$version_minor \
-            -DCPACK_PACKAGE_VERSION_PATCH=$version_patch  \
+            -DCMAKE_PROJECT_VERSION_MAJOR=$version_major \
+            -DCMAKE_PROJECT_VERSION_MINOR=$version_minor \
+            -DCMAKE_PROJECT_VERSION_PATCH=$version_patch  \
             -Dcomma_INSTALL_LIB_DIR=lib/x86_64-linux-gnu \
             -Dcomma_BUILD_XML=OFF \
             -Dcomma_build_io_rabbit_cat=OFF || die "failed"
