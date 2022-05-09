@@ -155,6 +155,8 @@ OPTION( comma_BUILD_ZEROMQ "build io with zeromq support" OFF )
 
 option( BUILD_SHARED_LIBS "build with shared libraries" ON ) # option( BUILD_SHARED_LIBS "build with shared libraries" OFF )
 
+OPTION( comma_BUILD_PYTHON "build python" ON )
+
 OPTION( comma_BUILD_XML "build xml" OFF )
 
 SET(comma_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
@@ -319,7 +321,9 @@ if( INSTALL_BASH_COMPLETION )
     add_subdirectory( etc/bash_completion.d )
 endif( INSTALL_BASH_COMPLETION )
 
-add_subdirectory( python )
+if( comma_BUILD_PYTHON )
+  add_subdirectory( python )
+endif( comma_BUILD_PYTHON )
 
 #in future, may need to add third party dlls somehow, if they are linked as dlls. Not needed for statically linking to boost.
 #if we set them up to install to bin they might be packaged through, e.g. roughly (using GLOB):
@@ -348,7 +352,7 @@ set( CPACK_GENERATOR "DEB" CACHE STRING "cpack generator: PRM or DEB" )
 set( CPACK_PACKAGE_VERSION_MAJOR ${comma_version_major} CACHE STRING "cpack version major" )
 set( CPACK_PACKAGE_VERSION_MINOR ${comma_version_minor} CACHE STRING "cpack version minor" )
 set( CPACK_PACKAGE_VERSION_PATCH ${comma_version_patch} CACHE STRING "cpack version patch" )
-set( CPACK_DEPENDENCIES_LIBPROCPS "libprocps6 (>= 2:3.3.0)" CACHE STRING "libprocps versions: libprocps6 (>= 2:3.3.0) for Ubuntu 18.04; libprocps8 (>= 1) for Ubuntu 20.04" )
+set( CPACK_DEPENDENCIES_LIBPROCPS "libprocps8 (>= 1)" CACHE STRING "libprocps versions: libprocps6 (>= 2:3.3.0) for Ubuntu 18.04; libprocps8 (>= 1) for Ubuntu 20.04" )
 #set( CPACK_DEBIAN_PACKAGE_DEPENDS "python3-comma, ${CPACK_DEPENDENCIES_LIBPROCPS}, libzmq5 (>= 4.2.5-1), libboost-all-dev (>=1.65), recode (>=3.6), socat, python3-numpy (>=1.14.1), libc (>=6)" )
 set( CPACK_DEBIAN_PACKAGE_DEPENDS "${CPACK_DEPENDENCIES_LIBPROCPS}, libzmq5 (>= 4.2.5-1), libboost-all-dev (>=1.65), recode (>=3.6), socat, python3-numpy (>=1.14.1), libc (>=6)" )
 set( CPACK_DEBIAN_PACKAGE_SHLIBDEPS "libboost-all-dev (>=1.65), libc" )
