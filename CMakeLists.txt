@@ -8,9 +8,21 @@ if( USE_ARM_TOOLCHAIN )
     include( ${CMAKE_TOOLCHAIN_FILE} REQUIRED )
 endif( USE_ARM_TOOLCHAIN )
 
-PROJECT( "comma" )
-
 cmake_minimum_required( VERSION 3.1 )
+if(POLICY CMP0048)
+    cmake_policy( SET CMP0048 NEW )
+    project( comma VERSION 1.0.0 LANGUAGES CXX )
+else( POLICY CMP0048 )
+    project( comma )
+    set( CMAKE_PROJECT_VERSION_MAJOR "1" CACHE STRING "comma version major" )
+    set( CMAKE_PROJECT_VERSION_MINOR "0" CACHE STRING "comma version minor" )
+    set( CMAKE_PROJECT_VERSION_PATCH "0" CACHE STRING "comma version patch" )
+    set( CMAKE_PROJECT_VERSION "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}.${CMAKE_PROJECT_VERSION_PATCH}" )
+endif( POLICY CMP0048 )
+
+set( comma_version_major "${CMAKE_PROJECT_VERSION_MAJOR}" ) # quick and dirty
+set( comma_version_minor "${CMAKE_PROJECT_VERSION_MINOR}" ) # quick and dirty
+set( comma_version_patch "${CMAKE_PROJECT_VERSION_PATCH}" ) # quick and dirty
 
 # option( USE_ARM_TOOLCHAIN "Cross compile using arm toolchain" OFF )
 # if( USE_ARM_TOOLCHAIN )
@@ -106,14 +118,6 @@ endif( UNIX )
 
 SET( SOURCE_CODE_BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR} )
 SET( LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/lib )
-
-SET( EXECUTABLE_OUTPUT_PATH
-     ${PROJECT_BINARY_DIR}/bin CACHE PATH
-     "Single output directory for building all executables." )
-
-set( comma_version_major "1" CACHE STRING "comma version major" ) # quick and dirty
-set( comma_version_minor "0" CACHE STRING "comma version minor" ) # quick and dirty
-set( comma_version_patch "0" CACHE STRING "comma version patch" ) # quick and dirty
 
 SET( comma_LIBRARY_PROPERTIES ${comma_LIBRARY_PROPERTIES} DEBUG_POSTFIX "-d" )
 
