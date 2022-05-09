@@ -24,8 +24,8 @@ set( comma_version_major "${CMAKE_PROJECT_VERSION_MAJOR}" ) # quick and dirty
 set( comma_version_minor "${CMAKE_PROJECT_VERSION_MINOR}" ) # quick and dirty
 set( comma_version_patch "${CMAKE_PROJECT_VERSION_PATCH}" ) # quick and dirty
 set( comma_version "${CMAKE_PROJECT_VERSION}" ) # quick and dirty
-install( FILES COPYING DESTINATION share/doc/comma-${CMAKE_PROJECT_VERSION} RENAME copyright )
-install( FILES system/package/debian/changelog.gz DESTINATION share/doc/comma-${CMAKE_PROJECT_VERSION} )
+install( FILES COPYING DESTINATION share/doc/comma RENAME copyright ) # required by lintian
+install( FILES system/package/debian/changelog.gz DESTINATION share/doc/comma ) # required by lintian
 
 # option( USE_ARM_TOOLCHAIN "Cross compile using arm toolchain" OFF )
 # if( USE_ARM_TOOLCHAIN )
@@ -345,15 +345,7 @@ endif( CMAKE_COMPILER_IS_GNUCXX )
 add_subdirectory( CMakeFiles/post_install ) # uber-quick and dirty
 
 # todo
-#     set as cache variables
-#         CMAKE_PROJECT_VERSION
-#         CMAKE_PROJECT_VERSION_MAJOR
-#         CMAKE_PROJECT_VERSION_MINOR
-#         CMAKE_PROJECT_VERSION_PATCH
 #     lintian errors and warnings
-#         fix errors
-#             E: comma: no-changelog usr/share/doc/comma/changelog.gz (native package)
-#             E: comma: no-copyright-file
 #         fix warnings
 #             W: comma: package-name-doesnt-match-sonames: try comma_string -> comma-string, etc?
 #             W: comma: maintscript-calls-ldconfig [postinst]: don't call ldconfig from package?
