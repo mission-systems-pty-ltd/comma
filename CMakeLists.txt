@@ -205,8 +205,8 @@ IF( comma_BUILD_TESTS )
 
 OPTION( INSTALL_TESTS "Install the tests into the nominated directory" OFF )
 IF( INSTALL_TESTS )
-    SET ( comma_CPP_TESTS_INSTALL_DIR bin CACHE PATH "Install directory for cpp unit tests" )
-    SET ( comma_INSTALL_COMMA_TESTS_DIR share/test )
+SET ( comma_CPP_TESTS_INSTALL_DIR bin CACHE PATH "Install directory for cpp unit tests" )
+SET ( comma_INSTALL_COMMA_TESTS_DIR share/test )
 
 # Get the list of test directories (using glob).
 FILE ( GLOB_RECURSE all_files
@@ -222,19 +222,18 @@ FOREACH ( i ${all_files} )
 ENDFOREACH (i)
 
 # Add those directories
-	FOREACH (file ${test_dirs} )
-			# Determine the parent directories for a given file so to prefix the install location (otherwise they just all get installed in the destination root)
-			get_filename_component( dest_dir ${file} DIRECTORY )
-                        STRING( REGEX MATCH ".*\\/output\\/.*" skip ${file} )
-                        IF( NOT skip )
-			# See that slash there? 		 vvv It's really important.
-			INSTALL ( 	DIRECTORY ${dest_dir}/
-						DESTINATION ${comma_INSTALL_COMMA_TESTS_DIR}/${CMAKE_PROJECT_NAME}/unit/${dest_dir}
-						USE_SOURCE_PERMISSIONS
-                            PATTERN "output" EXCLUDE )
-                        ENDIF( NOT skip )
-	ENDFOREACH (file)
-
+FOREACH (file ${test_dirs} )
+		# Determine the parent directories for a given file so to prefix the install location (otherwise they just all get installed in the destination root)
+		get_filename_component( dest_dir ${file} DIRECTORY )
+                    STRING( REGEX MATCH ".*\\/output\\/.*" skip ${file} )
+                    IF( NOT skip )
+		# See that slash there? 		 vvv It's really important.
+		INSTALL ( 	DIRECTORY ${dest_dir}/
+					DESTINATION ${comma_INSTALL_COMMA_TESTS_DIR}/${CMAKE_PROJECT_NAME}/unit/${dest_dir}
+					USE_SOURCE_PERMISSIONS
+                        PATTERN "output" EXCLUDE )
+                    ENDIF( NOT skip )
+ENDFOREACH (file)
 ENDIF( INSTALL_TESTS )
 ENDIF( comma_BUILD_TESTS )
 
