@@ -11,32 +11,11 @@
   tasks:
   - name: "install comma dependencies"
     become: true
-    apt: pkg={{ item }} state=present update_cache=yes
-    with_items:
-      - build-essential
-      - git
-      - cmake-curses-gui
-      - cmake
-      - gawk
-      - perl
-      - python3
-      - libboost-all-dev
-      - socat
-      - libzmq3-dev
-      - libgtest-dev
-      - python3-dev
-      - python3-numpy
-      - python3-pip
-      - libprocps-dev
-      - recode
+    apt: pkg: ['build-essential', 'git', 'cmake-curses-gui', 'cmake', 'gawk', 'perl', 'python3', 'libboost-all-dev', 'socat', 'libzmq3-dev', 'libgtest-dev', 'python3-dev', 'python3-numpy', 'python3-pip', 'libprocps-dev', 'recode'] state=present update_cache=yes
 
   - name: "install comma regressions test dependencies"
     become: true
-    apt: pkg={{ item }} state=present update_cache=yes
-    with_items:
-      - moreutils
-      - net-tools
-      - pv
+    apt: pkg=['moreutils', 'net-tools', 'pv'] state=present update_cache=yes
 
   - name: "comma: make source directory at {{ base }}"
     file: path={{ base }}/{{ item }} state=directory
