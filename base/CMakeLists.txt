@@ -6,8 +6,6 @@ FILE( GLOB includes ${SOURCE_CODE_BASE_DIR}/${PROJECT}/*.h)
 SOURCE_GROUP( ${PROJECT} FILES ${source} ${includes} )
 ADD_LIBRARY( ${TARGET_NAME} ${source} ${includes} )
 SET_TARGET_PROPERTIES( ${TARGET_NAME} PROPERTIES ${comma_LIBRARY_PROPERTIES} )
-set_target_properties( ${TARGET_NAME} PROPERTIES LINK_FLAGS_RELEASE -s )
-set_target_properties( ${TARGET_NAME} PROPERTIES SOVERSION ${comma_version_major} ${comma_version_minor} ${comma_version_patch} )
 
 install( FILES ${includes} DESTINATION ${comma_INSTALL_INCLUDE_DIR}/${PROJECT} )
 install( TARGETS ${TARGET_NAME}

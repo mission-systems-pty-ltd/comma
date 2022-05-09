@@ -9,7 +9,7 @@ if( USE_ARM_TOOLCHAIN )
 endif( USE_ARM_TOOLCHAIN )
 
 cmake_minimum_required( VERSION 3.1 )
-if(POLICY CMP0048)
+if( POLICY CMP0048 )
     cmake_policy( SET CMP0048 NEW )
     project( comma VERSION 1.0.0 LANGUAGES CXX )
 else( POLICY CMP0048 )
@@ -23,6 +23,7 @@ endif( POLICY CMP0048 )
 set( comma_version_major "${CMAKE_PROJECT_VERSION_MAJOR}" ) # quick and dirty
 set( comma_version_minor "${CMAKE_PROJECT_VERSION_MINOR}" ) # quick and dirty
 set( comma_version_patch "${CMAKE_PROJECT_VERSION_PATCH}" ) # quick and dirty
+set( comma_version "${CMAKE_PROJECT_VERSION}" ) # quick and dirty
 
 # option( USE_ARM_TOOLCHAIN "Cross compile using arm toolchain" OFF )
 # if( USE_ARM_TOOLCHAIN )
@@ -119,7 +120,7 @@ endif( UNIX )
 SET( SOURCE_CODE_BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR} )
 SET( LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/lib )
 
-SET( comma_LIBRARY_PROPERTIES ${comma_LIBRARY_PROPERTIES} DEBUG_POSTFIX "-d" )
+SET( comma_LIBRARY_PROPERTIES ${comma_LIBRARY_PROPERTIES} DEBUG_POSTFIX "-d" SOVERSION ${CMAKE_PROJECT_VERSION} LINK_FLAGS_RELEASE -s )
 
 IF( NOT comma_INSTALL_BIN_DIR )
   SET( comma_INSTALL_BIN_DIR bin )
