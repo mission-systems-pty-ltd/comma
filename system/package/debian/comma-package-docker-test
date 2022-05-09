@@ -18,4 +18,4 @@ docker run \
        --mount "type=bind,source=$comma_dir,target=/mnt/comma" \
        --mount "type=bind,source=$package_dir,target=/mnt/package" \
        ubuntu.$ubuntu_version.build.basics \
-       /mnt/comma/system/package/comma-package-test "/mnt/package/$( basename "$package" )" "/mnt/package/$( basename "$python_package" )" || { echo "$0: failed" >&2; exit 1; }
+       /mnt/comma/system/package/debian/comma-package-test "/mnt/package/$( basename "$package" )" "/mnt/package/$( basename "$python_package" )" || { echo "$0: failed" >&2; exit 1; }
