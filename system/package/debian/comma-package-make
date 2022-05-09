@@ -11,7 +11,7 @@ comma_dir="$5"
 [[ -n "$version_patch" ]] || { echo "usage: $0 <ubuntu version> <comma version major> <comma version minor> <comma version patch> [<comma dir>]" >&2; exit 1; }
 cd ~
 echo "$0: running ansible-playbook '$comma_dir/system/ansible/install.yml' in $( pwd )..." >&2
-ansible-playbook "$comma_dir/system/ansible/install.yml" || die "failed"
+#ansible-playbook "$comma_dir/system/ansible/install.yml" || die "ansible-playbook failed"
 case $ubuntu_version in
     18.04) libproc_version="libprocps6 (>= 2:3.3.0)" ;;
     20.04) libproc_version="libprocps8 (>= 1)" ;;
@@ -20,9 +20,11 @@ case $ubuntu_version in
 esac
 
 (
+    mkdir -p ~/build/comma
     cd ~/build/comma
     echo "$0: running cmake in $( pwd )..." >&2
-    cmake . -DCPACK_GENERATOR=DEB \
+    cmake $comma_dir \
+            -DCPACK_GENERATOR=DEB \
             -DBUILD_PYTHON_PACKAGES=OFF \
             -DADD_PYTHON_PACKAGES_TO_RPM=OFF \
             -DBUILD_SHARED_LIBS=ON \
@@ -39,7 +41,7 @@ esac
             -Dcomma_BUILD_XML=OFF \
             -Dcomma_build_io_rabbit_cat=OFF || die "cmake failed"
     echo "$0: running cpack in $( pwd )..." >&2
-    cpack || die "cpack failed"
+    cpack -j4 || die "cpack failed"
     echo "$0: created package at $( realpath comma-$version_major.$version_minor.$version_patch-Linux.deb )" >&2
     # todo: optionally run full regression test
     echo "$0: done" >&2
