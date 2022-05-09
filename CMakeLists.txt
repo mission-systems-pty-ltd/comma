@@ -111,9 +111,9 @@ SET( EXECUTABLE_OUTPUT_PATH
      ${PROJECT_BINARY_DIR}/bin CACHE PATH
      "Single output directory for building all executables." )
 
-set( comma_version_major "1" ) # quick and dirty
-set( comma_version_minor "0" ) # quick and dirty
-set( comma_version_patch "0" ) # quick and dirty
+set( comma_version_major "1" CACHE STRING "comma version major" ) # quick and dirty
+set( comma_version_minor "0" CACHE STRING "comma version minor" ) # quick and dirty
+set( comma_version_patch "0" CACHE STRING "comma version patch" ) # quick and dirty
 
 SET( comma_LIBRARY_PROPERTIES ${comma_LIBRARY_PROPERTIES} DEBUG_POSTFIX "-d" )
 
@@ -338,6 +338,27 @@ endif( CMAKE_COMPILER_IS_GNUCXX )
 
 add_subdirectory( CMakeFiles/post_install ) # uber-quick and dirty
 
+# todo
+#     set as cache variables
+#         CMAKE_PROJECT_VERSION
+#         CMAKE_PROJECT_VERSION_MAJOR
+#         CMAKE_PROJECT_VERSION_MINOR
+#         CMAKE_PROJECT_VERSION_PATCH
+#     lintian errors and warnings
+#         fix errors
+#             E: comma: no-changelog usr/share/doc/comma/changelog.gz (native package)
+#             E: comma: no-copyright-file
+#         fix warnings
+#             W: comma: package-name-doesnt-match-sonames: try comma_string -> comma-string, etc?
+#             W: comma: maintscript-calls-ldconfig [postinst]: don't call ldconfig from package?
+#             W: comma: maintscript-calls-ldconfig [postrm]: don't call ldconfig from package?
+#             W: comma: distant-prerequisite-in-shlibs comma (ON 1.0.0): try to add full version to shared libs
+#         investigate
+#             W: comma: non-standard-dir-in-usr usr/CMakeFiles/
+#         ignore for now
+#             W: comma: link-to-shared-library-in-wrong-package: deemed ok for small packages
+#             W: comma: no-manual-page: ok for now, lots of packages don't have man pages
+
 set( CPACK_PACKAGE_NAME "comma" )
 #set( CPACK_PACKAGE_DESCRIPTION "cli utilities for structured or fixed-width offline or realtime data" )
 set( CPACK_PACKAGE_DESCRIPTION_SUMMARY "cli utilities for structured or fixed-width offline or realtime data" )
@@ -349,9 +370,9 @@ set( CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${PROJECT_SOURCE_DIR}/system/package/de
 set( CPACK_PACKAGE_CONTACT "vsevolod.vlaskine@gmail.com" )
 set( CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/COPYING" )
 set( CPACK_GENERATOR "DEB" CACHE STRING "cpack generator: PRM or DEB" )
-set( CPACK_PACKAGE_VERSION_MAJOR ${comma_version_major} CACHE STRING "cpack version major" )
-set( CPACK_PACKAGE_VERSION_MINOR ${comma_version_minor} CACHE STRING "cpack version minor" )
-set( CPACK_PACKAGE_VERSION_PATCH ${comma_version_patch} CACHE STRING "cpack version patch" )
+set( CPACK_PACKAGE_VERSION_MAJOR ${comma_version_major} )
+set( CPACK_PACKAGE_VERSION_MINOR ${comma_version_minor} )
+set( CPACK_PACKAGE_VERSION_PATCH ${comma_version_patch} )
 set( CPACK_DEPENDENCIES_LIBPROCPS "libprocps8 (>= 1)" CACHE STRING "libprocps versions: libprocps6 (>= 2:3.3.0) for Ubuntu 18.04; libprocps8 (>= 1) for Ubuntu 20.04" )
 #set( CPACK_DEBIAN_PACKAGE_DEPENDS "python3-comma, ${CPACK_DEPENDENCIES_LIBPROCPS}, libzmq5 (>= 4.2.5-1), libboost-all-dev (>=1.65), recode (>=3.6), socat, python3-numpy (>=1.14.1), libc (>=6)" )
 #set( CPACK_DEBIAN_PACKAGE_DEPENDS "${CPACK_DEPENDENCIES_LIBPROCPS}, libzmq5 (>= 4.2.5-1), libboost-all-dev (>=1.65), recode (>=3.6), socat, python3-numpy (>=1.14.1), libc (>=6)" )
