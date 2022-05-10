@@ -1,0 +1,5 @@
+tar -acf hello-world_0.1.orig.tar.gz hello-world
+cd hello-world
+debuild -S -sa
+cd ..
+dput ppa:yourppa/name hello-world_0.1-0ppa0_source.changes

@@ -1,0 +1,3 @@
+courtesy of this generous tutorial: http://schneegans.github.io/lessons/2011/11/02/ppa-launchpad-cmake
+adding gpg-key and setting it in launchpad: https://help.launchpad.net/YourAccount/ImportingYourPGPKey
+debian package policy, all necessary files: https://www.debian.org/doc/debian-policy/ch-controlfields.html
