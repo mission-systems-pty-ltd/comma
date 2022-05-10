@@ -345,6 +345,8 @@ endif( CMAKE_COMPILER_IS_GNUCXX )
 add_subdirectory( CMakeFiles/post_install ) # uber-quick and dirty
 
 # todo
+#     build ppa
+#         see here? http://schneegans.github.io/lessons/2011/11/02/ppa-launchpad-cmake
 #     lintian errors and warnings
 #         fix warnings
 #             W: comma: package-name-doesnt-match-sonames: try comma_string -> comma-string, etc?
@@ -358,6 +360,7 @@ add_subdirectory( CMakeFiles/post_install ) # uber-quick and dirty
 #             W: comma: no-manual-page: ok for now, lots of packages don't have man pages
 
 set( CPACK_PACKAGE_NAME "comma" )
+set( CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_SYSTEM_NAME}" CACHE STRING "package name" )
 #set( CPACK_PACKAGE_DESCRIPTION "cli utilities for structured or fixed-width offline or realtime data" )
 set( CPACK_PACKAGE_DESCRIPTION_SUMMARY "cli utilities for structured or fixed-width offline or realtime data" )
 set( CPACK_PACKAGE_VENDOR "orthographic" )
@@ -371,7 +374,7 @@ set( CPACK_GENERATOR "DEB" CACHE STRING "cpack generator: PRM or DEB" )
 set( CPACK_PACKAGE_VERSION_MAJOR ${comma_version_major} )
 set( CPACK_PACKAGE_VERSION_MINOR ${comma_version_minor} )
 set( CPACK_PACKAGE_VERSION_PATCH ${comma_version_patch} )
-set( CPACK_DEPENDENCIES_LIBPROCPS "libprocps8 (>= 1)" CACHE STRING "libprocps versions: libprocps6 (>= 2:3.3.0) for Ubuntu 18.04; libprocps8 (>= 1) for Ubuntu 20.04" )
+set( CPACK_DEPENDENCIES_LIBPROCPS "libprocps8 (>= 1)" CACHE STRING "libprocps versions: libprocps6 (>= 2:3.3.0) for Ubuntu 18.04; libprocps8 (>= 1) for Ubuntu 20.04 or later" )
 #set( CPACK_DEBIAN_PACKAGE_DEPENDS "python3-comma, ${CPACK_DEPENDENCIES_LIBPROCPS}, libzmq5 (>= 4.2.5-1), libboost-all-dev (>=1.65), recode (>=3.6), socat, python3-numpy (>=1.14.1), libc (>=6)" )
 #set( CPACK_DEBIAN_PACKAGE_DEPENDS "${CPACK_DEPENDENCIES_LIBPROCPS}, libzmq5 (>= 4.2.5-1), libboost-all-dev (>=1.65), recode (>=3.6), socat, python3-numpy (>=1.14.1), libc (>=6)" )
 #set( CPACK_DEBIAN_PACKAGE_DEPENDS "${CPACK_DEPENDENCIES_LIBPROCPS}, libzmq5 (>= 4.2.5-1), libboost-all-dev (>=1.65), recode (>=3.6), socat, python3-numpy (>=1.14.1), libc" )

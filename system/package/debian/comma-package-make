@@ -7,6 +7,7 @@ version_major=$2
 version_minor=$3
 version_patch=$4
 comma_dir="$5"
+package_name="comma-$version_major.$version_minor.$version_patch-ubuntu.$ubuntu_version"
 [[ -n "$comma_dir" ]] || comma_dir=$( realpath ~/src/comma )
 [[ -n "$version_patch" ]] || { echo "usage: $0 <ubuntu version> <comma version major> <comma version minor> <comma version patch> [<comma dir>]" >&2; exit 1; }
 cd ~
@@ -25,6 +26,7 @@ esac
     echo "$0: running cmake in $( pwd )..." >&2
     cmake $comma_dir \
             -DCPACK_GENERATOR=DEB \
+            -DCPACK_PACKAGE_NAME="$package_name" \
             -DBUILD_PYTHON_PACKAGES=OFF \
             -DADD_PYTHON_PACKAGES_TO_RPM=OFF \
             -DBUILD_SHARED_LIBS=ON \
@@ -42,13 +44,13 @@ esac
             -Dcomma_build_io_rabbit_cat=OFF || die "cmake failed"
     echo "$0: running cpack in $( pwd )..." >&2
     cpack -j4 || die "cpack failed"
-    echo "$0: created package at $( realpath comma-$version_major.$version_minor.$version_patch-Linux.deb )" >&2
+    echo "$0: created package at $( realpath $package_name.deb )" >&2
     # todo: optionally run full regression test
     echo "$0: done" >&2
 )
 if [[ -d output ]]; then
-    cp ~/build/comma/comma-$version_major.$version_minor.$version_patch-Linux.deb output
-    echo "$0: copied $( realpath ~/build/comma/comma-$version_major.$version_minor.$version_patch-Linux.deb ) to $( realpath output )" >&2
+    cp ~/build/comma/$package_name.deb output
+    echo "$0: copied $( realpath ~/build/comma/$package_name.deb ) to $( realpath output )" >&2
 fi
 
 # (
