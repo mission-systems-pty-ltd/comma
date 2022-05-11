@@ -5,5 +5,5 @@ comma_dir="$2"
 [[ -n "$comma_dir" ]] || comma_dir=$( realpath ~/src/comma )
 [[ -d "$comma_dir" ]] || { echo "usage: $0 please specify <comma dir> explicitly (since you seem to either run with sudo or have comma not in '$comma_dir')" >&2; exit 1; }
 echo "$0: running:" >&2
-echo "docker build -t ubuntu.$version.build.basics --build-arg version=$version --no-cache -f '$comma_dir/system/package/debian/Dockerfile' ." >&2
-docker build -t ubuntu.$version.build.basics --build-arg version=$version --no-cache -f "$comma_dir/system/package/debian/Dockerfile" .
+echo "docker build -t ubuntu.$version.build.basics --build-arg version=$version --no-cache -f '$comma_dir/system/package/cpack/Dockerfile' ." >&2
+docker build -t ubuntu.$version.build.basics --build-arg version=$version --no-cache -f "$comma_dir/system/package/cpack/Dockerfile" .

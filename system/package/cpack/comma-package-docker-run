@@ -13,4 +13,4 @@ docker run \
        --mount "type=bind,source=$comma_dir,target=/mnt/comma" \
        --mount "type=bind,source=$( pwd ),target=/root/output" \
        ubuntu.$ubuntu_version.build.basics \
-       /mnt/comma/system/package/debian/comma-package-make $ubuntu_version $comma_version_major $comma_version_minor $comma_version_patch /mnt/comma || { echo "$0: failed" >&2; exit 1; }
+       /mnt/comma/system/package/cpack/comma-package-make $ubuntu_version $comma_version_major $comma_version_minor $comma_version_patch /mnt/comma || { echo "$0: failed" >&2; exit 1; }

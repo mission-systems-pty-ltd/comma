@@ -24,5 +24,6 @@ binary-arch:
 clean:
 	rm -f build
 	rm -rf $(BUILDDIR)
+	rm -f debian/files
 
 .PHONY: binary binary-arch binary-indep clean
