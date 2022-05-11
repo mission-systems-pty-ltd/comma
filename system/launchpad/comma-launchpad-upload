@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# todo
+#   - manual steps (automate if possible)
+#     - update changelog
+#       - version
+#       - changes
+#     - update default version in cmake
+#     - tag repo with version
+#     - commit
+#     - push
+#   ? check current version at launchpad
+
+function say() { echo "usage: $0: $@" >&2; }
+function die() { say "$@"; exit 1; }
+[[ -n "$2" ]] || { echo "usage: $0 <ubuntu-name> <comma-version> [<comma_dir>]" >&2; exit 1; }
+ubuntu_name=$1
+comma_version=$2
+comma_dir=$3
+name=comma_$comma_version
+[[ -n "$comma_dir" ]] || comma_dir=$( realpath ~/src/comma )
+rm -rf comma
+cp -r $comma_dir . || die "copying $comma_dir failed" # quick and dirty; or git clone instead?
+tar -acf $name.orig.tar.gz comma || die "tar failed"
+( cd comma && debuild -S -sa ) || die "debuild failed"
+dput ppa:yourppa/name $name-0ppa0_source.changes || die "dput failed"

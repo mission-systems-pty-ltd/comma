@@ -10,5 +10,5 @@ Package: comma
 Architecture: any
 Depends: libc-dev, libboost-all-dev (>=1.65), libzmq5 (>= 4.2.5-1), recode (>=3.6), socat
 Description: generic libraries and cli for csv and fixed-width data processing
-  comma, libraries and command line utilitie for efficient streaming and
+  comma, libraries and command line utilities for efficient streaming and
   processing of comma-separated (csv) and fixed-width binary data
