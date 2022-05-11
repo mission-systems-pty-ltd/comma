@@ -3,7 +3,7 @@ Standards-Version: 4.6.0.1
 Section: devel
 Priority: optional
 Maintainer: Vsevolod Vlaskine <vsevolod.vlaskine@gmail.com>
-Build-Depends: cmake
+Build-Depends: cmake, libc-dev, libboost-all-dev (>=1.65), libzmq5 (>= 4.2.5-1)
 Homepage: https://gitlab.com/orthographic/comma/-/wikis/home
 
 Package: comma

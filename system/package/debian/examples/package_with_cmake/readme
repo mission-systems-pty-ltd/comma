@@ -1,6 +1,7 @@
 courtesy of this generous tutorial: http://schneegans.github.io/lessons/2011/11/02/ppa-launchpad-cmake
 adding gpg-key and setting it in launchpad: https://help.launchpad.net/YourAccount/ImportingYourPGPKey
 debian package policy, all necessary files: https://www.debian.org/doc/debian-policy/ch-controlfields.html
+building ppa: https://www.ebower.com/docs/ubuntu-ppa/
 
 to create package, run commands from upload script one by one, except dput (unless
 you want to actually upload your package to ubuntu ppa launchpad)
