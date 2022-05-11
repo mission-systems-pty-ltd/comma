@@ -31,5 +31,3 @@ setuptools.setup(
         entry_points        = { 'console_scripts': ['csv-eval=comma.csv.applications.csv_eval:main'] },
         #scripts             = [ "comma/csv/applications/csv-eval" ]
      )
-
-# "console_scripts": [ 'sxm-detect=jfab.stm.imaging.scripts.sxm_detect:main'
