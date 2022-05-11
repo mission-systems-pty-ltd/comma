@@ -11,16 +11,20 @@
 #     - push
 #   ? check current version at launchpad
 
-function say() { echo "usage: $0: $@" >&2; }
-function die() { say "$@"; exit 1; }
-[[ -n "$2" ]] || { echo "usage: $0 <ubuntu-name> <comma-version> [<comma_dir>]" >&2; exit 1; }
-ubuntu_name=$1
+function say() { echo "usage: $0: $@" >&2; }; function die() { say "$@"; exit 1; }
+[[ -n "$2" ]] || { echo "usage: $0 <what> <ubuntu-name> <comma-version>" >&2; exit 1; }
+what=$1
 comma_version=$2
-comma_dir=$3
 name=comma_$comma_version
-[[ -n "$comma_dir" ]] || comma_dir=$( realpath ~/src/comma )
-rm -rf comma
-cp -r $comma_dir . || die "copying $comma_dir failed" # quick and dirty; or git clone instead?
-tar -acf $name.orig.tar.gz comma || die "tar failed"
-( cd comma && debuild -S -sa ) || die "debuild failed"
-dput ppa:yourppa/name $name-0ppa0_source.changes || die "dput failed"
+[[ -d comma ]] || die "comma directory not found; please run in something like ~/src"
+if [[ "$what" == "orig" ]]; then
+    rm -f comma/debian/files
+    tar -acf $name.orig.tar.gz comma || die "tar failed"
+    ( cd comma && debuild -S -sa ) || die "debuild failed"
+    dput ppa:orthographic/ppa $name-0ppa0_source.changes || die "dput failed"
+elif [[ "$what" == "update" ]]; then
+    ( cd comma && debuild -S -sd ) || die "debuild failed"
+    dput ppa:orthographic/ppa $name-0ppa0_source.changes || die "dput failed"
+else
+    die "expected <what>: orig or update; got \"$what\""
+fi

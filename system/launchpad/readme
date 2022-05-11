@@ -1,3 +1,22 @@
+uploading to launchpad
+
+- update comma/debian/changelog; see https://www.debian.org/doc/debian-policy/ch-source.html#debian-changelog-debian-changelog
+  - ubuntu version (currently jammy)
+  - version, e.g. 1.2.3
+  - changes
+  - date
+- update default version in comma/CMakeLists.txt
+- run:
+      cd ~/src/comma
+      git tag -a 1.2.3 -m 'your comments for version 1.2.3'
+      cd ..
+      comma/system/launchpad/comma-launchpad-upload update 1.2.3
+- once build in launchpad succeeds, commit and push
+- if there were changes in comma/python, release them into pypi (todo)
+- notify interested parties
+
+verifying ppa in docker
+
 todo
   - document
     - uploading to launchpad

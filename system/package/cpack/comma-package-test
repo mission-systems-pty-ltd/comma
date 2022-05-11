@@ -15,7 +15,7 @@ expected=$( seq 0 9 )
 [[ "$output" == "$expected" ]] || die "failed: unexpected output: $output"
 echo "$0: testing basic csv utilities: done" >&2
 
-echo "$0: testing bash utils..."
+echo "$0: testing bash utils..." >&2
 type -p comma-application-util || die "failed: failed"
 echo "$0: testing bash utils: done" >&2
 
