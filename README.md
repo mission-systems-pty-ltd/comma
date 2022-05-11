@@ -65,23 +65,4 @@ Albeit more tedious, it is safe since **comma** master branch is thoroughly test
 
 Read install.yml, if interested in tweaking build configuration.
 
-# command line applications
-
-- [**csv**: working with comma-separated and fixed-width binary data](csv/overview)
-- [**io**: utilities for input/output manipulations](io/overview)
-- [**name_value**: working with name-value pair data formats](name_value/overview)
-
-# bash scripting: utilities and design recipes
-
-**comma** applications help with complex data processing when they are bootstrapped together in Linux pipelines or bash scripts.
-
-**comma** bash utilities make writing bash scripts quicker and cleaner.
-
-[more...](bash/overview)
-
-# comma-test-run: regression test framework
-
-comma-test-run is a command line utility that runs minimalistic language-agnostic regression test suits.
-
-[more...](comma-test-run/comma-test-run:-a-simple-regression-test-framework)
-
+Documentation: [https://gitlab.com/orthographic/comma/-/wikis/home](https://gitlab.com/orthographic/comma/-/wikis/home)
