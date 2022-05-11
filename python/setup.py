@@ -3,14 +3,16 @@
 import setuptools, pathlib #from distutils.core import setup
 import comma.version
 
+# https://realpython.com/pypi-publish-python-package/
+
 setuptools.setup(
-        name                = 'python3-comma', # quick and dirty to make python packaging work
+        name                = 'comma-py', # quick and dirty to make python packaging work
         version             = comma.version.__version__,
         classifiers = [
           'Environment :: Console',
           'Intended Audience :: End Users/Desktop',
           'Intended Audience :: Developers',
-          'License :: OSI Approved :: BSD 3-Clause',
+          'License :: OSI Approved :: BSD License',
           'Operating System :: MacOS :: MacOS X',
           'Operating System :: Microsoft :: Windows',
           'Operating System :: POSIX',
