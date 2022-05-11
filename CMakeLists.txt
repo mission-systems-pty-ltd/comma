@@ -25,7 +25,7 @@ set( comma_version_minor "${CMAKE_PROJECT_VERSION_MINOR}" ) # quick and dirty
 set( comma_version_patch "${CMAKE_PROJECT_VERSION_PATCH}" ) # quick and dirty
 set( comma_version "${CMAKE_PROJECT_VERSION}" ) # quick and dirty
 # install( FILES COPYING DESTINATION share/doc/comma RENAME copyright ) # required by lintian
-# install( FILES system/package/debian/changelog.gz DESTINATION share/doc/comma ) # required by lintian
+# install( FILES system/package/cpack/changelog.gz DESTINATION share/doc/comma ) # required by lintian
 
 # option( USE_ARM_TOOLCHAIN "Cross compile using arm toolchain" OFF )
 # if( USE_ARM_TOOLCHAIN )
