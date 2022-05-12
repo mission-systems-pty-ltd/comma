@@ -26,7 +26,7 @@ The library code is self-documented. You can generate it with **doxigen**. Use *
 ## latest release
 
 ```
-sudo add-apt-repository --yes ppa:orthographic/ppa
+sudo add-apt-repository --yes ppa:orthographic/comma
 sudo add-apt-repository --yes multiverse
 sudo apt-get update
 sudo apt-get install comma

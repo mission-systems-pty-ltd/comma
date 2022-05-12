@@ -15,16 +15,16 @@ function say() { echo "usage: $0: $@" >&2; }; function die() { say "$@"; exit 1;
 [[ -n "$2" ]] || { echo "usage: $0 <what> <ubuntu-name> <comma-version>" >&2; exit 1; }
 what=$1
 comma_version=$2
-name=comma_$comma_version
+name=comma_${comma_version}
 [[ -d comma ]] || die "comma directory not found; please run in something like ~/src"
 if [[ "$what" == "orig" ]]; then
     rm -f comma/debian/files
     tar -acf $name.orig.tar.gz comma || die "tar failed"
     ( cd comma && debuild -S -sa ) || die "debuild failed"
-    dput ppa:orthographic/ppa $name-0ppa0_source.changes || die "dput failed"
+    dput ppa:orthographic/comma $name-0ppa0_source.changes || die "dput failed"
 elif [[ "$what" == "update" ]]; then
     ( cd comma && debuild -S -sd ) || die "debuild failed"
-    dput ppa:orthographic/ppa $name-0ppa0_source.changes || die "dput failed"
+    dput ppa:orthographic/comma $name-0ppa0_source.changes || die "dput failed"
 else
     die "expected <what>: orig or update; got \"$what\""
 fi
