@@ -4,7 +4,7 @@ function say() { echo "usage: $0: $@" >&2; }; function die() { say "$@"; exit 1;
 
 comma_py_version='1.0.0'
 
-add-apt-repository -y ppa:orthographic/ppa || die "add-apt-repository ppa:orthographic/ppa failed"
+add-apt-repository -y ppa:orthographic/comma || die "add-apt-repository ppa:orthographic/ppa failed"
 add-apt-repository -y multiverse || die "add-apt-repository multiverse failed"
 apt-get update || die "apt-get update failed"
 apt-get -y install comma || die "apt-get install comma failed"
