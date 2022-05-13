@@ -23,11 +23,11 @@ say "testing bash utils: done"
 say "running csv-eval --help (for reference)"
 csv-eval --help
 
-say "testing comma-pi..."
+say "testing comma-py..."
 output=$( python3 -c "import comma; print( comma.version.__version__ )" ) || die "failed: failed to run"
 expected=$comma_py_version
 [[ "$output" == "$expected" ]] || die "failed: expected: $expected; got: $output"
-say "testing comma-pi: done"
+say "testing comma-py: done"
 
 say "testing csv-eval..."
 output=$( seq 0 9 | csv-eval --fields a "a+=1" || exit ) || die "failed: failed to run"
