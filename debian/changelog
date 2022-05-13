@@ -1,5 +1,5 @@
-comma (1.0.1-0ppa0) jammy; urgency=low
+comma (1.0.2-0ppa0) jammy; urgency=low
 
-  * initial upload
+  * lib and cmake installation paths fixed
 
- -- Vsevolod Vlaskine <vsevolod.vlaskine@gmail.com>  Wed, 11 May 2022 13:12:01 +1000
+ -- Vsevolod Vlaskine <vsevolod.vlaskine@gmail.com>  Fri, 13 May 2022 20:56:43 +1000

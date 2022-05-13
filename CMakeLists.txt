@@ -9,23 +9,13 @@ if( USE_ARM_TOOLCHAIN )
 endif( USE_ARM_TOOLCHAIN )
 
 cmake_minimum_required( VERSION 3.1 )
-if( POLICY CMP0048 )
-    cmake_policy( SET CMP0048 NEW )
-    project( comma VERSION 1.0.1 LANGUAGES CXX )
-else( POLICY CMP0048 )
-    project( comma )
-    set( CMAKE_PROJECT_VERSION_MAJOR "1" CACHE STRING "comma version major" )
-    set( CMAKE_PROJECT_VERSION_MINOR "0" CACHE STRING "comma version minor" )
-    set( CMAKE_PROJECT_VERSION_PATCH "1" CACHE STRING "comma version patch" )
-    set( CMAKE_PROJECT_VERSION "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}.${CMAKE_PROJECT_VERSION_PATCH}" )
-endif( POLICY CMP0048 )
+cmake_policy( SET CMP0048 NEW )
+project( comma VERSION 1.0.2 LANGUAGES CXX )
 
 set( comma_version_major "${CMAKE_PROJECT_VERSION_MAJOR}" ) # quick and dirty
 set( comma_version_minor "${CMAKE_PROJECT_VERSION_MINOR}" ) # quick and dirty
 set( comma_version_patch "${CMAKE_PROJECT_VERSION_PATCH}" ) # quick and dirty
 set( comma_version "${CMAKE_PROJECT_VERSION}" ) # quick and dirty
-# install( FILES COPYING DESTINATION share/doc/comma RENAME copyright ) # required by lintian
-# install( FILES system/package/cpack/changelog.gz DESTINATION share/doc/comma ) # required by lintian
 
 # option( USE_ARM_TOOLCHAIN "Cross compile using arm toolchain" OFF )
 # if( USE_ARM_TOOLCHAIN )
@@ -122,23 +112,12 @@ endif( UNIX )
 SET( SOURCE_CODE_BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR} )
 SET( LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/lib )
 
+set( comma_INSTALL_BIN_DIR "bin" CACHE STRING "installation directory for binaries" )
+set( comma_INSTALL_INCLUDE_DIR "include/comma" CACHE STRING "installation directory for include directories" )
+set( comma_INSTALL_LIB_DIR "lib" CACHE STRING "installation directory for libraries" )
+set( comma_INSTALL_PACKAGE_DIR "CMakeFiles" CACHE STRING "installation directory for cmake files" )
+
 SET( comma_LIBRARY_PROPERTIES ${comma_LIBRARY_PROPERTIES} DEBUG_POSTFIX "-d" SOVERSION ${CMAKE_PROJECT_VERSION} LINK_FLAGS_RELEASE -s )
-
-IF( NOT comma_INSTALL_BIN_DIR )
-  SET( comma_INSTALL_BIN_DIR bin )
-ENDIF( NOT comma_INSTALL_BIN_DIR )
-
-IF( NOT comma_INSTALL_INCLUDE_DIR )
-    SET( comma_INSTALL_INCLUDE_DIR include/${PROJECT_NAME} )
-ENDIF( NOT comma_INSTALL_INCLUDE_DIR )
-
-if( NOT comma_INSTALL_LIB_DIR ) # voodoo
-  set( comma_INSTALL_LIB_DIR lib )
-endif( NOT comma_INSTALL_LIB_DIR )
-
-IF( NOT comma_INSTALL_PACKAGE_DIR )
-  SET( comma_INSTALL_PACKAGE_DIR CMakeFiles )
-ENDIF( NOT comma_INSTALL_PACKAGE_DIR )
 
 #INCLUDE_DIRECTORIES( ${comma_INSTALL_INCLUDE_DIR}/../ )
 
