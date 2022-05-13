@@ -35,9 +35,13 @@ SET(comma_REQUIRED_EXE_LINKER_FLAGS "@comma_REQUIRED_EXE_LINKER_FLAGS@")
 SET(comma_REQUIRED_SHARED_LINKER_FLAGS "@comma_REQUIRED_SHARED_LINKER_FLAGS@")
 SET(comma_REQUIRED_MODULE_LINKER_FLAGS "@comma_REQUIRED_MODULE_LINKER_FLAGS@")
 
-SET(comma_MAJOR_VERSION "@comma_MAJOR_VERSION@")
-SET(comma_MINOR_VERSION "@comma_MINOR_VERSION@")
-SET(comma_BUILD_VERSION "@comma_BUILD_VERSION@")
+SET(comma_version_major "@comma_version_major@")
+SET(comma_version_minor "@comma_version_minor@")
+SET(comma_version_patch "@comma_version_patch@")
+SET(comma_MAJOR_VERSION "@comma_version_major@") # quick and dirty, otherwise comma so library version in dependent packages seem to get messed up
+SET(comma_MINOR_VERSION "@comma_version_minor@") # quick and dirty, otherwise comma so library version in dependent packages seem to get messed up
+SET(comma_BUILD_VERSION "@comma_version_patch@") # quick and dirty, otherwise comma so library version in dependent packages seem to get messed up
+set(comma_version "@comma_version@")
 
 SET(comma_USE_FILE "@comma_USE_FILE@")
 

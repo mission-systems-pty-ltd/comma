@@ -3,10 +3,10 @@
 # The following variables are set if comma is found.
 #  comma_FOUND         - Set to true when comma is found.
 #  comma_USE_FILE      - CMake file to use comma.
-#  comma_MAJOR_VERSION - The comma major version number.
-#  comma_MINOR_VERSION - The comma minor version number
+#  comma_version_major - The comma major version number.
+#  comma_version_minor - The comma minor version number
 #                       (odd non-release).
-#  comma_BUILD_VERSION - The comma patch level
+#  comma_version_patch - The comma patch level
 #                       (meaningless for odd minor).
 #  comma_INCLUDE_DIRS  - Include directories for comma
 #  comma_LIBRARY_DIRS  - Link directories for comma libraries
@@ -85,4 +85,3 @@ ENDIF ( comma_FOUND )
 IF( NOT comma_FOUND )
   MESSAGE(FATAL_ERROR ${comma_DIR_MESSAGE})
 ENDIF( NOT comma_FOUND )
-
