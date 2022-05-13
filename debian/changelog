@@ -1,4 +1,4 @@
-comma (1.0.2-0ppa0) jammy; urgency=low
+comma (1.0.3-0ppa0) jammy; urgency=low
 
   * lib and cmake installation paths fixed
 
