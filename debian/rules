@@ -16,6 +16,7 @@ build:
 							 -DINSTALL_TESTS=OFF \
 							 -Dcomma_INSTALL_LIB_DIR=lib/x86_64-linux-gnu \
 							 -Dcomma_INSTALL_PACKAGE_DIR=lib/x86_64-linux-gnu/cmake/comma \
+							 -Dcomma_INSTALL_RUN_POST_INSTALL=OFF \
 							 -Dcomma_BUILD_XML=OFF \
 							 -Dcomma_BUILD_ZEROMQ=OFF \
 							 -Dcomma_build_io_rabbit_cat=OFF

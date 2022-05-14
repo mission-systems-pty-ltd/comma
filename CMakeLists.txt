@@ -10,7 +10,7 @@ endif( USE_ARM_TOOLCHAIN )
 
 cmake_minimum_required( VERSION 3.1 )
 cmake_policy( SET CMP0048 NEW )
-project( comma VERSION 1.0.7 LANGUAGES CXX )
+project( comma VERSION 1.0.8 LANGUAGES CXX )
 
 set( comma_version_major "${CMAKE_PROJECT_VERSION_MAJOR}" ) # quick and dirty
 set( comma_version_minor "${CMAKE_PROJECT_VERSION_MINOR}" ) # quick and dirty
@@ -321,7 +321,10 @@ if( CMAKE_COMPILER_IS_GNUCXX )
     endif( CMAKE_BUILD_TYPE STREQUAL "Release" )
 endif( CMAKE_COMPILER_IS_GNUCXX )
 
-add_subdirectory( CMakeFiles/post_install ) # uber-quick and dirty
+option( comma_INSTALL_RUN_POST_INSTALL "run post install step (currently just ldconfig)" ON )
+if( comma_INSTALL_RUN_POST_INSTALL )
+    add_subdirectory( CMakeFiles/post_install ) # uber-quick and dirty
+endif( comma_INSTALL_RUN_POST_INSTALL )
 
 # todo
 #     build ppa
