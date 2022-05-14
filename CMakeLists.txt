@@ -10,7 +10,7 @@ endif( USE_ARM_TOOLCHAIN )
 
 cmake_minimum_required( VERSION 3.1 )
 cmake_policy( SET CMP0048 NEW )
-project( comma VERSION 1.0.5 LANGUAGES CXX )
+project( comma VERSION 1.0.7 LANGUAGES CXX )
 
 set( comma_version_major "${CMAKE_PROJECT_VERSION_MAJOR}" ) # quick and dirty
 set( comma_version_minor "${CMAKE_PROJECT_VERSION_MINOR}" ) # quick and dirty

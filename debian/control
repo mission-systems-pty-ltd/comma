@@ -3,12 +3,12 @@ Standards-Version: 4.6.0.1
 Section: devel
 Priority: optional
 Maintainer: Vsevolod Vlaskine <vsevolod.vlaskine@gmail.com>
-Build-Depends: cmake, libc-dev, libboost-all-dev (>=1.65), libzmq5 (>= 4.2.5-1)
+Build-Depends: cmake, libc-dev, libboost-all-dev (>=1.65)
 Homepage: https://gitlab.com/orthographic/comma/-/wikis/home
 
 Package: comma
 Architecture: any
-Depends: libc-dev, libboost-all-dev (>=1.65), libzmq5 (>= 4.2.5-1), recode (>=3.6), socat
+Depends: libc-dev, libboost-all-dev (>=1.65), gawk, recode, socat
 Description: generic libraries and cli for csv and fixed-width data processing
   comma, libraries and command line utilities for efficient streaming and
   processing of comma-separated (csv) and fixed-width binary data
