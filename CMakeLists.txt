@@ -10,7 +10,7 @@ endif( USE_ARM_TOOLCHAIN )
 
 cmake_minimum_required( VERSION 3.1 )
 cmake_policy( SET CMP0048 NEW )
-project( comma VERSION 1.0.3 LANGUAGES CXX )
+project( comma VERSION 1.0.4 LANGUAGES CXX )
 
 set( comma_version_major "${CMAKE_PROJECT_VERSION_MAJOR}" ) # quick and dirty
 set( comma_version_minor "${CMAKE_PROJECT_VERSION_MINOR}" ) # quick and dirty
@@ -112,10 +112,10 @@ endif( UNIX )
 SET( SOURCE_CODE_BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR} )
 SET( LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/lib )
 
-set( comma_INSTALL_BIN_DIR "bin" CACHE STRING "installation directory for binaries" )
-set( comma_INSTALL_INCLUDE_DIR "include/comma" CACHE STRING "installation directory for include directories" )
-set( comma_INSTALL_LIB_DIR "lib" CACHE STRING "installation directory for libraries" )
-set( comma_INSTALL_PACKAGE_DIR "CMakeFiles" CACHE STRING "installation directory for cmake files" )
+set( comma_INSTALL_BIN_DIR bin CACHE PATH "installation directory for binaries" )
+set( comma_INSTALL_INCLUDE_DIR include/comma CACHE PATH "installation directory for include directories" )
+set( comma_INSTALL_LIB_DIR lib CACHE PATH "installation directory for libraries" )
+set( comma_INSTALL_PACKAGE_DIR CMakeFiles CACHE PATH "installation directory for cmake files" )
 
 SET( comma_LIBRARY_PROPERTIES ${comma_LIBRARY_PROPERTIES} DEBUG_POSTFIX "-d" SOVERSION ${CMAKE_PROJECT_VERSION} LINK_FLAGS_RELEASE -s )
 
