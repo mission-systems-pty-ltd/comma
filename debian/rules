@@ -28,13 +28,16 @@ binary: binary-indep binary-arch
 binary-indep:
 	# nothing to be done
 
-# super quick and dirty:
-#     mkdir debian/tmp/usr/lib -p
-#     cp -r $(BUILDDIR)/lib/x86_64-linux-gnu debian/tmp/usr/lib
-# there seems to be a bug, most likely in generate_comma_config.cmake
-# that installs libraries in build instead of debian/tmp
-# (cannot reproduce it locally: locally, installation works,
-# but on launchpad it does not
+# todo
+#   ! try running rules with make locally
+#   - try cpack (which sucks)
+#   for now super quick and dirty:
+#       mkdir debian/tmp/usr/lib -p
+#       cp -r $(BUILDDIR)/lib/x86_64-linux-gnu debian/tmp/usr/lib
+#   there seems to be a bug, most likely in generate_comma_config.cmake
+#   that installs libraries in build instead of debian/tmp
+#   (cannot reproduce it locally: locally, installation works,
+#   but on launchpad it does not
 binary-arch:
 	cd $(BUILDDIR); make install
 	mkdir debian/tmp/usr/lib -p
