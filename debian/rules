@@ -32,7 +32,8 @@ binary-indep:
 # (cannot reproduce it locally: locally, installation works,
 # but on launchpad it does not
 binary-arch:
-	cp -r build/lib debian/tmp
+	mkdir -p debian/tmp/usr
+	cp -r build/lib debian/tmp/usr
 	cd build; cmake -P cmake_install.cmake
 	mkdir debian/tmp/DEBIAN
 	dpkg-gencontrol -pcomma
