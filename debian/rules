@@ -1,10 +1,12 @@
 #!/usr/bin/make -f
 
+BUILDDIR=build_dir
+
 # secondly called by launchpad
 build:
-	mkdir build;
-	cd build; cmake .. \
-                     -DCMAKE_INSTALL_PREFIX=../debian/tmp/usr \
+	mkdir $(BUILDDIR);
+	cd $(BUILDDIR); cmake .. \
+	                 -DCMAKE_INSTALL_PREFIX=../debian/tmp/usr \
 					 -DCMAKE_BUILD_TYPE=Release \
 					 -DBUILD_SHARED_LIBS=ON \
 					 -DBUILD_PYTHON_PACKAGES=OFF \
@@ -18,7 +20,7 @@ build:
 					 -Dcomma_BUILD_XML=OFF \
 					 -Dcomma_BUILD_ZEROMQ=OFF \
 					 -Dcomma_build_io_rabbit_cat=OFF
-	make -C build
+	cd $(BUILDDIR); make
 
 # thirdly called by launchpad
 binary: binary-indep binary-arch
@@ -26,22 +28,24 @@ binary: binary-indep binary-arch
 binary-indep:
 	# nothing to be done
 
-# super quick and dirty: cp -r build/lib debian/tmp
+# super quick and dirty:
+#     mkdir debian/tmp/usr/lib -p
+#     cp -r $(BUILDDIR)/lib/x86_64-linux-gnu debian/tmp/usr/lib
 # there seems to be a bug, most likely in generate_comma_config.cmake
 # that installs libraries in build instead of debian/tmp
 # (cannot reproduce it locally: locally, installation works,
 # but on launchpad it does not
 binary-arch:
-	mkdir -p debian/tmp/usr
-	cp -r build/lib debian/tmp/usr
-	cd build; cmake -P cmake_install.cmake
+	cd $(BUILDDIR); make install
+	mkdir debian/tmp/usr/lib -p
+	cp -r $(BUILDDIR)/lib/x86_64-linux-gnu debian/tmp/usr/lib
 	mkdir debian/tmp/DEBIAN
 	dpkg-gencontrol -pcomma
 	dpkg --build debian/tmp ..
 
 # firstly called by launchpad
 clean:
-	rm -rf build
+	rm -rf $(BUILDDIR)
 	rm -f debian/files
 
 .PHONY: binary binary-arch binary-indep clean

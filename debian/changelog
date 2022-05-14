@@ -1,5 +1,5 @@
-comma (1.0.10-0ppa0) jammy; urgency=low
+comma (1.0.12-0ppa0) jammy; urgency=low
 
   * launchpad stopped installing so files; trying to fix...
 
- -- Vsevolod Vlaskine <vsevolod.vlaskine@gmail.com>  Sat, 14 May 2022 21:26:51 +1000
+ -- Vsevolod Vlaskine <vsevolod.vlaskine@gmail.com>  Sat, 14 May 2022 22:23:49 +1000
