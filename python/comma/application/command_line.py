@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 import argparse
 
 class set_dictionary_action( argparse.Action ):

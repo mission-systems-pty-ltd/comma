@@ -370,7 +370,7 @@ set( CPACK_DEPENDENCIES_LIBPROCPS "libprocps8 (>= 1)" CACHE STRING "libprocps ve
 #set( CPACK_DEBIAN_PACKAGE_DEPENDS "${CPACK_DEPENDENCIES_LIBPROCPS}, libzmq5 (>= 4.2.5-1), libboost-all-dev (>=1.65), recode (>=3.6), socat, python3-numpy (>=1.14.1), libc (>=6)" )
 #set( CPACK_DEBIAN_PACKAGE_DEPENDS "${CPACK_DEPENDENCIES_LIBPROCPS}, libzmq5 (>= 4.2.5-1), libboost-all-dev (>=1.65), recode (>=3.6), socat, python3-numpy (>=1.14.1), libc" )
 #set( CPACK_DEBIAN_PACKAGE_SHLIBDEPS "libboost-all-dev (>=1.65), libc" )
-set( CPACK_DEBIAN_PACKAGE_DEPENDS "${CPACK_DEPENDENCIES_LIBPROCPS}, libzmq5 (>= 4.2.5-1), libboost-all-dev (>=1.65), recode (>=3.6), socat, python3-numpy (>=1.14.1), libc-dev" )
+set( CPACK_DEBIAN_PACKAGE_DEPENDS "${CPACK_DEPENDENCIES_LIBPROCPS}, libzmq5 (>= 4.2.5-1), libboost-all-dev (>=1.65), recode (>=3.6), socat, libc-dev" )
 set( CPACK_DEBIAN_PACKAGE_SHLIBDEPS "libboost-all-dev (>=1.65), libc-dev" )
 set( CPACK_DEBIAN_PACKAGE_GENERATE_SHLIBS ON )
 set( CPACK_DEBIAN_PACKAGE_GENERATE_SHLIBS_POLICY ON )
