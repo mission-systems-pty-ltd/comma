@@ -9,8 +9,15 @@ if( USE_ARM_TOOLCHAIN )
 endif( USE_ARM_TOOLCHAIN )
 
 cmake_minimum_required( VERSION 3.1 )
-cmake_policy( SET CMP0048 NEW )
-project( comma VERSION 1.0.12 LANGUAGES CXX )
+if( POLICY CMP0048 )
+    cmake_policy( SET CMP0048 NEW )
+    project( comma VERSION 1.0.12 LANGUAGES CXX )
+else( POLICY CMP0048 )
+    project( comma )
+    set( CMAKE_PROJECT_VERSION_MAJOR 1 )
+    set( CMAKE_PROJECT_VERSION_MINOR 0 )
+    set( CMAKE_PROJECT_VERSION_PATCH 12 )
+endif( POLICY CMP0048 )
 
 set( comma_version_major "${CMAKE_PROJECT_VERSION_MAJOR}" ) # quick and dirty
 set( comma_version_minor "${CMAKE_PROJECT_VERSION_MINOR}" ) # quick and dirty
