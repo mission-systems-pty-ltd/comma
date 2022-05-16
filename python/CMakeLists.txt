@@ -40,16 +40,15 @@ MACRO( set_python_build_lib_directory )
     ENDIF( MODULE_EXIT_CODE MATCHES 0 )
 ENDMACRO( set_python_build_lib_directory )
 
-
 IF( NOT BUILD_PYTHON_PACKAGES )
     disable_python_testing()
     RETURN()
 ENDIF( NOT BUILD_PYTHON_PACKAGES )
 
-FIND_PROGRAM( PYTHON "python" )
+FIND_PROGRAM( PYTHON "python3" )
 
 IF( NOT PYTHON )
-    MESSAGE( WARNING "python not found" )
+    MESSAGE( WARNING "python3 not found" )
     MESSAGE( STATUS "comma/python modules and scripts will not be installed" )
     disable_python_testing()
     RETURN()
