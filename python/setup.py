@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import setuptools, pathlib #from distutils.core import setup
+import setuptools #from distutils.core import setup
 import comma.version
 
 # https://realpython.com/pypi-publish-python-package/
@@ -22,7 +22,7 @@ setuptools.setup(
         description         = 'csv and fixed-width binary python utilities',
         url                 = 'https://gitlab.com/orthographic/comma',
         license             = 'BSD 3-Clause',
-        long_description    = ( pathlib.Path(__file__).parent / "README.md" ).read_text(),
+        long_description    =  open( '/'.join( __file__.split( '/' )[:-1] ) + '/README.md' ).read(), #long_description    = ( pathlib.Path(__file__).parent / "README.md" ).read_text(),
         long_description_content_type = "text/markdown",
         author              = "vsevolod vlaskine",
         author_email        = "vsevolod.vlaskine@gmail.com",
