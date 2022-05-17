@@ -47,7 +47,8 @@ pip3 install comma-py==1.0.0
 ### building it manually
 #### install dependencies (ubuntu)
 ```
-sudo apt-get install git build-essential cmake cmake-curses-gui perl python3-dev python3-numpy libboost-all-dev socat libzmq3-dev libgtest-dev libprocps-dev recode expat gawk
+sudo apt-get install git python3-pip build-essential cmake cmake-curses-gui perl python3-dev libboost-all-dev socat libzmq3-dev libgtest-dev libprocps-dev recode expat gawk
+sudo pip3 install numpy
 ```
 #### build
 

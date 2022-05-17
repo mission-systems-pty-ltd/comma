@@ -85,7 +85,7 @@ ADD_CUSTOM_TARGET( python_build ALL
 #                    COMMAND ${PYTHON} ${SETUP_PY} build --build-base ${BUILD_BASE} install ${INSTALL_PREFIX_OPTION} --force
 #                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )" )
 
-INSTALL( CODE "EXECUTE_PROCESS(
+install( CODE "EXECUTE_PROCESS(
                     COMMAND ${PYTHON} -m pip install ${CMAKE_CURRENT_SOURCE_DIR} --ignore-installed
                     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )" )
 

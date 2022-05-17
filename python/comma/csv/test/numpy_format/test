@@ -4,7 +4,7 @@ function comma_format_to_numpy
 {
     local compress=$2
     compress=${compress:+", $compress"}
-    python -c "$( cat <<END
+    python3 -c "$( cat <<END
 from __future__ import print_function
 import comma
 import numpy

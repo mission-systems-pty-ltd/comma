@@ -28,8 +28,9 @@ done
 variables="$data_dir/variable_vals"
 pass_count=0
 total_count=0
-python_version="$( python -c "from __future__ import print_function; import sys; print( sys.version_info.major )" )" # sigh...
-python_prefix="python${python_version}:"
+#python_version="$( python -c "from __future__ import print_function; import sys; print( sys.version_info.major )" )" # sigh...
+#python_prefix="python${python_version}:"
+python_prefix="python3:"
 
 for input in $data_dir/input_*; do # for input in $data_dir/input*; do
     (( ++total_count ))

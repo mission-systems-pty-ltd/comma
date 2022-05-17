@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 import numpy as np
 import comma
 t = comma.csv.struct( 'id,value', 'u4', 'f8' )
@@ -11,4 +11,3 @@ for data in s:
             continue
         max[id] = current_max
 s.write(np.array(max.items(), dtype=t))
-

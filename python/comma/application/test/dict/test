@@ -10,8 +10,7 @@ function main()
 {
     local value_type
     value_type=${input_value_type:+"value_type=$input_value_type, "}
-    python -c "
-from __future__ import print_function
+    python3 -c "
 import comma.application
 import argparse
 

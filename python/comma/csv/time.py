@@ -39,7 +39,7 @@ def to_numpy(t):
     >>> to_numpy('')
     numpy.datetime64('NaT')
     """
-    if NUMPY_VERSION_MAJOR_ == 1 and NUMPY_VERSION_MAJOR_ < 14 and isinstance( t, bytes ): t = t.decode( 'utf-8' ) # quick and dirty, since ubuntu 18.04 python3-numpy still install numpy 1.13; remove once move on with the version since it's waste of cpu cycles
+    if NUMPY_VERSION_MAJOR_ == 1 and NUMPY_VERSION_MAJOR_ < 14 and isinstance( t, bytes ): t = t.decode( 'utf-8' ) # quick and dirty, since some packages, e.g. ubuntu 18.04 python3-numpy, still install numpy 1.13; remove once move on with the version since it's waste of cpu cycles
     if t in ['', 'not-a-date-time']: return NOT_A_DATE_TIME
     if t in ['+infinity', '+inf', 'infinity', 'inf']: return POSITIVE_INFINITY
     if t in ['-infinity', '-inf']: return NEGATIVE_INFINITY

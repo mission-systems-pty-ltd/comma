@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import setuptools #from distutils.core import setup
 import comma.version
@@ -28,7 +28,7 @@ setuptools.setup(
         author_email        = "vsevolod.vlaskine@gmail.com",
         maintainer          = 'vsevolod vlaskine',
         maintainer_email    = 'vsevolod.vlaskine@gmail.com',
-        python_requires     = '>=2.7', # 3.6
+        python_requires     = '>=3.6',
         install_requires    = [ 'numpy' ], # todo?
         packages            = [ 'comma', 'comma.csv', 'comma.csv.applications', 'comma.io', 'comma.numpy', 'comma.signal', 'comma.util', 'comma.cpp_bindings', 'comma.application' ],
         package_dir         = { 'comma': 'comma', 'comma.cpp_bindings': 'comma/cpp_bindings' },

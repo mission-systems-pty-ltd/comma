@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function comma_time_roundabout {
-    python -c "$( cat <<END
+    python3 -c "$( cat <<END
 from __future__ import print_function
 import numpy
 import comma

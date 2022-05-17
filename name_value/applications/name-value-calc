@@ -118,7 +118,7 @@ function logical_op()
 function python_converter()
 {
     # todo? python2 -c "import operator...
-    python -c "
+    python3 -c "
 from __future__ import division
 from __future__ import print_function
 import operator

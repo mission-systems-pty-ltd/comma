@@ -2,7 +2,7 @@
 
 function comma_guess_format
 {
-    python -c "$( cat <<END
+    python3 -c "$( cat <<END
 from __future__ import print_function
 import comma
 import numpy

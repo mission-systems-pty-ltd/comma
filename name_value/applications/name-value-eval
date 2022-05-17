@@ -73,7 +73,7 @@ Options:
 Examples:
 
     $name --variables=vars.pv commands.py
-    
+
     cat commands.py | $name --variables=vars.pv
 
     cat vars.pv | $name commands.py
@@ -134,7 +134,8 @@ output_vars_option=
 input=
 tmpdir="."
 # python_cmd="python2"
-python_cmd="python"
+# python_cmd="python"
+python_cmd="python3"
 
 while [[ $# -gt 0 ]]; do
     arg="${1#*=}"
@@ -195,7 +196,7 @@ if (( test_option )); then preparse_options+=" --test"; fi
   cat "$tmp_vars";
   if [[ -n "$input" ]]; then name-value-eval-preparse $preparse_options "$input"
   else name-value-eval-preparse $preparse_options; fi ) > $python_input
-  
+
 if (( debug )); then cat $python_input | sed 's/^/debug: /g' > /dev/tty; fi
 
 #cat "$python_input" > ./python_input
@@ -215,4 +216,3 @@ else
 fi
 
 exit $exit_code
-

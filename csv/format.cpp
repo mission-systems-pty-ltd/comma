@@ -226,8 +226,8 @@ static boost::posix_time::ptime time_from_iso_string( const std::string& s )
     if ( s.empty() || s == "not-a-date-time" ) { return boost::posix_time::not_a_date_time; }
     else if ( s == "+infinity" || s == "+inf" || s == "inf" ) { return boost::posix_time::pos_infin; }
     else if ( s == "-infinity" || s == "-inf" ) { return boost::posix_time::neg_infin; }
-    else 
-    { 
+    else
+    {
         try { return boost::posix_time::from_iso_string( s ); }
         catch ( ... ) { return boost::posix_time::not_a_date_time; }
     }
@@ -459,7 +459,7 @@ std::string format::collapsed_string() const
 
 // formats for not-a-date-time, +infinity, -infinity
 // note: these are not boost representations. in boost, +infinity = int64::max() - 1, -infinity = int64::min(), not-a-date-time = int64::max()
-// not-a-date-time is chosen to matche python numpy.datetime64('NaT') = int64::min()
+// not-a-date-time is chosen to match python numpy.datetime64('NaT') = int64::min()
 static const comma::int64 bin_not_a_date_time = std::numeric_limits< comma::int64 >::min();
 static const comma::int64 bin_time_pos_infin = std::numeric_limits< comma::int64 >::max();
 static const comma::int64 bin_time_neg_infin = std::numeric_limits< comma::int64 >::min() + 1;
