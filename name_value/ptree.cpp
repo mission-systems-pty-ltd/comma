@@ -1,31 +1,4 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /// @author cedric wohlleber
 /// @author vsevolod vlaskine
@@ -50,7 +23,7 @@
 #include "ptree.h"
 
 namespace comma {
-    
+
 void property_tree::put( boost::property_tree::ptree& ptree, const xpath& path, const std::string& value, bool use_index )
 {
     boost::property_tree::ptree* t = &ptree;
@@ -132,7 +105,7 @@ boost::optional< std::string > property_tree::get( const boost::property_tree::p
     if( !t ) { return boost::none; }
     return t->get_value_optional< std::string >();
 }
-    
+
 } // namespace comma {
 
 namespace comma { namespace impl {
@@ -145,15 +118,23 @@ static void ptree_output_value_( std::ostream& os, const std::string& value, boo
     os << path.to_string() << equal_sign;
     bool quoted = true;
     if( unquote_numbers )
-    { 
+    {
         if( "true" == value || "false" == value ) { quoted = false; }
         else if( !boost::regex_match( value, number_like_string ) ) { try { boost::lexical_cast< double >( value ); quoted = false; } catch ( ... ) {} }
     }
     if( quoted ) { os << '"' << value << '"'; } else { os << value; }
 }
 
-static void ptree_to_path_value_string_impl( std::ostream& os, boost::property_tree::ptree::const_iterator i, bool is_begin, xpath& path, xpath& display_path, 
-                                                    property_tree::path_mode mode, char equal_sign, char delimiter, const std::string& root, bool const unquote_numbers )
+static void ptree_to_path_value_string_impl( std::ostream& os
+                                           , boost::property_tree::ptree::const_iterator i
+                                           , bool is_begin
+                                           , xpath& path
+                                           , xpath& display_path
+                                           , property_tree::path_mode mode
+                                           , char equal_sign
+                                           , char delimiter
+                                           , const std::string& root
+                                           , bool const unquote_numbers )
 {
     if( i->second.begin() == i->second.end() )
     {
@@ -169,7 +150,7 @@ static void ptree_to_path_value_string_impl( std::ostream& os, boost::property_t
             const std::string& stripped = comma::strip( *v );
             if( !stripped.empty() )  { ptree_output_value_( os, stripped, is_begin, display_path, equal_sign, delimiter, root, unquote_numbers );  }
         }
-        
+
         comma::uint32 index=0;
         for( boost::property_tree::ptree::const_iterator j = i->second.begin(); j != i->second.end(); ++j )
         {
@@ -195,7 +176,7 @@ void property_tree::to_path_value( std::ostream& os, const boost::property_tree:
     {
         // display_path is the modified key path showing array indices, if array exists within e.g abc[0]/xyz[0]
         // But the actual path to the value is many empty keys under abc and abc/xyz
-        // Boost: "JSON arrays are mapped to nodes. Each element is a child node with an empty name. 
+        // Boost: "JSON arrays are mapped to nodes. Each element is a child node with an empty name.
         //         If a node has both named and unnamed child nodes, it cannot be mapped to a JSON representation."
         // http://www.boost.org/doc/libs/1_41_0/doc/html/boost_propertytree/parsers.html#boost_propertytree.parsers.json_parser
         xpath path;
@@ -241,7 +222,7 @@ template <> struct path_filter< property_tree::path_value::no_overwrite >
     bool put_allowed( const std::string& p, bool use_index ) const
     {
         if( use_index )
-        { 
+        {
             if( property_tree::get( ptree_, p, use_index ) ) { COMMA_THROW( comma::exception, "input path '" << p << "' already in the tree" ); }
         }
         else
@@ -328,11 +309,11 @@ bool is_seekable( std::istream& stream ) { return static_cast< bool >( stream.se
 
 void property_tree::from_unknown( std::istream& stream, boost::property_tree::ptree& ptree, property_tree::path_value::check_repeated_paths check_type, char equal_sign, char delimiter, bool use_index )
 {
-    if( is_seekable( stream ) ) 
+    if( is_seekable( stream ) )
     {
-        from_unknown_seekable( stream, ptree, check_type, equal_sign, delimiter, use_index ); 
+        from_unknown_seekable( stream, ptree, check_type, equal_sign, delimiter, use_index );
     }
-    else 
+    else
     {
         std::stringstream buffer;
         buffer << stream.rdbuf();
@@ -396,7 +377,7 @@ static boost::property_tree::ptree xml_to_ptree_( boost::property_tree::ptree& p
 
 void property_tree::read_xml( std::istream& is, boost::property_tree::ptree& ptree )
 {
-        boost::property_tree::read_xml( is, ptree ); 
+        boost::property_tree::read_xml( is, ptree );
         ptree=xml_to_ptree_(ptree);
 }
 

@@ -10,9 +10,9 @@ test[4]/output='b'
 test[4]/status=0
 #test[5]/output='a;b;'
 #test[5]/status=0
-test[6]/output='y[0]="a";y[1]="b"'
+test[6]/output='y[0]="a";y[1]="b";'
 test[6]/status=0
-test[7]/output='y[0]="4";y[0]="5"'
+test[7]/output='y[0]="4";y[0]="5";'
 test[7]/status=0
 test[8]/output='4'
 test[8]/status=0

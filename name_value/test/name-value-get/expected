@@ -11,14 +11,14 @@ empty_input[0]/output=''
 non_existant[0]/output=''
 non_existant[1]/output=''
 
-multiple_results[0]/output='c="0";c="1"'
-multiple_results[1]/output='c="0";d="1";e="2"'
+multiple_results[0]/output='c="0";c="1";'
+multiple_results[1]/output='c="0";d="1";e="2";'
 
 indexed_path[0]/output='1'
 indexed_path[1]/output='1'
-indexed_path[2]/output='c="0"'
+indexed_path[2]/output='c="0";'
 indexed_path[3]/output='1'
-indexed_path[4]/output='b[0]/c="0";b[1]/c="1"'
+indexed_path[4]/output='b[0]/c="0";b[1]/c="1";'
 
 regex[0]/output='1'
 regex[1]/output='0;1;'
