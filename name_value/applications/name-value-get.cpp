@@ -151,7 +151,7 @@ template <> struct traits< path_value > // quick and dirty
         ptree = comma::property_tree::from_path_value_string( line, equal_sign, path_value_delimiter, check_type, true );
     }
     static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const std::string& path )
-    { 
+    {
         static bool first = true; // todo: will not work linewise, fix
         if( !first ) { std::cout << path_value_delimiter; }
         first = false;
@@ -164,30 +164,36 @@ static std::vector< boost::property_tree::ptree::path_type > paths;
 static std::vector< boost::optional< boost::regex > > path_regex;
 static void ( * input )( std::istream& is, boost::property_tree::ptree& ptree );
 static void ( * output )( std::ostream& is, const boost::property_tree::ptree& ptree, const std::string& );
+static bool output_last_line_break = false;
 
 static void match_( std::ostream& os, const boost::property_tree::ptree& ptree )
 {
     static const boost::property_tree::ptree::path_type empty;
+    bool found = false;
     for( std::size_t i = 0; i < paths.size(); ++i )
     {
         boost::optional< const boost::property_tree::ptree& > child = comma::property_tree::get_tree(ptree, path_strings[i]);
         if( !child ) { continue; }
         boost::optional< std::string > value = child->get_optional< std::string >( empty );
-        if( value && !value->empty() )
-        { 
+        if( value && !value->empty() ) // todo! homogenise single values with path-value pairs; currently the following example will output junk: ( echo x/z=0; echo y=1 ) | name-value-get x y
+        {
+            if( found ) { os << path_value_delimiter; }
             if( output_path ) { os << path_strings[i] << equal_sign; }
-            os << *value << std::endl;
+            os << *value;
         }
         else
-        { 
+        {
             output( os, *child, path_strings[i] );
         }
+        found = true;
     }
+    if( found && output_last_line_break ) { os << std::endl; }
 }
 
-static void traverse_( std::ostream& os, const boost::property_tree::ptree& ptree, boost::property_tree::ptree::const_iterator it, comma::xpath& path )
+static bool traverse_( std::ostream& os, const boost::property_tree::ptree& ptree, boost::property_tree::ptree::const_iterator it, comma::xpath& path )
 {
     static const boost::property_tree::ptree::path_type empty;
+    static bool found = false;
     path /= it->first;
     const std::string& s = path.to_string( '/' ); // quick and dirty
     for( std::size_t i = 0; i < paths.size(); ++i ) // todo: quick and dirty: can prune much earlier, i guess...
@@ -197,30 +203,32 @@ static void traverse_( std::ostream& os, const boost::property_tree::ptree& ptre
         boost::optional< const boost::property_tree::ptree& > child = ptree.get_child_optional( path.to_string( '.' ) ); // quick and dirty, watch performance
         if( !child ) { continue; }
         boost::optional< std::string > value = child->get_optional< std::string >( empty );
-        if( value && !value->empty() )
-        { 
+        if( value && !value->empty() ) // todo! homogenise single values with path-value pairs; currently the following example will output junk: ( echo x/z=0; echo y=1 ) | name-value-get x y
+        {
+            if( found ) { os << path_value_delimiter; }
             if( output_path ) { os << s << equal_sign; }
-            os << *value << std::endl;
+            os << *value;
         }
         else
         {
             output( os, *child, s );
         }
+        found = true;
     }
-    for( boost::property_tree::ptree::const_iterator j = it->second.begin(); j != it->second.end(); ++j )
-    {
-        traverse_( os, ptree, j, path );
-    }
-    if( !(it->first.empty()) ) { path = path.head(); }
+    for( boost::property_tree::ptree::const_iterator j = it->second.begin(); j != it->second.end(); ++j ) { traverse_( os, ptree, j, path ); }
+    if( !( it->first.empty() ) ) { path = path.head(); }
+    return found; // todo! aweful!
 }
 
 void match_regex_( std::ostream& os, const boost::property_tree::ptree& ptree )
 {
+    bool found = false;
     for( boost::property_tree::ptree::const_iterator i = ptree.begin(); i != ptree.end(); ++i )
     {
         comma::xpath path;
-        traverse_( os, ptree, i, path );
+        found = traverse_( os, ptree, i, path ) || found;
     }
+    if( found && output_last_line_break ) { os << std::endl; }
 }
 
 static bool is_regex_(const std::string& s)
@@ -228,7 +236,7 @@ static bool is_regex_(const std::string& s)
     std::string regex_characters = regex_characters_;
     if (option_regex) { regex_characters += "[]"; }
     for( unsigned int k = 0; k < regex_characters.size(); ++k )
-    { 
+    {
         if( s.find_first_of( regex_characters[k] ) != std::string::npos ) { return true; }
     }
     return false;
@@ -263,13 +271,14 @@ int main( int ac, char** av )
         boost::optional< char > delimiter = options.optional< char >( "--delimiter,-d" );
         path_value_delimiter = delimiter ? *delimiter : ( linewise ? ',' : '\n' );
         output_path = options.exists( "--output-path" );
+        if( output_path && to != "path-value" ) { std::cerr << "name-value-get: --output-path is compatible only with --to=path-value; got: --to=" << to << std::endl; return 1; }
         if( from )
         {
             if( *from == "ini" ) { input = &traits< ini >::input; }
             else if( *from == "info" ) { input = &traits< info >::input; }
             else if( *from == "json" ) { input = &traits< json >::input; }
             else if( *from == "xml" ) { input = &traits< xml >::input; }
-            else if( *from == "path-value" ) { input = &traits< path_value >::input; }
+            else if( *from == "path-value" ) { input = &traits< path_value >::input; } // super-quick and dirty!
             else { std::cerr << "name-value-get: expected --from format to be ini, info, json, xml, or path-value, got " << *from << std::endl; return 1; }
         }
         else
@@ -281,7 +290,7 @@ int main( int ac, char** av )
         else if( to == "info" ) { output = &traits< info >::output; }
         else if( to == "json" ) { output = &traits< json >::output; }
         else if( to == "xml" ) { output = &traits< xml >::output; }
-        else if( to == "path-value" ) { output = &traits< path_value >::output; }
+        else if( to == "path-value" ) { output = &traits< path_value >::output; output_last_line_break = true; }
         else { std::cerr << "name-value-get: expected --to format to be ini, info, json, xml, or path-value, got " << to << std::endl; return 1; }
         indices_mode = options.exists( "--no-brackets" ) ? comma::property_tree::without_brackets : comma::property_tree::with_brackets;
         if( linewise )
