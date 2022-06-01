@@ -25,8 +25,8 @@ static void usage( bool verbose = false )
     std::cerr << "usage: cat data.xml | name-value-convert [<options>]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "data options" << std::endl;
-    std::cerr << "    --from <format>: input format; if this options is omitted, input format will be guessed (only for json, xml, and path-value)" << std::endl;
-    std::cerr << "    --to <format>: output format; default path-value" << std::endl;
+    std::cerr << "    --from <format>: input format; if this options is omitted, input format will be guessed; formats: json, xml, path-value/pv" << std::endl;
+    std::cerr << "    --to <format>: output format; formats: ini, json, xml, path-value (pv); default: path-value" << std::endl;
     std::cerr << "    --path=[<path>]; output data at a given path in the input" << std::endl;
     std::cerr << "                     multiple instances of --path supported" << std::endl;
     std::cerr << "                     regex expression support: todo" << std::endl;
@@ -161,7 +161,7 @@ int main( int ac, char** av )
             else if( *from == "info" ) { input = &traits< info >::input; }
             else if( *from == "json" ) { input = &traits< json >::input; }
             else if( *from == "xml" ) { input = &traits< xml >::input; }
-            else if( *from == "path-value" ) { input = &traits< path_value >::input; }
+            else if( *from == "path-value" || *from == "pv" ) { input = &traits< path_value >::input; }
             else { std::cerr << "name-value-convert: expected --from format to be ini, info, json, xml, or path-value, got " << *from << std::endl; return 1; }
         }
         else
@@ -173,7 +173,7 @@ int main( int ac, char** av )
         else if( to == "info" ) { output = &traits< info >::output; }
         else if( to == "json" ) { output = &traits< json >::output; }
         else if( to == "xml" ) { output = &traits< xml >::output; }
-        else if( to == "path-value" ) { output = &traits< path_value >::output; }
+        else if( to == "path-value" || to == "pv" ) { output = &traits< path_value >::output; }
         else { std::cerr << "name-value-convert: expected --to format to be ini, info, json, xml, or path-value, got " << *from << std::endl; return 1; }
         if( use_index )
         {
