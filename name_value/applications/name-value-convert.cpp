@@ -1,31 +1,4 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /// @author vsevolod vlaskine
 
@@ -54,6 +27,10 @@ static void usage( bool verbose = false )
     std::cerr << "data options" << std::endl;
     std::cerr << "    --from <format>: input format; if this options is omitted, input format will be guessed (only for json, xml, and path-value)" << std::endl;
     std::cerr << "    --to <format>: output format; default path-value" << std::endl;
+    std::cerr << "    --path=[<path>]; output data at a given path in the input" << std::endl;
+    std::cerr << "                     multiple instances of --path supported" << std::endl;
+    std::cerr << "                     regex expression support: todo" << std::endl;
+    std::cerr << "    --strict: return error if path specified in --path not found" << std::endl;
     std::cerr << std::endl;
     std::cerr << "formats" << std::endl;
     std::cerr << "    info: info data (see boost::property_tree)" << std::endl;
@@ -167,6 +144,7 @@ int main( int ac, char** av )
         linewise = options.exists( "--linewise,-l" );
         minify_json = options.exists( "--minify" );
         options.assert_mutually_exclusive( "--unquote-numbers,--unquote", "--quote-numbers,--quote" );
+        options.assert_mutually_exclusive( "--path", "--linewise" );
         unquote_numbers = options.exists( "--unquote-numbers,--unquote" );
         quote_numbers = options.exists( "--quote-numbers,--quote" ) && !unquote_numbers; // todo: quick and dirty, combine logic, it sucks now that there is different logic for json and everything else
         if ( options.exists( "--take-last" ) ) check_type = comma::property_tree::path_value::take_last;
@@ -174,6 +152,9 @@ int main( int ac, char** av )
         xml_writer_settings.indent_count = options.value( "--indent", options.exists( "--indented" ) ? 4 : 0 );
         boost::optional< char > delimiter = options.optional< char >( "--delimiter,-d" );
         path_value_delimiter = delimiter ? *delimiter : ( linewise ? ',' : '\n' );
+        const auto& paths = options.values< std::string >( "--path" );
+        bool strict = options.exists( "--strict" );
+        bool output_line_breaks = to == "path-value" && path_value_delimiter != '\n'; // hyper-quick and dirty
         if( from )
         {
             if( *from == "ini" ) { input = &traits< ini >::input; }
@@ -192,7 +173,8 @@ int main( int ac, char** av )
         else if( to == "info" ) { output = &traits< info >::output; }
         else if( to == "json" ) { output = &traits< json >::output; }
         else if( to == "xml" ) { output = &traits< xml >::output; }
-        else { output = &traits< path_value >::output; }
+        else if( to == "path-value" ) { output = &traits< path_value >::output; }
+        else { std::cerr << "name-value-convert: expected --to format to be ini, info, json, xml, or path-value, got " << *from << std::endl; return 1; }
         if( use_index )
         {
             if( options.exists( "--no-brackets" ) ) { indices_mode = comma::property_tree::without_brackets; }
@@ -233,7 +215,32 @@ int main( int ac, char** av )
         {
             boost::property_tree::ptree ptree;
             input( std::cin, ptree );
-            output( std::cout, ptree, indices_mode );
+            if( paths.empty() )
+            {
+                output( std::cout, ptree, indices_mode );
+            }
+            else
+            {
+                std::string eol;
+                for( const auto& path: paths )
+                {
+                    auto child = comma::property_tree::get_tree( ptree, path ); // paths[i] = boost::property_tree::ptree::path_type( path_strings[i], '/' )
+                    if( !child ) { if( strict ) { std::cerr << "name-value-convert: path \"" << path << "\" not found" << std::endl; return 1; } else { continue; } }
+                    boost::optional< std::string > value = child->get_optional< std::string >( "" );
+                    std::cout << eol;
+                    if( value && !value->empty() ) // todo? output empty values?
+                    {
+                        boost::property_tree::ptree t;
+                        t.add_child( comma::split( path, '/' ).back(), boost::property_tree::ptree() ).put_value( *value ); // quick and dirty; lame...
+                        output( std::cout, t, indices_mode );
+                    }
+                    else
+                    {
+                        output( std::cout, *child, indices_mode );
+                    }
+                    if( output_line_breaks ) { eol = std::string( 1, path_value_delimiter ); } // quick and dirty
+                }
+            }
         }
         return 0;
     }
