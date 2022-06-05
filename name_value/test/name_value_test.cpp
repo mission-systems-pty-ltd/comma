@@ -341,6 +341,13 @@ TEST( name_value, unique )
     EXPECT_THROW( name_value::map( "a=1;b;b;c=2", ';', '=', true ), comma::exception );
 }
 
+TEST( name_value, allowed_names )
+{
+    void( name_value::map( "a=1;b;c=2", ';', '=', false, "a,b,c" ) );
+    EXPECT_THROW( name_value::map( "a=1;b;x;a=2;c=2", ';', '=', false, "a,b,c" ), comma::exception );
+    EXPECT_THROW( name_value::map( "a=1;b;x=5;b;c=2", ';', '=', false, "a,b,c" ), comma::exception );
+}
+
 } } }
 
 int main( int argc, char* argv[] )
