@@ -1,32 +1,4 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
 
 /// @authors cedric wohlleber, vsevolod vlaskine
 
@@ -41,23 +13,23 @@
 namespace comma { namespace name_value {
 
 /// constructs a map of name-value pair from an input string
-/// TODO implement full_path_as_name ? 
+/// TODO implement full_path_as_name ?
 class map
 {
     public:
         /// constructor
-        map( const std::string& line, char delimiter = ';', char value_delimiter = '=' );
+        map( const std::string& line, char delimiter = ';', char value_delimiter = '=', bool unique = false );
         /// constructor
-        map( const std::string& line, const std::string& fields, char delimiter = ';', char value_delimiter = '=' );
+        map( const std::string& line, const std::string& fields, char delimiter = ';', char value_delimiter = '=', bool unique = false );
         /// constructor
-        map( const std::string& line, const impl::options& options );
-        
+        map( const std::string& line, const impl::options& options, bool unique = false );
+
         /// return vector of name-value pairs in the given order
         static std::vector< std::pair< std::string, std::string > > as_vector( const std::string& line, char delimiter = ';', char value_delimiter = '=' );
-        
+
         /// return vector of name-value pairs in the given order
         static std::vector< std::pair< std::string, std::string > > as_vector( const std::string& line, const std::string& fields, char delimiter = ';', char value_delimiter = '=' );
-        
+
         /// return vector of name-value pairs in the given order
         static std::vector< std::pair< std::string, std::string > > as_vector( const std::string& line, const impl::options& options );
 
@@ -75,7 +47,7 @@ class map
         /// return first available value, if field exists; otherwise throw
         template < typename T >
         T value( const std::string& name ) const;
-        
+
         /// return first available value, if field exists; otherwise return empty optional
         template < typename T >
         boost::optional< T > optional( const std::string& name ) const;
@@ -84,19 +56,19 @@ class map
         typedef std::multimap< std::string, std::string > map_type;
 
         /// return name-value map
-        const map_type& get() const { return m_map; }
+        const map_type& get() const { return _map; }
 
     private:
-        void init_( const comma::name_value::impl::options& options );
-        const std::string m_line;
-        map_type m_map;
+        void init_( const comma::name_value::impl::options& options, bool unique );
+        const std::string _line;
+        map_type _map;
 };
 
-inline map::map( const std::string& line, char delimiter, char value_delimiter ): m_line( line ) { init_( impl::options( delimiter, value_delimiter ) ); }
+inline map::map( const std::string& line, char delimiter, char value_delimiter, bool unique ): _line( line ) { init_( impl::options( delimiter, value_delimiter ), unique ); }
 
-inline map::map( const std::string& line, const std::string& fields, char delimiter, char value_delimiter ): m_line( line ) { init_( impl::options( fields, delimiter, value_delimiter ) ); }
+inline map::map( const std::string& line, const std::string& fields, char delimiter, char value_delimiter, bool unique ): _line( line ) { init_( impl::options( fields, delimiter, value_delimiter ), unique ); }
 
-inline map::map( const std::string& line, const comma::name_value::impl::options& options ): m_line( line ) { init_( options ); }
+inline map::map( const std::string& line, const comma::name_value::impl::options& options, bool unique ): _line( line ) { init_( options, unique ); }
 
 inline static std::vector< std::string > get_named_values( const std::string& line, const comma::name_value::impl::options& options )
 {
@@ -110,22 +82,23 @@ inline static std::vector< std::string > get_named_values( const std::string& li
     return named_values;
 }
 
-inline void map::init_( const comma::name_value::impl::options& options )
+inline void map::init_( const comma::name_value::impl::options& options, bool unique )
 {
-    const std::vector< std::string >& named_values = get_named_values( m_line, options );
+    const std::vector< std::string >& named_values = get_named_values( _line, options );
     for( std::size_t i = 0; i < named_values.size(); ++i )
     {
-        std::vector< std::string > pair = split_escaped( named_values[i], options.m_value_delimiter, &(options.m_quotes[0]), options.m_escape );
+        std::vector< std::string > pair = split_escaped( named_values[i], options.m_value_delimiter, &( options.m_quotes[0]), options.m_escape );
+        if( unique && pair.size() > 0 && _map.find( pair[0] ) != _map.end() ) { COMMA_THROW_STREAM( comma::exception, "expected unique names, got more than one \"" << pair[0] << "\"" ); }
         switch( pair.size() )
         {
-            case 1: m_map.insert( std::make_pair( pair[0], std::string() ) ); break; // quick and dirty
-            case 2: m_map.insert( std::make_pair( pair[0], pair[1] ) ); break;
+            case 1: _map.insert( std::make_pair( pair[0], std::string() ) ); break; // quick and dirty
+            case 2: _map.insert( std::make_pair( pair[0], pair[1] ) ); break;
             default: { COMMA_THROW_STREAM( comma::exception, "expected name-value pair, got: " << join( pair, options.m_value_delimiter ) ); }
         }
     }
 }
 
-inline std::vector< std::pair< std::string, std::string > > map::as_vector( const std::string& line, char delimiter, char value_delimiter ) { return as_vector( line, impl::options( delimiter, value_delimiter ) ); } 
+inline std::vector< std::pair< std::string, std::string > > map::as_vector( const std::string& line, char delimiter, char value_delimiter ) { return as_vector( line, impl::options( delimiter, value_delimiter ) ); }
 
 inline std::vector< std::pair< std::string, std::string > > map::as_vector( const std::string& line, const std::string& fields, char delimiter, char value_delimiter ) { return as_vector( line, impl::options( fields, delimiter, value_delimiter ) ); }
 
@@ -146,7 +119,7 @@ inline std::vector< std::pair< std::string, std::string > > map::as_vector( cons
     return v;
 }
 
-inline bool map::exists( const std::string& name ) const { return m_map.find( name ) != m_map.end(); }
+inline bool map::exists( const std::string& name ) const { return _map.find( name ) != _map.end(); }
 
 namespace detail {
 
@@ -176,7 +149,7 @@ template < typename T >
 inline std::vector< T > map::values( const std::string& name ) const
 {
     std::vector< T > v;
-    for( typename map_type::const_iterator it = m_map.begin(); it != m_map.end(); ++it )
+    for( typename map_type::const_iterator it = _map.begin(); it != _map.end(); ++it )
     {
         if( it->first == name ) { v.push_back( detail::lexical_cast< T >( it->second ) ); }
     }
@@ -194,7 +167,7 @@ template < typename T >
 inline T map::value( const std::string& name ) const
 {
     const std::vector< T >& v = values< T >( name );
-    if( v.empty() ) { COMMA_THROW_STREAM( comma::exception, "'" << name << "' not found in \"" << m_line << "\"" ); }
+    if( v.empty() ) { COMMA_THROW_STREAM( comma::exception, "'" << name << "' not found in \"" << _line << "\"" ); }
     return v[0];
 }
 

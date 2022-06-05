@@ -1,32 +1,4 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
 
 #include <gtest/gtest.h>
 #include "../../name_value/parser.h"
@@ -110,12 +82,12 @@ template <> struct traits< nested_with_optional >
         v.apply( "c", t.c );
         v.apply( "d", t.d );
     }
-    
+
     template < typename Key, class Visitor > static void visit( Key, nested_with_optional& t, Visitor& v )
     {
         v.apply( "c", t.c );
         v.apply( "d", t.d );
-    }    
+    }
 };
 
 template <> struct traits< struct_with_optional >
@@ -126,13 +98,13 @@ template <> struct traits< struct_with_optional >
         v.apply( "b", t.b );
         v.apply( "nested", t.nested );
     }
-    
+
     template < typename Key, class Visitor > static void visit( Key, struct_with_optional& t, Visitor& v )
     {
         v.apply( "a", t.a );
         v.apply( "b", t.b );
         v.apply( "nested", t.nested );
-    }    
+    }
 };
 
 } } // namespace comma { namespace visiting {
@@ -174,7 +146,7 @@ template <> struct traits< config >
 
 } } // namespace comma { namespace visiting {
 
-    
+
 namespace comma { namespace name_value { namespace test {
 
 TEST( name_value, get )
@@ -302,7 +274,7 @@ TEST( name_value, serialize_json )
     EXPECT_EQ( "{ \"a\": \"a\", \"b\": \"b\\\"b\" }", json_remove_quotes_wrapper( "{ \"a\": \"a\", \"b\": \"b\\\"b\" }" ) );
     EXPECT_EQ( "{ \"a\": 1, \"b\": \"val\" }", json_remove_quotes_wrapper( "{ \"a\": \"1\", \"b\": \"val\" }" ) );
     EXPECT_EQ( "{ \"a\": [ 4.44, true, \"e\" ] }", json_remove_quotes_wrapper( "{ \"a\": [ \"4.44\", \"true\", \"e\" ] }" ) );
-    
+
     EXPECT_EQ( "{ \"a\": [ { \"b\": { \"c\": [ { \"d\": 1, \"e\": false }, { \"d\":2, \"e\": true } ] } } ], \"p\": { \"q\": { \"r\": 3.9e8, \"s\": \"t\"} }, \"x\": { \"y\": [ \"z\", 0.1e-3 ] } }", json_remove_quotes_wrapper( "{ \"a\": [ { \"b\": { \"c\": [ { \"d\": \"1\", \"e\": \"false\" }, { \"d\":2, \"e\": \"true\" } ] } } ], \"p\": { \"q\": { \"r\": \"3.9e8\", \"s\": \"t\"} }, \"x\": { \"y\": [ \"z\", \"0.1e-3\" ] } }" ) );
 
     //minify
@@ -360,6 +332,13 @@ TEST( name_value, as_vector )
         EXPECT_EQ( "nested/d", v[3].first );
         EXPECT_EQ( "blah", v[3].second );
     }
+}
+
+TEST( name_value, unique )
+{
+    void( name_value::map( "a=1;b;c=2", ';', '=', true ) );
+    EXPECT_THROW( name_value::map( "a=1;b;a=2;c=2", ';', '=', true ), comma::exception );
+    EXPECT_THROW( name_value::map( "a=1;b;b;c=2", ';', '=', true ), comma::exception );
 }
 
 } } }
