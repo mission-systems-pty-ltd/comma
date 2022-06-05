@@ -1,37 +1,11 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /// @author vsevolod vlaskine
 
 #include <iostream>
-#include <sstream>
 #include <map>
+#include <sstream>
+#include <unordered_set>
 #include <vector>
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
@@ -46,7 +20,7 @@
 #include "../../string/string.h"
 #include "../../visiting/traits.h"
 
-void usage()
+void usage( bool verbose )
 {
     std::cerr << std::endl;
     std::cerr << "find in a file or stream by constraints on a given key" << std::endl;
@@ -80,7 +54,7 @@ void usage()
     std::cerr << "fields: any non-empty fields will be treated as keys" << std::endl;
     std::cerr << std::endl;
     std::cerr << "csv options" << std::endl;
-    std::cerr << comma::csv::options::usage() << std::endl;
+    std::cerr << comma::csv::options::usage( verbose ) << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << "    cat a.csv | csv-select --fields=,,t --from=20120101T000000" << std::endl;
@@ -89,8 +63,7 @@ void usage()
     std::cerr << "    cat a.csv | csv-select --fields=t,scalar \"t;from=20120101T000000;sorted\" \"scalar;from=-10;to=20.5\"" << std::endl;
     std::cerr << "    echo hello,world | csv-select --fields=h,w \"h;regex=he.*\"" << std::endl;
     std::cerr << std::endl;
-    std::cerr << std::endl;
-    exit( 1 );
+    exit( 0 );
 }
 
 bool matches( const std::string& value, const boost::regex& r ) { return boost::regex_match( value, r ); }
@@ -135,19 +108,22 @@ struct constraints
 
     constraints( const std::string& options )
     {
-        comma::name_value::map m( options, ';', '=' ); // quick and dirty, since optional is not well-supported (euphymism for 'buggy') in comma::name_value::parser
-        if( m.exists( "equals" ) ) { equals = m.value< T >( "equals" ); }
-        if( m.exists( "not-equal" ) ) { not_equal = m.value< T >( "not-equal" ); }
-        if( m.exists( "less" ) ) { less = m.value< T >( "less" ); }
-        if( m.exists( "greater" ) ) { greater = m.value< T >( "greater" ); } // it was: { equal = m.value< T >( "greater" ); }
-        if( m.exists( "from" ) ) { from = m.value< T >( "from" ); }
-        if( m.exists( "greater-or-equal" ) ) { from = m.value< T >( "greater-or-equal" ); }
-        if( m.exists( "ge" ) ) { from = m.value< T >( "ge" ); }
-        if( m.exists( "to" ) ) { to = m.value< T >( "to" ); }
-        if( m.exists( "less-or-equal" ) ) { to = m.value< T >( "less-or-equal" ); }
-        if( m.exists( "le" ) ) { to = m.value< T >( "le" ); }
-        if( m.exists( "regex" ) ) { regex = boost::regex( m.value< std::string >( "regex" ) ); }
-        sorted = m.exists( "sorted" );
+        comma::name_value::map m( options.substr( options.find_first_of( ';' ) + 1 ), ';', '=', true, "equals,not-equal,less,greater,from,greater-or-equal,ge,to,less-or-equal,le,regex,sorted,fields,f,binary,b,delimiter,d,format" ); // quick and dirty, since optional is not well-supported (euphymism for 'buggy') in comma::name_value::parser
+        for( const auto& v: m.get() ) // super quick and dirty, suboptimal
+        {
+            if( v.first == "equals" ) { equals = m.value< T >( "equals" ); }
+            else if( v.first == "not-equal" ) { not_equal = m.value< T >( "not-equal" ); }
+            else if( v.first == "less" ) { less = m.value< T >( "less" ); }
+            else if( v.first == "greater" ) { greater = m.value< T >( "greater" ); } // it was: { equal = m.value< T >( "greater" ); }
+            else if( v.first == "from" ) { from = m.value< T >( "from" ); }
+            else if( v.first == "greater-or-equal" ) { from = m.value< T >( "greater-or-equal" ); }
+            else if( v.first == "ge" ) { from = m.value< T >( "ge" ); }
+            else if( v.first == "to" ) { to = m.value< T >( "to" ); }
+            else if( v.first == "less-or-equal" ) { to = m.value< T >( "less-or-equal" ); }
+            else if( v.first == "le" ) { to = m.value< T >( "le" ); }
+            else if( v.first == "regex" ) { regex = boost::regex( m.value< std::string >( "regex" ) ); }
+            else if( v.first == "sorted" ) { sorted = true; }
+        }
     }
 
     bool is_a_match( const T& t ) const // quick and dirty, implement a proper expression parser
@@ -216,15 +192,11 @@ struct input_t
 
     bool is_a_match( bool is_or ) const
     {
-//         std::cerr << "==> is_a_match: doubles: ";
-//         for( unsigned int i = 0; i < doubles.size(); ++i ) { std::cerr << doubles[i].value << " "; }
-//         std::cerr << std::endl;
         if( is_or )
         {
             for( unsigned int i = 0; i < time.size(); ++i ) { if( time[i].is_a_match( is_or ) ) { return true; } }
             for( unsigned int i = 0; i < doubles.size(); ++i ) { if( doubles[i].is_a_match( is_or ) ) { return true; } }
             for( unsigned int i = 0; i < strings.size(); ++i ) { if( strings[i].is_a_match( is_or ) ) { return true; } }
-    //        std::cerr << "==> is_a_match: done" << std::endl << std::endl;
             return false;
         }
         else
@@ -232,7 +204,6 @@ struct input_t
             for( unsigned int i = 0; i < time.size(); ++i ) { if( !time[i].is_a_match() ) { return false; } }
             for( unsigned int i = 0; i < doubles.size(); ++i ) { if( !doubles[i].is_a_match() ) { return false; } }
             for( unsigned int i = 0; i < strings.size(); ++i ) { if( !strings[i].is_a_match() ) { return false; } }
-    //        std::cerr << "==> is_a_match: done" << std::endl << std::endl;
             return true;
         }
     }
@@ -260,15 +231,8 @@ namespace comma { namespace visiting {
 
 template < typename T > struct traits< constrained< T > >
 {
-    template < typename K, typename V > static void visit( const K&, const constrained< T >& p, V& v )
-    {
-        v.apply( "value", p.value );
-    }
-
-    template < typename K, typename V > static void visit( const K&, constrained< T >& p, V& v )
-    {
-        v.apply( "value", p.value );
-    }
+    template < typename K, typename V > static void visit( const K&, const constrained< T >& p, V& v ) { v.apply( "value", p.value ); }
+    template < typename K, typename V > static void visit( const K&, constrained< T >& p, V& v ) { v.apply( "value", p.value ); }
 };
 
 template <> struct traits< input_t >
@@ -290,22 +254,17 @@ template <> struct traits< input_t >
 
 } } // namespace comma { namespace visiting {
 
-static bool verbose;
 static comma::csv::options csv;
 static input_t input;
 static std::vector< std::string > fields;
 typedef std::multimap< std::string, std::string > constraints_map_t;
 static constraints_map_t constraints_map;
 
-template < typename T >
-static constrained< T > make_value( unsigned int i, const comma::command_line_options& options )
+template < typename T > static constrained< T > make_value( unsigned int i, const comma::command_line_options& options )
 {
     constrained< T > v;
-    for( std::pair< constraints_map_t::const_iterator, constraints_map_t::const_iterator > r = constraints_map.equal_range( fields[i] ); r.first != r.second; ++r.first )
-    {
-        v.constraints.push_back( constraints< T >( r.first->second ) );
-    }
-    static constraints< T > common_constraints( options );
+    for( auto r = constraints_map.equal_range( fields[i] ); r.first != r.second; ++r.first ) { v.constraints.push_back( constraints< T >( r.first->second ) ); }
+    static constraints< T > common_constraints( options ); // quick and dirty
     if( !common_constraints.empty() ) { v.constraints.push_back( common_constraints ); }
     return v;
 }
@@ -339,16 +298,15 @@ static void init_input( const comma::csv::format& format, const comma::command_l
 
 int main( int ac, char** av )
 {
-        comma::command_line_options options( ac, av );
     try
     {
-        if( options.exists( "--help,-h" ) ) { usage(); }
-        verbose = options.exists( "--verbose,-v" );
+        comma::command_line_options options( ac, av, usage );
         bool is_or = options.exists( "--or" );
         csv = comma::csv::options( options );
         fields = comma::split( csv.fields, ',' );
         if( fields.size() == 1 && fields[0].empty() ) { fields.clear(); }
-        std::vector< std::string > unnamed = options.unnamed( "--first-matching,--or,--sorted,--input-sorted,--not-matching,--output-all,--all,--strict,--verbose,-v", "-.*" );
+        std::vector< std::string > unnamed = options.unnamed( "--first-matching,--or,--sorted,--input-sorted,--not-matching,--output-all,--all,--strict,--verbose,-v,--flush"
+                                                            , "--equals,--not-equal,--less,--greater,--from,--greater-or-equal,--ge,--to,--less-or-equal,--le,--regex,--fields,-f,--binary,-b,--format,--delimiter,-d,--precision" );
         //for( unsigned int i = 0; i < unnamed.size(); constraints_map.insert( std::make_pair( comma::split( unnamed[i], ';' )[0], unnamed[i] ) ), ++i );
         bool strict = options.exists( "--strict" );
         bool first_matching = options.exists( "--first-matching" );
@@ -359,13 +317,9 @@ int main( int ac, char** av )
             std::string field = comma::split( unnamed[i], ';' )[0];
             bool found = false;
             for( unsigned int j = 0; j < fields.size() && !found; found = field == fields[j], ++j );
-            if( !found )
-            {
-                if( strict ) { std::cerr << "csv-select: on constraint: \"" << unnamed[i] << "\" field \"" << field << "\" not found in fields: " << csv.fields << std::endl; return 1; }
-                std::cerr << "csv-select: warning: on constraint: \"" << unnamed[i] << "\" field \"" << field << "\" not found in fields: " << csv.fields << std::endl;
-                continue;
-            }
-            constraints_map.insert( std::make_pair( field, unnamed[i] ) );
+            if( found ) { constraints_map.insert( std::make_pair( field, unnamed[i] ) ); continue; }
+            if( strict ) { std::cerr << "csv-select: on constraint: \"" << unnamed[i] << "\" field \"" << field << "\" not found in fields: " << csv.fields << std::endl; return 1; }
+            std::cerr << "csv-select: warning: on constraint: \"" << unnamed[i] << "\" field \"" << field << "\" not found in fields: " << csv.fields << std::endl;
         }
         if( csv.binary() )
         {
