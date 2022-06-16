@@ -1,32 +1,4 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
 
 /// @author vsevolod vlaskine
 
@@ -243,7 +215,7 @@ static std::size_t csv_to_bin( char* buf, const std::string& s, format::types_en
             case format::int8:
             {
                 int i = boost::lexical_cast< int >( s );
-                if( i < -127 || i > 128 ) { COMMA_THROW( comma::exception, "expected byte, got " << i ); }
+                if( i < -128 || i > 127 ) { COMMA_THROW( comma::exception, "expected byte, got " << i ); }
                 *buf = static_cast< char >( i );
                 return sizeof( char );
             }
@@ -287,14 +259,8 @@ static std::size_t csv_to_bin( char* buf, const std::string& s, format::types_en
             default: COMMA_THROW( comma::exception, "todo: not implemented" );
         }
     }
-    catch( std::exception& ex )
-    {
-        COMMA_THROW( comma::exception, "failed to convert \"" << s << "\" to type \"" << format::to_format(type) << "\": "  << ex.what() );
-    }
-    catch( ... )
-    {
-        throw;
-    }
+    catch( std::exception& ex ) { COMMA_THROW( comma::exception, "failed to convert \"" << s << "\" to type \"" << format::to_format(type) << "\": "  << ex.what() ); }
+    catch( ... ) { throw; }
 }
 
 static std::size_t bin_to_csv( std::ostringstream& oss, const char* buf, format::types_enum type, std::size_t size, const boost::optional< unsigned int >& precision )
@@ -377,7 +343,7 @@ std::string format::csv_to_bin( const std::vector< std::string >& csv ) const
 std::string format::bin_to_csv( const std::string& bin, char delimiter, const boost::optional< unsigned int >& precision ) const
 {
     if( bin.length() != size_ ) { COMMA_THROW( comma::exception, "expected binary string of size " << size_ << ", got " << bin.length() << " bytes" ); }
-    return bin_to_csv( bin.c_str(), delimiter, precision );
+    return bin_to_csv( &bin[0], delimiter, precision );
 }
 
 std::string format::bin_to_csv( const char* buf, char delimiter, const boost::optional< unsigned int >& precision ) const
