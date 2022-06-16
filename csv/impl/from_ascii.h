@@ -55,8 +55,8 @@ class from_ascii_
     public:
         /// constructor
         from_ascii_( const std::vector< boost::optional< std::size_t > >& indices
-                  , const std::deque< bool >& optional
-                  , const std::vector< std::string >& line );
+                   , const std::deque< bool >& optional
+                   , const std::vector< std::string >& line );
 
         /// apply
         template < typename K, typename T > void apply( const K& name, boost::optional< T >& value );
@@ -83,6 +83,7 @@ class from_ascii_
         std::size_t index_;
         std::size_t optional_index;
         static void lexical_cast_( char& v, const std::string& s ) { v = s.at( 0 ) == '\'' && s.at( 2 ) == '\'' && s.length() == 3 ? s.at( 1 ) : static_cast< char >( boost::lexical_cast< int >( s ) ); }
+        static void lexical_cast_( signed char& v, const std::string& s ) { v = s.at( 0 ) == '\'' && s.at( 2 ) == '\'' && s.length() == 3 ? s.at( 1 ) : static_cast< signed char >( boost::lexical_cast< int >( s ) ); }
         static void lexical_cast_( unsigned char& v, const std::string& s ) { v = s.at( 0 ) == '\'' && s.at( 2 ) == '\'' && s.length() == 3 ? s.at( 1 ) : static_cast< unsigned char >( boost::lexical_cast< unsigned int >( s ) ); }
         static void lexical_cast_( boost::posix_time::ptime& v, const std::string& s )
         { 

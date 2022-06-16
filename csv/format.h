@@ -257,6 +257,7 @@ inline std::string format::value( const std::string& fields, bool full_xpath, co
 
 template <> inline std::string format::value_impl< bool >( const bool& ) { return "b"; }
 template <> inline std::string format::value_impl< char >( const char& ) { return "b"; }
+template <> inline std::string format::value_impl< signed char >( const signed char& ) { return "b"; }
 template <> inline std::string format::value_impl< unsigned char >( const unsigned char& ) { return "ub"; }
 template <> inline std::string format::value_impl< int16 >( const comma::int16& ) { return "w"; }
 template <> inline std::string format::value_impl< comma::uint16 >( const comma::uint16& ) { return "uw"; }
@@ -282,7 +283,13 @@ template <> struct format::type_to_enum< bool >
     static const char* as_string() { return "b"; }
 };
 
-template <> struct format::type_to_enum< char >
+template <> struct format::type_to_enum< char > // ATTENTION: char is unsigned on arm
+{
+    static const format::types_enum value = format::int8;
+    static const char* as_string() { return "b"; }
+};
+
+template <> struct format::type_to_enum< signed char >
 {
     static const format::types_enum value = format::int8;
     static const char* as_string() { return "b"; }

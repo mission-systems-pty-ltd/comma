@@ -104,7 +104,7 @@ static boost::array< unsigned int, 14 > Sizesimpl()
 {
     boost::array< unsigned int, 14 > sizes;
     sizes[ format::char_t ] = sizeof( char );
-    sizes[ format::int8 ] = sizeof( char );
+    sizes[ format::int8 ] = sizeof( signed char );
     sizes[ format::uint8 ] = sizeof( unsigned char );
     sizes[ format::int16 ] = sizeof( int16 );
     sizes[ format::uint16 ] = sizeof( uint16 );
@@ -216,8 +216,8 @@ static std::size_t csv_to_bin( char* buf, const std::string& s, format::types_en
             {
                 int i = boost::lexical_cast< int >( s );
                 if( i < -128 || i > 127 ) { COMMA_THROW( comma::exception, "expected byte, got " << i ); }
-                *buf = static_cast< char >( i );
-                return sizeof( char );
+                *buf = static_cast< signed char >( i );
+                return sizeof( signed char );
             }
             case format::uint8:
             {

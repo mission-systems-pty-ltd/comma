@@ -91,6 +91,7 @@ class to_ascii
         std::string as_string_( const std::string& v ) { return quote_ ? *quote_ + v + *quote_ : v; } // todo: escape/unescape
         // todo: better output semantics for char/unsigned char
         std::string as_string_( const char& v ) { std::ostringstream oss; oss << static_cast< int >( v ); return oss.str(); }
+        std::string as_string_( const signed char& v ) { std::ostringstream oss; oss << static_cast< int >( v ); return oss.str(); }
         std::string as_string_( const unsigned char& v ) { std::ostringstream oss; oss << static_cast< unsigned int >( v ); return oss.str(); }
         void set_precision_( std::ostringstream& oss ) const;
 
