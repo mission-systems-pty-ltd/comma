@@ -271,7 +271,10 @@ TEST( name_value, exists )
 
 TEST( name_value, serialize_json )
 {
+    EXPECT_EQ( "{ \"a\": \"a\", \"b\": \"b\\\\\" }", json_remove_quotes_wrapper( "{ \"a\": \"a\", \"b\": \"b\\\\\" }" ) );
     EXPECT_EQ( "{ \"a\": \"a\", \"b\": \"b\\\"b\" }", json_remove_quotes_wrapper( "{ \"a\": \"a\", \"b\": \"b\\\"b\" }" ) );
+    EXPECT_EQ( "{ \"a\": \"a\", \"b\": \"b\\\\c\" }", json_remove_quotes_wrapper( "{ \"a\": \"a\", \"b\": \"b\\\\c\" }" ) );
+    EXPECT_EQ( "{ \"a\": \"a\", \"b\": \"b\\\\\\\"b\" }", json_remove_quotes_wrapper( "{ \"a\": \"a\", \"b\": \"b\\\\\\\"b\" }" ) );
     EXPECT_EQ( "{ \"a\": 1, \"b\": \"val\" }", json_remove_quotes_wrapper( "{ \"a\": \"1\", \"b\": \"val\" }" ) );
     EXPECT_EQ( "{ \"a\": [ 4.44, true, \"e\" ] }", json_remove_quotes_wrapper( "{ \"a\": [ \"4.44\", \"true\", \"e\" ] }" ) );
 

@@ -34,8 +34,9 @@ template< typename C > inline void json_remove_quotes( std::basic_string< C >& j
         while( true )
         {
             value_end = std::find( value_end + 1, json_text.cend(), '"' );
-            auto i = value_end - 1;
-            if( *i != '\\' || *( i - 1 ) == '\\' ) { break; } // hyper quick and dirty fix, sigh
+            unsigned int backslash_count = 0;
+            for( auto i = value_end - 1; *i == '\\'; ++backslash_count, --i );
+            if( backslash_count % 2 == 0 ) { break; } // hyper quick and dirty fix, sigh
         }
         auto next_token = std::find_if_not( value_end + 1, json_text.cend(), []( C ch ) { return ' ' == ch || '\t' == ch || '\n' == ch; } );
         bool quoted = true;
