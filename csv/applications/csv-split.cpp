@@ -197,7 +197,6 @@ int main( int argc, char** argv )
         else { suffix += "."; suffix += extension; }
         streams = boost::program_options::collect_unrecognized( parsed.options, boost::program_options::include_positional );
         if( !streams.empty() && ( csv.has_field( "block" ) || id_is_time ) ) { std::cerr << "publisher streams are not compatible with splitting by block or timestamp." << std::endl; return 1; }
-        if( ( csv.has_field( "t" ) || csv.fields.empty() ) && !period && timestamps.empty() ) { COMMA_THROW( comma::exception, "got fields '" << csv.fields << "' meaning split by time; thus please specify either --period or --timestamps" ); }
         if( id_is_string ) { run< std::string >(); }
         else if( id_is_time ) { run< boost::posix_time::ptime >(); }
         else { run< comma::uint32 >(); }

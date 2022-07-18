@@ -160,10 +160,14 @@ split< T >::split( const boost::optional< boost::posix_time::time_duration >& pe
     {
         ofstream_ = std::bind( &split< T >::ofstream_by_block_, this );
     }
-    else
+    else if( csv.has_field( "id" ) )
     {
-        if( csv.has_field( "id" ) ) { ofstream_ = std::bind( &split< T >::ofstream_by_id_, this ); }
-        else { if( !filenames_.empty() ) { COMMA_THROW( comma::exception, "--files given, but no block field specified in --fields" ); } }
+        ofstream_ = std::bind( &split< T >::ofstream_by_id_, this );
+    }
+    else   // splitting by time
+    {
+        if( !filenames_.empty() ) { COMMA_THROW( comma::exception, "--files given, but no block field specified in --fields" ); }
+        if( !period && timestamps.empty() ) { COMMA_THROW( comma::exception, "splitting by time; please specify either --period or --timestamps" ); }
     }
     timestamps_stream_make_( timestamps );
 }
