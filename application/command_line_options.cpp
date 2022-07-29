@@ -1,32 +1,5 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
+// Copyright (c) 2022 Vsevolod Vlaskine
 
 /// @author vsevolod vlaskine
 
@@ -36,31 +9,53 @@
 #include <unordered_map>
 #include <boost/bind.hpp>
 #include <boost/config/warning_disable.hpp>
+#include "boost/filesystem.hpp"
+#include "boost/iostreams/stream.hpp"
+#include "boost/iostreams/device/null.hpp"
 #include <boost/optional.hpp>
 #include <boost/regex.hpp>
 #include <boost/spirit/include/qi.hpp>
 #include "../string/split.h"
-#include "../application/command_line_options.h"
 #include "../base/exception.h"
+#include "command_line_options.h"
 
 namespace comma {
+
+namespace application { namespace detail {
+
+static std::string name;
+static bool verbose = false;
+static boost::iostreams::stream< boost::iostreams::null_sink > null_ostream( ( boost::iostreams::null_sink() ) );
+
+} } // namespace application { namespace detail {
+
+std::ostream& say( std::ostream& os ) { std::cerr << comma::application::detail::name << ": "; return os; }
+
+std::ostream& saymore() { return say( verbose ? std::cerr : comma::application::detail::null_ostream ); }
+
+void command_line_options::_init_verbose( bool v, const std::string& path )
+{
+    comma::verbose.init( v, path ); // todo: deprecate, use comma::say() and comma::saymore() instead
+    comma::application::detail::name = boost::filesystem::basename( path );
+    comma::application::detail::verbose = v;
+}
 
 command_line_options::command_line_options( int argc, char ** argv, boost::function< void( bool ) > usage )
 {
     argv_.resize( argc );
     for( int i = 0; i < argc; ++i ) { argv_[i] = argv[i]; }
-    fill_map_( argv_ );
-    bool v=exists("--verbose,-v");
-    comma::verbose.init(v, argv[0]);
+    _fill_map( argv_ );
+    bool v = exists("--verbose,-v");
+    _init_verbose( v, argv[0] );
     if( usage && exists( "--help,-h" ) ) { usage( v ); exit( 1 ); }
 }
 
 command_line_options::command_line_options( const std::vector< std::string >& argv, boost::function< void( bool ) > usage )
     : argv_( argv )
 {
-    fill_map_( argv_ );
-    bool v=exists("--verbose,-v");
-    comma::verbose.init(v, argv[0]);
+    _fill_map( argv_ );
+    bool v = exists( "--verbose,-v" );
+    _init_verbose( v, argv[0] );
     if( usage && exists( "--help,-h" ) ) { usage( v ); exit( 1 ); }
 }
 
@@ -122,7 +117,7 @@ std::vector< std::string > command_line_options::unnamed( const std::string& val
 
 std::vector< std::string > command_line_options::names() const { return names_; }
 
-void command_line_options::fill_map_( const std::vector< std::string >& v )
+void command_line_options::_fill_map( const std::vector< std::string >& v )
 {
     for( std::size_t i = 1; i < v.size(); ++i )
     {

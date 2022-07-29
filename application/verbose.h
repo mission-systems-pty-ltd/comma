@@ -31,7 +31,6 @@
 
 #include <iostream>
 
-//prototype for comma::verbose
 namespace comma {
 
 //a pseudo ostream for outputing information to stderr
@@ -39,6 +38,7 @@ namespace comma {
 //examples: 
 //  comma::verbose << "hello!" << std::endl;
 //  if (comma::verbose) { std::cerr << comma::verbose.app_name() << "info" << std::endl; }
+/// @deprecated
 class verbose_t
 {
     bool enabled_;
