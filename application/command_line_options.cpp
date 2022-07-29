@@ -29,9 +29,9 @@ static boost::iostreams::stream< boost::iostreams::null_sink > null_ostream( ( b
 
 } } // namespace application { namespace detail {
 
-std::ostream& say( std::ostream& os ) { std::cerr << comma::application::detail::name << ": "; return os; }
+std::ostream& say( std::ostream& os ) { os << comma::application::detail::name << ": "; return os; }
 
-std::ostream& saymore() { return say( verbose ? std::cerr : comma::application::detail::null_ostream ); }
+std::ostream& saymore() { return say( comma::application::detail::verbose ? std::cerr : comma::application::detail::null_ostream ); }
 
 void command_line_options::_init_verbose( bool v, const std::string& path )
 {
