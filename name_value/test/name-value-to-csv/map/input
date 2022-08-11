@@ -1,0 +1,2 @@
+map/basics[0]="( echo p/x/a/b=0; echo p/x/c=1; echo p/y/a/b=2 ) | name-value-to-csv --map --prefix=p --fields a/b,c"
+map/basics[1]="( echo p/x/a/b=0; echo p/x/c=1 ) | name-value-to-csv --map --prefix=p --fields a/b,c"

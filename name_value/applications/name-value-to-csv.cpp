@@ -24,6 +24,8 @@ static void usage( bool )
     std::cerr << "    --delimiter,-d=<delimiter>; default=','; csv delimiter" << std::endl;
     std::cerr << "    --equal-sign,-e=<equal_sign>; default='='; equal sign" << std::endl;
     std::cerr << "    --fields,-f=<fields>; fields to output" << std::endl;
+    std::cerr << "    --map,--dict; prefixed paths are a map, not list; expects input sorted by path" << std::endl;
+    std::cerr << "                  run example below to make sense of it" << std::endl;
     std::cerr << "    --prefix,--path,-p=[<prefix>]; optional prefix" << std::endl;
     std::cerr << "    --unindexed-fields=<fields>; if no --fields specified, output unindexed fields once, if --fields specified, append given unindexed fields to all records" << std::endl;
     std::cerr << "    --unindexed-stream,--stream; read a stream of key-value pairs, on every input record output csv record with the field value set and other fields empty, see example below" << std::endl;
@@ -42,9 +44,20 @@ static void usage( bool )
     std::cerr << "        EOF" << std::endl;
     std::cerr << std::endl;
     std::cerr << "        yields:" << std::endl;
+    std::cerr << "            a,10,0" << std::endl;
+    std::cerr << "            b,20,1" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "        a,10,0" << std::endl;
-    std::cerr << "        b,20,1" << std::endl;
+    std::cerr << "        cat <<EOF | name-value-to-csv --map --fields=name,value,status --prefix=my/test" << std::endl;
+    std::cerr << "        my/test/x/name=a" << std::endl;
+    std::cerr << "        my/test/x/value=10" << std::endl;
+    std::cerr << "        my/test/x/status=0" << std::endl;
+    std::cerr << "        my/test/y/name=b" << std::endl;
+    std::cerr << "        my/test/y/status=1" << std::endl;
+    std::cerr << "        EOF" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "        yields:" << std::endl;
+    std::cerr << "            x,a,10,0" << std::endl;
+    std::cerr << "            y,b,,1" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    unindexed fields" << std::endl;
     std::cerr << "        todo" << std::endl;
@@ -103,6 +116,9 @@ int main( int ac, char** av )
         values_t values; // quick and dirty; watch performance?
         std::map< unsigned int, values_t > map;
         boost::optional< unsigned int > index;
+        std::string key;
+        bool is_map = options.exists( "--dict,--map" );
+        if( is_map && unsorted ) { comma::say() << "combination of --map and --unsorted: todo, just ask" << std::endl; return 1; }
         while( std::cin.good() && !std::cin.eof() )
         {
             std::string s;
@@ -124,16 +140,30 @@ int main( int ac, char** av )
                 else if( name[ prefix.size() ] == '/' ) { values[ name.substr( prefix.size() + 1 ) ] = s.substr( e + 1 ); }
                 continue;
             }
-            if( name[prefix.size()] != '[' ) { continue; }
-            auto b = s.find_first_of( ']', prefix.size() );
-            if( b == std::string::npos ) { std::cerr << "name-value-to-csv: expected path-value pair with valid indices; got: '" << s << "'" << std::endl; return 1; }
-            if( s[ b + 1 ] != '/' ) { continue; }
-            unsigned int current_index = boost::lexical_cast< unsigned int >( name.substr( prefix.size() + 1, b - prefix.size() - 1 ) );
-            if( unsorted || !unindexed_fields.empty() ) { map[current_index][name.substr( b + 2 )] = s.substr( e + 1 ); continue; }
-            if( index && current_index < *index ) { std::cerr << "name-value-to-csv: expected sorted index, got index " << current_index << " after " << *index << " in line: '" << comma::strip( s ) << "'" << std::endl; return 1; }
-            if( index && current_index > *index ) { std::cout << join( fields, values, delimiter ) << std::endl; }
-            values[name.substr( b + 2 )] = s.substr( e + 1 );
-            index = current_index;
+            if( is_map )
+            {
+                if( name[prefix.size()] != '/' ) { continue; }
+                auto b = s.find_first_of( '/', prefix.size() + 1 );
+                if( b == std::string::npos ) { std::cerr << "name-value-to-csv: with prefix \"" << prefix << "\" expected path-value pair with valid keys; got: '" << s << "'" << std::endl; return 1; }
+                std::string current_key = name.substr( prefix.size() + 1, b - prefix.size() - 1 );
+                if( unsorted ) {} // todo
+                if( !key.empty() && current_key != key ) { std::cout << key << delimiter << join( fields, values, delimiter ) << std::endl; }
+                values[name.substr( b + 1 )] = s.substr( e + 1 );
+                key = current_key;
+            }
+            else
+            {
+                if( name[prefix.size()] != '[' ) { continue; }
+                auto b = s.find_first_of( ']', prefix.size() );
+                if( b == std::string::npos ) { std::cerr << "name-value-to-csv: with prefix \"" << prefix << "\" expected path-value pair with valid indices; got: '" << s << "'" << std::endl; return 1; }
+                if( s[ b + 1 ] != '/' ) { continue; }
+                unsigned int current_index = boost::lexical_cast< unsigned int >( name.substr( prefix.size() + 1, b - prefix.size() - 1 ) );
+                if( unsorted || !unindexed_fields.empty() ) { map[current_index][name.substr( b + 2 )] = s.substr( e + 1 ); continue; }
+                if( index && current_index < *index ) { std::cerr << "name-value-to-csv: expected sorted index, got index " << current_index << " after " << *index << " in line: '" << comma::strip( s ) << "'" << std::endl; return 1; }
+                if( index && current_index > *index ) { std::cout << join( fields, values, delimiter ) << std::endl; }
+                values[name.substr( b + 2 )] = s.substr( e + 1 );
+                index = current_index;
+            }
         }
         if( unindexed && !unindexed_stream )
         { 
@@ -153,6 +183,10 @@ int main( int ac, char** av )
         else if( index )
         {
             std::cout << join( fields, values, delimiter ) << std::endl;
+        }
+        else if( is_map && !key.empty() )
+        {
+            std::cout << key << delimiter << join( fields, values, delimiter ) << std::endl;
         }
         return 0;
     }

@@ -1,0 +1,5 @@
+map/basics[0]/output/line[0]="x,0,1"
+map/basics[0]/output/line[1]="y,2,"
+map/basics[0]/status=0
+map/basics[1]/output="x,0,1"
+map/basics[1]/status=0
