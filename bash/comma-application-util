@@ -303,6 +303,7 @@ function comma-application-swiss-init()
         local operation_options; operation_options=$( ${comma_application_swiss_operation}-options | comma-options-to-name-value "$@" ) || die "invalid options"
         eval "$( grep -v '^"' <<< "$operation_options" | sed 's#^#options_#' | comma_path_value_mangle )"
     fi
+    mapfile -t options_unnamed < <( ( echo "$options"; echo "$operation_options" ) | grep '^"' | sed -e 's#^"##' -e 's#"$##' )
 }
 
 export -f comma-application-swiss-init
