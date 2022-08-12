@@ -1,5 +1,3 @@
-[0]/name=a
-[0]/value=1
-[1]/name=b
-[1]/value=2
-
+basics[0]="( echo [0]/name=a; echo [0]/value=1; echo [1]/name=b; echo [1]/value=2 ) | name-value-to-csv --fields name,value"
+unquote[0]="( echo [0]/name=\\\"a\\\"; echo [0]/value=1; echo [1]/name=\\\"b\\\"; echo [1]/value=2 ) | name-value-to-csv --fields name,value"
+unquote[1]="( echo [0]/name=\\\"a\\\"; echo [0]/value=1; echo [1]/name=\\\"b\\\"; echo [1]/value=2 ) | name-value-to-csv --fields name,value --unquote"
