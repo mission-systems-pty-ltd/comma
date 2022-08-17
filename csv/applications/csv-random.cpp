@@ -13,6 +13,7 @@
 #include "../../application/command_line_options.h"
 #include "../../base/types.h"
 #include "../../csv/stream.h"
+#include "../../string/string.h"
 
 static void usage( bool verbose )
 {
@@ -30,7 +31,10 @@ static void usage( bool verbose )
     std::cerr << std::endl;
     std::cerr << "        options" << std::endl;
     std::cerr << "            --append; append random numbers to stdin input" << std::endl;
-    std::cerr << "            --distribution=<distribution>; default=uniform; todo: more distributions to plug in, just ask" << std::endl;
+    std::cerr << "            --distribution=<distribution>[;<options>]; default=uniform; values: uniform, gaussian, normal; todo: more distributions to plug in, just ask" << std::endl;
+    std::cerr << "                uniform[;<min>;<max>]: if <min>, <max> not present, --range values will be used" << std::endl;
+    std::cerr << "                gaussian[;<mean>;<sigma>]" << std::endl;
+    std::cerr << "                normal: alias for gaussian" << std::endl;
     std::cerr << "            --engine=<engine>; default=mt19937_64; supported values: minstd_rand0, minstd_rand, mt19937, mt19937_64, ranlux24_base, ranlux48_base, ranlux24, ranlux48, knuth_b, default_random_engine" << std::endl;
     std::cerr << "            --output-binary; output random numbers as binary, or specify --binary=<format> for stdin input" << std::endl;
     std::cerr << "            --range=[<min>,<max>]; desired value range, default: whatever stl defines (usually numeric limits)" << std::endl;
@@ -207,12 +211,15 @@ static int run_impl( const comma::command_line_options& options )
 
 static int run( const comma::command_line_options& options ) // quick and dirty
 {
-    const auto& distribution = options.value< std::string >( "--distribution", "uniform" );
+    const auto& params = comma::split( options.value< std::string >( "--distribution", "uniform" ), ',' );
+    const std::string& distribution = params[0];
     const auto& format = comma::csv::format( options.value< std::string >( "--type", "ui" ) );
     if ( format.collapsed_string().find( ',' ) != std::string::npos ) { std::cerr << "csv-random make: --type must be homogeneous i.e. ui or 2ui or 3ui" << std::endl; return 1; }
     if( distribution == "uniform" )
     {
-        switch ( format.offset( 0 ).type )
+        if( params.size() != 1 && params.size() != 3 ) { std::cerr << "csv-random make: uniform: expected uniform[,<min>,<max>]; got: \"" << options.value< std::string >( "--distribution" ) << "\"" << std::endl; return 1; }
+        if( params.size() == 3 ) { std::cerr << "csv-random make: uniform: parameters handling: implementing..." << std::endl; return 1; }
+        switch( format.offset( 0 ).type )
         {
             case csv::format::int8: return run_impl< char, std::uniform_int_distribution >( options );
             case csv::format::uint8: return run_impl< unsigned char, std::uniform_int_distribution >( options );
@@ -224,7 +231,17 @@ static int run( const comma::command_line_options& options ) // quick and dirty
             case csv::format::uint64: return run_impl< comma::uint64, std::uniform_int_distribution >( options );
             case csv::format::float_t: return run_impl< float, std::uniform_real_distribution >( options );
             case csv::format::double_t: return run_impl< double, std::uniform_real_distribution >( options );
-            default: std::cerr << "csv-random make: expected type; got: '" << format.string() << "'" << std::endl; return 1;
+            default: std::cerr << "csv-random make: uniform distribution: expected type; got: '" << format.string() << "'" << std::endl; return 1;
+        }
+    }
+    if( distribution == "gaussian" || distribution == "normal" )
+    {
+        std::cerr << "csv-random make: normal: implementing..." << std::endl; return 1;
+        switch( format.offset( 0 ).type )
+        {
+            case csv::format::float_t: return run_impl< float, std::normal_distribution >( options );
+            case csv::format::double_t: return run_impl< double, std::normal_distribution >( options );
+            default: std::cerr << "csv-random make: normal distribution: expected floating point --type; got unsupported type: '" << format.string() << "'" << std::endl; return 1;
         }
     }
     std::cerr << "csv-random make: expected distribution; got: '" << distribution << "'" << std::endl;
@@ -331,11 +348,7 @@ static int run_impl( const comma::command_line_options& options, std::size_t cou
             {
                 std::cin.read( &buf[0], buf.size() );
                 if( std::cin.gcount() == 0 ) { return 0; }
-                if( std::cin.gcount() != static_cast< int >( buf.size() ) )
-                {
-                    std::cerr << "csv-random true-random: expected " << buf.size() << " bytes; got " << std::cin.gcount() << std::endl;
-                    return 1;
-                }
+                if( std::cin.gcount() != static_cast< int >( buf.size() ) ) { std::cerr << "csv-random true-random: expected " << buf.size() << " bytes; got " << std::cin.gcount() << std::endl; return 1; }
             }
             else
             {
@@ -360,11 +373,7 @@ static int run_impl( const comma::command_line_options& options, std::size_t cou
 static int run( const comma::command_line_options& options )
 {
     const auto format = comma::csv::format( options.value< std::string >( "--type", "ui" ) );
-    if( format.collapsed_string().find( ',' ) != std::string::npos )
-    {
-        std::cerr << "csv-random true-random: --type must be homogeneous i.e. ui or 2ui or 3ui" << std::endl;
-        return 1;
-    }
+    if( format.collapsed_string().find( ',' ) != std::string::npos ) { std::cerr << "csv-random true-random: --type must be homogeneous i.e. ui or 2ui or 3ui" << std::endl; return 1; }
     switch( format.offset( 0 ).type ) {
         case csv::format::int8: return run_impl< char >( options, format.count() );
         case csv::format::uint8: return run_impl< unsigned char >( options, format.count() );
