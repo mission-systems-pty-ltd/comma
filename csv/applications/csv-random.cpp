@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "../../application/command_line_options.h"
+#include "../../base/exception.h"
 #include "../../base/types.h"
 #include "../../csv/stream.h"
 #include "../../string/string.h"
@@ -118,7 +119,7 @@ template <> struct type_traits< unsigned char > { static unsigned int cast( cons
 namespace make {
 
 template < typename T, template < typename > class Distribution, typename Engine >
-static int run_impl( Distribution< T >& distribution, bool append, bool binary, std::size_t count )
+static int run_impl( Distribution< T >& distribution, bool append, bool binary, std::size_t count, const boost::optional< std::pair< T, T > >& range )
 {
     Engine engine = ::seed ? Engine( *::seed ) : Engine();
     if( !::csv.flush ) { std::cin.tie( nullptr ); }
@@ -181,66 +182,91 @@ static int run_impl( Distribution< T >& distribution, bool append, bool binary, 
     return 0;
 }
 
+template < typename T > static std::vector< T > _as( const std::vector< std::string >& v, unsigned int begin ) // todo? move to library?
+{
+    std::vector< T > r( v.size() - begin );
+    for( unsigned int i = begin; i < v.size(); r[ i - begin ] = boost::lexical_cast< T >( v[i] ), ++i );
+    return r;
+}
+
+template < typename T, template < typename > class Distribution, unsigned int Size > struct distribution_traits { static Distribution< T > make( const std::vector< T >& p ); }; // quick and dirty
+template < typename T, template < typename > class Distribution > struct distribution_traits< T, Distribution, 0 > { static Distribution< T > make( const std::vector< T >& p ) { return Distribution< T >(); } };
+template < typename T, template < typename > class Distribution > struct distribution_traits< T, Distribution, 1 > { static Distribution< T > make( const std::vector< T >& p ) { return Distribution< T >( p[0] ); } };
+template < typename T, template < typename > class Distribution > struct distribution_traits< T, Distribution, 2 > { static Distribution< T > make( const std::vector< T >& p ) { return Distribution< T >( p[0], p[1] ); } };
+
+template < typename T, template < typename > class Distribution > static Distribution< T > make_distribution( const std::vector< std::string >& params ) // quick and dirty
+{
+    const auto& p = _as< T >( params, 1 );
+    switch( p.size() ) // quick and dirty; does not scale, but for now just to make it working
+    {
+        case 0: return distribution_traits< T, Distribution, 0 >::make( p );
+        case 1: return distribution_traits< T, Distribution, 1 >::make( p );
+        case 2: return distribution_traits< T, Distribution, 2 >::make( p );
+        default: COMMA_THROW( comma::exception, "distribution traits for " << p.size() << " parameters: not implemented; just ask" );
+    }
+}
+
 template < typename T, template < typename > class Distribution >
-static int run_impl( const comma::command_line_options& options )
+static int run_impl( const std::vector< std::string >& params, const comma::command_line_options& options )
 {
     const auto& append = options.exists( "--append" );
     const auto& binary = options.exists( "--output-binary" ) || ::csv.binary();
     const auto& engine = options.value< std::string >( "--engine", "mt19937_64" );
     const auto& count = comma::csv::format( options.value< std::string >( "--type", "ui" ) ).count();
-    const auto& r = options.optional< std::string >( "--range" ); // todo: parse distribution parameters
-    Distribution< T > distribution;
-    if( r )
-    {
-        const auto& range = comma::csv::ascii< std::pair< T, T > >().get( *r );
-        distribution = Distribution< T >( range.first, range.second );
-    }
-    if( engine == "minstd_rand0" ) { return run_impl< T, Distribution, std::minstd_rand0 >( distribution, append, binary, count ); }
-    if( engine == "minstd_rand" ) { return run_impl< T, Distribution, std::minstd_rand >( distribution, append, binary, count ); }
-    if( engine == "mt19937" ) { return run_impl< T, Distribution, std::mt19937 >( distribution, append, binary, count ); }
-    if( engine == "mt19937_64" ) { return run_impl< T, Distribution, std::mt19937_64 >( distribution, append, binary, count ); }
-    if( engine == "ranlux24_base" ) { return run_impl< T, Distribution, std::ranlux24_base >( distribution, append, binary, count ); }
-    if( engine == "ranlux48_base" ) { return run_impl< T, Distribution, std::ranlux48_base >( distribution, append, binary, count ); }
-    if( engine == "ranlux24" ) { return run_impl< T, Distribution, std::ranlux24 >( distribution, append, binary, count ); }
-    if( engine == "ranlux48" ) { return run_impl< T, Distribution, std::ranlux48 >( distribution, append, binary, count ); }
-    if( engine == "knuth_b" ) { return run_impl< T, Distribution, std::knuth_b >( distribution, append, binary, count ); }
-    if( engine == "default_random_engine" ) { return run_impl< T, Distribution, std::default_random_engine >( distribution, append, binary, count ); }
+    boost::optional< std::pair< T, T > > range;
+    if( options.exists( "--range" ) ) { range = comma::csv::ascii< std::pair< T, T > >().get( options.value< std::string >( "--range" ) ); }
+    Distribution< T > distribution = make_distribution< T, Distribution >( params );
+    if( engine == "minstd_rand0" ) { return run_impl< T, Distribution, std::minstd_rand0 >( distribution, append, binary, count, range ); }
+    if( engine == "minstd_rand" ) { return run_impl< T, Distribution, std::minstd_rand >( distribution, append, binary, count, range ); }
+    if( engine == "mt19937" ) { return run_impl< T, Distribution, std::mt19937 >( distribution, append, binary, count, range ); }
+    if( engine == "mt19937_64" ) { return run_impl< T, Distribution, std::mt19937_64 >( distribution, append, binary, count, range ); }
+    if( engine == "ranlux24_base" ) { return run_impl< T, Distribution, std::ranlux24_base >( distribution, append, binary, count, range ); }
+    if( engine == "ranlux48_base" ) { return run_impl< T, Distribution, std::ranlux48_base >( distribution, append, binary, count, range ); }
+    if( engine == "ranlux24" ) { return run_impl< T, Distribution, std::ranlux24 >( distribution, append, binary, count, range ); }
+    if( engine == "ranlux48" ) { return run_impl< T, Distribution, std::ranlux48 >( distribution, append, binary, count, range ); }
+    if( engine == "knuth_b" ) { return run_impl< T, Distribution, std::knuth_b >( distribution, append, binary, count, range ); }
+    if( engine == "default_random_engine" ) { return run_impl< T, Distribution, std::default_random_engine >( distribution, append, binary, count, range ); }
     std::cerr << "csv-random make: expected engine; got: '" << engine << "'" << std::endl;
     return 1;
 }
 
 static int run( const comma::command_line_options& options ) // quick and dirty
 {
-    const auto& params = comma::split( options.value< std::string >( "--distribution", "uniform" ), ',' );
+    auto params = comma::split( options.value< std::string >( "--distribution", "uniform" ), ',' );
     const std::string& distribution = params[0];
     const auto& format = comma::csv::format( options.value< std::string >( "--type", "ui" ) );
     if ( format.collapsed_string().find( ',' ) != std::string::npos ) { std::cerr << "csv-random make: --type must be homogeneous i.e. ui or 2ui or 3ui" << std::endl; return 1; }
     if( distribution == "uniform" )
     {
+        if( options.exists( "--range" ) ) // super-quick and dirty to preserve backward compatibility
+        {
+            if( params.size() > 1 ) { std::cerr << "csv-random make: uniform: either use --range or uniform[,<min>,<max>], not both" << std::endl; return 1; }
+            const auto& r = comma::split( options.value< std::string >( "--range" ), ',' );
+            params = { "uniform", r[0], r[1] };
+        }
         if( params.size() != 1 && params.size() != 3 ) { std::cerr << "csv-random make: uniform: expected uniform[,<min>,<max>]; got: \"" << options.value< std::string >( "--distribution" ) << "\"" << std::endl; return 1; }
-        if( params.size() == 3 ) { std::cerr << "csv-random make: uniform: parameters handling: implementing..." << std::endl; return 1; }
         switch( format.offset( 0 ).type )
         {
-            case csv::format::int8: return run_impl< char, std::uniform_int_distribution >( options );
-            case csv::format::uint8: return run_impl< unsigned char, std::uniform_int_distribution >( options );
-            case csv::format::int16: return run_impl< comma::int16, std::uniform_int_distribution >( options );
-            case csv::format::uint16: return run_impl< comma::uint16, std::uniform_int_distribution >( options );
-            case csv::format::int32: return run_impl< comma::int32, std::uniform_int_distribution >( options );
-            case csv::format::uint32: return run_impl< comma::uint32, std::uniform_int_distribution >( options );
-            case csv::format::int64: return run_impl< comma::int64, std::uniform_int_distribution >( options );
-            case csv::format::uint64: return run_impl< comma::uint64, std::uniform_int_distribution >( options );
-            case csv::format::float_t: return run_impl< float, std::uniform_real_distribution >( options );
-            case csv::format::double_t: return run_impl< double, std::uniform_real_distribution >( options );
+            case csv::format::int8: return run_impl< char, std::uniform_int_distribution >( params, options );
+            case csv::format::uint8: return run_impl< unsigned char, std::uniform_int_distribution >( params, options );
+            case csv::format::int16: return run_impl< comma::int16, std::uniform_int_distribution >( params, options );
+            case csv::format::uint16: return run_impl< comma::uint16, std::uniform_int_distribution >( params, options );
+            case csv::format::int32: return run_impl< comma::int32, std::uniform_int_distribution >( params, options );
+            case csv::format::uint32: return run_impl< comma::uint32, std::uniform_int_distribution >( params, options );
+            case csv::format::int64: return run_impl< comma::int64, std::uniform_int_distribution >( params, options );
+            case csv::format::uint64: return run_impl< comma::uint64, std::uniform_int_distribution >( params, options );
+            case csv::format::float_t: return run_impl< float, std::uniform_real_distribution >( params, options );
+            case csv::format::double_t: return run_impl< double, std::uniform_real_distribution >( params, options );
             default: std::cerr << "csv-random make: uniform distribution: expected type; got: '" << format.string() << "'" << std::endl; return 1;
         }
     }
     if( distribution == "gaussian" || distribution == "normal" )
     {
-        std::cerr << "csv-random make: normal: implementing..." << std::endl; return 1;
+        if( params.size() != 1 && params.size() != 3 ) { std::cerr << "csv-random make: gaussian: expected gaussian[,<mean>,<sigma>]; got: \"" << options.value< std::string >( "--distribution" ) << "\"" << std::endl; return 1; }
         switch( format.offset( 0 ).type )
         {
-            case csv::format::float_t: return run_impl< float, std::normal_distribution >( options );
-            case csv::format::double_t: return run_impl< double, std::normal_distribution >( options );
+            case csv::format::float_t: return run_impl< float, std::normal_distribution >( params, options );
+            case csv::format::double_t: return run_impl< double, std::normal_distribution >( params, options );
             default: std::cerr << "csv-random make: normal distribution: expected floating point --type; got unsupported type: '" << format.string() << "'" << std::endl; return 1;
         }
     }
