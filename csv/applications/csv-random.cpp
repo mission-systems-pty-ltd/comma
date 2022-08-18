@@ -38,7 +38,7 @@ static void usage( bool verbose )
     std::cerr << "                normal: alias for gaussian" << std::endl;
     std::cerr << "            --engine=<engine>; default=mt19937_64; supported values: minstd_rand0, minstd_rand, mt19937, mt19937_64, ranlux24_base, ranlux48_base, ranlux24, ranlux48, knuth_b, default_random_engine" << std::endl;
     std::cerr << "            --output-binary; output random numbers as binary, or specify --binary=<format> for stdin input" << std::endl;
-    std::cerr << "            --range=[<min>,<max>]; desired value range, default: whatever stl defines (usually numeric limits)" << std::endl;
+    std::cerr << "            --range=[<min>,<max>]; desired value range: attention! currently, will pick value until gets something in range" << std::endl;
     std::cerr << "            --type=<type>; default=ui; supported values: b, ub, w, uw, i, ui, l, ul, f, d; can have more than one <type> i.e. 3ui" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    true-random: output non-deterministic uniformly distributed unsigned int random numbers (if non-deterministic source is not available" << std::endl;
@@ -122,6 +122,15 @@ template < typename T, template < typename > class Distribution, typename Engine
 static int run_impl( Distribution< T >& distribution, bool append, bool binary, std::size_t count, const boost::optional< std::pair< T, T > >& range )
 {
     Engine engine = ::seed ? Engine( *::seed ) : Engine();
+    auto _pick = [&]() -> T
+    {
+        if( !range ) { return distribution( engine ); }
+        while( true ) // todo? parametrise? while( true ) is quite cruel
+        {
+            T r = distribution( engine );
+            if( r >= range->first && r <= range->second ) { return r; }
+        }
+    };
     if( !::csv.flush ) { std::cin.tie( nullptr ); }
     if( append )
     {
@@ -136,7 +145,7 @@ static int run_impl( Distribution< T >& distribution, bool append, bool binary, 
                 std::cout.write( &buf[0], buf.size() );
                 for( std::size_t i = 0; i < count; ++i )
                 {
-                    T r = distribution( engine );
+                    T r = _pick();
                     std::cout.write( reinterpret_cast< char* >( &r ), sizeof( T ) );
                 }
                 if( ::csv.flush ) { std::cout.flush(); }
@@ -149,7 +158,7 @@ static int run_impl( Distribution< T >& distribution, bool append, bool binary, 
             std::getline( std::cin, s );
             if( s.empty() ) { continue; }
             std::cout << s;
-            for( std::size_t i = 0; i < count; ++i ) { std::cout << ::csv.delimiter << type_traits< T >::cast( distribution( engine ) ); }
+            for( std::size_t i = 0; i < count; ++i ) { std::cout << ::csv.delimiter << type_traits< T >::cast( _pick() ); }
             std::cout << std::endl;
             if( ::csv.flush ) { std::cout.flush(); }
         }
@@ -161,7 +170,7 @@ static int run_impl( Distribution< T >& distribution, bool append, bool binary, 
         {
             for( std::size_t i = 0; i < count; ++i )
             {
-                T r = distribution( engine );
+                T r = _pick();
                 std::cout.write( reinterpret_cast< char* >( &r ), sizeof( T ) );
             }
             if( ::csv.flush ) { std::cout.flush(); }
@@ -173,7 +182,7 @@ static int run_impl( Distribution< T >& distribution, bool append, bool binary, 
         std::string comma;
         for( std::size_t i = 0; i < count; ++i )
         {
-            std::cout << comma << type_traits< T >::cast( distribution( engine ) );
+            std::cout << comma << type_traits< T >::cast( _pick() );
             comma = ::csv.delimiter;
         }
         std::cout << std::endl;
@@ -214,7 +223,7 @@ static int run_impl( const std::vector< std::string >& params, const comma::comm
     const auto& engine = options.value< std::string >( "--engine", "mt19937_64" );
     const auto& count = comma::csv::format( options.value< std::string >( "--type", "ui" ) ).count();
     boost::optional< std::pair< T, T > > range;
-    if( options.exists( "--range" ) ) { range = comma::csv::ascii< std::pair< T, T > >().get( options.value< std::string >( "--range" ) ); }
+    if( options.exists( "--range" ) && params[0] != "uniform" ) { range = comma::csv::ascii< std::pair< T, T > >().get( options.value< std::string >( "--range" ) ); } // quick and dirty
     Distribution< T > distribution = make_distribution< T, Distribution >( params );
     if( engine == "minstd_rand0" ) { return run_impl< T, Distribution, std::minstd_rand0 >( distribution, append, binary, count, range ); }
     if( engine == "minstd_rand" ) { return run_impl< T, Distribution, std::minstd_rand >( distribution, append, binary, count, range ); }
@@ -262,7 +271,7 @@ static int run( const comma::command_line_options& options ) // quick and dirty
     }
     if( distribution == "gaussian" || distribution == "normal" )
     {
-        if( params.size() != 1 && params.size() != 3 ) { std::cerr << "csv-random make: gaussian: expected gaussian[,<mean>,<sigma>]; got: \"" << options.value< std::string >( "--distribution" ) << "\"" << std::endl; return 1; }
+        if( params.size() != 1 && params.size() != 3 ) { std::cerr << "csv-random make: gaussian: expected gaussian[,<mean>,<stddev>]; got: \"" << options.value< std::string >( "--distribution" ) << "\"" << std::endl; return 1; }
         switch( format.offset( 0 ).type )
         {
             case csv::format::float_t: return run_impl< float, std::normal_distribution >( params, options );
