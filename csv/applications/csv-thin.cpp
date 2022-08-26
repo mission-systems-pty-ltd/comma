@@ -54,7 +54,7 @@ static void usage( bool verbose = false )
     std::cerr << "    using timestamp from input:  cat full.csv | csv-thin --period 2 --fields t" << std::endl;
     std::cerr << "    binary data:                 cat full.bin | csv-thin 0.1 --binary 3d" << std::endl;
     std::cerr << std::endl;
-    exit( 1 );
+    exit( 0 );
 }
 
 static double rate;
@@ -164,9 +164,9 @@ int main( int ac, char** av )
         if( !period )
         {
             v = options.unnamed( "--deterministic,-d", "-.*" );
-            if( v.empty() ) { comma::say() << "please specify rate" << std::endl; usage(); }
+            if( v.empty() ) { comma::say() << "please specify rate" << std::endl; return 1; }
             rate = boost::lexical_cast< double >( v[0] );
-            if( comma::math::less( rate, 0 ) || comma::math::less( 1, rate ) ) { comma::say() << "expected rate between 0 and 1, got " << rate << std::endl; usage(); }
+            if( comma::math::less( rate, 0 ) || comma::math::less( 1, rate ) ) { comma::say() << "expected rate between 0 and 1, got " << rate << std::endl; return 1; }
         }
         if( binary ) // quick and dirty, improve performance by reading larger buffer
         {
