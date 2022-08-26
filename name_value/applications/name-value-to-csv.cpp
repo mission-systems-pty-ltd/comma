@@ -89,9 +89,6 @@ static std::string join( const std::vector< std::string >& fields, values_t& val
     return oss.str();
 }
 
-static bool unquote;
-static std::string _unquoted( const std::string s ) { return unquote && s.size() >= 2 ? comma::strip( s, "\"" ) : s; }
-
 int main( int ac, char** av )
 {
     try
@@ -113,7 +110,7 @@ int main( int ac, char** av )
         if( fields[0].empty() && unindexed_fields.empty() ) { std::cerr << "name-value-to-csv: please specify --fields or --unindexed-fields" << std::endl; return 1; }
         bool unindexed = fields[0].empty();
         values_t unindexed_values;
-        unquote = options.exists( "--unquote" );
+        bool unquote = options.exists( "--unquote" );
         bool unsorted = options.exists( "--unsorted" );
         char delimiter = options.value( "--delimiter,-d", ',' );
         char equal_sign = options.value( "--equal-sign,-e", '=' );
@@ -124,25 +121,27 @@ int main( int ac, char** av )
         std::string key;
         bool is_map = options.exists( "--dict,--map" );
         if( is_map && unsorted ) { comma::say() << "combination of --map and --unsorted: todo, just ask" << std::endl; return 1; }
+        std::string::size_type e = std::string::npos;
+        auto value = [&]( const std::string& s ) { const std::string& t = s.substr( e + 1 ); return unquote && t.size() >= 2 ? comma::strip( t, "\"" ) : t; };
         while( std::cin.good() && !std::cin.eof() )
         {
             std::string s;
             std::getline( std::cin, s );
             if( comma::strip( s, " \t" ).empty() || comma::strip( s, " \t" )[0] == '#' ) { continue; }
-            auto e = s.find_first_of( equal_sign ); // todo: use boost::spirit
+            e = s.find_first_of( equal_sign ); // todo: use boost::spirit
             if( e == std::string::npos ) { std::cerr << "name-value-to-csv: expected path-value pair; got: '" << s << "'" << std::endl; return 1; }
             std::string name = s.substr( 0, e );
             if( unindexed_fields_set.find( name ) != unindexed_fields_set.end() )
             {
-                unindexed_values[name] = s.substr( e + 1 );
+                unindexed_values[name] = value( s );
                 if( unindexed_stream ) { std::cout << join( unindexed_fields, unindexed_values, delimiter, !unindexed_stream_update ) << std::endl; }
                 continue;
             }
             if( name.substr( 0, prefix.size() ) != prefix ) { continue; }
             if( unindexed )
             {
-                if( prefix.empty() ) { values[name] = _unquoted( s.substr( e + 1 ) ); }
-                else if( name[ prefix.size() ] == '/' ) { values[ name.substr( prefix.size() + 1 ) ] = _unquoted( s.substr( e + 1 ) ); }
+                if( prefix.empty() ) { values[name] = value( s ); }
+                else if( name[ prefix.size() ] == '/' ) { values[ name.substr( prefix.size() + 1 ) ] = value( s ); }
                 continue;
             }
             if( is_map )
@@ -153,7 +152,7 @@ int main( int ac, char** av )
                 std::string current_key = name.substr( prefix.size() + 1, b - prefix.size() - 1 );
                 if( unsorted ) {} // todo
                 if( !key.empty() && current_key != key ) { std::cout << key << delimiter << join( fields, values, delimiter ) << std::endl; }
-                values[name.substr( b + 1 )] = _unquoted( s.substr( e + 1 ) );
+                values[name.substr( b + 1 )] = value( s );
                 key = current_key;
             }
             else
@@ -163,10 +162,10 @@ int main( int ac, char** av )
                 if( b == std::string::npos ) { std::cerr << "name-value-to-csv: with prefix \"" << prefix << "\" expected path-value pair with valid indices; got: '" << s << "'" << std::endl; return 1; }
                 if( s[ b + 1 ] != '/' ) { continue; }
                 unsigned int current_index = boost::lexical_cast< unsigned int >( name.substr( prefix.size() + 1, b - prefix.size() - 1 ) );
-                if( unsorted || !unindexed_fields.empty() ) { map[current_index][name.substr( b + 2 )] = s.substr( e + 1 ); continue; }
+                if( unsorted || !unindexed_fields.empty() ) { map[current_index][name.substr( b + 2 )] = value( s ); continue; }
                 if( index && current_index < *index ) { std::cerr << "name-value-to-csv: expected sorted index, got index " << current_index << " after " << *index << " in line: '" << comma::strip( s ) << "'" << std::endl; return 1; }
                 if( index && current_index > *index ) { std::cout << join( fields, values, delimiter ) << std::endl; }
-                values[name.substr( b + 2 )] = _unquoted( s.substr( e + 1 ) );
+                values[name.substr( b + 2 )] = value( s );
                 index = current_index;
             }
         }
