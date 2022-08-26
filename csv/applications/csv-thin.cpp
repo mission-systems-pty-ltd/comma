@@ -1,31 +1,4 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /// @author vsevolod vlaskine
 
@@ -165,14 +138,13 @@ int main( int ac, char** av )
         deterministic = options.exists( "--deterministic,-d" );
         invert = options.exists( "--invert,-i" );
         seed = options.optional< comma::uint32 >( "--seed" );
-        if( options.exists( "--period" )) { period = boost::posix_time::microseconds( static_cast<unsigned int> (options.value< double >( "--period" ) * 1000000 )); }
+        if( options.exists( "--period" )) { period = boost::posix_time::microseconds( static_cast< unsigned int >( options.value< double >( "--period" ) * 1000000 ) ); }
         #ifdef WIN32
         if( binary ) { _setmode( _fileno( stdin ), _O_BINARY ); _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
-
         if( options.exists( "--fields" ))
         {
-            if( !period ) { COMMA_THROW( comma::exception, "--fields requires --period option" ); }
+            if( !period ) { comma::say() << "--fields requires --period option" << std::endl; }
             comma::csv::input_stream< timestamped > istream( std::cin, comma::csv::options( options ) );
             while( std::cin.good() && !std::cin.eof() )
             {
@@ -192,9 +164,9 @@ int main( int ac, char** av )
         if( !period )
         {
             v = options.unnamed( "--deterministic,-d", "-.*" );
-            if( v.empty() ) { std::cerr << "csv-thin: please specify rate" << std::endl; usage(); }
+            if( v.empty() ) { comma::say() << "please specify rate" << std::endl; usage(); }
             rate = boost::lexical_cast< double >( v[0] );
-            if( comma::math::less( rate, 0 ) || comma::math::less( 1, rate ) ) { std::cerr << "csv-thin: expected rate between 0 and 1, got " << rate << std::endl; usage(); }
+            if( comma::math::less( rate, 0 ) || comma::math::less( 1, rate ) ) { comma::say() << "expected rate between 0 and 1, got " << rate << std::endl; usage(); }
         }
         if( binary ) // quick and dirty, improve performance by reading larger buffer
         {
@@ -203,7 +175,7 @@ int main( int ac, char** av )
             boost::optional< comma::csv::format > f;
             if( !format_string.empty() ) { f.reset( comma::csv::format( format_string ) ); }
             if( !size ) { size = f->size(); }
-            if( f && f->size() != size ) { std::cerr << "csv-thin: expected consistent size, got --size " << size << " and --binary of size " << f->size() << std::endl; return 1; }
+            if( f && f->size() != size ) { comma::say() << "expected consistent size, got --size " << size << " and --binary of size " << f->size() << std::endl; return 1; }
             unsigned int factor = 65536 / size; // arbitrary
             if( factor == 0 ) { factor = 1; }
             std::vector< char > buf( size * factor );
@@ -217,7 +189,7 @@ int main( int ac, char** av )
                 //std::size_t e = available < int( size ) ? size : available - available % size;
                 std::cin.read( &buf[0], size ); // quick and dirty
                 if( std::cin.gcount() <= 0 ) { break; }
-                if( std::cin.gcount() < int( size ) ) { std::cerr << "csv-thin: expected " << size << " bytes; got only " << std::cin.gcount() << std::endl; return 1; }
+                if( std::cin.gcount() < int( size ) ) { comma::say() << "expected " << size << " bytes; got only " << std::cin.gcount() << std::endl; return 1; }
                 if( keep() ) { std::cout.write( &buf[0], size ); std::cout.flush(); }
             }
             #else
@@ -229,7 +201,7 @@ int main( int ac, char** av )
                 int count = ::read( comma::io::stdin_fd, cur + offset, capacity );
                 if( count <= 0 )
                 {
-                    if( offset != 0 ) { std::cerr << "csv-thin: expected at least " << size << " bytes, got only " << offset << std::endl; return 1; }
+                    if( offset != 0 ) { comma::say() << "expected at least " << size << " bytes, got only " << offset << std::endl; return 1; }
                     break;
                 }
                 offset += count;
@@ -254,7 +226,7 @@ int main( int ac, char** av )
         }
         return 0;
     }
-    catch( std::exception& ex ) { std::cerr << "csv-thin: " << ex.what() << std::endl; }
-    catch( ... ) { std::cerr << "csv-thin: unknown exception" << std::endl; }
+    catch( std::exception& ex ) { comma::say() << ex.what() << std::endl; }
+    catch( ... ) { comma::say() << "unknown exception" << std::endl; }
     return 1;
 }
