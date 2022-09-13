@@ -13,17 +13,17 @@
 namespace comma { namespace io {
 
 /// convenience function to load a vector-like contiguous container from file
-template < typename T, template < typename S > class A = std::vector >
-A< T >& load_array( A< T >& a, const std::string& path );
+template < typename T, template < typename S, typename A > class C = std::vector, typename A = std::allocator< T > >
+C< T, A >& load_array( C< T, A >& a, const std::string& path );
     
 /// convenience function to load a vector-like contiguous container from file
 /// @note allocates and returns the container, thus it is up to the user to use move semantics
-template < typename T, template < typename S > class A = std::vector >
-A< T > load_array( const std::string& path );
+template < typename T, template < typename S, typename A > class C = std::vector, typename A = std::allocator< T > >
+C< T, A > load_array( const std::string& path );
 
 
-template < typename T, template < typename S > class A >
-inline A< T >& load_array( A< T >& a, const std::string& path )
+template < typename T, template < typename S, typename A > class C = std::vector, typename A >
+inline C< T, A >& load_array( C< T, A >& a, const std::string& path )
 {
     std::ifstream ifs( path );
     if( !ifs.is_open() ) { COMMA_THROW( comma::exception, "failed to open \"" << path << "\"" ); }
@@ -33,10 +33,10 @@ inline A< T >& load_array( A< T >& a, const std::string& path )
     return a;
 }
 
-template < typename T, template < typename S > class A >
-inline A< T > load_array( const std::string& path )
+template < typename T, template < typename S, typename A > class C = std::vector, typename A >
+inline C< T, A > load_array( const std::string& path )
 {
-    A< T > a;
+    C< T, A > a;
     return load_array( a, path );
 }
     
