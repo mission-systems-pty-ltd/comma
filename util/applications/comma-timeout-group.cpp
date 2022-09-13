@@ -1,32 +1,4 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
 
 /// @author dmitry mikhin
 
@@ -179,29 +151,28 @@ void usage( bool )
         "\n        -or-"
         "\n        comma-timeout-group --wait-for-process-group=5 --enforce-group 10 cmd"
         "\n            as above, but if comma-timeout-group is built without procps support"
-        "\n            exit with error"
-        "\n"
-        "\n";
+        "\n            exit with error";
+    std::cerr << msg_general << std::endl;
     exit( 0 );
 }
 
 // many values are used in the signal handler, no way to pass via arguments, hence, global
 // the rest just moved here to keep all in one place
-sig_atomic_t timed_out = 0;
-int signal_to_use = SIGTERM;  // same default as kill and timeout commands
-int child_pid = 0;
-bool verbose = false;
-bool verbose_signal_handler = false;
-bool report_timeout = false;
-bool preserve_status = false;
-double timeout = 0.0;
-double kill_after = 0.0;
+static sig_atomic_t timed_out = 0;
+static int signal_to_use = SIGTERM;  // same default as kill and timeout commands
+static int child_pid = 0;
+static bool verbose = false;
+static bool verbose_signal_handler = false;
+static bool report_timeout = false;
+static bool preserve_status = false;
+static double timeout = 0.0;
+static double kill_after = 0.0;
 #ifdef HAVE_PROCPS_DEV
-bool wait_for_process_group = false;
-const bool can_wait_for_process_group = true;
-unsigned int wait_for_process_group_delay = 100000;
+static bool wait_for_process_group = false;
+static const bool can_wait_for_process_group = true;
+static unsigned int wait_for_process_group_delay = 100000;
 #else
-const bool can_wait_for_process_group = false;
+static const bool can_wait_for_process_group = false;
 #endif
 
 double seconds_from_string( const std::string& s, bool allow_forever = false )
