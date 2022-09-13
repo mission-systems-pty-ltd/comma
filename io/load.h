@@ -27,7 +27,7 @@ inline A< T >& load_array( A< T >& a, const std::string& path )
 {
     std::ifstream ifs( path );
     if( !ifs.is_open() ) { COMMA_THROW( comma::exception, "failed to open \"" << path << "\"" ); }
-    a.resize( boost::filesystem::file_size( path ) / sizeof( T ) );
+    a.resize( boost::filesystem::file_size( path ) / sizeof( T ) ); // todo? will file_size work on symlinks?
     auto r = ifs.read( reinterpret_cast< char * >( &a[0] ), a.size() * sizeof( T ) );
     if( r != a.size() * sizeof( T ) ) { COMMA_THROW( comma::exception, "expected to read " << a.size() * sizeof( T ) << " bytes (" << a.size() << " elements " << sizeof( T ) << " byte(s) each) from \"" << path << "\"; got: " << r << " byte(s)" ); }
     return a;

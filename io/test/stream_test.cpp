@@ -1,31 +1,4 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cstdio>
 #include <fstream>
@@ -34,6 +7,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/local/stream_protocol.hpp>
 #include <boost/filesystem/operations.hpp>
+#include "../load.h" // just to make sure it compiles
 #include "../select.h"
 #include "../stream.h"
 
@@ -54,14 +28,14 @@ TEST( io, file_stream )
         boost::filesystem::remove( "./test.file" );
     }
     // todo: more testing?
-    system( "mkfifo test.pipe" );
+    EXPECT_EQ( system( "mkfifo test.pipe" ), 0 );
     EXPECT_TRUE( boost::filesystem::exists( "./test.pipe" ) );
     EXPECT_TRUE( !boost::filesystem::is_regular_file( "./test.pipe" ) );
     EXPECT_TRUE( ::open( "./test.pipe", O_RDONLY | O_NONBLOCK ) > 0 );
     comma::io::ostream os( "./test.pipe" );
     EXPECT_TRUE( os() != NULL );
     EXPECT_TRUE( os->good() );
-    system( "rm ./test.pipe" );
+    EXPECT_EQ( system( "rm ./test.pipe" ), 0 );
 }
 
 TEST( io, std_stream )
