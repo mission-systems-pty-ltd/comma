@@ -10,6 +10,12 @@
 
 namespace comma { namespace csv {
 
+class options;
+
+/// convenience method: make output options from input options (propagate binary setting, flush); todo? add more parameters?
+template < typename T >
+static options make_output_options( const options& input_options );
+
 /// a helper class to extract csv-related command line options
 class options
 {
@@ -22,10 +28,6 @@ class options
 
         /// constructor
         options( const comma::command_line_options& options, const std::string& defaultFields = "", bool full_xpath = true );
-
-        /// convenience method: make output options from input options (propagate binary setting, flush); todo? add more parameters?
-        template < typename T >
-        static options make_output_options( const options& input_options );
 
         /// return usage to incorporate into application usage
         static std::string usage( const std::string& default_fields = "", bool verbose = true );
