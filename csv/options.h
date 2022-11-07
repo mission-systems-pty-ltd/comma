@@ -23,6 +23,10 @@ class options
         /// constructor
         options( const comma::command_line_options& options, const std::string& defaultFields = "", bool full_xpath = true );
 
+        /// convenience method: make output options from input options (propagate binary setting, flush); todo? add more parameters?
+        template < typename T >
+        static options make_output_options( const options& input_options );
+
         /// return usage to incorporate into application usage
         static std::string usage( const std::string& default_fields = "", bool verbose = true );
 
@@ -90,5 +94,14 @@ class options
     private:
         boost::optional< csv::format > format_;
 };
+
+template < typename T >
+inline options make_output_options( const options& input_options )
+{
+    options o;
+    o.flush = input_options.flush;
+    if( input_options.binary() ) { o.format( format::value< T >() ); }
+    return o;
+}
 
 } } // namespace comma { namespace csv {
