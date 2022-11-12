@@ -1,38 +1,9 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// Copyright (c) 2022 Vsevolod Vlaskine
 
+/// @authors cedric wohlleber, vsevolod vlaskine
 
-/// @author cedric wohlleber
-/// @author vsevolod vlaskine
-
-#ifndef COMMA_NAME_VALUE_PTREE_H_
-#define COMMA_NAME_VALUE_PTREE_H_
+#pragma once
 
 #include <iostream>
 #include <sstream>
@@ -125,30 +96,13 @@ struct property_tree // quick and dirty
             /// @param ptree: property tree for the structure to fill
             /// @param root: path to the root of the subtree to visit
             /// @param branch: path to the subtree to visit (i.e. other branches will be pruned)
-            from( const boost::property_tree::ptree& ptree )
-                : ptree_( ptree )
-                , cur_( ptree )
-                , permissive_( false )
-            {
-            }
-            from( const boost::property_tree::ptree& ptree, bool permissive )
-                : ptree_( ptree )
-                , cur_( ptree )
-                , permissive_( permissive )
-            {
-            }
-            from( const boost::property_tree::ptree& ptree, const char* root, bool permissive = false )
-                : ptree_( ptree )
-                , cur_( get_tree( ptree_, xpath( root ) ) )
-                , permissive_( permissive )
-            {
-            }
-            from( const boost::property_tree::ptree& ptree, const xpath& root, bool permissive = false )
-                : ptree_( ptree )
-                , cur_( get_tree( ptree_, root ) )
-                , permissive_( permissive )
-            {
-            }
+            from( const boost::property_tree::ptree& ptree ): ptree_( ptree ), cur_( ptree ), permissive_( false ) {}
+
+            from( const boost::property_tree::ptree& ptree, bool permissive ): ptree_( ptree ), cur_( ptree ), permissive_( permissive ) {}
+
+            from( const boost::property_tree::ptree& ptree, const char* root, bool permissive = false ): ptree_( ptree ), cur_( get_tree( ptree_, xpath( root ) ) ), permissive_( permissive ) {}
+
+            from( const boost::property_tree::ptree& ptree, const xpath& root, bool permissive = false ): ptree_( ptree ), cur_( get_tree( ptree_, root ) ), permissive_( permissive ) {}
 
             //ptree_visitor( const boost::property_tree::ptree& ptree, const xpath& root, const xpath& branch, bool permissive = false ) : ptree_( ptree ), cur_( &ptree ), path_( root ), branch_( branch ), permissive_( permissive ) {}
 
@@ -172,7 +126,7 @@ struct property_tree // quick and dirty
 
             /// apply to vector
             template < typename K, typename T, typename A >
-            void apply_next( const K& key, std::vector< T, A >& value )
+            void apply_next( const K& key, std::vector< T, A >& value ) // todo? std::array? boost::array?
             {
                 std::string name = boost::lexical_cast< std::string >( key );
                 boost::optional< const boost::property_tree::ptree& > t = cur_ && !name.empty() ? cur_->get_child_optional( name ) : cur_;
@@ -252,6 +206,7 @@ struct property_tree // quick and dirty
             const boost::property_tree::ptree& ptree_;
             boost::optional< const boost::property_tree::ptree& > cur_;
             const bool permissive_;
+
             void value_( const std::string& name, boost::optional< boost::posix_time::ptime >& v ) // quick and dirty, imlement traits instead
             {
                 if( !cur_ ) { return; }
@@ -259,6 +214,7 @@ struct property_tree // quick and dirty
                 if( !s ) { s = cur_->get_optional< std::string >( "<xmlattr>." + name ); }
                 if( s ) { v = boost::posix_time::from_iso_string( *s ); }
             }
+
             template < typename T > void value_( const std::string& name, boost::optional< T >& v )
             {
                 if( !cur_ ) { return; }
@@ -284,20 +240,16 @@ class to_ptree
         to_ptree( boost::property_tree::ptree& ptree, const char* root ) : ptree_( ptree ), path_( root ) {}
 
         /// apply_next on boost optional
-        template < typename K, typename T >
-        void apply_next( const K& name, const boost::optional< T >& value )
+        template < typename K, typename T > void apply_next( const K& name, const boost::optional< T >& value )
         {
-            if( value )
-            {
-                visiting::do_while<    !boost::is_fundamental< T >::value
-                                    && !boost::is_same< T, boost::posix_time::ptime >::value
-                                    && !boost::is_same< T, std::string >::value >::visit( name, *value, *this );
-            }
+            if( !value ) { return; }
+            visiting::do_while<    !boost::is_fundamental< T >::value
+                                && !boost::is_same< T, boost::posix_time::ptime >::value
+                                && !boost::is_same< T, std::string >::value >::visit( name, *value, *this );
         }
 
-        /// apply
-        template < typename K, typename T, typename A >
-        void apply( const K& name, const std::vector< T, A >& value )
+        /// apply to vector
+        template < typename K, typename T, typename A > void apply( const K& name, const std::vector< T, A >& value ) // do we even need it?
         {
             if( !( path_ <= branch_ ) ) { return; } // visit, only if on the branch
             append_( name );
@@ -313,8 +265,7 @@ class to_ptree
         }
 
         /// apply
-        template < typename K, typename T >
-        void apply( const K& name, const T& value )
+        template < typename K, typename T > void apply( const K& name, const T& value )
         {
             if( !( path_ <= branch_ ) ) { return; } // visit, only if on the branch
             const std::string& s = boost::lexical_cast< std::string >( name );
@@ -326,15 +277,10 @@ class to_ptree
         }
 
         /// apply to non-leaf elements
-        template < typename K, typename T >
-        void apply_next( const K& name, const T& value )
-        {
-            comma::visiting::visit( name, value, *this );
-        }
+        template < typename K, typename T > void apply_next( const K& name, const T& value ) { comma::visiting::visit( name, value, *this ); }
 
         /// apply to leaf elements
-        template < typename K, typename T >
-        void apply_final( const K&, const T& value ) { ptree_.put( path_.to_string( '.' ), value_( value ) ); }
+        template < typename K, typename T > void apply_final( const K&, const T& value ) { ptree_.put( path_.to_string( '.' ), value_( value ) ); }
 
     private:
         boost::property_tree::ptree& ptree_;
@@ -354,4 +300,3 @@ class to_ptree
 
 } // namespace comma
 
-#endif /*COMMA_NAME_VALUE_PTREE_H_*/
