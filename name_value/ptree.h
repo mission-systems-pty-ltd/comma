@@ -5,17 +5,19 @@
 
 #pragma once
 
+#include <array>
 #include <iostream>
 #include <sstream>
-#include <boost/version.hpp>
-#include <boost/lexical_cast.hpp>
+#include <boost/array.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/info_parser.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/unordered_set.hpp>
+#include <boost/version.hpp>
 #include "../base/exception.h"
 #include "../base/types.h"
 #include "../string/string.h"
@@ -74,9 +76,11 @@ struct property_tree // quick and dirty
 
     /// convert path-value-style string into boost parameter tree
     static boost::property_tree::ptree from_path_value_string( const std::string& s, char equal_sign = '=', char delimiter = ',', path_value::check_repeated_paths check_type = path_value::no_check, bool use_index = true );
+
     static boost::property_tree::ptree& from_path_value_string( boost::property_tree::ptree& ptree, const std::string& s, char equal_sign, char delimiter, path_value::check_repeated_paths check_type = path_value::no_check, bool use_index = true );
 
     static void read_xml( std::istream& is, boost::property_tree::ptree& ptree );
+
     static void write_xml( std::ostream& os, const boost::property_tree::ptree& ptree, const xml_writer_settings_t& xml_writer_settings  = xml_writer_settings_t()  );
     
     /// read as path-value from input stream
@@ -106,51 +110,25 @@ struct property_tree // quick and dirty
 
             //ptree_visitor( const boost::property_tree::ptree& ptree, const xpath& root, const xpath& branch, bool permissive = false ) : ptree_( ptree ), cur_( &ptree ), path_( root ), branch_( branch ), permissive_( permissive ) {}
 
-            /// apply
-            template < typename K, typename T >
-            void apply( const K& key, T& value )
+            template < typename K, typename T > void apply( const K& key, T& value )
             {
                 visiting::do_while<    !boost::is_fundamental< T >::value
                                     && !boost::is_same< T, boost::posix_time::ptime >::value
                                     && !boost::is_same< T, std::string >::value >::visit( key, value, *this );
             }
 
-            /// apply on boost optional
-            template < typename K, typename T >
-            void apply_next( const K& name, boost::optional< T >& value )
+            template < typename K, typename T > void apply_next( const K& name, boost::optional< T >& value )
             {
                 if( !cur_ || cur_->find( name ) == cur_->not_found() ) { return; }
                 if( !value ) { value = T(); }
                 apply( name, *value );
             }
 
-            /// apply to vector
-            template < typename K, typename T, typename A >
-            void apply_next( const K& key, std::vector< T, A >& value ) // todo? std::array? boost::array?
-            {
-                std::string name = boost::lexical_cast< std::string >( key );
-                boost::optional< const boost::property_tree::ptree& > t = cur_ && !name.empty() ? cur_->get_child_optional( name ) : cur_;
-                if( t )
-                {
-                    const boost::property_tree::ptree& parent = *cur_;
-                    value.resize( t->size() );
-                    std::size_t i = 0;
-                    for( boost::property_tree::ptree::const_assoc_iterator j = t->ordered_begin(); j != t->not_found(); ++j, ++i )
-                    {
-                        cur_ = j->second;
-                        //std::size_t index = j->first == "" ? i : boost::lexical_cast< std::size_t >( j->first ); // way quick and dirty
-                        //if( index >= t->size() ) { COMMA_THROW( comma::exception, "expected index less than " << t->size() << "; got: " << index ); }
-                        visiting::do_while<    !boost::is_fundamental< T >::value
-                                            && !boost::is_same< T, boost::posix_time::ptime >::value
-                                            && !boost::is_same< T, std::string >::value >::visit( "", value[i], *this );
-                    }
-                    cur_ = parent;
-                }
-                else if( !permissive_ )
-                {
-                    COMMA_THROW( comma::exception, "key " << key << " not found" );
-                }
-            }
+            template < typename K, typename T, typename A > void apply_next( const K& key, std::vector< T, A >& value ) { _apply_to_arraylike( key, value ); }
+
+            template < typename K, typename T, unsigned int Size > void apply_next( const K& key, boost::array< T, Size >& value ) { _apply_to_arraylike( key, value ); }
+
+            template < typename K, typename T, unsigned int Size > void apply_next( const K& key, std::array< T, Size >& value ) { _apply_to_arraylike( key, value ); }
 
             /// apply to map
             template < typename K, typename L, typename T, typename A >
@@ -220,6 +198,37 @@ struct property_tree // quick and dirty
                 if( !cur_ ) { return; }
                 v = name.empty() ? cur_->get_value_optional< T >() : cur_->get_optional< T >( name );
                 if( !v ) { v = cur_->get_optional< T >( "<xmlattr>." + name ); }
+            }
+
+            template < typename T, typename A > void resize_( std::vector< T, A >& a, unsigned int size ) { a.resize( size ); }
+
+            template < typename A > void resize_( A& a, unsigned int size ) {}
+
+            template < typename K, typename A >
+            void _apply_to_arraylike( const K& key, A& value ) // todo? std::array? boost::array?
+            {
+                std::string name = boost::lexical_cast< std::string >( key );
+                boost::optional< const boost::property_tree::ptree& > t = cur_ && !name.empty() ? cur_->get_child_optional( name ) : cur_;
+                if( t )
+                {
+                    const boost::property_tree::ptree& parent = *cur_;
+                    resize_( value, t->size() );
+                    std::size_t i = 0;
+                    for( boost::property_tree::ptree::const_assoc_iterator j = t->ordered_begin(); j != t->not_found(); ++j, ++i )
+                    {
+                        cur_ = j->second;
+                        //std::size_t index = j->first == "" ? i : boost::lexical_cast< std::size_t >( j->first ); // way quick and dirty
+                        //if( index >= t->size() ) { COMMA_THROW( comma::exception, "expected index less than " << t->size() << "; got: " << index ); }
+                        visiting::do_while<    !boost::is_fundamental< typename A::value_type >::value
+                                            && !boost::is_same< typename A::value_type, boost::posix_time::ptime >::value
+                                            && !boost::is_same< typename A::value_type, std::string >::value >::visit( "", value[i], *this );
+                    }
+                    cur_ = parent;
+                }
+                else if( !permissive_ )
+                {
+                    COMMA_THROW( comma::exception, "key " << key << " not found" );
+                }
             }
     };
 };
