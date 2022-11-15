@@ -204,7 +204,7 @@ TEST( visiting, tuple )
     std::ostringstream oss;
     o_stream_visitor v( oss );
     visiting::apply( v, t );
-    EXPECT_EQ( oss.str(), "{ int:elem_0=5 double:elem_1=10 string:elem_2=\"hello\" }" );
+    EXPECT_EQ( oss.str(), "{ int:0=5 double:1=10 string:2=\"hello\" }" ); // EXPECT_EQ( oss.str(), "{ int:elem_0=5 double:elem_1=10 string:elem_2=\"hello\" }" );
 }
 
 } } } /// namespace comma { namespace visiting { namespace test {

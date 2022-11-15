@@ -54,26 +54,38 @@ struct traits< std::pair< T, S > >
 
 namespace detail {
 
-template < unsigned int I > const char* element_name(); // super-quick and dirty for now, certainly improve it (somehow)
-template <> inline const char* element_name< 0 >() { return "elem_0"; }
-template <> inline const char* element_name< 1 >() { return "elem_1"; }
-template <> inline const char* element_name< 2 >() { return "elem_2"; }
-template <> inline const char* element_name< 3 >() { return "elem_3"; }
-template <> inline const char* element_name< 4 >() { return "elem_4"; }
-template <> inline const char* element_name< 5 >() { return "elem_5"; }
-template <> inline const char* element_name< 6 >() { return "elem_6"; }
-template <> inline const char* element_name< 7 >() { return "elem_7"; }
+// template < unsigned int I > const char* element_name(); // super-quick and dirty for now, it would be better to use numeric indices, but then all visitors need to support tuple correctly
+// template <> inline const char* element_name< 0 >() { return "first"; }
+// template <> inline const char* element_name< 1 >() { return "second"; }
+// template <> inline const char* element_name< 2 >() { return "third"; }
+// template <> inline const char* element_name< 3 >() { return "fourth"; }
+// template <> inline const char* element_name< 4 >() { return "fifth"; }
+// template <> inline const char* element_name< 5 >() { return "sixth"; }
+// template <> inline const char* element_name< 6 >() { return "seventh"; }
+// template <> inline const char* element_name< 7 >() { return "eighth"; }
 
-template < unsigned int I, unsigned int Size > struct elementwise
+// template < unsigned int I, unsigned int Size > struct elementwise
+// {
+//     template < typename T, typename V > static void visit( T& t, V& v ) { v.apply( element_name< Size - I >(), std::get< Size - I >( t ) ); elementwise< I - 1, Size >::visit( t, v ); }
+//     template < typename T, typename V > static void visit( const T& t, V& v ) { v.apply( element_name< Size - I >(), std::get< Size - I >( t ) ); elementwise< I - 1, Size >::visit( t, v ); }
+// };
+
+// template < unsigned int Size > struct elementwise< 1, Size >
+// {
+//     template < typename T, typename V > static void visit( T& t, V& v ) { v.apply( element_name< Size - 1 >(), std::get< Size - 1 >( t ) ); }
+//     template < typename T, typename V > static void visit( const T& t, V& v ) { v.apply( element_name< Size - 1 >(), std::get< Size - 1 >( t ) ); }
+// };
+
+template < unsigned int I, unsigned int Size > struct elementwise // todo! add tuple support to all visitors
 {
-    template < typename T, typename V > static void visit( T& t, V& v ) { v.apply( element_name< Size - I >(), std::get< Size - I >( t ) ); elementwise< I - 1, Size >::visit( t, v ); }
-    template < typename T, typename V > static void visit( const T& t, V& v ) { v.apply( element_name< Size - I >(), std::get< Size - I >( t ) ); elementwise< I - 1, Size >::visit( t, v ); }
+    template < typename T, typename V > static void visit( T& t, V& v ) { v.apply( Size - I, std::get< Size - I >( t ) ); elementwise< I - 1, Size >::visit( t, v ); }
+    template < typename T, typename V > static void visit( const T& t, V& v ) { v.apply( Size - I, std::get< Size - I >( t ) ); elementwise< I - 1, Size >::visit( t, v ); }
 };
 
 template < unsigned int Size > struct elementwise< 1, Size >
 {
-    template < typename T, typename V > static void visit( T& t, V& v ) { v.apply( element_name< Size - 1 >(), std::get< Size - 1 >( t ) ); }
-    template < typename T, typename V > static void visit( const T& t, V& v ) { v.apply( element_name< Size - 1 >(), std::get< Size - 1 >( t ) ); }
+    template < typename T, typename V > static void visit( T& t, V& v ) { v.apply( Size - 1, std::get< Size - 1 >( t ) ); }
+    template < typename T, typename V > static void visit( const T& t, V& v ) { v.apply( Size - 1, std::get< Size - 1 >( t ) ); }
 };
 
 } // namespace detail {
