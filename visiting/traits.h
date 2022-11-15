@@ -1,4 +1,5 @@
 // Copyright (c) 2011 The University of Sydney
+// Copyright (c) 2022 Vsevolod Vlaskine
 
 /// @author vsevolod vlaskine
 
@@ -11,6 +12,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -48,6 +50,36 @@ struct traits< std::pair< T, S > >
         v.apply( "first", t.first );
         v.apply( "second", t.second );
     }    
+};
+
+namespace detail {
+
+template < unsigned int I, unsigned int Size > struct elementwise
+{
+    template < typename T, typename V > static void visit( T& t, V& v ) { v.apply( Size - I, std::get< Size - I >( t ) ); elementwise< I - 1, Size >::visit( t, v ); }
+    template < typename T, typename V > static void visit( const T& t, V& v ) { v.apply( Size - I, std::get< Size - I >( t ) ); elementwise< I - 1, Size >::visit( t, v ); }
+};
+
+template < unsigned int Size > struct elementwise< 1, Size >
+{
+    template < typename T, typename V > static void visit( T& t, V& v ) { v.apply( Size - 1, std::get< Size - 1 >( t ) ); }
+    template < typename T, typename V > static void visit( const T& t, V& v ) { v.apply( Size - 1, std::get< Size - 1 >( t ) ); }
+};
+
+} // namespace detail {
+
+template < typename... T >
+struct traits< std::tuple< T... > >
+{
+    typedef std::tuple< T... > tuple_t;
+
+    static const unsigned int size{ std::tuple_size< tuple_t >::value };
+
+    static_assert( size > 0 );
+
+    template < typename K, typename V > static void visit( const K& key, tuple_t& t, V& v ) { detail::elementwise< size, size >::visit( t, v ); }
+    
+    template < typename K, typename V > static void visit( const K&, const tuple_t& t, V& v ) { detail::elementwise< size, size >::visit( t, v ); }
 };
 
 namespace impl {
