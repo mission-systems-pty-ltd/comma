@@ -1,2 +1,7 @@
-fixed_block_size/basic="( echo c ; echo b ; echo a ; echo f ; echo e; echo d ) | csv-sort --fields a --block-size 3"
-fixed_block_size/last_block="( echo c ; echo b ; echo a ; echo f ; echo e; echo d; echo y; echo x ) | csv-sort --fields a --block-size 3"
+fixed_block_size/ascii/block_field="( echo 0,f ; echo 0,e ; echo 0,d ; echo 1,c ; echo 1,b; echo 1,a ) | csv-sort --fields block,a"
+fixed_block_size/ascii/basic="( echo f ; echo e ; echo d ; echo c ; echo b; echo a ) | csv-sort --fields a --block-size 3"
+fixed_block_size/ascii/last_block="( echo z ; echo y ; echo x ; echo f ; echo e; echo d; echo y; echo x ) | csv-sort --fields a --block-size 3"
+
+fixed_block_size/binary/block_field="( echo 0,f ; echo 0,e ; echo 0,d ; echo 1,c ; echo 1,b; echo 1,a ) | csv-to-bin ui,c | csv-sort --fields block,a --binary=ui,c | csv-from-bin ui,c"
+fixed_block_size/binary/basic="( echo f ; echo e ; echo d ; echo c ; echo b; echo a ) | csv-to-bin c | csv-sort --fields a --block-size 3 --binary c | csv-from-bin c"
+fixed_block_size/binary/last_block="( echo z ; echo y ; echo x ; echo f ; echo e; echo d; echo y; echo x ) | csv-to-bin c | csv-sort --fields a --block-size 3 --binary c | csv-from-bin c"

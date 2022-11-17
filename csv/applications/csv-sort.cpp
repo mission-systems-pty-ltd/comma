@@ -657,8 +657,6 @@ static int sort( const comma::command_line_options& options )
     }
     csv.fields = comma::join( w, ',' );
     if ( verbose ) { std::cerr << "csv-sort: fields: " << csv.fields << std::endl; }
-    block = comma::csv::block_counter( 0, options.value( "--block-size,--size", 0 ) );
-    if( csv.has_field( "block" ) && block.fixed() ) { comma::say() << "'block' field and --block-size are mutually exclusive" << std::endl; return 1; }
     comma::csv::input_stream< input_with_block > istream( std::cin, csv, default_input );
     #ifdef WIN32
     if( istream.is_binary() ) { _setmode( _fileno( stdout ), _O_BINARY ); }
@@ -678,13 +676,17 @@ static int sort( const comma::command_line_options& options )
     while( istream.ready() || ( std::cin.good() && !std::cin.eof() ) || !map.empty() )
     {
         const input_with_block* p = istream.read();
+        //if( p ) { std::cerr << "==> a: block != *p: " << ( block != *p ) << " size: " << block.size() << " current_size: " << block.current_size() << " map.size(): " << map.size() << std::endl; }
         if( !p || block != *p )
         {
+            //std::cerr << "==> b: block != *p: " << ( block != *p ) << " size: " << block.size() << " current_size: " << block.current_size() << std::endl;
             if( reverse ) { output_( map.rbegin(), map.rend() ); } else { output_( map.begin(), map.end() ); }
             map.clear();
         }
         if( !p ) { break; }
+        //std::cerr << "==> c: block: " << block() << " current_size: " << block.current_size() << std::endl;
         block.update( *p );
+        //std::cerr << "==> d: block: " << block() << " current_size: " << block.current_size() << std::endl;
         input_t::map::mapped_type& d = map[ *p ];
         if( unique && !d.empty() ) { continue; }
         if( istream.is_binary() )
@@ -711,6 +713,8 @@ int main( int ac, char** av )
         if( options.exists( "--last" ) ) { std::cerr << "csv-sort: --last: not implemented; todo" << std::endl; return 1; }
         verbose = options.exists( "--verbose,-v" );
         csv = comma::csv::options( options );
+        block = comma::csv::block_counter( 0, options.value( "--block-size,--size", 0 ) );
+        if( csv.has_field( "block" ) && block.fixed() ) { comma::say() << "'block' field and --block-size are mutually exclusive; got csv fields: '" << csv.fields << "'" << std::endl; return 1; }
         return   options.exists( "--first,--min,--max" )
                ? handle_operations_with_ids( options )
                : options.exists( "--random" )
