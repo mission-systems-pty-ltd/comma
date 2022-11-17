@@ -18,6 +18,7 @@
 #include "../../application/command_line_options.h"
 #include "../../base/exception.h"
 #include "../../base/types.h"
+#include "../../csv/block.h"
 #include "../../csv/stream.h"
 #include "../../csv/traits.h"
 #include "../../io/stream.h"
@@ -98,24 +99,7 @@ static bool verbose;
 static comma::csv::options csv;
 static bool is_min = false;
 static bool is_max = false;
-
-class block_counter // todo? move block handling to library
-{
-    public:
-        block_counter( comma::uint32 b = 0, comma::uint32 s = 0 ): _block( 0 ), _size( 0 ) {}
-        comma::uint32 operator()() const { return _block; }
-        comma::uint32 size() const { return _size; }
-        bool fixed() const { return _size > 0; }
-        template < typename T > bool operator==( const T& t ) const { return _size > 0 ? _block < _size : t.block == _block; }
-        template < typename T > bool operator!=( const T& t ) const { return !operator==( t ); }
-        template < typename T > comma::uint32 update( const T& t ) { _block = _size > 0 ? _block + 1 == _size ? 0 : _block + 1 : t.block; return _block; }
-        template < typename T > bool ready( const T& t ) const { return _size > 0 ? _block + 1 == _size : t.block != _block; }
-    private:
-        comma::uint32 _block{0}; 
-        comma::uint32 _size{0}; 
-};
-
-static block_counter block;
+static comma::csv::block_counter block;
 
 struct ordering_t
 {
@@ -655,8 +639,7 @@ static int sort( const comma::command_line_options& options )
         if( order[i].empty() || order[i] == "block" ) { continue; }
         for( std::size_t k = 0; k < v.size(); ++k )
         {
-            if( v[k].empty() || v[k] != order[i] ) 
-            { 
+            if( v[k].empty() || v[k] != order[i] ) { 
                 if( k + 1 == v.size() ) { std::cerr << "csv-sort: order field name \"" << order[i] << "\" not found in input fields \"" << csv.fields << "\"" << std::endl; return 1; }
                 continue; 
             }
@@ -674,7 +657,7 @@ static int sort( const comma::command_line_options& options )
     }
     csv.fields = comma::join( w, ',' );
     if ( verbose ) { std::cerr << "csv-sort: fields: " << csv.fields << std::endl; }
-    block = block_counter( 0, options.value( "--block-size,--size", 0 ) );
+    block = comma::csv::block_counter( 0, options.value( "--block-size,--size", 0 ) );
     if( csv.has_field( "block" ) && block.fixed() ) { comma::say() << "'block' field and --block-size are mutually exclusive" << std::endl; return 1; }
     comma::csv::input_stream< input_with_block > istream( std::cin, csv, default_input );
     #ifdef WIN32
