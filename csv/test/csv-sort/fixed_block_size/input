@@ -1,0 +1,2 @@
+fixed_block_size/basic="( echo c ; echo b ; echo a ; echo f ; echo e; echo d ) | csv-sort --fields a --block-size 3"
+fixed_block_size/last_block="( echo c ; echo b ; echo a ; echo f ; echo e; echo d; echo y; echo x ) | csv-sort --fields a --block-size 3"
