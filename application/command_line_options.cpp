@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <boost/bind.hpp>
 #include <boost/config/warning_disable.hpp>
-#include "boost/filesystem.hpp"
+//#include "boost/filesystem.hpp"
 #include "boost/iostreams/stream.hpp"
 #include "boost/iostreams/device/null.hpp"
 #include <boost/optional.hpp>
@@ -36,7 +36,7 @@ std::ostream& saymore() { return say( comma::application::detail::verbose ? std:
 void command_line_options::_init_verbose( bool v, const std::string& path )
 {
     comma::verbose.init( v, path ); // todo: deprecate, use comma::say() and comma::saymore() instead
-    comma::application::detail::name = boost::filesystem::basename( path );
+    comma::application::detail::name = comma::split( path, '/' ).back(); // boost::filesystem::basename( path );
     comma::application::detail::verbose = v;
 }
 
