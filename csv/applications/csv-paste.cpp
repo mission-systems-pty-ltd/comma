@@ -1,31 +1,4 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /// @author vsevolod vlaskine
 
@@ -89,6 +62,7 @@ static void usage( bool verbose )
     std::cerr << "                 WARNING: --size: deprecated, since it is confusing for files" << std::endl;
     std::cerr << "            --index; instead of block number output record index in the block" << std::endl;
     std::cerr << "            --reverse; if --index, output index in descending order" << std::endl;
+    std::cerr << "            --shape=<shape>; iterate through indices of a given shape; <shape>: same meaning as in numpy, e.g. 'line-number;shape=10,5,4'" << std::endl;
     std::cerr << "            --step=<value>; default=1; line number increment/decrement step" << std::endl;        
     std::cerr << "        examples (try them)" << std::endl;
     std::cerr << "            line number" << std::endl;
@@ -204,6 +178,7 @@ class line_number : public source
                 bool reverse;
                 comma::int32 step;
                 comma::int32 begin;
+                std::vector< comma::uint32 > shape;
                 std::string format;
                 
                 options( const boost::optional< comma::int32 >& b = boost::optional< comma::int32 >(), comma::uint32 size = 1, bool index = false, bool reverse = false, int s = 1 )
@@ -217,6 +192,7 @@ class line_number : public source
                 
                 options( const std::string& properties, const comma::command_line_options& o ) // quick and dirty: use visiting instead
                 {
+                    o.assert_mutually_exclusive( "--shape", "--block-size,--size,--reverse,--begin" );
                     options defaults( boost::optional< comma::int32 >(), o.value< comma::uint32 >( "--block-size,--size", 1 ), o.exists( "--index" ), o.exists( "--reverse" ), o.value< comma::int32 >( "--step", 1 ) );
                     comma::name_value::map map( properties, ';', '=' );
                     size = map.value< comma::uint32 >( map.get().find( "block-size" ) != map.get().end() ? "block-size" : "size", defaults.size ); // quick and dirty
