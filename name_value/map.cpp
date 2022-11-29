@@ -67,14 +67,30 @@ std::vector< std::pair< std::string, std::string > > map::as_vector( const std::
 
 bool map::exists( const std::string& name ) const { return _map.find( name ) != _map.end(); }
 
-void map::assert_mutually_exclusive( const std::string& f )
-{
+void map::assert_mutually_exclusive( const std::string& f ) { assert_mutually_exclusive( comma::split( f, ',' ) ); }
 
+void map::assert_mutually_exclusive( const std::string& f, const std::string& g ) { assert_mutually_exclusive( comma::split( f, ',' ), comma::split( g, ',' ) ); }
+
+void map::assert_mutually_exclusive( const std::vector< std::string >& f )
+{
+    std::string found;
+    for( const auto& s: f )
+    {
+        if( _map.find( s ) == _map.end() ) { continue; }
+        if( !found.empty() ) { COMMA_THROW( comma::exception, found << " and " << s << " are mutually exclusive" ); }
+        found = s;
+    }
 }
 
-void map::assert_mutually_exclusive( const std::string& f, const std::string& g )
+void map::assert_mutually_exclusive( const std::vector< std::string >& f, const std::vector< std::string >& g )
 {
-
+    std::string found;
+    for( const auto& s: f ) { if( _map.find( s ) != _map.end() ) { found = s; break; } }
+    if( found.empty() ) { return; }
+    for( const auto& s: g )
+    {
+        if( _map.find( s ) != _map.end() ) { COMMA_THROW( comma::exception, found << " and " << s << " are mutually exclusive" ); }
+    }    
 }
 
 } } // namespace comma { namespace name_value {

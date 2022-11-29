@@ -195,15 +195,26 @@ class line_number : public source
                     o.assert_mutually_exclusive( "--shape", "--block-size,--size,--reverse,--begin" );
                     options defaults( boost::optional< comma::int32 >(), o.value< comma::uint32 >( "--block-size,--size", 1 ), o.exists( "--index" ), o.exists( "--reverse" ), o.value< comma::int32 >( "--step", 1 ) );
                     comma::name_value::map map( properties, ';', '=' );
-                    size = map.value< comma::uint32 >( map.get().find( "block-size" ) != map.get().end() ? "block-size" : "size", defaults.size ); // quick and dirty
-                    index = map.value< bool >( "index", defaults.index );
-                    reverse = map.value< bool >( "reverse", defaults.reverse );
-                    step = map.value< comma::int32 >( "step", defaults.step );
-                    auto b = map.optional< comma::int32 >( "begin" );
-                    if( !b ) { b = o.optional< comma::int32 >( "--begin" ); }
-                    begin = begin_( b );
+                    map.assert_mutually_exclusive( "shape", "block-size,size,reverse,begin,step" );
+                    std::string s = map.value< std::string >( "shape", o.value< std::string >( "--shape", "" ) );
                     format = map.value< std::string >( "binary", "" );
-                    if( !format.empty() && format != "ui" ) { std::cerr << "csv-paste: currently only ui supported for line-number; got: '" << format << "'" << std::endl; exit( 1 ); } // quick and dirty for now
+                    if( s.empty() )
+                    {
+                        size = map.value< comma::uint32 >( map.get().find( "block-size" ) != map.get().end() ? "block-size" : "size", defaults.size ); // quick and dirty
+                        index = map.value< bool >( "index", defaults.index );
+                        reverse = map.value< bool >( "reverse", defaults.reverse );
+                        step = map.value< comma::int32 >( "step", defaults.step );
+                        auto b = map.optional< comma::int32 >( "begin" );
+                        if( !b ) { b = o.optional< comma::int32 >( "--begin" ); }
+                        begin = begin_( b );
+                        if( !format.empty() && format != "ui" ) { std::cerr << "csv-paste: currently only ui supported for line-number; got: '" << format << "'" << std::endl; exit( 1 ); } // quick and dirty for now
+                    }
+                    else
+                    {
+                        auto v = comma::split( s, ',' );
+                        shape.resize( v.size() );
+                        for( unsigned int i = 0; i < v.size(); ++i ) { shape[i] = boost::lexical_cast< unsigned int >( v[i] ); }
+                    }
                 }
                 
             private:
@@ -215,23 +226,25 @@ class line_number : public source
         };
         
         line_number( bool is_binary, const options& options )
-            : source( options.format.empty() ? ( is_binary ? "binary=ui" : "" ) : "binary=" + options.format ) // quick and dirty
+            : source( options.format.empty() ? ( is_binary ? options.shape.empty() ? std::string ( "binary=ui" ) : "binary=" + boost::lexical_cast< std::string >( options.shape.size() ) + "ui" : std::string() ) : "binary=" + options.format ) // quick and dirty
             , options_( options )
             , count_( 0 )
             , value_( options_.begin )
+            , values_( options_.shape.size(), 0 )
         {
         }
         
         const std::string* read()
         { 
-            serialized_ = boost::lexical_cast< std::string >( value_ );
+            serialized_ = values_.empty() ? boost::lexical_cast< std::string >( value_ ) : comma::join( values_, ',' );
             update_();
             return &serialized_;
         }
         
         const char* read( char* buf ) // quick and dirty
         {
-            comma::csv::format::traits< comma::int32 >::to_bin( value_, buf );
+            if( values_.empty() ) { comma::csv::format::traits< comma::int32 >::to_bin( value_, buf ); }
+            else { for( unsigned int i = 0; i < values_.size(); ++i, buf += sizeof( comma::int32 ) ) { comma::csv::format::traits< comma::int32 >::to_bin( values_[i], buf ); } }
             update_();
             return buf;
         }
@@ -240,19 +253,32 @@ class line_number : public source
         options options_;
         comma::uint32 count_;
         comma::int32 value_;
+        std::vector< comma::uint32 > values_;
         std::string serialized_;
         
         void update_()
         {
-            ++count_; //count_ += options_.step;
-            if( count_ < options_.size )
+            if( values_.empty() )
             {
-                if( options_.index ) { value_ += options_.reverse ? -options_.step : options_.step; }
+                ++count_; //count_ += options_.step;
+                if( count_ < options_.size )
+                {
+                    if( options_.index ) { value_ += options_.reverse ? -options_.step : options_.step; }
+                }
+                else
+                {
+                    value_ = options_.index ? options_.begin : ( value_ + options_.step );
+                    count_ = 0;
+                }
             }
             else
             {
-                value_ = options_.index ? options_.begin : ( value_ + options_.step );
-                count_ = 0;
+                for( int i = values_.size() - 1; i >= 0; --i )
+                {
+                    ++values_[i];
+                    if( values_[i] < options_.shape[i] ) { break; }
+                    values_[i] = 0;
+                }
             }
         }
 };

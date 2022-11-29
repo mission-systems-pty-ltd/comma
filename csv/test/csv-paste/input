@@ -42,3 +42,6 @@ line_number/step[7]="csv-paste "line-number;block-size=5;index;reverse;begin=4;s
 head[0]="csv-paste 'line-number;size=10;index' --head=0"
 head[1]="csv-paste 'line-number;size=10;index' --head=1"
 head[2]="csv-paste 'line-number;size=10;index' --head=2"
+
+line_number/shape[0]="csv-paste 'line-number;shape=2,3' --head=12"
+line_number/shape[1]="csv-paste 'line-number;shape=2,3;binary=2ui' --head=12 | csv-from-bin 2ui"

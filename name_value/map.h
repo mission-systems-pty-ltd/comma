@@ -62,9 +62,9 @@ class map
 
         /// throw exception if incompatible fields are present
         void assert_mutually_exclusive( const std::string& f );
-
-        /// throw exception if incompatible fields are present
         void assert_mutually_exclusive( const std::string& f, const std::string& g );
+        void assert_mutually_exclusive( const std::vector< std::string >& f );
+        void assert_mutually_exclusive( const std::vector< std::string >& f, const std::vector< std::string >& g );
 
     private:
         void init_( const comma::name_value::impl::options& options, bool unique, const std::string& allowed_names );
