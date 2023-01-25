@@ -191,10 +191,14 @@ static int run_impl( Distribution< T >& distribution, bool append, bool binary, 
     return 0;
 }
 
+template < typename T > struct cast_traits { typedef T type; };
+template <> struct cast_traits< char > { typedef int type; };
+template <> struct cast_traits< unsigned char > { typedef unsigned int type; };
+
 template < typename T > static std::vector< T > _as( const std::vector< std::string >& v, unsigned int begin ) // todo? move to library?
 {
     std::vector< T > r( v.size() - begin );
-    for( unsigned int i = begin; i < v.size(); r[ i - begin ] = boost::lexical_cast< T >( v[i] ), ++i );
+    for( unsigned int i = begin; i < v.size(); r[ i - begin ] = boost::lexical_cast< typename cast_traits< T >::type >( v[i] ), ++i );
     return r;
 }
 
