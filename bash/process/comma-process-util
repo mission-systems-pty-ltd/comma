@@ -454,9 +454,13 @@ declare -r terminate_comma_execute_and_wait
 # @description runs a given command as a background task and waits for it to terminate
 #
 # Usage:
-#   comma_execute_and_wait command[,command2[,command3]] [--signals=signal1,signal2,...] \
+#   comma_execute_and_wait command[ command2[ command3]] [--signals=signal1,signal2,...] \
 #                          [--max-wait=max_wait] [--process|--group] [--any|--all] \
 #                          [--pid-fifo=<named pipe>]
+# Quick example:
+#   function _hello() { echo "hello $1"; }
+#   export -f _hello
+#   comma_execute_and_wait --group "some-command-line-util --some-option" "bash -c _hello world"
 #
 # The function executes the given command(s) (non-option argument) in a background process(es)
 # and waits for its completion (or timeout, see below).
