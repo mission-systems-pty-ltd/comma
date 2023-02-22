@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #endif
 #include <array>
+#include <complex>
 #include <map>
 #include <set>
 #include <string>
@@ -49,6 +50,26 @@ struct traits< std::pair< T, S > >
     {
         v.apply( "first", t.first );
         v.apply( "second", t.second );
+    }    
+};
+
+template < typename T >
+struct traits< std::complex< T > >
+{
+    template < typename K, typename V > static void visit( const K& key, std::complex< T >& t, V& v )
+    {
+        T s = t.real();
+        v.apply( "real", s );
+        t.real( s );
+        v = t.imag();
+        v.apply( "imag", s );
+        t.imag( s );
+    }
+    
+    template < typename K, typename V > static void visit( const K& key, const std::complex< T >& t, V& v )
+    {
+        v.apply( "real", t.real() );
+        v.apply( "imag", t.imag() );
     }    
 };
 
