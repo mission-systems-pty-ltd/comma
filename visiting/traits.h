@@ -61,7 +61,7 @@ struct traits< std::complex< T > >
         T s = t.real();
         v.apply( "real", s );
         t.real( s );
-        v = t.imag();
+        s = t.imag();
         v.apply( "imag", s );
         t.imag( s );
     }
