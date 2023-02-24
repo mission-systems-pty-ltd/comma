@@ -60,8 +60,8 @@ function comma_path_value_mangle()
         [[ -n "$path" && ! "$path" =~ ^[#\"] ]] || continue
         name=${path//\//$delimiter}
         name=${name//-/$delimiter}
-        value=${value#\"}
-        value=${value%\"}
+        value="${value#\"}"
+        value="${value%\"}"
         echo "$name='$value'"
     done
 }
