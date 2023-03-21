@@ -1,37 +1,8 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
 
 /// @author vsevolod vlaskine
 
-#ifndef COMMA_CSV_STREAM_H_
-#define COMMA_CSV_STREAM_H_
+#pragma once
 
 #ifdef WIN32
 #include <stdio.h>
@@ -39,6 +10,7 @@
 #include <io.h>
 #endif
 
+#include <fstream>
 #include <iostream>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/noncopyable.hpp>
@@ -53,10 +25,21 @@ namespace comma { namespace csv {
 /// @todo document
 namespace detail { void unsynchronize_with_stdio(); }
 
-template < typename S > class output_stream;
+/// generic input stream
 template < typename S > class input_stream;
+
+/// generic output stream
+template < typename S > class output_stream;
+
+/// tied input and output streams
 template < typename S, typename T > class tied;
 
+/// input stream passed through
+template < typename S > class passed;
+
+/// convenience functions: read input stream into a container that has push_back() method
+template < typename V > V read_as( std::istream& is, const options& o = options() );
+template < typename V > V read_as( const std::string& filename, const options& o = options() );
 
 /// ascii csv input stream
 template < typename S >
@@ -847,6 +830,25 @@ inline void output_stream< S >::append_output( input_stream< T >& is, const S& s
     }
 }*/
 
-} } // namespace comma { namespace csv {
+template < typename V > V read_as( std::istream& is, const options& o )
+{
+    input_stream< typename V::value_type > istream( is, o );
+    V v;
+    while( istream.ready() || is.good() )
+    {
+        auto p = istream.read();
+        if( !p ) { break; }
+        v.push_back( *p );
+    }
+    return v;
+}
 
-#endif /*COMMA_CSV_STREAM_H_*/
+template < typename V > V read_as( const std::string& filename, const options& o )
+{
+    std::ifstream ifs;
+    ifs.open( &filename[0], o.binary() ? std::ios_base::in | std::ios_base::binary : std::ios_base::in );
+    if( ifs.is_open() ) { return read_as< V >( ifs, o ); }
+    COMMA_THROW( comma::exception, "failed to open '" << filename << "'" );
+}
+
+} } // namespace comma { namespace csv {
