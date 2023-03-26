@@ -114,6 +114,9 @@ class command_line_options
         /// throw, if not at least one of options in the list exists, trivial convenience method
         void assert_exists( const std::string& comma_separated_names ) const;
 
+        /// throw, if first option is present, but any of options in the csv list in second is not
+        void assert_exists_if( const std::string& first, const std::string& second ) const;
+
         /// description
         struct description
         {
