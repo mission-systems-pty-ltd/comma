@@ -4,3 +4,8 @@ basic/var_b='22'
 no_newline_at_end/var_a=basic/var_a
 no_newline_at_end/var_b=basic/var_b
 
+path/a_b_c='1'
+dashes/a_b_c='1'
+path_with_dashes/a_b_c='1'
+subscript/a_b_0='1'
+subscript_followed_by_path/a_b_0_c='1'
