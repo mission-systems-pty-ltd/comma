@@ -12,3 +12,7 @@ install( TARGETS ${TARGET_NAME}
          RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime       # .exe, .dll
          LIBRARY DESTINATION ${comma_INSTALL_LIB_DIR} COMPONENT Runtime       # .so, mod.dll
          ARCHIVE DESTINATION ${comma_INSTALL_LIB_DIR} COMPONENT Development ) # .a, .lib
+
+IF( comma_BUILD_TESTS )
+    ADD_SUBDIRECTORY( test )
+ENDIF( comma_BUILD_TESTS )
