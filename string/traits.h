@@ -17,10 +17,8 @@ template < typename Derived, typename Base > struct traits< comma::strings::choi
 
     template < typename Key, class Visitor > static void visit( const Key& k, choice_t& p, Visitor& v )
     {
-        std::string s( p );
-        v.apply( k, s );
-        choice_t::assert_valid( s );
-        p = s;
+        v.apply( k, static_cast< Base& >( p ) );
+        choice_t::assert_valid( std::string( p ) );
     }
 
     template < typename Key, class Visitor > static void visit( const Key& k, const choice_t& p, Visitor& v )
