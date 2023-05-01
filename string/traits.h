@@ -6,6 +6,7 @@
 
 #include <string>
 #include "../base/exception.h"
+#include "../visiting/apply.h"
 #include "../visiting/traits.h"
 #include "choice.h"
 
@@ -17,13 +18,13 @@ template < typename Derived, typename Base > struct traits< comma::strings::choi
 
     template < typename Key, class Visitor > static void visit( const Key& k, choice_t& p, Visitor& v )
     {
-        v.apply( k, static_cast< Base& >( p ) );
+        comma::visiting::apply( v, static_cast< Base& >( p ) );
         choice_t::assert_valid( std::string( p ) );
     }
 
     template < typename Key, class Visitor > static void visit( const Key& k, const choice_t& p, Visitor& v )
     {
-        v.apply( k, static_cast< const Base& >( p ) );
+        comma::visiting::apply( v, static_cast< const Base& >( p ) );
     }
 };
 
