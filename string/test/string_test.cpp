@@ -1,11 +1,12 @@
 // Copyright (c) 2023 vsevolod vlaskine
 
-#include "../../base/exception.h"
-#include "../choice.h"
-#include "../string.h"
-#include "../split.h"
 #include <list>
 #include <gtest/gtest.h>
+#include "../../base/exception.h"
+#include "../choice.h"
+#include "../split.h"
+#include "../string.h"
+#include "../traits.h"
 
 namespace comma {
 
@@ -373,16 +374,39 @@ struct fruit
     enum values { apple, orange, juicymambo };
 };
 
-TEST( string, choice )
+struct grocery_store
 {
-    EXPECT_EQ( choice< fruit >(), "apple" );
-    EXPECT_EQ( choice< fruit >().to_enum(), fruit::apple );
-    EXPECT_EQ( choice< fruit >( "orange" ), "orange" );
-    EXPECT_EQ( choice< fruit >( fruit::orange ), "orange" );
-    EXPECT_EQ( choice< fruit >( fruit::orange ).to_enum(), fruit::orange );
-    EXPECT_TRUE( choice< fruit >::valid( "juicymambo" ) );
-    EXPECT_FALSE( choice< fruit >::valid( "driedmambo" ) );
-    EXPECT_THROW( choice< fruit >( "driedmambo" ), comma::exception );
+    strings::choice< comma::fruit > fruit;
+};
+
+namespace visiting {
+
+template <> struct traits< grocery_store >
+{
+    template < typename Key, class Visitor > static void visit( const Key& k, grocery_store& p, Visitor& v )
+    {
+        v.apply( "fruit", p.fruit );
+    }
+
+    template < typename Key, class Visitor > static void visit( const Key& k, const grocery_store& p, Visitor& v )
+    {
+        v.apply( "fruit", p.fruit );
+    }
+};
+
+} // namespace visiting {
+
+TEST( strings, choice )
+{
+    EXPECT_EQ( strings::choice< fruit >(), "apple" );
+    EXPECT_EQ( strings::choice< fruit >().to_enum(), fruit::apple );
+    EXPECT_EQ( strings::choice< fruit >( "orange" ), "orange" );
+    EXPECT_EQ( strings::choice< fruit >( fruit::orange ), "orange" );
+    EXPECT_EQ( strings::choice< fruit >( fruit::orange ).to_enum(), fruit::orange );
+    EXPECT_TRUE( strings::choice< fruit >::valid( "juicymambo" ) );
+    EXPECT_FALSE( strings::choice< fruit >::valid( "driedmambo" ) );
+    EXPECT_THROW( strings::choice< fruit >( "driedmambo" ), comma::exception );
+    // todo: test visiting...
 }
 
 } // namespace comma {
