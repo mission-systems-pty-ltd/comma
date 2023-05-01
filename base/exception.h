@@ -43,9 +43,9 @@ namespace comma {
 
 #endif // COMMA_RETHROW
 
-#define COMMA_ASSERT( condition, strmessage ) { if( !( condition ) ) { COMMA_THROW( comma::exception, "throwing because condition: " << #condition << "is true; " << strmessage ); } }
+#define COMMA_ASSERT( condition, strmessage ) { if( !( condition ) ) { COMMA_THROW( comma::exception, "condition: '" << #condition << "' is false; " << strmessage ); } }
 
-#define COMMA_THROW_IF( condition, strmessage ) { if( condition ) { COMMA_THROW( comma::exception, "throw if condition: " << #condition << "; " << strmessage ); } }
+#define COMMA_THROW_IF( condition, strmessage ) { if( condition ) { COMMA_THROW( comma::exception, "throw because condition: '" << #condition << "' is true; " << strmessage ); } }
 
 class exception : public std::runtime_error
 {
