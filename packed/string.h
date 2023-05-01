@@ -32,6 +32,8 @@ class string : public packed::field< string< S, Padding >, std::string, S >
 
         string( const std::string& rhs ) { pack( this->data(), rhs ); }
 
+        string( const char* rhs ) { operator=( rhs ); }
+
         static const std::string& default_value() { static const std::string s; return s; } // static const std::string s( S, Padding );
 
         static void pack( char* storage, const std::string& value )
