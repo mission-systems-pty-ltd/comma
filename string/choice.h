@@ -18,6 +18,8 @@ struct choice: public Base
     typename Derived::values to_enum() const;
     static bool valid( const std::string& rhs );
     static void assert_valid( const std::string& rhs );
+    bool valid() const { return valid( std::string( *this ) ); } // quick and dirty for now
+    void assert_valid() const { assert_valid( std::string( *this ) ); } // quick and dirty for now
 };
 
 template < typename Derived, typename Base >
