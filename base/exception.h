@@ -21,19 +21,23 @@ namespace comma {
 #ifndef COMMA_THROW
 
 #if defined( WIN32 )
-    #define COMMA_THROW_IMPL_( exception, message )      \
-    throw exception( message, __FILE__, __LINE__, __FUNCSIG__ );
+    #define COMMA_THROW_IMPL_( exception, message, brief )      \
+    throw exception( message, __FILE__, __LINE__, __FUNCSIG__, brief );
 #elif defined( __GNUC__ )
-    #define COMMA_THROW_IMPL_( exception, message )      \
-    throw exception( message, __FILE__, __LINE__, __PRETTY_FUNCTION__ );
+    #define COMMA_THROW_IMPL_( exception, message, brief )      \
+    throw exception( message, __FILE__, __LINE__, __PRETTY_FUNCTION__, brief );
 #else
-    #define COMMA_THROW_IMPL_( exception, message )      \
-    throw exception( message, __FILE__, __LINE__, __FUNCTION__ );
+    #define COMMA_THROW_IMPL_( exception, message, brief )      \
+    throw exception( message, __FILE__, __LINE__, __FUNCTION__, brief );
 #endif
 
-#define COMMA_THROW( exception, strmessage ) { std::ostringstream CommaThrowStr##__LINE__; CommaThrowStr##__LINE__ << strmessage;  COMMA_THROW_IMPL_( exception, CommaThrowStr##__LINE__.str() ); }
+#define COMMA_THROW( exception, strmessage ) { std::ostringstream CommaThrowStr##__LINE__; CommaThrowStr##__LINE__ << strmessage;  COMMA_THROW_IMPL_( exception, CommaThrowStr##__LINE__.str(), false ); }
+
+#define COMMA_THROW_BRIEF( exception, strmessage ) { std::ostringstream CommaThrowStr##__LINE__; CommaThrowStr##__LINE__ << strmessage;  COMMA_THROW_IMPL_( exception, CommaThrowStr##__LINE__.str(), true ); }
 
 #define COMMA_THROW_STREAM( exception, strmessage ) COMMA_THROW( exception, strmessage )
+
+#define COMMA_THROW_STREAM_BRIEF( exception, strmessage ) COMMA_THROW_BRIEF( exception, strmessage )
 
 #endif // COMMA_THROW
 
@@ -45,110 +49,91 @@ namespace comma {
 
 #define COMMA_ASSERT( condition, strmessage ) { if( !( condition ) ) { COMMA_THROW( comma::exception, "condition: '" << #condition << "' is false; " << strmessage ); } }
 
+#define COMMA_ASSERT_BRIEF( condition, strmessage ) { if( !( condition ) ) { COMMA_THROW_BRIEF( comma::exception, "condition: '" << #condition << "' is false; " << strmessage ); } }
+
 #define COMMA_THROW_IF( condition, strmessage ) { if( condition ) { COMMA_THROW( comma::exception, "throw because condition: '" << #condition << "' is true; " << strmessage ); } }
+
+#define COMMA_THROW_BRIEF_IF( condition, strmessage ) { if( condition ) { COMMA_THROW_BRIEF( comma::exception, "throw because condition: '" << #condition << "' is true; " << strmessage ); } }
 
 class exception : public std::runtime_error
 {
     public:
 
         /// constructor
-        exception( const char *message, const char *filename, unsigned long line_number, const char *function_name );
+        exception( const char *message, const char *filename, unsigned long line_number, const char *function_name, bool brief = false );
 
         /// constructor
-        exception( const std::string& message, const char *filename, unsigned long line_number, const char *function_name );
+        exception( const std::string& message, const char *filename, unsigned long line_number, const char *function_name, bool brief = false );
 
         /// destructor
         virtual ~exception() throw() {}
 
         /// e.what is the complete formatted info
-        const char*     what(void) const throw();
+        const char*     what() const throw();
 
         /// just the error message
-        const char*     error() const;
+        const char*     error() const { return &_message[0]; }
 
         /// filename
-        const char*     file() const;
+        const char*     file() const { return &_filename[0]; }
 
         /// line number
-        unsigned long   line() const;
+        unsigned long   line() const { return _line; }
 
         /// function name
-        const char*     function() const;
+        const char*     function() const { return &_function[0]; }
 
     protected:
 
-        virtual void    formatted_string_();
+        virtual void    _formatted_string( bool brief );
 
-        std::string     m_message;
-        std::string     m_filename;
-        unsigned long   m_line_number;
-        std::string     m_function_name;
-        std::string     m_formatted_message;
+        std::string     _message;
+        std::string     _filename;
+        unsigned long   _line;
+        std::string     _function;
+        std::string     _formatted_message;
 };
 
-inline exception::exception( const char *message, const char *filename, unsigned long line_number, const char *function_name ) :
-    std::runtime_error( message ),
-    m_message( message ),
-    m_filename( filename ),
-    m_line_number( line_number ),
-    m_function_name( function_name )
+inline exception::exception( const char *message, const char *filename, unsigned long line_number, const char *function_name, bool brief )
+    : std::runtime_error( message )
+    , _message( message )
+    , _filename( filename )
+    , _line( line_number )
+    , _function( function_name )
 {
-    formatted_string_();
+    _formatted_string( brief );
 }
 
-inline exception::exception( const std::string& message, const char *filename, unsigned long line_number, const char *function_name ) :
-    std::runtime_error( message.c_str() ),
-    m_message( message ),
-    m_filename( filename ),
-    m_line_number( line_number ),
-    m_function_name( function_name )
+inline exception::exception( const std::string& message, const char *filename, unsigned long line_number, const char *function_name, bool brief )
+    : std::runtime_error( message.c_str() )
+    , _message( message )
+    , _filename( filename )
+    , _line( line_number )
+    , _function( function_name )
 {
-    formatted_string_();
+    _formatted_string( brief );
 }
 
-inline const char* exception::what(void) const throw()
+inline const char* exception::what() const throw()
 {
-    const char * string = "exception::what() m_formatted_message.c_str() threw exception";
-    try
-    {
-      string = m_formatted_message.c_str();
-    }
-    catch( ... )
-    {}
+    const char* string = "exception::what() _formatted_message.c_str() threw exception";
+    try { string = _formatted_message.c_str(); } catch( ... ) {}
     return string;
 }
 
-inline const char* exception::error() const
-{
-    return m_message.c_str();
-}
-
-
-inline const char* exception::file() const
-{
-    return m_filename.c_str();
-}
-
-inline unsigned long exception::line() const
-{
-    return m_line_number;
-}
-
-inline const char* exception::function() const
-{
-    return m_function_name.c_str();
-}
-
-inline void exception::formatted_string_()
+inline void exception::_formatted_string( bool brief )
 {
     std::ostringstream oss;
-    oss << error() << std::endl
-        << "============================================" << std::endl
-        << "file: "     << m_filename << std::endl
-        << "line: "     << m_line_number << std::endl
-        << "function: " << m_function_name << std::endl
-        << "============================================" << std::endl;
-    m_formatted_message = oss.str();
+    oss << error() << std::endl;
+    if( !brief )
+    {
+        oss << "============================================" << std::endl
+            << "file: "     << _filename << std::endl
+            << "line: "     << _line << std::endl
+            << "function: " << _function << std::endl
+            << "============================================" << std::endl;
+    }
+    _formatted_message = oss.str();
 }
 
 }  // namespace comma
