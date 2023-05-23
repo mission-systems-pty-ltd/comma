@@ -95,9 +95,10 @@ function description_others()
   'expected' file; pass multiple global files by invoking this option several times
 --debug; much more debug output
 --document,--doc; do not run tests, only output to stdout a collated test documentation in informal way, if --junit present, produce junit-like output (todo)
---junit=[<file>]; output to file junit record compatible with jenkins for each test
 --no-ansiterm-control-characters,--no-control-characters,--raw; unstyled output (no ANSIterm control characters)
 --output-directories,--dry-run,--dry; output list of test directories intended to run and exit
+--output-junit,--junit=[<file>]; output to file junit record compatible with jenkins for each test
+--output-stdout,--stdout; output test results to stdout as <dir>,<status>, <status>: success, failed, timeout, disabled
 --path=[<dir>]; data-storage directory for tests, default: none, let the tests define it
 --test-option=[<option>]; extra command line argument(s) pass to "test" script
 
@@ -288,7 +289,7 @@ function error_and_junit_()
     error_ $( head -1 <<< "$error_and_junit_formatted" )
     local -r error_and_junit_formatted_tail="$( tail -n +2 <<< "$error_and_junit_formatted" )"
     [[ -z "$error_and_junit_formatted_tail" ]] || cat >&2 <<< "$error_and_junit_formatted_tail"
-    if [[ -n "$options_junit" && -d 'output' ]] ; then cat >> 'output/junit.failure.log' <<< "$error_and_junit_formatted" ; fi
+    if [[ -n "$options_output_junit" && -d 'output' ]] ; then cat >> 'output/junit.failure.log' <<< "$error_and_junit_formatted" ; fi
 }
 export -f error_and_junit_
 
@@ -336,6 +337,7 @@ function disabled_()
         if [[ "$verbose" == "--verbose" ]]; then
             if [[ -s $dir/$filename ]] ; then warning_ "$name: test $counter: $dir: $filename:" ; cat $dir/$filename | sed 's/^/    /' >&2
             else error_ "$name: test $counter: $dir: $filename (with no explanation)" ; fi
+            (( !options_output_stdout )) || echo "$dir,disabled" # todo? put it in message_
         fi
         return 0
     fi
@@ -468,7 +470,7 @@ function stats_finalize()
 {
     [[ -f "$stats_progress_csv" ]] || return
     cat "$stats_progress_csv" | comma-progress --elapsed > "$stats_elapsed_path_value"
-    [[ -z "$options_junit" ]] || junit_finalize > "$options_junit"
+    [[ -z "$options_output_junit" ]] || junit_finalize > "$options_output_junit"
 }
 
 function resources_limits()
@@ -613,7 +615,7 @@ function run_and_match_test()
         
         function junit_log_error() # quick and dirty; todo: move all junit stuff to one location
         {
-            [[ -n "$options_junit" ]] || return
+            [[ -n "$options_output_junit" ]] || return
             local dir=$1
             mkdir -p $dir
             touch $dir/junit.failure.log
@@ -626,7 +628,7 @@ function run_and_match_test()
             local is_global=$2
             if [[ -f "$expected" ]] ; then
                 (( options_verbose )) && message_ "$name: match expectations in '$expected'"
-                match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; comma-test-match "$expected" <'output/stdout.log' 2>&1 )
+                match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; comma-test-match "$expected" <'output/stdout.log' )
             elif [[ -d "$expected" ]] ; then
                 local extras=$( find "$expected" -type f )
                 for extra in $extras ; do
@@ -634,7 +636,7 @@ function run_and_match_test()
                     (( options_verbose )) && message_ "$name: match expectations in '$extra'"
                     local extra_match_output=$( comma-test-match "$extra" < 'output/stdout.log' )
                     [[ $is_global ]] || junit_log_error output/$( sed 's#^\./expected/##' <<< "$extra" ) "$extra_match_output"
-                    [[ -z "$extra_match_output" ]] || match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; echo "$extra_match_output" | sed "s#^#$extra:#" 2>&1 )
+                    [[ -z "$extra_match_output" ]] || match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; echo "$extra_match_output" | sed "s#^#$extra:#" )
                 done
             fi
         }
@@ -788,7 +790,7 @@ function run_single_test()
     ) 9>>"$comma_test_run_output_flock"
 
     # do not touch this equilibristics with file descriptors
-    exec 3>&1 4>&2 1>"$our_stderrout_log" 2>&1
+    exec 3>&1 4>&2 1>"$our_stderrout_log" # exec 3>&1 4>&2 1>"$our_stderrout_log" 2>&1
 
     local test_exec basedir outcome
     local result=0
@@ -829,6 +831,7 @@ function run_single_test()
                         comma_locked "$comma_test_run_resources_flock" comma_release_resources "$request" "$comma_test_run_resources_counter" "$worker_id"
                         (( $? == 0 )) || {
                             error_ "$name: test $counter: $dir: repeated internal error on release_resources, terminate the test run PID '$comma_test_run_top_pid'"
+                            (( !options_output_stdout )) || echo "$dir,timeout" # todo? put it in message_; disambiguate timeout status
                             kill -TERM $comma_test_run_top_pid
                         }
                     }
@@ -840,10 +843,12 @@ function run_single_test()
                     }
                     [[ "$test_failed" == "0" ]] && {
                         message_ "$name: test $counter: $dir: succeeded"
+                        (( !options_output_stdout )) || echo "$dir,succeeded" # todo? put it in message_
                     } || {
                         result=1
                         error_ "$name: $dir: failed$( (( $test_failed == 124 )) && echo ' (likely timed out)' )"
-                        [[ -n "$options_junit" && $test_failed == 124 ]] && echo "likely timed out" >> "output/junit.failure.log"
+                        (( !options_output_stdout )) || echo "$dir,failed" # todo? put it in message_
+                        [[ -n "$options_output_junit" && $test_failed == 124 ]] && echo "likely timed out" >> "output/junit.failure.log"
                     }
                     break
                 else
@@ -852,6 +857,7 @@ function run_single_test()
                         [[ "$max_wait_time" != "forever" ]] && {
                             if gawk '{ a=$1 > $2; exit !a }' < <( echo $wait_time $max_wait_time ) ; then
                                 echo "$name: in '$dir', could not get requested resources for ${wait_time}s, failed to run" >&2
+                                (( !options_output_stdout )) || echo "$dir,timeout" # todo? put it in message_
                                 result=1
                                 break
                             fi
@@ -869,13 +875,14 @@ function run_single_test()
                             sleep 1  # do not count as waiting time, for simplicity
                             continue
                         else
-                            error_ "$name: terminate the test run with PID '$comma_test_run_top_pid'"
+                            error_ "$name: $dir: terminate the test run with PID '$comma_test_run_top_pid'"
                             kill -TERM $comma_test_run_top_pid
+                            (( !options_output_stdout )) || echo "$dir,timeout" # todo? put it in message_; disambiguate timeout status
                         fi
                     fi
                 fi
             done
-            [[ -n "$options_junit" && $result != 0 && ! -f "output/junit.failure.log" ]] && echo "internal error, see detailed log" >> "output/junit.failure.log"
+            [[ -n "$options_output_junit" && $result != 0 && ! -f "output/junit.failure.log" ]] && echo "internal error, see detailed log" >> "output/junit.failure.log"
             cd "$basedir"
         fi
     fi
@@ -1032,9 +1039,9 @@ have_max_parallel=$(( have_max_parallel_equal > 0 || have_max_parallel_space > 0
 [[ "$options_parallel" != "0" && "$options_estimate_resources" == "1" ]] && { error_ "$name: resource estimation shall be serial"; exit 1; }
 if [[ "$options_debug" != "0" ]] ; then verbose="--verbose" ; fi
 (( options_verbose )) && verbose="--verbose"
-if [[ -n "$options_junit" ]] ; then
+if [[ -n "$options_output_junit" ]] ; then
     type -p recode >/dev/null || { error_ "$name: --junit given, but recode is not found; please install recode; e.g. run: sudo apt-get install recode"; exit 1; }
-    rm -f "$options_junit"
+    rm -f "$options_output_junit"
 fi
 [[ -n "$options_also_expected" ]] && {
     [[ -f "$options_also_expected" ]] || { error_ "$name: global expected file '$options_also_expected' not found"; exit 1; }
