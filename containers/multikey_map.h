@@ -41,6 +41,8 @@ class multikey_map : public std::unordered_map< std::array< comma::int32, Size >
 {
     public:
         typedef std::unordered_map< std::array< comma::int32, Size >, V, comma::array_hash< std::array< comma::int32, Size >, Size > > base_type;
+
+        typedef base_type map_type;
         
         enum { dimensions = Size };
         
