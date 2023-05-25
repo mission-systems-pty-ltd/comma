@@ -30,11 +30,6 @@ template < typename T > struct array_traits;
 
 } // namespace impl {
 
-// todo: type traits:
-//       - zero
-//       - subtract
-//       - array-divide
-
 /// unordered map with array-like keys
 template < typename K, typename V, unsigned int Size, typename P = std::array< K, Size >, typename Traits = impl::array_traits< P > >
 class multikey_map : public std::unordered_map< std::array< comma::int32, Size >, V, comma::array_hash< std::array< comma::int32, Size >, Size > >
