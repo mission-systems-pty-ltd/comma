@@ -36,7 +36,7 @@ template < typename T > struct array_traits;
 //       - array-divide
 
 /// unordered map with array-like keys
-template < typename K, typename V, unsigned int Size, typename P = std::array< K, Size >, template < typename > class Traits = impl::array_traits >
+template < typename K, typename V, unsigned int Size, typename P = std::array< K, Size >, typename Traits = impl::array_traits< P > >
 class multikey_map : public std::unordered_map< std::array< comma::int32, Size >, V, comma::array_hash< std::array< comma::int32, Size >, Size > >
 {
     public:
@@ -133,21 +133,21 @@ template < typename T, std::size_t Size > struct array_traits< std::array< T, Si
 
 } // namespace impl {
 
-template < typename K, typename V, unsigned int Size, typename P, template < typename > class Traits >
+template < typename K, typename V, unsigned int Size, typename P, typename Traits >
 inline multikey_map< K, V, Size, P, Traits >::multikey_map( const typename multikey_map< K, V, Size, P, Traits >::point_type& origin, const typename multikey_map< K, V, Size, P, Traits >::point_type& resolution )
     : _origin( origin )
     , _resolution( resolution )
 {
 }
 
-template < typename K, typename V, unsigned int Size, typename P, template < typename > class Traits >
+template < typename K, typename V, unsigned int Size, typename P, typename Traits >
 inline multikey_map< K, V, Size, P, Traits >::multikey_map( const typename multikey_map< K, V, Size, P, Traits >::point_type& resolution )
-    : _origin( Traits< P >::zero() )
+    : _origin( Traits::zero() )
     , _resolution( resolution )
 {
 }
 
-template < typename K, typename V, unsigned int Size, typename P, template < typename > class Traits >
+template < typename K, typename V, unsigned int Size, typename P, typename Traits >
 inline typename multikey_map< K, V, Size, P, Traits >::iterator multikey_map< K, V, Size, P, Traits >::touch_at( const typename multikey_map< K, V, Size, P, Traits >::point_type& point )
 {
     key_type index = index_of( point );
@@ -156,16 +156,16 @@ inline typename multikey_map< K, V, Size, P, Traits >::iterator multikey_map< K,
     return this->base_type::insert( std::make_pair( index, mapped_type() ) ).first;
 }
 
-template < typename K, typename V, unsigned int Size, typename P, template < typename > class Traits >
+template < typename K, typename V, unsigned int Size, typename P, typename Traits >
 inline std::pair< typename multikey_map< K, V, Size, P, Traits >::iterator, bool > multikey_map< K, V, Size, P, Traits >::insert( const typename multikey_map< K, V, Size, P, Traits >::point_type& point, const typename multikey_map< K, V, Size, P, Traits >::mapped_type& value )
 {
     return this->base_type::insert( std::make_pair( index_of( point ), value ) );
 }
 
-template < typename K, typename V, unsigned int Size, typename P, template < typename > class Traits >
+template < typename K, typename V, unsigned int Size, typename P, typename Traits >
 inline typename multikey_map< K, V, Size, P, Traits >::key_type multikey_map< K, V, Size, P, Traits >::index_of( const typename multikey_map< K, V, Size, P, Traits >::point_type& point, const typename multikey_map< K, V, Size, P, Traits >::point_type& origin, const typename multikey_map< K, V, Size, P, Traits >::point_type& resolution )
 {
-    point_type diff = Traits< P >::divide( Traits< P >::subtract( point, origin ), resolution );
+    point_type diff = Traits::divide( Traits::subtract( point, origin ), resolution );
     key_type index;
     for( unsigned int i = 0; i < dimensions; ++i )
     {
@@ -177,48 +177,48 @@ inline typename multikey_map< K, V, Size, P, Traits >::key_type multikey_map< K,
     return index;
 }
 
-template < typename K, typename V, unsigned int Size, typename P, template < typename > class Traits >
+template < typename K, typename V, unsigned int Size, typename P, typename Traits >
 inline typename multikey_map< K, V, Size, P, Traits >::key_type multikey_map< K, V, Size, P, Traits >::index_of( const typename multikey_map< K, V, Size, P, Traits >::point_type& point, const typename multikey_map< K, V, Size, P, Traits >::point_type& resolution )
 {
-    return index_of( point, Traits< P >::zero(), resolution );
+    return index_of( point, Traits::zero(), resolution );
 }
 
-template < typename K, typename V, unsigned int Size, typename P, template < typename > class Traits >
+template < typename K, typename V, unsigned int Size, typename P, typename Traits >
 inline typename multikey_map< K, V, Size, P, Traits >::key_type multikey_map< K, V, Size, P, Traits >::index_of( const typename multikey_map< K, V, Size, P, Traits >::point_type& point ) const
 {
     return index_of( point, _origin, _resolution );
 }
 
-template < typename K, typename V, unsigned int Size, typename P, template < typename > class Traits >
+template < typename K, typename V, unsigned int Size, typename P, typename Traits >
 inline typename multikey_map< K, V, Size, P, Traits >::iterator multikey_map< K, V, Size, P, Traits >::find( const typename multikey_map< K, V, Size, P, Traits >::point_type& point )
 {
     index_type i = index_of( point );
     return this->base_type::find( i );
 }
 
-template < typename K, typename V, unsigned int Size, typename P, template < typename > class Traits >
+template < typename K, typename V, unsigned int Size, typename P, typename Traits >
 inline typename multikey_map< K, V, Size, P, Traits >::const_iterator multikey_map< K, V, Size, P, Traits >::find( const typename multikey_map< K, V, Size, P, Traits >::point_type& point ) const
 {
     index_type i = index_of( point );
     return this->base_type::find( i );
 }
 
-template < typename K, typename V, unsigned int Size, typename P, template < typename > class Traits >
+template < typename K, typename V, unsigned int Size, typename P, typename Traits >
 inline typename multikey_map< K, V, Size, P, Traits >::iterator multikey_map< K, V, Size, P, Traits >::find( const typename multikey_map< K, V, Size, P, Traits >::key_type& index )
 {
     return this->base_type::find( index ); // otherwise strange things happen... debug, when we have time
 }
 
-template < typename K, typename V, unsigned int Size, typename P, template < typename > class Traits >
+template < typename K, typename V, unsigned int Size, typename P, typename Traits >
 inline typename multikey_map< K, V, Size, P, Traits >::const_iterator multikey_map< K, V, Size, P, Traits >::find( const typename multikey_map< K, V, Size, P, Traits >::key_type& index ) const
 {
     return this->base_type::find( index ); // otherwise strange things happen... debug, when we have time
 }
 
-template < typename K, typename V, unsigned int Size, typename P, template < typename > class Traits >
+template < typename K, typename V, unsigned int Size, typename P, typename Traits >
 inline const typename multikey_map< K, V, Size, P, Traits >::point_type& multikey_map< K, V, Size, P, Traits >::origin() const { return _origin; }
 
-template < typename K, typename V, unsigned int Size, typename P, template < typename > class Traits >
+template < typename K, typename V, unsigned int Size, typename P, typename Traits >
 inline const typename multikey_map< K, V, Size, P, Traits >::point_type& multikey_map< K, V, Size, P, Traits >::resolution() const { return _resolution; }
 
 } // namespace comma {
