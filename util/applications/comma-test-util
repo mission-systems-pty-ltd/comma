@@ -120,15 +120,15 @@ function comma_test_interactive_commands()
     (
         function comma_test_interactive_test_case()
         {
-            local name=$1
+            local name=$1 testcase_number=$2 number_of_testcases=$3
             local command instruction expected dialog
             eval $( comma_path_value_mangle | sed 's/^/local /' )
             [[ -n "$command" ]] || { echo "$name/command not specified" >&2 ; echo "$name/status=1"; return 1 ; }
             eval "$command" &
             local eval_pid=$!
-            [[ $instruction ]] && dialog="$name: $instruction\n\n"
+            [[ $instruction ]] && dialog+="$instruction\n\n"
             dialog+="do you see $expected?"
-            zenity --question --text="$dialog"
+            zenity --question --title="testcase $testcase_number of $number_of_testcases: $name" --text="$dialog" --width=600
             result=$?
             echo "$name/status=$result"
             kill $( pgrep -P $eval_pid )
@@ -139,25 +139,28 @@ function comma_test_interactive_commands()
         local test_case
         local test_name
         local path
+        local lines=$( cat );
+        local number_of_testcases=$( grep '/command=' <<< "$lines" | wc -l )
+        local testcase_number=0
         while read line ; do
             [[ "$line" =~ ^# ]] && continue
             local p=$( cut -d= -f1 <<< "$line" )
             [[ -n "$p" ]] || continue
             local n=$( dirname $p )
             if [[ "$n" != "$test_name" ]] ; then
-                [[ -z "$test_name" ]] || comma_test_interactive_test_case $test_name <<< "$test_case"
+                [[ -z "$test_name" ]] || comma_test_interactive_test_case $test_name $testcase_number $number_of_testcases <<< "$test_case"
+                (( ++testcase_number ))
                 test_name=$n
                 test_case=
             fi
             n=${n//[/\\[}
             n=${n//]/\\]}
             test_case=$( echo "$test_case" ; sed "s#^$n/##" <<< "$line" )
-        done
-        if [[ -n "$test_case" ]] ; then comma_test_interactive_test_case $test_name <<< "$test_case" ; fi
+        done <<< "$lines"
+        if [[ -n "$test_case" ]] ; then comma_test_interactive_test_case $test_name $testcase_number $number_of_testcases <<< "$test_case" ; fi
         return $?
     )
 }
-
 
 # the tmp directory cleanup for comma_test_run_tarball
 function comma_test_run_tarball_cleanup()
