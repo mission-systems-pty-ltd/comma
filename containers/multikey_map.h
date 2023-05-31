@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <boost/functional/hash.hpp>
 #include "../base/types.h"
+#include "impl/array_traits.h"
 
 namespace comma {
 
@@ -23,12 +24,6 @@ struct array_hash : public std::unary_function< Array, std::size_t >
         // return boost::hash_range( &array[0], &array[Size] ); // not so easy...
     }
 };
-
-namespace impl {
-
-template < typename T > struct array_traits;
-
-} // namespace impl {
 
 /// unordered map with array-like keys
 template < typename K, typename V, unsigned int Size, typename P = std::array< K, Size >, typename Traits = impl::array_traits< P > >
@@ -99,39 +94,6 @@ class multikey_map : public std::unordered_map< std::array< comma::int32, Size >
         point_type _resolution;
 };
 
-namespace impl {
-
-static int negative_flooring_ = static_cast< int >( -1.5 ) == -1 ? -1 : static_cast< int >( -1.5 ) == -2 ? 0 : 0;
-static int positive_flooring_ = static_cast< int >( 1.5 ) == 1 ? 0 : static_cast< int >( 1.5 ) == 2 ? -1 : -1;
-
-template < typename T, std::size_t Size > struct array_traits< std::array< T, Size > >
-{
-    enum { size = Size };
-
-    static std::array< T, Size > subtract( const std::array< T, Size >& lhs, const std::array< T, Size >& rhs )
-    {
-        std::array< T, Size > d;
-        for( unsigned int i = 0; i < Size; ++i ) { d[i] = lhs[i] - rhs[i]; }
-        return d;
-    }
-
-    static std::array< T, Size > divide( const std::array< T, Size >& lhs, const std::array< T, Size >& rhs )
-    {
-        std::array< T, Size > d;
-        for( unsigned int i = 0; i < Size; ++i ) { d[i] = lhs[i] / rhs[i]; }
-        return d;
-    }
-
-    static std::array< T, Size > zero()
-    {
-        std::array< T, Size > d;
-        for( unsigned int i = 0; i < Size; ++i ) { d[i] = T( 0 ); }
-        return d;
-    }
-};
-
-} // namespace impl {
-
 template < typename K, typename V, unsigned int Size, typename P, typename Traits >
 inline multikey_map< K, V, Size, P, Traits >::multikey_map( const typename multikey_map< K, V, Size, P, Traits >::point_type& origin, const typename multikey_map< K, V, Size, P, Traits >::point_type& resolution )
     : _origin( origin )
@@ -171,7 +133,7 @@ inline typename multikey_map< K, V, Size, P, Traits >::key_type multikey_map< K,
         int d = diff[i];
         index[i] = d;
         if( diff[i] == d ) { continue; }
-        index[i] += diff[i] < 0 ? impl::negative_flooring_ : ( d == 0 ? 0 : impl::positive_flooring_ );
+        index[i] += diff[i] < 0 ? impl::negative_flooring() : ( d == 0 ? 0 : impl::positive_flooring() );
     }
     return index;
 }
