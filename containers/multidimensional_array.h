@@ -88,6 +88,33 @@ class multidimensional_array
         std::size_t _product( const index_type& i );
 };
 
+template < typename V, unsigned int D, typename P = std::array< double, D > >
+class interpolated_multidimensional_array: public multidimensional_array< V, D >
+{
+    public:
+        typedef P point_type;
+
+        typedef multidimensional_array< V, D > base_type;
+
+        typedef typename base_type::index_type index_type;
+
+        typedef typename base_type::value_type value_type;
+
+        interpolated_multidimensional_array( const P& origin, const P& resolution, const index_type& size, const V& default_value = V() );
+
+        index_type index_of( const point_type& p ) const;
+
+        V& operator()( const point_type& p ) { return operator()( index_of( p ) ); }
+
+        const V& operator()( const point_type& p ) const { return operator()( index_of( p ) ); }
+
+        V interpolated( const point_type& p ) const;
+
+    private:
+        point_type _origin;
+        point_type _resolution;
+        void _assert_valid( const point_type& p );
+};
 
 
 namespace impl {
