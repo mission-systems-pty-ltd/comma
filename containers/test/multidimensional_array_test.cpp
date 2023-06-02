@@ -98,10 +98,10 @@ TEST( multidimensional_array, array )
 TEST( multidimensional_array, slice )
 {
     {
-        comma::containers::multidimensional::array< int, 3 > a( {2, 3, 4}, 0 );
-        unsigned int i = 0;
-        for( auto it = a.begin(); it != a.end(); ++it ) { *it = i++; }
         {
+            comma::containers::multidimensional::array< int, 3 > a( {2, 3, 4}, 0 );
+            unsigned int i = 0;
+            for( auto it = a.begin(); it != a.end(); ++it ) { *it = i++; }
             typedef comma::containers::multidimensional::array< int, 2 >::index_type index_t;
             comma::containers::multidimensional::slice< int, 2 > s = a[0];
             { index_t i{0, 0}; EXPECT_EQ( s[i], 0 ); }
@@ -116,6 +116,19 @@ TEST( multidimensional_array, slice )
             { index_t i{2, 1}; EXPECT_EQ( s[i], 9 ); }
             { index_t i{2, 2}; EXPECT_EQ( s[i], 10 ); }
             { index_t i{2, 3}; EXPECT_EQ( s[i], 11 ); }
+            {
+                auto t = s[0];
+                typedef comma::containers::multidimensional::array< int, 1 >::index_type index_t;
+                { index_t i{0}; EXPECT_EQ( t[i], 0 ); }
+                { index_t i{1}; EXPECT_EQ( t[i], 1 ); }
+                { index_t i{2}; EXPECT_EQ( t[i], 2 ); }
+                { index_t i{3}; EXPECT_EQ( t[i], 3 ); }
+                t = s[1];
+                { index_t i{0}; EXPECT_EQ( t[i], 4 ); }
+                { index_t i{1}; EXPECT_EQ( t[i], 5 ); }
+                { index_t i{2}; EXPECT_EQ( t[i], 6 ); }
+                { index_t i{3}; EXPECT_EQ( t[i], 7 ); }
+            }
             s = a[1];
             { index_t i{0, 0}; EXPECT_EQ( s[i], 12 ); }
             { index_t i{0, 1}; EXPECT_EQ( s[i], 13 ); }
@@ -129,8 +142,12 @@ TEST( multidimensional_array, slice )
             { index_t i{2, 1}; EXPECT_EQ( s[i], 21 ); }
             { index_t i{2, 2}; EXPECT_EQ( s[i], 22 ); }
             { index_t i{2, 3}; EXPECT_EQ( s[i], 23 ); }
+            { s[{1, 3}] = 111; std::array< std::size_t, 3 > i{1, 1, 3}; EXPECT_EQ( a[i], 111 ); }
         }
         {
+            comma::containers::multidimensional::array< int, 3 > a( {2, 3, 4}, 0 );
+            unsigned int i = 0;
+            for( auto it = a.begin(); it != a.end(); ++it ) { *it = i++; }
             typedef comma::containers::multidimensional::array< int, 1 >::index_type index_t;
             {
                 comma::containers::multidimensional::slice< int, 1 > s = a.operator[]<2>( {0, 0} ); // todo! super-ugly! improve templating on operator (use impl for now)!
