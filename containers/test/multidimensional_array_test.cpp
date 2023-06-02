@@ -48,6 +48,8 @@ TEST( multidimensional_array, iteration )
         { array_t s{2, 3, 4}; EXPECT_EQ( a.shape(), s ); EXPECT_EQ( a.data().size(), 2 * 3 * 4 ); }
         unsigned int i = 0;
         for( auto it = a.begin(); it != a.end(); ++it ) { *it = i++; }
+        i = 0;
+        for( auto it = a.data().begin(); it != a.data().end(); ++it ) { EXPECT_EQ( *it, i++ ); }
         auto it = a.begin();
         { array_t a{0, 0, 0}; EXPECT_EQ( it.index(), a ); EXPECT_EQ( *it, 0 ); ++it; }
         { array_t a{0, 0, 1}; EXPECT_EQ( it.index(), a ); EXPECT_EQ( *it, 1 ); ++it; }
@@ -77,7 +79,7 @@ TEST( multidimensional_array, iteration )
     }
 }
 
-TEST( multidimensional_array, access )
+TEST( multidimensional_array, array )
 {
     {
         comma::containers::multidimensional::array< int, 3 > a( {2, 3, 4}, 0 );
@@ -90,5 +92,78 @@ TEST( multidimensional_array, access )
         { index_t i{0, 0, 0}; a[{0, 0, 0}] = 111; EXPECT_EQ( a[i], 111 ); }
         { index_t i{1, 1, 2}; a[{1, 1, 2}] = 222; EXPECT_EQ( a[i], 222 ); }
         { index_t i{1, 2, 3}; a[{1, 2, 3}] = 333; EXPECT_EQ( a[i], 333 ); }
+    }
+}
+
+TEST( multidimensional_array, slice )
+{
+    {
+        comma::containers::multidimensional::array< int, 3 > a( {2, 3, 4}, 0 );
+        unsigned int i = 0;
+        for( auto it = a.begin(); it != a.end(); ++it ) { *it = i++; }
+        {
+            typedef comma::containers::multidimensional::array< int, 2 >::index_type index_t;
+            comma::containers::multidimensional::slice< int, 2 > s = a[0];
+            { index_t i{0, 0}; EXPECT_EQ( s[i], 0 ); }
+            { index_t i{0, 1}; EXPECT_EQ( s[i], 1 ); }
+            { index_t i{0, 2}; EXPECT_EQ( s[i], 2 ); }
+            { index_t i{0, 3}; EXPECT_EQ( s[i], 3 ); }
+            { index_t i{1, 0}; EXPECT_EQ( s[i], 4 ); }
+            { index_t i{1, 1}; EXPECT_EQ( s[i], 5 ); }
+            { index_t i{1, 2}; EXPECT_EQ( s[i], 6 ); }
+            { index_t i{1, 3}; EXPECT_EQ( s[i], 7 ); }
+            { index_t i{2, 0}; EXPECT_EQ( s[i], 8 ); }
+            { index_t i{2, 1}; EXPECT_EQ( s[i], 9 ); }
+            { index_t i{2, 2}; EXPECT_EQ( s[i], 10 ); }
+            { index_t i{2, 3}; EXPECT_EQ( s[i], 11 ); }
+            s = a[1];
+            { index_t i{0, 0}; EXPECT_EQ( s[i], 12 ); }
+            { index_t i{0, 1}; EXPECT_EQ( s[i], 13 ); }
+            { index_t i{0, 2}; EXPECT_EQ( s[i], 14 ); }
+            { index_t i{0, 3}; EXPECT_EQ( s[i], 15 ); }
+            { index_t i{1, 0}; EXPECT_EQ( s[i], 16 ); }
+            { index_t i{1, 1}; EXPECT_EQ( s[i], 17 ); }
+            { index_t i{1, 2}; EXPECT_EQ( s[i], 18 ); }
+            { index_t i{1, 3}; EXPECT_EQ( s[i], 19 ); }
+            { index_t i{2, 0}; EXPECT_EQ( s[i], 20 ); }
+            { index_t i{2, 1}; EXPECT_EQ( s[i], 21 ); }
+            { index_t i{2, 2}; EXPECT_EQ( s[i], 22 ); }
+            { index_t i{2, 3}; EXPECT_EQ( s[i], 23 ); }
+        }
+        {
+            typedef comma::containers::multidimensional::array< int, 1 >::index_type index_t;
+            {
+                comma::containers::multidimensional::slice< int, 1 > s = a.operator[]<2>( {0, 0} ); // todo! super-ugly! improve templating on operator (use impl for now)!
+                { index_t i{0}; EXPECT_EQ( s[i], 0 ); } // todo: improve usage on 1-dimensional slices
+                { index_t i{1}; EXPECT_EQ( s[i], 1 ); }
+                { index_t i{2}; EXPECT_EQ( s[i], 2 ); }
+                { index_t i{3}; EXPECT_EQ( s[i], 3 ); }
+                s = a.operator[]<2>( {0, 1} );
+                { index_t i{0}; EXPECT_EQ( s[i], 4 ); }
+                { index_t i{1}; EXPECT_EQ( s[i], 5 ); }
+                { index_t i{2}; EXPECT_EQ( s[i], 6 ); }
+                { index_t i{3}; EXPECT_EQ( s[i], 7 ); }
+                s = a.operator[]<2>( {0, 2} );
+                { index_t i{0}; EXPECT_EQ( s[i], 8 ); }
+                { index_t i{1}; EXPECT_EQ( s[i], 9 ); }
+                { index_t i{2}; EXPECT_EQ( s[i], 10 ); }
+                { index_t i{3}; EXPECT_EQ( s[i], 11 ); }
+                s = a.operator[]<2>( {1, 0} );
+                { index_t i{0}; EXPECT_EQ( s[i], 12 ); }
+                { index_t i{1}; EXPECT_EQ( s[i], 13 ); }
+                { index_t i{2}; EXPECT_EQ( s[i], 14 ); }
+                { index_t i{3}; EXPECT_EQ( s[i], 15 ); }
+                s = a.operator[]<2>( {1, 1} );
+                { index_t i{0}; EXPECT_EQ( s[i], 16 ); }
+                { index_t i{1}; EXPECT_EQ( s[i], 17 ); }
+                { index_t i{2}; EXPECT_EQ( s[i], 18 ); }
+                { index_t i{3}; EXPECT_EQ( s[i], 19 ); }
+                s = a.operator[]<2>( {1, 2} );
+                { index_t i{0}; EXPECT_EQ( s[i], 20 ); }
+                { index_t i{1}; EXPECT_EQ( s[i], 21 ); }
+                { index_t i{2}; EXPECT_EQ( s[i], 22 ); }
+                { index_t i{3}; EXPECT_EQ( s[i], 23 ); }
+            }
+        }
     }
 }
