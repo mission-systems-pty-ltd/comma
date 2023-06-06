@@ -26,7 +26,7 @@ struct array_hash : public std::unary_function< Array, std::size_t >
 };
 
 /// unordered map with array-like keys
-template < typename K, typename V, unsigned int Size, typename P = std::array< K, Size >, typename Traits = impl::array_traits< P > >
+template < typename K, typename V, unsigned int Size, typename P = std::array< K, Size >, typename Traits = impl::operations< Size > >
 class map : public std::unordered_map< std::array< comma::int32, Size >, V, array_hash< std::array< comma::int32, Size >, Size > >
 {
     public:
@@ -103,7 +103,7 @@ inline map< K, V, Size, P, Traits >::map( const typename map< K, V, Size, P, Tra
 
 template < typename K, typename V, unsigned int Size, typename P, typename Traits >
 inline map< K, V, Size, P, Traits >::map( const typename map< K, V, Size, P, Traits >::point_type& resolution )
-    : _origin( Traits::zero() )
+    : _origin( Traits::template zero< P >() )
     , _resolution( resolution )
 {
 }
@@ -126,22 +126,13 @@ inline std::pair< typename map< K, V, Size, P, Traits >::iterator, bool > map< K
 template < typename K, typename V, unsigned int Size, typename P, typename Traits >
 inline typename map< K, V, Size, P, Traits >::key_type map< K, V, Size, P, Traits >::index_of( const typename map< K, V, Size, P, Traits >::point_type& point, const typename map< K, V, Size, P, Traits >::point_type& origin, const typename map< K, V, Size, P, Traits >::point_type& resolution )
 {
-    point_type diff = Traits::divide( Traits::subtract( point, origin ), resolution );
-    key_type index;
-    for( unsigned int i = 0; i < dimensions; ++i )
-    {
-        int d = diff[i];
-        index[i] = d;
-        if( diff[i] == d ) { continue; }
-        index[i] += diff[i] < 0 ? impl::negative_flooring() : ( d == 0 ? 0 : impl::positive_flooring() );
-    }
-    return index;
+    return Traits::template index_of< P, key_type >( point, origin, resolution );
 }
 
 template < typename K, typename V, unsigned int Size, typename P, typename Traits >
 inline typename map< K, V, Size, P, Traits >::key_type map< K, V, Size, P, Traits >::index_of( const typename map< K, V, Size, P, Traits >::point_type& point, const typename map< K, V, Size, P, Traits >::point_type& resolution )
 {
-    return index_of( point, Traits::zero(), resolution );
+    return index_of( point, Traits::template zero< P >(), resolution );
 }
 
 template < typename K, typename V, unsigned int Size, typename P, typename Traits >

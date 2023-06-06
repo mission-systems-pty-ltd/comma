@@ -157,8 +157,8 @@ class array
         slice_type _slice;
 };
 
-template < typename V, unsigned int D, typename P = std::array< double, D >, typename S = std::vector< V > >
-class interpolated_array: public array< V, D, S >
+template < typename V, unsigned int D, typename P = std::array< double, D >, typename Traits = impl::operations< D >, typename S = std::vector< V > >
+class grid: public array< V, D, S >
 {
     public:
         typedef P point_type;
@@ -169,23 +169,24 @@ class interpolated_array: public array< V, D, S >
 
         typedef typename base_type::value_type value_type;
 
-        interpolated_array( const P& origin, const P& resolution, const index_type& size, const V& default_value = V() );
+        grid( const P& origin, const P& resolution, const index_type& shape, const V& default_value = V() );
 
-        index_type index_of( const point_type& p ) const; // p: 1.,2.,3. -> return: 23,22,21
+        index_type index_of( const point_type& p ) const;
 
-        /// q = index_as_point( p ); // p: 1.,2.,3. -> 21.,22.,23
-        /// index_of( p ) == index_of( origin + q * resolution );
-        point_type index_as_point( const point_type& p ) const; // p: 1.,2.,3. -> 21.,22.,23
+        point_type lower_bound( const point_type& p ) const;
 
-        V& operator()( const point_type& p ) { return operator()( index_of( p ) ); }
+        V& operator()( const point_type& p ) { return this->operator[]( index_of( p ) ); }
 
-        const V& operator()( const point_type& p ) const { return operator()( index_of( p ) ); }
+        const V& operator()( const point_type& p ) const { return this->operator[]( index_of( p ) ); }
 
-        V interpolated( const point_type& p ) const;
+        const point_type& origin() const { return _origin; }
+
+        const point_type& resolution() const { return _resolution; }
 
     private:
         point_type _origin;
         point_type _resolution;
+        point_type _end;
         void _assert_valid( const point_type& p );
 };
 
@@ -251,5 +252,20 @@ inline const slice< V, D - I > slice< V, D >::at( const std::array< std::size_t,
 
 template < typename V, unsigned int D, typename S >
 inline array< V, D, S >::array( const index_type& shape, const V& default_value ): _data( impl::index< D >::product( shape ), default_value ), _slice( shape, &_data[0] ) {}
+
+// template < typename V, unsigned int D, typename P, typename Traits, typename S >
+// inline typename interpolated_array< V, D, P, Traits, S >::key_type interpolated_array< V, D, P, Traits, S >::index_of( const typename interpolated_array< V, D, P, Traits, S >::point_type& point )
+// {
+//     point_type diff = Traits::divide( Traits::subtract( _point, _origin ), _resolution ); // todo: move this all to a more generic location; reuse for array and map
+//     key_type index;
+//     for( unsigned int i = 0; i < dimensions; ++i )
+//     {
+//         int d = diff[i];
+//         index[i] = d;
+//         if( diff[i] == d ) { continue; }
+//         index[i] += diff[i] < 0 ? impl::negative_flooring() : ( d == 0 ? 0 : impl::positive_flooring() );
+//     }
+//     return index;
+// }
 
 } } } // namespace comma { namespace containers { namespace multidimensional {
