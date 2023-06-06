@@ -169,11 +169,11 @@ class grid: public array< V, D, S >
 
         typedef typename base_type::value_type value_type;
 
-        grid( const P& origin, const P& resolution, const index_type& shape, const V& default_value = V() );
+        grid( const P& origin, const P& resolution, const index_type& shape, const V& default_value = V() ): base_type( shape, default_value ), _origin( origin ), _resolution( resolution ) {}
 
-        index_type index_of( const point_type& p ) const;
+        index_type index_of( const point_type& point ) const { return Traits::template index_of< P, index_type >( point, origin, resolution ); }
 
-        point_type lower_bound( const point_type& p ) const;
+        point_type lower_bound( const point_type& point ) const { return Traits::add( _origin + Traits::multiply( _resolution, index_of( point ) ) ); }
 
         V& operator()( const point_type& p ) { return this->operator[]( index_of( p ) ); }
 
@@ -186,8 +186,6 @@ class grid: public array< V, D, S >
     private:
         point_type _origin;
         point_type _resolution;
-        point_type _end;
-        void _assert_valid( const point_type& p );
 };
 
 namespace impl {
