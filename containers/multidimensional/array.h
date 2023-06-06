@@ -5,8 +5,8 @@
 #pragma once
 
 #include <array>
-#include "../base/types.h"
-#include "impl/array_traits.h"
+#include "../../base/types.h"
+#include "../impl/array_traits.h"
 
 namespace comma { namespace containers { namespace multidimensional {
 

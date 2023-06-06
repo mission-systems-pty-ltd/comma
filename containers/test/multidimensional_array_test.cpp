@@ -1,7 +1,7 @@
 // Copyright (c) 2023 Vsevolod Vlaskine
 
 #include <gtest/gtest.h>
-#include "../multidimensional_array.h"
+#include "../multidimensional/array.h"
 
 namespace cmd = comma::containers::multidimensional; 
 

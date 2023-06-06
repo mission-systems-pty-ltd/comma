@@ -1,18 +1,18 @@
 // Copyright (c) 2023 Vsevolod Vlaskine
 
 #include <gtest/gtest.h>
-#include "../multikey_map.h"
+#include "../multidimensional/map.h"
 
 TEST( multikey_map, usage )
 {
-    comma::multikey_map< double, int, 3 > m( { 0, 0, 0 }, { 1, 2, 3 } );
+    comma::containers::multidimensional::map< double, int, 3 > m( { 0, 0, 0 }, { 1, 2, 3 } );
     m.touch_at( { 1, 2, 3 } );
     // todo
 }
 
 TEST( multikey_map, index )
 {
-    typedef comma::multikey_map< double, int, 3 > map_type;
+    typedef comma::containers::multidimensional::map< double, int, 3 > map_type;
     {
         map_type m( {1, 1, 1} );
         {
@@ -59,7 +59,7 @@ TEST( multikey_map, index )
 
 TEST( multikey_map, operations )
 {
-    typedef comma::multikey_map< double, int, 3 > map_type;
+    typedef comma::containers::multidimensional::map< double, int, 3 > map_type;
     map_type m( {1, 1, 1} );
     {
         EXPECT_TRUE( ( m.find( map_type::point_type{1., 1., 1.} ) == m.end() ) );
@@ -98,14 +98,14 @@ TEST( multikey_map, operations )
 
 TEST( multikey_map, test )
 {
-    typedef comma::multikey_map< double, int, 3 > map_type;
+    typedef comma::containers::multidimensional::map< double, int, 3 > map_type;
     map_type m( {1, 1, 1} );
     EXPECT_TRUE( m.empty() );
 }
 
 TEST( multikey_map, neighbourhood )
 {
-    typedef comma::multikey_map< double, int, 3 > map_type;
+    typedef comma::containers::multidimensional::map< double, int, 3 > map_type;
     map_type m( {1, 1, 1} );
     {
         EXPECT_TRUE( ( m.find( map_type::point_type{1, 1, 1} ) == m.end() ) );
