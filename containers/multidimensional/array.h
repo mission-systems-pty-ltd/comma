@@ -29,14 +29,14 @@ class slice
         const V& operator[]( const index_type& i ) const { return _data[ _index( i ) ]; }
 
         template < unsigned int I >
-        slice< V, D - I > operator[]( const std::array< std::size_t, I >& i );
+        slice< V, D - I > at( const std::array< std::size_t, I >& i );
 
         template < unsigned int I >
-        const slice< V, D - I > operator[]( const std::array< std::size_t, I >& i ) const;
+        const slice< V, D - I > at( const std::array< std::size_t, I >& i ) const;
 
-        slice< V, D - 1 > operator[]( std::size_t i ) { return operator[]< 1 >( std::array< std::size_t, 1 >{i} ); }
+        slice< V, D - 1 > at( std::size_t i ) { return at< 1 >( std::array< std::size_t, 1 >{i} ); }
 
-        const slice< V, D - 1 > operator[]( std::size_t i ) const { return operator[]< 1 >( std::array< std::size_t, 1 >{i} ); }
+        const slice< V, D - 1 > at( std::size_t i ) const { return at< 1 >( std::array< std::size_t, 1 >{i} ); }
 
         V* data() { return _data; }
         
@@ -124,15 +124,15 @@ class array
 
         const V& operator[]( const index_type& i ) const { return _slice[i]; }
 
-        multidimensional::slice< V, D - 1 > operator[]( std::size_t i ) { return _slice[i]; }
+        template < unsigned int I >
+        multidimensional::slice< V, D - I > at( const std::array< std::size_t, I >& i ) { return _slice.template at< I >( i ); }
 
         template < unsigned int I >
-        multidimensional::slice< V, D - I > operator[]( const std::array< std::size_t, I >& i ) { return _slice.template operator[]< I >( i ); }
+        const multidimensional::slice< V, D - I > at( const std::array< std::size_t, I >& i ) const { return _slice.template at< I >( i ); }
 
-        const multidimensional::slice< V, D - 1 > operator[]( std::size_t i ) const { return _slice[i]; }
+        multidimensional::slice< V, D - 1 > at( std::size_t i ) { return _slice.at( i ); }
 
-        template < unsigned int I >
-        const multidimensional::slice< V, D - I > operator[]( const std::array< std::size_t, I >& i ) const { return _slice.template operator[]< I >( i ); }
+        const multidimensional::slice< V, D - 1 > at( std::size_t i ) const { return _slice.at( i ); }
 
         storage_type& data() { return _data; }
 
@@ -235,7 +235,7 @@ inline typename slice< V, D >::index_type slice< V, D >::const_iterator::index()
 
 template < typename V, unsigned int D >
 template < unsigned int I >
-inline slice< V, D - I > slice< V, D >::operator[]( const std::array< std::size_t, I >& i )
+inline slice< V, D - I > slice< V, D >::at( const std::array< std::size_t, I >& i )
 {
     auto s = impl::index< D >::template split< I >( _shape );
     return slice< V, D - I >( s.second, _data + impl::index< I >::value( i, s.first ) * impl::index< D - I >::product( s.second ) );
@@ -243,7 +243,7 @@ inline slice< V, D - I > slice< V, D >::operator[]( const std::array< std::size_
 
 template < typename V, unsigned int D >
 template < unsigned int I >
-inline const slice< V, D - I > slice< V, D >::operator[]( const std::array< std::size_t, I >& i ) const
+inline const slice< V, D - I > slice< V, D >::at( const std::array< std::size_t, I >& i ) const
 {
     auto s = impl::index< D >::template split< I >( _shape );
     return slice< V, D - I >( s.second, _data + impl::index< I >::value( i, s.first ) * impl::index< D - I >::product( s.second ) );

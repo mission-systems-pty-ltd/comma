@@ -103,7 +103,7 @@ TEST( multidimensional_array, slice )
             unsigned int i = 0;
             for( auto it = a.begin(); it != a.end(); ++it ) { *it = i++; }
             typedef comma::containers::multidimensional::array< int, 2 >::index_type index_t;
-            comma::containers::multidimensional::slice< int, 2 > s = a[0];
+            comma::containers::multidimensional::slice< int, 2 > s = a.at( 0 );
             { index_t i{0, 0}; EXPECT_EQ( s[i], 0 ); }
             { index_t i{0, 1}; EXPECT_EQ( s[i], 1 ); }
             { index_t i{0, 2}; EXPECT_EQ( s[i], 2 ); }
@@ -117,19 +117,19 @@ TEST( multidimensional_array, slice )
             { index_t i{2, 2}; EXPECT_EQ( s[i], 10 ); }
             { index_t i{2, 3}; EXPECT_EQ( s[i], 11 ); }
             {
-                auto t = s[0];
+                auto t = s.at( 0 );
                 typedef comma::containers::multidimensional::array< int, 1 >::index_type index_t;
                 { index_t i{0}; EXPECT_EQ( t[i], 0 ); }
                 { index_t i{1}; EXPECT_EQ( t[i], 1 ); }
                 { index_t i{2}; EXPECT_EQ( t[i], 2 ); }
                 { index_t i{3}; EXPECT_EQ( t[i], 3 ); }
-                t = s[1];
+                t = s.at( 1 );
                 { index_t i{0}; EXPECT_EQ( t[i], 4 ); }
                 { index_t i{1}; EXPECT_EQ( t[i], 5 ); }
                 { index_t i{2}; EXPECT_EQ( t[i], 6 ); }
                 { index_t i{3}; EXPECT_EQ( t[i], 7 ); }
             }
-            s = a[1];
+            s = a.at( 1 );
             { index_t i{0, 0}; EXPECT_EQ( s[i], 12 ); }
             { index_t i{0, 1}; EXPECT_EQ( s[i], 13 ); }
             { index_t i{0, 2}; EXPECT_EQ( s[i], 14 ); }
@@ -150,32 +150,32 @@ TEST( multidimensional_array, slice )
             for( auto it = a.begin(); it != a.end(); ++it ) { *it = i++; }
             typedef comma::containers::multidimensional::array< int, 1 >::index_type index_t;
             {
-                comma::containers::multidimensional::slice< int, 1 > s = a.operator[]<2>( {0, 0} ); // todo! super-ugly! improve templating on operator (use impl for now)!
+                comma::containers::multidimensional::slice< int, 1 > s = a.at< 2 >( {0, 0} ); // todo! super-ugly! improve templating!
                 { index_t i{0}; EXPECT_EQ( s[i], 0 ); } // todo: improve usage on 1-dimensional slices
                 { index_t i{1}; EXPECT_EQ( s[i], 1 ); }
                 { index_t i{2}; EXPECT_EQ( s[i], 2 ); }
                 { index_t i{3}; EXPECT_EQ( s[i], 3 ); }
-                s = a.operator[]<2>( {0, 1} );
+                s = a.at< 2 >( {0, 1} );
                 { index_t i{0}; EXPECT_EQ( s[i], 4 ); }
                 { index_t i{1}; EXPECT_EQ( s[i], 5 ); }
                 { index_t i{2}; EXPECT_EQ( s[i], 6 ); }
                 { index_t i{3}; EXPECT_EQ( s[i], 7 ); }
-                s = a.operator[]<2>( {0, 2} );
+                s = a.at< 2 >( {0, 2} );
                 { index_t i{0}; EXPECT_EQ( s[i], 8 ); }
                 { index_t i{1}; EXPECT_EQ( s[i], 9 ); }
                 { index_t i{2}; EXPECT_EQ( s[i], 10 ); }
                 { index_t i{3}; EXPECT_EQ( s[i], 11 ); }
-                s = a.operator[]<2>( {1, 0} );
+                s = a.at< 2 >( {1, 0} );
                 { index_t i{0}; EXPECT_EQ( s[i], 12 ); }
                 { index_t i{1}; EXPECT_EQ( s[i], 13 ); }
                 { index_t i{2}; EXPECT_EQ( s[i], 14 ); }
                 { index_t i{3}; EXPECT_EQ( s[i], 15 ); }
-                s = a.operator[]<2>( {1, 1} );
+                s = a.at< 2 >( {1, 1} );
                 { index_t i{0}; EXPECT_EQ( s[i], 16 ); }
                 { index_t i{1}; EXPECT_EQ( s[i], 17 ); }
                 { index_t i{2}; EXPECT_EQ( s[i], 18 ); }
                 { index_t i{3}; EXPECT_EQ( s[i], 19 ); }
-                s = a.operator[]<2>( {1, 2} );
+                s = a.at< 2 >( {1, 2} );
                 { index_t i{0}; EXPECT_EQ( s[i], 20 ); }
                 { index_t i{1}; EXPECT_EQ( s[i], 21 ); }
                 { index_t i{2}; EXPECT_EQ( s[i], 22 ); }
