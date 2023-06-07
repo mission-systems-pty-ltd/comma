@@ -31,4 +31,13 @@ TEST( array_traits, operations_nearest )
         { index_t expected{0, 1}; index_t actual = cci::operations< 2 >::nearest< point_t, index_t >( point_t{0.1, 0.7}, point_t{0, 0}, point_t{1, 1} ); EXPECT_EQ( expected, actual ); }
         { index_t expected{1, 1}; index_t actual = cci::operations< 2 >::nearest< point_t, index_t >( point_t{1, 1}, point_t{0, 0}, point_t{1, 1} ); EXPECT_EQ( expected, actual ); }
     }
+    {
+        typedef std::array< double, 3 > point_t;
+        typedef std::array< int, 3 > index_t;
+        { index_t expected{0, 0, 0}; index_t actual = cci::operations< 3 >::nearest< point_t, index_t >( point_t{0, 0, 0}, point_t{0, 0, 0}, point_t{1, 1, 1} ); EXPECT_EQ( expected, actual ); }
+        { index_t expected{1, 0, 0}; index_t actual = cci::operations< 3 >::nearest< point_t, index_t >( point_t{0.7, 0, 0}, point_t{0, 0, 0}, point_t{1, 1, 1} ); EXPECT_EQ( expected, actual ); }
+        { index_t expected{0, 1, 0}; index_t actual = cci::operations< 3 >::nearest< point_t, index_t >( point_t{0, 0.7, 0}, point_t{0, 0, 0}, point_t{1, 1, 1} ); EXPECT_EQ( expected, actual ); }
+        { index_t expected{0, 0, 1}; index_t actual = cci::operations< 3 >::nearest< point_t, index_t >( point_t{0, 0, 0.7}, point_t{0, 0, 0}, point_t{1, 1, 1} ); EXPECT_EQ( expected, actual ); }
+        { index_t expected{1, 1, 1}; index_t actual = cci::operations< 3 >::nearest< point_t, index_t >( point_t{0.7, 0.7, 0.7}, point_t{0, 0, 0}, point_t{1, 1, 1} ); EXPECT_EQ( expected, actual ); }
+    }
 }

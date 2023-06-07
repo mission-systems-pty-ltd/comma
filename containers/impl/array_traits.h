@@ -5,6 +5,7 @@
 #pragma once
 
 #include <array>
+#include <cmath>
 
 namespace comma { namespace containers { namespace impl {
 
@@ -18,6 +19,8 @@ template < typename T > inline int index( T p, T origin, T resolution )
     return i;
 }
 
+template < int Base, unsigned int Pow > static constexpr int pow = Base * pow< Base, Pow - 1 >;
+template < int Base > static constexpr int pow< Base, 0 >{1};
 template < typename I, std::size_t Size > static constexpr std::array< I, Size > neighbours; // quick and dirty, for now leaving it to the enthusiasts to implement it using metaprogramming
 template < typename I > static constexpr std::array< I, 2 > neighbours< I, 1 > = {{ {{ 0 }}, {{ 1 }} }};
 template < typename I > static constexpr std::array< I, 4 > neighbours< I, 2 > = {{ {{ 0, 0 }}, {{ 0, 1 }}, {{ 1, 0 }}, {{ 1, 1 }} }};
@@ -65,6 +68,35 @@ template < std::size_t Size > struct operations
             if( d < m ) { m = d; j = i; }
         }
         return n[j];
+    }
+
+    template < typename S, typename I > static std::array< double, pow< 2, Size > > squared_norms( const S& p, const S& origin, const S& resolution ) // todo? metaprogram?
+    {
+        const S& s = subtract( p, origin );
+        std::array< double, pow< 2, Size > > d;
+        const auto& n = comma::containers::impl::neighbours< I, Size >;
+        for( unsigned int i = 0; i < n.size(); ++i )
+        {
+            const S& r = subtract( vmultiply( resolution, n[i] ), s );
+            d[i] = dot( r, r );
+        }
+        return d;
+    }
+
+    template < typename S, typename I > static std::array< double, pow< 2, Size > > norms( const S& p, const S& origin, const S& resolution )
+    {
+        std::array< double, pow< 2, Size > > d = squared_norms( p, origin, resolution );
+        for( auto& v: d ) { v = std::sqrt( v ); }
+        return d;
+    }
+
+    template < typename S, typename I > static std::array< double, pow< 2, Size > > weights( const S& p, const S& origin, const S& resolution )
+    {
+        std::array< double, pow< 2, Size > > d = norms( p, origin, resolution );
+        double s = 0;
+        for( auto& v: d ) { s += v; }
+        for( auto& v: d ) { v /= s; }
+        return d;
     }
 };
 
