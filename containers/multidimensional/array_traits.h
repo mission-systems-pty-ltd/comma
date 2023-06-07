@@ -7,7 +7,7 @@
 #include <array>
 #include <cmath>
 
-namespace comma { namespace containers { namespace impl {
+namespace comma { namespace containers { namespace multidimensional { namespace impl {
 
 template < typename T > inline int index( T p, T origin, T resolution )
 {
@@ -60,7 +60,7 @@ template < std::size_t Size > struct operations
         const S& s = subtract( p, origin );
         double m = dot( s, s );
         unsigned int j = 0;
-        const auto& n = comma::containers::impl::neighbours< I, Size >;
+        const auto& n = neighbours< I, Size >;
         for( unsigned int i = 1; m > 0 && i < n.size(); ++i )
         {
             const S& r = subtract( vmultiply( resolution, n[i] ), s );
@@ -74,7 +74,7 @@ template < std::size_t Size > struct operations
     {
         const S& s = subtract( p, origin );
         std::array< double, pow< 2, Size > > d;
-        const auto& n = comma::containers::impl::neighbours< I, Size >;
+        const auto& n = neighbours< I, Size >;
         for( unsigned int i = 0; i < n.size(); ++i )
         {
             const S& r = subtract( vmultiply( resolution, n[i] ), s );
@@ -113,4 +113,4 @@ template <> struct operations< 1 >
     template < typename S, typename I > static I nearest( const S& p, const S& origin, const S& resolution ) { return p[0] - origin[0] < resolution[0] / 2 ? I{ 0 } : I{ 1 }; }
 };
 
-} } } // namespace comma { namespace containers { impl {
+} } } } // namespace comma { namespace containers { namespace multidimensional { namespace impl {

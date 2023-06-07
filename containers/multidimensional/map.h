@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <boost/functional/hash.hpp>
 #include "../../base/types.h"
-#include "../impl/array_traits.h"
+#include "array_traits.h"
 
 namespace comma { namespace containers { namespace multidimensional {
 
