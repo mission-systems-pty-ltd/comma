@@ -1,10 +1,11 @@
 // Copyright (c) 2023 Vsevolod Vlaskine
 
 #include <gtest/gtest.h>
-#include <eigen3/Eigen/Core>
 #include "../multidimensional/array.h"
 
 namespace cmd = comma::containers::multidimensional; 
+
+namespace cci = comma::containers::impl; 
 
 TEST( multidimensional_array, impl_index_value )
 {
