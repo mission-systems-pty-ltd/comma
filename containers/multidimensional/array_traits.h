@@ -6,6 +6,7 @@
 
 #include <array>
 #include <cmath>
+#include <type_traits>
 
 namespace comma { namespace containers { namespace multidimensional { namespace impl {
 
@@ -36,9 +37,13 @@ template < std::size_t Size > struct operations
     template < typename S, typename T > static S& multiply( S& s, const T& t ) { s[ Size - 1 ] *= t; operations< Size - 1 >::multiply( s, t ); return s; }
     template < typename S, typename T > static S& vmultiply( S& s, const T& t ) { s[ Size - 1 ] *= t[ Size - 1 ]; operations< Size - 1 >::vmultiply( s, t ); return s; }
     template < typename S, typename T > static double dot( S& s, const T& t ) { return s[ Size - 1 ] * t[ Size - 1 ] + operations< Size - 1 >::dot( s, t ); }
-    template < typename S > static S& fill( S&s, double value ) { s[ Size - 1 ] = 0; operations< Size - 1 >::fill( s, value ); return s; }
+    template < typename S, typename T > static S& invert( S& s ) { s[ Size - 1 ] = !s[ Size - 1 ]; operations< Size - 1 >::invert( s ); return s; }
+    template < typename S, typename T > static S& mask( S& s, const T& t ) { s[ Size - 1 ] = t[ Size - 1 ] ? t[ Size - 1 ] : s[ Size - 1 ]; operations< Size - 1 >::mask( s, t ); return s; }
+    template < typename S, typename T > static S masked( const S& s, const T& t ) { S m = s; mask( m, t ); return m; }
+    template < typename S > static S& fill( S&s, double value ) { s[ Size - 1 ] = value; operations< Size - 1 >::fill( s, value ); return s; }
     template < typename S > static S filled( double value ) { S s; fill( s, value ); return s; }
     template < typename S > static S zero() { S s; fill( s, 0 ); return s; }
+    template < typename S > static auto product( const S& s ) -> typename std::remove_reference< decltype( s[Size] ) >::type { return s[ Size - 1 ] * operations< Size - 1 >::product( s ); }
 
     template < typename S, typename T > static S add( const S& s, const T& t ) { S r = s; add( r, t ); return r; }
     template < typename S, typename T > static S subtract( const S& s, const T& t ) { S r = s; subtract( r, t ); return r; }
@@ -90,14 +95,22 @@ template < std::size_t Size > struct operations
         return d;
     }
 
-    template < typename S, typename I > static std::array< double, pow< 2, Size > > weights( const S& p, const S& origin, const S& resolution )
+    struct interpolation
     {
-        std::array< double, pow< 2, Size > > d = norms( p, origin, resolution );
-        double s = 0;
-        for( auto& v: d ) { s += v; }
-        for( auto& v: d ) { v /= s; }
-        return d;
-    }
+        struct linear
+        {
+            template < typename S > static std::array< double, pow< 2, Size > > weights( const S& p, const S& origin, const S& resolution )
+            {
+                S s = vdivide( subtract( p, origin ), resolution );
+                S t;
+                subtract( fill( t, 1. ), s );
+                const auto& n = neighbours< std::array< unsigned int, Size >, Size >;
+                std::array< double, pow< 2, Size > > w;
+                for( unsigned int i = 0; i < pow< 2, Size >; ++i ) { w[i] = product( masked( s, n[ pow< 2, Size > - i - 1 ] ) ) * product( masked( t, n[i] ) ); }
+                return w;
+            }
+        };
+    };
 };
 
 template <> struct operations< 1 >
@@ -108,7 +121,10 @@ template <> struct operations< 1 >
     template < typename S, typename T > static S& multiply( S& s, const T& t ) { s[0] *= t; return s; }
     template < typename S, typename T > static S& vmultiply( S& s, const T& t ) { s[0] *= t[0]; return s; }
     template < typename S, typename T > static double dot( S& s, const T& t ) { return s[0] * t[0]; }
-    template < typename S > static S& fill( S&s, double value ) { s[0] = 0; return s; }
+    template < typename S, typename T > static S& invert( S& s ) { s[0] = !s[0]; return s; }
+    template < typename S, typename T > static S& mask( S& s, const T& t ) { s[0] = t[0] ? t[0] : s[0]; return s; }
+    template < typename S > static auto product( const S& s ) -> typename std::remove_reference< decltype( s[0] ) >::type { return s[0]; }
+    template < typename S > static S& fill( S&s, double value ) { s[0] = value; return s; }
     template < typename S, typename I > static I& index_of( I& i, const S& p, const S& origin, const S& resolution ) { i[0] = index( p[0], origin[0], resolution[0] ); return i; }
     template < typename S, typename I > static I nearest( const S& p, const S& origin, const S& resolution ) { return p[0] - origin[0] < resolution[0] / 2 ? I{ 0 } : I{ 1 }; }
 };
