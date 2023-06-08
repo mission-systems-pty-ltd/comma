@@ -2,9 +2,13 @@
 
 /// @author vsevolod vlaskine
 
+#include <fstream>
 #include <iostream>
 #include "../../application/command_line_options.h"
+#include "../../base/exception.h"
 #include "../../csv/stream.h"
+#include "../../name_value/parser.h"
+#include "../multidimensional/array.h"
 
 void usage( bool verbose )
 {
@@ -35,6 +39,34 @@ void usage( bool verbose )
     std::cerr << std::endl;
     exit( 0 );
 }
+
+namespace comma { namespace applications { namespace lookup { namespace operations {
+
+template < typename T, std::size_t D, std::size_t E >
+struct lut
+{
+    struct input { std::array< double, D > point; };
+    typedef std::array< std::size_t, D > index_t;
+    typedef std::array< T, E > value_t;
+    typedef comma::containers::multidimensional::grid< value_t, D > grid_t;
+
+    static grid_t& load( grid_t& g, const std::string& options )
+    {
+        auto csv = comma::name_value::parser( "filename" ).get< comma::csv::options >( options );
+        COMMA_ASSERT_BRIEF( csv.binary(), "lookup table: on file '" << csv.filename << "': only binary files are currently supported" );
+        std::ifstream ifs( csv.filename, std::ios::binary );
+        COMMA_ASSERT_BRIEF( ifs.is_open(), "lookup table: failed to open '" << csv.filename << "'" );
+        std::size_t size = g.data().size() * sizeof( T ) * E;
+        ifs.read( reinterpret_cast< char* >( &g.data()[0] ), size );
+        COMMA_ASSERT_BRIEF( ifs.gcount() > 0, "lookup table: failed to read from '" << csv.filename << "'" );
+        COMMA_ASSERT_BRIEF( std::size_t( ifs.gcount() ) == size, "lookup table: on file '" << csv.filename << "': expected " << size << " bytes; got: " << ifs.gcount() );
+        return g;
+    }
+};
+
+} } } } // namespace comma { namespace applications { namespace lookup { namespace operations {
+
+
 
 namespace comma { namespace applications { namespace lookup { namespace operations {
 
