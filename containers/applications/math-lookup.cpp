@@ -43,6 +43,25 @@ void usage( bool verbose )
     exit( 0 );
 }
 
+// todo
+// - 1-dimensional: fix
+// - array operators: fix
+// - nearest: fix
+// ! --help
+// - regression test: basics
+
+template< typename T, std::size_t D, typename S >
+std::array< T, D >& operator*=( std::array< T, D >& lhs, const S& rhs ) { COMMA_THROW( comma::exception, "todo" ); }
+
+template< typename T, std::size_t D, typename S >
+std::array< T, D > operator*( const std::array< T, D >& lhs, const S& rhs ) { COMMA_THROW( comma::exception, "todo" ); }
+
+template< typename T, std::size_t D >
+std::array< T, D >& operator+=( std::array< T, D >& lhs, const std::array< T, D >& rhs ) { COMMA_THROW( comma::exception, "todo" ); }
+
+template< typename T, std::size_t D >
+std::array< T, D > operator+( const std::array< T, D >& lhs, const std::array< T, D >& rhs ) { COMMA_THROW( comma::exception, "todo" ); }
+
 namespace comma { namespace applications { namespace lookup { namespace operations {
 
 template< typename T, std::size_t D >
@@ -69,6 +88,14 @@ struct lut
         return g;
     }
 
+    static std::pair< index_t, value_t > interpolate( const grid_t& g, const point_t& p )
+    {
+        std::pair< index_t, value_t > r;
+        r.first = g.index_of( p );
+        r.second = g.interpolated( p );
+        return r;
+    }
+
     static std::pair< index_t, value_t > nearest( const grid_t& g, const point_t& p )
     {
         std::pair< index_t, value_t > r;
@@ -85,79 +112,72 @@ struct lut
         return r;
     }
 
-    static std::pair< index_t, value_t > interpolate( const grid_t& g, const point_t& p )
+    static int run( const std::string& operation
+                  , const comma::csv::options& csv
+                  , const comma::csv::options& lut_csv
+                  , const std::vector< double >& origin
+                  , const std::vector< double >& resolution
+                  , const std::vector< std::size_t >& shape )
     {
-        std::pair< index_t, value_t > r;
-        r.first = g.index_of( p );
-        r.second = g.interpolated( p );
-        return r;
-    }
-
-    template < typename F > static int run( const comma::csv::options& csv
-                                          , const comma::csv::options& lut_csv
-                                          , const std::vector< double >& origin
-                                          , const std::vector< double >& resolution
-                                          , const std::vector< std::size_t >& shape                                          
-                                          , F&& f )
-    {
+        std::pair< index_t, value_t > ( *f )( const grid_t&, const point_t& );
+        if( operation == "interpolate" ) { f = lut< T, D, E >::interpolate; }
+        //else if( operation == "nearest" ) { f = lut< T, D, E >::nearest; }
+        else if( operation == "query" ) { f = lut< T, D, E >::query; }
+        else { COMMA_THROW_BRIEF( comma::exception, "expected operation; got: '" << operation << "'" ); }
         point_t o, r;
         index_t s;
-        std::memcpy( &o[0], &origin[0], D * sizeof( double ) );
-        std::memcpy( &r[0], &resolution[0], D * sizeof( double ) );
-        std::memcpy( &s[0], &shape[0], D * sizeof( std::size_t ) );
+        std::memcpy( &o[0], &origin[0], D * sizeof( double ) ); // quick and dirty
+        std::memcpy( &r[0], &resolution[0], D * sizeof( double ) ); // quick and dirty
+        std::memcpy( &s[0], &shape[0], D * sizeof( std::size_t ) ); // quick and dirty
         grid_t grid( o, r, s );
         load( grid, lut_csv );
         input_t zero;
         std::memset( &zero.point[0], 0, zero.point.size() * sizeof( T ) );
         comma::csv::input_stream< input_t > istream( std::cin, csv, zero );
-        // todo! ostream and tied? or just do it by hand for now?
+        comma::csv::output_stream< std::pair< index_t, value_t > > ostream( std::cout, csv.binary() );
+        auto tied = comma::csv::tied( istream, ostream );
         while( istream.ready() || std::cin.good() )
         {
             const auto& p = istream.read();
             if( !p ) { break; }
-
-            // todo: process
-            // todo: output using tied; just a stub for debugging for now
-            if( csv.binary() ) { std::cout.write( istream.binary().last(), istream.binary().size() ); }
-            else { std::cout << comma::join( istream.ascii().last(), csv.delimiter ) << std::endl; }
-
+            tied.append( f( grid, p->point ) );
             if( csv.flush ) { std::cout.flush(); }
         }
         return 0;
     }
 };
 
-template < typename T, std::size_t D, typename F > static int run_with_dim( const comma::csv::options& csv
-                                                                          , const comma::csv::options& lut_csv
-                                                                          , const std::vector< double >& origin
-                                                                          , const std::vector< double >& resolution
-                                                                          , const std::vector< std::size_t >& shape
-                                                                          , F&& f )
+template < typename T, std::size_t D > static int run_with_dim( const std::string& operation
+                                                              , const comma::csv::options& csv
+                                                              , const comma::csv::options& lut_csv
+                                                              , const std::vector< double >& origin
+                                                              , const std::vector< double >& resolution
+                                                              , const std::vector< std::size_t >& shape )
 {
     switch( lut_csv.format().count() )
     {
-        case 1: return lut< T, D, 1 >::run( csv, lut_csv, origin, resolution, shape, f );
-        case 2: return lut< T, D, 2 >::run( csv, lut_csv, origin, resolution, shape, f );
-        case 3: return lut< T, D, 3 >::run( csv, lut_csv, origin, resolution, shape, f );
-        case 4: return lut< T, D, 4 >::run( csv, lut_csv, origin, resolution, shape, f );
+        case 1: return lut< T, D, 1 >::run( operation, csv, lut_csv, origin, resolution, shape );
+        case 2: return lut< T, D, 2 >::run( operation, csv, lut_csv, origin, resolution, shape );
+        case 3: return lut< T, D, 3 >::run( operation, csv, lut_csv, origin, resolution, shape );
+        case 4: return lut< T, D, 4 >::run( operation, csv, lut_csv, origin, resolution, shape );
         default: COMMA_THROW( comma::exception, "up to 4-dimensional lookup table values currently supported; got: " << lut_csv.format().count() << " dimensions in " << lut_csv.format().string() );
     }
     return 1;
 }
 
-template < typename T, typename F > static int run_as( const comma::csv::options& csv
-                                                     , const comma::csv::options& lut_csv
-                                                     , const std::vector< double >& origin
-                                                     , const std::vector< double >& resolution
-                                                     , const std::vector< std::size_t >& shape
-                                                     , F&& f )
+template < typename T > static int run_as( const std::string& operation
+                                         , const comma::csv::options& csv
+                                         , const comma::csv::options& lut_csv
+                                         , const std::vector< double >& origin
+                                         , const std::vector< double >& resolution
+                                         , const std::vector< std::size_t >& shape )
 {
     switch( origin.size() )
     {
-        case 1: return run_with_dim< T, 1 >( csv, lut_csv, origin, resolution, shape, f );
-        case 2: return run_with_dim< T, 2 >( csv, lut_csv, origin, resolution, shape, f );
-        case 3: return run_with_dim< T, 3 >( csv, lut_csv, origin, resolution, shape, f );
-        case 4: return run_with_dim< T, 4 >( csv, lut_csv, origin, resolution, shape, f );
+        // todo! case 1: return run_with_dim< T, 1 >( operation, csv, lut_csv, origin, resolution, shape );
+        case 2: return run_with_dim< T, 2 >( operation, csv, lut_csv, origin, resolution, shape );
+        case 3: return run_with_dim< T, 3 >( operation, csv, lut_csv, origin, resolution, shape );
+        case 4: return run_with_dim< T, 4 >( operation, csv, lut_csv, origin, resolution, shape );
         default: COMMA_THROW( comma::exception, "up to 4-dimensional lookup tables currently supported; got: " << origin.size() << " dimensions" );
     }
     return 1;
@@ -177,7 +197,7 @@ template < typename T, std::size_t D > struct traits< comma::applications::looku
 
 namespace comma { namespace applications { namespace lookup { namespace operations {
 
-static int interpolate( const comma::command_line_options& options, const csv::options& csv, const std::vector< std::string >& unnamed )
+static int run( const comma::command_line_options& options, const csv::options& csv, const std::vector< std::string >& unnamed )
 {
     COMMA_ASSERT_BRIEF( unnamed.size() > 1, "please specify lookup table file as: math-lookup <operation> <filename>" );
     auto lut_csv = comma::name_value::parser( "filename" ).get< comma::csv::options >( unnamed[1] );
@@ -189,22 +209,10 @@ static int interpolate( const comma::command_line_options& options, const csv::o
     COMMA_ASSERT_BRIEF( origin.size() == shape.size(), "expected --origin and --shape of the same dimensions; got: " << origin.size() << " and " << shape.size() );
     switch( lut_csv.format().elements()[0].type ) // todo! quick and dirty
     {
-        case comma::csv::format::float_t: return comma::applications::lookup::operations::run_as< float >( csv, lut_csv, origin, resolution, shape, nullptr );
-        case comma::csv::format::double_t: return comma::applications::lookup::operations::run_as< double >( csv, lut_csv, origin, resolution, shape, nullptr );
+        case comma::csv::format::float_t: return comma::applications::lookup::operations::run_as< float >( unnamed[0], csv, lut_csv, origin, resolution, shape );
+        case comma::csv::format::double_t: return comma::applications::lookup::operations::run_as< double >( unnamed[0], csv, lut_csv, origin, resolution, shape );
         default: COMMA_THROW( comma::exception, "only float and double as lookup table values are supported; got: '" << unnamed[1] << "'" );
     }
-    return 1;
-}
-
-static int nearest( const comma::command_line_options& options, const csv::options& csv, const std::vector< std::string >& unnamed )
-{
-    comma::say() << "nearest: todo" << std::endl;
-    return 1;
-}
-
-static int query( const comma::command_line_options& options, const csv::options& csv, const std::vector< std::string >& unnamed )
-{
-    comma::say() << "query: todo" << std::endl;
     return 1;
 }
 
@@ -218,12 +226,7 @@ int main( int ac, char** av )
         comma::csv::options csv( options );
         const auto& unnamed = options.unnamed( "--flush,--verbose,-v", "-.*" );
         if( unnamed.empty() ) { comma::say() << "please specify operation" << std::endl; return 1; }
-        std::string operation = unnamed[0];
-        if( operation == "interpolate" ) { return comma::applications::lookup::operations::interpolate( options, csv, unnamed ); }
-        if( operation == "nearest" ) { return comma::applications::lookup::operations::nearest( options, csv, unnamed ); }
-        if( operation == "query" ) { return comma::applications::lookup::operations::query( options, csv, unnamed ); }
-        comma::say() << "expected operation; got: '" << operation << "'" << std::endl;
-        return 1;
+        return comma::applications::lookup::operations::run( options, csv, unnamed );
     }
     catch( std::exception& ex ) { comma::say() << "caught exception: " << ex.what() << std::endl; }
     catch( ... ) { comma::say() << "caught unknown exception" << std::endl; }

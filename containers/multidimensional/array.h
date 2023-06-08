@@ -274,7 +274,7 @@ typename grid< V, D, P, Traits, S >::index_type grid< V, D, P, Traits, S >::near
     P element_origin = _resolution;
     index_type i = index_of( point );
     Traits::add( Traits::vmultiply( element_origin, i ), _origin );
-    return Traits::add( Traits::nearest( point, element_origin, resolution ), i );
+    return Traits::add( Traits::template nearest< index_type >( point, const_cast< const P& >( element_origin ), _resolution ), i );
 }
 
 } } } // namespace comma { namespace containers { namespace multidimensional {
