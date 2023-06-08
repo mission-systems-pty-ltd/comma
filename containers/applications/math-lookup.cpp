@@ -4,11 +4,13 @@
 
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include "../../application/command_line_options.h"
 #include "../../base/exception.h"
 #include "../../csv/stream.h"
 #include "../../csv/traits.h"
 #include "../../name_value/parser.h"
+#include "../../visiting/traits.h"
 #include "../multidimensional/array.h"
 
 void usage( bool verbose )
@@ -43,6 +45,9 @@ void usage( bool verbose )
 
 namespace comma { namespace applications { namespace lookup { namespace operations {
 
+template< typename T, std::size_t D >
+struct _array { std::array< T, D > point; };
+
 template < typename T, std::size_t D, std::size_t E >
 struct lut
 {
@@ -50,7 +55,8 @@ struct lut
     typedef std::array< std::size_t, D > index_t;
     typedef std::array< T, E > value_t;
     typedef comma::containers::multidimensional::grid< value_t, D, point_t > grid_t;
-    struct input { std::array< double, D > point; };
+    typedef _array< double, D > input_t;
+    typedef _array< T, D > output_t;
 
     static grid_t& load( grid_t& g, const comma::csv::options& csv )
     {
@@ -63,16 +69,68 @@ struct lut
         return g;
     }
 
-    template < typename F >
-    int run( const comma::csv::options& lut_csv, F&& f )
+    template < typename F > static int run( const std::vector< double >& origin
+                                          , const std::vector< double >& resolution
+                                          , const std::vector< std::size_t >& shape
+                                          , const comma::csv::options& lut_csv
+                                          , F&& f )
     {
-        grid_t grid;
+        point_t o, r;
+        index_t s;
+        std::memcpy( &o[0], &origin[0], D * sizeof( double ) );
+        std::memcpy( &r[0], &resolution[0], D * sizeof( double ) );
+        std::memcpy( &s[0], &shape[0], D * sizeof( std::size_t ) );
+        grid_t grid( o, r, s );
         load( grid, lut_csv );
         return 0;
     }
 };
 
+template < typename T, std::size_t D, typename F > static int run_with_dim( const std::vector< double >& origin
+                                                                          , const std::vector< double >& resolution
+                                                                          , const std::vector< std::size_t >& shape
+                                                                          , const comma::csv::options& lut_csv
+                                                                          , F&& f )
+{
+    switch( lut_csv.format().count() )
+    {
+        case 1: return lut< T, D, 1 >::run( origin, resolution, shape, lut_csv, f );
+        case 2: return lut< T, D, 2 >::run( origin, resolution, shape, lut_csv, f );
+        case 3: return lut< T, D, 3 >::run( origin, resolution, shape, lut_csv, f );
+        case 4: return lut< T, D, 4 >::run( origin, resolution, shape, lut_csv, f );
+        default: COMMA_THROW( comma::exception, "up to 4-dimensional lookup table values currently supported; got: " << lut_csv.format().count() << " dimensions in " << lut_csv.format().string() );
+    }
+    return 1;
+}
+
+template < typename T, typename F > static int run_as( const std::vector< double >& origin
+                                                     , const std::vector< double >& resolution
+                                                     , const std::vector< std::size_t >& shape
+                                                     , const comma::csv::options& lut_csv
+                                                     , F&& f )
+{
+    switch( origin.size() )
+    {
+        case 1: return run_with_dim< T, 1 >( origin, resolution, shape, lut_csv, f );
+        case 2: return run_with_dim< T, 2 >( origin, resolution, shape, lut_csv, f );
+        case 3: return run_with_dim< T, 3 >( origin, resolution, shape, lut_csv, f );
+        case 4: return run_with_dim< T, 4 >( origin, resolution, shape, lut_csv, f );
+        default: COMMA_THROW( comma::exception, "up to 4-dimensional lookup tables currently supported; got: " << origin.size() << " dimensions" );
+    }
+    return 1;
+}
+
 } } } } // namespace comma { namespace applications { namespace lookup { namespace operations {
+
+namespace comma { namespace visiting {
+
+template < typename T, std::size_t D > struct traits< comma::applications::lookup::operations::_array< T, D > >
+{
+    template < typename Key, class Visitor > static void visit( const Key&, comma::applications::lookup::operations::_array< T, D >& p, Visitor& v ) { v.apply( "point", p.point ); }
+    template < typename Key, class Visitor > static void visit( const Key&, const comma::applications::lookup::operations::_array< T, D >& p, Visitor& v ) { v.apply( "point", p.point ); }
+};
+
+} } // namespace comma { namespace visiting {
 
 namespace comma { namespace applications { namespace lookup { namespace operations {
 
@@ -81,8 +139,17 @@ static int interpolate( const comma::command_line_options& options, const csv::o
     COMMA_ASSERT_BRIEF( unnamed.size() > 1, "please specify lookup table file as: math-lookup <operation> <filename>" );
     auto lut_csv = comma::name_value::parser( "filename" ).get< comma::csv::options >( unnamed[1] );
     COMMA_ASSERT_BRIEF( csv.binary(), "lookup table: on file '" << lut_csv.filename << "': only binary files are currently supported" );
-    auto input_format = csv.binary() ? csv.format() : comma::csv::format( options.value< std::string >( "--format", "d" ) );
-    comma::say() << "interpolate: todo" << std::endl;
+    const auto& origin = comma::split_as< double >( options.value< std::string >( "--origin,-o" ), ',' );
+    const auto& resolution = comma::split_as< double >( options.value< std::string >( "--resolution,-r" ), ',' );
+    const auto& shape = comma::split_as< std::size_t >( options.value< std::string >( "--shape" ), ',' );
+    COMMA_ASSERT_BRIEF( origin.size() == resolution.size(), "expected --origin and --resolution of the same dimensions; got: " << origin.size() << " and " << resolution.size() );
+    COMMA_ASSERT_BRIEF( origin.size() == shape.size(), "expected --origin and --shape of the same dimensions; got: " << origin.size() << " and " << shape.size() );
+    switch( lut_csv.format().elements()[0].type ) // todo! quick and dirty
+    {
+        case comma::csv::format::float_t: return comma::applications::lookup::operations::run_as< float >( origin, resolution, shape, lut_csv, nullptr );
+        case comma::csv::format::double_t: return comma::applications::lookup::operations::run_as< double >( origin, resolution, shape, lut_csv, nullptr );
+        default: COMMA_THROW( comma::exception, "only float and double as lookup table values are supported; got: '" << unnamed[1] << "'" );
+    }
     return 1;
 }
 
