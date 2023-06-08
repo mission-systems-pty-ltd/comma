@@ -183,6 +183,8 @@ class grid: public array< V, D, S >
 
         const point_type& resolution() const { return _resolution; }
 
+        V interpolated( const point_type& point ) const; // todo: flag/enum or alike for different interpolation types; currently linear only
+
     private:
         point_type _origin;
         point_type _resolution;
@@ -249,6 +251,19 @@ inline const slice< V, D - I > slice< V, D >::at( const std::array< std::size_t,
 }
 
 template < typename V, unsigned int D, typename S >
-inline array< V, D, S >::array( const index_type& shape, const V& default_value ): _data( impl::index_traits< D >::product( shape ), default_value ), _slice( shape, &_data[0] ) {}
+inline array< V, D, S >::array( const typename array< V, D, S >::index_type& shape, const V& default_value ): _data( impl::index_traits< D >::product( shape ), default_value ), _slice( shape, &_data[0] ) {}
+
+template < typename V, unsigned int D, typename P, typename Traits, typename S >
+V grid< V, D, P, Traits, S >::interpolated( const P& point ) const
+{
+    P origin = _resolution;
+    index_type i = index_of( point );
+    Traits::add( Traits::multiply( _resolution, i ), _origin );
+    const auto& weights = Traits::interpolation::linear::weights( point, origin, _resolution );
+    const auto& neighbours = impl::neighbours< index_type, D >;
+    V v = this->operator[]( i ) * weights[0]; // todo?! value traits?!
+    for( unsigned int i = 1; i < weights.size(); ++i ) { v += this->operator[]( Traits::add( neighbours[i], i ) ) * weights[i]; } // todo?! value traits?!
+    return v;
+}
 
 } } } // namespace comma { namespace containers { namespace multidimensional {
