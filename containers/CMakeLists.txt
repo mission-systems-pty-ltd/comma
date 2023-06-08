@@ -1,5 +1,5 @@
 SET( PROJECT "containers" )
-SET( TARGET_NAME comma${PROJECT} )
+SET( TARGET_NAME comma_${PROJECT} )
 
 FILE( GLOB source   ${SOURCE_CODE_BASE_DIR}/${PROJECT}/*.cpp)
 FILE( GLOB includes ${SOURCE_CODE_BASE_DIR}/${PROJECT}/*.h)
@@ -20,6 +20,10 @@ INSTALL( FILES ${multidimensional_includes} DESTINATION ${comma_INSTALL_INCLUDE_
 #    ARCHIVE DESTINATION ${comma_INSTALL_LIB_DIR} COMPONENT Development # .a, .lib
 #)
 
-IF( comma_BUILD_TESTS )
-    ADD_SUBDIRECTORY( test )
-ENDIF( comma_BUILD_TESTS )
+if( comma_BUILD_TESTS )
+    add_subdirectory( test )
+endif( comma_BUILD_TESTS )
+
+if( comma_BUILD_APPLICATIONS )
+    add_subdirectory( applications )
+endif( comma_BUILD_APPLICATIONS )
