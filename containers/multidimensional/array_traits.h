@@ -127,6 +127,7 @@ template <> struct operations< 1 >
     template < typename S > static auto product( const S& s ) -> typename std::remove_reference< decltype( s[0] ) >::type { return s[0]; }
     template < typename S, typename T, typename Diff > static bool near( const S& s, const T& t, const Diff& epsilon ) { return comma::math::equal( s[0], t[0], epsilon ); }
     template < typename S > static S& fill( S&s, double value ) { s[0] = value; return s; }
+    template < typename S > static S zero() { S s; fill( s, 0 ); return s; }
     template < typename S, typename I > static I& index_of( I& i, const S& p, const S& origin, const S& resolution ) { i[0] = index( p[0], origin[0], resolution[0] ); return i; }
     template < typename S, typename I > static I nearest( const S& p, const S& origin, const S& resolution ) { return p[0] - origin[0] < resolution[0] / 2 ? I{ 0 } : I{ 1 }; }
 };
