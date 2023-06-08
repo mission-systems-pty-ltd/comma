@@ -7,6 +7,7 @@
 #include "../../application/command_line_options.h"
 #include "../../base/exception.h"
 #include "../../csv/stream.h"
+#include "../../csv/traits.h"
 #include "../../name_value/parser.h"
 #include "../multidimensional/array.h"
 
@@ -45,15 +46,14 @@ namespace comma { namespace applications { namespace lookup { namespace operatio
 template < typename T, std::size_t D, std::size_t E >
 struct lut
 {
-    struct input { std::array< double, D > point; };
+    typedef std::array< double, D > point_t;
     typedef std::array< std::size_t, D > index_t;
     typedef std::array< T, E > value_t;
-    typedef comma::containers::multidimensional::grid< value_t, D > grid_t;
+    typedef comma::containers::multidimensional::grid< value_t, D, point_t > grid_t;
+    struct input { std::array< double, D > point; };
 
-    static grid_t& load( grid_t& g, const std::string& options )
+    static grid_t& load( grid_t& g, const comma::csv::options& csv )
     {
-        auto csv = comma::name_value::parser( "filename" ).get< comma::csv::options >( options );
-        COMMA_ASSERT_BRIEF( csv.binary(), "lookup table: on file '" << csv.filename << "': only binary files are currently supported" );
         std::ifstream ifs( csv.filename, std::ios::binary );
         COMMA_ASSERT_BRIEF( ifs.is_open(), "lookup table: failed to open '" << csv.filename << "'" );
         std::size_t size = g.data().size() * sizeof( T ) * E;
@@ -62,16 +62,26 @@ struct lut
         COMMA_ASSERT_BRIEF( std::size_t( ifs.gcount() ) == size, "lookup table: on file '" << csv.filename << "': expected " << size << " bytes; got: " << ifs.gcount() );
         return g;
     }
+
+    template < typename F >
+    int run( const comma::csv::options& lut_csv, F&& f )
+    {
+        grid_t grid;
+        load( grid, lut_csv );
+        return 0;
+    }
 };
 
 } } } } // namespace comma { namespace applications { namespace lookup { namespace operations {
-
-
 
 namespace comma { namespace applications { namespace lookup { namespace operations {
 
 static int interpolate( const comma::command_line_options& options, const csv::options& csv, const std::vector< std::string >& unnamed )
 {
+    COMMA_ASSERT_BRIEF( unnamed.size() > 1, "please specify lookup table file as: math-lookup <operation> <filename>" );
+    auto lut_csv = comma::name_value::parser( "filename" ).get< comma::csv::options >( unnamed[1] );
+    COMMA_ASSERT_BRIEF( csv.binary(), "lookup table: on file '" << lut_csv.filename << "': only binary files are currently supported" );
+    auto input_format = csv.binary() ? csv.format() : comma::csv::format( options.value< std::string >( "--format", "d" ) );
     comma::say() << "interpolate: todo" << std::endl;
     return 1;
 }
