@@ -184,3 +184,28 @@ TEST( multidimensional_array, slice )
         }
     }
 }
+
+TEST( multidimensional_array, grid_index )
+{
+    {
+        comma::containers::multidimensional::grid< double, 2 > g( {0, 0}, {1, 1}, {2, 3}, 0 );
+        typedef std::array< std::size_t, 2 > index_t;
+        int i = 0;
+        for( auto it = g.begin(); it != g.end(); ++it ) { *it = i++; }
+        { index_t i = {0, 0}; EXPECT_EQ( g.index_of( {0, 0} ), i ); }
+        { index_t i = {0, 1}; EXPECT_EQ( g.index_of( {0, 1.01} ), i ); }
+        // todo: more tests
+    }
+}
+
+TEST( multidimensional_array, grid_interpolate )
+{
+    {
+        comma::containers::multidimensional::grid< double, 2 > g( {0, 0}, {1, 1}, {2, 2}, 0 );
+        g[{0, 0}] = 0; g[{0, 1}] = 1; g[{1, 0}] = 2; g[{1, 1}] = 3;
+        EXPECT_EQ( g.interpolated( {0, 0} ), 0 );
+        EXPECT_EQ( g.interpolated( {0, 1} ), 1 );
+        EXPECT_EQ( g.interpolated( {1, 0} ), 2 );
+        EXPECT_EQ( g.interpolated( {1, 1} ), 3 );
+    }
+}

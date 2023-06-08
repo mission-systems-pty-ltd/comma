@@ -99,7 +99,7 @@ class slice
         index_type _shape;
         std::size_t _size;
         V* _data;
-        std::size_t _index( const index_type& i );
+        std::size_t _index( const index_type& i ) const;
         static std::size_t _product( const index_type& i );
 };
 
@@ -171,7 +171,7 @@ class grid: public array< V, D, S >
 
         grid( const P& origin, const P& resolution, const index_type& shape, const V& default_value = V() ): base_type( shape, default_value ), _origin( origin ), _resolution( resolution ) {}
 
-        index_type index_of( const point_type& point ) const { return Traits::template index_of< P, index_type >( point, origin, resolution ); }
+        index_type index_of( const point_type& point ) const { return Traits::template index_of< P, index_type >( point, _origin, _resolution ); }
 
         point_type lower_bound( const point_type& point ) const { return Traits::add( _origin + Traits::multiply( _resolution, index_of( point ) ) ); }
 
@@ -223,7 +223,7 @@ struct index_traits< D, 1 >
 } // namespace impl {
 
 template < typename V, unsigned int D >
-inline std::size_t slice< V, D >::_index( const typename slice< V, D >::index_type& i ) { return impl::index_traits< D >::value( i, _shape ); }
+inline std::size_t slice< V, D >::_index( const typename slice< V, D >::index_type& i ) const { return impl::index_traits< D >::value( i, _shape ); }
 
 template < typename V, unsigned int D >
 inline std::size_t slice< V, D >::_product( const typename slice< V, D >::index_type& i ) { return impl::index_traits< D >::product( i ); }
@@ -256,13 +256,13 @@ inline array< V, D, S >::array( const typename array< V, D, S >::index_type& sha
 template < typename V, unsigned int D, typename P, typename Traits, typename S >
 V grid< V, D, P, Traits, S >::interpolated( const P& point ) const
 {
-    P origin = _resolution;
-    index_type i = index_of( point );
-    Traits::add( Traits::multiply( _resolution, i ), _origin );
-    const auto& weights = Traits::interpolation::linear::weights( point, origin, _resolution );
+    P element_origin = _resolution;
+    const index_type i = index_of( point );
+    Traits::add( Traits::vmultiply( element_origin, i ), _origin );
+    const auto& weights = Traits::interpolation::linear::weights( point, element_origin, _resolution );
     const auto& neighbours = impl::neighbours< index_type, D >;
     V v = this->operator[]( i ) * weights[0]; // todo?! value traits?!
-    for( unsigned int i = 1; i < weights.size(); ++i ) { v += this->operator[]( Traits::add( neighbours[i], i ) ) * weights[i]; } // todo?! value traits?!
+    for( unsigned int j = 1; j < weights.size(); ++j ) { v += this->operator[]( Traits::add( i, neighbours[j] ) ) * weights[j]; } // todo?! value traits?!
     return v;
 }
 

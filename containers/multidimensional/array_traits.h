@@ -32,7 +32,7 @@ template < typename I > static constexpr std::array< I, 16 > neighbours< I, 4 > 
 
 template < std::size_t Size > struct operations
 {
-    template < typename S, typename T > static S& add( S& s, const T& t ) { s[ Size - 1 ] += t[ Size - 1 ]; operations< Size - 1 >::multiply( s, t ); return s; }
+    template < typename S, typename T > static S& add( S& s, const T& t ) { s[ Size - 1 ] += t[ Size - 1 ]; operations< Size - 1 >::add( s, t ); return s; }
     template < typename S, typename T > static S& subtract( S& s, const T& t ) { s[ Size - 1 ] -= t[ Size - 1 ]; operations< Size - 1 >::subtract( s, t ); return s; }
     template < typename S, typename T > static S& vdivide( S& s, const T& t ) { s[ Size - 1 ] /= t[ Size - 1 ]; operations< Size - 1 >::vdivide( s, t ); return s; }
     template < typename S, typename T > static S& multiply( S& s, const T& t ) { s[ Size - 1 ] *= t; operations< Size - 1 >::multiply( s, t ); return s; }
