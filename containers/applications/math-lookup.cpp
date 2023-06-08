@@ -69,6 +69,30 @@ struct lut
         return g;
     }
 
+    static std::pair< index_t, value_t > nearest( const grid_t& g, const point_t& p )
+    {
+        std::pair< index_t, value_t > r;
+        r.first = g.nearest_to( p );
+        r.second = g[r.first];
+        return r;
+    }
+
+    static std::pair< index_t, value_t > query( const grid_t& g, const point_t& p )
+    {
+        std::pair< index_t, value_t > r;
+        r.first = g.index_of( p );
+        r.second = g[r.first];
+        return r;
+    }
+
+    static std::pair< index_t, value_t > interpolate( const grid_t& g, const point_t& p )
+    {
+        std::pair< index_t, value_t > r;
+        r.first = g.index_of( p );
+        r.second = g.interpolated( p );
+        return r;
+    }
+
     template < typename F > static int run( const comma::csv::options& csv
                                           , const comma::csv::options& lut_csv
                                           , const std::vector< double >& origin

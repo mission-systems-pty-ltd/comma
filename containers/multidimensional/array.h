@@ -185,6 +185,8 @@ class grid: public array< V, D, S >
 
         V interpolated( const point_type& point ) const; // todo: flag/enum or alike for different interpolation types; currently linear only
 
+        index_type nearest_to( const point_type& point ) const;
+
     private:
         point_type _origin;
         point_type _resolution;
@@ -264,6 +266,15 @@ V grid< V, D, P, Traits, S >::interpolated( const P& point ) const
     V v = this->operator[]( i ) * weights[0]; // todo?! value traits?!
     for( unsigned int j = 1; j < weights.size(); ++j ) { v += this->operator[]( Traits::add( i, neighbours[j] ) ) * weights[j]; } // todo?! value traits?!
     return v;
+}
+
+template < typename V, unsigned int D, typename P, typename Traits, typename S >
+typename grid< V, D, P, Traits, S >::index_type grid< V, D, P, Traits, S >::nearest_to( const P& point ) const
+{
+    P element_origin = _resolution;
+    index_type i = index_of( point );
+    Traits::add( Traits::vmultiply( element_origin, i ), _origin );
+    return Traits::add( Traits::nearest( point, element_origin, resolution ), i );
 }
 
 } } } // namespace comma { namespace containers { namespace multidimensional {
