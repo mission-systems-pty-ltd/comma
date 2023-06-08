@@ -14,7 +14,7 @@ struct choice: public Base
     typedef Base base_t;
     choice( typename Derived::values rhs = static_cast< typename Derived::values >( 0 ) ): Base( Derived::choices()[rhs] ) {}
     choice( const std::string& rhs ) { operator=( rhs ); }
-    choice& operator=( const std::string& rhs ) { assert_valid( rhs ); operator=( rhs ); return *this; }
+    choice& operator=( const std::string& rhs ) { assert_valid( rhs ); Base::operator=( rhs ); return *this; }
     typename Derived::values to_enum() const;
     static bool valid( const std::string& rhs );
     static void assert_valid( const std::string& rhs );
