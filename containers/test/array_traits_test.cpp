@@ -2,6 +2,7 @@
 
 #include <array>
 #include <gtest/gtest.h>
+#include "../../math/compare.h"
 #include "../multidimensional/array_traits.h"
 
 namespace ccmi = comma::containers::multidimensional::impl; 
@@ -60,5 +61,8 @@ TEST( array_traits, interpolation_linear_weights )
         { weights_t expected{0, 1, 0, 0}; auto actual = ccmi::operations< 2 >::interpolation::linear::weights( point_t{0, 1}, point_t{0, 0}, point_t{1, 1} ); EXPECT_EQ( expected, actual ); }
         { weights_t expected{0, 0, 1, 0}; auto actual = ccmi::operations< 2 >::interpolation::linear::weights( point_t{1, 0}, point_t{0, 0}, point_t{1, 1} ); EXPECT_EQ( expected, actual ); }
         { weights_t expected{0, 0, 0, 1}; auto actual = ccmi::operations< 2 >::interpolation::linear::weights( point_t{1, 1}, point_t{0, 0}, point_t{1, 1} ); EXPECT_EQ( expected, actual ); }
+        { weights_t expected{0.3, 0.7, 0, 0}; auto actual = ccmi::operations< 2 >::interpolation::linear::weights( point_t{0, 0.7}, point_t{0, 0}, point_t{1, 1} ); EXPECT_TRUE( ccmi::operations< 3 >::near( expected, actual, 1e-6 ) ); }
+        { weights_t expected{0.3, 0, 0.7, 0}; auto actual = ccmi::operations< 2 >::interpolation::linear::weights( point_t{0.7, 0}, point_t{0, 0}, point_t{1, 1} ); EXPECT_TRUE( ccmi::operations< 3 >::near( expected, actual, 1e-6 ) ); }
+        // todo: way more testing
     }
 }

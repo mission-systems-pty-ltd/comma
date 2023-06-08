@@ -7,6 +7,7 @@
 #include <array>
 #include <cmath>
 #include <type_traits>
+#include "../../math/compare.h"
 
 namespace comma { namespace containers { namespace multidimensional { namespace impl {
 
@@ -44,7 +45,7 @@ template < std::size_t Size > struct operations
     template < typename S > static S filled( double value ) { S s; fill( s, value ); return s; }
     template < typename S > static S zero() { S s; fill( s, 0 ); return s; }
     template < typename S > static auto product( const S& s ) -> typename std::remove_reference< decltype( s[Size] ) >::type { return s[ Size - 1 ] * operations< Size - 1 >::product( s ); }
-
+    template < typename S, typename T, typename Diff > static bool near( const S& s, const T& t, const Diff& epsilon ) { return comma::math::equal( s[ Size - 1 ], t[ Size - 1 ], epsilon ) && operations< Size - 1 >::near( s, t, epsilon ); }
     template < typename S, typename T > static S add( const S& s, const T& t ) { S r = s; add( r, t ); return r; }
     template < typename S, typename T > static S subtract( const S& s, const T& t ) { S r = s; subtract( r, t ); return r; }
     template < typename S, typename T > static S vdivide( const S& s, const T& t ) { S r = s; vdivide( r, t ); return r; }
@@ -124,6 +125,7 @@ template <> struct operations< 1 >
     template < typename S, typename T > static S& invert( S& s ) { s[0] = !s[0]; return s; }
     template < typename S, typename T > static S& mask( S& s, const T& t ) { s[0] = t[0] ? t[0] : s[0]; return s; }
     template < typename S > static auto product( const S& s ) -> typename std::remove_reference< decltype( s[0] ) >::type { return s[0]; }
+    template < typename S, typename T, typename Diff > static bool near( const S& s, const T& t, const Diff& epsilon ) { return comma::math::equal( s[0], t[0], epsilon ); }
     template < typename S > static S& fill( S&s, double value ) { s[0] = value; return s; }
     template < typename S, typename I > static I& index_of( I& i, const S& p, const S& origin, const S& resolution ) { i[0] = index( p[0], origin[0], resolution[0] ); return i; }
     template < typename S, typename I > static I nearest( const S& p, const S& origin, const S& resolution ) { return p[0] - origin[0] < resolution[0] / 2 ? I{ 0 } : I{ 1 }; }
