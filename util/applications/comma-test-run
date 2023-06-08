@@ -628,7 +628,7 @@ function run_and_match_test()
             local is_global=$2
             if [[ -f "$expected" ]] ; then
                 (( options_verbose )) && message_ "$name: match expectations in '$expected'"
-                match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; comma-test-match "$expected" <'output/stdout.log' )
+                match_output=$( [[ -n "$match_output" ]] && echo "$match_output"; comma-test-match "$expected" <'output/stdout.log' 2>&1 )
             elif [[ -d "$expected" ]] ; then
                 local extras=$( find "$expected" -type f )
                 for extra in $extras ; do
