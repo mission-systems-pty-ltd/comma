@@ -855,8 +855,8 @@ template < typename V > inline V read_as( const std::string& filename, const opt
     COMMA_THROW( comma::exception, "failed to open '" << filename << "'" );
 }
 
-template < typename V > inline V read_as( const std::string& filename, const options& o ) { return read_as< V >( filename, o, V::value_type() ); }
+template < typename V > inline V read_as( const std::string& filename, const options& o ) { return read_as< V >( filename, o, typename V::value_type() ); }
 
-template < typename V > inline V read_as( std::istream& is, const options& o ) { return read_as< V >( is, o, V::value_type() ); }
+template < typename V > inline V read_as( std::istream& is, const options& o ) { return read_as< V >( is, o, typename V::value_type() ); }
 
 } } // namespace comma { namespace csv {
