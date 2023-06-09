@@ -38,6 +38,7 @@ template < typename S, typename T > class tied;
 template < typename S > class passed;
 
 /// convenience functions: read input stream into a container that has push_back() method
+template < typename V > V read_as( const options& o, const typename V::value_type& default_value = typename V::value_type() );
 template < typename V > V read_as( std::istream& is, const options& o = options() );
 template < typename V > V read_as( const std::string& filename, const options& o = options() );
 template < typename V > V read_as( std::istream& is, const options& o, const typename V::value_type& default_value );
@@ -858,5 +859,7 @@ template < typename V > inline V read_as( const std::string& filename, const opt
 template < typename V > inline V read_as( const std::string& filename, const options& o ) { return read_as< V >( filename, o, typename V::value_type() ); }
 
 template < typename V > inline V read_as( std::istream& is, const options& o ) { return read_as< V >( is, o, typename V::value_type() ); }
+
+template < typename V > inline V read_as( const options& o, const typename V::value_type& default_value ) { return read_as< V >( o.filename, o, default_value ); }
 
 } } // namespace comma { namespace csv {
