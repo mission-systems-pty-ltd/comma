@@ -38,11 +38,11 @@ template < typename S, typename T > class tied;
 template < typename S > class passed;
 
 /// convenience functions: read input stream into a container that has push_back() method
-template < typename V > V read_as( const options& o, const typename V::value_type& default_value = typename V::value_type() );
-template < typename V > V read_as( std::istream& is, const options& o = options() );
-template < typename V > V read_as( const std::string& filename, const options& o = options() );
-template < typename V > V read_as( std::istream& is, const options& o, const typename V::value_type& default_value );
-template < typename V > V read_as( const std::string& filename, const options& o, const typename V::value_type& default_value );
+template < typename V > V read_as( const options& o, const typename V::value_type& default_value = typename V::value_type(), std::size_t size = 0 );
+template < typename V > V read_as( std::istream& is, const options& o = options(), std::size_t size = 0 );
+template < typename V > V read_as( const std::string& filename, const options& o = options(), std::size_t size = 0 );
+template < typename V > V read_as( std::istream& is, const options& o, const typename V::value_type& default_value, std::size_t size = 0 );
+template < typename V > V read_as( const std::string& filename, const options& o, const typename V::value_type& default_value, std::size_t size = 0 );
 
 /// ascii csv input stream
 template < typename S >
@@ -835,11 +835,11 @@ inline void output_stream< S >::append_output( input_stream< T >& is, const S& s
     }
 }*/
 
-template < typename V > inline V read_as( std::istream& is, const options& o, const typename V::value_type& default_value )
+template < typename V > inline V read_as( std::istream& is, const options& o, const typename V::value_type& default_value, std::size_t size )
 {
     input_stream< typename V::value_type > istream( is, o, default_value );
     V v;
-    while( istream.ready() || is.good() )
+    for( std::size_t count{0}; ( size == 0 || count < size ) && ( istream.ready() || is.good() ); ++count )
     {
         auto p = istream.read();
         if( !p ) { break; }
@@ -848,18 +848,18 @@ template < typename V > inline V read_as( std::istream& is, const options& o, co
     return v;
 }
 
-template < typename V > inline V read_as( const std::string& filename, const options& o, const typename V::value_type& default_value )
+template < typename V > inline V read_as( const std::string& filename, const options& o, const typename V::value_type& default_value, std::size_t size )
 {
     std::ifstream ifs;
     ifs.open( &filename[0], o.binary() ? std::ios_base::in | std::ios_base::binary : std::ios_base::in );
-    if( ifs.is_open() ) { return read_as< V >( ifs, o, default_value ); }
+    if( ifs.is_open() ) { return read_as< V >( ifs, o, default_value, size ); }
     COMMA_THROW( comma::exception, "failed to open '" << filename << "'" );
 }
 
-template < typename V > inline V read_as( const std::string& filename, const options& o ) { return read_as< V >( filename, o, typename V::value_type() ); }
+template < typename V > inline V read_as( const std::string& filename, const options& o, std::size_t size ) { return read_as< V >( filename, o, typename V::value_type(), size ); }
 
-template < typename V > inline V read_as( std::istream& is, const options& o ) { return read_as< V >( is, o, typename V::value_type() ); }
+template < typename V > inline V read_as( std::istream& is, const options& o, std::size_t size ) { return read_as< V >( is, o, typename V::value_type(), size ); }
 
-template < typename V > inline V read_as( const options& o, const typename V::value_type& default_value ) { return read_as< V >( o.filename, o, default_value ); }
+template < typename V > inline V read_as( const options& o, const typename V::value_type& default_value, std::size_t size ) { return read_as< V >( o.filename, o, default_value, size ); }
 
 } } // namespace comma { namespace csv {
