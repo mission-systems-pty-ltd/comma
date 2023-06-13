@@ -39,6 +39,7 @@ void usage( bool verbose )
     std::cerr << "    --input-fields; todo: print input fields for an operation to stdout and exit" << std::endl;
     std::cerr << "    --output-fields; todo: print output fields for an operation to stdout and exit" << std::endl;
     std::cerr << "    --output-format; todo: print output format for an operation to stdout and exit" << std::endl;
+    std::cerr << "    --permissive; discard inputs outside lookup table" << std::endl;
     std::cerr << std::endl;
     std::cerr << "csv options" << std::endl;
     std::cerr << comma::csv::options::usage( verbose ) << std::endl;
@@ -51,6 +52,9 @@ void usage( bool verbose )
 // - nearest: fix
 // - regression test: basics
 
+static bool permissive{false};
+static bool verbose{false};
+
 template< typename T, std::size_t D, typename S >
 std::array< T, D >& operator*=( std::array< T, D >& lhs, const S& rhs ) { for( unsigned int i = 0; i < D; ++i ) { lhs[i] *= rhs; } return lhs; } // quick and dirty; let compiler optimize
 
@@ -62,6 +66,9 @@ std::array< T, D >& operator+=( std::array< T, D >& lhs, const std::array< T, D 
 
 template< typename T, std::size_t D >
 std::array< T, D > operator+( const std::array< T, D >& lhs, const std::array< T, D >& rhs ) { auto r = lhs; r += rhs; return r; }
+
+template< typename T, std::size_t D >
+std::ostream& operator<<( std::ostream& os, const std::array< T, D >& rhs ) { std::string d; for( unsigned int i = 0; i < D; ++i ) { os << d << rhs[i]; d = ","; } return os; }
 
 namespace comma { namespace applications { namespace lookup { namespace operations {
 
@@ -141,6 +148,12 @@ struct lut
         {
             const auto& p = istream.read();
             if( !p ) { break; }
+            if( !grid.has( p->point ) ) 
+            {
+                if( permissive ) { comma::saymore() << "discarded input outside grid: " << p->point << std::endl; continue; }
+                comma::say() << "input outside grid: " << p->point << "; use --permissive to discard" << std::endl;
+                return 1;
+            }
             tied.append( f( grid, p->point ) );
             if( csv.flush ) { std::cout.flush(); }
         }
@@ -225,8 +238,10 @@ int main( int ac, char** av )
     {
         comma::command_line_options options( ac, av, usage );
         comma::csv::options csv( options );
-        const auto& unnamed = options.unnamed( "--flush,--verbose,-v", "-.*" );
+        const auto& unnamed = options.unnamed( "--flush,--permissive,--verbose,-v", "-.*" );
         if( unnamed.empty() ) { comma::say() << "please specify operation" << std::endl; return 1; }
+        permissive = options.exists( "--permissive" );
+        verbose = options.exists( "--verbose,-v" );
         return comma::applications::lookup::operations::run( options, csv, unnamed );
     }
     catch( std::exception& ex ) { comma::say() << "caught exception: " << ex.what() << std::endl; }
