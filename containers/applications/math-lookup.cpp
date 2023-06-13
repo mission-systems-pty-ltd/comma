@@ -204,7 +204,7 @@ static int run( const comma::command_line_options& options, const csv::options& 
 {
     COMMA_ASSERT_BRIEF( unnamed.size() > 1, "please specify lookup table file as: math-lookup <operation> <filename>" );
     auto lut_csv = comma::name_value::parser( "filename" ).get< comma::csv::options >( unnamed[1] );
-    COMMA_ASSERT_BRIEF( csv.binary(), "lookup table: on file '" << lut_csv.filename << "': only binary files are currently supported, e.g: 'lut.bin;binary=3f'" );
+    COMMA_ASSERT_BRIEF( lut_csv.binary(), "lookup table: on file '" << lut_csv.filename << "': only binary files are currently supported, e.g: 'lut.bin;binary=3f'" );
     const auto& origin = comma::split_as< double >( options.value< std::string >( "--origin,-o" ), ',' );
     const auto& resolution = comma::split_as< double >( options.value< std::string >( "--resolution,-r" ), ',' );
     const auto& shape = comma::split_as< std::size_t >( options.value< std::string >( "--shape" ), ',' );
