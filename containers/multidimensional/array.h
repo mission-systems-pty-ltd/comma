@@ -95,7 +95,7 @@ class slice
 
         const_iterator end() const { return const_iterator( _size, _data + _size, _shape ); }
 
-    private:
+    protected:
         index_type _shape;
         std::size_t _size;
         V* _data;
@@ -152,7 +152,7 @@ class array
 
         const_iterator end() const { return _slice.end(); }
 
-    private:
+    protected:
         storage_type _data;
         slice_type _slice;
 };
@@ -186,6 +186,8 @@ class grid: public array< V, D, S >
         V interpolated( const point_type& point ) const; // todo: flag/enum or alike for different interpolation types; currently linear only
 
         index_type nearest_to( const point_type& point ) const;
+
+        bool has( const point_type& point ) const;
 
     private:
         point_type _origin;
@@ -275,6 +277,14 @@ typename grid< V, D, P, Traits, S >::index_type grid< V, D, P, Traits, S >::near
     index_type i = index_of( point );
     Traits::add( Traits::vmultiply( element_origin, i ), _origin );
     return Traits::add( Traits::template nearest< index_type >( point, const_cast< const P& >( element_origin ), _resolution ), i );
+}
+
+template < typename V, unsigned int D, typename P, typename Traits, typename S >
+inline bool grid< V, D, P, Traits, S >::has( const P& point ) const // quick and dirty for now
+{
+    const auto& i = index_of( point );
+    for( unsigned int k = 0; k < D; ++k ) { if( i[k] < 0 || i[k] >= this->shape()[k] ) { return false; } }
+    return true;
 }
 
 } } } // namespace comma { namespace containers { namespace multidimensional {
