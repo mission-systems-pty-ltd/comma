@@ -23,9 +23,9 @@ void usage( bool verbose )
     std::cerr << std::endl;
     std::cerr << "operations" << std::endl;
     std::cerr << "    index: todo: output index for a given input" << std::endl;
-    std::cerr << "    interpolate: todo: output interpolated value for the given input" << std::endl;
+    std::cerr << "    interpolate: output interpolated value for the given input" << std::endl;
     std::cerr << "    nearest: todo: output table element index and value nearest to the given input" << std::endl;
-    std::cerr << "    query: todo: output table element index and value for the given input" << std::endl;
+    std::cerr << "    query: output table element index and value for the given input" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --origin,-o=<point>; e.g: --origin=0,1,2,3" << std::endl;
@@ -48,22 +48,20 @@ void usage( bool verbose )
 
 // todo
 // - 1-dimensional: fix
-// - array operators: fix
 // - nearest: fix
-// ! --help
 // - regression test: basics
 
 template< typename T, std::size_t D, typename S >
-std::array< T, D >& operator*=( std::array< T, D >& lhs, const S& rhs ) { COMMA_THROW( comma::exception, "todo" ); }
+std::array< T, D >& operator*=( std::array< T, D >& lhs, const S& rhs ) { for( unsigned int i = 0; i < D; ++i ) { lhs[i] *= rhs; } return lhs; } // quick and dirty; let compiler optimize
 
 template< typename T, std::size_t D, typename S >
-std::array< T, D > operator*( const std::array< T, D >& lhs, const S& rhs ) { COMMA_THROW( comma::exception, "todo" ); }
+std::array< T, D > operator*( const std::array< T, D >& lhs, const S& rhs ) { auto r = lhs; r *= rhs; return r; }
 
 template< typename T, std::size_t D >
-std::array< T, D >& operator+=( std::array< T, D >& lhs, const std::array< T, D >& rhs ) { COMMA_THROW( comma::exception, "todo" ); }
+std::array< T, D >& operator+=( std::array< T, D >& lhs, const std::array< T, D >& rhs ) { for( unsigned int i = 0; i < D; ++i ) { lhs[i] += rhs[i]; } return lhs; } // quick and dirty; let compiler optimize
 
 template< typename T, std::size_t D >
-std::array< T, D > operator+( const std::array< T, D >& lhs, const std::array< T, D >& rhs ) { COMMA_THROW( comma::exception, "todo" ); }
+std::array< T, D > operator+( const std::array< T, D >& lhs, const std::array< T, D >& rhs ) { auto r = lhs; r += rhs; return r; }
 
 namespace comma { namespace applications { namespace lookup { namespace operations {
 
@@ -124,7 +122,7 @@ struct lut
     {
         std::pair< index_t, value_t > ( *f )( const grid_t&, const point_t& );
         if( operation == "interpolate" ) { f = lut< T, D, E >::interpolate; }
-        //else if( operation == "nearest" ) { f = lut< T, D, E >::nearest; }
+        else if( operation == "nearest" ) { COMMA_THROW_BRIEF( comma::exception, "nearest: todo" ); } //else if( operation == "nearest" ) { f = lut< T, D, E >::nearest; }
         else if( operation == "query" ) { f = lut< T, D, E >::query; }
         else { COMMA_THROW_BRIEF( comma::exception, "expected operation; got: '" << operation << "'" ); }
         point_t o, r;
