@@ -138,7 +138,7 @@ struct lut
         std::memset( &zero.point[0], 0, zero.point.size() * sizeof( T ) );
         comma::csv::input_stream< input_t > istream( std::cin, csv, zero );
         comma::csv::output_stream< std::pair< index_t, value_t > > ostream( std::cout, csv.binary() );
-        auto tied = comma::csv::tied( istream, ostream );
+        auto tied = comma::csv::make_tied( istream, ostream );
         while( istream.ready() || std::cin.good() )
         {
             const auto& p = istream.read();
