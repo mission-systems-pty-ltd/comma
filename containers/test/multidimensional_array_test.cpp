@@ -193,6 +193,9 @@ TEST( multidimensional_array, grid_index )
         int i = 0;
         for( auto it = g.begin(); it != g.end(); ++it ) { *it = i++; }
         { index_t i = {0, 0}; EXPECT_EQ( g.index_of( {0, 0} ), i ); }
+        { index_t i = {0, 1}; EXPECT_EQ( g.index_of( {0, 1} ), i ); }
+        { index_t i = {1, 0}; EXPECT_EQ( g.index_of( {1, 0} ), i ); }
+        { index_t i = {1, 1}; EXPECT_EQ( g.index_of( {1, 1} ), i ); }
         { index_t i = {0, 1}; EXPECT_EQ( g.index_of( {0, 1.01} ), i ); }
         // todo: more tests
     }

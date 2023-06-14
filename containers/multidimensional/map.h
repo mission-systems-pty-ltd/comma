@@ -26,7 +26,7 @@ struct array_hash : public std::unary_function< Array, std::size_t >
 };
 
 /// unordered map with array-like keys
-template < typename K, typename V, unsigned int Size, typename P = std::array< K, Size >, typename Traits = impl::operations< Size > >
+template < typename K, typename V, std::size_t Size, typename P = std::array< K, Size >, typename Traits = impl::operations< Size > >
 class map : public std::unordered_map< std::array< comma::int32, Size >, V, array_hash< std::array< comma::int32, Size >, Size > >
 {
     public:
@@ -94,21 +94,21 @@ class map : public std::unordered_map< std::array< comma::int32, Size >, V, arra
         point_type _resolution;
 };
 
-template < typename K, typename V, unsigned int Size, typename P, typename Traits >
+template < typename K, typename V, std::size_t Size, typename P, typename Traits >
 inline map< K, V, Size, P, Traits >::map( const typename map< K, V, Size, P, Traits >::point_type& origin, const typename map< K, V, Size, P, Traits >::point_type& resolution )
     : _origin( origin )
     , _resolution( resolution )
 {
 }
 
-template < typename K, typename V, unsigned int Size, typename P, typename Traits >
+template < typename K, typename V, std::size_t Size, typename P, typename Traits >
 inline map< K, V, Size, P, Traits >::map( const typename map< K, V, Size, P, Traits >::point_type& resolution )
     : _origin( Traits::template zero< P >() )
     , _resolution( resolution )
 {
 }
 
-template < typename K, typename V, unsigned int Size, typename P, typename Traits >
+template < typename K, typename V, std::size_t Size, typename P, typename Traits >
 inline typename map< K, V, Size, P, Traits >::iterator map< K, V, Size, P, Traits >::touch_at( const typename map< K, V, Size, P, Traits >::point_type& point )
 {
     key_type index = index_of( point );
@@ -117,60 +117,60 @@ inline typename map< K, V, Size, P, Traits >::iterator map< K, V, Size, P, Trait
     return this->base_type::insert( std::make_pair( index, mapped_type() ) ).first;
 }
 
-template < typename K, typename V, unsigned int Size, typename P, typename Traits >
+template < typename K, typename V, std::size_t Size, typename P, typename Traits >
 inline std::pair< typename map< K, V, Size, P, Traits >::iterator, bool > map< K, V, Size, P, Traits >::insert( const typename map< K, V, Size, P, Traits >::point_type& point, const typename map< K, V, Size, P, Traits >::mapped_type& value )
 {
     return this->base_type::insert( std::make_pair( index_of( point ), value ) );
 }
 
-template < typename K, typename V, unsigned int Size, typename P, typename Traits >
+template < typename K, typename V, std::size_t Size, typename P, typename Traits >
 inline typename map< K, V, Size, P, Traits >::key_type map< K, V, Size, P, Traits >::index_of( const typename map< K, V, Size, P, Traits >::point_type& point, const typename map< K, V, Size, P, Traits >::point_type& origin, const typename map< K, V, Size, P, Traits >::point_type& resolution )
 {
     return Traits::template index_of< P, key_type >( point, origin, resolution );
 }
 
-template < typename K, typename V, unsigned int Size, typename P, typename Traits >
+template < typename K, typename V, std::size_t Size, typename P, typename Traits >
 inline typename map< K, V, Size, P, Traits >::key_type map< K, V, Size, P, Traits >::index_of( const typename map< K, V, Size, P, Traits >::point_type& point, const typename map< K, V, Size, P, Traits >::point_type& resolution )
 {
     return index_of( point, Traits::template zero< P >(), resolution );
 }
 
-template < typename K, typename V, unsigned int Size, typename P, typename Traits >
+template < typename K, typename V, std::size_t Size, typename P, typename Traits >
 inline typename map< K, V, Size, P, Traits >::key_type map< K, V, Size, P, Traits >::index_of( const typename map< K, V, Size, P, Traits >::point_type& point ) const
 {
     return index_of( point, _origin, _resolution );
 }
 
-template < typename K, typename V, unsigned int Size, typename P, typename Traits >
+template < typename K, typename V, std::size_t Size, typename P, typename Traits >
 inline typename map< K, V, Size, P, Traits >::iterator map< K, V, Size, P, Traits >::find( const typename map< K, V, Size, P, Traits >::point_type& point )
 {
     index_type i = index_of( point );
     return this->base_type::find( i );
 }
 
-template < typename K, typename V, unsigned int Size, typename P, typename Traits >
+template < typename K, typename V, std::size_t Size, typename P, typename Traits >
 inline typename map< K, V, Size, P, Traits >::const_iterator map< K, V, Size, P, Traits >::find( const typename map< K, V, Size, P, Traits >::point_type& point ) const
 {
     index_type i = index_of( point );
     return this->base_type::find( i );
 }
 
-template < typename K, typename V, unsigned int Size, typename P, typename Traits >
+template < typename K, typename V, std::size_t Size, typename P, typename Traits >
 inline typename map< K, V, Size, P, Traits >::iterator map< K, V, Size, P, Traits >::find( const typename map< K, V, Size, P, Traits >::key_type& index )
 {
     return this->base_type::find( index ); // otherwise strange things happen... debug, when we have time
 }
 
-template < typename K, typename V, unsigned int Size, typename P, typename Traits >
+template < typename K, typename V, std::size_t Size, typename P, typename Traits >
 inline typename map< K, V, Size, P, Traits >::const_iterator map< K, V, Size, P, Traits >::find( const typename map< K, V, Size, P, Traits >::key_type& index ) const
 {
     return this->base_type::find( index ); // otherwise strange things happen... debug, when we have time
 }
 
-template < typename K, typename V, unsigned int Size, typename P, typename Traits >
+template < typename K, typename V, std::size_t Size, typename P, typename Traits >
 inline const typename map< K, V, Size, P, Traits >::point_type& map< K, V, Size, P, Traits >::origin() const { return _origin; }
 
-template < typename K, typename V, unsigned int Size, typename P, typename Traits >
+template < typename K, typename V, std::size_t Size, typename P, typename Traits >
 inline const typename map< K, V, Size, P, Traits >::point_type& map< K, V, Size, P, Traits >::resolution() const { return _resolution; }
 
 } } } // namespace comma { namespace containers { namespace multidimensional {

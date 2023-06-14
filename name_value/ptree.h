@@ -126,9 +126,9 @@ struct property_tree // quick and dirty
 
             template < typename K, typename T, typename A > void apply_next( const K& key, std::vector< T, A >& value ) { _apply_to_arraylike( key, value ); }
 
-            template < typename K, typename T, unsigned int Size > void apply_next( const K& key, boost::array< T, Size >& value ) { _apply_to_arraylike( key, value ); }
+            template < typename K, typename T, std::size_t Size > void apply_next( const K& key, boost::array< T, Size >& value ) { _apply_to_arraylike( key, value ); }
 
-            template < typename K, typename T, unsigned int Size > void apply_next( const K& key, std::array< T, Size >& value ) { _apply_to_arraylike( key, value ); }
+            template < typename K, typename T, std::size_t Size > void apply_next( const K& key, std::array< T, Size >& value ) { _apply_to_arraylike( key, value ); }
 
             /// apply to map
             template < typename K, typename L, typename T, typename A >
