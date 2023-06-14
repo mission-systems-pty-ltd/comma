@@ -359,8 +359,11 @@ TEST( ptree, array )
         std::istringstream iss( s );
         property_tree::from_path_value( iss, ptree );
         from_ptree from_ptree( ptree );
-        boost::array< std::string, 3 > array;
-        try { visiting::apply( from_ptree, array ); EXPECT_TRUE( false ); } catch( ... ) {}
+        boost::array< std::string, 3 > array{ "bye", "moon", "stars" };
+        visiting::apply( from_ptree, array );
+        EXPECT_EQ( array[0], "hello" );
+        EXPECT_EQ( array[1], "world" );
+        EXPECT_EQ( array[2], "stars" );
     }
     {
         boost::property_tree::ptree ptree;
