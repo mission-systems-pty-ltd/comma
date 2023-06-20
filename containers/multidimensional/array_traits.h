@@ -100,9 +100,8 @@ template < std::size_t Size > struct operations
     {
         struct linear
         {
-            template < typename S > static std::array< double, pow< 2, Size > > weights( const S& p, const S& origin, const S& resolution )
+            template < typename S > static std::array< double, pow< 2, Size > > weights( const S& s )
             {
-                S s = vdivide( subtract( p, origin ), resolution );
                 S t;
                 subtract( fill( t, 1. ), s );
                 const auto& n = neighbours< std::array< unsigned int, Size >, Size >;
@@ -110,6 +109,8 @@ template < std::size_t Size > struct operations
                 for( unsigned int i = 0; i < pow< 2, Size >; ++i ) { w[i] = product( masked( s, n[ pow< 2, Size > - i - 1 ] ) ) * product( masked( t, n[i] ) ); }
                 return w;
             }
+
+            template < typename S > static std::array< double, pow< 2, Size > > weights( const S& p, const S& origin, const S& resolution ) { return weights( vdivide( subtract( p, origin ), resolution ) ); }
         };
     };
 };

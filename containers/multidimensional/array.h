@@ -257,42 +257,41 @@ inline const slice< V, D - I > slice< V, D >::at( const std::array< std::size_t,
 template < typename V, unsigned int D, typename S >
 inline array< V, D, S >::array( const typename array< V, D, S >::index_type& shape, const V& default_value ): _data( impl::index_traits< D >::product( shape ), default_value ), _slice( shape, &_data[0] ) {}
 
-// template < typename V, unsigned int D, typename P, typename Traits, typename S >
-// V grid< V, D, P, Traits, S >::interpolated( const P& point ) const
-// {
-//     P element_origin = _resolution;
-//     const index_type i = index_of( point );
-//     Traits::add( Traits::vmultiply( element_origin, i ), _origin );
-//     const auto& weights = Traits::interpolation::linear::weights( point, element_origin, _resolution );
-//     const auto& neighbours = impl::neighbours< index_type, D >;
-//     V v = this->operator[]( i ) * weights[0]; // todo?! value traits?!
-//     for( unsigned int j = 1; j < weights.size(); ++j ) { v += this->operator[]( Traits::add( i, neighbours[j] ) ) * weights[j]; } // todo?! value traits?!
-//     return v;
-// }
-
 template < typename V, unsigned int D, typename P, typename Traits, typename S >
 V grid< V, D, P, Traits, S >::interpolated( const P& point ) const
 {
     const index_type i = index_of( point );
-    const P p = Traits::subtract( point, Traits::add( Traits::vmultiply( _resolution, i ), _origin ) );
-    //std::cerr << "==> a: point: " << point[0] << "," << point[1] << " p: " << p[0] << "," << p[1] << " _resolution: " << _resolution[0] << "," << _resolution[1] << std::endl;
+    P element_origin = Traits::add( Traits::vmultiply( _resolution, i ), _origin );
+    const auto& weights = Traits::interpolation::linear::weights( point, element_origin, _resolution );
     const auto& neighbours = impl::neighbours< index_type, D >;
-    double s = 0;
-    V v = this->operator[]( i ); // todo?! value traits?!
-    for( unsigned int j = 0; j < neighbours.size(); ++j )
-    {
-        P d = Traits::subtract( p, Traits::vmultiply( _resolution, neighbours[j] ) );
-        double n = std::sqrt( Traits::dot( d, d ) );
-        index_type k = Traits::add( i, neighbours[j] );
-        if( math::equal( n, 0 ) ) { return this->operator[]( k ); }
-        double w = 1 / n;
-        s += w;
-        //std::cerr << "==> b: j: " << j << " k: " << k[0] << "," << k[1] << " n: " << n << " w: " << w << std::endl;
-        if( j == 0 ) { v *= w; } else { v += this->operator[]( k ) * w; } // quick and dirty for now
-    }
-    //std::cerr << "==> c: s: " << s << std::endl;
-    return v * ( 1 / s );
+    V v = this->operator[]( i ) * weights[0]; // todo?! value traits?!
+    for( unsigned int j = 1; j < weights.size(); ++j ) { v += this->operator[]( Traits::add( i, neighbours[j] ) ) * weights[j]; } // todo?! value traits?!
+    return v;
 }
+
+// template < typename V, unsigned int D, typename P, typename Traits, typename S >
+// V grid< V, D, P, Traits, S >::interpolated( const P& point ) const
+// {
+//     const index_type i = index_of( point );
+//     const P p = Traits::subtract( point, Traits::add( Traits::vmultiply( _resolution, i ), _origin ) );
+//     //std::cerr << "==> a: point: " << point[0] << "," << point[1] << " p: " << p[0] << "," << p[1] << " _resolution: " << _resolution[0] << "," << _resolution[1] << std::endl;
+//     const auto& neighbours = impl::neighbours< index_type, D >;
+//     double s = 0;
+//     V v = this->operator[]( i ); // todo?! value traits?!
+//     for( unsigned int j = 0; j < neighbours.size(); ++j )
+//     {
+//         P d = Traits::subtract( p, Traits::vmultiply( _resolution, neighbours[j] ) );
+//         double n = Traits::dot( d, d ); //double n = std::sqrt( Traits::dot( d, d ) );
+//         index_type k = Traits::add( i, neighbours[j] );
+//         if( math::equal( n, 0 ) ) { return this->operator[]( k ); }
+//         double w = 1 / n;
+//         s += w;
+//         //std::cerr << "==> b: j: " << j << " k: " << k[0] << "," << k[1] << " n: " << n << " w: " << w << std::endl;
+//         if( j == 0 ) { v *= w; } else { v += this->operator[]( k ) * w; } // quick and dirty for now
+//     }
+//     //std::cerr << "==> c: s: " << s << std::endl;
+//     return v * ( 1 / s );
+// }
 
 template < typename V, unsigned int D, typename P, typename Traits, typename S >
 typename grid< V, D, P, Traits, S >::index_type grid< V, D, P, Traits, S >::nearest_to( const P& point ) const
