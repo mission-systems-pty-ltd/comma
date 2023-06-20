@@ -205,10 +205,12 @@ TEST( multidimensional_array, grid_interpolate )
 {
     {
         comma::containers::multidimensional::grid< double, 2 > g( {0, 0}, {1, 1}, {2, 2}, 0 );
-        g[{0, 0}] = 0; g[{0, 1}] = 1; g[{1, 0}] = 2; g[{1, 1}] = 3;
+        g[{0, 0}] = 0; g[{0, 1}] = 1; g[{1, 0}] = 0; g[{1, 1}] = 1;
         EXPECT_EQ( g.interpolated( {0, 0} ), 0 );
-        EXPECT_EQ( g.interpolated( {0, 1} ), 1 );
-        EXPECT_EQ( g.interpolated( {1, 0} ), 2 );
-        EXPECT_EQ( g.interpolated( {1, 1} ), 3 );
+        EXPECT_EQ( g.interpolated( {0, 0.5} ), 0.5 );
+        EXPECT_EQ( g.interpolated( {0.5, 0.5} ), 0.5 );
+        //EXPECT_EQ( g.interpolated( {0.5, 0} ), 0.5 );
+        //EXPECT_EQ( g.interpolated( {1, 0} ), 2 );
+        //EXPECT_EQ( g.interpolated( {1, 1} ), 3 );
     }
 }

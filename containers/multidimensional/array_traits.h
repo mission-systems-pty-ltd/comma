@@ -38,9 +38,9 @@ template < std::size_t Size > struct operations
     template < typename S, typename T > static S& multiply( S& s, const T& t ) { s[ Size - 1 ] *= t; operations< Size - 1 >::multiply( s, t ); return s; }
     template < typename S, typename T > static S& vmultiply( S& s, const T& t ) { s[ Size - 1 ] *= t[ Size - 1 ]; operations< Size - 1 >::vmultiply( s, t ); return s; }
     template < typename S, typename T > static double dot( S& s, const T& t ) { return s[ Size - 1 ] * t[ Size - 1 ] + operations< Size - 1 >::dot( s, t ); }
-    template < typename S, typename T > static S& invert( S& s ) { s[ Size - 1 ] = !s[ Size - 1 ]; operations< Size - 1 >::invert( s ); return s; }
     template < typename S, typename T > static S& mask( S& s, const T& t ) { s[ Size - 1 ] = t[ Size - 1 ] ? t[ Size - 1 ] : s[ Size - 1 ]; operations< Size - 1 >::mask( s, t ); return s; }
     template < typename S, typename T > static S masked( const S& s, const T& t ) { S m = s; mask( m, t ); return m; }
+    template < typename S, typename T > static S& logical_not( S& s ) { s[ Size - 1 ] = !s[ Size - 1 ]; operations< Size - 1 >::logical_not( s ); return s; }
     template < typename S > static S& fill( S&s, double value ) { s[ Size - 1 ] = value; operations< Size - 1 >::fill( s, value ); return s; }
     template < typename S > static S filled( double value ) { S s; fill( s, value ); return s; }
     template < typename S > static S zero() { S s; fill( s, 0 ); return s; }
@@ -122,7 +122,7 @@ template <> struct operations< 1 >
     template < typename S, typename T > static S& multiply( S& s, const T& t ) { s[0] *= t; return s; }
     template < typename S, typename T > static S& vmultiply( S& s, const T& t ) { s[0] *= t[0]; return s; }
     template < typename S, typename T > static double dot( S& s, const T& t ) { return s[0] * t[0]; }
-    template < typename S, typename T > static S& invert( S& s ) { s[0] = !s[0]; return s; }
+    template < typename S, typename T > static S& logical_not( S& s ) { s[0] = !s[0]; return s; }
     template < typename S, typename T > static S& mask( S& s, const T& t ) { s[0] = t[0] ? t[0] : s[0]; return s; }
     template < typename S > static auto product( const S& s ) -> typename std::remove_reference< decltype( s[0] ) >::type { return s[0]; }
     template < typename S, typename T, typename Diff > static bool near( const S& s, const T& t, const Diff& epsilon ) { return comma::math::equal( s[0], t[0], epsilon ); }
