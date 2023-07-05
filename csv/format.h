@@ -30,8 +30,7 @@
 
 /// @author vsevolod vlaskine
 
-#ifndef COMMA_CSV_APPLICATIONS_FORMAT_HEADER_GUARD_
-#define COMMA_CSV_APPLICATIONS_FORMAT_HEADER_GUARD_
+#pragma once
 
 #include <stdlib.h>
 #include <iostream>
@@ -48,11 +47,20 @@
 #include "../visiting/visit.h"
 #include "../visiting/while.h"
 #include "../xpath/xpath.h"
+#include "impl/epoch.h" 
 
 namespace comma { namespace csv {
 
 /// forward declaration
 namespace impl { class to_format; }
+
+namespace time {
+
+boost::posix_time::ptime from_microseconds(comma::int64 microseconds, boost::gregorian::date epoch=csv::impl::epoch);
+
+comma::int64 to_microseconds(const boost::posix_time::ptime& t, boost::gregorian::date epoch=csv::impl::epoch);
+
+} // namespace time {
 
 /// csv to/from bin format
 /// @todo the interface has got real messy; fully refactor!
@@ -165,7 +173,6 @@ class format
         friend class impl::to_format;
         template < typename T > static std::string value_impl( const T& t );
 };
-
 
 namespace impl {
 
@@ -394,5 +401,3 @@ template <> struct format::traits< std::string, format::fixed_string >
 };
 
 } } // namespace comma { namespace csv {
-
-#endif // #ifndef COMMA_CSV_APPLICATIONS_FORMAT_HEADER_GUARD_

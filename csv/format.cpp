@@ -13,7 +13,6 @@
 #include "../base/types.h"
 #include "../string/string.h"
 #include "../csv/format.h"
-#include "impl/epoch.h"
 
 namespace comma { namespace csv {
 
@@ -467,27 +466,13 @@ boost::posix_time::ptime format::traits< boost::posix_time::ptime, format::time 
     //::memcpy( &microseconds, buf, sizeof( comma::int64 ) );
 	(void)size;
     comma::int64 microseconds = *reinterpret_cast< const comma::int64* >( buf );
-    if( microseconds == bin_not_a_date_time ) { return boost::posix_time::not_a_date_time; }
-    if( microseconds == bin_time_pos_infin ) { return boost::posix_time::pos_infin; }
-    if( microseconds == bin_time_neg_infin ) { return boost::posix_time::neg_infin; }
-    long seconds = static_cast< long >( microseconds / 1000000 ); // todo: due to bug in boost, will be casted down to int32, but for the dates we use seconds will never overflow, thus, leave it like this now
-    microseconds -= static_cast< comma::int64 >( seconds ) * 1000000;
-    return boost::posix_time::ptime( csv::impl::epoch, boost::posix_time::seconds( seconds ) + boost::posix_time::microseconds( static_cast< long >( microseconds ) ) );
+    return comma::csv::time::from_microseconds( microseconds );
 }
 
 void format::traits< boost::posix_time::ptime, format::time >::to_bin( const boost::posix_time::ptime& t, char* buf, std::size_t size )
 {
-    if( t.is_not_a_date_time() ) { *reinterpret_cast< comma::int64* >( buf ) = bin_not_a_date_time; return; }
-    if( t.is_pos_infinity() ) { *reinterpret_cast< comma::int64* >( buf ) = bin_time_pos_infin; return; }
-    if( t.is_neg_infinity() ) { *reinterpret_cast< comma::int64* >( buf ) = bin_time_neg_infin; return; }
 	(void)size;
-    static const boost::posix_time::ptime base( csv::impl::epoch );
-    const boost::posix_time::time_duration duration = t - base;
-    long seconds = duration.total_seconds(); // boost uses long, which is a bug for 32-bit
-    comma::int64 microseconds = static_cast< comma::int64 >( seconds ) * 1000000l;
-    microseconds += ( duration - boost::posix_time::seconds( seconds ) ).total_microseconds();
-    *reinterpret_cast< comma::int64* >( buf ) = microseconds; // ::memcpy( buf, &microseconds, sizeof( comma::int64 ) );
-
+    *reinterpret_cast< comma::int64* >( buf ) = comma::csv::time::to_microseconds(t);
 }
 
 std::string format::traits< std::string, format::fixed_string >::from_bin( const char* buf, std::size_t size )
@@ -501,5 +486,32 @@ void format::traits< std::string, format::fixed_string >::to_bin( const std::str
     ::memcpy( buf, &t[0], t.length() );
     if( t.length() < size ) { ::memset( buf + t.length(), 0, size - t.length() ); }
 }
+
+namespace time {
+
+boost::posix_time::ptime from_microseconds(comma::int64 microseconds, boost::gregorian::date epoch)
+{
+    if( microseconds == bin_not_a_date_time ) { return boost::posix_time::not_a_date_time; }
+    if( microseconds == bin_time_pos_infin ) { return boost::posix_time::pos_infin; }
+    if( microseconds == bin_time_neg_infin ) { return boost::posix_time::neg_infin; }
+    long seconds = static_cast< long >( microseconds / 1000000 ); // todo: due to bug in boost, will be casted down to int32, but for the dates we use seconds will never overflow, thus, leave it like this now
+    microseconds -= static_cast< comma::int64 >( seconds ) * 1000000;
+    return boost::posix_time::ptime( epoch, boost::posix_time::seconds( seconds ) + boost::posix_time::microseconds( static_cast< long >( microseconds ) ) );
+}
+
+comma::int64 to_microseconds(const boost::posix_time::ptime& t, boost::gregorian::date epoch)
+{
+    if( t.is_not_a_date_time() ) { return bin_not_a_date_time; }
+    if( t.is_pos_infinity() ) { return bin_time_pos_infin; }
+    if( t.is_neg_infinity() ) { return bin_time_neg_infin; }
+    static const boost::posix_time::ptime base( epoch );
+    const boost::posix_time::time_duration duration = t - base;
+    long seconds = duration.total_seconds(); // boost uses long, which is a bug for 32-bit
+    comma::int64 microseconds = static_cast< comma::int64 >( seconds ) * 1000000l;
+    microseconds += ( duration - boost::posix_time::seconds( seconds ) ).total_microseconds();
+    return microseconds;
+}
+
+} // namespace time {
 
 } } // namespace comma { namespace csv {
