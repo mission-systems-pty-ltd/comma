@@ -786,7 +786,7 @@ function run_single_test()
     # say something so that the user is not guessing what is going on
     (
         flock -x 9
-        message_ "$name: test $counter: $dir: started..."
+        message_ "$name: test $counter: $dir: launching..."
     ) 9>>"$comma_test_run_output_flock"
 
     # do not touch this equilibristics with file descriptors
@@ -806,8 +806,6 @@ function run_single_test()
             error_ "$name: error: no \"test\" script found in any parent directory of $dir"
             result=1
         else
-            message_ "$name: test $counter: $dir: running..."
-
             basedir=$( pwd )
 
             ## Comment out for now: the exact usage to be discussed, it is confusing and can be taken as a sign of error
@@ -823,6 +821,7 @@ function run_single_test()
                     report_end_of_wait
                     local error_files test_failed
                     find . -name out_of_shared_memory | xargs rm -f
+                    message_ "$name: test $counter: $dir: running..."
                     comma_progress_named "$our_stats_progress" "$dir" run_test_with_timeout
                     test_failed=$?
                     comma_locked "$comma_test_run_resources_flock" comma_release_resources "$request" "$comma_test_run_resources_counter" "$worker_id"
