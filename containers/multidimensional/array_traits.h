@@ -9,6 +9,18 @@
 #include <type_traits>
 #include "../../math/compare.h"
 
+template< typename T, std::size_t D, typename S >
+inline std::array< T, D >& operator*=( std::array< T, D >& lhs, const S& rhs ) { for( unsigned int i = 0; i < D; ++i ) { lhs[i] *= rhs; } return lhs; } // quick and dirty; let compiler optimize
+
+template< typename T, std::size_t D, typename S >
+inline std::array< T, D > operator*( const std::array< T, D >& lhs, const S& rhs ) { auto r = lhs; r *= rhs; return r; }
+
+template< typename T, std::size_t D >
+inline std::array< T, D >& operator+=( std::array< T, D >& lhs, const std::array< T, D >& rhs ) { for( unsigned int i = 0; i < D; ++i ) { lhs[i] += rhs[i]; } return lhs; } // quick and dirty; let compiler optimize
+
+template< typename T, std::size_t D >
+inline std::array< T, D > operator+( const std::array< T, D >& lhs, const std::array< T, D >& rhs ) { auto r = lhs; r += rhs; return r; }
+
 namespace comma { namespace containers { namespace multidimensional { namespace impl {
 
 template < typename T > inline int index( T p, T origin, T resolution )

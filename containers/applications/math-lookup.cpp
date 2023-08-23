@@ -55,17 +55,17 @@ void usage( bool verbose )
 static bool permissive{false};
 static bool verbose{false};
 
-template< typename T, std::size_t D, typename S >
-std::array< T, D >& operator*=( std::array< T, D >& lhs, const S& rhs ) { for( unsigned int i = 0; i < D; ++i ) { lhs[i] *= rhs; } return lhs; } // quick and dirty; let compiler optimize
+// template< typename T, std::size_t D, typename S >
+// std::array< T, D >& operator*=( std::array< T, D >& lhs, const S& rhs ) { for( unsigned int i = 0; i < D; ++i ) { lhs[i] *= rhs; } return lhs; } // quick and dirty; let compiler optimize
 
-template< typename T, std::size_t D, typename S >
-std::array< T, D > operator*( const std::array< T, D >& lhs, const S& rhs ) { auto r = lhs; r *= rhs; return r; }
+// template< typename T, std::size_t D, typename S >
+// std::array< T, D > operator*( const std::array< T, D >& lhs, const S& rhs ) { auto r = lhs; r *= rhs; return r; }
 
-template< typename T, std::size_t D >
-std::array< T, D >& operator+=( std::array< T, D >& lhs, const std::array< T, D >& rhs ) { for( unsigned int i = 0; i < D; ++i ) { lhs[i] += rhs[i]; } return lhs; } // quick and dirty; let compiler optimize
+// template< typename T, std::size_t D >
+// std::array< T, D >& operator+=( std::array< T, D >& lhs, const std::array< T, D >& rhs ) { for( unsigned int i = 0; i < D; ++i ) { lhs[i] += rhs[i]; } return lhs; } // quick and dirty; let compiler optimize
 
-template< typename T, std::size_t D >
-std::array< T, D > operator+( const std::array< T, D >& lhs, const std::array< T, D >& rhs ) { auto r = lhs; r += rhs; return r; }
+// template< typename T, std::size_t D >
+// std::array< T, D > operator+( const std::array< T, D >& lhs, const std::array< T, D >& rhs ) { auto r = lhs; r += rhs; return r; }
 
 template< typename T, std::size_t D >
 std::ostream& operator<<( std::ostream& os, const std::array< T, D >& rhs ) { std::string d; for( unsigned int i = 0; i < D; ++i ) { os << d << rhs[i]; d = ","; } return os; }
