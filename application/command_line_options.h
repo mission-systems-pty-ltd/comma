@@ -39,7 +39,7 @@ class command_line_options
         /// constructor
         /// if --help,-h present, call usage()
         /// if --verbose,-v present, call usage( verbose )
-        command_line_options( int argc, char ** argv, boost::function< void( bool ) > usage = NULL );
+        command_line_options( int argc, char ** argv, boost::function< void( bool ) > usage = NULL, boost::function< void( int, char** ) > bash_completion = NULL );
 
         /// constructor
         /// if --help,-h present, call usage()

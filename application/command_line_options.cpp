@@ -40,14 +40,15 @@ void command_line_options::_init_verbose( bool v, const std::string& path )
     comma::application::detail::verbose = v;
 }
 
-command_line_options::command_line_options( int argc, char ** argv, boost::function< void( bool ) > usage )
+command_line_options::command_line_options( int argc, char ** argv, boost::function< void( bool ) > usage, boost::function< void( int, char** ) > bash_completion )
 {
     argv_.resize( argc );
     for( int i = 0; i < argc; ++i ) { argv_[i] = argv[i]; }
     _fill_map( argv_ );
     bool v = exists("--verbose,-v");
     _init_verbose( v, argv[0] );
-    if( usage && exists( "--help,-h" ) ) { usage( v ); exit( 1 ); }
+    if( bash_completion && exists( "--bash-completion" ) ) { bash_completion( argc, argv ); exit( 0 ); }
+    if( usage && exists( "--help,-h" ) ) { usage( v ); exit( 0 ); }
 }
 
 command_line_options::command_line_options( const std::vector< std::string >& argv, boost::function< void( bool ) > usage )
