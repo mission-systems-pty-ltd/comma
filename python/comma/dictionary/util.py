@@ -3,7 +3,7 @@ operations on dict and dict-like objects with string keys
 made for convenience, not for performance
 '''
 
-import copy, functools, typing
+import copy, functools, os, sys, typing
 
 def at( d, path, delimiter = '/', no_throw = False, full = False ): # todo: default=...
     '''
@@ -30,7 +30,8 @@ def at( d, path, delimiter = '/', no_throw = False, full = False ): # todo: defa
         [ 8, 9, 10 ]
         >>> comma.dictionary.at( d, 'e[2][1]' )
         10
-        >>> comma.dictionary.at( d, 'e[1][1:]' )
+        >>> comma.dictionary.at( d, 'e[1][1:]' )assert permissive or has( d, p )
+                
         [ 9, 10 ]
         >>> e = [1, 2, {'a': 3} ]
         >>> comma.dictionary.at( e, '[2]/a' )
@@ -72,6 +73,41 @@ def has( d, path, delimiter = '/' ):
     p = path.split( delimiter ) if isinstance( path, str ) else path
     return functools.reduce( lambda d, k: ( d[k[1]] if k[0] + 1 < len( p ) else True ) if isinstance( d, dict ) and k[1] in d else False, enumerate( p ), d )
 
+def leaves( d, path=None ):
+    '''
+    generator of the leaf items of a nested dictionary or list, yields path-value pairs
+
+    example
+    -------
+        >>> list( comma.dictionary.leaves( { "x": { "y": [ { "z": 0 }, {"w": 2 } ], "v": "hello" } } ) )
+        [('x/y[0]/z', 0), ('x/y[1]/w', 2), ('x/v', 'hello')]
+    '''
+    if path is None: path = ''
+    if isinstance( d, dict ):
+        for key, value in d.items(): yield from leaves( value, f'{path}/{key}' )
+    elif isinstance( d, list ):
+        for i, value in enumerate(d): yield from leaves( value, f'{path}[{i}]' )
+    else:
+        yield path[1:] if path and path[0] == '/' else path, d
+
+def parents( d, path, parent=None ):
+    '''
+    generator of parents of a given path
+
+    todo: usage semantics and examples
+    todo: unit test
+    '''
+    p = path
+    while p not in [ '', '/' ]:
+        if parent is None:
+            p = os.path.dirname( p )
+        else:
+            q = at( d, f'{p}/{parent}', no_throw=True )
+            if q in [ '', '/' ]: break
+            if q is None: p = os.path.dirname( p )
+            else: p = q[1:] if q[0] == '/' else f'{os.path.dirname( p )}/{q}'
+        if p not in [ '', '/' ]: yield p[1:] if p[0] == '/' else p # quick and dirty
+
 def set( d, path, value, delimiter = '/' ):
     '''
     assign value to a nested dictionary/list element
@@ -96,37 +132,3 @@ def set( d, path, value, delimiter = '/' ):
                 _set( eval( f'd[{s[1]}' if s[0] == '' else f'd["{s[0]}"][{s[1]}', { 'd': d } ), p[1:])
     _set( d, path.split( delimiter ) )
     return d
-
-def leaves( d, path=None ):
-    '''
-    generator of the leaf items of a nested dictionary or list, yields path-value pairs
-
-    example
-    -------
-        >>> list( comma.dictionary.leaves( { "x": { "y": [ { "z": 0 }, {"w": 2 } ], "v": "hello" } } ) )
-        [('x/y[0]/z', 0), ('x/y[1]/w', 2), ('x/v', 'hello')]
-    '''
-    if path is None: path = ''
-    if isinstance( d, dict ):
-        for key, value in d.items(): yield from leaves( value, f'{path}/{key}' )
-    elif isinstance( d, list ):
-        for i, value in enumerate(d): yield from leaves( value, f'{path}[{i}]' )
-    else:
-        yield path[1:] if path and path[0] == '/' else path, d
-
-def parents( d, path, parent_field_name=None, root=None ):
-    '''
-    generator of parents of a given path
-
-    todo: usage semantics and examples
-    todo: unit test
-    '''
-    if root is None: root = ''
-    if parent_field_name is None or not has( d, f'{path}/{parent_field_name}' ):
-        p = os.path.dirname( path )
-        if p == root: yield p
-        else: yield from parents( d, p )
-    else:
-        p = at( d, f'{path}/{parent_field_name}' )
-        if p == '': yield p
-        else: yield from parents( d, f'{root}{p}' if p[0] == '/' else f'{os.path.dirname( path )}/{p}', parent_field_name, root )

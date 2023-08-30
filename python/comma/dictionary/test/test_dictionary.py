@@ -47,10 +47,14 @@ def test_dictionary_at():
     assert dictionary.at({'e': [3, 4, {'g': 6}]}, 'e[2]/g', no_throw=True) == 6
 
 def test_dictionary_has():
-    d = { 'a': { 'b': { 'c': { 'd': 1 } } } }
+    d = { 'a': { 'b': { 'c': { 'd': 1 } }, 'e': [ 2, { 'f': 3 } ] } }
     assert dictionary.has( d, 'a/b/c' )
     assert dictionary.has( d, 'a.b.c', delimiter = '.' )
     assert dictionary.has( d, 'a/b/c/d' )
+    # assert dictionary.has( d, 'a/b/e' ) # todo: support arrays
+    # assert dictionary.has( d, 'a/b/e[0]' ) # todo: support arrays
+    # assert dictionary.has( d, 'a/b/e[1]' ) # todo: support arrays
+    # assert dictionary.has( d, 'a/b/e[1]/f' ) # todo: support arrays
     assert not dictionary.has( d, 'x' )
     assert not dictionary.has( d, 'x/y' )
     assert not dictionary.has( d, 'a/z' )
@@ -68,6 +72,13 @@ def test_dictionary_leaves():
     assert list( dictionary.leaves( 'a' ) ) == [ ( '', 'a' ) ]
     assert list( dictionary.leaves( {} ) ) == []
     assert list( dictionary.leaves( [] ) ) == []
+
+def test_dictionary_parents():
+    assert list( dictionary.parents( { 'a': { 'b': { 'c': {} } } }, 'a/b/c' ) ) == ['a/b', 'a']
+    assert list( dictionary.parents( { 'a': { 'b': [ 5, { 'c': 6 } ] } }, 'a/b[1]/c' ) ) == ['a/b[1]', 'a']
+    assert list( dictionary.parents( { 'a': { 'b': [ 5, { 'c': 6 } ] } }, 'a/b[1]/c', parent='parent' ) ) == ['a/b[1]', 'a']
+    with pytest.raises( KeyError ): dictionary.at( {}, 'a/b/c' )
+    assert list( dictionary.parents( { 'a': { 'parent': 'd', 'b': [ 5, { 'c': { 'parent': '/a/b[0]' } } ], 'd': 3 } }, 'a/b[1]/c', parent='parent' ) ) == ['a/b[0]', 'a', 'd']
 
 def test_dictionary_set():
     d = {}
