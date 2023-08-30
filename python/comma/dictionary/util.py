@@ -99,7 +99,7 @@ def set( d, path, value, delimiter = '/' ):
 
 def leaves( d, path=None ):
     '''
-    iterator through the leaf items of a nested dictionary or list, yields path-value pairs
+    generator of the leaf items of a nested dictionary or list, yields path-value pairs
 
     example
     -------
@@ -113,3 +113,20 @@ def leaves( d, path=None ):
         for i, value in enumerate(d): yield from leaves( value, f'{path}[{i}]' )
     else:
         yield path[1:] if path and path[0] == '/' else path, d
+
+def parents( d, path, parent_field_name=None, root=None ):
+    '''
+    generator of parents of a given path
+
+    todo: usage semantics and examples
+    todo: unit test
+    '''
+    if root is None: root = ''
+    if parent_field_name is None or not has( d, f'{path}/{parent_field_name}' ):
+        p = os.path.dirname( path )
+        if p == root: yield p
+        else: yield from parents( d, p )
+    else:
+        p = at( d, f'{path}/{parent_field_name}' )
+        if p == '': yield p
+        else: yield from parents( d, f'{root}{p}' if p[0] == '/' else f'{os.path.dirname( path )}/{p}', parent_field_name, root )
