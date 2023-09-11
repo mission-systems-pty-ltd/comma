@@ -217,11 +217,16 @@ struct property_tree // quick and dirty
                     for( boost::property_tree::ptree::const_assoc_iterator j = t->ordered_begin(); j != t->not_found(); ++j, ++i )
                     {
                         cur_ = j->second;
-                        //std::size_t index = j->first == "" ? i : boost::lexical_cast< std::size_t >( j->first ); // way quick and dirty
+                        std::size_t index = i; // super-quick and dirty for now
+                        if( j->first != "" )
+                        {
+                            try { index = boost::lexical_cast< std::size_t >( j->first ); }
+                            catch( ... ) { index = i; }
+                        }
                         //if( index >= t->size() ) { COMMA_THROW( comma::exception, "expected index less than " << t->size() << "; got: " << index ); }
                         visiting::do_while<    !boost::is_fundamental< typename A::value_type >::value
                                             && !boost::is_same< typename A::value_type, boost::posix_time::ptime >::value
-                                            && !boost::is_same< typename A::value_type, std::string >::value >::visit( "", value[i], *this );
+                                            && !boost::is_same< typename A::value_type, std::string >::value >::visit( "", value[index], *this );
                     }
                     cur_ = parent;
                 }
