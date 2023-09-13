@@ -16,7 +16,7 @@
 void usage( bool verbose )
 {
     std::cerr << "operations on a multidimensional lookup table" << std::endl;
-    std::cerr << "up to 4-dimension lookup tables with up to 4-dimension" << std::endl;
+    std::cerr << "lookup tables with up to 4-dimension" << std::endl;
     std::cerr << "values are currently supported; if you need more, just ask" << std::endl;
     std::cerr << std::endl;
     std::cerr << "usage: cat input.csv | math-lookup <operation> [<lut-filename>[;<lut-csv-options>]] <options>" << std::endl;
