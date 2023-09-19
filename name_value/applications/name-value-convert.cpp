@@ -3,6 +3,7 @@
 /// @author vsevolod vlaskine
 
 #include <iostream>
+#include <map>
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
 #include <boost/property_tree/info_parser.hpp>
@@ -26,7 +27,7 @@ static void usage( bool verbose = false )
     std::cerr << std::endl;
     std::cerr << "data options" << std::endl;
     std::cerr << "    --from <format>: input format; if this options is omitted, input format will be guessed; formats: json, xml, path-value/pv" << std::endl;
-    std::cerr << "    --to <format>: output format; formats: ini, json, xml, path-value (pv); default: path-value" << std::endl;
+    std::cerr << "    --to <format>: output format; formats: ini, json, xml, path-value (pv), dot; default: path-value" << std::endl;
     std::cerr << "    --path=[<path>]; output data at a given path in the input" << std::endl;
     std::cerr << "                     multiple instances of --path supported" << std::endl;
     std::cerr << "                     regex expression support: todo" << std::endl;
@@ -38,6 +39,7 @@ static void usage( bool verbose = false )
     std::cerr << "    json: json data" << std::endl;
     std::cerr << "    xml: xml data" << std::endl;
     std::cerr << "    path-value: path=value-style data; e.g. x/a=1,x/b=2,y=3" << std::endl;
+    std::cerr << "    dot: as graphviz dot language, see: https://graphviz.org/doc/info/lang.html" << std::endl;
     std::cerr << std::endl;
     std::cerr << "name/path-value options" << std::endl;
     std::cerr << "    --equal-sign,-e=<equal sign>: default '='" << std::endl;
@@ -66,6 +68,19 @@ static void usage( bool verbose = false )
     std::cerr << "    --linewise,-l: if present, treat each input line as a record" << std::endl;
     std::cerr << "                   if absent, treat all of the input as one record" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "examples" << std::endl;
+    if( verbose )
+    {
+        std::cerr << "dot" << std::endl;
+        std::cerr << "    sudo apt install graphviz" << std::endl;
+        std::cerr << "    { echo a/b/c=hello; echo a/c/d=world; } | name-value-convert --to dot | dot -Tsvg > test.svg" << std::endl;
+        std::cerr << "    eog test.svg" << std::endl;
+    }
+    else
+    {
+        std::cerr << "    run: name-value-convert --help --verbose for more..." << std::endl;
+    }
+    std::cerr << std::endl;
     exit( 0 );
 }
 
@@ -81,7 +96,7 @@ static path_mode indices_mode = comma::property_tree::disabled;
 static bool use_index = true;
 static comma::property_tree::path_value::check_repeated_paths check_type( comma::property_tree::path_value::no_check );
 
-enum Types { ini, info, json, xml, path_value, void_t };
+enum Types { ini, info, json, xml, path_value, dot, void_t };
 
 template < Types Type > struct traits {};
 
@@ -130,6 +145,34 @@ template <> struct traits< path_value > // quick and dirty
     }
 };
 
+template <> struct traits< dot >
+{
+    static void input( std::istream& is, boost::property_tree::ptree& ptree ) { COMMA_THROW_BRIEF( comma::exception, "--from dot: not implemented (and most likely never will)" ); }
+    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode mode )
+    { 
+        const auto& pv = comma::property_tree::to_path_value( ptree, comma::xpath(), mode ); // todo: optional root
+        std::set< std::string > r; // super-quick and dirty; ordered set: slower, but neater output
+        std::map< std::string, std::pair< std::string, std::string > > nodes;
+        std::set< std::string > edges;
+        os << "digraph callgraph {" << std::endl;
+        for( const auto& p: pv )
+        {
+            std::string q = p.first.elements[0].to_string();
+            nodes.insert( std::make_pair( q, std::make_pair( q, p.first.elements.size() == 1 ? p.second : std::string() ) ) );
+            for( unsigned int i = 1; i < p.first.elements.size(); ++i )
+            {
+                auto s = p.first.elements[i].to_string();
+                edges.insert( "\"" + q + "\" -> \"" + q + "/" + s + "\"" );
+                q += "/" + s;
+                nodes.insert( std::make_pair( q, std::make_pair( s, i + 1 == p.first.elements.size() ? p.second : std::string() ) ) );
+            }
+        }
+        for( const auto& n: nodes ) { os << "    \"" << n.first << "\" [label=\"" << n.second.first << ( n.second.second.empty() ? std::string() : ( ":\n" + n.second.second ) ) << "\"]" << std::endl; }
+        for( const auto& e: edges ) { os << "    " << e << std::endl; }
+        os << "}" << std::endl;
+    }
+};
+
 void ( * input )( std::istream& is, boost::property_tree::ptree& ptree );
 void ( * output )( std::ostream& is, const boost::property_tree::ptree& ptree, const path_mode );
 
@@ -162,6 +205,7 @@ int main( int ac, char** av )
             else if( *from == "json" ) { input = &traits< json >::input; }
             else if( *from == "xml" ) { input = &traits< xml >::input; }
             else if( *from == "path-value" || *from == "pv" ) { input = &traits< path_value >::input; }
+            else if( *from == "dot" ) { input = &traits< dot >::input; }
             else { std::cerr << "name-value-convert: expected --from format to be ini, info, json, xml, or path-value, got " << *from << std::endl; return 1; }
         }
         else
@@ -174,6 +218,7 @@ int main( int ac, char** av )
         else if( to == "json" ) { output = &traits< json >::output; }
         else if( to == "xml" ) { output = &traits< xml >::output; }
         else if( to == "path-value" || to == "pv" ) { output = &traits< path_value >::output; }
+        else if( to == "dot" ) { output = &traits< dot >::output; }
         else { std::cerr << "name-value-convert: expected --to format to be ini, info, json, xml, or path-value, got " << *from << std::endl; return 1; }
         if( use_index )
         {
