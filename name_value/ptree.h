@@ -56,6 +56,7 @@ struct property_tree // quick and dirty
     static boost::optional< std::string > get( const boost::property_tree::ptree& ptree, const xpath& path, bool use_index = true );
 
     /// return value of a given type
+    /// todo! support non-class types and time
     template < typename T >
     static boost::optional< T > as( const boost::property_tree::ptree& ptree, const xpath& path, bool use_index = true, bool permissive = true );
     
