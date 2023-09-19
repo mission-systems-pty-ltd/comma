@@ -152,6 +152,12 @@ TEST( ptree, basics )
         EXPECT_TRUE( !t.world );
         EXPECT_TRUE( !t1.world );
         EXPECT_EQ( t.nested->moon, t1.nested->moon );
+
+        comma::name_value::impl::write_json( std::cerr, tree1 );
+        auto a = property_tree::as< nested_type >( tree1, "test_type/nested" );
+        EXPECT_TRUE( a );
+        EXPECT_EQ( a->moon, t.nested->moon );
+        // todo! way more tests
     }
     {
         boost::property_tree::ptree ptree;

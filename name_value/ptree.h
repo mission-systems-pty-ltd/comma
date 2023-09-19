@@ -22,6 +22,7 @@
 #include "../base/types.h"
 #include "../string/string.h"
 #include "../xpath/xpath.h"
+#include "../visiting/apply.h"
 #include "../visiting/visit.h"
 #include "../visiting/while.h"
 
@@ -53,6 +54,10 @@ struct property_tree // quick and dirty
     
     /// get value as string from an xpath like a/b[5]/c/d[3]=4 on ptree
     static boost::optional< std::string > get( const boost::property_tree::ptree& ptree, const xpath& path, bool use_index = true );
+
+    /// return value of a given type
+    template < typename T >
+    static boost::optional< T > as( const boost::property_tree::ptree& ptree, const xpath& path, bool use_index = true, bool permissive = true );
     
     /// get subtree
     static boost::optional< boost::property_tree::ptree& > get_tree( boost::property_tree::ptree& ptree, const xpath& path, bool use_index = true );
@@ -315,5 +320,15 @@ class to_ptree
         template < typename T > static T value_( T v ) { return v; }
 };
 
-} // namespace comma
+template < typename T >
+boost::optional< T > property_tree::as( const boost::property_tree::ptree& ptree, const xpath& path, bool use_index, bool permissive )
+{
+    auto p = property_tree::get_tree( ptree, path, use_index );
+    if( !p ) { return boost::none; }
+    comma::from_ptree from_ptree( *p, xpath(), permissive );
+    T t;
+    comma::visiting::apply( from_ptree ).to( t );
+    return t;
+}
 
+} // namespace comma
