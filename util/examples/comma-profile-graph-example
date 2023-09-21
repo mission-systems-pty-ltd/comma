@@ -1,0 +1,55 @@
+#!/bin/bash
+
+scriptname=$( basename $0 )
+
+source $( type -p comma-progress-util ) || { echo "$scriptname: cannot source 'comma-progress-util'" >&2; exit 1; }
+
+elapsed_csv=elapsed.csv
+profile_svg=profile.svg
+
+function usage()
+{
+    cat <<EOF
+
+usage: $scriptname <make|view>
+
+make - create profile data in $elapsed_csv
+view - visualise $elapsed_csv in $profile_svg
+
+EOF
+}
+
+function profile()
+{
+    local fn=$1
+    comma_progress_named $elapsed_csv $fn $fn
+}
+
+function func_a() { profile func_b; profile func_d; sleep 1.5; }
+function func_b() { for i in {0..2}; do profile func_c; done; sleep 0.1; }
+function func_c() { sleep 0.4; }
+function func_d() { sleep 0.2; }
+function func_e() { profile func_b; }
+function func_f() { profile func_d; }
+
+function make()
+{
+    [[ -f $elapsed_csv ]] && rm $elapsed_csv
+    profile func_a
+    profile func_e
+    profile func_f
+}
+
+function view()
+{
+    cat $elapsed_csv | comma-progress --elapsed | comma-profile-graph | dot -Tsvg > $profile_svg
+    eog $profile_svg
+}
+
+[[ $1 == "-h" || $1 == "--help" ]] && { usage; exit 1; }
+
+case $1 in
+    make) make ;;
+    view) view ;;
+    *)    usage
+esac
