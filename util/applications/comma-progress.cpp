@@ -85,37 +85,82 @@ template < > struct traits< impl_::log > {
     
 } } // namespace comma { namespace visiting { 
 
-
-static void usage( bool verbose=false )
+static void usage( bool verbose )
 {
-    std::cerr << std::endl;
-    std::cerr << "cat progress.csv | " << name() << " [<options>] > stat.csv" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "Example: cat progress.csv | comma-progress --elapsed | comma-progress --ratio run_all/application"  << std::endl;
-    std::cerr << "         In this example, every 'ratio' value is compared against time of run_all/application, instead" << std::endl;
-    std::cerr << "         of total time." << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "modes" << std::endl;
-    std::cerr << "    These are mutually exclusive." << std::endl;
-    std::cerr << "    <no option>: Outputs path value for input data: " << comma::join( comma::csv::names< impl_::log >(), ',' )  << std::endl;
-    std::cerr << "                 Output format is 'path/{begin,end}=<ISO timestamp>'" << std::endl;
-    std::cerr << "    --elapsed [ --from-path-value|--from-pv ]" << std::endl;
-    std::cerr << "                 Outputs path value with 'elapsed' time, input data format: " << comma::join( comma::csv::names< impl_::log >(), ',' )  << std::endl;
-    std::cerr << "                 If '--from-path-value|--from-pv' is given, it takes inputs from outputs of < no option >" << std::endl;
-    std::cerr << "                 Output format is 'path/elapsed=<duration in second>'" << std::endl;
-    std::cerr << "    --sum [--mean] [--count] [--ratio ] [-P|--percentage] " << std::endl;
-    std::cerr << "                 Outputs path value with summed 'elapsed' time, taking input data from --elapsed mode." << std::endl;
-    std::cerr << "                 Elapsed duration is duration sum of runs with the same <path> key, where one application was called multiple times." << std::endl;
-    std::cerr << "                 Output format is '<path>/elapsed=<duration in second>'" << std::endl;
-    std::cerr << "                 --mean  adds '<path>/mean=< mean duration in second >' for items that ran more than once - duplicated elapsed path/keys." << std::endl;
-    std::cerr << "                 --mean  adds '<path>/count=< occurances of <path>/elapsed >', where mean=( elapsed / count )." << std::endl;
-    std::cerr << "                 --ratio adds '<path>/ratio=< ratio to total time or time of [path] if given >', " << std::endl;
-    std::cerr << "                 --ratio with -P|--percentage, a percentage is the value for <path>/ratio, rounded to 3 decimal places." << std::endl;
-    std::cerr << "options" << std::endl;
-    std::cerr << "    --help,-h:   Print this message.." << std::endl;
-    std::cerr << std::endl;
+    std::cerr << "\nsummarise timestamped elapsed time data";
+    std::cerr << "\n";
+    std::cerr << "\nusage: cat progress.csv | " << name() << " [<options>] > stat.csv";
+    std::cerr << "\n";
+    std::cerr << "\noptions:";
+    std::cerr << "\n    --help,-h:     display this help message and exit";
+    std::cerr << "\n    --verbose,-v:  more output";
+    std::cerr << "\n    --elapsed:     output path value with elapsed time";
+    std::cerr << "\n    --sum          output path value with summed elapsed time";
+    std::cerr << "\n";
+    std::cerr << "\nelapsed options:";
+    std::cerr << "\n    --from-path-value,--from-pv: take input from output of <no option>";
+    std::cerr << "\n";
+    std::cerr << "\nsum options:";
+    std::cerr << "\n    --count:          adds number of occurances of <path> (requires --mean)";
+    std::cerr << "\n    --mean:           adds mean duration for duplicate paths";
+    std::cerr << "\n    --percentage,-P:  express --ratio as a percentage";
+    std::cerr << "\n    --ratio [<path>]: adds ratio to total time or time of [path] if given";
+    std::cerr << "\n";
+    std::cerr << "\nmodes:";
+    std::cerr << "\n    with no option comma-progress takes " << comma::join( comma::csv::names< impl_::log >(), ',' ) << " and converts to";
+    std::cerr << "\n    path-value format of 'path/{begin,end}=<ISO timestamp>'";
+    std::cerr << "\n";
+    std::cerr << "\n    --elapsed";
+    std::cerr << "\n        input data format: " << comma::join( comma::csv::names< impl_::log >(), ',' );
+    std::cerr << "\n        output format: 'path/elapsed=<duration in second>'";
+    std::cerr << "\n        if --from-path-value is given input format is <no option> output";
+    std::cerr << "\n";
+    std::cerr << "\n    --sum";
+    std::cerr << "\n        input: data in format from --elapsed mode";
+    std::cerr << "\n        output: path-value with summed 'elapsed' time";
+    std::cerr << "\n        elapsed duration sums of runs with the same <path>";
+    std::cerr << "\n        additional accumlation stats can be added with --mean, --count, --ratio";
+    std::cerr << "\n        options in the format <path>/<stat>=<value>";
+    std::cerr << "\n";
+    if( verbose )
+    {
+        std::cerr << "\nexamples:";
+        std::cerr << "\n    --- create input data ---";
+        std::cerr << "\n    cat <<-EOF > data.csv";
+        std::cerr << "\n\t20230101T120000,main,begin";
+        std::cerr << "\n\t20230101T120100,sub_a,begin";
+        std::cerr << "\n\t20230101T120200,sub_a,end";
+        std::cerr << "\n\t20230101T120200,sub_b,begin";
+        std::cerr << "\n\t20230101T120600,sub_b,end";
+        std::cerr << "\n\t20230101T120600,sub_a,begin";
+        std::cerr << "\n\t20230101T120800,sub_a,end";
+        std::cerr << "\n\t20230101T121000,main,end";
+        std::cerr << "\n\tEOF";
+        std::cerr << "\n";
+        std::cerr << "\n    --- create path/value data ---";
+        std::cerr << "\n    cat data.csv | comma-progress";
+        std::cerr << "\n";
+        std::cerr << "\n    --- calculate elapsed times ---";
+        std::cerr << "\n    cat data.csv | comma-progress --elapsed";
+        std::cerr << "\n    cat data.csv | comma-progress | comma-progress --elapsed --from-path-value";
+        std::cerr << "\n";
+        std::cerr << "\n    --- sum up repeated entries ---";
+        std::cerr << "\n    cat data.csv | comma-progress --elapsed > elapsed.csv";
+        std::cerr << "\n    cat elapsed.csv | comma-progress --sum";
+        std::cerr << "\n    cat elapsed.csv | comma-progress --sum --mean";
+        std::cerr << "\n    cat elapsed.csv | comma-progress --sum --mean --count";
+        std::cerr << "\n    cat elapsed.csv | comma-progress --sum --ratio";
+        std::cerr << "\n    cat elapsed.csv | comma-progress --sum --ratio --percentage";
+        std::cerr << "\n    cat elapsed.csv | comma-progress --sum --ratio main/sub_b";
+    }
+    else
+    {
+        std::cerr << "\nsee comma-progress --help --verbose for examples";
+    }
+    std::cerr << "\n" << std::endl;
     exit( 1 );
 }
+
 static const std::string start = "begin";
 static const std::string finished = "end";
 
@@ -306,12 +351,10 @@ void process_begin_end( L get_log, O output )
 
 int main( int ac, char** av )
 {
-    comma::command_line_options options( ac, av );
-    
-    if( options.exists( "-h,--help" ) ) { usage(); }
-    
     try
     {
+        comma::command_line_options options( ac, av, usage );
+
         if( options.exists( "--sum" ) )
         {
             
