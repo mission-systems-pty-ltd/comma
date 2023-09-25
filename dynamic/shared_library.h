@@ -49,8 +49,6 @@ inline T* shared_library::make( const std::string& library_symbol, Args... args 
 
     T* object = create_(args...);
 
-    dlclose(handle_);
-
     return object;
 }
 
