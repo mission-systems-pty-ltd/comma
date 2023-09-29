@@ -15,9 +15,7 @@ class shared_library
     public:
         shared_library( const std::string& lib, std::vector<std::string> additional_directories={} );
 
-        ~shared_library() { 
-            dlclose(handle_); 
-        }
+        ~shared_library() { dlclose(handle_); }
 
         template < typename T, typename... Args >
         T* make( const std::string& library_symbol, Args... args ) const;
