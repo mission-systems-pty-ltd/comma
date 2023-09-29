@@ -29,21 +29,26 @@ class shared_library
 inline shared_library::shared_library( const std::string& lib, std::vector<std::string> link_directories )
 : lib_(lib)
 {
+    char* error;
     // sanitise_search_directories_
     for (auto& dir : link_directories) { if( dir.back() != '/' ) { dir += std::string("/"); } }
     for (const auto& dir : link_directories) {
-        handle_ = dlopen( (dir+lib).c_str(), RTLD_LAZY);
-        if( handle_ ) { break; }
+        std::string link_lib = (dir+lib).c_str();
+        handle_ = dlopen( &link_lib[0], RTLD_LAZY);
+        error = dlerror();
+        if( error == NULL ){ break; } 
     }
-    if( !handle_ ) handle_ = dlopen(&lib[0], RTLD_LAZY);
-    COMMA_ASSERT( !dlerror(), "Shared library loading failed: could not open library: \"" + lib + "\"");
-    COMMA_ASSERT( handle_, "Shared library loading failed: could not open library: \"" + lib + "\"" );
+    if( error != NULL ) handle_ = dlopen(&lib[0], RTLD_LAZY);
+    COMMA_ASSERT( error == NULL, error );
 }
 
 template < typename T, typename... Args >
 inline T* shared_library::make( const std::string& library_symbol, Args... args ) const
 {
-    auto symbol = dlsym(handle_, library_symbol.c_str());
+    char* error;
+    auto symbol = dlsym(handle_, &library_symbol[0]);
+    COMMA_ASSERT( error == NULL, error );
+    if( symbol == nullptr ) { std::cerr << dlerror() << std::endl; }
     COMMA_ASSERT( symbol, "Shared library loading failed: could not find "+library_symbol+" symbol; on library: \"" + lib_ + "\"");
     T* (*create_)(Args...) = reinterpret_cast<T*(*)(Args...)>(symbol);
     COMMA_ASSERT( create_, "Shared library loading failed: could not find "+library_symbol+" symbol; on library: \"" + lib_ + "\"");
