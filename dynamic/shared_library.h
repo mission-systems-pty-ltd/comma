@@ -13,7 +13,7 @@ namespace comma { namespace dynamic {
 class shared_library
 {
     public:
-        shared_library( const std::string& lib, std::vector<std::string> additional_directories={} );
+        shared_library( const std::string& lib, std::vector<std::string> link_directories={} );
 
         ~shared_library() { dlclose(handle_); }
 
