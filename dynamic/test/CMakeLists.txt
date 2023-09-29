@@ -1,8 +1,12 @@
 set( KIT dynamic )
 file( GLOB source ${SOURCE_CODE_BASE_DIR}/${KIT}/test/*test.cpp )
 set( test_name ${CMAKE_PROJECT_NAME}_test_${KIT} )
+
+add_library( comma_dynamic_test_classes SHARED shared_library_test_classes.cpp )
+target_compile_definitions(comma_dynamic_test_classes PRIVATE DYNAMICLIB_EXPORTS)
+
 add_executable( ${test_name} ${source} )
-target_link_libraries( ${test_name} comma_base comma_string ${GTEST_BOTH_LIBRARIES} pthread )
+target_link_libraries( ${test_name} comma_base comma_string ${GTEST_BOTH_LIBRARIES} pthread ${CMAKE_DL_LIBS} )
 add_test( NAME ${test_name} COMMAND ${CMAKE_PROJECT_NAME}_test_${KIT} WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/bin )
 if( INSTALL_TESTS )
     install( TARGETS ${test_name} RUNTIME DESTINATION ${comma_CPP_TESTS_INSTALL_DIR} COMPONENT Runtime )
