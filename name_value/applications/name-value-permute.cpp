@@ -31,6 +31,7 @@
 #include <fstream>
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/math/special_functions.hpp>
 #include "../../base/exception.h"
 #include "../../application/command_line_options.h"
 #include "../../string/split.h"
