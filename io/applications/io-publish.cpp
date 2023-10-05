@@ -183,6 +183,11 @@ class publish
                 if( !input.good() ) { return false; }
             }
             transaction_t t( publishers_ );
+            if( cache_size_ > 0 )
+            {
+                cache_.push_back( buffer_ );
+                if( cache_.size() > cache_size_ ) { cache_.pop_front(); }
+            }
             for( auto& p: *t ) { if( p ) { p->write( &buffer_[0], buffer_.size(), false ); } } // for( std::size_t i = 0; i < t->size(); ++i ) { if( ( *t )[i] ) { ( *t )[i]->write( &buffer_[0], buffer_.size(), false ); } }
             return handle_sizes_( t );
         }
@@ -243,7 +248,14 @@ class publish
                     if( ( *t )[i] && select.read().ready( ( *t )[i]->acceptor_file_descriptor() ) )
                     {
                         const auto& streams = ( *t )[i]->accept();
-
+                        for( unsigned int i = 0; i < cache_.size(); ++i )
+                        {
+                            for( auto s: streams )
+                            { 
+                                ( *s )->write( &buffer_[0], buffer_.size() );
+                                if( flush_ ) { ( *s )->flush(); }
+                            }
+                        }
                     }
                 }
                 handle_sizes_( t );
