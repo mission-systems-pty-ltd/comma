@@ -40,7 +40,7 @@ publisher::~publisher() { delete pimpl_; }
 
 std::size_t publisher::write( const char* buf, std::size_t size, bool do_accept ) { return pimpl_->write( buf, size, do_accept ); }
 
-unsigned int publisher::accept() { return pimpl_->accept(); }
+std::vector< io::ostream* > publisher::accept() { return pimpl_->accept(); }
 
 void publisher::close() { pimpl_->close(); }
 

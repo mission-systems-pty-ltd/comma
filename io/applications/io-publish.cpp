@@ -263,7 +263,11 @@ class publish
                 transaction_t t( publishers_ );
                 for( unsigned int i = 0; i < t->size(); ++i )
                 {
-                    if( ( *t )[i] && select.read().ready( ( *t )[i]->acceptor_file_descriptor() ) ) { ( *t )[i]->accept(); }
+                    if( ( *t )[i] && select.read().ready( ( *t )[i]->acceptor_file_descriptor() ) )
+                    {
+                        const auto& streams = ( *t )[i]->accept();
+
+                    }
                 }
                 handle_sizes_( t );
                 if( has_primary_clients_ )
