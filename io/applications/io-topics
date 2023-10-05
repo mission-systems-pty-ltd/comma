@@ -187,6 +187,7 @@ function publish_topic_fields_help()
     cat <<eof
 address;           passed verbatim to io-publish, port attribute will be ignored
 binary;            for binary data, binary format of data, overrides size
+cache_size;        same meaning as io-publish --cache-size
 command;           command for the publisher to run
 input;             input topic for publish command to read on stdin
 multiplier;        passed to io-publish
@@ -295,7 +296,8 @@ function publish_command()
     [[ -z "$topic_secondary_address" ]] || topic_secondary_address="$topic_secondary_address;secondary"
     if [[ -n "$topic_multiplier" ]]; then multiplier="--multiplier $topic_multiplier"; else unset multiplier; fi
     if [[ "$topic_on_demand" == 1 || "$topic_on_demand" == "true" ]]; then on_demand="--on-demand"; else unset on_demand; fi
-    local cmd="io-publish $topic_address $topic_secondary_address $size_option $multiplier $on_demand -- "
+    if [[ -n "$topic_cache_size" ]]; then cache_size=$topic_cache_size; else unset cache_size; fi
+    local cmd="io-publish $topic_address $topic_secondary_address $size_option $multiplier $on_demand $cache_size -- "
     if [[ -z "$topic_input" ]]; then cmd+="$topic_command"
     else cmd+="$( set_topic_variables "cat" "$topic_input"; cat_command "$topic_input" 1 ) --flush --verbose | $topic_command" || die "topic '$topic': failed to configure input topic '$topic_input'"; fi
     verbose "$cmd"
@@ -308,7 +310,8 @@ function cat_command()
     local ignore_command=$2
     (( ignore_command )) || [[ -n "$topic_command" ]] || die "topic '$topic': command not specified in files ${configs[@]}"
     set_topic_address
-    if [[ "$topic_on_demand" == 1 || "$topic_on_demand" == "true" ]]; then on_demand="--on-demand"; else unset on_demand; fi
+    if [[ "$topic_on_demand" == 1 || "$topic_on_demand" == "true" ]]; then on_demand="--on-demand"; else unset on_demand; fi # todo? remove? is it even used anywhere?
+    if [[ -n "$topic_cache_size" ]]; then cache_size=$topic_cache_size; else unset cache_size; fi
     if [[ -n "$topic_flush" ]]; then flush_option="--flush"; else unset flush_option; fi # todo! make flush default?!
     if [[ -n "$topic_connect_attempts" ]]; then connect_attempts_option="--connect-attempts=$topic_connect_attempts"; else unset connect_attempts_option; fi
     if [[ -n "$topic_connect_period" ]]; then connect_period_option="--connect-period=$topic_connect_period"; else unset connect_period_option; fi
