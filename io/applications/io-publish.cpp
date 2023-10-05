@@ -1,32 +1,5 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
 // Copyright (c) 2020 Vsevolod Vlaskine
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /// @authors cedric wohlleber, vsevolod vlaskine, dave jennings
 
@@ -34,6 +7,7 @@
 #include <signal.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <deque>
 #include <memory>
 #include <boost/bind.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -68,6 +42,8 @@ static void usage( bool verbose = false )
     std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
     std::cerr << std::endl;
     std::cerr << "stream options" << std::endl;
+    std::cerr << "    --cache-size,--cache=<n>; default=0; number of cached records; if a new client connects, the" << std::endl;
+    std::cerr << "                                         the cached records will be sent to it once connected (todo)" << std::endl;
     std::cerr << "    --size,-s: binary input; packet size" << std::endl;
     std::cerr << "    --multiplier,-m: multiplier for packet size, default is 1. The actual packet size will be m * s" << std::endl;
     std::cerr << "    --no-discard: if present, do blocking write to every open stream" << std::endl;
@@ -119,7 +95,6 @@ static void usage( bool verbose = false )
     std::cerr << "    io-publish tcp:1234 --size 24000 --on-demand --exec \"camera-cat arg1 arg2\"" << std::endl;
     std::cerr << "    io-publish tcp:1234 --size 24000 --on-demand -- camera-cat arg1 arg2" << std::endl;
     std::cerr << std::endl;
-    std::cerr << std::endl;
     exit( 0 );
 }
 
@@ -142,12 +117,14 @@ class publish
                , bool discard
                , bool flush
                , bool output_number_of_clients
-               , bool update_no_clients )
+               , bool update_no_clients
+               , unsigned int cache_size )
             : discard_( discard )
             , flush_( flush )
             , buffer_( packet_size, '\0' )
             , packet_size_( packet_size )
             , output_number_of_clients_( output_number_of_clients )
+            , cache_size_( cache_size )
             , update_no_clients_( update_no_clients )
             , got_first_client_ever_( false )
             , sizes_( endpoints.size(), 0 )
@@ -298,6 +275,7 @@ class publish
         std::string buffer_;
         unsigned int packet_size_;
         bool output_number_of_clients_;
+        unsigned int cache_size_;
         bool update_no_clients_;
         bool got_first_client_ever_;
         std::vector< unsigned int > sizes_;
@@ -305,6 +283,7 @@ class publish
         unsigned int num_clients_;
         boost::scoped_ptr< boost::thread > acceptor_thread_;
         bool is_shutdown_;
+        std::deque< std::string > cache_;
 };
 
 class command
@@ -364,6 +343,7 @@ int main( int ac, char** av )
         comma::command_line_options options( head, usage );
         const std::vector< std::string >& names = options.unnamed( "--no-discard,--verbose,-v,--no-flush,--output-number-of-clients,--clients,--exit-on-no-clients,-e,--on-demand", "-.+" );
         if( names.empty() ) { std::cerr << "io-publish: please specify at least one stream; use '-' for stdout" << std::endl; return 1; }
+        options.assert_mutually_exclusive( "--cache-size,--cache", "--on-demand" );
         const boost::array< comma::signal_flag::signals, 2 > signals = { { comma::signal_flag::sigint, comma::signal_flag::sigterm } };
         comma::signal_flag is_shutdown( signals );
         bool on_demand = options.exists( "--on-demand" );
@@ -373,7 +353,8 @@ int main( int ac, char** av )
                  , !options.exists( "--no-discard" )
                  , !options.exists( "--no-flush" )
                  , options.exists( "--output-number-of-clients,--clients" )
-                 , exit_on_no_clients || on_demand );
+                 , exit_on_no_clients || on_demand
+                 , options.value( "--cache-size,--cache", 0 ) );
         std::string exec_command = options.value< std::string >( "--exec", "" );
         if( !tail.empty() )
         {
