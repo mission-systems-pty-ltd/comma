@@ -296,7 +296,7 @@ function publish_command()
     [[ -z "$topic_secondary_address" ]] || topic_secondary_address="$topic_secondary_address;secondary"
     if [[ -n "$topic_multiplier" ]]; then multiplier="--multiplier $topic_multiplier"; else unset multiplier; fi
     if [[ "$topic_on_demand" == 1 || "$topic_on_demand" == "true" ]]; then on_demand="--on-demand"; else unset on_demand; fi
-    if [[ -n "$topic_cache_size" ]]; then cache_size=$topic_cache_size; else unset cache_size; fi
+    if [[ -n "$topic_cache_size" ]]; then cache_size="--cache-size=$topic_cache_size"; else unset cache_size; fi
     local cmd="io-publish $topic_address $topic_secondary_address $size_option $multiplier $on_demand $cache_size -- "
     if [[ -z "$topic_input" ]]; then cmd+="$topic_command"
     else cmd+="$( set_topic_variables "cat" "$topic_input"; cat_command "$topic_input" 1 ) --flush --verbose | $topic_command" || die "topic '$topic': failed to configure input topic '$topic_input'"; fi
