@@ -248,13 +248,10 @@ class publish
                     if( ( *t )[i] && select.read().ready( ( *t )[i]->acceptor_file_descriptor() ) )
                     {
                         const auto& streams = ( *t )[i]->accept();
-                        for( unsigned int i = 0; i < cache_.size(); ++i )
+                        for( auto s: streams )
                         {
-                            for( auto s: streams )
-                            { 
-                                ( *s )->write( &buffer_[0], buffer_.size() );
-                                if( flush_ ) { ( *s )->flush(); }
-                            }
+                            for( const auto& c: cache_ ) { ( *s )->write( &c[0], c.size() ); }
+                            if( flush_ ) { ( *s )->flush(); }
                         }
                     }
                 }
