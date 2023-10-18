@@ -66,6 +66,10 @@ void usage( bool verbose = false )
     std::cerr << "options" << std::endl;
     std::cerr << "    --exit-on-first-closed,-e: exit, if one of the streams finishes" << std::endl;
     std::cerr << "    --flush,--unbuffered,-u: flush output" << std::endl;
+    std::cerr << "    --head=[<n>]; output first <n> records and exit without waiting for record n+1" << std::endl;
+    std::cerr << "                  a workaround for sparse input fed into: io-cat ... | head -n10, which" << std::endl;
+    std::cerr << "                  not exit until io-cat receives record 11" << std::endl;
+    std::cerr << "                  instead run: io-cat ... --head=10 (use --flush if you don't want buffering" << std::endl;
     std::cerr << "    --round-robin=[<number of packets>]: todo: only for multiple inputs: read not more" << std::endl;
     std::cerr << "                                         than <number of packets> from an input at once," << std::endl;
     std::cerr << "                                         before checking other inputs" << std::endl;
@@ -302,6 +306,26 @@ static bool try_connect( boost::ptr_vector< stream >& streams, comma::io::select
     exit( 1 );
 }
 
+static bool _write( const comma::command_line_options& options, const std::vector< char >& buffer, unsigned int bytes_read )
+{
+    static unsigned int head = options.value( "--head", 0 );
+    static unsigned int size = options.value( "--size,-s", 0 );
+    static unsigned int count = 0;
+    if( head == 0 ) { std::cout.write( &buffer[0], bytes_read ); return true; }
+    if( size == 0 )
+    {
+        std::cout.write( &buffer[0], bytes_read );
+        ++count;
+    }
+    else
+    {
+        unsigned int n = std::min( bytes_read / size, head - count );
+        std::cout.write( &buffer[0], n * size );
+        count += n;
+    }
+    return count < head;
+}
+
 int main( int argc, char** argv )
 {
     #ifdef WIN32
@@ -325,12 +349,14 @@ int main( int argc, char** argv )
         permissive = options.exists( "--permissive" );
         const std::vector< std::string >& unnamed = options.unnamed( "--permissive,--exit-on-first-closed,-e,--flush,--unbuffered,-u,--verbose,-v", "-.+" );
         #ifdef WIN32
-        if( size || unnamed.size() == 1 ) { _setmode( _fileno( stdout ), _O_BINARY ); }
+        //if( size || unnamed.size() == 1 ) { _setmode( _fileno( stdout ), _O_BINARY ); }
+        if( size ) { _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
         if( unnamed.empty() ) { std::cerr << "io-cat: please specify at least one source" << std::endl; return 1; }
         boost::ptr_vector< stream > streams;
         comma::io::select select;
-        for( unsigned int i = 0; i < unnamed.size(); ++i ) { streams.push_back( make_stream( unnamed[i], size, size || unnamed.size() == 1 ) ); }
+        // for( unsigned int i = 0; i < unnamed.size(); ++i ) { streams.push_back( make_stream( unnamed[i], size, size || unnamed.size() == 1 ) ); }
+        for( unsigned int i = 0; i < unnamed.size(); ++i ) { streams.push_back( make_stream( unnamed[i], size, size > 0 ) ); }
         const unsigned int max_count = size ? ( size > 65536u ? 1 : 65536u / size ) : 0;
         std::vector< char > buffer( size ? size * max_count : 65536u );        
         unsigned int round_robin_count = unnamed.size() > 1 ? options.value( "--round-robin", 0 ) : 0;
@@ -362,7 +388,7 @@ int main( int argc, char** argv )
                     if( bytes_read == 0 ) { break; }
                     done = false;
                     if( size && bytes_read % size != 0 ) { std::cerr << "io-cat: stream " << i << " (" << streams[i].address() << "): expected " << size << " byte(s), got only " << ( bytes_read % size ) << std::endl; return 1; }
-                    std::cout.write( &buffer[0], bytes_read );
+                    if( !_write( options, buffer, bytes_read ) ) { done = true; break; }
                     if( !std::cout.good() ) { done = true; break; }
                     if( unbuffered ) { std::cout.flush(); }
                     if( round_robin_count )
