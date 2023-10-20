@@ -347,16 +347,17 @@ int main( int argc, char** argv )
         double connect_period_seconds = options.value( "--connect-period", 1.0 );
         connect_period = boost::posix_time::milliseconds( static_cast<unsigned int>(std::floor( connect_period_seconds * 1000 ) ));
         permissive = options.exists( "--permissive" );
+        bool has_head = options.exists( "--head" );
         const std::vector< std::string >& unnamed = options.unnamed( "--permissive,--exit-on-first-closed,-e,--flush,--unbuffered,-u,--verbose,-v", "-.+" );
         #ifdef WIN32
-        //if( size || unnamed.size() == 1 ) { _setmode( _fileno( stdout ), _O_BINARY ); }
-        if( size ) { _setmode( _fileno( stdout ), _O_BINARY ); }
+        if( size || ( unnamed.size() == 1 && !has_head ) ) { _setmode( _fileno( stdout ), _O_BINARY ); }
+        //if( size ) { _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
         if( unnamed.empty() ) { std::cerr << "io-cat: please specify at least one source" << std::endl; return 1; }
         boost::ptr_vector< stream > streams;
         comma::io::select select;
-        // for( unsigned int i = 0; i < unnamed.size(); ++i ) { streams.push_back( make_stream( unnamed[i], size, size || unnamed.size() == 1 ) ); }
-        for( unsigned int i = 0; i < unnamed.size(); ++i ) { streams.push_back( make_stream( unnamed[i], size, size > 0 ) ); }
+        for( unsigned int i = 0; i < unnamed.size(); ++i ) { streams.push_back( make_stream( unnamed[i], size, size > 0 || ( unnamed.size() == 1 && !has_head ) ) ); }
+        //for( unsigned int i = 0; i < unnamed.size(); ++i ) { streams.push_back( make_stream( unnamed[i], size, size > 0 ) ); }
         const unsigned int max_count = size ? ( size > 65536u ? 1 : 65536u / size ) : 0;
         std::vector< char > buffer( size ? size * max_count : 65536u );        
         unsigned int round_robin_count = unnamed.size() > 1 ? options.value( "--round-robin", 0 ) : 0;
