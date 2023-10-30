@@ -20,6 +20,7 @@ static void usage( bool verbose )
     std::cerr << "    --input-fields; print input fields to stdout and exit" << std::endl;
     std::cerr << "    --output-fields; print output fields to stdout and exit" << std::endl;
     std::cerr << "    --output-format; print output format to stdout and exit" << std::endl;
+    std::cerr << "    --no-append; do not output stdin records to stdout, output only result" << std::endl;
     std::cerr << std::endl;
     std::cerr << "csv options" << std::endl;
     std::cerr << comma::csv::options::usage( verbose ) << std::endl;
@@ -118,12 +119,14 @@ int main( int ac, char** av )
         comma::csv::input_stream< comma::csv::examples::application::input > is( std::cin, csv );
         comma::csv::output_stream< comma::csv::examples::application::output > os( std::cout, csv.binary() );
         auto tied = comma::csv::make_tied( is, os );
+        bool append = !options.exists( "--no-append" );
         comma::csv::examples::application::output output;
         while( is.ready() || std::cin.good() )
         {
             auto p = is.read();
             if( !p ) { break; }
-            tied.append( populate_output( *p, output ) );
+            if( append ) { tied.append( populate_output( *p, output ) ); }
+            else { os.write( populate_output( *p, output ) ); }
         }
         return 0;
     }
