@@ -1,0 +1,6 @@
+project( comma-csv-sample-application )
+cmake_minimum_required(VERSION 3.20)
+set_property( CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "RelWithDebInfo" "MinSizeRel" )
+find_package( comma REQUIRED PATHS "/usr/local/CMakeFiles" )
+add_executable( comma-csv-sample-application comma-csv-sample-application.cpp )
+target_link_libraries( comma-csv-sample-application ${comma_ALL_LIBRARIES} )
