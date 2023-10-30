@@ -12,26 +12,24 @@ static void usage( bool verbose )
 {
     std::cerr << std::endl;
     std::cerr << "example: read csv/binary fixed-width data on stdin, calculate some result" << std::endl;
-    std::cerr << "         append to input, output to stdout" << std::endl;
+    std::cerr << "         update input values emplace, output to stdout" << std::endl;
     std::cerr << std::endl;
     std::cerr << "usage: cat values.csv | ./comma-csv-sample-application-append [<options>] > result.csv" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --input-fields; print input fields to stdout and exit" << std::endl;
-    std::cerr << "    --output-fields; print output fields to stdout and exit" << std::endl;
-    std::cerr << "    --output-format; print output format to stdout and exit" << std::endl;
     std::cerr << std::endl;
     std::cerr << "csv options" << std::endl;
     std::cerr << comma::csv::options::usage( verbose ) << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << "    ascii" << std::endl;
-    std::cerr << "        ( echo 1,2,3; echo 4,5,6 ) | ./comma-csv-sample-application-append" << std::endl;
+    std::cerr << "        ( echo 1,2; echo 3,4 ) | ./comma-csv-sample-application-emplace" << std::endl;
     std::cerr << "    binary" << std::endl;
-    std::cerr << "        ( echo 1,2,3; echo 4,5,6 ) \\" << std::endl;
-    std::cerr << "            | csv-to-bin 3ui \\" << std::endl;
-    std::cerr << "            | ./comma-csv-sample-application-append --binary 3ui" << std::endl;
-    std::cerr << "            | csv-from-bin 3ui,ui,d" << std::endl;
+    std::cerr << "        ( echo 1,2; echo 3,4 ) \\" << std::endl;
+    std::cerr << "            | csv-to-bin 2ui \\" << std::endl;
+    std::cerr << "            | ./comma-csv-sample-application-emplace --binary 2ui \\" << std::endl;
+    std::cerr << "            | csv-from-bin 2ui" << std::endl;
     std::cerr << std::endl;
 }
 
@@ -39,16 +37,9 @@ namespace comma { namespace csv { namespace examples { namespace application {
 
 struct input
 {
-    struct nested { double d{0}; };
-    unsigned int a{0};
-    double b{0};
-    nested c;
-};
-
-struct output
-{
-    unsigned int count{0};
-    double result{0};
+    struct nested { double c{0}; };
+    double a{0};
+    nested b;
 };
 
 } } } } // namespace comma { namespace csv { namespace examples { namespace application {
@@ -59,12 +50,12 @@ template <> struct traits< comma::csv::examples::application::input::nested >
 {
     template < typename Key, class Visitor > static void visit( const Key&, const comma::csv::examples::application::input::nested& p, Visitor& v )
     {
-        v.apply( "d", p.d );
+        v.apply( "c", p.c );
     }
 
     template < typename Key, class Visitor > static void visit( const Key&, comma::csv::examples::application::input::nested& p, Visitor& v )
     {
-        v.apply( "d", p.d );
+        v.apply( "c", p.c );
     }
 };
 
@@ -74,34 +65,22 @@ template <> struct traits< comma::csv::examples::application::input >
     {
         v.apply( "a", p.a );
         v.apply( "b", p.b );
-        v.apply( "c", p.c );
     }
 
     template < typename Key, class Visitor > static void visit( const Key&, comma::csv::examples::application::input& p, Visitor& v )
     {
         v.apply( "a", p.a );
         v.apply( "b", p.b );
-        v.apply( "c", p.c );
-    }
-};
-
-template <> struct traits< comma::csv::examples::application::output >
-{
-    template < typename Key, class Visitor > static void visit( const Key&, const comma::csv::examples::application::output& p, Visitor& v )
-    {
-        v.apply( "count", p.count );
-        v.apply( "result", p.result );
     }
 };
 
 } } // namespace comma { namespace visiting {
 
-static comma::csv::examples::application::output& populate_output( const comma::csv::examples::application::input& input
-                                                                 , comma::csv::examples::application::output& output )
+static comma::csv::examples::application::input updated( const comma::csv::examples::application::input& input )
 {
-    ++output.count;
-    output.result = input.a + input.b * input.c.d;
-    return output;
+    auto r = input;
+    r.a = input.a + input.b.c;
+    return r;
 }
 
 int main( int ac, char** av )
@@ -111,19 +90,14 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av, usage );
         comma::csv::options csv( options );
         typedef comma::csv::examples::application::input input_t;
-        typedef comma::csv::examples::application::output output_t;
         if( options.exists( "--input-fields" ) ) { std::cout << comma::join( comma::csv::names< input_t >(), ',' ) << std::endl; return 0; }
-        if( options.exists( "--output-fields" ) ) { std::cout << comma::join( comma::csv::names< output_t >(), ',' ) << std::endl; return 0; }
-        if( options.exists( "--output-format" ) ) { std::cout << comma::csv::format::value< output_t >() << std::endl; return 0; }
         comma::csv::input_stream< comma::csv::examples::application::input > is( std::cin, csv );
-        comma::csv::output_stream< comma::csv::examples::application::output > os( std::cout, csv.binary() );
-        auto tied = comma::csv::make_tied( is, os );
-        comma::csv::examples::application::output output;
+        auto passed = comma::csv::make_passed( is, std::cout, csv.flush );
         while( is.ready() || std::cin.good() )
         {
             auto p = is.read();
             if( !p ) { break; }
-            tied.append( populate_output( *p, output ) );
+            passed.write( updated( *p ) );
         }
         return 0;
     }
