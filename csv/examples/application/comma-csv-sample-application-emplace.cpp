@@ -14,7 +14,7 @@ static void usage( bool verbose )
     std::cerr << "example: read csv/binary fixed-width data on stdin, calculate some result" << std::endl;
     std::cerr << "         update input values emplace, output to stdout" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "usage: cat values.csv | ./comma-csv-sample-application-append [<options>] > result.csv" << std::endl;
+    std::cerr << "usage: cat values.csv | ./comma-csv-sample-application-emplace [<options>] > result.csv" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --input-fields; print input fields to stdout and exit" << std::endl;

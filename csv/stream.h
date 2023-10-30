@@ -437,6 +437,9 @@ class passed
 };
 
 template < typename S >
+inline passed< S > make_passed( const input_stream< S >& is, std::ostream& os, bool flush = false ) { return passed< S >( is, os, flush ); }
+ 
+template < typename S >
 inline passed< S >::passed( const input_stream< S >& is, std::ostream& os, bool flush ) : is_( is ), os_( os ), flush( flush )
 {
     #ifdef WIN32
