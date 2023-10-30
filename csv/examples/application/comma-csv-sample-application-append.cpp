@@ -21,6 +21,15 @@ static void usage( bool verbose )
     std::cerr << "csv options" << std::endl;
     std::cerr << comma::csv::options::usage( verbose ) << std::endl;
     std::cerr << std::endl;
+    std::cerr << "examples" << std::endl;
+    std::cerr << "    ascii" << std::endl;
+    std::cerr << "        ( echo 1,2,3; echo 4,5,6 ) | ./comma-csv-sample-application-append" << std::endl;
+    std::cerr << "    binary" << std::endl;
+    std::cerr << "        ( echo 1,2,3; echo 4,5,6 ) \\" << std::endl;
+    std::cerr << "            | csv-to-bin 3ui \\" << std::endl;
+    std::cerr << "            | ./comma-csv-sample-application-append --binary 3ui" << std::endl;
+    std::cerr << "            | csv-from-bin 3ui,ui,d" << std::endl;
+    std::cerr << std::endl;
 }
 
 namespace comma { namespace csv { namespace examples { namespace application {
