@@ -1,6 +1,7 @@
 project( comma-csv-sample-application )
 cmake_minimum_required( VERSION 3.1 )
 add_compile_options( -std=c++14 )
+find_package( Boost REQUIRED COMPONENTS thread filesystem system date_time iostreams program_options regex )
 find_package( comma REQUIRED PATHS "/usr/local/CMakeFiles" )
 add_executable( comma-csv-sample-application-append comma-csv-sample-application-append.cpp )
 target_link_libraries( comma-csv-sample-application-append ${comma_ALL_LIBRARIES} )
