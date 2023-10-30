@@ -31,10 +31,10 @@ static void usage( bool verbose )
     std::cerr << "    ascii" << std::endl;
     std::cerr << "        ( echo 45,20; echo 30,-10 ) | ./comma-csv-sample-application-append" << std::endl;
     std::cerr << "    binary" << std::endl;
-    std::cerr << "        ( echo 1,2,3; echo 4,5,6 ) \\" << std::endl;
-    std::cerr << "            | csv-to-bin 3ui \\" << std::endl;
-    std::cerr << "            | ./comma-csv-sample-application-append --binary 3ui" << std::endl;
-    std::cerr << "            | csv-from-bin 3ui,ui,d" << std::endl;
+    std::cerr << "        ( echo 45,20; echo 30,-10 ) \\" << std::endl;
+    std::cerr << "            | csv-to-bin 2d \\" << std::endl;
+    std::cerr << "            | ./comma-csv-sample-application-append --binary 2d \\" << std::endl;
+    std::cerr << "            | csv-from-bin 2d,ui,3d" << std::endl;
     std::cerr << std::endl;
 }
 
@@ -119,11 +119,11 @@ int main( int ac, char** av )
         if( options.exists( "--input-fields" ) ) { std::cout << comma::join( comma::csv::names< input_t >(), ',' ) << std::endl; return 0; }
         if( options.exists( "--output-fields" ) ) { std::cout << comma::join( comma::csv::names< output_t >(), ',' ) << std::endl; return 0; }
         if( options.exists( "--output-format" ) ) { std::cout << comma::csv::format::value< output_t >() << std::endl; return 0; }
-        comma::csv::input_stream< comma::csv::examples::application::input > is( std::cin, csv );
-        comma::csv::output_stream< comma::csv::examples::application::output > os( std::cout, csv.binary() );
+        comma::csv::input_stream< input_t > is( std::cin, csv );
+        comma::csv::output_stream< output_t > os( std::cout, csv.binary() );
         auto tied = comma::csv::make_tied( is, os );
         bool append = !options.exists( "--no-append" );
-        comma::csv::examples::application::output output;
+        output_t output;
         while( is.ready() || std::cin.good() )
         {
             auto p = is.read();
