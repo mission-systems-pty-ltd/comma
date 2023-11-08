@@ -1,31 +1,5 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
 // All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /// @author vsevolod vlaskine
 
@@ -107,8 +81,12 @@ static void usage( bool more )
         std::cerr << "        block. If no block field is given the entire input is considered to be" << std::endl;
         std::cerr << "        one block. Blocks are required to be contiguous in the input stream." << std::endl;
     }
+    else
+    {
+        std::cerr << "    run csv-join --help --verbose for more..." << std::endl;
+    }
     std::cerr << std::endl;
-    std::cerr << "Examples (try them):" << std::endl;
+    std::cerr << "examples (try them)" << std::endl;
     std::cerr << "    on the following data file:" << std::endl;
     std::cerr << "        echo 1,1,2,hello > data.csv" << std::endl;
     std::cerr << "        echo 1,2,3,hello >> data.csv" << std::endl;
@@ -136,7 +114,6 @@ static void usage( bool more )
     std::cerr << "        <input:3>" << std::endl;
     std::cerr << "        <input:3>" << std::endl;
     std::cerr << std::endl;
-    std::cerr << std::endl;
     exit( 0 );
 }
 
@@ -149,8 +126,10 @@ static bool not_matching;
 static bool matching;
 static bool flag_matching;
 static bool swap_output;
+static bool filter_id_fields_discard;
 static comma::csv::options stdin_csv;
 static comma::csv::options filter_csv;
+static std::vector< unsigned int > filter_id_fields_flags; // quick and dirty
 boost::scoped_ptr< comma::io::istream > filter_transport;
 static comma::uint32 block = 0;
 static boost::optional< double > radius;
@@ -305,6 +284,20 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
     static typename traits< K, Strict >::map filter_map;
     static input< K > default_input;
 
+    static std::string make_output_string( const std::vector< std::string >& values ) // todo? something like comma::join( values, drop )?
+    {
+        if( filter_id_fields_flags.empty() ) { return comma::join( values, stdin_csv.delimiter ); }
+        std::string s;
+        std::string delimiter;
+        unsigned int i = 0;
+        for( ; i < std::min( filter_id_fields_flags.size(), values.size() ); ++i )
+        {
+            if( filter_id_fields_flags[i] == 0 ) { s += delimiter + values[i]; delimiter = std::string( 1, stdin_csv.delimiter ); }
+        }
+        for( ; i < values.size(); ++i ) { s += delimiter + values[i]; delimiter = std::string( 1, stdin_csv.delimiter ); }
+        return s;
+    }
+
     static void read_filter_block()
     {
         static comma::csv::input_stream< input< K > > filter_stream( **filter_transport, filter_csv, default_input );
@@ -326,7 +319,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
             }
             else
             {
-                d.push_back( comma::join( filter_stream.ascii().last(), stdin_csv.delimiter ) );
+                d.push_back( make_output_string( filter_stream.ascii().last() ) );
             }
             if( verbose ) { ++count; if( count % 10000 == 0 ) { std::cerr << "csv-join: reading block " << block << "; loaded " << count << " point" << ( count == 1 ? "" : "s" ) << "; hash map size: " << filter_map.size() << std::endl; } }
             //if( ( *filter_transport )->good() && !( *filter_transport )->eof() ) { break; }
@@ -340,6 +333,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
     {
         std::vector< std::string > v = comma::split( stdin_csv.fields, ',' );
         std::vector< std::string > w = comma::split( filter_csv.fields, ',' );
+        if( filter_id_fields_discard ) { filter_id_fields_flags.resize( w.size(), 0 ); }
         bool got_state = false;
         bool got_next_state = false;
         std::size_t filter_state_index;
@@ -348,6 +342,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
             if( w[k] == "state" ) { got_state = true; filter_state_index = k; continue; }
             if( w[k] == "next_state" ) { got_next_state = true; continue; }
         }
+        if( ( got_state || got_next_state ) && filter_id_fields_discard ) { std::cerr << "csv-join: --discard-id and 'state' or 'next_field' are mutually exclusive" << std::endl; return 1; }
         bool is_state_machine = got_state && got_next_state;
         std::size_t default_input_keys_count = 0;
         bool no_stdin_key_fields = true;
@@ -360,9 +355,11 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
             {
                 if( is_state_machine && ( w[k] == "state" || w[k] == "next_state" ) ) { no_filter_key_fields = false; continue; }
                 if( !w[k].empty() && w[k] != "block" ) { no_filter_key_fields = false; }
+                if( filter_id_fields_discard && w[k] == "block" ) { filter_id_fields_flags[k] = 1; }
                 if( v[i] != w[k] ) { continue; }
                 v[i] = "keys[" + boost::lexical_cast< std::string >( default_input_keys_count ) + "]";
                 w[k] = "keys[" + boost::lexical_cast< std::string >( default_input_keys_count ) + "]";
+                if( filter_id_fields_discard ) { filter_id_fields_flags[k] = 1; }
                 ++default_input_keys_count;
             }
         }
@@ -500,12 +497,14 @@ int main( int ac, char** av )
         radius = options.optional< double >( "--radius,--epsilon" );
         nearest = options.exists( "--nearest" );
         swap_output = options.exists( "--output-swap,--swap-output,--swap" );
+        filter_id_fields_discard = options.exists( "--discard-id-fields,--discard-id" );
         if( nearest && !radius ) { std::cerr << "csv-join: if using --nearest, please specify --radius" << std::endl; return 1; }
         options.assert_mutually_exclusive( "--matching,--not-matching,--flag-matching,--swap-output,--swap,--output-swap" );
         options.assert_mutually_exclusive( "--radius,--epsilon,--first-matching" );
         options.assert_mutually_exclusive( "--radius,--epsilon,--string,-s,--double,--time" );
+        options.assert_mutually_exclusive( "--matching,--not-matching", "--discard-id-fields,--discard-id" );
         stdin_csv = comma::csv::options( options );
-        std::vector< std::string > unnamed = options.unnamed( "--verbose,-v,--first-matching,--matching,--not-matching,--string,-s,--time,--double,--strict,--swap-output,--swap,--output-swap,--nearest", "-.*" );
+        std::vector< std::string > unnamed = options.unnamed( "--verbose,-v,--first-matching,--matching,--not-matching,--string,-s,--time,--double,--strict,--swap-output,--swap,--output-swap,--nearest,--discard-id-fields,--discard-id", "-.*" );
         if( unnamed.empty() ) { std::cerr << "csv-join: please specify the second source" << std::endl; return 1; }
         if( unnamed.size() > 1 ) { std::cerr << "csv-join: expected one file or stream to join, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         comma::name_value::parser parser( "filename", ';', '=', false );
