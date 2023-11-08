@@ -137,7 +137,7 @@ static boost::optional< double > radius;
 static void hash_combine_( std::size_t& seed, boost::posix_time::ptime key )
 {
     static_assert( sizeof( boost::posix_time::ptime ) == 8, "expected time of size 8" );
-    boost::hash_combine( seed, *reinterpret_cast< const long long* >( &key ) );
+    boost::hash_combine( seed, *reinterpret_cast< const comma::uint64* >( &key ) );
 }
 
 template < typename K > static void hash_combine_( std::size_t& seed, K key ) { boost::hash_combine( seed, key ); }
@@ -284,7 +284,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
     static typename traits< K, Strict >::map filter_map;
     static input< K > default_input;
 
-    static std::string make_output_string( const std::vector< std::string >& values ) // todo? something like comma::join( values, drop )?
+    static std::string make_output( const std::vector< std::string >& values ) // todo? something like comma::join( values, drop )?
     {
         if( filter_id_fields_flags.empty() ) { return comma::join( values, stdin_csv.delimiter ); }
         std::string s;
@@ -296,6 +296,17 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
         }
         for( ; i < values.size(); ++i ) { s += delimiter + values[i]; delimiter = std::string( 1, stdin_csv.delimiter ); }
         return s;
+    }
+
+    static std::string make_output( const char* values ) // quick and dirty for now
+    {
+        if( filter_id_fields_flags.empty() )
+        {
+            std::string s( filter_csv.format().size() );
+            ::memcpy( &s[0], values, filter_csv.format().size() );
+            return s;
+        }
+        COMMA_THROW( comma::exception, "--drop-id: binary support: todo" );
     }
 
     static void read_filter_block()
@@ -319,7 +330,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
             }
             else
             {
-                d.push_back( make_output_string( filter_stream.ascii().last() ) );
+                d.push_back( make_output( filter_stream.ascii().last() ) );
             }
             if( verbose ) { ++count; if( count % 10000 == 0 ) { std::cerr << "csv-join: reading block " << block << "; loaded " << count << " point" << ( count == 1 ? "" : "s" ) << "; hash map size: " << filter_map.size() << std::endl; } }
             //if( ( *filter_transport )->good() && !( *filter_transport )->eof() ) { break; }
@@ -342,7 +353,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
             if( w[k] == "state" ) { got_state = true; filter_state_index = k; continue; }
             if( w[k] == "next_state" ) { got_next_state = true; continue; }
         }
-        if( ( got_state || got_next_state ) && filter_id_fields_discard ) { std::cerr << "csv-join: --discard-id and 'state' or 'next_field' are mutually exclusive" << std::endl; return 1; }
+        if( ( got_state || got_next_state ) && filter_id_fields_discard ) { std::cerr << "csv-join: --drop-id and 'state' or 'next_field' are mutually exclusive" << std::endl; return 1; }
         bool is_state_machine = got_state && got_next_state;
         std::size_t default_input_keys_count = 0;
         bool no_stdin_key_fields = true;
@@ -497,14 +508,14 @@ int main( int ac, char** av )
         radius = options.optional< double >( "--radius,--epsilon" );
         nearest = options.exists( "--nearest" );
         swap_output = options.exists( "--output-swap,--swap-output,--swap" );
-        filter_id_fields_discard = options.exists( "--discard-id-fields,--discard-id" );
+        filter_id_fields_discard = options.exists( "--drop-id-fields,--drop-id" );
         if( nearest && !radius ) { std::cerr << "csv-join: if using --nearest, please specify --radius" << std::endl; return 1; }
         options.assert_mutually_exclusive( "--matching,--not-matching,--flag-matching,--swap-output,--swap,--output-swap" );
         options.assert_mutually_exclusive( "--radius,--epsilon,--first-matching" );
         options.assert_mutually_exclusive( "--radius,--epsilon,--string,-s,--double,--time" );
-        options.assert_mutually_exclusive( "--matching,--not-matching", "--discard-id-fields,--discard-id" );
+        options.assert_mutually_exclusive( "--matching,--not-matching", "--drop-id-fields,--drop-id" );
         stdin_csv = comma::csv::options( options );
-        std::vector< std::string > unnamed = options.unnamed( "--verbose,-v,--first-matching,--matching,--not-matching,--string,-s,--time,--double,--strict,--swap-output,--swap,--output-swap,--nearest,--discard-id-fields,--discard-id", "-.*" );
+        std::vector< std::string > unnamed = options.unnamed( "--verbose,-v,--first-matching,--matching,--not-matching,--string,-s,--time,--double,--strict,--swap-output,--swap,--output-swap,--nearest,--drop-id-fields,--drop-id", "-.*" );
         if( unnamed.empty() ) { std::cerr << "csv-join: please specify the second source" << std::endl; return 1; }
         if( unnamed.size() > 1 ) { std::cerr << "csv-join: expected one file or stream to join, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         comma::name_value::parser parser( "filename", ';', '=', false );
