@@ -41,6 +41,7 @@ static void usage( bool more )
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
+    std::cerr << "    --drop-id-fields,--drop-id; remove id and block fields from filter output (same as if you did csv-join|csv-shuffle)" << std::endl;
     std::cerr << "    --first-matching: output only the first matching record (a bit of hack for now, but we needed it)" << std::endl;
     std::cerr << "    --flag-matching: output all records, with 1 appended to matching records and 0 appended to not-matching records" << std::endl;
     std::cerr << "    --matching: output only matching records from stdin" << std::endl;
@@ -114,6 +115,12 @@ static void usage( bool more )
     std::cerr << "        <input:3>" << std::endl;
     std::cerr << "        <input:3>" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "    --drop-id (same would work in binary as well)" << std::endl;
+    std::cerr << "        > echo 0,1,2,3 | csv-join --fields ,x,,y <( echo 1,A,B,3 )';fields=x,,,y'" << std::endl;
+    std::cerr << "        0,1,2,3,1,A,B,3" << std::endl;
+    std::cerr << "        > echo 0,1,2,3 | csv-join --fields ,x,,y <( echo 1,A,B,3 )';fields=x,,,y' --drop-id" << std::endl;
+    std::cerr << "        0,1,2,3,A,B" << std::endl;
+    std::cerr << std::endl;
     exit( 0 );
 }
 
@@ -126,10 +133,12 @@ static bool not_matching;
 static bool matching;
 static bool flag_matching;
 static bool swap_output;
-static bool filter_id_fields_discard;
 static comma::csv::options stdin_csv;
 static comma::csv::options filter_csv;
-static std::vector< unsigned int > filter_id_fields_flags; // quick and dirty
+static bool filter_id_fields_discard; // todo: super-quick and dirty, put in a separate class
+static std::vector< unsigned int > filter_id_fields_flags; // todo: super-quick and dirty, put in a separate class
+static std::vector< std::pair< unsigned int, unsigned int > > filter_id_fields_offsets; // todo: super-quick and dirty, put in a separate class
+static unsigned int filter_id_fields_size{0}; // todo: super-quick and dirty, put in a separate class
 boost::scoped_ptr< comma::io::istream > filter_transport;
 static comma::uint32 block = 0;
 static boost::optional< double > radius;
@@ -284,7 +293,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
     static typename traits< K, Strict >::map filter_map;
     static input< K > default_input;
 
-    static std::string make_output( const std::vector< std::string >& values ) // todo? something like comma::join( values, drop )?
+    static std::string make_output( const std::vector< std::string >& values ) // todo? implement something like comma::join( values, drop )?
     {
         if( filter_id_fields_flags.empty() ) { return comma::join( values, stdin_csv.delimiter ); }
         std::string s;
@@ -298,15 +307,27 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
         return s;
     }
 
-    static std::string make_output( const char* values ) // quick and dirty for now
+    static std::string make_output( const char* values ) // todo? quick and dirty for now; use csv::binary? or implement something like csv::format::drop_fields...?
     {
+        std::string s( filter_csv.format().size() - filter_id_fields_size, '\0' );
         if( filter_id_fields_flags.empty() )
         {
-            std::string s( filter_csv.format().size() );
             ::memcpy( &s[0], values, filter_csv.format().size() );
-            return s;
         }
-        COMMA_THROW( comma::exception, "--drop-id: binary support: todo" );
+        else
+        {
+            char* p = &s[0];
+            unsigned int t = 0;
+            for( const auto& e: filter_id_fields_offsets ) // todo: quick and dirty, watch performance
+            {
+                unsigned int c = e.first - t;
+                std::memcpy( p, values + t, c );
+                p += c;
+                t = e.first + e.second;
+            }
+            std::memcpy( p, values + t, filter_csv.format().size() - t ); // todo: quick and dirty, watch performance
+        }
+        return s;
     }
 
     static void read_filter_block()
@@ -320,18 +341,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
         static comma::signal_flag is_shutdown( comma::signal_flag::hard );
         while( last->block == block && !is_shutdown )
         {
-            typename traits< K, Strict >::map::mapped_type& d = filter_map[ *last ];
-            if( filter_stream.is_binary() )
-            {
-                typename traits< K, Strict >::map::mapped_type& d = filter_map[ *last ];
-                d.push_back( std::string() );
-                d.back().resize( filter_csv.format().size() );
-                ::memcpy( &d.back()[0], filter_stream.binary().last(), filter_csv.format().size() );
-            }
-            else
-            {
-                d.push_back( make_output( filter_stream.ascii().last() ) );
-            }
+            filter_map[ *last ].push_back( filter_stream.is_binary() ? make_output( filter_stream.binary().last() ) : make_output( filter_stream.ascii().last() ) );
             if( verbose ) { ++count; if( count % 10000 == 0 ) { std::cerr << "csv-join: reading block " << block << "; loaded " << count << " point" << ( count == 1 ? "" : "s" ) << "; hash map size: " << filter_map.size() << std::endl; } }
             //if( ( *filter_transport )->good() && !( *filter_transport )->eof() ) { break; }
             last = filter_stream.read();
@@ -372,6 +382,18 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
                 w[k] = "keys[" + boost::lexical_cast< std::string >( default_input_keys_count ) + "]";
                 if( filter_id_fields_discard ) { filter_id_fields_flags[k] = 1; }
                 ++default_input_keys_count;
+            }
+        }
+        if( filter_csv.binary() ) // todo: super-quick and dirty; move all the --drop-id stuff to a class
+        {
+            for( unsigned int i = 0; i < filter_id_fields_flags.size(); ++i )
+            {
+                if( filter_id_fields_flags[i] )
+                { 
+                    const auto& e = filter_csv.format().offset( i );
+                    filter_id_fields_offsets.push_back( { e.offset, e.size } );
+                    filter_id_fields_size += e.size;
+                }
             }
         }
         bool do_full_join = no_stdin_key_fields && no_filter_key_fields;
@@ -459,7 +481,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
                         if( is_state_machine ) { state = it->first.next_state; }
                         if( flag_matching ) { char match = 1; std::cout.write( &match, 1 ); break; }
                         if( matching ) { break; }
-                        std::cout.write( &( it->second[i][0] ), filter_csv.format().size() );
+                        std::cout.write( &( it->second[i][0] ), it->second[i].size() );
                         if( swap_output ) { std::cout.write( stdin_stream.binary().last(), stdin_csv.format().size() ); }
                         std::cout.flush();
                     }

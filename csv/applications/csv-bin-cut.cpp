@@ -1,32 +1,5 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
 // All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
 
 /// @author dmitry mikhin
 
@@ -289,7 +262,8 @@ namespace {
         // - check for read errors / end of input
         // - write the buffer to stdout
         std::streampos record_start = 0;
-        if ( skip_ ) {
+        if ( skip_ )
+        {
             ifs.seekg( 0, std::ios_base::end );
             std::streampos fsize = ifs.tellg();
             unsigned int nrecords = fsize / irecord_size_;
@@ -307,7 +281,8 @@ namespace {
                 std::streamoff off = fields_[i].input_offset - ( i == 0 ? 0 : fields_[i - 1].input_offset + fields_[i - 1].size );
                 ifs.seekg( off, std::ios_base::cur );
                 ifs.read( &obuf_[ fields_[i].offset ], fields_[i].size );
-                if ( ifs.eof() ) {
+                if ( ifs.eof() )
+                {
                     if ( i == 0 ) { break; }
                     std::cerr << "csv-bin-cut: encountered eof mid-record in '" << fname << "'" << std::endl; exit( 1 );
                 }
@@ -332,12 +307,16 @@ namespace {
     int seeker::process( const std::vector< std::string > & files )
     {
         if ( files.empty() ) { return read_all( std::cin ); }
-        for ( std::vector< std::string >::const_iterator ifile = files.begin(); ifile < files.end(); ++ifile ) {
-            if ( count_max_ >= 0 && count_ >= count_max_ ) { return 0; }
-            if ( *ifile == "-" ) {
+        for ( std::vector< std::string >::const_iterator ifile = files.begin(); ifile < files.end(); ++ifile )
+        {
+            if( count_max_ >= 0 && count_ >= count_max_ ) { return 0; }
+            if( *ifile == "-" )
+            {
                 int rv = read_all( std::cin );
                 if ( rv != 0 ) { return rv; }
-            } else {
+            }
+            else
+            {
                 std::ifstream ifs( &( *ifile )[0], std::ifstream::binary );
                 if ( !ifs.is_open() ) { std::cerr << "csv-bin-cut: cannot open '" << *ifile << "' for reading" << std::endl; exit( 1 ); }
                 int rv = ( force_read_ ? read_all( ifs ) : read_fields( ifs, *ifile ) );
@@ -365,26 +344,16 @@ int main( int ac, char** av )
         {
             if( files.size() == 1 && files[0] != "-" ) // deprecated, left for backward compatibility
             {
-                try
-                {
-                    csv.format( comma::csv::format( files[0] ) );
-                    files.clear();
-                }
-                catch ( comma::exception & )
-                {
-                    // it's not a format string
-                }
+                try { csv.format( comma::csv::format( files[0] ) ); files.clear(); }
+                catch ( comma::exception & ) {} // it's not a format string
             }
         }
         if( !csv.binary() ) { std::cerr << "csv-bin-cut: please specify --binary" << std::endl; exit( 1 ); }
-
         const std::vector< field >& fields = setup_fields( options, csv );
-
         unsigned int skip = options.value< unsigned int >( "--skip", 0 );
         long int count_max = options.value< long int >( "--count", -1 );
         bool flush = options.exists( "--flush" );
         bool force_read = options.exists( "--read-all,--force-read" );
-
         seeker seek( fields, csv, skip, count_max, flush, force_read );
         return seek.process( files );
     }
