@@ -2,7 +2,13 @@ drop_id/ascii[0]="echo 0,1,2,3 | csv-join --drop-id --fields ,x <( echo 1,A,B,C 
 drop_id/ascii[1]="echo 0,1,2,3 | csv-join --drop-id --fields ,x <( echo 1,A,B,C )';fields=x,,,'"
 drop_id/ascii[2]="echo 0,1,2,3 | csv-join --drop-id --fields ,x <( echo A,1,B,C )';fields=,x'"
 drop_id/ascii[3]="echo 0,1,2,3 | csv-join --drop-id --fields ,,,x <( echo A,B,C,3 )';fields=,,,x'"
-
 drop_id/ascii[4]="echo 0,1,2,3 | csv-join --drop-id --fields ,x,,y <( echo 1,A,B,3 )';fields=x,,,y'"
 drop_id/ascii[5]="echo 0,1,2,3 | csv-join --drop-id --fields ,x,,y <( echo 3,A,B,1 )';fields=y,,,x'"
 drop_id/ascii[6]="( echo a,1,b,3; echo c,1,d,3 ) | csv-join --drop-id --fields ,x,,y <( echo 3,A,B,1 )';fields=y,,,x'"
+
+drop_id/binary[0]="echo 0,1,2,3 | csv-to-bin 4ui | csv-join --drop-id --fields ,x --binary=4ui <( echo 1,111,222,333 | csv-to-bin ui,d,ui,d )';fields=x;binary=ui,d,ui,d' | csv-from-bin 4ui,d,ui,d"
+drop_id/binary[1]="echo 0,1,2,3 | csv-to-bin 4ui | csv-join --drop-id --fields ,x,,y --binary=4ui <( echo 1,111,222,3 | csv-to-bin ui,d,ui,ul )';fields=x,,,y;binary=ui,d,ui,ul' | csv-from-bin 4ui,d,ui"
+drop_id/binary[2]="echo 0,1,2,3 | csv-to-bin 4ui | csv-join --drop-id --fields ,x,,y --binary=4ui <( echo 1,111,3,222 | csv-to-bin ui,d,ui,ul )';fields=x,,y,;binary=ui,d,ui,ul' | csv-from-bin 4ui,d,ul"
+drop_id/binary[3]="echo 0,1,2,3 | csv-to-bin 4ui | csv-join --drop-id --fields ,x,,y --binary=4ui <( echo 3,111,1,222 | csv-to-bin ui,d,ui,ul )';fields=y,,x,;binary=ui,d,ui,ul' | csv-from-bin 4ui,d,ul"
+drop_id/binary[4]="echo 0,1,2,3 | csv-to-bin 4ui | csv-join --drop-id --fields ,x,,y --binary=4ui <( echo 111,3,1,222 | csv-to-bin ui,d,ui,ul )';fields=,y,x,;binary=ui,d,ui,ul' | csv-from-bin 4ui,ui,ul"
+drop_id/binary[5]="( echo 111,1,222,3; echo 333,1,444,3 ) | csv-to-bin 4ui | csv-join --drop-id --fields ,x,,y --binary=4ui <( echo 111,3,1,222 | csv-to-bin ui,d,ui,ul )';fields=,y,x,;binary=ui,d,ui,ul' | csv-from-bin 4ui,ui,ul"
