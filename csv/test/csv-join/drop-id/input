@@ -1,0 +1,8 @@
+drop_id/ascii[0]="echo 0,1,2,3 | csv-join --drop-id --fields ,x <( echo 1,A,B,C )';fields=x'"
+drop_id/ascii[1]="echo 0,1,2,3 | csv-join --drop-id --fields ,x <( echo 1,A,B,C )';fields=x,,,'"
+drop_id/ascii[2]="echo 0,1,2,3 | csv-join --drop-id --fields ,x <( echo A,1,B,C )';fields=,x'"
+drop_id/ascii[3]="echo 0,1,2,3 | csv-join --drop-id --fields ,,,x <( echo A,B,C,3 )';fields=,,,x'"
+
+drop_id/ascii[4]="echo 0,1,2,3 | csv-join --drop-id --fields ,x,,y <( echo 1,A,B,3 )';fields=x,,,y'"
+drop_id/ascii[5]="echo 0,1,2,3 | csv-join --drop-id --fields ,x,,y <( echo 3,A,B,1 )';fields=y,,,x'"
+drop_id/ascii[6]="( echo a,1,b,3; echo c,1,d,3 ) | csv-join --drop-id --fields ,x,,y <( echo 3,A,B,1 )';fields=y,,,x'"

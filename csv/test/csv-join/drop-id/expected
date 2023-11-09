@@ -1,0 +1,9 @@
+drop_id/ascii[0]/output="0,1,2,3,A,B,C"
+drop_id/ascii[1]/output="0,1,2,3,A,B,C"
+drop_id/ascii[2]/output="0,1,2,3,A,B,C"
+drop_id/ascii[3]/output="0,1,2,3,A,B,C"
+drop_id/ascii[4]/output="0,1,2,3,A,B"
+drop_id/ascii[5]/output="0,1,2,3,A,B"
+drop_id/ascii[6]/output/line[0]="a,1,b,3,A,B"
+drop_id/ascii[6]/output/line[1]="c,1,d,3,A,B"
+
