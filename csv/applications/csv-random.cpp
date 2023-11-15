@@ -117,6 +117,14 @@ static void usage( bool verbose )
     std::cerr << '\n';
     std::cerr << "\ncsv options:";
     std::cerr << comma::csv::options::usage( "", verbose ) << std::endl;
+    std::cerr << "\nexamples";
+    std::cerr << "\n    generate three floating point random samples from gaussian distribution";
+    std::cerr << "\n        csv-random make --distribution gaussian 0,10 --type 3f";
+    std::cerr << "\n        csv-random make --distribution gaussian 0,10 --type 3f \\";
+    std::cerr << "\n            | csv-paste line-number - \\";
+    std::cerr << "\n            | csv-blocks group --fields scalar --span 1000 \\";
+    std::cerr << "\n            | csv-shuffle --fields=id,x,y,z,block --output-fields=id,block,x,y,z";
+    std::cerr << "\n\n";
     exit( 0 );
 }
 
