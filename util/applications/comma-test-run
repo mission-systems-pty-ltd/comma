@@ -75,14 +75,14 @@ function description_resources()
     cat <<EOF
 --estimate-resources; in serial mode, accumulates performance data using comma-top into 'output/performance.csv' files;
   note: file may be empty for very short tests
---max-parallel,-P=[<N>]; run up to N tests in parallel; default: $max_parallel
+--max-parallel=[<N>]; run up to N tests in parallel; default: $max_parallel
 --max-memory-main=[<N>]; limit on main memory, in MB; default: $max_memory_main
 --max-memory-shared=[<N>]; limit on shared memory, in MB; default: $max_memory_shared
 --max-wait-time=[<time>]; maximal time to wait for available CPUs before failing a test, default: ${max_wait_time}
 --max-run-time=[<time>]; maximal time to wait for a test completion before failing it by force, default: ${max_run_time}
 --max-resources=[<file>]; specify limits for all resources in path-value format; see config files in verbose help;
   explicit options above have precedence
---parallel; run tests in parallel; default: run serially
+--parallel,-p; run tests in parallel; default: run serially
 EOF
 }
 
