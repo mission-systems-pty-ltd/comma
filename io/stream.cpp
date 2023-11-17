@@ -365,13 +365,13 @@ namespace impl {
 
 static std::string usage( const std::string& what, const std::string& dash, unsigned int indent )
 {
-    std::string i( ' ', indent );
+    std::string i( indent, ' ' );
     std::ostringstream oss;
     oss << i << "<" << what << ">" << std::endl;
-    oss << i << "    '-': " << dash << std::endl;
-    oss << i << "    <path>: path to the input file or named pipe" << std::endl;
-    oss << i << "    local:<path>: local linux socket" << std::endl;
-    oss << i << "    tcp:<address>:<port>: tcp socket (not really required, but comes for free)" << std::endl;
+    oss << i << "    '-'                  : " << dash << std::endl;
+    oss << i << "    <path>               : path to input file or named pipe" << std::endl;
+    oss << i << "    local:<path>         : local linux socket" << std::endl;
+    oss << i << "    tcp:<address>:<port> : tcp socket" << std::endl;
     return oss.str();
 }
 
