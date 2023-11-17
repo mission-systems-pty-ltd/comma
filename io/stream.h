@@ -1,5 +1,5 @@
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
+// All rights reserved
 
 /// @author vsevolod vlaskine
 
@@ -93,6 +93,7 @@ struct istream : public stream< std::istream >
     istream( const std::string& name, mode::value mode = mode::ascii, mode::blocking_value blocking = mode::blocking );
     istream( std::istream* s, io::file_descriptor fd, mode::value mode, boost::function< void() > close );
     istream( std::istream* s, io::file_descriptor fd, mode::value mode, mode::blocking_value blocking, boost::function< void() > close );
+    static std::string usage( unsigned int indent = 0 );
 };
 
 /// output stream owner
@@ -101,12 +102,14 @@ struct ostream : public stream< std::ostream >
     ostream( const std::string& name, mode::value mode = mode::ascii, mode::blocking_value blocking = mode::blocking );
     ostream( std::ostream* s, io::file_descriptor fd, mode::value mode, boost::function< void() > close );
     ostream( std::ostream* s, io::file_descriptor fd, mode::value mode, mode::blocking_value blocking, boost::function< void() > close );
+    static std::string usage( unsigned int indent = 0 );
 };
 
 /// input/output stream owner
 struct iostream : public stream< std::iostream >
 {
     iostream( const std::string& name, mode::value mode = mode::ascii, mode::blocking_value blocking = mode::blocking );
+    static std::string usage( unsigned int indent = 0 );
 };
 
 } } // namespace comma { namespace io {

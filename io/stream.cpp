@@ -1,32 +1,5 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
+// All rights reserved
 
 /// @author vsevolod vlaskine
 
@@ -43,6 +16,7 @@
 
 #include <fcntl.h>
 #include <fstream>
+#include <sstream>
 #include <vector>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ip/udp.hpp>
@@ -386,6 +360,26 @@ stream< S >::stream( const std::string& name, mode::value m, mode::blocking_valu
         #endif // #ifdef WIN32
     }
 }
+
+namespace impl {
+
+static std::string usage( const std::string& what, const std::string& dash, unsigned int indent )
+{
+    std::string i( ' ', indent );
+    std::ostringstream oss;
+    oss << i << "<" << what << ">" << std::endl;
+    oss << i << "    '-': " << dash << std::endl;
+    oss << i << "    <path>: path to the input file or named pipe" << std::endl;
+    oss << i << "    local:<path>: local linux socket" << std::endl;
+    oss << i << "    tcp:<address>:<port>: tcp socket (not really required, but comes for free)" << std::endl;
+    return oss.str();
+}
+
+} // namespace impl {
+
+std::string istream::usage( unsigned int indent ) { return impl::usage( "input", "stdin", indent ); }
+std::string ostream::usage( unsigned int indent ) { return impl::usage( "output", "stdout", indent ); }
+std::string iostream::usage( unsigned int indent ) { return impl::usage( "input/output", "n/a", indent ); }
 
 template class stream< std::istream >;
 template class stream< std::ostream >;
