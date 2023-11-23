@@ -19,11 +19,15 @@ class stats
 
         typedef decltype( time_type() - time_type() ) duration_type;
 
-        stats( double ema_alpha = 0.5, comma::uint64 ema_initial_count = 1 ): _ema( ema_alpha, ema_initial_count ), _previous( std::chrono::system_clock::now() ) {}
+        stats( double ema_alpha = 0.5, comma::uint64 ema_initial_count = 1 ): _ema( ema_alpha, ema_initial_count ), _previous_output_time( std::chrono::system_clock::now() ) {}
+
+        stats& operator+=( const time_type& t );
 
         stats& operator++() { return operator+=( std::chrono::system_clock::now() ); }
 
-        stats& operator+=( const time_type& t );
+        stats& touch( const time_type& t ) { _t = t; return *this; }
+
+        stats& touch() { return touch( std::chrono::system_clock::now() ); }
 
         comma::uint64 count() const { return _ema.count(); }
 
@@ -46,7 +50,7 @@ class stats
     private:
         time_type _start;
         time_type _t;
-        time_type _previous;
+        time_type _previous_output_time;
         math::exponential_moving_average< double > _ema;
         double _min{0};
         double _max{0};
@@ -54,7 +58,7 @@ class stats
 
 inline stats& stats::operator+=( const stats::time_type& t ) // todo: move to cpp file
 {
-    if( _t.time_since_epoch() == std::chrono::seconds( 0 ) )
+    if( _start.time_since_epoch() == std::chrono::seconds( 0 ) )
     {
         _start = t;
     }
@@ -83,9 +87,9 @@ inline void stats::output( unsigned int c, std::ostream& os, const std::string& 
 inline void stats::output_every( const stats::duration_type& d, std::ostream& os, const std::string& prefix )
 {
     auto now = std::chrono::system_clock::now();
-    if( ( now - _previous ) < d ) { return; }
+    if( ( now - _previous_output_time ) < d ) { return; }
     output( os, prefix );
-    _previous = now;
+    _previous_output_time = now;
 }
 
 
