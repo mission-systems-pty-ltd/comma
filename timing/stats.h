@@ -15,11 +15,15 @@ namespace comma { namespace timing {
 class stats
 {
     public:
-        stats( double ema_alpha = 0.5, comma::uint64 ema_initial_count = 1 ): _ema( ema_alpha, ema_initial_count ) {}
+        typedef std::chrono::time_point< std::chrono::system_clock > time_type;
+
+        typedef decltype( time_type() - time_type() ) duration_type;
+
+        stats( double ema_alpha = 0.5, comma::uint64 ema_initial_count = 1 ): _ema( ema_alpha, ema_initial_count ), _previous( std::chrono::system_clock::now() ) {}
 
         stats& operator++() { return operator+=( std::chrono::system_clock::now() ); }
 
-        stats& operator+=( const std::chrono::time_point< std::chrono::system_clock >& t );
+        stats& operator+=( const time_type& t );
 
         comma::uint64 count() const { return _ema.count(); }
 
@@ -31,18 +35,30 @@ class stats
 
         double max() const { return _max; }
 
-        void print( unsigned int count = 1, std::ostream& os = std::cerr, const std::string& prefix = "" );
+        void output( std::ostream& os = std::cerr, const std::string& prefix = "" );
+    
+        void output( unsigned int count = 1, std::ostream& os = std::cerr, const std::string& prefix = "" );
+
+        void output_every( const stats::duration_type& d, std::ostream& os = std::cerr, const std::string& prefix = "" );
+
+        double elapsed() const { return double( std::chrono::duration_cast< std::chrono::microseconds >( _t - _start ).count() ) / 1000000; }
 
     private:
-        std::chrono::time_point< std::chrono::system_clock > _t;
+        time_type _start;
+        time_type _t;
+        time_type _previous;
         math::exponential_moving_average< double > _ema;
         double _min{0};
         double _max{0};
 };
 
-inline stats& stats::operator+=( const std::chrono::time_point< std::chrono::system_clock >& t ) // todo: move to cpp file
+inline stats& stats::operator+=( const stats::time_type& t ) // todo: move to cpp file
 {
-    if( _t.time_since_epoch() > std::chrono::seconds( 0 ) )
+    if( _t.time_since_epoch() == std::chrono::seconds( 0 ) )
+    {
+        _start = t;
+    }
+    else
     {
         double d = double( std::chrono::duration_cast< std::chrono::microseconds >( t - _t ).count() ) / 1000000;
         if( _ema.count() == 0 ) { _min = _max = d; }
@@ -53,9 +69,24 @@ inline stats& stats::operator+=( const std::chrono::time_point< std::chrono::sys
     return *this;
 }
 
-inline void stats::print( unsigned int c, std::ostream& os, const std::string& prefix )
+inline void stats::output( std::ostream& os, const std::string& prefix )
 {
-    if( count() > 0 && count() % c == 0 ) { os << ( prefix.empty() ? std::string() : ( prefix + ": " ) ) << "rate: " << rate() << "Hz" << " intervals: min: " << _min << " max: " << _max << " mean: " << _ema() << " count: " << _ema.count() << std::endl; }
+    // freaking hate chrono! os << prefix << "start=" << _start << ";elapsed=" << elapsed() << ";count=" << _ema.count() << ";rate=" << rate() << ";intervals/min=" << _min << ";intervals/max=" << _max << ";intervals/mean=" << _ema() << std::endl;
+    os << prefix << "elapsed=" << elapsed() << ";count=" << _ema.count() << ";rate=" << rate() << ";intervals/min=" << _min << ";intervals/max=" << _max << ";intervals/mean=" << _ema() << std::endl;
 }
+
+inline void stats::output( unsigned int c, std::ostream& os, const std::string& prefix )
+{
+    if( count() > 0 && count() % c == 0 ) { output( os, prefix ); }
+}
+
+inline void stats::output_every( const stats::duration_type& d, std::ostream& os, const std::string& prefix )
+{
+    auto now = std::chrono::system_clock::now();
+    if( ( now - _previous ) < d ) { return; }
+    output( os, prefix );
+    _previous = now;
+}
+
 
 } } // namespace comma { namespace timing {
