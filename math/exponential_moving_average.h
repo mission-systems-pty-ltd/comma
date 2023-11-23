@@ -33,7 +33,6 @@ class exponential_moving_average
         T _value;
 };
 
-
 template < typename T >
 inline exponential_moving_average< T >::exponential_moving_average( double alpha, comma::uint64 initial_count )
     : _alpha( alpha )
@@ -52,6 +51,5 @@ inline exponential_moving_average< T >& exponential_moving_average< T >::operato
     ++_count;
     return *this;
 }
-
 
 } } // namespace comma { namespace math {
