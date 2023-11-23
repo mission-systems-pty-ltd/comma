@@ -6,6 +6,8 @@
 #pragma once
 
 #include <chrono>
+#include <iostream>
+#include <string>
 #include "../math/exponential_moving_average.h"
 
 namespace comma { namespace timing {
@@ -29,6 +31,8 @@ class stats
 
         double max() const { return _max; }
 
+        void print( unsigned int count = 1, std::ostream& os = std::cerr, const std::string& prefix = "" );
+
     private:
         std::chrono::time_point< std::chrono::system_clock > _t;
         math::exponential_moving_average< double > _ema;
@@ -47,6 +51,11 @@ inline stats& stats::operator+=( const std::chrono::time_point< std::chrono::sys
     }
     _t = t;
     return *this;
+}
+
+inline void stats::print( unsigned int c, std::ostream& os, const std::string& prefix )
+{
+    if( count() > 0 && count() % c == 0 ) { os << ( prefix.empty() ? std::string() : ( prefix + ": " ) ) << "rate: " << rate() << "Hz" << " intervals: min: " << _min << " max: " << _max << " mean: " << _ema() << " count: " << _ema.count() << std::endl; }
 }
 
 } } // namespace comma { namespace timing {
