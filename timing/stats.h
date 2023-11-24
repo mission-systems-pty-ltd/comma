@@ -76,7 +76,8 @@ inline stats& stats::operator+=( const stats::time_type& t ) // todo: move to cp
 inline void stats::output( std::ostream& os, const std::string& prefix )
 {
     // freaking hate chrono! os << prefix << "start=" << _start << ";elapsed=" << elapsed() << ";count=" << _ema.count() << ";rate=" << rate() << ";intervals/min=" << _min << ";intervals/max=" << _max << ";intervals/mean=" << _ema() << std::endl;
-    os << prefix << "elapsed=" << elapsed() << ";count=" << _ema.count() << ";rate=" << rate() << ";intervals/min=" << _min << ";intervals/max=" << _max << ";intervals/mean=" << _ema() << std::endl;
+    if( _ema.count() == 0 ) { os << prefix << "elapsed=" << elapsed() << ";count=" << _ema.count() << ";rate=nan;intervals/min=nan;intervals/max=nan;intervals/mean=nan" << std::endl; }
+    else { os << prefix << "elapsed=" << elapsed() << ";count=" << _ema.count() << ";rate=" << rate() << ";intervals/min=" << _min << ";intervals/max=" << _max << ";intervals/mean=" << _ema() << std::endl; }
 }
 
 inline void stats::output( unsigned int c, std::ostream& os, const std::string& prefix )
