@@ -254,7 +254,9 @@ SET( comma_ALL_LIBRARIES
         debug comma_xpath-d
         optimized comma_xpath
         debug comma_name_value-d
-        optimized comma_name_value )
+        optimized comma_name_value
+        debug comma_timing-d
+        optimized comma_timing )
 
 if(WIN32)
     set( comma_ALL_EXTERNAL_LIBRARIES Ws2_32.lib )
