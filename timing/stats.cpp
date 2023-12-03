@@ -46,12 +46,14 @@ void stats::output( std::ostream& os, const std::string& prefix, bool csv ) // t
     }
     else
     {
-        boost::property_tree::ptree t;
-        to_ptree to( t );
-        visiting::apply( to, *this );
-        comma::property_tree::to_path_value( os, t, comma::property_tree::disabled, '=', ';', xpath(), true );
-        os << std::endl;
-        //os << prefix << "elapsed=" << elapsed() << ";count=" << _ema.count() << ";rate=" << rate() << ";intervals/min=" << _min << ";intervals/max=" << _max << ";intervals/mean=" << _ema() << std::endl;
+        // todo! fix! to_ptree: eventually calls ptree.put() which does lexical cast at very high precision
+        //                      the solution: parametrize on precision and/or provide translator for putting value (or getting)
+        // boost::property_tree::ptree t;
+        // to_ptree to( t );
+        // visiting::apply( to, *this );
+        // comma::property_tree::to_path_value( os, t, comma::property_tree::disabled, '=', ';', xpath(), true );
+        // os << std::endl;
+        os << prefix << "elapsed=" << elapsed() << ";count=" << _ema.count() << ";rate=" << rate() << ";intervals/min=" << _min << ";intervals/max=" << _max << ";intervals/mean=" << _ema() << std::endl;
     }
     os << std::setprecision( p ); // todo! not excetion-safe
 }
