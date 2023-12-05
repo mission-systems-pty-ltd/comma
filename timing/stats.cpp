@@ -53,7 +53,7 @@ void stats::output( std::ostream& os, const std::string& prefix, bool csv ) // t
         // visiting::apply( to, *this );
         // comma::property_tree::to_path_value( os, t, comma::property_tree::disabled, '=', ';', xpath(), true );
         // os << std::endl;
-        os << prefix << "elapsed=" << elapsed() << ";count=" << _ema.count() << ";rate=" << rate() << ";intervals/min=" << _min << ";intervals/max=" << _max << ";intervals/mean=" << _ema() << std::endl;
+        os << prefix << "elapsed=" << elapsed() << ";count=" << _ema.count() << ";rate=" << rate() << ";intervals/min=" << _min << ";intervals/max=" << _max << ";intervals/mean=" << ema() << std::endl;
     }
     os << std::setprecision( p ); // todo! not excetion-safe
 }
