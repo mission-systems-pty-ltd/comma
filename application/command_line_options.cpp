@@ -7,7 +7,7 @@
 #include <sstream>
 #include <set>
 #include <unordered_map>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/config/warning_disable.hpp>
 //#include "boost/filesystem.hpp"
 #include "boost/iostreams/stream.hpp"
@@ -239,12 +239,12 @@ namespace impl {
         description_t d;
         bool r = boost::spirit::qi::phrase_parse( s.begin()
                                                 , s.end()
-                                                ,      name[ boost::bind( push_back_, boost::ref( d.names ), _1 ) ]
-                                                    >> *( ',' >> name[ boost::bind( push_back_, boost::ref( d.names ), _1 ) ] )
-                                                    >> -( '=' >> ( value[ boost::bind( got_value, boost::ref( d ), _1 ) ]
-                                                                | optional_value[ boost::bind( got_optional_value, boost::ref( d ), _1 ) ] ) )
-                                                    >> -( ';' >> default_value[ boost::bind( got_default_value, boost::ref( d ), _1 ) ] )
-                                                    >> -( ';' >> *( ascii::space ) >> help[ boost::bind( set_, boost::ref( d.help ), _1 ) ] )
+                                                ,      name[ boost::bind( push_back_, boost::ref( d.names ), boost::placeholders::_1 ) ]
+                                                    >> *( ',' >> name[ boost::bind( push_back_, boost::ref( d.names ), boost::placeholders::_1 ) ] )
+                                                    >> -( '=' >> ( value[ boost::bind( got_value, boost::ref( d ), boost::placeholders::_1 ) ]
+                                                                | optional_value[ boost::bind( got_optional_value, boost::ref( d ), boost::placeholders::_1 ) ] ) )
+                                                    >> -( ';' >> default_value[ boost::bind( got_default_value, boost::ref( d ), boost::placeholders::_1 ) ] )
+                                                    >> -( ';' >> *( ascii::space ) >> help[ boost::bind( set_, boost::ref( d.help ), boost::placeholders::_1 ) ] )
                                                     >> qi::eoi
                                                 , ascii::space );
         if( !r ) { COMMA_THROW( comma::exception, "invalid option description: \"" << s << "\"" ); }

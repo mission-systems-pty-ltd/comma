@@ -1,32 +1,5 @@
-// This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
 // Copyright (c) 2020 Vsevolod Vlaskine
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the University of Sydney nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-// GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
-// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-// BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-// WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-// IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /// @author vsevolod vlaskine
 
@@ -41,7 +14,7 @@
 #include <map>
 #include <type_traits>
 #include <unordered_set>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/function.hpp>
 #include <boost/optional.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
@@ -50,6 +23,7 @@
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include "../../application/verbose.h"
 #include "../../base/exception.h"
+#include "../../base/none.h"
 #include "../../csv/format.h"
 #include "../../csv/options.h"
 #include "../../string/string.h"
@@ -217,8 +191,8 @@ class Values
         std::vector< comma::csv::format::element > input_elements_;
         std::vector< comma::csv::format::element > elements_;
         std::vector< char > buffer_;
-        boost::optional< unsigned int > block_index_;
-        boost::optional< unsigned int > id_index_;
+        boost::optional< unsigned int > block_index_{ comma::silent_none< unsigned int >() };
+        boost::optional< unsigned int > id_index_{ comma::silent_none< unsigned int >() };
         comma::csv::format::element block_element_;
         comma::csv::format::element id_element_;
         unsigned int block_;
@@ -264,15 +238,15 @@ class Values
                 block_element_ = input_format_.offset( *block_index_ );
                 switch( block_element_.type )
                 {
-                    case comma::csv::format::char_t: block_from_bin_ = boost::bind( &Values::from_bin_< char >, _1 ); break;
-                    case comma::csv::format::int8: block_from_bin_ = boost::bind( &Values::from_bin_< char >, _1 ); break;
-                    case comma::csv::format::uint8: block_from_bin_ = boost::bind( &Values::from_bin_< unsigned char >, _1 ); break;
-                    case comma::csv::format::int16: block_from_bin_ = boost::bind( &Values::from_bin_< comma::int16 >, _1 ); break;
-                    case comma::csv::format::uint16: block_from_bin_ = boost::bind( &Values::from_bin_< comma::uint16 >, _1 ); break;
-                    case comma::csv::format::int32: block_from_bin_ = boost::bind( &Values::from_bin_< comma::int32 >, _1 ); break;
-                    case comma::csv::format::uint32: block_from_bin_ = boost::bind( &Values::from_bin_< comma::uint32 >, _1 ); break;
-                    case comma::csv::format::int64: block_from_bin_ = boost::bind( &Values::from_bin_< comma::int64 >, _1 ); break;
-                    case comma::csv::format::uint64: block_from_bin_ = boost::bind( &Values::from_bin_< comma::uint64 >, _1 ); break;
+                    case comma::csv::format::char_t: block_from_bin_ = boost::bind( &Values::from_bin_< char >, boost::placeholders::_1 ); break;
+                    case comma::csv::format::int8: block_from_bin_ = boost::bind( &Values::from_bin_< char >, boost::placeholders::_1 ); break;
+                    case comma::csv::format::uint8: block_from_bin_ = boost::bind( &Values::from_bin_< unsigned char >, boost::placeholders::_1 ); break;
+                    case comma::csv::format::int16: block_from_bin_ = boost::bind( &Values::from_bin_< comma::int16 >, boost::placeholders::_1 ); break;
+                    case comma::csv::format::uint16: block_from_bin_ = boost::bind( &Values::from_bin_< comma::uint16 >, boost::placeholders::_1 ); break;
+                    case comma::csv::format::int32: block_from_bin_ = boost::bind( &Values::from_bin_< comma::int32 >, boost::placeholders::_1 ); break;
+                    case comma::csv::format::uint32: block_from_bin_ = boost::bind( &Values::from_bin_< comma::uint32 >, boost::placeholders::_1 ); break;
+                    case comma::csv::format::int64: block_from_bin_ = boost::bind( &Values::from_bin_< comma::int64 >, boost::placeholders::_1 ); break;
+                    case comma::csv::format::uint64: block_from_bin_ = boost::bind( &Values::from_bin_< comma::uint64 >, boost::placeholders::_1 ); break;
                     default: COMMA_THROW( comma::exception, "expected integer for block id, got format " << input_format_.string() );
                 }
             }
@@ -281,15 +255,15 @@ class Values
                 id_element_ = input_format_.offset( *id_index_ );
                 switch( id_element_.type )
                 {
-                    case comma::csv::format::char_t: id_from_bin_ = boost::bind( &Values::from_bin_< char >, _1 ); break;
-                    case comma::csv::format::int8: id_from_bin_ = boost::bind( &Values::from_bin_< char >, _1 ); break;
-                    case comma::csv::format::uint8: id_from_bin_ = boost::bind( &Values::from_bin_< unsigned char >, _1 ); break;
-                    case comma::csv::format::int16: id_from_bin_ = boost::bind( &Values::from_bin_< comma::int16 >, _1 ); break;
-                    case comma::csv::format::uint16: id_from_bin_ = boost::bind( &Values::from_bin_< comma::uint16 >, _1 ); break;
-                    case comma::csv::format::int32: id_from_bin_ = boost::bind( &Values::from_bin_< comma::int32 >, _1 ); break;
-                    case comma::csv::format::uint32: id_from_bin_ = boost::bind( &Values::from_bin_< comma::uint32 >, _1 ); break;
-                    case comma::csv::format::int64: id_from_bin_ = boost::bind( &Values::from_bin_< comma::int64 >, _1 ); break;
-                    case comma::csv::format::uint64: id_from_bin_ = boost::bind( &Values::from_bin_< comma::uint64 >, _1 ); break;
+                    case comma::csv::format::char_t: id_from_bin_ = boost::bind( &Values::from_bin_< char >, boost::placeholders::_1 ); break;
+                    case comma::csv::format::int8: id_from_bin_ = boost::bind( &Values::from_bin_< char >, boost::placeholders::_1 ); break;
+                    case comma::csv::format::uint8: id_from_bin_ = boost::bind( &Values::from_bin_< unsigned char >, boost::placeholders::_1 ); break;
+                    case comma::csv::format::int16: id_from_bin_ = boost::bind( &Values::from_bin_< comma::int16 >, boost::placeholders::_1 ); break;
+                    case comma::csv::format::uint16: id_from_bin_ = boost::bind( &Values::from_bin_< comma::uint16 >, boost::placeholders::_1 ); break;
+                    case comma::csv::format::int32: id_from_bin_ = boost::bind( &Values::from_bin_< comma::int32 >, boost::placeholders::_1 ); break;
+                    case comma::csv::format::uint32: id_from_bin_ = boost::bind( &Values::from_bin_< comma::uint32 >, boost::placeholders::_1 ); break;
+                    case comma::csv::format::int64: id_from_bin_ = boost::bind( &Values::from_bin_< comma::int64 >, boost::placeholders::_1 ); break;
+                    case comma::csv::format::uint64: id_from_bin_ = boost::bind( &Values::from_bin_< comma::uint64 >, boost::placeholders::_1 ); break;
                     default: COMMA_THROW( comma::exception, "expected integer for block id, got format " << input_format_.string() );
                 }
             }
@@ -456,7 +430,7 @@ namespace Operations
     class Min : public base
     {
         public:
-            void reset() { min_ = boost::optional< T >(); }
+            void reset() { min_ = comma::silent_none< T >(); }
             void push( const char* buf )
             {
                 const T& t = comma::csv::format::traits< T, F >::from_bin( buf );
@@ -468,14 +442,14 @@ namespace Operations
             friend class Centre< T, F >;
             friend class Diameter< T, F >;
             friend class Radius< T, F >;
-            boost::optional< T > min_;
+            boost::optional< T > min_{ comma::silent_none< T >() };
     };
 
     template < typename T, comma::csv::format::types_enum F = comma::csv::format::type_to_enum< T >::value >
     class Max : public base
     {
         public:
-            void reset() { max_ = boost::optional< T >(); }
+            void reset() { max_ = comma::silent_none< T >(); }
             void push( const char* buf )
             {
                 T t = comma::csv::format::traits< T, F >::from_bin( buf );
@@ -487,14 +461,14 @@ namespace Operations
             friend class Centre< T, F >;
             friend class Diameter< T, F >;
             friend class Radius< T, F >;
-            boost::optional< T > max_;
+            boost::optional< T > max_{ comma::silent_none< T >() };
     };
 
     template < typename T, comma::csv::format::types_enum F = comma::csv::format::type_to_enum< T >::value >
     class Sum : public base
     {
         public:
-            void reset() { sum_ = boost::optional< T >(); }
+            void reset() { sum_ = comma::silent_none< T >(); }
             void push( const char* buf )
             {
                 T t = comma::csv::format::traits< T, F >::from_bin( buf );
@@ -503,7 +477,7 @@ namespace Operations
             void calculate( char* buf ) { if( sum_ ) { comma::csv::format::traits< T, F >::to_bin( *sum_, buf ); } }
             base* clone() const { return new Sum< T, F >( *this ); }
         private:
-            boost::optional< T > sum_;
+            boost::optional< T > sum_{ comma::silent_none< T >() };
     };
 
     template < comma::csv::format::types_enum F >
@@ -558,7 +532,7 @@ namespace Operations
             void calculate( char* buf ) { if( count_ > 0 ) { comma::csv::format::traits< T, F >::to_bin( static_cast< T >( *mean_ ), buf ); } }
             base* clone() const { return new Mean< T, F >( *this ); }
         private:
-            boost::optional< typename result_traits< T >::type > mean_;
+            boost::optional< typename result_traits< T >::type > mean_{ comma::silent_none< typename result_traits< T >::type >() };
             std::size_t count_;
     };
 
@@ -588,7 +562,7 @@ namespace Operations
                 if( values_.empty() ) { return; }
                 std::size_t count = values_.size();
                 comma::verbose << "calculating " << percentile_*100 << "th percentile using ";
-                T value;
+                T value = comma::csv::format::traits< T, F >::zero();
                 typename std::multiset< T >::iterator it = values_.begin();
                 switch( method_ )
                 {
@@ -776,7 +750,7 @@ namespace Operations
             void reset() { moments_.reset(); first_ = boost::none; }
         private:
             Moment< T, 2 > moments_;
-            boost::optional<T> first_;
+            boost::optional< T > first_{ comma::silent_none< T >() };
             bool sample_;
     };
 
@@ -797,7 +771,7 @@ namespace Operations
             void reset() { stddev_.reset(); first_ = boost::none; }
         private:
             Stddev< double, F > stddev_;
-            boost::optional<boost::posix_time::ptime> first_;
+            boost::optional< boost::posix_time::ptime > first_{ comma::silent_none< boost::posix_time::ptime >() };
     };
     
     template < typename T, comma::csv::format::types_enum F = comma::csv::format::type_to_enum< T >::value >
@@ -819,7 +793,7 @@ namespace Operations
             void reset() { moments_.reset(); first_ = boost::none; }
         private:
             Moment< T, 2 > moments_;
-            boost::optional<T> first_;
+            boost::optional< T > first_{ comma::silent_none< T >() };
             bool sample_;
     };
 
@@ -840,7 +814,7 @@ namespace Operations
             void reset() { variance_.reset(); first_ = boost::none; }
         private:
             Variance< double, F > variance_;
-            boost::optional< boost::posix_time::ptime > first_;
+            boost::optional< boost::posix_time::ptime > first_{ comma::silent_none< boost::posix_time::ptime >() };
     };
     
     template < typename T, comma::csv::format::types_enum F = comma::csv::format::type_to_enum< T >::value >
@@ -872,7 +846,7 @@ namespace Operations
             void reset() { moments_.reset(); first_ = boost::none; }
         private:
             Moment< T, 3 > moments_;
-            boost::optional< T > first_;
+            boost::optional< T > first_{ comma::silent_none< T >() };
             bool sample_;
     };
 
@@ -893,7 +867,7 @@ namespace Operations
             void reset() { skew_.reset(); first_ = boost::none; }
         private:
             Skew< double, F > skew_;
-            boost::optional< boost::posix_time::ptime > first_;
+            boost::optional< boost::posix_time::ptime > first_{ comma::silent_none< boost::posix_time::ptime >() };
     };
     
     template < typename T, comma::csv::format::types_enum F = comma::csv::format::type_to_enum< T >::value >
@@ -936,7 +910,7 @@ namespace Operations
             void reset() { moments_.reset(); first_ = boost::none; }
         private:
             Moment< T, 4 > moments_;
-            boost::optional< T > first_;
+            boost::optional< T > first_{ comma::silent_none< T >() };
             bool sample_;
             bool excess_;
     };
@@ -958,7 +932,7 @@ namespace Operations
             void reset() { kurtosis_.reset(); first_ = boost::none; }
         private:
             Kurtosis< double, F > kurtosis_;
-            boost::optional< boost::posix_time::ptime > first_;
+            boost::optional< boost::posix_time::ptime > first_{ comma::silent_none< boost::posix_time::ptime >() };
     };
     
     template < typename T > struct Diff
@@ -1311,7 +1285,7 @@ int main( int ac, char** av )
             operations_parameters[i].type = Operations::from_name( p[0] );
             if( p.size() == 2 ){ operations_parameters[i].options = comma::split( p[1], ':' ); }
         }
-        boost::optional< comma::csv::format > format;
+        boost::optional< comma::csv::format > format = { comma::silent_none< comma::csv::format >() };
         if( csv.binary() ) { format = csv.format(); }
         else if( options.exists( "--format" ) ) { format = comma::csv::format( options.value< std::string >( "--format" ) ); }
         boost::scoped_ptr< ascii_input > ascii;
