@@ -3,8 +3,6 @@
 /// @author vsevolod vlaskine
 
 #include <iostream>
-#include <boost/bind.hpp>
-#include <boost/function.hpp>
 #include <boost/property_tree/info_parser.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/property_tree/json_parser.hpp>
