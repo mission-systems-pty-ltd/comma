@@ -100,7 +100,8 @@ struct endian : public packed::field< endian< Endianness, Size, Signed, Floating
         uint_of_same_size i = ( !Floating && Signed && ( storage[ Endianness == little ? size - 1 : 0 ] & 0x80 ) ) ? -1 : 0;
         ::memcpy( reinterpret_cast< char * >( &i ) + ( Endianness == little ? 0 : sizeof( uint_of_same_size ) - size ), storage, size );
         i = convert< Endianness >::to_host( i );
-        return *( reinterpret_cast< type* >( &i ) );
+        const type* p = reinterpret_cast< type* >( &i );
+        return *p;
     }
 
     const endian& operator=( const endian& rhs ) { return base_type::operator=( rhs ); }

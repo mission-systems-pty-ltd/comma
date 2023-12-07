@@ -7,6 +7,7 @@
 
 #include <limits>
 #include <string.h>
+#include <memory>
 #include <type_traits>
 #include <boost/type_traits.hpp>
 #include "../packed/field.h"
@@ -31,17 +32,17 @@ struct bits : public packed::field< bits< B, Default >, B, sizeof( typename comm
     bits( integer_type v ) { operator=( v ); }
     bits( type t ) : base_type( t ) {}
 
-    static type default_value() { static const integer_type d = Default; type t; ::memcpy( &t, &d, size ); return t; }
+    static type default_value() { static const integer_type d = Default; type t; std::memcpy( ( char* )( &t ), ( const char* )( &d ), size ); return t; }
 
-    static void pack( char* storage, type value ) { ::memcpy( storage, &value, size ); }
+    static void pack( char* storage, type value ) { std::memcpy( storage, ( const char* )( &value ), size ); }
 
-    static type unpack( const char* storage ) { type t; ::memcpy( &t, storage, size ); return t; }
+    static type unpack( const char* storage ) { type t; std::memcpy( ( char* )( &t ), storage, size ); return t; }
 
     const bits& operator=( const bits& rhs ) { return base_type::operator=( rhs ); }
 
     const bits& operator=( type rhs ) { return base_type::operator=( rhs ); }
 
-    const bits& operator=( integer_type rhs ) { type t; ::memcpy( &t, &rhs, size ); return base_type::operator=( t ); }
+    const bits& operator=( integer_type rhs ) { type t; std::memcpy( ( char* )( &t ), &rhs, size ); return base_type::operator=( t ); }
 
     type& fields() { return *( reinterpret_cast< type* >( this ) ); }
 
@@ -83,18 +84,17 @@ struct reversed_bits : public packed::field< reversed_bits< B, Default >, B, siz
     reversed_bits( integer_type v ) { operator=( v ); }
     reversed_bits( type t ) : base_type( t ) {}
 
-    static type default_value() { static const integer_type d = Default; type t; ::memcpy( &t, &d, size ); return t; }
+    static type default_value() { static const integer_type d = Default; type t; std::memcpy( ( char* )( &t ), ( const char* )( &d ), size ); return t; }
 
-    static void pack( char* storage, type t ) { integer_type v; ::memcpy( &v, &t, size ); reverse_bits( v ); ::memcpy( storage, &v, size ); }
+    static void pack( char* storage, type t ) { integer_type v; std::memcpy( &v, &t, size ); reverse_bits( v ); std::memcpy( storage, ( const char* )( &v ), size ); }
 
-    static type unpack( const char* storage ) { integer_type v; ::memcpy( &v, storage, size ); reverse_bits( v ); type t; ::memcpy( &t, &v, size ); return t; }
+    static type unpack( const char* storage ) { integer_type v; std::memcpy( &v, storage, size ); reverse_bits( v ); type t; std::memcpy( ( char* )( &t ), ( const char* )( &v ), size ); return t; }
 
     const reversed_bits& operator=( const reversed_bits& rhs ) { return base_type::operator=( rhs ); }
 
     const reversed_bits& operator=( type rhs ) { return base_type::operator=( rhs ); }
 
-    const reversed_bits& operator=( integer_type rhs ) { type t; ::memcpy( &t, &rhs, size ); return base_type::operator=( t ); }
-
+    const reversed_bits& operator=( integer_type rhs ) { type t; std::memcpy( ( char* )( &t ), ( const char* )( &rhs ), size ); return base_type::operator=( t ); }
 };
 
 } } // namespace comma { namespace packed {
