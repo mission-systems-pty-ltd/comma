@@ -49,11 +49,11 @@ namespace comma {
 
 #define COMMA_ASSERT( condition, strmessage ) { if( !( condition ) ) { COMMA_THROW( comma::exception, "condition: '" << #condition << "' is false; " << strmessage ); } }
 
-#define COMMA_ASSERT_BRIEF( condition, strmessage ) { if( !( condition ) ) { COMMA_THROW_BRIEF( comma::exception, "condition: '" << #condition << "' is false; " << strmessage ); } }
+#define COMMA_ASSERT_BRIEF( condition, strmessage ) { if( !( condition ) ) { COMMA_THROW_BRIEF( comma::exception, strmessage ); } }
 
 #define COMMA_THROW_IF( condition, strmessage ) { if( condition ) { COMMA_THROW( comma::exception, "throw because condition: '" << #condition << "' is true; " << strmessage ); } }
 
-#define COMMA_THROW_BRIEF_IF( condition, strmessage ) { if( condition ) { COMMA_THROW_BRIEF( comma::exception, "throw because condition: '" << #condition << "' is true; " << strmessage ); } }
+#define COMMA_THROW_BRIEF_IF( condition, strmessage ) { if( condition ) { COMMA_THROW_BRIEF( comma::exception, strmessage ); } }
 
 class exception : public std::runtime_error
 {
