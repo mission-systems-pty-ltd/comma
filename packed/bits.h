@@ -5,9 +5,8 @@
 
 #pragma once
 
+#include <cstring>
 #include <limits>
-#include <string.h>
-#include <memory>
 #include <type_traits>
 #include <boost/type_traits.hpp>
 #include "../packed/field.h"
