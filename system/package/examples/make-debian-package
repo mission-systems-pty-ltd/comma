@@ -1,7 +1,9 @@
 #!/bin/bash
 
 home=$1
-[[ -n "$home" ]] || { echo "usage: $0 <dir>" >&2; exit 1; }
+[[ -n "$home" ]] || { echo "usage: $0 <packaging-dir>" >&2; exit 1; }
+home=$( realpath $home )
+mkdir -p $home/src
 cd $home/src
 git clone https://gitlab.com/orthographic/comma.git
 build_dir=$home/src/comma/build
@@ -23,17 +25,20 @@ cmake $home/src/comma \
     -Dcomma_BUILD_ZEROMQ=OFF \
     -Dcomma_build_io_rabbit_cat=OFF
 make -j
-sudo make install
+make install -j
 
+# make vodoo debian directories
 mkdir -p $build_dir/debian/tmp/usr/lib
 mkdir -p $build_dir/debian/tmp/DEBIAN
 
-# Copy installed lib files, and debian configuration files to our build directory for packaging
+# copy installed lib files (because for some reason comma cmake does not install libraries at the right place; todo: fix!)
 cp -r $build_dir/lib/x86_64-linux-gnu $build_dir/debian/tmp/usr/lib
-rsync -r $package_root/debian/* debian/
 
-# Generate the control file
+# copy debian configuration files to our build directory for packaging
+cp -r $home/src/comma/debian/* $build_dir/debian
+
+# generate the control file
 dpkg-gencontrol -pcomma
 
-# Build the package
+# build the package
 dpkg --build $build_dir/debian/tmp $build_dir
