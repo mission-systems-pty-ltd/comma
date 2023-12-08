@@ -1,0 +1,37 @@
+#!/bin/bash
+
+package_root=$HOME/src/comma
+build_root=$HOME/src/comma_build
+
+mkdir -p $build_root/comma
+cd $build_root/comma
+cmake $package_root \
+    -DCMAKE_INSTALL_PREFIX=$package_root/debian/tmp/usr \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_SHARED_LIBS=ON \
+    -DBUILD_PYTHON_PACKAGES=OFF \
+    -DADD_PYTHON_PACKAGES_TO_RPM=OFF \
+    -DBUILD_TESTS=OFF \
+    -DINSTALL_BASH_COMPLETION=OFF \
+    -DINSTALL_TESTS=OFF \
+    -Dcomma_INSTALL_LIB_DIR=lib/x86_64-linux-gnu \
+    -Dcomma_INSTALL_PACKAGE_DIR=lib/x86_64-linux-gnu/cmake/comma \
+    -Dcomma_INSTALL_RUN_POST_INSTALL=OFF \
+    -Dcomma_BUILD_XML=OFF \
+    -Dcomma_BUILD_ZEROMQ=OFF \
+    -Dcomma_build_io_rabbit_cat=OFF
+make -j
+sudo make install
+
+mkdir -p $build_root/comma/debian/tmp/usr/lib
+mkdir -p $build_root/comma/debian/tmp/DEBIAN
+
+# Copy installed lib files, and debian configuration files to our build directory for packaging
+cp -r $build_root/comma/lib/x86_64-linux-gnu debian/tmp/usr/lib
+rsync -r $package_root/debian/* debian/
+
+# Generate the control file
+dpkg-gencontrol -pcomma
+
+# Build the package
+dpkg --build debian/tmp $build_root/comma
