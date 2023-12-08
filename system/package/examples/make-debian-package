@@ -9,8 +9,11 @@ git clone https://gitlab.com/orthographic/comma.git
 build_dir=$home/src/comma/build
 mkdir -p $build_dir
 cd $build_dir
+
+# if you want the library path to be lib/x86_64-linux-gnu
+# see target build in src/comma/debian/rules
 cmake $home/src/comma \
-    -DCMAKE_INSTALL_PREFIX=$home/src/comma/debian/tmp/usr \
+    -DCMAKE_INSTALL_PREFIX=$build_dir/debian/tmp/usr \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_SHARED_LIBS=ON \
     -DBUILD_PYTHON_PACKAGES=OFF \
@@ -18,8 +21,6 @@ cmake $home/src/comma \
     -DBUILD_TESTS=OFF \
     -DINSTALL_BASH_COMPLETION=OFF \
     -DINSTALL_TESTS=OFF \
-    -Dcomma_INSTALL_LIB_DIR=lib/x86_64-linux-gnu \
-    -Dcomma_INSTALL_PACKAGE_DIR=lib/x86_64-linux-gnu/cmake/comma \
     -Dcomma_INSTALL_RUN_POST_INSTALL=OFF \
     -Dcomma_BUILD_XML=OFF \
     -Dcomma_BUILD_ZEROMQ=OFF \
@@ -27,15 +28,11 @@ cmake $home/src/comma \
 make -j
 make install -j
 
-# make vodoo debian directories
-mkdir -p $build_dir/debian/tmp/usr/lib
+# make vodoo debian directory
 mkdir -p $build_dir/debian/tmp/DEBIAN
 
-# copy installed lib files (because for some reason comma cmake does not install libraries at the right place; todo: fix!)
-cp -r $build_dir/lib/x86_64-linux-gnu $build_dir/debian/tmp/usr/lib
-
 # copy debian configuration files to our build directory for packaging
-cp -r $home/src/comma/debian/* $build_dir/debian
+cp -r $home/src/comma/debian/control $home/src/comma/debian/changelog $home/src/comma/debian/copyright $build_dir/debian
 
 # generate the control file
 dpkg-gencontrol -pcomma
