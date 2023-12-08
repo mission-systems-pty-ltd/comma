@@ -1,12 +1,14 @@
 #!/bin/bash
 
-package_root=$HOME/src/comma
-build_root=$HOME/src/comma_build
-
-mkdir -p $build_root/comma
-cd $build_root/comma
-cmake $package_root \
-    -DCMAKE_INSTALL_PREFIX=$package_root/debian/tmp/usr \
+home=$1
+[[ -n "$home" ]] || { echo "usage: $0 <dir>" >&2; exit 1; }
+cd $home/src
+git clone https://gitlab.com/orthographic/comma.git
+build_dir=$home/src/comma/build
+mkdir -p $build_dir
+cd $build_dir
+cmake $home/src/comma \
+    -DCMAKE_INSTALL_PREFIX=$home/src/comma/debian/tmp/usr \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_SHARED_LIBS=ON \
     -DBUILD_PYTHON_PACKAGES=OFF \
@@ -23,15 +25,15 @@ cmake $package_root \
 make -j
 sudo make install
 
-mkdir -p $build_root/comma/debian/tmp/usr/lib
-mkdir -p $build_root/comma/debian/tmp/DEBIAN
+mkdir -p $build_dir/debian/tmp/usr/lib
+mkdir -p $build_dir/debian/tmp/DEBIAN
 
 # Copy installed lib files, and debian configuration files to our build directory for packaging
-cp -r $build_root/comma/lib/x86_64-linux-gnu debian/tmp/usr/lib
+cp -r $build_dir/lib/x86_64-linux-gnu $build_dir/debian/tmp/usr/lib
 rsync -r $package_root/debian/* debian/
 
 # Generate the control file
 dpkg-gencontrol -pcomma
 
 # Build the package
-dpkg --build debian/tmp $build_root/comma
+dpkg --build $build_dir/debian/tmp $build_dir
