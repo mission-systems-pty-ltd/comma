@@ -10,12 +10,6 @@
 
 namespace comma { namespace csv {
 
-class options;
-
-/// convenience method: make output options from input options (propagate binary setting, flush); todo? add more parameters?
-template < typename T >
-static options make_output_options( const options& input_options );
-
 /// a helper class to extract csv-related command line options
 class options
 {
@@ -28,6 +22,11 @@ class options
 
         /// constructor
         options( const comma::command_line_options& options, const std::string& defaultFields = "", bool full_xpath = true );
+
+        /// make options from input options (propagate binary setting, flush, delimiter, etc)
+        /// typical use: make output stream options compatible with the input stream options
+        template < typename T >
+        static options make_same_kind( const options& rhs );
 
         /// return usage to incorporate into application usage
         static std::string usage( const std::string& default_fields = "", bool verbose = true );
@@ -98,11 +97,15 @@ class options
 };
 
 template < typename T >
-inline options make_output_options( const options& input_options )
+inline options options::make_same_kind( const options& rhs )
 {
     options o;
-    o.flush = input_options.flush;
-    if( input_options.binary() ) { o.format( format::value< T >() ); }
+    o.flush = rhs.flush;
+    o.delimiter = rhs.delimiter;
+    o.flush = rhs.flush;
+    o.precision = rhs.precision;
+    o.quote = rhs.quote;
+    if( rhs.binary() ) { o.format( format::value< T >() ); }
     return o;
 }
 
