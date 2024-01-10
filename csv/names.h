@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <algorithm>
+#include <vector>
+#include <unordered_map>
 #include "../csv/impl/to_names.h"
 #include "../string/string.h"
 #include "../visiting/apply.h"
@@ -13,20 +16,20 @@ namespace comma { namespace csv {
 
 /// the most generic way: return default column names for
 /// a given sample and given subtree in comma-separated xpaths
-template < typename S >
-std::vector< std::string > names( const std::string& paths, bool useFullxpath = true, const S& sample = S() );
+template < typename S > std::vector< std::string > names( const std::string& paths, bool useFullxpath = true, const S& sample = S() );
 
 /// return default column names for a given sample and given subtree in comma-separated xpaths
-template < typename S >
-std::vector< std::string > names( const char* paths, bool useFullxpath = true, const S& sample = S() ) { return names( std::string( paths ), useFullxpath, sample ); }
+template < typename S > std::vector< std::string > names( const char* paths, bool useFullxpath = true, const S& sample = S() ) { return names( std::string( paths ), useFullxpath, sample ); }
 
 /// return default column names for a given sample
-template < typename S >
-std::vector< std::string > names( bool useFullxpath, const S& sample = S() ) { return names( "", useFullxpath, sample ); }
+template < typename S > std::vector< std::string > names( bool useFullxpath, const S& sample = S() ) { return names( "", useFullxpath, sample ); }
 
 /// return default column names for a given sample, use full xpath
-template < typename S >
-std::vector< std::string > names( const S& sample = S() ) { return names( true, sample ); }
+template < typename S > std::vector< std::string > names( const S& sample = S() ) { return names( true, sample ); }
+
+template < typename S > std::unordered_map< std::string, std::string > leaves( const std::string& paths, const S& sample = S() );
+template < typename S > std::unordered_map< std::string, std::string > leaves( const char* paths, const S& sample = S() ) { return leaves( std::string( paths ), sample ); }
+template < typename S > std::unordered_map< std::string, std::string > leaves( const S& sample = S() ) { return leaves( "", sample ); }
 
 /// return true, if all the fields from subset present in fields
 /// @todo make a generic subset application
@@ -53,6 +56,16 @@ inline std::vector< std::string > names( const std::string& paths, bool useFullx
         }
     }
     return r;
+}
+
+template < typename S >
+inline std::unordered_map< std::string, std::string > leaves( const std::string& paths, const S& sample )
+{
+    const auto& flat = names< S >( paths, false, sample );
+    const auto& full = names< S >( paths, true, sample );
+    std::unordered_map< std::string, std::string > m;
+    std::transform( flat.begin(), flat.end(), full.begin(), std::inserter( m, m.end() ), []( const std::string& k, const std::string& v ) { return std::make_pair( k, v ); } );
+    return m;
 }
 
 } } // namespace comma { namespace csv {

@@ -245,6 +245,14 @@ TEST( csv, names )
     EXPECT_EQ( join( names< test_struct >( ",,,,no-such-field,,," ), ',' ), ",,,,no-such-field,,," );
 }
 
+TEST( csv, leaves )
+{
+    {
+        std::unordered_map< std::string, std::string > m{ { "A", "D/A" }, { "X", "D/B/X" }, { "Y", "D/B/Y" } };
+        EXPECT_EQ( leaves< test_struct >( "D" ), m );
+    }
+}
+
 TEST( csv, names_optional_element )
 {
     EXPECT_EQ( join( names< struct_with_optional_element >(), ',' ), "x,nested/X,nested/Y" );
