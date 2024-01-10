@@ -139,4 +139,18 @@ std::string common_front( const std::string& s, const std::string& t, char delim
     return s.substr( 0, i );
 }
 
+std::string replace( const std::string& s, const std::unordered_map< std::string, std::string >& aliases )
+{
+    if( aliases.empty() ) { return s; }
+    auto v = comma::split( s, ',', true );
+    std::string f, comma;
+    for( const auto& e: v )
+    {
+        auto i = aliases.find( e );
+        f += comma + ( i == aliases.end() ? e : i->second );
+        comma = ",";
+    }
+    return f;
+}
+
 } // namespace comma {

@@ -28,6 +28,7 @@
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <gtest/gtest.h>
+#include "../../application/command_line_options.h"
 #include "../../csv/options.h"
 
 namespace comma {
@@ -98,5 +99,38 @@ TEST( options, has_paths )
         EXPECT_FALSE( csv.has_some_of_paths( "c" ) );
     }
 }
-    
+
+TEST( options, aliases )
+{
+    {
+        comma::csv::options csv( comma::command_line_options( std::vector< std::string >{ "" } ), std::unordered_map< std::string, std::string >() );
+        EXPECT_EQ( csv.fields, "" );
+    }
+    {
+        comma::csv::options csv( comma::command_line_options( std::vector< std::string >{ "" } ), { { "b", "x/y/b" } }, "a,b,b" );
+        EXPECT_EQ( csv.fields, "a,x/y/b,x/y/b" );
+    }
+    {
+        comma::csv::options csv( comma::command_line_options( std::vector< std::string >{ "", "--fields=a,b,c" } ), std::unordered_map< std::string, std::string >() );
+        EXPECT_EQ( csv.fields, "a,b,c" );
+    }
+    {
+        comma::csv::options csv( comma::command_line_options( std::vector< std::string >{ "", "--fields=,b,c" } ), { { "b", "x/y/b" } } );
+        EXPECT_EQ( csv.fields, ",x/y/b,c" );
+    }
+    {
+        comma::csv::options csv( comma::command_line_options( std::vector< std::string >{ "", "--fields=a,b," } ), { { "b", "x/y/b" } } );
+        EXPECT_EQ( csv.fields, "a,x/y/b," );
+    }
+    {
+        comma::csv::options csv( comma::command_line_options( std::vector< std::string >{ "", "--fields=a,,b" } ), { { "b", "x/y/b" } } );
+        EXPECT_EQ( csv.fields, "a,,x/y/b" );
+    }
+    {
+        comma::csv::options csv( comma::command_line_options( std::vector< std::string >{ "", "--fields=a,b,c" } ), { { "b", "x/y/b" } } );
+        EXPECT_EQ( csv.fields, "a,x/y/b,c" );
+    }
+    // todo: more tests
+}
+
 } // namespace comma {

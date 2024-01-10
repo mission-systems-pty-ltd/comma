@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <unordered_map>
 #include <boost/optional.hpp>
 #include "../application/command_line_options.h"
 #include "format.h"
@@ -18,10 +19,13 @@ class options
         options();
 
         /// constructor
-        options( int argc, char** argv, const std::string& defaultFields = "", bool full_xpath = true );
+        options( int argc, char** argv, const std::string& default_fields = "", bool full_xpath = true );
 
         /// constructor
-        options( const comma::command_line_options& options, const std::string& defaultFields = "", bool full_xpath = true );
+        options( const comma::command_line_options& options, const std::string& default_fields = "", bool full_xpath = true );
+
+        /// constructor
+        options( const comma::command_line_options& options, const std::unordered_map< std::string, std::string >& field_aliases, const std::string& default_fields = "" );
 
         /// make options from input options (propagate binary setting, flush, delimiter, etc)
         /// typical use: make output stream options compatible with the input stream options

@@ -49,10 +49,14 @@ bool options::binary() const { return static_cast< bool >( format_ ); }
 
 namespace impl {
 
-inline static void init( comma::csv::options& csv_options, const comma::command_line_options& options, const std::string& defaultFields, bool full_xpath )
+static void init( comma::csv::options& csv_options
+                , const comma::command_line_options& options
+                , const std::string& default_fields
+                , bool full_xpath
+                , const std::unordered_map< std::string, std::string >& field_aliases )
 {
     csv_options.full_xpath = full_xpath;
-    csv_options.fields = options.value( "--fields,-f", defaultFields );
+    csv_options.fields = comma::replace( options.value( "--fields,-f", default_fields ), field_aliases );
     if( options.exists( "--binary,-b" ) )
     {
         boost::optional< std::string > format = options.optional< std::string >( "--binary,-b" );
@@ -75,11 +79,13 @@ inline static void init( comma::csv::options& csv_options, const comma::command_
 
 } // namespace impl {
 
-options::options() : full_xpath( true ), delimiter( ',' ), precision( 12 ), quote( '"' ), flush( false ) {}
+options::options(): full_xpath( true ), delimiter( ',' ), precision( 12 ), quote( '"' ), flush( false ) {}
 
-options::options( int argc, char** argv, const std::string& defaultFields, bool full_xpath ) { impl::init( *this, comma::command_line_options( argc, argv ), defaultFields, full_xpath ); }
+options::options( int argc, char** argv, const std::string& default_fields, bool full_xpath ): options( comma::command_line_options( argc, argv ), default_fields, full_xpath ) {}
 
-options::options( const comma::command_line_options& options, const std::string& defaultFields, bool full_xpath ) { impl::init( *this, options, defaultFields, full_xpath ); }
+options::options( const comma::command_line_options& options, const std::string& default_fields, bool full_xpath ) { impl::init( *this, options, default_fields, full_xpath, {} ); }
+
+options::options( const comma::command_line_options& options, const std::unordered_map< std::string, std::string >& field_aliases, const std::string& default_fields ) { impl::init( *this, options, default_fields, true, field_aliases ); }
 
 std::string options::usage( const std::string& default_fields, bool verbose )
 {

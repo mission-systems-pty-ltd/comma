@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include "../string/split.h"
 
@@ -43,6 +44,9 @@ std::string join( const A& a, std::size_t size, char delimiter );
 /// join array elements into a string with given delimiter
 template < typename A >
 inline std::string join( const A& a, char delimiter ) { return join( a, a.size(), delimiter ); }
+
+/// convenience function, somewhat overfit: split, replace aliased entries, join
+std::string replace( const std::string& s, const std::unordered_map< std::string, std::string >& aliases );
 
 template < typename A >
 inline std::string join( const A& a, std::size_t size, char delimiter )
