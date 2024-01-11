@@ -116,7 +116,7 @@ class stream
     public:
         stream( const std::string& address ): address_( address ) {}
         virtual ~stream() {}
-        virtual unsigned int read_available( std::vector< char >& buffer, unsigned int max_count ) = 0;
+        virtual unsigned int read_available( std::vector< char >& buffer, unsigned int max_count, bool blocking ) = 0;
         virtual comma::io::file_descriptor fd() const = 0;
         virtual bool eof() const = 0;
         virtual bool empty() const = 0;
@@ -150,7 +150,7 @@ class udp_stream : public stream
         
         comma::io::file_descriptor fd() const { return socket_->native_handle(); }
         
-        unsigned int read_available( std::vector< char >& buffer, unsigned int )
+        unsigned int read_available( std::vector< char >& buffer, unsigned int, bool )
         {
             boost::system::error_code error;
             std::size_t size = socket_->receive( boost::asio::buffer( buffer ), 0, error );
@@ -188,10 +188,10 @@ class any_stream : public stream
         
         comma::io::file_descriptor fd() const { return ( *istream_ ).fd(); }
         
-        unsigned int read_available( std::vector< char >& buffer, unsigned int max_count )
+        unsigned int read_available( std::vector< char >& buffer, unsigned int max_count, bool blocking )
         {
             std::size_t available = available_();
-            if( available == 0 ) { return 0; }
+            if( !blocking && available == 0 ) { return 0; }
             if( binary_ )
             {
                 unsigned int count = size_ ? available / size_ : 0;
@@ -396,7 +396,7 @@ int main( int argc, char** argv )
                 unsigned int countdown = round_robin_count;
                 while( !streams[i].eof() ) // todo? check is_shutdown here as well?
                 {
-                    unsigned int bytes_read = streams[i].read_available( buffer, countdown ? countdown : max_count );
+                    unsigned int bytes_read = streams[i].read_available( buffer, countdown ? countdown : max_count, ordered );
                     if( bytes_read == 0 ) { break; }
                     done = false;
                     if( size && bytes_read % size != 0 ) { std::cerr << "io-cat: stream " << i << " (" << streams[i].address() << "): expected " << size << " byte(s), got only " << ( bytes_read % size ) << std::endl; return 1; }
