@@ -66,19 +66,47 @@ void usage( bool verbose = false )
     std::cerr << "options" << std::endl;
     std::cerr << "    --exit-on-first-closed,-e: exit, if one of the streams finishes" << std::endl;
     std::cerr << "    --flush,--unbuffered,-u: flush output" << std::endl;
+    std::cerr << "    --verbose,-v: more output" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "output order options" << std::endl;
+    std::cerr << "    --blocking: blocking read on each source in order sources appear on command line" << std::endl;
+    std::cerr << "                output modes" << std::endl;
+    std::cerr << "                    default:     output all records from the first source, then all" << std::endl;
+    std::cerr << "                                 records from the seconds source, etc" << std::endl;
+    std::cerr << "                    round robin: output <n> records from the first source, then <n>" << std::endl;
+    std::cerr << "                                 records from the seconds source, etc; note that if" << std::endl;
+    std::cerr << "                                 the number of records in a source is not divisible by <n>" << std::endl;
+    std::cerr << "                                 then the last records groups may contain fewer than <n>" << std::endl;
+    std::cerr << "                                 records" << std::endl;
+    std::cerr << "                attention: if you want full control over record ordering, use --blocking" << std::endl;
+    std::cerr << "                           when using subshells or sockets as io-cat inputs " << std::endl;
+    if( verbose )
+    {
+        std::cerr << "                           io-cat will open such inputs, but they may not be immediately" << std::endl;
+        std::cerr << "                           ready for reading, which may lead to records being read from sources" << std::endl;
+        std::cerr << "                           out of order;  use --blocking to avoid this problem" << std::endl;
+        std::cerr << "                           e.g. in the following command without --blocking one subshell may" << std::endl;
+        std::cerr << "                           start slightly earlier than the other and thus likely to output" << std::endl;
+        std::cerr << "                           not what you expect or want - add --blocking to fix that:" << std::endl;
+        std::cerr << "                               io-cat --round-robin=1 \\" << std::endl;
+        std::cerr << "                                      <( csv-paste line-number value=a | head -n100 ) \\" << std::endl;
+        std::cerr << "                                      <( csv-paste line-number value=b | head -n100 )" << std::endl;
+    }
+    else
+    {
+        std::cerr << "                           run io-cat --help --verbose for more details" << std::endl;
+    }
     std::cerr << "    --head=[<n>]; output first <n> records and exit without waiting for record n+1" << std::endl;
     std::cerr << "                  a workaround for sparse input fed into: io-cat ... | head -n10, which" << std::endl;
     std::cerr << "                  not exit until io-cat receives record 11" << std::endl;
     std::cerr << "                  instead run: io-cat ... --head=10 (use --flush if you don't want buffering" << std::endl;
-    std::cerr << "    --round-robin=[<number of packets>]: todo: only for multiple inputs: read not more" << std::endl;
+    std::cerr << "    --round-robin=[<number of packets>]: only for multiple inputs: read not more" << std::endl;
     std::cerr << "                                         than <number of packets> from an input at once," << std::endl;
     std::cerr << "                                         before checking other inputs" << std::endl;
     std::cerr << "                                         if not specified, read from each input" << std::endl;
     std::cerr << "                                         all available data" << std::endl;
     std::cerr << "                                         ignored for udp streams, where one full udp" << std::endl;
     std::cerr << "                                         packet at a time is always read" << std::endl;
-    std::cerr << "    --size,-s=[<size>]: packet size, if binary data (required only for multiple sources)" << std::endl;
-    std::cerr << "    --verbose,-v: more output" << std::endl;
     std::cerr << std::endl;
     std::cerr << "connect options" << std::endl;
     std::cerr << "    --connect-max-attempts,--connect-attempts,--attempts,--max-attempts=<n>; default=1; number of attempts to reconnect or 'unlimited'" << std::endl;
@@ -263,9 +291,9 @@ static unsigned int connect_max_attempts;
 static boost::posix_time::time_duration connect_period;
 static bool permissive;
 
-static bool ready( const boost::ptr_vector< stream >& streams, comma::io::select& select, bool connected_all_we_could, bool ordered )
+static bool ready( const boost::ptr_vector< stream >& streams, comma::io::select& select, bool connected_all_we_could, bool blocking )
 {
-    if( ordered )
+    if( blocking )
     {
         select.check();
         bool r{connected_all_we_could};
@@ -349,17 +377,17 @@ int main( int argc, char** argv )
         comma::signal_flag is_shutdown;
         verbose = options.exists( "--verbose,-v" );
         unsigned int size = options.value( "--size,-s", 0 );
-        bool ordered = options.exists( "--sources-ordered,--ordered" );
+        bool blocking = options.exists( "--blocking" );
         bool unbuffered = options.exists( "--flush,--unbuffered,-u" );
         bool exit_on_first_closed = options.exists( "--exit-on-first-closed,-e" );
-        options.assert_mutually_exclusive( "--sources-ordered,--ordered", "--permissive" );
+        options.assert_mutually_exclusive( "--blocking", "--permissive" );
         std::string connect_max_attempts_string = options.value< std::string >( "--connect-max-attempts,--connect-attempts,--attempts,--max-attempts", "1" );
         connect_max_attempts = connect_max_attempts_string == "unlimited" ? 0 : boost::lexical_cast< unsigned int >( connect_max_attempts_string );
         double connect_period_seconds = options.value( "--connect-period", 1.0 );
         connect_period = boost::posix_time::milliseconds( static_cast<unsigned int>(std::floor( connect_period_seconds * 1000 ) ));
         permissive = options.exists( "--permissive" );
         bool has_head = options.exists( "--head" );
-        const std::vector< std::string >& unnamed = options.unnamed( "--sources-ordered,--ordered,--permissive,--exit-on-first-closed,-e,--flush,--unbuffered,-u,--verbose,-v", "-.+" );
+        const std::vector< std::string >& unnamed = options.unnamed( "--blocking,--permissive,--exit-on-first-closed,-e,--flush,--unbuffered,-u,--verbose,-v", "-.+" );
         #ifdef WIN32
         if( size || ( unnamed.size() == 1 && !has_head ) ) { _setmode( _fileno( stdout ), _O_BINARY ); }
         //if( size ) { _setmode( _fileno( stdout ), _O_BINARY ); }
@@ -376,7 +404,7 @@ int main( int argc, char** argv )
         {
             if( is_shutdown ) { if( verbose ) { std::cerr << "io-cat: received signal" << std::endl; }; break; }
             bool connected_all_we_could = try_connect( streams, select );
-            if( !ready( streams, select, connected_all_we_could, ordered ) ) { continue; }
+            if( !ready( streams, select, connected_all_we_could, blocking ) ) { continue; }
             done = true;
             for( unsigned int i = 0; i < streams.size(); ++i )
             {
@@ -396,7 +424,7 @@ int main( int argc, char** argv )
                 unsigned int countdown = round_robin_count;
                 while( !streams[i].eof() ) // todo? check is_shutdown here as well?
                 {
-                    unsigned int bytes_read = streams[i].read_available( buffer, countdown ? countdown : max_count, ordered );
+                    unsigned int bytes_read = streams[i].read_available( buffer, countdown ? countdown : max_count, blocking );
                     if( bytes_read == 0 ) { break; }
                     done = false;
                     if( size && bytes_read % size != 0 ) { std::cerr << "io-cat: stream " << i << " (" << streams[i].address() << "): expected " << size << " byte(s), got only " << ( bytes_read % size ) << std::endl; return 1; }
