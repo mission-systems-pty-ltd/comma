@@ -215,7 +215,7 @@ class any_stream : public stream
         
         bool empty() const { return !connected() || closed_ || available_() == 0; }
         
-        bool eof() const { return !( *istream_ )->good() || ( *istream_ )->eof(); }
+        bool eof() const { return bool( istream_ ) && ( !( *istream_ )->good() || ( *istream_ )->eof() ); }
         
         void close() { closed_ = true; ( *istream_ ).close(); }
         
@@ -226,7 +226,8 @@ class any_stream : public stream
         void connect()
         {
             if( istream_ ) { return; }
-            istream_.reset( new comma::io::istream( address_, comma::io::mode::binary, comma::io::mode::non_blocking ) );
+            auto blocking_mode = false ? comma::io::mode::non_blocking : comma::io::mode::blocking; // todo? expose on command line?
+            istream_.reset( new comma::io::istream( address_, comma::io::mode::binary, blocking_mode ) );
             if( ( *istream_ )() != &std::cin ) { return; }
             std::ios_base::sync_with_stdio( false ); // unsync to make rdbuf()->in_avail() working
             std::cin.tie( NULL ); // std::cin is tied to std::cout by default
@@ -262,8 +263,16 @@ static unsigned int connect_max_attempts;
 static boost::posix_time::time_duration connect_period;
 static bool permissive;
 
-static bool ready( const boost::ptr_vector< stream >& streams, comma::io::select& select, bool connected_all_we_could )
+static bool ready( const boost::ptr_vector< stream >& streams, comma::io::select& select, bool connected_all_we_could, bool ordered )
 {
+    if( ordered )
+    {
+        select.check();
+        bool r{connected_all_we_could};
+        for( unsigned int i = 0; i < streams.size() && r; ++i ) { r = streams[i].closed() || select.read().ready( streams[i].fd() ); }
+        if( !r ) { boost::this_thread::sleep( boost::posix_time::milliseconds( 10 ) ); } // quick and dirty
+        return r;
+    }
     for( unsigned int i = 0; i < streams.size(); ++i ) { if( !streams[i].empty() ) { select.check(); return true; } }
     if( !select.read()().empty() ) { return select.wait( boost::posix_time::seconds( 1 ) ) > 0; }
     if( connected_all_we_could ) { return true; }
@@ -340,15 +349,17 @@ int main( int argc, char** argv )
         comma::signal_flag is_shutdown;
         verbose = options.exists( "--verbose,-v" );
         unsigned int size = options.value( "--size,-s", 0 );
+        bool ordered = options.exists( "--sources-ordered,--ordered" );
         bool unbuffered = options.exists( "--flush,--unbuffered,-u" );
         bool exit_on_first_closed = options.exists( "--exit-on-first-closed,-e" );
+        options.assert_mutually_exclusive( "--sources-ordered,--ordered", "--permissive" );
         std::string connect_max_attempts_string = options.value< std::string >( "--connect-max-attempts,--connect-attempts,--attempts,--max-attempts", "1" );
         connect_max_attempts = connect_max_attempts_string == "unlimited" ? 0 : boost::lexical_cast< unsigned int >( connect_max_attempts_string );
         double connect_period_seconds = options.value( "--connect-period", 1.0 );
         connect_period = boost::posix_time::milliseconds( static_cast<unsigned int>(std::floor( connect_period_seconds * 1000 ) ));
         permissive = options.exists( "--permissive" );
         bool has_head = options.exists( "--head" );
-        const std::vector< std::string >& unnamed = options.unnamed( "--permissive,--exit-on-first-closed,-e,--flush,--unbuffered,-u,--verbose,-v", "-.+" );
+        const std::vector< std::string >& unnamed = options.unnamed( "--sources-ordered,--ordered,--permissive,--exit-on-first-closed,-e,--flush,--unbuffered,-u,--verbose,-v", "-.+" );
         #ifdef WIN32
         if( size || ( unnamed.size() == 1 && !has_head ) ) { _setmode( _fileno( stdout ), _O_BINARY ); }
         //if( size ) { _setmode( _fileno( stdout ), _O_BINARY ); }
@@ -365,7 +376,7 @@ int main( int argc, char** argv )
         {
             if( is_shutdown ) { if( verbose ) { std::cerr << "io-cat: received signal" << std::endl; }; break; }
             bool connected_all_we_could = try_connect( streams, select );
-            if( !ready( streams, select, connected_all_we_could ) ) { continue; }
+            if( !ready( streams, select, connected_all_we_could, ordered ) ) { continue; }
             done = true;
             for( unsigned int i = 0; i < streams.size(); ++i )
             {
@@ -373,7 +384,7 @@ int main( int argc, char** argv )
                 if( streams[i].closed() ) { continue; }
                 bool ready = select.read().ready( streams[i].fd() );
                 bool empty = streams[i].empty();
-                if( empty && ( streams[i].eof() || ready ) )
+                if( empty && ( ready || streams[i].eof() ) )
                 { 
                     if( verbose ) { std::cerr << "io-cat: stream " << i << " (" << unnamed[i] << "): closed" << std::endl; }
                     select.read().remove( streams[i].fd() );
