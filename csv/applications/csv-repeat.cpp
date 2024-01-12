@@ -224,9 +224,9 @@ int main( int ac, char** av )
             if( options.exists( "--timeout,-t" ) ) { std::cerr << "csv-repeat: for --timestamped: --timeout not supported" << std::endl; return 1; }
             comma::csv::input_stream< input_t > istream( std::cin, csv );
             boost::posix_time::ptime last;
-            if( options.exists( "--from" ) ) { last = boost::posix_time::from_iso_string( options.value< std::string >( "--at-least-from,--from" ) ); }
+            if( options.exists( "--at-least-from,--from" ) ) { last = boost::posix_time::from_iso_string( options.value< std::string >( "--at-least-from,--from" ) ); }
             boost::posix_time::ptime to;
-            if( options.exists( "--to" ) ) { to = boost::posix_time::from_iso_string( options.value< std::string >( "--at-least-to,--to" ) ); }
+            if( options.exists( "--at-least-to,--to" ) ) { to = boost::posix_time::from_iso_string( options.value< std::string >( "--at-least-to,--to" ) ); }
             std::string last_record;
             if( csv.binary() ) { last_record = std::string( csv.format().size(), 0 ); }
             auto pass = [&]( const output_t& )
