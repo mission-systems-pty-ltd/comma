@@ -46,7 +46,7 @@ std::string verbosity::usage()
     const char* s = R"verbosity(verbosity options
     --verbose,-v; more output on stderr, same as --verbosity=1
     --verbosity=<n>; default=0; verbosity level from 0 to 5 or 'none'(0), 'low'(1), 'medium'(2), 'high'(3)
-    --v,--vv,--vvv,--vvvv,--vvvvv; same as --verbosity from 1 to 5
+    -v,-vv,-vvv,-vvvv,-vvvvv; same as --verbosity from 1 to 5
 )verbosity";
     return s;
 }
@@ -59,7 +59,7 @@ std::ostream& say( std::ostream& os, unsigned int verbosity )
 void command_line_options::_init_verbose( const std::string& path )
 {
     comma::application::detail::verbosity_level = verbosity::from_string( value< std::string >( "--verbosity", exists( "--verbose,-v" ) ? "1" : "0" ) );
-    static const std::array< std::string, 5 > v{{ "--vvvvv", "--vvvv", "--vvv", "--vv", "--v" }}; // add more verbosity levels if some strange people need them
+    static const std::array< std::string, 5 > v{{ "-vvvvv", "-vvvv", "-vvv", "-vv", "-v" }}; // add more verbosity levels if some strange people need them
     for( unsigned int i = 0; i < v.size() && comma::application::detail::verbosity_level + i < v.size(); ++i )
     {
         if( exists( v[i] ) ) { comma::application::detail::verbosity_level = v.size() - i; break; }
@@ -119,8 +119,8 @@ bool command_line_options::exists( const std::string& name ) const
 std::vector< std::string > command_line_options::unnamed( const std::string& valueless_options, const std::string& options_with_values ) const
 {
 
-    std::vector< std::string > valueless{ "--verbose", "-v", "--v", "--vv", "--vvv", "--vvvv", "--vvvvv" };
-    if( !valueless_options.empty() ) { valueless = split( valueless_options + ",--verbose,-v,--v,--vv,--vvv,--vvvv,--vvvvv", ',' ); }
+    std::vector< std::string > valueless{ "--verbose", "-v", "-vv", "-vvv", "-vvvv", "-vvvvv" };
+    if( !valueless_options.empty() ) { valueless = split( valueless_options + ",--verbose,-v,-vv,-vvv,-vvvv,-vvvvv", ',' ); }
     std::vector< std::string > valued = split( options_with_values, ',' );
     std::vector< std::string > w;
     for( unsigned int i = 1; i < argv_.size(); ++i )
