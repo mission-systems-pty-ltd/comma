@@ -31,15 +31,19 @@ struct verbosity
 ///          say() << "some message";
 ///      will print on stderr:
 ///          my-application: some message
-std::ostream& say( std::ostream& os = std::cerr );
+std::ostream& say( std::ostream& os, unsigned int verbosity=0 );
+inline std::ostream& say( unsigned int verbosity=0 ) { return say( std::cerr, verbosity ); }
 
+/// convenience alias of say( verbosity )
 /// @example
 ///      in my-application
 ///          saymore() << "some debug message";
+///          saymore( 2 ) << "some debug message at medium verbosity";
+///          saymore( comma::verbosity::medium ) << "some debug message at medium verbosity";
 ///      if run as: my-application --verbose, will print on stderr:
 ///          my-application: some debug message
 ///      define verbosity level on command line as --verbosity-level=3 or equivalently --vvv
-std::ostream& saymore( unsigned int verbosity = verbosity::low );
+inline std::ostream& saymore( unsigned int verbosity=comma::verbosity::low ) { return say( verbosity ); }
     
 /// a simple command line options class
 class command_line_options

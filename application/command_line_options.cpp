@@ -51,9 +51,11 @@ std::string verbosity::usage()
     return s;
 }
 
-std::ostream& say( std::ostream& os ) { os << comma::application::detail::name << ": "; return os; }
-
-std::ostream& saymore( unsigned int verbosity ) { return say( verbosity < comma::application::detail::verbosity_level ? comma::application::detail::null_ostream : std::cerr ); }
+std::ostream& say( std::ostream& os, unsigned int verbosity )
+{ 
+    ( verbosity > comma::application::detail::verbosity_level ? comma::application::detail::null_ostream : os ) << comma::application::detail::name << ": ";
+    return os;
+}
 
 void command_line_options::_init_verbose( const std::string& path )
 {
