@@ -4,6 +4,7 @@
 /// @author vsevolod vlaskine
 
 #include <algorithm>
+#include <array>
 #include <sstream>
 #include <set>
 #include <unordered_map>
@@ -24,20 +25,46 @@ namespace comma {
 namespace application { namespace detail {
 
 static std::string name;
-static bool verbose = false;
+static unsigned int verbosity_level{0};
 static boost::iostreams::stream< boost::iostreams::null_sink > null_ostream( ( boost::iostreams::null_sink() ) );
 
 } } // namespace application { namespace detail {
 
+unsigned int verbosity::level() { return comma::application::detail::verbosity_level; }
+
+unsigned int verbosity::from_string( const std::string& s )
+{
+    return   s == "none"   ? verbosity::none
+           : s == "low"    ? verbosity::low
+           : s == "medium" ? verbosity::medium
+           : s == "high"   ? verbosity::high
+           : boost::lexical_cast< unsigned int >( s );
+}
+
+std::string verbosity::usage()
+{
+    const char* s = R"verbosity(verbosity options
+    --verbose,-v; more output on stderr, same as --verbosity=1
+    --verbosity=<n>; default=0; verbosity level from 0 to 5 or 'none'(0), 'low'(1), 'medium'(2), 'high'(3)
+    --v,--vv,--vvv,--vvvv,--vvvvv; same as --verbosity from 1 to 5
+)verbosity";
+    return s;
+}
+
 std::ostream& say( std::ostream& os ) { os << comma::application::detail::name << ": "; return os; }
 
-std::ostream& saymore() { return say( comma::application::detail::verbose ? std::cerr : comma::application::detail::null_ostream ); }
+std::ostream& saymore( unsigned int verbosity ) { return say( verbosity < comma::application::detail::verbosity_level ? comma::application::detail::null_ostream : std::cerr ); }
 
-void command_line_options::_init_verbose( bool v, const std::string& path )
+void command_line_options::_init_verbose( const std::string& path )
 {
-    comma::verbose.init( v, path ); // todo: deprecate, use comma::say() and comma::saymore() instead
+    comma::application::detail::verbosity_level = verbosity::from_string( value< std::string >( "--verbosity", exists( "--verbose,-v" ) ? "1" : "0" ) );
+    static const std::array< std::string, 5 > v{{ "--vvvvv", "--vvvv", "--vvv", "--vv", "--v" }}; // add more verbosity levels if some strange people need them
+    for( unsigned int i = 0; i < v.size() && comma::application::detail::verbosity_level + i < v.size(); ++i )
+    {
+        if( exists( v[i] ) ) { comma::application::detail::verbosity_level = v.size() - i; break; }
+    }
+    comma::verbose.init( comma::application::detail::verbosity_level > 0, path ); // todo: deprecate, use comma::say() and comma::saymore() instead
     comma::application::detail::name = comma::split( path, '/' ).back(); // boost::filesystem::basename( path );
-    comma::application::detail::verbose = v;
 }
 
 command_line_options::command_line_options( int argc, char ** argv, boost::function< void( bool ) > usage, boost::function< void( int, char** ) > bash_completion )
@@ -45,19 +72,17 @@ command_line_options::command_line_options( int argc, char ** argv, boost::funct
     argv_.resize( argc );
     for( int i = 0; i < argc; ++i ) { argv_[i] = argv[i]; }
     _fill_map( argv_ );
-    bool v = exists("--verbose,-v");
-    _init_verbose( v, argv[0] );
+    _init_verbose( argv[0] );
     if( bash_completion && exists( "--bash-completion" ) ) { bash_completion( argc, argv ); exit( 0 ); }
-    if( usage && exists( "--help,-h" ) ) { usage( v ); exit( 0 ); }
+    if( usage && exists( "--help,-h" ) ) { usage( comma::application::detail::verbosity_level > 0 ); exit( 0 ); }
 }
 
 command_line_options::command_line_options( const std::vector< std::string >& argv, boost::function< void( bool ) > usage )
     : argv_( argv )
 {
     _fill_map( argv_ );
-    bool v = exists( "--verbose,-v" );
-    _init_verbose( v, argv[0] );
-    if( usage && exists( "--help,-h" ) ) { usage( v ); exit( 1 ); }
+    _init_verbose( argv[0] );
+    if( usage && exists( "--help,-h" ) ) { usage( comma::application::detail::verbosity_level > 0 ); exit( 1 ); }
 }
 
 std::string command_line_options::escaped( const std::string& s ) // quick and dirty
@@ -86,16 +111,15 @@ const std::vector< std::string >& command_line_options::argv() const { return ar
 bool command_line_options::exists( const std::string& name ) const
 {
     std::vector< std::string > names = comma::split( name, ',' );
-    for( std::size_t i = 0; i < names.size(); ++i )
-    {
-        if( map_.find( names[i] ) != map_.end() ) { return true; }
-    }
+    for( const std::string& n: names ) { if( map_.find( n ) != map_.end() ) { return true; } }
     return false;
 }
 
 std::vector< std::string > command_line_options::unnamed( const std::string& valueless_options, const std::string& options_with_values ) const
 {
-    std::vector< std::string > valueless = split( valueless_options, ',' );
+
+    std::vector< std::string > valueless{ "--verbose", "-v", "--v", "--vv", "--vvv", "--vvvv", "--vvvvv" };
+    if( !valueless_options.empty() ) { valueless = split( valueless_options + ",--verbose,-v,--v,--vv,--vvv,--vvvv,--vvvvv", ',' ); }
     std::vector< std::string > valued = split( options_with_values, ',' );
     std::vector< std::string > w;
     for( unsigned int i = 1; i < argv_.size(); ++i )

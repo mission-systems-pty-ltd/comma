@@ -18,6 +18,14 @@
 
 namespace comma {
 
+struct verbosity
+{
+    enum levels { none=0, low=1, medium=2, high=3 }; // todo: more levels and or aliases like warning, info, debug - but when choosing names, remember: verbosity is not the same as logging!
+    static unsigned int level();
+    static unsigned int from_string( const std::string& s );
+    static std::string usage();
+};
+
 /// @example
 ///      in my-application:
 ///          say() << "some message";
@@ -30,7 +38,8 @@ std::ostream& say( std::ostream& os = std::cerr );
 ///          saymore() << "some debug message";
 ///      if run as: my-application --verbose, will print on stderr:
 ///          my-application: some debug message
-std::ostream& saymore();
+///      define verbosity level on command line as --verbosity-level=3 or equivalently --vvv
+std::ostream& saymore( unsigned int verbosity = verbosity::low );
     
 /// a simple command line options class
 class command_line_options
@@ -154,7 +163,7 @@ class command_line_options
         map_type_ map_;
         std::vector< std::string > names_;
         void _fill_map( const std::vector< std::string >& v );
-        void _init_verbose( bool v, const std::string& path );
+        void _init_verbose( const std::string& path );
         template < typename T > static T lexical_cast_( const std::string& s );
         
 };
@@ -166,9 +175,8 @@ template< typename Iterator > inline command_line_options::command_line_options(
     _fill_map( argv_ );
     if( usage && exists( "--help,-h" ) )
     {
-        bool v = exists( "--verbose,-v" );
-        _init_verbose( v, *begin );
-        usage( v );
+        _init_verbose( *begin );
+        usage( verbosity::level() > 0 );
         exit( 0 );
     }
 }
