@@ -9,3 +9,6 @@ dashes/a_b_c='1'
 path_with_dashes/a_b_c='1'
 subscript/a_b_0='1'
 subscript_followed_by_path/a_b_0_c='1'
+a="123"
+b="123"
+c="123"
