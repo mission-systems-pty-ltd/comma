@@ -39,6 +39,9 @@ readonly comma_name_value_util_include_guard_=1
     || source $( type -p comma-log-util ) \
     || { echo "$name: cannot source 'comma-log-util' from '$BASH_SOURCE'" >&2; exit 1; }
 
+# usage: echo <path-value pairs> | comma_path_value_mangle [<delimiter>] [<default_value>]
+#        <delimiter>: default='_'
+#
 # take path-value pairs, mangle path to turn them into bash
 # expressions, e.g:
 # echo hello/world=5 | comma_path_value_mangle
@@ -53,7 +56,7 @@ readonly comma_name_value_util_include_guard_=1
 # local hello_world="5"
 function comma_path_value_mangle()
 {
-    local delimiter="$1"
+    local delimiter="$1" default_value="$2"
     [[ -n "$delimiter" ]] || delimiter="_"
     local path name value
     while IFS='=' read -r path value || [[ -n "$path" ]]; do
@@ -64,6 +67,7 @@ function comma_path_value_mangle()
         name=${name//]/}        # just remove trailing ] since it's always followed by / or the end of the line
         value="${value#\"}"
         value="${value%\"}"
+        [[ -n "$value" || -z "$default_value" ]] || value="$default_value"
         echo "$name='$value'"
     done
 }
