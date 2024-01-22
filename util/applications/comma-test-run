@@ -278,7 +278,7 @@ function error_()
         local bold=$( tput bold )
         local red=$( tput setaf 1 )
         local normal=$( tput sgr0 )
-        echo -e "$bold$red$*$normal" >&2
+        echo -e "${bold}${red}$*${normal}" >&2
     fi
 }
 export -f error_
@@ -286,7 +286,7 @@ export -f error_
 function error_and_junit_()
 {
     local -r error_and_junit_formatted=$( echo -e "$1" )
-    error_ $( head -1 <<< "$error_and_junit_formatted" )
+    error_ $( head -1 <<< "comma-test-run: $error_and_junit_formatted" )
     local -r error_and_junit_formatted_tail="$( tail -n +2 <<< "$error_and_junit_formatted" )"
     [[ -z "$error_and_junit_formatted_tail" ]] || cat >&2 <<< "$error_and_junit_formatted_tail"
     if [[ -n "$options_output_junit" && -d 'output' ]] ; then cat >> 'output/junit.failure.log' <<< "$error_and_junit_formatted" ; fi
@@ -595,8 +595,8 @@ function run_and_match_test()
 
     local env_variables="PYTHONPATH,XDG_RUNTIME_DIR,DISPLAY"
     
-    rm -rf output || { error_and_junit_ "Unable to remove 'output' directory" ; return 1 ; }
-    mkdir -p output || { error_and_junit_ "Unable to make 'output' directory" ; return 1 ; }
+    rm -rf output || { error_and_junit_ "unable to remove 'output' directory" ; return 1 ; }
+    mkdir -p output || { error_and_junit_ "unable to make 'output' directory" ; return 1 ; }
 
     {
         if [[ -f ./input ]] ; then cat ./input ; fi | comma_env --import "$env_variables" "$test_exec" "$path" $verbose $options_test_option
@@ -648,9 +648,9 @@ function run_and_match_test()
         if [[ -n "$options_always_expected" ]] ; then
             for global_expected in $options_always_expected ; do match_expected "$global_expected" "is_global" ; done
         fi
-        echo -e '\n# After comma-test-match in comma-test-run' >> 'output/stdout.log'
+        echo -e '\n# after comma-test-match in comma-test-run' >> 'output/stdout.log'
         if [[ -n "$match_output" ]]; then
-            error_and_junit_ "Test output does not match expected:\nexpected output:\n$match_output"
+            error_and_junit_ "test output does not match expected:\nexpected output:\n$match_output"
             return 1
         fi
     }

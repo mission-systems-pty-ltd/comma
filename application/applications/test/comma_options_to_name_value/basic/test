@@ -2,6 +2,6 @@
 
 set -e
 
-echo '--var=[<var>]; default=10; help text' | comma-options-to-name-value "--var=1" | sed 's|"||g; s|^|given_value/|'
-echo '--var=[<var>]; default=10; help text' | comma-options-to-name-value "" | sed 's|"||g; s|^|default_value/|'
+echo '--var=<var>; default=10; help text' | comma-options-to-name-value "--var=1" | sed 's|"||g; s|^|given_value/|'
+echo '--var=<var>; default=10; help text' | comma-options-to-name-value  | sed 's|"||g; s|^|default_value/|'
 
