@@ -34,26 +34,33 @@ unsigned int verbosity::level() { return comma::application::detail::verbosity_l
 
 unsigned int verbosity::from_string( const std::string& s )
 {
-    return   s == "none"   ? verbosity::none
-           : s == "low"    ? verbosity::low
-           : s == "medium" ? verbosity::medium
-           : s == "high"   ? verbosity::high
+    return   s == "none"                     ? verbosity::none
+           : s == "low"    || s == "error"   ? verbosity::low
+           : s == "medium" || s == "warning" ? verbosity::medium
+           : s == "high"   || s == "info"    ? verbosity::high
+           : s == "debug"  || s == "extreme" ? verbosity::extreme
            : boost::lexical_cast< unsigned int >( s );
+}
+
+const std::string verbosity::to_string( unsigned int v )
+{
+    static const std::array< std::string, 5 > s{{ "", "low", "medium", "high", "extreme" }};
+    return v < s.size() ? s[v] : ""; // output lexical cast?
 }
 
 std::string verbosity::usage()
 {
     const char* s = R"verbosity(verbosity options
     --verbose,-v; more output on stderr, same as --verbosity=1
-    --verbosity=<n>; default=0; verbosity level from 0 to 5 or 'none'(0), 'low'(1), 'medium'(2), 'high'(3)
+    --verbosity=<n>; default=0; verbosity level from 0 to 5 or 'none'(0), 'low'|'error'(1), 'medium'|'warning'(2), 'high'|'info'(3), 'extreme'|'debug'(4)
     -v,-vv,-vvv,-vvvv,-vvvvv; same as --verbosity from 1 to 5
 )verbosity";
     return s;
 }
 
-std::ostream& say( std::ostream& os, unsigned int verbosity )
+std::ostream& say( std::ostream& os, unsigned int verbosity, const std::string& prefix )
 {
-    return ( verbosity > comma::application::detail::verbosity_level ? comma::application::detail::null_ostream : os ) << comma::application::detail::name << ": ";
+    return ( verbosity > comma::application::detail::verbosity_level ? comma::application::detail::null_ostream : os ) << comma::application::detail::name << ": " << ( prefix.empty() ? std::string() : ( prefix + ": " ) );
 }
 
 void command_line_options::_init_verbose( const std::string& path )

@@ -20,9 +20,10 @@ namespace comma {
 
 struct verbosity
 {
-    enum levels { none=0, low=1, medium=2, high=3 }; // todo: more levels and or aliases like warning, info, debug - but when choosing names, remember: verbosity is not the same as logging!
+    enum levels { none=0, low=1, medium=2, high=3, extreme=4 }; // todo: more levels and or aliases like warning, info, debug - but when choosing names, remember: verbosity is not the same as logging!
     static unsigned int level();
     static unsigned int from_string( const std::string& s );
+    static const std::string to_string( unsigned int v );
     static std::string usage();
 };
 
@@ -31,8 +32,14 @@ struct verbosity
 ///          say() << "some message";
 ///      will print on stderr:
 ///          my-application: some message
-std::ostream& say( std::ostream& os, unsigned int verbosity=0 );
-inline std::ostream& say( unsigned int verbosity=0 ) { return say( std::cerr, verbosity ); }
+std::ostream& say( std::ostream& os, unsigned int verbosity=0, const std::string& prefix="" );
+inline std::ostream& say( unsigned int verbosity=0, const std::string& prefix="" ) { return say( std::cerr, verbosity, prefix ); }
+#define COMMA_SAY ( say( verbosity::none ) << __FILE__ << ": " << __FUNCTION__ << ": " << __LINE__ << ": " )
+#define COMMA_SAY_ERROR ( say( verbosity::low ) << "error: " )
+#define COMMA_SAY_WARN ( say( verbosity::medium ) << "warning: " )
+#define COMMA_SAY_INFO ( say( verbosity::high ) << "info: " )
+#define COMMA_SAY_DEBUG ( say( verbosity::extreme ) << "debug: " )
+#define COMMA_SAY_TRACE ( say( 5 ) << "trace: " << __FILE__ << ": " << __FUNCTION__ << ": line " << __LINE__ << ": " )
 
 /// convenience alias of say( verbosity )
 /// @example
