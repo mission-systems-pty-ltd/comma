@@ -42,7 +42,7 @@ static void usage( bool more )
     std::cerr << "options" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
     std::cerr << "    --block-less; todo! better option name! input and filter block ids expected sorted" << std::endl;
-    std::cerr << "                  " << std::endl;
+    std::cerr << "                  todo! document" << std::endl;
     std::cerr << "    --drop-id-fields,--drop-id; remove id and block fields from filter output (same as if you did csv-join|csv-shuffle)" << std::endl;
     std::cerr << "    --first-matching: output only the first matching record (a bit of hack for now, but we needed it)" << std::endl;
     std::cerr << "    --flag-matching: output all records, with 1 appended to matching records and 0 appended to not-matching records" << std::endl;
