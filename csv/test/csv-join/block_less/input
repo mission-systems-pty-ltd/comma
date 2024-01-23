@@ -1,0 +1,8 @@
+block_less/basics[0]="csv-paste line-number value=0 | head | csv-join --fields block,id <( echo 0,0 )';fields=block,id' --block-less"
+block_less/basics[1]="csv-paste line-number value=0 | head | csv-join --fields block,id <( echo 3,0 )';fields=block,id' --block-less"
+block_less/basics[2]="csv-paste line-number value=0 | head | csv-join --fields block,id <( echo 9,0 )';fields=block,id' --block-less"
+block_less/basics[3]="csv-paste line-number value=0 | head | csv-join --fields block,id <( echo 10,0 )';fields=block,id' --block-less"
+block_less/basics[4]="csv-paste line-number value=0 | head | csv-join --fields block,id <( echo 0,0; echo 6,0 )';fields=block,id' --block-less"
+block_less/basics[5]="csv-paste line-number value=0 | head | csv-join --fields block,id <( echo 3,0; echo 6,0 )';fields=block,id' --block-less"
+block_less/basics[6]="csv-paste line-number value=0 | head | csv-join --fields block,id <( echo 3,0; echo 9,0 )';fields=block,id' --block-less"
+block_less/basics[7]="csv-paste line-number value=0 | head | csv-join --fields block,id <( echo 3,0; echo 10,0 )';fields=block,id' --block-less"

@@ -41,6 +41,8 @@ static void usage( bool more )
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
+    std::cerr << "    --block-less; todo! better option name! input and filter block ids expected sorted" << std::endl;
+    std::cerr << "                  " << std::endl;
     std::cerr << "    --drop-id-fields,--drop-id; remove id and block fields from filter output (same as if you did csv-join|csv-shuffle)" << std::endl;
     std::cerr << "    --first-matching: output only the first matching record (a bit of hack for now, but we needed it)" << std::endl;
     std::cerr << "    --flag-matching: output all records, with 1 appended to matching records and 0 appended to not-matching records" << std::endl;
@@ -79,48 +81,59 @@ static void usage( bool more )
         std::cerr << "        any other field name: key" << std::endl;
         std::cerr << std::endl;
         std::cerr << "        block acts as a key but stream processing occurs at the end of each" << std::endl;
-        std::cerr << "        block. If no block field is given the entire input is considered to be" << std::endl;
-        std::cerr << "        one block. Blocks are required to be contiguous in the input stream." << std::endl;
+        std::cerr << "        block; if no block field is given the entire input is considered to be" << std::endl;
+        std::cerr << "        one block; blocks are required to be contiguous in the input stream" << std::endl;
     }
     else
     {
         std::cerr << "    run csv-join --help --verbose for more..." << std::endl;
     }
     std::cerr << std::endl;
-    std::cerr << "examples (try them)" << std::endl;
-    std::cerr << "    on the following data file:" << std::endl;
-    std::cerr << "        echo 1,1,2,hello > data.csv" << std::endl;
-    std::cerr << "        echo 1,2,3,hello >> data.csv" << std::endl;
-    std::cerr << "        echo 3,3,4,world >> data.csv" << std::endl;
-    std::cerr << "        echo 3,4,3,world >> data.csv" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "    join with a matching record" << std::endl;
-    std::cerr << "        echo 1,blah | csv-join --fields=id \"data.csv;fields=id\"" << std::endl;
-    std::cerr << "        echo 3,blah | csv-join --fields=id \"data.csv;fields=,,id\"" << std::endl;
-    std::cerr << "        echo 5,blah | csv-join --fields=id \"data.csv;fields=,,id\"" << std::endl;
-    std::cerr << "        echo 5,blah | csv-join --fields=id \"data.csv;fields=,,id\" --not-matching" << std::endl;
-    std::cerr << "        echo 5,blah | csv-join --fields=id \"data.csv;fields=,,id\" --strict" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "    join by key which is a string" << std::endl;
-    std::cerr << "        echo 1,hello | csv-join --fields=,id \"data.csv;fields=,,,id\" --string" << std::endl;
-    std::cerr << "        echo 1,world | csv-join --fields=,id \"data.csv;fields=,,,id\" --string" << std::endl;
-    std::cerr << "        echo 1,blah | csv-join --fields=,id \"data.csv;fields=,,,id\" --string" << std::endl;
-    std::cerr << "        echo 1,blah | csv-join --fields=,id \"data.csv;fields=,,,id\" --string --not-matching" << std::endl;
-    std::cerr << "        echo 1,blah | csv-join --fields=,id \"data.csv;fields=,,,id\" --string --strict" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "    finite state machine" << std::endl;
-    std::cerr << "        csv-join --fields=event \"data.csv;fields=event,state,next_state\" --initial-state 1" << std::endl;
-    std::cerr << "        <input:1>" << std::endl;
-    std::cerr << "        <input:1>" << std::endl;
-    std::cerr << "        <input:3>" << std::endl;
-    std::cerr << "        <input:3>" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "    --drop-id (same would work in binary as well)" << std::endl;
-    std::cerr << "        > echo 0,1,2,3 | csv-join --fields ,x,,y <( echo 1,A,B,3 )';fields=x,,,y'" << std::endl;
-    std::cerr << "        0,1,2,3,1,A,B,3" << std::endl;
-    std::cerr << "        > echo 0,1,2,3 | csv-join --fields ,x,,y <( echo 1,A,B,3 )';fields=x,,,y' --drop-id" << std::endl;
-    std::cerr << "        0,1,2,3,A,B" << std::endl;
-    std::cerr << std::endl;
+    if( more )
+    {
+        std::cerr << "examples (try them)" << std::endl;
+        std::cerr << "    on the following data file:" << std::endl;
+        std::cerr << "        echo 1,1,2,hello > data.csv" << std::endl;
+        std::cerr << "        echo 1,2,3,hello >> data.csv" << std::endl;
+        std::cerr << "        echo 3,3,4,world >> data.csv" << std::endl;
+        std::cerr << "        echo 3,4,3,world >> data.csv" << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "    join with a matching record" << std::endl;
+        std::cerr << "        echo 1,blah | csv-join --fields=id \"data.csv;fields=id\"" << std::endl;
+        std::cerr << "        echo 3,blah | csv-join --fields=id \"data.csv;fields=,,id\"" << std::endl;
+        std::cerr << "        echo 5,blah | csv-join --fields=id \"data.csv;fields=,,id\"" << std::endl;
+        std::cerr << "        echo 5,blah | csv-join --fields=id \"data.csv;fields=,,id\" --not-matching" << std::endl;
+        std::cerr << "        echo 5,blah | csv-join --fields=id \"data.csv;fields=,,id\" --strict" << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "    join by key which is a string" << std::endl;
+        std::cerr << "        echo 1,hello | csv-join --fields=,id \"data.csv;fields=,,,id\" --string" << std::endl;
+        std::cerr << "        echo 1,world | csv-join --fields=,id \"data.csv;fields=,,,id\" --string" << std::endl;
+        std::cerr << "        echo 1,blah | csv-join --fields=,id \"data.csv;fields=,,,id\" --string" << std::endl;
+        std::cerr << "        echo 1,blah | csv-join --fields=,id \"data.csv;fields=,,,id\" --string --not-matching" << std::endl;
+        std::cerr << "        echo 1,blah | csv-join --fields=,id \"data.csv;fields=,,,id\" --string --strict" << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "    block id ordered, gaps in filter blocks allowed" << std::endl;
+        std::cerr << "        csv-paste line-number value=0 | head \\" << std::endl;
+        std::cerr << "            | csv-join --fields block,id <( echo 3,0; echo 6,0 )';fields=block,id' --block-less" << std::endl;
+        std::cerr << "    finite state machine" << std::endl;
+        std::cerr << "        csv-join --fields=event \"data.csv;fields=event,state,next_state\" --initial-state 1" << std::endl;
+        std::cerr << "        <input:1>" << std::endl;
+        std::cerr << "        <input:1>" << std::endl;
+        std::cerr << "        <input:3>" << std::endl;
+        std::cerr << "        <input:3>" << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "    --drop-id (same would work in binary as well)" << std::endl;
+        std::cerr << "        > echo 0,1,2,3 | csv-join --fields ,x,,y <( echo 1,A,B,3 )';fields=x,,,y'" << std::endl;
+        std::cerr << "        0,1,2,3,1,A,B,3" << std::endl;
+        std::cerr << "        > echo 0,1,2,3 | csv-join --fields ,x,,y <( echo 1,A,B,3 )';fields=x,,,y' --drop-id" << std::endl;
+        std::cerr << "        0,1,2,3,A,B" << std::endl;
+        std::cerr << std::endl;
+    }
+    else
+    {
+        std::cerr << "examples" << std::endl;
+        std::cerr << "    run csv-join --help --verbose for more..." << std::endl;
+    }
     exit( 0 );
 }
 
@@ -330,12 +343,12 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
         return s;
     }
 
-    static void read_filter_block()
+    static const input< K >* read_filter_block()
     {
         static comma::csv::input_stream< input< K > > filter_stream( **filter_transport, filter_csv, default_input );
         static const input< K >* last = filter_stream.read();
         filter_map.clear();
-        if( !last ) { return; }
+        if( !last ) { return last; }
         block = last->block;
         comma::uint64 count = 0;
         static comma::signal_flag is_shutdown( comma::signal_flag::hard );
@@ -348,10 +361,12 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
             if( !last ) { break; }
         }
         if( verbose ) { std::cerr << "csv-join: read block " << block << " of " << count << " point" << ( count == 1 ? "" : "s" ) << "; hash map size: " << filter_map.size() << std::endl; }
+        return last;
     }
 
     static int run( const comma::command_line_options& options )
     {
+        bool block_less = options.exists( "--block-less" );
         std::vector< std::string > v = comma::split( stdin_csv.fields, ',' );
         std::vector< std::string > w = comma::split( filter_csv.fields, ',' );
         if( filter_id_fields_discard ) { filter_id_fields_flags.resize( w.size(), 0 ); }
@@ -419,7 +434,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
         filter_transport.reset( new comma::io::istream( filter_csv.filename, filter_csv.binary() ? comma::io::mode::binary : comma::io::mode::ascii ) );
         if( filter_transport->fd() == comma::io::invalid_file_descriptor ) { std::cerr << "csv-join: failed to open \"" << filter_csv.filename << "\"" << std::endl; return 1; }
         std::size_t discarded = 0;
-        read_filter_block();
+        auto last = read_filter_block();
         #ifdef WIN32
         if( stdin_stream.is_binary() ) { _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
@@ -427,7 +442,18 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
         {
             const input< K >* p = stdin_stream.read();
             if( !p ) { break; }
-            if( block != p->block ) { read_filter_block(); }
+            if( block_less )
+            {
+                if( p->block < block ) { continue; }
+                while( last && p->block >= last->block )
+                {
+                    last = read_filter_block();
+                }
+            }
+            else
+            {
+                if( p->block != block ) { last = read_filter_block(); }
+            }
             typename traits< K, Strict >::pair pair;
             if( is_state_machine )
             {
@@ -537,7 +563,7 @@ int main( int ac, char** av )
         options.assert_mutually_exclusive( "--radius,--epsilon,--string,-s,--double,--time" );
         options.assert_mutually_exclusive( "--matching,--not-matching", "--drop-id-fields,--drop-id" );
         stdin_csv = comma::csv::options( options );
-        std::vector< std::string > unnamed = options.unnamed( "--verbose,-v,--first-matching,--matching,--not-matching,--string,-s,--time,--double,--strict,--swap-output,--swap,--output-swap,--nearest,--drop-id-fields,--drop-id", "-.*" );
+        std::vector< std::string > unnamed = options.unnamed( "--verbose,-v,--block-less,--first-matching,--matching,--not-matching,--string,-s,--time,--double,--strict,--swap-output,--swap,--output-swap,--nearest,--drop-id-fields,--drop-id", "-.*" );
         if( unnamed.empty() ) { std::cerr << "csv-join: please specify the second source" << std::endl; return 1; }
         if( unnamed.size() > 1 ) { std::cerr << "csv-join: expected one file or stream to join, got " << comma::join( unnamed, ' ' ) << std::endl; return 1; }
         comma::name_value::parser parser( "filename", ';', '=', false );
