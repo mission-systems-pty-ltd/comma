@@ -16,7 +16,7 @@
 
 namespace comma { namespace name_value { namespace impl {
 
-template< typename C > inline void json_remove_quotes( std::basic_string< C >& json_text ) // assuming valid json
+template< typename C > inline void json_remove_quotes( std::basic_string< C >& json_text, bool pretty = true ) // assuming valid json
 {
     using string_type = std::basic_string< C >;
     static string_type const true_str( std::initializer_list< C >{ 't', 'r', 'u', 'e' } );
@@ -53,16 +53,25 @@ template< typename C > inline void json_remove_quotes( std::basic_string< C >& j
         *source++ = *next_token++;
         target = next_token;
     }
-    json_text.erase( source, json_text.cend() );
+    json_text.erase( pretty ? source : ( source - 1 ), json_text.cend() );
 }
 
 template< class PTree > void write_json( std::basic_ostream< typename PTree::key_type::value_type > &stream, const PTree &ptree, bool const pretty = true, bool unquote_numbers = true )
 {
-    std::basic_ostringstream< typename PTree::key_type::value_type > string_stream;
-    boost::property_tree::write_json( string_stream, ptree, pretty );
-    auto json_text = string_stream.str();
-    if( unquote_numbers ) { json_remove_quotes( json_text ); }
-    stream << json_text << std::flush;
+    std::basic_ostringstream< typename PTree::key_type::value_type > oss;
+    boost::property_tree::write_json( oss, ptree, pretty );
+    if( unquote_numbers )
+    {
+        std::string s = oss.str();
+        json_remove_quotes( s, pretty );
+        stream << s;
+    }
+    else
+    {
+        if( pretty ) { stream << oss.str(); }
+        else { std::string s = oss.str(); stream << s.substr( 0, s.size() - 1 ); } // unfortunately, boost adds trailing end of line, which we don't want in minified mode
+    }
+    stream << std::flush;
 }
  
 } } }

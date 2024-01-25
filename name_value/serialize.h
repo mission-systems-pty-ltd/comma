@@ -188,9 +188,9 @@ template < typename T > void read_ini( T& t, std::istream& stream );
 template < typename T > void write_json( const T& t, const std::string& filename, const xpath& root, bool pretty = true, bool unquote_numbers = true );
 template < typename T > void write_json( const T& t, const std::string& filename, const char* root, bool pretty = true, bool unquote_numbers = true );
 template < typename T > void write_json( const T& t, const std::string& filename, bool pretty = true, bool unquote_numbers = true );
-template < typename T > void write_json( const T& t, std::ostream& stream, const xpath& root, bool pretty = true, bool unquote_numbers = true );
-template < typename T > void write_json( const T& t, std::ostream& stream, const char* root, bool pretty = true, bool unquote_numbers = true );
-template < typename T > void write_json( const T& t, std::ostream& stream, bool pretty = true, bool unquote_numbers = true );
+template < typename T > std::ostream& write_json( const T& t, std::ostream& stream, const xpath& root, bool pretty = true, bool unquote_numbers = true );
+template < typename T > std::ostream& write_json( const T& t, std::ostream& stream, const char* root, bool pretty = true, bool unquote_numbers = true );
+template < typename T > std::ostream& write_json( const T& t, std::ostream& stream, bool pretty = true, bool unquote_numbers = true );
 template < typename T > std::string json_to_string( const T& t, const xpath& root, bool pretty = true, bool unquote_numbers = true );
 template < typename T > std::string json_to_string( const T& t, const char* root, bool pretty = true, bool unquote_numbers = true );
 template < typename T > std::string json_to_string( const T& t, bool pretty = true, bool unquote_numbers = true );
@@ -200,9 +200,9 @@ template < typename T > std::string json_to_string( const T& t, bool pretty = tr
 template < typename T > void write_xml( const T& t, const std::string& filename, const xpath& root );
 template < typename T > void write_xml( const T& t, const std::string& filename, const char* root );
 template < typename T > void write_xml( const T& t, const std::string& filename );
-template < typename T > void write_xml( const T& t, std::ostream& stream, const xpath& root );
-template < typename T > void write_xml( const T& t, std::ostream& stream, const char* root );
-template < typename T > void write_xml( const T& t, std::ostream& stream );
+template < typename T > std::ostream& write_xml( const T& t, std::ostream& stream, const xpath& root );
+template < typename T > std::ostream& write_xml( const T& t, std::ostream& stream, const char* root );
+template < typename T > std::ostream& write_xml( const T& t, std::ostream& stream );
 
 /// write path-value object to file or stream
 /// convenience wrappers for comma::property_tree boiler-plate code
@@ -210,18 +210,18 @@ template < typename T > void write_xml( const T& t, std::ostream& stream );
 template < typename T > void write_path_value( const T& t, const std::string& filename, const xpath& root );
 template < typename T > void write_path_value( const T& t, const std::string& filename, const char* root );
 template < typename T > void write_path_value( const T& t, const std::string& filename );
-template < typename T > void write_path_value( const T& t, std::ostream& stream, const xpath& root, bool const unquote_numbers = false );
-template < typename T > void write_path_value( const T& t, std::ostream& stream, const char* root );
-template < typename T > void write_path_value( const T& t, std::ostream& stream );
+template < typename T > std::ostream& write_path_value( const T& t, std::ostream& stream, const xpath& root, bool const unquote_numbers = false );
+template < typename T > std::ostream& write_path_value( const T& t, std::ostream& stream, const char* root );
+template < typename T > std::ostream& write_path_value( const T& t, std::ostream& stream );
 
 /// write ini object to file or stream
 /// convenience wrappers for comma::property_tree boiler-plate code
 template < typename T > void write_ini( const T& t, const std::string& filename, const xpath& root );
 template < typename T > void write_ini( const T& t, const std::string& filename, const char* root );
 template < typename T > void write_ini( const T& t, const std::string& filename );
-template < typename T > void write_ini( const T& t, std::ostream& stream, const xpath& root );
-template < typename T > void write_ini( const T& t, std::ostream& stream, const char* root );
-template < typename T > void write_ini( const T& t, std::ostream& stream );
+template < typename T > std::ostream& write_ini( const T& t, std::ostream& stream, const xpath& root );
+template < typename T > std::ostream& write_ini( const T& t, std::ostream& stream, const char* root );
+template < typename T > std::ostream& write_ini( const T& t, std::ostream& stream );
 
 
 template < typename T > inline void read_json( T& t, const std::string& filename, const xpath& root, bool permissive )
@@ -388,19 +388,20 @@ template < typename T > inline void write_json( const T& t, const std::string& f
     ofs.close();
 }
 
-template < typename T > inline void write_json( const T& t, std::ostream& stream, const xpath& root, bool pretty, bool unquote_numbers )
+template < typename T > inline std::ostream& write_json( const T& t, std::ostream& stream, const xpath& root, bool pretty, bool unquote_numbers )
 {
     boost::property_tree::ptree p;
     comma::to_ptree to_ptree( p, root );
     comma::visiting::apply( to_ptree ).to( t );
     stream.precision( 16 ); // quick and dirty
     comma::name_value::impl::write_json( stream, p, pretty, unquote_numbers );
+    return stream;
 }
 
 template < typename T > inline void write_json( const T& t, const std::string& filename, const char* root, bool pretty, bool unquote_numbers ) { write_json( t, filename, xpath( root ), pretty, unquote_numbers ); }
 template < typename T > inline void write_json( const T& t, const std::string& filename, bool pretty, bool unquote_numbers ) { write_json( t, filename, xpath(), pretty, unquote_numbers ); }
-template < typename T > inline void write_json( const T& t, std::ostream& stream, const char* root, bool pretty, bool unquote_numbers ) { write_json( t, stream, xpath( root ), pretty, unquote_numbers ); }
-template < typename T > inline void write_json( const T& t, std::ostream& stream, bool pretty, bool unquote_numbers ) { write_json( t, stream, xpath(), pretty, unquote_numbers ); }
+template < typename T > inline std::ostream& write_json( const T& t, std::ostream& stream, const char* root, bool pretty, bool unquote_numbers ) { return write_json( t, stream, xpath( root ), pretty, unquote_numbers ); }
+template < typename T > inline std::ostream& write_json( const T& t, std::ostream& stream, bool pretty, bool unquote_numbers ) { return write_json( t, stream, xpath(), pretty, unquote_numbers ); }
 
 template < typename T > inline std::string json_to_string( const T& t, const char* root, bool pretty, bool unquote_numbers ) { return json_to_string( t, xpath( root ), pretty, unquote_numbers ); }
 template < typename T > inline std::string json_to_string( const T& t, bool pretty, bool unquote_numbers ) { return json_to_string( t, xpath(), pretty, unquote_numbers ); }
@@ -420,27 +421,29 @@ template < typename T > inline void write_xml( const T& t, const std::string& fi
     ofs.close();
 }
 
-template < typename T > inline void write_xml( const T& t, std::ostream& stream, const xpath& root )
+template < typename T > inline std::ostream& write_xml( const T& t, std::ostream& stream, const xpath& root )
 {
     boost::property_tree::ptree p;
     comma::to_ptree to_ptree( p, root );
     comma::visiting::apply( to_ptree ).to( t );
     stream.precision( 16 ); // quick and dirty
     boost::property_tree::write_xml( stream, p );
+    return stream;
 }
 
 template < typename T > inline void write_xml( const T& t, const std::string& filename, const char* root ) { write_xml( t, filename, xpath( root ) ); }
 template < typename T > inline void write_xml( const T& t, const std::string& filename ) { write_xml( t, filename, xpath() ); }
-template < typename T > inline void write_xml( const T& t, std::ostream& stream, const char* root ) { write_xml( t, stream, xpath( root ) ); }
-template < typename T > inline void write_xml( const T& t, std::ostream& stream ) { write_xml( t, stream, xpath() ); }
+template < typename T > inline std::ostream& write_xml( const T& t, std::ostream& stream, const char* root ) { return write_xml( t, stream, xpath( root ) ); }
+template < typename T > inline std::ostream& write_xml( const T& t, std::ostream& stream ) { return write_xml( t, stream, xpath() ); }
 
-template < typename T > inline void write_path_value( const T& t, std::ostream& stream, const xpath& root, bool const unquote_numbers )
+template < typename T > inline std::ostream& write_path_value( const T& t, std::ostream& stream, const xpath& root, bool const unquote_numbers )
 {
     boost::property_tree::ptree p;
     comma::to_ptree to_ptree( p, root );
     comma::visiting::apply( to_ptree ).to( t );
     stream.precision( 16 ); // quick and dirty
     comma::property_tree::to_path_value( stream, p, comma::property_tree::disabled, '=', '\n', xpath(), unquote_numbers );
+    return stream;
 }
 
 template < typename T > inline void write_path_value( const T& t, const std::string& filename, const xpath& root )
@@ -453,16 +456,17 @@ template < typename T > inline void write_path_value( const T& t, const std::str
 
 template < typename T > inline void write_path_value( const T& t, const std::string& filename, const char* root ) { write_path_value( t, filename, xpath( root ) ); }
 template < typename T > inline void write_path_value( const T& t, const std::string& filename ) { write_path_value( t, filename, xpath() ); }
-template < typename T > inline void write_path_value( const T& t, std::ostream& stream, const char* root ) { write_path_value( t, stream, xpath( root ) ); }
-template < typename T > inline void write_path_value( const T& t, std::ostream& stream ) { write_path_value( t, stream, xpath() ); }
+template < typename T > inline std::ostream& write_path_value( const T& t, std::ostream& stream, const char* root ) { return write_path_value( t, stream, xpath( root ) ); }
+template < typename T > inline std::ostream& write_path_value( const T& t, std::ostream& stream ) { return write_path_value( t, stream, xpath() ); }
 
-template < typename T > inline void write_ini( const T& t, std::ostream& stream, const xpath& root )
+template < typename T > inline std::ostream& write_ini( const T& t, std::ostream& stream, const xpath& root )
 {
     boost::property_tree::ptree p;
     comma::to_ptree to_ptree( p, root );
     comma::visiting::apply( to_ptree ).to( t );
     stream.precision( 16 ); // quick and dirty
     boost::property_tree::write_ini( stream, p );
+    return stream;
 }
 
 template < typename T > inline void write_ini( const T& t, const std::string& filename, const xpath& root )
@@ -475,8 +479,8 @@ template < typename T > inline void write_ini( const T& t, const std::string& fi
 
 template < typename T > inline void write_ini( const T& t, const std::string& filename, const char* root ) { write_ini( t, filename, xpath( root ) ); }
 template < typename T > inline void write_ini( const T& t, const std::string& filename ) { write_ini( t, filename, xpath() ); }
-template < typename T > inline void write_ini( const T& t, std::ostream& stream, const char* root ) { write_ini( t, stream, xpath( root ) ); }
-template < typename T > inline void write_ini( const T& t, std::ostream& stream ) { write_ini( t, stream, xpath() ); }
+template < typename T > inline std::ostream& write_ini( const T& t, std::ostream& stream, const char* root ) { return write_ini( t, stream, xpath( root ) ); }
+template < typename T > inline std::ostream& write_ini( const T& t, std::ostream& stream ) { return write_ini( t, stream, xpath() ); }
 
 
 template < typename T > inline void read( T& t, std::istream& stream, const xpath& root, bool permissive )
