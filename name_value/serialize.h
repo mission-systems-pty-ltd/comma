@@ -1,5 +1,6 @@
 // This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
+// Copyright (c) 2023 Vsevolod Vlaskine
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -29,11 +30,11 @@
 
 /// @author vsevolod vlaskine
 
-#ifndef COMMA_NAME_VALUE_SERIALIZE_H_
-#define COMMA_NAME_VALUE_SERIALIZE_H_
+#pragma once
 
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/xml_parser.hpp>
@@ -184,12 +185,15 @@ template < typename T > void read_ini( T& t, std::istream& stream );
 
 /// write json object to file or stream
 /// convenience wrappers for comma::property_tree boiler-plate code
-template < typename T > void write_json( const T& t, const std::string& filename, const xpath& root );
-template < typename T > void write_json( const T& t, const std::string& filename, const char* root );
-template < typename T > void write_json( const T& t, const std::string& filename );
-template < typename T > void write_json( const T& t, std::ostream& stream, const xpath& root );
-template < typename T > void write_json( const T& t, std::ostream& stream, const char* root );
-template < typename T > void write_json( const T& t, std::ostream& stream );
+template < typename T > void write_json( const T& t, const std::string& filename, const xpath& root, bool pretty = true, bool unquote_numbers = true );
+template < typename T > void write_json( const T& t, const std::string& filename, const char* root, bool pretty = true, bool unquote_numbers = true );
+template < typename T > void write_json( const T& t, const std::string& filename, bool pretty = true, bool unquote_numbers = true );
+template < typename T > void write_json( const T& t, std::ostream& stream, const xpath& root, bool pretty = true, bool unquote_numbers = true );
+template < typename T > void write_json( const T& t, std::ostream& stream, const char* root, bool pretty = true, bool unquote_numbers = true );
+template < typename T > void write_json( const T& t, std::ostream& stream, bool pretty = true, bool unquote_numbers = true );
+template < typename T > std::string json_to_string( const T& t, const xpath& root, bool pretty = true, bool unquote_numbers = true );
+template < typename T > std::string json_to_string( const T& t, const char* root, bool pretty = true, bool unquote_numbers = true );
+template < typename T > std::string json_to_string( const T& t, bool pretty = true, bool unquote_numbers = true );
 
 /// write xml object to file or stream
 /// convenience wrappers for comma::property_tree boiler-plate code
@@ -376,27 +380,37 @@ template < typename T > inline void read_ini( T& t, std::istream& stream, const 
 template < typename T > inline void read_ini( T& t, std::istream& stream, bool permissive ) { read_ini< T >( t, stream, xpath(), permissive ); }
 template < typename T > inline void read_ini( T& t, std::istream& stream ) { read_ini< T >( t, stream, xpath(), true ); }
 
-template < typename T > inline void write_json( const T& t, const std::string& filename, const xpath& root )
+template < typename T > inline void write_json( const T& t, const std::string& filename, const xpath& root, bool pretty, bool unquote_numbers )
 {
     std::ofstream ofs( &filename[0] );
     if( !ofs.is_open() ) { COMMA_THROW( comma::exception, "failed to open \"" << filename << "\"" ); }
-    write_json< T >( t, ofs, root );
+    write_json< T >( t, ofs, root, pretty, unquote_numbers );
     ofs.close();
 }
 
-template < typename T > inline void write_json( const T& t, std::ostream& stream, const xpath& root )
+template < typename T > inline void write_json( const T& t, std::ostream& stream, const xpath& root, bool pretty, bool unquote_numbers )
 {
     boost::property_tree::ptree p;
     comma::to_ptree to_ptree( p, root );
     comma::visiting::apply( to_ptree ).to( t );
     stream.precision( 16 ); // quick and dirty
-    comma::name_value::impl::write_json( stream, p );
+    comma::name_value::impl::write_json( stream, p, pretty, unquote_numbers );
 }
 
-template < typename T > inline void write_json( const T& t, const std::string& filename, const char* root ) { write_json( t, filename, xpath( root ) ); }
-template < typename T > inline void write_json( const T& t, const std::string& filename ) { write_json( t, filename, xpath() ); }
-template < typename T > inline void write_json( const T& t, std::ostream& stream, const char* root ) { write_json( t, stream, xpath( root ) ); }
-template < typename T > inline void write_json( const T& t, std::ostream& stream ) { write_json( t, stream, xpath() ); }
+template < typename T > inline void write_json( const T& t, const std::string& filename, const char* root, bool pretty, bool unquote_numbers ) { write_json( t, filename, xpath( root ), pretty, unquote_numbers ); }
+template < typename T > inline void write_json( const T& t, const std::string& filename, bool pretty, bool unquote_numbers ) { write_json( t, filename, xpath(), pretty, unquote_numbers ); }
+template < typename T > inline void write_json( const T& t, std::ostream& stream, const char* root, bool pretty, bool unquote_numbers ) { write_json( t, stream, xpath( root ), pretty, unquote_numbers ); }
+template < typename T > inline void write_json( const T& t, std::ostream& stream, bool pretty, bool unquote_numbers ) { write_json( t, stream, xpath(), pretty, unquote_numbers ); }
+
+template < typename T > inline std::string json_to_string( const T& t, const char* root, bool pretty, bool unquote_numbers ) { return json_to_string( t, xpath( root ), pretty, unquote_numbers ); }
+template < typename T > inline std::string json_to_string( const T& t, bool pretty, bool unquote_numbers ) { return json_to_string( t, xpath(), pretty, unquote_numbers ); }
+
+template < typename T > inline std::string json_to_string( const T& t, const xpath& root, bool pretty, bool unquote_numbers )
+{
+    std::ostringstream os;
+    write_json( t, os, root, pretty, unquote_numbers );
+    return os.str();
+}
 
 template < typename T > inline void write_xml( const T& t, const std::string& filename, const xpath& root )
 {
@@ -505,5 +519,3 @@ template < typename T > inline void read( T& t, std::istream& stream, bool permi
 template < typename T > inline void read( T& t, std::istream& stream ) { read< T >( t, stream, xpath(), true ); }
 
 } // namespace comma {
-
-#endif // COMMA_NAME_VALUE_SERIALIZE_H_
