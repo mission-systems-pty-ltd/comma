@@ -121,10 +121,18 @@ std::string options::usage( const std::string& default_fields, bool verbose )
 bool options::has_field( const std::string& field ) const
 {
     if( field.empty() ) { return false; }
-    const std::vector< std::string >& v = split( fields, ',' );
-    const std::vector< std::string >& f = split( field, ',' );
+    const auto& v = split( fields, ',' );
+    const auto& f = split( field, ',' );
     for( unsigned int i = 0; i < f.size(); ++i ) { if( std::find( v.begin(), v.end(), f[i] ) == v.end() ) { return false; } }
     return true;
+}
+
+std::map< std::string, unsigned int > options::indices() const
+{
+    std::map< std::string, unsigned int > m;
+    const auto& v = split( fields, ',' );
+    for( unsigned int i = 0; i < v.size(); ++i ) { if( !v[i].empty() ) { m[v[i]] = i; } }
+    return m;
 }
 
 bool options::has_some_of_fields( const std::string& field ) const
