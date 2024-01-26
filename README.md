@@ -66,6 +66,6 @@ Albeit more tedious, it is safe since **comma** master branch is thoroughly test
 
 Read install.yml, if interested in tweaking build configuration.
 
-#documentation
+# documentation
 
 [https://gitlab.com/orthographic/comma/-/wikis/home](https://gitlab.com/orthographic/comma/-/wikis/home)
