@@ -4,6 +4,8 @@
 
 **comma** is a generic library for fixed-width (comma-separated or binary) and structured (e.g. json) data processing primarily on Linux. MacOS is supported, but less tested.
 
+Documentation: [https://gitlab.com/orthographic/comma/-/wikis/home](https://gitlab.com/orthographic/comma/-/wikis/home)
+
 **comma** consists of a collection of command line utilities, as well as underlying C++ and python libraries.
 
 **comma** design considerations:
@@ -19,7 +21,7 @@ This documentation will have not more than a brief description of each command l
 
 Instead, this documentation is intended to provide more and more step-by-step tutorials and recipes for **comma** command line applications.
 
-The library code is self-documented. You can generate it with **doxigen**. Use **git grep** or explore code of respective applications for usage examples.
+The library code is self-documented. You can generate it with **doxygen**. Use **git grep** or explore code of respective applications for usage examples.
 
 # installation
 
