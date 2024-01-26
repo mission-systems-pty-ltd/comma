@@ -17,7 +17,7 @@ Documentation: [https://gitlab.com/orthographic/comma/-/wikis/home](https://gitl
 
 You can limit yourself to using the **comma** command line utilities. Further, **comma** provides libraries for serialization, binary protocol packet layouts, etc.
 
-This documentation will have not more than a brief description of each command line utility. For details, each utility has elaborate help, e.g. run: **csv-eval --help**.
+This documentation will have not more than a brief description of each command line utility. For details, each utility has elaborate help with examples, e.g. run: **csv-eval --help**.
 
 Instead, this documentation is intended to provide more and more step-by-step tutorials and recipes for **comma** command line applications.
 
