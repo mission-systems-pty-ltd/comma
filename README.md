@@ -36,6 +36,9 @@ pip3 install comma-py==1.0.0
 ```
 
 ## build from source
+
+Building from source gives you the latest features and thus may be a good choice. The code is continuously tested and backward compatible.
+
 ### building with ansible
 
 ```
