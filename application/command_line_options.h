@@ -38,11 +38,11 @@ inline std::ostream& say( unsigned int verbosity=0, const std::string& prefix=""
 /// convenience macros
 #define _COMMA_SAY( _level, _message ) { if( _level <= ::comma::verbosity::level() ) { ::comma::say( _level ) << _message; } }
 #define COMMA_SAY( message )       _COMMA_SAY( 0,                message << std::endl )
-#define COMMA_SAY_ERROR( message ) _COMMA_SAY( 1, "error: "   << message << std::endl )
-#define COMMA_SAY_WARN( message )  _COMMA_SAY( 2, "warning: " << message << std::endl )
-#define COMMA_SAY_INFO( message )  _COMMA_SAY( 3, "info: "    << message << std::endl )
-#define COMMA_SAY_DEBUG( message ) _COMMA_SAY( 4, "debug: "   << message << std::endl )
-#define COMMA_SAY_TRACE( message ) _COMMA_SAY( 5, "trace: "   << __FILE__ << ": " << __FUNCTION__ << ": line " << __LINE__ << ": " << message << std::endl; )
+#define COMMA_SAY_ERROR( message ) _COMMA_SAY( 0, "error: "   << message << std::endl )
+#define COMMA_SAY_WARN( message )  _COMMA_SAY( 1, "warning: " << message << std::endl )
+#define COMMA_SAY_INFO( message )  _COMMA_SAY( 2, "info: "    << message << std::endl )
+#define COMMA_SAY_DEBUG( message ) _COMMA_SAY( 3, "debug: "   << message << std::endl )
+#define COMMA_SAY_TRACE( message ) _COMMA_SAY( 4, "trace: "   << __FILE__ << ": " << __FUNCTION__ << ": line " << __LINE__ << ": " << message << std::endl; )
 
 /// convenience alias of say( verbosity )
 /// @example
