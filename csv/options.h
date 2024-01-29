@@ -110,7 +110,7 @@ inline options options::make_same_kind( const options& rhs )
     options o;
     o.flush = rhs.flush;
     o.delimiter = rhs.delimiter;
-    o.flush = rhs.flush;
+    o.full_xpath = rhs.full_xpath;
     o.precision = rhs.precision;
     o.quote = rhs.quote;
     if( rhs.binary() ) { o.format( format::value< T >() ); }
