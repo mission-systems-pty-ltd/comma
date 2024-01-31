@@ -100,6 +100,10 @@ void usage( bool verbose = false )
     std::cerr << "                  a workaround for sparse input fed into: io-cat ... | head -n10, which" << std::endl;
     std::cerr << "                  not exit until io-cat receives record 11" << std::endl;
     std::cerr << "                  instead run: io-cat ... --head=10 (use --flush if you don't want buffering" << std::endl;
+    std::cerr << "    --repeat=[<n>]; read each stream, output <n> times" << std::endl;
+    std::cerr << "                  e.g: run: io-cat my-file-1 my-file-2 --repeat=3" << std::endl;
+    std::cerr << "                       instead of: cat my-file-1 my-file-2 my-file-1 my-file-2 my-file-1 my-file-2" << std::endl;
+    std::cerr << "    --repeat-forever,--forever; same as --repeat, but forever" << std::endl;
     std::cerr << "    --round-robin=[<number of packets>]: only for multiple inputs: read not more" << std::endl;
     std::cerr << "                                         than <number of packets> from an input at once," << std::endl;
     std::cerr << "                                         before checking other inputs" << std::endl;
@@ -387,7 +391,12 @@ int main( int argc, char** argv )
         connect_period = boost::posix_time::milliseconds( static_cast<unsigned int>(std::floor( connect_period_seconds * 1000 ) ));
         permissive = options.exists( "--permissive" );
         bool has_head = options.exists( "--head" );
-        const std::vector< std::string >& unnamed = options.unnamed( "--blocking,--permissive,--exit-on-first-closed,-e,--flush,--unbuffered,-u,--verbose,-v", "-.+" );
+        unsigned int repeat = options.value( "--repeat", 0 );
+        bool forever = options.exists( "--repeat-forever,--forever" );
+        std::uint64_t count{0};
+        ( void )repeat; ( void )forever; ( void )count;
+        const std::vector< std::string >& unnamed = options.unnamed( "--repeat-forever,--forever,--blocking,--permissive,--exit-on-first-closed,-e,--flush,--unbuffered,-u,--verbose,-v", "-.+" );
+        options.assert_mutually_exclusive( "--round-robin", "--repeat,--repeat-forever,--forever" );
         #ifdef WIN32
         if( size || ( unnamed.size() == 1 && !has_head ) ) { _setmode( _fileno( stdout ), _O_BINARY ); }
         //if( size ) { _setmode( _fileno( stdout ), _O_BINARY ); }
