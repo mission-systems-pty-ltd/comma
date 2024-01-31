@@ -103,6 +103,7 @@ void usage( bool verbose = false )
     std::cerr << "    --repeat=[<n>]; read each stream, output <n> times" << std::endl;
     std::cerr << "                  e.g: run: io-cat my-file-1 my-file-2 --repeat=3" << std::endl;
     std::cerr << "                       instead of: cat my-file-1 my-file-2 my-file-1 my-file-2 my-file-1 my-file-2" << std::endl;
+    std::cerr << "                  when using for large source, be aware that the sources get stored in memory first" << std::endl;
     std::cerr << "    --repeat-forever,--forever; same as --repeat, but forever" << std::endl;
     std::cerr << "    --round-robin=[<number of packets>]: only for multiple inputs: read not more" << std::endl;
     std::cerr << "                                         than <number of packets> from an input at once," << std::endl;
@@ -347,21 +348,58 @@ static bool try_connect( boost::ptr_vector< stream >& streams, comma::io::select
     exit( 1 );
 }
 
-static bool _write( const comma::command_line_options& options, const std::vector< char >& buffer, unsigned int bytes_read )
+struct output_t
+{
+    unsigned int size{0};
+    bool forever{false};
+    std::vector< std::vector< char > > buffers; // todo: quick and dirty, watch performance on push back of large inputs
+    operator bool() const { return !buffers.empty(); }
+
+    output_t() = default;
+    output_t( const comma::command_line_options& options, unsigned int n )
+        : size( options.value( "--repeat", 0 ) )
+        , forever( options.exists( "--repeat-forever,--forever" ) )
+        , buffers( size > 0 || forever ? n : 0 )
+    {
+    }
+
+    void write( unsigned int i, const std::vector< char >& buffer, unsigned int bytes_read )
+    {
+        if( buffers.empty() ) { std::cout.write( &buffer[0], bytes_read ); return; }
+        unsigned int s = buffers[i].size();
+        buffers[i].resize( s + bytes_read );
+        std::memcpy( &buffers[i][s], &buffer[0], bytes_read );
+    }
+
+    void finalise( const comma::signal_flag& is_shutdown ) const
+    {
+        for( unsigned int i = 0; !is_shutdown && ( i < size || forever ); ++i )
+        {
+            for( unsigned int j = 0; !is_shutdown && j < buffers.size() && std::cout.good(); ++j )
+            {
+                std::cout.write( &buffers[j][0], buffers[j].size() );
+            }
+        }
+    }
+};
+
+output_t output;
+
+static bool _write( unsigned int i, const comma::command_line_options& options, const std::vector< char >& buffer, unsigned int bytes_read )
 {
     static unsigned int head = options.value( "--head", 0 );
     static unsigned int size = options.value( "--size,-s", 0 );
     static unsigned int count = 0;
-    if( head == 0 ) { std::cout.write( &buffer[0], bytes_read ); return true; }
+    if( head == 0 ) { output.write( i, buffer, bytes_read ); return true; }
     if( size == 0 )
     {
-        std::cout.write( &buffer[0], bytes_read );
+        output.write( i, buffer, bytes_read );
         ++count;
     }
     else
     {
         unsigned int n = std::min( bytes_read / size, head - count );
-        std::cout.write( &buffer[0], n * size );
+        output.write( i, buffer, n * size );
         count += n;
     }
     return count < head;
@@ -391,10 +429,6 @@ int main( int argc, char** argv )
         connect_period = boost::posix_time::milliseconds( static_cast<unsigned int>(std::floor( connect_period_seconds * 1000 ) ));
         permissive = options.exists( "--permissive" );
         bool has_head = options.exists( "--head" );
-        unsigned int repeat = options.value( "--repeat", 0 );
-        bool forever = options.exists( "--repeat-forever,--forever" );
-        std::uint64_t count{0};
-        ( void )repeat; ( void )forever; ( void )count;
         const std::vector< std::string >& unnamed = options.unnamed( "--repeat-forever,--forever,--blocking,--permissive,--exit-on-first-closed,-e,--flush,--unbuffered,-u,--verbose,-v", "-.+" );
         options.assert_mutually_exclusive( "--round-robin", "--repeat,--repeat-forever,--forever" );
         #ifdef WIN32
@@ -402,6 +436,7 @@ int main( int argc, char** argv )
         //if( size ) { _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
         if( unnamed.empty() ) { std::cerr << "io-cat: please specify at least one source" << std::endl; return 1; }
+        output = output_t( options, unnamed.size() );
         boost::ptr_vector< stream > streams;
         comma::io::select select;
         for( unsigned int i = 0; i < unnamed.size(); ++i ) { streams.push_back( make_stream( unnamed[i], size, size > 0 || ( unnamed.size() == 1 && !has_head ) ) ); }
@@ -426,7 +461,7 @@ int main( int argc, char** argv )
                     if( verbose ) { std::cerr << "io-cat: stream " << i << " (" << unnamed[i] << "): closed" << std::endl; }
                     select.read().remove( streams[i].fd() );
                     streams[i].close();
-                    if( exit_on_first_closed || ( connected_all_we_could && select.read()().empty() ) ) { return 0; }
+                    if( exit_on_first_closed || ( connected_all_we_could && select.read()().empty() ) ) { done = true; break; }
                     continue;
                 }
                 if( !ready && empty ) { done = false; continue; }
@@ -437,7 +472,7 @@ int main( int argc, char** argv )
                     if( bytes_read == 0 ) { break; }
                     done = false;
                     if( size && bytes_read % size != 0 ) { std::cerr << "io-cat: stream " << i << " (" << streams[i].address() << "): expected " << size << " byte(s), got only " << ( bytes_read % size ) << std::endl; return 1; }
-                    if( !_write( options, buffer, bytes_read ) ) { done = true; break; }
+                    if( !_write( i, options, buffer, bytes_read ) ) { done = true; break; }
                     if( !std::cout.good() ) { done = true; break; }
                     if( unbuffered ) { std::cout.flush(); }
                     if( round_robin_count )
@@ -448,6 +483,7 @@ int main( int argc, char** argv )
                 }
             }
         }
+        output.finalise( is_shutdown );
         return 0;
     }
     catch( std::exception& ex ) { std::cerr << "io-cat: " << ex.what() << std::endl; }

@@ -1,0 +1,4 @@
+repeat[0]="( echo 1,2,3; echo 4,5,6 ) | io-cat - --repeat=3"
+repeat[1]="( echo 1,2,3; echo 4,5,6 ) | csv-to-bin 3ui | io-cat - --repeat=3 | csv-from-bin 3ui"
+repeat[2]="( echo 1,2,3; echo 4,5,6 ) | io-cat - --repeat-forever | head -n4"
+repeat[3]="( echo 0,0,0; echo 1,1,1 ) | io-cat - <( echo 2,2,2 ) --repeat=3"
