@@ -4,7 +4,9 @@
 **comma-py** is the part of **comma** written in python; the main part of
 it is **csv-eval** command line utility for efficient **numpy**-style
 conversions on an input stream of comma-separated or fixed-width binary
-data
+data.
+
+**comma-py** also has useful modules for dictionary and signal manipulations.
 
 for more details, run:
 ```

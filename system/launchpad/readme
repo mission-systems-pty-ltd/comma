@@ -26,6 +26,15 @@ python3 setup.py sdist bdist_wheel
 twine upload --repository-url https://pypi.org/legacy/ dist/* # test
 twine upload dist/*
 
+update of 20240205
+- pypi requires 2FA now (set e.g. with google authenticator on a mobile)
+- legacy twine upload dist/* does not work: 
+    HTTPError: 403 Forbidden from https://upload.pypi.org/legacy/
+    Username/Password authentication is no longer supported. Migrate to API Tokens or Trusted Publishers instead. See https://pypi.org/help/#apitoken and https://pypi.org/help/#trusted-publishers
+- follow instructions in the link above to set up api token and rc file (which are really vague: e.g. it seems that PROJECT_NAME should be left as is, NOT replaced with comma-py)
+- then run: twine upload --repository PROJECT_NAME dist/* or twine upload dist/*
+- it may exit with a very obscure HTTP error 403 or 400, but it seems to upload the repo nevertheless...
+
 todo
   - document
     - uploading to launchpad
