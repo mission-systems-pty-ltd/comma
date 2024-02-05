@@ -1,5 +1,5 @@
-comma (1.0.12-0ppa0) jammy; urgency=low
+comma (1.1.0-0ppa0) jammy; urgency=low
 
-  * launchpad stopped installing so files; trying to fix...
+  * substantially more functionality and bug fixes in utilities like csv-paste, io-cat, etc
 
- -- Vsevolod Vlaskine <vsevolod.vlaskine@gmail.com>  Sat, 14 May 2022 22:23:49 +1000
+ -- Vsevolod Vlaskine <vsevolod.vlaskine@gmail.com>  Mon, 5 Feb 2024 12:44:00 +1000

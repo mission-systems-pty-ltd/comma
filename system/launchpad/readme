@@ -12,7 +12,7 @@ uploading to launchpad
       cd ..
       comma/system/launchpad/comma-launchpad-upload update 1.2.3
 - once build in launchpad succeeds, commit and push
-- if there were changes in comma/python, release them into pypi (todo)
+- if there were changes in comma/python, release them into pypi
 - notify interested parties
 
 verifying ppa in docker
