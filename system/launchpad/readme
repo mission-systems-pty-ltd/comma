@@ -11,6 +11,7 @@ uploading to launchpad
       git tag -a 1.2.3 -m 'your comments for version 1.2.3'
       cd ..
       comma/system/launchpad/comma-launchpad-upload update 1.2.3
+- sign gpg as snaky gpg (as opposed to dromedary)
 - once build in launchpad succeeds, commit and push
 - if there were changes in comma/python, release them into pypi
 - notify interested parties
