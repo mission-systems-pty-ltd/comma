@@ -12,7 +12,7 @@
 #     - push
 
 type -p debuild >/dev/null || sudo apt install devscripts
-function say() { echo "usage: $0: $@" >&2; }; function die() { say "$@"; exit 1; }
+function say() { echo "usage: $0: $@" >&2; }; function die() { "$0: error: $@"; exit 1; }
 [[ -n "$2" ]] || { echo "usage: $0 <what> <ubuntu-name> <comma-version>" >&2; exit 1; }
 what=$1
 comma_version=$2
