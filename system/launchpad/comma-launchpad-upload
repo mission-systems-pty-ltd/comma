@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # todo
+#   - !!! script to build in docker (how to manage signature and dput in docker?)
 #   - manual steps (automate if possible)
 #     - update changelog
 #       - version
