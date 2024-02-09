@@ -1,0 +1,62 @@
+#!/bin/bash
+
+# Copyright (c) 2024 Vsevolod Vlaskine
+
+type -p zenity >/dev/null || { echo "$0: please install zenity (zenity is great!): sudo apt install zenity" >&2; exit 1; }
+source $( type -p comma-application-util ) || { echo "tinysar-simulation-console: you need to install comma and snark to run this utility" >&2; exit 1; }
+source $( type -p comma-name-value-util )
+
+function prologue()
+{
+    cat <<eof
+usage: todo
+eof
+}
+
+function epilogue()
+{
+    cat <<eof
+examples (try them)
+    todo
+eof
+}
+
+function options-description()
+{
+    cat <<eof
+--delimiter=<character>; default=,
+--dry-run,--dry; print zenity command and exit
+--height=[<pixels>]
+--title=[<title>]
+--verbose,-v
+--width=[<pixels>]
+eof
+}
+
+function _run()
+{
+    local command="zenity --forms"
+    [[ -z "$options_width" ]] || command+=" --width='$options_width'" # todo? adaptive width
+    [[ -z "$options_height" ]] || command+=" --width='$options_height'" # todo? adaptive height
+    [[ -z "$options_title" ]] || command+=" --text='$options_title'"
+    local input=$( cat | grep -v '^#' )
+    local label name value default_value combo_list names=() defaults=() values=()
+    while IFS== read name value; do
+        IFS="$options_delimiter" read default_value combo_list <<< "$value"
+        label="$name"
+        names+=( "$name" )
+        defaults+=( "$default_value" )
+        [[ -z "$default_value" ]] || label+=" ($default_value)"
+        if [[ -n "$combo_list" ]]; then command+=" --add-combo='$label' --combo-values='$( sed 's#,#|#g' <<< "$combo_list" )'"
+        else command+=" --add-entry='$label'"; fi
+    done <<< "$input"
+    (( ! options_dry_run )) || { echo "$command"; exit; }
+    while read value; do values+=( "$value" ); done < <( eval "$command" 2> >( if (( options_verbose )); then cat; else cat >/dev/null; fi ) | tr '|' '\n' )
+    for (( i = 0; i < ${#names[@]}; ++i )); do # keeping it plain vanilla; todo? use comma utilities
+        if [[ -n "${values[$i]}" ]]; then echo "${names[$i]}=\"${values[$i]}\""; else echo "${names[$i]}=\"${defaults[$i]}\""; fi
+    done
+    comma_status_ok || die "failed"
+}
+
+comma-application-init "$@" < <( options-description )
+_run
