@@ -9,7 +9,14 @@ source $( type -p comma-name-value-util )
 function prologue()
 {
     cat <<eof
-usage: todo
+read name-value pairs on stdin, display form, output initialised
+name-value pairs to stdout
+
+usage: cat <input> | name-value-form
+
+<input>     : <name>[=<value>]
+<value>     : [<default>][<delimiter><combo list values>]
+<delimiter> : value of --delimiter option (default: ',')
 eof
 }
 
@@ -17,14 +24,25 @@ function epilogue()
 {
     cat <<eof
 examples (try them)
-    todo
+    plain vanilla
+        { echo "hello"; echo "world"; } | name-value-form
+    form title
+        { echo "hello"; echo "world"; } | name-value-form --title "HELLO"
+    default values
+        { echo "hello"; echo "world=XXX"; } | name-value-form
+    combo lists
+        { echo "hello"; echo "world=,a,b,c"; } | name-value-form
+    combo lists with defaults
+        { echo "hello"; echo "world=b,a,b,c"; } | name-value-form
+    dry run
+        { echo "hello"; echo "world"; } | name-value-form --dry
 eof
 }
 
 function options-description()
 {
     cat <<eof
---delimiter=<character>; default=,
+--delimiter=<character>; default=,; value delimiter
 --dry-run,--dry; print zenity command and exit
 --height=[<pixels>]
 --title=[<title>]
