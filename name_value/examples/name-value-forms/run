@@ -1,8 +1,8 @@
 #!/bin/bash
 
 echo "======== example 1: hello world =========================="
-( echo hello; echo world; echo star=sun,antares,betelgeuse ) | ../../applications/name-value-forms --title menu
+( echo hello; echo world; echo star=sun,antares,betelgeuse ) | name-value-forms --title menu
 
 echo "======== example 2: json ================================="
-cat menu.json | name-value-convert | ../../applications/name-value-forms --title menu | name-value-convert --to json
+cat menu.json | name-value-convert | name-value-forms --title menu | name-value-convert --to json
 
