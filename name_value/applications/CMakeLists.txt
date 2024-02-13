@@ -36,4 +36,4 @@ install( TARGETS name-value-to-csv RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} 
 install( PROGRAMS name-value-apply DESTINATION ${comma_INSTALL_BIN_DIR} )
 install( PROGRAMS name-value-calc DESTINATION ${comma_INSTALL_BIN_DIR} )
 install( PROGRAMS name-value-eval DESTINATION ${comma_INSTALL_BIN_DIR} )
-install( PROGRAMS name-value-form DESTINATION ${comma_INSTALL_BIN_DIR} )
+install( PROGRAMS name-value-forms DESTINATION ${comma_INSTALL_BIN_DIR} )

@@ -12,7 +12,7 @@ function prologue()
 read name-value pairs on stdin, display form, output initialised
 name-value pairs to stdout
 
-usage: cat <input> | name-value-form
+usage: cat <input> | name-value-forms
 
 <input>     : <name>[=<value>]
 <value>     : [<default>][<delimiter><combo list values>]
@@ -25,17 +25,17 @@ function epilogue()
     cat <<eof
 examples (try them)
     plain vanilla
-        { echo "hello"; echo "world"; } | name-value-form
+        { echo "hello"; echo "world"; } | name-value-forms
     form title
-        { echo "hello"; echo "world"; } | name-value-form --title "HELLO"
+        { echo "hello"; echo "world"; } | name-value-forms --title "HELLO"
     default values
-        { echo "hello"; echo "world=XXX"; } | name-value-form
+        { echo "hello"; echo "world=XXX"; } | name-value-forms
     combo lists
-        { echo "hello"; echo "world=,a,b,c"; } | name-value-form
+        { echo "hello"; echo "world=,a,b,c"; } | name-value-forms
     combo lists with defaults
-        { echo "hello"; echo "world=b,a,b,c"; } | name-value-form
+        { echo "hello"; echo "world=b,a,b,c"; } | name-value-forms
     dry run
-        { echo "hello"; echo "world"; } | name-value-form --dry
+        { echo "hello"; echo "world"; } | name-value-forms --dry
 eof
 }
 
