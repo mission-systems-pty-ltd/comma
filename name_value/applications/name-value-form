@@ -59,14 +59,22 @@ function _run()
     [[ -z "$options_title" ]] || command+=" --text='$options_title'"
     local input=$( cat | grep -v '^#' )
     local label name value default_value combo_list names=() defaults=() values=()
+    function _strip() { sed -e 's#^"##' -e "s#^'##" -e 's#"$##' -e "s#'\$##"; } # todo: handle trailing whitespaces and alike
+    #local max_len=$( while IFS== read name value; do echo "${#name}"; done <<< "$input" | sort | tail -n1 )
     while IFS== read name value; do
-        IFS="$options_delimiter" read default_value combo_list <<< "$value"
+        stripped="$( _strip <<< "$value" )"
+        IFS="$options_delimiter" read default_value combo_list <<< "$stripped"
         label="$name"
         names+=( "$name" )
         defaults+=( "$default_value" )
-        [[ -z "$default_value" ]] || label+=" ($default_value)"
-        if [[ -n "$combo_list" ]]; then command+=" --add-combo='$label' --combo-values='$( sed 's#,#|#g' <<< "$combo_list" )'"
-        else command+=" --add-entry='$label'"; fi
+        #[[ -z "$default_value" ]] || { n=$(( max_len - ${#name} + 2 )) label+="$( printf ".%.0s" $( seq 1 $n ) )default: $default_value"; }
+        [[ -z "$default_value" ]] || { label+=" (default: $default_value)"; } # todo? zenity does not support markup for items
+        if [[ -n "$combo_list" ]]; then
+            [[ -z "$default_value" ]] || combo_list="$default_value,$combo_list"
+            command+=" --add-combo='$label' --combo-values='$( sed 's#,#|#g' <<< "$combo_list" )'"
+        else
+            command+=" --add-entry='$label'"
+        fi
     done <<< "$input"
     (( ! options_dry_run )) || { echo "$command"; exit; }
     while read value; do values+=( "$value" ); done < <( eval "$command" 2> >( if (( options_verbose )); then cat; else cat >/dev/null; fi ) | tr '|' '\n' )
