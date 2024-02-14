@@ -99,6 +99,30 @@ TEST( string, split )
     }
 }
 
+TEST( string, split_as )
+{
+    {
+        std::vector< int > expected{ 1, 2, 3 };
+        EXPECT_EQ( split_as< int >( "1,2,3", ',' ), expected );
+        EXPECT_EQ( split_as< int >( "1,2;3", ",;" ), expected );
+        EXPECT_EQ( split_as< int >( "1,2;3", ",;_" ), expected );
+    }
+    {
+        std::vector< int > expected{ 5, 5, 3, 5 };
+        EXPECT_EQ( split_as< int >( ",,3,", ',', 5 ), expected );
+    }
+    {
+        std::vector< int > expected{ 1, 5, 3 };
+        std::vector< int > defaults_vector{ 1, 5 };
+        std::array< int, 4 > defaults_std_array{ 1, 5, 1, 1 };
+        boost::array< int, 4 > defaults_boost_array{ 1, 5, 1, 1 };        
+        EXPECT_EQ( split_as< int >( std::string( ",,3" ), ',', defaults_vector ), expected );
+        split_as< int >( std::string( ",,3" ), ',', defaults_boost_array );
+        EXPECT_EQ( split_as< int >( std::string( ",,3" ), ',', defaults_boost_array ), expected );
+        EXPECT_EQ( split_as< int >( ",,3", ',', defaults_std_array ), expected );
+    }
+}
+
 TEST( string, escape )
 {
     EXPECT_EQ( "ab", escape( "ab" ) );

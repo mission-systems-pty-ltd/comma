@@ -4,8 +4,10 @@
 
 #pragma once
 
+#include <array>
 #include <string>
 #include <vector>
+#include <boost/array.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
 
@@ -23,13 +25,17 @@ std::vector< std::string > split( const std::string& s, const char* separators =
 /// split string into tokens (a quick implementation); always contains at least one element unless empty_if_empty_input is true
 std::vector< std::string > split( const std::string& s, char separator, bool empty_if_empty_input = false );
 
-/// split string into tokens (a quick implementation) and cast to a given type
-template < typename T >
-std::vector< T > split_as( const std::string& s, const char* separators, const boost::optional< T >& default_value = boost::none );
-
-/// split string into tokens (a quick implementation) and cast to a given type
-template < typename T >
-std::vector< T > split_as( const std::string& s, char separator, const boost::optional< T >& default_value = boost::none );
+/// split string into tokens and cast to a vector of given types
+template < typename T > std::vector< T > split_as( const std::string& s, const char* separators );
+template < typename T > std::vector< T > split_as( const std::string& s, const char* separators, const T& default_value );
+template < typename T > std::vector< T > split_as( const std::string& s, char separator );
+template < typename T > std::vector< T > split_as( const std::string& s, char separator, const T& default_value );
+template < typename T > std::vector< T > split_as( const std::string& s, const char* separators, const std::vector< T >& defaults ); // todo: re-implement using traits
+template < typename T > std::vector< T > split_as( const std::string& s, char separator, const std::vector< T >& defaults );
+template < typename T, std::size_t N > std::vector< T > split_as( const std::string& s, const char* separators, const std::array< T, N >& defaults );
+template < typename T, std::size_t N > std::vector< T > split_as( const std::string& s, char separator, const std::array< T, N >& defaults );
+template < typename T, std::size_t N > std::vector< T > split_as( const std::string& s, const char* separators, const boost::array< T, N >& defaults );
+template < typename T, std::size_t N > std::vector< T > split_as( const std::string& s, char separator, const boost::array< T, N >& defaults );
 
 /// Split string into tokens; always contains at least one element;
 /// skips backslash escaped separator, handle non-nested quotes;
@@ -55,8 +61,10 @@ std::vector< std::string > split_bracketed( const std::string& s, const char * s
 /// skips bracketed separators
 std::vector< std::string > split_bracketed( const std::string& s, char separator, char lbracket = '(', char rbracket = ')', bool strip_brackets = true );
 
+namespace impl {
+
 template < typename T >
-inline std::vector< T > split_as( const std::string& s, const char* separators, const boost::optional< T >& default_value )
+inline std::vector< T > split_with_scalar_default( const std::string& s, const char* separators, const boost::optional< T >& default_value )
 {
     const auto& v = split( s, separators, true );
     std::vector< T > t( v.size() );
@@ -64,10 +72,43 @@ inline std::vector< T > split_as( const std::string& s, const char* separators, 
     return t;
 }
 
-template < typename T > inline std::vector< T > split_as( const std::string& s, char separator, const boost::optional< T >& default_value )
+template < typename T, typename V > inline std::vector< T > split_as( const std::string& s, const char* separators, const V& defaults )
+{
+    const auto& v = split( s, separators, true );
+    std::vector< T > t( v.size() );
+    for( unsigned int i = 0; i < v.size(); ++i ) { t[i] = v[i].empty() && defaults.size() > i ? defaults[i] : boost::lexical_cast< T >( v[i] ); }
+    return t;
+}
+
+template < typename T, typename V > inline std::vector< T > split_as( const std::string& s, char separator, const V& defaults )
 {
     const char separators[] = { separator, 0 };
-    return split_as< T >( s, separators, default_value );
+    return split_as< T >( s, &separators[0], defaults );
 }
+
+} // namespace impl {
+
+template < typename T > inline std::vector< T > split_as( const std::string& s, const char* separators ) { return impl::split_with_scalar_default( s, separators, boost::optional< T >() ); }
+
+template < typename T > inline std::vector< T > split_as( const std::string& s, const char* separators, const T& default_value ) { return impl::split_with_scalar_default( s, separators, default_value ); }
+
+template < typename T > inline std::vector< T > split_as( const std::string& s, char separator )
+{ 
+    const char separators[] = { separator, 0 };
+    return impl::split_with_scalar_default( s, &separators[0], boost::optional< T >() );
+}
+
+template < typename T > inline std::vector< T > split_as( const std::string& s, char separator, const T& default_value )
+{ 
+    const char separators[] = { separator, 0 };
+    return impl::split_with_scalar_default( s, &separators[0], boost::optional< T >( default_value ) );
+}
+
+template < typename T > inline std::vector< T > split_as( const std::string& s, const char* separators, const std::vector< T >& defaults ) { return impl::split_as< T >( s, separators, defaults ); }
+template < typename T > inline std::vector< T > split_as( const std::string& s, char separator, const std::vector< T >& defaults ) { return impl::split_as< T >( s, separator, defaults ); }
+template < typename T, std::size_t N > inline std::vector< T > split_as( const std::string& s, const char* separators, const std::array< T, N >& defaults ) { return impl::split_as< T >( s, separators, defaults ); }
+template < typename T, std::size_t N > inline std::vector< T > split_as( const std::string& s, char separator, const std::array< T, N >& defaults ) { return impl::split_as< T >( s, separator, defaults ); }
+template < typename T, std::size_t N > inline std::vector< T > split_as( const std::string& s, const char* separators, const boost::array< T, N >& defaults ) { return impl::split_as< T >( s, separators, defaults ); }
+template < typename T, std::size_t N > inline std::vector< T > split_as( const std::string& s, char separator, const boost::array< T, N >& defaults ) { return impl::split_as< T >( s, separator, defaults ); }
 
 } // namespace comma {
