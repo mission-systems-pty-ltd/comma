@@ -75,8 +75,9 @@ inline std::vector< T > split_with_scalar_default( const std::string& s, const c
 template < typename T, typename V > inline std::vector< T > split_as( const std::string& s, const char* separators, const V& defaults )
 {
     const auto& v = split( s, separators, true );
-    std::vector< T > t( v.size() );
+    std::vector< T > t( v.size() < defaults.size() ? defaults.size() : v.size() );
     for( unsigned int i = 0; i < v.size(); ++i ) { t[i] = v[i].empty() && defaults.size() > i ? defaults[i] : boost::lexical_cast< T >( v[i] ); }
+    for( unsigned int i = v.size(); i < defaults.size(); ++i ) { t[i] = defaults[i]; }
     return t;
 }
 
