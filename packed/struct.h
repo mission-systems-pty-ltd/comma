@@ -12,20 +12,21 @@ namespace comma { namespace packed {
 
 /// packed structure
 template < class Derived, size_t S >
-class packed_struct
+struct packed_struct
 {
-    public:
-        enum { size = S };
+    enum { size = S };
 
-        packed_struct() throw() { static_assert( sizeof( Derived ) == size, "expected derived of provided size" ); }
+    packed_struct() throw() { static_assert( sizeof( Derived ) == size, "expected derived of provided size" ); }
 
-        const char* data() const throw() { return reinterpret_cast< const char* >( this ); }
+    const char* data() const throw() { return reinterpret_cast< const char* >( this ); }
 
-        char* data() throw() { return reinterpret_cast< char* >( this ); }
+    char* data() throw() { return reinterpret_cast< char* >( this ); }
 
-        bool operator==( const packed_struct& rhs ) const { return ::memcmp( this, &rhs, size ) == 0; }
+    bool operator==( const packed_struct& rhs ) const { return std::memcmp( this, &rhs, size ) == 0; }
 
-        bool operator!=( const packed_struct& rhs ) const { return !operator==( rhs ); }
+    bool operator!=( const packed_struct& rhs ) const { return !operator==( rhs ); }
+
+    void clear() { std::memset( ( char* )( this ), 0, size ); }
 };
 
 } } // namespace comma { namespace packed {
