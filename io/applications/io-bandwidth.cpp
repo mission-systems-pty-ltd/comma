@@ -31,11 +31,13 @@
 
 #include <iostream>
 #include <numeric>
+#include <sstream>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/array.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/thread.hpp>
 #include "../../application/command_line_options.h"
+#include "../../base/none.h"
 #include "../../io/select.h"
 #include "../../io/stream.h"
 
@@ -44,7 +46,7 @@ static const double default_window_resolution = 0.1f;
 static const double default_update_interval = 1.0f;
 static const char default_delimiter = ',';
 static const std::string standard_output_fields="timestamp,received_bytes,bytes_per_second/all_time,bytes_per_second/window";
-static const std::string extended_output_fields="timestamp,received_bytes,bytes_per_second/all_time,bytes_per_second/window,records_per_second/all_time,records_per_second/window";
+static const std::string extended_output_fields="timestamp,received_bytes,bytes_per_second/all_time,bytes_per_second/window,records_per_second/all_time,records_per_second/window,progress";
 
 static void bash_completion( unsigned const ac, char const * const * av )
 {
@@ -65,12 +67,17 @@ void usage( bool verbose = false )
     std::cerr << "usage: io-bandwidth [<options>]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
-    std::cerr << "    --size,-s=[<bytes>]: specify size of one record of input data" << std::endl;
-    std::cerr << "    --window,-w=[<n>]: sliding window; default=" << default_window << "s" << std::endl;
-    std::cerr << "    --update,-u=[<n>]: update interval; default=" << default_update_interval << "s" << std::endl;
-    std::cerr << "    --resolution,-r=[<n>]: sliding window resolution; default=" << default_window_resolution << "s" << std::endl;
-    std::cerr << "    --output-fields: list output fields and exit" << std::endl;
     std::cerr << "    --delimiter,-d <delimiter>: default ','" << std::endl;
+    std::cerr << "    --output-fields: list output fields and exit" << std::endl;
+    std::cerr << "    --output-progress,--progress: output only progress indicator; todo: --fields=<output-fields>" << std::endl;
+    std::cerr << "    --porcelain: human-readable output" << std::endl;
+    std::cerr << "    --porcelain-title,--title=<title>; default=io-bandwidth: output will be prefixed with <title>" << std::endl;
+    std::cerr << "    --resolution,-r=[<n>]: sliding window resolution; default=" << default_window_resolution << "s" << std::endl;
+    std::cerr << "    --size,-s=[<bytes>]: specify size of one record of input data" << std::endl;
+    std::cerr << "    --total-count=[<n>]: total expected record count, if present, output progress in percent" << std::endl;
+    std::cerr << "    --total-size=[<bytes>]: total expected size in bytes, if present, output progress in percent" << std::endl;
+    std::cerr << "    --update,-u=[<n>]: update interval; default=" << default_update_interval << "s" << std::endl;
+    std::cerr << "    --window,-w=[<n>]: sliding window; default=" << default_window << "s" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    The sliding window consists of a number of buckets. The width of each" << std::endl;
     std::cerr << "    bucket is given by --resolution, and there are sufficient buckets to" << std::endl;
@@ -104,6 +111,15 @@ void usage( bool verbose = false )
     std::cerr << "            dd if=/dev/urandom bs=100 count=1 2> /dev/null; sleep 0.1" << std::endl;
     std::cerr << "        done | io-bandwidth 2> >( io-publish tcp:8888 ) | hexdump" << std::endl;
     std::cerr << std::endl;
+    std::cerr << "    show values in terminal title bar" << std::endl;
+    std::cerr << "        yes | csv-repeat --pace --period 0.001 | head -n10000 \\" << std::endl;
+    std::cerr << "            | io-bandwidth --total-size 10000 --size 2 \\" << std::endl;
+    std::cerr << "                           --porcelain --titlebar >/dev/null" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    show progress indicator in terminal title bar" << std::endl;
+    std::cerr << "        yes | csv-repeat --pace --period 0.001 | head -n50000 \\" << std::endl;
+    std::cerr << "            | io-bandwidth --total-count 10000 --size 2 \\" << std::endl;
+    std::cerr << "                           --porcelain --titlebar --progress --title='counting yes' >/dev/null" << std::endl;
     std::cerr << std::endl;
     exit( 0 );
 }
@@ -118,42 +134,43 @@ int main( int ac, char** av )
     {
         comma::command_line_options options( ac, av, usage );
         if( options.exists( "--bash-completion" ) ) bash_completion( ac, av );
-
         if( options.exists( "--output-fields" ))
         {
             if( options.exists( "--size,-s" )) { std::cout << extended_output_fields << std::endl; }
             else { std::cout << standard_output_fields << std::endl; }
             return 0;
         }
-
+        options.assert_mutually_exclusive( "--total-size", "--total-count" );
         // Functionally equivalent to boost::optional< std::size_t > record_size
         // but eliminates the gcc "maybe-uninitialized" warning
-        boost::optional< std::size_t > record_size = boost::make_optional< std::size_t >( false, 0 );
+        boost::optional< std::size_t > record_size = comma::silent_none< std::size_t >();
         if( options.exists( "--size,-s" )) { record_size = options.value< std::size_t >( "--size,-s" ); }
-
+        auto total_count = options.optional< std::uint64_t >( "--total-count" );
+        auto total_size = options.optional< std::uint64_t >( "--total-size" );
+        bool output_progress = options.exists( "--output-progress,--progress" ); // todo! --fields <output fields>
+        COMMA_ASSERT_BRIEF( !total_count || record_size, "--total-count given, please specify --size" );
+        COMMA_ASSERT_BRIEF( !output_progress || total_count || total_size, "--output-progress given; please specify --total-count or --total-size" );
         boost::posix_time::time_duration update_interval = boost::posix_time::microseconds( static_cast<unsigned int> (options.value< double >( "--update,-u", default_update_interval ) * 1000000) );
         double window = options.value< double >( "--window,-w", default_window );
         double bucket_width = options.value< double >( "--resolution,-r", default_window_resolution );
         boost::posix_time::time_duration bucket_duration = boost::posix_time::microseconds( static_cast<unsigned int> (bucket_width * 1000000) );
         char delimiter = options.value( "--delimiter,-d", default_delimiter );
-
+        bool porcelain = options.exists( "--porcelain" );
+        std::string porcelain_title = options.value< std::string >( "--porceilain-title,--title", "io-bandwidth" );
+        if( porcelain ) { delimiter = ' '; }
         comma::io::select select;
         select.read().add( comma::io::stdin_fd );
         comma::io::istream is( "-", comma::io::mode::binary );
-
         unsigned long long total_bytes = 0;
         unsigned int bucket_bytes = 0;
         boost::circular_buffer< unsigned int > window_buckets( std::ceil( window / bucket_width ));
-
         boost::posix_time::ptime start_time = boost::posix_time::microsec_clock::universal_time();
         boost::posix_time::ptime next_update = start_time + update_interval;
         boost::posix_time::ptime next_bucket = start_time + bucket_duration;
-
         bool end_of_stream = false;
         boost::array< char, 65536 > buffer;
         std::ios_base::sync_with_stdio( false ); // unsync to make rdbuf()->in_avail() working
         std::cin.tie( NULL ); // std::cin is tied to std::cout by default
-        
         while( !end_of_stream )
         {
             select.wait( wait_interval );
@@ -168,9 +185,7 @@ int main( int ac, char** av )
                 std::cout.write( &buffer[0], size );
                 std::cout.flush();
             }
-
             boost::posix_time::ptime now = boost::posix_time::microsec_clock::universal_time();
-
             if( now >= next_bucket )
             {
                 window_buckets.push_back( bucket_bytes );
@@ -183,29 +198,30 @@ int main( int ac, char** av )
                     next_bucket = now + bucket_duration;
                 }
             }
-
             if( now >= next_update && !window_buckets.empty() )
             {
                 double elapsed_time = double( ( now - start_time ).total_milliseconds() ) / 1000.0f;
-                double bandwidth = (double)total_bytes / elapsed_time;
-                double window_bandwidth = (double)std::accumulate( window_buckets.begin()
-                                                                 , window_buckets.end()
-                                                                 , 0.0f )
-                                                  / window_buckets.size() / bucket_width;
-
-                std::cerr << boost::posix_time::to_iso_string( now )
-                          << std::fixed
-                          << delimiter << total_bytes
-                          << delimiter << bandwidth
-                          << delimiter << window_bandwidth;
-                std::cerr.unsetf( std::ios_base::floatfield );
-                if( record_size )
+                double bandwidth = double( total_bytes ) / elapsed_time;
+                double window_bandwidth = static_cast< double >( std::accumulate( window_buckets.begin(), window_buckets.end(), 0.0f ) ) / window_buckets.size() / bucket_width;
+                std::ostringstream oss;
+                if( porcelain ) { oss << porcelain_title << ": "; }
+                if( !output_progress )
                 {
-                    std::cerr << delimiter << bandwidth / *record_size
-                              << delimiter << window_bandwidth / *record_size;
+                    oss << ( porcelain ? "time: " : "" ) << boost::posix_time::to_iso_string( now )
+                        << std::fixed
+                        << delimiter << ( porcelain ? "bytes: " : "" ) << total_bytes
+                        << delimiter << ( porcelain ? "bandwidth: " : "" ) << bandwidth
+                        << delimiter << ( porcelain ? "window-bandwidth: " : "" ) << window_bandwidth;
+                    oss.unsetf( std::ios_base::floatfield );
+                    if( record_size )
+                    {
+                        oss << delimiter << ( porcelain ? "record-rate: " : "" ) << bandwidth / *record_size
+                            << delimiter << ( porcelain ? "window-rate: " : "" ) << window_bandwidth / *record_size;
+                    }
                 }
-                std::cerr << std::endl;
-
+                if( total_count ) { oss << delimiter << ( porcelain ? "complete: " : "" ) << ( total_bytes / *record_size * 100 / *total_count ) << ( porcelain ? "%" : "" ); }
+                if( total_size ) { oss << delimiter << ( porcelain ? "complete: " : "" ) << ( total_bytes * 100 / *total_size ) << ( porcelain ? "%" : "" ); }
+                COMMA_TITLE_BARE( oss.str() );
                 next_update += update_interval;
                 // If there's been a large pause (for some reason), catch up
                 if( now > next_update ) { next_update = now + update_interval; }
