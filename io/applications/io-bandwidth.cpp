@@ -113,7 +113,7 @@ void usage( bool verbose = false )
     std::cerr << std::endl;
     std::cerr << "    show values in terminal title bar" << std::endl;
     std::cerr << "        yes | csv-repeat --pace --period 0.001 | head -n10000 \\" << std::endl;
-    std::cerr << "            | io-bandwidth --total-size 10000 --size 2 \\" << std::endl;
+    std::cerr << "            | io-bandwidth --total-count 10000 --size 2 \\" << std::endl;
     std::cerr << "                           --porcelain --titlebar >/dev/null" << std::endl;
     std::cerr << std::endl;
     std::cerr << "    show progress indicator in terminal title bar" << std::endl;
