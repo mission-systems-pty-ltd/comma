@@ -5,8 +5,8 @@
 
 #include <algorithm>
 #include <array>
-#include <sstream>
 #include <set>
+#include <sstream>
 #include <unordered_map>
 #include <boost/bind/bind.hpp>
 #include <boost/config/warning_disable.hpp>
@@ -16,9 +16,8 @@
 #include <boost/optional.hpp>
 #include <boost/regex.hpp>
 #include <boost/spirit/include/qi.hpp>
-#include "../io/terminal.h"
-#include "../string/split.h"
 #include "../base/exception.h"
+#include "../string/split.h"
 #include "command_line_options.h"
 
 namespace comma {
@@ -27,12 +26,15 @@ namespace application { namespace detail {
 
 static std::string name;
 static unsigned int verbosity_level{0};
-static bool titlebar{false};
+static bool titlebar_enabled{false};
+static comma::io::terminal::titlebar_ostream titlebar_ostream;
 static boost::iostreams::stream< boost::iostreams::null_sink > null_ostream( ( boost::iostreams::null_sink() ) );
 
 } } // namespace application { namespace detail {
 
 unsigned int verbosity::level() { return comma::application::detail::verbosity_level; }
+
+bool verbosity::titlebar_enabled() { return comma::application::detail::titlebar_enabled; }
 
 unsigned int verbosity::from_string( const std::string& s )
 {
@@ -67,6 +69,8 @@ std::ostream& say( std::ostream& os, unsigned int verbosity, const std::string& 
     return ( verbosity > comma::application::detail::verbosity_level ? comma::application::detail::null_ostream : os ) << comma::application::detail::name << ": " << ( prefix.empty() ? std::string() : ( prefix + ": " ) );
 }
 
+comma::io::terminal::titlebar_ostream titlebar() { return comma::application::detail::titlebar_ostream << comma::application::detail::name; }
+
 void command_line_options::_init_verbose( const std::string& path )
 {
     comma::application::detail::verbosity_level = verbosity::from_string( value< std::string >( "--verbosity", exists( "--verbose,-v" ) ? "1" : "0" ) );
@@ -77,7 +81,7 @@ void command_line_options::_init_verbose( const std::string& path )
     }
     comma::verbose.init( comma::application::detail::verbosity_level > 0, path ); // todo: deprecate, use comma::say() and comma::saymore() instead
     comma::application::detail::name = comma::split( path, '/' ).back(); // boost::filesystem::basename( path );
-    comma::application::detail::titlebar = exists( "--titlebar,--tb" );
+    comma::application::detail::titlebar_enabled = exists( "--titlebar,--tb" );
     if( exists( "--titlebar-application-name,--tbn" ) ) { comma::io::terminal::titlebar_ostream s; s << comma::application::detail::name; }
 }
 

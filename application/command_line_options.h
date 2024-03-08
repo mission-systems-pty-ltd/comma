@@ -5,14 +5,15 @@
 
 #pragma once
 
+#include <iostream>
 #include <map>
 #include <string>
 #include <vector>
-#include <iostream>
 #include <boost/function.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
 #include "../base/exception.h"
+#include "../io/terminal.h"
 #include "../string/string.h"
 #include "verbose.h" // todo: deprecate
 
@@ -23,6 +24,7 @@ struct verbosity
     enum levels { none=0, low=1, medium=2, high=3, extreme=4 }; // todo: more levels and or aliases like warning, info, debug - but when choosing names, remember: verbosity is not the same as logging!
     enum target { stderr=0, terminal=1 };
     static unsigned int level();
+    static bool titlebar_enabled();
     static unsigned int from_string( const std::string& s );
     static const std::string to_string( unsigned int v );
     static std::string usage();
@@ -35,15 +37,21 @@ struct verbosity
 ///          my-application: some message
 std::ostream& say( std::ostream& os, unsigned int verbosity=0, const std::string& prefix="" );
 inline std::ostream& say( unsigned int verbosity=0, const std::string& prefix="" ) { return say( std::cerr, verbosity, prefix ); }
+/// set terminal title bar if --tb option present or force set to true
+/// @example
+///     todo
+comma::io::terminal::titlebar_ostream titlebar();
 
 /// convenience macros
 #define _COMMA_SAY( _level, _message ) { if( _level <= ::comma::verbosity::level() ) { ::comma::say( _level ) << _message; } }
-#define COMMA_SAY( message )       _COMMA_SAY( 0,                message << std::endl )
-#define COMMA_SAY_ERROR( message ) _COMMA_SAY( 0, "error:   "   << message << std::endl )
-#define COMMA_SAY_WARN( message )  _COMMA_SAY( 1, "warning: " << message << std::endl )
-#define COMMA_SAY_INFO( message )  _COMMA_SAY( 2, "info:    "    << message << std::endl )
-#define COMMA_SAY_DEBUG( message ) _COMMA_SAY( 3, "debug:   "   << message << std::endl )
-#define COMMA_SAY_TRACE( message ) _COMMA_SAY( 4, "trace:   "   << __FILE__ << ": " << __FUNCTION__ << ": line " << __LINE__ << ": " << message << std::endl; )
+#define COMMA_SAY( message )         _COMMA_SAY( 0,                message << std::endl )
+#define COMMA_SAY_ERROR( message )   _COMMA_SAY( 0, "error:   "   << message << std::endl )
+#define COMMA_SAY_WARN( message )    _COMMA_SAY( 1, "warning: " << message << std::endl )
+#define COMMA_SAY_INFO( message )    _COMMA_SAY( 2, "info:    "    << message << std::endl )
+#define COMMA_SAY_DEBUG( message )   _COMMA_SAY( 3, "debug:   "   << message << std::endl )
+#define COMMA_SAY_TRACE( message )   _COMMA_SAY( 4, "trace:   "   << __FILE__ << ": " << __FUNCTION__ << ": line " << __LINE__ << ": " << message << std::endl; )
+#define COMMA_TITLE( message )       { if( ::comma::verbosity::titlebar_enabled() ) { auto t = ::comma::tilebar(); t << message; } else { COMMA_SAY( message ); } }
+#define COMMA_TITLE_BARE( message )  { if( ::comma::verbosity::titlebar_enabled() ) { ::comma::io::terminal::titlebar_ostream t; t << message; } else { std::cerr << message << std::endl; } }
 
 /// convenience alias of say( verbosity )
 /// @example
