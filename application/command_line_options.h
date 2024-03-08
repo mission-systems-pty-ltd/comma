@@ -21,6 +21,7 @@ namespace comma {
 struct verbosity
 {
     enum levels { none=0, low=1, medium=2, high=3, extreme=4 }; // todo: more levels and or aliases like warning, info, debug - but when choosing names, remember: verbosity is not the same as logging!
+    enum target { stderr=0, terminal=1 };
     static unsigned int level();
     static unsigned int from_string( const std::string& s );
     static const std::string to_string( unsigned int v );

@@ -16,6 +16,7 @@
 #include <boost/optional.hpp>
 #include <boost/regex.hpp>
 #include <boost/spirit/include/qi.hpp>
+#include "../io/terminal.h"
 #include "../string/split.h"
 #include "../base/exception.h"
 #include "command_line_options.h"
@@ -26,6 +27,7 @@ namespace application { namespace detail {
 
 static std::string name;
 static unsigned int verbosity_level{0};
+static bool titlebar{false};
 static boost::iostreams::stream< boost::iostreams::null_sink > null_ostream( ( boost::iostreams::null_sink() ) );
 
 } } // namespace application { namespace detail {
@@ -51,6 +53,8 @@ const std::string verbosity::to_string( unsigned int v )
 std::string verbosity::usage()
 {
     const char* s = R"verbosity(verbosity options
+    --titlebar,--tb; output terminal-destined messages to terminal title bar, default: stderr
+    --titlebar-application-name,--tbn; on application start, set terminal title bar to application name
     --verbose,-v; more output on stderr, same as --verbosity=1
     --verbosity=<n>; default=0; verbosity level from 0 to 5 or 'none'(0), 'low'|'error'(1), 'medium'|'warning'(2), 'high'|'info'(3), 'extreme'|'debug'(4)
     -v,-vv,-vvv,-vvvv,-vvvvv; same as --verbosity from 1 to 5
@@ -73,6 +77,8 @@ void command_line_options::_init_verbose( const std::string& path )
     }
     comma::verbose.init( comma::application::detail::verbosity_level > 0, path ); // todo: deprecate, use comma::say() and comma::saymore() instead
     comma::application::detail::name = comma::split( path, '/' ).back(); // boost::filesystem::basename( path );
+    comma::application::detail::titlebar = exists( "--titlebar,--tb" );
+    if( exists( "--titlebar-application-name,--tbn" ) ) { comma::io::terminal::titlebar_ostream s; s << comma::application::detail::name; }
 }
 
 command_line_options::command_line_options( int argc, char ** argv, boost::function< void( bool ) > usage, boost::function< void( int, char** ) > bash_completion )
@@ -126,8 +132,8 @@ bool command_line_options::exists( const std::string& name ) const
 std::vector< std::string > command_line_options::unnamed( const std::string& valueless_options, const std::string& options_with_values ) const
 {
 
-    std::vector< std::string > valueless{ "--verbose", "-v", "-vv", "-vvv", "-vvvv", "-vvvvv" };
-    if( !valueless_options.empty() ) { valueless = split( valueless_options + ",--verbose,-v,-vv,-vvv,-vvvv,-vvvvv", ',' ); }
+    std::vector< std::string > valueless{ "--verbose", "-v", "-vv", "-vvv", "-vvvv", "-vvvvv", "--titlebar", "--tb", "--titlebar-application-name", "--tbn", "" };
+    if( !valueless_options.empty() ) { valueless = split( valueless_options + ",--verbose,-v,-vv,-vvv,-vvvv,-vvvvv,--titlebar,--tb,--titlebar-application-name,--tbn", ',' ); }
     std::vector< std::string > valued = split( options_with_values, ',' );
     std::vector< std::string > w;
     for( unsigned int i = 1; i < argv_.size(); ++i )

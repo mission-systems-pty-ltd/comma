@@ -12,7 +12,7 @@ namespace controls {
 
 struct end { static constexpr char value[] = { 0x07, 0 }; };
 
-struct stderr { static constexpr char* start = ""; static constexpr char* end = "\n"; }; // quick and dirty
+struct stderr { static constexpr char start[] = { 0 }; static constexpr char end[] = { '\n', 0 }; }; // quick and dirty
 
 struct titlebar { static constexpr char start[] = { 0x1b, ']', '0', ';', 0 }; static constexpr char end[] = { 0x07, 0 }; };
 
