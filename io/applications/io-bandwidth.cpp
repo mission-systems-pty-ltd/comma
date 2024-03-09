@@ -156,6 +156,8 @@ int main( int ac, char** av )
         boost::posix_time::time_duration bucket_duration = boost::posix_time::microseconds( static_cast<unsigned int> (bucket_width * 1000000) );
         char delimiter = options.value( "--delimiter,-d", default_delimiter );
         bool porcelain = options.exists( "--porcelain" );
+        //std::pair< unsigned int, std::string > porcelain_spinner{ 0, options.exists( "--porcelain-spinner,--spinner" ) ? "-\\|/" : "" };
+        std::pair< unsigned int, std::vector< std::string > > porcelain_spinner{ 0, options.exists( "--porcelain-spinner,--spinner" ) ? std::vector< std::string >{ "<>     ", " <>    ", "  <>   ", "   <>  ", "  <> ", "     <>", "    <> ", "   <>  ", "  <>   ", " <>    " } : std::vector< std::string >{} };
         std::string porcelain_title = options.value< std::string >( "--porceilain-title,--title", "io-bandwidth" );
         if( porcelain ) { delimiter = ' '; }
         comma::io::select select;
@@ -221,6 +223,11 @@ int main( int ac, char** av )
                 }
                 if( total_count ) { oss << delimiter << ( porcelain ? "complete: " : "" ) << ( total_bytes / *record_size * 100 / *total_count ) << ( porcelain ? "%" : "" ); }
                 if( total_size ) { oss << delimiter << ( porcelain ? "complete: " : "" ) << ( total_bytes * 100 / *total_size ) << ( porcelain ? "%" : "" ); }
+                if( output_progress )
+                {
+                    if( !porcelain_spinner.second.empty() ) { oss << " " << porcelain_spinner.second[porcelain_spinner.first++]; }
+                    if( porcelain_spinner.first == porcelain_spinner.second.size() ) { porcelain_spinner.first = 0; }
+                }
                 COMMA_TITLE_BARE( oss.str() );
                 next_update += update_interval;
                 // If there's been a large pause (for some reason), catch up
