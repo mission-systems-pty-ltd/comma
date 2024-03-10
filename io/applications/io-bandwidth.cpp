@@ -157,7 +157,9 @@ int main( int ac, char** av )
         char delimiter = options.value( "--delimiter,-d", default_delimiter );
         bool porcelain = options.exists( "--porcelain" );
         //std::pair< unsigned int, std::string > porcelain_spinner{ 0, options.exists( "--porcelain-spinner,--spinner" ) ? "-\\|/" : "" };
-        std::pair< unsigned int, std::vector< std::string > > porcelain_spinner{ 0, options.exists( "--porcelain-spinner,--spinner" ) ? std::vector< std::string >{ "<>     ", " <>    ", "  <>   ", "   <>  ", "  <> ", "     <>", "    <> ", "   <>  ", "  <>   ", " <>    " } : std::vector< std::string >{} };
+        //std::pair< unsigned int, std::vector< std::string > > porcelain_spinner{ 0, options.exists( "--porcelain-spinner,--spinner" ) ? std::vector< std::string >{ "|<>       |", "| <>      |", "|  <>     |", "|   <>    |", "|    <>   |", "|     <>  |", "|      <> |", "|       <>|", "|      <> |", "|     <>  |", "|    <>   |", "|   <>    |", "|  <>     |", "| <>      |" } : std::vector< std::string >{} };
+        std::pair< unsigned int, std::vector< std::string > > porcelain_spinner{ 0, options.exists( "--porcelain-spinner,--spinner" ) ? std::vector< std::string >{ "[>________]", "[_>_______]", "[__>______]", "[___>_____]", "[____>____]", "[_____>___]", "[______>__]", "[_______>_]", "[________>]", "[________<]", "[_______<_]", "[______<__]", "[_____<___]", "[____<____]", "[___<_____]", "[__<______]", "[_<_______]", "[<________]" } : std::vector< std::string >{} };
+        //std::pair< unsigned int, std::vector< std::string > > porcelain_spinner{ 0, options.exists( "--porcelain-spinner,--spinner" ) ? std::vector< std::string >{ "\\/\\/\\/       ", " /\\/\\/\\      ", "  \\/\\/\\/     ", "   /\\/\\/\\    ", "  \\/\\/\\/   ", "     /\\/\\/\\  ", "    \\/\\/\\/   ", "   /\\/\\/\\    ", "  \\/\\/\\/     ", " /\\/\\/\\      " } : std::vector< std::string >{} };
         std::string porcelain_title = options.value< std::string >( "--porceilain-title,--title", "io-bandwidth" );
         if( porcelain ) { delimiter = ' '; }
         comma::io::select select;
