@@ -10,11 +10,11 @@ namespace comma { namespace io { namespace terminal {
 
 namespace controls {
 
-struct end { static constexpr char value[] = { 0x07, 0 }; };
+struct end { static char value[]; };
 
-struct stderr { static constexpr char start[] = { 0 }; static constexpr char end[] = { '\n', 0 }; }; // quick and dirty
+struct stderr { static char start[]; static char end[]; }; // quick and dirty
 
-struct titlebar { static constexpr char start[] = { 0x1b, ']', '0', ';', 0 }; static constexpr char end[] = { 0x07, 0 }; };
+struct titlebar { static char start[]; static char end[]; };
 
 template < unsigned int Colour >
 struct coloured; // todo

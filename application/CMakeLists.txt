@@ -10,7 +10,7 @@ ADD_LIBRARY( ${TARGET_NAME} ${source} ${includes} )
 SET_TARGET_PROPERTIES( ${TARGET_NAME} PROPERTIES ${comma_LIBRARY_PROPERTIES} )
 #set_target_properties( ${TARGET_NAME} PROPERTIES LINK_FLAGS_RELEASE -s )
 #set_target_properties( ${TARGET_NAME} PROPERTIES SOVERSION "${comma_version}" ) #set_target_properties( ${TARGET_NAME} PROPERTIES SOVERSION ${comma_version_major} ${comma_version_minor} ${comma_version_patch} )
-TARGET_LINK_LIBRARIES( ${TARGET_NAME} ${comma_ALL_EXTERNAL_LIBRARIES} comma_base comma_string )
+TARGET_LINK_LIBRARIES( ${TARGET_NAME} ${comma_ALL_EXTERNAL_LIBRARIES} comma_base comma_io comma_string )
 
 INSTALL( FILES ${includes} DESTINATION ${comma_INSTALL_INCLUDE_DIR}/${PROJECT} )
 INSTALL( TARGETS ${TARGET_NAME}
