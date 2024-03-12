@@ -4,7 +4,7 @@
 
 import argparse, comma, json, os, sys
 
-def _find( dir, absolute=False ):
+def _find( what, dir, absolute=False ):
     if dir == '-': raise Exception( 'comma-test-query: --dir="-": reading directories from stdin: todo, just ask' )
     real_root = os.path.realpath( dir )
     def _is_mount( p ): # quick and dirty, excessive and inefficient for now
@@ -16,7 +16,7 @@ def _find( dir, absolute=False ):
     def _valid( p ): # quick and dirty, inefficient for now
         if _is_mount( p ): return False
         while os.path.realpath( p ) != real_root:
-            if os.path.isfile( f'{p}/readme.json' ) or os.path.isfile( f'{p}/test' ): return True
+            if os.path.isfile( f'{p}/{what}' ) or os.path.isfile( f'{p}/test' ): return True
             p = os.path.dirname( p )
         return False
     d = [ i[0] for i in os.walk( dir, followlinks=True ) ]
@@ -26,20 +26,20 @@ def _find( dir, absolute=False ):
     return root, r
 
 def _list( args ):
-    _, paths = _find( args.dir, args.absolute )
+    _, paths = _find( args.what, args.dir, args.absolute )
     for p in paths: print( f'{p}' )
 
 def _transpose( args ):
-    _, paths = _find( args.dir )
+    _, paths = _find( args.what, args.dir )
 
 def _traverse( args ):
     d = {}
-    base, paths = _find( args.dir )
+    base, paths = _find( args.what, args.dir )
     for path in paths:
-        readme = f'{base}/{path}/readme.json'
+        what = f'{base}/{path}/{args.what}'
         status = 'todo'
-        if os.path.isfile( readme ):
-            with open( readme ) as f: comma.dictionary.set( d, path, json.load( f ) )
+        if os.path.isfile( what ):
+            with open( what ) as f: comma.dictionary.set( d, path, json.load( f ) ) # todo: fix overfitting on loading files of various types
     json.dump( d, sys.stdout, indent = None if args.minify else 4 )
 
 def make_args():
@@ -47,16 +47,18 @@ def make_args():
     epilog = 'examples: todo'
     parser = argparse.ArgumentParser( description=description, epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter )
     parser.add_argument( '--dir', default='.', type=str, help='directory to traverse; default: current directory, "-": read paths from stdin (todo)' )
-    parser.add_argument( '--permissive', help='do not complain about directories that have test, but not readme.json', action='store_true' )
     parser.add_argument( '--verbose', '-v', help='more human-readable output', action='store_true' )
     subparsers = parser.add_subparsers( help='sub-command help' )
-    list_parser = subparsers.add_parser( 'list', help='print subdirectories containing test or readme.json, following symlinks, but skipping mounted drives (for now)' )
+    list_parser = subparsers.add_parser( 'list', help='print subdirectories containing test or <what>, following symlinks, but skipping mounted drives (for now)' )
+    list_parser.add_argument( 'what', type=str, choices=['readme.json'], help='output absolute path' )
     list_parser.add_argument( '--absolute', help='output absolute path', action='store_true' )
     list_parser.set_defaults( func=_list )
     transpose_parser = subparsers.add_parser( 'transpose', help='transpose into the given primary key' )
-    transpose_parser.add_argument( 'what', type=str, help='field name vs which to transpose' )
+    transpose_parser.add_argument( 'what', type=str, choices=['readme.json'], help='output absolute path' )
+    transpose_parser.add_argument( 'key', type=str, help='field name vs which to transpose' )
     transpose_parser.set_defaults( func=_transpose )
-    traverse_parser = subparsers.add_parser( 'traverse', help='traverse subdirectories, following symlinks, find readme.json, output combined json' )
+    traverse_parser = subparsers.add_parser( 'traverse', help='traverse subdirectories, following symlinks, find <what>, output combined json' )
+    traverse_parser.add_argument( 'what', type=str, choices=['readme.json'], help='output absolute path' )
     traverse_parser.add_argument( '--minify', help='output one-line json', action='store_true' )
     traverse_parser.set_defaults( func=_traverse )
     return parser.parse_args()
