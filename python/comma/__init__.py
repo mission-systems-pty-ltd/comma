@@ -3,6 +3,7 @@
 
 from . import csv
 from . import dictionary
+from . import filesystem
 from . import io
 from . import numpy
 from . import signal
