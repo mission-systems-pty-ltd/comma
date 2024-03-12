@@ -2,23 +2,24 @@
 
 # Copyright (c) 2024 Vsevolod Vlaskine
 
-import argparse, comma, json, os, sys
+import argparse, collections.abc, comma, json, os, sys
 
 def _find( what, dir, absolute=False ):
     if dir == '-': raise Exception( 'comma-test-query: --dir="-": reading directories from stdin: todo, just ask' )
     real_root = os.path.realpath( dir )
     def _is_mount( p ): # quick and dirty, excessive and inefficient for now
         p = os.path.realpath( p )
-        while not p in ['', '/']:
+        while True:
+            if p == '/': return False
             if os.path.ismount( p ): return True
+            if p == '': return False
             p = os.path.dirname( p )
-        return False
     def _valid( p ): # quick and dirty, inefficient for now
         if _is_mount( p ): return False
-        while os.path.realpath( p ) != real_root:
-            if os.path.isfile( f'{p}/{what}' ) or os.path.isfile( f'{p}/test' ): return True
+        while True:
+            if os.path.isfile( f'{p}/{what}' ): return True # if os.path.isfile( f'{p}/{what}' ) or os.path.isfile( f'{p}/test' ): return True
+            if os.path.realpath( p ) == real_root: return False
             p = os.path.dirname( p )
-        return False
     d = [ i[0] for i in os.walk( dir, followlinks=True ) ]
     root = d[0]
     r = sorted( filter( _valid, d ) )
@@ -26,7 +27,7 @@ def _find( what, dir, absolute=False ):
     return root, r
 
 def _list( args ):
-    _, paths = _find( args.what, args.dir, args.absolute )
+    _, paths = _find( args.what, args.dir )
     for p in paths: print( f'{p}' )
 
 def _transpose( args ):
@@ -41,12 +42,19 @@ def _transpose( args ):
                 if args.strict: raise KeyError( f'{args.key} not found in {what}' )
                 else: continue
             if args.output == 'all':
-                for k in r[args.key]:
-                    comma.dictionary.set( d, f'{args.key}/{k}/{path}', r ) # todo! quick and dirty, super-overfit!
+                if isinstance( r[args.key], list ):
+                    for k in r[args.key]:
+                        comma.dictionary.set( d, f'{args.key}/{k}/{path}', r ) # todo! quick and dirty, super-overfit!
+                else:
+                    comma.dictionary.set( d, f'{args.key}/{r[args.key]}/{path}', r ) # todo! quick and dirty, super-overfit!
             elif args.output == 'paths':
-                for k in r[args.key]:
+                if isinstance( r[args.key], list ):
+                    for k in r[args.key]: comma.dictionary.set( d, f'{args.key}/{k}', { 'paths': comma.dictionary.at( d, f'{args.key}/{k}/paths' ) + [ path ] if comma.dictionary.has( d, f'{args.key}/{k}/paths' ) else [ path ] } ) # todo! quick and dirty, super-overfit!
+                else:
+                    k = r[args.key]
                     comma.dictionary.set( d, f'{args.key}/{k}', { 'paths': comma.dictionary.at( d, f'{args.key}/{k}/paths' ) + [ path ] if comma.dictionary.has( d, f'{args.key}/{k}/paths' ) else [ path ] } ) # todo! quick and dirty, super-overfit!
-    json.dump( d, sys.stdout, indent = None if args.minify else 4 )    
+    #json.dump( sorted( d, key=lambda i: i[0] ), sys.stdout, indent = None if args.minify else 4 )    
+    json.dump( d, sys.stdout, sort_keys=True, indent = None if args.minify else 4 )
 
 def _traverse( args ):
     d = {}
@@ -62,22 +70,20 @@ def make_args():
     description = 'usage: todo'
     epilog = 'examples: todo'
     parser = argparse.ArgumentParser( description=description, epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter )
+    parser.add_argument( 'what', type=str, help='what to look for, e.g. readme.json' )
     parser.add_argument( '--dir', default='.', type=str, help='directory to traverse; default: current directory, "-": read paths from stdin (todo)' )
     parser.add_argument( '--verbose', '-v', help='more human-readable output', action='store_true' )
     subparsers = parser.add_subparsers( help='sub-command help' )
     list_parser = subparsers.add_parser( 'list', help='print subdirectories containing test or <what>, following symlinks, but skipping mounted drives (for now)' )
-    list_parser.add_argument( 'what', type=str, choices=['readme.json'], help='output absolute path' )
-    list_parser.add_argument( '--absolute', help='output absolute path', action='store_true' )
+    #list_parser.add_argument( '--absolute', help='output absolute path', action='store_true' )
     list_parser.set_defaults( func=_list )
     transpose_parser = subparsers.add_parser( 'transpose', help='transpose into the given primary key' )
-    transpose_parser.add_argument( 'what', type=str, choices=['readme.json'], help='output absolute path' )
     transpose_parser.add_argument( 'key', type=str, help='field name vs which to transpose' )
     transpose_parser.add_argument( '--minify', help='output one-line json', action='store_true' )
     transpose_parser.add_argument( '--output', default='all', type=str, choices=['all', 'paths'], help='what to output' )
     transpose_parser.add_argument( '--strict', help='fail if one of files does not have desired <key>', action='store_true' )
     transpose_parser.set_defaults( func=_transpose )
     traverse_parser = subparsers.add_parser( 'traverse', help='traverse subdirectories, following symlinks, find <what>, output combined json' )
-    traverse_parser.add_argument( 'what', type=str, choices=['readme.json'], help='output absolute path' )
     traverse_parser.add_argument( '--minify', help='output one-line json', action='store_true' )
     traverse_parser.set_defaults( func=_traverse )
     return parser.parse_args()
