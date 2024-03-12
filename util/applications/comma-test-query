@@ -40,8 +40,12 @@ def _transpose( args ):
             if not args.key in r:
                 if args.strict: raise KeyError( f'{args.key} not found in {what}' )
                 else: continue
-            for k in r[args.key]:
-                comma.dictionary.set( d, f'{args.key}/{k}', { 'paths': comma.dictionary.at( d, f'{args.key}/{k}/paths' ) + [ path ] if comma.dictionary.has( d, f'{args.key}/{k}/paths' ) else [ path ] } ) # todo! quick and dirty, super-overfit!
+            if args.output == 'all':
+                for k in r[args.key]:
+                    comma.dictionary.set( d, f'{args.key}/{k}/{path}', r ) # todo! quick and dirty, super-overfit!
+            elif args.output == 'paths':
+                for k in r[args.key]:
+                    comma.dictionary.set( d, f'{args.key}/{k}', { 'paths': comma.dictionary.at( d, f'{args.key}/{k}/paths' ) + [ path ] if comma.dictionary.has( d, f'{args.key}/{k}/paths' ) else [ path ] } ) # todo! quick and dirty, super-overfit!
     json.dump( d, sys.stdout, indent = None if args.minify else 4 )    
 
 def _traverse( args ):
@@ -69,6 +73,7 @@ def make_args():
     transpose_parser.add_argument( 'what', type=str, choices=['readme.json'], help='output absolute path' )
     transpose_parser.add_argument( 'key', type=str, help='field name vs which to transpose' )
     transpose_parser.add_argument( '--minify', help='output one-line json', action='store_true' )
+    transpose_parser.add_argument( '--output', default='all', type=str, choices=['all', 'paths'], help='what to output' )
     transpose_parser.add_argument( '--strict', help='fail if one of files does not have desired <key>', action='store_true' )
     transpose_parser.set_defaults( func=_transpose )
     traverse_parser = subparsers.add_parser( 'traverse', help='traverse subdirectories, following symlinks, find <what>, output combined json' )
