@@ -7,9 +7,14 @@ import argparse, comma, json, os, sys
 def _find( args ):
     if args.dir == '-': raise Exception( 'comma-test-query: --dir="-": reading directories from stdin: todo, just ask' )
     dir = os.path.realpath( args.dir )
-    def _valid( path ): # quick and dirty, inefficient for now
-        # print(functools.reduce(lambda a, b: a if a > b else b, lis)) 
-        p = path
+    def _is_mount( p ): # quick and dirty, excessive and inefficient for now
+        p = os.path.realpath( p )
+        while not p in ['', '/']:
+            if os.path.ismount( p ): return True
+            p = os.path.dirname( p )
+        return False
+    def _valid( p ): # quick and dirty, inefficient for now
+        if _is_mount( p ): return False
         while os.path.realpath( p ) != dir:
             if os.path.isfile( f'{p}/readme.json' ) or os.path.isfile( f'{p}/test' ): return True
             p = os.path.dirname( p )
@@ -38,7 +43,7 @@ def make_args():
     parser.add_argument( '--permissive', help='do not complain about directories that have test, but not readme.json', action='store_true' )
     parser.add_argument( '--verbose', '-v', help='more human-readable output', action='store_true' )
     subparsers = parser.add_subparsers( help='sub-command help' )
-    list_parser = subparsers.add_parser( 'list', help='print subdirectories containing test or readme.json, following symlinks' )
+    list_parser = subparsers.add_parser( 'list', help='print subdirectories containing test or readme.json, following symlinks, but skipping mounted drives (for now)' )
     list_parser.add_argument( '--absolute', help='output absolute path', action='store_true' )
     list_parser.set_defaults( func=_list )
     transpose_parser = subparsers.add_parser( 'transpose', help='transpose into the given primary key' )
