@@ -2,21 +2,54 @@
 
 # Copyright (c) 2024 Vsevolod Vlaskine
 
-import argparse, comma, json, sys
+import argparse, comma, json, os, sys
+
+def _find( args ):
+    if args.dir == '-': raise Exception( 'comma-test-query: --dir="-": reading directories from stdin: todo, just ask' )
+    dir = os.path.realpath( args.dir )
+    def _valid( path ): # quick and dirty, inefficient for now
+        # print(functools.reduce(lambda a, b: a if a > b else b, lis)) 
+        p = path
+        while os.path.realpath( p ) != dir:
+            if os.path.isfile( f'{p}/readme.json' ) or os.path.isfile( f'{p}/test' ): return True
+            p = os.path.dirname( p )
+        return False
+    d = [ i[0] for i in os.walk( args.dir, followlinks=True ) ]
+    r = sorted( filter( _valid, d ) )
+    if not args.absolute: r = [ p[ ( len( d[0] ) + 1 ) : ] for p in r ]
+    return r
+
+def _list( args ):
+    w = _find( args )
+    for e in w: print( f'{e}' )
+    #print( list( _find( args ) ) )
+
+def _transpose( args ):
+    _find( args )
+
+def _traverse( args ):
+    _find( args )
 
 def make_args():
     description = 'usage: todo'
     epilog = 'examples: todo'
     parser = argparse.ArgumentParser( description=description, epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter )
-    parser.add_argument( '--dir', default='.', type=str, help='directory to traverse, "-": read paths from stdin (todo)' )
+    parser.add_argument( '--dir', default='.', type=str, help='directory to traverse; default: current directory, "-": read paths from stdin (todo)' )
+    parser.add_argument( '--permissive', help='do not complain about directories that have test, but not readme.json', action='store_true' )
     parser.add_argument( '--verbose', '-v', help='more human-readable output', action='store_true' )
     subparsers = parser.add_subparsers( help='sub-command help' )
-    traverse_parser = subparsers.add_parser( 'traverse', help='traverse subdirectories, following symlinks, find readme.json, output combined json' )
+    list_parser = subparsers.add_parser( 'list', help='print subdirectories containing test or readme.json, following symlinks' )
+    list_parser.add_argument( '--absolute', help='output absolute path', action='store_true' )
+    list_parser.set_defaults( func=_list )
     transpose_parser = subparsers.add_parser( 'transpose', help='transpose into the given primary key' )
     transpose_parser.add_argument( 'what', type=str, help='field name vs which to transpose' )
+    transpose_parser.set_defaults( func=_transpose )
+    traverse_parser = subparsers.add_parser( 'traverse', help='traverse subdirectories, following symlinks, find readme.json, output combined json' )
+    traverse_parser.set_defaults( func=_traverse )
     return parser.parse_args()
 
 def main():
     args = make_args()
+    args.func( args )
 
 if __name__ == '__main__': main()
