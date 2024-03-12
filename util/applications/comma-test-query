@@ -30,13 +30,25 @@ def _list( args ):
     for p in paths: print( f'{p}' )
 
 def _transpose( args ):
-    _, paths = _find( args.what, args.dir )
+    root, paths = _find( args.what, args.dir )
+    d = {}
+    for path in paths:
+        what = f'{root}/{path}/{args.what}'
+        status = 'todo'
+        if os.path.isfile( what ):
+            with open( what ) as f: r = json.load( f )
+            if not args.key in r:
+                if args.strict: raise KeyError( f'{args.key} not found in {what}' )
+                else: continue
+            for k in r[args.key]:
+                comma.dictionary.set( d, f'{args.key}/{k}', { 'paths': comma.dictionary.at( d, f'{args.key}/{k}/paths' ) + [ path ] if comma.dictionary.has( d, f'{args.key}/{k}/paths' ) else [ path ] } ) # todo! quick and dirty, super-overfit!
+    json.dump( d, sys.stdout, indent = None if args.minify else 4 )    
 
 def _traverse( args ):
     d = {}
-    base, paths = _find( args.what, args.dir )
+    root, paths = _find( args.what, args.dir )
     for path in paths:
-        what = f'{base}/{path}/{args.what}'
+        what = f'{root}/{path}/{args.what}'
         status = 'todo'
         if os.path.isfile( what ):
             with open( what ) as f: comma.dictionary.set( d, path, json.load( f ) ) # todo: fix overfitting on loading files of various types
@@ -56,6 +68,8 @@ def make_args():
     transpose_parser = subparsers.add_parser( 'transpose', help='transpose into the given primary key' )
     transpose_parser.add_argument( 'what', type=str, choices=['readme.json'], help='output absolute path' )
     transpose_parser.add_argument( 'key', type=str, help='field name vs which to transpose' )
+    transpose_parser.add_argument( '--minify', help='output one-line json', action='store_true' )
+    transpose_parser.add_argument( '--strict', help='fail if one of files does not have desired <key>', action='store_true' )
     transpose_parser.set_defaults( func=_transpose )
     traverse_parser = subparsers.add_parser( 'traverse', help='traverse subdirectories, following symlinks, find <what>, output combined json' )
     traverse_parser.add_argument( 'what', type=str, choices=['readme.json'], help='output absolute path' )
