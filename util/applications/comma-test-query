@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+
+# Copyright (c) 2024 Vsevolod Vlaskine
+
+import argparse, comma, json, sys
+
+def make_args():
+    description = 'usage: todo'
+    epilog = 'examples: todo'
+    parser = argparse.ArgumentParser( description=description, epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter )
+    parser.add_argument( '--dir', default='.', type=str, help='directory to traverse, "-": read paths from stdin (todo)' )
+    parser.add_argument( '--verbose', '-v', help='more human-readable output', action='store_true' )
+    subparsers = parser.add_subparsers( help='sub-command help' )
+    traverse_parser = subparsers.add_parser( 'traverse', help='traverse subdirectories, following symlinks, find readme.json, output combined json' )
+    transpose_parser = subparsers.add_parser( 'transpose', help='transpose into the given primary key' )
+    transpose_parser.add_argument( 'what', type=str, help='field name vs which to transpose' )
+    return parser.parse_args()
+
+def main():
+    args = make_args()
+
+if __name__ == '__main__': main()
