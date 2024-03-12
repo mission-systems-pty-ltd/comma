@@ -4,9 +4,9 @@
 
 import argparse, comma, json, os, sys
 
-def _find( args ):
-    if args.dir == '-': raise Exception( 'comma-test-query: --dir="-": reading directories from stdin: todo, just ask' )
-    dir = os.path.realpath( args.dir )
+def _find( dir, absolute=False ):
+    if dir == '-': raise Exception( 'comma-test-query: --dir="-": reading directories from stdin: todo, just ask' )
+    real_root = os.path.realpath( dir )
     def _is_mount( p ): # quick and dirty, excessive and inefficient for now
         p = os.path.realpath( p )
         while not p in ['', '/']:
@@ -15,25 +15,32 @@ def _find( args ):
         return False
     def _valid( p ): # quick and dirty, inefficient for now
         if _is_mount( p ): return False
-        while os.path.realpath( p ) != dir:
+        while os.path.realpath( p ) != real_root:
             if os.path.isfile( f'{p}/readme.json' ) or os.path.isfile( f'{p}/test' ): return True
             p = os.path.dirname( p )
         return False
-    d = [ i[0] for i in os.walk( args.dir, followlinks=True ) ]
+    d = [ i[0] for i in os.walk( dir, followlinks=True ) ]
+    root = d[0]
     r = sorted( filter( _valid, d ) )
-    if not args.absolute: r = [ p[ ( len( d[0] ) + 1 ) : ] for p in r ]
-    return r
+    if not absolute: r = [ p[ ( len( root ) + 1 ) : ] for p in r ]
+    return root, r
 
 def _list( args ):
-    w = _find( args )
-    for e in w: print( f'{e}' )
-    #print( list( _find( args ) ) )
+    _, paths = _find( args.dir, args.absolute )
+    for p in paths: print( f'{p}' )
 
 def _transpose( args ):
-    _find( args )
+    _, paths = _find( args.dir )
 
 def _traverse( args ):
-    _find( args )
+    d = {}
+    base, paths = _find( args.dir )
+    for path in paths:
+        readme = f'{base}/{path}/readme.json'
+        status = 'todo'
+        if os.path.isfile( readme ):
+            with open( readme ) as f: comma.dictionary.set( d, path, json.load( f ) )
+    json.dump( d, sys.stdout, indent = None if args.minify else 4 )
 
 def make_args():
     description = 'usage: todo'
@@ -50,6 +57,7 @@ def make_args():
     transpose_parser.add_argument( 'what', type=str, help='field name vs which to transpose' )
     transpose_parser.set_defaults( func=_transpose )
     traverse_parser = subparsers.add_parser( 'traverse', help='traverse subdirectories, following symlinks, find readme.json, output combined json' )
+    traverse_parser.add_argument( '--minify', help='output one-line json', action='store_true' )
     traverse_parser.set_defaults( func=_traverse )
     return parser.parse_args()
 
