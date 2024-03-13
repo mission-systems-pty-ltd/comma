@@ -58,6 +58,8 @@ function description_test_selection()
 --black-list=[<file>]; do not run these tests mentioned in <file>, e.g. a lists of sub-directories in white list
   to be excluded; see '--white-list' below for file format.
 --end=[<dir>]; run tests up to a given test, the latter excluded, where test directories are ordered lexicographically
+--followsymlinks,-L; follow symlinks when looking for test directories, same as find -L
+--followmounts; search mounted filesystems when looking for test directories, same as find without -mount
 --from,--begin=[<dir>]; run tests starting from a given test, where test directories are ordered lexicographically
 --run-disabled; run disabled tests
 --run-optional,--optional; run tests having file called "optional" (same logic as for --run-disabled)
@@ -1081,7 +1083,10 @@ function test_directories()
         options_black_list="^(\./)?($( sed 's#\./##' <$options_black_list | grep -v ^# | grep -v ^$ | tr \\n '|' | sed 's/|$//' ))";
     fi
 
-    test_script_dirs_all=( $( exclude_generic_tests $( get_dirnames $( find . -name "test" -or -name "input" -or -name "expected" | grep -v "/\." ) 2>/dev/null | sort -u ) | apply_white_black_list ) )
+    local followsymlinks followmounts="-mount"
+    (( ! options_followsymlinks )) || followsymlinks="-L"
+    (( ! options_followmounts )) || followmounts=
+    test_script_dirs_all=( $( exclude_generic_tests $( get_dirnames $( find $followsymlinks . $followmounts -name "test" -or -name "input" -or -name "expected" | grep -v "/\." ) 2>/dev/null | sort -u ) | apply_white_black_list ) )
     [[ -n "$options_from" || -n "$options_to" || -n "$options_end" ]] || { echo ${test_script_dirs_all[@]} ; return ; }
     [[ -z "$options_from" ]] || { local from="${options_from#\.\/}" ; }
     [[ -z "$options_to" ]] || { local to="${options_to#\.\/}" ; }
