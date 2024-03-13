@@ -20,36 +20,40 @@ def _transpose( args ):
     root, paths = _find( args.what, args.dir )
     d = {}
     for path in paths:
-        what = f'{root}/{path}/{args.what}'
-        status = 'todo'
-        if os.path.isfile( what ):
-            with open( what ) as f: r = json.load( f )
-            if not args.key in r:
-                if args.strict: raise KeyError( f'{args.key} not found in {what}' )
-                else: continue
-            if args.output == 'all':
-                if isinstance( r[args.key], list ):
-                    for k in r[args.key]:
-                        comma.dictionary.set( d, f'{args.key}/{k}/{path}', r ) # todo! quick and dirty, super-overfit!
-                else:
-                    comma.dictionary.set( d, f'{args.key}/{r[args.key]}/{path}', r ) # todo! quick and dirty, super-overfit!
-            elif args.output == 'paths':
-                if isinstance( r[args.key], list ):
-                    for k in r[args.key]: comma.dictionary.set( d, f'{args.key}/{k}', { 'paths': comma.dictionary.at( d, f'{args.key}/{k}/paths' ) + [ path ] if comma.dictionary.has( d, f'{args.key}/{k}/paths' ) else [ path ] } ) # todo! quick and dirty, super-overfit!
-                else:
-                    k = r[args.key]
-                    comma.dictionary.set( d, f'{args.key}/{k}', { 'paths': comma.dictionary.at( d, f'{args.key}/{k}/paths' ) + [ path ] if comma.dictionary.has( d, f'{args.key}/{k}/paths' ) else [ path ] } ) # todo! quick and dirty, super-overfit!
+        for w in args.what:
+            what = f'{root}/{path}/{w}'
+            status = 'todo'
+            if os.path.isfile( what ):
+                with open( what ) as f: r = json.load( f )
+                if not args.key in r:
+                    if args.strict: raise KeyError( f'{args.key} not found in {what}' )
+                    else: continue
+                if args.output == 'all':
+                    if isinstance( r[args.key], list ):
+                        for k in r[args.key]:
+                            comma.dictionary.set( d, f'{args.key}/{k}/{path}', r ) # todo! quick and dirty, super-overfit!
+                    else:
+                        comma.dictionary.set( d, f'{args.key}/{r[args.key]}/{path}', r ) # todo! quick and dirty, super-overfit!
+                elif args.output == 'paths':
+                    if isinstance( r[args.key], list ):
+                        for k in r[args.key]: comma.dictionary.set( d, f'{args.key}/{k}', { 'paths': comma.dictionary.at( d, f'{args.key}/{k}/paths' ) + [ path ] if comma.dictionary.has( d, f'{args.key}/{k}/paths' ) else [ path ] } ) # todo! quick and dirty, super-overfit!
+                    else:
+                        k = r[args.key]
+                        comma.dictionary.set( d, f'{args.key}/{k}', { 'paths': comma.dictionary.at( d, f'{args.key}/{k}/paths' ) + [ path ] if comma.dictionary.has( d, f'{args.key}/{k}/paths' ) else [ path ] } ) # todo! quick and dirty, super-overfit!
     #json.dump( sorted( d, key=lambda i: i[0] ), sys.stdout, indent = None if args.minify else 4 )    
     json.dump( d, sys.stdout, sort_keys=True, indent = None if args.minify else 4 )
 
 def _traverse( args ):
     d = {}
     root, paths = _find( args.what, args.dir )
+    print( f'a: {root=}', file=sys.stderr )
+    print( f'b: {paths=}', file=sys.stderr )
     for path in paths:
-        what = f'{root}/{path}/{args.what}'
-        status = 'todo'
-        if os.path.isfile( what ):
-            with open( what ) as f: comma.dictionary.set( d, path, json.load( f ) ) # todo: fix overfitting on loading files of various types
+        for w in args.what:
+            what = f'{root}/{path}/{w}'
+            print( f'c: {what=}', file=sys.stderr )
+            if os.path.isfile( what ):
+                with open( what ) as f: comma.dictionary.set( d, path, json.load( f ) ) # todo: fix overfitting on loading files of various types
     json.dump( d, sys.stdout, indent = None if args.minify else 4 )
 
 def make_args():
