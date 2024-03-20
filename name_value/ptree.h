@@ -7,6 +7,7 @@
 
 #include <array>
 #include <iostream>
+#include <optional>
 #include <sstream>
 #include <boost/array.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -127,6 +128,13 @@ struct property_tree // quick and dirty
             }
 
             template < typename K, typename T > void apply_next( const K& name, boost::optional< T >& value )
+            {
+                if( !cur_ || cur_->find( name ) == cur_->not_found() ) { return; }
+                if( !value ) { value = T(); }
+                apply( name, *value );
+            }
+
+            template < typename K, typename T > void apply_next( const K& name, std::optional< T >& value )
             {
                 if( !cur_ || cur_->find( name ) == cur_->not_found() ) { return; }
                 if( !value ) { value = T(); }
@@ -259,10 +267,8 @@ class to_ptree
         /// @param branch: path to the subtree to visit (i.e. other branches will be pruned)
         to_ptree( boost::property_tree::ptree& ptree, const xpath& root = xpath(), const xpath& branch = xpath() ) : ptree_( ptree ), path_( root ), branch_( branch ) {}
 
-        /// constructor
         to_ptree( boost::property_tree::ptree& ptree, const char* root ) : ptree_( ptree ), path_( root ) {}
 
-        /// apply_next on boost optional
         template < typename K, typename T > void apply_next( const K& name, const boost::optional< T >& value )
         {
             if( !value ) { return; }
@@ -271,7 +277,14 @@ class to_ptree
                                 && !boost::is_same< T, std::string >::value >::visit( name, *value, *this );
         }
 
-        /// apply to vector
+        template < typename K, typename T > void apply_next( const K& name, const std::optional< T >& value )
+        {
+            if( !value ) { return; }
+            visiting::do_while<    !boost::is_fundamental< T >::value
+                                && !boost::is_same< T, boost::posix_time::ptime >::value
+                                && !boost::is_same< T, std::string >::value >::visit( name, *value, *this );
+        }
+
         template < typename K, typename T, typename A > void apply( const K& name, const std::vector< T, A >& value ) // do we even need it?
         {
             if( !( path_ <= branch_ ) ) { return; } // visit, only if on the branch
