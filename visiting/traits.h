@@ -19,7 +19,7 @@
 #include <vector>
 #include <boost/array.hpp>
 #include "../base/none.h"
-#include "optional.h"
+#include "../base/optional.h"
 
 namespace comma { namespace visiting {
 
@@ -55,15 +55,15 @@ struct traits< std::pair< T, S > >
 };
 
 template < typename T >
-struct traits< comma::visiting::optional< T > >
+struct traits< comma::optional< T > >
 {
-    template < typename K, typename V > static void visit( const K& key, comma::visiting::optional< T >& t, V& v )
+    template < typename K, typename V > static void visit( const K& key, comma::optional< T >& t, V& v )
     {
         v.apply( "value", t.value );
         v.apply( "is_set", t.is_set );
     }
     
-    template < typename K, typename V > static void visit( const K&, const comma::visiting::optional< T >& t, V& v )
+    template < typename K, typename V > static void visit( const K&, const comma::optional< T >& t, V& v )
     {
         v.apply( "value", t.value );
         v.apply( "is_set", t.is_set );

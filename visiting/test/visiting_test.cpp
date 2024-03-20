@@ -10,6 +10,7 @@
 #include <vector>
 #include <boost/array.hpp>
 #include <boost/noncopyable.hpp>
+#include "../../base/optional.h"
 #include "../../base/types.h"
 #include "../apply.h"
 #include "../visit.h"
@@ -85,8 +86,8 @@ struct old_plain
 
 struct optionals
 {
-    comma::visiting::optional< int > a;
-    comma::visiting::optional< std::pair< int, int > > b;
+    comma::optional< int > a;
+    comma::optional< std::pair< int, int > > b;
 };
 
 } } } // namespace comma { namespace visiting { namespace test {

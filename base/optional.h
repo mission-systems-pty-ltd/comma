@@ -4,7 +4,7 @@
 
 #pragma once
 
-namespace comma { namespace visiting {
+namespace comma {
 
 /// convenience class when std::optional or boost::optional is not enough
 /// e.g. if in visiting we would like to have an explicit is-set flag field 
@@ -29,4 +29,4 @@ struct optional
     const T& operator*() const { return value; }
 };
 
-} } // namespace comma { namespace visiting {
+} // namespace comma {
