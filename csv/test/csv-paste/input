@@ -45,3 +45,11 @@ head[2]="csv-paste 'line-number;size=10;index' --head=2"
 
 line_number/shape[0]="csv-paste 'line-number;shape=2,3' --head=12"
 line_number/shape[1]="csv-paste 'line-number;shape=2,3;binary=2ui' --head=12 | csv-from-bin 2ui"
+
+line_number/repeat[0]="csv-paste 'line-number' --repeat=3"
+line_number/repeat[1]="csv-paste 'line-number;repeat=3'"
+line_number/repeat[3]="csv-paste 'line-number;size=2' --repeat=2"
+line_number/repeat[4]="csv-paste 'line-number;size=2;repeat=3'"
+line_number/repeat[5]="csv-paste 'line-number;size=2;index;repeat=3'"
+line_number/repeat[6]="csv-paste 'line-number;size=2;index;reverse;repeat=3'"
+line_number/repeat[7]="csv-paste 'line-number;shape=2,3;repeat=2'"

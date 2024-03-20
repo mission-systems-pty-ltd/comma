@@ -61,6 +61,10 @@ static void usage( bool verbose )
     std::cerr << "            --block-size,--size=<size>: number of records with the same line number; default: 1" << std::endl;
     std::cerr << "                 WARNING: --size: deprecated, since it is confusing for files" << std::endl;
     std::cerr << "            --index; instead of block number output record index in the block" << std::endl;
+    std::cerr << "            --repeat=[<n>]; repeat a given pattern <n> times" << std::endl;
+    std::cerr << "                no --size: same as --head" << std::endl;
+    std::cerr << "                --size: repeat block of a given size <n> times" << std::endl;
+    std::cerr << "                --shape: repeat a given shape <n> times, e.g. 'line-number;shape=4,3,5;repeat=2'" << std::endl;
     std::cerr << "            --reverse; if --index, output index in descending order" << std::endl;
     std::cerr << "            --shape=<shape>; iterate through indices of a given shape; <shape>: same meaning as in numpy, e.g. 'line-number;shape=10,5,4'" << std::endl;
     std::cerr << "            --step=<value>; default=1; line number increment/decrement step" << std::endl;        
@@ -173,27 +177,29 @@ class line_number : public source
         class options
         {
             public:
-                comma::uint32 size;
-                bool index;
-                bool reverse;
-                comma::int32 step;
-                comma::int32 begin;
+                comma::uint32 size{0};
+                bool index{false};
+                bool reverse{false};
+                comma::int32 step{0};
+                comma::int32 begin{0};
                 std::vector< comma::uint32 > shape;
                 std::string format;
+                comma::uint32 repeat{0};
                 
-                options( const boost::optional< comma::int32 >& b = boost::optional< comma::int32 >(), comma::uint32 size = 1, bool index = false, bool reverse = false, int s = 1 )
+                options( const boost::optional< comma::int32 >& b = boost::optional< comma::int32 >(), comma::uint32 size = 1, bool index = false, bool reverse = false, int s = 1, unsigned int repeat = 0 )
                     : size( size )
                     , index( index )
                     , reverse( reverse )
                     , step( s )
                     , begin( begin_( b ) )
+                    , repeat( repeat )
                 {
                 }
                 
                 options( const std::string& properties, const comma::command_line_options& o ) // quick and dirty: use visiting instead
                 {
                     o.assert_mutually_exclusive( "--shape", "--block-size,--size,--reverse,--begin" );
-                    options defaults( boost::optional< comma::int32 >(), o.value< comma::uint32 >( "--block-size,--size", 1 ), o.exists( "--index" ), o.exists( "--reverse" ), o.value< comma::int32 >( "--step", 1 ) );
+                    options defaults( boost::optional< comma::int32 >(), o.value< comma::uint32 >( "--block-size,--size", 1 ), o.exists( "--index" ), o.exists( "--reverse" ), o.value< comma::int32 >( "--step", 1 ), o.value< comma::uint32 >( "--repeat", 0 ) );
                     comma::name_value::map map( properties, ';', '=' );
                     map.assert_mutually_exclusive( "shape", "block-size,size,reverse,begin,step" );
                     std::string s = map.value< std::string >( "shape", o.value< std::string >( "--shape", "" ) );
@@ -215,6 +221,7 @@ class line_number : public source
                         shape.resize( v.size() );
                         for( unsigned int i = 0; i < v.size(); ++i ) { shape[i] = boost::lexical_cast< unsigned int >( v[i] ); }
                     }
+                    repeat = map.value< comma::int32 >( "repeat", defaults.repeat );
                 }
                 
             private:
@@ -237,27 +244,28 @@ class line_number : public source
         const std::string* read()
         { 
             serialized_ = values_.empty() ? boost::lexical_cast< std::string >( value_ ) : comma::join( values_, ',' );
-            update_();
-            return &serialized_;
+            return update_() ? &serialized_ : nullptr;
         }
         
         const char* read( char* buf ) // quick and dirty
         {
             if( values_.empty() ) { comma::csv::format::traits< comma::int32 >::to_bin( value_, buf ); }
             else { for( unsigned int i = 0; i < values_.size(); ++i, buf += sizeof( comma::int32 ) ) { comma::csv::format::traits< comma::int32 >::to_bin( values_[i], buf ); } }
-            update_();
-            return buf;
+            return update_() ? buf : nullptr;
         }
         
     private:
         options options_;
-        comma::uint32 count_;
-        comma::int32 value_;
+        comma::uint32 count_{0};
+        comma::int32 value_{0};
+        comma::uint32 _repeats{0};
         std::vector< comma::uint32 > values_;
         std::string serialized_;
+        bool _done{false};
         
-        void update_()
+        bool update_()
         {
+            if( _done ) { return false; }
             if( values_.empty() )
             {
                 ++count_; //count_ += options_.step;
@@ -269,6 +277,7 @@ class line_number : public source
                 {
                     value_ = options_.index ? options_.begin : ( value_ + options_.step );
                     count_ = 0;
+                    if( options_.repeat > 0 ) { ++_repeats; if( _repeats == options_.repeat ) { _done = true; } }
                 }
             }
             else
@@ -277,9 +286,11 @@ class line_number : public source
                 {
                     ++values_[i];
                     if( values_[i] < options_.shape[i] ) { break; }
+                    if( i == 0 && options_.repeat > 0 ) { ++_repeats; if( _repeats == options_.repeat ) { _done = true; } }
                     values_[i] = 0;
                 }
             }
+            return true;
         }
 };
 
@@ -289,7 +300,7 @@ int main( int ac, char** av )
     {
         comma::command_line_options options( ac, av, usage );
         char delimiter = options.value( "--delimiter,-d", ',' );
-        std::vector< std::string > unnamed = options.unnamed( "--flush,--index,--reverse", "--delimiter,-d,--begin,--size,--step,--block-size,--head" );
+        std::vector< std::string > unnamed = options.unnamed( "--flush,--index,--reverse", "--delimiter,-d,--begin,--size,--step,--block-size,--head,--repeat" );
         bool flush = options.exists( "--flush" );
         boost::ptr_vector< source > sources;
         bool is_binary = false;
