@@ -83,13 +83,18 @@ struct old_plain
     nested world;
 };
 
+struct optionals
+{
+    comma::visiting::optional< int > a;
+    comma::visiting::optional< std::pair< int, int > > b;
+};
+
 } } } // namespace comma { namespace visiting { namespace test {
 
 namespace comma { namespace visiting {
 
 /// traits specialization for old_plain
-template <>
-struct traits< test::old_plain >
+template <> struct traits< test::old_plain >
 {
     template < typename Key, typename visitor >
     static void visit( const Key&, const test::old_plain& p, visitor& v )
@@ -101,8 +106,7 @@ struct traits< test::old_plain >
 };
 
 /// traits specialization for old_plain::nested
-template <>
-struct traits< test::old_plain::nested >
+template <> struct traits< test::old_plain::nested >
 {
     template < typename Key, typename visitor >
     static void visit( const Key&, const test::old_plain::nested& p, visitor& v )
@@ -110,6 +114,16 @@ struct traits< test::old_plain::nested >
         v.apply( "a", p.a );
         v.apply( "b", p.b );
         v.apply( "c", p.c );
+    }
+};
+
+template <> struct traits< test::optionals >
+{
+    template < typename Key, typename visitor >
+    static void visit( const Key&, const test::optionals& p, visitor& v )
+    {
+        v.apply( "a", p.a );
+        v.apply( "b", p.b );
     }
 };
 
@@ -205,6 +219,39 @@ TEST( visiting, tuple )
     o_stream_visitor v( oss );
     visiting::apply( v, t );
     EXPECT_EQ( oss.str(), "{ int:0=5 double:1=10 string:2=\"hello\" }" ); // EXPECT_EQ( oss.str(), "{ int:elem_0=5 double:elem_1=10 string:elem_2=\"hello\" }" );
+}
+
+TEST( visiting, optional )
+{
+    {
+        test::optionals t;
+        t.a.value = 0; // quick and dirty
+        t.b.value = {0, 0}; // quick and dirty
+        std::ostringstream oss;
+        o_stream_visitor v( oss );
+        visiting::apply( v, t );
+        EXPECT_EQ( oss.str(), "{ object:a={ int:value=0 bool:is_set=false } object:b={ object:value={ int:first=0 int:second=0 } bool:is_set=false } }" );
+    }
+    {
+        test::optionals t;
+        t.a.value = 0; // quick and dirty
+        t.b.value = {0, 0}; // quick and dirty
+        t.a = 5;
+        std::ostringstream oss;
+        o_stream_visitor v( oss );
+        visiting::apply( v, t );
+        EXPECT_EQ( oss.str(), "{ object:a={ int:value=5 bool:is_set=true } object:b={ object:value={ int:first=0 int:second=0 } bool:is_set=false } }" );
+    }
+    {
+        test::optionals t;
+        t.a.value = 0; // quick and dirty
+        t.b.value = {0, 0}; // quick and dirty
+        t.b = std::make_pair( 3, 4 );
+        std::ostringstream oss;
+        o_stream_visitor v( oss );
+        visiting::apply( v, t );
+        EXPECT_EQ( oss.str(), "{ object:a={ int:value=0 bool:is_set=false } object:b={ object:value={ int:first=3 int:second=4 } bool:is_set=true } }" );
+    }
 }
 
 } } } /// namespace comma { namespace visiting { namespace test {
