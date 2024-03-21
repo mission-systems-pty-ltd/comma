@@ -7,7 +7,9 @@
 
 #include <array>
 #include <iostream>
+#if __cplusplus >= 201703L
 #include <optional>
+#endif
 #include <sstream>
 #include <boost/array.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -134,12 +136,14 @@ struct property_tree // quick and dirty
                 apply( name, *value );
             }
 
+            #if __cplusplus >= 201703L
             template < typename K, typename T > void apply_next( const K& name, std::optional< T >& value )
             {
                 if( !cur_ || cur_->find( name ) == cur_->not_found() ) { return; }
                 if( !value ) { value = T(); }
                 apply( name, *value );
             }
+            #endif
 
             template < typename K, typename T, typename A > void apply_next( const K& key, std::vector< T, A >& value ) { _apply_to_arraylike( key, value ); }
 
@@ -277,6 +281,7 @@ class to_ptree
                                 && !boost::is_same< T, std::string >::value >::visit( name, *value, *this );
         }
 
+        #if __cplusplus >= 201703L
         template < typename K, typename T > void apply_next( const K& name, const std::optional< T >& value )
         {
             if( !value ) { return; }
@@ -284,6 +289,7 @@ class to_ptree
                                 && !boost::is_same< T, boost::posix_time::ptime >::value
                                 && !boost::is_same< T, std::string >::value >::visit( name, *value, *this );
         }
+        #endif
 
         template < typename K, typename T, typename A > void apply( const K& name, const std::vector< T, A >& value ) // do we even need it?
         {
