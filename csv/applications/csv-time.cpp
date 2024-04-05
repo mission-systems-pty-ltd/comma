@@ -47,6 +47,7 @@
 #include "../../csv/stream.h"
 #include "../../csv/impl/epoch.h"
 #include "../../string/string.h"
+#include "../../timing/tai.h"
 #include "../../visiting/traits.h"
 
 static void usage( bool )
@@ -58,8 +59,8 @@ static void usage( bool )
                  "\n    cat log.csv | csv-time <options> > converted.csv"
                  "\n"
                  "\nOptions"
-                 "\n    --from <what>: input format: any, iso, seconds, sql, xsd, local; default iso"
-                 "\n    --to <what>: output format: iso, seconds, sql, xsd, local; default iso"
+                 "\n    --from <what>: input format: any, iso, seconds, sql, xsd, local, tai; default iso"
+                 "\n    --to <what>: output format: iso, seconds, sql, xsd, local, tai; default iso"
                  "\n    --delimiter,-d <delimiter> : default: ','"
                  "\n    --fields <fields> : time field names or field numbers as in \"cut\""
                  "\n                        e.g. \"1,5,7\" or \"a,b,,d\""
@@ -88,6 +89,8 @@ static void usage( bool )
                  "\n            seconds since UNIX epoch as double"
                  "\n    - sql, posix, ieee-std-1003.1"
                  "\n            e.g. 2014-01-01 00:11:22"
+                 "\n    - tai"
+                 "\n            same as iso but converts from/to the TAI time standard"
                  "\n    - xsd, iso-8601-extended"
                  "\n            used in xsd:dateTime, xs:dateTime, gml and derivatives"
                  "\n            e.g. 2014-12-25T00:00:00.000Z"
@@ -103,7 +106,7 @@ static void usage( bool )
     exit( 0 );
 }
 
-enum what_t { guess, iso, seconds, microseconds, sql, xsd, local, format, iso_always_with_fractions };
+enum what_t { guess, iso, seconds, microseconds, sql, xsd, local, format, iso_always_with_fractions, tai };
 static what_t from = guess;
 static what_t to = iso;
 static std::string from_format;
@@ -174,8 +177,12 @@ static what_t what( const std::string& option, const comma::command_line_options
         {
             return local;
         }
+        else if( s == "tai" )
+        {
+            return tai;
+        }
     }
-    std::cerr << "csv-time: expected seconds, sql, or iso; got: \"" << s << "\"" << std::endl;
+    std::cerr << "csv-time: expected seconds, sql, tai, or iso; got: \"" << s << "\"" << std::endl;
     exit( 1 );
 }
 
@@ -256,6 +263,9 @@ static boost::posix_time::ptime from_string( const std::string& s, const what_t 
         
         case sql:
             return s == "NULL" || s == "null" ? boost::posix_time::not_a_date_time : boost::posix_time::time_from_string( s );
+
+        case tai:
+            return comma::timing::tai::to_utc( boost::posix_time::from_iso_string( s ));
 
         case xsd: // 2014-03-05T23:00:00.000Z
             return from_string_xsd( s );
@@ -355,6 +365,9 @@ std::string to_string( const boost::posix_time::ptime& t, what_t w )
 
         case sql:
             return t.is_not_a_date_time() ? std::string( "NULL" ) : comma::split( boost::replace_all_copy( boost::posix_time::to_iso_extended_string( t ), "T", " " ), '.' )[0];
+
+        case tai:
+            return boost::posix_time::to_iso_string( comma::timing::tai::from_utc( t ));
 
         case xsd: // 2014-03-05T23:00:00.000Z
             return boost::posix_time::to_iso_extended_string( t );

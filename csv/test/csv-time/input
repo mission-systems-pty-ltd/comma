@@ -28,6 +28,33 @@ sql[0]="echo '2014-03-05 23:00:00' | csv-time --from sql --to seconds"
 sql[1]="echo '2014-03-05 23:00:00' | csv-time --from posix --to seconds"
 sql[2]="echo '2014-03-05 23:00:00' | csv-time --from 'ieee-std-1003.1' --to seconds"
 
+# I'd like to test datetimes like 19720630T235960 (that was a leap-second) but
+# boost doesn't understand them. It treats them as identical to 19720701T000000
+tai_to_tai[0]="echo 19700101T000000 | csv-time --to tai"
+tai_to_tai[1]="echo 19711231T235959 | csv-time --to tai"
+tai_to_tai[2]="echo 19720101T000000 | csv-time --to tai"
+tai_to_tai[3]="echo 19720101T000001 | csv-time --to tai"
+tai_to_tai[4]="echo 19720630T235959 | csv-time --to tai"
+tai_to_tai[5]="echo 19720701T000000 | csv-time --to tai"
+tai_to_tai[6]="echo 19720701T000001 | csv-time --to tai"
+tai_to_tai[7]="echo 20161231T235959 | csv-time --to tai"
+tai_to_tai[8]="echo 20170101T000000 | csv-time --to tai"
+tai_to_tai[9]="echo 20170101T000001 | csv-time --to tai"
+tai_to_tai[10]="echo 20240101T000000 | csv-time --to tai"
+
+tai_stream[0]="echo -e '20161231T235959\\n20170101T000000\\n20170101T000001' | csv-time --to tai"
+tai_stream[1]="echo -e '20240101T000000\\n20240101T000001\\n20240101T000002' | csv-time --to tai"
+
+tai_from_tai[0]="echo 19720101T000010 | csv-time --from tai"
+tai_from_tai[1]="echo 19720701T000009 | csv-time --from tai"
+tai_from_tai[2]="echo 19720701T000010 | csv-time --from tai"
+tai_from_tai[3]="echo 19720701T000011 | csv-time --from tai"
+tai_from_tai[4]="echo 19720701T000012 | csv-time --from tai"
+tai_from_tai[5]="echo 20170101T000036 | csv-time --from tai"
+tai_from_tai[6]="echo 20170101T000037 | csv-time --from tai"
+tai_from_tai[7]="echo 20170101T000038 | csv-time --from tai"
+tai_from_tai[8]="echo 20240101T000037 | csv-time --from tai"
+
 xsd[0]="echo '2014-03-05T23:00:00.000Z' | csv-time --from xsd --to seconds"
 xsd[1]="echo '2014-03-05T23:00:00.000Z' | csv-time --from 'iso-8601-extended' --to seconds"
 
@@ -85,4 +112,3 @@ precision[6]="echo 19700101T000000.000001 | csv-time --from=iso --to=seconds | c
 
 format[0]="echo 20180102T123456 | csv-time --from 'format;%Y%m%dT%H%M%S'"
 format[1]="echo 10m23s | csv-time --from 'format;%Mm%S' --to seconds"
-
