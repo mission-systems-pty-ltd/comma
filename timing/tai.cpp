@@ -63,13 +63,14 @@ static std::vector< leap_seconds_entry > leap_seconds_table = {
     leap_seconds_entry( ptime( date( 2009, Jan, 1 )), 34 ),
     leap_seconds_entry( ptime( date( 2012, Jul, 1 )), 35 ),
     leap_seconds_entry( ptime( date( 2015, Jul, 1 )), 36 ),
-    leap_seconds_entry( ptime( date( 2017, Jan, 1 )), 37 )
+    leap_seconds_entry( ptime( date( 2017, Jan, 1 )), 37 ),
+    leap_seconds_entry(  boost::date_time::pos_infin, 37 )
 };
 
-// The switch over times are in UTC. That's how we get a time of 23:59:60.
+// The switch-over times are in UTC. That's how we get a time of 23:59:60.
 // So when working out the leap_second offset we need the UTC timestamp.
 // See https://en.wikipedia.org/wiki/Leap_second#Process
-int leap_seconds( const boost::posix_time::ptime& time, bool time_is_utc )
+static std::vector< leap_seconds_entry >::reverse_iterator lookup_table( const boost::posix_time::ptime& time, bool time_is_utc )
 {
     // Timestamps are likely to be recent so look backwards through the table to
     // find the right entry
@@ -79,7 +80,18 @@ int leap_seconds( const boost::posix_time::ptime& time, bool time_is_utc )
         boost::posix_time::ptime utc = ( time_is_utc ? time : time - boost::posix_time::seconds( riter->second ));
         if( utc >= riter->first ) { break; }
     }
-    return riter->second;
+    return riter;
+}
+
+int leap_seconds( const boost::posix_time::ptime& time, bool time_is_utc )
+{
+    return lookup_table( time, time_is_utc )->second;
+}
+
+std::pair< int, boost::posix_time::ptime > leap_seconds_with_valid_time( const boost::posix_time::ptime& time, bool time_is_utc )
+{
+    std::vector< leap_seconds_entry >::reverse_iterator riter = lookup_table( time, time_is_utc );
+    return std::pair< int, boost::posix_time::ptime >( riter->second, ( riter - 1 )->first );
 }
 
 boost::posix_time::ptime from_utc( const boost::posix_time::ptime& utc )

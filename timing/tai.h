@@ -13,6 +13,11 @@ namespace tai {
 // This will not be accurate if the data crosses a leap-second boundary but is much faster.
 int leap_seconds( const boost::posix_time::ptime& time, bool time_is_utc = true );
 
+// If you want accurate time across a boundary, use this call, check your
+// timestamps and update the leap seconds when you go past the valid time.
+// Valid time is in UTC.
+std::pair< int, boost::posix_time::ptime > leap_seconds_with_valid_time( const boost::posix_time::ptime& time, bool time_is_utc );
+
 // Otherwise use the from/to functions which are accurate across boundaries.
 // Although note that boost doesn't understand UTC times of 23:59:60.
 // It thinks it's the same as 00:00:00 even if it aligns with a leap-second.
