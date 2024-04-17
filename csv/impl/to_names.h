@@ -30,9 +30,10 @@
 
 /// @author vsevolod vlaskine
 
-#ifndef COMMA_CSV_IMPL_TONAMES_H_
-#define COMMA_CSV_IMPL_TONAMES_H_
+#pragma once
 
+#include <memory>
+#include <optional>
 #include <sstream>
 #include <boost/optional.hpp>
 #include <boost/scoped_ptr.hpp>
@@ -51,74 +52,58 @@ namespace comma { namespace csv { namespace impl {
 class to_names
 {
     public:
-        /// constructor
-        to_names( bool full_path_as_name = true );
+        to_names( bool full_path_as_name = true ): _full_path_as_name( full_path_as_name ) {}
         
-        /// constructor
-        to_names( const xpath& root, bool full_path_as_name );
+        to_names( const xpath& root, bool full_path_as_name ): _full_path_as_name( full_path_as_name ), _root( root ) {}
         
-        /// traverse
         template < typename K, typename T >
-        void apply( const K& name, const boost::optional< T >& value );
+        void apply( const K& name, const boost::optional< T >& value ) { apply( name, value ? *value : T() ); }
+
+        template < typename K, typename T >
+        void apply( const K& name, const std::optional< T >& value ) { apply( name, value ? *value : T() ); }
         
-        /// traverse
         template < typename K, typename T >
         void apply( const K& name, const boost::scoped_ptr< T >& value );
         
-        /// traverse
         template < typename K, typename T >
         void apply( const K& name, const boost::shared_ptr< T >& value );
+
+        template < typename K, typename T >
+        void apply( const K& name, const std::unique_ptr< T >& value );
         
-        /// traverse
         template < typename K, typename T >
         void apply( const K& name, const T& value );
         
-        /// traverse
         template < typename K, typename T >
         void apply_next( const K& name, const T& value );
         
-        /// output a non-string type
         template < typename K, typename T >
         void apply_final( const K& name, const T& value );
         
-        /// return string
-        const std::vector< std::string >& operator()() const;
+        const std::vector< std::string >& operator()() const { return _names; }
         
     private:
-        bool full_path_as_name_;
-        xpath xpath_;
-        xpath root_;
-        boost::optional< std::size_t > index_;
-        std::vector< std::string > names_;
-        const xpath& append( std::size_t index ) { xpath_.elements.back().index = index; return xpath_; }
-        const xpath& append( const char* name ) { xpath_ /= xpath::element( name ); return xpath_; }
-        const xpath& append( const std::string& name ) { xpath_ /= xpath::element( name ); return xpath_; }
-        const xpath& trim( std::size_t ) { xpath_.elements.back().index = boost::optional< std::size_t >(); return xpath_; }
-        const xpath& trim( const char* ) { xpath_ = xpath_.head(); return xpath_; }
-        const xpath& trim( const std::string& ) { xpath_ = xpath_.head(); return xpath_; }
+        bool _full_path_as_name;
+        xpath _xpath;
+        xpath _root;
+        std::optional< std::size_t > _index;
+        std::vector< std::string > _names;
+        const xpath& _append( std::size_t index ) { _xpath.elements.back().index = index; return _xpath; }
+        const xpath& _append( const char* name ) { _xpath /= xpath::element( name ); return _xpath; }
+        const xpath& _append( const std::string& name ) { _xpath /= xpath::element( name ); return _xpath; }
+        const xpath& _trim( std::size_t ) { _xpath.elements.back().index = boost::optional< std::size_t >(); return _xpath; }
+        const xpath& _trim( const char* ) { _xpath = _xpath.head(); return _xpath; }
+        const xpath& _trim( const std::string& ) { _xpath = _xpath.head(); return _xpath; }
 };
 
-inline to_names::to_names( bool full_path_as_name ) : full_path_as_name_( full_path_as_name ) {}
-
-inline to_names::to_names( const xpath& root, bool full_path_as_name ) : full_path_as_name_( full_path_as_name ), root_( root ) {}
+template < typename K, typename T >
+inline void to_names::apply( const K& name, const boost::scoped_ptr< T >& value ) { if( value ) { apply( name, *value ); } else { T v; apply( name, v ); } }
 
 template < typename K, typename T >
-inline void to_names::apply( const K& name, const boost::optional< T >& value )
-{
-    apply( name, value ? *value : T() );
-}
+inline void to_names::apply( const K& name, const boost::shared_ptr< T >& value ) { if( value ) { apply( name, *value ); } else { T v; apply( name, v ); } }
 
 template < typename K, typename T >
-inline void to_names::apply( const K& name, const boost::scoped_ptr< T >& value )
-{
-    if( value ) { apply( name, *value ); } else { T v; apply( name, v ); }
-}
-
-template < typename K, typename T >
-inline void to_names::apply( const K& name, const boost::shared_ptr< T >& value )
-{
-    if( value ) { apply( name, *value ); } else { T v; apply( name, v ); }
-}
+inline void to_names::apply( const K& name, const std::unique_ptr< T >& value ) { if( value ) { apply( name, *value ); } else { T v; apply( name, v ); } }
 
 template < typename K, typename T >
 inline void to_names::apply( const K& name, const T& value )
@@ -131,21 +116,17 @@ inline void to_names::apply( const K& name, const T& value )
 template < typename K, typename T >
 inline void to_names::apply_next( const K& name, const T& value )
 {
-    append( name );
+    _append( name );
     comma::visiting::visit( name, value, *this );
-    trim( name );
+    _trim( name );
 }
 
 template < typename K, typename T >
 inline void to_names::apply_final( const K& name, const T& )
 {
-    append( name );
-    if( xpath_ <= root_ ) { names_.push_back( full_path_as_name_ ? xpath_.to_string() : xpath_.elements.back().to_string() ); }
-    trim( name );
+    _append( name );
+    if( _xpath <= _root ) { _names.push_back( _full_path_as_name ? _xpath.to_string() : _xpath.elements.back().to_string() ); }
+    _trim( name );
 }
 
-inline const std::vector< std::string >& to_names::operator()() const { return names_; }
-
 } } } // namespace comma { namespace csv { namespace impl {
-
-#endif // COMMA_CSV_IMPL_TONAMES_H_

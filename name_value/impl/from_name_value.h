@@ -27,14 +27,14 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author cedric wohlleber
 
-#ifndef COMMA_APPLICATION_FROM_NAME_VALUE_H
-#define COMMA_APPLICATION_FROM_NAME_VALUE_H
+#pragma once
 
 #include <deque>
 #include <map>
+#include <memory>
+#include <optional>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
@@ -59,35 +59,32 @@ public:
     /// constructor
     /// @param values values to read from
     /// @param full_path_as_name use full path as name
-    from_name_value( const map_type& values, bool full_path_as_name = true ):
-        m_values( values ), m_full_path_as_name(full_path_as_name){};
+    from_name_value( const map_type& values, bool full_path_as_name = true ): _values( values ), _full_path_as_name( full_path_as_name ) {};
 
-    /// apply
-    template < typename K, typename T > void apply( const K& name, boost::optional< T >& value );
+    template < typename K, typename T > void apply( const K& name, boost::optional< T >& value ) { _apply_optional< K, T >( name, value ); }
+
+    template < typename K, typename T > void apply( const K& name, std::optional< T >& value ) { _apply_optional< K, T >( name, value ); }
     
-    /// apply
-    template < typename K, typename T > void apply( const K& name, boost::scoped_ptr< T >& value );
+    template < typename K, typename T > void apply( const K& name, boost::scoped_ptr< T >& value ) { _apply_ptr< K, T >( name, value ); }
     
-    /// apply
-    template < typename K, typename T > void apply( const K& name, boost::shared_ptr< T >& value );
+    template < typename K, typename T > void apply( const K& name, boost::shared_ptr< T >& value ) { _apply_ptr< K, T >( name, value ); }
+
+    template < typename K, typename T > void apply( const K& name, std::unique_ptr< T >& value ) { _apply_ptr< K, T >( name, value ); }
         
-    /// apply
     template < typename K, typename T > void apply( const K& name, T& value );
 
-    /// apply to non-leaf elements
     template < typename K, typename T > void apply_next( const K& name, T& value );
 
-    /// apply to leaf elements
     template < typename K, typename T > void apply_final( const K& name, T& value );
 
 private:
-    const map_type& m_values;
-    bool m_full_path_as_name;
-    xpath m_xpath;
-    std::deque< bool > m_empty;
-    static void lexical_cast( bool& v, const std::string& s ) { v = s == "" || boost::lexical_cast< bool >( s ); }
-    static void lexical_cast( boost::posix_time::ptime& v, const std::string& s ) { v = boost::posix_time::from_iso_string( s ); }
-    static void lexical_cast( boost::posix_time::time_duration& v, const std::string& s )
+    const map_type& _values;
+    bool _full_path_as_name;
+    xpath _xpath;
+    std::deque< bool > _empty;
+    static void _lexical_cast( bool& v, const std::string& s ) { v = s == "" || boost::lexical_cast< bool >( s ); }
+    static void _lexical_cast( boost::posix_time::ptime& v, const std::string& s ) { v = boost::posix_time::from_iso_string( s ); }
+    static void _lexical_cast( boost::posix_time::time_duration& v, const std::string& s )
     {
         std::vector< std::string > t = comma::split( s, '.' );
         if( t.size() > 2 ) { COMMA_THROW_STREAM( comma::exception, "expected duration in seconds, got " << s ); }
@@ -98,65 +95,49 @@ private:
         if( seconds < 0 ) { microseconds = -microseconds; }
         v = boost::posix_time::seconds( seconds ) + boost::posix_time::microseconds( microseconds );
     }
-    template < typename T > static void lexical_cast( T& v, const std::string& s ) { v = boost::lexical_cast< T >( s ); }
+    template < typename T > static void _lexical_cast( T& v, const std::string& s ) { v = boost::lexical_cast< T >( s ); }
+    template < typename K, typename T, template < typename > class Optional > void _apply_optional( const K& name, Optional< T >& value );
+    template < typename K, typename T, template < typename > class Ptr > void _apply_ptr( const K& name, Ptr< T >& value );
 };
 
-template < typename K, typename T >
-inline void from_name_value::apply( const K& name, boost::optional< T >& value )
+template < typename K, typename T, template < typename > class Optional > inline void from_name_value::_apply_optional( const K& name, Optional< T >& value )
 {
     if( value ) { apply( name, *value ); return; }
     T t;
-    m_empty.push_back( true );
+    _empty.push_back( true );
     apply( name, t );
-    if( !m_empty.back() ) { value = t; }
-    m_empty.pop_back();
+    if( !_empty.back() ) { value = t; }
+    _empty.pop_back();    
 }
 
-template < typename K, typename T >
-inline void from_name_value::apply( const K& name, boost::scoped_ptr< T >& value )
+template < typename K, typename T, template < typename > class Ptr > inline void from_name_value::_apply_ptr( const K& name, Ptr< T >& value )
 {
     if( value ) { apply( name, *value ); return; }
     T t;
-    m_empty.push_back( true );
+    _empty.push_back( true );
     apply( name, t );
-    if( !m_empty.back() ) { value.reset( new T( t ) ); }
-    m_empty.pop_back();
+    if( !_empty.back() ) { value.reset(); value.reset( new T( t ) ); } // todo? emplace? 
+    _empty.pop_back();
 }
 
-template < typename K, typename T >
-inline void from_name_value::apply( const K& name, boost::shared_ptr< T >& value )
+template < typename K, typename T > inline void from_name_value::apply( const K& name, T& value )
 {
-    if( value ) { apply( name, *value ); return; }
-    T t;
-    m_empty.push_back( true );
-    apply( name, t );
-    if( !m_empty.back() ) { value.reset( new T( t ) ); }
-    m_empty.pop_back();
-}
-
-template < typename K, typename T >
-inline void from_name_value::apply( const K& name, T& value )
-{
-    m_xpath /= xpath::element( name );
+    _xpath /= xpath::element( name );
     visiting::do_while<    !boost::is_fundamental< T >::value
                         && !boost::is_same< T, boost::posix_time::ptime >::value
                         && !boost::is_same< T, boost::posix_time::time_duration >::value
                         && !boost::is_same< T, std::string >::value >::visit( name, value, *this );
-    m_xpath = m_xpath.head();
+    _xpath = _xpath.head();
 }
 
-template < typename K, typename T >
-inline void from_name_value::apply_next( const K& name, T& value ) { comma::visiting::visit( name, value, *this ); }
+template < typename K, typename T > inline void from_name_value::apply_next( const K& name, T& value ) { comma::visiting::visit( name, value, *this ); }
 
-template < typename K, typename T >
-inline void from_name_value::apply_final( const K& key, T& value )
+template < typename K, typename T > inline void from_name_value::apply_final( const K& key, T& value )
 {
-    map_type::const_iterator iter = m_values.find( m_full_path_as_name ? m_xpath.to_string() : m_xpath.elements.back().to_string() );
-    if( iter == m_values.end() ) { return; }
-    lexical_cast( value, iter->second );
-    for( std::size_t i = 0; i < m_empty.size(); ++i ) { m_empty[i] = false; }
+    map_type::const_iterator iter = _values.find( _full_path_as_name ? _xpath.to_string() : _xpath.elements.back().to_string() );
+    if( iter == _values.end() ) { return; }
+    _lexical_cast( value, iter->second );
+    for( std::size_t i = 0; i < _empty.size(); ++i ) { _empty[i] = false; }
 }
 
 } } } // namespace comma { namespace name_value { namespace impl {
-
-#endif // COMMA_APPLICATION_FROM_NAME_VALUE_H
