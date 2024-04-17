@@ -33,7 +33,9 @@
 #pragma once
 
 #include <memory>
+#if __cplusplus >= 201703L
 #include <optional>
+#endif // #if __cplusplus >= 201703L
 #include <sstream>
 #include <boost/optional.hpp>
 #include <boost/scoped_ptr.hpp>
@@ -59,8 +61,10 @@ class to_names
         template < typename K, typename T >
         void apply( const K& name, const boost::optional< T >& value ) { apply( name, value ? *value : T() ); }
 
+        #if __cplusplus >= 201703L
         template < typename K, typename T >
         void apply( const K& name, const std::optional< T >& value ) { apply( name, value ? *value : T() ); }
+        #endif // #if __cplusplus >= 201703L
         
         template < typename K, typename T >
         void apply( const K& name, const boost::scoped_ptr< T >& value );
@@ -86,7 +90,7 @@ class to_names
         bool _full_path_as_name;
         xpath _xpath;
         xpath _root;
-        std::optional< std::size_t > _index;
+        boost::optional< std::size_t > _index;
         std::vector< std::string > _names;
         const xpath& _append( std::size_t index ) { _xpath.elements.back().index = index; return _xpath; }
         const xpath& _append( const char* name ) { _xpath /= xpath::element( name ); return _xpath; }

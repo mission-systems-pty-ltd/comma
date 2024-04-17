@@ -7,6 +7,9 @@
 
 #include <map>
 #include <memory>
+#if __cplusplus >= 201703L
+#include <optional>
+#endif // #if __cplusplus >= 201703L
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
 #include <boost/scoped_ptr.hpp>
@@ -28,7 +31,9 @@ public:
     /// @param full_path_as_name use full path as name
     to_name_value( char delimiter = '=', bool full_path_as_name = true ): _delimiter(delimiter), _full_path_as_name( full_path_as_name ) {};
     template < typename K, typename T > void apply( const K& name, const boost::optional< T >& value ) { if( value ) { apply( name, *value ); } }
+    #if __cplusplus >= 201703L
     template < typename K, typename T > void apply( const K& name, const std::optional< T >& value ) { if( value ) { apply( name, *value ); } }
+    #endif // #if __cplusplus >= 201703L
     template < typename K, typename T > void apply( const K& name, const boost::scoped_ptr< T >& value ) { if( value ) { apply( name, *value ); } }
     template < typename K, typename T > void apply( const K& name, const boost::shared_ptr< T >& value ) { if( value ) { apply( name, *value ); } }
     template < typename K, typename T > void apply( const K& name, const std::unique_ptr< T >& value ) { if( value ) { apply( name, *value ); } }

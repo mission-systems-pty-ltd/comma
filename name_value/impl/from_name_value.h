@@ -34,7 +34,9 @@
 #include <deque>
 #include <map>
 #include <memory>
+#if __cplusplus >= 201703L
 #include <optional>
+#endif // #if __cplusplus >= 201703L
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
@@ -63,7 +65,9 @@ public:
 
     template < typename K, typename T > void apply( const K& name, boost::optional< T >& value ) { _apply_optional< K, T >( name, value ); }
 
+    #if __cplusplus >= 201703L
     template < typename K, typename T > void apply( const K& name, std::optional< T >& value ) { _apply_optional< K, T >( name, value ); }
+    #endif // #if __cplusplus >= 201703L
     
     template < typename K, typename T > void apply( const K& name, boost::scoped_ptr< T >& value ) { _apply_ptr< K, T >( name, value ); }
     
