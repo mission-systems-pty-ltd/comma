@@ -112,6 +112,7 @@ void usage( bool verbose = false )
     std::cerr << "                                         all available data" << std::endl;
     std::cerr << "                                         ignored for udp streams, where one full udp" << std::endl;
     std::cerr << "                                         packet at a time is always read" << std::endl;
+    std::cerr << "    --size=[<bytes>]; on fixed-width binary records, size of the record in bytes, for --round-robin or --head" << std::endl;
     std::cerr << std::endl;
     std::cerr << "connect options" << std::endl;
     std::cerr << "    --connect-max-attempts,--connect-attempts,--attempts,--max-attempts=<n>; default=1; number of attempts to reconnect or 'unlimited'" << std::endl;
