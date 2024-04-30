@@ -356,6 +356,13 @@ TEST( serialise, path_value )
         comma::read_path_value< config >( c, ss, comma::xpath( "root/item" ), true );
         test_config( c );
     }
+    {
+        std::stringstream ss;
+        comma::write_path_value< config >( d, ss, "root/item", true, "hello/world" );
+        config c;
+        comma::read_path_value< config >( c, ss, "hello/world/root/item", true );
+        test_config( c );
+    }
 }
 
 } } } // namespace comma { namespace test { namespace serialise {

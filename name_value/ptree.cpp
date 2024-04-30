@@ -135,7 +135,8 @@ static void ptree_to_path_value_string_impl( std::ostream* os
                                            , char equal_sign
                                            , char delimiter
                                            , const std::string& root
-                                           , bool const unquote_numbers )
+                                           , bool const unquote_numbers
+                                           , const std::string& prefix )
 {
     if( i->second.begin() == i->second.end() )
     {
@@ -162,7 +163,7 @@ static void ptree_to_path_value_string_impl( std::ostream* os
             // Test if it is json array data, if so all keys are empty. If so display indices in path if requested
             if( mode == property_tree::without_brackets && j->first.empty()  ) { display_path /= boost::lexical_cast< std::string >( index++ ); }
             else if( mode == property_tree::with_brackets && j->first.empty() ) { display_path.elements.back().index = index++; }
-            ptree_to_path_value_string_impl( os, pv, j, is_begin, path, display_path, mode, equal_sign, delimiter, root, unquote_numbers );
+            ptree_to_path_value_string_impl( os, pv, j, is_begin, path, display_path, mode, equal_sign, delimiter, root, unquote_numbers, prefix );
             if( mode == property_tree::without_brackets && j->first.empty() ) { display_path = display_path.head(); }
             is_begin = false;
         }
@@ -175,7 +176,7 @@ static void ptree_to_path_value_string_impl( std::ostream* os
 
 namespace comma {
 
-void property_tree::to_path_value( std::ostream& os, const boost::property_tree::ptree& ptree, path_mode mode, char equal_sign, char delimiter, const xpath& root, bool const unquote_numbers )
+void property_tree::to_path_value( std::ostream& os, const boost::property_tree::ptree& ptree, path_mode mode, char equal_sign, char delimiter, const xpath& root, bool unquote_numbers, const std::string& prefix )
 {
     std::vector< std::pair< xpath, std::string > > dummy; // quick and dirty
     for( boost::property_tree::ptree::const_iterator i = ptree.begin(); i != ptree.end(); ++i )
@@ -186,12 +187,12 @@ void property_tree::to_path_value( std::ostream& os, const boost::property_tree:
         //         If a node has both named and unnamed child nodes, it cannot be mapped to a JSON representation."
         // http://www.boost.org/doc/libs/1_41_0/doc/html/boost_propertytree/parsers.html#boost_propertytree.parsers.json_parser
         xpath path;
-        xpath display_path;
-        impl::ptree_to_path_value_string_impl( &os, dummy, i, i == ptree.begin(), path, display_path, mode, equal_sign, delimiter, root.to_string(), unquote_numbers ); // quick and dirty
+        xpath display_path( prefix );
+        impl::ptree_to_path_value_string_impl( &os, dummy, i, i == ptree.begin(), path, display_path, mode, equal_sign, delimiter, root.to_string(), unquote_numbers, prefix ); // quick and dirty
     }
 }
 
-std::vector< std::pair< xpath, std::string > > property_tree::to_path_value( const boost::property_tree::ptree& ptree, const xpath& root, path_mode mode )
+std::vector< std::pair< xpath, std::string > > property_tree::to_path_value( const boost::property_tree::ptree& ptree, const xpath& root, path_mode mode, const std::string& prefix )
 {
     std::vector< std::pair< xpath, std::string > > pv; // quick and dirty
     for( boost::property_tree::ptree::const_iterator i = ptree.begin(); i != ptree.end(); ++i )
@@ -202,8 +203,8 @@ std::vector< std::pair< xpath, std::string > > property_tree::to_path_value( con
         //         If a node has both named and unnamed child nodes, it cannot be mapped to a JSON representation."
         // http://www.boost.org/doc/libs/1_41_0/doc/html/boost_propertytree/parsers.html#boost_propertytree.parsers.json_parser
         xpath path;
-        xpath display_path;
-        impl::ptree_to_path_value_string_impl( nullptr, pv, i, i == ptree.begin(), path, display_path, mode, '=', ',', root.to_string(), true ); // quick and dirty
+        xpath display_path( prefix );
+        impl::ptree_to_path_value_string_impl( nullptr, pv, i, i == ptree.begin(), path, display_path, mode, '=', ',', root.to_string(), true, prefix ); // quick and dirty
     }
     return pv;
 }
@@ -222,10 +223,10 @@ void property_tree::from_path_value( std::istream& is, boost::property_tree::ptr
     ptree = comma::property_tree::from_path_value_string( s, equal_sign, delimiter, check_type, use_index );
 }
 
-std::string property_tree::to_path_value_string( const boost::property_tree::ptree& ptree, property_tree::path_mode mode, char equal_sign, char delimiter, bool const unquote_numbers )
+std::string property_tree::to_path_value_string( const boost::property_tree::ptree& ptree, property_tree::path_mode mode, char equal_sign, char delimiter, bool unquote_numbers, const std::string& prefix )
 {
     std::ostringstream oss;
-    to_path_value( oss, ptree, mode, equal_sign, delimiter, xpath(), unquote_numbers );
+    to_path_value( oss, ptree, mode, equal_sign, delimiter, xpath(), unquote_numbers, prefix );
     return oss.str();
 }
 

@@ -44,13 +44,13 @@ struct property_tree // quick and dirty
     enum path_mode { disabled, with_brackets, without_brackets  };
 
     /// write as path-value to output stream
-    static void to_path_value( std::ostream& os, const boost::property_tree::ptree& ptree, path_mode indices_mode = disabled, char equal_sign = '=', char delimiter = ',', const xpath& root = xpath(), bool const unquote_numbers = false );
+    static void to_path_value( std::ostream& os, const boost::property_tree::ptree& ptree, path_mode indices_mode = disabled, char equal_sign = '=', char delimiter = ',', const xpath& root = xpath(), bool unquote_numbers = false, const std::string& prefix = "" );
 
     /// return path-value pairs
-    static std::vector< std::pair< xpath, std::string > > to_path_value( const boost::property_tree::ptree& ptree, const xpath& root = xpath(), path_mode indices_mode = with_brackets );
+    static std::vector< std::pair< xpath, std::string > > to_path_value( const boost::property_tree::ptree& ptree, const xpath& root = xpath(), path_mode indices_mode = with_brackets, const std::string& prefix = "" );
 
     /// convert boost parameter tree into path=value-style string (equal sign and delimiter have to be escaped)
-    static std::string to_path_value_string( const boost::property_tree::ptree& ptree, path_mode mode=disabled, char equal_sign = '=', char delimiter = ',', bool const unquote_numbers = false );
+    static std::string to_path_value_string( const boost::property_tree::ptree& ptree, path_mode mode=disabled, char equal_sign = '=', char delimiter = ',', bool unquote_numbers = false, const std::string& prefix = "" );
     
     /// put an xpath like a/b[5]/c/d[3]=4 into ptree
     static void put( boost::property_tree::ptree& ptree, const xpath& path, const std::string& value, bool use_index = true );
