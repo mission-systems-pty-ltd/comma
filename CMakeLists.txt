@@ -152,13 +152,10 @@ CMAKE_DEPENDENT_OPTION( BUILD_CPP_PYTHON_BINDINGS "build C++/Python bindings" OF
 OPTION( BUILD_APPLICATIONS "build applications" ON )
 SET( comma_BUILD_APPLICATIONS ${BUILD_APPLICATIONS} )
 
-OPTION( comma_BUILD_ZEROMQ "build io with zeromq support" OFF )
-
 option( BUILD_SHARED_LIBS "build with shared libraries" ON )
-
-OPTION( comma_BUILD_PYTHON "build python" ON )
-
-OPTION( comma_BUILD_XML "build xml" OFF )
+option( comma_BUILD_PYTHON "build python" ON )
+option( comma_BUILD_XML "build xml" OFF )
+option( comma_BUILD_ZEROMQ "build io with zeromq support" OFF )
 
 SET(comma_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 
