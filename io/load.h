@@ -7,7 +7,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
-#include <boost/filesystem.hpp>
+#include "impl/filesystem.h"
 #include "../base/exception.h"
 
 namespace comma { namespace io {
@@ -27,7 +27,7 @@ inline C< T, A >& load_array( C< T, A >& a, const std::string& path )
 {
     std::ifstream ifs( path );
     if( !ifs.is_open() ) { COMMA_THROW( comma::exception, "failed to open \"" << path << "\"" ); }
-    a.resize( boost::filesystem::file_size( path ) / sizeof( T ) ); // todo? will file_size work on symlinks?
+    a.resize( comma::filesystem::file_size( path ) / sizeof( T ) ); // todo? will file_size work on symlinks?
     ifs.read( reinterpret_cast< char * >( &a[0] ), a.size() * sizeof( T ) );
     if( ifs.gcount() != int( a.size() * sizeof( T ) ) ) { COMMA_THROW( comma::exception, "expected to read " << a.size() * sizeof( T ) << " bytes (" << a.size() << " elements " << sizeof( T ) << " byte(s) each) from \"" << path << "\"; got: " << ifs.gcount() << " byte(s)" ); }
     return a;

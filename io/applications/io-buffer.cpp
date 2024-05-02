@@ -43,7 +43,6 @@
 #include <cctype>
 #include <vector>
 #include <fstream>
-#include <boost/filesystem/operations.hpp>
 #include <boost/interprocess/sync/file_lock.hpp>
 #include <boost/interprocess/sync/scoped_lock.hpp>
 #include <boost/algorithm/string.hpp>

@@ -156,12 +156,27 @@ option( BUILD_SHARED_LIBS "build with shared libraries" ON )
 option( comma_BUILD_PYTHON "build python" ON )
 option( comma_BUILD_XML "build xml" OFF )
 option( comma_BUILD_ZEROMQ "build io with zeromq support" OFF )
+option( comma_USE_BOOST_FILESYSTEM "use boost::filesystem rather than std::filesystem" OFF )
+
+if( comma_USE_BOOST_FILESYSTEM )
+    set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCOMMA_USE_BOOST_FILESYSTEM -DBOOST_FILESYSTEM_NO_DEPRECATED" )
+else()
+    # see https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html#status.iso.2017
+    if( CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9 )
+        link_libraries( "-lstdc++fs" )
+    endif()
+endif()
 
 SET(comma_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 
 IF( NOT BUILD_SHARED_LIBS )
     SET( Boost_USE_STATIC_LIBS ON )
 ENDIF( NOT BUILD_SHARED_LIBS )
+
+set( comma_boost_components thread system date_time iostreams program_options regex )
+if( comma_USE_BOOST_FILESYSTEM )
+    set( comma_boost_components ${comma_boost_components} filesystem )
+endif()
 
 IF( BUILD_PYTHON_PACKAGES AND BUILD_CPP_PYTHON_BINDINGS )
     IF( NOT BUILD_SHARED_LIBS )
@@ -170,10 +185,10 @@ IF( BUILD_PYTHON_PACKAGES AND BUILD_CPP_PYTHON_BINDINGS )
     SET( Python_ADDITIONAL_VERSIONS 2.7 )
     FIND_PACKAGE( PythonLibs REQUIRED )
     INCLUDE_DIRECTORIES( ${PYTHON_INCLUDE_DIRS} )
-    FIND_PACKAGE( Boost COMPONENTS thread filesystem system date_time iostreams program_options regex python )
-ELSE( BUILD_PYTHON_PACKAGES AND BUILD_CPP_PYTHON_BINDINGS )
-    FIND_PACKAGE( Boost COMPONENTS thread filesystem system date_time iostreams program_options regex )
+    set( comma_boost_components ${comma_boost_components} python )
 ENDIF( BUILD_PYTHON_PACKAGES AND BUILD_CPP_PYTHON_BINDINGS )
+
+FIND_PACKAGE( Boost COMPONENTS ${comma_boost_components} )
 INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIRS} )
 LINK_DIRECTORIES( ${Boost_LIBRARY_DIRS} )
 

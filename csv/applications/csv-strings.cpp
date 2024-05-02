@@ -6,13 +6,13 @@
 #include <functional>
 #include <iostream>
 
-#include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include "../../application/command_line_options.h"
 #include "../../base/exception.h"
 #include "../../csv/stream.h"
 #include "../../csv/traits.h"
+#include "../../io/impl/filesystem.h"
 #include "../../string/string.h"
 
 static void usage( bool verbose )
@@ -232,21 +232,21 @@ struct canonical
 {
     typedef input output_t;
     
-    boost::filesystem::path base;
+    comma::filesystem::path base;
 
     static constexpr char const* name() { return "canonical"; }
     
     canonical( const comma::command_line_options& options )
         : base( options.exists( "--base" )
-        ? boost::filesystem::path( options.value< std::string >( "--base" ) )
-        : boost::filesystem::current_path() )
+        ? comma::filesystem::path( options.value< std::string >( "--base" ) )
+        : comma::filesystem::current_path() )
     {
         if( ( options.value( "--path-delimiter,-p", '/' ) ) != '/' ) { COMMA_THROW( comma::exception, "path-canonical: expected path delimiter '/'; got: '" << options.value( "--path-delimiter,-p", '/' ) << "'" ); }
     }
 
     std::string convert( const std::string& s ) const
     {
-        try { return boost::filesystem::canonical( boost::filesystem::path( s ), base ).string(); } catch( ... ) { if( strict ) { throw; } }
+        try { return comma::filesystem::canonical( base / comma::filesystem::path( s )).string(); } catch( ... ) { if( strict ) { throw; } }
         return s;
     }
 };

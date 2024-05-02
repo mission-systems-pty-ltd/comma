@@ -40,13 +40,10 @@
 
 #include <expat.h>
 
-#include <boost/filesystem.hpp>
-
 #include "../../application/command_line_options.h"
+#include "../../io/impl/filesystem.h"
 #include "../../xpath/xpath.h"
 #include "expat_util.h"
-
-namespace FS = boost::filesystem;
 
 #define CMDNAME "xml-split"
 
@@ -190,14 +187,14 @@ output_wrapper::start()
     
     if (0 == _total_count)
     {
-        if (FS::exists(oss.str()))
+        if (comma::filesystem::exists(oss.str()))
         {
             std::cerr << CMDNAME ": Error: Output Directory Name '" << oss.str() << "' Already Exists on Filesystem. Abort!" << std::endl;
             exit(1);
         }
         else
         {
-            if (! FS::create_directory(oss.str()))
+            if (! comma::filesystem::create_directory(oss.str()))
             {
                 std::cerr << CMDNAME ": Error: Could not Create Output Directory '" << oss.str() << "'. Abort!" << std::endl;
                 return _destination;

@@ -22,10 +22,9 @@
 #include <boost/asio/ip/udp.hpp>
 #include <boost/asio/local/stream_protocol.hpp>
 #include <boost/bind/bind.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/operations.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include "impl/filesystem.h"
 #include "../base/exception.h"
 #include "../string/string.h"
 #include "file_descriptor.h"
@@ -146,7 +145,7 @@ S* stream< S >::lazily_make_stream_()
     #ifndef WIN32
     if( stream_ == NULL ) // quick and dirty: if fstream, cannot open on construction, as pipe might block
     {
-        if( !boost::filesystem::is_regular_file( name_ ) && !blocking_ ) // quick and dirty
+        if( !comma::filesystem::is_regular_file( name_ ) && !blocking_ ) // quick and dirty
         {
             io::select select;
             select.read().add( fd_ ); // todo: express via traits
@@ -356,7 +355,7 @@ stream< S >::stream( const std::string& name, mode::value m, mode::blocking_valu
 
         fd_ = impl::traits< S >::open( name );
         if( fd_ != io::invalid_file_descriptor ) { set_non_blocking_flags_( fd_ ); return; }
-        if( boost::filesystem::is_regular_file( name ) ) { COMMA_THROW( comma::exception, "failed to open \"" << name << "\"" ); }
+        if( comma::filesystem::is_regular_file( name ) ) { COMMA_THROW( comma::exception, "failed to open \"" << name << "\"" ); }
         #endif // #ifdef WIN32
     }
 }

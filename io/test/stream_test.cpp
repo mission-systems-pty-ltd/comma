@@ -6,7 +6,7 @@
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/local/stream_protocol.hpp>
-#include <boost/filesystem/operations.hpp>
+#include "../impl/filesystem.h"
 #include "../load.h" // just to make sure it compiles
 #include "../select.h"
 #include "../stream.h"
@@ -14,8 +14,8 @@
 TEST( io, file_stream )
 {
     {
-        boost::filesystem::remove( "./test.pipe" );
-        boost::filesystem::remove( "./test.file" );
+        comma::filesystem::remove( "./test.pipe" );
+        comma::filesystem::remove( "./test.file" );
         comma::io::ostream ostream( "./test.file" );
         comma::io::istream istream( "./test.file" );
         std::string line;
@@ -25,12 +25,12 @@ TEST( io, file_stream )
         EXPECT_EQ( line, "hello, world" );
         ostream.close();
         istream.close();
-        boost::filesystem::remove( "./test.file" );
+        comma::filesystem::remove( "./test.file" );
     }
     // todo: more testing?
     EXPECT_EQ( system( "mkfifo test.pipe" ), 0 );
-    EXPECT_TRUE( boost::filesystem::exists( "./test.pipe" ) );
-    EXPECT_TRUE( !boost::filesystem::is_regular_file( "./test.pipe" ) );
+    EXPECT_TRUE( comma::filesystem::exists( "./test.pipe" ) );
+    EXPECT_TRUE( !comma::filesystem::is_regular_file( "./test.pipe" ) );
     EXPECT_TRUE( ::open( "./test.pipe", O_RDONLY | O_NONBLOCK ) > 0 );
     comma::io::ostream os( "./test.pipe" );
     EXPECT_TRUE( os() != NULL );
@@ -90,7 +90,7 @@ TEST( io, local_stream )
 {
     #ifndef WIN32
     {
-        boost::filesystem::remove( "./test.localsocket" );
+        comma::filesystem::remove( "./test.localsocket" );
         boost::asio::local::stream_protocol::endpoint endpoint( "test.localsocket" );
         EXPECT_TRUE( !boost::asio::local::stream_protocol::iostream( endpoint ) );
         boost::asio::io_service service;
@@ -102,17 +102,17 @@ TEST( io, local_stream )
         ostream.close();
         acceptor.close();
         EXPECT_TRUE( !boost::asio::local::stream_protocol::iostream( endpoint ) );
-        EXPECT_TRUE( !boost::filesystem::is_regular_file( "./test.localsocket" ) );
-        boost::filesystem::remove( "./test.localsocket" );
+        EXPECT_TRUE( !comma::filesystem::is_regular_file( "./test.localsocket" ) );
+        comma::filesystem::remove( "./test.localsocket" );
     }
     {
-        boost::filesystem::remove( "./test.file" );
+        comma::filesystem::remove( "./test.file" );
         comma::io::ostream ostream( "./test.file" );
         ostream.close();
         boost::asio::io_service service;
         boost::asio::local::stream_protocol::endpoint endpoint( "test.file" );
         try { boost::asio::local::stream_protocol::acceptor acceptor( service, endpoint ); EXPECT_TRUE( false ); } catch( ... ) {}
-        boost::filesystem::remove( "./test.file" );
+        comma::filesystem::remove( "./test.file" );
     }
     #endif
 }

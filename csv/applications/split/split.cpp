@@ -39,12 +39,12 @@
 #endif
 
 #include <unordered_map>
-#include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 #include "../../../base/exception.h"
 #include "../../../csv/stream.h"
 #include "../../../csv/traits.h"
 #include "../../../io/file_descriptor.h"
+#include "../../../io/impl/filesystem.h"
 #include "../../../name_value/parser.h"
 #include "../../../visiting/traits.h"
 #include "split.h"
@@ -321,8 +321,8 @@ std::ofstream* split< T >::ofstream_by_block_()
             auto it = filenames_.find( filenames_have_id_ ? current_.block : id );
             if( it == filenames_.end() ) { return nullptr; }
             filename = it->second;
-            const auto& dirname = boost::filesystem::path( filename ).parent_path();
-            if( !( dirname.empty() || boost::filesystem::is_directory( dirname ) || boost::filesystem::create_directories( dirname ) ) ) { COMMA_THROW( comma::exception, "failed to create directory '" << dirname << "' for file: '" << filename << "'" ); }
+            const auto& dirname = comma::filesystem::path( filename ).parent_path();
+            if( !( dirname.empty() || comma::filesystem::is_directory( dirname ) || comma::filesystem::create_directories( dirname ) ) ) { COMMA_THROW( comma::exception, "failed to create directory '" << dirname << "' for file: '" << filename << "'" ); }
         }
         if( filename.empty() ) { filename = boost::lexical_cast< std::string >( current_.block ) + suffix_; }
         file_.open( &filename[0], mode_ );
@@ -368,8 +368,8 @@ std::ofstream* split< T >::ofstream_by_id_()
         else { mode |= std::ofstream::app; }
         std::string name = filename_from_id_( current_.id );
         if( name.empty() ) { return nullptr; }
-        const auto& dirname = boost::filesystem::path( name ).parent_path();
-        if( !( dirname.empty() || boost::filesystem::is_directory( dirname ) || boost::filesystem::create_directories( dirname ) ) )
+        const auto& dirname = comma::filesystem::path( name ).parent_path();
+        if( !( dirname.empty() || comma::filesystem::is_directory( dirname ) || comma::filesystem::create_directories( dirname ) ) )
         {
             COMMA_THROW( comma::exception, "failed to create directory '" << dirname << "' for file: '" << name << "'" );
         }
