@@ -21,9 +21,13 @@ bool is_one_of( char c, const char* characters );
 
 /// split string into tokens (a quick implementation); always contains at least one element unless empty_if_empty_input is true
 std::vector< std::string > split( const std::string& s, const char* separators = " ", bool empty_if_empty_input = false );
-
-/// split string into tokens (a quick implementation); always contains at least one element unless empty_if_empty_input is true
 std::vector< std::string > split( const std::string& s, char separator, bool empty_if_empty_input = false );
+/// split to up to <size> elements starting from the start of the string
+std::vector< std::string > split_head( const std::string& s, unsigned int size, const char* separators = " ", bool empty_if_empty_input = false );
+std::vector< std::string > split_head( const std::string& s, unsigned int size, char separator, bool empty_if_empty_input = false );
+/// split to up to <size> elements starting from the end of the string
+std::vector< std::string > split_tail( const std::string& s, unsigned int size, const char* separators = " ", bool empty_if_empty_input = false );
+std::vector< std::string > split_tail( const std::string& s, unsigned int size, char separator, bool empty_if_empty_input = false );
 
 /// split string into tokens and cast to a vector of given types
 template < typename T > std::vector< T > split_as( const std::string& s, const char* separators );

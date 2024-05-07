@@ -56,6 +56,23 @@ TEST( string, join )
     }
 }
 
+static inline void make_vector_impl( std::vector< std::string >& v ) {}
+
+template < typename T, typename... Args >
+static inline void make_vector_impl( std::vector< std::string >& v, T arg, Args... args )
+{
+    v.push_back( arg );
+    make_vector_impl( v, args... );
+}
+
+template < typename... Args >
+static inline std::vector< std::string > make_vector( Args... args )
+{
+    std::vector< std::string > v;
+    make_vector_impl( v, args... );
+    return v;
+}
+
 TEST( string, split )
 {
     {
@@ -96,6 +113,31 @@ TEST( string, split )
         std::vector< std::string > v( split( ":,:", ":," ) );
         EXPECT_TRUE( v.size() == 4 );
         for( unsigned int i = 0; i < 4; ++i ) { EXPECT_TRUE( v.at(i) == "" ); }
+    }
+    {
+        EXPECT_EQ( split_head( "",              1, ',', true ), std::vector< std::string >() );
+        EXPECT_EQ( split_head( "",              5, ',', true ), std::vector< std::string >() );
+        EXPECT_EQ( split_head( "a",             1, ',', true ), make_vector( "a" ) );
+        EXPECT_EQ( split_head( "abc",           1, ',', true ), make_vector( "abc" ) );
+        EXPECT_EQ( split_head( "a,b",           1, ',', true ), make_vector( "a,b" ) );
+        EXPECT_EQ( split_head( "ab,cd",         1, ',', true ), make_vector( "ab,cd" ) );
+        EXPECT_EQ( split_head( "a,b",           2, ',', true ), make_vector( "a", "b" ) );
+        EXPECT_EQ( split_head( "a,b",           2, ',', true ), make_vector( "a", "b" ) );
+        EXPECT_EQ( split_head( "a,b",           3, ',', true ), make_vector( "a", "b" ) );
+        EXPECT_EQ( split_head( "a,b,c,d,e,f,g", 5, ',', true ), make_vector( "a", "b", "c", "d", "e,f,g" ) );
+    }
+    {
+        EXPECT_EQ( split_tail( "",              1, ',', true ), std::vector< std::string >() );
+        EXPECT_EQ( split_tail( "",              5, ',', true ), std::vector< std::string >() );
+        EXPECT_EQ( split_tail( "a",             1, ',', true ), make_vector( "a" ) );
+        EXPECT_EQ( split_tail( "abc",           1, ',', true ), make_vector( "abc" ) );
+        EXPECT_EQ( split_tail( "a,b",           1, ',', true ), make_vector( "a,b" ) );
+        EXPECT_EQ( split_tail( "ab,cd",         1, ',', true ), make_vector( "ab,cd" ) );
+        EXPECT_EQ( split_tail( "a,b",           2, ',', true ), make_vector( "a", "b" ) );
+        EXPECT_EQ( split_tail( "a,b",           2, ',', true ), make_vector( "a", "b" ) );
+        EXPECT_EQ( split_tail( "a,b",           3, ',', true ), make_vector( "a", "b" ) );
+        EXPECT_EQ( split_tail( "a,b,c,d,e,f",   5, ',', true ), make_vector( "a,b", "c", "d", "e", "f" ) );
+        EXPECT_EQ( split_tail( "a,b,c,d,e,f,g", 5, ',', true ), make_vector( "a,b,c", "d", "e", "f", "g" ) );
     }
 }
 
