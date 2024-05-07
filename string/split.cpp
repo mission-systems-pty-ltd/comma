@@ -7,8 +7,6 @@
 #include "../base/exception.h"
 #include "split.h"
 
-#include <iostream>
-
 namespace comma {
 
 bool string::is_one_of( char c, const char * characters )
