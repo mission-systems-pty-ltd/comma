@@ -64,6 +64,12 @@ class cyclic_buffer
         
         /// clear
         void clear();
+
+        /// accessor to underlying data
+        const std::vector< T >& data() const { return vector_; }
+
+        /// accessor to underlying data
+        std::vector< T >& data() { return vector_; }
         
     protected:
         std::vector< T > vector_;
