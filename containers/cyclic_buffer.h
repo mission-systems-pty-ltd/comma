@@ -21,54 +21,41 @@ template < typename T >
 class cyclic_buffer
 {
     public:
-        /// constructor
         cyclic_buffer( std::size_t size, const T& t = T() );
         
-        /// copy constructor
         cyclic_buffer( const cyclic_buffer& rhs ) { operator=( rhs ); }
         
-        /// assignment
         const cyclic_buffer& operator=( const cyclic_buffer& rhs );
         
-        /// return front
         T& front();
         
-        /// return front
         const T& front() const;
         
-        /// return back
         T& back();
         
-        /// return back
-        
         const T& back() const;
+
+        std::size_t front_index() const { return begin_(); }
+
+        std::size_t end_index() const { return end_(); }
         
-        /// push a new element at the end of the list
-        void push( const T& t );
+        void push( const T& t, bool force = false );
         
-        /// push a new element at the end of the list
         template < typename Iterator >
-        void push( Iterator begin, Iterator end );
+        void push( Iterator begin, Iterator end, bool force = false );
         
-        /// pop the new element at the front of the list
         void pop( std::size_t n = 1 );
         
-        /// return current size
         std::size_t size() const;
         
-        /// return capacity
         std::size_t capacity() const;
         
-        /// return true, if empty
         bool empty() const;
         
-        /// clear
         void clear();
 
-        /// accessor to underlying data
         const std::vector< T >& data() const { return vector_; }
 
-        /// accessor to underlying data
         std::vector< T >& data() { return vector_; }
         
     protected:
@@ -150,19 +137,27 @@ template < typename T >
 inline std::size_t cyclic_buffer< T >::capacity() const { return vector_.size(); }
 
 template < typename T >
-inline void cyclic_buffer< T >::push( const T& t )
+inline void cyclic_buffer< T >::push( const T& t, bool force )
 {
-    if( size() == vector_.size() ) { COMMA_THROW( comma::exception, "full" ); }
-    vector_[ end_() ] = t;
+    if( size() == vector_.size() )
+    { 
+        if( !force ) { COMMA_THROW( comma::exception, "full" ); }
+        vector_[ begin_() ] = t;
+        ++begin_;
+    }
+    else
+    {
+        vector_[ end_() ] = t;
+    }
     ++end_;
     empty_ = false;
 }
 
 template < typename T >
 template < typename Iterator >
-inline void cyclic_buffer< T >::push( Iterator begin, Iterator end )
+inline void cyclic_buffer< T >::push( Iterator begin, Iterator end, bool force )
 {
-    for( Iterator it = begin; it != end; ++it ) { push( *it ); }
+    for( Iterator it = begin; it != end; ++it ) { push( *it, force ); }
 }
 
 template < typename T >

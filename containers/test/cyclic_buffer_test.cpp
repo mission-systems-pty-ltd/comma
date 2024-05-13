@@ -29,6 +29,7 @@
 
 
 #include <gtest/gtest.h>
+#include "../../base/exception.h"
 #include "../cyclic_buffer.h"
 
 namespace comma {
@@ -82,14 +83,35 @@ TEST( cyclic_buffer, push_pop )
         EXPECT_EQ( b.size(), 4 - i );
     }
     EXPECT_TRUE( b.empty() );
-    EXPECT_EQ( b.size(), 0u );    
-    
+    EXPECT_EQ( b.size(), 0u );
     for( unsigned int i = 0; i < 5u; ++i )
     {
         b.push( i );
     }    
     b.pop(4);
     EXPECT_EQ( b.size(), 1u );    
+}
+
+TEST( cyclic_buffer, push_force )
+{
+    cyclic_buffer< unsigned int > b( 3 );
+    b.push( 0 );
+    b.push( 1 );
+    b.push( 2 );
+    EXPECT_EQ( b.front(), 0 );
+    EXPECT_EQ( b.back(), 2 );
+    EXPECT_THROW( b.push( 3 ), comma::exception );
+    b.push( 3, true );
+    EXPECT_EQ( b.front(), 1 );
+    EXPECT_EQ( b.back(), 3 );
+    EXPECT_THROW( b.push( 4 ), comma::exception );
+    b.push( 4, true );
+    EXPECT_EQ( b.front(), 2 );
+    EXPECT_EQ( b.back(), 4 );
+    EXPECT_THROW( b.push( 5 ), comma::exception );
+    b.push( 5, true );
+    EXPECT_EQ( b.front(), 3 );
+    EXPECT_EQ( b.back(), 5 );
 }
 
 TEST( cyclic_buffer, fixed_cyclic_buffer )
