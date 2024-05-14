@@ -81,7 +81,7 @@ struct traits< comma::variant< T, Args... > >
     
     template < typename K, typename V > static void visit( const K& key, const comma::variant< T, Args... >& t, V& v )
     {
-        if( t.template is< T >() ) { traits< T >::visit( key, t.template get< T >(), v ); }
+        // todo if( t.template is< T >() ) { traits< T >::visit( key, t.template get< T >(), v ); }
     }    
 };
 
@@ -95,7 +95,7 @@ struct traits< comma::variant< T > >
     
     template < typename K, typename V > static void visit( const K& key, const comma::variant< T >& t, V& v )
     {
-        if( t.template is< T >() ) { traits< T >::visit( key, t.template get< T >(), v ); }
+        // if( t.template is< T >() ) { traits< T >::visit( key, t.template get< T >(), v ); }
     }    
 };
 
