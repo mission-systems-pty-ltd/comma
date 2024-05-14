@@ -75,7 +75,8 @@ template < typename... Args >
 class variant
 {
     public:
-        // todo: template constructor
+        variant() = default;
+        template < typename S > variant( const S& s ) { set( s ); }
         template < typename S > bool is() const { return _values.template is< S >(); }
         operator bool() const { return bool( _values ); }
         template < typename S > void set( const S& s ) { _values.set( s ); }
