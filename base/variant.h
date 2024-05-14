@@ -53,6 +53,7 @@ template < typename T, typename... Args > struct variant  // todo? use tuple ins
     template < typename S > void set( const boost::optional< S >& s ) { variant_traits< T, std::is_same< T, S >::value >::set( t, s ); values.set( s ); }
     template < typename S > const S& get() const { return variant_traits< T, std::is_same< T, S >::value >::template get< S >( t, values ); }
     template < typename S > const boost::optional< S >& optional() const { return variant_traits< T, std::is_same< T, S >::value >::template optional< S >( t, values ); }
+    void reset() { t.reset(); values.reset(); }
 };
 
 template < typename T > struct variant< T >  // todo? use tuple instead?
@@ -65,6 +66,7 @@ template < typename T > struct variant< T >  // todo? use tuple instead?
     template < typename S > void set( const boost::optional< S >& s ) { variant_traits< T, std::is_same< T, S >::value >::set( t, s ); }
     template < typename S > const S& get() const { return variant_traits< T, std::is_same< T, S >::value >::template get< S >( t, type_is_not_on_type_list() ); }
     template < typename S > const boost::optional< S >& optional() const { return variant_traits< T, std::is_same< T, S >::value >::template optional< S >( t, type_is_not_on_type_list() ); }
+    void reset() { t.reset(); }
 };
 
 } // namespace impl {
@@ -73,12 +75,14 @@ template < typename... Args >
 class variant
 {
     public:
+        // todo: template constructor
         template < typename S > bool is() const { return _values.template is< S >(); }
         operator bool() const { return bool( _values ); }
         template < typename S > void set( const S& s ) { _values.set( s ); }
         template < typename S > void set( const boost::optional< S >& s ) { _values.set( s ); }
         template < typename S > const S& get() const { return _values.template get< S >(); }
         template < typename S > const boost::optional< S >& optional() const { return _values.template optional< S >(); }
+        void reset() { _values.reset(); }
     private:
         impl::variant< Args... > _values;
 };
