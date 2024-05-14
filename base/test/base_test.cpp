@@ -52,6 +52,49 @@ TEST( base, variant )
         EXPECT_FALSE( v.is< float >() );
         EXPECT_FALSE( v.is< double >() );
     }
+    {
+        comma::variant< int, float, double > v;
+        EXPECT_FALSE( v.is< int >() );
+        EXPECT_FALSE( v.is< float >() );
+        EXPECT_FALSE( v.is< double >() );
+        v.set< int >( 5 );
+        EXPECT_EQ( v.get< int >(), 5 );
+        EXPECT_TRUE( v.optional< int >() );
+        EXPECT_FALSE( v.optional< float >() );
+        EXPECT_FALSE( v.optional< double >() );
+        EXPECT_EQ( *v.optional< int >(), 5 );
+        EXPECT_TRUE( v.is< int >() );
+        EXPECT_FALSE( v.is< float >() );
+        EXPECT_FALSE( v.is< double >() );
+        v.set< float >( 5 );
+        EXPECT_EQ( v.get< float >(), 5 );
+        EXPECT_FALSE( v.optional< int >() );
+        EXPECT_TRUE( v.optional< float >() );
+        EXPECT_FALSE( v.optional< double >() );
+        EXPECT_EQ( *v.optional< float >(), 5 );
+        EXPECT_FALSE( v.is< int >() );
+        EXPECT_TRUE( v.is< float >() );
+        EXPECT_FALSE( v.is< double >() );
+        v.set< double >( 5 );
+        EXPECT_EQ( v.get< double >(), 5 );
+        EXPECT_FALSE( v.optional< int >() );
+        EXPECT_FALSE( v.optional< float >() );
+        EXPECT_TRUE( v.optional< double >() );
+        EXPECT_EQ( *v.optional< double >(), 5 );
+        EXPECT_FALSE( v.is< int >() );
+        EXPECT_FALSE( v.is< float >() );
+        EXPECT_TRUE( v.is< double >() );
+        v.set< int >( 5 );
+        EXPECT_EQ( v.get< int >(), 5 );
+        EXPECT_TRUE( v.optional< int >() );
+        EXPECT_FALSE( v.optional< float >() );
+        EXPECT_FALSE( v.optional< double >() );
+        EXPECT_EQ( *v.optional< float >(), 5 );
+        EXPECT_EQ( *v.optional< int >(), 5 );
+        EXPECT_TRUE( v.is< int >() );
+        EXPECT_FALSE( v.is< float >() );
+        EXPECT_FALSE( v.is< double >() );
+    }
 }
 
 } // namespace comma {
