@@ -20,6 +20,7 @@
 #include <boost/array.hpp>
 #include "../base/none.h"
 #include "../base/optional.h"
+#include "../base/variant.h"
 
 namespace comma { namespace visiting {
 
@@ -67,6 +68,35 @@ struct traits< comma::optional< T > >
     {
         v.apply( "value", t.value );
         v.apply( "is_set", t.is_set );
+    }    
+};
+
+template < typename T, typename... Args >
+struct traits< comma::variant< T, Args... > >
+{
+    template < typename K, typename V > static void visit( const K& key, comma::variant< T, Args... >& t, V& v )
+    {
+        // todo
+    }
+    
+    template < typename K, typename V > static void visit( const K& key, const comma::variant< T, Args... >& t, V& v )
+    {
+        // todo
+    }    
+};
+
+//template < typename T > struct variant< T >
+template < typename T >
+struct traits< comma::variant< T > >
+{
+    template < typename K, typename V > static void visit( const K& key, comma::variant< T >& t, V& v )
+    {
+        // todo
+    }
+    
+    template < typename K, typename V > static void visit( const K& key, const comma::variant< T >& t, V& v )
+    {
+        // todo
     }    
 };
 
