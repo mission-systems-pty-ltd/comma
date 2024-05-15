@@ -420,40 +420,36 @@ template <> struct traits< forest >
 
 } } // namespace comma { namespace visiting {
 
-TEST( DISABLED_serialise, variant )
+TEST( serialise, variant )
 {
     forest f;
-    std::cerr << "=================================" << std::endl;
-
-
-    std::cerr << "=== chirp ===" << std::endl;
-
-    f.sound.set( forest::chirp() );
-    comma::write_json( f, std::cerr ); // comma::write_json( f, std::cerr, false );
-
-    std::cerr << std::endl;
-
-
-    std::cerr << "=== whistle ===" << std::endl;
-
-    f.sound.set( forest::whistle() );
-    f.madeup.set( forest::warble{555, 666} );
-    comma::write_json( f, std::cerr ); // comma::write_json( f, std::cerr, false );
-    
-    std::cerr << std::endl;
-
-
-    std::cerr << "=== warble ===" << std::endl;
-
-    f.sound.set( forest::warble() );
-    f.sounds[2].set( forest::whistle() );
-    f.madeup.reset();
-    comma::write_json( f, std::cerr ); // comma::write_json( f, std::cerr, false );
-    std::cerr << "-------------------" << std::endl;
-    comma::write_xml( f, std::cerr ); // comma::write_json( f, std::cerr, false );
-    std::cerr << "-------------------" << std::endl;
-    comma::write_path_value( f, std::cerr ); // comma::write_json( f, std::cerr, false );
-
-    std::cerr << std::endl;
-    std::cerr << "=================================" << std::endl;
+    {
+        std::ostringstream oss;
+        comma::write_json( f, oss, false );
+        EXPECT_EQ( oss.str(), "{}" );
+    }
+    {
+        f.sound.set( forest::chirp{11, 22} );
+        std::ostringstream oss;
+        comma::write_json( f, oss, false );
+        EXPECT_EQ( oss.str(), "{\"sound\":{\"chirp\":{\"a\":11,\"b\":22}}}" );
+    }
+    {
+        f.sound.set( forest::whistle{33, 44} );
+        std::ostringstream oss;
+        comma::write_json( f, oss, false );
+        EXPECT_EQ( oss.str(), "{\"sound\":{\"whistle\":{\"a\":33,\"b\":44}}}" );
+    }
+    {
+        f.sound.set( forest::warble{55, 66} );
+        std::ostringstream oss;
+        comma::write_json( f, oss, false );
+        EXPECT_EQ( oss.str(), "{\"sound\":{\"warble\":{\"x\":55,\"y\":66}}}" );
+    }
+    {
+        f.sound.reset();
+        std::ostringstream oss;
+        comma::write_json( f, oss, false );
+        EXPECT_EQ( oss.str(), "{}" );
+    }
 }
