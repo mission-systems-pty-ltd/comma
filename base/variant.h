@@ -70,6 +70,11 @@ template < typename T > struct variant< T >  // todo? use tuple instead?
 
 } // namespace impl {
 
+/// @example
+///     struct chirp { int a{1}; int b{2}; };
+///     struct whistle { int a{3}; int b{4}; };
+///     struct warble { int x{5}; int y{6}; };
+///     comma::named_variant< naming, chirp, whistle, warble > sound;
 template < typename... Args >
 class variant
 {
@@ -87,6 +92,17 @@ class variant
         impl::variant< Args... > _values;
 };
 
+/// @example
+///     struct forest
+///     {
+///         struct chirp { int a{1}; int b{2}; };
+///         struct whistle { int a{3}; int b{4}; };
+///         struct warble { int x{5}; int y{6}; };
+///
+///         struct naming { static std::array< std::string, 3 > names() { return { "chirp", "whistle", "warble" }; } };
+///
+///         comma::named_variant< naming, chirp, whistle, warble > sound;
+/// };
 template < typename Names, typename... Args >
 struct named_variant : public variant< Args... >, public Names
 {
