@@ -143,7 +143,7 @@ struct traits< comma::named_variant< Names, NArgs... > > // todo? should it be i
     typedef comma::named_variant< Names, NArgs... > named_variant_t;
     typedef comma::variant< NArgs... > variant_t;
 
-    template < typename S, typename... Args > struct _variant_traits // todo
+    template < typename S, typename... Args > struct _variant_traits
     {
         template < typename V > static void visit( variant_t& t, V& v, unsigned int i, bool is_set )
         {
@@ -160,9 +160,9 @@ struct traits< comma::named_variant< Names, NArgs... > > // todo? should it be i
         }
     };
 
-    template < typename S > struct _variant_traits< S > // todo
+    template < typename S > struct _variant_traits< S >
     {
-        template < typename V > static void visit( variant_t& t, V& v, bool is_set, unsigned int i )
+        template < typename V > static void visit( variant_t& t, V& v, unsigned int i, bool is_set )
         {
             boost::optional< S > s = t.template optional< S >();
             v.apply( named_variant_t::names()[i], s );

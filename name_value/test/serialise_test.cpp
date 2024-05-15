@@ -370,51 +370,54 @@ TEST( serialise, path_value )
 
 struct forest
 {
-    struct chirp { int a{1}; int b{2}; };
-    struct whistle { int a{3}; int b{4}; };
-    struct warble { int x{5}; int y{6}; };
+    struct sounds
+    {
+        struct chirp { int a{1}; int b{2}; };
+        struct whistle { int a{3}; int b{4}; };
+        struct warble { int x{5}; int y{6}; };
+    };
 
     struct naming { static std::array< std::string, 3 > names() { return { "chirp", "whistle", "warble" }; } };
 
-    typedef comma::named_variant< naming, chirp, whistle, warble > variant_t;
-    comma::make_named_variant< naming >::variant< chirp, whistle, warble >::type madeup;
-    comma::named_variant< naming, chirp, whistle, warble > sound;
-    std::array< variant_t, 3 > sounds;
+    typedef comma::named_variant< naming, sounds::chirp, sounds::whistle, sounds::warble > variant_t;
+    comma::make_named_variant< naming >::variant< sounds::chirp, sounds::whistle, sounds::warble >::type madeup;
+    std::array< variant_t, 3 > choir;
+    comma::named_variant< naming, sounds::chirp, sounds::whistle, sounds::warble > sound;    
 };
 
 namespace comma { namespace visiting {
 
-template <> struct traits< forest::chirp >
+template <> struct traits< forest::sounds::chirp >
 {
-    template < typename Key, class Visitor > static void visit( Key, forest::chirp& t, Visitor& v ) { v.apply( "a", t.a ); v.apply( "b", t.b ); }
-    template < typename Key, class Visitor > static void visit( Key, const forest::chirp& t, Visitor& v ) { v.apply( "a", t.a ); v.apply( "b", t.b ); }
+    template < typename Key, class Visitor > static void visit( Key, forest::sounds::chirp& t, Visitor& v ) { v.apply( "a", t.a ); v.apply( "b", t.b ); }
+    template < typename Key, class Visitor > static void visit( Key, const forest::sounds::chirp& t, Visitor& v ) { v.apply( "a", t.a ); v.apply( "b", t.b ); }
 };
 
-template <> struct traits< forest::whistle >
+template <> struct traits< forest::sounds::whistle >
 {
-    template < typename Key, class Visitor > static void visit( Key, forest::whistle& t, Visitor& v ) { v.apply( "a", t.a ); v.apply( "b", t.b ); }
-    template < typename Key, class Visitor > static void visit( Key, const forest::whistle& t, Visitor& v ) { v.apply( "a", t.a ); v.apply( "b", t.b ); }
+    template < typename Key, class Visitor > static void visit( Key, forest::sounds::whistle& t, Visitor& v ) { v.apply( "a", t.a ); v.apply( "b", t.b ); }
+    template < typename Key, class Visitor > static void visit( Key, const forest::sounds::whistle& t, Visitor& v ) { v.apply( "a", t.a ); v.apply( "b", t.b ); }
 };
 
-template <> struct traits< forest::warble >
+template <> struct traits< forest::sounds::warble >
 {
-    template < typename Key, class Visitor > static void visit( Key, forest::warble& t, Visitor& v ) { v.apply( "x", t.x ); v.apply( "y", t.y ); }
-    template < typename Key, class Visitor > static void visit( Key, const forest::warble& t, Visitor& v ) { v.apply( "x", t.x ); v.apply( "y", t.y ); }
+    template < typename Key, class Visitor > static void visit( Key, forest::sounds::warble& t, Visitor& v ) { v.apply( "x", t.x ); v.apply( "y", t.y ); }
+    template < typename Key, class Visitor > static void visit( Key, const forest::sounds::warble& t, Visitor& v ) { v.apply( "x", t.x ); v.apply( "y", t.y ); }
 };
 
 template <> struct traits< forest >
 {
     template < typename Key, class Visitor > static void visit( Key, forest& t, Visitor& v )
     {
-        v.apply( "madeup", t.madeup );
+        v.apply( "madeup", t.madeup ); // todo
+        v.apply( "choir", t.choir ); // todo
         v.apply( "sound", t.sound );
-        v.apply( "sounds", t.sounds );
     }
     template < typename Key, class Visitor > static void visit( Key, const forest& t, Visitor& v )
     {
-        v.apply( "madeup", t.madeup );
+        v.apply( "madeup", t.madeup ); // todo
+        v.apply( "choir", t.choir ); // todo
         v.apply( "sound", t.sound );
-        v.apply( "sounds", t.sounds );
     }
 };
 
@@ -429,19 +432,19 @@ TEST( serialise, variant )
         EXPECT_EQ( oss.str(), "{}" );
     }
     {
-        f.sound.set( forest::chirp{11, 22} );
+        f.sound.set( forest::sounds::chirp{11, 22} );
         std::ostringstream oss;
         comma::write_json( f, oss, false );
         EXPECT_EQ( oss.str(), "{\"sound\":{\"chirp\":{\"a\":11,\"b\":22}}}" );
     }
     {
-        f.sound.set( forest::whistle{33, 44} );
+        f.sound.set( forest::sounds::whistle{33, 44} );
         std::ostringstream oss;
         comma::write_json( f, oss, false );
         EXPECT_EQ( oss.str(), "{\"sound\":{\"whistle\":{\"a\":33,\"b\":44}}}" );
     }
     {
-        f.sound.set( forest::warble{55, 66} );
+        f.sound.set( forest::sounds::warble{55, 66} );
         std::ostringstream oss;
         comma::write_json( f, oss, false );
         EXPECT_EQ( oss.str(), "{\"sound\":{\"warble\":{\"x\":55,\"y\":66}}}" );
@@ -451,5 +454,27 @@ TEST( serialise, variant )
         std::ostringstream oss;
         comma::write_json( f, oss, false );
         EXPECT_EQ( oss.str(), "{}" );
+    }
+}
+
+TEST( deserialise, variant )
+{
+    {
+        forest g;
+        {
+            std::istringstream iss( "{\"sound\":{\"warble\":{\"x\":55,\"y\":66}}}" );
+            comma::read_json( g, iss );
+            EXPECT_TRUE( g.sound.is< forest::sounds::warble >() );
+            EXPECT_EQ( g.sound.get< forest::sounds::warble >().x, 55 );
+            EXPECT_EQ( g.sound.get< forest::sounds::warble >().y, 66 );
+            
+        }
+        {
+            std::istringstream iss( "{\"sound\":{\"chirp\":{\"a\":77,\"b\":88}}}" );
+            comma::read_json( g, iss );
+            EXPECT_TRUE( g.sound.is< forest::sounds::chirp >() );
+            EXPECT_EQ( g.sound.get< forest::sounds::chirp >().a, 77 );
+            EXPECT_EQ( g.sound.get< forest::sounds::chirp >().b, 88 );
+        }
     }
 }
