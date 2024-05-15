@@ -12,6 +12,7 @@
 // #endif
 #include <type_traits>
 #include <boost/optional.hpp>
+#include "exception.h"
 
 namespace comma {
 
@@ -43,6 +44,7 @@ template < typename T > struct variant_traits< T, true >
 
 template < typename T, typename... Args > struct variant  // todo? use tuple instead?
 {
+    enum { size = variant< Args... >::size + 1 };
     boost::optional< T > t;
     variant< Args... > values;
 
@@ -53,10 +55,12 @@ template < typename T, typename... Args > struct variant  // todo? use tuple ins
     template < typename S > const S& get() const { return variant_traits< T, std::is_same< T, S >::value >::template get< S >( t, values ); }
     template < typename S > const boost::optional< S >& optional() const { return variant_traits< T, std::is_same< T, S >::value >::template optional< S >( t, values ); }
     void reset() { t.reset(); values.reset(); }
+    template < typename S > static unsigned int rindex() { return std::is_same< T, S >::value ? size - 1 : variant< Args... >::template rindex< S >(); }
 };
 
 template < typename T > struct variant< T >  // todo? use tuple instead?
 {
+    enum { size = 1 };
     boost::optional< T > t;
 
     template < typename S > bool is() const { return std::is_same< T, S >::value && bool( t ); }
@@ -66,6 +70,7 @@ template < typename T > struct variant< T >  // todo? use tuple instead?
     template < typename S > const S& get() const { return variant_traits< T, std::is_same< T, S >::value >::template get< S >( t, type_is_not_on_type_list() ); }
     template < typename S > const boost::optional< S >& optional() const { return variant_traits< T, std::is_same< T, S >::value >::template optional< S >( t, type_is_not_on_type_list() ); }
     void reset() { t.reset(); }
+    template < typename S > static unsigned int rindex() { bool same_type = std::is_same< T, S >::value; COMMA_ASSERT( same_type, "type not found in type list" ); return 0; }
 };
 
 } // namespace impl {
@@ -79,6 +84,7 @@ template < typename... Args >
 class variant
 {
     public:
+        enum { size = impl::variant< Args... >::size };
         variant() = default;
         template < typename S > variant( const S& s ) { set( s ); }
         template < typename S > bool is() const { return _values.template is< S >(); }
@@ -88,6 +94,7 @@ class variant
         template < typename S > const S& get() const { return _values.template get< S >(); }
         template < typename S > const boost::optional< S >& optional() const { return _values.template optional< S >(); }
         void reset() { _values.reset(); }
+        template < typename S > static unsigned int index_of() { return impl::variant< Args... >::size - impl::variant< Args... >::template rindex< S >() - 1; }
     protected:
         impl::variant< Args... > _values;
 };
@@ -108,6 +115,7 @@ struct named_variant : public variant< Args... >, public Names
 {
     typedef Names names_t;
     typedef variant< Args... > variant_t;
+    template < typename S > static const std::string& name_of() { return Names::names()[ variant_t::template index_of< S >() ]; }
 };
 
 template < typename Names >

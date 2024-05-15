@@ -95,6 +95,29 @@ TEST( base, variant )
         EXPECT_FALSE( v.is< float >() );
         EXPECT_FALSE( v.is< double >() );
     }
+    {
+        { auto size = comma::variant< int >::size; EXPECT_EQ( size, 1 ); }
+        { auto size = comma::variant< int, float >::size; EXPECT_EQ( size, 2 ); }
+        { auto size = comma::variant< int, float, double >::size; EXPECT_EQ( size, 3 ); }
+    }
+    {
+        typedef comma::variant< int, float, double > variant_t;
+        EXPECT_EQ( variant_t::index_of< int >(), 0 );
+        EXPECT_EQ( variant_t::index_of< float >(), 1 );
+        EXPECT_EQ( variant_t::index_of< double >(), 2 );
+    }
+}
+
+TEST( base, named_variant )
+{
+    {
+        struct naming { static std::array< std::string, 3 > names() { return { "a", "b", "c" }; } };
+        typedef comma::named_variant< naming, int, float, double > variant_t;
+        variant_t v;
+        EXPECT_EQ( variant_t::name_of< int >(), "a" );
+        EXPECT_EQ( variant_t::name_of< float >(), "b" );
+        EXPECT_EQ( variant_t::name_of< double >(), "c" );
+    }
 }
 
 } // namespace comma {
