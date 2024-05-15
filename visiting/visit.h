@@ -27,24 +27,18 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author vsevolod vlaskine
 
-#ifndef COMMA_VISITING_VISIT_HEADER_GUARD_
-#define COMMA_VISITING_VISIT_HEADER_GUARD_
+#pragma once
 
 #include "traits.h"
 
 namespace comma { namespace visiting {
     
-/// visit
 template < typename K, typename T, typename V >
 inline void visit( const K& key, T& t, V& v ) { traits< T >::visit( key, t, v ); }
 
-/// visit const
 template < typename K, typename T, typename V >
 inline void visit( const K& key, const T& t, V& v ) { traits< T >::visit( key, t, v ); }
     
 } } // namespace comma { namespace visiting {
-
-#endif // COMMA_VISITING_VISIT_HEADER_GUARD_

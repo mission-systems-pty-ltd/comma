@@ -73,7 +73,7 @@ struct traits< comma::optional< T > >
 };
 
 template < typename... Args >
-struct traits< comma::variant< Args... > > // todo? should it be in the visitors instead?
+struct traits< comma::variant< Args... > > // todo? should it be in the visitors instead? todo!
 {
     typedef comma::variant< Args... > variant_t;
 
@@ -82,7 +82,7 @@ struct traits< comma::variant< Args... > > // todo? should it be in the visitors
         template < typename K, typename V > void _visit( const K& key, variant_t& t, V& v, bool is_set )
         {
             boost::optional< S > s = t.template optional< S >();
-            v.apply( key, s );
+            traits< boost::optional< S > >::visit( key, s, v );
             COMMA_ASSERT( !s || !is_set, "variant: ambiguous: expected not more than one variant type set; got at least two variant types set" );
             if( s ) { t.set( s ); }
             _variant_traits< Args... >::_visit( key, t, v, bool( s ) );
@@ -90,7 +90,7 @@ struct traits< comma::variant< Args... > > // todo? should it be in the visitors
         template < typename K, typename V > void _visit( const K& key, const variant_t& t, V& v )
         {
             const boost::optional< S >& s = t.template optional< S >();
-            if( s ) { v.apply( key, *s ); } else { _variant_traits< Args... >::_visit( key, t, v ); }
+            if( s ) { traits< S >::visit( key, *s, v ); } else { _variant_traits< Args... >::_visit( key, t, v ); }
         }
     };
 
@@ -115,14 +115,14 @@ struct traits< comma::variant< T > >
         template < typename K, typename V > void _visit( const K& key, variant_t& t, V& v, bool is_set )
         {
             boost::optional< S > s = t.template optional< S >();
-            v.apply( key, s );
+            traits< boost::optional< S > >::visit( key, s, v );
             COMMA_ASSERT( !s || !is_set, "variant: ambiguous: expected not more than one variant type set; got at least two variant types set" );
             if( s ) { t.set( s ); }
         }
         template < typename K, typename V > void _visit( const K& key, const variant_t& t, V& v )
         {
             const boost::optional< S >& s = t.template optional< S >();
-            if( s ) { v.apply( key, *s ); }
+            if( s ) { traits< S >::visit( key, *s, v ); }
         }
     };
 
@@ -136,6 +136,88 @@ struct traits< comma::variant< T > >
         _variant_traits< T >::visit( key, t, v );
     }
 };
+
+template < typename Names, typename... NArgs >
+struct traits< comma::named_variant< Names, NArgs... > > // todo? should it be in the visitors instead?
+{
+    typedef comma::named_variant< Names, NArgs... > named_variant_t;
+    typedef comma::variant< NArgs... > variant_t;
+
+    template < typename S, typename... Args > struct _variant_traits // todo
+    {
+        template < typename V > static void visit( variant_t& t, V& v, unsigned int i, bool is_set )
+        {
+            boost::optional< S > s = t.template optional< S >();
+            v.apply( named_variant_t::names()[i], s );
+            COMMA_ASSERT( !s || !is_set, "variant: ambiguous: expected not more than one variant type set; got at least two variant types set" );
+            if( s ) { t.set( s ); }
+            _variant_traits< Args... >::visit( t, v, ++i, bool( s ) );
+        }
+        template < typename V > static void visit( const variant_t& t, V& v, unsigned int i )
+        {
+            const boost::optional< S >& s = t.template optional< S >();
+            if( s ) { v.apply( named_variant_t::names()[i], *s ); } else { _variant_traits< Args... >::visit( t, v, ++i ); }
+        }
+    };
+
+    template < typename S > struct _variant_traits< S > // todo
+    {
+        template < typename V > static void visit( variant_t& t, V& v, bool is_set, unsigned int i )
+        {
+            boost::optional< S > s = t.template optional< S >();
+            v.apply( named_variant_t::names()[i], s );
+            COMMA_ASSERT( !s || !is_set, "variant: ambiguous: expected not more than one variant type set; got at least two variant types set" );
+            if( s ) { t.set( s ); }
+        }
+        template < typename V > static void visit( const variant_t& t, V& v, unsigned int i )
+        {
+            const boost::optional< S >& s = t.template optional< S >();
+            if( s ) { v.apply( named_variant_t::names()[i], *s ); }
+        }
+    };
+
+    template < typename K, typename V > static void visit( const K&, named_variant_t& t, V& v )
+    {
+        _variant_traits< NArgs... >::visit( static_cast< variant_t& >( t ), v, 0, false );
+    }
+    
+    template < typename K, typename V > static void visit( const K& key, const named_variant_t& t, V& v )
+    {
+        _variant_traits< NArgs... >::visit( static_cast< const variant_t& >( t ), v, 0 );
+    }
+};
+
+// template < typename Names, typename T >
+// struct traits< comma::named_variant< T > >
+// {
+//     typedef typename comma::variant< T >::variant_t variant_t;
+
+//     template < typename S > struct _variant_traits // todo
+//     {
+//         template < typename K, typename V > void _visit( const K& key, variant_t& t, V& v, bool is_set, unsigned int i )
+//         {
+//             boost::optional< S > s = t.template optional< S >();
+//             v.apply( variant_t::names()[i], s );
+//             COMMA_ASSERT( !s || !is_set, "variant: ambiguous: expected not more than one variant type set; got at least two variant types set" );
+//             if( s ) { t.set( s ); }
+//         }
+//         template < typename K, typename V > void _visit( const K& key, const variant_t& t, V& v, unsigned int i )
+//         {
+//             const boost::optional< S >& s = t.template optional< S >();
+//             if( s ) { v.apply( variant_t::names()[i], *s ); }
+//         }
+//     };
+
+//     template < typename K, typename V > static void visit( const K& key, variant_t& t, V& v )
+//     {
+//         _variant_traits< T >::visit( key, t, v, false );
+//     }
+    
+//     template < typename K, typename V > static void visit( const K& key, const variant_t& t, V& v )
+//     {
+//         _variant_traits< T >::visit( key, t, v );
+//     }
+// };
 
 template < typename T >
 struct traits< std::complex< T > >

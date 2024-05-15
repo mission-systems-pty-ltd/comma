@@ -29,6 +29,7 @@
 
 
 #include <gtest/gtest.h>
+#include "../../base/variant.h"
 #include "../../name_value/serialize.h"
 #include "../../visiting/traits.h"
 #include "../../xpath/xpath.h"
@@ -366,3 +367,93 @@ TEST( serialise, path_value )
 }
 
 } } } // namespace comma { namespace test { namespace serialise {
+
+struct forest
+{
+    struct chirp { int a{1}; int b{2}; };
+    struct whistle { int a{3}; int b{4}; };
+    struct warble { int x{5}; int y{6}; };
+
+    struct naming { static std::array< std::string, 3 > names() { return { "chirp", "whistle", "warble" }; } };
+
+    typedef comma::named_variant< naming, chirp, whistle, warble > variant_t;
+    comma::make_named_variant< naming >::variant< chirp, whistle, warble >::type madeup;
+    comma::named_variant< naming, chirp, whistle, warble > sound;
+    std::array< variant_t, 3 > sounds;
+};
+
+namespace comma { namespace visiting {
+
+template <> struct traits< forest::chirp >
+{
+    template < typename Key, class Visitor > static void visit( Key, forest::chirp& t, Visitor& v ) { v.apply( "a", t.a ); v.apply( "b", t.b ); }
+    template < typename Key, class Visitor > static void visit( Key, const forest::chirp& t, Visitor& v ) { v.apply( "a", t.a ); v.apply( "b", t.b ); }
+};
+
+template <> struct traits< forest::whistle >
+{
+    template < typename Key, class Visitor > static void visit( Key, forest::whistle& t, Visitor& v ) { v.apply( "a", t.a ); v.apply( "b", t.b ); }
+    template < typename Key, class Visitor > static void visit( Key, const forest::whistle& t, Visitor& v ) { v.apply( "a", t.a ); v.apply( "b", t.b ); }
+};
+
+template <> struct traits< forest::warble >
+{
+    template < typename Key, class Visitor > static void visit( Key, forest::warble& t, Visitor& v ) { v.apply( "x", t.x ); v.apply( "y", t.y ); }
+    template < typename Key, class Visitor > static void visit( Key, const forest::warble& t, Visitor& v ) { v.apply( "x", t.x ); v.apply( "y", t.y ); }
+};
+
+template <> struct traits< forest >
+{
+    template < typename Key, class Visitor > static void visit( Key, forest& t, Visitor& v )
+    {
+        v.apply( "madeup", t.madeup );
+        v.apply( "sound", t.sound );
+        v.apply( "sounds", t.sounds );
+    }
+    template < typename Key, class Visitor > static void visit( Key, const forest& t, Visitor& v )
+    {
+        v.apply( "madeup", t.madeup );
+        v.apply( "sound", t.sound );
+        v.apply( "sounds", t.sounds );
+    }
+};
+
+} } // namespace comma { namespace visiting {
+
+TEST( DISABLED_serialise, variant )
+{
+    forest f;
+    std::cerr << "=================================" << std::endl;
+
+
+    std::cerr << "=== chirp ===" << std::endl;
+
+    f.sound.set( forest::chirp() );
+    comma::write_json( f, std::cerr ); // comma::write_json( f, std::cerr, false );
+
+    std::cerr << std::endl;
+
+
+    std::cerr << "=== whistle ===" << std::endl;
+
+    f.sound.set( forest::whistle() );
+    f.madeup.set( forest::warble{555, 666} );
+    comma::write_json( f, std::cerr ); // comma::write_json( f, std::cerr, false );
+    
+    std::cerr << std::endl;
+
+
+    std::cerr << "=== warble ===" << std::endl;
+
+    f.sound.set( forest::warble() );
+    f.sounds[2].set( forest::whistle() );
+    f.madeup.reset();
+    comma::write_json( f, std::cerr ); // comma::write_json( f, std::cerr, false );
+    std::cerr << "-------------------" << std::endl;
+    comma::write_xml( f, std::cerr ); // comma::write_json( f, std::cerr, false );
+    std::cerr << "-------------------" << std::endl;
+    comma::write_path_value( f, std::cerr ); // comma::write_json( f, std::cerr, false );
+
+    std::cerr << std::endl;
+    std::cerr << "=================================" << std::endl;
+}

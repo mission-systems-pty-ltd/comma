@@ -18,7 +18,6 @@ namespace comma {
 // todo
 //   ? use tuple instead?
 //   - check that types don't repeat
-//   - visiting traits
 
 namespace impl {
 
@@ -84,8 +83,21 @@ class variant
         template < typename S > const S& get() const { return _values.template get< S >(); }
         template < typename S > const boost::optional< S >& optional() const { return _values.template optional< S >(); }
         void reset() { _values.reset(); }
-    private:
+    protected:
         impl::variant< Args... > _values;
+};
+
+template < typename Names, typename... Args >
+struct named_variant : public variant< Args... >, public Names
+{
+    typedef Names names_t;
+    typedef variant< Args... > variant_t;
+};
+
+template < typename Names >
+struct make_named_variant
+{
+    template < typename... Args > struct variant { typedef named_variant< Names, Args... > type; };
 };
 
 } // namespace comma {
