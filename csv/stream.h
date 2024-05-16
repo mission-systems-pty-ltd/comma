@@ -134,8 +134,11 @@ class ascii_output_stream : public boost::noncopyable
         /// return fields
         const std::vector< std::string >& fields() const { return fields_; }
 
+        /// return size of last output record in bytes
+        unsigned int last_size() const { return _last_size; }
+
     private:
-        friend class output_stream<S>;
+        friend class output_stream< S >;
         template < typename W, typename T>
         friend class tied;
         template < typename V, typename T, typename Data >
@@ -144,6 +147,7 @@ class ascii_output_stream : public boost::noncopyable
         std::ostream& os_;
         csv::ascii< S > ascii_;
         std::vector< std::string > fields_;
+        unsigned int _last_size{0};
 };
 
 /// binary csv input stream
@@ -224,6 +228,9 @@ class binary_output_stream : public boost::noncopyable
         /// return fields
         const std::vector< std::string >& fields() const { return fields_; }
 
+        /// record size
+        unsigned int size() const { return _size; }
+
     private:
         template < typename W, typename T>
         friend class tied;
@@ -240,6 +247,7 @@ class binary_output_stream : public boost::noncopyable
         //char* cur_;
         std::vector< std::string > fields_;
         bool flush_;
+        unsigned int _size{};
         /// bool is_stdout;
 };
 
@@ -344,6 +352,9 @@ class output_stream : public boost::noncopyable
         bool is_binary() const { return bool( binary_ ); }
 
         std::ostream& os() { return binary_ ? binary_->os_ : ascii_->os_; }
+
+        /// return size of last output record in bytes
+        unsigned int last_size() const { return binary_ ? binary_->size() : ascii_->last_size(); }
 
     private:
         boost::scoped_ptr< ascii_output_stream< S > > ascii_;
@@ -634,8 +645,7 @@ inline void ascii_output_stream< S >::write( const S& s )
 template < typename S >
 inline void ascii_output_stream< S >::write( const S& s, const std::string& line )
 {
-    write( s, split
-( line, ascii_.delimiter() ) );
+    write( s, split( line, ascii_.delimiter() ) );
 }
 
 template < typename S >
@@ -651,7 +661,8 @@ inline void ascii_output_stream< S >::write( const S& s, std::vector< std::strin
     ascii_.put( s, v );
     if( v.empty() ) { return; } // never here, though
     os_ << v[0];
-    for( std::size_t i = 1; i < v.size(); ++i ) { os_ << ascii_.delimiter() << v[i]; }
+    _last_size = 0;
+    for( std::size_t i = 1; i < v.size(); ++i ) { os_ << ascii_.delimiter() << v[i]; _last_size += v[i].size() + 1; }
     os_ << std::endl;
 }
 
@@ -715,6 +726,7 @@ inline binary_output_stream< S >::binary_output_stream( std::ostream& os, const 
     //, cur_( begin_ )
     , fields_( split( column_names, ',' ) )
     , flush_( flush )
+    , _size( binary_.format().size() )
     /// , is_stdout( os_.rdbuf() == std::cout.rdbuf() )
 {
     #ifdef WIN32
@@ -735,6 +747,7 @@ inline binary_output_stream< S >::binary_output_stream( std::ostream& os, const 
     , fields_( split( o.fields, ',' ) )
     , flush_( o.flush )
     /// , is_stdout( os_.rdbuf() == std::cout.rdbuf() )
+    , _size( binary_.format().size() )
 {
     #ifdef WIN32
     if( &os == &std::cout ) { _setmode( _fileno( stdout ), _O_BINARY ); }
