@@ -81,7 +81,8 @@ class by_size
         splitting::ofstream _ofs;
         std::size_t _size{0};
         std::size_t _record_size{0};
-        std::size_t _estimated_record_size{0};
+        double _average_record_size{0};
+        std::size_t _count{0};
         std::size_t _remaining{0};
 
         bool _is_due();

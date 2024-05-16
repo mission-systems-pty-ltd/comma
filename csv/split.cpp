@@ -18,7 +18,13 @@ std::string usage( unsigned int size, bool verbose )
     {
         oss << indent << "    <options>: <how>[;<parameters>]" << std::endl;
         oss << indent << "        by-time;period=<seconds>[;align]" << std::endl;
+        oss << indent << "            period=<seconds>: create a new file if next" << std::endl;
+        oss << indent << "                              timestamp passes <seconds> deadline" << std::endl;
+        oss << indent << "            align : align deadline timestamp and respective filename" << std::endl;
+        oss << indent << "                    exactly with the period (todo, just ask)" << std::endl;
         oss << indent << "        by-size;size=<bytes>" << std::endl;
+        oss << indent << "            size=<bytes>: create files not larger than <bytes>" << std::endl;
+        oss << indent << "                          may not be exact on ascii output" << std::endl;
         oss << indent << "        by-block" << std::endl;
     }
     else
@@ -61,7 +67,7 @@ by_size::by_size( std::size_t size, const std::string& dir, const options& csv )
 
 bool by_size::_is_due()
 {
-    if( _estimated_record_size <= _remaining ) { return false; }
+    if( ( _record_size ? _record_size : ( unsigned int )( _average_record_size ) ) <= _remaining ) { return false; }
     _remaining = _size;
     return true;
 }
@@ -69,6 +75,11 @@ bool by_size::_is_due()
 void by_size::wrote( unsigned int size )
 {
     _remaining = _remaining > size ? _remaining - size : 0;
+    if( _record_size ) { return; }
+    ++_count;
+    if( _count == 1 ) { _average_record_size = size; return; }
+    double r = 1. / _count;
+    _average_record_size = ( 1 - r ) * _average_record_size + r * size; // quick and dirty
 }
 
 bool by_block::_is_due( unsigned int block )
