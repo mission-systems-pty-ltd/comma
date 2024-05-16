@@ -6,6 +6,7 @@
 
 #include <fstream>
 #include "../base/exception.h"
+#include "../base/none.h"
 #include "../io/stream.h"
 #include "../timing/duration.h"
 #include "options.h"
@@ -14,6 +15,14 @@
 namespace comma { namespace csv {
 
 namespace splitting {
+
+template < typename T >
+struct type_traits
+{
+    static boost::posix_time::ptime time( const T& t ) { return t.t; }
+    static unsigned int block( const T& t ) { return t.block; }
+    static unsigned int id( const T& t ) { return t.id; }
+};
 
 class none
 {
@@ -26,31 +35,65 @@ class none
         io::ostream _ostream;
 };
 
+class ofstream
+{
+    public:
+        ofstream( const std::string& dir, const std::string& suffix ): _dir( dir ), _suffix( suffix ) {}
+        ofstream( const std::string& dir, const options& csv ): _dir( dir ), _suffix( csv.binary() ? "bin" : "csv" ) {}
+        ofstream* update( boost::posix_time::ptime t );
+        template < typename T > ofstream* update( const T& t ) { return update( splitting::type_traits< T >::time( t ) ); }
+        std::ofstream* operator()() { return _ofs.get(); }
+    protected:
+        std::string _dir;
+        std::string _suffix;
+        std::unique_ptr< std::ofstream > _ofs;
+};
+
 class by_time
 {
     public:
-        by_time( boost::posix_time::time_duration period ): _period( period ) {}
-        by_time( double period ): _period( timing::duration::from_seconds( period ) ) {}
-        template < typename T >
-        std::ostream* stream( const T& t );
+        by_time( boost::posix_time::time_duration period, const std::string& dir, const options& csv ): _ofs( dir, csv ), _period( period ) {}
+        by_time( double period, const std::string& dir, const options& csv ): by_time( timing::duration::from_seconds( period ), dir, csv ) {}
+        template < typename T > std::ostream* stream( const T& t ) { auto d = splitting::type_traits< T >::time( t ); return _is_due( d ) ? _ofs.update( d ) : _ofs(); }
 
     private:
-        boost::posix_time::ptime _deadline;
+        splitting::ofstream _ofs;
         boost::posix_time::time_duration _period;
-        std::unique_ptr< std::ofstream > _ofs;
+        boost::posix_time::ptime _deadline;
+
+        bool _is_due( boost::posix_time::ptime t ) const;
 };
 
 class by_size
 {
     public:
-        by_size( std::size_t size ): _size( size ) {}
+        by_size( std::size_t size, const std::string& dir, const options& csv );
         template < typename T >
-        std::ostream* stream( const T& t );
+        std::ostream* stream( const T& t ) { return _is_due() ? _ofs.update( t ) : _ofs(); }
 
     private:
+        splitting::ofstream _ofs;
         std::size_t _size{0};
+        std::size_t _record_size{0};
+        std::size_t _estimated_record_size{0};
         std::size_t _remaining{0};
-        std::unique_ptr< std::ofstream > _ofs;
+
+        bool _is_due() const;
+        
+};
+
+class by_block
+{
+    public:
+        by_block( const std::string& dir, const options& csv ): _ofs( dir, csv ), _block( silent_none< unsigned int >() ) {}
+        template < typename T >
+        std::ostream* stream( const T& t ) { return _is_due( splitting::type_traits< T >::block( t ) ) ? _ofs.update( t ) : _ofs(); }
+
+    private:
+        splitting::ofstream _ofs;
+        boost::optional< unsigned int > _block;
+
+        bool _is_due( unsigned int block ) const;
 };
 
 class by_id; // todo
