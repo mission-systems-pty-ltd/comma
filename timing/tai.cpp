@@ -21,9 +21,9 @@
 
 /// @author dave jennings
 
-#include "tai.h"
 #include <utility>
 #include <vector>
+#include "tai.h"
 
 namespace comma { namespace timing { namespace tai {
 

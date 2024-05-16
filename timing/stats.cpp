@@ -3,10 +3,10 @@
 
 /// @author vsevolod vlaskine
 
-#include "../csv/ascii.h" // quick and dirty
+// introduces circular dependencies: #include "../csv/ascii.h" // quick and dirty
 #include "../name_value/ptree.h"
 #include "../timing/stats.h"
-#include "../timing/traits.h"
+//#include "../timing/traits.h"
 
 namespace comma { namespace timing {
 
@@ -39,10 +39,11 @@ void stats::output( std::ostream& os, const std::string& prefix, bool csv ) // t
     os.setf( std::ios::fixed, std::ios::floatfield );
     os << std::setprecision( 6 ) << prefix;
     std::cerr << std::setprecision( 6 );
-    if( csv )
+    if( csv ) // quick and dirty for now to avoid circular dependencies; todo? csv::timing::stats wrapper or something along those lines
     {
-        static comma::csv::ascii< stats > ascii;
-        os << ascii.put( *this ) << std::endl;
+        //static comma::csv::ascii< stats > ascii; // introduces circular dependencies
+        //os << ascii.put( *this ) << std::endl;
+        os << elapsed() << ',' << count() << ',' << rate() << ',' << min() << ',' << max() << ',' << ema() << std::endl;
     }
     else
     {

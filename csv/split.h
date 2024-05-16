@@ -40,8 +40,8 @@ class ofstream
     public:
         ofstream( const std::string& dir, const std::string& suffix ): _dir( dir ), _suffix( suffix ) {}
         ofstream( const std::string& dir, const options& csv ): _dir( dir ), _suffix( csv.binary() ? "bin" : "csv" ) {}
-        ofstream* update( boost::posix_time::ptime t );
-        template < typename T > ofstream* update( const T& t ) { return update( splitting::type_traits< T >::time( t ) ); }
+        std::ofstream* update( boost::posix_time::ptime t );
+        template < typename T > std::ofstream* update( const T& t ) { return update( splitting::type_traits< T >::time( t ) ); }
         std::ofstream* operator()() { return _ofs.get(); }
     protected:
         std::string _dir;
@@ -79,7 +79,6 @@ class by_size
         std::size_t _remaining{0};
 
         bool _is_due() const;
-        
 };
 
 class by_block

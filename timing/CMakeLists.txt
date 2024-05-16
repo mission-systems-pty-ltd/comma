@@ -8,7 +8,7 @@ FILE( GLOB source   ${SOURCE_CODE_BASE_DIR}/${PROJECT}/*.cpp)
 FILE( GLOB includes ${SOURCE_CODE_BASE_DIR}/${PROJECT}/*.h)
 SOURCE_GROUP( ${PROJECT} FILES ${source} ${includes} )
 ADD_LIBRARY( ${TARGET_NAME} ${source} ${includes} )
-target_link_libraries( ${TARGET_NAME} comma_csv comma_name_value comma_string )
+target_link_libraries( ${TARGET_NAME} comma_string ) # target_link_libraries( ${TARGET_NAME} comma_csv comma_name_value comma_string )
 SET_TARGET_PROPERTIES( ${TARGET_NAME} PROPERTIES ${comma_LIBRARY_PROPERTIES} )
 
 INSTALL( FILES ${includes} DESTINATION ${comma_INSTALL_INCLUDE_DIR}/${PROJECT} )
