@@ -8,6 +8,7 @@
 #include "../base/exception.h"
 #include "../base/none.h"
 #include "../io/stream.h"
+#include "../string/string.h"
 #include "../timing/duration.h"
 #include "options.h"
 #include "stream.h"
@@ -123,7 +124,7 @@ class split
         split& write( const T& t, const char* buf, unsigned int size );
         split& operator<<( const T& t ) { return write( t, nullptr, 0 ); }
         bool eof() const { return _eof || ( _os && _os->eof() ); }
-        static split< T >* make( const std::string& options, const csv::options& csv );
+        static split< T >* make( const std::string& options, const csv::options& csv, bool permissive = false, const T& sample = T() );
 
     protected:
         std::unique_ptr< splitting::method< T > > _how;
@@ -157,9 +158,32 @@ template < typename T > inline split< T >& split< T >::write( const T& t, const 
     return *this;
 }
 
-template < typename T > inline split< T >* split< T >::make( const std::string& options, const csv::options& csv )
+template < typename T > inline split< T >* split< T >::make( const std::string& options, const csv::options& csv, bool permissive, const T& sample )
 {
-    return nullptr; // todo
+    const auto& v = comma::split_head( options, 1, ':' );
+    if( v[0] == "split" ) { COMMA_THROW( comma::exception, "on '" << options << "': 'split': todo, just ask" ); }
+    if( v[0] == "log" ) // todo: reimplement using comma::variant
+    {
+        const auto& w = comma::split( v[1], ';' );
+        COMMA_ASSERT( w.size() >= 2, "expected log:<dir>;<method>[;<options>]; got: '" << options );
+        std::string dir = w[0];
+        std::string method = w[1];
+        if( method == "by-time" ) { return nullptr; } // todo
+        if( method == "by-size" )
+        {
+            for( unsigned int i = 2; i < w.size(); ++i )
+            {
+                const auto& s = comma::split( w[i], '=' );
+                if( s[0] == "size" && s.size() == 2 ) { return new split< T >( new splitting::by_size< T >( boost::lexical_cast< unsigned int >( s[1] ), dir, csv ), csv, sample ); }
+            }
+            COMMA_THROW( comma::exception, "expected 'log:<dir>;by-size;size=<bytes>'" );
+        }
+        if( method == "by-block" ) { return new split< T >( new splitting::by_block< T >( dir, csv ), csv, sample ); }
+        if( permissive ) { return nullptr; }
+        COMMA_THROW( comma::exception, "expected 'by-time', 'by-size' or 'by-block', got: '" << v[0] << " in '" << options << "'" );
+    }
+    if( permissive ) { return nullptr; }
+    COMMA_THROW( comma::exception, "expected 'split' or 'log', got: '" << v[0] << " in '" << options << "'" );
 }
 
 namespace splitting {
