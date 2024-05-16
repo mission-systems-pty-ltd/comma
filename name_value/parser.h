@@ -42,6 +42,20 @@ public:
     template < typename S >
     void put( std::string& line, const S& s ) const;
 
+    /// mangle string as in following examples
+    ///     - prefix: "abc"; line: "x=1;y/z=2"; mangled: "abc/x=1;abc/y/z=2"
+    ///     - self-mangled (prefix: ""); line: "my-operation;x=1;y/z=2"; mangled: "my-operation/x=1;my-operation/y/z=2"
+    /// usage example
+    ///     struct naming { static std::array< std::string, 3 > names() { return { "some-operation", "another-operation" } } };
+    ///     struct some_operation { int a; float b; };
+    ///     struct another_operation { double c; std::string d; };
+    ///     typedef comma::named_variant< naming, some_operation, another_operation > operation_t;
+    ///     operation_t operation = parser().get< operation_t >( parser::mangled( operation_options ) );
+    ///     if( operation.is< some_operation >() ) { /* handle */ }
+    ///     else if( operation.is< some_operation >() ) { /* handle */ }
+    ///     etc
+    static std::string mangled( const std::string& line, const std::string& prefix = "", char delimiter = ';' );
+
 private:
     impl::options _options;
 };
