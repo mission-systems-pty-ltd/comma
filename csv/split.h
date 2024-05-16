@@ -30,6 +30,7 @@ class none
         none( const std::string& address ): _ostream( address ) {}
         template < typename T >
         std::ostream* stream( const T& t ) { return _ostream(); }
+        void wrote( unsigned int ) {}
 
     private:
         io::ostream _ostream;
@@ -52,16 +53,17 @@ class ofstream
 class by_time
 {
     public:
-        by_time( boost::posix_time::time_duration period, const std::string& dir, const options& csv ): _ofs( dir, csv ), _period( period ) {}
-        by_time( double period, const std::string& dir, const options& csv ): by_time( timing::duration::from_seconds( period ), dir, csv ) {}
+        by_time( boost::posix_time::time_duration max_duration, const std::string& dir, const options& csv ): _ofs( dir, csv ), _max_duration( max_duration ) {}
+        by_time( double max_duration, const std::string& dir, const options& csv ): by_time( timing::duration::from_seconds( max_duration ), dir, csv ) {}
         template < typename T > std::ostream* stream( const T& t ) { auto d = splitting::type_traits< T >::time( t ); return _is_due( d ) ? _ofs.update( d ) : _ofs(); }
+        void wrote( unsigned int ) {}
 
     private:
         splitting::ofstream _ofs;
-        boost::posix_time::time_duration _period;
+        boost::posix_time::time_duration _max_duration;
         boost::posix_time::ptime _deadline;
 
-        bool _is_due( boost::posix_time::ptime t ) const;
+        bool _is_due( boost::posix_time::ptime t );
 };
 
 class by_size
@@ -70,6 +72,7 @@ class by_size
         by_size( std::size_t size, const std::string& dir, const options& csv );
         template < typename T >
         std::ostream* stream( const T& t ) { return _is_due() ? _ofs.update( t ) : _ofs(); }
+        void wrote( unsigned int size );
 
     private:
         splitting::ofstream _ofs;
@@ -78,7 +81,7 @@ class by_size
         std::size_t _estimated_record_size{0};
         std::size_t _remaining{0};
 
-        bool _is_due() const;
+        bool _is_due();
 };
 
 class by_block
@@ -87,12 +90,13 @@ class by_block
         by_block( const std::string& dir, const options& csv ): _ofs( dir, csv ), _block( silent_none< unsigned int >() ) {}
         template < typename T >
         std::ostream* stream( const T& t ) { return _is_due( splitting::type_traits< T >::block( t ) ) ? _ofs.update( t ) : _ofs(); }
+        void wrote( unsigned int ) {}
 
     private:
         splitting::ofstream _ofs;
         boost::optional< unsigned int > _block;
 
-        bool _is_due( unsigned int block ) const;
+        bool _is_due( unsigned int block );
 };
 
 class by_id; // todo
@@ -135,6 +139,7 @@ template < typename T, typename How > inline split< T, How >& split< T, How >::o
         _ostream = std::make_unique< output_stream< T > >( *_os, _options, _sample );
     }
     _ostream.write( t );
+    _how.wrote( _ostream.last_size() );
     return *this;
 }
 

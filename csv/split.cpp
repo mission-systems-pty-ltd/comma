@@ -16,10 +16,11 @@ std::ofstream* ofstream::update( boost::posix_time::ptime t )
     return _ofs.get();
 }
 
-bool by_time::_is_due( boost::posix_time::ptime t ) const
+bool by_time::_is_due( boost::posix_time::ptime t )
 {
-    // todo
-    return false;
+    if( !_deadline.is_not_a_date_time() && t < _deadline ) { return false; }
+    _deadline = t + _max_duration;
+    return true;
 }
 
 by_size::by_size( std::size_t size, const std::string& dir, const options& csv )
@@ -29,16 +30,23 @@ by_size::by_size( std::size_t size, const std::string& dir, const options& csv )
 {
 }
 
-bool by_size::_is_due() const
+bool by_size::_is_due()
 {
-    // todo
-    return false;
+    if( _estimated_record_size <= _remaining ) { return false; }
+    _remaining = _size;
+    return true;
 }
 
-bool by_block::_is_due( unsigned int block ) const
+void by_size::wrote( unsigned int size )
 {
-    // todo
-    return false;
+    _remaining = _remaining > size ? _remaining - size : 0;
+}
+
+bool by_block::_is_due( unsigned int block )
+{
+    if( _block && *_block == block ) { return false; }
+    _block = block;
+    return true;
 }
 
 } } } // namespace comma { namespace csv { namespace splitting {
