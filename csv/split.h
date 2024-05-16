@@ -16,6 +16,8 @@ namespace comma { namespace csv {
 
 namespace splitting {
 
+std::string usage( unsigned int indent = 0, bool verbose = false );
+
 template < typename T >
 struct type_traits
 {
@@ -53,14 +55,15 @@ class ofstream
 class by_time
 {
     public:
-        by_time( boost::posix_time::time_duration max_duration, const std::string& dir, const options& csv ): _ofs( dir, csv ), _max_duration( max_duration ) {}
-        by_time( double max_duration, const std::string& dir, const options& csv ): by_time( timing::duration::from_seconds( max_duration ), dir, csv ) {}
+        by_time( boost::posix_time::time_duration max_duration, const std::string& dir, const options& csv, bool align = false );
+        by_time( double max_duration, const std::string& dir, const options& csv, bool align ): by_time( timing::duration::from_seconds( max_duration ), dir, csv, align ) {}
         template < typename T > std::ostream* stream( const T& t ) { auto d = splitting::type_traits< T >::time( t ); return _is_due( d ) ? _ofs.update( d ) : _ofs(); }
         void wrote( unsigned int ) {}
 
     private:
         splitting::ofstream _ofs;
         boost::posix_time::time_duration _max_duration;
+        bool _align{false};
         boost::posix_time::ptime _deadline;
 
         bool _is_due( boost::posix_time::ptime t );

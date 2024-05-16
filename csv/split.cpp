@@ -2,10 +2,31 @@
 
 /// @author vsevolod vlaskine
 
-#include "split.h"
+#include <sstream>
 #include "../timing/conversions.h"
+#include "split.h"
 
 namespace comma { namespace csv { namespace splitting {
+
+std::string usage( unsigned int size, bool verbose )
+{
+    std::string indent( size, ' ' );
+    std::ostringstream oss;
+    oss << indent << "split:<options>      : todo" << std::endl;
+    oss << indent << "log:<dir>;<options>  : log in timestamped files" << std::endl;
+    if( verbose )
+    {
+        oss << indent << "    <options>: <how>[;<parameters>]" << std::endl;
+        oss << indent << "        by-time;period=<seconds>[;align]" << std::endl;
+        oss << indent << "        by-size;size=<bytes>" << std::endl;
+        oss << indent << "        by-block" << std::endl;
+    }
+    else
+    {
+        oss << indent << "    run --help --verbose for details..." << std::endl;
+    }
+    return oss.str();
+}
 
 std::ofstream* ofstream::update( boost::posix_time::ptime t )
 {
@@ -14,6 +35,14 @@ std::ofstream* ofstream::update( boost::posix_time::ptime t )
     _ofs = std::make_unique< std::ofstream >( filename );
     COMMA_ASSERT( _ofs->is_open(), "failed to open '" << filename << "'" );
     return _ofs.get();
+}
+
+by_time::by_time( boost::posix_time::time_duration max_duration, const std::string& dir, const options& csv, bool align )
+    : _ofs( dir, csv )
+    , _max_duration( max_duration )
+    , _align( align )
+{
+    COMMA_THROW_IF( align, "align: todo" );
 }
 
 bool by_time::_is_due( boost::posix_time::ptime t )

@@ -93,7 +93,7 @@ struct istream : public stream< std::istream >
     istream( const std::string& name, mode::value mode = mode::ascii, mode::blocking_value blocking = mode::blocking );
     istream( std::istream* s, io::file_descriptor fd, mode::value mode, boost::function< void() > close );
     istream( std::istream* s, io::file_descriptor fd, mode::value mode, mode::blocking_value blocking, boost::function< void() > close );
-    static std::string usage( unsigned int indent = 0 );
+    static std::string usage( unsigned int indent = 0, bool verbose = false );
 };
 
 /// output stream owner
@@ -102,14 +102,14 @@ struct ostream : public stream< std::ostream >
     ostream( const std::string& name, mode::value mode = mode::ascii, mode::blocking_value blocking = mode::blocking );
     ostream( std::ostream* s, io::file_descriptor fd, mode::value mode, boost::function< void() > close );
     ostream( std::ostream* s, io::file_descriptor fd, mode::value mode, mode::blocking_value blocking, boost::function< void() > close );
-    static std::string usage( unsigned int indent = 0 );
+    static std::string usage( unsigned int indent = 0, bool verbose = false );
 };
 
 /// input/output stream owner
 struct iostream : public stream< std::iostream >
 {
     iostream( const std::string& name, mode::value mode = mode::ascii, mode::blocking_value blocking = mode::blocking );
-    static std::string usage( unsigned int indent = 0 );
+    static std::string usage( unsigned int indent = 0, bool verbose = false );
 };
 
 } } // namespace comma { namespace io {

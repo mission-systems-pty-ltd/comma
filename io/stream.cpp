@@ -39,11 +39,9 @@ namespace comma { namespace io {
 
 namespace impl {
 
-template < typename S >
-struct traits {};
+template < typename S > struct traits {};
 
-template <>
-struct traits < std::istream >
+template <> struct traits < std::istream >
 {
     typedef std::ifstream file_stream;
     static bool is_standard( const std::istream* is ) { return is == &std::cin; }
@@ -69,8 +67,7 @@ struct traits < std::istream >
     #endif
 };
 
-template <>
-struct traits < std::ostream >
+template <> struct traits < std::ostream >
 {
     typedef std::ofstream file_stream;
     static bool is_standard( const std::ostream* is ) { return is == &std::cout || is == &std::cerr; }
@@ -104,8 +101,7 @@ struct traits < std::ostream >
     #endif
 };
 
-template <>
-struct traits < std::iostream >
+template <> struct traits < std::iostream >
 {
     typedef std::fstream file_stream; // quick and dirty, does not matter for now
     static bool is_standard( const std::iostream* ) { return false; }
@@ -130,8 +126,7 @@ template < typename S > void close_file_stream( typename traits< S >::file_strea
 
 } // namespace impl
 
-template < typename S >
-stream< S >::~stream()
+template < typename S > stream< S >::~stream()
 {
     if( stream_ == NULL || impl::traits< S >::is_standard( stream_ ) ) { return; }
     delete stream_;
@@ -139,8 +134,7 @@ stream< S >::~stream()
     close_ = NULL;
 }
 
-template < typename S >
-S* stream< S >::lazily_make_stream_()
+template < typename S > S* stream< S >::lazily_make_stream_()
 {
     #ifndef WIN32
     if( stream_ == NULL ) // quick and dirty: if fstream, cannot open on construction, as pipe might block
@@ -185,8 +179,7 @@ static void set_non_blocking_flags_( io::file_descriptor fd )
 #endif // #ifndef WIN32
 }
 
-template < typename S >
-comma::io::file_descriptor stream< S >::fd() const
+template < typename S > comma::io::file_descriptor stream< S >::fd() const
 {
     #ifdef WIN32
     if( fd_ == io::invalid_file_descriptor )
@@ -200,8 +193,7 @@ comma::io::file_descriptor stream< S >::fd() const
     return fd_;
 }
 
-template < typename S >
-std::size_t stream< S >::available_on_file_descriptor() const
+template < typename S > std::size_t stream< S >::available_on_file_descriptor() const
 {
     int count = 0;
 #ifdef WIN32
@@ -215,8 +207,7 @@ std::size_t stream< S >::available_on_file_descriptor() const
 
 template < typename S > const std::string& stream< S >::name() const { return name_; }
 
-template < typename S >
-stream< S >::stream( const std::string& name, mode::value m, mode::blocking_value blocking )
+template < typename S > stream< S >::stream( const std::string& name, mode::value m, mode::blocking_value blocking )
     : name_( name )
     , mode_( m )
     , stream_( NULL )
@@ -362,23 +353,30 @@ stream< S >::stream( const std::string& name, mode::value m, mode::blocking_valu
 
 namespace impl {
 
-static std::string usage( const std::string& what, const std::string& dash, unsigned int indent )
+static std::string usage( const std::string& what, const std::string& dash, unsigned int indent, bool verbose )
 {
     std::string i( indent, ' ' );
     std::ostringstream oss;
     oss << i << "<" << what << ">" << std::endl;
-    oss << i << "    '-'                  : " << dash << std::endl;
-    oss << i << "    <path>               : path to input file or named pipe" << std::endl;
-    oss << i << "    local:<path>         : local linux socket" << std::endl;
-    oss << i << "    tcp:<address>:<port> : tcp socket" << std::endl;
+    if( verbose )
+    {
+        oss << i << "    '-'                  : " << dash << std::endl;
+        oss << i << "    <path>               : path to input file or named pipe" << std::endl;
+        oss << i << "    local:<path>         : local linux socket" << std::endl;
+        oss << i << "    tcp:<address>:<port> : tcp socket" << std::endl;
+    }
+    else
+    {
+        oss << i << "    run --help --verbose for details" << std::endl;
+    }
     return oss.str();
 }
 
 } // namespace impl {
 
-std::string istream::usage( unsigned int indent ) { return impl::usage( "input", "stdin", indent ); }
-std::string ostream::usage( unsigned int indent ) { return impl::usage( "output", "stdout", indent ); }
-std::string iostream::usage( unsigned int indent ) { return impl::usage( "input/output", "n/a", indent ); }
+std::string istream::usage( unsigned int indent, bool verbose ) { return impl::usage( "input", "stdin", indent, verbose ); }
+std::string ostream::usage( unsigned int indent, bool verbose ) { return impl::usage( "output", "stdout", indent, verbose ); }
+std::string iostream::usage( unsigned int indent, bool verbose ) { return impl::usage( "input/output", "n/a", indent, verbose ); }
 
 template class stream< std::istream >;
 template class stream< std::ostream >;
