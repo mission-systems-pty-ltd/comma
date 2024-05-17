@@ -160,7 +160,7 @@ template < typename T > inline split< T >& split< T >::write( const T& t, const 
 
 template < typename T > inline split< T >* split< T >::make( const std::string& options, const csv::options& csv, bool permissive, const T& sample )
 {
-    const auto& v = comma::split_head( options, 1, ':' );
+    const auto& v = comma::split_head( options, 2, ':' );
     if( v[0] == "split" ) { COMMA_THROW( comma::exception, "on '" << options << "': 'split': todo, just ask" ); }
     if( v[0] == "log" ) // todo: reimplement using comma::variant
     {
