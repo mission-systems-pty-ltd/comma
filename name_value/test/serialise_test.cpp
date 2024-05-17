@@ -375,14 +375,17 @@ struct forest
         struct chirp { int a{1}; int b{2}; };
         struct whistle { int a{3}; int b{4}; };
         struct warble { int x{5}; int y{6}; };
+        struct silence {};
     };
 
     struct naming { static std::array< std::string, 3 > names() { return { "chirp", "whistle", "warble" }; } };
 
     typedef comma::named_variant< naming, sounds::chirp, sounds::whistle, sounds::warble > variant_t;
-    comma::make_named_variant< naming >::variant< sounds::chirp, sounds::whistle, sounds::warble >::type madeup;
-    std::array< variant_t, 3 > choir;
-    comma::named_variant< naming, sounds::chirp, sounds::whistle, sounds::warble > sound;    
+    comma::make_named_variant< naming >::variant< sounds::chirp, sounds::whistle, sounds::warble >::type madeup; // todo
+    std::array< variant_t, 3 > choir; // todo
+    comma::named_variant< naming, sounds::chirp, sounds::whistle, sounds::warble, sounds::silence > maybesound; // todo
+    comma::named_variant< naming, sounds::chirp, sounds::whistle, sounds::warble > sound;
+    
 };
 
 namespace comma { namespace visiting {
@@ -405,18 +408,26 @@ template <> struct traits< forest::sounds::warble >
     template < typename Key, class Visitor > static void visit( Key, const forest::sounds::warble& t, Visitor& v ) { v.apply( "x", t.x ); v.apply( "y", t.y ); }
 };
 
+template <> struct traits< forest::sounds::silence >
+{
+    template < typename Key, class Visitor > static void visit( Key, forest::sounds::silence& t, Visitor& v ) {}
+    template < typename Key, class Visitor > static void visit( Key, const forest::sounds::silence& t, Visitor& v ) {}
+};
+
 template <> struct traits< forest >
 {
     template < typename Key, class Visitor > static void visit( Key, forest& t, Visitor& v )
     {
         v.apply( "madeup", t.madeup ); // todo
         v.apply( "choir", t.choir ); // todo
+        v.apply( "maybesound", t.maybesound ); // todo
         v.apply( "sound", t.sound );
     }
     template < typename Key, class Visitor > static void visit( Key, const forest& t, Visitor& v )
     {
         v.apply( "madeup", t.madeup ); // todo
         v.apply( "choir", t.choir ); // todo
+        v.apply( "maybesound", t.maybesound ); // todo
         v.apply( "sound", t.sound );
     }
 };
@@ -425,36 +436,47 @@ template <> struct traits< forest >
 
 TEST( serialise, variant )
 {
-    forest f;
     {
-        std::ostringstream oss;
-        comma::write_json( f, oss, false );
-        EXPECT_EQ( oss.str(), "{}" );
+        forest f;
+        {
+            std::ostringstream oss;
+            comma::write_json( f, oss, false );
+            EXPECT_EQ( oss.str(), "{}" );
+        }
+        {
+            f.sound.set( forest::sounds::chirp{11, 22} );
+            std::ostringstream oss;
+            comma::write_json( f, oss, false );
+            EXPECT_EQ( oss.str(), "{\"sound\":{\"chirp\":{\"a\":11,\"b\":22}}}" );
+        }
+        {
+            f.sound.set( forest::sounds::whistle{33, 44} );
+            std::ostringstream oss;
+            comma::write_json( f, oss, false );
+            EXPECT_EQ( oss.str(), "{\"sound\":{\"whistle\":{\"a\":33,\"b\":44}}}" );
+        }
+        {
+            f.sound.set( forest::sounds::warble{55, 66} );
+            std::ostringstream oss;
+            comma::write_json( f, oss, false );
+            EXPECT_EQ( oss.str(), "{\"sound\":{\"warble\":{\"x\":55,\"y\":66}}}" );
+        }
+        {
+            f.sound.reset();
+            std::ostringstream oss;
+            comma::write_json( f, oss, false );
+            EXPECT_EQ( oss.str(), "{}" );
+        }
     }
-    {
-        f.sound.set( forest::sounds::chirp{11, 22} );
-        std::ostringstream oss;
-        comma::write_json( f, oss, false );
-        EXPECT_EQ( oss.str(), "{\"sound\":{\"chirp\":{\"a\":11,\"b\":22}}}" );
-    }
-    {
-        f.sound.set( forest::sounds::whistle{33, 44} );
-        std::ostringstream oss;
-        comma::write_json( f, oss, false );
-        EXPECT_EQ( oss.str(), "{\"sound\":{\"whistle\":{\"a\":33,\"b\":44}}}" );
-    }
-    {
-        f.sound.set( forest::sounds::warble{55, 66} );
-        std::ostringstream oss;
-        comma::write_json( f, oss, false );
-        EXPECT_EQ( oss.str(), "{\"sound\":{\"warble\":{\"x\":55,\"y\":66}}}" );
-    }
-    {
-        f.sound.reset();
-        std::ostringstream oss;
-        comma::write_json( f, oss, false );
-        EXPECT_EQ( oss.str(), "{}" );
-    }
+    // { // todo?
+    //     forest f;
+    //     std::ostringstream oss;
+    //     comma::write_json( f, oss, false );
+    //     EXPECT_EQ( oss.str(), "{}" );
+    //     f.maybesound.set( forest::sounds::silence() );
+    //     comma::write_json( f, oss, false );
+    //     //EXPECT_EQ( oss.str(), "{\"sound\":{\"silence\":\"\"}}" );
+    // }
 }
 
 TEST( deserialise, variant )

@@ -20,19 +20,19 @@ namespace splitting {
 std::string usage( unsigned int indent = 0, bool verbose = false );
 
 template < typename T >
+struct type_traits
+{
+    static boost::posix_time::ptime time( const T& t ) { return t.t; }
+    static unsigned int block( const T& t ) { return t.block; }
+    static unsigned int id( const T& t ) { return t.id; }
+};
+
+template < typename T >
 struct method
 {
     virtual ~method() {}
     virtual void wrote( unsigned int size ) {}
     virtual std::ostream* stream( const T& t, unsigned int size = 0 ) = 0;
-};
-
-template < typename T >
-struct type_traits: public method< T >
-{
-    static boost::posix_time::ptime time( const T& t ) { return t.t; }
-    static unsigned int block( const T& t ) { return t.block; }
-    static unsigned int id( const T& t ) { return t.id; }
 };
 
 template < typename T >
@@ -98,7 +98,7 @@ class by_size: public method< T >
 };
 
 template < typename T >
-class by_block
+class by_block: public method< T >
 {
     public:
         by_block( const std::string& dir, const options& csv ): _ofs( dir, csv ), _block( silent_none< unsigned int >() ) {}
@@ -165,20 +165,41 @@ template < typename T > inline split< T >* split< T >::make( const std::string& 
     if( v[0] == "log" ) // todo: reimplement using comma::variant
     {
         const auto& w = comma::split( v[1], ';' );
-        COMMA_ASSERT( w.size() >= 2, "expected log:<dir>;<method>[;<options>]; got: '" << options );
+        COMMA_ASSERT( w.size() >= 2, "expected log:<dir>;<method>[;<options>]; got: '" << options << "'" );
         std::string dir = w[0];
         std::string method = w[1];
-        if( method == "by-time" ) { return nullptr; } // todo
+        if( method == "by-time" )
+        {
+            boost::optional< double > period = silent_none< double >();
+            bool align{false};
+            for( unsigned int i = 2; i < w.size(); ++i )
+            {
+                const auto& s = comma::split( w[i], '=' );
+                if( s[0] == "period" && s.size() == 2 ) { period = boost::lexical_cast< double >( s[1] ); }
+                else if( ( s[0] == "align" && s.size() == 1 ) || w[i] == "align=true" || w[i] == "align=1" ) { align = true; }
+            }
+            if( period ) { return new split< T >( new splitting::by_time< T >( *period, dir, csv, align ), csv, sample ); }
+            if( permissive ) { return nullptr; }
+            COMMA_THROW( comma::exception, "expected 'log:<dir>;by-time;period=<seconds>[;align]'; got: '" << options << "'" );
+        }
         if( method == "by-size" )
         {
             for( unsigned int i = 2; i < w.size(); ++i )
             {
                 const auto& s = comma::split( w[i], '=' );
-                if( s[0] == "size" && s.size() == 2 ) { return new split< T >( new splitting::by_size< T >( boost::lexical_cast< unsigned int >( s[1] ), dir, csv ), csv, sample ); }
+                if( s[0] == "size" && s.size() == 2 )
+                { 
+                    if( permissive ) { return nullptr; }
+                    return new split< T >( new splitting::by_size< T >( boost::lexical_cast< unsigned int >( s[1] ), dir, csv ), csv, sample );
+                }
             }
-            COMMA_THROW( comma::exception, "expected 'log:<dir>;by-size;size=<bytes>'" );
+            if( permissive ) { return nullptr; }
+            COMMA_THROW( comma::exception, "expected 'log:<dir>;by-size;size=<bytes>'; got: '" << options << "'" );
         }
-        if( method == "by-block" ) { return new split< T >( new splitting::by_block< T >( dir, csv ), csv, sample ); }
+        if( method == "by-block" )
+        {
+            return new split< T >( new splitting::by_block< T >( dir, csv ), csv, sample );
+        }
         if( permissive ) { return nullptr; }
         COMMA_THROW( comma::exception, "expected 'by-time', 'by-size' or 'by-block', got: '" << v[0] << " in '" << options << "'" );
     }
