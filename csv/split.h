@@ -152,9 +152,9 @@ template < typename T > inline split< T >& split< T >::write( const T& t, const 
         _os = os;
         _ostream = std::make_unique< output_stream< T > >( *_os, _options, _sample );
     }
-    _ostream.write( t );
+    _ostream->write( t );
     if( buf ) { _os->write( buf, size ); }
-    _how->wrote( _ostream.last_size() + size );
+    _how->wrote( _ostream->last_size() + size );
     return *this;
 }
 
