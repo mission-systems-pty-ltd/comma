@@ -245,7 +245,7 @@ inline bool by_size< T >::_is_due( unsigned int extra_size )
 template < typename T >
 inline void by_size< T >::wrote( unsigned int size )
 {
-    _remaining = _remaining > size ? _remaining - size : 0;
+    _remaining = _remaining >= size ? _remaining - size : 0;
     if( _record_size ) { return; }
     ++_count;
     if( _count == 1 ) { _average_record_size = size; return; }
