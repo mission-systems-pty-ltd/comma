@@ -31,13 +31,11 @@
 
 source $( type -p comma-application-util ) 2>/dev/null || { echo "io-top: could not source 'comma-application-util'" >&2; exit 1; }
 
-function usage()
+function prologue()
 {
     cat <<eof
 Invokes the performance monitoring utility top (1) or iotop in continuous mode, parses
 top (1) output, and collects the results into CVS file (sent to stdout).
-
-Usage: io-top <options> [ > output_file.csv ]
 
 Note: top (1) output is affected by its global and user configuration files.
 There is no option to ignore those files. This utility assumes the default format
@@ -108,8 +106,7 @@ function extract_mem()
 function parser_totals()
 {
     shopt -s extglob
-    local timestamp line first shared
-    first="true"
+    local timestamp line first="true" shared
     grep --line-buffered -A 4 '^top' \
     | tee 0.csv \
     | while true ; do
@@ -120,9 +117,8 @@ function parser_totals()
             first="false"
         }
         [[ "$line" = "%Cpu(s)"* ]]  && extract_cpus "$line"
-        [[ "$line" = "KiB Mem"* ]]  && { extract_mem  "$line" ; echo -n ",$shared" ; }
-        # swap is last, finish the line
-        [[ "$line" = "KiB Swap"* ]] && { extract_mem  "$line" ; echo ; }
+        [[ "$line" = [KMG]"iB Mem"* || "$line" = [KMG]"iB Mem"* ]]  && { extract_mem  "$line" ; echo -n ",$shared" ; }
+        [[ "$line" = [KMG]"iB Swap"* || "$line" = [KMG]"iB Swap"* ]] && { extract_mem  "$line" ; echo ; } # swap is last, finish the line
         [[ "$line" = "--" ]] && first="true"
     done \
     | tee 1.csv \
@@ -133,7 +129,7 @@ function parser_totals()
 function parser_num_procs()
 {
     grep --line-buffered -E -A $((options_num_procs + 1)) '^[ ]+PID ' \
-    | sed -r -u -n 's/[[:blank:]]+/,/g ; s/^,// ; /^[0-9]+,/p'
+        | sed -r -u -n 's/[[:blank:]]+/,/g ; s/^,// ; /^[0-9]+,/p'
 }
 
 io_payload_fields="total/read,total/write,actual/read,actual/write"
@@ -165,7 +161,6 @@ function run_iotop()
         | csv-time-stamp 2>/dev/null
 }
 
-options-description | comma-options-validate "$@"
 comma-application-init $@ < <( options-description ) || die "failed" # comma_path_value_to_var --export < <( description | comma-options-to-name-value "$@" )
 maybe_output_fields
 if [[ -n "$options_io" ]] ; then
