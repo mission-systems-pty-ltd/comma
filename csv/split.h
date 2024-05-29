@@ -137,7 +137,7 @@ class split
         void _init();
 };
 
-template < typename T > inline split< T >& split< T >::write( const T& t, const char* buf, unsigned int size, bool flusj )
+template < typename T > inline split< T >& split< T >::write( const T& t, const char* buf, unsigned int size, bool flush )
 {
     COMMA_ASSERT( !_eof, "end of stream" );
     std::ostream* os = _how->stream( t );
