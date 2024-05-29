@@ -121,7 +121,8 @@ class split
 {
     public:
         split( splitting::method< T >* how, const options& csv, const T& sample = T() ): _how( how ), _options( csv ), _sample( sample ) {}
-        split& write( const T& t, const char* buf, unsigned int size );
+        split& write( const T& t, const char* buf, unsigned int size, bool flush = false );
+        void flush() { if( _os ) { _os->flush(); } }
         split& operator<<( const T& t ) { return write( t, nullptr, 0 ); }
         bool eof() const { return _eof || ( _os && _os->eof() ); }
         static split< T >* make( const std::string& options, const csv::options& csv, bool permissive = false, const T& sample = T() );
@@ -136,7 +137,7 @@ class split
         void _init();
 };
 
-template < typename T > inline split< T >& split< T >::write( const T& t, const char* buf, unsigned int size )
+template < typename T > inline split< T >& split< T >::write( const T& t, const char* buf, unsigned int size, bool flusj )
 {
     COMMA_ASSERT( !_eof, "end of stream" );
     std::ostream* os = _how->stream( t );
@@ -154,6 +155,7 @@ template < typename T > inline split< T >& split< T >::write( const T& t, const 
     }
     _ostream->write( t );
     if( buf ) { _os->write( buf, size ); }
+    if( flush ) { _os->flush(); }
     _how->wrote( _ostream->last_size() + size );
     return *this;
 }
