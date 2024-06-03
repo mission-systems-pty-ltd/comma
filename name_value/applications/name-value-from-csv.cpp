@@ -105,7 +105,7 @@ int main( int ac, char** av )
         
         if( fields.empty() )
         { 
-            const std::vector< std::string >& unnamed = options.unnamed( "--strict,--no-brackets,--output-line-number,--line-number,-n,--indices", "-.*" );
+            const std::vector< std::string >& unnamed = options.unnamed( "--strict,--no-brackets,--output-line-number,--line-number,-n,--indices,--unquote-numbers", "-.*" );
             if( unnamed.empty() || unnamed[0].empty() ) { std::cerr << "name-value-from-csv: please specify fields" << std::endl; return 1; }
             fields = unnamed[0];
         }
