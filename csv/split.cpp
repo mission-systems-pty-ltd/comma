@@ -37,9 +37,10 @@ std::string usage( unsigned int size, bool verbose )
 std::ofstream* ofstream::update( boost::posix_time::ptime t )
 {
     if( _ofs ) { _ofs.reset(); }
-    std::string filename = _dir + "/" + timing::to_iso_string( t ) + "." + _suffix;
-    _ofs = std::make_unique< std::ofstream >( filename );
-    COMMA_ASSERT( _ofs->is_open(), "failed to open '" << filename << "'" );
+    _time = t;
+    _filename = _dir + "/" + timing::to_iso_string( t ) + "." + _suffix;
+    _ofs = std::make_unique< std::ofstream >( _filename );
+    COMMA_ASSERT( _ofs->is_open(), "failed to open '" << _filename << "'" );
     return _ofs.get();
 }
 

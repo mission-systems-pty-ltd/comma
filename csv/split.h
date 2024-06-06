@@ -27,12 +27,45 @@ struct type_traits
     static unsigned int id( const T& t ) { return t.id; }
 };
 
+class ofstream
+{
+    public:
+        ofstream( const std::string& dir, const std::string& suffix ): _dir( dir ), _suffix( suffix ) {}
+        ofstream( const std::string& dir, const options& csv ): _dir( dir ), _suffix( csv.binary() ? "bin" : "csv" ) {}
+        std::ofstream* update( boost::posix_time::ptime t );
+        template < typename T > std::ofstream* update( const T& t ) { return update( splitting::type_traits< T >::time( t ) ); }
+        std::ofstream* operator()() { return _ofs.get(); }
+        boost::posix_time::ptime time() const { return _time; }
+        const std::string& dir() const { return _dir; }
+        const std::string& filename() const { return _filename; }
+    
+    protected:
+        std::string _dir;
+        std::string _suffix;
+        std::string _filename;
+        boost::posix_time::ptime _time;
+        std::unique_ptr< std::ofstream > _ofs;
+};
+
 template < typename T >
 struct method
 {
     virtual ~method() {}
     virtual void wrote( unsigned int size ) {}
     virtual std::ostream* stream( const T& t, unsigned int size = 0 ) = 0;
+    virtual boost::posix_time::ptime time() const { return boost::posix_time::ptime(); } // quick and dirty for now
+};
+
+template < typename T >
+class to_timestamped_files: public method< T >
+{
+    public:
+        to_timestamped_files( const std::string& dir, const options& csv ): _ofs( dir, csv ) {}
+        boost::posix_time::ptime time() const { return _ofs.time(); }
+        const splitting::ofstream& ofs() const { return _ofs; }
+
+    protected:
+        splitting::ofstream _ofs;
 };
 
 template < typename T >
@@ -46,31 +79,15 @@ class none: public method< T >
         io::ostream _ostream;
 };
 
-class ofstream
-{
-    public:
-        ofstream( const std::string& dir, const std::string& suffix ): _dir( dir ), _suffix( suffix ) {}
-        ofstream( const std::string& dir, const options& csv ): _dir( dir ), _suffix( csv.binary() ? "bin" : "csv" ) {}
-        std::ofstream* update( boost::posix_time::ptime t );
-        template < typename T > std::ofstream* update( const T& t ) { return update( splitting::type_traits< T >::time( t ) ); }
-        std::ofstream* operator()() { return _ofs.get(); }
-    
-    protected:
-        std::string _dir;
-        std::string _suffix;
-        std::unique_ptr< std::ofstream > _ofs;
-};
-
 template < typename T >
-class by_time: public method< T >
+class by_time: public to_timestamped_files< T >
 {
     public:
         by_time( boost::posix_time::time_duration max_duration, const std::string& dir, const options& csv, bool align = false );
         by_time( double max_duration, const std::string& dir, const options& csv, bool align ): by_time( timing::duration::from_seconds( max_duration ), dir, csv, align ) {}
-        std::ostream* stream( const T& t, unsigned int ) { auto d = splitting::type_traits< T >::time( t ); return _is_due( d ) ? _ofs.update( d ) : _ofs(); }
+        std::ostream* stream( const T& t, unsigned int ) { auto d = splitting::type_traits< T >::time( t ); return _is_due( d ) ? this->_ofs.update( d ) : this->_ofs(); }
     
     private:
-        splitting::ofstream _ofs;
         boost::posix_time::time_duration _max_duration;
         bool _align{false};
         boost::posix_time::ptime _deadline;
@@ -79,15 +96,14 @@ class by_time: public method< T >
 };
 
 template < typename T >
-class by_size: public method< T >
+class by_size: public to_timestamped_files< T >
 {
     public:
         by_size( std::size_t size, const std::string& dir, const options& csv );
-        std::ostream* stream( const T& t, unsigned int size = 0 ) { return _is_due( size ) ? _ofs.update( t ) : _ofs(); }
+        std::ostream* stream( const T& t, unsigned int size = 0 ) { return _is_due( size ) ? this->_ofs.update( t ) : this->_ofs(); }
         void wrote( unsigned int size );
 
     private:
-        splitting::ofstream _ofs;
         std::size_t _size{0};
         std::size_t _record_size{0};
         double _average_record_size{0};
@@ -98,14 +114,13 @@ class by_size: public method< T >
 };
 
 template < typename T >
-class by_block: public method< T >
+class by_block: public to_timestamped_files< T >
 {
     public:
-        by_block( const std::string& dir, const options& csv ): _ofs( dir, csv ), _block( silent_none< unsigned int >() ) {}
-        std::ostream* stream( const T& t, unsigned int ) { return _is_due( splitting::type_traits< T >::block( t ) ) ? _ofs.update( t ) : _ofs(); }
+        by_block( const std::string& dir, const options& csv ): to_timestamped_files< T >( dir, csv ), _block( silent_none< unsigned int >() ) {}
+        std::ostream* stream( const T& t, unsigned int ) { return _is_due( splitting::type_traits< T >::block( t ) ) ? this->_ofs.update( t ) : this->_ofs(); }
 
     private:
-        splitting::ofstream _ofs;
         boost::optional< unsigned int > _block;
 
         bool _is_due( unsigned int block );
@@ -213,7 +228,7 @@ namespace splitting {
 
 template < typename T >
 inline by_time< T >::by_time( boost::posix_time::time_duration max_duration, const std::string& dir, const options& csv, bool align )
-    : _ofs( dir, csv )
+    : to_timestamped_files< T >( dir, csv )
     , _max_duration( max_duration )
     , _align( align )
 {
@@ -230,7 +245,7 @@ inline bool by_time< T >::_is_due( boost::posix_time::ptime t )
 
 template < typename T >
 inline by_size< T >::by_size( std::size_t size, const std::string& dir, const options& csv )
-    : _ofs( dir, csv )
+    : to_timestamped_files< T >( dir, csv )
     , _size( size )
     , _record_size( csv.binary() ? csv.format().size() : 0 )
 {
