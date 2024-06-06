@@ -30,6 +30,7 @@
 
 /// @author vsevolod vlaskine
 
+#include <cmath>
 #include <deque>
 #include <iostream>
 #include <string>
@@ -86,17 +87,21 @@ static void usage( bool verbose )
     std::cerr << "       if csv-time-join b.csv -, concatenate output as: <b.csv><stdin>" << std::endl;
     std::cerr << "       default: csv-time-join - b.csv" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    --help,-h:                  this help" << std::endl;
-    std::cerr << "    --verbose,-v:               more output" << std::endl;
-    std::cerr << "    --binary,-b <format>:       binary format" << std::endl;
-    std::cerr << "    --delimiter,-d <delimiter>: ascii only; default ','" << std::endl;
-    std::cerr << "    --fields,-f <fields>:       input fields; default: t" << std::endl;
-    std::cerr << "    --bound=[<seconds>]:        output only points within given bound" << std::endl;
-    std::cerr << "    --do-not-append,--select:   do not append any field from the second input" << std::endl;
-    std::cerr << "    --timestamp-only:           append only timestamp from the second input" << std::endl;
-    std::cerr << "    --buffer=[<records>]:       bounding data buffer size; default: infinite" << std::endl;
-    std::cerr << "    --discard-bounding:         discard bounding data if buffer size reached;" << std::endl;
-    std::cerr << "                                default is to block until stdin catches up" << std::endl;
+    std::cerr << "    --help,-h:                    this help" << std::endl;
+    std::cerr << "    --verbose,-v:                 more output" << std::endl;
+    std::cerr << "    --binary,-b <format>:         binary format" << std::endl;
+    std::cerr << "    --delimiter,-d <delimiter>:   ascii only; default ','" << std::endl;
+    std::cerr << "    --fields,-f <fields>:         input fields; default: t" << std::endl;
+    std::cerr << "    --bound=[<seconds>]:          output only points within given bound" << std::endl;
+    std::cerr << "    --buffer=[<records>]:         bounding data buffer size; default: infinite" << std::endl;
+    std::cerr << "    --discard-bounding:           discard bounding data if buffer size reached;" << std::endl;
+    std::cerr << "                                  default is to block until stdin catches up" << std::endl;
+    std::cerr << "    --do-not-append,--select:     do not append any field from the second input" << std::endl;
+    std::cerr << "    --output-diff-abs,--abs-diff: append abs difference between first and second input" << std::endl;
+    std::cerr << "                                  input timestamps as seconds (double)" << std::endl;
+    std::cerr << "    --output-diff,--diff:         append difference between first and second input" << std::endl;
+    std::cerr << "                                  input timestamps as seconds (double)" << std::endl;
+    std::cerr << "    --timestamp-only:             append only timestamp from the second input" << std::endl;
     std::cerr << std::endl;
     std::cerr << "examples" << std::endl;
     std::cerr << "    first field on stdin is timestamp, the first field of filter is timestamp" << std::endl;
@@ -157,14 +162,16 @@ template <> struct traits< Point >
 
 enum class how { by_lower, by_upper, nearest, realtime };
 how method = how::by_lower;
-bool timestamp_only;
-bool select_only;
-comma::csv::options stdin_csv;
-comma::csv::options bounding_csv;
-boost::optional< boost::posix_time::time_duration > bound;
+static bool timestamp_only;
+static bool output_diff_abs;
+static bool output_diff;
+static bool select_only;
+static comma::csv::options stdin_csv;
+static comma::csv::options bounding_csv;
+static boost::optional< boost::posix_time::time_duration > bound;
 typedef std::pair< boost::posix_time::ptime, std::string > timestring_t;
 
-boost::posix_time::ptime get_time( const Point& p ) { return p.timestamp ? *p.timestamp : boost::posix_time::microsec_clock::universal_time(); }
+static boost::posix_time::ptime get_time( const Point& p ) { return p.timestamp ? *p.timestamp : boost::posix_time::microsec_clock::universal_time(); }
 
 static void output_bounding( std::ostream& os, const timestring_t& bounding, bool stdin_first )
 {
@@ -177,7 +184,7 @@ static void output_bounding( std::ostream& os, const timestring_t& bounding, boo
                 static const unsigned int time_size = comma::csv::format::traits< boost::posix_time::ptime, comma::csv::format::time >::size;
                 static char timestamp[ time_size ];
                 comma::csv::format::traits< boost::posix_time::ptime, comma::csv::format::time >::to_bin( bounding.first, timestamp );
-                os.write( (char*)&timestamp, time_size );
+                os.write( ( const char* )( &timestamp ), time_size );
             }
             else
             {
@@ -191,6 +198,14 @@ static void output_bounding( std::ostream& os, const timestring_t& bounding, boo
             if( !stdin_first ) { os << stdin_csv.delimiter; }
         }
     }
+}
+
+static void _output_diff( std::ostream& os, boost::posix_time::ptime bounded, boost::posix_time::ptime bounding )
+{
+    if( !output_diff && !output_diff_abs ) { return; }
+    double diff = double( ( bounded - bounding ).total_microseconds() ) * 1e-6;
+    if( output_diff_abs ) { diff = std::abs( diff ); }
+    if( stdin_csv.binary() ) { os.write( reinterpret_cast< const char* >( &diff ), sizeof( double ) ); } else { os << stdin_csv.delimiter << diff; }    
 }
 
 static void output_input( std::ostream& os, const timestring_t& input )
@@ -212,6 +227,7 @@ static void output( const timestring_t& input, const timestring_t& bounding, boo
         output_bounding( std::cout, bounding, stdin_first );
         output_input( std::cout, input );
     }
+    _output_diff( std::cout, input.first, bounding.first );
     if( !stdin_csv.binary() ) { std::cout << '\n'; }
     std::cout.flush();
 }
@@ -224,10 +240,13 @@ int main( int ac, char** av )
         comma::command_line_options options( ac, av, usage );
         if( options.exists( "--bash-completion" )) bash_completion( ac, av );
         options.assert_mutually_exclusive( "--by-lower,--by-upper,--nearest,--realtime" );
+        options.assert_mutually_exclusive( "--output-diff,--diff", "--output-diff-abs,--abs-diff" );
         if( options.exists( "--by-upper" )) { method = how::by_upper; }
         if( options.exists( "--nearest" )) { method = how::nearest; }
         if( options.exists( "--realtime" )) { method = how::realtime; }
         timestamp_only = options.exists( "--timestamp-only,--time-only" );
+        output_diff = options.exists( "--output-diff,--diff" );
+        output_diff_abs = options.exists( "--output-diff-abs,--abs-diff" );
         select_only = options.exists( "--do-not-append,--select" );
         if( select_only && timestamp_only ) { std::cerr << "csv-time-join: --timestamp-only specified with --select, ignoring --timestamp-only" << std::endl; }
         bool discard_bounding = options.exists( "--discard-bounding" );
@@ -236,7 +255,7 @@ int main( int ac, char** av )
         stdin_csv = comma::csv::options( options, "t" );
         std::vector< std::string > unnamed = options.unnamed(
             "--by-lower,--by-upper,--nearest,--realtime,--select,--do-not-append,--timestamp-only,--time-only,--discard-bounding",
-            "--binary,-b,--delimiter,-d,--fields,-f,--bound,--buffer,--verbose,-v" );
+            "--binary,-b,--delimiter,-d,--fields,-f,--bound,--buffer,--verbose,-v,--output-diff-abs,--abs-diff,--diff-abs,--diff" );
         std::string properties;
         bool stdin_first = true;
         switch( unnamed.size() )
