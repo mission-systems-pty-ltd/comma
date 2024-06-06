@@ -4,6 +4,7 @@
 /// @author vsevolod vlaskine
 
 #include "../timing/stats.h"
+#include "../timing/timestamped.h"
 #include "../visiting/traits.h"
 
 namespace comma { namespace visiting {
@@ -18,6 +19,21 @@ template <> struct traits< comma::timing::stats > // quick and dirty
         v.apply( "min", p.min() );
         v.apply( "max", p.max() );
         v.apply( "mean", p.ema() );
+    }
+};
+
+template < typename T > struct traits< comma::timestamped< T > >
+{
+    template< typename K, typename V > static void visit( const K&, comma::timestamped< T >& p, V& v )
+    {
+        v.apply( "t", p.t );
+        v.apply( "data", p.data );
+    }
+
+    template< typename K, typename V > static void visit( const K&, const comma::timestamped< T >& p, V& v )
+    {
+        v.apply( "t", p.t );
+        v.apply( "data", p.data );
     }
 };
 
