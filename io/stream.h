@@ -6,7 +6,9 @@
 #pragma once
 
 #include <iostream>
+#include <memory>
 #include <string>
+#include <vector>
 #include <boost/function.hpp>
 #include <boost/noncopyable.hpp>
 #include "file_descriptor.h"
@@ -64,6 +66,12 @@ class stream : boost::noncopyable
         /// @return stream name
         const std::string& name() const;
 
+        /// @return stream mode
+        io::mode::value mode() const { return mode_; }
+
+        /// @return true if stream is blocking
+        bool blocking() const { return blocking_; }
+
     protected:
         stream( const std::string& name, mode::value mode, mode::blocking_value blocking );
         template < typename T >
@@ -110,6 +118,33 @@ struct iostream : public stream< std::iostream >
 {
     iostream( const std::string& name, mode::value mode = mode::ascii, mode::blocking_value blocking = mode::blocking );
     static std::string usage( unsigned int indent = 0, bool verbose = false );
+};
+
+/// convenience class: multiple input streams read one by one
+/// use case
+///     - we have log files split by size, e.g. 1MB each: 0.bin, 1.bin, 2.bin, etc
+///     - we want to read records from those files seamlessly
+/// @todo currently, we assume a record never is split across two input files
+///       support for split records: todo, just ask
+/// @todo derive from std::istream (kinda super-fiddly, forwarding lots of methods...)
+/// @todo support constructing from a directory name
+class istreams
+{
+    public:
+        // todo: istreams( const std::string& dir...
+        istreams( const std::vector< std::string >& names, mode::value mode = mode::ascii, mode::blocking_value blocking = mode::blocking );
+        static std::string usage( unsigned int indent = 0, bool verbose = false );
+        bool eof() const { return _index + 1 < _names.size() || ( *_istream )->eof(); }
+        void read( char* buf, std::size_t size );
+        std::string getline();
+        void seek( std::uint64_t offset );
+        stream< std::istream >& operator()() { return *_istream; }
+        const stream< std::istream >& operator()() const { return *_istream; }
+        stream< std::istream >& operator++();
+    protected:
+        std::unique_ptr< istream > _istream;
+        std::vector< std::string > _names;
+        unsigned int _index{0};
 };
 
 } } // namespace comma { namespace io {

@@ -17,16 +17,15 @@
 #include <fcntl.h>
 #include <fstream>
 #include <sstream>
-#include <vector>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ip/udp.hpp>
 #include <boost/asio/local/stream_protocol.hpp>
 #include <boost/bind/bind.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include "impl/filesystem.h"
 #include "../base/exception.h"
 #include "../string/string.h"
+#include "impl/filesystem.h"
 #include "file_descriptor.h"
 #include "select.h"
 #include "stream.h"
@@ -377,6 +376,7 @@ static std::string usage( const std::string& what, const std::string& dash, unsi
 std::string istream::usage( unsigned int indent, bool verbose ) { return impl::usage( "input", "stdin", indent, verbose ); }
 std::string ostream::usage( unsigned int indent, bool verbose ) { return impl::usage( "output", "stdout", indent, verbose ); }
 std::string iostream::usage( unsigned int indent, bool verbose ) { return impl::usage( "input/output", "n/a", indent, verbose ); }
+std::string istreams::usage( unsigned int indent, bool verbose ) { return impl::usage( "input", "stdin", indent, verbose ); } // todo: improve; kind bogus...
 
 template class stream< std::istream >;
 template class stream< std::ostream >;
@@ -389,5 +389,13 @@ ostream::ostream( const std::string& name, mode::value mode, mode::blocking_valu
 ostream::ostream( std::ostream* s, io::file_descriptor fd, mode::value mode, boost::function< void() > close ) : stream< std::ostream >( s, fd, mode, mode::non_blocking, close ) {}
 ostream::ostream( std::ostream* s, io::file_descriptor fd, mode::value mode, mode::blocking_value blocking, boost::function< void() > close ) : stream< std::ostream >( s, fd, mode, blocking, close ) {}
 iostream::iostream( const std::string& name, mode::value mode , mode::blocking_value blocking ) : stream< std::iostream >( name, mode, blocking ) {}
+
+istreams::istreams( const std::vector< std::string >& names, mode::value mode, mode::blocking_value blocking ): _istream( std::make_unique< istream >( names[0], mode, blocking ) ), _names( names ), _index( 0 ) {}
+
+stream< std::istream >& istreams::operator++()
+{
+    // todo
+    COMMA_THROW( comma::exception, "todo" );
+}
 
 } } // namespace comma { namespace io {
