@@ -54,6 +54,7 @@ struct method
     virtual void wrote( unsigned int size ) {}
     virtual std::ostream* stream( const T& t, unsigned int size = 0 ) = 0;
     virtual boost::posix_time::ptime time() const { return boost::posix_time::ptime(); } // quick and dirty for now
+    virtual const std::string& address() const;
 };
 
 template < typename T >
@@ -63,6 +64,7 @@ class to_timestamped_files: public method< T >
         to_timestamped_files( const std::string& dir, const options& csv ): _ofs( dir, csv ) {}
         boost::posix_time::ptime time() const { return _ofs.time(); }
         const splitting::ofstream& ofs() const { return _ofs; }
+        const std::string& address() const { return _ofs.dir(); }
 
     protected:
         splitting::ofstream _ofs;
@@ -72,10 +74,12 @@ template < typename T >
 class none: public method< T >
 {
     public:
-        none( const std::string& address ): _ostream( address ) {}
+        none( const std::string& address ): _ostream( address ), _address( address ) {}
         std::ostream* stream( const T&, unsigned int ) { return _ostream(); }
+        const std::string& address() const { return _address; }
     
     private:
+        std::string _address;
         io::ostream _ostream;
 };
 
@@ -141,6 +145,7 @@ class split
         split& operator<<( const T& t ) { return write( t, nullptr, 0 ); }
         bool eof() const { return _eof || ( _os && _os->eof() ); }
         static split< T >* make( const std::string& options, const csv::options& csv, bool permissive = false, const T& sample = T() );
+        const splitting::method< T >& how() { return *_how; }
 
     protected:
         std::unique_ptr< splitting::method< T > > _how;
