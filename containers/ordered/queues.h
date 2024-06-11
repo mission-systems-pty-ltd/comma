@@ -10,27 +10,21 @@
 
 namespace comma { namespace containers { namespace ordered {
 
-namespace impl {
-
-template < typename K > struct traits { typedef K diff_type; };
-template <> struct traits< boost::posix_time::ptime > { typedef boost::posix_time::time_duration diff_type; };
-
-}
-
 /// @todo variadic types
 /// @todo don't use std::pair, use traits instead?
 template < typename K, typename T, typename S >
 class queues: public std::tuple< std::queue< std::pair< K, T > >, std::queue< std::pair< K, S > > >
 {
     public:
-        typedef std::tuple< std::queue< std::pair< K, T > >, std::queue< std::pair< K, S > > > queues_t;
-        queues( typename impl::traits< K >::diff_type max_diff ): _max_diff( max_diff ) {}
+        typedef std::tuple< std::queue< std::pair< K, T > >, std::queue< std::pair< K, S > > > queues_type;
+        typedef decltype( K() - K() ) diff_type;
+        queues( diff_type max_diff ): _max_diff( max_diff ) {}
         bool ready() const;
         void purge();
 
     private:
-        typename impl::traits< K >::diff_type _max_diff;
-        static typename impl::traits< K >::diff_type _abs_diff(K lhs, K rhs) { return lhs < rhs ? (rhs - lhs) : (lhs - rhs); }
+        diff_type _max_diff;
+        static diff_type _abs_diff(K lhs, K rhs) { return lhs < rhs ? (rhs - lhs) : (lhs - rhs); }
 };
 
 template < typename K, typename T, typename S >
