@@ -1,11 +1,11 @@
 // Copyright (c) 2023 Mission Systems Pty Ltd
 
 #include <gtest/gtest.h>
-#include "../synchronized/multiqueue.h"
-#include <boost/date_time/posix_time/posix_time.hpp>
+#include "../ordered/multiqueue.h"
 
-TEST( multiqueue, usage ){
-    typedef comma::containers::synchronized::multiqueue< int, int, int > multiqueue_t;
+TEST( multiqueue, usage )
+{
+    typedef comma::containers::ordered::multiqueue< int, int, int > multiqueue_t;
     multiqueue_t q{ 2 /*timeout*/  };
 
     EXPECT_EQ( std::get<0>(q.queues).size(), 0 );
@@ -34,7 +34,7 @@ TEST( multiqueue, usage ){
 }
 
 TEST( multiqueue, sync_first_to_second ){
-    typedef comma::containers::synchronized::multiqueue< float, int, int > multiqueue_t;
+    typedef comma::containers::ordered::multiqueue< float, int, int > multiqueue_t;
     multiqueue_t q{ 2 /*timeout*/  };
 
     std::get<0>(q.queues) = std::queue< std::pair< float, int > >({ {0, 0}, {2, 0}, {4, 5} });
@@ -52,7 +52,7 @@ TEST( multiqueue, sync_first_to_second ){
 }
 
 TEST( multiqueue, sync_second_to_first ){
-    typedef comma::containers::synchronized::multiqueue< float, int, int > multiqueue_t;
+    typedef comma::containers::ordered::multiqueue< float, int, int > multiqueue_t;
     multiqueue_t q{ 2 /*timeout*/  };
 
     std::get<0>(q.queues) = std::queue< std::pair< float, int > >({ {5, 5} });
@@ -70,7 +70,7 @@ TEST( multiqueue, sync_second_to_first ){
 }
 
 TEST( multiqueue, empty_list_before_sync ){
-    typedef comma::containers::synchronized::multiqueue< float, int, int > multiqueue_t;
+    typedef comma::containers::ordered::multiqueue< float, int, int > multiqueue_t;
     multiqueue_t q{ 2 /*timeout*/ };
     std::get<0>(q.queues) = std::queue< std::pair< float, int > >({ {0, 0}, {1, 0}, {2, 5} });
     std::get<1>(q.queues) = std::queue< std::pair< float, int > >({ {5, 5} });
@@ -81,7 +81,7 @@ TEST( multiqueue, empty_list_before_sync ){
 }
 
 TEST( multiqueue, max_time_offset ){
-    typedef comma::containers::synchronized::multiqueue< float, int, int > multiqueue_t;
+    typedef comma::containers::ordered::multiqueue< float, int, int > multiqueue_t;
     multiqueue_t q{ 2 /*timeout*/ };
     std::get<0>(q.queues) = std::queue< std::pair< float, int > >({ {3, 5} });
     std::get<1>(q.queues) = std::queue< std::pair< float, int > >({ {5, 5} });
@@ -96,7 +96,7 @@ TEST( multiqueue, max_time_offset ){
 }
 
 TEST( multiqueue, floating_point_error ){
-    typedef comma::containers::synchronized::multiqueue< float, int, int > multiqueue_t;
+    typedef comma::containers::ordered::multiqueue< float, int, int > multiqueue_t;
     {
     multiqueue_t q{ 2 /*timeout*/ };
     std::get<0>(q.queues) = std::queue< std::pair< float, int > >({ {3.000001, 5} });
@@ -148,14 +148,14 @@ TEST( multiqueue, floating_point_error ){
 }
 
 TEST( multiqueue, type_difference ){
-    typedef comma::containers::synchronized::multiqueue< float, int, double > multiqueue_t;
+    typedef comma::containers::ordered::multiqueue< float, int, double > multiqueue_t;
     multiqueue_t q{ 2 /*timeout*/ };
     std::get<0>(q.queues) = std::queue< std::pair< float, int > >({ {0, 1} });
     std::get<1>(q.queues) = std::queue< std::pair< float, double > >({ {0, 1.0} });
 }
 
 TEST( multiqueue, boost_time ){
-    typedef comma::containers::synchronized::multiqueue< boost::posix_time::ptime, double, double > multiqueue_t;
+    typedef comma::containers::ordered::multiqueue< boost::posix_time::ptime, double, double > multiqueue_t;
     multiqueue_t q{boost::posix_time::seconds( 2 /*timeout*/  ) };
 
     boost::posix_time::ptime t( boost::gregorian::date( 2023, 1, 1 ) );

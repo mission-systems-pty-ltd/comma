@@ -1,8 +1,14 @@
+// Copyright (c) 2024 Mission Systems
+
+/// @authors aspen eyers, vsevolod vlaskine
+
+#pragma once
+
 #include <queue>
 #include <tuple>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
-namespace comma { namespace containers { namespace synchronized {
+namespace comma { namespace containers { namespace ordered {
 
 namespace impl {
 
@@ -11,6 +17,8 @@ template <> struct traits< boost::posix_time::ptime > { typedef boost::posix_tim
 
 }
 
+/// @todo variadic types
+/// @todo don't use std::pair, use traits instead?
 template < typename K, typename T, typename S >
 class multiqueue
 {
@@ -49,4 +57,4 @@ inline void multiqueue<K, T, S>::purge()
     }
 }
 
-} } } // namespace comma { namespace containers { namespace synchronized {
+} } } // namespace comma { namespace containers { namespace ordered {
