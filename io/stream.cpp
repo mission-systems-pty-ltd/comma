@@ -390,12 +390,35 @@ ostream::ostream( std::ostream* s, io::file_descriptor fd, mode::value mode, boo
 ostream::ostream( std::ostream* s, io::file_descriptor fd, mode::value mode, mode::blocking_value blocking, boost::function< void() > close ) : stream< std::ostream >( s, fd, mode, blocking, close ) {}
 iostream::iostream( const std::string& name, mode::value mode , mode::blocking_value blocking ) : stream< std::iostream >( name, mode, blocking ) {}
 
-istreams::istreams( const std::vector< std::string >& names, mode::value mode, mode::blocking_value blocking ): _istream( std::make_unique< istream >( names[0], mode, blocking ) ), _names( names ), _index( 0 ) {}
+istreams::istreams( const std::vector< std::string >& names, mode::value mode, mode::blocking_value blocking ): _istream( std::make_unique< istream >( names[0], mode, blocking ) ), _names( names ), _index( 0 ), _mode( mode ), _blocking( blocking ) {}
 
-stream< std::istream >& istreams::operator++()
+istreams& istreams::operator++()
 {
-    // todo
-    COMMA_THROW( comma::exception, "todo" );
+    ++_index;
+    if( _index < _names.size() ) { _istream.reset(); _istream.reset( new istream( _names[_index], _mode, _blocking ) ); }
+    return *this;
+}
+
+bool istreams::read( char* buf, std::size_t size )
+{
+    std::size_t s = size;
+    for( char* p = buf; s > 0 && !eof(); ++( *this ) )
+    {
+        auto& is = *( *_istream );
+        is.read( p, s );
+        if( is.gcount() > 0 ) { s -= is.gcount(); p += is.gcount(); }
+    }
+    return s == 0;
+}
+
+std::string istreams::getline()
+{
+    COMMA_THROW( comma::exception, "todo, just ask" );
+}
+
+void seek( std::uint64_t offset )
+{
+    COMMA_THROW( comma::exception, "todo, just ask" );
 }
 
 } } // namespace comma { namespace io {

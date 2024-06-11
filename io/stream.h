@@ -135,16 +135,18 @@ class istreams
         istreams( const std::vector< std::string >& names, mode::value mode = mode::ascii, mode::blocking_value blocking = mode::blocking );
         static std::string usage( unsigned int indent = 0, bool verbose = false );
         bool eof() const { return _index + 1 < _names.size() || ( *_istream )->eof(); }
-        void read( char* buf, std::size_t size );
+        bool read( char* buf, std::size_t size );
         std::string getline();
         void seek( std::uint64_t offset );
         stream< std::istream >& operator()() { return *_istream; }
         const stream< std::istream >& operator()() const { return *_istream; }
-        stream< std::istream >& operator++();
+        istreams& operator++();
     protected:
         std::unique_ptr< istream > _istream;
         std::vector< std::string > _names;
         unsigned int _index{0};
+        mode::value _mode;
+        mode::blocking_value _blocking;
 };
 
 } } // namespace comma { namespace io {
