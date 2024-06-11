@@ -1,6 +1,7 @@
 // Copyright (c) 2023 Mission Systems Pty Ltd
 
 #include <gtest/gtest.h>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include "../ordered/queues.h"
 
 TEST( queues, usage )
@@ -147,14 +148,16 @@ TEST( queues, floating_point_error ){
     }    
 }
 
-TEST( queues, type_difference ){
+TEST( queues, type_difference )
+{
     typedef comma::containers::ordered::queues< float, int, double > queues_t;
     queues_t q{ 2 /*timeout*/ };
     std::get<0>(q) = std::queue< std::pair< float, int > >({ {0, 1} });
     std::get<1>(q) = std::queue< std::pair< float, double > >({ {0, 1.0} });
 }
 
-TEST( queues, boost_time ){
+TEST( queues, boost_time )
+{
     typedef comma::containers::ordered::queues< boost::posix_time::ptime, double, double > queues_t;
     queues_t q{boost::posix_time::seconds( 2 /*timeout*/  ) };
 

@@ -6,7 +6,6 @@
 
 #include <queue>
 #include <tuple>
-#include <boost/date_time/posix_time/posix_time.hpp>
 
 namespace comma { namespace containers { namespace ordered {
 
