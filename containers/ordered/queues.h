@@ -20,12 +20,11 @@ template <> struct traits< boost::posix_time::ptime > { typedef boost::posix_tim
 /// @todo variadic types
 /// @todo don't use std::pair, use traits instead?
 template < typename K, typename T, typename S >
-class multiqueue
+class queues: public std::tuple< std::queue< std::pair< K, T > >, std::queue< std::pair< K, S > > >
 {
     public:
-        std::tuple< std::queue< std::pair< K, T > >, std::queue< std::pair< K, S > > > queues;
-
-        multiqueue( typename impl::traits< K >::diff_type max_diff ): _max_diff( max_diff ) {}
+        typedef std::tuple< std::queue< std::pair< K, T > >, std::queue< std::pair< K, S > > > queues_t;
+        queues( typename impl::traits< K >::diff_type max_diff ): _max_diff( max_diff ) {}
         bool ready() const;
         void purge();
 
@@ -35,25 +34,25 @@ class multiqueue
 };
 
 template < typename K, typename T, typename S >
-inline bool multiqueue<K, T, S>::ready() const
+inline bool queues<K, T, S>::ready() const
 {
-    if( std::get<0>(queues).empty() || std::get<1>(queues).empty() ) { return false; }
-    return _abs_diff( std::get<1>(queues).front().first, std::get<0>(queues).front().first ) <= _max_diff;
+    if( std::get<0>(*this).empty() || std::get<1>(*this).empty() ) { return false; }
+    return _abs_diff( std::get<1>(*this).front().first, std::get<0>(*this).front().first ) <= _max_diff;
 }
 
 template < typename K, typename T, typename S >
-inline void multiqueue<K, T, S>::purge()
+inline void queues<K, T, S>::purge()
 {
-    if( std::get<1>(queues).empty() || std::get<0>(queues).empty() ) { return; }
-    while( std::get<0>(queues).front().first - std::get<1>(queues).front().first > _max_diff ) 
+    if( std::get<1>(*this).empty() || std::get<0>(*this).empty() ) { return; }
+    while( std::get<0>(*this).front().first - std::get<1>(*this).front().first > _max_diff ) 
     { 
-        if( std::get<1>(queues).empty() ) { return; }
-        std::get<1>(queues).pop(); 
+        if( std::get<1>(*this).empty() ) { return; }
+        std::get<1>(*this).pop(); 
     }
-    while( std::get<1>(queues).front().first - std::get<0>(queues).front().first > _max_diff ) 
+    while( std::get<1>(*this).front().first - std::get<0>(*this).front().first > _max_diff ) 
     { 
-        if( std::get<0>(queues).empty() ) { return; }
-        std::get<0>(queues).pop(); 
+        if( std::get<0>(*this).empty() ) { return; }
+        std::get<0>(*this).pop(); 
     }
 }
 
