@@ -134,7 +134,7 @@ class istreams
         // todo: istreams( const std::string& dir...
         istreams( const std::vector< std::string >& names, mode::value mode = mode::ascii, mode::blocking_value blocking = mode::blocking );
         static std::string usage( unsigned int indent = 0, bool verbose = false );
-        bool eof() const { return _index + 1 < _names.size() || ( *_istream )->eof(); }
+        bool eof() const;
         bool read( char* buf, std::size_t size );
         std::string getline();
         void seek( std::uint64_t offset );

@@ -390,10 +390,20 @@ ostream::ostream( std::ostream* s, io::file_descriptor fd, mode::value mode, boo
 ostream::ostream( std::ostream* s, io::file_descriptor fd, mode::value mode, mode::blocking_value blocking, boost::function< void() > close ) : stream< std::ostream >( s, fd, mode, blocking, close ) {}
 iostream::iostream( const std::string& name, mode::value mode , mode::blocking_value blocking ) : stream< std::iostream >( name, mode, blocking ) {}
 
-istreams::istreams( const std::vector< std::string >& names, mode::value mode, mode::blocking_value blocking ): _istream( std::make_unique< istream >( names[0], mode, blocking ) ), _names( names ), _index( 0 ), _mode( mode ), _blocking( blocking ) {}
+istreams::istreams( const std::vector< std::string >& names, mode::value mode, mode::blocking_value blocking )
+    : _istream( std::make_unique< istream >( names[0], mode, blocking ) )
+    , _names( names )
+    , _index( 0 )
+    , _mode( mode )
+    , _blocking( blocking )
+{
+}
+
+bool istreams::eof() const { return _index >= _names.size() || _index == _names.size() - 1 || ( *_istream )->eof(); }
 
 istreams& istreams::operator++()
 {
+    if( _index >= _names.size() ) { return *this; }
     ++_index;
     if( _index < _names.size() ) { _istream.reset(); _istream.reset( new istream( _names[_index], _mode, _blocking ) ); }
     return *this;
