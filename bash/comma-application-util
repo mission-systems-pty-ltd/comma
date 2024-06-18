@@ -19,6 +19,17 @@ readonly comma_application_util_include_guard_=1
 
 source $( type -p comma-name-value-util ) || { echo "$comma_application_name: cannot source 'comma-name-value-util' from '$BASH_SOURCE'" >&2; exit 1; }
 
+## @page comma-source-relative comma-source-relative
+# @section comma-source-relative
+# @description source relative to the location of the calling
+#              script/subshell (a trivial convenience wrapper)
+# @param relative path to source
+function comma-source-relative()
+{
+    source "$( realpath $( dirname $0 ) )"/$1
+}
+export -f comma-source-relative
+
 ## @page comma_options_from_name_value comma_options_from_name_value
 # @section comma_options_from_name_value
 # @description convert path-value pairs to bash variables
