@@ -307,7 +307,7 @@ function comma-application-swiss-usage()
 {
     local common_options=$( cat )
     echo
-    echo "usage: $( basename "$0" ) <operation> <options>"
+    if [[ $( type -t usage ) == "function" ]]; then usage; else echo "usage: $( basename "$0" ) <operation> <options>"; fi
     echo; echo "common options"
     { [[ -z "$common_options" ]] || echo "$common_options"; comma-application-common-options; } | sed 's#^#   #'
     echo; echo "available operations: ${operations[@]}"
