@@ -23,10 +23,17 @@ source $( type -p comma-name-value-util ) || { echo "$comma_application_name: ca
 # @section comma-source-relative
 # @description source relative to the location of the calling
 #              script/subshell (a trivial convenience wrapper)
-# @param relative path to source
+# @param whitespace-separated relative paths to source
+#        regular expressions permitted, e.g. my/sources/*
+#        as well as directory names, e.g. my/sources, which is the
+#        same as my/sources/*
 function comma-source-relative()
 {
-    source "$( realpath $( dirname $0 ) )"/$1
+    local dir="$( realpath $( dirname $0 ) )"
+    for s in "$@"; do
+        if [[ -d "$s" ]]; then for t in "$s"/*; do comma-source-relative "$t" || return 1; done
+        else source "$dir/$s" || return 1; fi
+    done
 }
 export -f comma-source-relative
 

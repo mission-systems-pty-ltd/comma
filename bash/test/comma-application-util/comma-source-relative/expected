@@ -1,0 +1,13 @@
+once/a/b/x/sourced=1
+multiple/a/b/x/sourced=1
+multiple/a/b/y/sourced=1
+multiple/a/z/sourced=1
+wildcard/a/b/x/sourced=1
+wildcard/a/b/y/sourced=1
+directory/a/b/x/sourced=1
+directory/a/b/y/sourced=1
+directories/a/b/x/sourced=1
+directories/a/b/y/sourced=1
+directories/a/b/x/sourced=1
+directories/a/b/y/sourced=1
+directories/a/z/sourced=1

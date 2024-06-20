@@ -1,0 +1,9 @@
+#!/bin/bash
+
+source ../../../comma-application-util || exit 1
+
+comma-source-relative a/b/x | sed 's#^#once/#'
+comma-source-relative a/b/x a/b/y a/z | sed 's#^#multiple/#'
+comma-source-relative a/b/* | sed 's#^#wildcard/#'
+comma-source-relative a/b | sed 's#^#directory/#'
+comma-source-relative a/b a | sed 's#^#directories/#'
