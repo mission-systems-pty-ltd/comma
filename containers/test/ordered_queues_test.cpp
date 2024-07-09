@@ -13,13 +13,13 @@ TEST( queues, usage )
     EXPECT_EQ( std::get<1>(q).size(), 0 );
     EXPECT_EQ( q.ready(), false );
 
-    std::get<0>(q).push( std::make_pair( 0, 1 ) );
+    std::get<0>(q).push_back( std::make_pair( 0, 1 ) );
     EXPECT_EQ( std::get<0>(q).front().second, 1 );
     EXPECT_EQ( std::get<0>(q).size(), 1 );
     EXPECT_EQ( std::get<1>(q).size(), 0 );
     EXPECT_EQ( q.ready(), false );
 
-    std::get<1>(q).push( std::make_pair( 0, 1 ) );
+    std::get<1>(q).push_back( std::make_pair( 0, 1 ) );
     EXPECT_EQ( std::get<1>(q).front().second, 1 );
     EXPECT_EQ( std::get<0>(q).size(), 1 );
     EXPECT_EQ( std::get<1>(q).size(), 1 );
@@ -38,8 +38,8 @@ TEST( queues, sync_first_to_second ){
     typedef comma::containers::ordered::queues< float, int, int > queues_t;
     queues_t q{ 2 /*timeout*/  };
 
-    std::get<0>(q) = std::queue< std::pair< float, int > >({ {0, 0}, {2, 0}, {4, 5} });
-    std::get<1>(q) = std::queue< std::pair< float, int > >({ {5, 5} });
+    std::get<0>(q) = std::deque< std::pair< float, int > >({ {0, 0}, {2, 0}, {4, 5} });
+    std::get<1>(q) = std::deque< std::pair< float, int > >({ {5, 5} });
     EXPECT_EQ( q.ready(), false );
     q.purge();
     EXPECT_EQ( std::get<0>(q).front().second, 5 );
@@ -56,8 +56,8 @@ TEST( queues, sync_second_to_first ){
     typedef comma::containers::ordered::queues< float, int, int > queues_t;
     queues_t q{ 2 /*timeout*/  };
 
-    std::get<0>(q) = std::queue< std::pair< float, int > >({ {5, 5} });
-    std::get<1>(q) = std::queue< std::pair< float, int > >({ {1, 0}, {2, 0}, {4, 5} });
+    std::get<0>(q) = std::deque< std::pair< float, int > >({ {5, 5} });
+    std::get<1>(q) = std::deque< std::pair< float, int > >({ {1, 0}, {2, 0}, {4, 5} });
     EXPECT_EQ( q.ready(), false );
     q.purge();
     EXPECT_EQ( std::get<0>(q).front().second, 5 );
@@ -73,19 +73,51 @@ TEST( queues, sync_second_to_first ){
 TEST( queues, empty_list_before_sync ){
     typedef comma::containers::ordered::queues< float, int, int > queues_t;
     queues_t q{ 2 /*timeout*/ };
-    std::get<0>(q) = std::queue< std::pair< float, int > >({ {0, 0}, {1, 0}, {2, 5} });
-    std::get<1>(q) = std::queue< std::pair< float, int > >({ {5, 5} });
+    std::get<0>(q) = std::deque< std::pair< float, int > >({ {0, 0}, {1, 0}, {2, 5} });
+    std::get<1>(q) = std::deque< std::pair< float, int > >({ {5, 5} });
     q.purge();
     EXPECT_EQ( std::get<0>(q).size(), 0 );
     EXPECT_EQ( std::get<1>(q).size(), 1 );
     EXPECT_EQ( q.ready(), false );
 }
 
+TEST( queues, sync_and_pop ){
+    typedef comma::containers::ordered::queues< float, int, int > queues_t;
+    queues_t q{ 0.9 /*timeout*/ };
+    std::get<0>(q) = std::deque< std::pair< float, int > >({ {0, 1}, {1, 1}, {2, 1}, {3, 1}, {4, 1}, {5, 1} });
+    std::get<1>(q) = std::deque< std::pair< float, int > >({ {3, 2}, {5, 2}});
+    q.purge();
+    EXPECT_EQ( std::get<0>(q).size(), 3 ); // {3, 1}, {4, 1}, {5, 1} });
+    EXPECT_EQ( std::get<1>(q).size(), 2 ); // {3, 2}, {5, 2}});
+    EXPECT_EQ( std::get<0>(q).front().first, 3 );
+    EXPECT_EQ( std::get<1>(q).front().first, 3 );
+    EXPECT_EQ( q.ready(), true );
+
+    auto data = q.front();
+    q.pop_all();
+    EXPECT_EQ( std::get<0>(data).first, 3 );
+    EXPECT_EQ( std::get<1>(data).first, 3 );
+    EXPECT_EQ( std::get<0>(q).size(), 2 ); // {4, 1}, {5, 1} });
+    EXPECT_EQ( std::get<1>(q).size(), 1 ); // {5, 2}});
+    EXPECT_EQ( std::get<0>(q).front().first, 4 );
+    EXPECT_EQ( std::get<1>(q).front().first, 5 );
+
+    EXPECT_EQ( q.ready(), false );
+    q.purge();
+    EXPECT_EQ( q.ready(), true );
+
+    EXPECT_EQ( std::get<0>(q).size(), 1 ); // {5, 1} });
+    EXPECT_EQ( std::get<1>(q).size(), 1 ); // {5, 2}});
+    EXPECT_EQ( std::get<0>(q).front().first, 5 );
+    EXPECT_EQ( std::get<1>(q).front().first, 5 );
+    EXPECT_EQ( q.ready(), true );
+}
+
 TEST( queues, max_time_offset ){
     typedef comma::containers::ordered::queues< float, int, int > queues_t;
     queues_t q{ 2 /*timeout*/ };
-    std::get<0>(q) = std::queue< std::pair< float, int > >({ {3, 5} });
-    std::get<1>(q) = std::queue< std::pair< float, int > >({ {5, 5} });
+    std::get<0>(q) = std::deque< std::pair< float, int > >({ {3, 5} });
+    std::get<1>(q) = std::deque< std::pair< float, int > >({ {5, 5} });
     q.purge();
     EXPECT_EQ( std::get<0>(q).size(), 1 );
     EXPECT_EQ( std::get<1>(q).size(), 1 );
@@ -100,8 +132,8 @@ TEST( queues, floating_point_error ){
     typedef comma::containers::ordered::queues< float, int, int > queues_t;
     {
     queues_t q{ 2 /*timeout*/ };
-    std::get<0>(q) = std::queue< std::pair< float, int > >({ {3.000001, 5} });
-    std::get<1>(q) = std::queue< std::pair< float, int > >({ {5, 5} });
+    std::get<0>(q) = std::deque< std::pair< float, int > >({ {3.000001, 5} });
+    std::get<1>(q) = std::deque< std::pair< float, int > >({ {5, 5} });
     q.purge();
     EXPECT_EQ( std::get<0>(q).size(), 1 );
     EXPECT_EQ( std::get<1>(q).size(), 1 );
@@ -113,8 +145,8 @@ TEST( queues, floating_point_error ){
     }
     {
     queues_t q{ 2 /*timeout*/ };
-    std::get<0>(q) = std::queue< std::pair< float, int > >({ {2.999999, 5} });
-    std::get<1>(q) = std::queue< std::pair< float, int > >({ {5, 5} });
+    std::get<0>(q) = std::deque< std::pair< float, int > >({ {2.999999, 5} });
+    std::get<1>(q) = std::deque< std::pair< float, int > >({ {5, 5} });
     q.purge();
     EXPECT_EQ( std::get<0>(q).size(), 0 );
     EXPECT_EQ( std::get<1>(q).size(), 1 );
@@ -124,8 +156,8 @@ TEST( queues, floating_point_error ){
     }
     {
     queues_t q{ 2 /*timeout*/ };
-    std::get<0>(q) = std::queue< std::pair< float, int > >({ {5, 5} });
-    std::get<1>(q) = std::queue< std::pair< float, int > >({ {3.000001, 5} });
+    std::get<0>(q) = std::deque< std::pair< float, int > >({ {5, 5} });
+    std::get<1>(q) = std::deque< std::pair< float, int > >({ {3.000001, 5} });
     q.purge();
     EXPECT_EQ( std::get<0>(q).size(), 1 );
     EXPECT_EQ( std::get<1>(q).size(), 1 );
@@ -137,8 +169,8 @@ TEST( queues, floating_point_error ){
     }
     {
     queues_t q{ 2 /*timeout*/ };
-    std::get<0>(q) = std::queue< std::pair< float, int > >({ {5, 5} });
-    std::get<1>(q) = std::queue< std::pair< float, int > >({ {2.999999, 5} });
+    std::get<0>(q) = std::deque< std::pair< float, int > >({ {5, 5} });
+    std::get<1>(q) = std::deque< std::pair< float, int > >({ {2.999999, 5} });
     q.purge();
     EXPECT_EQ( std::get<0>(q).size(), 1 );
     EXPECT_EQ( std::get<1>(q).size(), 0 );
@@ -152,8 +184,8 @@ TEST( queues, type_difference )
 {
     typedef comma::containers::ordered::queues< float, int, double > queues_t;
     queues_t q{ 2 /*timeout*/ };
-    std::get<0>(q) = std::queue< std::pair< float, int > >({ {0, 1} });
-    std::get<1>(q) = std::queue< std::pair< float, double > >({ {0, 1.0} });
+    std::get<0>(q) = std::deque< std::pair< float, int > >({ {0, 1} });
+    std::get<1>(q) = std::deque< std::pair< float, double > >({ {0, 1.0} });
 }
 
 TEST( queues, boost_time )
@@ -162,8 +194,8 @@ TEST( queues, boost_time )
     queues_t q{boost::posix_time::seconds( 2 /*timeout*/  ) };
 
     boost::posix_time::ptime t( boost::gregorian::date( 2023, 1, 1 ) );
-    std::get<0>(q) = std::queue< std::pair< boost::posix_time::ptime, double > >({ {t, 1.0} });
-    std::get<1>(q) = std::queue< std::pair< boost::posix_time::ptime, double > >({ {t, 1.0} });
+    std::get<0>(q) = std::deque< std::pair< boost::posix_time::ptime, double > >({ {t, 1.0} });
+    std::get<1>(q) = std::deque< std::pair< boost::posix_time::ptime, double > >({ {t, 1.0} });
     EXPECT_EQ( std::get<0>(q).size(), 1 );
     EXPECT_EQ( std::get<1>(q).size(), 1 );
     EXPECT_EQ( q.ready(), true );
