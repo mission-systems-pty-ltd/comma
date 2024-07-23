@@ -1,6 +1,8 @@
 // Copyright (c) 2023 Vsevolod Vlaskine
 
 #include <gtest/gtest.h>
+// #include <numeric>
+// #include <boost/date_time/posix_time/posix_time.hpp>
 #include "../multidimensional/array.h"
 
 namespace cmd = comma::containers::multidimensional; 
@@ -214,3 +216,28 @@ TEST( multidimensional_array, grid_interpolate )
         //EXPECT_EQ( g.interpolated( {1, 1} ), 3 );
     }
 }
+
+// TEST( vector_of_vectors, performance )
+// {
+//     //std::pair< unsigned int, unsigned int > size{ 10000000, 4 };
+//     std::pair< unsigned int, unsigned int > size{ 4096, 8 };
+//     std::vector< std::vector< float > > a( size.first, std::vector< float >( size.second, 0 ) );
+//     std::vector< float > b( size.first * size.second, 0 );
+//     auto t0 = boost::posix_time::microsec_clock::universal_time();
+//     for( auto& c: a )
+//     {
+//         for( auto& d: c )
+//         {
+//             d += 10;
+//         }
+//     }
+//     auto t1 = boost::posix_time::microsec_clock::universal_time();
+//     for( auto& d: b )
+//     {
+//         d += 10;
+//     }
+//     auto t2 = boost::posix_time::microsec_clock::universal_time();
+//     auto e0 = double( ( t1 - t0 ).total_microseconds() ) / 1e6;
+//     auto e1 = double( ( t2 - t1 ).total_microseconds() ) / 1e6;
+//     std::cerr << "==> speedup: " << ( e0 / e1 ) << "\tvector of vectors: elapsed: " << e0 << "\tvector: elapsed: " << e1 << std::endl;
+// }
