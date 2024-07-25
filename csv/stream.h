@@ -44,6 +44,10 @@ template < typename V > V read_as( const std::string& filename, const options& o
 template < typename V > V read_as( std::istream& is, const options& o, const typename V::value_type& default_value, std::size_t size = 0 );
 template < typename V > V read_as( const std::string& filename, const options& o, const typename V::value_type& default_value, std::size_t size = 0 );
 
+/// convenience functions: write to output stream from a non-mapped container
+template < typename V > void write( const V& v, std::ostream& os, const options& o, const typename V::value_type& default_value );
+template < typename V > void write( const V& v, std::ostream& os, const options& o = options() );
+
 /// ascii csv input stream
 template < typename S >
 class ascii_input_stream : public boost::noncopyable
@@ -850,6 +854,20 @@ inline void output_stream< S >::append_output( input_stream< T >& is, const S& s
         ascii_->os()<< comma::join( is.ascii().last(), ascii_->ascii().delimiter() ) << ascii_->ascii().delimiter() << sbuf << std::endl;
     }
 }*/
+
+template < typename V > inline void write( const V& v, std::ostream& os, const options& o ) { if( !v.empty() ) { write( v, os, o, typename V::value_type() ); } }
+
+template < typename V > inline void write( const V& v, std::ostream& os, const options& o, const typename V::value_type& default_value )
+{
+    if( v.empty() ) { return; }
+    output_stream< typename V::value_type > ostream( os, o, default_value );
+    for( const auto& e: v )
+    {
+        COMMA_ASSERT( os.good(), "output stream not good" );
+        ostream.write( e );
+    }
+    if( o.flush ) { os.flush(); }
+}
 
 template < typename V > inline V read_as( std::istream& is, const options& o, const typename V::value_type& default_value, std::size_t size )
 {
