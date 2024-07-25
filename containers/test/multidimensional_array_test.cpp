@@ -45,7 +45,7 @@ TEST( multidimensional_array, iteration )
 {
     {
         typedef std::array< std::size_t, 3 > array_t;
-        comma::containers::multidimensional::array< int, 3 > a( {2, 3, 4}, 0 );
+        cmd::array< int, 3 > a( {2, 3, 4}, 0 );
         { array_t s{2, 3, 4}; EXPECT_EQ( a.shape(), s ); EXPECT_EQ( a.data().size(), 2 * 3 * 4 ); }
         unsigned int i = 0;
         for( auto it = a.begin(); it != a.end(); ++it ) { *it = i++; }
@@ -83,10 +83,10 @@ TEST( multidimensional_array, iteration )
 TEST( multidimensional_array, array )
 {
     {
-        comma::containers::multidimensional::array< int, 3 > a( {2, 3, 4}, 0 );
+        cmd::array< int, 3 > a( {2, 3, 4}, 0 );
         unsigned int i = 0;
         for( auto it = a.begin(); it != a.end(); ++it ) { *it = i++; }
-        typedef comma::containers::multidimensional::array< int, 3 >::index_type index_t;
+        typedef cmd::array< int, 3 >::index_type index_t;
         { index_t i{0, 0, 0}; EXPECT_EQ( a[i], 0 ); }
         { index_t i{0, 1, 0}; EXPECT_EQ( a[i], 4 ); }
         { index_t i{1, 2, 3}; EXPECT_EQ( a[i], 23 ); }
@@ -100,11 +100,11 @@ TEST( multidimensional_array, slice )
 {
     {
         {
-            comma::containers::multidimensional::array< int, 3 > a( {2, 3, 4}, 0 );
+            cmd::array< int, 3 > a( {2, 3, 4}, 0 );
             unsigned int i = 0;
             for( auto it = a.begin(); it != a.end(); ++it ) { *it = i++; }
-            typedef comma::containers::multidimensional::array< int, 2 >::index_type index_t;
-            comma::containers::multidimensional::slice< int, 2 > s = a.at( 0 );
+            typedef cmd::array< int, 2 >::index_type index_t;
+            cmd::slice< int, 2 > s = a.at( 0 );
             { index_t i{0, 0}; EXPECT_EQ( s[i], 0 ); }
             { index_t i{0, 1}; EXPECT_EQ( s[i], 1 ); }
             { index_t i{0, 2}; EXPECT_EQ( s[i], 2 ); }
@@ -119,7 +119,7 @@ TEST( multidimensional_array, slice )
             { index_t i{2, 3}; EXPECT_EQ( s[i], 11 ); }
             {
                 auto t = s.at( 0 );
-                typedef comma::containers::multidimensional::array< int, 1 >::index_type index_t;
+                typedef cmd::array< int, 1 >::index_type index_t;
                 { index_t i{0}; EXPECT_EQ( t[i], 0 ); }
                 { index_t i{1}; EXPECT_EQ( t[i], 1 ); }
                 { index_t i{2}; EXPECT_EQ( t[i], 2 ); }
@@ -146,12 +146,12 @@ TEST( multidimensional_array, slice )
             { s[{1, 3}] = 111; std::array< std::size_t, 3 > i{1, 1, 3}; EXPECT_EQ( a[i], 111 ); }
         }
         {
-            comma::containers::multidimensional::array< int, 3 > a( {2, 3, 4}, 0 );
+            cmd::array< int, 3 > a( {2, 3, 4}, 0 );
             unsigned int i = 0;
             for( auto it = a.begin(); it != a.end(); ++it ) { *it = i++; }
-            typedef comma::containers::multidimensional::array< int, 1 >::index_type index_t;
+            typedef cmd::array< int, 1 >::index_type index_t;
             {
-                comma::containers::multidimensional::slice< int, 1 > s = a.at< 2 >( {0, 0} ); // todo! super-ugly! improve templating!
+                cmd::slice< int, 1 > s = a.at< 2 >( {0, 0} ); // todo! super-ugly! improve templating!
                 { index_t i{0}; EXPECT_EQ( s[i], 0 ); } // todo: improve usage on 1-dimensional slices
                 { index_t i{1}; EXPECT_EQ( s[i], 1 ); }
                 { index_t i{2}; EXPECT_EQ( s[i], 2 ); }
@@ -189,7 +189,7 @@ TEST( multidimensional_array, slice )
 TEST( multidimensional_array, grid_index )
 {
     {
-        comma::containers::multidimensional::grid< double, 2 > g( {0, 0}, {1, 1}, {2, 3}, 0 );
+        cmd::grid< double, 2 > g( {0, 0}, {1, 1}, {2, 3}, 0 );
         typedef std::array< std::size_t, 2 > index_t;
         int i = 0;
         for( auto it = g.begin(); it != g.end(); ++it ) { *it = i++; }
@@ -205,7 +205,7 @@ TEST( multidimensional_array, grid_index )
 TEST( multidimensional_array, grid_interpolate )
 {
     {
-        comma::containers::multidimensional::grid< double, 2 > g( {0, 0}, {1, 1}, {2, 2}, 0 );
+        cmd::grid< double, 2 > g( {0, 0}, {1, 1}, {2, 2}, 0 );
         g[{0, 0}] = 0; g[{0, 1}] = 1; g[{1, 0}] = 0; g[{1, 1}] = 1;
         EXPECT_EQ( g.interpolated( {0, 0} ), 0 );
         EXPECT_EQ( g.interpolated( {0, 0.5} ), 0.5 );
@@ -213,6 +213,79 @@ TEST( multidimensional_array, grid_interpolate )
         //EXPECT_EQ( g.interpolated( {0.5, 0} ), 0.5 );
         //EXPECT_EQ( g.interpolated( {1, 0} ), 2 );
         //EXPECT_EQ( g.interpolated( {1, 1} ), 3 );
+    }
+}
+
+TEST( multidimensional_array, index )
+{
+    {
+        cmd::index< 4 > i;
+        EXPECT_EQ( i[0], 0 );
+        EXPECT_EQ( i[1], 0 );
+        EXPECT_EQ( i[2], 0 );
+        EXPECT_EQ( i[3], 0 );
+    }
+    {
+        cmd::index< 4 > i{};
+        EXPECT_EQ( i[0], 0 );
+        EXPECT_EQ( i[1], 0 );
+        EXPECT_EQ( i[2], 0 );
+        EXPECT_EQ( i[3], 0 );
+    }
+    {
+        cmd::index< 4 > i{0u, 1u, 2u, 3u};
+        EXPECT_EQ( i[0], 0 );
+        EXPECT_EQ( i[1], 1 );
+        EXPECT_EQ( i[2], 2 );
+        EXPECT_EQ( i[3], 3 );
+    }
+    {
+        cmd::index< 1 > i;
+        cmd::index< 1 > j{5u};
+        EXPECT_TRUE( i < j );
+        EXPECT_TRUE( i != j );
+        EXPECT_EQ( i.increment( j ), cmd::index< 1 >{1u} );
+        EXPECT_EQ( i.increment( j ), cmd::index< 1 >{2u} );
+    }
+    {
+        cmd::index< 2 > i;
+        cmd::index< 2 > j{3u, 2u};
+        EXPECT_EQ( i               , ( cmd::index< 2 >{0u, 0u} ) );
+        EXPECT_TRUE( i < j );
+        EXPECT_EQ( i.increment( j ), ( cmd::index< 2 >{0u, 1u} ) );
+        EXPECT_TRUE( i < j );
+        EXPECT_EQ( i.increment( j ), ( cmd::index< 2 >{1u, 0u} ) );
+        EXPECT_TRUE( i < j );
+        EXPECT_EQ( i.increment( j ), ( cmd::index< 2 >{1u, 1u} ) );
+        EXPECT_TRUE( i < j );
+        EXPECT_EQ( i.increment( j ), ( cmd::index< 2 >{2u, 0u} ) );
+        EXPECT_TRUE( i < j );
+        EXPECT_EQ( i.increment( j ), ( cmd::index< 2 >{2u, 1u} ) );
+        EXPECT_TRUE( i < j );
+        EXPECT_EQ( i.increment( j ), ( cmd::index< 2 >{0u, 0u} ) );
+        EXPECT_TRUE( i == cmd::index< 2 >{} );
+    }
+    {
+        cmd::index< 2 >::iterator i{{3u, 2u}};
+        EXPECT_TRUE( bool( i ) );
+        EXPECT_EQ( *i, ( cmd::index< 2 >{0u, 0u} ) );
+        EXPECT_TRUE( bool( ++i ) );
+        EXPECT_EQ( *i, ( cmd::index< 2 >{0u, 1u} ) );
+        EXPECT_TRUE( bool( ++i ) );
+        EXPECT_EQ( *i, ( cmd::index< 2 >{1u, 0u} ) );
+        EXPECT_TRUE( bool( ++i ) );
+        EXPECT_EQ( *i, ( cmd::index< 2 >{1u, 1u} ) );
+        EXPECT_TRUE( bool( ++i ) );
+        EXPECT_EQ( *i, ( cmd::index< 2 >{2u, 0u} ) );
+        EXPECT_TRUE( bool( ++i ) );
+        EXPECT_EQ( *i, ( cmd::index< 2 >{2u, 1u} ) );
+        EXPECT_FALSE( bool( ++i ) );
+        EXPECT_EQ( *i, ( cmd::index< 2 >{0u, 0u} ) );
+    }
+    {
+        unsigned int count{0};
+        for( cmd::index< 2 >::iterator i{{3u, 2u}}; i; ++i, ++count );
+        EXPECT_EQ( count, 6 );
     }
 }
 
@@ -266,4 +339,5 @@ TEST( multidimensional_array, grid_interpolate )
 //         //std::cerr << "==> memcpy:\tspeedup: " << ( e0 / e1 ) << "\tvector of vectors: elapsed: " << e0 << "\tvector: elapsed: " << e1 << std::endl;
 //         std::cerr << "==> memcpy vs std::copy:\tspeedup: " << ( e0 / e1 ) << std::endl;
 //     }
+//     // todo! multidimensional::array performance
 // }
