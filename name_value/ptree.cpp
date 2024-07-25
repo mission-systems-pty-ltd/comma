@@ -110,7 +110,7 @@ boost::optional< std::string > property_tree::get( const boost::property_tree::p
 
 namespace comma { namespace impl {
 
-static void ptree_output_value_( std::ostream& os, const std::string& value, bool is_begin, const xpath& path, char equal_sign, char delimiter, const std::string& root, bool const unquote_numbers )
+static void ptree_output_value_( std::ostream& os, const std::string& value, bool is_begin, const xpath& path, char equal_sign, char delimiter, const std::string& root, bool unquote_numbers )
 {
     static boost::regex number_like_string( "^0[0-9][0-9]*$" );
     if( !is_begin ) { os << delimiter; }

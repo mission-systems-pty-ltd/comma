@@ -7,6 +7,8 @@ quoting[6]/output='a=1'
 quoting[4]/output='{"a":"1"}'
 quoting[5]/output='a="1"'
 quoting[6]/output='a=1'
+quoting[7]/output='{"a":"inf","b":"iNf","c":"nan","d":"NaN"}'
+quoting[8]/output='{"a":"inf","b":"iNf","c":"nan","d":"NaN"}'
 
 paths[0]/output='a/b="1";a/c="2";x/y="3";x/z="4"'
 paths[1]/output='b="1";c="2"'

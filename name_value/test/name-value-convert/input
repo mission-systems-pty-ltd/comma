@@ -7,6 +7,8 @@ quoting[6]="echo a=1 | name-value-convert --to json --minify | name-value-conver
 quoting[4]="echo a=1 | name-value-convert --to json --quote-numbers --minify"
 quoting[5]="echo a=1 | name-value-convert --to json --quote-numbers --minify | name-value-convert"
 quoting[6]="echo a=1 | name-value-convert --to json --quote-numbers --minify | name-value-convert --unquote-numbers"
+quoting[7]="( echo a=inf; echo b=iNf; echo c=nan; echo d=NaN ) | name-value-convert --to json --minify"
+quoting[8]="( echo a=inf; echo b=iNf; echo c=nan; echo d=NaN ) | name-value-convert --to json --minify --unquote-numbers"
 
 paths[0]="( echo a/b=1; echo a/c=2; echo x/y=3; echo x/z=4 ) | name-value-convert --delimiter=';'"
 paths[1]="( echo a/b=1; echo a/c=2; echo x/y=3; echo x/z=4 ) | name-value-convert --path a --delimiter=';'"

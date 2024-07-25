@@ -42,8 +42,10 @@ template< typename C > inline void json_remove_quotes( std::basic_string< C >& j
         bool quoted = true;
         if( ':' != *next_token )
         {
-            auto const value = std::string( value_begin + 1, value_end );
+            auto value = std::string( value_begin + 1, value_end );
+            for( char& c: value ) { c = std::tolower( c ); } // quick and dirty, watch performance
             if( true_str == value || false_str == value ) { quoted = false; }
+            else if( value == "nan" || value == "inf" ) { quoted = true; } // lexical cast thinks it's a number
             else if( !boost::regex_match( value, number_like_string ) ) { try { boost::lexical_cast< double >( value ); quoted = false; } catch ( ... ) {} } // todo? try to avoid lexical_cast+exception to improve performace?
         }
         if( !quoted ) { value_begin++; }
