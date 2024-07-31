@@ -37,10 +37,14 @@ template < typename T > inline int index( T p, T origin, T resolution )
 template < int Base, unsigned int Pow > static constexpr int pow = Base * pow< Base, Pow - 1 >;
 template < int Base > static constexpr int pow< Base, 0 >{1};
 template < typename I, std::size_t Size > static constexpr std::array< I, Size > neighbours; // quick and dirty, for now leaving it to the enthusiasts to implement it using metaprogramming
-template < typename I > static constexpr std::array< I, 2 > neighbours< I, 1 > = {{ {{ 0 }}, {{ 1 }} }};
-template < typename I > static constexpr std::array< I, 4 > neighbours< I, 2 > = {{ {{ 0, 0 }}, {{ 0, 1 }}, {{ 1, 0 }}, {{ 1, 1 }} }};
-template < typename I > static constexpr std::array< I, 8 > neighbours< I, 3 > = {{ {{ 0, 0, 0 }}, {{ 0, 0, 1 }}, {{ 0, 1, 0 }}, {{ 0, 1, 1 }}, {{ 1, 0, 0 }}, {{ 1, 0, 1 }}, {{ 1, 1, 0 }}, {{ 1, 1, 1 }} }};
-template < typename I > static constexpr std::array< I, 16 > neighbours< I, 4 > = {{ {{ 0, 0, 0, 0 }}, {{ 0, 0, 0, 1 }}, {{ 0, 0, 1, 0 }}, {{ 0, 0, 1, 1 }}, {{ 0, 1, 0, 0 }}, {{ 0, 1, 0, 1 }}, {{ 0, 1, 1, 0 }}, {{ 0, 1, 1, 1 }}, {{ 1, 0, 0, 0 }}, {{ 1, 0, 0, 1 }}, {{ 1, 0, 1, 0 }}, {{ 1, 0, 1, 1 }}, {{ 1, 1, 0, 0 }}, {{ 1, 1, 0, 1 }}, {{ 1, 1, 1, 0 }}, {{ 1, 1, 1, 1 }} }};
+template < typename I > static constexpr std::array< I, 2 > neighbours< I, 1 > = {{ I{ 0 }, I{ 1 } }};
+template < typename I > static std::array< I, 4 > neighbours< I, 2 > = {{ I{ 0, 0 }, I{ 0, 1 }, I{ 1, 0 }, I{ 1, 1 } }};
+template < typename I > static std::array< I, 8 > neighbours< I, 3 > = {{ I{ 0, 0, 0 }, I{ 0, 0, 1 }, I{ 0, 1, 0 }, I{ 0, 1, 1 }, I{ 1, 0, 0 }, I{ 1, 0, 1 }, I{ 1, 1, 0 }, I{ 1, 1, 1 } }};
+template < typename I > static std::array< I, 16 > neighbours< I, 4 > = {{ I{ 0, 0, 0, 0 }, I{ 0, 0, 0, 1 }, I{ 0, 0, 1, 0 }, I{ 0, 0, 1, 1 }, I{ 0, 1, 0, 0 }, I{ 0, 1, 0, 1 }, I{ 0, 1, 1, 0 }, I{ 0, 1, 1, 1 }, I{ 1, 0, 0, 0 }, I{ 1, 0, 0, 1 }, I{ 1, 0, 1, 0 }, I{ 1, 0, 1, 1 }, I{ 1, 1, 0, 0 }, I{ 1, 1, 0, 1 }, I{ 1, 1, 1, 0 }, I{ 1, 1, 1, 1 } }};
+// template < typename I > static constexpr std::array< I, 2 > neighbours< I, 1 > = {{ {{ 0 }}, {{ 1 }} }};
+// template < typename I > static constexpr std::array< I, 4 > neighbours< I, 2 > = {{ {{ 0, 0 }}, {{ 0, 1 }}, {{ 1, 0 }}, {{ 1, 1 }} }};
+// template < typename I > static constexpr std::array< I, 8 > neighbours< I, 3 > = {{ {{ 0, 0, 0 }}, {{ 0, 0, 1 }}, {{ 0, 1, 0 }}, {{ 0, 1, 1 }}, {{ 1, 0, 0 }}, {{ 1, 0, 1 }}, {{ 1, 1, 0 }}, {{ 1, 1, 1 }} }};
+// template < typename I > static constexpr std::array< I, 16 > neighbours< I, 4 > = {{ {{ 0, 0, 0, 0 }}, {{ 0, 0, 0, 1 }}, {{ 0, 0, 1, 0 }}, {{ 0, 0, 1, 1 }}, {{ 0, 1, 0, 0 }}, {{ 0, 1, 0, 1 }}, {{ 0, 1, 1, 0 }}, {{ 0, 1, 1, 1 }}, {{ 1, 0, 0, 0 }}, {{ 1, 0, 0, 1 }}, {{ 1, 0, 1, 0 }}, {{ 1, 0, 1, 1 }}, {{ 1, 1, 0, 0 }}, {{ 1, 1, 0, 1 }}, {{ 1, 1, 1, 0 }}, {{ 1, 1, 1, 1 }} }};
 // todo: add more dimensions as required or write that little metaprogramming piece
 
 template < std::size_t Size > struct operations

@@ -10,8 +10,8 @@
 #include "../../csv/stream.h"
 #include "../../csv/traits.h"
 #include "../../name_value/parser.h"
-#include "../../visiting/traits.h"
 #include "../multidimensional/array.h"
+#include "../multidimensional/traits.h"
 
 void usage( bool verbose )
 {
@@ -79,7 +79,7 @@ template < typename T, std::size_t D, std::size_t E >
 struct lut
 {
     typedef std::array< double, D > point_t;
-    typedef std::array< std::size_t, D > index_t;
+    typedef comma::containers::multidimensional::index< D > index_t; // typedef std::array< std::size_t, D > index_t;
     typedef std::array< T, E > value_t;
     typedef comma::containers::multidimensional::grid< value_t, D, point_t > grid_t;
     typedef _array< double, D > input_t;

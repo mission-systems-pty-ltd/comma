@@ -16,7 +16,7 @@ template < typename V, unsigned int D >
 class slice
 {
     public:
-        typedef std::array< std::size_t, D > index_type; // todo: typedef multidimensional::index< D > index_type;
+        typedef multidimensional::index< D > index_type; // typedef std::array< std::size_t, D > index_type; // todo: typedef multidimensional::index< D > index_type;
 
         typedef V value_type;
 
@@ -31,14 +31,14 @@ class slice
         const V& operator[]( const index_type& i ) const { return _data[ _index( i ) ]; }
 
         template < unsigned int I >
-        slice< V, D - I > at( const std::array< std::size_t, I >& i );
+        slice< V, D - I > at( const multidimensional::index< I >& i );
 
         template < unsigned int I >
-        const slice< V, D - I > at( const std::array< std::size_t, I >& i ) const;
+        const slice< V, D - I > at( const multidimensional::index< I >& i ) const;
 
-        slice< V, D - 1 > at( std::size_t i ) { return at< 1 >( std::array< std::size_t, 1 >{i} ); }
+        slice< V, D - 1 > at( std::size_t i ) { return at< 1 >( multidimensional::index< 1 >{i} ); }
 
-        const slice< V, D - 1 > at( std::size_t i ) const { return at< 1 >( std::array< std::size_t, 1 >{i} ); }
+        const slice< V, D - 1 > at( std::size_t i ) const { return at< 1 >( multidimensional::index< 1 >{i} ); }
 
         V* data() { return _data; }
         
@@ -127,10 +127,10 @@ class array
         const V& operator[]( const index_type& i ) const { return _slice[i]; }
 
         template < unsigned int I >
-        multidimensional::slice< V, D - I > at( const std::array< std::size_t, I >& i ) { return _slice.template at< I >( i ); }
+        multidimensional::slice< V, D - I > at( const multidimensional::index< I >& i ) { return _slice.template at< I >( i ); } // todo!
 
         template < unsigned int I >
-        const multidimensional::slice< V, D - I > at( const std::array< std::size_t, I >& i ) const { return _slice.template at< I >( i ); }
+        const multidimensional::slice< V, D - I > at( const multidimensional::index< I >& i ) const { return _slice.template at< I >( i ); } // todo!
 
         multidimensional::slice< V, D - 1 > at( std::size_t i ) { return _slice.at( i ); }
 
@@ -201,15 +201,15 @@ namespace impl {
 template < unsigned int D, unsigned int I = D >
 struct index_traits
 {
-    typedef std::array< std::size_t, D > index_type;
+    typedef comma::containers::multidimensional::index< D > index_type; // typedef std::array< std::size_t, D > index_type;
     static unsigned int value( const index_type& i, const index_type& shape ) { return i[ I - 1 ] + index_traits< D, I - 1 >::value( i, shape ) * shape[ I - 1 ]; }
     static void value( std::size_t j, index_type& i, const index_type& shape ) { i[ I - 1 ] = j % shape[ I - 1 ]; index_traits< D, I - 1 >::value( j / shape[ I - 1 ], i, shape ); }
     static index_type value( std::size_t j, const index_type& shape ) { index_type i; value( j, i, shape ); return i; }
     static std::size_t product( const index_type& i ) { return i[ I - 1 ] * index_traits< D, I - 1 >::product( i ); }
     template < unsigned int J >
-    static std::pair< std::array< std::size_t, J >, std::array< std::size_t, D - J > > split( const index_type& i ) // todo: use metaprogramming, kinda same as product
+    static std::pair< comma::containers::multidimensional::index< J >, comma::containers::multidimensional::index< D - J > > split( const index_type& i ) // todo: use metaprogramming, kinda same as product
     {
-        std::pair< std::array< std::size_t, J >, std::array< std::size_t, D - J > > p;
+        std::pair< comma::containers::multidimensional::index< J >, comma::containers::multidimensional::index< D - J > > p;
         unsigned int k = 0;
         for( unsigned int n = 0; n < J; ++n, ++k ) { p.first[n] = i[k]; }
         for( unsigned int n = 0; n < D - J; ++n, ++k ) { p.second[n] = i[k]; }
@@ -220,7 +220,7 @@ struct index_traits
 template < unsigned int D >
 struct index_traits< D, 1 >
 {
-    typedef std::array< std::size_t, D > index_type;
+    typedef comma::containers::multidimensional::index< D > index_type; // typedef std::array< std::size_t, D > index_type;
     static unsigned int value( const index_type& i, const index_type& ) { return i[0]; }
     static void value( std::size_t j, index_type& i, const index_type& size ) { i[0] = j; }
     static std::size_t product( const index_type& i ) { return i[0]; }
@@ -242,7 +242,7 @@ inline typename slice< V, D >::index_type slice< V, D >::const_iterator::index()
 
 template < typename V, unsigned int D >
 template < unsigned int I >
-inline slice< V, D - I > slice< V, D >::at( const std::array< std::size_t, I >& i )
+inline slice< V, D - I > slice< V, D >::at( const multidimensional::index< I >& i )
 {
     auto s = impl::index_traits< D >::template split< I >( _shape );
     return slice< V, D - I >( s.second, _data + impl::index_traits< I >::value( i, s.first ) * impl::index_traits< D - I >::product( s.second ) );
@@ -250,7 +250,7 @@ inline slice< V, D - I > slice< V, D >::at( const std::array< std::size_t, I >& 
 
 template < typename V, unsigned int D >
 template < unsigned int I >
-inline const slice< V, D - I > slice< V, D >::at( const std::array< std::size_t, I >& i ) const
+inline const slice< V, D - I > slice< V, D >::at( const multidimensional::index< I >& i ) const
 {
     auto s = impl::index_traits< D >::template split< I >( _shape );
     return slice< V, D - I >( s.second, _data + impl::index_traits< I >::value( i, s.first ) * impl::index_traits< D - I >::product( s.second ) );

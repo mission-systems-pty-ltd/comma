@@ -158,7 +158,7 @@ TEST( multidimensional_array, slice )
             { index_t i{2, 1}; EXPECT_EQ( s[i], 21 ); }
             { index_t i{2, 2}; EXPECT_EQ( s[i], 22 ); }
             { index_t i{2, 3}; EXPECT_EQ( s[i], 23 ); }
-            { s[{1, 3}] = 111; std::array< std::size_t, 3 > i{1, 1, 3}; EXPECT_EQ( a[i], 111 ); }
+            s[{1, 3}] = 111; EXPECT_EQ( ( a[{1, 1, 3}] ), 111 );
         }
         {
             cmd::array< int, 3 > a( {2, 3, 4}, 0 );
