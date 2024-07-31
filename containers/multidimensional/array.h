@@ -8,29 +8,15 @@
 #include <cstring>
 #include "../../base/types.h"
 #include "array_traits.h"
+#include "index.h"
 
 namespace comma { namespace containers { namespace multidimensional {
-
-template < unsigned int D >
-struct index: public std::array< std::size_t, D >
-{
-    typedef std::array< std::size_t, D > base_t;
-
-    //index() { std::memset( reinterpret_cast< char* >( this ), 0, sizeof( std::size_t ) * D ); }
-    template < typename... Args > index( Args... args ): base_t( { args... } ) {}
-    bool operator<( const index& rhs ) const;
-    bool operator==( const index& rhs ) const;
-    bool operator!=( const index& rhs ) const { return !operator==( rhs ); }
-    index& increment( const index& sizes );
-
-    class iterator;
-};
 
 template < typename V, unsigned int D >
 class slice
 {
     public:
-        typedef std::array< std::size_t, D > index_type;
+        typedef std::array< std::size_t, D > index_type; // todo: typedef multidimensional::index< D > index_type;
 
         typedef V value_type;
 
@@ -325,44 +311,5 @@ inline bool grid< V, D, P, Traits, S >::has( const P& point ) const // quick and
     for( unsigned int k = 0; k < D; ++k ) { if( i[k] < 0 || i[k] >= this->shape()[k] ) { return false; } }
     return true;
 }
-
-template < unsigned int D > inline bool index< D >::operator<( const index& rhs ) const // todo: unravel in compile time (compiler probably will do it anyway)
-{
-    for( unsigned int i = 0; i < D; ++i )
-    {
-        if( ( *this )[i] < rhs[i] ) { return true; }
-    }
-    return false;
-}
-
-template < unsigned int D > inline bool index< D >::operator==( const index& rhs ) const // todo: unravel in compile time (compiler probably will do it anyway)
-{
-    return std::memcmp( reinterpret_cast< const char* >( this ), reinterpret_cast< const char* >( &rhs ), sizeof( std::size_t ) * D ) == 0;
-}
-
-template < unsigned int D > inline index< D >& index< D >::increment( const index< D >& sizes ) // todo: unravel in compile time (compiler probably will do it anyway)
-{
-    for( unsigned int i{0}, j{D - 1}; i < D; ++i, --j )
-    {
-        if( ++( *this )[j] < sizes[j] ) { return *this; }
-        ( *this )[j] = 0;
-    }
-    return *this;
-}
-
-template < unsigned int D >
-class index< D >::iterator
-{
-    public:
-        iterator( const index< D >& shape ): _shape( shape ) {}
-        iterator& operator++() { _valid = _index.increment( _shape ) != index< D >{}; return *this; }
-        operator bool() const { return _valid; }
-        const index< D >& operator*() const { return _index; }
-
-    private:
-        index< D > _index;
-        index< D > _shape;
-        bool _valid{true};
-};
 
 } } } // namespace comma { namespace containers { namespace multidimensional {

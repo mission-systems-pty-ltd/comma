@@ -8,6 +8,7 @@
 #include <cmath>
 #include <type_traits>
 #include "../../math/compare.h"
+#include "index.h"
 
 template< typename T, std::size_t D, typename S >
 inline std::array< T, D >& operator*=( std::array< T, D >& lhs, const S& rhs ) { for( unsigned int i = 0; i < D; ++i ) { lhs[i] *= rhs; } return lhs; } // quick and dirty; let compiler optimize

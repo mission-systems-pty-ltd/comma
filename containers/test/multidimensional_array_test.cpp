@@ -41,6 +41,22 @@ TEST( multidimensional_array, impl_index_inverted_value )
     // todo: way more tests
 }
 
+TEST( multidimensional_array, index )
+{
+    {
+        cmd::array< int, 3 > a( {2, 3, 4}, 0 );
+        unsigned int i = 0;
+        for( auto it = a.begin(); it != a.end(); ++it ) { *it = i++; }
+        typedef cmd::array< int, 3 >::index_type array_index_t;
+        typedef cmd::index< 3 > index_t;
+        EXPECT_EQ( ( array_index_t{1, 2, 3} ), ( index_t{1, 2, 3} ) );
+        EXPECT_EQ( ( index_t{1, 2, 3} ), ( array_index_t{1, 2, 3} ) );
+        EXPECT_EQ( ( a[{1, 2, 3}]), 23 );
+        EXPECT_EQ( ( a[ index_t( {1, 2, 3} )] ), 23 );
+        EXPECT_EQ( ( a[ index_t( {1, 2, 3} )] ), 23 );
+    }
+}
+
 TEST( multidimensional_array, iteration )
 {
     {
@@ -86,13 +102,12 @@ TEST( multidimensional_array, array )
         cmd::array< int, 3 > a( {2, 3, 4}, 0 );
         unsigned int i = 0;
         for( auto it = a.begin(); it != a.end(); ++it ) { *it = i++; }
-        typedef cmd::array< int, 3 >::index_type index_t;
-        { index_t i{0, 0, 0}; EXPECT_EQ( a[i], 0 ); }
-        { index_t i{0, 1, 0}; EXPECT_EQ( a[i], 4 ); }
-        { index_t i{1, 2, 3}; EXPECT_EQ( a[i], 23 ); }
-        { index_t i{0, 0, 0}; a[{0, 0, 0}] = 111; EXPECT_EQ( a[i], 111 ); }
-        { index_t i{1, 1, 2}; a[{1, 1, 2}] = 222; EXPECT_EQ( a[i], 222 ); }
-        { index_t i{1, 2, 3}; a[{1, 2, 3}] = 333; EXPECT_EQ( a[i], 333 ); }
+        EXPECT_EQ( ( a[{0, 0, 0}] ), 0 );
+        EXPECT_EQ( ( a[{0, 1, 0}] ), 4 );
+        EXPECT_EQ( ( a[{1, 2, 3}] ), 23 );
+        a[{0, 0, 0}] = 111; EXPECT_EQ( ( a[{0, 0, 0}] ), 111 );
+        a[{1, 1, 2}] = 222; EXPECT_EQ( ( a[{1, 1, 2}] ), 222 );
+        a[{1, 2, 3}] = 333; EXPECT_EQ( ( a[{1, 2, 3}] ), 333 );
     }
 }
 
