@@ -301,7 +301,6 @@ std::string usage( bool )
 }
 
 // todo
-// - examples
 // - test
 // - notify
 
