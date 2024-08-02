@@ -284,9 +284,15 @@ std::string usage( bool )
 {
     return R"(    sliding-window
         --incremental; output first block incrementally: first record, then first and second, etc
+        --prepend-block,--block; prepend each record with block number, ui if binary output
         --size=<n>; number of input records in each grouping
         --step=<n>; default=1; sliding window step)";
 }
+
+// todo
+// - examples
+// - test
+// - notify
 
 static int run( const comma::command_line_options& options, comma::csv::options& csv )
 {
@@ -296,12 +302,23 @@ static int run( const comma::command_line_options& options, comma::csv::options&
     std::deque< std::string > deque;
     std::string record = csv.binary() ? std::string( csv.format().size(), 0 ) : std::string();
     bool incremental = options.exists( "--incremental" );
+    bool prepend_block = options.exists( "--prepend-block,--block" );
+    std::uint32_t block = 0;
     auto output_record = [&]( const std::string& record )
     {
+        if( prepend_block )
+        {
+            if( csv.binary() ) { std::cout.write( reinterpret_cast< const char* >( &block ), sizeof( std::uint32_t ) ); }
+            else { std::cout << block << csv.delimiter; }
+        }
         std::cout.write( &record[0], record.size() );
         if( !csv.binary() ) { std::cout << std::endl; }
     };
-    auto output_all = [&]() { for( const auto& r: deque ) { output_record( r ); } };
+    auto output_all = [&]()
+    {
+        for( const auto& r: deque ) { output_record( r ); }
+        ++block;
+    };
     while( std::cin.good() && !std::cin.eof() )
     {
         if( csv.binary() )
@@ -323,7 +340,15 @@ static int run( const comma::command_line_options& options, comma::csv::options&
         if( deque.size() < ( size + stride ) )
         {
             if( deque.size() > size ) { continue; }
-            if( incremental ) { if( deque.size() % stride == 0 ) { output_all(); } } else { output_record( record ); }
+            if( incremental )
+            {
+                if( deque.size() % stride == 0 ) { output_all(); }
+            }
+            else
+            {
+                output_record( record );
+                if( deque.size() == size ) { ++block; } // quick and dirty
+            }
         }
         else
         {
@@ -344,7 +369,7 @@ int main( int ac, char** av )
     try
     {
         comma::command_line_options options( ac, av, usage );
-        std::vector< std::string > unnamed = options.unnamed( "--expected-records,--incremental,--repeat,--sliding-window,-w,--verbose,-v", "-.*" );
+        std::vector< std::string > unnamed = options.unnamed( "--prepend-block,--block,--expected-records,--incremental,--repeat,--sliding-window,-w,--verbose,-v", "-.*" );
         comma::csv::options csv( options );
         csv.full_xpath = false;
         if( csv.fields.empty() ) { csv.fields="a"; }
