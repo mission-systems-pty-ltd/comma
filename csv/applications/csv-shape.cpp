@@ -283,6 +283,7 @@ namespace sliding_window {
 std::string usage( bool )
 {
     return R"(    sliding-window
+        --incremental; output first block incrementally: first record, then first and second, etc
         --size=<n>; number of input records in each grouping
         --step=<n>; default=1; sliding window step)";
 }
@@ -294,6 +295,13 @@ static int run( const comma::command_line_options& options, comma::csv::options&
     COMMA_ASSERT( stride <= size, "stride greater than size currently not supported, just ask; got: size: " << size << " stride: " << stride );
     std::deque< std::string > deque;
     std::string record = csv.binary() ? std::string( csv.format().size(), 0 ) : std::string();
+    bool incremental = options.exists( "--incremental" );
+    auto output_record = [&]( const std::string& record )
+    {
+        std::cout.write( &record[0], record.size() );
+        if( !csv.binary() ) { std::cout << std::endl; }
+    };
+    auto output_all = [&]() { for( const auto& r: deque ) { output_record( r ); } };
     while( std::cin.good() && !std::cin.eof() )
     {
         if( csv.binary() )
@@ -311,17 +319,12 @@ static int run( const comma::command_line_options& options, comma::csv::options&
         if( deque.size() > ( size + stride ) )
         {
             for( unsigned int i = 0; i < stride; ++i ) { deque.pop_front(); } // quick and dirty
-            for( const auto& d: deque )
-            {
-                std::cout.write( &d[0], d.size() );
-                if( !csv.binary() ) { std::cout << std::endl; }
-            }
+            output_all();
         }
         else
         {
             if( deque.size() > size ) { continue; }
-            std::cout.write( &record[0], record.size() );
-            if( !csv.binary() ) { std::cout << std::endl; }
+            if( incremental ) { output_all(); } else { output_record( record ); }
         }
         if( csv.flush ) { std::cout.flush(); }
     }
@@ -337,7 +340,7 @@ int main( int ac, char** av )
     try
     {
         comma::command_line_options options( ac, av, usage );
-        std::vector< std::string > unnamed = options.unnamed( "--expected-records,--repeat,--sliding-window,-w,--verbose,-v", "-.*" );
+        std::vector< std::string > unnamed = options.unnamed( "--expected-records,--incremental,--repeat,--sliding-window,-w,--verbose,-v", "-.*" );
         comma::csv::options csv( options );
         csv.full_xpath = false;
         if( csv.fields.empty() ) { csv.fields="a"; }
