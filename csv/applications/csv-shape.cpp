@@ -316,16 +316,20 @@ static int run( const comma::command_line_options& options, comma::csv::options&
             if( comma::strip( record ).empty() ) { continue; }
         }
         deque.push_back( record );
-        if( deque.size() > ( size + stride ) )
-        {
-            for( unsigned int i = 0; i < stride; ++i ) { deque.pop_front(); } // quick and dirty
-            output_all();
-        }
-        else
+        // std::cerr << "============" << std::endl;
+        // for( const auto& d: deque ) { std::cerr << " " << d; }
+        // std::cerr << std::endl;
+        // std::cerr << "------------" << std::endl;
+        if( deque.size() < ( size + stride ) )
         {
             if( deque.size() > size ) { continue; }
             if( incremental ) { output_all(); } else { output_record( record ); }
         }
+        else
+        {
+            while( deque.size() > size ) { deque.pop_front(); } // quick and dirty
+            output_all();
+        }        
         if( csv.flush ) { std::cout.flush(); }
     }
     return 0;
