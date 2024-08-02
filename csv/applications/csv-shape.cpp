@@ -300,10 +300,6 @@ std::string usage( bool )
         --step=<n>; default=1; sliding window step)";
 }
 
-// todo
-// - test
-// - notify
-
 static int run( const comma::command_line_options& options, comma::csv::options& csv )
 {
     const unsigned int size = options.value< unsigned int >( "--size" );
