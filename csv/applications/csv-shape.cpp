@@ -1,11 +1,11 @@
 // Copyright (c) 2011 The University of Sydney
-// Copyright (c) 2023 Vsevolod Vlaskine
+// Copyright (c) 2023-2024 Vsevolod Vlaskine
 
 /// @author dewey nguyen
 
+#include <deque>
 #include <iostream>
 #include <vector>
-#include <deque>
 #include "../../base/types.h"
 #include "../../application/command_line_options.h"
 #include "../options.h"
@@ -14,18 +14,21 @@
 
 using namespace comma;
 
+namespace comma { namespace csv { namespace applications { namespace shape { namespace operations { namespace sliding_window { static std::string usage( bool verbose ); } } } } } }
+
 static void usage( bool verbose=false )
 {
     std::cerr << "Perform reshaping operations on input data" << std::endl;
     std::cerr << std::endl;
     std::cerr << "operations" << std::endl;
-    std::cerr << "    concatenate: group input records for concatenation into output records." << std::endl;
-    std::cerr << "                 the user can choose non-overlapping or overlapping grouping (sliding window) mode." << std::endl;
-    std::cerr << "    loop:        same as concatenate, but with an additional last record:" << std::endl;
-    std::cerr << "                 last input record concatenated with the first record (hence, 'loop')" << std::endl;
-    std::cerr << "                 this mode always uses the sliding window for overlapping groups" << std::endl;
-    std::cerr << "    repeat:      repeat input given number of times, e.g. csv-shape repeat --size 5" << std::endl;
-    std::cerr << "    split:       csv-only: split line at n-th field, e.g. csv-shape split --size 4" << std::endl;
+    std::cerr << "    concatenate:    group input records for concatenation into output records." << std::endl;
+    std::cerr << "                    the user can choose non-overlapping or overlapping grouping (sliding window) mode." << std::endl;
+    std::cerr << "    loop:           same as concatenate, but with an additional last record:" << std::endl;
+    std::cerr << "                    last input record concatenated with the first record (hence, 'loop')" << std::endl;
+    std::cerr << "                    this mode always uses the sliding window for overlapping groups" << std::endl;
+    std::cerr << "    repeat:         repeat input given number of times, e.g. csv-shape repeat --size 5" << std::endl;
+    std::cerr << "    sliding-window: todo" << std::endl;
+    std::cerr << "    split:          csv-only: split line at n-th field, e.g. csv-shape split --size 4" << std::endl;
     std::cerr << std::endl;
     std::cerr << "Usage: cat data.csv | csv-shape <operation> [<options>]" << std::endl;
     std::cerr << std::endl;
@@ -49,6 +52,7 @@ static void usage( bool verbose=false )
     std::cerr << "                     echo 0,1,2,3,4,5 | csv-shape split -n 2 --repeat will output: 0,1, then 2,3, then 4,5" << std::endl;
     std::cerr << "      --size,-n=<n>; e.g. echo 0,1,2,3,4,5| csv-shape split -n 3 will output" << std::endl;
     std::cerr << "                     two lines: 0,1,2 and 3,4,5" << std::endl;
+    std::cerr << comma::csv::applications::shape::operations::sliding_window::usage( verbose ) << std::endl;
     std::cerr << std::endl;
     std::cerr << "csv options" << std::endl;
     std::cerr << comma::csv::options::usage( verbose ) << std::endl;
@@ -273,6 +277,50 @@ static int _split( const comma::command_line_options& options, const comma::csv:
     return 0;
 }
 
+namespace comma { namespace csv { namespace applications { namespace shape { namespace operations {
+
+namespace sliding_window {
+
+std::string usage( bool verbose )
+{
+    ( void )verbose;
+    return R"(todo)";
+}
+
+static int run( const comma::command_line_options& options, comma::csv::options& csv )
+{
+    unsigned int size = options.value< unsigned int >( "--size" );
+    std::deque< std::string > deque;
+    if( csv.binary() )
+    {
+        // todo
+    }
+    else
+    {
+        while( std::cin.good() && !std::cin.eof() )
+        {
+            std::string line;
+            std::getline( std::cin, line );
+            if( comma::strip( line ).empty() ) { continue; }
+            deque.push_back( line );
+            if( deque.size() > size )
+            {
+                deque.pop_front();
+                for( const auto& d: deque ) { std::cout << d << std::endl; }
+            }
+            else
+            {
+                std::cout << line << std::endl;
+            }
+        }
+    }
+    return 0;
+}
+
+} // namespace sliding_window {
+
+} } } } } // namespace comma { namespace csv { namespace applications { namespace shape { namespace operations {
+
 int main( int ac, char** av )
 {
     try
@@ -287,8 +335,9 @@ int main( int ac, char** av )
         std::string operation = unnamed[0];
         if( operation == "concatenate" || operation == "loop" ) { return _concatenate().run( options, csv ); }
         if( operation == "repeat" ) { return _repeat( options, csv ); }
+        if( operation == "sliding-window" ) { return comma::csv::applications::shape::operations::sliding_window::run( options, csv ); }
         if( operation == "split" ) { return _split( options, csv ); }
-        std::cerr << comma::verbose.app_name() << ": expected operation; got: '" << operation << '\'' << std::endl;
+        comma::say() << ": expected operation; got: '" << operation << "'" << std::endl;
     }
     catch( std::exception& ex ) { std::cerr << "csv-shape: " << ex.what() << std::endl; }
     catch( ... ) { std::cerr << "csv-shape: unknown exception" << std::endl; }
