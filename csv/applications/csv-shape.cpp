@@ -58,22 +58,33 @@ static void usage( bool verbose=false )
     std::cerr << "examples" << std::endl;
     if( verbose )
     {
-        std::cerr << "examples" << std::endl;
-        std::cerr << "   concatenate" << std::endl;
-        std::cerr << "      non-overlapping groups:" << std::endl;
-        std::cerr << "          concatenate each group of 5 input records into one output record." << std::endl;
-        std::cerr << "          input records 1 to 5 create the first output record, input records 6-10 create the second output record, and so forth." << std::endl;
-        std::cerr << "              seq 1 15 | csv-shape concatenate -n 5" << std::endl;
-        std::cerr << "      overlapping groups:" << std::endl;
-        std::cerr << "          move a sliding window of size 5 along the input records, every time the sliding window moves, make an output record from window" << std::endl;
-        std::cerr << "          input records 1 to 5 create the first output record, input records 2 to 6 create the second record, input records 3 to 7 create the third record, and so forth" << std::endl;
-        std::cerr << "              seq 1 10 | csv-shape concatenate -n 5 --sliding-window" << std::endl;
-        std::cerr << std::endl;
+        std::cerr << R"(examples
+    concatenate
+        non-overlapping groups
+            concatenate each group of 5 input records into one output record.
+            input records 1 to 5 create the first output record, input records 6-10 create the second output record, and so forth.
+                seq 1 15 | csv-shape concatenate -n 5
+        overlapping groups
+            move a sliding window of size 5 along the input records, every time the sliding window moves, make an output record from window
+            input records 1 to 5 create the first output record, input records 2 to 6 create the second record, input records 3 to 7 create the third record, and so forth
+                seq 1 10 | csv-shape concatenate -n 5 --sliding-window
+    sliding-window
+        basics
+            for x in a b c d e f g h; do echo $x; done | csv-shape sliding-window --size 4
+            for x in a b c d e f g h; do echo $x; done | csv-shape sliding-window --size 4 --step 2
+        enumerate blocks of records
+            for x in a b c d e f g h; do echo $x; done | csv-shape sliding-window --size 4 --block
+            for x in a b c d e f g h; do echo $x; done | csv-shape sliding-window --size 4 --step 2 --block
+        incrementally output of the records 
+            for x in a b c d e f; do echo $x; done | csv-shape sliding-window --size 4 --incremental --block
+            for x in a b c d e f; do echo $x; done | csv-shape sliding-window --size 4 --incremental --block --step 2
+)";
     }
     else
     {
         std::cerr << "    run csv-shape --help --verbose for more..." << std::endl;
     }
+    std::cerr << std::endl;
     exit( 0 );
 }
 
