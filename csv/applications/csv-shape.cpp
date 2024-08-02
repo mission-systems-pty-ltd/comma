@@ -323,7 +323,7 @@ static int run( const comma::command_line_options& options, comma::csv::options&
         if( deque.size() < ( size + stride ) )
         {
             if( deque.size() > size ) { continue; }
-            if( incremental ) { output_all(); } else { output_record( record ); }
+            if( incremental ) { if( deque.size() % stride == 0 ) { output_all(); } } else { output_record( record ); }
         }
         else
         {
