@@ -39,19 +39,18 @@ static void usage( bool verbose=false )
     std::cerr << "    --verbose,-v: more output to stderr, shows examples with --help,-h" << std::endl;
     std::cerr << std::endl;
     std::cerr << "operations options" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "   concatenate" << std::endl;
-    std::cerr << "      --bidirectional; output records in both directions (e.g. a,b; b,a)" << std::endl;
-    std::cerr << "      --reverse; output records in reverse order (e.g. b,a)" << std::endl;
-    std::cerr << "      --sliding-window,-w; use a sliding window to group input records, see examples" << std::endl;
-    std::cerr << "   loop" << std::endl;
-    std::cerr << "      --bidirectional; output records in both directions (e.g. a,b; b,a)" << std::endl;
-    std::cerr << "      --reverse; output records in reverse order (e.g. b,a)" << std::endl;
-    std::cerr << "   split" << std::endl;
-    std::cerr << "      --repeat; e.g: echo 0,1,2,3,4,5 | csv-shape split -n 2 will output: 0,1 and 2,3,4,5" << std::endl;
-    std::cerr << "                     echo 0,1,2,3,4,5 | csv-shape split -n 2 --repeat will output: 0,1, then 2,3, then 4,5" << std::endl;
-    std::cerr << "      --size,-n=<n>; e.g. echo 0,1,2,3,4,5| csv-shape split -n 3 will output" << std::endl;
-    std::cerr << "                     two lines: 0,1,2 and 3,4,5" << std::endl;
+    std::cerr << "    concatenate" << std::endl;
+    std::cerr << "       --bidirectional; output records in both directions (e.g. a,b; b,a)" << std::endl;
+    std::cerr << "       --reverse; output records in reverse order (e.g. b,a)" << std::endl;
+    std::cerr << "       --sliding-window,-w; use a sliding window to group input records, see examples" << std::endl;
+    std::cerr << "    loop" << std::endl;
+    std::cerr << "       --bidirectional; output records in both directions (e.g. a,b; b,a)" << std::endl;
+    std::cerr << "       --reverse; output records in reverse order (e.g. b,a)" << std::endl;
+    std::cerr << "    split" << std::endl;
+    std::cerr << "       --repeat; e.g: echo 0,1,2,3,4,5 | csv-shape split -n 2 will output: 0,1 and 2,3,4,5" << std::endl;
+    std::cerr << "                      echo 0,1,2,3,4,5 | csv-shape split -n 2 --repeat will output: 0,1, then 2,3, then 4,5" << std::endl;
+    std::cerr << "       --size,-n=<n>; e.g. echo 0,1,2,3,4,5| csv-shape split -n 3 will output" << std::endl;
+    std::cerr << "                      two lines: 0,1,2 and 3,4,5" << std::endl;
     std::cerr << comma::csv::applications::shape::operations::sliding_window::usage( verbose ) << std::endl;
     std::cerr << std::endl;
     std::cerr << "csv options" << std::endl;
@@ -281,38 +280,50 @@ namespace comma { namespace csv { namespace applications { namespace shape { nam
 
 namespace sliding_window {
 
-std::string usage( bool verbose )
+std::string usage( bool )
 {
-    ( void )verbose;
-    return R"(todo)";
+    return R"(    sliding-window
+        --size=<n>; number of input records in each grouping
+        --step=<n>; default=1; sliding window step)";
 }
 
 static int run( const comma::command_line_options& options, comma::csv::options& csv )
 {
-    unsigned int size = options.value< unsigned int >( "--size" );
+    const unsigned int size = options.value< unsigned int >( "--size" );
+    const unsigned int stride = options.value< unsigned int >( "--step,--stride", 1 );
+    COMMA_ASSERT( stride <= size, "stride greater than size currently not supported, just ask; got: size: " << size << " stride: " << stride );
     std::deque< std::string > deque;
-    if( csv.binary() )
+    std::string record = csv.binary() ? std::string( csv.format().size(), 0 ) : std::string();
+    while( std::cin.good() && !std::cin.eof() )
     {
-        // todo
-    }
-    else
-    {
-        while( std::cin.good() && !std::cin.eof() )
+        if( csv.binary() )
         {
-            std::string line;
-            std::getline( std::cin, line );
-            if( comma::strip( line ).empty() ) { continue; }
-            deque.push_back( line );
-            if( deque.size() > size )
+            std::cin.read( &record[0], record.size() );
+            if( std::cin.gcount() == 0 ) { break; }
+            COMMA_ASSERT( std::cin.gcount() == int( record.size() ), "expected " << record.size() << " bytes; got only: " << std::cin.gcount() );
+        }
+        else
+        {
+            std::getline( std::cin, record );
+            if( comma::strip( record ).empty() ) { continue; }
+        }
+        deque.push_back( record );
+        if( deque.size() > ( size + stride ) )
+        {
+            for( unsigned int i = 0; i < stride; ++i ) { deque.pop_front(); } // quick and dirty
+            for( const auto& d: deque )
             {
-                deque.pop_front();
-                for( const auto& d: deque ) { std::cout << d << std::endl; }
-            }
-            else
-            {
-                std::cout << line << std::endl;
+                std::cout.write( &d[0], d.size() );
+                if( !csv.binary() ) { std::cout << std::endl; }
             }
         }
+        else
+        {
+            if( deque.size() > size ) { continue; }
+            std::cout.write( &record[0], record.size() );
+            if( !csv.binary() ) { std::cout << std::endl; }
+        }
+        if( csv.flush ) { std::cout.flush(); }
     }
     return 0;
 }
