@@ -97,6 +97,8 @@ class slice
 
         const_iterator end() const { return const_iterator( _size, _data + _size, _shape ); }
 
+        std::size_t absolute_index( const index_type& i ) const { return _index( i ); }
+
     protected:
         index_type _shape;
         std::size_t _size;
@@ -122,9 +124,9 @@ class array
 
         array( const index_type& shape, const V& default_value = V() );
 
-        V& operator[]( const index_type& i ) { return _slice[i]; }
+        V& operator[]( const index_type& i ) { return _slice[i]; } // V& operator[]( const index_type& i ) { return _data[ absolute_index( i ) ]; } //{ return _slice[i]; }
 
-        const V& operator[]( const index_type& i ) const { return _slice[i]; }
+        const V& operator[]( const index_type& i ) const { return _slice[i]; } // const V& operator[]( const index_type& i ) const { return _data[ absolute_index( i ) ]; } //{ return _slice[i]; }
 
         template < unsigned int I >
         multidimensional::slice< V, D - I > at( const multidimensional::index< I >& i ) { return _slice.template at< I >( i ); } // todo!
@@ -141,6 +143,8 @@ class array
         const storage_type& data() const { return _data; }
 
         const index_type& shape() const { return _slice.shape(); }
+
+        std::size_t absolute_index( const index_type& i ) const { return _slice.absolute_index( i ); }
 
         typedef typename slice_type::iterator iterator;
 
