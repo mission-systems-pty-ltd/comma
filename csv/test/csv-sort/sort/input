@@ -14,3 +14,15 @@ descending/block[2]="( echo 1,0; echo 0,0; echo 1,0 ; echo 1,1; echo 0,1; echo 1
 
 numeric_keys_are_floats[0]="( echo 5; echo 4; echo 3.1; echo 2 ) | csv-sort --fields a"
 numeric_keys_are_floats[1]="( echo 5; echo 4; echo 3.1; echo 2 ) | csv-sort --fields a --numeric-keys-are-floats"
+
+strings[0]="( echo a,z; echo b,z; echo b,y )     | csv-sort              | tr '\\n' ';'"
+strings[1]="( echo a,z; echo b,z; echo b,y )     | csv-sort --fields a,b | tr '\\n' ';'"
+strings[2]="( echo a,z; echo b,z; echo b,y )     | csv-sort --fields a   | tr '\\n' ';'"
+strings[3]="( echo a,z; echo b,z; echo b,y )     | csv-sort --fields ,a  | tr '\\n' ';'"
+strings[4]="( echo a_; echo aa; echo _a )        | csv-sort              | tr '\\n' ';'"
+strings[5]="( echo ,a_; echo ,aa; echo ,_a )     | csv-sort              | tr '\\n' ';'"
+strings[6]="( echo ,a_; echo ,aa; echo ,_a )     | csv-sort --fields ,a  | tr '\\n' ';'"
+strings[7]="( echo y,a_; echo x,aa; echo z,_a )  | csv-sort              | tr '\\n' ';'"
+strings[8]="( echo y,a_; echo x,aa; echo z,_a )  | csv-sort --fields a,b | tr '\\n' ';'"
+strings[9]="( echo y,a_; echo x,aa; echo z,_a )  | csv-sort --fields a   | tr '\\n' ';'"
+strings[10]="( echo y,a_; echo x,aa; echo z,_a ) | csv-sort --fields ,a  | tr '\\n' ';'"

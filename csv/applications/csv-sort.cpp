@@ -618,15 +618,21 @@ static int random( const comma::command_line_options& options )
 static int sort( const comma::command_line_options& options )
 {
     input_with_block default_input;
-    std::vector< std::string > v = comma::split( csv.fields, ',' );
-    std::vector< std::string > order = options.exists( "--order" ) ? comma::split( options.value< std::string >( "--order" ), ',' ) : v;
+    std::vector< std::string > v = comma::split( csv.fields, ',', true );
+    std::vector< std::string > order = options.exists( "--order" ) ? comma::split( options.value< std::string >( "--order" ), ',', true ) : v;
     std::vector< std::string > w( v.size() );
     bool unique = options.exists( "--unique,-u" );
     for( std::size_t k = 0; k < v.size(); ++k ) { if( v[k] == "block" ) { w[k] = "block"; } }
     std::string first_line;
     comma::csv::format f;
-    if( csv.binary() ) { f = csv.format(); }
-    else if( options.exists( "--format" ) ) { f = comma::csv::format( options.value< std::string >( "--format" ) ); }
+    if( csv.binary() )
+    {
+        f = csv.format();
+    }
+    else if( options.exists( "--format" ) )
+    {
+        f = comma::csv::format( options.value< std::string >( "--format" ) );
+    }
     else
     {
         while( std::cin.good() && first_line.empty() ) { std::getline( std::cin, first_line ); }
@@ -634,12 +640,19 @@ static int sort( const comma::command_line_options& options )
         f = comma::csv::impl::unstructured::guess_format( first_line, csv.delimiter, options.exists( "--numeric-keys-are-floats,--floats" ) );
         if( verbose ) { std::cerr << "csv-sort: guessed format: " << f.string() << std::endl; }
     }
+    if( order.empty() ) // quick and dirty for now (really should be a method in unstructured or alike)
+    {
+        order.resize( f.count() );
+        for( unsigned int i = 0; i < order.size(); ++i ) { order[i] = std::to_string( i ); }
+        if( v.empty() ) { v = order; w.resize( v.size() ); }
+    }
     for( std::size_t i = 0; i < order.size(); ++i ) // quick and dirty, wasteful, but who cares
     {
         if( order[i].empty() || order[i] == "block" ) { continue; }
         for( std::size_t k = 0; k < v.size(); ++k )
         {
-            if( v[k].empty() || v[k] != order[i] ) { 
+            if( v[k].empty() || v[k] != order[i] )
+            {
                 if( k + 1 == v.size() ) { std::cerr << "csv-sort: order field name \"" << order[i] << "\" not found in input fields \"" << csv.fields << "\"" << std::endl; return 1; }
                 continue; 
             }
@@ -667,7 +680,7 @@ static int sort( const comma::command_line_options& options )
     if( sliding_window ) { return handle_sliding_window( istream, first_line, default_input, reverse, *sliding_window ); }
     input_t::map map;
     if( !first_line.empty() )
-    { 
+    {
         input_with_block input = comma::csv::ascii< input_with_block >( csv, default_input ).get( first_line );
         block.update( input );
         input_t::map::mapped_type& d = map[ input ];
