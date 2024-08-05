@@ -45,54 +45,52 @@
 
 static void usage( bool )
 {
-    std::cerr << "\n";
-    std::cerr << "wrap/check crc on fixed-width input (ascii or binary)\n";
-    std::cerr << "\n";
-    std::cerr << "usage: csv-crc <command> [<options>]\n";
-    std::cerr << "\n";
-    std::cerr << "<command>\n";
-    std::cerr << "    wrap:    add crc\n";
-    std::cerr << "    check:   check crc; exit if check fails\n";
-    std::cerr << "    recover: recover with given parameters (see below)\n";
-    std::cerr << "\n";
-    std::cerr << "general options\n";
-    std::cerr << "    --help,-h;    this help\n";
-    std::cerr << "    --verbose,-v: more output\n";
-    std::cerr << "\n";
-    std::cerr << "data options\n";
-    std::cerr << "    --crc-size;      output given crc size to stdout and exit\n";
-    std::cerr << "    --delimiter,-d=[<char>]: ascii csv delimiter\n";
-    std::cerr << "    --size=[<size>]: binary data size; if absent, expect ascii csv\n";
-    std::cerr << "                     for wrap: payload size\n";
-    std::cerr << "                     for check/recover: size including crc\n";
-    std::cerr << "\n";
-    std::cerr << "crc options\n";
-    std::cerr << "    --crc=<which>:\n";
-    std::cerr << "        16:     16-bit, generator 0x8805\n";
-    std::cerr << "        ccitt:  16-bit, generator 0x1021\n";
-    std::cerr << "        xmodem: 16-bit, generator 0x1021\n";
-    std::cerr << "        32:     32-bit, generator 0x04C11DB7\n";
-    //std::cerr << "        checksum16: simple 16-bit checksum (todo)\n";
-    //std::cerr << "        checksum32: simple 32-bit checksum (todo)\n";
-    std::cerr << "        default: ccitt\n";
-    std::cerr << "    --big-endian,--net-byte-order: if binary, crc is big endian\n";
-    std::cerr << "\n";
-    std::cerr << "recover options\n";
-    std::cerr << "    --give-up-after=<n>: if check fails, give up after <n> bytes\n";
-    std::cerr << "                         default: infinity; don't give up\n";
-    std::cerr << "    --recover-after=<n>: if check fails and then new valid crc found\n";
-    std::cerr << "                         make sure that at least <n> subsequent lines (ascii)\n";
-    std::cerr << "                         or packets (binary) are valid, before output;\n";
-    std::cerr << "                         default: 0; recover on the next valid packet\n";
-    std::cerr << "    --discard-on-recovery,--discard: discard packets accumulated when recovering\n";
-    std::cerr << "\n";
-    std::cerr << "    Note that the check command is equivalent to\n";
-    std::cerr << "    csv-crc recover --give-up-after 0\n";
-    std::cerr << "\n";
-    std::cerr << "For a definitive list of 16 bit CRC algorithms see:\n";
-    std::cerr << "http://reveng.sourceforge.net/crc-catalogue/16.htm\n";
-    std::cerr << std::endl;
-    exit( 1 );
+    std::cerr << R"(
+wrap/check crc on fixed-width input (ascii or binary)
+
+usage: csv-crc <command> [<options>]
+
+<command>
+    wrap:    add crc
+    check:   check crc; exit if check fails
+    recover: recover with given parameters (see below)
+
+general options
+    --help,-h;    this help
+    --verbose,-v: more output
+
+data options
+    --crc-size;      output given crc size to stdout and exit
+    --delimiter,-d=[<char>]: ascii csv delimiter
+    --size=[<size>]: binary data size; if absent, expect ascii csv
+                     for wrap: payload size
+                     for check/recover: size including crc
+
+crc options
+    --crc=<which>:
+        16:     16-bit, generator 0x8805
+        ccitt:  16-bit, generator 0x1021
+        xmodem: 16-bit, generator 0x1021
+        32:     32-bit, generator 0x04C11DB7
+        default: ccitt
+    --big-endian,--net-byte-order: if binary, crc is big endian
+
+recover options
+    --give-up-after=<n>: if check fails, give up after <n> bytes
+                         default: infinity; don't give up
+    --recover-after=<n>: if check fails and then new valid crc found
+                         make sure that at least <n> subsequent lines (ascii)
+                         or packets (binary) are valid, before output;
+                         default: 0; recover on the next valid packet
+    --discard-on-recovery,--discard: discard packets accumulated when recovering
+
+    Note that the check command is equivalent to
+    csv-crc recover --give-up-after 0
+
+For a definitive list of 16 bit CRC algorithms see:
+http://reveng.sourceforge.net/crc-catalogue/16.htm
+)";
+    exit( 0 );
 }
 
 static bool verbose;
@@ -173,7 +171,7 @@ static bool run_()
                         {
                             if( recovered_count == recover_after )
                             {
-                                std::cerr << "csv-crc: recovered after " << recovered_byte_count << " byte(s)" << std::endl;
+                                comma::say() << "recovered after " << recovered_byte_count << " byte(s)" << std::endl;
                                 if( !discard_on_recovery ) { std::cout.write( &recovery_buffer[0], recovery_buffer.size() ); }
                                 recovered = true;
                                 recovered_count = 0;
@@ -197,7 +195,7 @@ static bool run_()
                             recovered_count = 0;
                             current_recovered_byte_count = 0;
                         }
-                        if( recovered ) { std::cerr << "csv-crc: crc check failed" << ( !give_up_after || *give_up_after > 0 ? "; recovering..." : "" ) << std::endl; }
+                        if( recovered ) { comma::say() << "crc check failed" << ( !give_up_after || *give_up_after > 0 ? "; recovering..." : "" ) << std::endl; }
                         recovered = false;
                         if( give_up_after && recovered_byte_count >= *give_up_after ) { break; }
                     }
@@ -217,7 +215,7 @@ static bool run_()
             if( r <= 0 ) { break; }
             offset += r;
         }
-        if( offset > 0 && offset < size ) { std::cerr << "csv-crc: expected at least " << size << " byte(s), got only " << offset << std::endl; return 1; }
+        COMMA_ASSERT_BRIEF( offset <= 0 || offset >= size, "expected at least " << size << " byte(s), got only " << offset );
     }
     else
     {
@@ -243,7 +241,7 @@ static bool run_()
                 }
                 else
                 {
-                    std::cerr << "csv-crc: check failed (recovery is not implemented for ascii mode, todo)" << std::endl;
+                    comma::say() << "check failed (recovery is not implemented for ascii mode, todo)" << std::endl;
                     return 1;
                 }
             }
@@ -265,10 +263,10 @@ int main( int ac, char** av )
             else if( crc == "ccitt" ) { std::cout << sizeof( boost::crc_ccitt_type::value_type ) << std::endl; }
             else if( crc == "xmodem" ) { std::cout << sizeof( boost::crc_xmodem_type::value_type ) << std::endl; }
             else if( crc == "xmodem-boost" ) { std::cout << sizeof( boost::crc_xmodem_type::value_type ) << std::endl; }
-            else { std::cerr << "csv-crc: expected crc type, got \"" << crc << "\"" << std::endl; return 1; }
+            else { comma::say() << "expected crc type, got \"" << crc << "\"" << std::endl; return 1; }
             return 0;
         }
-        if( wrap && recover ) { std::cerr << "csv-crc: if 'wrap', then no 'check' or 'recover'" << std::endl; return 1; }
+        COMMA_ASSERT_BRIEF( !wrap || !recover, "if 'wrap', then no 'check' or 'recover'" );
         verbose = options.exists( "--verbose,-v" );
         give_up_after = options.optional< unsigned int >( "--give-up-after" );
         recover_after = options.value( "--recover-after", 0 );
@@ -278,13 +276,13 @@ int main( int ac, char** av )
         big_endian = options.exists( "--big-endian,--net-byte-order" );
         delimiter = options.value< char >( "--delimiter,-d", ',' );
         std::vector< std::string > commands = options.unnamed( "--discard-on-recovery,--discard,--verbose,-v,--big-endian,--net-byte-order", "--size,--delimiter,-d,--crc,--give-up-after,--recover-after" );
-        if( commands.empty() ) { std::cerr << "csv-crc: specify a command" << std::endl; return 1; }
+        COMMA_ASSERT_BRIEF( !commands.empty(), "please specify a command" );
         for( std::size_t i = 0; i < commands.size(); ++i )
         {
             if( commands[i] == "wrap" ) { wrap = true; }
             else if( commands[i] == "check" ) { recover = true; give_up_after = 0; }
             else if( commands[i] == "recover" ) { recover = true; }
-            else { std::cerr << "csv-crc: expected command, got '" << commands[i] << "'" << std::endl; return 1; }
+            else { comma::say() << "expected command, got '" << commands[i] << "'" << std::endl; return 1; }
         }
         // The list of crc versions predefined by boost is given at
         //     http://www.boost.org/doc/libs/1_58_0/libs/crc/crc.html#crc_ex
@@ -300,16 +298,9 @@ int main( int ac, char** av )
         // the following is designated boost::crc_xmodem_t in the git repo for boost/crc.hpp
         else if( crc == "xmodem" ) { return run_< boost::crc_optimal< 16, 0x1021, 0, 0, false, false > >(); }
         else if( crc == "xmodem-boost" ) { return run_< boost::crc_xmodem_type >(); }
-        std::cerr << "csv-crc: expected crc type, got \"" << crc << "\"" << std::endl;
-        return 1;
+        comma::say() << "expected crc type, got '" << crc << "'" << std::endl;
     }
-    catch( std::exception& ex )
-    {
-        std::cerr << "csv-crc: " << ex.what() << std::endl;
-    }
-    catch( ... )
-    {
-        std::cerr << "csv-crc: unknown exception" << std::endl;
-    }
+    catch( std::exception& ex ) { comma::say() << ex.what() << std::endl; }
+    catch( ... ) { comma::say() << "unknown exception" << std::endl; }
     return 1;
 }
