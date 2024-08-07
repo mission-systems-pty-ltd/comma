@@ -276,9 +276,10 @@ int parse_process_tree( bool verbose = false )
     int count = 0;
     while ( readproc( proc, &proc_info ) != NULL ) {
         if ( proc_info.pgrp == ownpid ) {
-            if ( first && verbose ) { std::cerr << "extant processes in group " << ownpid << std::endl; first = 0; }
-            ++count;
-            if ( verbose ) { std::cerr << "    " << proc_info.cmd << ":\t" << proc_info.tid << "\t" << proc_info.pgrp << "\t" << proc_info.state << "\t" << proc_info.start_time << std::endl; }
+            if ( first && verbose ) { comma::say() << "extant processes in group " << ownpid << std::endl; first = 0; }
+            if( proc_info.state == 'Z' ) { comma::say() << "    " << proc_info.cmd << " (pid " << proc_info.tid << ") is a zombie process - ignoring" << std::endl; }
+            else { ++count; }
+            if ( verbose ) { comma::say() << "    " << proc_info.cmd << ":\t" << proc_info.tid << "\t" << proc_info.pgrp << "\t" << proc_info.state << "\t" << proc_info.start_time << std::endl; }
         }
     }
     closeproc(proc);
