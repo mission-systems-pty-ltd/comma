@@ -2,6 +2,7 @@
 
 /// @author vsevolod vlaskine
 
+#include <fstream>
 #include <iostream>
 #include <map>
 #include <boost/property_tree/info_parser.hpp>
@@ -14,6 +15,7 @@
 #include "../../application/command_line_options.h"
 #include "../../name_value/ptree.h"
 #include "../../name_value/serialize.h"
+#include "../../string/split.h"
 #include "../../xpath/xpath.h"
 
 static void usage( bool verbose = false )
@@ -26,9 +28,12 @@ static void usage( bool verbose = false )
     std::cerr << "data options" << std::endl;
     std::cerr << "    --from <format>: input format; if this options is omitted, input format will be guessed; formats: json, xml, path-value/pv" << std::endl;
     std::cerr << "    --to <format>: output format; formats: ini, json, xml, path-value (pv), dot; default: path-value" << std::endl;
-    std::cerr << "    --path=[<path>]; output data at a given path in the input" << std::endl;
-    std::cerr << "                     multiple instances of --path supported" << std::endl;
-    std::cerr << "                     regex expression support: todo" << std::endl;
+    std::cerr << "    --path=[[<filename>:]<path>]; output data at a given path in the input" << std::endl;
+    std::cerr << "                                  multiple instances of --path supported" << std::endl;
+    std::cerr << "                                  <filename> supported only for a single --path" << std::endl;
+    std::cerr << "                                  e.g. --path path/inside/json/file" << std::endl;
+    std::cerr << "                                       --path my-config.json:path/inside/json/file" << std::endl;
+    std::cerr << "                                  regex expression support: todo" << std::endl;
     std::cerr << "    --strict: return error if path specified in --path not found" << std::endl;
     std::cerr << std::endl;
     std::cerr << "formats" << std::endl;
@@ -193,7 +198,22 @@ int main( int ac, char** av )
         xml_writer_settings.indent_count = options.value( "--indent", options.exists( "--indented" ) ? 4 : 0 );
         boost::optional< char > delimiter = options.optional< char >( "--delimiter,-d" );
         path_value_delimiter = delimiter ? *delimiter : ( linewise ? ',' : '\n' );
-        const auto& paths = options.values< std::string >( "--path" );
+        auto paths = options.values< std::string >( "--path" );
+        std::string filename;
+        std::ifstream ifs;
+        if( !paths.empty() )
+        {
+            const auto& s = comma::split_tail( paths[0], 2, ':' );
+            COMMA_ASSERT_BRIEF( paths.size() == 1 || s.size() == 1, "<filename>:<path>: currently supported only for a single --path option" );
+            if( s.size() == 2 )
+            {
+                filename = s[0];
+                paths[0] = s[1];
+                ifs.open( filename );
+                COMMA_ASSERT_BRIEF( ifs.is_open(), "failed to open '" << filename << "'" );
+            }
+        }
+        std::istream& istream = filename.empty() ? static_cast< std::istream& >( std::cin ) : static_cast< std::istream& >( ifs );
         bool strict = options.exists( "--strict" );
         bool output_line_breaks = to == "path-value" && path_value_delimiter != '\n'; // hyper-quick and dirty
         if( from )
@@ -228,8 +248,8 @@ int main( int ac, char** av )
             while( std::cout.good() )
             {
                 std::string line;
-                std::getline( std::cin, line );
-                if( !std::cin.good() || std::cin.eof() ) { break; }
+                std::getline( istream, line );
+                if( !istream.good() || istream.eof() ) { break; }
                 std::istringstream iss( line );
                 boost::property_tree::ptree ptree;
                 input( iss, ptree );
@@ -257,7 +277,7 @@ int main( int ac, char** av )
         else
         {
             boost::property_tree::ptree ptree;
-            input( std::cin, ptree );
+            input( istream, ptree );
             if( paths.empty() )
             {
                 output( std::cout, ptree, indices_mode );

@@ -26,3 +26,7 @@ paths[12]="( echo a/b=1; echo a/c=2; echo x/y=3; echo x/z=4 ) | name-value-conve
 paths[13]="( echo a/b=1; echo a/c=2; echo x/y=3; echo x/z=4 ) | name-value-convert --path x/y | tr '\\n' ';'"
 paths[14]="( echo a/b=1; echo a/c=2; echo x/y=3; echo x/z=4 ) | name-value-convert --path x/z --path x/y | tr '\\n' ';'"
 paths[15]="( echo a/b=1; echo a/c=2; echo x/y=3; echo x/z=4 ) | name-value-convert --path x/z --path x/y --path a | tr '\\n' ';'"
+
+file[0]="name-value-convert --path <( echo x/y/a=3; echo x/y/b=4 )':x/y' --unquote"
+file[1]="name-value-convert --path <( echo x/y/a=3; echo x/y/b=4 )':x/y/a' --unquote"
+file[2]="name-value-convert --path <( echo x/y/a=3; echo x/y/b=4 )':x/y/c' --unquote"

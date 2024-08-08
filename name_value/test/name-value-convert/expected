@@ -27,3 +27,8 @@ paths[12]/output='y="3";z="4";b="1";c="2";'
 paths[13]/output='y="3";'
 paths[14]/output='z="4";y="3";'
 paths[15]/output='z="4";y="3";b="1";c="2";'
+
+file[0]/output/line[0]="a=3"
+file[0]/output/line[1]="b=4"
+file[1]/output="a=3"
+file[2]/output=""
