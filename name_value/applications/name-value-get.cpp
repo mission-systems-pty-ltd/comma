@@ -230,7 +230,7 @@ int main( int ac, char** av )
         std::string filename;
         if( !option_regex )
         {
-            const auto& s = comma::split_head( path_strings[0], 2, ':' );
+            const auto& s = comma::split_tail( path_strings[0], 2, ':' );
             COMMA_ASSERT_BRIEF( !option_regex || s.size() == 1 || path_strings.size() == 1, "<filename>:<path> syntax is supported only for a single query path" );
             if( s.size() == 2 ) { filename = s[0]; path_strings[0] = s[1]; }
         }
