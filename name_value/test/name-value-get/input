@@ -26,3 +26,7 @@ regex[2]="( echo a/phi=0 ; echo a/psi=1; echo a/rho=2; ) | name-value-get --rege
 
 whitespace[0]="( echo a/b/c=0; echo; echo a/b/d=1; echo; echo a/b/e=2; ) | name-value-get a/b/e"
 whitespace[1]="( echo a/b/c=0; echo a/b/d=1; echo a/b/ e =2; ) | name-value-get 'a/b/ e '"
+
+file[0]="name-value-get <( echo a/b/c=111; echo a/b/d=222 )':a/b' --unquote"
+file[1]="name-value-get <( echo a/b/c=111; echo a/b/d=222 )':a/b/c' --unquote"
+file[2]="name-value-get <( echo a/b/c=111; echo a/b/d=222 )':a/b/c/d' --unquote"

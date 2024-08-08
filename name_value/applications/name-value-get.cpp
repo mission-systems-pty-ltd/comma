@@ -2,16 +2,19 @@
 
 /// @author vsevolod vlaskine
 
+#include <fstream>
 #include <iostream>
 #include <boost/property_tree/info_parser.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/regex.hpp>
-#include "../../base/exception.h"
 #include "../../application/command_line_options.h"
+#include "../../base/exception.h"
+#include "../../base/none.h"
 #include "../../name_value/ptree.h"
 #include "../../name_value/serialize.h"
+#include "../../string/split.h"
 #include "../../xpath/xpath.h"
 
 static const std::string regex_characters_ =  ".{}()\\*+?|^$";
@@ -22,6 +25,7 @@ static void usage( bool verbose = false )
     std::cerr << "take json, xml, or path-value formatted data on stdin and output value at given path on stdout" << std::endl;
     std::cerr << std::endl;
     std::cerr << "usage: cat data.xml | name-value-get <paths> [<options>]" << std::endl;
+    std::cerr << "       name-value-get data.xml:<paths> [<options>]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "<paths>: x-path, e.g. \"command/type\" or posix regular expressions" << std::endl;
     std::cerr << "    if <paths> doesn't contain any of regex characters: \"" << regex_characters_ << "\" it will be treated as x-path" << std::endl;
@@ -204,7 +208,7 @@ void match_regex_( std::ostream& os, const boost::property_tree::ptree& ptree )
 static bool is_regex_(const std::string& s)
 {
     std::string regex_characters = regex_characters_;
-    if (option_regex) { regex_characters += "[]"; }
+    if( option_regex ) { regex_characters += "[]"; }
     for( unsigned int k = 0; k < regex_characters.size(); ++k )
     {
         if( s.find_first_of( regex_characters[k] ) != std::string::npos ) { return true; }
@@ -218,15 +222,22 @@ int main( int ac, char** av )
     {
         comma::command_line_options options( ac, av, usage );
         path_strings = options.unnamed( "--linewise,-l,--minify,--output-path,--use-buffer,--regex,--quote-numbers,--quote,--unquote-numbers,--unquote", "-.*" );
-        if( path_strings.empty() ) { std::cerr << std::endl << "name-value-get: xpath missing" << std::endl; usage(); }
+        if( path_strings.empty() ) { std::cerr << std::endl << "name-value-get: please specify at least one path" << std::endl; usage(); }
         path_regex.resize( path_strings.size() );
         paths.resize( path_strings.size() );
         bool has_regex = false;
         option_regex = options.exists( "--regex" );
+        std::string filename;
+        if( !option_regex )
+        {
+            const auto& s = comma::split_head( path_strings[0], 2, ':' );
+            COMMA_ASSERT_BRIEF( !option_regex || s.size() == 1 || path_strings.size() == 1, "<filename>:<path> syntax is supported only for a single query path" );
+            if( s.size() == 2 ) { filename = s[0]; path_strings[0] = s[1]; }
+        }
         for( std::size_t i = 0; i < path_strings.size(); ++i )
         {
             if( is_regex_( path_strings[i] ) ) { path_regex[i] = boost::regex( path_strings[i], boost::regex::extended ); has_regex = true; }
-            else {  paths[i] = boost::property_tree::ptree::path_type( path_strings[i], '/' ); }
+            else { paths[i] = boost::property_tree::ptree::path_type( path_strings[i], '/' ); }
         }
         boost::optional< std::string > from = options.optional< std::string >( "--from" );
         std::string to = options.value< std::string >( "--to", "path-value" );
@@ -263,13 +274,21 @@ int main( int ac, char** av )
         else if( to == "path-value" ) { output = &traits< path_value >::output; output_last_line_break = true; }
         else { std::cerr << "name-value-get: expected --to format to be ini, info, json, xml, or path-value, got " << to << std::endl; return 1; }
         indices_mode = options.exists( "--no-brackets" ) ? comma::property_tree::without_brackets : comma::property_tree::with_brackets;
+        //auto ifstream = comma::silent_none< std::ifstream >();
+        std::ifstream ifs;
+        if( !filename.empty() )
+        {
+            ifs.open( filename );
+            COMMA_ASSERT_BRIEF( ifs.is_open(), "failed to open '" << filename << "'" );
+        }
+        std::istream& istream = filename.empty() ? static_cast< std::istream& >( std::cin ) : static_cast< std::istream& >( ifs );
         if( linewise )
         {
             while( std::cout.good() )
             {
                 std::string line;
-                std::getline( std::cin, line );
-                if( !std::cin.good() || std::cin.eof() ) { break; }
+                std::getline( istream, line );
+                if( !istream.good() || istream.eof() ) { break; }
                 std::istringstream iss( line );
                 boost::property_tree::ptree ptree;
                 input( iss, ptree );
@@ -296,7 +315,7 @@ int main( int ac, char** av )
         else
         {
             boost::property_tree::ptree ptree;
-            input( std::cin, ptree );
+            input( istream, ptree );
             if( has_regex ) { match_regex_( std::cout, ptree ); } else { match_( std::cout, ptree ); }
         }
         return 0;

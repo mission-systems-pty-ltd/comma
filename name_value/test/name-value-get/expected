@@ -26,3 +26,9 @@ regex[2]/output='0;2;'
 
 whitespace[0]/output='2'
 whitespace[1]/output='2'
+
+file[0]/output/line[0]="c=111"
+file[0]/output/line[1]="d=222"
+file[1]/output="111"
+file[2]/output=""
+
