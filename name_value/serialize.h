@@ -40,10 +40,10 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include "../base/exception.h"
-#include "../xpath/xpath.h"
+#include "../string/split.h"
 #include "../visiting/apply.h"
+#include "../xpath/xpath.h"
 #include "impl/json_writer.h"
-
 #include "ptree.h"
 
 namespace comma {
@@ -54,12 +54,14 @@ template < typename T > T read( const std::string& filename, const xpath& root, 
 template < typename T > T read( const std::string& filename, const char* root, bool permissive );
 template < typename T > T read( const std::string& filename, const xpath& root );
 template < typename T > T read( const std::string& filename, const char* root );
+template < typename T > T read( const std::string& filename, bool permissive, bool split_filename );
 template < typename T > T read( const std::string& filename, bool permissive );
 template < typename T > T read( const std::string& filename );
 template < typename T > void read( T& t, const std::string& filename, const xpath& root, bool permissive );
 template < typename T > void read( T& t, const std::string& filename, const char* root, bool permissive );
 template < typename T > void read( T& t, const std::string& filename, const xpath& root );
 template < typename T > void read( T& t, const std::string& filename, const char* root );
+template < typename T > void read( T& t, const std::string& filename, bool permissive, bool split_filename );
 template < typename T > void read( T& t, const std::string& filename, bool permissive );
 template < typename T > void read( T& t, const std::string& filename );
 template < typename T > T read( std::istream& stream, const xpath& root, bool permissive );
@@ -82,12 +84,14 @@ template < typename T > T read_json( const std::string& filename, const char* ro
 template < typename T > T read_json( const std::string& filename, const xpath& root );
 template < typename T > T read_json( const std::string& filename, const char* root );
 template < typename T > T read_json( const std::string& filename, bool permissive );
+template < typename T > T read_json( const std::string& filename, bool permissive, bool split_filename );
 template < typename T > T read_json( const std::string& filename );
 template < typename T > void read_json( T& t, const std::string& filename, const xpath& root, bool permissive );
 template < typename T > void read_json( T& t, const std::string& filename, const char* root, bool permissive );
 template < typename T > void read_json( T& t, const std::string& filename, const xpath& root );
 template < typename T > void read_json( T& t, const std::string& filename, const char* root );
 template < typename T > void read_json( T& t, const std::string& filename, bool permissive );
+template < typename T > void read_json( T& t, const std::string& filename, bool permissive, bool split_filename );
 template < typename T > void read_json( T& t, const std::string& filename );
 template < typename T > T read_json( std::istream& stream, const xpath& root, bool permissive );
 template < typename T > T read_json( std::istream& stream, const char* root, bool permissive );
@@ -108,12 +112,14 @@ template < typename T > T read_xml( const std::string& filename, const xpath& ro
 template < typename T > T read_xml( const std::string& filename, const char* root, bool permissive );
 template < typename T > T read_xml( const std::string& filename, const xpath& root );
 template < typename T > T read_xml( const std::string& filename, const char* root );
+template < typename T > T read_xml( const std::string& filename, bool permissive, bool split_filename );
 template < typename T > T read_xml( const std::string& filename, bool permissive );
 template < typename T > T read_xml( const std::string& filename );
 template < typename T > void read_xml( T& t, const std::string& filename, const xpath& root, bool permissive );
 template < typename T > void read_xml( T& t, const std::string& filename, const char* root, bool permissive );
 template < typename T > void read_xml( T& t, const std::string& filename, const xpath& root );
 template < typename T > void read_xml( T& t, const std::string& filename, const char* root );
+template < typename T > void read_xml( T& t, const std::string& filename, bool permissive, bool split_filename );
 template < typename T > void read_xml( T& t, const std::string& filename, bool permissive );
 template < typename T > void read_xml( T& t, const std::string& filename );
 template < typename T > T read_xml( std::istream& stream, const xpath& root, bool permissive );
@@ -136,11 +142,13 @@ template < typename T > T read_path_value( const std::string& filename, const ch
 template < typename T > T read_path_value( const std::string& filename, const xpath& root );
 template < typename T > T read_path_value( const std::string& filename, const char* root );
 template < typename T > T read_path_value( const std::string& filename, bool permissive );
+template < typename T > T read_path_value( const std::string& filename, bool permissive, bool split_filename );
 template < typename T > T read_path_value( const std::string& filename );
 template < typename T > void read_path_value( T& t, const std::string& filename, const xpath& root, bool permissive );
 template < typename T > void read_path_value( T& t, const std::string& filename, const char* root, bool permissive );
 template < typename T > void read_path_value( T& t, const std::string& filename, const xpath& root );
 template < typename T > void read_path_value( T& t, const std::string& filename, const char* root );
+template < typename T > void read_path_value( T& t, const std::string& filename, bool permissive, bool split_filename );
 template < typename T > void read_path_value( T& t, const std::string& filename, bool permissive );
 template < typename T > void read_path_value( T& t, const std::string& filename );
 template < typename T > T read_path_value( std::istream& stream, const xpath& root, bool permissive );
@@ -162,12 +170,14 @@ template < typename T > T read_ini( const std::string& filename, const xpath& ro
 template < typename T > T read_ini( const std::string& filename, const char* root, bool permissive );
 template < typename T > T read_ini( const std::string& filename, const xpath& root );
 template < typename T > T read_ini( const std::string& filename, const char* root );
+template < typename T > T read_ini( const std::string& filename, bool permissive, bool split_filename );
 template < typename T > T read_ini( const std::string& filename, bool permissive );
 template < typename T > T read_ini( const std::string& filename );
 template < typename T > void read_ini( T& t, const std::string& filename, const xpath& root, bool permissive );
 template < typename T > void read_ini( T& t, const std::string& filename, const char* root, bool permissive );
 template < typename T > void read_ini( T& t, const std::string& filename, const xpath& root );
 template < typename T > void read_ini( T& t, const std::string& filename, const char* root );
+template < typename T > void read_ini( T& t, const std::string& filename, bool permissive, bool split_filename );
 template < typename T > void read_ini( T& t, const std::string& filename, bool permissive );
 template < typename T > void read_ini( T& t, const std::string& filename );
 template < typename T > T read_ini( std::istream& stream, const xpath& root, bool permissive );
@@ -223,6 +233,15 @@ template < typename T > std::ostream& write_ini( const T& t, std::ostream& strea
 template < typename T > std::ostream& write_ini( const T& t, std::ostream& stream, const char* root );
 template < typename T > std::ostream& write_ini( const T& t, std::ostream& stream );
 
+namespace impl {
+
+inline std::pair< std::string, xpath > _split( const std::string& filename )
+{
+    const auto& s = comma::split_tail( filename, 2, ':' );
+    return s.size() == 1 ? std::pair< std::string, xpath >{ filename, xpath() } : std::pair< std::string, xpath >{ s[0], xpath( s[1] ) };
+}
+
+} // namespace impl {
 
 template < typename T > inline void read_json( T& t, const std::string& filename, const xpath& root, bool permissive )
 {
@@ -244,6 +263,7 @@ template < typename T > inline T read_json( const std::string& filename, const x
 template < typename T > inline T read_json( const std::string& filename, const char* root, bool permissive ) { return root ? read_json< T >( filename, xpath( root ), permissive ) : read_json< T >( filename, permissive ); }
 template < typename T > inline T read_json( const std::string& filename, const xpath& root ) { return read_json< T >( filename, root, true ); }
 template < typename T > inline T read_json( const std::string& filename, const char* root ) { return root ? read_json< T >( filename, xpath( root ), true ) : read_json< T >( filename, true ); }
+template < typename T > inline T read_json( const std::string& filename, bool permissive, bool split_filename ) { T t; read_json< T >( t, filename, permissive, split_filename ); return t; }
 template < typename T > inline T read_json( const std::string& filename, bool permissive ) { return read_json< T >( filename, xpath(), permissive ); }
 template < typename T > inline T read_json( const std::string& filename ) { return read_json< T >( filename, xpath(), true ); }
 template < typename T > inline T read_json( std::istream& stream, const xpath& root, bool permissive ) { T t; read_json< T >( t, stream, root, permissive ); return t; }
@@ -255,6 +275,11 @@ template < typename T > inline T read_json( std::istream& stream ) { return read
 template < typename T > inline void read_json( T& t, const std::string& filename, const char* root, bool permissive ) { if( root ) { read_json< T >( t, filename, xpath( root ), permissive ); } else { read_json< T >( t, filename, permissive ); } }
 template < typename T > inline void read_json( T& t, const std::string& filename, const xpath& root ) { read_json< T >( t, filename, root, true ); }
 template < typename T > inline void read_json( T& t, const std::string& filename, const char* root ) { if( root ) { read_json< T >( t, filename, xpath( root ), true ); } else { read_json< T >( t, filename, true ); } }
+template < typename T > inline void read_json( T& t, const std::string& filename, bool permissive, bool split_filename )
+{
+    std::pair< std::string, xpath > p = split_filename ? impl::_split( filename ) : std::pair< std::string, xpath >{ filename, xpath() };
+    return read_json< T >( t, p.first, p.second, permissive );
+}
 template < typename T > inline void read_json( T& t, const std::string& filename, bool permissive ) { read_json< T >( t, filename, xpath(), permissive ); }
 template < typename T > inline void read_json( T& t, const std::string& filename ) { return read_json< T >( t, filename, xpath(), true ); }
 template < typename T > inline void read_json( T& t, std::istream& stream, const char* root, bool permissive ) { if( root ) { read_json< T >( t, stream, xpath( root ), permissive ); } else { read_json< T >( t, stream, permissive ); } }
@@ -283,6 +308,7 @@ template < typename T > inline T read_xml( const std::string& filename, const xp
 template < typename T > inline T read_xml( const std::string& filename, const char* root, bool permissive ) { return root ? read_xml< T >( filename, xpath( root ), permissive ) : read_xml< T >( filename, permissive ); }
 template < typename T > inline T read_xml( const std::string& filename, const xpath& root ) { return read_xml< T >( filename, root, true ); }
 template < typename T > inline T read_xml( const std::string& filename, const char* root ) { return root ? read_xml< T >( filename, xpath( root ), true ) : read_xml< T >( filename, true ); }
+template < typename T > inline T read_xml( const std::string& filename, bool permissive, bool split_filename ) { T t; read_xml< T >( t, filename, permissive, split_filename ); return t; }
 template < typename T > inline T read_xml( const std::string& filename, bool permissive ) { return read_xml< T >( filename, xpath(), permissive ); }
 template < typename T > inline T read_xml( const std::string& filename ) { return read_xml< T >( filename, xpath(), true ); }
 template < typename T > inline T read_xml( std::istream& stream, const xpath& root, bool permissive ) { T t; read_xml< T >( t, stream, root, permissive ); return t; }
@@ -294,8 +320,13 @@ template < typename T > inline T read_xml( std::istream& stream ) { return read_
 template < typename T > inline void read_xml( T& t, const std::string& filename, const char* root, bool permissive ) { if( root ) { read_xml< T >( t, filename, xpath( root ), permissive ); } else { read_xml< T >( t, filename, permissive ); } }
 template < typename T > inline void read_xml( T& t, const std::string& filename, const xpath& root ) { read_xml< T >( t, filename, root, true ); }
 template < typename T > inline void read_xml( T& t, const std::string& filename, const char* root ) { if( root ) { read_xml< T >( t, filename, xpath( root ), true ); } else { read_xml< T >( t, filename, true ); } }
+template < typename T > inline void read_xml( T& t, const std::string& filename, bool permissive, bool split_filename )
+{
+    std::pair< std::string, xpath > p = split_filename ? impl::_split( filename ) : std::pair< std::string, xpath >{ filename, xpath() };
+    read_xml< T >( t, p.first, p.second, permissive );
+}
 template < typename T > inline void read_xml( T& t, const std::string& filename, bool permissive ) { read_xml< T >( t, filename, xpath(), permissive ); }
-template < typename T > inline void read_xml( T& t, const std::string& filename ) { return read_xml< T >( t, filename, xpath(), true ); }
+template < typename T > inline void read_xml( T& t, const std::string& filename ) { read_xml< T >( t, filename, xpath(), true ); }
 template < typename T > inline void read_xml( T& t, std::istream& stream, const char* root, bool permissive ) { if( root ) { read_xml< T >( t, stream, xpath( root ), permissive ); } else { read_xml< T >( t, stream, permissive ); } }
 template < typename T > inline void read_xml( T& t, std::istream& stream, const xpath& root ) { read_xml< T >( t, stream, root, true ); }
 template < typename T > inline void read_xml( T& t, std::istream& stream, const char* root ) { if( root ) { read_xml< T >( t, stream, xpath( root ), true ); } else { read_xml< T >( t, stream, true ); } }
@@ -322,6 +353,7 @@ template < typename T > inline T read_path_value( const std::string& filename, c
 template < typename T > inline T read_path_value( const std::string& filename, const char* root, bool permissive ) { return root ? read_path_value< T >( filename, xpath( root ), permissive ) : read_path_value< T >( filename, permissive ); }
 template < typename T > inline T read_path_value( const std::string& filename, const xpath& root ) { return read_path_value< T >( filename, root, true ); }
 template < typename T > inline T read_path_value( const std::string& filename, const char* root ) { return root ? read_path_value< T >( filename, xpath( root ), true ) : read_path_value< T >( filename, true ); }
+template < typename T > inline T read_path_value( const std::string& filename, bool permissive, bool split_filename ) { T t; read_path_value< T >( t, filename, permissive, split_filename ); return t; }
 template < typename T > inline T read_path_value( const std::string& filename, bool permissive ) { return read_path_value< T >( filename, xpath(), permissive ); }
 template < typename T > inline T read_path_value( const std::string& filename ) { return read_path_value< T >( filename, xpath(), true ); }
 template < typename T > inline T read_path_value( std::istream& stream, const xpath& root, bool permissive ) { T t; read_path_value< T >( t, stream, root, permissive ); return t; }
@@ -333,6 +365,11 @@ template < typename T > inline T read_path_value( std::istream& stream ) { retur
 template < typename T > inline void read_path_value( T& t, const std::string& filename, const char* root, bool permissive ) { if( root ) { read_path_value< T >( t, filename, xpath( root ), permissive ); } else { read_path_value< T >( t, filename, permissive ); } }
 template < typename T > inline void read_path_value( T& t, const std::string& filename, const xpath& root ) { read_path_value< T >( t, filename, root, true ); }
 template < typename T > inline void read_path_value( T& t, const std::string& filename, const char* root ) { if( root ) { read_path_value< T >( t, filename, xpath( root ), true ); } else { read_path_value< T >( t, filename, true ); } }
+template < typename T > inline void read_path_value( T& t, const std::string& filename, bool permissive, bool split_filename )
+{
+    std::pair< std::string, xpath > p = split_filename ? impl::_split( filename ) : std::pair< std::string, xpath >{ filename, xpath() };
+    read_path_value< T >( t, p.first, p.second, permissive );
+}
 template < typename T > inline void read_path_value( T& t, const std::string& filename, bool permissive ) { read_path_value< T >( t, filename, xpath(), permissive ); }
 template < typename T > inline void read_path_value( T& t, const std::string& filename ) { return read_path_value< T >( t, filename, xpath(), true ); }
 template < typename T > inline void read_path_value( T& t, std::istream& stream, const char* root, bool permissive ) { if( root ) { read_path_value< T >( t, stream, xpath( root ), permissive ); } else { read_path_value< T >( t, stream, permissive ); } }
@@ -361,6 +398,7 @@ template < typename T > inline T read_ini( const std::string& filename, const xp
 template < typename T > inline T read_ini( const std::string& filename, const char* root, bool permissive ) { return root ? read_ini< T >( filename, xpath( root ), permissive ) : read_ini< T >( filename, permissive ); }
 template < typename T > inline T read_ini( const std::string& filename, const xpath& root ) { return read_ini< T >( filename, root, true ); }
 template < typename T > inline T read_ini( const std::string& filename, const char* root ) { return root ? read_ini< T >( filename, xpath( root ), true ) : read_ini< T >( filename, true ); }
+template < typename T > inline T read_ini( const std::string& filename, bool permissive, bool split_filename ) { T t; read_ini< T >( t, filename, permissive, split_filename ); return t; }
 template < typename T > inline T read_ini( const std::string& filename, bool permissive ) { return read_ini< T >( filename, xpath(), permissive ); }
 template < typename T > inline T read_ini( const std::string& filename ) { return read_ini< T >( filename, xpath(), true ); }
 template < typename T > inline T read_ini( std::istream& stream, const xpath& root, bool permissive ) { T t; read_ini< T >( t, stream, root, permissive ); return t; }
@@ -372,6 +410,11 @@ template < typename T > inline T read_ini( std::istream& stream ) { return read_
 template < typename T > inline void read_ini( T& t, const std::string& filename, const char* root, bool permissive ) { if( root ) { read_ini< T >( t, filename, xpath( root ), permissive ); } else { read_ini< T >( t, filename, permissive ); } }
 template < typename T > inline void read_ini( T& t, const std::string& filename, const xpath& root ) { read_ini< T >( t, filename, root, true ); }
 template < typename T > inline void read_ini( T& t, const std::string& filename, const char* root ) { if( root ) { read_ini< T >( t, filename, xpath( root ), true ); } else { read_ini< T >( t, filename, true ); } }
+template < typename T > inline void read_ini( T& t, const std::string& filename, bool permissive, bool split_filename )
+{
+    std::pair< std::string, xpath > p = split_filename ? impl::_split( filename ) : std::pair< std::string, xpath >{ filename, xpath() };
+    read_ini< T >( t, p.first, p.second, permissive );
+}
 template < typename T > inline void read_ini( T& t, const std::string& filename, bool permissive ) { read_ini< T >( t, filename, xpath(), permissive ); }
 template < typename T > inline void read_ini( T& t, const std::string& filename ) { return read_ini< T >( t, filename, xpath(), true ); }
 template < typename T > inline void read_ini( T& t, std::istream& stream, const char* root, bool permissive ) { if( root ) { read_ini< T >( t, stream, xpath( root ), permissive ); } else { read_ini< T >( t, stream, permissive ); } }
@@ -482,7 +525,6 @@ template < typename T > inline void write_ini( const T& t, const std::string& fi
 template < typename T > inline std::ostream& write_ini( const T& t, std::ostream& stream, const char* root ) { return write_ini( t, stream, xpath( root ) ); }
 template < typename T > inline std::ostream& write_ini( const T& t, std::ostream& stream ) { return write_ini( t, stream, xpath() ); }
 
-
 template < typename T > inline void read( T& t, std::istream& stream, const xpath& root, bool permissive )
 {
     boost::property_tree::ptree p;
@@ -503,6 +545,7 @@ template < typename T > inline T read( const std::string& filename, const xpath&
 template < typename T > inline T read( const std::string& filename, const char* root, bool permissive ) { return root ? read_json< T >( filename, xpath( root ), permissive ) : read< T >( filename, permissive ); }
 template < typename T > inline T read( const std::string& filename, const xpath& root ) { return read< T >( filename, root, true ); }
 template < typename T > inline T read( const std::string& filename, const char* root ) { return root ? read< T >( filename, xpath( root ), true ) : read< T >( filename, true ); }
+template < typename T > inline T read( const std::string& filename, bool permissive, bool split_filename ) { T t; read< T >( t, filename, permissive, split_filename ); }
 template < typename T > inline T read( const std::string& filename, bool permissive ) { return read< T >( filename, xpath(), permissive ); }
 template < typename T > inline T read( const std::string& filename ) { return read< T >( filename, xpath(), true ); }
 template < typename T > inline T read( std::istream& stream, const xpath& root, bool permissive ) { T t; read< T >( t, stream, root, permissive ); return t; }
@@ -514,6 +557,11 @@ template < typename T > inline T read( std::istream& stream ) { return read< T >
 template < typename T > inline void read( T& t, const std::string& filename, const char* root, bool permissive ) { if( root ) { read< T >( t, filename, xpath( root ), permissive ); } else { read< T >( t, filename, permissive ); } }
 template < typename T > inline void read( T& t, const std::string& filename, const xpath& root ) { read< T >( t, filename, root, true ); }
 template < typename T > inline void read( T& t, const std::string& filename, const char* root ) { if( root ) { read< T >( t, filename, xpath( root ), true ); } else { read< T >( t, filename, true ); } }
+template < typename T > inline void read( T& t, const std::string& filename, bool permissive, bool split_filename )
+{ 
+    std::pair< std::string, xpath > p = split_filename ? impl::_split( filename ) : std::pair< std::string, xpath >{ filename, xpath() };
+    read< T >( t, p.first, p.second, permissive );
+}
 template < typename T > inline void read( T& t, const std::string& filename, bool permissive ) { read< T >( t, filename, xpath(), permissive ); }
 template < typename T > inline void read( T& t, const std::string& filename ) { return read< T >( t, filename, xpath(), true ); }
 template < typename T > inline void read( T& t, std::istream& stream, const char* root, bool permissive ) { if( root ) { read< T >( t, stream, xpath( root ), permissive ); } else { read< T >( t, stream, permissive ); } }
