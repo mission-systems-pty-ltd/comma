@@ -102,6 +102,7 @@ function description_others()
 --output-junit,--junit=[<file>]; output to file junit record compatible with jenkins for each test
 --output-stdout,--stdout; output test results to stdout as <dir>,<status>, <status>: success, failed, timeout, disabled
 --path=[<dir>]; data-storage directory for tests, default: none, let the tests define it
+--root-path,--root=[<dir>]; todo: do not accend beyond this path while searching for specially-named files, e.g. 'test' or 'config'
 --test-option=[<option>]; extra command line argument(s) pass to "test" script
 
 --quiet,-q; minimize output
@@ -1017,6 +1018,7 @@ comma_path_value_to_var --export --prefix=options < <( default_options )
 options_path_value="$( description | comma-options-to-name-value $@ )"
 comma_path_value_to_var --export --prefix=options <<<"$options_path_value"
 
+[[ -z "$options_root_path" ]] || { error_ "$name: --root-path: todo, just ask"; exit 1; }
 options_test_option=$( echo "$options_path_value" |  grep "^test-option=" | cut -d'=' -f2- | sed 's#^"##;s#"$##' | tr '\n' ' ' )
 
 # and perform sanity check
