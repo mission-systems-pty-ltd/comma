@@ -60,7 +60,7 @@ struct input_t
     std::uint32_t index{0};
     std::uint32_t block{0}; // todo in some vague future
 
-    std::uint32_t get_index( std::size_t filesize, std::size_t record_size, bool use_ratio ) const { return use_ratio ? static_cast<std::uint32_t>(filesize * ratio) : index*record_size; }
+    std::uint64_t get_index( std::size_t filesize, std::size_t record_size, bool use_ratio ) const { return use_ratio ? static_cast<std::uint64_t>(filesize * ratio) : index*record_size; }
 };
 
 }} // namespace comma { namespace csv {
@@ -132,9 +132,9 @@ int main( int ac, char** av )
             const comma::csv::input_t* p = istream.read();
             if( !p ) { break; }
 
-            std::uint32_t index = p->get_index( file_size, record_size, csv.has_field( "ratio" ) );
-            std::streampos target_offset = index;
-            std::streampos adjusted_offset = (target_offset / record_size) * record_size;
+            std::streampos index = p->get_index( file_size, record_size, csv.has_field( "ratio" ) );
+            std::cerr << "seeking to index:" << index << " with file size:" << file_size << " and record size:" << record_size << std::endl;
+            std::streampos adjusted_offset = (index / record_size) * record_size;
 
             if (adjusted_offset >= file_size) { std::cerr << "index out of bounds" << std::endl; continue; }
             std::vector<char> record_data;
