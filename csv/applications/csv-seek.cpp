@@ -31,13 +31,13 @@ csv options
       csv-paste 'line-number;binary=ui' --head 100 > data.bin
 
       Sample the records at 50% and 10% through the data:
-      ( echo 0.5; echo 0.1 ) | csv-seek --fields=ratio \"data.bin;binary=f\" | csv-from-bin f
+      ( echo 0.5; echo 0.1 ) | csv-seek --fields=ratio "data.bin;binary=f" | csv-from-bin f
 
       Sample the 10th record
-      echo 10 | csv-seek \"data.bin;binary=12f\" | csv-from-bin f
+      echo 10 | csv-seek "data.bin;binary=12f" | csv-from-bin f
 
       Scrub through a point cloud (note this example requires snark):
-      csv-sliders \"percentage;min=0;max=1\" --on-change --frequency 100 | csv-seek --fields=ratio --flush \"data.bin;binary=ui\" | csv-from-bin ui --flush
+      csv-sliders "percentage;min=0;max=1" --on-change --frequency 100 | csv-seek --fields=ratio --flush "data.bin;binary=ui" | csv-from-bin ui --flush
 )";
     }
     else
@@ -60,7 +60,7 @@ struct input_t
     std::uint32_t index{0};
     std::uint32_t block{0}; // todo in some vague future
 
-    std::uint32_t get_index( std::size_t size, bool use_ratio ) const { return use_ratio ? static_cast<std::uint32_t>(size * ratio) : index; }
+    std::uint32_t get_index( std::size_t filesize, std::size_t record_size, bool use_ratio ) const { return use_ratio ? static_cast<std::uint32_t>(filesize * ratio) : index*record_size; }
 };
 
 }} // namespace comma { namespace csv {
@@ -132,7 +132,7 @@ int main( int ac, char** av )
             const comma::csv::input_t* p = istream.read();
             if( !p ) { break; }
 
-            std::uint32_t index = p->get_index( file_size, csv.has_field( "ratio" ) );
+            std::uint32_t index = p->get_index( file_size, record_size, csv.has_field( "ratio" ) );
             std::streampos target_offset = index;
             std::streampos adjusted_offset = (target_offset / record_size) * record_size;
 
