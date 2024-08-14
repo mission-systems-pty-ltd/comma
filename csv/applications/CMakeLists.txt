@@ -17,6 +17,7 @@ install( TARGETS csv-fields RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONE
 
 add_executable( csv-format ${dir}/csv-format.cpp )
 add_executable( csv-size ${dir}/csv-size.cpp )
+add_executable( csv-seek ${dir}/csv-seek.cpp )
 add_executable( csv-select ${dir}/csv-select.cpp )
 add_executable( csv-bin-cut ${dir}/csv-bin-cut.cpp )
 add_executable( csv-from-columns ${dir}/csv-from-columns.cpp )
@@ -47,6 +48,7 @@ target_link_libraries ( csv-split comma_csv comma_application comma_io comma_str
 target_link_libraries ( csv-from-columns ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_io comma_string )
 target_link_libraries ( csv-join ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_io comma_xpath comma_string comma_name_value )
 target_link_libraries ( csv-sort ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_io comma_xpath comma_string )
+target_link_libraries ( csv-seek ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_xpath comma_string comma_name_value )
 target_link_libraries ( csv-select ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_xpath comma_string comma_name_value )
 target_link_libraries ( csv-paste ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_string comma_csv comma_io comma_name_value )
 target_link_libraries ( csv-time ${comma_ALL_EXTERNAL_LIBRARIES} comma_application comma_csv comma_io comma_xpath comma_string comma_timing )
@@ -84,6 +86,7 @@ set_target_properties( csv-play PROPERTIES LINK_FLAGS_RELEASE -s )
 set_target_properties( csv-shape PROPERTIES LINK_FLAGS_RELEASE -s )
 set_target_properties( csv-shuffle PROPERTIES LINK_FLAGS_RELEASE -s )
 set_target_properties( csv-crc PROPERTIES LINK_FLAGS_RELEASE -s )
+set_target_properties( csv-seek PROPERTIES LINK_FLAGS_RELEASE -s )
 set_target_properties( csv-select PROPERTIES LINK_FLAGS_RELEASE -s )
 set_target_properties( csv-thin PROPERTIES LINK_FLAGS_RELEASE -s )
 set_target_properties( csv-analyse PROPERTIES LINK_FLAGS_RELEASE -s )
@@ -109,6 +112,7 @@ install( TARGETS csv-bin-cut
                  csv-shape
                  csv-shuffle
                  csv-crc
+                 csv-seek
                  csv-select
                  csv-thin
                  csv-analyse
