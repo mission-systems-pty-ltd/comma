@@ -392,19 +392,15 @@ function closest_file_in_path()
 {
     local path="$1"
     local file="$2"
-    
-    # sanity check (and avoid infinite loop)
-    if [[ -z "$path" || -z "$file" ]]; then echo "$name: error: empty path in closest_file_in_path()" >&2; exit 1; fi
-    # get canonical name (so path always starts with "/")
-    path=$( readlink -e "$path" )
-
+    [[ -n "$path" && -n "$file" ]] || { echo "$name: error: empty path in closest_file_in_path()" >&2; exit 1; }
+    path=$( readlink -e "$path" ) # get canonical name (so path always starts with "/")
     while true; do
         if [[ -d "$path/$file" ]]; then
-            echo "$name: warning: \"$path/$file\" is a directory (expected an executable script); ignoring" >&2
+            echo "$name: warning: '$path/$file' is a directory (expected an executable script); ignoring" >&2
         elif [[ -f "$path/$file" ]]; then
-            if [[ $file == "test" && ! -x "$path/$file" ]]; then echo "$name: warning: \"$path/$file\" is not executable; ignoring" >&2 
-            else echo $path/$file; break; fi
-        elif [[ $path == "/" ]]; then break
+            if [[ $file == "test" && ! -x "$path/$file" ]]; then echo "$name: warning: '$path/$file' is not executable; ignoring" >&2 
+            else echo "$path/$file"; break; fi
+        elif [[ "$path" == "/" || -d "$path/.git" ]]; then break # super-quick and dirty: stop on .git directory, otherwise it leads to bizarre errors, e.g. when there is a file 'config' or 'test' outside of git repository 
         fi
         path=$( dirname "$path" )
     done
@@ -803,7 +799,7 @@ function run_single_test()
     elif disabled_ "optional" "$dir" "$options_run_optional" ; then
         warning_ "$name: test $counter: $dir: optional, skipped"
     else
-        test_exec=$( closest_file_in_path "$dir" "test" )
+        test_exec=$( closest_file_in_path "$dir" test )
         if [[ -z "$test_exec" ]]; then
             error_ "$name: error: no \"test\" script found in any parent directory of $dir"
             result=1
