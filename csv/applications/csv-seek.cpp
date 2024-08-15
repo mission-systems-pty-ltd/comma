@@ -26,18 +26,33 @@ csv options
     std::cerr << comma::csv::options::usage( verbose ) << std::endl;
     std::cerr << "examples" << std::endl;
     if( verbose ) { std::cerr << R"(    examples setup
-      The following examples assume you have some data to work on.
-      Run this to create some data to look at!
-      csv-paste 'line-number;binary=ui' --head 100 > data.bin
+        basics
+            make data file
+                csv-paste 'line-number;binary=ui' --head 100 > data.bin
 
-      Sample the records at 50% and 10% through the data:
-      ( echo 0.5; echo 0.1 ) | csv-seek --fields=ratio "data.bin;binary=f" | csv-from-bin f
+            sample the records at 50% and 10% through the data:
+                ( echo 0.5; echo 0.1 ) | csv-seek --fields=ratio "data.bin;binary=f" | csv-from-bin f
 
-      Sample the 10th record
-      echo 10 | csv-seek "data.bin;binary=12f" | csv-from-bin f
+            sample the 10th record
+                echo 10 | csv-seek "data.bin;binary=12f" | csv-from-bin f
 
-      Scrub through a point cloud (note this example requires snark):
-      csv-sliders "percentage;min=0;max=1" --on-change --frequency 100 | csv-seek --fields=ratio --flush "data.bin;binary=ui" | csv-from-bin ui --flush
+        colour hue (you would need snark installed with graphics and imaging enabled)
+            make data file
+                ( csv-paste value=255 value=0 line-number --head 256; \
+                    csv-paste 'line-number;begin=255;step=-1' line-number value=255 --head 256; \
+                    csv-paste value=0 value=255 'line-number;begin=255;step=-1' --head 256; \
+                    csv-paste line-number value=255 value=0 --head 256; \
+                    csv-paste value=255 'line-number;begin=255;step=-1' value=0 --head 256 ) \
+                    | csv-to-bin 3ub \
+                    > colour-wheel.bin
+            sample colour hue
+                csv-sliders 'hue;min=0;max=1;step=0.0001' \
+                            --frequency 10 \
+                            --window-geometry=0,0,400,60 \
+                            --title='examples: hue selection' \
+                    | csv-seek --fields ratio 'colour-wheel.bin;binary=3ub' --flush \
+                    | cv-cat --input 'rows=1;cols=1;no-header;type=3ub' \
+                             'resize=400;view=,examples: hue selection,,0,130;null'
 )";
     }
     else
