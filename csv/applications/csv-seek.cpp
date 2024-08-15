@@ -14,10 +14,7 @@ static void usage( bool verbose = false )
 seek through a stream to grab selected records
 usage: csv-seek <options> [<stream>]
 options
-    --binary,-b=<format>:  data is packets of fixed size given by <format>
-                           alternatively use --size
-    --fields=[<fields>]:   index(default) - find record by index  
-                           ratio - find record as a proportion of the file size"
+    --permissive:          permissive mode: output empty record on error
 
     --size,-s=<size>:      [todo] data is packets of fixed size, otherwise data is expected
                            line-wise. Alternatively use --binary" << std::endl
@@ -50,7 +47,7 @@ csv options
                             --frequency 10 \
                             --window-geometry=0,0,400,60 \
                             --title='examples: hue selection' \
-                    | csv-seek --fields ratio 'colour-wheel.bin;binary=3ub' --flush \
+                    | csv-seek --permissive --fields ratio 'colour-wheel.bin;binary=3ub' --flush \
                     | cv-cat --input 'rows=1;cols=1;no-header;type=3ub' \
                              'resize=400;view=,examples: hue selection,,0,130;null'
 )";
@@ -121,11 +118,12 @@ int main( int ac, char** av )
     try
     {
         comma::command_line_options options( ac, av, usage );
-        std::vector< std::string > unnamed = options.unnamed( "--flush,-v,--verbose,", "-.*" );
+        std::vector< std::string > unnamed = options.unnamed( "--flush,-v,--verbose,--permissive,-p,--size", "-.*" );
         comma::csv::options csv( options, "index" );
+        bool permissive = options.exists( "--permissive,-p" );
         COMMA_ASSERT_BRIEF( csv.has_field( "ratio" ) != csv.has_field( "index" ), "please specify either 'ratio' or 'index' (but not both) in --fields" );
 
-        COMMA_ASSERT_BRIEF( unnamed.size() > 0, "expected file or stream (todo)" );
+        COMMA_ASSERT_BRIEF( unnamed.size() > 0, "expected file (or stream, todo)" );
         COMMA_ASSERT_BRIEF( unnamed.size() < 2, "Does not work on multiple streams (yet (shouuld it?))" );
 
         comma::name_value::parser csv_options_parser( "filename", ';', '=', false );
@@ -148,10 +146,14 @@ int main( int ac, char** av )
             if( !p ) { break; }
 
             std::streampos index = p->get_index( file_size, record_size, csv.has_field( "ratio" ) );
-            std::cerr << "seeking to index:" << index << " with file size:" << file_size << " and record size:" << record_size << std::endl;
             std::streampos adjusted_offset = (index / record_size) * record_size;
 
-            if (adjusted_offset >= file_size) { std::cerr << "index out of bounds" << std::endl; continue; }
+            if (adjusted_offset >= file_size) 
+            { 
+                comma::saymore() <<  "index out of bounds" << std::endl; 
+                if( permissive ) { continue; }
+                return 1;
+            }
             std::vector<char> record_data;
             file.seekg(adjusted_offset);
             record_data.resize(record_size);
