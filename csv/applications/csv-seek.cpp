@@ -1,3 +1,7 @@
+// Copyright (c) 2024 Mission Systems
+
+/// @author Aspen Eyers
+
 #include <iostream>
 #include <fstream>
 #include "../../application/command_line_options.h"
