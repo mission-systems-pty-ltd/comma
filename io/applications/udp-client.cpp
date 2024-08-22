@@ -27,7 +27,6 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author vsevolod vlaskine
 
 #ifndef WIN32
@@ -40,87 +39,97 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/noncopyable.hpp>
 #include "../../application/command_line_options.h"
+#include "../../base/exception.h"
 #include "../../base/types.h"
 #include "../../csv/format.h"
+#include "../publisher.h"
 
-void usage()
+static void usage()
 {
-    std::cerr << "simple udp client: receives udp packets and outputs them on stdout" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "rationale: netcat and socat somehow do not work very well with udp" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "usage: udp-client <port> [<options>]" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "<options>" << std::endl;
-    std::cerr << "    --ascii: output timestamp as ascii; default: 64-bit binary" << std::endl;
-    std::cerr << "    --binary: output timestamp as 64-bit binary; default" << std::endl;
-    std::cerr << "    --delimiter=<delimiter>: if ascii and --timestamp, use this delimiter; default: ','" << std::endl;
-    std::cerr << "    --size=<size>: hint of maximum buffer size; default 16384" << std::endl;
-    std::cerr << "    --reuse-addr,--reuseaddr: reuse udp address/port" << std::endl;
-    std::cerr << "    --timestamp: output packet timestamp (currently just system time)" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << std::endl;
-    exit( 1 );
+    std::cerr << R"(
+simple udp client: receives udp packets and outputs them on stdout
+
+rationale: netcat and socat somehow do not work very well with udp
+
+usage: udp-client <port> [<options>]
+
+options
+    --ascii: output timestamp as ascii; default: 64-bit binary
+    --binary: output timestamp as 64-bit binary; default
+    --delimiter=<delimiter>: if ascii and --timestamp, use this delimiter; default: ','
+    --size=<size>: hint of maximum buffer size; default 16384
+    --reuse-addr,--reuseaddr: reuse udp address/port
+    --timestamp: output packet timestamp (currently just system time)
+)" << std::endl;
+    exit( 0 );
 }
 
 int main( int argc, char** argv )
 {
-    comma::command_line_options options( argc, argv );
-    if( argc < 2 || options.exists( "--help,-h" ) ) { usage(); }
-    const std::vector< std::string >& unnamed = options.unnamed( "--ascii,--binary,--reuse-addr,--reuseaddr,--timestamp", "--delimiter,--size" );
-    if( unnamed.empty() ) { std::cerr << "udp-client: please specify port" << std::endl; return 1; }
-    unsigned short port = boost::lexical_cast< unsigned short >( unnamed[0] );
-    bool timestamped = options.exists( "--timestamp" );
-    bool binary = !options.exists( "--ascii" );
-    char delimiter = options.value( "--delimiter", ',' );
-    std::vector< char > packet( options.value( "--size", 16384 ) );
-#if (BOOST_VERSION >= 106600)
-    boost::asio::io_context service;
-#else
-    boost::asio::io_service service;
-#endif
-    boost::asio::ip::udp::socket socket( service );
-    socket.open( boost::asio::ip::udp::v4() );
-    boost::system::error_code error;
-    socket.set_option( boost::asio::ip::udp::socket::broadcast( true ), error );
-    if( error ) { std::cerr << "udp-client: failed to set broadcast option on port " << port << std::endl; return 1; }
-    if( options.exists( "--reuse-addr,--reuseaddr" ) )
+    try
     {
-        socket.set_option( boost::asio::ip::udp::socket::reuse_address( true ), error );
-        if( error ) { std::cerr << "udp-client: failed to set reuse address option on port " << port << std::endl; return 1; }
-    }
-    socket.bind( boost::asio::ip::udp::endpoint( boost::asio::ip::udp::v4(), port ), error );
-    if( error ) { std::cerr << "udp-client: failed to bind port " << port << std::endl; return 1; }
-
-    #ifdef WIN32
-    if( binary )
-    {
-        _setmode( _fileno( stdout ), _O_BINARY );        
-    }
+        comma::command_line_options options( argc, argv );
+        if( argc < 2 || options.exists( "--help,-h" ) ) { usage(); }
+        const std::vector< std::string >& unnamed = options.unnamed( "--ascii,--binary,--reuse-addr,--reuseaddr,--timestamp", "--delimiter,--size" );
+        COMMA_ASSERT_BRIEF( !unnamed.empty(), "please specify port" );
+        COMMA_ASSERT_BRIEF( unnamed.size() < 3, "expected not more than two unnamed options; got: " << comma::join( unnamed, ' ' ) );
+        std::string publish_address = unnamed.size() == 2 ? "-" : unnamed[1];
+        COMMA_ASSERT_BRIEF( publish_address == "-", "publish: todo; got: '" << publish_address << "'" );
+        unsigned short port = boost::lexical_cast< unsigned short >( unnamed[0] );
+        bool timestamped = options.exists( "--timestamp" );
+        bool binary = !options.exists( "--ascii" );
+        char delimiter = options.value( "--delimiter", ',' );
+        std::vector< char > packet( options.value( "--size", 16384 ) );
+    #if ( BOOST_VERSION >= 106600 )
+        boost::asio::io_context service;
+    #else
+        boost::asio::io_service service;
     #endif
-    
-    while( std::cout.good() )
-    {
+        boost::asio::ip::udp::socket socket( service );
+        socket.open( boost::asio::ip::udp::v4() );
         boost::system::error_code error;
-        std::size_t size = socket.receive( boost::asio::buffer( packet ), 0, error );
-        if( error || size == 0 ) { break; }
-        if( timestamped )
+        socket.set_option( boost::asio::ip::udp::socket::broadcast( true ), error );
+        COMMA_ASSERT_BRIEF( !bool( error ), "failed to set broadcast option on port " << port );
+        if( options.exists( "--reuse-addr,--reuseaddr" ) )
         {
-            boost::posix_time::ptime timestamp = boost::posix_time::microsec_clock::universal_time();
-            static_assert( sizeof( boost::posix_time::ptime ) == sizeof( comma::uint64 ), "expected time of size 8" );
-            if( binary )
-            { 
-                static char buf[ sizeof( comma::int64 ) ];
-                comma::csv::format::traits< boost::posix_time::ptime, comma::csv::format::time >::to_bin( timestamp, buf );
-                std::cout.write( buf, sizeof( comma::int64 ) );
-            }
-            else
-            {
-                std::cout << boost::posix_time::to_iso_string( timestamp ) << delimiter;
-            }
+            socket.set_option( boost::asio::ip::udp::socket::reuse_address( true ), error );
+            COMMA_ASSERT_BRIEF( !bool( error ), "failed to set reuse address option on port " << port );
         }
-        std::cout.write( &packet[0], size );
-        std::cout.flush();
-   }
-   return 0;
+        socket.bind( boost::asio::ip::udp::endpoint( boost::asio::ip::udp::v4(), port ), error );
+        COMMA_ASSERT_BRIEF( !bool( error ), "failed to bind port " << port );
+        #ifdef WIN32
+        if( binary )
+        {
+            _setmode( _fileno( stdout ), _O_BINARY );        
+        }
+        #endif
+        static_assert( sizeof( boost::posix_time::ptime ) == sizeof( comma::uint64 ), "expected time of size 8" );
+        // todo: comma::io::publisher publisher( publish_address, binary ? comma::io::mode::binary : comma::io::mode::ascii, false, flush );
+        while( std::cout.good() )
+        {
+            boost::system::error_code error;
+            std::size_t size = socket.receive( boost::asio::buffer( packet ), 0, error );
+            if( error || size == 0 ) { break; }
+            if( timestamped )
+            {
+                boost::posix_time::ptime timestamp = boost::posix_time::microsec_clock::universal_time();
+                if( binary )
+                { 
+                    static char buf[ sizeof( comma::int64 ) ];
+                    comma::csv::format::traits< boost::posix_time::ptime, comma::csv::format::time >::to_bin( timestamp, buf );
+                    std::cout.write( buf, sizeof( comma::int64 ) );
+                }
+                else
+                {
+                    std::cout << boost::posix_time::to_iso_string( timestamp ) << delimiter;
+                }
+            }
+            std::cout.write( &packet[0], size );
+            std::cout.flush();
+        }
+        return 0;
+    }
+    catch( std::exception& ex ) { comma::say() << ex.what() << std::endl; }
+    catch( ... ) { comma::say() << "unknown exception" << std::endl; }
+    return 1;
 }
