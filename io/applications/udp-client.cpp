@@ -62,8 +62,6 @@ options
     --delimiter=<delimiter>: if ascii and --timestamp, use this delimiter; default: ','
     --flush; flush stdout after each packet
     --no-discard: if present, do blocking write to every open output stream
-    --no-flush; if not present flush stdout after each packet (--no-flush logic to preserve
-                backward-compatible default behaviour)
     --size=<size>; hint of maximum buffer size; default 16384
     --reuse-addr,--reuseaddr: reuse udp address/port
     --timestamp: output packet timestamp (currently just system time)
@@ -89,7 +87,7 @@ int main( int argc, char** argv )
     {
         comma::command_line_options options( argc, argv );
         if( argc < 2 || options.exists( "--help,-h" ) ) { usage(); }
-        const std::vector< std::string >& unnamed = options.unnamed( "--ascii,--binary,--no-discar,--reuse-addr,--reuseaddr,--timestamp", "--delimiter,--size" );
+        const std::vector< std::string >& unnamed = options.unnamed( "--ascii,--binary,--flush,--no-discard,--reuse-addr,--reuseaddr,--timestamp", "--delimiter,--size" );
         COMMA_ASSERT_BRIEF( !unnamed.empty(), "please specify port" );
         std::string publish_address = unnamed.size() == 2 ? "-" : unnamed[1];
         COMMA_ASSERT_BRIEF( publish_address == "-", "publish: todo; got: '" << publish_address << "'" );
@@ -100,7 +98,6 @@ int main( int argc, char** argv )
         bool timestamped = options.exists( "--timestamp" );
         bool binary = !options.exists( "--ascii" );
         char delimiter = options.value( "--delimiter", ',' );
-        options.assert_mutually_exclusive( "--flush", "--no-flush" );
         std::vector< char > packet( options.value( "--size", 16384 ) );
         #if ( BOOST_VERSION >= 106600 )
             boost::asio::io_context service;
@@ -123,11 +120,10 @@ int main( int argc, char** argv )
         if( binary ) { _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
         static_assert( sizeof( boost::posix_time::ptime ) == sizeof( comma::uint64 ), "expected time of size 8" );
-        // todo: comma::io::publisher publisher( publish_address, binary ? comma::io::mode::binary : comma::io::mode::ascii, false, flush );
         comma::io::detail::publish p( output_streams
                                     , options.value( "-s,--size", 0 ) * options.value( "-m,--multiplier", 1 )
                                     , !options.exists( "--no-discard" )
-                                    , options.exists( "--flush" ) || !options.exists( "--no-flush" )
+                                    , options.exists( "--flush" )
                                     , false
                                     , false
                                     , options.value( "--cache-size,--cache", 0 ) );
