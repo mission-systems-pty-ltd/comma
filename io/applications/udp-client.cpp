@@ -62,6 +62,8 @@ options
     --delimiter=<delimiter>: if ascii and --timestamp, use this delimiter; default: ','
     --flush; flush stdout after each packet
     --no-discard: if present, do blocking write to every open output stream
+    --no-flush; if not present flush stdout after each packet (--no-flush logic to preserve
+                backward-compatible default behaviour)
     --size=<size>; hint of maximum buffer size; default 16384
     --reuse-addr,--reuseaddr: reuse udp address/port
     --timestamp: output packet timestamp (currently just system time)
@@ -98,6 +100,7 @@ int main( int argc, char** argv )
         bool timestamped = options.exists( "--timestamp" );
         bool binary = !options.exists( "--ascii" );
         char delimiter = options.value( "--delimiter", ',' );
+        options.assert_mutually_exclusive( "--flush", "--no-flush" );
         std::vector< char > packet( options.value( "--size", 16384 ) );
         #if ( BOOST_VERSION >= 106600 )
             boost::asio::io_context service;
@@ -124,7 +127,7 @@ int main( int argc, char** argv )
         comma::io::detail::publish p( output_streams
                                     , options.value( "-s,--size", 0 ) * options.value( "-m,--multiplier", 1 )
                                     , !options.exists( "--no-discard" )
-                                    , options.exists( "--flush" )
+                                    , options.exists( "--flush" ) || !options.exists( "--no-flush" )
                                     , false
                                     , false
                                     , options.value( "--cache-size,--cache", 0 ) );
