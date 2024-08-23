@@ -1,5 +1,5 @@
 // Copyright (c) 2011 The University of Sydney
-// Copyright (c) 2024 Vsevolod Vlaskine
+// Copyright (c) 2020 Vsevolod Vlaskine
 // All rights reserved.
 
 #include "publish.h"
@@ -33,7 +33,7 @@ publish::publish( const std::vector< std::string >& endpoints
         endpoints_.push_back( endpoint( m.value< std::string >( "address" ), secondary ) ); // todo? quick and dirty; better usage semantics?
         if( !secondary ) { has_primary_stream = true; }
     }
-    if( !has_primary_stream ) { comma::say() << "please specify at least one primary stream" << std::endl; exit( 1 ); }
+    COMMA_ASSERT_BRIEF( has_primary_stream, "please specify at least one primary stream" );
     struct sigaction new_action, old_action;
     new_action.sa_handler = SIG_IGN;
     sigemptyset( &new_action.sa_mask );
@@ -62,7 +62,24 @@ void publish::disconnect_all()
     for( auto& p: *t ) { if( p ) { p->disconnect_all(); } }
     handle_sizes_( t ); // quick and dirty
 }
-        
+
+bool publish::write( const std::string& s )
+{
+    transaction_t t( publishers_ );
+    if( cache_size_ > 0 )
+    {
+        cache_.push_back( s );
+        if( cache_.size() > cache_size_ ) { cache_.pop_front(); }
+    }
+    for( auto& p: *t ) { if( p ) { p->write( &s[0], s.size(), false ); } } // for( std::size_t i = 0; i < t->size(); ++i ) { if( ( *t )[i] ) { ( *t )[i]->write( &buffer_[0], buffer_.size(), false ); } }
+    return handle_sizes_( t );
+}
+
+bool publish::write( const char* buf, unsigned int size )
+{
+    return write( std::string( buf, size ) ); // todo: quick and dirty, watch performance
+}
+
 bool publish::read( std::istream& input )
 {
     if( is_binary_() )
@@ -76,14 +93,7 @@ bool publish::read( std::istream& input )
         buffer_ += '\n';
         if( !input.good() ) { return false; }
     }
-    transaction_t t( publishers_ );
-    if( cache_size_ > 0 )
-    {
-        cache_.push_back( buffer_ );
-        if( cache_.size() > cache_size_ ) { cache_.pop_front(); }
-    }
-    for( auto& p: *t ) { if( p ) { p->write( &buffer_[0], buffer_.size(), false ); } } // for( std::size_t i = 0; i < t->size(); ++i ) { if( ( *t )[i] ) { ( *t )[i]->write( &buffer_[0], buffer_.size(), false ); } }
-    return handle_sizes_( t );
+    return write( buffer_ );
 }
 
 bool publish::handle_sizes_( transaction_t& t ) // todo? why pass transaction? it doen not seem going out of scope at the point of call; remove?
@@ -112,7 +122,7 @@ bool publish::handle_sizes_( transaction_t& t ) // todo? why pass transaction? i
     if( update_no_clients_ )
     {
         if( total > 0 ) { got_first_client_ever_ = true; }
-        else if( got_first_client_ever_ ) { comma::verbose << "the last client exited" << std::endl; return false; }
+        else if( got_first_client_ever_ ) { comma::saymore() << "the last client exited" << std::endl; return false; }
     }
     return true;
 }

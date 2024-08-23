@@ -42,24 +42,41 @@
 #include "../../base/exception.h"
 #include "../../base/types.h"
 #include "../../csv/format.h"
-#include "../publisher.h"
+#include "detail/publish.h"
 
 static void usage()
 {
     std::cerr << R"(
-simple udp client: receives udp packets and outputs them on stdout
+simple udp client: receive udp packets and outputs them on stdout (default)
+                   or to given output streams
 
 rationale: netcat and socat somehow do not work very well with udp
 
-usage: udp-client <port> [<options>]
+usage: udp-client <port> [<output-streams>] [<options>]
 
 options
-    --ascii: output timestamp as ascii; default: 64-bit binary
-    --binary: output timestamp as 64-bit binary; default
+    --ascii; output timestamp as ascii; default: 64-bit binary
+    --binary; output timestamp as 64-bit binary; default
+    --cache-size,--cache=<n>; default=0; number of cached records; if a new client connects, the
+                                         the cached records will be sent to it once connected
     --delimiter=<delimiter>: if ascii and --timestamp, use this delimiter; default: ','
-    --size=<size>: hint of maximum buffer size; default 16384
+    --flush; flush stdout after each packet
+    --no-discard: if present, do blocking write to every open output stream
+    --size=<size>; hint of maximum buffer size; default 16384
     --reuse-addr,--reuseaddr: reuse udp address/port
     --timestamp: output packet timestamp (currently just system time)
+
+output streams: <address>
+    <address>
+        tcp:<port>: e.g. tcp:1234
+        udp:<port>: e.g. udp:1234 (todo)
+        local:<name>: linux/unix local server socket e.g. local:./tmp/my_socket
+        <named pipe name>: named pipe, which will be re-opened, if client reconnects
+        <filename>: a regular file
+        -: stdout
+
+examples
+    todo
 )" << std::endl;
     exit( 0 );
 }
@@ -70,21 +87,23 @@ int main( int argc, char** argv )
     {
         comma::command_line_options options( argc, argv );
         if( argc < 2 || options.exists( "--help,-h" ) ) { usage(); }
-        const std::vector< std::string >& unnamed = options.unnamed( "--ascii,--binary,--reuse-addr,--reuseaddr,--timestamp", "--delimiter,--size" );
+        const std::vector< std::string >& unnamed = options.unnamed( "--ascii,--binary,--no-discar,--reuse-addr,--reuseaddr,--timestamp", "--delimiter,--size" );
         COMMA_ASSERT_BRIEF( !unnamed.empty(), "please specify port" );
-        COMMA_ASSERT_BRIEF( unnamed.size() < 3, "expected not more than two unnamed options; got: " << comma::join( unnamed, ' ' ) );
         std::string publish_address = unnamed.size() == 2 ? "-" : unnamed[1];
         COMMA_ASSERT_BRIEF( publish_address == "-", "publish: todo; got: '" << publish_address << "'" );
+        std::vector< std::string > output_streams( unnamed.size() > 1 ? unnamed.size() - 1 : 1 );
+        if( unnamed.size() == 1 ) { output_streams[0] = "-"; }
+        else { std::copy( unnamed.begin() + 1, unnamed.end(), output_streams.begin() ); }
         unsigned short port = boost::lexical_cast< unsigned short >( unnamed[0] );
         bool timestamped = options.exists( "--timestamp" );
         bool binary = !options.exists( "--ascii" );
         char delimiter = options.value( "--delimiter", ',' );
         std::vector< char > packet( options.value( "--size", 16384 ) );
-    #if ( BOOST_VERSION >= 106600 )
-        boost::asio::io_context service;
-    #else
-        boost::asio::io_service service;
-    #endif
+        #if ( BOOST_VERSION >= 106600 )
+            boost::asio::io_context service;
+        #else
+            boost::asio::io_service service;
+        #endif
         boost::asio::ip::udp::socket socket( service );
         socket.open( boost::asio::ip::udp::v4() );
         boost::system::error_code error;
@@ -98,13 +117,17 @@ int main( int argc, char** argv )
         socket.bind( boost::asio::ip::udp::endpoint( boost::asio::ip::udp::v4(), port ), error );
         COMMA_ASSERT_BRIEF( !bool( error ), "failed to bind port " << port );
         #ifdef WIN32
-        if( binary )
-        {
-            _setmode( _fileno( stdout ), _O_BINARY );        
-        }
+        if( binary ) { _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
         static_assert( sizeof( boost::posix_time::ptime ) == sizeof( comma::uint64 ), "expected time of size 8" );
         // todo: comma::io::publisher publisher( publish_address, binary ? comma::io::mode::binary : comma::io::mode::ascii, false, flush );
+        comma::io::detail::publish p( output_streams
+                                    , options.value( "-s,--size", 0 ) * options.value( "-m,--multiplier", 1 )
+                                    , !options.exists( "--no-discard" )
+                                    , options.exists( "--flush" )
+                                    , false
+                                    , false
+                                    , options.value( "--cache-size,--cache", 0 ) );
         while( std::cout.good() )
         {
             boost::system::error_code error;
@@ -124,8 +147,7 @@ int main( int argc, char** argv )
                     std::cout << boost::posix_time::to_iso_string( timestamp ) << delimiter;
                 }
             }
-            std::cout.write( &packet[0], size );
-            std::cout.flush();
+            p.write( &packet[0], size );
         }
         return 0;
     }

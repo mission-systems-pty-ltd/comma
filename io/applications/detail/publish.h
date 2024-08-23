@@ -1,5 +1,5 @@
 // Copyright (c) 2011 The University of Sydney
-// Copyright (c) 2024 Vsevolod Vlaskine
+// Copyright (c) 2020 Vsevolod Vlaskine
 // All rights reserved.
 
 #pragma once
@@ -54,6 +54,10 @@ class publish
         void disconnect_all();
         
         bool read( std::istream& input );
+
+        bool write( const std::string& s );
+
+        bool write( const char* buf, unsigned int size );
         
         unsigned int num_clients() const { return num_clients_; }
 

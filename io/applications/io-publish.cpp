@@ -24,7 +24,7 @@ general options
 
 stream options
     --cache-size,--cache=<n>; default=0; number of cached records; if a new client connects, the
-                                         the cached records will be sent to it once connected (todo)
+                                         the cached records will be sent to it once connected
     --size,-s: binary input; packet size
     --multiplier,-m: multiplier for packet size, default is 1. The actual packet size will be m * s
     --no-discard: if present, do blocking write to every open stream
@@ -56,7 +56,7 @@ client options
                but might take a while to notice that a client has gone.
                This affects --output-number-of-clients and --on-demand.
 
-output streams: <address>[,<options>]
+output streams: <address>[;<options>]
     <address>
         tcp:<port>: e.g. tcp:1234
         udp:<port>: e.g. udp:1234 (todo)
