@@ -101,9 +101,13 @@ output streams: <address>
         -: stdout
 
 examples
+    publishing on udp
+        ( echo a; echo b; echo c ) | socat - udp:localhost::12345
     basics
         udp-client 12435 > raw.bin
-        udp-client 12435 --timestamp > timestamped.bin
+        udp-client 12435 --fields=t,data > timestamped.bin
+        udp-client 12435 --fields=t,size,data > timestamp.size.bin
+        udp-client 12435 --fields=t,size,data --ascii > timestamp.size.csv
     re-publishing
         udp-client 12435 tcp::4567 
         udp-client 12435 tcp::4567 tcp::7890 
