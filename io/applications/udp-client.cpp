@@ -59,6 +59,17 @@ rationale: netcat and socat somehow do not work very well with udp
 
 usage: udp-client <port> [<output-streams>] [<options>]
 
+attention! it is possible to receive several packets udp packets in a single
+           read from the udp socket; the way to deal with it:
+               - if fixed-width data is published on the UDP socket, use:
+                 udp-client ... --size=<expected-fixed-size>
+               - if variable-size data is published on the UDP socket, the data
+                 receiver will have to parse the packets depending on communication
+                 protocol or nature of the data
+               - if using udp-client --fields=size,data or --fields=t,size,data,
+                 size field will have the total size in bytes for all UDP packets
+                 read from the UDP socket in a single receive call
+
 options
     --ascii; output timestamp as ascii; default: 64-bit binary
     --cache-size,--cache=<n>; default=0; number of cached records; if a new client connects, the
@@ -74,7 +85,9 @@ options
             data: udp packet data
     --flush; flush stdout after each packet
     --reuse-addr,--reuseaddr: reuse udp address/port
-    --size=<size>; hint of maximum buffer size; default 16384
+    --size=<size>; default=16384; hint of maximum buffer size in bytes, if using timestamped
+                                  fixed-width data, use --size=<fixed-width-size>, otherwise
+                                  multiple packets may be read from the UDP socket at once
     --timestamp: deprecated, use --fields; output packet timestamp; currently just system
                  time as UTC; if binary, little endian uint64
 
