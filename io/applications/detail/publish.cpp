@@ -138,6 +138,7 @@ void publish::accept_()
             if( ( *t )[i]->acceptor_file_descriptor() != comma::io::invalid_file_descriptor ) { select.read().add( ( *t )[i]->acceptor_file_descriptor() ); }
         }
     }
+    if( select.read()().empty() ) { return; }
     while( !is_shutdown_ )
     {
         select.wait( boost::posix_time::millisec( 100 ) ); // todo? make timeout configurable?

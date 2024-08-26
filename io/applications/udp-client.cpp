@@ -1,5 +1,6 @@
 // This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
+// Copyright (c) 2024 Vsevolod Vlaskine
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -33,12 +34,14 @@
 #include <stdlib.h>
 #endif
 #include <iostream>
+#include <sstream>
 #include <type_traits>
 #include <boost/array.hpp>
 #include <boost/asio/ip/udp.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/noncopyable.hpp>
 #include "../../application/command_line_options.h"
+#include "../../application/signal_flag.h"
 #include "../../base/exception.h"
 #include "../../base/types.h"
 #include "../../csv/format.h"
@@ -58,20 +61,22 @@ usage: udp-client <port> [<output-streams>] [<options>]
 
 options
     --ascii; output timestamp as ascii; default: 64-bit binary
-    --binary; output timestamp as 64-bit binary; default
     --cache-size,--cache=<n>; default=0; number of cached records; if a new client connects, the
                                          the cached records will be sent to it once connected
     --delimiter=<delimiter>: if ascii and --timestamp, use this delimiter; default: ','
-    --fields=<fields>; default=data
+    --discard: not present, do blocking write to every open output stream
+    --endl; if --ascii, output '\n' after data
+    --fields=<fields>; default=data; choices (for now): 'data', 't,data', 't,size,data', 'size,data'
+                                                        't', 't,size', 'size' 
         <fields>
             t: utc timestamp, same as --timestamp
             size: data size in bytes
             data: udp packet data
     --flush; flush stdout after each packet
-    --no-discard: if present, do blocking write to every open output stream
-    --size=<size>; hint of maximum buffer size; default 16384
     --reuse-addr,--reuseaddr: reuse udp address/port
-    --timestamp: output packet timestamp; currently just system time as UTC, little endian
+    --size=<size>; hint of maximum buffer size; default 16384
+    --timestamp: deprecated, use --fields; output packet timestamp; currently just system
+                 time as UTC; if binary, little endian uint64
 
 output streams: <address>
     <address>
@@ -100,10 +105,8 @@ int main( int argc, char** argv )
     {
         comma::command_line_options options( argc, argv );
         if( argc < 2 || options.exists( "--help,-h" ) ) { usage(); }
-        const std::vector< std::string >& unnamed = options.unnamed( "--ascii,--binary,--flush,--no-discard,--reuse-addr,--reuseaddr,--timestamp", "-.?.*" );
+        const std::vector< std::string >& unnamed = options.unnamed( "--ascii,--binary,--discard,--endl,--flush,--reuse-addr,--reuseaddr,--timestamp", "-.+" );
         COMMA_ASSERT_BRIEF( !unnamed.empty(), "please specify port" );
-        std::string publish_address = unnamed.size() == 2 ? "-" : unnamed[1];
-        COMMA_ASSERT_BRIEF( publish_address == "-", "publish: todo; got: '" << publish_address << "'" );
         std::vector< std::string > output_streams( unnamed.size() > 1 ? unnamed.size() - 1 : 1 );
         if( unnamed.size() == 1 ) { output_streams[0] = "-"; }
         else { std::copy( unnamed.begin() + 1, unnamed.end(), output_streams.begin() ); }
@@ -111,9 +114,24 @@ int main( int argc, char** argv )
         options.assert_mutually_exclusive( "--timestamp", "--fields" );
         bool timestamped = options.exists( "--timestamp" );
         if( timestamped ) { comma::say() << "--timestamped: deprecated (will be maintained for now); use --fields=t,data" << std::endl; }
+        if( options.exists( "--binary" ) ) { comma::say() << "--binary: deprecated, please remove; data deemed binary anyway unless --ascii specified" << std::endl; }
         bool binary = !options.exists( "--ascii" );
-        comma::csv::options csv( options );
-        std::vector< char > packet( options.value( "--size", 16384 ) );
+        bool endl = options.exists( "--endl" );
+        comma::csv::options csv( options, timestamped ? "t,data" : "data" );
+        COMMA_ASSERT_BRIEF(    csv.fields == "data"
+                            || csv.fields == "t,data"
+                            || csv.fields == "t,size,data"
+                            || csv.fields == "size,data"
+                            || csv.fields == "t"
+                            || csv.fields == "t,size"
+                            || csv.fields == "size"
+                          , "unsupported fields: '" << csv.fields << "'" ); // uber-quick and dirty, shameful
+        bool has_time = csv.has_field( "t" ) || timestamped;
+        bool has_size = csv.has_field( "size" );
+        bool has_data = csv.has_field( "data" );
+        static_assert( sizeof( boost::posix_time::ptime ) == 8 ); // quick and dirty
+        unsigned max_size = options.value( "--size", 16384 );
+        std::vector< char > buffer( max_size + 12 ); // quick and dirty
         #if BOOST_VERSION >= 106600
             boost::asio::io_context service;
         #else
@@ -137,31 +155,38 @@ int main( int argc, char** argv )
         static_assert( sizeof( boost::posix_time::ptime ) == sizeof( comma::uint64 ), "expected time of size 8" );
         comma::io::detail::publish p( output_streams
                                     , options.value( "-s,--size", 0 ) * options.value( "-m,--multiplier", 1 )
-                                    , !options.exists( "--no-discard" )
-                                    , options.exists( "--flush" )
+                                    , options.exists( "--discard" )
+                                    , options.exists( "--flush" ) || !binary
                                     , false
                                     , false
                                     , options.value( "--cache-size,--cache", 0 ) );
-        while( std::cout.good() )
+        comma::signal_flag is_shutdown;
+        if( binary )
         {
-            boost::system::error_code error;
-            std::size_t size = socket.receive( boost::asio::buffer( &packet[0], packet.size() ), 0, error );
-            if( error || size == 0 ) { break; }
-            if( timestamped )
+            unsigned int offset = ( has_time ? 8 : 0 ) + ( has_size ? 4 : 0 ); // hyper-quick and dirty for now
+            while( !is_shutdown )
             {
-                boost::posix_time::ptime timestamp = boost::posix_time::microsec_clock::universal_time();
-                if( binary )
-                { 
-                    static char buf[ sizeof( comma::int64 ) ];
-                    comma::csv::format::traits< boost::posix_time::ptime, comma::csv::format::time >::to_bin( timestamp, buf );
-                    std::cout.write( buf, sizeof( comma::int64 ) );
-                }
-                else
-                {
-                    std::cout << boost::posix_time::to_iso_string( timestamp ) << csv.delimiter;
-                }
+                std::uint32_t size = socket.receive( boost::asio::buffer( &buffer[offset], max_size ), 0, error );
+                if( error || size == 0 ) { break; } // todo? throw on error?
+                if( has_time ) { comma::csv::format::traits< boost::posix_time::ptime, comma::csv::format::time >::to_bin( boost::posix_time::microsec_clock::universal_time(), &buffer[0] ); }
+                if( has_size ) { ::memcpy( &buffer[ has_time ? 8 : 0 ], reinterpret_cast< const char* >( &size ), 4 ); }
+                p.write( &buffer[0], offset + ( has_data ? size : 0 ) );
             }
-            p.write( &packet[0], size );
+        }
+        else
+        {
+            std::string delimiter;
+            while( !is_shutdown )
+            {
+                std::size_t size = socket.receive( boost::asio::buffer( &buffer[0], max_size ), 0, error );
+                if( error || size == 0 ) { break; } // todo? throw on error?
+                std::ostringstream oss;
+                if( has_time ) { oss << boost::posix_time::to_iso_string( boost::posix_time::microsec_clock::universal_time() ); delimiter = csv.delimiter; }
+                if( has_size ) { oss << delimiter << size; delimiter = csv.delimiter; }
+                if( has_data ) { oss << delimiter; oss.write( &buffer[0], size ); if( endl ) { oss << std::endl; } }
+                const std::string& s = oss.str();
+                p.write( &s[0], s.size() );
+            }
         }
         return 0;
     }
