@@ -42,6 +42,8 @@
 #include "../../base/exception.h"
 #include "../../base/types.h"
 #include "../../csv/format.h"
+#include "../../csv/options.h"
+#include "../../string/string.h"
 #include "detail/publish.h"
 
 static void usage()
@@ -60,11 +62,16 @@ options
     --cache-size,--cache=<n>; default=0; number of cached records; if a new client connects, the
                                          the cached records will be sent to it once connected
     --delimiter=<delimiter>: if ascii and --timestamp, use this delimiter; default: ','
+    --fields=<fields>; default=data
+        <fields>
+            t: utc timestamp, same as --timestamp
+            size: data size in bytes
+            data: udp packet data
     --flush; flush stdout after each packet
     --no-discard: if present, do blocking write to every open output stream
     --size=<size>; hint of maximum buffer size; default 16384
     --reuse-addr,--reuseaddr: reuse udp address/port
-    --timestamp: output packet timestamp (currently just system time)
+    --timestamp: output packet timestamp; currently just system time as UTC, little endian
 
 output streams: <address>
     <address>
@@ -76,7 +83,13 @@ output streams: <address>
         -: stdout
 
 examples
-    todo
+    basics
+        udp-client 12435 > raw.bin
+        udp-client 12435 --timestamp > timestamped.bin
+    re-publishing
+        udp-client 12435 tcp::4567 
+        udp-client 12435 tcp::4567 tcp::7890 
+        udp-client 12435 tcp::4567 - > log.bin
 )" << std::endl;
     exit( 0 );
 }
@@ -87,7 +100,7 @@ int main( int argc, char** argv )
     {
         comma::command_line_options options( argc, argv );
         if( argc < 2 || options.exists( "--help,-h" ) ) { usage(); }
-        const std::vector< std::string >& unnamed = options.unnamed( "--ascii,--binary,--flush,--no-discard,--reuse-addr,--reuseaddr,--timestamp", "--delimiter,--size" );
+        const std::vector< std::string >& unnamed = options.unnamed( "--ascii,--binary,--flush,--no-discard,--reuse-addr,--reuseaddr,--timestamp", "-.?.*" );
         COMMA_ASSERT_BRIEF( !unnamed.empty(), "please specify port" );
         std::string publish_address = unnamed.size() == 2 ? "-" : unnamed[1];
         COMMA_ASSERT_BRIEF( publish_address == "-", "publish: todo; got: '" << publish_address << "'" );
@@ -95,11 +108,13 @@ int main( int argc, char** argv )
         if( unnamed.size() == 1 ) { output_streams[0] = "-"; }
         else { std::copy( unnamed.begin() + 1, unnamed.end(), output_streams.begin() ); }
         unsigned short port = boost::lexical_cast< unsigned short >( unnamed[0] );
+        options.assert_mutually_exclusive( "--timestamp", "--fields" );
         bool timestamped = options.exists( "--timestamp" );
+        if( timestamped ) { comma::say() << "--timestamped: deprecated (will be maintained for now); use --fields=t,data" << std::endl; }
         bool binary = !options.exists( "--ascii" );
-        char delimiter = options.value( "--delimiter", ',' );
+        comma::csv::options csv( options );
         std::vector< char > packet( options.value( "--size", 16384 ) );
-        #if ( BOOST_VERSION >= 106600 )
+        #if BOOST_VERSION >= 106600
             boost::asio::io_context service;
         #else
             boost::asio::io_service service;
@@ -130,7 +145,7 @@ int main( int argc, char** argv )
         while( std::cout.good() )
         {
             boost::system::error_code error;
-            std::size_t size = socket.receive( boost::asio::buffer( packet ), 0, error );
+            std::size_t size = socket.receive( boost::asio::buffer( &packet[0], packet.size() ), 0, error );
             if( error || size == 0 ) { break; }
             if( timestamped )
             {
@@ -143,7 +158,7 @@ int main( int argc, char** argv )
                 }
                 else
                 {
-                    std::cout << boost::posix_time::to_iso_string( timestamp ) << delimiter;
+                    std::cout << boost::posix_time::to_iso_string( timestamp ) << csv.delimiter;
                 }
             }
             p.write( &packet[0], size );

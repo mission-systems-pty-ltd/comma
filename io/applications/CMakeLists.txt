@@ -49,7 +49,7 @@ if( NOT WIN32 )
     install( TARGETS io-tee RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
     
     add_executable( udp-client ${dir}/udp-client.cpp ${dir}/detail/publish.h ${dir}/detail/publish.cpp )
-    target_link_libraries( udp-client comma_application comma_name_value comma_io comma_csv comma_base ) # profiler )
+    target_link_libraries( udp-client comma_application comma_name_value comma_io comma_csv comma_base comma_string ) # profiler )
     set_target_properties( udp-client PROPERTIES LINK_FLAGS_RELEASE -s )
     install( TARGETS udp-client RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime )
     
