@@ -12,15 +12,13 @@
 
 #include "../../application/command_line_options.h"
 #include "../../base/exception.h"
+#include "../../base/none.h"
 #include "../../base/types.h"
 #include "../../csv/stream.h"
 #include "../../string/string.h"
 
 // todo
 // - seed=true-random
-// - true-random
-//   - --type=f: fix types (should work, but they don't)
-//   - --type=ui,ui: fix types (should work, but they don't)
 // - make, true-random: --head=<n>
 // - sample, shuffle
 //   - examples
@@ -85,10 +83,12 @@ static void usage( bool verbose )
     std::cerr << "\n            --append; append random number to stdin input";
     std::cerr << "\n            --once; output random number only once";
     std::cerr << "\n            --output-binary; output random numbers as binary";
-    std::cerr << "\n                    specify --binary=<format> for stdin input";
+    std::cerr << "\n                specify --binary=<format> for stdin input";
+    std::cerr << "\n            --range=[<min>,<max>]; desired value range";
+    std::cerr << "\n                if multiple output values, e.g: --type=f,ui,ub";
+    std::cerr << "\n                --range will be applied to all output values";
     std::cerr << "\n            --type=<type>; default=ui; todo: supported values: ui;";
-    std::cerr << "\n                    e.g: --type=3ui; --type=ui,ui,ui; etc";
-    std::cerr << "\n                    todo! support other types, just ask";
+    std::cerr << "\n                e.g: --type=3ui; --type=ui,ui,ui; etc";
     std::cerr << '\n';
     std::cerr << "\n        example";
     std::cerr << "\n            > csv-random make --seed=$( csv-random true-random --once )";
@@ -430,11 +430,20 @@ static int run_impl( const comma::command_line_options& options, std::size_t cou
     std::random_device rd;
     const bool binary = options.exists( "--output-binary" ) || ::csv.binary();
     const bool flush = options.exists( "--flush" ) || ::csv.flush;
+    typedef std::pair< double, double > pair_t;
+    boost::optional< pair_t > range = comma::silent_none< pair_t >();
+    double factor{1};
+    if( options.exists( "--range" ) )
+    {
+        range = comma::csv::ascii< pair_t >().get( options.value< std::string >( "--range" ) );
+        factor = ( range->second - range->first ) / ( rd.max() - rd.min() );
+    }
     auto output_line_to_stdout = [&]( std::string&& initial_delimiter )
     {
         for( std::size_t i = 0; i < count; ++i )
         {
-            const T r = rd();
+            T r = rd();
+            if( range ) { r = range->first + ( r - rd.min() ) * factor; }
             if( binary ) { std::cout.write( reinterpret_cast< const char* >( &r ), sizeof( T ) ); }
             else { std::cout << initial_delimiter << type_traits< T >::cast( r ); initial_delimiter = ::csv.delimiter; }
         }
