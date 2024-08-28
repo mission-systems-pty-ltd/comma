@@ -16,6 +16,21 @@
 #include "../../csv/stream.h"
 #include "../../string/string.h"
 
+// todo
+// - seed=true-random
+// - true-random
+//   - --type=f: fix types (should work, but they don't)
+//   - --type=ui,ui: fix types (should work, but they don't)
+// - make, true-random: --head=<n>
+// - sample, shuffle
+//   - examples
+// - regression test!
+// - --help vs --help --verbose
+// ? wiki: tutorials
+//   - csv-random
+//   - csv-repeat: --pace etc
+//   - make tutorials searchable
+
 static void usage( bool verbose )
 {
     std::cerr << "\nrandom operations on input stream";
@@ -23,16 +38,18 @@ static void usage( bool verbose )
     std::cerr << "\nusage: csv-random <operation> [<options>]";
     std::cerr << "\n";
     std::cerr << "\n    where <operation> is one of:";
-    std::cerr << "\n        make: output pseudo-random numbers";
+    std::cerr << "\n        pseudo-random, make: output pseudo-random numbers";
     std::cerr << "\n        true-random: output non-deterministic uniformly distributed numbers";
     std::cerr << "\n        sample: output a uniformly distributed sample of input records";
     std::cerr << "\n        shuffle: output input records in pseudo-random order";
     std::cerr << '\n';
     std::cerr << "\noptions";
-    std::cerr << "\n    --seed=[<unsigned int>]; random seed";
+    std::cerr << "\n    --seed=[<unsigned int>]; random seed:";
+    std::cerr << "\n        <n>: integer seed for pseudo-random generator";
+    std::cerr << "\n        'true-random': todo: true random number to use as seed";
     std::cerr << '\n';
     std::cerr << "\noperations";
-    std::cerr << "\n    make: output pseudo-random numbers";
+    std::cerr << "\n    pseudo-random, make: output pseudo-random numbers";
     std::cerr << '\n';
     std::cerr << "\n        usage: csv-random make [<options>] > random.csv";
     std::cerr << "\n               cat input.csv | csv-random make --append [<options>]";
@@ -71,6 +88,7 @@ static void usage( bool verbose )
     std::cerr << "\n                    specify --binary=<format> for stdin input";
     std::cerr << "\n            --type=<type>; default=ui; todo: supported values: ui;";
     std::cerr << "\n                    e.g: --type=3ui; --type=ui,ui,ui; etc";
+    std::cerr << "\n                    todo! support other types, just ask";
     std::cerr << '\n';
     std::cerr << "\n        example";
     std::cerr << "\n            > csv-random make --seed=$( csv-random true-random --once )";
@@ -88,7 +106,7 @@ static void usage( bool verbose )
     std::cerr << "\n                where <engine> is one of: minstd_rand0, minstd_rand, mt19937,";
     std::cerr << "\n                    mt19937_64 (default), ranlux24_base, ranlux48_base,";
     std::cerr << "\n                    ranlux24, ranlux48, knuth_b, default_random_engine";
-    std::cerr << "\n            --fields=[<fields>]; if 'block' field present sample each block,";
+    std::cerr << "\n            --fields=[<fields>]; if 'block' field present, sample each block,";
     std::cerr << "\n                    otherwise read whole input and then sample";
     std::cerr << "\n            --ratio=[<ratio>]; portion of each block to output,";
     std::cerr << "\n                    if block is too small, nothing will be output for it";
@@ -136,8 +154,7 @@ namespace comma { namespace applications { namespace random { namespace shuffle 
 
 struct input
 {
-    comma::uint32 block;
-    input() : block( 0 ) {}
+    comma::uint32 block{0};
 };
 
 } } } } // namespace comma { namespace applications { namespace random { namespace shuffle {
@@ -344,21 +361,25 @@ template < typename Engine > static int run_impl( const comma::command_line_opti
     if( sliding_window ) { std::cerr << "csv-random shuffle: --sliding-window: todo" << std::endl; return 1; }
     if( sliding_window ) { std::cerr << "csv-random shuffle: expected either block field or --sliding-window; got both" << std::endl; return 1; }
     comma::csv::input_stream< input > is( std::cin, ::csv );
-    comma::uint32 block = 0;
+    bool has_block = ::csv.has_field( "block" );
+    comma::uint32 block{0};
     while( is.ready() || std::cin.good() )
     {
         const input* p = is.read();
-        if( !p || p->block != block )
+        if( !p || ( has_block && p->block != block ) )
         {
-            std::uniform_int_distribution< int > distribution( 0, records.size() - 1 ); // quick and dirty
-            indices.resize( records.size() ); // quick and dirty
-            for( unsigned int i = 0; i < indices.size(); ++i ) { indices[i] = i; }
-            std::random_shuffle( indices.begin(), indices.end(), [&]( int ) -> int { return distribution( engine ); } ); // quick and dirty, watch performance
-            unsigned int s = sample ? ( ratio ? int( records.size() * *ratio ) : size ) : records.size();
-            if( sample ) { std::sort( indices.begin(), indices.begin() + s ); } // quick and dirty
-            for( unsigned int i = 0; i < s; ++i ) { std::cout.write( &records[indices[i]][0], records[indices[i]].size() ); }
-            records.clear();
-            if( ::csv.flush ) { std::cout.flush(); }
+            if( !records.empty() )
+            {
+                std::uniform_int_distribution< int > distribution( 0, records.size() - 1 ); // quick and dirty
+                indices.resize( records.size() ); // quick and dirty
+                for( unsigned int i = 0; i < indices.size(); ++i ) { indices[i] = i; }
+                std::random_shuffle( indices.begin(), indices.end(), [&]( int ) -> int { return distribution( engine ); } ); // quick and dirty, watch performance
+                unsigned int s = sample ? ( ratio ? int( records.size() * *ratio ) : size ) : records.size();
+                if( sample ) { std::sort( indices.begin(), indices.begin() + s ); } // quick and dirty
+                for( unsigned int i = 0; i < s; ++i ) { std::cout.write( &records[indices[i]][0], records[indices[i]].size() ); }
+                records.clear();
+                if( ::csv.flush ) { std::cout.flush(); }
+            }
             if( p ) { block = p->block; }
         }
         if( !p ) { break; }
@@ -487,7 +508,7 @@ int main( int ac, char** av )
         ::seed = options.optional< comma::uint32 >( "--seed" );
         ::verbose = options.exists( "--verbose,-v" );
         std::string operation = unnamed[0];
-        if( operation == "make" ) { return comma::applications::random::make::run( options ); }
+        if( operation == "make" || operation == "pseudo-random" ) { return comma::applications::random::make::run( options ); }
         if( operation == "sample" ) { return comma::applications::random::sample::run( options ); }
         if( operation == "shuffle" ) { return comma::applications::random::shuffle::run( options ); }
         if( operation == "true-random" ) { return comma::applications::random::true_random::run( options ); }
