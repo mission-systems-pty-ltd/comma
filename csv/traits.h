@@ -2,8 +2,7 @@
 
 /// @author vsevolod vlaskine
 
-#ifndef COMMA_CSV_TRAITS_H_
-#define COMMA_CSV_TRAITS_H_
+#pragma once
 
 #include "../csv/options.h"
 #include "../visiting/traits.h"
@@ -48,5 +47,3 @@ template <> struct traits< comma::csv::options >
 };
 
 } } // namespace comma { namespace visiting {
-
-#endif // COMMA_CSV_TRAITS_H_

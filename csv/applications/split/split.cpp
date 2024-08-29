@@ -255,8 +255,7 @@ bool split< T >::published_on_stream( const char* data, unsigned int size )
     return true;
 }
 
-template < typename T >
-void split< T >::write( const char* data, unsigned int size )
+template < typename T > void split< T >::write( const char* data, unsigned int size )
 {
     mode_ = std::ofstream::out | std::ofstream::binary;
     if( binary_ ) { binary_->get( current_, data ); }
@@ -273,8 +272,7 @@ void split< T >::write( const char* data, unsigned int size )
     if ( pass_ ) { std::cout.write( data, size ); std::cout.flush(); }
 }
 
-template < typename T >
-void split< T >::write( std::string line )
+template < typename T > void split< T >::write( std::string line )
 {
     mode_ = std::ofstream::out; // quick and dirty
     if( ascii_ ) { ascii_->get( current_, line ); }
@@ -293,8 +291,7 @@ void split< T >::write( std::string line )
     if ( pass_ ) { std::cout.write( &line[0], line.size() ); /*std::cout.put('\n');*/ std::cout.flush(); }
 }
 
-template < typename T >
-std::ofstream* split< T >::ofstream_by_time_()
+template < typename T > std::ofstream* split< T >::ofstream_by_time_()
 {
     bool changed = period_ ? !last_ || current_.timestamp > last_->timestamp + *period_ : timestamps_stream_seek_( current_.timestamp );
     if( !last_ || changed )
@@ -308,8 +305,7 @@ std::ofstream* split< T >::ofstream_by_time_()
     return &file_;
 }
 
-template < typename T >
-std::ofstream* split< T >::ofstream_by_block_()
+template < typename T > std::ofstream* split< T >::ofstream_by_block_()
 {
     static comma::uint32 id = 0;
     if( !last_ || last_->block != current_.block )
@@ -322,11 +318,11 @@ std::ofstream* split< T >::ofstream_by_block_()
             if( it == filenames_.end() ) { return nullptr; }
             filename = it->second;
             const auto& dirname = comma::filesystem::path( filename ).parent_path();
-            if( !( dirname.empty() || comma::filesystem::is_directory( dirname ) || comma::filesystem::create_directories( dirname ) ) ) { COMMA_THROW( comma::exception, "failed to create directory '" << dirname << "' for file: '" << filename << "'" ); }
+            COMMA_ASSERT( dirname.empty() || comma::filesystem::is_directory( dirname ) || comma::filesystem::create_directories( dirname ), "failed to create directory '" << dirname << "' for file: '" << filename << "'" )
         }
         if( filename.empty() ) { filename = boost::lexical_cast< std::string >( current_.block ) + suffix_; }
         file_.open( &filename[0], mode_ );
-        if( !file_.is_open() ) { COMMA_THROW( comma::exception, "failed to open '" << filename << "'" ); }
+        COMMA_ASSERT( file_.is_open(), "failed to open '" << filename << "'" );
         last_ = current_;
         ++id;
     }
@@ -345,11 +341,9 @@ template <> std::string find_< comma::uint32, std::unordered_map< comma::uint32,
     return it == m.end() ? std::string() : it->second;
 }
 
-template < typename T >
-std::string split< T >::filename_from_id_( const T& id ) { return filenames_.empty() ? to_string( id ) + suffix_ : find_( filenames_, id ); }
+template < typename T > std::string split< T >::filename_from_id_( const T& id ) { return filenames_.empty() ? to_string( id ) + suffix_ : find_( filenames_, id ); }
 
-template < typename T >
-std::ofstream* split< T >::ofstream_by_id_()
+template < typename T > std::ofstream* split< T >::ofstream_by_id_()
 {
     typename Files::iterator it = files_.find( current_.id );
     if( it == files_.end() )
@@ -369,10 +363,7 @@ std::ofstream* split< T >::ofstream_by_id_()
         std::string name = filename_from_id_( current_.id );
         if( name.empty() ) { return nullptr; }
         const auto& dirname = comma::filesystem::path( name ).parent_path();
-        if( !( dirname.empty() || comma::filesystem::is_directory( dirname ) || comma::filesystem::create_directories( dirname ) ) )
-        {
-            COMMA_THROW( comma::exception, "failed to create directory '" << dirname << "' for file: '" << name << "'" );
-        }
+        COMMA_ASSERT( dirname.empty() || comma::filesystem::is_directory( dirname ) || comma::filesystem::create_directories( dirname ), "failed to create directory '" << dirname << "' for file: '" << name << "'" );
         std::shared_ptr< std::ofstream > stmp( new std::ofstream( &name[0], mode ) );
         it = files_.insert( std::make_pair( current_.id, stmp ) ).first;
     }
