@@ -37,6 +37,7 @@
 
 #include <boost/optional.hpp>
 #include <boost/program_options.hpp>
+#include "../../application/command_line_options.h"
 #include "../../csv/impl/program_options.h"
 #include "../../csv/traits.h"
 #include "split/split.h"
@@ -68,16 +69,31 @@ template < typename T > static int run()
     #ifdef WIN32
         _setmode( _fileno( stdin ), _O_BINARY );
     #endif
-    std::vector< char > packet( size );
+    bool has_size = csv.has_field( "size" );
+    std::vector< char > buffer( 32768 ); // quick and dirty
+    typedef comma::csv::applications::input< T > input_t;
+    comma::csv::binary< input_t > binary( csv );
+    input_t header;
     while( std::cin.good() && !std::cin.eof() )
     {
-        std::cin.read( &packet[0], size );
-        if( std::cin.gcount() > 0 ) { split.write( &packet[0], size ); }
+        std::cin.read( &buffer[0], size );
+        if( std::cin.gcount() == 0 ) { break; }
+        COMMA_ASSERT_BRIEF( std::cin.gcount() == int( size ), "expected " << size << " bytes; got: " << size );
+        unsigned int total_size = size;
+        if( has_size )
+        {
+            binary.get( header, &buffer[0] );
+            total_size += header.size;
+            if( buffer.size() < total_size ) { buffer.resize( total_size ); }
+            std::cin.read( &buffer[size], header.size );
+            COMMA_ASSERT_BRIEF( std::cin.gcount() == int( header.size ), "expected " << header.size << " bytes; got: " << size );
+        }
+        split.write( &buffer[0], total_size );
     }
     return 0;
 }
 
-int main( int argc, char** argv )
+int main( int ac, char** av )
 {
     try
     {
@@ -97,8 +113,8 @@ int main( int argc, char** argv )
             ( "timestamps", boost::program_options::value< std::string >( &timestamps ), "<filename>[;<csv options>]: split by timestamps (assuming both input and timestamps are in ascending order)" );
         description.add( comma::csv::program_options::description() );
         boost::program_options::variables_map vm;
-        boost::program_options::store( boost::program_options::parse_command_line( argc, argv, description), vm );
-        boost::program_options::parsed_options parsed = boost::program_options::command_line_parser( argc, argv ).options( description ).allow_unregistered().run();
+        boost::program_options::store( boost::program_options::parse_command_line( ac, av, description ), vm );
+        boost::program_options::parsed_options parsed = boost::program_options::command_line_parser( ac, av ).options( description ).allow_unregistered().run();
         boost::program_options::notify( vm );
         if ( vm.count( "help" ) || vm.count( "long-help" ) )
         {
@@ -111,11 +127,18 @@ usage: csv-split [options] [outputs]*
 )";
             std::cerr << description;
             std::cerr << R"(
-data is split by one of the following fields (listed in descending precedence)
-    block: split on the block number change
-    id:    split by id (same as block, except does not have to be contiguous
-                        with the price of worse performance)
-    t:     if present, use timestamp from the packet; if absent, use system time
+
+--fields=<fields>; <fields>: t,block,id,size
+    data is split by one of the following fields (listed in descending precedence)
+        block: split on the block number change
+        id   : split by id (same as block, except does not have to be contiguous
+                           with the price of worse performance)
+        t    : if present, use timestamp from the packet; if absent, use system time
+    size: if present, assume that fixed-width data is followed by <n> bytes
+          where <n> is the value of the size field; used only in binary mode
+          e.g: for the command: csv-split --fields t,,,size --binary=t,3ui,2f
+          the record has a fixed part (header) with format t,3ui,2f followed
+          by variable payload of size read from 'size' field (which can be 0 as well)
 
 examples:
     --- split by block field, output to files ---
@@ -128,7 +151,7 @@ examples:
     with specified filenames:
     ( echo 0; echo 1; echo 2 ) \
         | csv-split --fields block --files <( echo a; echo b; echo c )
-
+csv-split
     with filenames mapped to block ids:
     ( echo 0; echo 1; echo 2 ) \
         | csv-split --fields block \
@@ -163,7 +186,7 @@ examples:
     records with ids for which output stream is not specified will be discarded,
     unless ... stream is specified:
 
-    outputs: <keys>;<stream>; send records with given set of ids to this stream
+    outputs: <keys>;<stream>; send records with given set of i32768ds to this stream
         keys:
             <id>[,<id>]*: comma-separated list of ids, e.g: '5' or '2,5,7', etc
             ... (three dots): send to this stream all the records with ids
@@ -184,7 +207,8 @@ examples:
 )";
             return 0;
         }
-        csv = comma::csv::program_options::get( vm );
+        comma::command_line_options options( ac, av );
+        csv = comma::csv::options( options );
         COMMA_ASSERT_BRIEF( !vm.count( "period" ) || !vm.count( "timestamps" ), "csv-split: --period and --timestamps are mutually exclusive (todo? combine them? just ask)" );
         COMMA_ASSERT_BRIEF( default_filename.empty(), "csv-split: --default-filename: todo, just ask" )
         if( csv.binary() ) { size = csv.format().size(); }

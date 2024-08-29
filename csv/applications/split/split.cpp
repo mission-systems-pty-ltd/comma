@@ -123,8 +123,7 @@ void split< T >::timestamps_stream_make_( const std::string& timestamps )
     //std::cerr << "--> a: interval: " << boost::posix_time::to_iso_string( timestamps_last_.first ) << " - " << boost::posix_time::to_iso_string( timestamps_last_.second ) << std::endl;
 }
 
-template < typename T >
-bool split< T >::timestamps_stream_seek_( boost::posix_time::ptime t )
+template < typename T > bool split< T >::timestamps_stream_seek_( boost::posix_time::ptime t )
 {
     bool changed = false;
     while( t >= timestamps_last_.second && !timestamps_last_.second.is_pos_infinity() )
@@ -212,8 +211,7 @@ split< T >::split( const boost::optional< boost::posix_time::time_duration >& pe
     acceptor_thread_ = std::thread( std::bind( &split< T >::accept_, std::ref( *this )));
 }
 
-template < typename T >
-split< T >::~split()
+template < typename T > split< T >::~split()
 {
     is_shutdown_ = true;
     if( acceptor_thread_.joinable() )
@@ -224,8 +222,7 @@ split< T >::~split()
     }
 }
 
-template < typename T >
-void split< T >::accept_()
+template < typename T > void split< T >::accept_()
 {
     comma::io::select select;
     {
@@ -242,9 +239,7 @@ void split< T >::accept_()
     }
 }
 
-
-template < typename T >
-bool split< T >::published_on_stream( const char* data, unsigned int size )
+template < typename T > bool split< T >::published_on_stream( const char* data, unsigned int size )
 {
     transaction t( publishers_ );
     if( t->empty() && !default_publisher_ ) { return false; }
@@ -269,7 +264,7 @@ template < typename T > void split< T >::write( const char* data, unsigned int s
             if( flush_ ) { ofs->flush(); }
         }
     }
-    if ( pass_ ) { std::cout.write( data, size ); std::cout.flush(); }
+    if( pass_ ) { std::cout.write( data, size ); std::cout.flush(); }
 }
 
 template < typename T > void split< T >::write( std::string line )
@@ -288,7 +283,7 @@ template < typename T > void split< T >::write( std::string line )
             if( flush_ ) { ofs->flush(); }
         }
     }
-    if ( pass_ ) { std::cout.write( &line[0], line.size() ); /*std::cout.put('\n');*/ std::cout.flush(); }
+    if( pass_ ) { std::cout.write( &line[0], line.size() ); /*std::cout.put('\n');*/ std::cout.flush(); }
 }
 
 template < typename T > std::ofstream* split< T >::ofstream_by_time_()
@@ -353,7 +348,7 @@ template < typename T > std::ofstream* split< T >::ofstream_by_id_()
         #else
         static struct rlimit r;
         static int q = getrlimit( RLIMIT_NOFILE, &r );
-        if( q != 0 ) { COMMA_THROW( comma::exception, "getrlimit() failed" ); }
+        if( q != 0 ) { COMMA_THROW( comma::exception, "getting resource limit (getrlimit()) for number of open files failed" ); }
         static unsigned int max_number_of_open_files = static_cast< unsigned int >( r.rlim_cur );
         #endif
         if( files_.size() + 10 > max_number_of_open_files ) { files_.clear(); } // quick and dirty, may be too drastic...

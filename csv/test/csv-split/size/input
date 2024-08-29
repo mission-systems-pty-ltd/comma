@@ -1,0 +1,2 @@
+fixed[0]="( echo 111,0; echo 222,1; echo 333,2 ) | csv-to-bin 2ui | ( mkdir -p output && cd output && csv-split --fields ,id --binary 2ui && wc -c < 0.bin && wc -c < 1.bin && wc -c < 2.bin )"
+variable[0]="( echo 0,0 | csv-to-bin 2ui; echo 1,8,3,4 | csv-to-bin 4ui ) | ( mkdir -p output && cd output && csv-split --fields id,size --binary 2ui && wc -c < 0.bin && wc -c < 1.bin )"

@@ -56,7 +56,8 @@ namespace comma { namespace csv { namespace applications {
 template < typename T > struct input // quick and dirty
 {
     boost::posix_time::ptime timestamp;
-    comma::uint32 block;
+    comma::uint32 block{0};
+    comma::uint32 size{0};
     T id;
 };
 
@@ -72,6 +73,7 @@ template < typename T > struct traits< comma::csv::applications::input< T > >
     {
         v.apply( "t", p.timestamp );
         v.apply( "block", p.block );
+        v.apply( "size", p.size );
         v.apply( "id", p.id );
     }
 
@@ -79,6 +81,7 @@ template < typename T > struct traits< comma::csv::applications::input< T > >
     {
         v.apply( "t", p.timestamp );
         v.apply( "block", p.block );
+        v.apply( "size", p.size );
         v.apply( "id", p.id );
     }
 };
