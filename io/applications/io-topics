@@ -223,9 +223,9 @@ command;          optional command for logger to run instead of default logger
 connect_attempts; number of connect attempts
 connect_period;   time in seconds between connect attempts
 flush;            flush output on each record, default: buffer output
-header/fields;    if binary and has 'size' field, variable payload of size field
 header/binary;    only required for variable payload size
                   value after the fixed-width data part is expected
+header/fields;    if binary and has 'size' field, variable payload of size field
 host;             tcp host for publishing, unless address field is present
 index;            optional command to generate index file, default: fixed-width
                   binary index for each binary record, ascii: no index file
