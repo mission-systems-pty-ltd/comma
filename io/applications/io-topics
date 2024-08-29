@@ -14,10 +14,7 @@ source $( type -p comma-process-util ) || { echo "io-topics: could not source 'c
 function bash_completion()
 {
     echo "cat list log publish"
-    {
-        common_options
-        log_options
-    } | comma_options_to_bash_completion
+    { common_options; log_options; } | comma_options_to_bash_completion
 }
 
 function common_options()
@@ -177,10 +174,7 @@ function list_topic_fields() { :; }
 
 # todo: flush field? flush is default behaviour in io-publish, which is inconsistent with
 # log and cat operations and thus introducing flush in publish might be confusing
-function publish_topic_fields()
-{
-    publish_topic_fields_help | grep -v '^ ' | cut -f1 -d';'
-}
+function publish_topic_fields() { publish_topic_fields_help | grep -v '^ ' | cut -f1 -d';'; }
 
 function publish_topic_fields_help()
 {
@@ -201,10 +195,7 @@ size;              for binary data, size of the binary record
 eof
 }
 
-function cat_topic_fields()
-{
-    cat_topic_fields_help | grep -v '^ ' | cut -f1 -d';'
-}
+function cat_topic_fields() { cat_topic_fields_help | grep -v '^ ' | cut -f1 -d';'; }
 
 function cat_topic_fields_help()
 {
@@ -221,10 +212,7 @@ size;             if data is binary, size of the binary record
 eof
 }
 
-function log_topic_fields()
-{
-    log_topic_fields_help | grep -v '^ ' | cut -f1 -d';'
-}
+function log_topic_fields() { log_topic_fields_help | grep -v '^ ' | cut -f1 -d';'; }
 
 function log_topic_fields_help()
 {
@@ -235,6 +223,8 @@ command;          optional command for logger to run instead of default logger
 connect_attempts; number of connect attempts
 connect_period;   time in seconds between connect attempts
 flush;            flush output on each record, default: buffer output
+header_fields;    if binary and has 'size' field, variable payload of size field
+                  value after the fixed-width data part is expected
 host;             tcp host for publishing, unless address field is present
 index;            optional command to generate index file, default: fixed-width
                   binary index for each binary record, ascii: no index file
@@ -282,9 +272,10 @@ function set_topic_variables()
     eval "$( ${operation}_topic_fields | comma_path_mangle | sed 's#^#unset topic_#' )" # todo: quick and dirty, watch performance
     eval "$( grep $topic <<< "$config" | grep -v "^$topic/command" | sed "s#^$topic/#topic/#" | comma_path_value_mangle )"
     topic_command="$( grep ^$topic/command <<< "$master_config" | cut -d= -f1 --complement | sed -e 's#^"##' -e 's#"$##'  )" # quick and dirty
-    if [[ -n "$topic_binary" ]]; then size_option="--size $( echo $topic_binary | csv-format size )"
-    elif [[ -n "$topic_size" ]]; then size_option="--size $topic_size"
-    else unset size_option; fi
+    if [[ -n "$topic_binary" ]]; then size_option="--size=$( echo $topic_binary | csv-format size )"; binary_option="--binary=$topic_binary"
+    elif [[ -n "$topic_size" ]]; then size_option="--size=$topic_size"
+    else unset size_option; unset binary_option; fi
+    if [[ -n "$topic_header_fields" ]]; then fields_option="--fields=$topic_header_fields"; else unset fields_option; fi
 }
 
 function publish_command()
@@ -333,12 +324,12 @@ function log_command()
         local flush_option suffix_option
         (( topic_flush )) && flush_option="--flush"
         [[ -z "$topic_suffix" ]] || suffix_option="--suffix=$topic_suffix"
-        local period=$options_period
-        [[ -z "$topic_period" ]] || period=$topic_period
-        if [[ -n "$topic_connect_attempts" ]]; then connect_attempts_option="--connect-attempts=$topic_connect_attempts"; else unset connect_attempts_option; fi
-        if [[ -n "$topic_connect_period" ]]; then connect_period_option="--connect-period=$topic_connect_period"; else unset connect_period_option; fi
-        if [[ -n "$options_verbose" ]]; then verbose_option="--verbose"; else unset verbose_option; fi
-        cmd="io-cat $topic_address $flush_option $connect_attempts_option $connect_period_option $verbose_option | $topic_index | csv-split -t $period $size_option $suffix_option $flush_option"
+        if [[ -n "$topic_period" ]]; then local period=$topic_period; else local period=$options_period; fi
+        if [[ -n "$topic_connect_attempts" ]]; then local connect_attempts_option="--connect-attempts=$topic_connect_attempts"; else unset connect_attempts_option; fi
+        if [[ -n "$topic_connect_period" ]]; then local connect_period_option="--connect-period=$topic_connect_period"; else unset connect_period_option; fi
+        if [[ -n "$options_verbose" ]]; then local verbose_option="--verbose"; else unset verbose_option; fi
+        if [[ -n "$binary_option" ]]; then local format_option=$binary_option; else local format_option=$size_option; fi
+        cmd="io-cat $topic_address $flush_option $connect_attempts_option $connect_period_option $verbose_option | $topic_index | csv-split -t $period $fields_option $format_option $suffix_option $flush_option"
     fi
     local path
     [[ -z "$topic_path" ]] || path+="$topic_path/"
