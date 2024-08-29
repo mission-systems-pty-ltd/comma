@@ -15,7 +15,7 @@
 //
 // NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
 // GRANTED BY THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-// HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED
+// HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
 // WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 // MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 // DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
@@ -103,85 +103,86 @@ int main( int argc, char** argv )
         boost::program_options::notify( vm );
         if ( vm.count( "help" ) || vm.count( "long-help" ) )
         {
-            std::cerr << "\n";
-            std::cerr << "read from stdin by packet or by line and split into files\n";
-            std::cerr << "files are named by field value or time (if split by time)\n";
-            std::cerr << "if splitting by id, input can also be split into streams\n";
-            std::cerr << "\n";
-            std::cerr << "usage: csv-split [options] [outputs]*\n";
-            std::cerr << "\n";
+            std::cerr << R"(
+read from stdin by packet or by line and split into files
+files are named by field value or time (if split by time)
+if splitting by id, input can also be split into streams
+
+usage: csv-split [options] [outputs]*
+)";
             std::cerr << description;
-            std::cerr << "\n";
-            std::cerr << "data is split by one of the following fields (listed in descending precedence)\n";
-            std::cerr << "    block: split on the block number change\n";
-            std::cerr << "    id:    split by id (same as block, except does not have to be contiguous\n";
-            std::cerr << "                        with the price of worse performance)\n";
-            std::cerr << "    t:     if present, use timestamp from the packet; if absent, use system time\n";
-            std::cerr << "\n";
-            std::cerr << "examples:\n";
-            std::cerr << "    --- split by block field, output to files ---\n";
-            std::cerr << "    output records for each block to a separate file\n";
-            std::cerr << "    on change of block, open a new file, e.g. 0.csv, 1.csv, etc\n";
-            std::cerr << "\n";
-            std::cerr << "    with default filenames:\n";
-            std::cerr << "    ( echo 0,a; echo 1,b; echo 1,c; echo 2,d ) | csv-split --fields block\n";
-            std::cerr << "\n";
-            std::cerr << "    with specified filenames:\n";
-            std::cerr << "    ( echo 0; echo 1; echo 2 ) \\\n";
-            std::cerr << "        | csv-split --fields block --files <( echo a; echo b; echo c )\n";
-            std::cerr << "\n";
-            std::cerr << "    with filenames mapped to block ids:\n";
-            std::cerr << "    ( echo 0; echo 1; echo 2 ) \\\n";
-            std::cerr << "        | csv-split --fields block \\\n";
-            std::cerr << "              --files <( echo 0,a; echo 1,b; echo 2,c )';fields=id,filename'\n";
-            std::cerr << "\n";
-            std::cerr << "    --- split by id field, output to files ---\n";
-            std::cerr << "    for each id value, output records with this id to a separate file,\n";
-            std::cerr << "    e.g. 0.csv, 1.csv, etc\n";
-            std::cerr << "\n";
-            std::cerr << "    with default filenames:\n";
-            std::cerr << "    ( echo 0,a; echo 1,b; echo 1,c; echo 2,d ) | csv-split --fields id\n";
-            std::cerr << "\n";
-            std::cerr << "    with specified filenames:\n";
-            std::cerr << "    ( echo 0; echo 1; echo 2 ) \\\n";
-            std::cerr << "        | csv-split --fields id --files <( echo a; echo b; echo c )\n";
-            std::cerr << "\n";
-            std::cerr << "    with filenames mapped to block ids:\n";
-            std::cerr << "    ( echo 0; echo 1; echo 2 ) \\\n";
-            std::cerr << "        | csv-split --fields id \\\n";
-            std::cerr << "              --files <( echo 0,a; echo 1,b; echo 2,c )';fields=id,filename'\n";
-            std::cerr << "\n";
-            std::cerr << "    --- split by t field, output to files ---\n";
-            std::cerr << "    separate records into different time periods, outputting in separate files\n";
-            std::cerr << "    ( echo 20170101T000001,a; echo 20170101T000003,b; echo 20170101T000007,c ) \\\n";
-            std::cerr << "        | csv-split --fields=t --period=4\n";
-            std::cerr << "\n";
-            std::cerr << "    --- split by id field, output to streams ---\n";
-            std::cerr << "    if output streams (see example below) are present on the command line and \n";
-            std::cerr << "    id field present in --fields output records with the given ids to the\n";
-            std::cerr << "    corresponding streams, while outputing the rest into files\n";
-            std::cerr << "\n";
-            std::cerr << "    records with ids for which output stream is not specified will be discarded,\n";
-            std::cerr << "    unless ... stream is specified:\n";
-            std::cerr << "\n";
-            std::cerr << "    outputs: <keys>;<stream>; send records with given set of ids to this stream\n";
-            std::cerr << "        keys:\n";
-            std::cerr << "            <id>[,<id>]*: comma-separated list of ids, e.g: '5' or '2,5,7', etc\n";
-            std::cerr << "            ... (three dots): send to this stream all the records with ids\n";
-            std::cerr << "                for which no other stream is specified (see example below)\n";
-            std::cerr << "        stream:\n";
-            std::cerr << "            tcp:<port>: e.g. tcp:1234\n";
-            std::cerr << "            udp:<port>: e.g. udp:1234 (todo)\n";
-            std::cerr << "            local:<name>: linux/unix local server socket\n";
-            std::cerr << "                          e.g. local:./tmp/my_socket\n";
-            std::cerr << "            <named pipe name>: named pipe, re-opened if client reconnects\n";
-            std::cerr << "            <filename>: a regular file\n";
-            std::cerr << "\n";
-            std::cerr << "        ( echo 0,a; echo 1,b; echo 0,c; echo 2,d ) \\\n";
-            std::cerr << "            | csv-split --fields id \"0,1;tcp:5999\" \"...;local:/tmp/named_fifo\"\n";
-            std::cerr << "        ( echo 0,a; echo 1,b ) | csv-split --fields id --files \\\n";
-            std::cerr << "                  <( echo '1,one.csv'; echo '0,zero.csv' )';fields=id,filename'\n";
-            std::cerr << std::endl;
+            std::cerr << R"(
+data is split by one of the following fields (listed in descending precedence)
+    block: split on the block number change
+    id:    split by id (same as block, except does not have to be contiguous
+                        with the price of worse performance)
+    t:     if present, use timestamp from the packet; if absent, use system time
+
+examples:
+    --- split by block field, output to files ---
+    output records for each block to a separate file
+    on change of block, open a new file, e.g. 0.csv, 1.csv, etc
+
+    with default filenames:
+    ( echo 0,a; echo 1,b; echo 1,c; echo 2,d ) | csv-split --fields block
+
+    with specified filenames:
+    ( echo 0; echo 1; echo 2 ) \
+        | csv-split --fields block --files <( echo a; echo b; echo c )
+
+    with filenames mapped to block ids:
+    ( echo 0; echo 1; echo 2 ) \
+        | csv-split --fields block \
+              --files <( echo 0,a; echo 1,b; echo 2,c )';fields=id,filename'
+
+    --- split by id field, output to files ---
+    for each id value, output records with this id to a separate file,
+    e.g. 0.csv, 1.csv, etc
+
+    with default filenames:
+    ( echo 0,a; echo 1,b; echo 1,c; echo 2,d ) | csv-split --fields id
+
+    with specified filenames:
+    ( echo 0; echo 1; echo 2 ) \
+        | csv-split --fields id --files <( echo a; echo b; echo c )
+
+    with filenames mapped to block ids:
+    ( echo 0; echo 1; echo 2 ) \
+        | csv-split --fields id \
+              --files <( echo 0,a; echo 1,b; echo 2,c )';fields=id,filename'
+
+    --- split by t field, output to files ---
+    separate records into different time periods, outputting in separate files
+    ( echo 20170101T000001,a; echo 20170101T000003,b; echo 20170101T000007,c ) \
+        | csv-split --fields=t --period=4
+
+    --- split by id field, output to streams ---
+    if output streams (see example below) are present on the command line and 
+    id field present in --fields output records with the given ids to the
+    corresponding streams, while outputing the rest into files
+
+    records with ids for which output stream is not specified will be discarded,
+    unless ... stream is specified:
+
+    outputs: <keys>;<stream>; send records with given set of ids to this stream
+        keys:
+            <id>[,<id>]*: comma-separated list of ids, e.g: '5' or '2,5,7', etc
+            ... (three dots): send to this stream all the records with ids
+                for which no other stream is specified (see example below)
+        stream:
+            tcp:<port>: e.g. tcp:1234
+            udp:<port>: e.g. udp:1234 (todo)
+            local:<name>: linux/unix local server socket
+                          e.g. local:./tmp/my_socket
+            <named pipe name>: named pipe, re-opened if client reconnects
+            <filename>: a regular file
+
+        ( echo 0,a; echo 1,b; echo 0,c; echo 2,d ) \
+            | csv-split --fields id "0,1;tcp:5999" "...;local:/tmp/named_fifo"
+        ( echo 0,a; echo 1,b ) | csv-split --fields id --files \
+                  <( echo '1,one.csv'; echo '0,zero.csv' )';fields=id,filename'
+
+)";
             return 0;
         }
         csv = comma::csv::program_options::get( vm );
@@ -202,7 +203,7 @@ int main( int argc, char** argv )
         else { run< comma::uint32 >(); }
         return 0;
     }
-    catch( std::exception& ex ) { std::cerr << argv[0] << ": " << ex.what() << std::endl; }
-    catch( ... ) { std::cerr << argv[0] << ": unknown exception" << std::endl; }
+    catch( std::exception& ex ) { comma::say() << ex.what() << std::endl; }
+    catch( ... ) { comma::say() << "unknown exception" << std::endl; }
     return 1;
 }
