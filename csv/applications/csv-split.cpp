@@ -51,7 +51,7 @@ static std::string files;
 static std::string default_filename;
 static std::string timestamps;
 
-template < typename T > static void run()
+template < typename T > static int run()
 {
     comma::csv::applications::split< T > split( duration, suffix, csv, streams, passthrough, files, default_filename, timestamps );
     if( size == 0 )
@@ -63,19 +63,18 @@ template < typename T > static void run()
             if( line.empty() ) { break; }
             split.write( line );
         }
+        return 0;
     }
-    else
+    #ifdef WIN32
+        _setmode( _fileno( stdin ), _O_BINARY );
+    #endif
+    std::vector< char > packet( size );
+    while( std::cin.good() && !std::cin.eof() )
     {
-        #ifdef WIN32
-            _setmode( _fileno( stdin ), _O_BINARY );
-        #endif
-        std::vector< char > packet( size );
-        while( std::cin.good() && !std::cin.eof() )
-        {
-            std::cin.read( &packet[0], size );
-            if( std::cin.gcount() > 0 ) { split.write( &packet[0], size ); }
-        }
+        std::cin.read( &packet[0], size );
+        if( std::cin.gcount() > 0 ) { split.write( &packet[0], size ); }
     }
+    return 0;
 }
 
 int main( int argc, char** argv )
@@ -186,22 +185,21 @@ examples:
             return 0;
         }
         csv = comma::csv::program_options::get( vm );
-        if( vm.count( "period" ) && vm.count( "timestamps" ) ) { std::cerr << "csv-split: --period and --timestamps are mutually exclusive (todo? combine them? just ask)" << std::endl; return 1; }
-        if( !default_filename.empty() ) { std::cerr << "csv-split: --default-filename: todo, just ask" << std::endl; }
+        COMMA_ASSERT_BRIEF( !vm.count( "period" ) || !vm.count( "timestamps" ), "csv-split: --period and --timestamps are mutually exclusive (todo? combine them? just ask)" );
+        COMMA_ASSERT_BRIEF( default_filename.empty(), "csv-split: --default-filename: todo, just ask" )
         if( csv.binary() ) { size = csv.format().size(); }
         bool id_is_string = vm.count( "string" );
         bool id_is_time = vm.count( "time" );
         passthrough = vm.count("passthrough");
-        if( id_is_string && id_is_time ) { std::cerr << "csv-split: --string and --time are mutually exclusive" << std::endl; return 1; }
+        COMMA_ASSERT_BRIEF( !id_is_string || !id_is_time, "csv-split: --string and --time are mutually exclusive" );
         if( period > 0 ) { duration = boost::posix_time::microseconds( static_cast< unsigned int >( period * 1e6 )); }
         if( extension.empty() ) { suffix = csv.binary() || size > 0 ? ".bin" : ".csv"; }
         else { suffix += "."; suffix += extension; }
         streams = boost::program_options::collect_unrecognized( parsed.options, boost::program_options::include_positional );
-        if( !streams.empty() && ( csv.has_field( "block" ) || id_is_time ) ) { std::cerr << "publisher streams are not compatible with splitting by block or timestamp." << std::endl; return 1; }
-        if( id_is_string ) { run< std::string >(); }
-        else if( id_is_time ) { run< boost::posix_time::ptime >(); }
-        else { run< comma::uint32 >(); }
-        return 0;
+        COMMA_ASSERT_BRIEF( !( !streams.empty() && ( csv.has_field( "block" ) || id_is_time ) ), "publisher streams are not compatible with splitting by block or timestamp." );
+        if( id_is_string ) { return run< std::string >(); }
+        if( id_is_time ) { return run< boost::posix_time::ptime >(); }
+        return run< comma::uint32 >();
     }
     catch( std::exception& ex ) { comma::say() << ex.what() << std::endl; }
     catch( ... ) { comma::say() << "unknown exception" << std::endl; }
