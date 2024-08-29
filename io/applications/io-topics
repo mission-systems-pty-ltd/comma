@@ -223,7 +223,8 @@ command;          optional command for logger to run instead of default logger
 connect_attempts; number of connect attempts
 connect_period;   time in seconds between connect attempts
 flush;            flush output on each record, default: buffer output
-header_fields;    if binary and has 'size' field, variable payload of size field
+header/fields;    if binary and has 'size' field, variable payload of size field
+header/binary;    only required for variable payload size
                   value after the fixed-width data part is expected
 host;             tcp host for publishing, unless address field is present
 index;            optional command to generate index file, default: fixed-width
@@ -271,11 +272,15 @@ function set_topic_variables()
     local topic="$2"
     eval "$( ${operation}_topic_fields | comma_path_mangle | sed 's#^#unset topic_#' )" # todo: quick and dirty, watch performance
     eval "$( grep $topic <<< "$config" | grep -v "^$topic/command" | sed "s#^$topic/#topic/#" | comma_path_value_mangle )"
+    [[ -z "$topic_header_binary" || -z "$topic_binary" ]] || die "expected either header/binary or binary; got both"
+    [[ -z "$topic_header_binary" || -z "$topic_size" ]] || die "expected either header/binary or size; got both"
+    [[ -z "$topic_header_fields" || -n "$topic_header_binary" ]] || die "header/fields specified, but header/binary is not"
     topic_command="$( grep ^$topic/command <<< "$master_config" | cut -d= -f1 --complement | sed -e 's#^"##' -e 's#"$##'  )" # quick and dirty
+    unset size_option binary_option fields_option
     if [[ -n "$topic_binary" ]]; then size_option="--size=$( echo $topic_binary | csv-format size )"; binary_option="--binary=$topic_binary"
-    elif [[ -n "$topic_size" ]]; then size_option="--size=$topic_size"
-    else unset size_option; unset binary_option; fi
+    elif [[ -n "$topic_size" ]]; then size_option="--size=$topic_size"; fi
     if [[ -n "$topic_header_fields" ]]; then fields_option="--fields=$topic_header_fields"; else unset fields_option; fi
+    if [[ -n "$topic_header_binary" ]]; then binary_option="--binary=$topic_header_binary"; fi
 }
 
 function publish_command()
