@@ -354,7 +354,7 @@ function cat_config()
 
 function topics_from_config() # quick and dirty
 {
-    local expression="/address=|/host=|/port=|/command=|/secondary/address=|/secondary/host|/secondary/port="
+    local expression="/address=|/host=|/port=|/command=|/secondary/address=|/secondary/host|/secondary/port=|/header/fields=|/header/binary="
     function grep_by_topic_config_fields() { egrep -e "$expression" | cut -d= -f1 | sed -e 's#/secondary/address$##' -e 's#/secondary/host$##' -e 's#/secondary/port$##' -e 's#/address$##' -e 's#/host$##' -e 's#/port$##' -e 's#/command$##'; }
     [[ -z "$options_topics_from_all_configs" ]] || { grep_by_topic_config_fields <<< "$config" | sort --unique; return; }
     {
