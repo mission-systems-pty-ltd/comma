@@ -58,14 +58,14 @@ function description_test_selection()
 --black-list=[<file>]; do not run these tests mentioned in <file>, e.g. a lists of sub-directories in white list
   to be excluded; see '--white-list' below for file format.
 --end=[<dir>]; run tests up to a given test, the latter excluded, where test directories are ordered lexicographically
---followsymlinks,-L; follow symlinks when looking for test directories, same as find -L
+--followsymlinks,-L; folapply_tagslow symlinks when looking for test directories, same as find -L
 --followmounts; search mounted filesystems when looking for test directories, same as find without -mount
 --from,--begin=[<dir>]; run tests starting from a given test, where test directories are ordered lexicographically
 --run-disabled; run disabled tests
 --run-optional,--optional; run tests having file called "optional" (same logic as for --run-disabled)
 --stdin; read paths from stdin e.g. run test in hello/world: echo hello/world | comma-test-run --stdin
---tags=[<tags>]; |-separated tags, run only tests with given tags (see below), todo: support regex
---tags-excluded=[<tags>]; |-separated tags, do not run tests with given tags (see below), todo: support regex
+--tags=[<tags>]; |-separated tags or regular expressions, run only tests with given tags (see below)
+--tags-excluded=[<tags>]; |-separated tags or regular expressions, do not run tests with given tags (see below)
 --to=[<dir>]; run tests up to a given test, the latter included, where test directories are ordered lexicographically
 --until-first-failure; exit after the first failure (works only when tests run serially)
 --white-list=[<file>]; only run these tests mentioned in the <file>, applied first before black list;
@@ -215,7 +215,7 @@ ${brown}Running tests in parallel${none}
         as are available on the system. This is ${red}not recommended${none} for resource-heavy tests
         unless additional configuration files are provided as explained below.
 
-${brown}Config files${none}
+${brown}config files${none}
     The way a test is run can be controlled using a file named ${brown}config${none} in the test directory,
     which may contain the following parameters:
 
@@ -241,12 +241,23 @@ ${brown}Config files${none}
     run/max_time=<seconds>
         Test will be terminated and fail if it has not completed in the specified time (seconds).
         Overrides option '--max-run-time'.
+    
+    tags=<tags>
+        <tags>: comma-separated list of tags applied to the current directory and subdirectories
+                that do not have their own config containing 'tags' entry or a file named 'tags'
+                containing comma-separated list of arbitrary key words (tags); tests can be filtered
+                by tags using --tags and/or --tags-excluded command line options
 
     Example config:
         resources/cpus=4
         resources/memory/shared=3200 MB
         resources/serial=\"true\"
         run/max_time=600
+
+${brown}tags files${none}
+    If a file named 'tags' is present in the current directory or in one of its parent directories,
+    this file is expected to contain a comma-separated list of arbitrary key words (tags); tests can be
+    filtered by tags using --tags and/or --tags-excluded command line options
 
 ${brown}White(and black)-listing tests${none}
     The test names in the white/black list file shall match ${brown}exactly${none} the corresponding
