@@ -58,7 +58,7 @@ function description_test_selection()
 --black-list=[<file>]; do not run these tests mentioned in <file>, e.g. a lists of sub-directories in white list
   to be excluded; see '--white-list' below for file format.
 --end=[<dir>]; run tests up to a given test, the latter excluded, where test directories are ordered lexicographically
---followsymlinks,-L; folapply_tagslow symlinks when looking for test directories, same as find -L
+--followsymlinks,-L; follow symlinks when looking for test directories, same as find -L
 --followmounts; search mounted filesystems when looking for test directories, same as find without -mount
 --from,--begin=[<dir>]; run tests starting from a given test, where test directories are ordered lexicographically
 --run-disabled; run disabled tests
@@ -66,6 +66,7 @@ function description_test_selection()
 --stdin; read paths from stdin e.g. run test in hello/world: echo hello/world | comma-test-run --stdin
 --tags=[<tags>]; |-separated tags or regular expressions, run only tests with given tags (see below)
 --tags-excluded=[<tags>]; |-separated tags or regular expressions, do not run tests with given tags (see below)
+--tags-list; list tags for all subdirectories as <dir>,<tags>
 --to=[<dir>]; run tests up to a given test, the latter included, where test directories are ordered lexicographically
 --until-first-failure; exit after the first failure (works only when tests run serially)
 --white-list=[<file>]; only run these tests mentioned in the <file>, applied first before black list;
@@ -687,24 +688,6 @@ function get_test_timeout()
 }
 export -f get_test_timeout
 
-function get_tags()
-{
-    local config tags dc dt tt tc
-    config=$( closest_file_in_path "." "config" )
-    tags=$( closest_file_in_path "." "tags" )
-    [[ -f "$tags" || -f "$config" ]] || return
-    if [[ -f "$config" ]]; then tc="$( name-value-get tags < "$config" )"; fi
-    if [[ -f "$tags" ]]; then tt="$( cat "$tags" | grep -v '^#' | grep -v '^$' )"; fi
-    if [[ -n "$tc" && -n "$tt" ]]; then
-        dc="$( dirname "$config" )"
-        dt="$( dirname "$tags" )"
-        if (( "${#dc}" < "${#dt}" )); then echo "$tc"; else echo "$tt"; fi
-    elif [[ -n "$tc" ]]; then echo "$tc"
-    elif [[ -n "$tt" ]]; then echo "$tt"
-    fi
-}
-export -f get_tags
-
 # helper to terminate comma-top safely
 function terminate_comma_top()
 {
@@ -1099,11 +1082,29 @@ function apply_black_list() { if [[ -n "$options_black_list" ]] ; then grep -vE 
 
 function apply_white_black_list() { apply_white_list | apply_black_list ; }
 
-function apply_tags()
+function tags-get()
+{
+    local config tags dc dt tt tc
+    config=$( closest_file_in_path "." "config" )
+    tags=$( closest_file_in_path "." "tags" )
+    [[ -f "$tags" || -f "$config" ]] || return
+    if [[ -f "$config" ]]; then tc="$( name-value-get tags < "$config" )"; fi
+    if [[ -f "$tags" ]]; then tt="$( cat "$tags" | grep -v '^#' | grep -v '^$' )"; fi
+    if [[ -n "$tc" && -n "$tt" ]]; then
+        dc="$( dirname "$config" )"
+        dt="$( dirname "$tags" )"
+        if (( "${#dc}" < "${#dt}" )); then echo "$tc"; else echo "$tt"; fi
+    elif [[ -n "$tc" ]]; then echo "$tc"
+    elif [[ -n "$tt" ]]; then echo "$tt"
+    fi
+}
+export -f tags-get
+
+function tags-apply() # todo! getting tags for each subdirectory is very slow; get tags for the root, then list all tags, then join matching/not-matching
 {
     [[ -n "$options_tags" || -n "$options_tags_excluded" ]] || { cat; return; }
     while read d; do
-        tags="$( cd $d && get_tags | tr ',' '\n' )"
+        tags="$( cd $d && tags-get | tr ',' '\n' )"
         if [[ -n "$tags" ]]; then
             if [[ -n "$options_tags_excluded" ]]; then if egrep -e "^($options_tags_excluded)" <<< "$tags" --quiet; then continue; fi; fi
             csv-paste <( echo "$tags" ) value="$d"; else echo ",$d"
@@ -1111,6 +1112,11 @@ function apply_tags()
     done \
         | if [[ -n "$options_tags" ]]; then egrep -e "^($options_tags),"; else cat; fi \
         | cut -d, -f2
+}
+
+function tags-list()
+{
+    while read d; do echo "$d,$( cd $d && tags-get | tr ',' '\n' )"; done
 }
 
 # to run, search for directories containing either "test", "input" or "expected";
@@ -1128,7 +1134,7 @@ function test_directories()
     local followsymlinks followmounts="-mount"
     (( ! options_followsymlinks )) || followsymlinks="-L"
     (( ! options_followmounts )) || followmounts=
-    test_script_dirs_all=( $( exclude_generic_tests $( get_dirnames $( find $followsymlinks . $followmounts -name "test" -or -name "input" -or -name "expected" | grep -v "/\." ) 2>/dev/null | sort -u ) | apply_white_black_list | apply_tags ) )
+    test_script_dirs_all=( $( exclude_generic_tests $( get_dirnames $( find $followsymlinks . $followmounts -name "test" -or -name "input" -or -name "expected" | grep -v "/\." ) 2>/dev/null | sort -u ) | apply_white_black_list | tags-apply ) )
     [[ -n "$options_from" || -n "$options_to" || -n "$options_end" ]] || { echo ${test_script_dirs_all[@]} ; return ; }
     [[ -z "$options_from" ]] || { local from="${options_from#\.\/}" ; }
     [[ -z "$options_to" ]] || { local to="${options_to#\.\/}" ; }
@@ -1152,6 +1158,7 @@ else
     done
 fi
 [[ -z "$options_output_directories" ]] || { echo ${test_script_dirs[@]} | tr ' ' '\n' ; exit 0 ; }
+[[ -z "$options_tags_list" ]] || { echo ${test_script_dirs[@]} | tr ' ' '\n' | tags-list ; exit 0 ; }
 [[ -z "$options_document" ]] || { for d in ${test_script_dirs[@]} ; do document_test $d ; done ; exit 0 ; }
 export test_scripts_count=${#test_script_dirs[@]}
 
