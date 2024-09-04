@@ -157,6 +157,11 @@ EOF
                   echo 'b/command=socat tcp:localhost:12346 - > log.csv' )
             $ ls -al my-log/a
             $ head my-log/b/log.csv
+
+        trigger logging on a remote machine with templated command
+            $ io-topics log --dir my-log --config <(
+                  echo "a/command=curl 'http://remote:7000/log=start&name=${log_dir}'" )
+
 eof
     else
         echo "use \"$scriptname --help --verbose\" for examples"
@@ -318,12 +323,24 @@ function cat_command()
     echo "$cmd"
 }
 
+# allow placeholders in the command string
+function expanded_command()
+{
+    local cmd="$1"
+    eval "$( grep "=" <<< "$options" | comma_path_value_mangle | sed 's#^#local #' )"
+    eval "echo \"${cmd}\""
+}
+
 function log_command()
 {
     [[ -n "$options_log_dir" ]] || die "please specify --log-dir"
     local topic=$1
     local cmd="$topic_command"
-    if [[ -z "$cmd" ]]; then
+    if [[ "$cmd" ]]; then
+        verbose "got $cmd"
+        cmd=$( expanded_command "$cmd" )
+        verbose "expanded to $cmd"
+    else
         set_topic_address
         [[ -n "$topic_index" ]] || topic_index="cat"
         local flush_option suffix_option
