@@ -191,6 +191,7 @@ command;           command for the publisher to run
 input;             input topic for publish command to read on stdin
 multiplier;        passed to io-publish
 on_demand;         same meaning as io-publish --on-demand
+on_exit;           command to run when publisher stops
 port;              tcp port for publishing, unless address field is present
 secondary/address; passed verbatim to io-publish as '<address>;secondary',
                    in this case port attribute ignored
@@ -212,6 +213,7 @@ connect_attempts; number of connect attempts
 connect_period;   time in seconds between connect attempts
 flush;            flush output on each record, default: buffer output
 host;             tcp host for publishing, unless address field is present
+on_exit;          command to run when output stops
 port;             tcp port for publishing, unless address field is present
 size;             if data is binary, size of the binary record
 eof
@@ -234,6 +236,7 @@ header/fields;    if binary and has 'size' field, variable payload of size field
 host;             tcp host for publishing, unless address field is present
 index;            optional command to generate index file, default: fixed-width
                   binary index for each binary record, ascii: no index file
+on_exit;          command to run when logger stops
 path;             prefix path for log directory (to split logs across drives)
 period;           split log files at given number of seconds, overrides --period
 port;             tcp port for publishing, unless address field is present
@@ -404,6 +407,13 @@ if (( $( comma_options_has --help "$@" ) || $( comma_options_has -h "$@" ) )); t
     usage $verbose
 fi
 
+on_exit_commands=()
+
+function on_exit()
+{
+    comma_execute_and_wait --group "${on_exit_commands[@]}"
+}
+
 operation=$1
 [[ $( type -t ${operation}_topic_fields ) == "function" ]] || die "expected operation, got '$operation'" # quick and dirty
 (( $( comma_options_has --topic-fields "$@" ) )) && { ${operation}_topic_fields; exit 0; }
@@ -419,8 +429,14 @@ for topic in ${topics[@]}; do
     set_topic_variables "$operation" "$topic"
     cmd="$( ${operation}_command $topic )" || die "topic '$topic': making command failed"
     commands+=( "$cmd" )
+    [[ $topic_on_exit ]] && on_exit_commands+=( "$topic_on_exit" )
 done
 say "will run 'comma_execute_and_wait --group' with commands:"
 for cmd in "${commands[@]}"; do say "    $cmd"; done
+if (( ${#on_exit_commands[@]} > 0 )); then
+    say "on exit will run:"
+    for cmd in "${on_exit_commands[@]}"; do say "    $cmd"; done
+    trap on_exit EXIT
+fi
 [[ -z "$options_dry_run" ]] || exit
 comma_execute_and_wait --group "${commands[@]}"
