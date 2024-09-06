@@ -1,6 +1,0 @@
-{
-    "topic1":
-    {
-        "command": "echo ${log_dir}"
-    }
-}
