@@ -3,7 +3,15 @@
 
 /// @authors cedric wohlleber, vsevolod vlaskine, dave jennings
 
-#include "detail/publish.h"
+#include "../../application/command_line_options.h"
+#include "../../application/signal_flag.h"
+#include "../../base/last_error.h"
+#include "../../io/file_descriptor.h"
+#include "../../io/publisher.h"
+#include "../../io/impl/publish.h"
+#include "../../name_value/map.h"
+#include "../../string/string.h"
+#include "../../sync/synchronized.h"
 
 //#include <google/profiler.h>
 
@@ -141,13 +149,13 @@ int main( int ac, char** av )
         comma::signal_flag is_shutdown( signals );
         bool on_demand = options.exists( "--on-demand" );
         bool exit_on_no_clients = options.exists( "--exit-on-no-clients,-e" );
-        comma::io::detail::publish p( names
-                                    , options.value( "-s,--size", 0 ) * options.value( "-m,--multiplier", 1 )
-                                    , !options.exists( "--no-discard" )
-                                    , !options.exists( "--no-flush" )
-                                    , options.exists( "--output-number-of-clients,--clients" )
-                                    , exit_on_no_clients || on_demand
-                                    , options.value( "--cache-size,--cache", 0 ) );
+        comma::io::impl::publish p( names
+                                  , options.value( "-s,--size", 0 ) * options.value( "-m,--multiplier", 1 )
+                                  , !options.exists( "--no-discard" )
+                                  , !options.exists( "--no-flush" )
+                                  , options.exists( "--output-number-of-clients,--clients" )
+                                  , exit_on_no_clients || on_demand
+                                  , options.value( "--cache-size,--cache", 0 ) );
         std::string exec_command = options.value< std::string >( "--exec", "" );
         if( !tail.empty() )
         {

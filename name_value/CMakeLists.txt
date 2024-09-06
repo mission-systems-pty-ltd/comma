@@ -12,7 +12,7 @@ INSTALL( FILES ${impl_includes} DESTINATION ${comma_INSTALL_INCLUDE_DIR}/${PROJE
 
 ADD_LIBRARY( ${TARGET_NAME} ${source} ${includes} )
 SET_TARGET_PROPERTIES( ${TARGET_NAME} PROPERTIES ${comma_LIBRARY_PROPERTIES} )
-TARGET_LINK_LIBRARIES( ${TARGET_NAME} comma_application comma_string comma_xpath ${comma_ALL_EXTERNAL_LIBRARIES} )
+TARGET_LINK_LIBRARIES( ${TARGET_NAME} comma_string comma_xpath ${comma_ALL_EXTERNAL_LIBRARIES} ) # comma_application
 INSTALL(
     TARGETS ${TARGET_NAME}
     RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime     # .exe, .dll

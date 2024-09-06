@@ -2,9 +2,10 @@
 // Copyright (c) 2020 Vsevolod Vlaskine
 // All rights reserved.
 
+#include "../../name_value/map.h"
 #include "publish.h"
 
-namespace comma { namespace io { namespace detail {
+namespace comma { namespace io { namespace impl {
 
 publish::publish( const std::vector< std::string >& endpoints
                 , unsigned int packet_size
@@ -122,7 +123,7 @@ bool publish::handle_sizes_( transaction_t& t ) // todo? why pass transaction? i
     if( update_no_clients_ )
     {
         if( total > 0 ) { got_first_client_ever_ = true; }
-        else if( got_first_client_ever_ ) { comma::saymore() << "the last client exited" << std::endl; return false; }
+        else if( got_first_client_ever_ ) { return false; } // { comma::saymore() << "the last client exited" << std::endl; return false; }
     }
     return true;
 }
@@ -177,4 +178,4 @@ void publish::accept_()
     }
 }
 
-} } } // namespace comma { namespace io { namespace detail {
+} } } // namespace comma { namespace io { namespace impl {

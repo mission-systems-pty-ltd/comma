@@ -17,7 +17,7 @@ ELSE( comma_BUILD_ZEROMQ )
 ENDIF( comma_BUILD_ZEROMQ )
 
 SET_TARGET_PROPERTIES( ${TARGET_NAME} PROPERTIES ${comma_LIBRARY_PROPERTIES} )
-TARGET_LINK_LIBRARIES( ${TARGET_NAME} ${Boost_LIBRARIES} ${ZeroMQ_LIBRARY} comma_base comma_string )
+target_link_libraries( ${TARGET_NAME} ${Boost_LIBRARIES} ${ZeroMQ_LIBRARY} comma_base comma_name_value comma_string )
 
 INSTALL( FILES ${includes} DESTINATION ${comma_INSTALL_INCLUDE_DIR}/${PROJECT} )
 INSTALL( FILES ${impl_includes} DESTINATION ${comma_INSTALL_INCLUDE_DIR}/${PROJECT}/impl )

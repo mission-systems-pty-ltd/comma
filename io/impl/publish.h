@@ -16,16 +16,12 @@
 #include <boost/iostreams/stream.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/thread.hpp>
-#include "../../../application/command_line_options.h"
-#include "../../../application/signal_flag.h"
-#include "../../../base/last_error.h"
-#include "../../../io/file_descriptor.h"
-#include "../../../io/publisher.h"
-#include "../../../name_value/map.h"
-#include "../../../string/string.h"
-#include "../../../sync/synchronized.h"
+#include "../../io/file_descriptor.h"
+#include "../../io/publisher.h"
+#include "../../string/string.h"
+#include "../../sync/synchronized.h"
 
-namespace comma { namespace io { namespace detail {
+namespace comma { namespace io { namespace impl {
 
 class publish
 {
@@ -84,4 +80,4 @@ class publish
         void accept_();
 };
 
-} } } // namespace comma { namespace io { namespace detail {
+} } } // namespace comma { namespace io { namespace impl {
