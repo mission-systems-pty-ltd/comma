@@ -55,6 +55,13 @@ operations
     play:    play back logs, counterpart to log operation (todo)
     publish: start all the publishers listed on command line or config file
 
+variable substition in commands
+    options can be passed to commands via variable substition. for example:
+    command="save-to-dir ${log_dir}"
+    all options are available,
+    e.g. --config -> ${config}; --log-dir -> ${log_dir}
+    see examples below for more detail
+
 common options
 $( common_options | sed 's/^/    /g' )
 
@@ -330,8 +337,10 @@ function cat_command()
 function expanded_command()
 {
     local cmd="$1"
-    eval "$( grep "=" <<< "$options" | comma_path_value_mangle | sed 's#^#local #' )"
-    eval "echo \"${cmd}\""
+    {
+        grep "=" <<< "$options" | comma_path_value_mangle
+        echo "cmd=\"$( sed -e 's#"#\\\"#g' -e "s#'#\\'#g" <<< "$cmd" )\""
+    } | env -i $BASH -c 'eval "$( cat )"; echo "$cmd"'
 }
 
 function log_command()
@@ -411,6 +420,8 @@ on_exit_commands=()
 
 function on_exit()
 {
+    say "running commands on exit:"
+    for cmd in "${on_exit_commands[@]}"; do say "    $cmd"; done
     comma_execute_and_wait --group "${on_exit_commands[@]}"
 }
 
@@ -436,7 +447,7 @@ for cmd in "${commands[@]}"; do say "    $cmd"; done
 if (( ${#on_exit_commands[@]} > 0 )); then
     say "on exit will run:"
     for cmd in "${on_exit_commands[@]}"; do say "    $cmd"; done
-    trap on_exit EXIT
+    [[ $options_dry_run ]] || trap on_exit EXIT
 fi
 [[ -z "$options_dry_run" ]] || exit
 comma_execute_and_wait --group "${commands[@]}"
