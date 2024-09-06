@@ -47,7 +47,7 @@
 #include "../../csv/format.h"
 #include "../../csv/options.h"
 #include "../../string/string.h"
-#include "detail/publish.h"
+#include "../../io/impl/publish.h"
 
 static void usage()
 {
@@ -170,13 +170,13 @@ int main( int argc, char** argv )
         if( binary ) { _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
         static_assert( sizeof( boost::posix_time::ptime ) == sizeof( comma::uint64 ), "expected time of size 8" );
-        comma::io::detail::publish p( output_streams
-                                    , options.value( "-s,--size", 0 ) * options.value( "-m,--multiplier", 1 )
-                                    , options.exists( "--discard" )
-                                    , options.exists( "--flush" ) || !binary
-                                    , false
-                                    , false
-                                    , options.value( "--cache-size,--cache", 0 ) );
+        comma::io::impl::publish p( output_streams
+                                  , options.value( "-s,--size", 0 ) * options.value( "-m,--multiplier", 1 )
+                                  , options.exists( "--discard" )
+                                  , options.exists( "--flush" ) || !binary
+                                  , false
+                                  , false
+                                  , options.value( "--cache-size,--cache", 0 ) );
         comma::signal_flag is_shutdown;
         if( binary )
         {
