@@ -298,6 +298,16 @@ function set_topic_variables()
     if [[ -n "$topic_header_binary" ]]; then binary_option="--binary=$topic_header_binary"; fi
 }
 
+# allow placeholders in the command string
+function expanded_command()
+{
+    local cmd="$1"
+    {
+        grep "=" <<< "$options" | comma_path_value_mangle
+        echo "cmd=\"$( sed -e 's#"#\\\"#g' -e "s#'#\\'#g" <<< "$cmd" )\""
+    } | env -i $BASH -c 'eval "$( cat )"; echo "$cmd"'
+}
+
 function publish_command()
 {
     [[ -n "$topic_command" ]] || die "topic '$topic': command not specified in files ${configs[@]}"
@@ -309,8 +319,9 @@ function publish_command()
     if [[ "$topic_on_demand" == 1 || "$topic_on_demand" == "true" ]]; then on_demand="--on-demand"; else unset on_demand; fi
     if [[ -n "$topic_cache_size" ]]; then cache_size="--cache-size=$topic_cache_size"; else unset cache_size; fi
     local cmd="io-publish $topic_address $topic_secondary_address $size_option $multiplier $on_demand $cache_size -- "
-    if [[ -z "$topic_input" ]]; then cmd+="$topic_command"
-    else cmd+="$( set_topic_variables "cat" "$topic_input"; cat_command "$topic_input" 1 ) --flush --verbose | $topic_command" || die "topic '$topic': failed to configure input topic '$topic_input'"; fi
+    local expanded_topic_command=$( expanded_command $topic_command )
+    if [[ -z "$topic_input" ]]; then cmd+="$expanded_topic_command"
+    else cmd+="$( set_topic_variables "cat" "$topic_input"; cat_command "$topic_input" 1 ) --flush --verbose | $expanded_topic_command" || die "topic '$topic': failed to configure input topic '$topic_input'"; fi
     verbose "$cmd"
     echo "$cmd"
 }
@@ -328,19 +339,9 @@ function cat_command()
     if [[ -n "$topic_connect_period" ]]; then connect_period_option="--connect-period=$topic_connect_period"; else unset connect_period_option; fi
     if [[ -n "$options_verbose" ]]; then verbose_option="--verbose"; else unset verbose_option; fi
     if (( ignore_command )); then local cmd="io-cat $topic_address $size_option $flush_option $connect_attempts_option $connect_period_option $verbose_option"
-    else local cmd="bash -c io-cat $topic_address $size_option $flush_option $connect_attempts_option $connect_period_option $verbose_option | $topic_command"; fi # todo? comma_execute_and_wait?
+    else local cmd="bash -c io-cat $topic_address $size_option $flush_option $connect_attempts_option $connect_period_option $verbose_option | $( expanded_command $topic_command )"; fi # todo? comma_execute_and_wait?
     verbose "$cmd"
     echo "$cmd"
-}
-
-# allow placeholders in the command string
-function expanded_command()
-{
-    local cmd="$1"
-    {
-        grep "=" <<< "$options" | comma_path_value_mangle
-        echo "cmd=\"$( sed -e 's#"#\\\"#g' -e "s#'#\\'#g" <<< "$cmd" )\""
-    } | env -i $BASH -c 'eval "$( cat )"; echo "$cmd"'
 }
 
 function log_command()
