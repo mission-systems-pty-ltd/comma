@@ -298,33 +298,21 @@ function set_topic_variables()
     if [[ -n "$topic_header_binary" ]]; then binary_option="--binary=$topic_header_binary"; fi
 }
 
-# allow placeholders in the command string
-# function expanded_command()
-# {
-#     local cmd="$1"
-#     echo "$cmd"
-#     return
-
-#     local token
-#     echo $cmd | sed 's/\${/\n${/;s/}/}\n/' \
-#         | while IFS='' read token; do \
-#               if [[ $token =~ ^\$\{[a-zA-Z_][a-zA-Z0-9_]*\}$ ]]; then
-#                   local variable_name="options_${token:2:-1}"
-#                   echo "${!variable_name}"
-#               else
-#                   echo "$token"
-#               fi
-#           done | tr -d '\n'
-# }
-
-function expanded_command()
+function expanded_command() # quick and dirty
 {
     local cmd="$1"
     {
         grep "=" <<< "$options" | comma_path_value_mangle
-        echo "cmd="
-        sed -e 's#\${#\n\$\{#g' -e 's#}#}\n#g' <<< "$cmd" | sed -e 's#^#cmd+="#' -e 's#$#"#'
-    } | env -i $BASH -c 'eval "$( cat )"; echo "$cmd"' | tr -d '\n'
+        echo "${cmd// /__whitespace__}"
+    } \
+        | env -i $BASH -c 'input=$( cat )
+                           eval "$( head -n-1 <<< "$input" )"
+                           cmd=""
+                           while read line; do
+                               echo -n "$line" >> 1.txt
+                               if [[ $line =~ ^\$\{[a-zA-Z_][a-zA-Z0-9_]*\}$ ]]; then var="${line:2:-1}"; cmd+="${!var}"; else cmd+="$line"; fi
+                           done < <( tail -n1 <<< "$input" | sed -e "s#\${#\n\$\{#g" -e "s#}#}\n#g" )
+                           echo "${cmd//__whitespace__/ }"'
 }
 
 function publish_command()
