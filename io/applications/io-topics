@@ -463,7 +463,7 @@ for topic in ${topics[@]}; do
     set_topic_variables "$operation" "$topic"
     cmd="$( ${operation}_command $topic )" || die "topic '$topic': making command failed"
     commands+=( "$cmd" )
-    [[ $topic_on_exit ]] && on_exit_commands+=( "$topic_on_exit" )
+    [[ $topic_on_exit ]] && on_exit_commands+=( "$( expanded_command "$topic_on_exit" )" )
 done
 say "will run 'comma_execute_and_wait --group' with commands:"
 for cmd in "${commands[@]}"; do say "    $cmd"; done

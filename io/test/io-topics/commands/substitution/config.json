@@ -1,6 +1,7 @@
 {
     "topic1":
     {
-        "command": "echo ${log_dir} ${my_var} ${another_var}"
+        "command": "echo command: echo ${log_dir} ${my_var} ${another_var}",
+        "on_exit": "echo on_exit: echo ${log_dir}"
     }
 }

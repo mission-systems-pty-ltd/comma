@@ -1,6 +1,9 @@
-log/dir/output="my-dir"
+log/dir/output/line[0]="command: echo my-dir"
+log/dir/output/line[1]="on_exit: echo my-dir"
 log/dir/status=0
-log/log_dir/output="my-log-dir"
+log/log_dir/output/line[0]="command: echo my-log-dir"
+log/log_dir/output/line[1]="on_exit: echo my-log-dir"
 log/log_dir/status=0
-log/evn/output="my-dir hello world"
+log/evn/output/line[0]="command: echo my-dir hello world"
+log/evn/output/line[1]="on_exit: echo my-dir"
 log/evn/status=0
