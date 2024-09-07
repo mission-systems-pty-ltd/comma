@@ -60,9 +60,10 @@ operations
     publish: start all the publishers listed on command line or config file
 
 variable substition in commands
-    options can be passed to commands via variable substition
-    example:
-        command="save-to-dir \${log_dir}"
+    options can be passed to command and on_exit fields via variable substition
+    examples
+        "command": "log-some-sensor \${log_dir}"
+        "on_exit": "save-to-dir \${log_dir}"
     all command line options and values defined in --env are available
         e.g:
             --config -> \${config}
