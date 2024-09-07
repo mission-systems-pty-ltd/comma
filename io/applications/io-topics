@@ -303,16 +303,15 @@ function expanded_command() # quick and dirty
     local cmd="$1"
     {
         grep "=" <<< "$options" | comma_path_value_mangle
-        echo "${cmd// /__whitespace__}"
+        echo "$cmd"
     } \
         | env -i $BASH -c 'input=$( cat )
                            eval "$( head -n-1 <<< "$input" )"
                            cmd=""
-                           while read line; do
-                               echo -n "$line" >> 1.txt
+                           while IFS="" read line; do
                                if [[ $line =~ ^\$\{[a-zA-Z_][a-zA-Z0-9_]*\}$ ]]; then var="${line:2:-1}"; cmd+="${!var}"; else cmd+="$line"; fi
                            done < <( tail -n1 <<< "$input" | sed -e "s#\${#\n\$\{#g" -e "s#}#}\n#g" )
-                           echo "${cmd//__whitespace__/ }"'
+                           echo "$cmd"'
 }
 
 function publish_command()
