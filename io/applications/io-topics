@@ -20,19 +20,23 @@ function bash_completion()
 function common_options()
 {
     cat <<EOF
---help,-h;           display help and exit
---config=[<config>]; <config>: <dir>[:<path>], where <dir> is path to a
-                     json or path-value file specifying topic attributes,
-                     <path>: path inside config, multiple --config options
-                     allowed, configs will be applied in the reverse order
-                     of --config options on command line (see examples)
---dry-run,--dry;     print final command and exit
+--help,-h;            display help and exit
+--config=[<config>];  <config>: <dir>[:<path>], where <dir> is path to a
+                      json or path-value file specifying topic attributes,
+                      <path>: path inside config, multiple --config options
+                      allowed, configs will be applied in the reverse order
+                      of --config options on command line (see examples)
+--dry-run,--dry;      print final command and exit
+--env=[<defintions>]; <definitions>: bash-style variable definitions that 
+                      will be used only for \${some-var} variable substitution
+                      in commands, see variable substition in commands below
+                      e.g. --env="my_var=123;another_var='hello;world'"
 --topics-from-all-configs,--all; take topics from all configs and topic
-                     command values, default: take topics and topic command
-                     values only from the first config ("master config")
---topic-fields;      output topic config fields and exit
---topic-fields-help; output topic config fields help and exit
---verbose,-v;        print verbose information
+                      command values, default: take topics and topic command
+                      values only from the first config ("master config")
+--topic-fields;       output topic config fields and exit
+--topic-fields-help;  output topic config fields help and exit
+--verbose,-v;         print verbose information
 EOF
 }
 
@@ -56,10 +60,14 @@ operations
     publish: start all the publishers listed on command line or config file
 
 variable substition in commands
-    options can be passed to commands via variable substition. for example:
-    command="save-to-dir ${log_dir}"
-    all options are available,
-    e.g. --config -> ${config}; --log-dir -> ${log_dir}
+    options can be passed to commands via variable substition
+    example:
+        command="save-to-dir \${log_dir}"
+    all command line options and values defined in --env are available
+        e.g:
+            --config -> \${config}
+            --log-dir -> \${log_dir}
+            --env="my_var=5" -> \${my_var}
     see examples below for more detail
 
 common options
@@ -303,6 +311,7 @@ function expanded_command() # quick and dirty
     local cmd="$1"
     {
         grep "=" <<< "$options" | comma_path_value_mangle
+        echo "$options_env"
         echo "$cmd"
     } \
         | env -i $BASH -c 'input=$( cat )

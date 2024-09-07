@@ -1,6 +1,6 @@
 {
     "topic1":
     {
-        "command": "echo ${log_dir}"
+        "command": "echo ${log_dir} ${my_var} ${another_var}"
     }
 }
