@@ -3,6 +3,7 @@
 
 /// @author dewey nguyen
 
+#include <cstdint>
 #include <deque>
 #include <iostream>
 #include <vector>

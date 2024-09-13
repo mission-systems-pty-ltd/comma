@@ -19,6 +19,7 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/property_tree/ini_parser.hpp>
+#include <boost/type_traits.hpp>
 #include <boost/unordered_set.hpp>
 #include <boost/version.hpp>
 #include "../base/exception.h"

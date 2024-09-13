@@ -22,7 +22,7 @@ template < typename T, template < typename S, typename A > class C = std::vector
 C< T, A > load_array( const std::string& path );
 
 
-template < typename T, template < typename S, typename A > class C = std::vector, typename A >
+template < typename T, template < typename S, typename A > class C, typename A >
 inline C< T, A >& load_array( C< T, A >& a, const std::string& path )
 {
     std::ifstream ifs( path );
@@ -33,7 +33,7 @@ inline C< T, A >& load_array( C< T, A >& a, const std::string& path )
     return a;
 }
 
-template < typename T, template < typename S, typename A > class C = std::vector, typename A >
+template < typename T, template < typename S, typename A > class C, typename A >
 inline C< T, A > load_array( const std::string& path )
 {
     C< T, A > a;

@@ -2,6 +2,7 @@
 
 /// @author Aspen Eyers
 
+#include <cstdint>
 #include <iostream>
 #include <fstream>
 #include "../../application/command_line_options.h"
