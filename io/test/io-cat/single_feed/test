@@ -6,6 +6,8 @@ prefix=io-cat
 declare -A pids
 declare -A files
 
+type -p netstat >/dev/null || { echo "$0: netstat not found; to install run: sudo apt install net-tools"; exit 1; }
+
 function bye
 {
     trap '' INT TERM HUP  # ignore signals
