@@ -1,4 +1,5 @@
 #!/bin/bash
 
 name=$( basename $0 )
+type -p pytest >/dev/null || { echo "$0: pytest not found; to install run: sudo apt install python3-pytest" >&2; exit 1; }
 pytest 1>&2 && echo "$name: succeeded" >&2 || { echo "$name: failed" >&2; exit 1; }
