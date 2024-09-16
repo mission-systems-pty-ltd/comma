@@ -58,6 +58,8 @@ echo '--debug; much more debug output
 --verbose,-v; more output'
 }
 
+function escape() { sed -e 's#"#__quote__#g' -e 's#\\#__backslash#g' | tr '\n' '&'; }
+
 echo "basic[0]/text=\"$( comma_name_value_to_options <<< 'hello world' )\""
 echo "basic[1]/text=\"$( comma_name_value_to_options <<< 'hello_world=1' )\""
 echo "basic[2]/text=\"$( comma_name_value_to_options <<< 'hello=world' )\""
@@ -73,14 +75,14 @@ hello="world"
 hello_world
 --hello_world=1' | tr '\n' '@' )\""
 
-echo "co_to_nv[0]/text=\"$( command_description | comma-options-to-name-value --directory "/tmp" --debug --verbose | tr '\n' '@' | tr '"' '|' )\""
-echo "co_to_nv[1]/text=\"$( command_description | comma-options-to-name-value --directory="/tmp" --debug --verbose | tr '\n' '@' | tr '"' '|' )\""
-echo "co_to_nv[2]/text=\"$( command_description | comma-options-to-name-value "--directory=/tmp" --debug --verbose | tr '\n' '@' | tr '"' '|' )\""
-echo "co_to_nv[3]/text=\"$( command_description | comma-options-to-name-value '--directory="/tmp"' --debug --verbose | tr '\n' '@' | tr '"' '|' )\""
+echo "co_to_nv[0]/text=\"$( command_description | comma-options-to-name-value --directory "/tmp"   --debug --verbose | escape )\""
+echo "co_to_nv[1]/text=\"$( command_description | comma-options-to-name-value --directory="/tmp"   --debug --verbose | escape )\""
+echo "co_to_nv[2]/text=\"$( command_description | comma-options-to-name-value "--directory=/tmp"   --debug --verbose | escape )\""
+echo "co_to_nv[3]/text=\"$( command_description | comma-options-to-name-value '--directory="/tmp"' --debug --verbose | escape )\""
 
-echo "cnv_to_o[0]/text=\"$( command_description | comma-options-to-name-value --directory "/tmp" --debug --verbose | comma_name_value_to_options | tr '"' '|' )\""
-echo "cnv_to_o[1]/text=\"$( command_description | comma-options-to-name-value --directory="/tmp" --debug --verbose | comma_name_value_to_options | tr '"' '|' )\""
-echo "cnv_to_o[2]/text=\"$( command_description | comma-options-to-name-value "--directory=/tmp" --debug --verbose | comma_name_value_to_options | tr '"' '|' )\""
+echo "cnv_to_o[0]/text=\"$( command_description | comma-options-to-name-value --directory "/tmp"   --debug --verbose | comma_name_value_to_options | tr '"' '|' )\""
+echo "cnv_to_o[1]/text=\"$( command_description | comma-options-to-name-value --directory="/tmp"   --debug --verbose | comma_name_value_to_options | tr '"' '|' )\""
+echo "cnv_to_o[2]/text=\"$( command_description | comma-options-to-name-value "--directory=/tmp"   --debug --verbose | comma_name_value_to_options | tr '"' '|' )\""
 
 comma_name_value_to_options <<< 'directory=/tmp
 verbose="1"
