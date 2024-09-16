@@ -41,7 +41,7 @@ function run_test()
     local -r expected_file="$test_name.expected"
     if [[ -z "$expected" ]]; then > $expected_file; else echo -e "$expected" > $expected_file; fi
     echo "test: $test_name: command is: $@" >&2
-    echo "$test_name/command=\"$( io-tee --dry $options out -- "$@" | sed 's/"/(DQUOTE)/g'"; s/'/(SQUOTE)/g" )\""
+    echo "$test_name/command=\"$( io-tee --dry $options out -- "$@" | sed -e 's/"/(DQUOTE)/g' -e "s/'/(SQUOTE)/g" -e 's/\\/(BSLASH)/g' )\""
     cat $input | io-tee $options $tee_file $dashdash "$@" > $stdout_file
     if [[ $? != 0 ]]; then
         echo "test: io-tee call failed" >&2
