@@ -27,11 +27,11 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author vsevolod vlaskine
 
 #pragma once
 
+#include <functional>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -67,9 +67,9 @@ struct unstructured
                 return true;
             }
             
-            struct hash : public std::unary_function< values, std::size_t >
+            struct hash //: public std::function< std::size_t ( const& values ) >
             {
-                std::size_t operator()( values const& p ) const
+                std::size_t operator()( const values& p ) const
                 {
                     std::size_t seed = 0;
                     for( std::size_t i = 0; i < p.size(); ++i ) { hash_combine_impl_( seed, p[i] ); }
@@ -212,7 +212,7 @@ struct unstructured
     
     template < typename T > const values< T >& get() const;
         
-    struct hash : public std::unary_function< unstructured, std::size_t >
+    struct hash //: public std::unary_function< unstructured, std::size_t >
     {
         std::size_t operator()( unstructured const& p ) const
         {

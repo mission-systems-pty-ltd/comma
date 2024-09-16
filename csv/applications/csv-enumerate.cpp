@@ -29,7 +29,7 @@
 
 /// @author vsevolod vlaskine
 
-#include <boost/unordered_map.hpp>
+#include <unordered_map>
 #include "../../application/command_line_options.h"
 #include "../../base/exception.h"
 #include "../../base/types.h"
@@ -39,26 +39,27 @@
 
 static void usage( bool verbose )
 {
-    std::cerr << std::endl;
-    std::cerr << "append unique id to csv records with the same values; support integer, time, and string fields" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "usage: cat data.csv | csv-enumerate <options>" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "todo: support floating point values as input keys" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "options" << std::endl;
-    std::cerr << "    --fields,-f=<fields>; fields of interest, actual field names do not matter; e.g: --fields ,,,a,,b,,,c" << std::endl;
-    std::cerr << "    --format=<binary format>; if input is ascii and deducing data types may be ambiguous, define field types explicitly, value as in --binary" << std::endl;
-    std::cerr << "    --output-map,--map: do not output input records, only an unsorted list of keys" << std::endl;
-    std::cerr << "                        output fields" << std::endl;
-    std::cerr << "                            - list of input key values; in same binary as input" << std::endl;
-    std::cerr << "                            - corresponding enumeration index as ui" << std::endl;
-    std::cerr << "                            - number of values for this enumeration index as ui" << std::endl;
-    std::cerr << "    --verbose,-v: more output to stderr" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "csv options" << std::endl;
+    std::cerr << R"(
+append unique id to csv records with the same values; support integer, time, and string fields
+
+usage: cat data.csv | csv-enumerate <options>
+
+todo: support floating point values as input keys
+
+options
+    --fields,-f=<fields>; fields of interest, actual field names do not matter
+                          e.g: --fields ,,,a,,b,,,c
+    --format=<binary format>; if input is ascii and deducing data types may be ambiguous,
+                              define field types explicitly, value as in --binary
+    --output-map,--map: do not output input records, only an unsorted list of keys
+                        output fields
+                            - list of input key values; in same binary as input
+                            - corresponding enumeration index as ui
+                            - number of values for this enumeration index as ui
+    --verbose,-v: more output to stderr
+)" << std::endl;
+std::cerr << "csv options" << std::endl;
     std::cerr << comma::csv::options::usage( verbose ) << std::endl;
-    std::cerr << std::endl;
     exit( 0 );
 }
 
@@ -81,16 +82,15 @@ template <> struct traits< output >
 int main( int ac, char** av )
 {
     typedef comma::csv::impl::unstructured input_t;
-    typedef boost::unordered_map< comma::csv::impl::unstructured, std::pair< comma::uint32, comma::uint32 >, comma::csv::impl::unstructured::hash >  map_t;
+    typedef std::unordered_map< comma::csv::impl::unstructured, std::pair< comma::uint32, comma::uint32 >, comma::csv::impl::unstructured::hash >  map_t;
     try
     {
         comma::command_line_options options( ac, av, usage );
-        bool verbose = options.exists( "--verbose,-v" );
         bool output_map = options.exists( "--output-map,--map" );
         comma::csv::options csv( options );
         bool has_non_empty_field = false;
         for( const auto& f: comma::split( csv.fields, ',' ) ) { if( !f.empty() ) { has_non_empty_field = true; break; } }
-        if( !has_non_empty_field ) { std::cerr << "csv-enumerate: please specify at least one key in fields" << std::endl; return 1; }
+        COMMA_ASSERT_BRIEF( has_non_empty_field, "please specify at least one key in fields" );
         std::string first_line;
         comma::csv::format f;
         if( csv.binary() ) { f = csv.format(); }
@@ -100,7 +100,7 @@ int main( int ac, char** av )
             while( std::cin.good() && first_line.empty() ) { std::getline( std::cin, first_line ); }
             if( first_line.empty() ) { return 0; }
             f = comma::csv::impl::unstructured::guess_format( first_line, csv.delimiter );
-            if( verbose ) { std::cerr << "csv-enumerate: guessed format: " << f.string() << std::endl; }
+            comma::saymore() << "guessed format: " << f.string() << std::endl;
         }
         input_t default_input;
         std::vector< std::string > v = comma::split( csv.fields, ',' );
@@ -114,7 +114,7 @@ int main( int ac, char** av )
             if( csv.binary() ) { s.push_back( format[i] ); }
         }
         std::string map_output_binary_format = comma::join( s, ',' );
-        if( verbose ) { std::cerr << "csv-enumerate: fields " << csv.fields << " interpreted as: " << comma::join( v, ',' ) << std::endl; }
+        comma::saymore() << "fields " << csv.fields << " interpreted as: " << comma::join( v, ',' ) << std::endl;
         csv.fields = comma::join( v, ',' );
         static map_t map;
         comma::uint32 id = 0;
@@ -148,13 +148,13 @@ int main( int ac, char** av )
         if( csv.binary() )
         { 
             output_map_csv.format( map_output_binary_format + ",2ui" ); //output_map_csv.format( comma::csv::format::value< input_t >( default_input ) + ",2ui" );
-            std::cerr << "csv-enumerate: binary output format for map: \"" << output_map_csv.format().string() << "\"" << std::endl;
+            comma::say() << "binary output format for map: '" << output_map_csv.format().string() << "'" << std::endl;
         }
         comma::csv::output_stream< map_t::value_type > omstream( std::cout, output_map_csv, std::make_pair( default_input, std::make_pair( 0, 0 ) ) );
         for( map_t::const_iterator it = map.begin(); it != map.end(); ++it ) { omstream.write( *it ); }
         return 0;
     }
-    catch( std::exception& ex ) { std::cerr << "csv-enumerate: " << ex.what() << std::endl; }
-    catch( ... ) { std::cerr << "csv-enumerate: unknown exception" << std::endl; }
+    catch( std::exception& ex ) { comma::say() << ex.what() << std::endl; }
+    catch( ... ) { comma::say() << "unknown exception" << std::endl; }
     return 1;
 }
