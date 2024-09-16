@@ -31,7 +31,6 @@
 
 #pragma once
 
-#include <functional>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -198,15 +197,9 @@ struct unstructured
         return f;
     }
     
-    bool operator==( const unstructured& rhs ) const
-    {
-        return longs == rhs.longs && doubles == rhs.doubles && time == rhs.time && strings == rhs.strings;        
-    }
+    bool operator==( const unstructured& rhs ) const { return longs == rhs.longs && doubles == rhs.doubles && time == rhs.time && strings == rhs.strings; }
     
-    bool operator<( const unstructured& rhs ) const
-    {
-        return doubles < rhs.doubles && time < rhs.time && strings < rhs.strings;        
-    }
+    bool operator<( const unstructured& rhs ) const { return doubles < rhs.doubles && time < rhs.time && strings < rhs.strings; }
     
     template < typename T > values< T >& get();
     
