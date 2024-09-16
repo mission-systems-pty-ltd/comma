@@ -270,9 +270,14 @@ struct interval_t
     to_t< To > to;
 };
 
+
+template < typename T > struct scalar_traits { static T zero() { return 0; } };
+template <> struct scalar_traits< boost::posix_time::ptime > { static boost::posix_time::ptime zero() { return boost::posix_time::ptime(); } };
+template <> struct scalar_traits< std::string > { static std::string zero() { return ""; } };
+
 template < typename T > struct scalar_t
 { 
-    T scalar;
+    T scalar{ scalar_traits< T >::zero() };
     scalar_t() {}
     scalar_t( const T& t ): scalar( t ) {}
 };
