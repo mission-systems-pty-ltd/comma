@@ -24,5 +24,5 @@ basic_test/command="bash -c (SQUOTE)grep (DQUOTE)one two(DQUOTE) > (DQUOTE)out(D
 function_call_test/command="bash -c (SQUOTE)example_function (DQUOTE)two (DQUOTE) (DQUOTE)one(DQUOTE) > (DQUOTE)out(DQUOTE)(SQUOTE)"
 unbuffered_test/command="bash -c (SQUOTE)grep (DQUOTE)one two(DQUOTE) > (DQUOTE)out(DQUOTE)(SQUOTE)"
 unbuffered_fn_test/command="bash -c (SQUOTE)example_function (DQUOTE)two (DQUOTE) (DQUOTE)one(DQUOTE) > (DQUOTE)out(DQUOTE)(SQUOTE)"
-pipeline/command="bash -c (SQUOTE)grep (SQUOTE)\(SQUOTE)(SQUOTE)^t(SQUOTE)\(SQUOTE)(SQUOTE) | grep (DQUOTE)o$(DQUOTE) > (DQUOTE)out(DQUOTE)(SQUOTE)"
+pipeline/command="bash -c (SQUOTE)grep (SQUOTE)(BSLASH)(SQUOTE)(SQUOTE)^t(SQUOTE)(BSLASH)(SQUOTE)(SQUOTE) | grep (DQUOTE)o$(DQUOTE) > (DQUOTE)out(DQUOTE)(SQUOTE)"
 
