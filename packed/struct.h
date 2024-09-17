@@ -14,7 +14,7 @@ namespace comma { namespace packed {
 template < class Derived, size_t S >
 struct packed_struct
 {
-    enum { size = S };
+    static constexpr unsigned int size = S;
 
     packed_struct() throw() { static_assert( sizeof( Derived ) == size, "expected derived of provided size" ); }
 

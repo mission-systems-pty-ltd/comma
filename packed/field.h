@@ -15,7 +15,7 @@ template < typename Derived, typename T, size_t S >
 class field
 {
     public:
-        enum { size = S };
+        static constexpr unsigned int size = S;
 
         static_assert( size > 0, "expected positive size" );
 
