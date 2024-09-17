@@ -85,6 +85,14 @@ INSTALL( CODE "EXECUTE_PROCESS(
                     COMMAND ${PYTHON} ${SETUP_PY} build --build-base ${BUILD_BASE} install ${INSTALL_PREFIX_OPTION} --force
                     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )" )
 
+# setup.py creates a couple of working directories in the current directory: comma_py.egg_info and dist
+# Because it's run in the install stage, and therefore typically as root, these
+# directories are owned by root, which is a bit annoying as they are in the
+# source tree. So set them to being owned by the user.
+INSTALL( CODE "EXECUTE_PROCESS(
+                    COMMAND chown -R $ENV{USER} comma_py.egg-info dist
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )" )
+
 #install( CODE "EXECUTE_PROCESS(
 #                    COMMAND ${PYTHON} -m pip install ${CMAKE_CURRENT_SOURCE_DIR} --ignore-installed
 #                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )" )
