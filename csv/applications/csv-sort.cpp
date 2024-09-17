@@ -563,7 +563,7 @@ static int random( const comma::command_line_options& options )
             if( !p || block != *p )
             {
                 std::uniform_int_distribution< int > distribution( 0, records.size() - 1 ); // quick and dirty
-                std::random_shuffle( records.begin(), records.end(), [&]( int ) -> int { return distribution( generator ); } ); // quick and dirty, watch performance
+                std::shuffle( records.begin(), records.end(), generator ); // std::random_shuffle( records.begin(), records.end(), [&]( int ) -> int { return distribution( generator ); } ); // quick and dirty, watch performance
                 for( const auto& r: records ) { std::cout.write( &r[0], r.size() ); }
                 if( csv.flush ) { std::cout.flush(); }
                 records.clear();
@@ -609,7 +609,7 @@ static int random( const comma::command_line_options& options )
             }
         }
         std::uniform_int_distribution< int > distribution( 0, records.size() - 1 ); // quick and dirty
-        std::random_shuffle( records.begin(), records.end(), [&]( int ) -> int { return distribution( generator ); } ); // quick and dirty, watch performance
+        std::shuffle( records.begin(), records.end(), generator ); // std::random_shuffle( records.begin(), records.end(), [&]( int ) -> int { return distribution( generator ); } ); // quick and dirty, watch performance
         for( const auto& r: records ) { std::cout.write( &r[0], r.size() ); }
     }
     return 0;
