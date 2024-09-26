@@ -17,33 +17,34 @@
 
 static void usage( bool verbose )
 {
-    std::cerr << "perform operations on csv columns" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "usage: cat data.csv | csv-shuffle <options> > shuffled.csv" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "options" << std::endl;
-    std::cerr << "    --help,-h: help; --help --verbose: more help" << std::endl;
-    std::cerr << "    --drop-empty,-e; e.g. csv-shuffle --fields a,b,,,c --drop-empty is equivalent to" << std::endl;
-    std::cerr << "                          csv-shuffle --fields a,b,,,c --output-fields a,b,c" << std::endl;
-    std::cerr << "    --fields,-f,--input-fields=<fields>; input fields" << std::endl;
-    std::cerr << "    --output-fields,--output,-o=<fields>; output fields, if not specified, will be set" << std::endl;
-    std::cerr << "                                          to --input-fields, which would chop off trailing input fields" << std::endl;
-    std::cerr << "                                          see also --drop-empty" << std::endl;
-    std::cerr << "    --verbose,-v: more output" << std::endl;
-    if( verbose ) { std::cerr << std::endl << comma::csv::options::usage() << std::endl; }
-    std::cerr << std::endl;
-    std::cerr << "examples" << std::endl;
-    std::cerr << "    operations (for now): append, remove, swap" << std::endl;
-    std::cerr << "    semantics:" << std::endl;
-    std::cerr << "        remove:" << std::endl;
-    std::cerr << "            echo 0,1,2 | csv-shuffle --fields=x,y,z" << std::endl;
-    std::cerr << "        append:" << std::endl;
-    std::cerr << "            echo 0,1,2 | csv-shuffle --fields=x,y,z --output-fields=x,y,z,x" << std::endl;
-    std::cerr << "        swap:" << std::endl;
-    std::cerr << "            echo 0,1,2 | csv-shuffle --fields=x,y,z --output-fields=y,z,x" << std::endl;
-    std::cerr << "        remove x, swap y,z, append z two times:" << std::endl;
-    std::cerr << "            echo 0,1,2 | csv-shuffle --fields=x,y,z --output-fields=z,y,z,z" << std::endl;
-    std::cerr << std::endl;
+    std::cerr << R"(
+swap, remove, or duplicate csv fields
+
+usage: cat data.csv | csv-shuffle <options> > shuffled.csv
+
+options
+    --drop-empty,-e; e.g. two following commands are equivalent
+                     csv-shuffle --fields a,b,,,c --drop-empty
+                     csv-shuffle --fields a,b,,,c --output-fields a,b,c
+    --fields,-f,--input-fields=<fields>; input fields
+    --output-fields,--output,-o=<fields>; output fields, if not specified,
+                                          will be set to --input-fields,
+                                          which would chop off trailing
+                                          input fields see also --drop-empty
+    --verbose,-v: more verbose output
+)" << std::endl;
+    std::cerr << "csv options" << std::endl;
+    std::cerr << comma::csv::options::usage( verbose ) << std::endl;
+std::cerr << R"(examples
+    remove
+        echo 0,1,2 | csv-shuffle --fields=x,y,z
+    append
+        echo 0,1,2 | csv-shuffle --fields=x,y,z --output-fields=x,y,z,x
+    swap
+        echo 0,1,2 | csv-shuffle --fields=x,y,z --output-fields=y,z,x
+    remove x, swap y,z, append z two times
+        echo 0,1,2 | csv-shuffle --fields=x,y,z --output-fields=z,y,z,z
+)" << std::endl;
     exit( 0 );
 }
 
@@ -61,11 +62,11 @@ int main( int ac, char** av )
             for( auto s: output_fields ) { if( !s.empty() ) { v.push_back( s ); } }
             output_fields = v;
         }
-        if( output_fields.empty() ) { std::cerr << "csv-shuffle: please specify --output-fields or --drop-empty" << std::endl; return 1; }
-        if( output_fields.back() == "..." ) { std::cerr << "csv-shuffle: support for trailing fields has been removed for now; please specify input/output fields explicitly" << std::endl; return 1; }
+        COMMA_ASSERT_BRIEF( !output_fields.empty(), "please specify --output-fields or --drop-empty" );
+        COMMA_ASSERT_BRIEF( output_fields.back() != "...", "support for trailing fields has been removed for now; please specify input/output fields explicitly" );
         auto find_ = [&]( const std::string& n )->unsigned int
         {
-            if( n.empty() ) { COMMA_THROW( comma::exception, "got empty fields in output fields '" << comma::join( output_fields, ',' ) << "'; you may need to use --drop-empty" ); }
+            COMMA_ASSERT_BRIEF( !n.empty(), "got empty fields in output fields '" << comma::join( output_fields, ',' ) << "'; you may need to use --drop-empty" );
             unsigned int j = 0;
             for( ; j < input_fields.size(); ++j ) { if( input_fields[j] == n ) { return j; } }
             COMMA_THROW( comma::exception, "output field '" << n << "' not found in input fields '" << csv.fields << "'" );
@@ -89,7 +90,7 @@ int main( int ac, char** av )
             {
                 std::cin.read( &buf[0], csv.format().size() );
                 if( std::cin.gcount() == 0 ) { continue; }
-                if( std::cin.gcount() < int( csv.format().size() ) ) { std::cerr << "csv-shuffle: expected " << csv.format().size() << " bytes, got only " << std::cin.gcount() << std::endl; return 1; }
+                COMMA_ASSERT_BRIEF( std::cin.gcount() >= int( csv.format().size() ), "expected " << csv.format().size() << " bytes, got only " << std::cin.gcount() );
                 for( const auto& offset: offsets ) { std::cout.write( &buf[ offset.first ], offset.second ); }
                 if( csv.flush ) { std::cout.flush(); }
             }
@@ -104,14 +105,14 @@ int main( int ac, char** av )
             if( !line.empty() && *line.rbegin() == '\r' ) { line = line.substr( 0, line.length() - 1 ); } // windows... sigh...
             if( line.empty() ) { continue; }
             const auto& v = comma::split( line, csv.delimiter );
-            if( v.size() < input_fields.size() ) { std::cerr << "csv-shuffle: expected at least " << input_fields.size() << " fields, got only " << v.size() << " in record \"" << line << "\"" << std::endl; return 1; }
+            COMMA_ASSERT_BRIEF( v.size() >= input_fields.size(), "expected at least " << input_fields.size() << " fields, got only " << v.size() << " in record \"" << line << "\"" );
             std::string delimiter;
             for( auto index: indices ) { std::cout << delimiter << v[index]; delimiter = csv.delimiter; }
             std::cout << std::endl;
         }
         return 0;
     }
-    catch( std::exception& ex ) { std::cerr << "csv-shuffle: " << ex.what() << std::endl; }
-    catch( ... ) { std::cerr << "csv-shuffle: unknown exception" << std::endl; }
+    catch( std::exception& ex ) { comma::say() << ex.what() << std::endl; }
+    catch( ... ) { comma::say() << "unknown exception" << std::endl; }
     return 1;
 }
