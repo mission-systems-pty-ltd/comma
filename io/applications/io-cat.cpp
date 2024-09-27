@@ -215,10 +215,10 @@ class udp_stream : public stream
         mutable boost::scoped_ptr< boost::asio::ip::udp::socket > socket_; // boost::asio::ip::udp::socket::fd() is non-const for some reason
 };
 
-class any_stream : public stream
+class client_stream : public stream
 {
     public:
-        any_stream( const std::string& address, unsigned int size, bool binary ): stream( address ), size_( size ), binary_( binary ), closed_( false ) {}
+        client_stream( const std::string& address, unsigned int size, bool binary ): stream( address ), size_( size ), binary_( binary ), closed_( false ) {}
         
         comma::io::file_descriptor fd() const { return ( *istream_ ).fd(); }
         
@@ -289,7 +289,7 @@ static stream* make_stream( const std::string& address, unsigned int size, bool 
     const std::vector< std::string >& v = comma::split( address, ':' );
     if( v[0] == "udp" ) { return new udp_stream( address ); }
     COMMA_ASSERT_BRIEF( v[0] != "zmq-local" && v[0] != "zero-local" && v[0] != "zmq-tcp" && v[0] != "zero-tcp", "zmq support not implemented" );
-    return new any_stream( address, size, binary );
+    return new client_stream( address, size, binary );
 }
 
 static bool verbose;

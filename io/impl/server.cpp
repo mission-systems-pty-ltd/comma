@@ -17,7 +17,7 @@
 #include "../../base/exception.h"
 #include "../../io/file_descriptor.h"
 #include "../../string/string.h"
-#include "publisher.h"
+#include "server.h"
 
 namespace comma { namespace io { namespace impl {
 
@@ -181,7 +181,7 @@ class zero_acceptor_ : public acceptor
         bool accepted_;
 };
 
-publisher::publisher( const std::string& name, io::mode::value mode, bool blocking, bool flush )
+server::server( const std::string& name, io::mode::value mode, bool blocking, bool flush )
     : blocking_( blocking ),
       flush_( flush )
 {
@@ -228,7 +228,7 @@ publisher::publisher( const std::string& name, io::mode::value mode, bool blocki
     }
 }
 
-unsigned int publisher::write( const char* buf, std::size_t size, bool do_accept )
+unsigned int server::write( const char* buf, std::size_t size, bool do_accept )
 {
     if( do_accept ) { accept(); }
     if( !blocking_ ) { select_.check(); } // todo: if slow, put all the files in one select
@@ -245,15 +245,15 @@ unsigned int publisher::write( const char* buf, std::size_t size, bool do_accept
     return count;
 }
 
-void publisher::close()
+void server::close()
 {
     if( acceptor_ ) { acceptor_->close(); }
     disconnect_all();
 }
 
-void publisher::disconnect_all() { while( streams_.begin() != streams_.end() ) { remove_( streams_.begin() ); } }
+void server::disconnect_all() { while( streams_.begin() != streams_.end() ) { remove_( streams_.begin() ); } }
 
-std::vector< io::ostream* > publisher::accept()
+std::vector< io::ostream* > server::accept()
 {
     std::vector< io::ostream* > streams;
     if( !acceptor_ ) { return streams; }
@@ -267,7 +267,7 @@ std::vector< io::ostream* > publisher::accept()
     }
 }
 
-void publisher::remove_( streams::iterator it )
+void server::remove_( streams::iterator it )
 {
     select_.write().remove( **it );
     ( *it )->close();
@@ -275,6 +275,6 @@ void publisher::remove_( streams::iterator it )
     streams_.erase( it );
 }
 
-std::size_t publisher::size() const { return streams_.size(); }
+std::size_t server::size() const { return streams_.size(); }
 
 } } } // namespace comma { namespace io { namespace impl {
