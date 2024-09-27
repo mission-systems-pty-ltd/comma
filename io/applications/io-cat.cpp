@@ -1,5 +1,6 @@
 // This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
+// Copyright (c) 2024 Vsevolod Vlaskine
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -49,99 +50,98 @@
 
 void usage( bool verbose = false )
 {
-    std::cerr << std::endl;
-    std::cerr << "read from one or a few sources, merge, and output to stdout" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "usage: io-cat <address> [<address>] ... [<options>]" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "<address>" << std::endl;
-    std::cerr << "    local:<path>: local socket" << std::endl;
-    std::cerr << "    tcp:<host>:<port>: tcp socket" << std::endl;
-    std::cerr << "    udp:<port>: udp socket" << std::endl;
-    std::cerr << "    zmp-<protocol>:<address>: zmq (todo)" << std::endl;
-    std::cerr << "    <filename>: file" << std::endl;
-    std::cerr << "    <fifo>: named pipe" << std::endl;
-    std::cerr << "    -: stdin" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "options" << std::endl;
-    std::cerr << "    --exit-on-first-closed,-e: exit, if one of the streams finishes" << std::endl;
-    std::cerr << "    --flush,--unbuffered,-u: flush output" << std::endl;
-    std::cerr << "    --verbose,-v: more output" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "output order options" << std::endl;
-    std::cerr << "    --blocking: blocking read on each source in order sources appear on command line" << std::endl;
-    std::cerr << "                output modes" << std::endl;
-    std::cerr << "                    default:     output all records from the first source, then all" << std::endl;
-    std::cerr << "                                 records from the seconds source, etc" << std::endl;
-    std::cerr << "                    round robin: output <n> records from the first source, then <n>" << std::endl;
-    std::cerr << "                                 records from the seconds source, etc; note that if" << std::endl;
-    std::cerr << "                                 the number of records in a source is not divisible by <n>" << std::endl;
-    std::cerr << "                                 then the last records groups may contain fewer than <n>" << std::endl;
-    std::cerr << "                                 records" << std::endl;
-    std::cerr << "                attention: if you want full control over record ordering, use --blocking" << std::endl;
-    std::cerr << "                           when using subshells or sockets as io-cat inputs " << std::endl;
+    std::cerr << R"(
+read from one or a few sources, merge, and output to stdout
+
+usage: io-cat <address> [<address>] ... [<options>]
+
+<address>
+    local:<path>: local socket
+    tcp:<host>:<port>: tcp socket
+    udp:<port>: udp socket
+    zmp-<protocol>:<address>: zmq (todo)
+    <filename>: file
+    <fifo>: named pipe
+    -: stdin
+
+options
+    --exit-on-first-closed,-e: exit, if one of the streams finishes
+    --flush,--unbuffered,-u: flush output
+    --verbose,-v: more output
+
+output order options
+    --blocking: blocking read on each source in order sources appear on command line
+                output modes
+                    default:     output all records from the first source, then all
+                                 records from the seconds source, etc
+                    round robin: output <n> records from the first source, then <n>
+                                 records from the seconds source, etc; note that if
+                                 the number of records in a source is not divisible by <n>
+                                 then the last records groups may contain fewer than <n>
+                                 records
+                attention: if you want full control over record ordering, use --blocking
+                           when using subshells or sockets as io-cat inputs)" << std::endl;
     if( verbose )
     {
-        std::cerr << "                           io-cat will open such inputs, but they may not be immediately" << std::endl;
-        std::cerr << "                           ready for reading, which may lead to records being read from sources" << std::endl;
-        std::cerr << "                           out of order;  use --blocking to avoid this problem" << std::endl;
-        std::cerr << "                           e.g. in the following command without --blocking one subshell may" << std::endl;
-        std::cerr << "                           start slightly earlier than the other and thus likely to output" << std::endl;
-        std::cerr << "                           not what you expect or want - add --blocking to fix that:" << std::endl;
-        std::cerr << "                               io-cat --round-robin=1 \\" << std::endl;
-        std::cerr << "                                      <( csv-paste line-number value=a | head -n100 ) \\" << std::endl;
-        std::cerr << "                                      <( csv-paste line-number value=b | head -n100 )" << std::endl;
+        std::cerr << R"(                           io-cat will open such inputs, but they may not be immediately
+                           ready for reading, which may lead to records being read from sources
+                           out of order;  use --blocking to avoid this problem
+                           e.g. in the following command without --blocking one subshell may
+                           start slightly earlier than the other and thus likely to output
+                           not what you expect or want - add --blocking to fix that:
+                               io-cat --round-robin=1 \\
+                                      <( csv-paste line-number value=a | head -n100 ) \\
+                                      <( csv-paste line-number value=b | head -n100 ))" << std::endl;
     }
     else
     {
-        std::cerr << "                           run io-cat --help --verbose for more details" << std::endl;
+        std::cerr << "                           run io-cat --help --verbose for more details..." << std::endl;
     }
-    std::cerr << "    --head=[<n>]; output first <n> records and exit without waiting for record n+1" << std::endl;
-    std::cerr << "                  a workaround for sparse input fed into: io-cat ... | head -n10, which" << std::endl;
-    std::cerr << "                  not exit until io-cat receives record 11" << std::endl;
-    std::cerr << "                  instead run: io-cat ... --head=10 (use --flush if you don't want buffering" << std::endl;
-    std::cerr << "    --repeat=[<n>]; read each stream, output <n> times" << std::endl;
-    std::cerr << "                  e.g: run: io-cat my-file-1 my-file-2 --repeat=3" << std::endl;
-    std::cerr << "                       instead of: cat my-file-1 my-file-2 my-file-1 my-file-2 my-file-1 my-file-2" << std::endl;
-    std::cerr << "                  when using for large source, be aware that the sources get stored in memory first" << std::endl;
-    std::cerr << "    --repeat-forever,--forever; same as --repeat, but forever" << std::endl;
-    std::cerr << "    --round-robin=[<number of packets>]: only for multiple inputs: read not more" << std::endl;
-    std::cerr << "                                         than <number of packets> from an input at once," << std::endl;
-    std::cerr << "                                         before checking other inputs" << std::endl;
-    std::cerr << "                                         if not specified, read from each input" << std::endl;
-    std::cerr << "                                         all available data" << std::endl;
-    std::cerr << "                                         ignored for udp streams, where one full udp" << std::endl;
-    std::cerr << "                                         packet at a time is always read" << std::endl;
-    std::cerr << "    --size=[<bytes>]; on fixed-width binary records, size of the record in bytes, for --round-robin or --head" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "connect options" << std::endl;
-    std::cerr << "    --connect-max-attempts,--connect-attempts,--attempts,--max-attempts=<n>; default=1; number of attempts to reconnect or 'unlimited'" << std::endl;
-    std::cerr << "    --connect-period=<seconds>; default=1; how long to wait before the next connect attempt" << std::endl;
-    std::cerr << "    --permissive; run even if connection to some sources fails" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "supported address types: tcp, udp, local (unix) sockets, named pipes, files, zmq (todo)" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "examples" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "    single stream" << std::endl;
-    std::cerr << "        io-cat tcp:localhost:12345" << std::endl;
-    std::cerr << "        io-cat udp:12345" << std::endl;
-    std::cerr << "        io-cat local:/tmp/socket" << std::endl;
-    std::cerr << "        io-cat some/pipe" << std::endl;
-    std::cerr << "        io-cat some/file" << std::endl;
-    std::cerr << "        io-cat zmq-local:/tmp/socket (not implemented)" << std::endl;
-    std::cerr << "        io-cat zmq-tcp:localhost:12345 (not implemented)" << std::endl;
-    std::cerr << "        echo hello | io-cat -" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "    multiple streams" << std::endl;
-    std::cerr << "        merge line-based input" << std::endl;
-    std::cerr << "            io-cat tcp:localhost:55555 tcp:localhost:88888" << std::endl;
-    std::cerr << "        merge binary input with packet size 100 bytes" << std::endl;
-    std::cerr << "            io-cat tcp:localhost:55555 tcp:localhost:88888 --size 100" << std::endl;
-    std::cerr << "        merge line-based input with stdin" << std::endl;
-    std::cerr << "            echo hello | io-cat tcp:localhost:55555 -" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << std::endl;
+    std::cerr << R"(    --head=[<n>]; output first <n> records and exit without waiting for record n+1
+                  a workaround for sparse input fed into: io-cat ... | head -n10, which
+                  not exit until io-cat receives record 11
+                  instead run: io-cat ... --head=10 (use --flush if you don't want buffering
+    --repeat=[<n>]; read each stream, output <n> times
+                  e.g: run: io-cat my-file-1 my-file-2 --repeat=3
+                       instead of: cat my-file-1 my-file-2 my-file-1 my-file-2 my-file-1 my-file-2
+                  when using for large source, be aware that the sources get stored in memory first
+    --repeat-forever,--forever; same as --repeat, but forever
+    --round-robin=[<number of packets>]: only for multiple inputs: read not more
+                                         than <number of packets> from an input at once,
+                                         before checking other inputs
+                                         if not specified, read from each input
+                                         all available data
+                                         ignored for udp streams, where one full udp
+                                         packet at a time is always read
+    --size=[<bytes>]; on fixed-width binary records, size of the record in bytes, for --round-robin or --head
+    
+connect options
+    --connect-max-attempts,--connect-attempts,--attempts,--max-attempts=<n>; default=1; number of attempts to reconnect or 'unlimited'
+    --connect-period=<seconds>; default=1; how long to wait before the next connect attempt
+    --permissive; run even if connection to some sources fails
+    
+supported address types: tcp, udp, local (unix) sockets, named pipes, files, zmq (todo)
+    
+examples
+    
+    single stream
+        io-cat tcp:localhost:12345
+        io-cat udp:12345
+        io-cat local:/tmp/socket
+        io-cat some/pipe
+        io-cat some/file
+        io-cat zmq-local:/tmp/socket (not implemented)
+        io-cat zmq-tcp:localhost:12345 (not implemented)
+        echo hello | io-cat -
+    
+    multiple streams
+        merge line-based input
+            io-cat tcp:localhost:55555 tcp:localhost:88888
+        merge binary input with packet size 100 bytes
+            io-cat tcp:localhost:55555 tcp:localhost:88888 --size 100
+        merge line-based input with stdin
+            echo hello | io-cat tcp:localhost:55555 -
+)" << std::endl;
     exit( 0 );
 }
 
@@ -288,7 +288,7 @@ static stream* make_stream( const std::string& address, unsigned int size, bool 
 {
     const std::vector< std::string >& v = comma::split( address, ':' );
     if( v[0] == "udp" ) { return new udp_stream( address ); }
-    if( v[0] == "zmq-local" || v[0] == "zero-local" || v[0] == "zmq-tcp" || v[0] == "zero-tcp" ) { COMMA_THROW( comma::exception, "io-cat: zmq support not implemented" ); }
+    COMMA_ASSERT_BRIEF( v[0] != "zmq-local" && v[0] != "zero-local" && v[0] != "zmq-tcp" && v[0] != "zero-tcp", "zmq support not implemented" );
     return new any_stream( address, size, binary );
 }
 
@@ -330,22 +330,22 @@ static bool try_connect( boost::ptr_vector< stream >& streams, comma::io::select
         if( streams[i].connected() ) { continue; }
         try
         {
-            if( verbose ) { std::cerr << "io-cat: stream " << i << " (" << streams[i].address() << "): connecting, attempt " << ( attempts + 1 ) << " of " << ( connect_max_attempts == 0 ? std::string( "unlimited" ) : boost::lexical_cast< std::string >( connect_max_attempts ) ) << "..." << std::endl; }
+            comma::saymore() << "stream " << i << " (" << streams[i].address() << "): connecting, attempt " << ( attempts + 1 ) << " of " << ( connect_max_attempts == 0 ? std::string( "unlimited" ) : boost::lexical_cast< std::string >( connect_max_attempts ) ) << "..." << std::endl;
             streams[i].connect();
-            if( verbose ) { std::cerr << "io-cat: stream " << i << " (" << streams[i].address() << "): connected" << std::endl; }
+            comma::saymore() << "stream " << i << " (" << streams[i].address() << "): connected" << std::endl;
             select.read().add( streams[i] );
             --unconnected_count;
             continue;
         }
         catch( std::exception& ex ) { what = ex.what(); }
         catch( ... ) { what = "unknown exception"; }
-        if( verbose ) { std::cerr << "io-cat: stream " << i << " (" << streams[i].address() << "): failed to connect" << std::endl; }
+        comma::saymore() << "stream " << i << " (" << streams[i].address() << "): failed to connect" << std::endl;
     }
     ++attempts;
     connected_all_we_could = unconnected_count == 0 || ( permissive && connect_max_attempts > 0 && attempts >= connect_max_attempts );
     if( connected_all_we_could ) { return connected_all_we_could; }
     if( connect_max_attempts == 0 || attempts < connect_max_attempts ) { return connected_all_we_could; }
-    std::cerr << "io-cat: fatal: after " << attempts << " attempt(s): " << what << std::endl;
+    comma::say() << "fatal: after " << attempts << " attempt(s): " << what << std::endl;
     exit( 1 );
 }
 
@@ -354,6 +354,7 @@ struct output_t
     unsigned int size{0};
     bool forever{false};
     std::vector< std::vector< char > > buffers; // todo: quick and dirty, watch performance on push back of large inputs
+
     operator bool() const { return !buffers.empty(); }
 
     output_t() = default;
@@ -409,10 +410,9 @@ static bool _write( unsigned int i, const comma::command_line_options& options, 
 int main( int argc, char** argv )
 {
     #ifdef WIN32
-    std::cerr << "io-cat: not implemented on windows" << std::endl;
+    comma::say() << "not implemented on windows" << std::endl;
     return 1;
     #endif
-    
     try
     {
         if( argc < 2 ) { usage(); }
@@ -436,7 +436,7 @@ int main( int argc, char** argv )
         if( size || ( unnamed.size() == 1 && !has_head ) ) { _setmode( _fileno( stdout ), _O_BINARY ); }
         //if( size ) { _setmode( _fileno( stdout ), _O_BINARY ); }
         #endif
-        if( unnamed.empty() ) { std::cerr << "io-cat: please specify at least one source" << std::endl; return 1; }
+        COMMA_ASSERT_BRIEF( !unnamed.empty(), "please specify at least one source" );
         output = output_t( options, unnamed.size() );
         boost::ptr_vector< stream > streams;
         comma::io::select select;
@@ -447,7 +447,7 @@ int main( int argc, char** argv )
         unsigned int round_robin_count = unnamed.size() > 1 ? options.value( "--round-robin", 0 ) : 0;
         for( bool done = false; !done; )
         {
-            if( is_shutdown ) { if( verbose ) { std::cerr << "io-cat: received signal" << std::endl; }; break; }
+            if( is_shutdown ) { comma::saymore() << "received signal" << std::endl; break; }
             bool connected_all_we_could = try_connect( streams, select );
             if( !ready( streams, select, connected_all_we_could, blocking ) ) { continue; }
             done = true;
@@ -459,7 +459,7 @@ int main( int argc, char** argv )
                 bool empty = streams[i].empty();
                 if( empty && ( ready || streams[i].eof() ) )
                 { 
-                    if( verbose ) { std::cerr << "io-cat: stream " << i << " (" << unnamed[i] << "): closed" << std::endl; }
+                    comma::saymore() << "stream " << i << " (" << unnamed[i] << "): closed" << std::endl;
                     select.read().remove( streams[i].fd() );
                     streams[i].close();
                     if( exit_on_first_closed || ( connected_all_we_could && select.read()().empty() ) ) { done = true; break; }
@@ -472,7 +472,7 @@ int main( int argc, char** argv )
                     unsigned int bytes_read = streams[i].read_available( buffer, countdown ? countdown : max_count, blocking );
                     if( bytes_read == 0 ) { break; }
                     done = false;
-                    if( size && bytes_read % size != 0 ) { std::cerr << "io-cat: stream " << i << " (" << streams[i].address() << "): expected " << size << " byte(s), got only " << ( bytes_read % size ) << std::endl; return 1; }
+                    COMMA_ASSERT_BRIEF( !( size && bytes_read % size != 0 ), "stream " << i << " (" << streams[i].address() << "): expected " << size << " byte(s), got only " << ( bytes_read % size ) );
                     if( !_write( i, options, buffer, bytes_read ) ) { done = true; break; }
                     if( !std::cout.good() ) { done = true; break; }
                     if( unbuffered ) { std::cout.flush(); }
@@ -487,7 +487,7 @@ int main( int argc, char** argv )
         output.finalise( is_shutdown );
         return 0;
     }
-    catch( std::exception& ex ) { std::cerr << "io-cat: " << ex.what() << std::endl; }
-    catch( ... ) { std::cerr << "io-cat: unknown exception" << std::endl; }
+    catch( std::exception& ex ) { comma::say() << ex.what() << std::endl; }
+    catch( ... ) { comma::say() << "unknown exception" << std::endl; }
     return 1;
 }
