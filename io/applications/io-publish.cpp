@@ -159,13 +159,13 @@ int main( int ac, char** av )
         std::string exec_command = options.value< std::string >( "--exec", "" );
         if( !tail.empty() )
         {
-            if( !exec_command.empty() ) { comma::say() << "expected either --exec or --, got both" << std::endl; return 1; }
+            COMMA_ASSERT_BRIEF( exec_command.empty(), "expected either --exec or --, got both" );
             exec_command = comma::join( tail, ' ' );
         }
         //ProfilerStart( "io-publish.prof" ); {
         if( exec_command.empty() )
         {
-            if( on_demand ) { comma::say() << "got --on-demand; please specify --exec <command> or -- <command>, or remove --on-demand" << std::endl; return 1; }
+            COMMA_ASSERT_BRIEF( !on_demand, "got --on-demand; please specify --exec <command> or -- <command>, or remove --on-demand" );
             while( std::cin.good() && !is_shutdown ) { if( !p.read( std::cin ) && exit_on_no_clients ) { break; } }
         }
         else

@@ -28,9 +28,9 @@ cd output
 [[ $( type -t exec_cmd ) == "function" ]] && options+=" --exec exec_cmd"
 
 if [[ $( type -t stdin_cmd ) == "function" ]]; then
-    stdin_cmd | io-publish tcp:$port $options &
+    stdin_cmd | io-publish tcp:$port $options --verbose &
 else
-    io-publish tcp:$port $options &
+    io-publish tcp:$port $options --verbose &
 fi
 io_publish_pid=$!
 echo "test: io_publish_pid: $io_publish_pid port: $port" >&2
@@ -40,11 +40,11 @@ if [[ $( type -t client_cmd ) == "function" ]]; then
     echo "test: running client command..." >&2
     client_cmd > /dev/null &
     client_cmd_pid=$!
-    echo "client_cmd_pid=$client_cmd_pid" >&2
+    echo "test: client_cmd_pid=$client_cmd_pid" >&2
 fi
 
-[[ $test_duration ]] || test_duration=10
-[[ $report_interval ]] || report_interval=1
+[[ -n "$test_duration" ]] || test_duration=10
+[[ -n "$report_interval" ]] || report_interval=1
 
 loops=$( echo "$test_duration / $report_interval" | bc -l | sed 's/\.[0-9]*$//' )
 
@@ -58,9 +58,7 @@ done | sed 's/,$//;s/,[^,]* <defunct>//g' | grep -v ",bash$" | uniq \
 # when logging the processes above, we filter out lines with just bash at the
 # end, as they are in transition, with their children having just died
 
-if [[ $client_cmd_pid ]]; then
-    kill_pid_and_children $client_cmd_pid
-fi
+if [[ $client_cmd_pid ]]; then kill_pid_and_children $client_cmd_pid; fi
 echo "test: killing io-publish: $io_publish_pid" >&2
 kill_pid_and_children $io_publish_pid
 

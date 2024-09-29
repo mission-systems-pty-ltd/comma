@@ -1,12 +1,12 @@
 port=42641
 
 function stdin_cmd()
-{
+{ 
     yes
 }
 export -f stdin_cmd
 
 function client_cmd()
 {
-    socat tcp:localhost:$port - | head -10 > client.out
+    socat tcp:localhost:$port - | head -n10 > client.out
 }

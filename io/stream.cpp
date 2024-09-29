@@ -104,7 +104,7 @@ template <> struct traits < std::iostream >
 {
     typedef std::fstream file_stream; // quick and dirty, does not matter for now
     static bool is_standard( const std::iostream* ) { return false; }
-    static std::iostream* standard( comma::io::mode::value mode ) { (void) mode; return NULL; }
+    static std::iostream* standard( comma::io::mode::value mode ) { (void) mode; return nullptr; }
     static comma::io::file_descriptor standard_fd() { return comma::io::invalid_file_descriptor; }
     #ifdef WIN32
         static io::file_descriptor open( const std::string& name ) { return io::invalid_file_descriptor; }
@@ -127,24 +127,24 @@ template < typename S > void close_file_stream( typename traits< S >::file_strea
 
 template < typename S > stream< S >::~stream()
 {
-    if( stream_ == NULL || impl::traits< S >::is_standard( stream_ ) ) { return; }
+    if( stream_ == nullptr || impl::traits< S >::is_standard( stream_ ) ) { return; }
     delete stream_;
-    stream_ = NULL;
+    stream_ = nullptr;
     close_ = NULL;
 }
 
 template < typename S > S* stream< S >::lazily_make_stream_()
 {
     #ifndef WIN32
-    if( stream_ == NULL ) // quick and dirty: if fstream, cannot open on construction, as pipe might block
+    if( stream_ == nullptr ) // quick and dirty: if fstream, cannot open on construction, as pipe might block
     {
         if( !comma::filesystem::is_regular_file( name_ ) && !blocking_ ) // quick and dirty
         {
             io::select select;
             select.read().add( fd_ ); // todo: express via traits
             select.write().add( fd_ ); // todo: express via traits
-            select.check(); //if( !select.check() ) { return NULL; }
-            if( !select.read().ready( fd_ ) && !select.write().ready( fd_ ) ) { return NULL; }
+            select.check(); //if( !select.check() ) { return nullptr; }
+            if( !select.read().ready( fd_ ) && !select.write().ready( fd_ ) ) { return nullptr; }
         }
         typename impl::traits< S >::file_stream* s = new typename impl::traits< S >::file_stream( name_.c_str(), static_cast< std::ios::openmode >( mode_ ) );
         if( s->bad() ) { COMMA_THROW( comma::exception, "failed to open " << name_ ); }
@@ -209,7 +209,7 @@ template < typename S > const std::string& stream< S >::name() const { return na
 template < typename S > stream< S >::stream( const std::string& name, mode::value m, mode::blocking_value blocking )
     : name_( name )
     , mode_( m )
-    , stream_( NULL )
+    , stream_( nullptr )
     , fd_( comma::io::invalid_file_descriptor )
     , close_d( false )
     , blocking_( blocking )

@@ -21,7 +21,7 @@
 
 namespace comma { namespace io { namespace impl {
 
-class file_acceptor : public acceptor
+template < typename Stream > class file_acceptor : public acceptor< Stream >
 {
     public:
         file_acceptor( const std::string& name, io::mode::value mode ): name_( name ), mode_( mode ), closed_( true ), fd_( io::invalid_file_descriptor ) {}
@@ -35,7 +35,7 @@ class file_acceptor : public acceptor
 #endif
         }
 
-        io::ostream* accept( boost::posix_time::time_duration )
+        Stream* accept( boost::posix_time::time_duration )
         {
             if( !closed_ ) { return NULL; }
 #ifndef WIN32
@@ -43,9 +43,9 @@ class file_acceptor : public acceptor
 #else
             fd_ = _open( &name_[0], O_WRONLY | _O_CREAT, _S_IWRITE );
 #endif
-            if( fd_ == io::invalid_file_descriptor ) { return NULL; }
+            if( fd_ == io::invalid_file_descriptor ) { return nullptr; }
             closed_ = false;
-            return new io::ostream( name_, mode_, io::mode::non_blocking ); // quick and dirty
+            return new Stream( name_, mode_, io::mode::non_blocking ); // quick and dirty
         }
 
         void notify_closed() { closed_ = true; ::close( fd_ ); }
@@ -55,8 +55,8 @@ class file_acceptor : public acceptor
     private:
         const std::string name_;
         const io::mode::value mode_;
-        bool closed_;
-        io::file_descriptor fd_; // todo: make io::ostream non-throwing on construction
+        bool closed_{false};
+        io::file_descriptor fd_{0}; // todo: make io::istream, io::ostream non-throwing on construction
 };
 
 struct Tcp {};
@@ -83,91 +83,87 @@ template <> struct socket_traits< local >
 };
 #endif
 
-template < typename S >
-class socket_acceptor : public acceptor
+template < typename Stream, typename S > class socket_acceptor : public acceptor< Stream >
 {
     public:
         socket_acceptor( const typename socket_traits< S >::name_type& name, io::mode::value mode )
             : mode_( mode )
-            , acceptor_( m_service, socket_traits< S >::endpoint( name ) )
+            , _acceptor( m_service, socket_traits< S >::endpoint( name ) )
         {
 #ifndef WIN32
 #if (BOOST_VERSION >= 106600)
-            select_.read().add( acceptor_.native_handle() );
+            select_.read().add( _acceptor.native_handle() );
 #else
-            select_.read().add( acceptor_.native() );
+            select_.read().add( _acceptor.native() );
 #endif
 #else
 #if (BOOST_VERSION >= 106600)
-            SOCKET socket = acceptor_.native_handle();
+            SOCKET socket = _acceptor.native_handle();
 #else
-            SOCKET socket = acceptor_.native();
+            SOCKET socket = _acceptor.native();
 #endif
             select_.read().add( socket );
 #endif
         }
 
-        io::ostream* accept( boost::posix_time::time_duration timeout )
+        Stream* accept( boost::posix_time::time_duration timeout )
         {
             select_.wait( timeout );
 #ifndef WIN32
 #if (BOOST_VERSION >= 106600)
-            if( !select_.read().ready( acceptor_.native_handle() ) ) { return NULL; }
+            if( !select_.read().ready( _acceptor.native_handle() ) ) { return nullptr; }
 #else
-            if( !select_.read().ready( acceptor_.native() ) ) { return NULL; }
+            if( !select_.read().ready( _acceptor.native() ) ) { return nullptr; }
 #endif
 #else
 #if (BOOST_VERSION >= 106600)
-            SOCKET socket = acceptor_.native_handle();
+            SOCKET socket = _acceptor.native_handle();
 #else
-            SOCKET socket = acceptor_.native();
+            SOCKET socket = _acceptor.native();
 #endif
-            if( !select_.read().ready( socket ) ) { return NULL; }
+            if( !select_.read().ready( socket ) ) { return nullptr; }
 #endif
             typename socket_traits< S >::iostream* stream = new typename socket_traits< S >::iostream;
-            acceptor_.accept( *( stream->rdbuf() ) );
+            _acceptor.accept( *( stream->rdbuf() ) );
 #if (BOOST_VERSION >= 106600)
-            return new io::ostream( stream, stream->rdbuf()->native_handle(), mode_, boost::bind( &socket_traits< S >::iostream::close, stream ) );
+            return new Stream( stream, stream->rdbuf()->native_handle(), mode_, boost::bind( &socket_traits< S >::iostream::close, stream ) );
 #else
-            return new io::ostream( stream, stream->rdbuf()->native(), mode_, boost::bind( &socket_traits< S >::iostream::close, stream ) );
+            return new Stream( stream, stream->rdbuf()->native(), mode_, boost::bind( &socket_traits< S >::iostream::close, stream ) );
 #endif
         }
 
-        void close() { acceptor_.close(); }
+        void close() { _acceptor.close(); }
 
 #ifndef WIN32
 #if (BOOST_VERSION >= 106600)
-        io::file_descriptor fd() const { return const_cast< typename socket_traits< S >::acceptor& >( acceptor_ ).native_handle(); }
+        io::file_descriptor fd() const { return const_cast< typename socket_traits< S >::acceptor& >( _acceptor ).native_handle(); }
 #else
-        io::file_descriptor fd() const { return const_cast< typename socket_traits< S >::acceptor& >( acceptor_ ).native(); }
+        io::file_descriptor fd() const { return const_cast< typename socket_traits< S >::acceptor& >( _acceptor ).native(); }
 #endif
 #else
         io::file_descriptor fd() const { return io::invalid_file_descriptor; }
 #endif
 
     private:
-        io::mode::value mode_;
+        io::mode::value mode_{io::mode::binary};
         io::select select_;
 #if (BOOST_VERSION >= 106600)
         boost::asio::io_context m_service;
 #else
         boost::asio::io_service m_service;
 #endif
-        typename socket_traits< S >::acceptor acceptor_;
+        typename socket_traits< S >::acceptor _acceptor;
 };
 
-class zero_acceptor_ : public acceptor
+template < typename Stream >
+class zero_acceptor_ : public acceptor< Stream >
 {
     public:
-        zero_acceptor_( const std::string& name, io::mode::value mode ):
-            stream_( new io::ostream( name, mode ) ),
-            accepted_( false )
-        {
-        }
+        zero_acceptor_( const std::string& name, io::mode::value mode ): stream_( new Stream( name, mode ) ), accepted_( false ) {}
 
-        io::ostream* accept( boost::posix_time::time_duration )
+        Stream* accept( boost::posix_time::time_duration )
         {
-            if( accepted_ ) { return NULL; }
+            if( accepted_ ) { return nullptr; }
             accepted_ = true;
             return stream_;
         }
@@ -177,11 +173,11 @@ class zero_acceptor_ : public acceptor
         io::file_descriptor fd() const { return io::invalid_file_descriptor; } // quick and dirty
 
     private:
-        io::ostream* stream_;
-        bool accepted_;
+        Stream* stream_{nullptr};
+        bool accepted_{false};
 };
 
-server::server( const std::string& name, io::mode::value mode, bool blocking, bool flush )
+template < typename Stream > server< Stream >::server( const std::string& name, io::mode::value mode, bool blocking, bool flush )
     : blocking_( blocking ),
       flush_( flush )
 {
@@ -189,7 +185,7 @@ server::server( const std::string& name, io::mode::value mode, bool blocking, bo
     if( v[0] == "tcp" )
     {
         if( v.size() != 2 ) { COMMA_THROW( comma::exception, "expected tcp server endpoint, got " << name ); }
-        acceptor_.reset( new socket_acceptor< Tcp >( boost::lexical_cast< unsigned short >( v[1] ), mode ) );
+        _acceptor.reset( new socket_acceptor< Stream, Tcp >( boost::lexical_cast< unsigned short >( v[1] ), mode ) );
     }
     else if( v[0] == "udp" )
     {
@@ -199,43 +195,78 @@ server::server( const std::string& name, io::mode::value mode, bool blocking, bo
     {
 #ifndef WIN32
         if( v.size() != 2 ) { COMMA_THROW( comma::exception, "expected local socket, got " << name ); }
-        acceptor_.reset( new socket_acceptor< local >( v[1], mode ) );
+        _acceptor.reset( new socket_acceptor< Stream, local >( v[1], mode ) );
 #endif
     }
     else if( v[0].substr( 0, 4 ) == "zero" )
     {
-        acceptor_.reset( new zero_acceptor_( name, mode ) );
+        _acceptor.reset( new zero_acceptor_< Stream >( name, mode ) );
     }
     else
     {
         if( name == "-" )
         {
-            streams_.insert( boost::shared_ptr< io::ostream >( new io::ostream( name, mode ) ) );
+            streams_.insert( std::unique_ptr< Stream >( new Stream( name, mode ) ) );
 #ifndef WIN32
-            select_.write().add( 1 );
+            select_.write().add( 1 ); // todo: traits: read/write
 #endif
         }
         else
         {
-            acceptor_.reset( new file_acceptor( name, mode ) );
-            io::ostream* s = acceptor_->accept( boost::posix_time::time_duration() );
-            streams_.insert( boost::shared_ptr< io::ostream >( s ) ); // todo: should we simply abolish file_acceptor and do it in the same way as for stdout?
+            _acceptor.reset( new file_acceptor< Stream >( name, mode ) );
+            Stream* s = _acceptor->accept( boost::posix_time::time_duration() );
+            streams_.insert( std::unique_ptr< Stream >( s ) ); // todo: should we simply abolish file_acceptor and do it in the same way as for stdout?
             if( s->fd() == comma::io::invalid_file_descriptor ) { COMMA_THROW( comma::exception, "failed to open '" << name << "'" ); }
 #ifndef WIN32
-            select_.write().add( s->fd() );
+            select_.write().add( s->fd() ); // todo: traits: read/write
 #endif
         }
     }
 }
 
-unsigned int server::write( const char* buf, std::size_t size, bool do_accept )
+template < typename Stream > void server< Stream >::close()
+{
+    if( _acceptor ) { _acceptor->close(); }
+    disconnect_all();
+}
+
+template < typename Stream > void server< Stream >::disconnect_all()
+{
+    while( streams_.begin() != streams_.end() ) { remove_( streams_.begin() ); }
+}
+
+template < typename Stream > std::vector< Stream* > server< Stream >::accept()
+{
+    std::vector< Stream* > streams;
+    if( !_acceptor ) { return streams; }
+    while( true ) // while( streams_.size() < maxSize ?
+    {
+        Stream* s = _acceptor->accept();
+        if( s == nullptr ) { return streams; }
+        streams.emplace_back( s );
+        streams_.insert( std::unique_ptr< Stream >( s ) );
+        select_.write().add( s->fd() ); // todo! istream/ostream traits
+    }
+}
+
+template < typename Stream > void server< Stream >::remove_( typename _streams_type::iterator it )
+{
+    select_.write().remove( **it );
+    ( *it )->close();
+    if( _acceptor ) { _acceptor->notify_closed(); }
+    streams_.erase( it );
+}
+
+template < typename Stream > std::size_t server< Stream >::size() const { return streams_.size(); }
+
+template < typename Stream > unsigned int server< Stream >::write( const char* buf, std::size_t size, bool do_accept )
 {
     if( do_accept ) { accept(); }
     if( !blocking_ ) { select_.check(); } // todo: if slow, put all the files in one select
     unsigned int count = 0;
-    for( streams::iterator i = streams_.begin(); i != streams_.end(); )
+    for( typename _streams_type::iterator i = streams_.begin(); i != streams_.end(); )
     {
-        streams::iterator it = i++;
+        typename _streams_type::iterator it = i++;
         if( !blocking_ && !select_.write().ready( **it ) ) { continue; }
         ( **it )->write( buf, size );
         if( flush_ ) { ( **it )->flush(); }
@@ -245,36 +276,11 @@ unsigned int server::write( const char* buf, std::size_t size, bool do_accept )
     return count;
 }
 
-void server::close()
-{
-    if( acceptor_ ) { acceptor_->close(); }
-    disconnect_all();
-}
-
-void server::disconnect_all() { while( streams_.begin() != streams_.end() ) { remove_( streams_.begin() ); } }
-
-std::vector< io::ostream* > server::accept()
-{
-    std::vector< io::ostream* > streams;
-    if( !acceptor_ ) { return streams; }
-    while( true ) // while( streams_.size() < maxSize ?
-    {
-        io::ostream* s = acceptor_->accept();
-        if( s == NULL ) { return streams; }
-        streams.push_back( s );
-        streams_.insert( boost::shared_ptr< io::ostream >( s ) );
-        select_.write().add( *s );
-    }
-}
-
-void server::remove_( streams::iterator it )
-{
-    select_.write().remove( **it );
-    ( *it )->close();
-    if( acceptor_ ) { acceptor_->notify_closed(); }
-    streams_.erase( it );
-}
-
-std::size_t server::size() const { return streams_.size(); }
+// template struct acceptor< io::istream >;
+template struct acceptor< io::ostream >;
+// template struct acceptor< io::iostream >;
+// todo: template struct server< io::istream >;
+template struct server< io::ostream >;
+// todo: template struct server< io::iostream >;
 
 } } } // namespace comma { namespace io { namespace impl {

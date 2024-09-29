@@ -9,6 +9,6 @@
 
 namespace comma { namespace io {
 
-typedef server publisher; // quick and dirty for backward compatibility
+typedef oserver publisher; // quick and dirty for backward compatibility
 
 } } // namespace comma { namespace io {

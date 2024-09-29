@@ -44,7 +44,7 @@ publish::publish( const std::vector< std::string >& endpoints
     t->resize( endpoints.size() );
     for( std::size_t i = 0; i < endpoints.size(); ++i )
     {
-        if( !endpoints_[i].secondary ) { ( *t )[i].reset( new comma::io::publisher( endpoints_[i].address, is_binary_() ? comma::io::mode::binary : comma::io::mode::ascii, !discard, flush ) ); }
+        if( !endpoints_[i].secondary ) { ( *t )[i].reset( new comma::io::oserver( endpoints_[i].address, is_binary_() ? comma::io::mode::binary : comma::io::mode::ascii, !discard, flush ) ); }
     }
     acceptor_thread_.reset( new boost::thread( boost::bind( &publish::accept_, boost::ref( *this ))));
 }
@@ -149,10 +149,13 @@ void publish::accept_()
             if( ( *t )[i] && select.read().ready( ( *t )[i]->acceptor_file_descriptor() ) )
             {
                 const auto& streams = ( *t )[i]->accept();
-                for( auto s: streams )
+                if( !cache_.empty() )
                 {
-                    for( const auto& c: cache_ ) { ( *s )->write( &c[0], c.size() ); }
-                    if( flush_ ) { ( *s )->flush(); }
+                    for( auto& s: streams )
+                    {
+                        for( const auto& c: cache_ ) { ( *s )->write( &c[0], c.size() ); }
+                        if( flush_ ) { ( *s )->flush(); }
+                    }
                 }
             }
         }
@@ -162,7 +165,7 @@ void publish::accept_()
             for( unsigned int i = 0; i < t->size(); ++i )
             {
                 if( !endpoints_[i].secondary || ( *t )[i] ) { continue; }
-                ( *t )[i].reset( new comma::io::publisher( endpoints_[i].address, is_binary_() ? comma::io::mode::binary : comma::io::mode::ascii, !discard_, flush_ ) );
+                ( *t )[i].reset( new comma::io::oserver( endpoints_[i].address, is_binary_() ? comma::io::mode::binary : comma::io::mode::ascii, !discard_, flush_ ) );
                 if( ( *t )[i]->acceptor_file_descriptor() != comma::io::invalid_file_descriptor ) { select.read().add( ( *t )[i]->acceptor_file_descriptor() ); }
             }
         }

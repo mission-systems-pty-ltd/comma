@@ -27,27 +27,30 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author vsevolod vlaskine
 
 #include "server.h"
 
 namespace comma { namespace io {
 
-server::server( const std::string& name, comma::io::mode::value mode, bool blocking, bool flush ) : pimpl_( new impl::server( name, mode, blocking, flush ) ) {}
+template < typename Stream > server< Stream >::server( const std::string& name, comma::io::mode::value mode, bool blocking, bool flush ) : pimpl_( new impl::server< Stream >( name, mode, blocking, flush ) ) {}
 
-server::~server() { delete pimpl_; }
+template < typename Stream > server< Stream >::~server() { delete pimpl_; }
 
-std::size_t server::write( const char* buf, std::size_t size, bool do_accept ) { return pimpl_->write( buf, size, do_accept ); }
+template < typename Stream > std::vector< Stream* > server< Stream >::accept() { return pimpl_->accept(); }
 
-std::vector< io::ostream* > server::accept() { return pimpl_->accept(); }
+template < typename Stream > void server< Stream >::close() { pimpl_->close(); }
 
-void server::close() { pimpl_->close(); }
+template < typename Stream > void server< Stream >::disconnect_all() { pimpl_->disconnect_all(); }
 
-void server::disconnect_all() { pimpl_->disconnect_all(); }
+template < typename Stream > std::size_t server< Stream >::size() const { return pimpl_->size(); }
 
-std::size_t server::size() const { return pimpl_->size(); }
+template < typename Stream > file_descriptor server< Stream >::acceptor_file_descriptor() const { return pimpl_->_acceptor ? pimpl_->acceptor().fd() : comma::io::invalid_file_descriptor; }
 
-file_descriptor server::acceptor_file_descriptor() const { return pimpl_->acceptor_ ? pimpl_->acceptor().fd() : comma::io::invalid_file_descriptor; }
+std::size_t oserver::write( const char* buf, std::size_t size, bool do_accept ) { return pimpl_->write( buf, size, do_accept ); }
+
+//template class server< io::istream >;
+template class server< io::ostream >;
+//template class server< io::iostream >;
 
 } } // namespace comma { namespace io {

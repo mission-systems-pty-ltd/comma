@@ -17,7 +17,7 @@
 #include <boost/scoped_ptr.hpp>
 #include <boost/thread.hpp>
 #include "../../io/file_descriptor.h"
-#include "../../io/publisher.h"
+#include "../../io/server.h"
 #include "../../string/string.h"
 #include "../../sync/synchronized.h"
 
@@ -26,7 +26,7 @@ namespace comma { namespace io { namespace impl {
 class publish
 {
     public:
-        typedef comma::synchronized< std::vector< std::unique_ptr< comma::io::publisher > > > publishers_t;
+        typedef comma::synchronized< std::vector< std::unique_ptr< comma::io::oserver > > > publishers_t;
         
         typedef publishers_t::scoped_transaction transaction_t;
         
