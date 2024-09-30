@@ -100,10 +100,14 @@ struct iserver: public io::server< io::istream >
     /// @param blocking if true, blocking write to a client, otherwise discard, if client not ready
     iserver( const std::string& name, comma::io::mode::value mode, bool blocking = false ): io::server< io::istream >( name, mode, blocking ) {}
 
-    /// @todo usage semantics!
-    std::size_t read( const char* buf, std::size_t size, bool do_accept = true );
+    /// read <size> bytes to <buf> from first available client
+    /// return 0 if no clients have data
+    /// start from the next client on the next read to assure round-robin behaviour
+    std::size_t read( char* buf, std::size_t size, bool do_accept = true );
 
-    /// @todo usage semantics!
+    /// read eol-terminated string from first available client
+    /// return 0 if no clients have data
+    /// start from the next client on the next read to assure round-robin behaviour
     std::string readline( bool do_accept = true );
 };
 

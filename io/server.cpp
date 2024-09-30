@@ -50,7 +50,7 @@ template < typename Stream > file_descriptor server< Stream >::acceptor_file_des
 
 std::size_t oserver::write( const char* buf, std::size_t size, bool do_accept ) { return io::impl::server< io::ostream >::write( pimpl_, buf, size, do_accept ); }
 
-std::size_t iserver::read( const char* buf, std::size_t size, bool do_accept ) { return io::impl::server< io::istream >::read( pimpl_, buf, size, do_accept ); }
+std::size_t iserver::read( char* buf, std::size_t size, bool do_accept ) { return io::impl::server< io::istream >::read( pimpl_, buf, size, do_accept ); }
 
 std::string iserver::readline( bool do_accept ) { return io::impl::server< io::istream >::readline( pimpl_, do_accept ); }
 

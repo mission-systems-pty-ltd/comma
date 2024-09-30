@@ -254,7 +254,7 @@ template < typename Stream > void server< Stream >::close()
 
 template < typename Stream > void server< Stream >::disconnect_all()
 {
-    while( streams_.begin() != streams_.end() ) { remove_( streams_.begin() ); }
+    while( streams_.begin() != streams_.end() ) { _remove( streams_.begin() ); }
 }
 
 template < typename Stream > std::vector< Stream* > server< Stream >::accept()
@@ -272,7 +272,7 @@ template < typename Stream > std::vector< Stream* > server< Stream >::accept()
     }
 }
 
-template < typename Stream > void server< Stream >::remove_( typename _streams_type::iterator it )
+template < typename Stream > void server< Stream >::_remove( typename _streams_type::iterator it )
 {
     if( stream_traits< Stream >::is_input_stream ) { select_.read().remove( **it ); }
     if( stream_traits< Stream >::is_output_stream ) { select_.write().remove( **it ); }
@@ -295,19 +295,56 @@ template < typename Stream > unsigned int server< Stream >::write( server< io::o
         ( **it )->write( buf, size );
         if( s->flush_ ) { ( **it )->flush(); }
         if( ( **it )->good() ) { ++count; }
-        else { s->remove_( it ); }
+        else { s->_remove( it ); }
     }
     return count;
 }
 
-template < typename Stream > unsigned int server< Stream >::read( server< io::istream >* s, const char* buf, std::size_t size, bool do_accept )
+template < typename Stream > void server< Stream >::_remove_bad()
 {
-    COMMA_THROW( comma::exception, "implementing..." );
+    for( auto i = streams_.begin(); i != streams_.end(); ) { if( !( **i )->good() ) { _remove( i ); } }
+}
+
+template < typename Stream > unsigned int server< Stream >::read( server< io::istream >* s, char* buf, std::size_t size, bool do_accept )
+{
+    if( do_accept ) { s->accept(); }
+
+
+    // todo: if blocking, read in the loop
+
+
+    if( s->blocking_ ) { s->select_.wait( boost::posix_time::milliseconds( 100 ) ); } else { s->select_.check(); } // todo? pass timeout as a parameter?
+
+    auto j = s->streams_.begin();
+    for( ; j != s->streams_.end() && ( *j )->fd() != s->_last_read; ++j );
+    if( j == s->streams_.end() ) { j = s->streams_.begin(); s->_last_read = io::invalid_file_descriptor; }
+    for( auto i = j; i != s->streams_.end(); )
+    {
+        auto it = i++;
+        if( !s->blocking_ && !s->select_.read().ready( **it ) ) { continue; }
+        ( **it )->read( buf, size );
+        if( ( **it )->gcount() < int( size ) ) { continue; } // quick and dirty
+        s->_remove_bad();
+        s->_last_read = ( *it )->fd();
+        return size;
+    }
+    auto e = j == s->streams_.end() ? j : ++j;
+    for( auto i = s->streams_.begin(); i != e; ) // todo: remove code duplication: combine with the previous loop
+    {
+        auto it = i++;
+        if( !s->blocking_ && !s->select_.read().ready( **it ) ) { continue; }
+        ( **it )->read( buf, size );
+        if( ( **it )->gcount() < int( size ) ) { continue; } // quick and dirty
+        s->_remove_bad();
+        s->_last_read = ( *it )->fd();
+        return size;
+    }
+    return 0;
 }
 
 template < typename Stream > std::string server< Stream >::readline( server< io::istream >* s, bool do_accept )
 {
-    COMMA_THROW( comma::exception, "implementing..." );
+    COMMA_THROW( comma::exception, "todo..." );
 }
 
 template struct acceptor< io::istream >;

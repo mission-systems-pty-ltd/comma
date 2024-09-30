@@ -65,11 +65,11 @@ class server
                 ( ***it ) << lhs;
                 if( s->flush_ ) { ( **it )->flush(); }
                 if( ( **it )->good() ) { ++count; }
-                else { s->remove_( it ); }
+                else { s->_remove( it ); }
             }
         }
 
-        static unsigned int read( server< io::istream >* s, const char* buf, std::size_t size, bool do_accept = true );
+        static unsigned int read( server< io::istream >* s, char* buf, std::size_t size, bool do_accept = true );
 
         static std::string readline( server< io::istream >* s, bool do_accept = true );
 
@@ -79,10 +79,12 @@ class server
         bool blocking_;
         bool flush_;
         boost::scoped_ptr< io::impl::acceptor< Stream > > _acceptor;
-        typedef std::set< std::unique_ptr< stream_type > > _streams_type;
+        typedef std::set< std::unique_ptr< Stream > > _streams_type;
+        io::file_descriptor _last_read{io::invalid_file_descriptor}; // quick and dirty
         _streams_type streams_;
         io::select select_;
-        void remove_( typename _streams_type::iterator it );
+        void _remove( typename _streams_type::iterator it );
+        void _remove_bad();
 };
 
 } } } // namespace comma { namespace io { namespace impl {
