@@ -21,6 +21,26 @@
 
 namespace comma { namespace io { namespace impl {
 
+template < typename Stream > struct stream_traits;
+
+template <> struct stream_traits< io::istream >
+{
+    static constexpr bool is_input_stream{true};
+    static constexpr bool is_output_stream{false};
+};
+
+template <> struct stream_traits< io::ostream >
+{
+    static constexpr bool is_input_stream{false};
+    static constexpr bool is_output_stream{true};
+};
+
+template <> struct stream_traits< io::iostream >
+{
+    static constexpr bool is_input_stream{true};
+    static constexpr bool is_output_stream{true};
+};
+
 template < typename Stream > class file_acceptor : public acceptor< Stream >
 {
     public:
@@ -208,7 +228,8 @@ template < typename Stream > server< Stream >::server( const std::string& name, 
         {
             streams_.insert( std::unique_ptr< Stream >( new Stream( name, mode ) ) );
 #ifndef WIN32
-            select_.write().add( 1 ); // todo: traits: read/write
+            if( stream_traits< Stream >::is_input_stream ) { select_.read().add( 0 ); }
+            if( stream_traits< Stream >::is_output_stream ) { select_.write().add( 1 ); }
 #endif
         }
         else
@@ -218,7 +239,8 @@ template < typename Stream > server< Stream >::server( const std::string& name, 
             streams_.insert( std::unique_ptr< Stream >( s ) ); // todo: should we simply abolish file_acceptor and do it in the same way as for stdout?
             if( s->fd() == comma::io::invalid_file_descriptor ) { COMMA_THROW( comma::exception, "failed to open '" << name << "'" ); }
 #ifndef WIN32
-            select_.write().add( s->fd() ); // todo: traits: read/write
+            if( stream_traits< Stream >::is_input_stream ) { select_.read().add( s->fd() ); }
+            if( stream_traits< Stream >::is_output_stream ) { select_.write().add( s->fd() ); }
 #endif
         }
     }
@@ -245,13 +267,15 @@ template < typename Stream > std::vector< Stream* > server< Stream >::accept()
         if( s == nullptr ) { return streams; }
         streams.emplace_back( s );
         streams_.insert( std::unique_ptr< Stream >( s ) );
-        select_.write().add( s->fd() ); // todo! istream/ostream traits
+        if( stream_traits< Stream >::is_input_stream ) { select_.read().add( s->fd() ); }
+        if( stream_traits< Stream >::is_output_stream ) { select_.write().add( s->fd() ); }
     }
 }
 
 template < typename Stream > void server< Stream >::remove_( typename _streams_type::iterator it )
 {
-    select_.write().remove( **it );
+    if( stream_traits< Stream >::is_input_stream ) { select_.read().remove( **it ); }
+    if( stream_traits< Stream >::is_output_stream ) { select_.write().remove( **it ); }
     ( *it )->close();
     if( _acceptor ) { _acceptor->notify_closed(); }
     streams_.erase( it );
@@ -259,27 +283,27 @@ template < typename Stream > void server< Stream >::remove_( typename _streams_t
 
 template < typename Stream > std::size_t server< Stream >::size() const { return streams_.size(); }
 
-template < typename Stream > unsigned int server< Stream >::write( const char* buf, std::size_t size, bool do_accept )
+template < typename Stream > unsigned int server< Stream >::write( server< io::ostream >* s, const char* buf, std::size_t size, bool do_accept )
 {
-    if( do_accept ) { accept(); }
-    if( !blocking_ ) { select_.check(); } // todo: if slow, put all the files in one select
+    if( do_accept ) { s->accept(); }
+    if( !s->blocking_ ) { s->select_.check(); } // todo: if slow, put all the files in one select
     unsigned int count = 0;
-    for( typename _streams_type::iterator i = streams_.begin(); i != streams_.end(); )
+    for( auto i = s->streams_.begin(); i != s->streams_.end(); )
     {
-        typename _streams_type::iterator it = i++;
-        if( !blocking_ && !select_.write().ready( **it ) ) { continue; }
+        auto it = i++;
+        if( !s->blocking_ && !s->select_.write().ready( **it ) ) { continue; }
         ( **it )->write( buf, size );
-        if( flush_ ) { ( **it )->flush(); }
+        if( s->flush_ ) { ( **it )->flush(); }
         if( ( **it )->good() ) { ++count; }
-        else { remove_( it ); }
+        else { s->remove_( it ); }
     }
     return count;
 }
 
-// template struct acceptor< io::istream >;
+template struct acceptor< io::istream >;
 template struct acceptor< io::ostream >;
 // template struct acceptor< io::iostream >;
-// todo: template struct server< io::istream >;
+template struct server< io::istream >;
 template struct server< io::ostream >;
 // todo: template struct server< io::iostream >;
 

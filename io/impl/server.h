@@ -40,28 +40,6 @@ class server
 
         server( const std::string& name, io::mode::value mode, bool blocking = false, bool flush = true );
 
-        // todo!
-        unsigned int write( const char* buf, std::size_t size, bool do_accept = true );
-
-        // todo!
-        template < typename T >
-        impl::server< Stream >& operator<<( const T& lhs ) // quick and dirty, inefficient, but then ascii is meant to be slow...
-        {
-            accept();
-            select_.check();
-            unsigned int count = 0;
-            for( typename _streams_type::iterator i = streams_.begin(); i != streams_.end(); )
-            {
-                typename _streams_type::iterator it = i++;
-                if( !blocking_ && !select_.write().ready( **it ) ) { continue; }
-                ( ***it ) << lhs;
-                if( flush_ ) { ( **it )->flush(); }
-                if( ( **it )->good() ) { ++count; }
-                else { remove_( it ); }
-            }
-            return *this;
-        }
-
         void close();
         
         void disconnect_all();
@@ -72,8 +50,28 @@ class server
         
         const io::impl::acceptor< Stream >& acceptor() const { return *_acceptor; }
 
-    private:
+        static unsigned int write( server< io::ostream >* s, const char* buf, std::size_t size, bool do_accept = true );
+
+        template < typename T >
+        static void write( server< io::ostream >* s, const T& lhs ) // quick and dirty, inefficient, but then ascii is meant to be slow...
+        {
+            s->accept();
+            s->select_.check();
+            unsigned int count = 0;
+            for( typename _streams_type::iterator i = s->streams_.begin(); i != s->streams_.end(); )
+            {
+                typename _streams_type::iterator it = i++;
+                if( !s->blocking_ && !s->select_.write().ready( **it ) ) { continue; }
+                ( ***it ) << lhs;
+                if( s->flush_ ) { ( **it )->flush(); }
+                if( ( **it )->good() ) { ++count; }
+                else { s->remove_( it ); }
+            }
+        }
+
+    protected:
         template < typename > friend class comma::io::server;
+        template < typename > friend class comma::io::impl::server;
         bool blocking_;
         bool flush_;
         boost::scoped_ptr< io::impl::acceptor< Stream > > _acceptor;

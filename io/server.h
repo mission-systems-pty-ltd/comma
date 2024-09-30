@@ -33,7 +33,7 @@ class server
         /// destructor
         ~server();
 
-        /// close
+        /// stop accepting clients, disconnect all existing clients
         void close();
         
         /// disconnect all existing clients
@@ -71,7 +71,7 @@ struct oserver: public io::server< io::ostream >
     ///     if <filename> is Linux domain socket, create Linux domain socket server
     /// @param mode ascii or binary, a hint for Windows
     /// @param blocking if true, blocking write to a client, otherwise discard, if client not ready
-    oserver( const std::string& name, comma::io::mode::value mode, bool blocking = false, bool flush = true ): server< io::ostream >( name, mode, blocking, flush ) {}
+    oserver( const std::string& name, comma::io::mode::value mode, bool blocking = false, bool flush = true ): io::server< io::ostream >( name, mode, blocking, flush ) {}
 
     /// publish to all existing connections (blocking), return number of clients with successful write
     std::size_t write( const char* buf, std::size_t size, bool do_accept = true );
@@ -85,7 +85,28 @@ struct oserver: public io::server< io::ostream >
     ///       has been output, this client will receive
     ///       ",2", which most likely was not intended
     template < typename T >
-    oserver& operator<<( const T& rhs ) { pimpl_->operator<<( rhs ); return *this; }
+    oserver& operator<<( const T& rhs ) { io::impl::server< io::ostream >::write( pimpl_, rhs ); return *this; }
+};
+
+class iserver: public io::server< io::istream >
+{
+    public:
+        /// @param name ::= tcp:<port> | udp:<port> | <filename>
+        ///     if tcp:<port>, create tcp server
+        ///     @todo if udp:<port>, broadcast on udp
+        ///     if <filename> is a regular file, just write to it
+        ///     @todo if <filename> is named pipe, keep reopening it, if closed
+        ///     if <filename> is Linux domain socket, create Linux domain socket server
+        /// @param mode ascii or binary, a hint for Windows
+        /// @param blocking if true, blocking write to a client, otherwise discard, if client not ready
+        iserver( const std::string& name, comma::io::mode::value mode, bool blocking = false ): io::server< io::istream >( name, mode, blocking ) {}
+
+        std::size_t read( const char* buf, std::size_t size, bool do_accept = true );
+
+        std::string readline( bool do_accept = true );
+
+    private:
+        unsigned int _index{0};
 };
 
 } } // namespace comma { namespace io {
