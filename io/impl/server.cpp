@@ -300,9 +300,19 @@ template < typename Stream > unsigned int server< Stream >::write( server< io::o
     return count;
 }
 
+template < typename Stream > unsigned int server< Stream >::read( server< io::istream >* s, const char* buf, std::size_t size, bool do_accept )
+{
+    COMMA_THROW( comma::exception, "implementing..." );
+}
+
+template < typename Stream > std::string server< Stream >::readline( server< io::istream >* s, bool do_accept )
+{
+    COMMA_THROW( comma::exception, "implementing..." );
+}
+
 template struct acceptor< io::istream >;
 template struct acceptor< io::ostream >;
-// template struct acceptor< io::iostream >;
+// todo: template struct acceptor< io::iostream >;
 template struct server< io::istream >;
 template struct server< io::ostream >;
 // todo: template struct server< io::iostream >;

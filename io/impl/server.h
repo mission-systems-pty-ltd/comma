@@ -69,6 +69,10 @@ class server
             }
         }
 
+        static unsigned int read( server< io::istream >* s, const char* buf, std::size_t size, bool do_accept = true );
+
+        static std::string readline( server< io::istream >* s, bool do_accept = true );
+
     protected:
         template < typename > friend class comma::io::server;
         template < typename > friend class comma::io::impl::server;

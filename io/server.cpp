@@ -1,5 +1,6 @@
 // This file is part of comma, a generic and flexible library
 // Copyright (c) 2011 The University of Sydney
+// Copyright (c) 2024 Vsevolod Vlaskine
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -49,8 +50,12 @@ template < typename Stream > file_descriptor server< Stream >::acceptor_file_des
 
 std::size_t oserver::write( const char* buf, std::size_t size, bool do_accept ) { return io::impl::server< io::ostream >::write( pimpl_, buf, size, do_accept ); }
 
+std::size_t iserver::read( const char* buf, std::size_t size, bool do_accept ) { return io::impl::server< io::istream >::read( pimpl_, buf, size, do_accept ); }
+
+std::string iserver::readline( bool do_accept ) { return io::impl::server< io::istream >::readline( pimpl_, do_accept ); }
+
 template class server< io::istream >;
 template class server< io::ostream >;
-//template class server< io::iostream >;
+// todo: template class server< io::iostream >;
 
 } } // namespace comma { namespace io {

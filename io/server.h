@@ -88,25 +88,28 @@ struct oserver: public io::server< io::ostream >
     oserver& operator<<( const T& rhs ) { io::impl::server< io::ostream >::write( pimpl_, rhs ); return *this; }
 };
 
-class iserver: public io::server< io::istream >
+struct iserver: public io::server< io::istream >
 {
-    public:
-        /// @param name ::= tcp:<port> | udp:<port> | <filename>
-        ///     if tcp:<port>, create tcp server
-        ///     @todo if udp:<port>, broadcast on udp
-        ///     if <filename> is a regular file, just write to it
-        ///     @todo if <filename> is named pipe, keep reopening it, if closed
-        ///     if <filename> is Linux domain socket, create Linux domain socket server
-        /// @param mode ascii or binary, a hint for Windows
-        /// @param blocking if true, blocking write to a client, otherwise discard, if client not ready
-        iserver( const std::string& name, comma::io::mode::value mode, bool blocking = false ): io::server< io::istream >( name, mode, blocking ) {}
+    /// @param name ::= tcp:<port> | udp:<port> | <filename>
+    ///     if tcp:<port>, create tcp server
+    ///     @todo if udp:<port>, broadcast on udp
+    ///     if <filename> is a regular file, just write to it
+    ///     @todo if <filename> is named pipe, keep reopening it, if closed
+    ///     if <filename> is Linux domain socket, create Linux domain socket server
+    /// @param mode ascii or binary, a hint for Windows
+    /// @param blocking if true, blocking write to a client, otherwise discard, if client not ready
+    iserver( const std::string& name, comma::io::mode::value mode, bool blocking = false ): io::server< io::istream >( name, mode, blocking ) {}
 
-        std::size_t read( const char* buf, std::size_t size, bool do_accept = true );
+    /// @todo usage semantics!
+    std::size_t read( const char* buf, std::size_t size, bool do_accept = true );
 
-        std::string readline( bool do_accept = true );
-
-    private:
-        unsigned int _index{0};
+    /// @todo usage semantics!
+    std::string readline( bool do_accept = true );
 };
+
+// struct ioserver: public io::server< io::iostream >
+// {
+//     // todo
+// };
 
 } } // namespace comma { namespace io {
