@@ -21,15 +21,20 @@ template < typename Stream > class server;
 namespace comma { namespace io { namespace impl {
 
 template < typename Stream >
-struct acceptor
+class acceptor
 {
-    typedef Stream stream_type;
+    public:
+        typedef Stream stream_type;
 
-    virtual ~acceptor() {}
-    virtual io::file_descriptor fd() const = 0;
-    virtual Stream* accept( boost::posix_time::time_duration timeout = boost::posix_time::seconds( 0 ) ) = 0;
-    virtual void notify_closed() {} // quick and dirty
-    virtual void close() {}
+        virtual ~acceptor() {}
+        virtual io::file_descriptor fd() const = 0;
+        virtual Stream* accept( boost::posix_time::time_duration timeout = boost::posix_time::seconds( 0 ) ) = 0;
+        virtual void notify_closed() {} // quick and dirty
+        virtual void close() { _closed = true; }
+        bool closed() const { return _closed; }
+        
+    protected:
+        bool _closed{false};
 };
 
 template < typename Stream >

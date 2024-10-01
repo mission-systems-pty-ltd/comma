@@ -44,7 +44,7 @@ template <> struct stream_traits< io::iostream >
 template < typename Stream > class file_acceptor : public acceptor< Stream >
 {
     public:
-        file_acceptor( const std::string& name, io::mode::value mode ): name_( name ), mode_( mode ), closed_( true ), fd_( io::invalid_file_descriptor ) {}
+        file_acceptor( const std::string& name, io::mode::value mode ): name_( name ), mode_( mode ), fd_( io::invalid_file_descriptor ) { this->_closed = true; }
 
         ~file_acceptor()
         {
@@ -57,25 +57,26 @@ template < typename Stream > class file_acceptor : public acceptor< Stream >
 
         Stream* accept( boost::posix_time::time_duration )
         {
-            if( !closed_ ) { return NULL; }
+            if( !this->_closed ) { return nullptr; }
 #ifndef WIN32
             fd_ = ::open( &name_[0], O_WRONLY | O_CREAT | O_NONBLOCK, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH ); // quick and dirty
 #else
             fd_ = _open( &name_[0], O_WRONLY | _O_CREAT, _S_IWRITE );
 #endif
             if( fd_ == io::invalid_file_descriptor ) { return nullptr; }
-            closed_ = false;
+            this->_closed = false;
             return new Stream( name_, mode_, io::mode::non_blocking ); // quick and dirty
         }
 
-        void notify_closed() { closed_ = true; ::close( fd_ ); }
+        void notify_closed() { this->_closed = true; ::close( fd_ ); }
         
         io::file_descriptor fd() const { return fd_; }
+
+        bool closed() const { COMMA_THROW( comma::exception, "todo" ); }
 
     private:
         const std::string name_;
         const io::mode::value mode_;
-        bool closed_{false};
         io::file_descriptor fd_{0}; // todo: make io::istream, io::ostream non-throwing on construction
 };
 
@@ -152,7 +153,7 @@ template < typename Stream, typename S > class socket_acceptor : public acceptor
 #endif
         }
 
-        void close() { _acceptor.close(); }
+        void close() { this->_closed = true; _acceptor.close(); }
 
 #ifndef WIN32
 #if (BOOST_VERSION >= 106600)
@@ -163,6 +164,8 @@ template < typename Stream, typename S > class socket_acceptor : public acceptor
 #else
         io::file_descriptor fd() const { return io::invalid_file_descriptor; }
 #endif
+
+        bool closed() const { COMMA_THROW( comma::exception, "todo" ); }
 
     private:
         io::mode::value mode_{io::mode::binary};
@@ -179,21 +182,23 @@ template < typename Stream >
 class zero_acceptor_ : public acceptor< Stream >
 {
     public:
-        zero_acceptor_( const std::string& name, io::mode::value mode ): stream_( new Stream( name, mode ) ), accepted_( false ) {}
+        zero_acceptor_( const std::string& name, io::mode::value mode ): _stream( new Stream( name, mode ) ), accepted_( false ) {}
 
         Stream* accept( boost::posix_time::time_duration )
         {
             if( accepted_ ) { return nullptr; }
             accepted_ = true;
-            return stream_;
+            return _stream;
         }
 
-        void close() { stream_->close(); }
+        void close() { this->_closed = true; _stream->close(); }
         
         io::file_descriptor fd() const { return io::invalid_file_descriptor; } // quick and dirty
 
+        bool closed() const { return this->_closed || _stream.eof(); }
+
     private:
-        Stream* stream_{nullptr};
+        Stream* _stream{nullptr};
         bool accepted_{false};
 };
 
@@ -307,37 +312,35 @@ template < typename Stream > void server< Stream >::_remove_bad()
 
 template < typename Stream > unsigned int server< Stream >::read( server< io::istream >* s, char* buf, std::size_t size, bool do_accept )
 {
-    if( do_accept ) { s->accept(); }
-
-
-    // todo: if blocking, read in the loop
-
-
-    if( s->blocking_ ) { s->select_.wait( boost::posix_time::milliseconds( 100 ) ); } else { s->select_.check(); } // todo? pass timeout as a parameter?
-
-    auto j = s->streams_.begin();
-    for( ; j != s->streams_.end() && ( *j )->fd() != s->_last_read; ++j );
-    if( j == s->streams_.end() ) { j = s->streams_.begin(); s->_last_read = io::invalid_file_descriptor; }
-    for( auto i = j; i != s->streams_.end(); )
+    while( !s->_acceptor->closed() )
     {
-        auto it = i++;
-        if( !s->blocking_ && !s->select_.read().ready( **it ) ) { continue; }
-        ( **it )->read( buf, size );
-        if( ( **it )->gcount() < int( size ) ) { continue; } // quick and dirty
-        s->_remove_bad();
-        s->_last_read = ( *it )->fd();
-        return size;
-    }
-    auto e = j == s->streams_.end() ? j : ++j;
-    for( auto i = s->streams_.begin(); i != e; ) // todo: remove code duplication: combine with the previous loop
-    {
-        auto it = i++;
-        if( !s->blocking_ && !s->select_.read().ready( **it ) ) { continue; }
-        ( **it )->read( buf, size );
-        if( ( **it )->gcount() < int( size ) ) { continue; } // quick and dirty
-        s->_remove_bad();
-        s->_last_read = ( *it )->fd();
-        return size;
+        if( do_accept ) { s->accept(); }
+        if( s->blocking_ ) { s->select_.wait( boost::posix_time::milliseconds( 100 ) ); } // todo? pass timeout as a parameter?
+        auto j = s->streams_.begin();
+        for( ; j != s->streams_.end() && ( *j )->fd() != s->_last_read; ++j );
+        if( j == s->streams_.end() ) { j = s->streams_.begin(); s->_last_read = io::invalid_file_descriptor; }
+        for( auto i = j; i != s->streams_.end(); )
+        {
+            auto it = i++;
+            if( !s->blocking_ && !s->select_.read().ready( **it ) ) { continue; }
+            ( **it )->read( buf, size );
+            if( ( **it )->gcount() < int( size ) ) { continue; } // quick and dirty
+            s->_remove_bad();
+            s->_last_read = ( *it )->fd();
+            return size;
+        }
+        auto e = j == s->streams_.end() ? j : ++j;
+        for( auto i = s->streams_.begin(); i != e; ) // todo: remove code duplication: combine with the previous loop
+        {
+            auto it = i++;
+            if( !s->blocking_ && !s->select_.read().ready( **it ) ) { continue; }
+            ( **it )->read( buf, size );
+            if( ( **it )->gcount() < int( size ) ) { continue; } // quick and dirty
+            s->_remove_bad();
+            s->_last_read = ( *it )->fd();
+            return size;
+        }
+        if( !s->blocking_ ) { return 0; }
     }
     return 0;
 }
