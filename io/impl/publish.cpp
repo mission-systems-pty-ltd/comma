@@ -7,13 +7,13 @@
 
 namespace comma { namespace io { namespace impl {
 
-publish::publish( const std::vector< std::string >& endpoints
-                , unsigned int packet_size
-                , bool discard
-                , bool flush
-                , bool output_number_of_clients
-                , bool update_no_clients
-                , unsigned int cache_size )
+multiserver::multiserver( const std::vector< std::string >& endpoints
+                        , unsigned int packet_size
+                        , bool discard
+                        , bool flush
+                        , bool output_number_of_clients
+                        , bool update_no_clients
+                        , unsigned int cache_size )
     : discard_( discard )
     , flush_( flush )
     , buffer_( packet_size, '\0' )
@@ -49,7 +49,7 @@ publish::publish( const std::vector< std::string >& endpoints
     acceptor_thread_.reset( new boost::thread( boost::bind( &publish::accept_, boost::ref( *this ))));
 }
         
-publish::~publish()
+multiserver::~multiserver()
 {
     is_shutdown_ = true;
     acceptor_thread_->join();
@@ -57,47 +57,14 @@ publish::~publish()
     for( std::size_t i = 0; i < t->size(); ++i ) { if( ( *t )[i] ) { ( *t )[i]->close(); } }
 }
         
-void publish::disconnect_all()
+void multiserver::disconnect_all()
 {
     transaction_t t( publishers_ );
     for( auto& p: *t ) { if( p ) { p->disconnect_all(); } }
     handle_sizes_( t ); // quick and dirty
 }
 
-bool publish::write( const std::string& s )
-{
-    transaction_t t( publishers_ );
-    if( cache_size_ > 0 )
-    {
-        cache_.push_back( s );
-        if( cache_.size() > cache_size_ ) { cache_.pop_front(); }
-    }
-    for( auto& p: *t ) { if( p ) { p->write( &s[0], s.size(), false ); } } // for( std::size_t i = 0; i < t->size(); ++i ) { if( ( *t )[i] ) { ( *t )[i]->write( &buffer_[0], buffer_.size(), false ); } }
-    return handle_sizes_( t );
-}
-
-bool publish::write( const char* buf, unsigned int size )
-{
-    return write( std::string( buf, size ) ); // todo: quick and dirty, watch performance
-}
-
-bool publish::read( std::istream& input )
-{
-    if( is_binary_() )
-    {
-        input.read( &buffer_[0], buffer_.size() );
-        if( input.gcount() < int( buffer_.size() ) || !input.good() ) { return false; }
-    }
-    else
-    {
-        std::getline( input, buffer_ );
-        buffer_ += '\n';
-        if( !input.good() ) { return false; }
-    }
-    return write( buffer_ );
-}
-
-bool publish::handle_sizes_( transaction_t& t ) // todo? why pass transaction? it doen not seem going out of scope at the point of call; remove?
+bool multiserver::handle_sizes_( transaction_t& t ) // todo? why pass transaction? it doen not seem going out of scope at the point of call; remove?
 {
     if( !output_number_of_clients_ && !update_no_clients_ ) { return true; }
     unsigned int total = 0;
@@ -128,7 +95,7 @@ bool publish::handle_sizes_( transaction_t& t ) // todo? why pass transaction? i
     return true;
 }
 
-void publish::accept_()
+void multiserver::accept_()
 {
     comma::io::select select;
     {
@@ -179,6 +146,73 @@ void publish::accept_()
             }
         }
     }
+}
+
+publish::publish( const std::vector< std::string >& endpoints
+                , unsigned int packet_size
+                , bool discard
+                , bool flush
+                , bool output_number_of_clients
+                , bool update_no_clients
+                , unsigned int cache_size )
+    : multiserver( endpoints
+                , packet_size
+                , discard
+                , flush
+                , output_number_of_clients
+                , update_no_clients
+                , cache_size )
+{
+}
+
+bool publish::write( const std::string& s )
+{
+    transaction_t t( publishers_ );
+    if( cache_size_ > 0 )
+    {
+        cache_.push_back( s );
+        if( cache_.size() > cache_size_ ) { cache_.pop_front(); }
+    }
+    for( auto& p: *t ) { if( p ) { p->write( &s[0], s.size(), false ); } } // for( std::size_t i = 0; i < t->size(); ++i ) { if( ( *t )[i] ) { ( *t )[i]->write( &buffer_[0], buffer_.size(), false ); } }
+    return handle_sizes_( t );
+}
+
+bool publish::write( const char* buf, unsigned int size )
+{
+    return write( std::string( buf, size ) ); // todo: quick and dirty, watch performance
+}
+
+bool publish::read( std::istream& input )
+{
+    if( is_binary_() )
+    {
+        input.read( &buffer_[0], buffer_.size() );
+        if( input.gcount() < int( buffer_.size() ) || !input.good() ) { return false; }
+    }
+    else
+    {
+        std::getline( input, buffer_ );
+        buffer_ += '\n';
+        if( !input.good() ) { return false; }
+    }
+    return write( buffer_ );
+}
+
+receive::receive( const std::vector< std::string >& endpoints
+                , unsigned int packet_size
+                , bool discard
+                , bool flush
+                , bool output_number_of_clients
+                , bool update_no_clients
+                , unsigned int cache_size )
+    : multiserver( endpoints
+                , packet_size
+                , discard
+                , flush
+                , output_number_of_clients
+                , update_no_clients
+                , cache_size )
+{
 }
 
 } } } // namespace comma { namespace io { namespace impl {

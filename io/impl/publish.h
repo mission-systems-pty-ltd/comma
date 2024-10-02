@@ -14,7 +14,6 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
-#include <boost/scoped_ptr.hpp>
 #include <boost/thread.hpp>
 #include "../../io/file_descriptor.h"
 #include "../../io/server.h"
@@ -23,7 +22,7 @@
 
 namespace comma { namespace io { namespace impl {
 
-class publish
+class multiserver
 {
     public:
         typedef comma::synchronized< std::vector< std::unique_ptr< comma::io::oserver > > > publishers_t;
@@ -37,27 +36,21 @@ class publish
             endpoint( const std::string& address = "", bool secondary = false ): address( address ), secondary( secondary ) {}
         };
         
-        publish( const std::vector< std::string >& endpoints
-               , unsigned int packet_size
-               , bool discard
-               , bool flush
-               , bool output_number_of_clients
-               , bool update_no_clients
-               , unsigned int cache_size );
+        multiserver( const std::vector< std::string >& endpoints
+                   , unsigned int packet_size
+                   , bool discard
+                   , bool flush
+                   , bool output_number_of_clients
+                   , bool update_no_clients
+                   , unsigned int cache_size );
         
-        ~publish();
+        ~multiserver();
         
         void disconnect_all();
         
-        bool read( std::istream& input );
-
-        bool write( const std::string& s );
-
-        bool write( const char* buf, unsigned int size );
-        
         unsigned int num_clients() const { return num_clients_; }
 
-    private:
+    protected:
         std::vector< endpoint > endpoints_;
         bool discard_;
         bool flush_;
@@ -71,13 +64,47 @@ class publish
         std::vector< unsigned int > sizes_;
         bool has_primary_clients_;
         unsigned int num_clients_;
-        boost::scoped_ptr< boost::thread > acceptor_thread_;
+        std::unique_ptr< boost::thread > acceptor_thread_;
         bool is_shutdown_;
         std::deque< std::string > cache_;
 
         bool is_binary_() const { return packet_size_ > 0; }
         bool handle_sizes_( transaction_t& t ); // todo? why pass transaction? it doen not seem going out of scope at the point of call; remove?
         void accept_();
+};
+
+struct publish : public multiserver
+{
+    publish( const std::vector< std::string >& endpoints
+            , unsigned int packet_size
+            , bool discard
+            , bool flush
+            , bool output_number_of_clients
+            , bool update_no_clients
+            , unsigned int cache_size );
+    
+    bool read( std::istream& input );
+
+    bool write( const std::string& s );
+
+    bool write( const char* buf, unsigned int size );
+};
+
+struct receive : public multiserver
+{
+    receive( const std::vector< std::string >& endpoints
+            , unsigned int packet_size
+            , bool discard
+            , bool flush
+            , bool output_number_of_clients
+            , bool update_no_clients
+            , unsigned int cache_size );
+    
+    // bool read( std::istream& input );
+
+    // bool write( const std::string& s );
+
+    // bool write( const char* buf, unsigned int size );
 };
 
 } } } // namespace comma { namespace io { namespace impl {
