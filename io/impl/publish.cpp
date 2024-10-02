@@ -7,13 +7,30 @@
 
 namespace comma { namespace io { namespace impl {
 
-multiserver::multiserver( const std::vector< std::string >& endpoints
-                        , unsigned int packet_size
-                        , bool discard
-                        , bool flush
-                        , bool output_number_of_clients
-                        , bool update_no_clients
-                        , unsigned int cache_size )
+template < typename S > struct server_traits; // quick and dirty
+
+template <> struct server_traits< io::iserver > // quick and dirty
+{
+    static io::iserver* make( const std::string& name, comma::io::mode::value mode, bool blocking, bool flush ) { return new io::iserver( name, mode, blocking ); }
+    template < typename T > static void write( T&, const char*, unsigned int ) {} 
+    template < typename T > static void flush( T& ) {}
+};
+
+template <> struct server_traits< io::oserver > // quick and dirty
+{
+    static io::oserver* make( const std::string& name, comma::io::mode::value mode, bool blocking, bool flush ) { return new io::oserver( name, mode, blocking, flush ); }
+    template < typename T > static void write( T& s, const char* buf, unsigned int size ) { s.write( buf, size ); }
+    template < typename T > static void flush( T& s ) { s.flush(); }
+};
+
+template < typename Server >
+multiserver< Server >::multiserver( const std::vector< std::string >& endpoints
+                                  , unsigned int packet_size
+                                  , bool discard
+                                  , bool flush
+                                  , bool output_number_of_clients
+                                  , bool update_no_clients
+                                  , unsigned int cache_size )
     : discard_( discard )
     , flush_( flush )
     , buffer_( packet_size, '\0' )
@@ -44,27 +61,30 @@ multiserver::multiserver( const std::vector< std::string >& endpoints
     t->resize( endpoints.size() );
     for( std::size_t i = 0; i < endpoints.size(); ++i )
     {
-        if( !endpoints_[i].secondary ) { ( *t )[i].reset( new comma::io::oserver( endpoints_[i].address, is_binary_() ? comma::io::mode::binary : comma::io::mode::ascii, !discard, flush ) ); }
+        if( !endpoints_[i].secondary ) { ( *t )[i].reset( server_traits< Server >::make( endpoints_[i].address, is_binary_() ? comma::io::mode::binary : comma::io::mode::ascii, !discard, flush ) ); }
     }
-    acceptor_thread_.reset( new boost::thread( boost::bind( &publish::accept_, boost::ref( *this ))));
+    acceptor_thread_.reset( new boost::thread( boost::bind( &multiserver< Server >::accept_, boost::ref( *this ))));
 }
-        
-multiserver::~multiserver()
+
+template < typename Server >
+multiserver< Server >::~multiserver()
 {
     is_shutdown_ = true;
     acceptor_thread_->join();
     transaction_t t( publishers_ );
     for( std::size_t i = 0; i < t->size(); ++i ) { if( ( *t )[i] ) { ( *t )[i]->close(); } }
 }
-        
-void multiserver::disconnect_all()
+
+template < typename Server >
+void multiserver< Server >::disconnect_all()
 {
     transaction_t t( publishers_ );
     for( auto& p: *t ) { if( p ) { p->disconnect_all(); } }
     handle_sizes_( t ); // quick and dirty
 }
 
-bool multiserver::handle_sizes_( transaction_t& t ) // todo? why pass transaction? it doen not seem going out of scope at the point of call; remove?
+template < typename Server >
+bool multiserver< Server >::handle_sizes_( typename multiserver< Server >::transaction_t& t ) // todo? why pass transaction? it doen not seem going out of scope at the point of call; remove?
 {
     if( !output_number_of_clients_ && !update_no_clients_ ) { return true; }
     unsigned int total = 0;
@@ -95,7 +115,8 @@ bool multiserver::handle_sizes_( transaction_t& t ) // todo? why pass transactio
     return true;
 }
 
-void multiserver::accept_()
+template < typename Server >
+void multiserver< Server >::accept_()
 {
     comma::io::select select;
     {
@@ -120,8 +141,8 @@ void multiserver::accept_()
                 {
                     for( auto& s: streams )
                     {
-                        for( const auto& c: cache_ ) { ( *s )->write( &c[0], c.size() ); }
-                        if( flush_ ) { ( *s )->flush(); }
+                        for( const auto& c: cache_ ) { server_traits< Server >::write( **s, &c[0], c.size() ); }
+                        if( flush_ ) { server_traits< Server >::flush( **s ); }
                     }
                 }
             }
@@ -132,7 +153,7 @@ void multiserver::accept_()
             for( unsigned int i = 0; i < t->size(); ++i )
             {
                 if( !endpoints_[i].secondary || ( *t )[i] ) { continue; }
-                ( *t )[i].reset( new comma::io::oserver( endpoints_[i].address, is_binary_() ? comma::io::mode::binary : comma::io::mode::ascii, !discard_, flush_ ) );
+                ( *t )[i].reset( server_traits< Server >::make( endpoints_[i].address, is_binary_() ? comma::io::mode::binary : comma::io::mode::ascii, !discard_, flush_ ) );
                 if( ( *t )[i]->acceptor_file_descriptor() != comma::io::invalid_file_descriptor ) { select.read().add( ( *t )[i]->acceptor_file_descriptor() ); }
             }
         }
@@ -155,13 +176,13 @@ publish::publish( const std::vector< std::string >& endpoints
                 , bool output_number_of_clients
                 , bool update_no_clients
                 , unsigned int cache_size )
-    : multiserver( endpoints
-                , packet_size
-                , discard
-                , flush
-                , output_number_of_clients
-                , update_no_clients
-                , cache_size )
+    : multiserver< comma::io::oserver >( endpoints
+                                       , packet_size
+                                       , discard
+                                       , flush
+                                       , output_number_of_clients
+                                       , update_no_clients
+                                       , cache_size )
 {
 }
 
@@ -198,21 +219,52 @@ bool publish::read( std::istream& input )
     return write( buffer_ );
 }
 
-receive::receive( const std::vector< std::string >& endpoints
+receive::receive( const std::string& endpoint
                 , unsigned int packet_size
-                , bool discard
                 , bool flush
                 , bool output_number_of_clients
-                , bool update_no_clients
-                , unsigned int cache_size )
-    : multiserver( endpoints
-                , packet_size
-                , discard
-                , flush
-                , output_number_of_clients
-                , update_no_clients
-                , cache_size )
+                , bool update_no_clients )
+    : multiserver< comma::io::iserver >( std::vector< std::string >( 1, endpoint )
+                                       , packet_size
+                                       , false
+                                       , flush
+                                       , output_number_of_clients
+                                       , update_no_clients
+                                       , 0 )
 {
 }
+
+bool receive::read( char* buf, unsigned int size )
+{
+    transaction_t t( publishers_ );
+    auto count = ( *t )[0]->read( buf, size );
+    return handle_sizes_( t ) || count != size;
+}
+
+bool receive::readline( std::string& line ) // quick and dirty
+{
+    transaction_t t( publishers_ );
+    line = ( *t )[0]->readline();
+    return handle_sizes_( t );
+}
+
+bool receive::write( std::ostream& output )
+{
+    if( is_binary_() )
+    {
+        if( read( &buffer_[0], buffer_.size() ) != buffer_.size() ) { return false; }
+    }
+    else
+    {
+        if( !readline( buffer_ ) ) { return false; }
+        buffer_ += '\n';
+    }
+    output.write( &buffer_[0], buffer_.size() );
+    if( flush_ ) { output.flush(); }
+    return output.good();
+}
+
+template class multiserver< io::iserver >;
+template class multiserver< io::oserver >;
 
 } } } // namespace comma { namespace io { namespace impl {

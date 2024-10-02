@@ -22,12 +22,13 @@
 
 namespace comma { namespace io { namespace impl {
 
+template < typename Server >
 class multiserver
 {
     public:
-        typedef comma::synchronized< std::vector< std::unique_ptr< comma::io::oserver > > > publishers_t;
+        typedef comma::synchronized< std::vector< std::unique_ptr< Server > > > publishers_t;
         
-        typedef publishers_t::scoped_transaction transaction_t;
+        typedef typename publishers_t::scoped_transaction transaction_t;
         
         struct endpoint
         {
@@ -73,7 +74,7 @@ class multiserver
         void accept_();
 };
 
-struct publish : public multiserver
+struct publish : public multiserver< comma::io::oserver >
 {
     publish( const std::vector< std::string >& endpoints
             , unsigned int packet_size
@@ -90,21 +91,19 @@ struct publish : public multiserver
     bool write( const char* buf, unsigned int size );
 };
 
-struct receive : public multiserver
+class receive : public multiserver< comma::io::iserver >
 {
-    receive( const std::vector< std::string >& endpoints
-            , unsigned int packet_size
-            , bool discard
-            , bool flush
-            , bool output_number_of_clients
-            , bool update_no_clients
-            , unsigned int cache_size );
-    
-    // bool read( std::istream& input );
+    receive( const std::string& endpoint
+           , unsigned int packet_size
+           , bool flush
+           , bool output_number_of_clients
+           , bool update_no_clients );
 
-    // bool write( const std::string& s );
+    bool read( char* buf, unsigned int size );
 
-    // bool write( const char* buf, unsigned int size );
+    bool readline( std::string& line );
+
+    bool write( std::ostream& output );
 };
 
 } } } // namespace comma { namespace io { namespace impl {
