@@ -299,31 +299,33 @@ class server_stream : public stream
         
         unsigned int read_available( std::vector< char >& buffer, unsigned int max_count, bool blocking )
         {
-            ( void )buffer, ( void )max_count, ( void )blocking;
-            
-            COMMA_THROW( comma::exception, "todo" );
-
-            // std::size_t available = available_();
-            // if( !blocking && available == 0 ) { return 0; }
-            // if( binary_ )
+            unsigned int total_count{0};
+            ( void )buffer; ( void )max_count; ( void )blocking; ( void )total_count;
+            // while( true )
             // {
-            //     unsigned int count = size_ ? available / size_ : 0;
-            //     if( max_count && count > max_count ) { count = max_count; }
-            //     if( count == 0 ) { count = 1; } // read at least one packet
-            //     unsigned int size = size_ ? count * size_ : std::min( available, buffer.size() );
-            //     ( *istream_ )->read( &buffer[0], size );
-            //     return ( *istream_ )->gcount() <= 0 ? 0 : ( *istream_ )->gcount();
+            //     std::size_t available = _server.max_available();
+            //     if( !blocking && available == 0 ) { return 0; }
+            //     if( binary_ )
+            //     {
+            //         unsigned int count = size_ ? available / size_ : 0;
+            //         if( max_count && count > max_count ) { count = max_count; }
+            //         if( count == 0 ) { count = 1; } // read at least one packet
+            //         unsigned int size = size_ ? count * size_ : std::min( available, buffer.size() );
+            //         ( *istream_ )->read( &buffer[0], size );
+            //         return ( *istream_ )->gcount() <= 0 ? 0 : ( *istream_ )->gcount();
+            //     }
+            //     else
+            //     {
+            //         std::string line; // quick and dirty, no-one expects ascii to be fast
+            //         std::getline( *( *istream_ ), line );
+            //         if( line.empty() ) { return 0; }
+            //         if( line.size() >= buffer.size() ) { buffer.resize( line.size() + 1 ); }
+            //         ::memcpy( &buffer[0], &line[0], line.size() );
+            //         buffer[ line.size() ] = '\n';
+            //         return line.size() + 1;
+            //     }
             // }
-            // else
-            // {
-            //     std::string line; // quick and dirty, no-one expects ascii to be fast
-            //     std::getline( *( *istream_ ), line );
-            //     if( line.empty() ) { return 0; }
-            //     if( line.size() >= buffer.size() ) { buffer.resize( line.size() + 1 ); }
-            //     ::memcpy( &buffer[0], &line[0], line.size() );
-            //     buffer[ line.size() ] = '\n';
-            //     return line.size() + 1;
-            // }
+            return 0;
         }
         
         bool empty() const { COMMA_THROW( comma::exception, "todo" ); } // { return !connected() || closed_ || available_() == 0; }
