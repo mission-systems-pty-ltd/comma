@@ -44,8 +44,9 @@
 #include "../../application/signal_flag.h"
 #include "../../base/exception.h"
 #include "../../base/types.h"
-#include "../../io/stream.h"
 #include "../../io/select.h"
+#include "../../io/server.h"
+#include "../../io/stream.h"
 #include "../../string/string.h"
 
 void usage( bool verbose = false )
@@ -58,6 +59,7 @@ usage: io-cat <address> [<address>] ... [<options>]
 <address>
     local:<path>: local socket
     tcp:<host>:<port>: tcp socket
+    tcp:<port>: tcp server socket (only partly implemented)
     udp:<port>: udp socket
     zmp-<protocol>:<address>: zmq (todo)
     <filename>: file
@@ -123,7 +125,6 @@ connect options
 supported address types: tcp, udp, local (unix) sockets, named pipes, files, zmq (todo)
     
 examples
-    
     single stream
         io-cat tcp:localhost:12345
         io-cat udp:12345
@@ -133,7 +134,6 @@ examples
         io-cat zmq-local:/tmp/socket (not implemented)
         io-cat zmq-tcp:localhost:12345 (not implemented)
         echo hello | io-cat -
-    
     multiple streams
         merge line-based input
             io-cat tcp:localhost:55555 tcp:localhost:88888
@@ -284,10 +284,85 @@ class client_stream : public stream
         }
 };
 
+class server_stream : public stream
+{
+    public:
+        server_stream( const std::string& address, unsigned int size, bool binary ): stream( address ), size_( size ), binary_( binary ), closed_( false ) {}
+        
+        comma::io::file_descriptor fd() const { return ( *istream_ ).fd(); }
+        
+        unsigned int read_available( std::vector< char >& buffer, unsigned int max_count, bool blocking )
+        {
+            ( void )buffer, ( void )max_count, ( void )blocking;
+            COMMA_THROW( comma::exception, "todo" );
+
+            // std::size_t available = available_();
+            // if( !blocking && available == 0 ) { return 0; }
+            // if( binary_ )
+            // {
+            //     unsigned int count = size_ ? available / size_ : 0;
+            //     if( max_count && count > max_count ) { count = max_count; }
+            //     if( count == 0 ) { count = 1; } // read at least one packet
+            //     unsigned int size = size_ ? count * size_ : std::min( available, buffer.size() );
+            //     ( *istream_ )->read( &buffer[0], size );
+            //     return ( *istream_ )->gcount() <= 0 ? 0 : ( *istream_ )->gcount();
+            // }
+            // else
+            // {
+            //     std::string line; // quick and dirty, no-one expects ascii to be fast
+            //     std::getline( *( *istream_ ), line );
+            //     if( line.empty() ) { return 0; }
+            //     if( line.size() >= buffer.size() ) { buffer.resize( line.size() + 1 ); }
+            //     ::memcpy( &buffer[0], &line[0], line.size() );
+            //     buffer[ line.size() ] = '\n';
+            //     return line.size() + 1;
+            // }
+        }
+        
+        bool empty() const { COMMA_THROW( comma::exception, "todo" ); } // { return !connected() || closed_ || available_() == 0; }
+        
+        bool eof() const { COMMA_THROW( comma::exception, "todo" ); } // { return bool( istream_ ) && ( !( *istream_ )->good() || ( *istream_ )->eof() ); }
+        
+        void close() { COMMA_THROW( comma::exception, "todo" ); } // { closed_ = true; ( *istream_ ).close(); }
+        
+        bool closed() const { return closed_; }
+        
+        bool connected() const { COMMA_THROW( comma::exception, "todo" ); } // { return bool( istream_ ); }
+        
+        void connect()
+        {
+            { COMMA_THROW( comma::exception, "todo" ); }
+            // if( istream_ ) { return; }
+            // auto blocking_mode = false ? comma::io::mode::non_blocking : comma::io::mode::blocking; // todo? expose on command line?
+            // istream_.reset( new comma::io::istream( address_, comma::io::mode::binary, blocking_mode ) );
+            // if( ( *istream_ )() != &std::cin ) { return; }
+            // std::ios_base::sync_with_stdio( false ); // unsync to make rdbuf()->in_avail() working
+            // std::cin.tie( NULL ); // std::cin is tied to std::cout by default
+        }
+        
+    private:
+        boost::scoped_ptr< comma::io::istream > istream_;
+        unsigned int size_;
+        bool binary_;
+        bool closed_;
+        
+        std::size_t available_() const // seriously quick and dirty
+        {
+            { COMMA_THROW( comma::exception, "todo" ); }
+            // if( ( *istream_ )() == NULL ) { return ( *istream_ ).available_on_file_descriptor(); } // quick and dirty
+            // std::streamsize s = ( *istream_ )->rdbuf()->in_avail();
+            // if( s < 0 ) { return 0; }
+            // // todo: it should be s + available_on_file_descriptor(), but it won't work for std::cin (and potentially for std::ifstream (we have not checked)
+            // //       if performance becomes a problem e.g. for tcp, check whether the stream is not std::cin and use sum instead of max
+            // return std::max( static_cast< std::size_t >( s ), ( *istream_ ).available_on_file_descriptor() );
+        }
+};
+
 static stream* make_stream( const std::string& address, unsigned int size, bool binary )
 {
     const std::vector< std::string >& v = comma::split( address, ':' );
     if( v[0] == "udp" ) { return new udp_stream( address ); }
+    if( v[0] == "tcp" && v.size() == 2 ) { return new server_stream( address, size, binary ); } // todo: quick and dirty for now; a better check if tcp:<port>-like
     COMMA_ASSERT_BRIEF( v[0] != "zmq-local" && v[0] != "zero-local" && v[0] != "zmq-tcp" && v[0] != "zero-tcp", "zmq support not implemented" );
     return new client_stream( address, size, binary );
 }
