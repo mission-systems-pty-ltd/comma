@@ -78,6 +78,8 @@ class server
 
         static std::string readline( server< io::istream >* s, bool do_accept = true );
 
+        static std::size_t max_available( const server< io::istream >* s );
+
     protected:
         template < typename > friend class comma::io::server;
         template < typename > friend class comma::io::impl::server;

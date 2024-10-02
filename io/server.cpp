@@ -54,6 +54,8 @@ std::size_t iserver::read( char* buf, std::size_t size, bool do_accept ) { retur
 
 std::string iserver::readline( bool do_accept ) { return io::impl::server< io::istream >::readline( pimpl_, do_accept ); }
 
+std::size_t iserver::max_available() const { return io::impl::server< io::istream >::max_available( pimpl_ ); }
+
 template class server< io::istream >;
 template class server< io::ostream >;
 // todo: template class server< io::iostream >;

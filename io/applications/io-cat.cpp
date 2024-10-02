@@ -287,13 +287,20 @@ class client_stream : public stream
 class server_stream : public stream
 {
     public:
-        server_stream( const std::string& address, unsigned int size, bool binary ): stream( address ), size_( size ), binary_( binary ), closed_( false ) {}
+        server_stream( const std::string& address, unsigned int size, bool binary )
+            : stream( address )
+            , _size( size )
+            , _binary( binary )
+            , _server( address, binary ? comma::io::mode::binary : comma::io::mode::ascii, true ) // todo: always blocking for now
+        {
+        }
         
-        comma::io::file_descriptor fd() const { return ( *istream_ ).fd(); }
+        comma::io::file_descriptor fd() const { COMMA_THROW( comma::exception, "todo" ); }
         
         unsigned int read_available( std::vector< char >& buffer, unsigned int max_count, bool blocking )
         {
             ( void )buffer, ( void )max_count, ( void )blocking;
+            
             COMMA_THROW( comma::exception, "todo" );
 
             // std::size_t available = available_();
@@ -323,28 +330,19 @@ class server_stream : public stream
         
         bool eof() const { COMMA_THROW( comma::exception, "todo" ); } // { return bool( istream_ ) && ( !( *istream_ )->good() || ( *istream_ )->eof() ); }
         
-        void close() { COMMA_THROW( comma::exception, "todo" ); } // { closed_ = true; ( *istream_ ).close(); }
+        void close() { _closed = true; _server.close(); }
         
-        bool closed() const { return closed_; }
+        bool closed() const { return _closed; }
         
-        bool connected() const { COMMA_THROW( comma::exception, "todo" ); } // { return bool( istream_ ); }
+        bool connected() const { return true; }
         
-        void connect()
-        {
-            { COMMA_THROW( comma::exception, "todo" ); }
-            // if( istream_ ) { return; }
-            // auto blocking_mode = false ? comma::io::mode::non_blocking : comma::io::mode::blocking; // todo? expose on command line?
-            // istream_.reset( new comma::io::istream( address_, comma::io::mode::binary, blocking_mode ) );
-            // if( ( *istream_ )() != &std::cin ) { return; }
-            // std::ios_base::sync_with_stdio( false ); // unsync to make rdbuf()->in_avail() working
-            // std::cin.tie( NULL ); // std::cin is tied to std::cout by default
-        }
+        void connect() {}
         
     private:
-        boost::scoped_ptr< comma::io::istream > istream_;
-        unsigned int size_;
-        bool binary_;
-        bool closed_;
+        unsigned int _size{0};
+        bool _binary{false};
+        bool _closed{false};
+        comma::io::iserver _server;
         
         std::size_t available_() const // seriously quick and dirty
         {

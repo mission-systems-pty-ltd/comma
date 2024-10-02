@@ -109,6 +109,8 @@ struct iserver: public io::server< io::istream >
     /// return 0 if no clients have data
     /// start from the next client on the next read to assure round-robin behaviour
     std::string readline( bool do_accept = true );
+
+    std::size_t max_available() const;
 };
 
 // struct ioserver: public io::server< io::iostream >

@@ -350,6 +350,18 @@ template < typename Stream > std::string server< Stream >::readline( server< io:
     COMMA_THROW( comma::exception, "todo..." );
 }
 
+
+template < typename Stream > std::size_t server< Stream >::max_available( const server< io::istream >* s )
+{
+    std::size_t a = 0;
+    for( const auto& t: s->streams_ )
+    {
+        auto n = ( *t )->rdbuf()->in_avail();
+        if( n > int( a ) ) { a = n; }
+    }
+    return a;
+}
+
 template struct acceptor< io::istream >;
 template struct acceptor< io::ostream >;
 // todo: template struct acceptor< io::iostream >;
