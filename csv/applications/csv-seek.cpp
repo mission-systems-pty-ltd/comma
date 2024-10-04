@@ -22,7 +22,7 @@ options
     --permissive:          permissive mode: output empty record on error
 
     --size,-s=<size>:      [todo] data is packets of fixed size, otherwise data is expected
-                           line-wise. Alternatively use --binary" << std::endl
+                           line-wise. Alternatively use --binary
 csv options
 )";
     std::cerr << comma::csv::options::usage( verbose ) << std::endl;
@@ -41,12 +41,12 @@ csv options
         colour hue (you would need snark installed with graphics and imaging enabled)
             make data file
                 ( csv-paste value=255 value=0 line-number --head 256; \
-                    csv-paste 'line-number;begin=255;step=-1' line-number value=255 --head 256; \
-                    csv-paste value=0 value=255 'line-number;begin=255;step=-1' --head 256; \
-                    csv-paste line-number value=255 value=0 --head 256; \
-                    csv-paste value=255 'line-number;begin=255;step=-1' value=0 --head 256 ) \
-                    | csv-to-bin 3ub \
-                    > colour-wheel.bin
+                  csv-paste 'line-number;begin=255;step=-1' line-number value=255 --head 256; \
+                  csv-paste value=0 value=255 'line-number;begin=255;step=-1' --head 256; \
+                  csv-paste line-number value=255 value=0 --head 256; \
+                  csv-paste value=255 'line-number;begin=255;step=-1' value=0 --head 256 ) \
+                      | csv-to-bin 3ub \
+                      > colour-wheel.bin
             sample colour hue
                 csv-sliders 'hue;min=0;max=1;step=0.0001' \
                             --frequency 10 \
