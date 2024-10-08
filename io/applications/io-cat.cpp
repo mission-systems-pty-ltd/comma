@@ -151,13 +151,16 @@ class stream
         stream( const std::string& address ): address_( address ) {}
         virtual ~stream() {}
         virtual unsigned int read_available( std::vector< char >& buffer, unsigned int max_count, bool blocking ) = 0;
-        virtual comma::io::file_descriptor fd() const = 0;
+        virtual comma::io::file_descriptor fd() const { return comma::io::invalid_file_descriptor; }
         virtual bool eof() const = 0;
         virtual bool empty() const = 0;
         virtual void close() = 0;
         virtual bool closed() const = 0;
         virtual bool connected() const = 0;
         virtual void connect() = 0;
+        virtual void add_to( comma::io::select& select ) const { select.read().add( fd() ); }
+        virtual void remove_from( comma::io::select& select ) const { select.read().remove( fd() ); }
+        virtual bool ready( comma::io::select& select ) const { return select.read().ready( fd() ); }
         const std::string& address() const { return address_; }
         
     protected:
@@ -284,7 +287,7 @@ class client_stream : public stream
         }
 };
 
-class server_stream : public stream
+class server_stream : public stream // todo! super-quick and dirty! get streams from the server instead and add/remove them to/from read methods
 {
     public:
         server_stream( const std::string& address, unsigned int size, bool binary, bool blocking )
@@ -295,8 +298,6 @@ class server_stream : public stream
             , _server( address, binary ? comma::io::mode::binary : comma::io::mode::ascii, blocking )
         {
         }
-        
-        comma::io::file_descriptor fd() const { COMMA_THROW( comma::exception, "todo" ); }
         
         unsigned int read_available( std::vector< char >& buffer, unsigned int max_count, bool blocking )
         {
@@ -329,7 +330,7 @@ class server_stream : public stream
         
         bool empty() const { return _closed || _server.available_at_least() == 0; }
         
-        bool eof() const { return !closed(); } // { return bool( istream_ ) && ( !( *istream_ )->good() || ( *istream_ )->eof() ); }
+        bool eof() const { return closed(); } // { return bool( istream_ ) && ( !( *istream_ )->good() || ( *istream_ )->eof() ); }
         
         void close() { _closed = true; _server.close(); }
         
@@ -338,6 +339,30 @@ class server_stream : public stream
         bool connected() const { return true; }
         
         void connect() {}
+
+        void add_to( comma::io::select& select ) const
+        {
+            for( auto d: _server.select().read()() ) { select.read().add( d ); }
+            select.read().add( _server.acceptor_file_descriptor() ); // uber-quick and dirty
+        }
+
+        void remove_from( comma::io::select& select ) const
+        {
+            for( auto d: _server.select().read()() ) {  select.read().remove( d ); }
+            select.read().add( _server.acceptor_file_descriptor() ); // uber-quick and dirty
+        }
+
+        // todo! void update( comma::io::select& select )
+        // todo! get streams from the server instead and add/remove them to/from read methods
+        // todo! test connecting/disconnecting clients
+        // todo! test multiple clients
+        // todo! examples
+
+        bool ready( comma::io::select& select ) const
+        {
+            for( auto d: _server.select().read()() ) { if( select.read().ready( d ) ) { return true; } }
+            return false;
+        }
         
     private:
         unsigned int _size{0};
@@ -345,17 +370,6 @@ class server_stream : public stream
         bool _blocking{false};
         bool _closed{false};
         comma::io::iserver _server;
-        
-        std::size_t available_() const // seriously quick and dirty
-        {
-            { COMMA_THROW( comma::exception, "todo" ); }
-            // if( ( *istream_ )() == NULL ) { return ( *istream_ ).available_on_file_descriptor(); } // quick and dirty
-            // std::streamsize s = ( *istream_ )->rdbuf()->in_avail();
-            // if( s < 0 ) { return 0; }
-            // // todo: it should be s + available_on_file_descriptor(), but it won't work for std::cin (and potentially for std::ifstream (we have not checked)
-            // //       if performance becomes a problem e.g. for tcp, check whether the stream is not std::cin and use sum instead of max
-            // return std::max( static_cast< std::size_t >( s ), ( *istream_ ).available_on_file_descriptor() );
-        }
 };
 
 static stream* make_stream( const std::string& address, unsigned int size, bool binary, bool blocking )
@@ -378,12 +392,12 @@ static bool ready( const boost::ptr_vector< stream >& streams, comma::io::select
     {
         select.check();
         bool r{connected_all_we_could};
-        for( unsigned int i = 0; i < streams.size() && r; ++i ) { r = streams[i].closed() || select.read().ready( streams[i].fd() ); }
+        for( unsigned int i = 0; i < streams.size() && r; ++i ) { r = streams[i].closed() || streams[i].ready( select ); }
         if( !r ) { boost::this_thread::sleep( boost::posix_time::milliseconds( 10 ) ); } // quick and dirty
         return r;
     }
     for( unsigned int i = 0; i < streams.size(); ++i ) { if( !streams[i].empty() ) { select.check(); return true; } }
-    if( !select.read()().empty() ) { return select.wait( boost::posix_time::seconds( 1 ) ) > 0; }
+    if( !select.read()().empty() ) { return select.wait( boost::posix_time::milliseconds( 100 ) ) > 0; }
     if( connected_all_we_could ) { return true; }
     boost::this_thread::sleep( connect_period );
     return false;
@@ -408,7 +422,7 @@ static bool try_connect( boost::ptr_vector< stream >& streams, comma::io::select
             comma::saymore() << "stream " << i << " (" << streams[i].address() << "): connecting, attempt " << ( attempts + 1 ) << " of " << ( connect_max_attempts == 0 ? std::string( "unlimited" ) : boost::lexical_cast< std::string >( connect_max_attempts ) ) << "..." << std::endl;
             streams[i].connect();
             comma::saymore() << "stream " << i << " (" << streams[i].address() << "): connected" << std::endl;
-            select.read().add( streams[i].fd() );
+            streams[i].add_to( select );
             --unconnected_count;
             continue;
         }
@@ -517,7 +531,7 @@ int main( int argc, char** argv )
         comma::io::select select;
         for( unsigned int i = 0; i < unnamed.size(); ++i ) { streams.push_back( make_stream( unnamed[i], size, size > 0 || ( unnamed.size() == 1 && !has_head ), blocking ) ); }
         //for( unsigned int i = 0; i < unnamed.size(); ++i ) { streams.push_back( make_stream( unnamed[i], size, size > 0 ) ); }
-        comma::saymore() << "created " << unnamed.size() << " stream(s)" << std::endl;
+        comma::saymore() << "created " << unnamed.size() << " stream" << ( unnamed.size() == 1 ? "" : "s" ) << std::endl;
         const unsigned int max_count = size ? ( size > 65536u ? 1 : 65536u / size ) : 0;
         std::vector< char > buffer( size ? size * max_count : 65536u );        
         unsigned int round_robin_count = unnamed.size() > 1 ? options.value( "--round-robin", 0 ) : 0;
@@ -531,12 +545,12 @@ int main( int argc, char** argv )
             {
                 if( !streams[i].connected() ) { done = connected_all_we_could; continue; }
                 if( streams[i].closed() ) { continue; }
-                bool ready = select.read().ready( streams[i].fd() );
+                bool ready = streams[i].ready( select );
                 bool empty = streams[i].empty();
                 if( empty && ( ready || streams[i].eof() ) )
                 { 
                     comma::saymore() << "stream " << i << " (" << unnamed[i] << "): closed" << std::endl;
-                    select.read().remove( streams[i].fd() );
+                    streams[i].remove_from( select );
                     streams[i].close();
                     if( exit_on_first_closed || ( connected_all_we_could && select.read()().empty() ) ) { done = true; break; }
                     continue;
