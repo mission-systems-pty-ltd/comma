@@ -161,6 +161,7 @@ class stream
         virtual void add_to( comma::io::select& select ) const { select.read().add( fd() ); }
         virtual void remove_from( comma::io::select& select ) const { select.read().remove( fd() ); }
         virtual bool ready( comma::io::select& select ) const { return select.read().ready( fd() ); }
+        virtual void update( comma::io::select& select ) const {}
         const std::string& address() const { return address_; }
         
     protected:
@@ -352,10 +353,17 @@ class server_stream : public stream // todo! super-quick and dirty! get streams 
             select.read().add( _server.acceptor_file_descriptor() ); // uber-quick and dirty
         }
 
-        // todo! void update( comma::io::select& select )
+        void update( comma::io::select& select ) const
+        {
+            // todo
+        }
+
+        // todo!? use io::impl::receive()?
         // todo! get streams from the server instead and add/remove them to/from read methods
         // todo! test connecting/disconnecting clients
         // todo! test multiple clients
+        // todo! cpu performance when there are no connections
+        // todo? for now, if server, don't allow multiple input streams
         // todo! examples
 
         bool ready( comma::io::select& select ) const
@@ -388,6 +396,7 @@ static bool permissive;
 
 static bool ready( const boost::ptr_vector< stream >& streams, comma::io::select& select, bool connected_all_we_could, bool blocking )
 {
+    for( const auto& s: streams ) { s.update( select ); } // quick and dirty
     if( blocking )
     {
         select.check();
@@ -535,30 +544,42 @@ int main( int argc, char** argv )
         const unsigned int max_count = size ? ( size > 65536u ? 1 : 65536u / size ) : 0;
         std::vector< char > buffer( size ? size * max_count : 65536u );        
         unsigned int round_robin_count = unnamed.size() > 1 ? options.value( "--round-robin", 0 ) : 0;
+        comma::say() << "==> A" << std::endl;
         for( bool done = false; !done; )
         {
+            comma::say() << "==> a" << std::endl;
             if( is_shutdown ) { comma::saymore() << "received signal" << std::endl; break; }
+            comma::say() << "==> b" << std::endl;
             bool connected_all_we_could = try_connect( streams, select );
             if( !ready( streams, select, connected_all_we_could, blocking ) ) { continue; }
             done = true;
+            comma::say() << "==> c: streams.size(): " << streams.size() << std::endl;
             for( unsigned int i = 0; i < streams.size(); ++i )
             {
+                comma::say() << "==> d" << std::endl;
                 if( !streams[i].connected() ) { done = connected_all_we_could; continue; }
+                comma::say() << "==> e" << std::endl;
                 if( streams[i].closed() ) { continue; }
+                comma::say() << "==> f" << std::endl;
                 bool ready = streams[i].ready( select );
+                comma::say() << "==> g: ready: " << ready << std::endl;
                 bool empty = streams[i].empty();
                 if( empty && ( ready || streams[i].eof() ) )
-                { 
+                {
+                    comma::say() << "==> h" << std::endl;
                     comma::saymore() << "stream " << i << " (" << unnamed[i] << "): closed" << std::endl;
                     streams[i].remove_from( select );
                     streams[i].close();
                     if( exit_on_first_closed || ( connected_all_we_could && select.read()().empty() ) ) { done = true; break; }
                     continue;
                 }
+                comma::say() << "==> i" << std::endl;
                 if( !ready && empty ) { done = false; continue; }
+                comma::say() << "==> j" << std::endl;
                 unsigned int countdown = round_robin_count;
                 while( !streams[i].eof() ) // todo? check is_shutdown here as well?
                 {
+                    comma::say() << "==> k" << std::endl;
                     unsigned int bytes_read = streams[i].read_available( buffer, countdown ? countdown : max_count, blocking );
                     if( bytes_read == 0 ) { break; }
                     done = false;
@@ -572,8 +593,11 @@ int main( int argc, char** argv )
                         if( countdown == 0 ) { break; }
                     }
                 }
+                comma::say() << "==> l" << std::endl;
             }
+            comma::say() << "==> m" << std::endl;
         }
+        comma::say() << "==> Z" << std::endl;
         output.finalise( is_shutdown );
         return 0;
     }

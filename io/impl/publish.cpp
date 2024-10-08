@@ -57,7 +57,7 @@ multiserver< Server >::multiserver( const std::vector< std::string >& endpoints
     sigemptyset( &new_action.sa_mask );
     sigaction( SIGPIPE, NULL, &old_action );
     sigaction( SIGPIPE, &new_action, NULL );
-    transaction_t t( publishers_ );
+    transaction_t t( servers_ );
     t->resize( endpoints.size() );
     for( std::size_t i = 0; i < endpoints.size(); ++i )
     {
@@ -71,14 +71,14 @@ multiserver< Server >::~multiserver()
 {
     is_shutdown_ = true;
     acceptor_thread_->join();
-    transaction_t t( publishers_ );
+    transaction_t t( servers_ );
     for( std::size_t i = 0; i < t->size(); ++i ) { if( ( *t )[i] ) { ( *t )[i]->close(); } }
 }
 
 template < typename Server >
 void multiserver< Server >::disconnect_all()
 {
-    transaction_t t( publishers_ );
+    transaction_t t( servers_ );
     for( auto& p: *t ) { if( p ) { p->disconnect_all(); } }
     handle_sizes_( t ); // quick and dirty
 }
@@ -120,7 +120,7 @@ void multiserver< Server >::accept_()
 {
     comma::io::select select;
     {
-        transaction_t t( publishers_ );
+        transaction_t t( servers_ );
         for( unsigned int i = 0; i < t->size(); ++i )
         {
             if( !( *t )[i] ) { continue; }
@@ -131,7 +131,7 @@ void multiserver< Server >::accept_()
     while( !is_shutdown_ )
     {
         select.wait( boost::posix_time::millisec( 100 ) ); // todo? make timeout configurable?
-        transaction_t t( publishers_ );
+        transaction_t t( servers_ );
         for( unsigned int i = 0; i < t->size(); ++i )
         {
             if( ( *t )[i] && select.read().ready( ( *t )[i]->acceptor_file_descriptor() ) )
@@ -188,7 +188,7 @@ publish::publish( const std::vector< std::string >& endpoints
 
 bool publish::write( const std::string& s )
 {
-    transaction_t t( publishers_ );
+    transaction_t t( servers_ );
     if( cache_size_ > 0 )
     {
         cache_.push_back( s );
@@ -236,14 +236,14 @@ receive::receive( const std::string& endpoint
 
 bool receive::read( char* buf, unsigned int size )
 {
-    transaction_t t( publishers_ );
+    transaction_t t( servers_ );
     auto count = ( *t )[0]->read( buf, size );
     return handle_sizes_( t ) || count != size;
 }
 
 bool receive::getline( std::string& line ) // quick and dirty
 {
-    transaction_t t( publishers_ );
+    transaction_t t( servers_ );
     line = ( *t )[0]->getline();
     return handle_sizes_( t );
 }

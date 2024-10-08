@@ -26,9 +26,9 @@ template < typename Server >
 class multiserver
 {
     public:
-        typedef comma::synchronized< std::vector< std::unique_ptr< Server > > > publishers_t;
+        typedef comma::synchronized< std::vector< std::unique_ptr< Server > > > servers_t;
         
-        typedef typename publishers_t::scoped_transaction transaction_t;
+        typedef typename servers_t::scoped_transaction transaction_t;
         
         struct endpoint
         {
@@ -55,7 +55,7 @@ class multiserver
         std::vector< endpoint > endpoints_;
         bool discard_;
         bool flush_;
-        publishers_t publishers_;
+        servers_t servers_;
         std::string buffer_;
         unsigned int packet_size_;
         bool output_number_of_clients_;
