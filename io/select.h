@@ -94,15 +94,18 @@ class select
                 /// return true, if file descriptor found in descriptor list and ready
                 bool ready( file_descriptor fd ) const;
                 template < typename T > bool ready( const T& t ) const { return ready( t.fd() ); }
+
+                /// remove all descriptors
+                void clear();
                 
                 /// return set of descriptors
                 const std::set< file_descriptor >& operator()() const { return descriptors_; } //const boost::unordered_set< file_descriptor >& operator()() const { return descriptors_; }
 
             private:
                 friend class select;
-                fd_set* reset_fds_();
+                ::fd_set* reset_fds_();
                 std::set< file_descriptor > descriptors_; //boost::unordered_set< file_descriptor > descriptors_;
-                fd_set fd_set_;
+                ::fd_set fd_set_;
         };
 
         /// return read descriptors

@@ -98,9 +98,12 @@ std::size_t select::wait( boost::posix_time::time_duration timeout )
 
 std::size_t select::check() { return wait( 0 ); }
 
-select::descriptors::descriptors()
+select::descriptors::descriptors() { reset_fds_(); }
+
+void select::descriptors::clear()
 {
-    reset_fds_();
+    FD_ZERO( &fd_set_ );
+    descriptors_.clear();
 }
 
 fd_set* select::descriptors::reset_fds_()
