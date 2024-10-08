@@ -40,25 +40,23 @@ namespace comma { namespace csv { namespace ascii_test {
 
 struct nested
 {
-    int x;
-    int y;
-    nested() : x( 0 ), y( 0 ) {}
+    int x{0};
+    int y{0};
 };
 
 struct simple_struct
 {
-    int a;
-    double b;
-    char c;
+    int a{0};
+    double b{0};
+    char c{0};
     std::string s;
     boost::posix_time::ptime t;
     ascii_test::nested nested;
-    simple_struct() : a( 0 ), b( 0 ), c( 0 ) {}
 };
 
 struct test_struct
 {
-    int a;
+    int a{0};
     boost::optional< int > z;
     boost::optional< ascii_test::nested > nested;
 };
@@ -212,6 +210,26 @@ TEST( csv, ascii_get )
 
 TEST( csv, ascii_put )
 {
+}
+
+TEST( csv, ascii_put_string )
+{
+    typedef comma::csv::ascii_test::simple_struct value_t;
+    typedef comma::csv::ascii< value_t > ascii_t;
+    EXPECT_EQ( ascii_t().put( value_t{} ), "0,0,0,\"\",not-a-date-time,0,0" );
+    EXPECT_EQ( ascii_t().put( value_t{1,2,3,"XXX"} ), "1,2,3,\"XXX\",not-a-date-time,0,0" );
+    {
+        comma::csv::options csv;
+        csv.quote.reset();
+        EXPECT_EQ( ascii_t( csv ).put( value_t{} ), "0,0,0,,not-a-date-time,0,0" );
+        EXPECT_EQ( ascii_t( csv ).put( value_t{1,2,3,"XXX"} ), "1,2,3,XXX,not-a-date-time,0,0" );
+    }
+    {
+        comma::csv::options csv;
+        csv.quote = '#';
+        EXPECT_EQ( ascii_t( csv ).put( value_t{} ), "0,0,0,##,not-a-date-time,0,0" );
+        EXPECT_EQ( ascii_t( csv ).put( value_t{1,2,3,"XXX"} ), "1,2,3,#XXX#,not-a-date-time,0,0" );
+    }
     // todo
 }
 
