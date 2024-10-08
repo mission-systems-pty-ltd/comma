@@ -48,6 +48,8 @@ template < typename Stream > std::size_t server< Stream >::size() const { return
 
 template < typename Stream > file_descriptor server< Stream >::acceptor_file_descriptor() const { return pimpl_->_acceptor ? pimpl_->acceptor().fd() : comma::io::invalid_file_descriptor; }
 
+template < typename Stream > const io::select& server< Stream >::select() const { return pimpl_->select_; }
+
 std::size_t oserver::write( const char* buf, std::size_t size, bool do_accept ) { return io::impl::server< io::ostream >::write( pimpl_, buf, size, do_accept ); }
 
 std::size_t iserver::read( char* buf, std::size_t size, bool do_accept ) { return io::impl::server< io::istream >::read( pimpl_, buf, size, do_accept ); }

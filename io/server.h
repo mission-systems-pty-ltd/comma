@@ -54,6 +54,9 @@ class server
         ///       has been output, this client will receive
         ///       ",2", which most likely was not intended
         std::vector< Stream* > accept(); // quick and dirty, use nacked pointers for now
+
+        /// return reference to select on the existing streams
+        const io::select& select() const;
         
     protected:
         server( const server& );
