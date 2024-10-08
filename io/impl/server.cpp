@@ -345,13 +345,13 @@ template < typename Stream > unsigned int server< Stream >::read( server< io::is
     return 0;
 }
 
-template < typename Stream > std::string server< Stream >::readline( server< io::istream >* s, bool do_accept )
+template < typename Stream > std::string server< Stream >::getline( server< io::istream >* s, bool do_accept )
 {
     COMMA_THROW( comma::exception, "todo..." );
 }
 
 
-template < typename Stream > std::size_t server< Stream >::max_available( const server< io::istream >* s )
+template < typename Stream > std::size_t server< Stream >::available_at_least( const server< io::istream >* s )
 {
     std::size_t a = 0;
     for( const auto& t: s->streams_ )

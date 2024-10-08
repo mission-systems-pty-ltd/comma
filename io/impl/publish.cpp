@@ -241,10 +241,10 @@ bool receive::read( char* buf, unsigned int size )
     return handle_sizes_( t ) || count != size;
 }
 
-bool receive::readline( std::string& line ) // quick and dirty
+bool receive::getline( std::string& line ) // quick and dirty
 {
     transaction_t t( publishers_ );
-    line = ( *t )[0]->readline();
+    line = ( *t )[0]->getline();
     return handle_sizes_( t );
 }
 
@@ -256,7 +256,7 @@ bool receive::write( std::ostream& output )
     }
     else
     {
-        if( !readline( buffer_ ) ) { return false; }
+        if( !getline( buffer_ ) ) { return false; }
         buffer_ += '\n';
     }
     output.write( &buffer_[0], buffer_.size() );

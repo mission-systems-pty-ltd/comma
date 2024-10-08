@@ -287,11 +287,12 @@ class client_stream : public stream
 class server_stream : public stream
 {
     public:
-        server_stream( const std::string& address, unsigned int size, bool binary )
+        server_stream( const std::string& address, unsigned int size, bool binary, bool blocking )
             : stream( address )
             , _size( size )
             , _binary( binary )
-            , _server( address, binary ? comma::io::mode::binary : comma::io::mode::ascii, true ) // todo: always blocking for now
+            , _blocking( blocking )
+            , _server( address, binary ? comma::io::mode::binary : comma::io::mode::ascii, blocking )
         {
         }
         
@@ -299,38 +300,36 @@ class server_stream : public stream
         
         unsigned int read_available( std::vector< char >& buffer, unsigned int max_count, bool blocking )
         {
-            unsigned int total_count{0};
-            ( void )buffer; ( void )max_count; ( void )blocking; ( void )total_count;
-            // while( true )
-            // {
-            //     std::size_t available = _server.max_available();
-            //     if( !blocking && available == 0 ) { return 0; }
-            //     if( binary_ )
-            //     {
-            //         unsigned int count = size_ ? available / size_ : 0;
-            //         if( max_count && count > max_count ) { count = max_count; }
-            //         if( count == 0 ) { count = 1; } // read at least one packet
-            //         unsigned int size = size_ ? count * size_ : std::min( available, buffer.size() );
-            //         ( *istream_ )->read( &buffer[0], size );
-            //         return ( *istream_ )->gcount() <= 0 ? 0 : ( *istream_ )->gcount();
-            //     }
-            //     else
-            //     {
-            //         std::string line; // quick and dirty, no-one expects ascii to be fast
-            //         std::getline( *( *istream_ ), line );
-            //         if( line.empty() ) { return 0; }
-            //         if( line.size() >= buffer.size() ) { buffer.resize( line.size() + 1 ); }
-            //         ::memcpy( &buffer[0], &line[0], line.size() );
-            //         buffer[ line.size() ] = '\n';
-            //         return line.size() + 1;
-            //     }
-            // }
+            COMMA_ASSERT_BRIEF( blocking == _blocking, "server stream is " << ( _blocking ? "blocking" : "non-blocking" ) << ", but asked to do " << ( blocking ? "blocking" : "non-blocking" ) << " read" );
+            unsigned int count{0};
+            char* p = &buffer[0];
+            while( true )
+            {
+                std::size_t available_at_least = _server.available_at_least();
+                if( !blocking && available_at_least == 0 ) { return 0; }
+                if( _binary )
+                {
+                    if( _server.read( p, _size ) != _size ) { return 0; } // todo? more checks?
+                    ++count;
+                    p += _size;
+                    if( count >= max_count || count * _size >= available_at_least ) { return count * _size; }
+                }
+                else
+                {
+                    std::string line = _server.getline();
+                    if( line.empty() ) { return 0; }
+                    if( line.size() >= buffer.size() ) { buffer.resize( line.size() + 1 ); }
+                    ::memcpy( &buffer[0], &line[0], line.size() );
+                    buffer[ line.size() ] = '\n';
+                    return line.size() + 1;
+                }
+            }
             return 0;
         }
         
         bool empty() const { COMMA_THROW( comma::exception, "todo" ); } // { return !connected() || closed_ || available_() == 0; }
         
-        bool eof() const { COMMA_THROW( comma::exception, "todo" ); } // { return bool( istream_ ) && ( !( *istream_ )->good() || ( *istream_ )->eof() ); }
+        bool eof() const { return !closed(); } // { return bool( istream_ ) && ( !( *istream_ )->good() || ( *istream_ )->eof() ); }
         
         void close() { _closed = true; _server.close(); }
         
@@ -343,6 +342,7 @@ class server_stream : public stream
     private:
         unsigned int _size{0};
         bool _binary{false};
+        bool _blocking{false};
         bool _closed{false};
         comma::io::iserver _server;
         
@@ -358,11 +358,11 @@ class server_stream : public stream
         }
 };
 
-static stream* make_stream( const std::string& address, unsigned int size, bool binary )
+static stream* make_stream( const std::string& address, unsigned int size, bool binary, bool blocking )
 {
     const std::vector< std::string >& v = comma::split( address, ':' );
     if( v[0] == "udp" ) { return new udp_stream( address ); }
-    if( v[0] == "tcp" && v.size() == 2 ) { return new server_stream( address, size, binary ); } // todo: quick and dirty for now; a better check if tcp:<port>-like
+    if( v[0] == "tcp" && v.size() == 2 ) { return new server_stream( address, size, binary, blocking ); } // todo: quick and dirty for now; a better check if tcp:<port>-like
     COMMA_ASSERT_BRIEF( v[0] != "zmq-local" && v[0] != "zero-local" && v[0] != "zmq-tcp" && v[0] != "zero-tcp", "zmq support not implemented" );
     return new client_stream( address, size, binary );
 }
@@ -515,7 +515,7 @@ int main( int argc, char** argv )
         output = output_t( options, unnamed.size() );
         boost::ptr_vector< stream > streams;
         comma::io::select select;
-        for( unsigned int i = 0; i < unnamed.size(); ++i ) { streams.push_back( make_stream( unnamed[i], size, size > 0 || ( unnamed.size() == 1 && !has_head ) ) ); }
+        for( unsigned int i = 0; i < unnamed.size(); ++i ) { streams.push_back( make_stream( unnamed[i], size, size > 0 || ( unnamed.size() == 1 && !has_head ), blocking ) ); }
         //for( unsigned int i = 0; i < unnamed.size(); ++i ) { streams.push_back( make_stream( unnamed[i], size, size > 0 ) ); }
         const unsigned int max_count = size ? ( size > 65536u ? 1 : 65536u / size ) : 0;
         std::vector< char > buffer( size ? size * max_count : 65536u );        

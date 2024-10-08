@@ -101,7 +101,7 @@ class receive : public multiserver< comma::io::iserver >
 
     bool read( char* buf, unsigned int size );
 
-    bool readline( std::string& line );
+    bool getline( std::string& line );
 
     bool write( std::ostream& output );
 };

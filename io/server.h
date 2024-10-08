@@ -108,9 +108,9 @@ struct iserver: public io::server< io::istream >
     /// read eol-terminated string from first available client
     /// return 0 if no clients have data
     /// start from the next client on the next read to assure round-robin behaviour
-    std::string readline( bool do_accept = true );
+    std::string getline( bool do_accept = true );
 
-    std::size_t max_available() const;
+    std::size_t available_at_least() const;
 };
 
 // struct ioserver: public io::server< io::iostream >

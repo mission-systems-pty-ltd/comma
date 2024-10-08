@@ -76,9 +76,9 @@ class server
 
         static unsigned int read( server< io::istream >* s, char* buf, std::size_t size, bool do_accept = true );
 
-        static std::string readline( server< io::istream >* s, bool do_accept = true );
+        static std::string getline( server< io::istream >* s, bool do_accept = true );
 
-        static std::size_t max_available( const server< io::istream >* s );
+        static std::size_t available_at_least( const server< io::istream >* s );
 
     protected:
         template < typename > friend class comma::io::server;

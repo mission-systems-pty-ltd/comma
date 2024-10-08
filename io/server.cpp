@@ -52,9 +52,9 @@ std::size_t oserver::write( const char* buf, std::size_t size, bool do_accept ) 
 
 std::size_t iserver::read( char* buf, std::size_t size, bool do_accept ) { return io::impl::server< io::istream >::read( pimpl_, buf, size, do_accept ); }
 
-std::string iserver::readline( bool do_accept ) { return io::impl::server< io::istream >::readline( pimpl_, do_accept ); }
+std::string iserver::getline( bool do_accept ) { return io::impl::server< io::istream >::getline( pimpl_, do_accept ); }
 
-std::size_t iserver::max_available() const { return io::impl::server< io::istream >::max_available( pimpl_ ); }
+std::size_t iserver::available_at_least() const { return io::impl::server< io::istream >::available_at_least( pimpl_ ); }
 
 template class server< io::istream >;
 template class server< io::ostream >;
