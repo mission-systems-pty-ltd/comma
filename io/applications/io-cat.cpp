@@ -327,7 +327,7 @@ class server_stream : public stream
             return 0;
         }
         
-        bool empty() const { COMMA_THROW( comma::exception, "todo" ); } // { return !connected() || closed_ || available_() == 0; }
+        bool empty() const { return _closed || _server.available_at_least() == 0; }
         
         bool eof() const { return !closed(); } // { return bool( istream_ ) && ( !( *istream_ )->good() || ( *istream_ )->eof() ); }
         
@@ -402,13 +402,13 @@ static bool try_connect( boost::ptr_vector< stream >& streams, comma::io::select
     std::string what;
     for( unsigned int i = 0; i < streams.size(); ++i )
     {
-        if( streams[i].connected() ) { continue; }
+        if( streams[i].connected() ) { --unconnected_count; continue; }
         try
         {
             comma::saymore() << "stream " << i << " (" << streams[i].address() << "): connecting, attempt " << ( attempts + 1 ) << " of " << ( connect_max_attempts == 0 ? std::string( "unlimited" ) : boost::lexical_cast< std::string >( connect_max_attempts ) ) << "..." << std::endl;
             streams[i].connect();
             comma::saymore() << "stream " << i << " (" << streams[i].address() << "): connected" << std::endl;
-            select.read().add( streams[i] );
+            select.read().add( streams[i].fd() );
             --unconnected_count;
             continue;
         }
@@ -517,6 +517,7 @@ int main( int argc, char** argv )
         comma::io::select select;
         for( unsigned int i = 0; i < unnamed.size(); ++i ) { streams.push_back( make_stream( unnamed[i], size, size > 0 || ( unnamed.size() == 1 && !has_head ), blocking ) ); }
         //for( unsigned int i = 0; i < unnamed.size(); ++i ) { streams.push_back( make_stream( unnamed[i], size, size > 0 ) ); }
+        comma::saymore() << "created " << unnamed.size() << " stream(s)" << std::endl;
         const unsigned int max_count = size ? ( size > 65536u ? 1 : 65536u / size ) : 0;
         std::vector< char > buffer( size ? size * max_count : 65536u );        
         unsigned int round_robin_count = unnamed.size() > 1 ? options.value( "--round-robin", 0 ) : 0;
