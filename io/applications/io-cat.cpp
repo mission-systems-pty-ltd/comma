@@ -425,7 +425,7 @@ static bool try_connect( boost::ptr_vector< stream >& streams, comma::io::select
     std::string what;
     for( unsigned int i = 0; i < streams.size(); ++i )
     {
-        if( streams[i].connected() ) { --unconnected_count; continue; }
+        if( streams[i].connected() ) { continue; }
         try
         {
             comma::saymore() << "stream " << i << " (" << streams[i].address() << "): connecting, attempt " << ( attempts + 1 ) << " of " << ( connect_max_attempts == 0 ? std::string( "unlimited" ) : boost::lexical_cast< std::string >( connect_max_attempts ) ) << "..." << std::endl;
@@ -440,9 +440,10 @@ static bool try_connect( boost::ptr_vector< stream >& streams, comma::io::select
         comma::saymore() << "stream " << i << " (" << streams[i].address() << "): failed to connect" << std::endl;
     }
     ++attempts;
-    connected_all_we_could = unconnected_count == 0 || ( permissive && connect_max_attempts > 0 && attempts >= connect_max_attempts );
-    if( connected_all_we_could ) { return connected_all_we_could; }
-    if( connect_max_attempts == 0 || attempts < connect_max_attempts ) { return connected_all_we_could; }
+    if( unconnected_count == 0 ) { return true; }
+    if( connect_max_attempts == 0 ) { return false; }
+    if( attempts < connect_max_attempts ) { return false; }
+    if( permissive ) { return true; }
     comma::say() << "fatal: after " << attempts << " attempt(s): " << what << std::endl;
     exit( 1 );
 }
@@ -544,42 +545,30 @@ int main( int argc, char** argv )
         const unsigned int max_count = size ? ( size > 65536u ? 1 : 65536u / size ) : 0;
         std::vector< char > buffer( size ? size * max_count : 65536u );        
         unsigned int round_robin_count = unnamed.size() > 1 ? options.value( "--round-robin", 0 ) : 0;
-        comma::say() << "==> A" << std::endl;
         for( bool done = false; !done; )
         {
-            comma::say() << "==> a" << std::endl;
             if( is_shutdown ) { comma::saymore() << "received signal" << std::endl; break; }
-            comma::say() << "==> b" << std::endl;
             bool connected_all_we_could = try_connect( streams, select );
             if( !ready( streams, select, connected_all_we_could, blocking ) ) { continue; }
             done = true;
-            comma::say() << "==> c: streams.size(): " << streams.size() << std::endl;
             for( unsigned int i = 0; i < streams.size(); ++i )
             {
-                comma::say() << "==> d" << std::endl;
                 if( !streams[i].connected() ) { done = connected_all_we_could; continue; }
-                comma::say() << "==> e" << std::endl;
                 if( streams[i].closed() ) { continue; }
-                comma::say() << "==> f" << std::endl;
                 bool ready = streams[i].ready( select );
-                comma::say() << "==> g: ready: " << ready << std::endl;
                 bool empty = streams[i].empty();
                 if( empty && ( ready || streams[i].eof() ) )
                 {
-                    comma::say() << "==> h" << std::endl;
                     comma::saymore() << "stream " << i << " (" << unnamed[i] << "): closed" << std::endl;
                     streams[i].remove_from( select );
                     streams[i].close();
                     if( exit_on_first_closed || ( connected_all_we_could && select.read()().empty() ) ) { done = true; break; }
                     continue;
                 }
-                comma::say() << "==> i" << std::endl;
                 if( !ready && empty ) { done = false; continue; }
-                comma::say() << "==> j" << std::endl;
                 unsigned int countdown = round_robin_count;
                 while( !streams[i].eof() ) // todo? check is_shutdown here as well?
                 {
-                    comma::say() << "==> k" << std::endl;
                     unsigned int bytes_read = streams[i].read_available( buffer, countdown ? countdown : max_count, blocking );
                     if( bytes_read == 0 ) { break; }
                     done = false;
@@ -593,11 +582,8 @@ int main( int argc, char** argv )
                         if( countdown == 0 ) { break; }
                     }
                 }
-                comma::say() << "==> l" << std::endl;
             }
-            comma::say() << "==> m" << std::endl;
         }
-        comma::say() << "==> Z" << std::endl;
         output.finalise( is_shutdown );
         return 0;
     }
