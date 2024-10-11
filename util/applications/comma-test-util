@@ -39,6 +39,31 @@ readonly comma_test_util_include_guard_=1
 
 source $( type -p comma-name-value-util )
 
+function _comma_test_commands_impl()
+{
+    local key value status output until_first_error=$1 fields=$2
+    while IFS='=' read key value ; do
+        [[ -n "$key" && ! "$key" =~ \#.* ]] || continue
+        value="${value/#\"}"
+        value="${value/%\"}"
+        output=$( eval "$value" )
+        status=$? # eval and bash -c both returns one error code, PIPESTATUS has only one value
+        if (( $( wc -l <<< "$output" ) > 1 )); then # a separate case for backward compatibility
+            local count=0
+            while read line; do
+                if [[ -n "$fields" ]]; then name-value-from-csv "$fields" --prefix "$key/output/line[$count]" <<< "$line" # todo? escape quote? ${line//\"/\\\"}, otherwise they get removed by bash
+                else echo "$key/output/line[$count]=\"$line\""; fi
+                (( ++count ))
+            done <<< "$output"
+        else
+            if [[ -n "$fields" ]]; then name-value-from-csv "$fields" --prefix "$key/output" <<< "$output" # todo? escape quotes, otherwise they get removed by bash
+            else echo "$key/output=\"$output\""; fi
+        fi
+        echo "$key/status=$status"
+        if (( status != 0 && until_first_error )); then break; fi
+    done < <( grep '=' ; grep -v '^#' )
+}
+
 # a helper to write tests in the comma-test-run style
 #
 # take line by line on stdin: <test name>="<command>"
@@ -67,34 +92,9 @@ source $( type -p comma-name-value-util )
 # my_basic_test[1]/for/something/output/a="2"
 # my_basic_test[1]/for/something/output/b="4"
 # my_basic_test[1]/for/something/output=0
-#
-function comma_test_commands()
-{
-    local key
-    local value
-    local status
-    local output
-    local fields=$1
-    while IFS='=' read key value ; do
-        [[ -n "$key" && ! "$key" =~ \#.* ]] || continue
-        value="${value/#\"}"
-        value="${value/%\"}"
-        output=$( eval "$value" )
-        status=$?       # eval and bash -c both returns one error code, PIPESTATUS has only one value
-        if (( $( wc -l <<< "$output" ) > 1 )); then # a separate case for backward compatibility
-            local count=0
-            while read line; do
-                if [[ -n "$fields" ]]; then name-value-from-csv "$fields" --prefix "$key/output/line[$count]" <<< "$line" # todo? escape quote? ${line//\"/\\\"}, otherwise they get removed by bash
-                else echo "$key/output/line[$count]=\"$line\""; fi
-                (( ++count ))
-            done <<< "$output"
-        else
-            if [[ -n "$fields" ]]; then name-value-from-csv "$fields" --prefix "$key/output" <<< "$output" # todo? escape quotes, otherwise they get removed by bash
-            else echo "$key/output=\"$output\""; fi
-        fi
-        echo "$key/status=$status"
-    done < <( grep '=' ; grep -v '^#' )
-}
+
+function comma_test_commands() { _comma_test_commands_impl 0 "$@" ; }
+function comma_test_commands_until_first_error() { _comma_test_commands_impl 1 "$@" ; }
 
 # run interactive test, something like
 # > cat input
