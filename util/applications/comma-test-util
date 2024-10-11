@@ -174,6 +174,8 @@ function comma_test_interactive_commands()
     )
 }
 
+function comma_test_interactive_commands_until_first_error() { comma_test_interactive_commands 1; }
+
 # the tmp directory cleanup for comma_test_run_tarball
 function comma_test_run_tarball_cleanup()
 {
