@@ -96,7 +96,13 @@ function _comma_test_commands_impl()
 function comma_test_commands() { _comma_test_commands_impl 0 "$@" ; }
 function comma_test_commands_until_first_error() { _comma_test_commands_impl 1 "$@" ; }
 
-# run interactive test, something like
+# run interactive test
+#
+# usage: comma_test_interactive_commands [<until_first_error>]
+#        <until_first_error>: 0 (i.e. false) or 1 (i.e. true); default: 0
+#
+# it works as something like
+#
 # > cat input
 # 
 # default/instruction=
@@ -117,6 +123,8 @@ function comma_test_commands_until_first_error() { _comma_test_commands_impl 1 "
 # see for an example: e.g. snark/graphics/applications/test/view-points/colour/scalar/options
 function comma_test_interactive_commands()
 {
+    local until_first_error=$1
+    if [[ -n "$until_first_error" ]]; then until_first_error=1; else until_first_error=0; fi
     (
         function comma_test_interactive_test_case()
         {
@@ -131,7 +139,7 @@ function comma_test_interactive_commands()
             zenity --question --title="testcase $testcase_number of $number_of_testcases: $name" --text="$dialog" --width=600
             result=$?
             echo "$name/status=$result"
-            kill $( pgrep -P $eval_pid )
+            kill $( pgrep -P $eval_pid )break
             wait $eval_pid
             return $result
         }
@@ -148,7 +156,11 @@ function comma_test_interactive_commands()
             [[ -n "$p" ]] || continue
             local n=$( dirname $p )
             if [[ "$n" != "$test_name" ]] ; then
-                [[ -z "$test_name" ]] || comma_test_interactive_test_case $test_name $testcase_number $number_of_testcases <<< "$test_case"
+                if [[ -n "$test_name" ]]; then
+                    comma_test_interactive_test_case $test_name $testcase_number $number_of_testcases <<< "$test_case"
+                    local r=$?
+                    if (( r != 0 && until_first_error )); then return $r; fi
+                fi
                 (( ++testcase_number ))
                 test_name=$n
                 test_case=
