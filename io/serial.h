@@ -14,10 +14,18 @@ namespace comma { namespace io { namespace serial {
 class port
 {
     public:
+        struct properties
+        {
+            std::string name;
+            unsigned int baud_rate{0};
+        };
+
         port( const std::string& name );
 
         /// open port as 8N1
         port( const std::string& name, unsigned int baud_rate );
+
+        port( const properties& p );
 
         void set_baud_rate( unsigned int baud_rate );
 

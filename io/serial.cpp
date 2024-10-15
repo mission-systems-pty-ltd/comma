@@ -9,9 +9,12 @@ namespace comma { namespace io { namespace serial {
 
 port::port( const std::string& name ): _port( _service, name ) {}
 
+port::port( const port::properties& p ): port( p.name, p.baud_rate ) {}
+
 port::port( const std::string& name, unsigned int baud_rate )
     : _port( _service, name )
 {
+    if( baud_rate == 0 ) { return; } // quick and dirty for now
     set_baud_rate( baud_rate );
     set_character_size( 8 );
     set_flow_control( boost::asio::serial_port_base::flow_control::none );
