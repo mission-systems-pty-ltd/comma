@@ -5,9 +5,9 @@
 
 #pragma once
 
+#include "../base/exception.h"
 #include <boost/asio.hpp>
 #include <boost/optional.hpp>
-#include <comma/base/exception.h>
 
 namespace comma { namespace io { namespace serial {
 
