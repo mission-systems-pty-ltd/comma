@@ -29,6 +29,8 @@ void port::set_parity( boost::asio::serial_port_base::parity::type parity ) { _p
 
 void port::set_stop_bits( boost::asio::serial_port_base::stop_bits::type stop_bits ) { _port.set_option( boost::asio::serial_port_base::stop_bits( stop_bits )); }
 
+std::size_t port::read_some( char* buf, std::size_t size ) { return read_some( reinterpret_cast< unsigned char* >( buf ), size ); }
+
 std::size_t port::read_some( unsigned char* buf, std::size_t buf_size )
 {
     boost::system::error_code ec;
@@ -37,9 +39,17 @@ std::size_t port::read_some( unsigned char* buf, std::size_t buf_size )
     return count;
 }
 
+std::size_t port::read_some( char* buf
+                           , std::size_t size
+                           , const boost::asio::deadline_timer::duration_type& timeout )
+{
+    return read_some( reinterpret_cast< unsigned char* >( buf ), size, timeout );
+}
+
 std::size_t port::read_some( unsigned char* buf
                            , std::size_t buf_size
                            , const boost::asio::deadline_timer::duration_type& timeout )
+
 {
     boost::optional< boost::system::error_code > timer_result;
     boost::asio::deadline_timer timer( _service );
@@ -67,6 +77,8 @@ std::size_t port::read_some( unsigned char* buf
     }
     return count;
 }
+
+std::size_t port::write( const char* buf, std::size_t to_write ) { return boost::asio::write( _port, boost::asio::buffer( buf, to_write )); }
 
 std::size_t port::write( const unsigned char* buf, std::size_t to_write ) { return boost::asio::write( _port, boost::asio::buffer( buf, to_write )); }
 

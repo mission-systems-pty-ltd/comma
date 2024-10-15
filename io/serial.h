@@ -29,9 +29,15 @@ class port
 
         void set_stop_bits( boost::asio::serial_port_base::stop_bits::type stop_bits );
 
+        std::size_t read_some( char* buf, std::size_t buf_size );
+
         std::size_t read_some( unsigned char* buf, std::size_t buf_size );
 
+        std::size_t read_some( char* buf, std::size_t buf_size, const boost::asio::deadline_timer::duration_type& timeout );
+
         std::size_t read_some( unsigned char* buf, std::size_t buf_size, const boost::asio::deadline_timer::duration_type& timeout );
+
+        std::size_t write( const char* buf, std::size_t to_write );
 
         std::size_t write( const unsigned char* buf, std::size_t to_write );
 
