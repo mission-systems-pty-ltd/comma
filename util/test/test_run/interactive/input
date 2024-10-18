@@ -1,0 +1,16 @@
+interactive/success/command="ls input test"
+interactive/success/instruction="will run ls on current directory, press YES for the test to succeed"
+interactive/success/expected="list of files in current directory"
+
+interactive/failure/by_user/command="ls input test"
+interactive/failure/by_user/instruction="will run ls on current directory, press NO for the test to fail"
+interactive/failure/by_user/expected="list of files in current directory"
+
+interactive/failure/by_expected/command="ls input test"
+interactive/failure/by_expected/instruction="will run ls on current directory, press YES, the test still should fail on actual/expected mismatch"
+interactive/failure/by_expected/expected="list of files in current directory"
+
+non_interactive/success[0]/command="ls input test"
+non_interactive/success[1]/command="ls input test"
+non_interactive/failure[0]/command="ls non-existent-file"
+non_interactive/failure[1]/command="ls non-existent-file"
