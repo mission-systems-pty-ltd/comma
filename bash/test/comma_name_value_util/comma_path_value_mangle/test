@@ -7,12 +7,18 @@ input="var_a=21
 var_b=22"
 
 echo "$input" | comma_path_value_mangle | sed 's|^|basic/|'
-
 echo -n "$input" | comma_path_value_mangle | sed 's|^|no_newline_at_end/|'
-
 echo "a/b/c=1" | comma_path_value_mangle | sed 's|^|path/|'
 echo "a-b-c=1" | comma_path_value_mangle | sed 's|^|dashes/|'
 echo "a/b-c=1" | comma_path_value_mangle | sed 's|^|path_with_dashes/|'
 echo "a/b[0]=1" | comma_path_value_mangle | sed 's|^|subscript/|'
 echo "a/b[0]/c=1" | comma_path_value_mangle | sed 's|^|subscript_followed_by_path/|'
 ( echo a; echo b; echo c ) | comma_path_value_mangle '_' 123
+
+cat <<eof | comma_path_value_mangle
+
+skip_empty_lines/n=a
+
+skip_empty_lines/v=b
+
+eof

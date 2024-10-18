@@ -12,3 +12,6 @@ subscript_followed_by_path/a_b_0_c='1'
 a="123"
 b="123"
 c="123"
+
+skip_empty_lines_n='a'
+skip_empty_lines_v='b'
