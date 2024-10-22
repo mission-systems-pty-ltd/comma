@@ -158,8 +158,14 @@ function comma_test_interactive_commands()
         {
             local name=$1 testcase_number=$2 number_of_testcases=$3
             local command instruction expected dialog input zenity_pid result
-            input=$( comma_path_value_mangle | sed 's/^/local /' )
-            eval "$input"
+            #input=$( comma_path_value_mangle | sed 's/^/local /' )
+            #eval "$input"
+            while IFS='=' read key value; do # have to do it piecemeal to avoid bash quoting difficulties
+                if [[ "$key" == "command" ]]; then command="$value"
+                elif [[ "$key" == "instruction" ]]; then instruction="$value"
+                elif [[ "$key" == "expected" ]]; then expected="$value"
+                else echo "$0: test '$name': expected 'command', 'instruction', or 'expected', got: '$key'" >&2; return 1; fi
+            done
             [[ -n "$command" ]] || { echo "$0: $name/command not specified" >&2 ; echo "$name/status=1"; return 1 ; }
             if [[ -n "$instruction" || -n "$expected" ]]; then                
                 [[ -z "$instruction" ]] || dialog+="$instruction\n\n"

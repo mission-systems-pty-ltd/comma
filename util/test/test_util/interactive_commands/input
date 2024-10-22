@@ -1,0 +1,6 @@
+basic/command="ls"
+quoted/single[0]/command="ls 'input' 'test'"
+quoted/single[1]/command=" ls 'input' 'test' "
+quoted/double[0]/command="ls \"input\" \"test\""
+quoted/double[1]/command=" ls \"input\" \"test\" "
+trailing_spaces/command="ls input"   
