@@ -39,27 +39,42 @@ readonly comma_test_util_include_guard_=1
 
 source $( type -p comma-name-value-util )
 
+function _comma_test_util_unquote()
+{
+    cat <<eof
+import sys
+for v in sys.stdin.readlines(): 
+    v = v.strip()
+    assert v.startswith( '"' ), f'comma-string-unquote: expected string starting with double quote; got: {v}'
+    assert v.endswith( '"' ), f'comma-string-unquote: expected string ending with with double quote"; got: {v}'
+    print( v[1:-1] )
+eof
+}
+
 function _comma_test_util_strip()
 {
     cat <<eof
 import sys
-v = sys.stdin.readline().strip()
-assert v.startswith( '"' ), f'expected command string starting with double quote; got: {v}'
-assert v.endswith( '"' ), f'expected command string ending with with double quote"; got: {v}'
-print( v[1:-1] )
+for line in sys.stdin.readlines(): print( line.strip() )
 eof
 }
 
 readonly _comma_test_util_strip_command="$( _comma_test_util_strip )"
+readonly _comma_test_util_unquote_command="$( _comma_test_util_unquote )"
 
-function comma_string_unquote() { python3 -c "$_comma_test_util_strip_command"; } # todo: add comma-string-util, parametrise on strip characters
+function comma-string-strip() { python3 -c "$_comma_test_util_strip_command"; } # todo: add comma-string-util, parametrise on strip characters
 
-export -f comma_string_unquote
+export -f comma-string-strip
+
+function comma-string-unquote() { python3 -c "$_comma_test_util_unquote_command"; } # todo: add comma-string-util, parametrise on strip characters
+
+export -f comma-string-unquote
 
 function _comma_test_command_impl()
 {
     local key="$1" value="$2"
-    value=$( comma_string_unquote <<< "$value" )
+    key=$( comma-string-strip <<< "$key" )
+    value=$( comma-string-unquote <<< "$value" )
     output=$( eval "$value" )
     status=$? # eval and bash -c both returns one error code, PIPESTATUS has only one value
     if (( $( wc -l <<< "$output" ) > 1 )); then # a separate case for backward compatibility
@@ -83,6 +98,7 @@ function _comma_test_commands_impl()
     local key value status output until_first_error=$1 fields=$2
     while IFS='=' read key value ; do
         [[ -n "$key" && ! "$key" =~ \#.* ]] || continue
+        key=$( comma-string-strip <<< "$key" )
         _comma_test_command_impl "$key" "$value"
         status=$?
         echo "$key/status=$status"
@@ -161,6 +177,7 @@ function comma_test_interactive_commands()
             #input=$( comma_path_value_mangle | sed 's/^/local /' )
             #eval "$input"
             while IFS='=' read key value; do # have to do it piecemeal to avoid bash quoting difficulties
+                key=$( comma-string-strip <<< "$key" )
                 if [[ "$key" == "command" ]]; then command="$value"
                 elif [[ "$key" == "instruction" ]]; then instruction="$value"
                 elif [[ "$key" == "expected" ]]; then expected="$value"
@@ -181,7 +198,7 @@ function comma_test_interactive_commands()
         }
 
         local lines=$( cat );
-        local test_cases=$( grep '/command=' <<< "$lines" | cut -d= -f1 | egrep '^[a-zA-Z0-9_]' | sed 's#/command$##' )
+        local test_cases=$( cut -d= -f1 <<< "$lines" | grep -v '^#' | comma-string-strip | grep '/command$' | egrep '^[a-zA-Z0-9_]' | sed 's#/command$##' )
         local number_of_testcases=$( wc -l <<< "$test_cases" )
         local testcase_number=0 test_case_name
         while read test_case_name; do
