@@ -1,4 +1,4 @@
-basic="ls"
+basic="ls input test"
 quoted/single[0]="ls 'input' 'test'"
 quoted/single[1]=" ls 'input' 'test' "
 quoted/single[2]=    " ls 'input' 'test' "

@@ -1,8 +1,5 @@
-basic/output/line[0]="expected"
-basic/output/line[1]="input"
-basic/output/line[2]="output"
-basic/output/line[3]="stats"
-basic/output/line[4]="test"
+basic/output/line[0]="input"
+basic/output/line[1]="test"
 basic/status=0
 quoted/single[0]/output/line[0]="input"
 quoted/single[0]/output/line[1]="test"

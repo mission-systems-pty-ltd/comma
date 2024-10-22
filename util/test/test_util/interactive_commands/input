@@ -1,4 +1,4 @@
-basic/command="ls"
+basic/command="ls input test"
 quoted/single[0]/command="ls 'input' 'test'"
 quoted/single[1]/command=" ls 'input' 'test' "
 quoted/single[2]/command= " ls 'input' 'test' "
