@@ -14,11 +14,11 @@ group/scalar/span[5]="( echo 1.1; echo 2; echo 5; echo 5.9 ) | csv-time --from s
 
 group/scalar/gap_and_span[0]="( echo 1; echo 2; echo 5; echo 6; echo 7; echo 8; echo 9 ) | csv-blocks group --fields scalar --gap 2 --span 4"
 
-group/scalar/range[0]="( seq 3; seq 3 ) | csv-blocks group --fields scalar --min 1.5
-group/scalar/range[1]="( seq 3; seq 3 ) | csv-blocks group --fields scalar --min 1.5 --discard-out-of-range
-group/scalar/range[2]="( seq 3; seq 3 ) | csv-blocks group --fields scalar --max 1.5
-group/scalar/range[3]="( seq 3; seq 3 ) | csv-blocks group --fields scalar --max 1.5 --discard-out-of-range
-group/scalar/range[4]="( seq 3; seq 3 ) | csv-blocks group --fields scalar --min 1.5 --max 2.5
-group/scalar/range[5]="( seq 3; seq 3 ) | csv-blocks group --fields scalar --min 1.5 --max 2.5 --discard-out-of-range
-group/scalar/range[6]="( seq 3; seq 3 ) | csv-blocks group --fields scalar --max 0
-group/scalar/range[7]="( seq 3; seq 3 ) | csv-blocks group --fields scalar --max 0 --discard-out-of-range
+group/scalar/range[0]="( seq 3; seq 3 ) | csv-blocks group --fields scalar --min 1.5"
+group/scalar/range[1]="( seq 3; seq 3 ) | csv-blocks group --fields scalar --min 1.5 --discard-out-of-range"
+group/scalar/range[2]="( seq 3; seq 3 ) | csv-blocks group --fields scalar --max 1.5"
+group/scalar/range[3]="( seq 3; seq 3 ) | csv-blocks group --fields scalar --max 1.5 --discard-out-of-range"
+group/scalar/range[4]="( seq 3; seq 3 ) | csv-blocks group --fields scalar --min 1.5 --max 2.5"
+group/scalar/range[5]="( seq 3; seq 3 ) | csv-blocks group --fields scalar --min 1.5 --max 2.5 --discard-out-of-range"
+group/scalar/range[6]="( seq 3; seq 3 ) | csv-blocks group --fields scalar --max 0"
+group/scalar/range[7]="( seq 3; seq 3 ) | csv-blocks group --fields scalar --max 0 --discard-out-of-range"
