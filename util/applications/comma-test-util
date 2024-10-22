@@ -39,11 +39,27 @@ readonly comma_test_util_include_guard_=1
 
 source $( type -p comma-name-value-util )
 
+function _comma_test_util_strip()
+{
+    cat <<eof
+import sys
+v = sys.stdin.readline().strip()
+assert v.startswith( '"' ), f'expected command string starting with double quote; got: {v}'
+assert v.endswith( '"' ), f'expected command string ending with with double quote"; got: {v}'
+print( v[1:-1] )
+eof
+}
+
+readonly _comma_test_util_strip_command="$( _comma_test_util_strip )"
+
+function comma_string_unquote() { python3 -c "$_comma_test_util_strip_command"; } # todo: add comma-string-util, parametrise on strip characters
+
+export -f comma_string_unquote
+
 function _comma_test_command_impl()
 {
     local key="$1" value="$2"
-    value="${value/#\"}"
-    value="${value/%\"}"
+    value=$( comma_string_unquote <<< "$value" )
     output=$( eval "$value" )
     status=$? # eval and bash -c both returns one error code, PIPESTATUS has only one value
     if (( $( wc -l <<< "$output" ) > 1 )); then # a separate case for backward compatibility

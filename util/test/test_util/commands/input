@@ -1,0 +1,6 @@
+basic="ls"
+quoted/single[0]="ls 'input' 'test'"
+quoted/single[1]=" ls 'input' 'test' "
+quoted/double[0]="ls \"input\" \"test\""
+quoted/double[1]=" ls \"input\" \"test\" "
+trailing_spaces="ls input"   
