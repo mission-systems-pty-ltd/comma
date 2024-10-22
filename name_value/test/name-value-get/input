@@ -1,28 +1,28 @@
-basics[0]=echo a=1 | name-value-get a
-basics[1]=echo '{ "a": 1, "b": 2, "c": 3}' | name-value-get b
+basics[0]="echo a=1 | name-value-get a"
+basics[1]="echo '{ \"a\": 1, \"b\": 2, \"c\": 3}' | name-value-get b"
 
-path[0]=echo '{ "a": 1, "b": 2, "c": { "d": 3 }}' | name-value-get c/d
-path[1]=( echo a/b/c=0; echo a/b/d=-1; ) | name-value-get a/b/d
+path[0]="echo '{ \"a\": 1, \"b\": 2, \"c\": { \"d\": 3 }}' | name-value-get c/d"
+path[1]="( echo a/b/c=0; echo a/b/d=-1; ) | name-value-get a/b/d"
 
-xml[0]=echo '{ "a": 1, "b": 2, "c": { "d": "omega" }}' | name-value-convert --to xml | name-value-get c/d
+xml[0]="echo '{ \"a\": 1, \"b\": 2, \"c\": { \"d\": \"omega\" }}' | name-value-convert --to xml | name-value-get c/d"
 
-non_existant[0]=echo '{ "a": 1, "b": 2, "c": { "d": 3 }}' | name-value-get d
-non_existant[1]=echo '{ "a": 1, "b": 2, "c": { "d": 3 }}' | name-value-get x/b
+non_existant[0]="echo '{ \"a\": 1, \"b\": 2, \"c\": { \"d\": 3 }}' | name-value-get d"
+non_existant[1]="echo '{ \"a\": 1, \"b\": 2, \"c\": { \"d\": 3 }}' | name-value-get x/b"
 
-empty_input[0]=name-value-get x < /dev/null
+empty_input[0]="name-value-get x < /dev/null"
 
 multiple_results[0]="( echo a/b[0]/c=0 ; echo a/b[1]/c=1 ) | name-value-convert --to json | name-value-get a/b | tr '\\n' ';'"
-multiple_results[1]="( echo a/b/c=0; echo a/b/d=1; echo a/b/e=2; ) | name-value-get a/b | tr \'\\\n\' \';\'"
+multiple_results[1]="( echo a/b/c=0; echo a/b/d=1; echo a/b/e=2; ) | name-value-get a/b | tr '\\n' ';'"
 
 indexed_path[0]="echo a[0]=1 | name-value-get a[0]"
 indexed_path[1]="echo a[0]=1 | name-value-convert --to json | name-value-get a[0]"
-indexed_path[2]="( echo a/b[0]/c=0 ; echo a/b[1]/c=1 ) | name-value-get a/b[0] | tr \'\\\n\' \';\'"
+indexed_path[2]="( echo a/b[0]/c=0 ; echo a/b[1]/c=1 ) | name-value-get a/b[0] | tr '\\n' ';'"
 indexed_path[3]="( echo a/b[0]/c=0 ; echo a/b[1]/c=1 ) | name-value-get a/b[1]/c"
-indexed_path[4]="( echo a/b[0]/c=0 ; echo a/b[1]/c=1 ) | name-value-get a | tr \'\\\n\' \';\'"
+indexed_path[4]="( echo a/b[0]/c=0 ; echo a/b[1]/c=1 ) | name-value-get a | tr '\\n' ';'"
 
 regex[0]="( echo a/alpha=0 ; echo a/aleph=1 ) | name-value-get 'a/ale.*' "
-regex[1]="( echo a/alpha=0 ; echo a/aleph=1; echo a/chi=2; ) | name-value-get 'a/al.*' | tr \'\\\n\' \';\'"
-regex[2]="( echo a/phi=0 ; echo a/psi=1; echo a/rho=2; ) | name-value-get --regex 'a/[pr]h[io]' | tr \'\\\n\' \';\'"
+regex[1]="( echo a/alpha=0 ; echo a/aleph=1; echo a/chi=2; ) | name-value-get 'a/al.*' | tr '\\n' ';'"
+regex[2]="( echo a/phi=0 ; echo a/psi=1; echo a/rho=2; ) | name-value-get --regex 'a/[pr]h[io]' | tr '\\n' ';'"
 
 whitespace[0]="( echo a/b/c=0; echo; echo a/b/d=1; echo; echo a/b/e=2; ) | name-value-get a/b/e"
 whitespace[1]="( echo a/b/c=0; echo a/b/d=1; echo a/b/ e =2; ) | name-value-get 'a/b/ e '"
