@@ -6,4 +6,4 @@ quoted/single[3] =    " ls 'input' 'test' "
 quoted/double[0]="ls \"input\" \"test\""
 quoted/double[1]=" ls \"input\" \"test\" "
 trailing_spaces="ls input"   
-# commented_test="exit 1"
+# commented_test="exit 1" # todo: add checks to expected
