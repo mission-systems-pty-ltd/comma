@@ -27,7 +27,6 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author cedric wohlleber
 
 #include <boost/thread/thread.hpp>
@@ -54,7 +53,6 @@ play::play( double speed, bool quiet, const boost::posix_time::time_duration& re
 /// @param time timestamp as ptime
 void play::wait( const boost::posix_time::ptime& time )
 {
-
     if ( !m_times_initialized )
     {
         boost::posix_time::ptime systemTime = boost::get_system_time();
@@ -70,7 +68,7 @@ void play::wait( const boost::posix_time::ptime& time )
             boost::posix_time::ptime systemTime = boost::get_system_time();
             const boost::posix_time::ptime target = m_systemFirst + boost::posix_time::milliseconds( static_cast<long>(( time - m_first ).total_milliseconds() / m_speed ) );
             const boost::posix_time::time_duration lag = systemTime - target;
-            if ( !m_quiet && ( lag > m_resolution ) ) // no need to be alarmed for a lag less than the expected accuracy
+            if ( !m_quiet && lag > m_resolution ) // no need to be alarmed for a lag less than the expected accuracy
             {
                 if( !m_lag )
                 {
@@ -83,14 +81,11 @@ void play::wait( const boost::posix_time::ptime& time )
             {
                 if( !m_quiet && m_lag )
                 {
-                    m_lag = false;
                     std::cerr << "csv-play: recovered after " << m_lagCounter << " packets " << std::endl;
+                    m_lag = false;
                     m_lagCounter = 0U;
                 }
-                if ( lag < -m_resolution ) // no need to sleep less than the expected accuracy
-                {
-                    boost::this_thread::sleep( target );
-                }
+                if( lag < -m_resolution ) { boost::this_thread::sleep( target ); } // no need to sleep less than the expected accuracy
             }
             m_last = time;
         }
@@ -103,17 +98,10 @@ void play::wait( const boost::posix_time::ptime& time )
 
 /// wait until a timestamp
 /// @param isoTime timestamp in iso format
-void play::wait( const std::string& isoTime )
-{
-    wait( boost::posix_time::from_iso_string( isoTime ) );
-}
+void play::wait( const std::string& isoTime ) { wait( boost::posix_time::from_iso_string( isoTime ) ); }
 
 /// allow for a pause in playback
 /// @param pause_duration duration of pause
-void play::paused_for( const boost::posix_time::time_duration& pause_duration )
-{
-    if( m_times_initialized ) { m_systemFirst += pause_duration; }
-}
-
+void play::paused_for( const boost::posix_time::time_duration& pause_duration ) { if( m_times_initialized ) { m_systemFirst += pause_duration; } }
 
 } } } // namespace comma { namespace csv { namespace impl {

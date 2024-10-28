@@ -27,7 +27,6 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author cedric wohlleber
 
 #include <sstream>
@@ -35,13 +34,8 @@
 #include "../../../string/string.h"
 #include "multiplay.h"
 
-namespace comma {
+namespace comma { namespace csv { namespace applications { namespace play {
 
-
-/*!
-    @brief Constructor
-    @param configs csv options
-*/
 Multiplay::Multiplay( const std::vector< SourceConfig >& configs
                     , double speed
                     , bool quiet
@@ -51,8 +45,8 @@ Multiplay::Multiplay( const std::vector< SourceConfig >& configs
                     , bool flush )
     : m_configs( configs )
     , istreams_( configs.size() )
-    , m_inputStreams( configs.size() )
-    , m_publishers( configs.size() )
+    , _input_streams( configs.size() )
+    , _publishers( configs.size() )
     , m_play( speed, quiet, resolution )
     , m_timestamps( configs.size() )
     , m_started( false )
@@ -66,11 +60,11 @@ Multiplay::Multiplay( const std::vector< SourceConfig >& configs
         // todo: quick and dirty for now: blocking streams for named pipes
         istreams_[i].reset( new io::istream( configs[i].options.filename, m_configs[i].options.binary() ? io::mode::binary : io::mode::ascii, io::mode::blocking ) );
         if( !( *istreams_[i] )() ) { COMMA_THROW( comma::exception, "named pipe " << configs[i].options.filename << " is closed (todo: support closed named pipes)" ); }
-        m_inputStreams[i].reset( new csv::input_stream< time >( *( *istreams_[i] )(), m_configs[i].options ) );
+        _input_streams[i].reset( new csv::input_stream< time >( *( *istreams_[i] )(), m_configs[i].options ) );
         unsigned int j;
         for( j = 0; j < i && configs[j].outputFileName != configs[i].outputFileName; ++j ); // quick and dirty: unique publishers
-        if( j == i ) { m_publishers[i].reset( new io::publisher( configs[i].outputFileName, m_configs[i].options.binary() ? io::mode::binary : io::mode::ascii, true, flush ) ); }
-        else { m_publishers[i] = m_publishers[j]; }
+        if( j == i ) { _publishers[i].reset( new io::publisher( configs[i].outputFileName, m_configs[i].options.binary() ? io::mode::binary : io::mode::ascii, true, flush ) ); }
+        else { _publishers[i] = _publishers[j]; }
         boost::posix_time::time_duration d;
         if( configs[i].offset.total_microseconds() != 0 )
         {
@@ -92,7 +86,7 @@ void Multiplay::close()
     for( unsigned int i = 0U; i < m_configs.size(); i++ )
     {
         istreams_[i]->close();
-        m_publishers[i]->close();
+        _publishers[i]->close();
     }
 }
 
@@ -112,21 +106,14 @@ bool Multiplay::ready() // quick and dirty; should not it be in io::Publisher?
     if( m_started ) { return true; }
     for( unsigned int i = 0; i < m_configs.size(); ++i )
     {
-        m_publishers[i]->accept();
-        if( m_publishers[i]->size() < m_configs[i].minNumberOfClients )
-        {
-            boost::this_thread::sleep( boost::posix_time::millisec( 200 ) );
-            return false;
-        }
+        _publishers[i]->accept();
+        if( _publishers[i]->size() < m_configs[i].minNumberOfClients ) { boost::this_thread::sleep( boost::posix_time::millisec( 200 ) ); return false; }
     }
     m_started = true;
     return true;
 }
     
-/*!
-    @brief try to read from all files and write the oldest
-    @return true if at least one file could be read
-*/
+/// @brief try to read from all files and write the oldest; return true if at least one file could be read
 bool Multiplay::read()
 {
     if( !ready() ) { return true; }
@@ -134,19 +121,12 @@ bool Multiplay::read()
     for( unsigned int i = 0U; i < m_configs.size(); ++i )
     {
         if( !m_timestamps[i].is_not_a_date_time() ) { end = false; continue; }
-        const time* time = m_inputStreams[i]->read();
+        const time* time = _input_streams[i]->read();
         if( time == NULL ) { continue; }
         boost::posix_time::ptime t = time->timestamp;
-        if( m_configs[i].offset.total_microseconds() != 0 )
-        {
-            t += m_configs[i].offset;
-        }
+        if( m_configs[i].offset.total_microseconds() != 0 ) { t += m_configs[i].offset; }
         end = false;
-        if( ( ( !m_from.is_not_a_date_time() ) && ( t < m_from ) ) || ( ( !m_to.is_not_a_date_time() ) && ( t > m_to ) ) )
-        {            
-            i--;
-            continue;
-        }
+        if( ( ( !m_from.is_not_a_date_time() ) && ( t < m_from ) ) || ( ( !m_to.is_not_a_date_time() ) && ( t > m_to ) ) ) { i--; continue; }
         m_timestamps[i] = t;
     }
     if( end ) { return false; }
@@ -158,23 +138,20 @@ bool Multiplay::read()
         oldest = m_timestamps[i];
         index = i;
     }
-    if( ( ( !m_from.is_not_a_date_time() ) && ( oldest < m_from ) ) || ( ( !m_to.is_not_a_date_time() ) && ( oldest > m_to ) ) )
-    {
-        return true;
-    }
+    if( ( ( !m_from.is_not_a_date_time() ) && ( oldest < m_from ) ) || ( ( !m_to.is_not_a_date_time() ) && ( oldest > m_to ) ) ) { return true; }
     now_ = oldest;
     m_play.wait( oldest );
     if( m_configs[index].options.binary() )
     {
         if( binary_[index] )
         {
-            ::memcpy( &buf_fer[0], m_inputStreams[index]->binary().last(), buf_fer.size() );
+            ::memcpy( &buf_fer[0], _input_streams[index]->binary().last(), buf_fer.size() );
             binary_[index]->put( time( oldest ), &buf_fer[0] );
-            m_publishers[index]->write( &buf_fer[0], buf_fer.size() );
+            _publishers[index]->write( &buf_fer[0], buf_fer.size() );
         }
         else
         {
-            m_publishers[index]->write( m_inputStreams[index]->binary().last(), m_configs[index].options.format().size() );
+            _publishers[index]->write( _input_streams[index]->binary().last(), m_configs[index].options.format().size() );
         }
     }
     else
@@ -182,18 +159,17 @@ bool Multiplay::read()
         static std::string endl = impl::endl(); // quick and dirty, since publisher is not std::stream
         if( ascii_[index] )
         {
-            std::vector< std::string > last = m_inputStreams[index]->ascii().last();
+            std::vector< std::string > last = _input_streams[index]->ascii().last();
             ascii_[index]->put( time( oldest ), last );
-            ( *m_publishers[index] ) << comma::join( last, m_configs[index].options.delimiter ) << endl;
+            ( *_publishers[index] ) << comma::join( last, m_configs[index].options.delimiter ) << endl;
         }
         else
         {
-            ( *m_publishers[index] ) << comma::join( m_inputStreams[index]->ascii().last(), m_configs[index].options.delimiter ) << endl;
+            ( *_publishers[index] ) << comma::join( _input_streams[index]->ascii().last(), m_configs[index].options.delimiter ) << endl;
         }
     }
     m_timestamps[index] = boost::posix_time::not_a_date_time;
     return true;
 }
 
-} // namespace comma {
-
+} } } } // namespace comma { namespace csv { namespace applications { namespace play {

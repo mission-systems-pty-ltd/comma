@@ -30,17 +30,17 @@
 
 /// @author cedric wohlleber
 
-#ifndef COMMA_CSV_MULTIPLAY_H
-#define COMMA_CSV_MULTIPLAY_H
+#pragma once
 
 #include <vector>
 #include <boost/thread/thread_time.hpp>
 #include "../../../csv/options.h"
 #include "../../../csv/stream.h"
 #include "../../../io/publisher.h"
+#include "../../../io/stream.h"
 #include "play.h"
 
-namespace comma {
+namespace comma { namespace csv { namespace applications { namespace play {
 
 /// gets data from multiple input files, and output in a real time manner to output files,  using timestamps
 class Multiplay
@@ -59,21 +59,18 @@ class Multiplay
             std::size_t minNumberOfClients;
             csv::options options;
             boost::posix_time::time_duration offset;
-            SourceConfig( const std::string& output, const csv::options& csv ) :
-                outputFileName( output ), minNumberOfClients( 0 ), options( csv ) {}
-            SourceConfig( const std::string& output, std::size_t n, const csv::options& csv ) :
-                outputFileName( output ), minNumberOfClients( n ), options( csv ) {}
+            SourceConfig( const std::string& output, const csv::options& csv ): outputFileName( output ), minNumberOfClients( 0 ), options( csv ) {}
+            SourceConfig( const std::string& output, std::size_t n, const csv::options& csv ): outputFileName( output ), minNumberOfClients( n ), options( csv ) {}
             SourceConfig() { options.full_xpath = false; };
         };
 
         Multiplay( const std::vector< SourceConfig >& configs
-                , double speed = 1.0
-                , bool quiet = false
-                , const boost::posix_time::time_duration& resolution = boost::posix_time::milliseconds( 1 )
-                , boost::posix_time::ptime from = boost::posix_time::not_a_date_time
-                , boost::posix_time::ptime to = boost::posix_time::not_a_date_time
-                , bool flush = true
-                 );
+                 , double speed = 1.0
+                 , bool quiet = false
+                 , const boost::posix_time::time_duration& resolution = boost::posix_time::milliseconds( 1 )
+                 , boost::posix_time::ptime from = boost::posix_time::not_a_date_time
+                 , boost::posix_time::ptime to = boost::posix_time::not_a_date_time
+                 , bool flush = true );
 
         void close();
 
@@ -86,8 +83,8 @@ class Multiplay
     private:
         std::vector<SourceConfig> m_configs;
         std::vector< boost::shared_ptr< comma::io::istream > > istreams_;
-        std::vector< boost::shared_ptr< csv::input_stream< time > > > m_inputStreams;
-        std::vector< boost::shared_ptr< comma::io::publisher > > m_publishers;
+        std::vector< boost::shared_ptr< csv::input_stream< time > > > _input_streams;
+        std::vector< boost::shared_ptr< comma::io::publisher > > _publishers;
         csv::impl::play m_play;
         std::vector< boost::posix_time::ptime > m_timestamps;
         boost::posix_time::ptime now_;
@@ -100,29 +97,21 @@ class Multiplay
         bool ready();
 };
 
-} // namespace comma {
+} } } } // namespace comma { namespace csv { namespace applications { namespace play {
 
 namespace comma { namespace visiting {
 
-template <> struct traits< comma::Multiplay::time >
+template <> struct traits< comma::csv::applications::play::Multiplay::time >
 {
-    template < typename Key, class Visitor >
-    static void visit( Key, comma::Multiplay::time& t, Visitor& v )
-    {
-        v.apply( "t", t.timestamp );
-    }
-
-    template < typename Key, class Visitor >
-    static void visit( Key, const comma::Multiplay::time& t, Visitor& v )
-    {
-        v.apply( "t", t.timestamp );
-    }
+    typedef comma::csv::applications::play::Multiplay::time type_t;
+    template < typename Key, class Visitor > static void visit( Key, type_t& t, Visitor& v ) { v.apply( "t", t.timestamp ); }
+    template < typename Key, class Visitor > static void visit( Key, const type_t& t, Visitor& v ) { v.apply( "t", t.timestamp ); }
 };
 
-template <> struct traits< comma::Multiplay::SourceConfig >
+template <> struct traits< comma::csv::applications::play::Multiplay::SourceConfig >
 {
-    template < typename Key, class Visitor >
-    static void visit( Key, comma::Multiplay::SourceConfig& c, Visitor& v )
+    typedef comma::csv::applications::play::Multiplay::SourceConfig type_t;
+    template < typename Key, class Visitor > static void visit( Key, type_t& c, Visitor& v )
     {
         v.apply( "options", c.options );
         v.apply( "output", c.outputFileName );
@@ -132,8 +121,7 @@ template <> struct traits< comma::Multiplay::SourceConfig >
 		c.offset = boost::posix_time::microseconds( static_cast< boost::int64_t >( duration * 1e6 ) );
     }
 
-    template < typename Key, class Visitor >
-    static void visit( Key, const comma::Multiplay::SourceConfig& c, Visitor& v )
+    template < typename Key, class Visitor > static void visit( Key, const type_t& c, Visitor& v )
     {
         v.apply( "options", c.options );
         v.apply( "output", c.outputFileName );
@@ -145,5 +133,3 @@ template <> struct traits< comma::Multiplay::SourceConfig >
 };
 
 } } // namespace comma { namespace visiting {
-
-#endif // COMMA_CSV_MULTIPLAY_H

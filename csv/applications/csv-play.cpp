@@ -153,7 +153,7 @@ examples
     exit( 0 );
 }
 
-static boost::scoped_ptr< comma::Multiplay > multiplay;
+static boost::scoped_ptr< comma::csv::applications::play::Multiplay > multiplay;
 static bool quit = false;
 
 class playback_state_t
@@ -308,14 +308,14 @@ int main( int argc, char** argv )
         comma::csv::options csv( argc, argv );
         csv.full_xpath = false;
         comma::name_value::parser name_value("filename,output", ';', '=', false );
-        std::vector< comma::Multiplay::SourceConfig > sourceConfigs( configstrings.size() );
-        comma::Multiplay::SourceConfig defaultConfig( "-", options.value( "--clients", 0 ), csv );
-        for( unsigned int i = 0U; i < configstrings.size(); ++i ) { sourceConfigs[i] = name_value.get< comma::Multiplay::SourceConfig >( configstrings[i], defaultConfig ); }
+        std::vector< comma::csv::applications::play::Multiplay::SourceConfig > source_configs( configstrings.size() );
+        comma::csv::applications::play::Multiplay::SourceConfig defaultConfig( "-", options.value( "--clients", 0 ), csv );
+        for( unsigned int i = 0U; i < configstrings.size(); ++i ) { source_configs[i] = name_value.get< comma::csv::applications::play::Multiplay::SourceConfig >( configstrings[i], defaultConfig ); }
         boost::posix_time::ptime fromtime;
         if( !from.empty() ) { fromtime = boost::posix_time::from_iso_string( from ); }
         boost::posix_time::ptime totime;
         if( !to.empty() ) { totime = boost::posix_time::from_iso_string( to ); }
-        multiplay.reset( new comma::Multiplay( sourceConfigs, speed, quiet, boost::posix_time::microseconds( static_cast<unsigned int>( resolution * 1000000 )), fromtime, totime, flush ));
+        multiplay.reset( new comma::csv::applications::play::Multiplay( source_configs, speed, quiet, boost::posix_time::microseconds( static_cast< unsigned int >( resolution * 1000000 )), fromtime, totime, flush ));
         if( options.exists( "--paused,--paused-at-start" )) { playback.pause(); }
         boost::optional< std::string > pause_at_option = options.optional< std::string >( "--pause-at" );
         boost::optional< boost::posix_time::ptime > pause_at_timestamp = boost::make_optional< boost::posix_time::ptime >( false, boost::posix_time::not_a_date_time );

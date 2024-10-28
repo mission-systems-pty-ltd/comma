@@ -27,11 +27,9 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author cedric wohlleber
 
-#ifndef COMMA_CSV_APPLICATIONS_PLAY_H
-#define COMMA_CSV_APPLICATIONS_PLAY_H
+#pragma once
 
 #include <boost/optional.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -63,5 +61,3 @@ private:
 };
 
 } } } // namespace comma { namespace csv { namespace impl {
-
-#endif // COMMA_CSV_APPLICATIONS_PLAY_H
