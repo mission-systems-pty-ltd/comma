@@ -162,16 +162,15 @@ public:
     playback_state_t() : state_( state::running ) {}
 
     bool is_running() const { return state_ == state::running; }
+
     bool is_paused() const { return state_ == state::paused; }
 
     void pause( const boost::posix_time::ptime& t = boost::posix_time::not_a_date_time )
     {
-        if( state_ != state::paused )
-        {
-            state_ = state::paused;
-            paused_time_ = boost::posix_time::microsec_clock::universal_time();
-            if( ! t.is_not_a_date_time() ) { std::cerr << "csv-play: paused at " << boost::posix_time::to_iso_string( t ) << std::endl; }
-        }
+        if( state_ == state::paused ) { return; }
+        state_ = state::paused;
+        paused_time_ = boost::posix_time::microsec_clock::universal_time();
+        if( ! t.is_not_a_date_time() ) { std::cerr << "csv-play: paused at " << boost::posix_time::to_iso_string( t ) << std::endl; }
     }
 
     void unpause()
@@ -181,12 +180,10 @@ public:
 
     void run()
     {
-        if( state_ != state::running )
-        {
-            if( state_ == state::paused ) { unpause(); }
-            state_ = state::running;
-            std::cerr << "csv-play: resumed" << std::endl;
-        }
+        if( state_ == state::running ) { return; }
+        if( state_ == state::paused ) { unpause(); }
+        state_ = state::running;
+        std::cerr << "csv-play: resumed" << std::endl;
     }
 
     void read_once()
@@ -195,14 +192,10 @@ public:
         state_ = state::read_once;
     }
 
-    void has_read_once()
-    {
-        if( state_ == state::read_once ) { pause(); }
-    }
+    void has_read_once() { if( state_ == state::read_once ) { pause(); } }
 
 private:
     enum class state { running, paused, read_once, read_block };
-
     state state_;
     boost::posix_time::ptime paused_time_;
 };
@@ -219,23 +212,11 @@ public:
         key k = get_key();
         switch( k )
         {
-            case key::space:
-                if( playback.is_running() ) { playback.pause( t ); }
-                else { playback.run(); }
-                break;
-            case key::down_arrow:
-            case key::right_arrow:
-                playback.read_once();
-                break;
-            case key::q:
-                quit = true;
-                break;
-            case key::t:
-                std::cerr << boost::posix_time::to_iso_string( t ) << std::endl;
-                break;
-            case key::none:
-            case key::other:
-                break;
+            case key::space: if( playback.is_running() ) { playback.pause( t ); } else { playback.run(); } break;
+            case key::down_arrow: case key::right_arrow: playback.read_once(); break;
+            case key::q: quit = true; break;
+            case key::t: std::cerr << boost::posix_time::to_iso_string( t ) << std::endl; break;
+            case key::none: case key::other: break;
         }
     }
     
@@ -346,16 +327,8 @@ int main( int argc, char** argv )
         {
             boost::posix_time::ptime now = multiplay->now();
             key_press_handler.update( now );
-            if( pause_at_timestamp && !now.is_not_a_date_time() && *pause_at_timestamp < now )
-            {
-                playback.pause( now );
-                pause_at_timestamp = boost::none;
-            }
-            if( playback.is_paused() )
-            {
-                boost::this_thread::sleep( boost::posix_time::millisec( 200 ) );
-                continue;
-            }
+            if( pause_at_timestamp && !now.is_not_a_date_time() && *pause_at_timestamp < now ) { playback.pause( now ); pause_at_timestamp = boost::none; }
+            if( playback.is_paused() ) { boost::this_thread::sleep( boost::posix_time::millisec( 200 ) ); continue; }
             if( !multiplay->read() ) { break; }
             playback.has_read_once();
         }
