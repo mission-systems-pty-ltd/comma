@@ -80,73 +80,76 @@ static void interactive_help( std::string prefix )
     std::cerr << prefix << "<q>: quit" << std::endl;
 }
 
-static void usage( bool )
+static void usage( bool verbose )
 {
-    std::cerr << std::endl;
-    std::cerr << "play back timestamped data from standard input in a real time manner" << std::endl;
-    std::cerr << "to standard output or optionally into given files/pipes" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "usage: csv-play [<options>]" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "options" << std::endl;
-    std::cerr << "    --speed: speed-up playback by a factor, default is 1 (inverse to --slowdown)" << std::endl;
-    std::cerr << "    --slowdown,--slow: slow-down playback by a factor, default is 1 (inverse to --speed)" << std::endl;
-    std::cerr << "    --quiet: don't print warnings when lagging behind" << std::endl;
-    std::cerr << "    --fields <fields> : specify where timestamp is" << std::endl;
-    std::cerr << "                        e.g., if timestamp is the 4th field: --fields=\",,,t\"" << std::endl;
-    std::cerr << "                        default: the timestamp is the first field" << std::endl;
-    std::cerr << "    --binary <format> : use binary format" << std::endl;
-    std::cerr << "    --clients: minimum number of clients to connect to each stream" << std::endl;
-    std::cerr << "               before playback starts; default 0" << std::endl;
-    std::cerr << "               can be specified individually for each client, e.g." << std::endl;
-    std::cerr << "               csv-play file1;pipe;clients=1 file2;tcp:1234;clients=3" << std::endl;
-    std::cerr << "    --interactive,-i: react to key presses:" << std::endl;
+    std::cerr << R"(
+play back timestamped data from standard input in a real time manner
+to standard output or optionally into given files/pipes
+
+usage: csv-play [<options>]
+
+options
+    --speed: speed-up playback by a factor, default is 1 (inverse to --slowdown)
+    --slowdown,--slow: slow-down playback by a factor, default is 1 (inverse to --speed)
+    --quiet: don't print warnings when lagging behind
+    --fields <fields> : specify where timestamp is
+                        e.g., if timestamp is the 4th field: --fields=',,,t'
+                        default: the timestamp is the first field
+    --binary <format> : use binary format
+    --clients: minimum number of clients to connect to each stream
+               before playback starts; default 0
+               can be specified individually for each client, e.g.
+               csv-play file1;pipe;clients=1 file2;tcp:1234;clients=3
+    --interactive,-i: react to key presses:"
+)";
     interactive_help( "    --interactive,-i: " );
-    std::cerr << "    --no-flush : if present, do not flush the output stream ( use on high bandwidth sources )" << std::endl;
-    std::cerr << "    --paused-at-start,--paused: start playback as paused, implies --interactive" << std::endl;
-    std::cerr << "    --pause-at=[<timestamp>]; pause when timestamp reached, implies --interactive" << std::endl;
-    std::cerr << "    --resolution=<second>: timestamp resolution; timestamps closer than this value will be" << std::endl;
-    std::cerr << "                           played without delay; the rationale is that microsleep used in csv-play" << std::endl;
-    std::cerr << "                           (boost::this_thread::sleep()) is essentially imprecise and may create" << std::endl;
-    std::cerr << "                           unnecessary delays in the data" << std::endl;
-    std::cerr << "                           default 0.01" << std::endl;
-    std::cerr << "    --from <timestamp> : play back data starting at <timestamp> ( iso format )" << std::endl;
-    std::cerr << "    --to <timestamp> : play back data up to <timestamp> ( iso format )" << std::endl;
-    std::cerr << comma::csv::format::usage();
-    std::cerr << std::endl;
-    std::cerr << "output" << std::endl;
-    std::cerr << "    -: write to stdout (default)" << std::endl;
-    std::cerr << "    offset=<offset>: add <offset> seconds to the timestamp of this source" << std::endl;
-    std::cerr << "    <filename>: write to file or named pipe, e.g. csv-play \"points.csv;pipe\"" << std::endl;
-    std::cerr << "    tcp:<port>: open tcp server socket on given port and write to the tcp clients" << std::endl;
-    std::cerr << "    local:<name>: same as tcp, but use unix/linux domain sockets" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "examples" << std::endl;
-    std::cerr << "    output timestamped 3d points in real time manner to stdout (e.g. for visualisation)" << std::endl;
-    std::cerr << "        cat points.csv | csv-play | view-points --fields=,x,y,z" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "    play back several files and output to, say, named pipes:" << std::endl;
-    std::cerr << "        mkfifo file1.pipe file2.pipe" << std::endl;
-    std::cerr << "        csv-play \"file1.csv;pipe1\" \"file2.csv;pipe2\" &" << std::endl;
-    std::cerr << "        view-points pipe1 pipe2 --fields=,x,y,z" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "    same as above, but block, until all the pipes are connected:" << std::endl;
-    std::cerr << "        csv-play \"file1.csv;pipe1\" \"file2.csv;pipe2\" --clients=1 &" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "    output multiple inputs of the same format to stdout:" << std::endl;
-    std::cerr << "        csv-play \"file1.csv;-\" \"file2.csv;-\" &" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "    use binary data (try it)" << std::endl;
-    std::cerr << "        > csv-play <( csv-paste line-number | csv-repeat --pace --period 1 | csv-time-amp | csv-to-bin t,ui --flush )';-;binary=t,ui' \\" << std::endl;
-    std::cerr << "                 <( csv-paste line-number value=0 | csv-repeat --pace --period 1 | csv-time-stamp | csv-to-bin t,2ui --flush )';tcp:8888;binary=t,2ui' \\" << std::endl;
-    std::cerr << "            | csv-from-bin t,ui" << std::endl;
-    std::cerr << "        > #in another shell, run" << std::endl;
-    std::cerr << "        > socat tcp:localhost:8888 - | csv-from-bin t,2ui" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "    pause and step through output:" << std::endl;
-    std::cerr << "        echo 0 | csv-repeat --period 0.1 --yes | csv-paste - line-number \\" << std::endl;
-    std::cerr << "            | csv-time-stamp | csv-play --interactive" << std::endl;
-    std::cerr << std::endl;
+    std::cerr << R"(    --no-flush : if present, do not flush the output stream ( use on high bandwidth sources )
+    --paused-at-start,--paused: start playback as paused, implies --interactive
+    --pause-at=[<timestamp>]; pause when timestamp reached, implies --interactive
+    --resolution=<second>: timestamp resolution; timestamps closer than this value will be
+                           played without delay; the rationale is that microsleep used in csv-play
+                           (boost::this_thread::sleep()) is essentially imprecise and may create
+                           unnecessary delays in the data
+                           default 0.01
+    --from <timestamp> : play back data starting at <timestamp> ( iso format )
+    --to <timestamp> : play back data up to <timestamp> ( iso format )
+)" << std::endl;
+    std::cerr << "csv options" << std::endl;
+    std::cerr << comma::csv::options::usage( verbose );
+    std::cerr << R"(
+output
+    -: write to stdout (default)
+    offset=<offset>: add <offset> seconds to the timestamp of this source
+    <filename>: write to file or named pipe, e.g. csv-play 'points.csv;pipe'
+    tcp:<port>: open tcp server socket on given port and write to the tcp clients
+    local:<name>: same as tcp, but use unix/linux domain sockets
+
+examples
+    output timestamped 3d points in real time manner to stdout (e.g. for visualisation)
+        cat points.csv | csv-play | view-points --fields=,x,y,z
+
+    play back several files and output to, say, named pipes:
+        mkfifo file1.pipe file2.pipe
+        csv-play 'file1.csv;pipe1' 'file2.csv;pipe2' &
+        view-points pipe1 pipe2 --fields=,x,y,z
+
+    same as above, but block, until all the pipes are connected:
+        csv-play 'file1.csv;pipe1' 'file2.csv;pipe2' --clients=1 &
+
+    output multiple inputs of the same format to stdout:
+        csv-play 'file1.csv;-' 'file2.csv;-' &
+
+    use binary data (try it)
+        > csv-play <( csv-paste line-number | csv-repeat --pace --period 1 | csv-time-amp | csv-to-bin t,ui --flush )';-;binary=t,ui' \
+                   <( csv-paste line-number value=0 | csv-repeat --pace --period 1 | csv-time-stamp | csv-to-bin t,2ui --flush )';tcp:8888;binary=t,2ui' \
+            | csv-from-bin t,ui
+        > #in another shell, run
+        > socat tcp:localhost:8888 - | csv-from-bin t,2ui
+
+    pause and step through output:
+        echo 0 | csv-repeat --period 0.1 --yes | csv-paste - line-number | csv-time-stamp | csv-play --interactive
+
+)" << std::endl;
     exit( 0 );
 }
 
