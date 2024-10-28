@@ -42,6 +42,43 @@
 
 namespace comma { namespace csv { namespace applications { namespace play {
 
+struct publisher // todo? quick and dirty; improve and put someplace generic
+{
+    virtual ~publisher() = default;
+    virtual unsigned int size() const = 0;
+    virtual void close() = 0;
+    virtual void accept() {}
+    virtual void write( const char* buf, unsigned int size ) = 0;
+    virtual void write_line( const std::string& ) = 0;
+};
+
+class server_publisher: public publisher
+{
+    public:
+        server_publisher( const std::string& name, bool binary, bool flush ): _oserver( name, binary ? io::mode::binary : io::mode::ascii, true, flush || !binary ) {}
+        unsigned int size() const { return _oserver.size(); }
+        void close() { _oserver.close(); }
+        void accept() { _oserver.accept(); }
+        void write( const char* buf, unsigned int size ) { _oserver.write( buf, size ); }
+        void write_line( const std::string& s ) { _oserver.write( &s[0], s.size() ); _oserver.write( "\n", 1 ); }
+    private:
+        io::oserver _oserver;
+};
+
+class client_publisher: public publisher
+{
+    public:
+        client_publisher( const std::string& name, bool binary, bool flush ): _ostream( name, binary ? io::mode::binary : io::mode::ascii, io::mode::non_blocking ), _flush( flush ) {}
+        unsigned int size() const { return 1; }
+        void close() { _ostream.close(); }
+        void accept() {}
+        void write( const char* buf, unsigned int size ) { _ostream->write( buf, size ); if( _flush ) { _ostream->flush(); } }
+        void write_line( const std::string& s ) { _ostream->write( &s[0], s.size() ); if( _flush ) { _ostream->flush(); } ( *_ostream ) << std::endl; }
+    private:
+        io::ostream _ostream;
+        bool _flush{false};
+};
+
 /// gets data from multiple input files, and output in a real time manner to output files,  using timestamps
 class Multiplay
 {
@@ -84,7 +121,7 @@ class Multiplay
         std::vector<SourceConfig> m_configs;
         std::vector< boost::shared_ptr< comma::io::istream > > istreams_;
         std::vector< boost::shared_ptr< csv::input_stream< time > > > _input_streams;
-        std::vector< boost::shared_ptr< comma::io::publisher > > _publishers;
+        std::vector< boost::shared_ptr< comma::csv::applications::play::publisher > > _publishers;
         csv::impl::play m_play;
         std::vector< boost::posix_time::ptime > m_timestamps;
         boost::posix_time::ptime now_;
@@ -93,7 +130,7 @@ class Multiplay
         boost::posix_time::ptime m_to;
         std::vector< boost::shared_ptr< csv::ascii< time > > > ascii_;
         std::vector< boost::shared_ptr< csv::binary< time > > > binary_;
-        std::vector< char > buf_fer;
+        std::vector< char > _buffer;
         bool ready();
 };
 

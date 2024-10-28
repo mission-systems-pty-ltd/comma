@@ -63,7 +63,7 @@ Multiplay::Multiplay( const std::vector< SourceConfig >& configs
         _input_streams[i].reset( new csv::input_stream< time >( *( *istreams_[i] )(), m_configs[i].options ) );
         unsigned int j;
         for( j = 0; j < i && configs[j].outputFileName != configs[i].outputFileName; ++j ); // quick and dirty: unique publishers
-        if( j == i ) { _publishers[i].reset( new io::publisher( configs[i].outputFileName, m_configs[i].options.binary() ? io::mode::binary : io::mode::ascii, true, flush ) ); }
+        if( j == i ) { _publishers[i].reset( new comma::csv::applications::play::server_publisher( configs[i].outputFileName, m_configs[i].options.binary(), flush ) ); }
         else { _publishers[i] = _publishers[j]; }
         boost::posix_time::time_duration d;
         if( configs[i].offset.total_microseconds() != 0 )
@@ -71,7 +71,7 @@ Multiplay::Multiplay( const std::vector< SourceConfig >& configs
             if( m_configs[i].options.binary() )
             {
                 binary_[i].reset( new csv::binary< time >( m_configs[i].options.fields ) );
-                buf_fer.resize( m_configs[i].options.format().size() );
+                _buffer.resize( m_configs[i].options.format().size() );
             }
             else
             {
@@ -145,9 +145,9 @@ bool Multiplay::read()
     {
         if( binary_[index] )
         {
-            ::memcpy( &buf_fer[0], _input_streams[index]->binary().last(), buf_fer.size() );
-            binary_[index]->put( time( oldest ), &buf_fer[0] );
-            _publishers[index]->write( &buf_fer[0], buf_fer.size() );
+            ::memcpy( &_buffer[0], _input_streams[index]->binary().last(), _buffer.size() );
+            binary_[index]->put( time( oldest ), &_buffer[0] );
+            _publishers[index]->write( &_buffer[0], _buffer.size() );
         }
         else
         {
@@ -161,11 +161,11 @@ bool Multiplay::read()
         {
             std::vector< std::string > last = _input_streams[index]->ascii().last();
             ascii_[index]->put( time( oldest ), last );
-            ( *_publishers[index] ) << comma::join( last, m_configs[index].options.delimiter ) << endl;
+            _publishers[index]->write_line( comma::join( last, m_configs[index].options.delimiter ) );
         }
         else
         {
-            ( *_publishers[index] ) << comma::join( _input_streams[index]->ascii().last(), m_configs[index].options.delimiter ) << endl;
+            _publishers[index]->write_line( comma::join( _input_streams[index]->ascii().last(), m_configs[index].options.delimiter ) );
         }
     }
     m_timestamps[index] = boost::posix_time::not_a_date_time;
