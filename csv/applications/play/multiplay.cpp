@@ -63,8 +63,16 @@ Multiplay::Multiplay( const std::vector< SourceConfig >& configs
         _input_streams[i].reset( new csv::input_stream< time >( *( *istreams_[i] )(), m_configs[i].options ) );
         unsigned int j;
         for( j = 0; j < i && configs[j].outputFileName != configs[i].outputFileName; ++j ); // quick and dirty: unique publishers
-        if( j == i ) { _publishers[i].reset( new comma::csv::applications::play::server_publisher( configs[i].outputFileName, m_configs[i].options.binary(), flush ) ); }
-        else { _publishers[i] = _publishers[j]; }
+        if( j == i )
+        {
+            const auto& s = comma::split( configs[i].outputFileName, ':' ); // todo: quick and dirty for now; add usage semantics for local sockets
+            if( s.size() > 2 && s[0] == "tcp" ) { _publishers[i].reset( new comma::csv::applications::play::client_publisher( configs[i].outputFileName, m_configs[i].options.binary(), flush ) ); }
+            else { _publishers[i].reset( new comma::csv::applications::play::server_publisher( configs[i].outputFileName, m_configs[i].options.binary(), flush ) ); }
+        }
+        else
+        {
+            _publishers[i] = _publishers[j];
+        }
         boost::posix_time::time_duration d;
         if( configs[i].offset.total_microseconds() != 0 )
         {
