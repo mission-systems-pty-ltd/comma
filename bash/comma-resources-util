@@ -168,13 +168,8 @@ export -f comma_queue_is_empty_infile
 # Extract cpu count, cores and sockets from lscpu
 function comma_cpu_resources()
 {
-    local lscpu=$( lscpu --parse )
-    local fields=$( echo "$lscpu" | grep '^#' | tail -1 | sed 's/^[# ]*//' )
-    {
-        # lscpu --parse gives us zero-based indexes. Add one to get the count
-        echo "$lscpu" | tail -1 | csv-shuffle --fields $fields --output CPU,Core,Socket
-        echo "1,1,1"
-    } | csv-calc sum --format 3i | name-value-from-csv --fields cpu,core,socket --prefix cpu
+    local fields='cpu,core,socket'
+    { lscpu --parse="$fields" | grep -v '^#' | tail -n1; echo 1,1,1; } | csv-calc sum --format 3i | name-value-from-csv --fields="$fields" --prefix=cpu
 }
 
 # Output the most commonly used system resources: number of CPUs, total RAM,
