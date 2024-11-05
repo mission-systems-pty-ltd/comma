@@ -160,17 +160,17 @@ def update( d0, d, verbose=False ):
 
     def _update( _d0, _d, path, _p ):
         if isinstance( _d0, typing.Dict ):
-            assert isinstance( _d, typing.Dict ), f'expected dictionary in d at {"/".join( path )}; got: {type(_d)=}'
+            assert isinstance( _d, typing.Dict ), f'expected dictionary in d at {"/".join( path )}; got: type(_d)={type(_d)}'
             for k, v in _d.items():
                 if k in _d0: _assign( _d0, k, v, _p( path, k ), _p )
                 else: _d0[k] = copy.deepcopy( v )
         elif isinstance( _d0, typing.List ):
-            assert isinstance( _d, typing.List ), f'expected list in d at {"/".join( path )}; got: {type(_d)=}'
+            assert isinstance( _d, typing.List ), f'expected list in d at {"/".join( path )}; got: type(_d)={type(_d)}'
             for i, v in enumerate( _d ):
                 if i < len( _d0 ): _assign( _d0, i, v, _p( path, i, True ), _p )
                 else: _d0.append( copy.deepcopy( v ) )
         else:
-            raise NotImplementedError( f'expected list or dictionary in d0 at {"/".join( path )}; got: {type(d0)=}' )
+            raise NotImplementedError( f'expected list or dictionary in d0 at {"/".join( path )}; got: type(d0)={type(d0)}' )
 
     _p = _update_path if verbose else _update_path_none
     _update( d0, d, [], _p )
