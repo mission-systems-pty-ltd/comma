@@ -127,3 +127,5 @@ def test_dictionary_update():
     assert dictionary.update( [1, 2, [3, 4, 5]], [] ) == [1, 2, [3, 4, 5]]
     assert dictionary.update( [], [1, 2, [3, 4, 5]] ) == [1, 2, [3, 4, 5]]
     assert dictionary.update( [1, 2, [3, 4, 5]], [1, 2, [3, 4, 6, 7]] ) == [1, 2, [3, 4, 6, 7]]
+    assert dictionary.update( { 'a': 1, 'b': 2, 'c': [3, 4, 5]}, { 'a': 6, 'c': [7, 8, 9, 10] } ) == { 'a': 6, 'b': 2, 'c': [7, 8, 9, 10]}
+    # todo: more tests on corner cases, negative cases, etc

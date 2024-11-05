@@ -139,7 +139,9 @@ def update( d0, d, verbose=False ):
     
     examples
     --------
-        >>> todo
+        >>> import comma.dictionary
+        >>> comma.dictionary.update( { 'a': 1, 'b': 2, 'c': [3, 4, 5]}, { 'a': 6, 'c': [7, 8, 9, 10] } )
+        { 'a': 6, 'b': 2, 'c': [7, 8, 9, 10]}
     '''
     def _update_path( path, k, bracketed=False ):
         p = copy.deepcopy( path )
