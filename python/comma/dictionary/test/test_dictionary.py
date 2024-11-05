@@ -116,4 +116,14 @@ def test_dictionary_update():
     assert dictionary.update( { 'a': 1, 'b': 2 }, { 'c': 3, 'd': { 'e': 4 } } ) == { 'a': 1, 'b': 2, 'c': 3, 'd': { 'e': 4 } }
     assert dictionary.update( {}, { 'c': 3 } ) == { 'c': 3 }
     assert dictionary.update( {}, { 'c': 3, 'd': { 'e': 4 } } ) == { 'c': 3, 'd': { 'e': 4 } }
-    assert dictionary.update( { 'a': 1, 'b': 2 }, { 'a': 4, 'c': 3 }, verbose=True ) == { 'a': 4, 'b': 2, 'c': 3 }
+    assert dictionary.update( { 'a': 1, 'b': 2 }, { 'a': 4, 'c': 3 } ) == { 'a': 4, 'b': 2, 'c': 3 }
+    assert dictionary.update( { 'a': 1, 'b': 2, 'd': { 'e': { 'f': 3 }, 'g': { 'h': 4 } } }, { 'd': { 'e': { 'f': 5 }, 'g': { 'h': 4 } } } ) == { 'a': 1, 'b': 2, 'd': { 'e': { 'f': 5 }, 'g': { 'h': 4 } } }
+    assert dictionary.update( [], [] ) == []
+    assert dictionary.update( [1, 2], [] ) == [1, 2]
+    assert dictionary.update( [1, 2], [3, 4, 5] ) == [3, 4, 5]
+    assert dictionary.update( [1, { 'a': 1, 'b': { 'c': 2 } }], [1, {}, 5] ) == [1, { 'a': 1, 'b': { 'c': 2 } }, 5]
+    assert dictionary.update( [1, { 'a': 1, 'b': { 'c': 2 } }], [1, { 'a': 4 }, 5] ) == [1, { 'a': 4, 'b': { 'c': 2 } }, 5]
+    assert dictionary.update( [1, { 'a': 1, 'b': { 'c': 2 } }], [1, { 'a': 4, 'b': { 'c': 6, 'd': 7 } }, 5] ) == [1, { 'a': 4, 'b': { 'c': 6, 'd': 7 } }, 5]
+    assert dictionary.update( [1, 2, [3, 4, 5]], [] ) == [1, 2, [3, 4, 5]]
+    assert dictionary.update( [], [1, 2, [3, 4, 5]] ) == [1, 2, [3, 4, 5]]
+    assert dictionary.update( [1, 2, [3, 4, 5]], [1, 2, [3, 4, 6, 7]] ) == [1, 2, [3, 4, 6, 7]]
