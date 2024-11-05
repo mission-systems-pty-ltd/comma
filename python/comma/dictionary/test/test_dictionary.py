@@ -108,3 +108,12 @@ def test_dictionary_set():
     dictionary.set(f, '[4]/a', 44)
     dictionary.set(f, '[4]/b', 55)
     assert f[4] == {'a': 44, 'b': 55 }
+
+def test_dictionary_update():
+    assert dictionary.update( {}, {} ) == {}
+    assert dictionary.update( { 'a': 1, 'b': 2 }, {} ) == { 'a': 1, 'b': 2 }
+    assert dictionary.update( { 'a': 1, 'b': 2 }, { 'c': 3 } ) == { 'a': 1, 'b': 2, 'c': 3 }
+    assert dictionary.update( { 'a': 1, 'b': 2 }, { 'c': 3, 'd': { 'e': 4 } } ) == { 'a': 1, 'b': 2, 'c': 3, 'd': { 'e': 4 } }
+    assert dictionary.update( {}, { 'c': 3 } ) == { 'c': 3 }
+    assert dictionary.update( {}, { 'c': 3, 'd': { 'e': 4 } } ) == { 'c': 3, 'd': { 'e': 4 } }
+    assert dictionary.update( { 'a': 1, 'b': 2 }, { 'a': 4, 'c': 3 }, verbose=True ) == { 'a': 4, 'b': 2, 'c': 3 }

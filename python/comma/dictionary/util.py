@@ -132,3 +132,44 @@ def set( d, path, value, delimiter = '/' ):
                 _set( eval( f'd[{s[1]}' if s[0] == '' else f'd["{s[0]}"][{s[1]}', { 'd': d } ), p[1:])
     _set( d, path.split( delimiter ) )
     return d
+
+def update( d0, d, verbose=False ):
+    '''
+    nested update of d0 by values in d
+    
+    examples
+    --------
+        >>> todo
+    '''
+    def _update_path( path, k, bracketed=False ):
+        p = copy.deepcopy( path )
+        if bracketed:
+            if len( p ) == 0: p = [ f'[{k}]' ]
+            else: p[-1] = f'{p[-1]}[{k}]'
+        else: p.append( k )
+        return p
+
+    def _update_path_none( path, k, bracketed=False ): return path
+
+    def _assign( _d0, k, v, path, _p ):
+        t = _d0[k]
+        if isinstance( t, typing.Dict ) or isinstance( t, typing.List ): _update( t, v, path, _p )
+        else: _d0[k] = v
+
+    def _update( _d0, _d, path, _p ):
+        if isinstance( _d0, typing.Dict ):
+            assert isinstance( _d, typing.Dict ), f'expected dictionary in d at {"/".join( path )}; got: {type(_d)=}'
+            for k, v in _d.items():
+                if k in _d0: _assign( _d0, k, v, _p( path, k ), _p )
+                else: _d0[k] = copy.deepcopy( v )
+        elif isinstance( _d0, typing.List ):
+            assert isinstance( _d, typing.List ), f'expected list in d at {"/".join( path )}; got: {type(_d)=}'
+            for i, v in enumerate( _d ):
+                if i < len( _d0 ): _update( _d0, i, v, _p( path, i, True ), _p )
+                else: _d0.append( copy.deepcopy( v ) )
+        else:
+            raise NotImplementedError( f'expected list or dictionary in d0 at {"/".join( path )}; got: {type(d0)=}' )
+
+    _p = _update_path if verbose else _update_path_none
+    _update( d0, d, [], _p )
+    return d0
