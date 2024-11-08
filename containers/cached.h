@@ -24,7 +24,7 @@ class cached
 
         void pop( unsigned int size = 1 );
 
-        const std::unordered_map< K, T, Hash >& values() const { return _values; }
+        const std::unordered_map< K, std::unique_ptr< T >, Hash >& values() const { return _values; }
 
     protected:
         mutable std::unordered_map< K, std::unique_ptr< T >, Hash > _values; // todo! use proper move semantics instead of unique_ptr
