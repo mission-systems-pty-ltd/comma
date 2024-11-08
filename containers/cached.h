@@ -2,8 +2,8 @@
 // All Rights Reserved
 
 #include <deque>
+#include <memory>
 #include <unordered_map>
-
 namespace comma {
 
 template < typename T, typename K, typename Hash = std::hash< K > >
@@ -27,7 +27,7 @@ class cached
         const std::unordered_map< K, T, Hash >& values() const { return _values; }
 
     protected:
-        mutable std::unordered_map< K, T, Hash > _values;
+        mutable std::unordered_map< K, std::unique_ptr< T >, Hash > _values; // todo! use proper move semantics instead of unique_ptr
         mutable std::deque< K > _keys;
         unsigned int _size{0};
 };
@@ -38,10 +38,10 @@ T& cached< T, K, Hash >::get( Args... args )
 {
     K k{ args... };
     auto i = _values.find( k );
-    if( i != _values.end() ) { return i->second; }
+    if( i != _values.end() ) { return *( i->second ); }
     if( _size > 0 && _values.size() == _size ) { pop(); }
     _keys.emplace_back( k );
-    return _values.emplace( std::make_pair( k, T( k ) ) ).first->second;
+    return *( _values.emplace( std::make_pair( k, std::make_unique< T >( k ) ) ).first->second );
 }
 
 template < typename T, typename K, typename Hash >
@@ -50,10 +50,10 @@ const T& cached< T, K, Hash >::get( Args... args ) const
 {
     K k{ args... };
     auto i = _values.find( k );
-    if( i != _values.end() ) { return i->second; }
+    if( i != _values.end() ) { return *( i->second ); }
     if( _size > 0 && _values.size() == _size ) { pop(); }
     _keys.emplace_back( k );
-    return _values.emplace( std::make_pair( k, T( k ) ) ).first->second;
+    return *( _values.emplace( std::make_pair( k, std::make_unique< T >( k ) ) ).first->second );
 }
 
 template < typename T, typename K, typename Hash >
