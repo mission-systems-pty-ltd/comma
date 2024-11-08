@@ -138,7 +138,7 @@ TEST( cached, operators )
     plans( std::vector< int >{ 1, 2 }, true, false );
     EXPECT_EQ( plans.values().size(), 2 );
 
-    plans( std::set{ 1, 2 }, true );
+    plans( std::set< int >{ 1, 2 }, true );
     EXPECT_EQ( plans.values().size(), 3 );
     plans( std::set< int >{ 1, 2 }, true );
     EXPECT_EQ( plans.values().size(), 3 );
