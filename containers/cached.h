@@ -12,8 +12,13 @@ class cached
     public:
         cached( unsigned int max_size = 0 ): _size( max_size ) {}
 
-        template < typename... Args >
-        T& operator()( Args... args );
+        template < typename... Args > T& get( Args... args );
+
+        template < typename... Args > const T& get( Args... args ) const;
+
+        template < typename... Args > auto operator()( Args... args ) { return get( args... )( args... ); }
+
+        template < typename... Args > auto operator()( Args... args ) const { return get( args... )( args... ); }
 
         void clear() { _values.clear(); }
 
@@ -21,15 +26,27 @@ class cached
 
         const std::unordered_map< K, T, Hash >& values() const { return _values; }
 
-    private:
-        std::unordered_map< K, T, Hash > _values;
-        std::deque< K > _keys;
+    protected:
+        mutable std::unordered_map< K, T, Hash > _values;
+        mutable std::deque< K > _keys;
         unsigned int _size{0};
 };
 
 template < typename T, typename K, typename Hash >
 template < typename... Args >
-T& cached< T, K, Hash >::operator()( Args... args )
+T& cached< T, K, Hash >::get( Args... args )
+{
+    K k{ args... };
+    auto i = _values.find( k );
+    if( i != _values.end() ) { return i->second; }
+    if( _size > 0 && _values.size() == _size ) { pop(); }
+    _keys.emplace_back( k );
+    return _values.emplace( std::make_pair( k, T( k ) ) ).first->second;
+}
+
+template < typename T, typename K, typename Hash >
+template < typename... Args >
+const T& cached< T, K, Hash >::get( Args... args ) const
 {
     K k{ args... };
     auto i = _values.find( k );

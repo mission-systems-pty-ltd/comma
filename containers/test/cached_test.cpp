@@ -2,6 +2,7 @@
 // All Rights Reserved
 
 #include <gtest/gtest.h>
+#include <vector>
 #include <boost/functional/hash.hpp>
 #include "../cached.h"
 
@@ -19,22 +20,22 @@ struct square
 TEST( cached, basics )
 {
     comma::cached< square, int > c;
-    EXPECT_EQ( c( 5 ).calculate( 5 ), 25 );
+    EXPECT_EQ( c.get( 5 ).calculate( 5 ), 25 );
     EXPECT_EQ( c.values().size(), 1 );
-    EXPECT_EQ( c( 5 ).calculate( 5 ), 25 );
+    EXPECT_EQ( c.get( 5 ).calculate( 5 ), 25 );
     EXPECT_EQ( c.values().size(), 1 );
-    EXPECT_EQ( c( 10 ).calculate( 10 ), 100 );
+    EXPECT_EQ( c.get( 10 ).calculate( 10 ), 100 );
     EXPECT_EQ( c.values().size(), 2 );
-    EXPECT_EQ( c( 10 ).calculate( 10 ), 100 );
+    EXPECT_EQ( c.get( 10 ).calculate( 10 ), 100 );
     EXPECT_EQ( c.values().size(), 2 );
-    EXPECT_EQ( c( 20 ).calculate( 20 ), 400 );
+    EXPECT_EQ( c.get( 20 ).calculate( 20 ), 400 );
     EXPECT_EQ( c.values().size(), 3 );
-    EXPECT_EQ( c( 20 ).calculate( 20 ), 400 );
+    EXPECT_EQ( c.get( 20 ).calculate( 20 ), 400 );
     EXPECT_EQ( c.values().size(), 3 );
     c.pop();
     EXPECT_EQ( c.values().size(), 2 );
     EXPECT_EQ( c.values().size(), 2 );
-    EXPECT_EQ( c( 20 ).calculate( 20 ), 400 );
+    EXPECT_EQ( c.get( 20 ).calculate( 20 ), 400 );
     EXPECT_EQ( c.values().size(), 2 );
 }
 
@@ -58,26 +59,90 @@ struct someclass
     void dummy( int x, int y ) const {}
 };
 
-// struct pair_hash : public std::unary_function< Array, std::size_t >
-// {
-//     std::size_t operator()( Array const& array ) const
-//     {
-//         std::size_t seed = 0;
-//         for( std::size_t i = 0; i < Size; ++i ) { boost::hash_combine( seed, array[i] ); }
-//         return seed;
-//         // return boost::hash_range( &array[0], &array[Size] ); // not so easy...
-//     }
-// };
-
 TEST( cached, key )
 {
     comma::cached< someclass, someclass::key, someclass::hash > c;
-    c( 1, 2 ).dummy( 1, 2 );
+    c.get( 1, 2 ).dummy( 1, 2 );
     EXPECT_EQ( c.values().size(), 1 );
-    c( 1, 2 ).dummy( 1, 2 );
+    c.get( 1, 2 ).dummy( 1, 2 );
     EXPECT_EQ( c.values().size(), 1 );
-    c( 3, 1 ).dummy( 3, 1 );
+    c.get( 3, 1 ).dummy( 3, 1 );
     EXPECT_EQ( c.values().size(), 2 );
-    c( 3, 1 ).dummy( 3, 1 );
+    c.get( 3, 1 ).dummy( 3, 1 );
     EXPECT_EQ( c.values().size(), 2 );
 }
+
+struct plan
+{
+    struct params
+    {
+        int size{0};
+        bool real{false};
+        bool inverse{false};
+
+        bool operator==( const params& rhs ) const { return size == rhs.size && real == rhs.real && inverse == rhs.inverse; }
+
+        params( const std::vector< int >& v, bool real, bool inverse ): size( v.size() ), real( real ), inverse( inverse ) {}
+
+        params( const std::set< int >& v, bool x ): size( v.size() ), real( x ), inverse( x ) {}
+    };
+
+    plan( const params& ) {}
+
+    void operator()( const std::vector< int >&, bool, bool ) {}
+
+    void operator()( const std::set< int >&, bool ) {}
+
+    void size() {}
+};
+
+namespace std {
+
+template <> struct hash< plan::params >
+{
+    std::size_t operator()( plan::params const& k ) const
+    {
+        std::size_t seed = 0;
+        boost::hash_combine( seed, k.size );
+        boost::hash_combine( seed, k.real );
+        boost::hash_combine( seed, k.inverse );
+        return seed;
+    }
+};
+
+} // namespace std {
+
+TEST( cached, hashing_non_intrusive )
+{
+    comma::cached< plan, plan::params > c;
+    c.get( std::vector{ 1, 2, 3 }, true, false )( std::vector{ 1, 2, 3 }, true, false );
+    EXPECT_EQ( c.values().size(), 1 );
+    c.get( std::vector{ 1, 2, 3 }, true, false )( std::vector{ 1, 2, 3 }, true, false );
+    EXPECT_EQ( c.values().size(), 1 );
+    c.get( std::vector{ 1, 2 }, true, false )( std::vector{ 1, 2 }, true, false );
+    EXPECT_EQ( c.values().size(), 2 );
+    c.get( std::vector{ 1, 2 }, true, false )( std::vector{ 1, 2 }, true, false );
+    c.get( std::vector{ 1, 2 }, true, false ).size();
+    EXPECT_EQ( c.values().size(), 2 );
+}
+
+TEST( cached, operators )
+{
+    comma::cached< plan, plan::params > plans;
+    plans( std::vector{ 1, 2, 3 }, true, false );
+    EXPECT_EQ( plans.values().size(), 1 );
+    plans( std::vector{ 1, 2, 3 }, true, false );
+    EXPECT_EQ( plans.values().size(), 1 );
+    plans( std::vector{ 1, 2 }, true, false );
+    EXPECT_EQ( plans.values().size(), 2 );
+    plans( std::vector{ 1, 2 }, true, false );
+    EXPECT_EQ( plans.values().size(), 2 );
+
+    plans( std::set{ 1, 2 }, true );
+    EXPECT_EQ( plans.values().size(), 3 );
+    plans( std::set{ 1, 2 }, true );
+    EXPECT_EQ( plans.values().size(), 3 );
+    plans( std::vector{ 1, 2 }, true, true );
+    EXPECT_EQ( plans.values().size(), 3 );
+}
+
