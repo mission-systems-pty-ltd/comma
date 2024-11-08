@@ -115,34 +115,34 @@ template <> struct hash< plan::params >
 TEST( cached, hashing_non_intrusive )
 {
     comma::cached< plan, plan::params > c;
-    c.get( std::vector{ 1, 2, 3 }, true, false )( std::vector{ 1, 2, 3 }, true, false );
+    c.get( std::vector< int >{ 1, 2, 3 }, true, false )( std::vector< int >{ 1, 2, 3 }, true, false );
     EXPECT_EQ( c.values().size(), 1 );
-    c.get( std::vector{ 1, 2, 3 }, true, false )( std::vector{ 1, 2, 3 }, true, false );
+    c.get( std::vector< int >{ 1, 2, 3 }, true, false )( std::vector< int >{ 1, 2, 3 }, true, false );
     EXPECT_EQ( c.values().size(), 1 );
-    c.get( std::vector{ 1, 2 }, true, false )( std::vector{ 1, 2 }, true, false );
+    c.get( std::vector< int >{ 1, 2 }, true, false )( std::vector< int >{ 1, 2 }, true, false );
     EXPECT_EQ( c.values().size(), 2 );
-    c.get( std::vector{ 1, 2 }, true, false )( std::vector{ 1, 2 }, true, false );
-    c.get( std::vector{ 1, 2 }, true, false ).size();
+    c.get( std::vector< int >{ 1, 2 }, true, false )( std::vector< int >{ 1, 2 }, true, false );
+    c.get( std::vector< int >{ 1, 2 }, true, false ).size();
     EXPECT_EQ( c.values().size(), 2 );
 }
 
 TEST( cached, operators )
 {
     comma::cached< plan, plan::params > plans;
-    plans( std::vector{ 1, 2, 3 }, true, false );
+    plans( std::vector< int >{ 1, 2, 3 }, true, false );
     EXPECT_EQ( plans.values().size(), 1 );
-    plans( std::vector{ 1, 2, 3 }, true, false );
+    plans( std::vector< int >{ 1, 2, 3 }, true, false );
     EXPECT_EQ( plans.values().size(), 1 );
-    plans( std::vector{ 1, 2 }, true, false );
+    plans( std::vector< int >{ 1, 2 }, true, false );
     EXPECT_EQ( plans.values().size(), 2 );
-    plans( std::vector{ 1, 2 }, true, false );
+    plans( std::vector< int >{ 1, 2 }, true, false );
     EXPECT_EQ( plans.values().size(), 2 );
 
     plans( std::set{ 1, 2 }, true );
     EXPECT_EQ( plans.values().size(), 3 );
-    plans( std::set{ 1, 2 }, true );
+    plans( std::set< int >{ 1, 2 }, true );
     EXPECT_EQ( plans.values().size(), 3 );
-    plans( std::vector{ 1, 2 }, true, true );
+    plans( std::vector< int >{ 1, 2 }, true, true );
     EXPECT_EQ( plans.values().size(), 3 );
 }
 
