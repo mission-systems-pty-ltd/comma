@@ -70,7 +70,7 @@ template < typename T > static int run()
         _setmode( _fileno( stdin ), _O_BINARY );
     #endif
     bool has_size = csv.has_field( "size" );
-    std::vector< char > buffer( 32768 ); // quick and dirty
+    std::vector< char > buffer( std::max< unsigned int >( size, 32768 )); // quick and dirty
     typedef comma::csv::applications::input< T > input_t;
     comma::csv::binary< input_t > binary( csv );
     input_t header;
