@@ -1,8 +1,10 @@
 // Copyright (c) 2023 vsevolod vlaskine
 
 #include <list>
+#include <sstream>
 #include <gtest/gtest.h>
 #include "../../base/exception.h"
+#include "../../name_value/serialize.h"
 #include "../choice.h"
 #include "../split.h"
 #include "../string.h"
@@ -457,7 +459,7 @@ struct veg
     enum class values { cucumber, pumpkin };
 };
 
-struct grocery_store
+struct groceries
 {
     strings::choice< comma::fruit > fruit;
     strings::choice< comma::veg > veg;
@@ -465,15 +467,15 @@ struct grocery_store
 
 namespace visiting {
 
-template <> struct traits< grocery_store >
+template <> struct traits< groceries >
 {
-    template < typename Key, class Visitor > static void visit( const Key& k, grocery_store& p, Visitor& v )
+    template < typename Key, class Visitor > static void visit( const Key& k, groceries& p, Visitor& v )
     {
         v.apply( "fruit", p.fruit );
         v.apply( "veg", p.veg );
     }
 
-    template < typename Key, class Visitor > static void visit( const Key& k, const grocery_store& p, Visitor& v )
+    template < typename Key, class Visitor > static void visit( const Key& k, const groceries& p, Visitor& v )
     {
         v.apply( "fruit", p.fruit );
         v.apply( "veg", p.veg );
@@ -500,7 +502,27 @@ TEST( strings, choice )
     EXPECT_EQ( strings::choice< veg >( veg::values::pumpkin ).to_enum(), veg::values::pumpkin );
     EXPECT_EQ( strings::choice< veg >( veg::values::pumpkin ), veg::values::pumpkin );
 
-    // todo: test visiting...
+    {
+        std::istringstream iss( R"({})" );
+        auto g = comma::read_json< groceries >( iss );
+        EXPECT_EQ( g.fruit, "apple" );
+        EXPECT_EQ( g.veg, "cucumber" );
+        EXPECT_EQ( comma::json_to_string( g, false ), R"({"fruit":"apple","veg":"cucumber"})" );
+    }
+    {
+        std::istringstream iss( R"({ "fruit": "orange" })" );
+        auto g = comma::read_json< groceries >( iss );
+        EXPECT_EQ( g.fruit, "orange" );
+        EXPECT_EQ( g.veg, "cucumber" );
+        EXPECT_EQ( comma::json_to_string( g, false ), R"({"fruit":"orange","veg":"cucumber"})" );
+    }
+    {
+        std::istringstream iss( R"({ "fruit": "orange", "veg": "pumpkin" })" );
+        auto g = comma::read_json< groceries >( iss );
+        EXPECT_EQ( g.fruit, "orange" );
+        EXPECT_EQ( g.veg, "pumpkin" );
+        EXPECT_EQ( comma::json_to_string( g, false ), R"({"fruit":"orange","veg":"pumpkin"})" );
+    }
 }
 
 } // namespace comma {
