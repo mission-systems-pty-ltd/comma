@@ -12,7 +12,7 @@ template < typename Derived, typename Base = std::string >
 struct choice: public Base
 {
     typedef Base base_t;
-    choice( typename Derived::values rhs = static_cast< typename Derived::values >( 0 ) ): Base( Derived::choices()[rhs] ) {}
+    choice( typename Derived::values rhs = static_cast< typename Derived::values >( 0 ) ): Base( Derived::choices()[static_cast< unsigned int >( rhs )] ) {}
     choice( const std::string& rhs ) { operator=( rhs ); }
     choice& operator=( const std::string& rhs ) { assert_valid( rhs ); Base::operator=( rhs ); return *this; }
     typename Derived::values to_enum() const;
@@ -20,6 +20,7 @@ struct choice: public Base
     static void assert_valid( const std::string& rhs );
     bool valid() const { return valid( std::string( *this ) ); } // quick and dirty for now
     void assert_valid() const { assert_valid( std::string( *this ) ); } // quick and dirty for now
+    operator typename Derived::values() const { return to_enum(); }
 };
 
 template < typename Derived, typename Base >

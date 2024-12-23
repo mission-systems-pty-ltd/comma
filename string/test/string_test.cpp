@@ -451,9 +451,16 @@ struct fruit
     enum values { apple, orange, juicymambo };
 };
 
+struct veg
+{
+    static std::vector< std::string > choices() { return { "cucumber", "pumpkin" }; }
+    enum class values { cucumber, pumpkin };
+};
+
 struct grocery_store
 {
     strings::choice< comma::fruit > fruit;
+    strings::choice< comma::veg > veg;
 };
 
 namespace visiting {
@@ -463,11 +470,13 @@ template <> struct traits< grocery_store >
     template < typename Key, class Visitor > static void visit( const Key& k, grocery_store& p, Visitor& v )
     {
         v.apply( "fruit", p.fruit );
+        v.apply( "veg", p.veg );
     }
 
     template < typename Key, class Visitor > static void visit( const Key& k, const grocery_store& p, Visitor& v )
     {
         v.apply( "fruit", p.fruit );
+        v.apply( "veg", p.veg );
     }
 };
 
@@ -480,9 +489,17 @@ TEST( strings, choice )
     EXPECT_EQ( strings::choice< fruit >( "orange" ), "orange" );
     EXPECT_EQ( strings::choice< fruit >( fruit::orange ), "orange" );
     EXPECT_EQ( strings::choice< fruit >( fruit::orange ).to_enum(), fruit::orange );
+    EXPECT_EQ( strings::choice< fruit >( fruit::orange ), fruit::orange );
     EXPECT_TRUE( strings::choice< fruit >::valid( "juicymambo" ) );
     EXPECT_FALSE( strings::choice< fruit >::valid( "driedmambo" ) );
     EXPECT_THROW( strings::choice< fruit >( "driedmambo" ), comma::exception );
+
+    EXPECT_EQ( strings::choice< veg >(), "cucumber" );
+    EXPECT_EQ( strings::choice< veg >().to_enum(), veg::values::cucumber );
+    EXPECT_EQ( strings::choice< veg >( veg::values::pumpkin ), "pumpkin" );
+    EXPECT_EQ( strings::choice< veg >( veg::values::pumpkin ).to_enum(), veg::values::pumpkin );
+    EXPECT_EQ( strings::choice< veg >( veg::values::pumpkin ), veg::values::pumpkin );
+
     // todo: test visiting...
 }
 
