@@ -3,6 +3,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include "../base/exception.h"
 #include "string.h"
 
@@ -23,16 +24,35 @@ struct choice: public Base
     operator typename Derived::values() const { return to_enum(); }
 };
 
-template < typename Derived, typename Base >
-typename Derived::values choice< Derived, Base >::to_enum() const
+template < typename Enum >
+Enum make_choice( const std::string& name, const std::vector< std::string >& choices ); // convenience function, quick and dirty for now
+
+namespace impl {
+
+template < typename Enum, typename T, typename V >
+inline Enum make_choice( const T& name, const V& choices ) // quick and dirty for now
 {
     unsigned int i = 0;
-    for( const auto& c: Derived::choices() ) { if( *this == c ) { return static_cast< typename Derived::values >( i ); } ++i; }
-    COMMA_THROW( comma::exception, "could not convert to enum value: '" << std::string( *this ) << "'" ); // in theory never here
+    for( const auto& c: choices ) { if( name == c ) { return static_cast< Enum >( i ); } ++i; }
+    COMMA_THROW( comma::exception, "could not convert to enum value: '" << name << "'" ); // in theory never here
+}
+
+} // namespace impl {
+
+template < typename Enum >
+inline Enum make_choice( const std::string& name, const std::vector< std::string >& choices )
+{
+    return impl::make_choice< Enum >( name, choices );
 }
 
 template < typename Derived, typename Base >
-bool choice< Derived, Base >::valid( const std::string& rhs )
+inline typename Derived::values choice< Derived, Base >::to_enum() const
+{
+    return impl::make_choice< typename Derived::values >( static_cast< const Base& >( *this ), Derived::choices() );
+}
+
+template < typename Derived, typename Base >
+inline bool choice< Derived, Base >::valid( const std::string& rhs )
 {
     unsigned int i = 0;
     for( const auto& c: Derived::choices() ) { if( rhs == c ) { return true; } ++i; }
@@ -40,7 +60,7 @@ bool choice< Derived, Base >::valid( const std::string& rhs )
 }
 
 template < typename Derived, typename Base >
-void choice< Derived, Base >::assert_valid( const std::string& rhs )
+inline void choice< Derived, Base >::assert_valid( const std::string& rhs )
 {
     COMMA_ASSERT( valid( rhs ), "expected one of: " << comma::join( Derived::choices(), ',' ) << "; got: '" << rhs << "'" );
 }

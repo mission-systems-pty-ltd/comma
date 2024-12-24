@@ -523,6 +523,9 @@ TEST( strings, choice )
         EXPECT_EQ( g.veg, "pumpkin" );
         EXPECT_EQ( comma::json_to_string( g, false ), R"({"fruit":"orange","veg":"pumpkin"})" );
     }
+
+    EXPECT_EQ( strings::make_choice< fruit::values >( "orange", { "apple", "orange" } ), fruit::orange );
+    EXPECT_EQ( strings::make_choice< veg::values >( "pumpkin", { "cucumber", "pumpkin" } ), veg::values::pumpkin );
 }
 
 } // namespace comma {
