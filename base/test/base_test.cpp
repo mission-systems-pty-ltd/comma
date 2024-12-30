@@ -28,6 +28,22 @@ TEST( base, variant )
     }
     {
         comma::impl::variant< int, float, double > v;
+        EXPECT_FALSE( v );
+        v.set< int >( 5 );
+        EXPECT_TRUE( v );
+        v.reset();
+        EXPECT_FALSE( v );
+        v.set< float >( 5 );
+        EXPECT_TRUE( v );
+        v.reset();
+        EXPECT_FALSE( v );
+        v.set< double >( 5 );
+        EXPECT_TRUE( v );
+        v.reset();
+        EXPECT_FALSE( v );
+    }
+    {
+        comma::impl::variant< int, float, double > v;
         EXPECT_FALSE( v.is< int >() );
         EXPECT_FALSE( v.is< float >() );
         EXPECT_FALSE( v.is< double >() );
@@ -113,10 +129,26 @@ TEST( base, named_variant )
     {
         struct naming { static std::array< std::string, 3 > names() { return { "a", "b", "c" }; } };
         typedef comma::named_variant< naming, int, float, double > variant_t;
-        variant_t v;
         EXPECT_EQ( variant_t::name_of< int >(), "a" );
         EXPECT_EQ( variant_t::name_of< float >(), "b" );
         EXPECT_EQ( variant_t::name_of< double >(), "c" );
+    }
+    {
+        struct naming { static std::array< std::string, 3 > names() { return { "a", "b", "c" }; } };
+        comma::named_variant< naming, int, float, double > v;
+        EXPECT_FALSE( v );
+        v.set< int >( 5 );
+        EXPECT_TRUE( v );
+        v.reset();
+        EXPECT_FALSE( v );
+        v.set< float >( 5 );
+        EXPECT_TRUE( v );
+        v.reset();
+        EXPECT_FALSE( v );
+        v.set< double >( 5 );
+        EXPECT_TRUE( v );
+        v.reset();
+        EXPECT_FALSE( v );
     }
 }
 

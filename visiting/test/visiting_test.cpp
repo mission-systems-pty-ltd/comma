@@ -12,6 +12,7 @@
 #include <boost/noncopyable.hpp>
 #include "../../base/optional.h"
 #include "../../base/types.h"
+//#include "../../name_value/serialize.h"
 #include "../apply.h"
 #include "../visit.h"
 
@@ -49,6 +50,7 @@ class o_stream_visitor : public boost::noncopyable
     private:
         std::ostream& m_stream;
         bool empty( const char* name ) { return *name == 0; }
+        bool empty( const std::string& name ) { return name.empty(); }
         bool empty( std::size_t ) { return false; }
 };
 
@@ -253,6 +255,52 @@ TEST( visiting, optional )
         visiting::apply( v, t );
         EXPECT_EQ( oss.str(), "{ object:a={ int:value=0 bool:is_set=false } object:b={ object:value={ int:first=3 int:second=4 } bool:is_set=true } }" );
     }
+}
+
+struct some_struct
+{
+    struct naming { static std::array< std::string, 3 > names() { return { "a", "b", "c" }; } };
+    typedef comma::named_variant< naming, int, std::pair< std::string, float >, double > named_variant_t;
+    named_variant_t variant;
+};
+
+} } } /// namespace comma { namespace visiting { namespace test {
+
+namespace comma { namespace visiting {
+
+template <> struct traits< test::some_struct >
+{
+    template < typename Key, typename visitor > static void visit( const Key&,       test::some_struct& p, visitor& v ) { v.apply( "variant", p.variant ); }
+    template < typename Key, typename visitor > static void visit( const Key&, const test::some_struct& p, visitor& v ) { v.apply( "variant", p.variant ); }
+};
+
+} } // namespace comma { namespace visiting {
+
+namespace comma { namespace visiting { namespace test {
+
+TEST( visiting, named_variant )
+{
+    {
+        test::some_struct t;
+        std::ostringstream oss;
+        o_stream_visitor v( oss );
+        visiting::apply( v, t );
+        EXPECT_EQ( oss.str(), "{ object:variant={ } }" );
+    }
+    {
+        // test::some_struct t;
+        // t.variant.set( std::pair< std::string, float >( "hello", 5 ) );
+        // std::ostringstream oss;
+        // o_stream_visitor v( oss );
+        // visiting::apply( v, t );
+        // //EXPECT_EQ( oss.str(), "{ object:variant={ } }" );
+        // std::cerr << "=============" << std::endl;
+        // std::cerr << oss.str() << std::endl;
+        // std::cerr << "=============" << std::endl;
+        // write_json( t, std::cerr );
+        // std::cerr << "=============" << std::endl;
+    }
+    // todo! test serialization and deserialization! make test dependent on name_value?
 }
 
 } } } /// namespace comma { namespace visiting { namespace test {
