@@ -121,6 +121,16 @@ TEST( base, variant )
         EXPECT_EQ( variant_t::index_of< int >(), 0 );
         EXPECT_EQ( variant_t::index_of< float >(), 1 );
         EXPECT_EQ( variant_t::index_of< double >(), 2 );
+        variant_t v;
+        EXPECT_EQ( v.index(), 3 );
+        v.set< int >( 5 );
+        EXPECT_EQ( v.index(), 0 );
+        v.set< float >( 5 );
+        EXPECT_EQ( v.index(), 1 );
+        v.set< double >( 5 );
+        EXPECT_EQ( v.index(), 2 );
+        v.reset();
+        EXPECT_EQ( v.index(), 3 );
     }
 }
 
@@ -139,16 +149,20 @@ TEST( base, named_variant )
         EXPECT_FALSE( v );
         v.set< int >( 5 );
         EXPECT_TRUE( v );
+        EXPECT_EQ( v.name(), "a" );
         v.reset();
         EXPECT_FALSE( v );
         v.set< float >( 5 );
         EXPECT_TRUE( v );
+        EXPECT_EQ( v.name(), "b" );
         v.reset();
         EXPECT_FALSE( v );
         v.set< double >( 5 );
         EXPECT_TRUE( v );
+        EXPECT_EQ( v.name(), "c" );
         v.reset();
         EXPECT_FALSE( v );
+        EXPECT_THROW( v.name(), comma::exception );
     }
 }
 

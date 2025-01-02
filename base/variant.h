@@ -56,6 +56,7 @@ template < typename T, typename... Args > struct variant  // todo? use tuple ins
     template < typename S > const boost::optional< S >& optional() const { return variant_traits< T, std::is_same< T, S >::value >::template optional< S >( t, values ); }
     void reset() { t.reset(); values.reset(); }
     template < typename S > static unsigned int rindex() { return std::is_same< T, S >::value ? size - 1 : variant< Args... >::template rindex< S >(); }
+    unsigned int index( unsigned int i = 0 ) const { return t ? i : values.index( i + 1 ); }
 };
 
 template < typename T > struct variant< T >  // todo? use tuple instead?
@@ -71,6 +72,7 @@ template < typename T > struct variant< T >  // todo? use tuple instead?
     template < typename S > const boost::optional< S >& optional() const { return variant_traits< T, std::is_same< T, S >::value >::template optional< S >( t, type_is_not_on_type_list() ); }
     void reset() { t.reset(); }
     template < typename S > static unsigned int rindex() { bool same_type = std::is_same< T, S >::value; COMMA_ASSERT( same_type, "type not found in type list" ); return 0; }
+    unsigned int index( unsigned int i = 0 ) const { return t ? i : ( i + 1 ); }
 };
 
 } // namespace impl {
@@ -95,6 +97,7 @@ class variant
         template < typename S > const boost::optional< S >& optional() const { return _values.template optional< S >(); }
         void reset() { _values.reset(); }
         template < typename S > static unsigned int index_of() { return impl::variant< Args... >::size - impl::variant< Args... >::template rindex< S >() - 1; }
+        unsigned int index() const { return _values.index(); }
     protected:
         impl::variant< Args... > _values;
 };
@@ -116,6 +119,7 @@ struct named_variant : public variant< Args... >, public Names
     typedef Names names_t;
     typedef variant< Args... > variant_t;
     template < typename S > static const std::string& name_of() { return Names::names()[ variant_t::template index_of< S >() ]; }
+    const auto& name() const { COMMA_ASSERT( bool( *this ), "asked for name, but value is not set" ); return this->names()[this->index()]; }
 };
 
 template < typename Names >
