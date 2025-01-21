@@ -14,8 +14,11 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
+#include <boost/optional.hpp>
 #include <boost/thread.hpp>
+#include "../../base/none.h"
 #include "../../io/file_descriptor.h"
+#include "../../io/select.h"
 #include "../../io/server.h"
 #include "../../string/string.h"
 #include "../../sync/synchronized.h"
@@ -74,21 +77,31 @@ class multiserver
         void accept_();
 };
 
-struct publish : public multiserver< comma::io::oserver >
+class publish : public multiserver< comma::io::oserver >
 {
-    publish( const std::vector< std::string >& endpoints
-            , unsigned int packet_size
-            , bool discard
-            , bool flush
-            , bool output_number_of_clients
-            , bool update_no_clients
-            , unsigned int cache_size );
-    
-    bool read( std::istream& input );
+    public:
+        publish( const std::vector< std::string >& endpoints
+               , unsigned int packet_size
+               , bool discard
+               , bool flush
+               , bool output_number_of_clients
+               , bool update_no_clients
+               , unsigned int cache_size
+               , const boost::optional< double >& timeout = comma::silent_none< double >() );
+        
+        bool read( std::istream& input, io::file_descriptor fd = 0 );
 
-    bool write( const std::string& s );
+        bool write( const std::string& s );
 
-    bool write( const char* buf, unsigned int size );
+        bool write( const char* buf, unsigned int size );
+
+        bool is_timeout() const { return _is_timeout; }
+
+    protected:
+        comma::io::select _select;
+        boost::optional< double > _timeout;
+        io::file_descriptor _fd{0};
+        bool _is_timeout{false};
 };
 
 class receive : public multiserver< comma::io::iserver >

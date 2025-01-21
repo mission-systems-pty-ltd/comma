@@ -175,7 +175,8 @@ publish::publish( const std::vector< std::string >& endpoints
                 , bool flush
                 , bool output_number_of_clients
                 , bool update_no_clients
-                , unsigned int cache_size )
+                , unsigned int cache_size
+                , const boost::optional< double >& timeout )
     : multiserver< comma::io::oserver >( endpoints
                                        , packet_size
                                        , discard
@@ -183,6 +184,7 @@ publish::publish( const std::vector< std::string >& endpoints
                                        , output_number_of_clients
                                        , update_no_clients
                                        , cache_size )
+    , _timeout( timeout )
 {
 }
 
@@ -203,18 +205,39 @@ bool publish::write( const char* buf, unsigned int size )
     return write( std::string( buf, size ) ); // todo: quick and dirty, watch performance
 }
 
-bool publish::read( std::istream& input )
+static bool _enough( std::istream& is, unsigned int size )
 {
+    auto available = is.rdbuf()->in_avail();
+    return ( size == 0 && available > 0 ) || ( size > 0 && available >= size );
+}
+
+bool publish::read( std::istream& is, io::file_descriptor fd )
+{
+    if( _timeout )
+    {
+        _is_timeout = false;
+        if( !_enough( is, packet_size_ ) && !is.eof() )
+        {
+            if( _select.read()().empty() || *_select.read()().begin() != fd )
+            {
+                _select.read().clear(); // todo: quick and dirty, watch performance
+                _select.read().add( fd );
+            }
+            _select.wait( *_timeout );
+            _is_timeout = !_enough( is, packet_size_ ) && !_select.read().ready( fd );
+            if( _is_timeout ) { return false; }
+        }
+    }
     if( is_binary_() )
     {
-        input.read( &buffer_[0], buffer_.size() );
-        if( input.gcount() < int( buffer_.size() ) || !input.good() ) { return false; }
+        is.read( &buffer_[0], buffer_.size() );
+        if( is.gcount() < int( buffer_.size() ) || !is.good() || is.eof() ) { return false; }
     }
     else
     {
-        std::getline( input, buffer_ );
+        std::getline( is, buffer_ );
         buffer_ += '\n';
-        if( !input.good() ) { return false; }
+        if( !is.good() || is.eof() ) { return false; }
     }
     return write( buffer_ );
 }

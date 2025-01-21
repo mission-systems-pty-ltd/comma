@@ -163,14 +163,14 @@ int main( int ac, char** av )
         COMMA_ASSERT_BRIEF( !reconnect_on_read_timeout || read_timeout, "--reconnect-on-read-timeout requires --read-timeout <seconds>" );
         COMMA_ASSERT_BRIEF( !reconnect_on_read_timeout || !exec_command.empty(), "--reconnect-on-read-timeout requires --exec <command>" );
         COMMA_ASSERT_BRIEF( !timeout_is_error || read_timeout, "--timeout-is-error requires --read-timeout <seconds>" );
-        unsigned int size = options.value( "-s,--size", 0 );
         comma::io::impl::publish p( names
-                                  , size * options.value( "-m,--multiplier", 1 )
+                                  , options.value( "-s,--size", 0 ) * options.value( "-m,--multiplier", 1 )
                                   , !options.exists( "--no-discard" )
                                   , !options.exists( "--no-flush" )
                                   , options.exists( "--output-number-of-clients,--clients" )
                                   , exit_on_no_clients || on_demand
-                                  , options.value( "--cache-size,--cache", 0 ) );
+                                  , options.value( "--cache-size,--cache", 0 )
+                                  , read_timeout );
         if( !tail.empty() )
         {
             COMMA_ASSERT_BRIEF( exec_command.empty(), "expected either --exec or --, got both" );
@@ -180,26 +180,15 @@ int main( int ac, char** av )
         if( exec_command.empty() )
         {
             COMMA_ASSERT_BRIEF( !on_demand, "got --on-demand; please specify --exec <command> or -- <command>, or remove --on-demand" );
-            comma::io::select select;
-            if( read_timeout ) { select.read().add( 0 ); }
             std::ios_base::sync_with_stdio( false ); // unsync to make rdbuf()->in_avail() working
             std::cin.tie( NULL ); // std::cin is tied to std::cout by default
-            while( std::cin.good() && !is_shutdown )
+            while( std::cin.good() && !is_shutdown && !p.is_timeout() )
             {
-                if( read_timeout )
+                if( !p.read( std::cin ) )
                 {
-                    auto available = std::cin.rdbuf()->in_avail();
-                    if( available == 0 ) // todo! || ( size > 0 && available < size ) )
-                    {
-                        select.wait( *read_timeout );
-                        if( !select.read().ready( 0 ) )
-                        {
-                            comma::say() << "read: timeout no input after " << *read_timeout << " seconds" << std::endl;
-                            exit( timeout_is_error ? 1 : 0 );
-                        }
-                    }
+                    if( exit_on_no_clients ) { break; }
+                    if( read_timeout && p.is_timeout() ) { comma::say() << "timeout: received no data after " << *read_timeout << " seconds" << std::endl; break; }
                 }
-                if( !p.read( std::cin ) && exit_on_no_clients ) { break; }
             }
         }
         else
@@ -215,12 +204,24 @@ int main( int ac, char** av )
                 command cmd( exec_command );
                 typedef boost::iostreams::file_descriptor_source fd_t;
                 boost::iostreams::stream< fd_t > is( fd_t( cmd.fd(), boost::iostreams::never_close_handle ) );
-                while( is.good() && !is_shutdown && p.read( is ) );
+                while( is.good() && !is_shutdown )
+                {
+                    if( !p.read( is, cmd.fd() ) )
+                    {
+                        //if( exit_on_no_clients ) { break; }
+                        if( read_timeout && p.is_timeout() )
+                        {
+                            comma::say() << "timeout: received no data after " << *read_timeout << " seconds" << std::endl;
+                            if( !reconnect_on_read_timeout ) { break; }
+                        }
+                    }
+                }
                 if( !on_demand ) { break; }
                 p.disconnect_all();
             }
         }
         //ProfilerStop(); }
+        if( p.is_timeout() ) { return timeout_is_error ? 1 : 0; }
         if( is_shutdown ) { comma::say() << "interrupted by signal" << std::endl; }
         return 0;
     }
