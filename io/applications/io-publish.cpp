@@ -206,15 +206,14 @@ int main( int ac, char** av )
                 boost::iostreams::stream< fd_t > is( fd_t( cmd.fd(), boost::iostreams::never_close_handle ) );
                 while( is.good() && !is_shutdown )
                 {
-                    if( !p.read( is, cmd.fd() ) )
+                    if( p.read( is, cmd.fd() ) ) { continue; }
+                    //if( exit_on_no_clients ) { break; }
+                    if( read_timeout && p.is_timeout() )
                     {
-                        //if( exit_on_no_clients ) { break; }
-                        if( read_timeout && p.is_timeout() )
-                        {
-                            comma::say() << "timeout: received no data after " << *read_timeout << " seconds" << std::endl;
-                            if( !reconnect_on_read_timeout ) { break; }
-                        }
+                        comma::say() << "timeout: received no data after " << *read_timeout << " seconds" << std::endl;
+                        if( !reconnect_on_read_timeout ) { break; }
                     }
+                    break;
                 }
                 if( !on_demand ) { break; }
                 p.disconnect_all();
