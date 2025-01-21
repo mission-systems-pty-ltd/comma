@@ -9,6 +9,7 @@
 #include "../../io/file_descriptor.h"
 #include "../../io/publisher.h"
 #include "../../io/impl/publish.h"
+#include "../../io/select.h"
 #include "../../name_value/map.h"
 #include "../../string/string.h"
 #include "../../sync/synchronized.h"
@@ -40,6 +41,12 @@ stream options
     --exec=[<command>]: read from <command> rather than stdin
     -- [<command>]: alternate syntax for specifying a command (simplifies quoting)
     --on-demand: only run <command> when a client is connected
+    --timeout-read,--read-timeout=<seconds>; exit or disconnect if no input data
+                                             for longer than <seconds>
+                                             limitation: if an input packet is half-read
+                                                         io-publish still will block on read
+    --timeout-reconnect,--reconnect-on-read-timeout, only if --exec present
+    --timeout-is-error; exit with error on timeout
 
 client options
     --exit-on-no-clients,-e: once the last client disconnects, exit
@@ -92,7 +99,7 @@ class command
     public:
         command( const std::string& command ): command_( command ), child_pid_( -1 )
         {
-            comma::verbose << "launching command: " << command << std::endl;
+            comma::saymore() << "launching command: " << command << std::endl;
             int fd[2];
             if( ::pipe( fd ) == -1 ) { comma::last_error::to_exception( "couldn't open pipe" ); } // create a pipe to send the child stdout to the parent stdin
             fd_ = fd[0];
@@ -109,7 +116,7 @@ class command
                 exit( 1 );
             }
             child_pid_ = pid;
-            comma::verbose << "launched command with pid: " << pid << std::endl;
+            comma::saymore() << "launched command with pid: " << pid << std::endl;
             ::close( STDIN_FILENO );
             ::close( fd[1] ); // don't need pipe input in the parent
         }
@@ -118,14 +125,14 @@ class command
 
         ~command()
         {
-            comma::verbose << "closing file descriptor " << fd_ << " for " << comma::split( command_ )[0] << "..." << std::endl;
+            comma::saymore() << "closing file descriptor " << fd_ << " for " << comma::split( command_ )[0] << "..." << std::endl;
             ::close( fd_ );
-            comma::verbose << "sending SIGTERM to " << comma::split( command_ )[0] << " (pid " << child_pid_ << ")..." << std::endl;
+            comma::saymore() << "sending SIGTERM to " << comma::split( command_ )[0] << " (pid " << child_pid_ << ")..." << std::endl;
             ::kill( -child_pid_, SIGTERM );
-            comma::verbose << "waiting for pid " << child_pid_ << "..." << std::endl;
-            if( ::waitpid( -child_pid_, NULL, 0 ) < 0 ) { comma::verbose << "warning: waiting for pid " << child_pid_ << " failed" << std::endl; }
+            comma::saymore() << "waiting for pid " << child_pid_ << "..." << std::endl;
+            if( ::waitpid( -child_pid_, NULL, 0 ) < 0 ) { comma::saymore() << "warning: waiting for pid " << child_pid_ << " failed" << std::endl; }
             while( std::getchar() >= 0 ); // todo: lame, but select or c-style reading produce bizarre results; investigate sometime
-            comma::verbose << "waiting for pid " << child_pid_ << " done" << std::endl;
+            comma::saymore() << "waiting for pid " << child_pid_ << " done" << std::endl;
         }
 
     private:
@@ -142,21 +149,28 @@ int main( int ac, char** av )
         for( int i = 0; i < ac && std::string( "--" ) != av[i]; ++i ) { head.push_back( av[i] ); }
         for( int i = head.size() + 1; i < ac; ++i ) { tail.push_back( av[i] ); }
         comma::command_line_options options( head, usage );
-        const std::vector< std::string >& names = options.unnamed( "--no-discard,--verbose,-v,--no-flush,--output-number-of-clients,--clients,--exit-on-no-clients,-e,--on-demand", "-.+" );
+        const std::vector< std::string >& names = options.unnamed( "--no-discard,--verbose,-v,--no-flush,--output-number-of-clients,--clients,--exit-on-no-clients,-e,--on-demand,--timeout-reconnect,--reconnect-on-read-timeout,--timeout-is-error", "-.+" );
         if( names.empty() ) { comma::say() << "please specify at least one stream; use '-' for stdout" << std::endl; return 1; }
         options.assert_mutually_exclusive( "--cache-size,--cache", "--on-demand" );
         const boost::array< comma::signal_flag::signals, 2 > signals = { { comma::signal_flag::sigint, comma::signal_flag::sigterm } };
         comma::signal_flag is_shutdown( signals );
         bool on_demand = options.exists( "--on-demand" );
         bool exit_on_no_clients = options.exists( "--exit-on-no-clients,-e" );
+        std::string exec_command = options.value< std::string >( "--exec", "" );
+        bool reconnect_on_read_timeout = options.exists( "--timeout-reconnect,--reconnect-on-read-timeout" );
+        bool timeout_is_error = options.exists( "--timeout-is-error" );
+        boost::optional< double > read_timeout = options.optional< double >( "--timeout-read,--read-timeout" );
+        COMMA_ASSERT_BRIEF( !reconnect_on_read_timeout || read_timeout, "--reconnect-on-read-timeout requires --read-timeout <seconds>" );
+        COMMA_ASSERT_BRIEF( !reconnect_on_read_timeout || !exec_command.empty(), "--reconnect-on-read-timeout requires --exec <command>" );
+        COMMA_ASSERT_BRIEF( !timeout_is_error || read_timeout, "--timeout-is-error requires --read-timeout <seconds>" );
+        unsigned int size = options.value( "-s,--size", 0 );
         comma::io::impl::publish p( names
-                                  , options.value( "-s,--size", 0 ) * options.value( "-m,--multiplier", 1 )
+                                  , size * options.value( "-m,--multiplier", 1 )
                                   , !options.exists( "--no-discard" )
                                   , !options.exists( "--no-flush" )
                                   , options.exists( "--output-number-of-clients,--clients" )
                                   , exit_on_no_clients || on_demand
                                   , options.value( "--cache-size,--cache", 0 ) );
-        std::string exec_command = options.value< std::string >( "--exec", "" );
         if( !tail.empty() )
         {
             COMMA_ASSERT_BRIEF( exec_command.empty(), "expected either --exec or --, got both" );
@@ -166,17 +180,38 @@ int main( int ac, char** av )
         if( exec_command.empty() )
         {
             COMMA_ASSERT_BRIEF( !on_demand, "got --on-demand; please specify --exec <command> or -- <command>, or remove --on-demand" );
-            while( std::cin.good() && !is_shutdown ) { if( !p.read( std::cin ) && exit_on_no_clients ) { break; } }
+            comma::io::select select;
+            if( read_timeout ) { select.read().add( 0 ); }
+            std::ios_base::sync_with_stdio( false ); // unsync to make rdbuf()->in_avail() working
+            std::cin.tie( NULL ); // std::cin is tied to std::cout by default
+            while( std::cin.good() && !is_shutdown )
+            {
+                if( read_timeout )
+                {
+                    auto available = std::cin.rdbuf()->in_avail();
+                    if( available == 0 ) // todo! || ( size > 0 && available < size ) )
+                    {
+                        select.wait( *read_timeout );
+                        if( !select.read().ready( 0 ) )
+                        {
+                            comma::say() << "read: timeout no input after " << *read_timeout << " seconds" << std::endl;
+                            exit( timeout_is_error ? 1 : 0 );
+                        }
+                    }
+                }
+                if( !p.read( std::cin ) && exit_on_no_clients ) { break; }
+            }
         }
         else
         {
+            COMMA_ASSERT_BRIEF( !read_timeout, "--read-timeout with --exec: implementing..." );
             bool done = false;
             int fd[2];
             if( ::pipe( fd ) == -1 ) { comma::last_error::to_exception( "couldn't open pipe" ); } // create a pipe to send the child stdout to the parent stdin
             while( !done && !is_shutdown )
             {
                 if( on_demand && p.num_clients() == 0 ) { ::sleep( 0.1 ); continue; } // todo? make timeout configurable?
-                comma::verbose << "number of clients: " << p.num_clients() << std::endl;
+                comma::saymore() << "number of clients: " << p.num_clients() << std::endl;
                 command cmd( exec_command );
                 typedef boost::iostreams::file_descriptor_source fd_t;
                 boost::iostreams::stream< fd_t > is( fd_t( cmd.fd(), boost::iostreams::never_close_handle ) );
