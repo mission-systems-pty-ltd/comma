@@ -45,7 +45,7 @@ stream options
                                              for longer than <seconds>
                                              limitation: if an input packet is half-read
                                                          io-publish still will block on read
-    --timeout-reconnect,--reconnect-on-read-timeout, only if --exec present
+    --timeout-reconnect,--reconnect-on-timeout; reconnect on read timeout only if --exec present
     --timeout-is-error; exit with error on timeout
 
 client options
@@ -149,7 +149,7 @@ int main( int ac, char** av )
         for( int i = 0; i < ac && std::string( "--" ) != av[i]; ++i ) { head.push_back( av[i] ); }
         for( int i = head.size() + 1; i < ac; ++i ) { tail.push_back( av[i] ); }
         comma::command_line_options options( head, usage );
-        const std::vector< std::string >& names = options.unnamed( "--no-discard,--verbose,-v,--no-flush,--output-number-of-clients,--clients,--exit-on-no-clients,-e,--on-demand,--timeout-reconnect,--reconnect-on-read-timeout,--timeout-is-error", "-.+" );
+        const std::vector< std::string >& names = options.unnamed( "--no-discard,--verbose,-v,--no-flush,--output-number-of-clients,--clients,--exit-on-no-clients,-e,--on-demand,--timeout-reconnect,--reconnect-on-timeout,--timeout-is-error", "-.+" );
         if( names.empty() ) { comma::say() << "please specify at least one stream; use '-' for stdout" << std::endl; return 1; }
         options.assert_mutually_exclusive( "--cache-size,--cache", "--on-demand" );
         const boost::array< comma::signal_flag::signals, 2 > signals = { { comma::signal_flag::sigint, comma::signal_flag::sigterm } };
@@ -157,11 +157,11 @@ int main( int ac, char** av )
         bool on_demand = options.exists( "--on-demand" );
         bool exit_on_no_clients = options.exists( "--exit-on-no-clients,-e" );
         std::string exec_command = options.value< std::string >( "--exec", "" );
-        bool reconnect_on_read_timeout = options.exists( "--timeout-reconnect,--reconnect-on-read-timeout" );
+        bool reconnect_on_read_timeout = options.exists( "--timeout-reconnect,--reconnect-on-timeout" );
         bool timeout_is_error = options.exists( "--timeout-is-error" );
         boost::optional< double > read_timeout = options.optional< double >( "--timeout-read,--read-timeout" );
-        COMMA_ASSERT_BRIEF( !reconnect_on_read_timeout || read_timeout, "--reconnect-on-read-timeout requires --read-timeout <seconds>" );
-        COMMA_ASSERT_BRIEF( !reconnect_on_read_timeout || !exec_command.empty(), "--reconnect-on-read-timeout requires --exec <command>" );
+        COMMA_ASSERT_BRIEF( !reconnect_on_read_timeout || read_timeout, "--reconnect-on-timeout requires --read-timeout <seconds>" );
+        COMMA_ASSERT_BRIEF( !reconnect_on_read_timeout || !exec_command.empty(), "--reconnect-on-timeout requires --exec <command>" );
         COMMA_ASSERT_BRIEF( !timeout_is_error || read_timeout, "--timeout-is-error requires --read-timeout <seconds>" );
         comma::io::impl::publish p( names
                                   , options.value( "-s,--size", 0 ) * options.value( "-m,--multiplier", 1 )

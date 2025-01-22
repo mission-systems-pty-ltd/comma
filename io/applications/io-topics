@@ -200,20 +200,22 @@ function publish_topic_fields() { publish_topic_fields_help | grep -v '^ ' | cut
 function publish_topic_fields_help()
 {
     cat <<eof
-address;           passed verbatim to io-publish, port attribute will be ignored
-binary;            for binary data, binary format of data, overrides size
-cache_size;        same meaning as io-publish --cache-size
-command;           command for the publisher to run
-input;             input topic for publish command to read on stdin
-multiplier;        passed to io-publish
-on_demand;         same meaning as io-publish --on-demand
-on_exit;           command to run when publisher stops
-port;              tcp port for publishing, unless address field is present
-secondary/address; passed verbatim to io-publish as '<address>;secondary',
-                   in this case port attribute ignored
-secondary/port;    secondary tcp port for publishing, unless address field is
-                   present, io-publish as 'tcp:<port>;secondary'
-size;              for binary data, size of the binary record
+address;              passed verbatim to io-publish, port attribute will be ignored
+binary;               for binary data, binary format of data, overrides size
+cache_size;           same meaning as io-publish --cache-size
+command;              command for the publisher to run
+input;                input topic for publish command to read on stdin
+multiplier;           passed to io-publish
+on_demand;            same meaning as io-publish --on-demand
+on_exit;              command to run when publisher stops
+port;                 tcp port for publishing, unless address field is present
+reconnect_on_timeout; same meaning as io-publish --reconnect-on-timeout
+secondary/address;    passed verbatim to io-publish as '<address>;secondary',
+                      in this case port attribute ignored
+secondary/port;       secondary tcp port for publishing, unless address field is
+                      present, io-publish as 'tcp:<port>;secondary'
+size;                 for binary data, size of the binary record
+timeout;              same meaning as io-publish --timeout=<seconds>
 eof
 }
 
@@ -333,8 +335,10 @@ function publish_command()
     [[ -z "$topic_secondary_address" ]] || topic_secondary_address="$topic_secondary_address;secondary"
     if [[ -n "$topic_multiplier" ]]; then multiplier="--multiplier $topic_multiplier"; else unset multiplier; fi
     if [[ "$topic_on_demand" == 1 || "$topic_on_demand" == "true" ]]; then on_demand="--on-demand"; else unset on_demand; fi
+    if [[ "$topic_timeout" == 1 || "$topic_timeout" == "true" ]]; then timeout="--timeout=$timeout"; else unset timeout; fi
+    if [[ "$topic_reconnect_on_timeout" == 1 || "$topic_reconnect_on_timeout" == "true" ]]; then reconnect_on_timeout="--reconnect-on-timeout"; else unset reconnect_on_timeout; fi
     if [[ -n "$topic_cache_size" ]]; then cache_size="--cache-size=$topic_cache_size"; else unset cache_size; fi
-    local cmd="io-publish $topic_address $topic_secondary_address $size_option $multiplier $on_demand $cache_size -- "
+    local cmd="io-publish $topic_address $topic_secondary_address $size_option $multiplier $on_demand $cache_size $timeout $reconnect_on_timeout -- "
     verbose "publish topic_command: $topic_command"
     local expanded_topic_command=$( expanded_command "$topic_command" )
     verbose "publish expanded_topic_command: $expanded_topic_command"
@@ -351,6 +355,8 @@ function cat_command()
     (( ignore_command )) || [[ -n "$topic_command" ]] || die "topic '$topic': command not specified in files ${configs[@]}"
     set_topic_address
     if [[ "$topic_on_demand" == 1 || "$topic_on_demand" == "true" ]]; then on_demand="--on-demand"; else unset on_demand; fi # todo? remove? is it even used anywhere?
+    if [[ "$topic_timeout" == 1 || "$topic_timeout" == "true" ]]; then timeout="--timeout=$timeout"; else unset timeout; fi
+    if [[ "$topic_reconnect_on_timeout" == 1 || "$topic_reconnect_on_timeout" == "true" ]]; then reconnect_on_timeout="--reconnect-on-timeout"; else unset reconnect_on_timeout; fi
     if [[ -n "$topic_cache_size" ]]; then cache_size=$topic_cache_size; else unset cache_size; fi
     if [[ -n "$topic_flush" ]]; then flush_option="--flush"; else unset flush_option; fi # todo! make flush default?!
     if [[ -n "$topic_connect_attempts" ]]; then connect_attempts_option="--connect-attempts=$topic_connect_attempts"; else unset connect_attempts_option; fi
