@@ -14,7 +14,7 @@ from ..util import warning
 from ..io import readlines_unbuffered
 from ..numpy import merge_arrays, types_of_dtype, structured_dtype
 from . import time as csv_time
-from .struct import struct
+from ._struct import struct
 
 DEFAULT_PRECISION = 12
 NUMPY_VERSION_MAJOR_, NUMPY_VERSION_MINOR_, NUMPY_VERSION_PATCH_ = ( int( _ ) for _ in np.__version__.split( '.' ) )

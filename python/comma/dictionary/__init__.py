@@ -1,3 +1,3 @@
 # Copyright (c) 2023 Vsevolod Vlaskine
 
-from .util import at, has, leaves, parents, set, update
+from ._util import at, has, leaves, parents, set, update

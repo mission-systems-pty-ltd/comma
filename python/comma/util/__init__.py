@@ -27,5 +27,5 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from .help_formatter import argparse_fmt
-from .warning import warning
+from ._help_formatter import argparse_fmt
+from ._warning import warning

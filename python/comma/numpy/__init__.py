@@ -27,4 +27,4 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from .functions import *
+from ._functions import merge_arrays, strip_byte_order_prefix, shape_to_string, types_of_dtype, structured_dtype, type_to_string

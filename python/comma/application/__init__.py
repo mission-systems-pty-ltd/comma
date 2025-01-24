@@ -27,4 +27,5 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from .command_line import *
+from ._command_line import set_dictionary_action, remove_argparse_options
+

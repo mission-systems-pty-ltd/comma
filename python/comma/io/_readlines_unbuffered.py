@@ -31,7 +31,6 @@ import sys
 if sys.version_info.major < 3: from itertools import ifilter
 else: ifilter = filter # quick and dirty, tired of googling...
 
-
 def readlines_unbuffered(size, source=sys.stdin, skip_blank_lines=True):
     """
     read the given number of lines from source, such as stdin, without buffering
