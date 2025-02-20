@@ -174,8 +174,8 @@ class test_structured_dtype(unittest.TestCase):
             self.assertEqual( sorted_fields1, sorted_fields2 )
             self.assertEqual( len( ndtype1.descr ), 4 )
             self.assertEqual( len( ndtype2.descr ), 5 )  # shall be 4
-            self.assertEqual( len( functions.types_of_dtype( ndtype1 ) ), 4 )
-            self.assertEqual( len( functions.types_of_dtype( ndtype2 ) ), 5 )  # shall be 4
+            self.assertEqual( len( types_of_dtype( ndtype1 ) ), 4 )
+            self.assertEqual( len( types_of_dtype( ndtype2 ) ), 5 )  # shall be 4
         except ValueError:
             import sys
             print( file = sys.stderr )
