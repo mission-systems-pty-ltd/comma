@@ -45,9 +45,9 @@ inline shared_library::shared_library( const std::string& lib, std::vector<std::
 template < typename T, typename... Args >
 inline T* shared_library::make( const std::string& library_symbol, Args... args ) const
 {
-    char* error;
+    char* error{nullptr};
     auto symbol = dlsym(handle_, &library_symbol[0]);
-    COMMA_ASSERT( error == NULL, error );
+    COMMA_ASSERT( error == nullptr, error );
     if( symbol == nullptr ) { std::cerr << dlerror() << std::endl; }
     COMMA_ASSERT( symbol, "Shared library loading failed: could not find "+library_symbol+" symbol; on library: \"" + lib_ + "\"");
     T* (*create_)(Args...) = reinterpret_cast<T*(*)(Args...)>(symbol);

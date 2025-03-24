@@ -89,51 +89,9 @@ class exception : public std::runtime_error
 
         std::string     _message;
         std::string     _filename;
-        unsigned long   _line;
+        unsigned long   _line{0};
         std::string     _function;
         std::string     _formatted_message;
 };
-
-inline exception::exception( const char *message, const char *filename, unsigned long line_number, const char *function_name, bool brief )
-    : std::runtime_error( message )
-    , _message( message )
-    , _filename( filename )
-    , _line( line_number )
-    , _function( function_name )
-{
-    _formatted_string( brief );
-}
-
-inline exception::exception( const std::string& message, const char *filename, unsigned long line_number, const char *function_name, bool brief )
-    : std::runtime_error( message.c_str() )
-    , _message( message )
-    , _filename( filename )
-    , _line( line_number )
-    , _function( function_name )
-{
-    _formatted_string( brief );
-}
-
-inline const char* exception::what() const throw()
-{
-    const char* string = "exception::what() _formatted_message.c_str() threw exception";
-    try { string = _formatted_message.c_str(); } catch( ... ) {}
-    return string;
-}
-
-inline void exception::_formatted_string( bool brief )
-{
-    std::ostringstream oss;
-    oss << error() << std::endl;
-    if( !brief )
-    {
-        oss << "============================================" << std::endl
-            << "file: "     << _filename << std::endl
-            << "line: "     << _line << std::endl
-            << "function: " << _function << std::endl
-            << "============================================" << std::endl;
-    }
-    _formatted_message = oss.str();
-}
 
 }  // namespace comma

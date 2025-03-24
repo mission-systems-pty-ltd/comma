@@ -14,6 +14,7 @@ TEST( initialise, no_args )
 {
     comma::dynamic::shared_library library( "libcomma_dynamic_test_classes.so", {"/home/aspen/src/comma/build/lib"} );
     auto p = library.make< comma::dynamic::test::simple >( "comma_dynamic_test_create_simple" );
+    ( void )p;
 }
 
 
