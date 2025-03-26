@@ -24,3 +24,5 @@ quoted/double[1]/output/line[1]="test"
 quoted/double[1]/status=0
 trailing_spaces/output="input"
 trailing_spaces/status=0
+critical_test/output="input"
+critical_test/status=0

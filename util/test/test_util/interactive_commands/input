@@ -7,4 +7,6 @@ quoted/single[4]/command = " ls 'input' 'test' "
 quoted/double[0]/command="ls \"input\" \"test\""
 quoted/double[1]/command=" ls \"input\" \"test\" "
 trailing_spaces/command="ls input"
+critical_test/command="ls input"
+critical_test/exit_on_fail
 # commented_test/command="exit 1"  # todo: add checks to expected
