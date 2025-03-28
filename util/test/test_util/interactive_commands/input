@@ -11,8 +11,10 @@ trailing_spaces/command="ls input"
 non_critical_test[0]/command="echo \"this test is non critical and should pass\"; true"
 non_critical_test[1]/command="echo \"this test is non critical and can fail safely\";false"
 critical_test[0]/command="echo \"this test is critical and should pass\";true"
-critical_test[0]/exit_on_fail
-critical_test[1]/command="echo \"this test is critical and cannot fail safely\";false"
-critical_test[1]/exit_on_fail
+critical_test[0]/strict_status_check=0
+critical_test[1]/command="echo \"this test is critical and is expected to fail in a known way\";false"
+critical_test[1]/strict_status_check=1
+critical_test[2]/command="echo \"this test is critical and cannot fail safely\";false"
+critical_test[2]/strict_status_check=0
 this_test_shouldnt_run/command="echo \"this test should not run because it is after a failure for a critical test\";false"
 

@@ -155,12 +155,20 @@ function comma_test_commands_until_first_error() { _comma_test_commands_impl 1 "
 # option[0]/expected="a line of points smoothly transitioning from cyan to magenta"
 # option[0]/command="( echo 0,0,0 ; echo 1,1,0.1 ; echo 2,2,0.2 ; echo 3,3,0.3 ; echo 4,4,0.4 ; echo 5,5,0.5 ) | view-points --fields=label,x,scalar --weight=10 --colour=0:0.5"
 #  
-# to protect against critical test failures use the flag exit_on_failure. For example,
+# To protect against critical test failures use the flag strict_status_check to specify the expected status of the test. This is used to ensure critical functionality behaves in
+# an expected way, where unexpected behaviour may result in hardware damage if testing continues. 
+#
 #
 # > cat input
 #
-# critical_test/command="false"
-# critical_test/exit_on_failure
+# critical_test_expected_non_zero_status/command="false"
+# critical_test_expected_non_zero_status/strict_status_check=1
+#
+# critical_test_expected_zero_status/command="true"
+# critical_test_expected_zero_status/strict_status_check=0
+#
+# critical_test_this_will_abort_testing/command="true"
+# critical_test_this_will_abort_testing/strict_status_check=1
 #
 # > cat test
 # #!/bin/bash
@@ -180,8 +188,7 @@ function comma_test_interactive_commands()
         function comma_test_interactive_test_case()
         {
             local name=$1 testcase_number=$2 number_of_testcases=$3 until_first_error=$4
-            local command instruction expected exit_on_fail dialog input zenity_pid result
-            exit_on_fail=0
+            local command instruction expected strict_status_check dialog input zenity_pid result
             #input=$( comma_path_value_mangle | sed 's/^/local /' )
             #eval "$input"
             while IFS='=' read key value; do # have to do it piecemeal to avoid bash quoting difficulties
@@ -189,8 +196,8 @@ function comma_test_interactive_commands()
                 if [[ "$key" == "command" ]]; then command="$value"
                 elif [[ "$key" == "instruction" ]]; then instruction="$value"
                 elif [[ "$key" == "expected" ]]; then expected="$value"
-                elif [[ "$key" == "exit_on_fail" ]]; then exit_on_fail=1
-                else echo "$0: test '$name': expected 'command', 'instruction', 'expected', or 'exit_on_fail', got: '$key'" >&2; return 1; fi
+                elif [[ "$key" == "strict_status_check" ]]; then strict_status_check="$value"
+                else echo "$0: test '$name': expected 'command', 'instruction', 'expected', or 'strict_status_check', got: '$key'" >&2; return 1; fi
             done
             [[ -n "$command" ]] || { echo "$0: $name/command not specified" >&2 ; echo "$name/status=1"; return 1 ; }
             if [[ -n "$instruction" || -n "$expected" ]]; then                
@@ -203,7 +210,12 @@ function comma_test_interactive_commands()
             result=$?
             if [[ -n "$zenity_pid" ]]; then wait $zenity_pid; result=$?; fi
             echo "$name/status=$result"
-            if (( result != 0 && (until_first_error || exit_on_fail) )); then return $result; fi 
+            if (( until_first_error )); then
+                 if (( result != 0)); then return 1; fi 
+            fi
+            if [[ -n "$strict_status_check" ]]; then
+                if (( result != strict_status_check )); then return 2; fi
+            fi
             return 0
         }
 
