@@ -179,8 +179,9 @@ function comma_test_interactive_commands()
     (
         function comma_test_interactive_test_case()
         {
-            local name=$1 testcase_number=$2 number_of_testcases=$3
-            local command instruction expected dialog input zenity_pid result
+            local name=$1 testcase_number=$2 number_of_testcases=$3 until_first_error=$4
+            local command instruction expected exit_on_fail dialog input zenity_pid result
+            exit_on_fail=0
             #input=$( comma_path_value_mangle | sed 's/^/local /' )
             #eval "$input"
             while IFS='=' read key value; do # have to do it piecemeal to avoid bash quoting difficulties
@@ -202,7 +203,8 @@ function comma_test_interactive_commands()
             result=$?
             if [[ -n "$zenity_pid" ]]; then wait $zenity_pid; result=$?; fi
             echo "$name/status=$result"
-            return $result
+            if (( result != 0 && (until_first_error || exit_on_fail) )); then return $result; fi 
+            return 0
         }
 
         local lines=$( cat );
@@ -210,12 +212,11 @@ function comma_test_interactive_commands()
         local number_of_testcases=$( wc -l <<< "$test_cases" )
         local testcase_number=0 test_case_name
         while read test_case_name; do
-            exit_on_fail=0
             local escaped="${test_case_name//[/\\[}"
             local test_case=$( grep "^$escaped/" <<< "$lines" | sed "s#^$escaped/##" ) # grep --fixed-strings does not seem to work
             comma_test_interactive_test_case $test_case_name $testcase_number $number_of_testcases <<< "$test_case"
-            local r=$?
-            if (( r != 0 && (until_first_error || exit_on_fail) )); then return $r; fi
+            local keep_testing=$?
+            if (( keep_testing !=0 )); then return $keep_testing; fi 
             (( ++testcase_number ))
         done <<< "$test_cases"
     )
