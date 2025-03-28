@@ -214,7 +214,7 @@ function comma_test_interactive_commands()
         while read test_case_name; do
             local escaped="${test_case_name//[/\\[}"
             local test_case=$( grep "^$escaped/" <<< "$lines" | sed "s#^$escaped/##" ) # grep --fixed-strings does not seem to work
-            comma_test_interactive_test_case $test_case_name $testcase_number $number_of_testcases <<< "$test_case"
+            comma_test_interactive_test_case $test_case_name $testcase_number $number_of_testcases $until_first_error <<< "$test_case"
             local keep_testing=$?
             if (( keep_testing !=0 )); then return $keep_testing; fi 
             (( ++testcase_number ))
