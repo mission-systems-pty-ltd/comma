@@ -155,9 +155,10 @@ function comma_test_commands_until_first_error() { _comma_test_commands_impl 1 "
 # option[0]/expected="a line of points smoothly transitioning from cyan to magenta"
 # option[0]/command="( echo 0,0,0 ; echo 1,1,0.1 ; echo 2,2,0.2 ; echo 3,3,0.3 ; echo 4,4,0.4 ; echo 5,5,0.5 ) | view-points --fields=label,x,scalar --weight=10 --colour=0:0.5"
 #  
-# To protect against critical test failures use the flag strict_status_check to specify the expected status of the test. This is used to ensure critical functionality behaves in
-# an expected way, where unexpected behaviour may result in hardware damage if testing continues. 
-#
+# To protect against critical test failures use the flag strict_status_check to specify the 
+# expected status of the test. This is used to ensure critical functionality behaves in
+# an expected way, where unexpected behaviour may result in hardware damage if testing 
+# continues. 
 #
 # > cat input
 #
@@ -216,7 +217,7 @@ function comma_test_interactive_commands()
             if [[ -n "$strict_status_check" ]]; then
                 if (( result != strict_status_check )); then return 2; fi
             fi
-            return 0
+            return 0;
         }
 
         local lines=$( cat );
