@@ -4,3 +4,9 @@ source $( type -p comma-application-util ) || { echo "$0: failed to source comma
 source $( type -p comma-test-util ) || { echo "$0: failed to source comma-test-util" >&2 ; exit 1 ; }
 
 comma_test_interactive_commands
+result=$?
+
+if (( result == 1 )); then 
+    echo "this_test_shouldnt_run/output=\"this test did not run\""
+    echo "this_test_shouldnt_run/status=0"
+fi

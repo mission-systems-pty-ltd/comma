@@ -7,6 +7,12 @@ quoted/single[4]/command = " ls 'input' 'test' "
 quoted/double[0]/command="ls \"input\" \"test\""
 quoted/double[1]/command=" ls \"input\" \"test\" "
 trailing_spaces/command="ls input"
-critical_test/command="ls input"
-critical_test/exit_on_fail
 # commented_test/command="exit 1"  # todo: add checks to expected
+non_critical_test[0]/command="echo \"this test is non critical and should pass\"; true"
+non_critical_test[1]/command="echo \"this test is non critical and can fail safely\";false"
+critical_test[0]/command="echo \"this test is critical and should pass\";true"
+critical_test[0]/exit_on_fail
+critical_test[1]/command="echo \"this test is critical and cannot fail safely\";false"
+critical_test[1]/exit_on_fail
+this_test_shouldnt_run/command="echo \"this test should not run because it is after a failure for a critical test\";false"
+
