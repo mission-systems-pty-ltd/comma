@@ -154,6 +154,13 @@ function comma_test_commands_until_first_error() { _comma_test_commands_impl 1 "
 # option[0]/instruction=
 # option[0]/expected="a line of points smoothly transitioning from cyan to magenta"
 # option[0]/command="( echo 0,0,0 ; echo 1,1,0.1 ; echo 2,2,0.2 ; echo 3,3,0.3 ; echo 4,4,0.4 ; echo 5,5,0.5 ) | view-points --fields=label,x,scalar --weight=10 --colour=0:0.5"
+#  
+# to protect against critical test failures use the flag exit_on_failure. For example,
+#
+# > cat input
+#
+# critical_test/command="false"
+# critical_test/exit_on_failure
 #
 # > cat test
 # #!/bin/bash
