@@ -171,6 +171,14 @@ function comma_test_commands_until_first_error() { _comma_test_commands_impl 1 "
 # critical_test_this_will_abort_testing/command="true"
 # critical_test_this_will_abort_testing/strict_status_check=1
 #
+# until_first_error vs strict_status_check
+# until_first_error
+#   * applies to all tests (when testing with comma_test_interactive_commands_until_first_error)
+#   * exits on non-zero status
+# strict_status_check
+#   * applies only to test with strict_status_check
+#   * exits on unexpected status
+#
 # > cat test
 # #!/bin/bash
 #
