@@ -43,6 +43,7 @@ parallel=0
 quiet=0
 debug=0
 until_first_failure=0
+assert_status=0
 max_parallel=$max_parallel
 max_memory_main=$max_memory_main
 max_memory_shared=$max_memory_shared
@@ -69,6 +70,7 @@ function description_test_selection()
 --tags-list; list tags for all subdirectories as <dir>,<tags>
 --to=[<dir>]; run tests up to a given test, the latter included, where test directories are ordered lexicographically
 --until-first-failure; exit after the first failure (works only when tests run serially)
+--assert-status; alias for until-first-failure
 --white-list=[<file>]; only run these tests mentioned in the <file>, applied first before black list;
   comment lines starting with # are ignored; each entry in the list matches to a sub-directory or
   directories name using pattern ^<subdir>; see examples
@@ -973,7 +975,7 @@ function process_tests_serial()
         rv=$?
         (( $rv == 0 )) || {
             result=1
-            [[ "$options_until_first_failure" == "1" ]] && return 1
+            [[ "$options_until_first_failure" == "1" || "$options_assert_status" == "1" ]] && return 1
         }
     done
     return 0
