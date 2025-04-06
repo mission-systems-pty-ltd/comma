@@ -10,8 +10,13 @@ trailing_spaces="ls input"
 tricky/test/name/assert_status="echo \"this is a test, not an assert_status flag!\""
 non/critical/test[0]="echo \"this test is non critical and should pass\"; true"
 non/critical/test[1]="echo \"this test is non critical and can fail safely\";false"
-non/critical/test/[2]/non/matching/assert_status
-non/critical/test[2]="echo \"the previous assert_status does not match this test so it can fail happily\";exit 3"
+bad/assert_status/usage[0]/assert_status
+bad/assert_status/usage[0]/test="echo \"assert_status flag should match test name. should be bad/assert_status/usage[0]/test/assert_status\";exit 1"
+bad/assert_status/usage[1]="echo \"assert_status flag should be before test\";exit 2"
+bad/assert_status/usage[1]/assert_status
+bad/assert_status/usage[2]/assert_status
+some/other/test="true"
+bad/assert_status/usage[2]="echo \"assert_status flag needs to immediately precede test\";exit 3"
 critical/test[0]/assert_status
 critical/test[0]="echo \"this test is critical and should pass\";true"
 critical/test[1]/assert_status
