@@ -95,15 +95,23 @@ export -f _comma_test_command_impl
 
 function _comma_test_commands_impl()
 {
-    local key value status output until_first_error=$1 fields=$2
+    local key value status output until_first_failure=$1 fields=$2 assert_status=0
+    local input=$( grep '=' ; grep -v '^#' )
+    # local critical_tests=()
+    # while IFS='=' read key value ; do
+    #     [[ -n "$key" && ! "$key" =~ \#.* ]] || continue
+    #     key=$( comma-string-strip <<< "$key" )
+    #     # todo: if $key is $blah/assert_status=1, then critical_tests+=( "$blah" )  
+    # done <<< "$input"
     while IFS='=' read key value ; do
         [[ -n "$key" && ! "$key" =~ \#.* ]] || continue
         key=$( comma-string-strip <<< "$key" )
         _comma_test_command_impl "$key" "$value"
         status=$?
         echo "$key/status=$status"
-        if (( status != 0 && until_first_error )); then break; fi
-    done < <( grep '=' ; grep -v '^#' )
+        if (( status != 0 && until_first_failure )); then break; fi
+        # todo: if (( status != 0 && $key in critical tests )); then break; - or maybe it should be: return 1
+    done <<< "$input"
 }
 
 # a helper to write tests in the comma-test-run style
@@ -136,12 +144,12 @@ function _comma_test_commands_impl()
 # my_basic_test[1]/for/something/output=0
 
 function comma_test_commands() { _comma_test_commands_impl 0 "$@" ; }
-function comma_test_commands_until_first_error() { _comma_test_commands_impl 1 "$@" ; }
+function comma_test_commands_until_first_failure() { _comma_test_commands_impl 1 "$@" ; }
 
 # run interactive test
 #
-# usage: comma_test_interactive_commands [<until_first_error>]
-#        <until_first_error>: 0 (i.e. false) or 1 (i.e. true); default: 0
+# usage: comma_test_interactive_commands [<until_first_failure>]
+#        <until_first_failure>: 0 (i.e. false) or 1 (i.e. true); default: 0
 #
 # it works as something like
 #
@@ -167,8 +175,8 @@ function comma_test_commands_until_first_error() { _comma_test_commands_impl 1 "
 # see for an example: e.g. snark/graphics/applications/test/view-points/colour/scalar/options
 function comma_test_interactive_commands()
 {
-    local until_first_error=$1
-    if [[ -n "$until_first_error" ]]; then until_first_error=1; else until_first_error=0; fi
+    local until_first_failure=$1
+    if [[ -n "$until_first_failure" ]]; then until_first_failure=1; else until_first_failure=0; fi
     (
         function comma_test_interactive_test_case()
         {
@@ -206,13 +214,13 @@ function comma_test_interactive_commands()
             local test_case=$( grep "^$escaped/" <<< "$lines" | sed "s#^$escaped/##" ) # grep --fixed-strings does not seem to work
             comma_test_interactive_test_case $test_case_name $testcase_number $number_of_testcases <<< "$test_case"
             local r=$?
-            if (( r != 0 && until_first_error )); then return $r; fi
+            if (( r != 0 && until_first_failure )); then return $r; fi
             (( ++testcase_number ))
         done <<< "$test_cases"
     )
 }
 
-function comma_test_interactive_commands_until_first_error() { comma_test_interactive_commands 1; }
+function comma_test_interactive_commands_until_first_failure() { comma_test_interactive_commands 1; }
 
 # the tmp directory cleanup for comma_test_run_tarball
 function comma_test_run_tarball_cleanup()

@@ -68,7 +68,7 @@ function description_test_selection()
 --tags-excluded=[<tags>]; |-separated tags or regular expressions, do not run tests with given tags (see below)
 --tags-list; list tags for all subdirectories as <dir>,<tags>
 --to=[<dir>]; run tests up to a given test, the latter included, where test directories are ordered lexicographically
---until-first-failure; exit after the first failure (works only when tests run serially)
+--until-first-failure,--assert-status; exit after the first failure i.e. test script or command returning non-zero (works only when tests run serially)
 --white-list=[<file>]; only run these tests mentioned in the <file>, applied first before black list;
   comment lines starting with # are ignored; each entry in the list matches to a sub-directory or
   directories name using pattern ^<subdir>; see examples
