@@ -6,7 +6,9 @@ source $( type -p comma-test-util ) || { echo "$0: failed to source comma-test-u
 comma_test_interactive_commands
 result=$?
 
+echo "bad/syntax/test/output=\"this test was skipped because it doesnt match expected syntax\""
+echo "bad/syntax/test/status=0"
 if (( result != 0 )); then 
-    echo "this_test_shouldnt_run/output=\"this test did not run\""
-    echo "this_test_shouldnt_run/status=0"
+    echo "this/test/shouldnt/run/output=\"this test did not run\""
+    echo "this/test/shouldnt/run/status=0"
 fi

@@ -1,0 +1,8 @@
+a/successful/test/output=""
+a/successful/test/status=0
+another/successful/test/output=""
+another/successful/test/status=0
+this/test/fails/output=""
+this/test/fails/status=1
+this/test/shouldnt/run/output="this test did not run"
+this/test/shouldnt/run/status=0

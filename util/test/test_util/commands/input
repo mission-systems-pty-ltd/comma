@@ -7,3 +7,15 @@ quoted/double[0]="ls \"input\" \"test\""
 quoted/double[1]=" ls \"input\" \"test\" "
 trailing_spaces="ls input"   
 # commented_test="exit 1" # todo: add checks to expected
+tricky/test/name/assert_status="echo \"this is a test, not an assert_status flag!\""
+non/critical/test[0]="echo \"this test is non critical and should pass\"; true"
+non/critical/test[1]="echo \"this test is non critical and can fail safely\";false"
+non/critical/test/[2]/non/matching/assert_status
+non/critical/test[2]="echo \"the previous assert_status does not match this test so it can fail happily\";exit 3"
+critical/test[0]/assert_status
+critical/test[0]="echo \"this test is critical and should pass\";true"
+critical/test[1]/assert_status
+critical/test[1]="echo \"this test is critical and is expected to fail in a known way\";(exit 5); if [[ $? == 5 ]]; then exit 0; else exit 1; fi"
+critical/test[2]/assert_status
+critical/test[2]="echo \"this test is critical and cannot fail safely\";false"
+this/test/shouldnt/run="echo \"this test should not run because it is after a failure for a critical test\";false"

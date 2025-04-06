@@ -1,0 +1,4 @@
+a/successful/test/command="true"
+another/successful/test/command="true"
+this/test/fails/command="false"
+this/test/is/after/first/failure/command="echo \"this test will not run\""

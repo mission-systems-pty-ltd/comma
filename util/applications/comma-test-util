@@ -95,18 +95,30 @@ export -f _comma_test_command_impl
 
 function _comma_test_commands_impl()
 {
-    local key value status output until_first_error=$1 fields=$2
+    local key value status output assert_status_key until_first_failure=$1 fields=$2
     while IFS='=' read key value ; do
         [[ -n "$key" && ! "$key" =~ \#.* ]] || continue
         key=$( comma-string-strip <<< "$key" )
+        if [[ -z "$value" && "$key" == *"/assert_status"* ]]; then
+            assert_status_key="${key%/assert_status}"
+            continue;
+        fi
         _comma_test_command_impl "$key" "$value"
         status=$?
         echo "$key/status=$status"
-        if (( status != 0 && until_first_error )); then break; fi
-    done < <( grep '=' ; grep -v '^#' )
+        if (( status != 0 )); then
+            if (( until_first_failure )) || [[ "$assert_status_key" == "$key" ]]; then return $status; fi
+        fi
+        assert_status_key=""
+    done < <( grep -v '^#' )
+    return 0;
 }
 
 # a helper to write tests in the comma-test-run style
+#
+# usage: comma_test_commands [<until_first_failure>/assert_status]
+#        <until_first_failure>: 0 (i.e. false) or 1 (i.e. true); default: 0
+# (assert_status  is an alias for until_first_failure when passed to the test helper)
 #
 # take line by line on stdin: <test name>="<command>"
 #
@@ -134,14 +146,49 @@ function _comma_test_commands_impl()
 # my_basic_test[1]/for/something/output/a="2"
 # my_basic_test[1]/for/something/output/b="4"
 # my_basic_test[1]/for/something/output=0
+#
+#
+# until_first_error vs assert_status
+# sometimes, it might be useful to stop testing when a test fails (returns a non-zero status)
+# for this purpose we have until_first_error and assert_status. These can be used in three ways
+#       1.  passed as an argument to comma-test-run: use --assert-status or --until-first-failure 
+#           flags. These are equivalent and apply to all test cases in a test - when the first
+#           test case fails, all tests will stop.
+#       2.  as a specific comma-test-util command: comma_test_interactive_commands_until_first_failure
+#           and comma_test_interactive_commands_assert_status both will stop testing on any test case
+#           returning a non-zero status.
+#       3.  assert_status as a boolean flag specified in ./input file: the previous two usages will
+#           apply to ALL test cases. If we only want to protect an individual test case against 
+#           failures, we can use the assert_status boolean flag in the input file. To apply to a test
+#           case, the assert_status flag must:
+#               a. have the same key as the test case it relates to, and,
+#               b. immediately precede the test case it relates to
+#           ie,
+#           <test_case_name>/assert_status
+#           <test_case_name>=<test_command>
+#           For example, valid usage is
+#               > cat input
+#
+#               critical/test/assert_status
+#               critical/test="false"
+#   
+#           Invalid usage will ignore the assert_status flag, for example
+#               > cat input
+#           
+#               bad/critical/test/a/assert_status   
+#               bad/critical/test/b="false"     # assert_status doesnt match the key of subsequent test
+#               bad/critical/test/b/assert_status   # assert_status comes after test
+#               bad/critical/test/a="false"     # test not immediately preceded by valid assert_status
 
 function comma_test_commands() { _comma_test_commands_impl 0 "$@" ; }
-function comma_test_commands_until_first_error() { _comma_test_commands_impl 1 "$@" ; }
+function comma_test_commands_until_first_failure() { _comma_test_commands_impl 1 "$@" ; }
+function comma_test_commands_assert_status() { _comma_test_commands_impl 1 "$@" ; }
 
 # run interactive test
 #
-# usage: comma_test_interactive_commands [<until_first_error>]
-#        <until_first_error>: 0 (i.e. false) or 1 (i.e. true); default: 0
+# usage: comma_test_interactive_commands [<until_first_failure>/assert_status]
+#        <until_first_failure>: 0 (i.e. false) or 1 (i.e. true); default: 0
+# (assert_status  is an alias for until_first_failure when passed to the test helper)
 #
 # it works as something like
 #
@@ -155,29 +202,26 @@ function comma_test_commands_until_first_error() { _comma_test_commands_impl 1 "
 # option[0]/expected="a line of points smoothly transitioning from cyan to magenta"
 # option[0]/command="( echo 0,0,0 ; echo 1,1,0.1 ; echo 2,2,0.2 ; echo 3,3,0.3 ; echo 4,4,0.4 ; echo 5,5,0.5 ) | view-points --fields=label,x,scalar --weight=10 --colour=0:0.5"
 #  
-# To protect against critical test failures use the flag strict_status_check to specify the 
-# expected status of the test. This is used to ensure critical functionality behaves in
-# an expected way, where unexpected behaviour may result in hardware damage if testing 
-# continues. 
+# until_first_error vs assert_status
+# Interactive commands also implement until_first_error/assert_status. The usage is the same as 
+# for non-interactive commands (see above comments), EXCEPT for when used inside ./input. This
+# is because interactive commands require a specific syntax - <test_case_name>/command/expected/instruction.
+# ie,
+# <test_case_name>/command=<test_command>
+# <test_case_name>/instruction=<test_instruction>
+# <test_case_name>/expected=<test_expected>
+# <test_case_name>/assert_status
 #
+# Note that for interactive commands, because test cases are strictly grouped by <test_case_name>
+# the order does not matter (unlike for non-interactive test cases where they just run line by
+# line)
+#
+# For example, valid usage is
+# 
 # > cat input
 #
-# critical_test_expected_non_zero_status/command="false"
-# critical_test_expected_non_zero_status/strict_status_check=1
-#
-# critical_test_expected_zero_status/command="true"
-# critical_test_expected_zero_status/strict_status_check=0
-#
-# critical_test_this_will_abort_testing/command="true"
-# critical_test_this_will_abort_testing/strict_status_check=1
-#
-# until_first_error vs strict_status_check
-# until_first_error
-#   * applies to all tests (when testing with comma_test_interactive_commands_until_first_error)
-#   * exits on non-zero status
-# strict_status_check
-#   * applies only to test with strict_status_check
-#   * exits on unexpected status
+# some/random/test/command="true"
+# some/random/test/assert_status
 #
 # > cat test
 # #!/bin/bash
@@ -191,13 +235,14 @@ function comma_test_commands_until_first_error() { _comma_test_commands_impl 1 "
 # see for an example: e.g. snark/graphics/applications/test/view-points/colour/scalar/options
 function comma_test_interactive_commands()
 {
-    local until_first_error=$1
-    if [[ -n "$until_first_error" ]]; then until_first_error=1; else until_first_error=0; fi
+    local until_first_failure=$1
+    if [[ -n "$until_first_failure" ]]; then until_first_failure=1; else until_first_failure=0; fi
     (
         function comma_test_interactive_test_case()
         {
-            local name=$1 testcase_number=$2 number_of_testcases=$3 until_first_error=$4
-            local command instruction expected strict_status_check dialog input zenity_pid result
+            local name=$1 testcase_number=$2 number_of_testcases=$3 until_first_failure=$4
+            local command instruction expected assert_status dialog input zenity_pid result
+            assert_status=0
             #input=$( comma_path_value_mangle | sed 's/^/local /' )
             #eval "$input"
             while IFS='=' read key value; do # have to do it piecemeal to avoid bash quoting difficulties
@@ -205,8 +250,8 @@ function comma_test_interactive_commands()
                 if [[ "$key" == "command" ]]; then command="$value"
                 elif [[ "$key" == "instruction" ]]; then instruction="$value"
                 elif [[ "$key" == "expected" ]]; then expected="$value"
-                elif [[ "$key" == "strict_status_check" ]]; then strict_status_check="$value"
-                else echo "$0: test '$name': expected 'command', 'instruction', 'expected', or 'strict_status_check', got: '$key'" >&2; return 1; fi
+                elif [[ "$key" == "assert_status" ]]; then assert_status=1
+                else echo "$0: test '$name': expected 'command', 'instruction', 'expected', or 'assert_status', got: '$key'" >&2; return 1; fi
             done
             [[ -n "$command" ]] || { echo "$0: $name/command not specified" >&2 ; echo "$name/status=1"; return 1 ; }
             if [[ -n "$instruction" || -n "$expected" ]]; then                
@@ -219,12 +264,7 @@ function comma_test_interactive_commands()
             result=$?
             if [[ -n "$zenity_pid" ]]; then wait $zenity_pid; result=$?; fi
             echo "$name/status=$result"
-            if (( until_first_error )); then
-                 if (( result != 0)); then return 1; fi 
-            fi
-            if [[ -n "$strict_status_check" ]]; then
-                if (( result != strict_status_check )); then return 2; fi
-            fi
+            if (( result != 0 && (until_first_failure || assert_status) )); then return $result; fi 
             return 0;
         }
 
@@ -235,15 +275,16 @@ function comma_test_interactive_commands()
         while read test_case_name; do
             local escaped="${test_case_name//[/\\[}"
             local test_case=$( grep "^$escaped/" <<< "$lines" | sed "s#^$escaped/##" ) # grep --fixed-strings does not seem to work
-            comma_test_interactive_test_case $test_case_name $testcase_number $number_of_testcases $until_first_error <<< "$test_case"
-            local keep_testing=$?
-            if (( keep_testing !=0 )); then return $keep_testing; fi 
+            comma_test_interactive_test_case $test_case_name $testcase_number $number_of_testcases $until_first_failure <<< "$test_case"
+            local continue_testing=$?
+            if (( continue_testing !=0 )); then return $continue_testing; fi 
             (( ++testcase_number ))
         done <<< "$test_cases"
     )
 }
 
-function comma_test_interactive_commands_until_first_error() { comma_test_interactive_commands 1; }
+function comma_test_interactive_commands_until_first_failure() { comma_test_interactive_commands 1; }
+function comma_test_interactive_commands_assert_status() { comma_test_interactive_commands 1; }
 
 # the tmp directory cleanup for comma_test_run_tarball
 function comma_test_run_tarball_cleanup()
