@@ -21,7 +21,6 @@
 #include <boost/scoped_ptr.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
-#include "../../application/verbose.h"
 #include "../../base/exception.h"
 #include "../../base/none.h"
 #include "../../csv/format.h"
@@ -49,7 +48,7 @@ static void usage( bool verbose )
     std::cerr << std::endl;
     std::cerr << "column-wise calculation, optionally by id and block" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "usage: cat data.csv | " << comma::verbose.app_name() << " <what> [<options>] > calc.csv" << std::endl;
+    std::cerr << "usage: cat data.csv | csv-calc <what> [<options>] > calc.csv" << std::endl;
     std::cerr << std::endl;
     std::cerr << "<what>: comma-separated list of operations" << std::endl;
     std::cerr << "        results will be output in the same order" << std::endl;
@@ -115,13 +114,13 @@ static void usage( bool verbose )
         std::cerr << std::endl;
     }
     std::cerr << "examples" << std::endl;
-    std::cerr << "    seq 1 1000 | " << comma::verbose.app_name() << " percentile=0.9" << std::endl;
-    std::cerr << "    seq 1 1000 | " << comma::verbose.app_name() << " percentile=0.1,percentile=0.9" << std::endl;
-    std::cerr << "    seq 1 1000 | " << comma::verbose.app_name() << " percentile=0.9:interpolate --verbose" << std::endl;
+    std::cerr << "    seq 1 1000 | csv-calc percentile=0.9" << std::endl;
+    std::cerr << "    seq 1 1000 | csv-calc percentile=0.1,percentile=0.9" << std::endl;
+    std::cerr << "    seq 1 1000 | csv-calc percentile=0.9:interpolate --verbose" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    {(seq 1 500 | csv-paste \"-\" \"value=0\") ; (seq 1 100 | csv-paste \"-\" \"value=1\") ; (seq 501 1000 | csv-paste \"-\" \"value=0\")} | " << comma::verbose.app_name() << " --fields=a,block percentile=0.9" << std::endl;
+    std::cerr << "    {(seq 1 500 | csv-paste \"-\" \"value=0\") ; (seq 1 100 | csv-paste \"-\" \"value=1\") ; (seq 501 1000 | csv-paste \"-\" \"value=0\")} | csv-calc --fields=a,block percentile=0.9" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "    {(seq 1 500 | csv-paste \"-\" \"value=0\") ; (seq 1 100 | csv-paste \"-\" \"value=1\") ; (seq 501 1000 | csv-paste \"-\" \"value=0\")} | " << comma::verbose.app_name() << " --fields=a,id percentile=0.9" << std::endl;
+    std::cerr << "    {(seq 1 500 | csv-paste \"-\" \"value=0\") ; (seq 1 100 | csv-paste \"-\" \"value=1\") ; (seq 501 1000 | csv-paste \"-\" \"value=0\")} | csv-calc --fields=a,id percentile=0.9" << std::endl;
     std::cerr << std::endl;
     std::cerr << std::endl;
     exit( -1 );
@@ -353,7 +352,7 @@ template < typename T, typename V > struct map_traits
 
 template < typename V > struct map_traits< boost::posix_time::ptime, V >
 {
-    struct hash : public std::unary_function< boost::posix_time::ptime, std::size_t >
+    struct hash : public std::function< boost::posix_time::ptime( std::size_t ) >
     {
         std::size_t operator()( const boost::posix_time::ptime& t ) const
         {

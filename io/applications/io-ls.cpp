@@ -169,12 +169,12 @@ void process_tcp(std::istream& is, const comma::csv::options& csv)
     comma::csv::output_stream<output_t> os(std::cout, csv);
     //first line is header
     std::getline(is,line);
-    comma::verbose<<line<<std::endl;
-    while(is.good())
+    comma::saymore() << line << std::endl;
+    while( is.good() )
     {
         std::getline(is,line);
-        comma::verbose<<line<<std::endl;
-        output.scan(line);
+        comma::saymore() << line << std::endl;
+        output.scan( line );
         if(port && output.local.port != *port) {continue;}
         if(state && output.state != *state) {continue;}
         os.write(output);
@@ -184,7 +184,7 @@ void usage(bool detail)
 {
     std::cerr << "    list tcp connections; reads and parses lines from /proc/net/tcp file and outputs them in csv format" << std::endl;
     std::cerr << std::endl;
-    std::cerr << "usage:  " << comma::verbose.app_name() << " [ <options> ]" << std::endl;
+    std::cerr << "usage:  io-ls [ <options> ]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "options" << std::endl;
     std::cerr << "    --help,-h: show help" << std::endl;
@@ -201,7 +201,7 @@ void usage(bool detail)
     }
     else { std::cerr << "    see --help --verbose for more details" << std::endl<< std::endl; }
     std::cerr << "example" << std::endl;
-    std::cerr << "    (" << comma::verbose.app_name() << " --output-fields; "<<comma::verbose.app_name() << ") | column -ts, " << std::endl;
+    std::cerr << "    (io-ls --output-fields; io-ls | column -ts, " << std::endl;
     std::cerr << std::endl;
     std::cerr << "    io-ls --fields=local,state | csv-join --fields=,,state <(io-ls --enum-state)\";fields=state\"" << std::endl;
     std::cerr << std::endl;
@@ -221,14 +221,9 @@ int main( int ac, char** av )
         state=options.optional<unsigned int>("--state");
         std::fstream file("/proc/net/tcp", std::ios::in);
         process_tcp(file, csv);
+        return 0;
     }
-    catch( std::exception& ex )
-    {
-        std::cerr << comma::verbose.app_name() << ": " << ex.what() << std::endl; return 1;
-    }
-    catch( ... )
-    {
-        std::cerr << comma::verbose.app_name() << ": " << "unknown exception" << std::endl; return 1;
-    }
-    return 0;
+    catch( std::exception& ex ) { comma::say() << ": " << ex.what() << std::endl; }
+    catch( ... ) { comma::say() << ": unknown exception" << std::endl; }
+    return 1;
 }
