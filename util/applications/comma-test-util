@@ -95,23 +95,20 @@ export -f _comma_test_command_impl
 
 function _comma_test_commands_impl()
 {
-    local key value status output until_first_failure=$1 fields=$2 assert_status=0
-    local input=$( grep '=' ; grep -v '^#' )
-    # local critical_tests=()
-    # while IFS='=' read key value ; do
-    #     [[ -n "$key" && ! "$key" =~ \#.* ]] || continue
-    #     key=$( comma-string-strip <<< "$key" )
-    #     # todo: if $key is $blah/assert_status=1, then critical_tests+=( "$blah" )  
-    # done <<< "$input"
-    while IFS='=' read key value ; do
-        [[ -n "$key" && ! "$key" =~ \#.* ]] || continue
-        key=$( comma-string-strip <<< "$key" )
+    local lhs key value status output until_first_failure=$1 fields=$2 predicate
+    while IFS='=' read lhs value ; do
+        [[ -n "$lhs" && ! "$lhs" =~ \#.* ]] || continue
+        local a=( $lhs )
+        if (( ${#a[@]} == 1 )); then predicate=; key=${a[0]}
+        elif (( ${#a[@]} == 2 )); then predicate=${a[0]}; key=${a[1]}
+        else echo "$0: expected [<predicate>] <test_name>=<command>, got: '$lhs=$value'" >&2; return 1; fi
         _comma_test_command_impl "$key" "$value"
         status=$?
         echo "$key/status=$status"
-        if (( status != 0 && until_first_failure )); then break; fi
-        # todo: if (( status != 0 && $key in critical tests )); then break; - or maybe it should be: return 1
-    done <<< "$input"
+        (( status != 0 )) || continue
+        if (( until_first_failure )); then return 1; fi 
+        if [[ "$predicate" == 'assert' ]]; then return 1; fi
+    done < <( grep '=' ; grep -v '^#' )
 }
 
 # a helper to write tests in the comma-test-run style
@@ -130,7 +127,6 @@ function _comma_test_commands_impl()
 #
 # if output fields are specified then the output will be split by field
 #
-#
 # e.g:
 # 
 # source $( type -p comma-test-util )
@@ -142,6 +138,17 @@ function _comma_test_commands_impl()
 # my_basic_test[1]/for/something/output/a="2"
 # my_basic_test[1]/for/something/output/b="4"
 # my_basic_test[1]/for/something/output=0
+#
+# 'assert' keyword: if present, do not run the remaining tests in the input file
+#
+# e.g, in the following example, the second test case my/test[1] does NOT run because
+#      the first failing test case my/test[0] has 'assert' in front of it
+#
+# source $( type -p comma-test-util )
+# ( echo 'assert my/test[0]="ls non-existent"'; echo 'my/test[1]="ls ."' ) | comma_test_commands
+# ls: cannot access 'non-existent': No such file or directory
+# my/test[0]/output=""
+# my/test[0]/status=2
 
 function comma_test_commands() { _comma_test_commands_impl 0 "$@" ; }
 function comma_test_commands_until_first_failure() { _comma_test_commands_impl 1 "$@" ; }
@@ -180,7 +187,7 @@ function comma_test_interactive_commands()
     (
         function comma_test_interactive_test_case()
         {
-            local name=$1 testcase_number=$2 number_of_testcases=$3
+            local name="$1" testcase_number=$2 number_of_testcases=$3
             local command instruction expected dialog input zenity_pid result
             #input=$( comma_path_value_mangle | sed 's/^/local /' )
             #eval "$input"
@@ -212,7 +219,7 @@ function comma_test_interactive_commands()
         while read test_case_name; do
             local escaped="${test_case_name//[/\\[}"
             local test_case=$( grep "^$escaped/" <<< "$lines" | sed "s#^$escaped/##" ) # grep --fixed-strings does not seem to work
-            comma_test_interactive_test_case $test_case_name $testcase_number $number_of_testcases <<< "$test_case"
+            comma_test_interactive_test_case "$test_case_name" $testcase_number $number_of_testcases <<< "$test_case"
             local r=$?
             if (( r != 0 && until_first_failure )); then return $r; fi
             (( ++testcase_number ))
