@@ -59,8 +59,40 @@ for line in sys.stdin.readlines(): print( line.strip() )
 eof
 }
 
+function _comma_test_util_test_case_name()
+{
+     cat <<eof
+import sys
+import re
+for line in sys.stdin:
+    match = re.match(r'(?:\S+\s+)?([^\s=]+)/command$', line)
+    if match:
+        print(match.group(1))
+eof
+}
+
+function _comma_test_util_test_case()
+{
+    cat <<eof
+import sys
+import re
+test_case_name = sys.argv[1]
+lines = sys.stdin.read().splitlines()
+for line in lines:
+    match = re.match(r'(?:(\S+)\s+)?(' + re.escape(test_case_name) + r')/(.+?)=(.*)', line)
+    if match:
+        predicate = match.group(1)
+        key = match.group(3)
+        val = match.group(4)
+        prefix = (predicate + ' ') if predicate else ''
+        print(f'{prefix}{key}={val}')
+eof
+}
+
 readonly _comma_test_util_strip_command="$( _comma_test_util_strip )"
 readonly _comma_test_util_unquote_command="$( _comma_test_util_unquote )"
+readonly _comma_test_util_test_case_name_command="$( _comma_test_util_test_case_name )"
+readonly _comma_test_util_test_case_command="$( _comma_test_util_test_case )"
 
 function comma-string-strip() { python3 -c "$_comma_test_util_strip_command"; } # todo: add comma-string-util, parametrise on strip characters
 
@@ -69,6 +101,14 @@ export -f comma-string-strip
 function comma-string-unquote() { python3 -c "$_comma_test_util_unquote_command"; } # todo: add comma-string-util, parametrise on strip characters
 
 export -f comma-string-unquote
+
+function comma-string-test-case-name() { python3 -c "$_comma_test_util_test_case_name_command"; } # todo: add comma-string-util, parametrise on strip characters
+
+export -f comma-string-test-case-name
+
+function comma-string-test-case() { local name="$1"; python3 -c "$_comma_test_util_test_case_command" "$name"; } # todo: add comma-string-util, parametrise on strip characters
+
+export -f comma-string-test-case
 
 function _comma_test_command_impl()
 {
@@ -180,48 +220,90 @@ function comma_test_commands_until_first_failure() { _comma_test_commands_impl 1
 # if test case does not have both instruction and expected, it is deemed non-interactive
 #
 # see for an example: e.g. snark/graphics/applications/test/view-points/colour/scalar/options
+#
+# 'assert' keyword: if present, do not run the remaining tests in the input file
+# predicates (like assert) are individually assosciated with command | instruction | expected
+#
+# in the folllowing example, my/test[1] will NOT  run if
+#   - command returns non-zero status (assert command)
+#   - zenity prompt returns non-zero status (assert expected)
+# there is currently no implementation for assert instruction
+# 
+# > cat input
+# 
+# assert my/test[0]/command=<command>
+# my/test[0]/instruction=<instruction>
+# assert my/test[0]/expected=<expected >
+# my/test[1]/command=<command>
 function comma_test_interactive_commands()
 {
     local until_first_failure=$1
     if [[ -n "$until_first_failure" ]]; then until_first_failure=1; else until_first_failure=0; fi
-    (
+    (   
         function comma_test_interactive_test_case()
-        {
+        {   
             local name="$1" testcase_number=$2 number_of_testcases=$3
-            local command instruction expected dialog input zenity_pid result
-            #input=$( comma_path_value_mangle | sed 's/^/local /' )
-            #eval "$input"
-            while IFS='=' read key value; do # have to do it piecemeal to avoid bash quoting difficulties
+            declare -A interactive_test
+            local lhs value dialog zenity_pid command_result zenity_result result
+            while IFS='=' read lhs value; do
+                local a predicate key
+                a=( $lhs )
+                if (( ${#a[@]} == 1 )); then predicate=""; key=${a[0]};
+                elif (( ${#a[@]} == 2 )); then predicate=${a[0]}; key=${a[1]};
+                else echo "$0: expected [<predicate>] <key>=<value>, got: '$lhs=$value'" >&2; return 1; fi
                 key=$( comma-string-strip <<< "$key" )
-                if [[ "$key" == "command" ]]; then command="$value"
-                elif [[ "$key" == "instruction" ]]; then instruction="$value"
-                elif [[ "$key" == "expected" ]]; then expected="$value"
-                else echo "$0: test '$name': expected 'command', 'instruction', or 'expected', got: '$key'" >&2; return 1; fi
+                case "$key" in
+                    command|instruction|expected)
+                        interactive_test["$key"]="$value"
+                        interactive_test["${key}_predicate"]="$predicate"
+                        ;;
+                    *)
+                        echo "$0: test '$name': expected 'command', 'instruction', or 'expected', got: '$key'" >&2; 
+                        return 2
+                        ;;
+                esac
             done
-            [[ -n "$command" ]] || { echo "$0: $name/command not specified" >&2 ; echo "$name/status=1"; return 1 ; }
-            if [[ -n "$instruction" || -n "$expected" ]]; then                
-                [[ -z "$instruction" ]] || dialog+="$instruction\n\n"
-                if [[ -n "$expected" ]]; then dialog+="do you see: $expected?"; else dialog+="does it look good?"; fi
+
+            [[ -n "${interactive_test[command]}" ]] || { echo "$0: $name/command not specified" >&2; return 3; }
+            if [[ -n "${interactive_test[instruction]}" || -n "${interactive_test[expected]}" ]]; then
+                [[ -z "${interactive_test[instruction]}" ]] || dialog+="${interactive_test[instruction]}\n\n"
+                if [[ -n "${interactive_test[expected]}" ]]; then dialog+="do you see: ${interactive_test[expected]}?"; else dialog+="does it look good?"; fi
                 zenity --question --title="testcase $testcase_number of $number_of_testcases: $name" --text="$dialog" --width=600 &
                 zenity_pid=$!
             fi
-            _comma_test_command_impl "$name" "$command"
-            result=$?
-            if [[ -n "$zenity_pid" ]]; then wait $zenity_pid; result=$?; fi
+
+            _comma_test_command_impl "$name" "${interactive_test[command]}"
+            command_result=$?
+            if [[ -n "$zenity_pid" ]]; then
+                wait $zenity_pid
+                zenity_result=$?
+                result=$(( command_result != 0 || zenity_result != 0 ? 1 : 0 ))
+            else
+                result=$command_result
+            fi
             echo "$name/status=$result"
-            return $result
+            
+            (( result != 0 )) || return $result
+            if (( until_first_failure )); then return 4; fi
+            if [[ "${interactive_test[command_predicate]}" == "assert" ]]; then
+                (( command_result != 0 )) && return 5
+            fi
+            [[ -n "$zenity_result" ]] || return 0
+            if [[ "${interactive_test[expected_predicate]}" == "assert" ]]; then
+                (( zenity_result != 0 )) && return 6
+            fi
+            return 0
         }
 
         local lines=$( cat );
-        local test_cases=$( cut -d= -f1 <<< "$lines" | grep -v '^#' | comma-string-strip | grep '/command$' | egrep '^[a-zA-Z0-9_]' | sed 's#/command$##' )
+        local test_cases=$( cut -d= -f1 <<< "$lines" | grep -v '^#' | comma-string-strip | grep '/command$' | egrep '^[a-zA-Z0-9_]' | comma-string-test-case-name )
         local number_of_testcases=$( wc -l <<< "$test_cases" )
         local testcase_number=0 test_case_name
         while read test_case_name; do
-            local escaped="${test_case_name//[/\\[}"
-            local test_case=$( grep "^$escaped/" <<< "$lines" | sed "s#^$escaped/##" ) # grep --fixed-strings does not seem to work
+            local test_case=$(comma-string-test-case "$test_case_name" <<< "$lines")
             comma_test_interactive_test_case "$test_case_name" $testcase_number $number_of_testcases <<< "$test_case"
             local r=$?
-            if (( r != 0 && until_first_failure )); then return $r; fi
+            (( r == 0 )) || return $r;
             (( ++testcase_number ))
         done <<< "$test_cases"
     )

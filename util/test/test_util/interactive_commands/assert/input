@@ -1,0 +1,5 @@
+basics[0]/command="ls ./non-existent-file"
+assert basics[1]="ls ./non-existent-file"
+assert basics[2]/command="ls ./non-existent-file"
+basics[3]/command="ls"
+basics[4]/command="ls ./non-existent-file"
