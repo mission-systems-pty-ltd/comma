@@ -71,7 +71,7 @@ for line in sys.stdin:
 eof
 }
 
-function _comma_test_util_test_case()
+function _comma_test_util_test_name_parse()
 {
     cat <<eof
 import sys
@@ -92,7 +92,7 @@ eof
 readonly _comma_test_util_strip_command="$( _comma_test_util_strip )"
 readonly _comma_test_util_unquote_command="$( _comma_test_util_unquote )"
 readonly _comma_test_util_test_case_name_command="$( _comma_test_util_test_case_name )"
-readonly _comma_test_util_test_case_command="$( _comma_test_util_test_case )"
+readonly _comma_test_util_test_name_parse_command="$( _comma_test_util_test_name_parse )"
 
 function comma-string-strip() { python3 -c "$_comma_test_util_strip_command"; } # todo: add comma-string-util, parametrise on strip characters
 
@@ -102,13 +102,9 @@ function comma-string-unquote() { python3 -c "$_comma_test_util_unquote_command"
 
 export -f comma-string-unquote
 
-function comma-string-test-case-name() { python3 -c "$_comma_test_util_test_case_name_command"; } # todo: add comma-string-util, parametrise on strip characters
+function _comma_test_case_name() { python3 -c "$_comma_test_util_test_case_name_command"; } # todo: add comma-string-util, parametrise on strip characters
 
-export -f comma-string-test-case-name
-
-function comma-string-test-case() { local name="$1"; python3 -c "$_comma_test_util_test_case_command" "$name"; } # todo: add comma-string-util, parametrise on strip characters
-
-export -f comma-string-test-case
+function _comma_test_name_parse() { local name="$1"; python3 -c "$_comma_test_util_test_name_parse_command" "$name"; } # todo: add comma-string-util, parametrise on strip characters
 
 function _comma_test_command_impl()
 {
@@ -254,6 +250,7 @@ function comma_test_interactive_commands()
                 key=$( comma-string-strip <<< "$key" )
                 case "$key" in
                     command|instruction|expected)
+                        if [[ "$key" == "instruction" || "$key" == "expected" ]]; then value=$(echo "$value" | sed -E "s/^(['\"])(.*)\1$/\2/"); fi
                         interactive_test["$key"]="$value"
                         interactive_test["${key}_predicate"]="$predicate"
                         ;;
@@ -296,11 +293,11 @@ function comma_test_interactive_commands()
         }
 
         local lines=$( cat );
-        local test_cases=$( cut -d= -f1 <<< "$lines" | grep -v '^#' | comma-string-strip | grep '/command$' | egrep '^[a-zA-Z0-9_]' | comma-string-test-case-name )
+        local test_cases=$( cut -d= -f1 <<< "$lines" | grep -v '^#' | comma-string-strip | grep '/command$' | egrep '^[a-zA-Z0-9_]' | _comma_test_case_name )
         local number_of_testcases=$( wc -l <<< "$test_cases" )
         local testcase_number=0 test_case_name
         while read test_case_name; do
-            local test_case=$(comma-string-test-case "$test_case_name" <<< "$lines")
+            local test_case=$(_comma_test_name_parse "$test_case_name" <<< "$lines")
             comma_test_interactive_test_case "$test_case_name" $testcase_number $number_of_testcases <<< "$test_case"
             local r=$?
             (( r == 0 )) || return $r;

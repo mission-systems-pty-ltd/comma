@@ -1,6 +1,6 @@
 basics[0]/output=""
-basics[0]/status=2
-basics[2]/output=""
-basics[2]/status=2
+basics[0]/status=1
+basics[1]/output=""
+basics[1]/status=2
 status=5
 output/lines/count=4
