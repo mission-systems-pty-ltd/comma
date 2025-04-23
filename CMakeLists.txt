@@ -153,6 +153,7 @@ OPTION( BUILD_APPLICATIONS "build applications" ON )
 SET( comma_BUILD_APPLICATIONS ${BUILD_APPLICATIONS} )
 
 option( BUILD_SHARED_LIBS "build with shared libraries" ON )
+option( comma_BUILD_NAME_VALUE_YAML "build name_value with yaml support; requires libyaml; e.g. apt install libyaml-dev" OFF )
 option( comma_BUILD_PYTHON "build python" ON )
 option( comma_BUILD_XML "build xml" OFF )
 option( comma_BUILD_ZEROMQ "build io with zeromq support" OFF )

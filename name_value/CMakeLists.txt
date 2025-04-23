@@ -7,12 +7,18 @@ FILE( GLOB impl_includes ${SOURCE_CODE_BASE_DIR}/${PROJECT}/impl/*.h )
 SOURCE_GROUP( ${PROJECT} FILES ${source} ${includes} ${impl_includes} )
 #ADD_CUSTOM_TARGET( ${TARGET_NAME} ${source} ${includes} ${impl_includes} comma_application comma_string comma_xpath )
 
+if( comma_BUILD_NAME_VALUE_YAML )
+    set( source "${source};${SOURCE_CODE_BASE_DIR}/${PROJECT}/impl/yaml.cpp" )
+endif( comma_BUILD_NAME_VALUE_YAML )
 INSTALL( FILES ${includes} DESTINATION ${comma_INSTALL_INCLUDE_DIR}/${PROJECT} )
 INSTALL( FILES ${impl_includes} DESTINATION ${comma_INSTALL_INCLUDE_DIR}/${PROJECT}/impl )
 
 ADD_LIBRARY( ${TARGET_NAME} ${source} ${includes} )
 SET_TARGET_PROPERTIES( ${TARGET_NAME} PROPERTIES ${comma_LIBRARY_PROPERTIES} )
-TARGET_LINK_LIBRARIES( ${TARGET_NAME} comma_string comma_xpath ${comma_ALL_EXTERNAL_LIBRARIES} ) # comma_application
+target_link_libraries( ${TARGET_NAME} comma_string comma_xpath ${comma_ALL_EXTERNAL_LIBRARIES} ) # comma_application
+if( comma_BUILD_NAME_VALUE_YAML )
+    target_link_libraries( ${TARGET_NAME} yaml )
+endif( comma_BUILD_NAME_VALUE_YAML )
 INSTALL(
     TARGETS ${TARGET_NAME}
     RUNTIME DESTINATION ${comma_INSTALL_BIN_DIR} COMPONENT Runtime     # .exe, .dll
