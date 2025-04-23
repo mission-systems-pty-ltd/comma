@@ -5,10 +5,10 @@
 
 #include <algorithm>
 #include <array>
+#include <functional>
 #include <set>
 #include <sstream>
 #include <unordered_map>
-#include <boost/bind/bind.hpp>
 #include <boost/config/warning_disable.hpp>
 #include <boost/iostreams/stream.hpp>
 #include <boost/iostreams/device/null.hpp>
@@ -85,7 +85,7 @@ void command_line_options::_init_verbose( const std::string& path )
     if( exists( "--titlebar-application-name,--tbn" ) ) { comma::io::terminal::titlebar_ostream s; s << comma::application::detail::name; }
 }
 
-command_line_options::command_line_options( int argc, char ** argv, boost::function< void( bool ) > usage, boost::function< void( int, char** ) > bash_completion )
+command_line_options::command_line_options( int argc, char ** argv, std::function< void( bool ) > usage, std::function< void( int, char** ) > bash_completion )
 {
     argv_.resize( argc );
     for( int i = 0; i < argc; ++i ) { argv_[i] = argv[i]; }
@@ -95,7 +95,7 @@ command_line_options::command_line_options( int argc, char ** argv, boost::funct
     if( usage && exists( "--help,-h" ) ) { usage( comma::application::detail::verbosity_level > 0 ); exit( 0 ); }
 }
 
-command_line_options::command_line_options( const std::vector< std::string >& argv, boost::function< void( bool ) > usage )
+command_line_options::command_line_options( const std::vector< std::string >& argv, std::function< void( bool ) > usage )
     : argv_( argv )
 {
     _fill_map( argv_ );
@@ -281,12 +281,12 @@ namespace impl {
         description_t d;
         bool r = boost::spirit::qi::phrase_parse( s.begin()
                                                 , s.end()
-                                                ,      name[ boost::bind( push_back_, boost::ref( d.names ), boost::placeholders::_1 ) ]
-                                                    >> *( ',' >> name[ boost::bind( push_back_, boost::ref( d.names ), boost::placeholders::_1 ) ] )
-                                                    >> -( '=' >> ( value[ boost::bind( got_value, boost::ref( d ), boost::placeholders::_1 ) ]
-                                                                | optional_value[ boost::bind( got_optional_value, boost::ref( d ), boost::placeholders::_1 ) ] ) )
-                                                    >> -( ';' >> default_value[ boost::bind( got_default_value, boost::ref( d ), boost::placeholders::_1 ) ] )
-                                                    >> -( ';' >> *( ascii::space ) >> help[ boost::bind( set_, boost::ref( d.help ), boost::placeholders::_1 ) ] )
+                                                ,      name[ std::bind( push_back_, boost::ref( d.names ), std::placeholders::_1 ) ]
+                                                    >> *( ',' >> name[ std::bind( push_back_, boost::ref( d.names ), std::placeholders::_1 ) ] )
+                                                    >> -( '=' >> ( value[ std::bind( got_value, boost::ref( d ), std::placeholders::_1 ) ]
+                                                                | optional_value[ std::bind( got_optional_value, boost::ref( d ), std::placeholders::_1 ) ] ) )
+                                                    >> -( ';' >> default_value[ std::bind( got_default_value, boost::ref( d ), std::placeholders::_1 ) ] )
+                                                    >> -( ';' >> *( ascii::space ) >> help[ std::bind( set_, boost::ref( d.help ), std::placeholders::_1 ) ] )
                                                     >> qi::eoi
                                                 , ascii::space );
         if( !r ) { COMMA_THROW( comma::exception, "invalid option description: \"" << s << "\"" ); }
