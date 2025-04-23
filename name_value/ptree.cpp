@@ -20,6 +20,7 @@
 #include "../xpath/xpath.h"
 #include "../visiting/visit.h"
 #include "../visiting/while.h"
+#include "impl/yaml.h"
 #include "ptree.h"
 
 namespace comma {
@@ -421,7 +422,7 @@ void property_tree::from_unknown_seekable( std::istream& stream, boost::property
         return;
     }
     catch( const boost::property_tree::ptree_error&  ex ) {}
-    catch(...) { throw; }
+    catch( ... ) { throw; }
     try
     {
         stream.clear();
@@ -430,7 +431,7 @@ void property_tree::from_unknown_seekable( std::istream& stream, boost::property
         return;
     }
     catch( const boost::property_tree::ptree_error&  ex ) {}
-    catch(...) { throw; }
+    catch( ... ) { throw; }
     try
     {
         stream.clear();
@@ -439,10 +440,78 @@ void property_tree::from_unknown_seekable( std::istream& stream, boost::property
         return;
     }
     catch( const boost::property_tree::ptree_error&  ex ) {}
-    catch( const comma::exception&  ex ) {}
-    catch(...) { throw; }
+    catch( const comma::exception& ex ) {}
+    catch( ... ) { throw; }
+    try
+    {
+        stream.clear();
+        stream.seekg( 0, std::ios::beg );
+        comma::property_tree::read_yaml( stream, ptree );
+        return;
+    }
+    catch( const boost::property_tree::ptree_error&  ex ) {}
+    catch( const comma::exception& ex ) {}
+    catch( ... ) { throw; }
     // TODO: add try for ini format (currently the problem is that path-value treats ini sections and comments as valid entries; possible solution: make path-value parser stricter)
     COMMA_THROW( comma::exception, "failed to guess format" );
 }
+
+#if defined comma_BUILD_NAME_VALUE_YAML
+
+boost::property_tree::ptree property_tree::from_yaml( const std::string& s )
+{
+    boost::property_tree::ptree t;
+    from_yaml( s, t );
+    return t;
+}
+
+void property_tree::read_yaml( std::istream& is, boost::property_tree::ptree& t )
+{
+    std::ostringstream oss;
+    while( is.good() && !is.eof() ) // quick and dirty, watch performance
+    {
+        std::string line;
+        std::getline( std::cin, line );
+        if( line.empty() ) { continue; }
+        oss << line << std::endl;
+    }
+    from_yaml( oss.str(), t );
+}
+
+void property_tree::write_yaml( std::ostream& os, const boost::property_tree::ptree& t ) { os << to_yaml( t ) << std::endl; }
+
+boost::property_tree::ptree& property_tree::from_yaml( const std::string& s, boost::property_tree::ptree& t )
+{
+    return comma::name_value::impl::yaml::to_ptree( s, t );
+}
+
+std::string property_tree::to_yaml( const boost::property_tree::ptree& t )
+{
+    COMMA_THROW( comma::exception, "todo" );
+}
+
+#else // #if defined comma_BUILD_NAME_VALUE_YAML
+
+boost::property_tree::ptree property_tree::from_yaml( const std::string& s )
+{
+    COMMA_THROW( comma::exception, "built without yaml support; run cmake with comma_BUILD_NAME_VALUE_YAML defined and rebuild" );
+}
+
+boost::property_tree::ptree& property_tree::from_yaml( const std::string& s, boost::property_tree::ptree& t )
+{
+    COMMA_THROW( comma::exception, "built without yaml support; run cmake with comma_BUILD_NAME_VALUE_YAML defined and rebuild" );
+}
+
+boost::property_tree::ptree& property_tree::from_yaml( std::istream& is, boost::property_tree::ptree& t )
+{
+    COMMA_THROW( comma::exception, "built without yaml support; run cmake with comma_BUILD_NAME_VALUE_YAML defined and rebuild" );
+}
+
+std::string property_tree::to_yaml( const boost::property_tree::ptree& t )
+{
+    COMMA_THROW( comma::exception, "built without yaml support; run cmake with comma_BUILD_NAME_VALUE_YAML defined and rebuild" );
+}
+
+#endif // #if defined comma_BUILD_NAME_VALUE_YAML
 
 } // namespace comma {

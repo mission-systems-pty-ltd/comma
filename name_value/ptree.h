@@ -102,6 +102,16 @@ struct property_tree // quick and dirty
     /// guess format and read boost property tree from stream (a wrapper for from_unknown_seekable that buffers input from a non-seekable stream)
     static void from_unknown( std::istream& stream, boost::property_tree::ptree& ptree, path_value::check_repeated_paths check_type = path_value::no_check, char equal_sign = '=', char delimiter = ',', bool use_index = true );
 
+    static boost::property_tree::ptree from_yaml( const std::string& s );
+
+    static boost::property_tree::ptree& from_yaml( const std::string& s, boost::property_tree::ptree& t );
+
+    static void read_yaml( std::istream& is, boost::property_tree::ptree& t );
+
+    static std::string to_yaml( const boost::property_tree::ptree& t );
+
+    static void write_yaml( std::ostream& os, const boost::property_tree::ptree& t );
+
     /// guess format and read boost property tree from a seekable stream (pipe or terminal input is not accepted)
     static void from_unknown_seekable( std::istream& stream, boost::property_tree::ptree& ptree, path_value::check_repeated_paths check_type = path_value::no_check, char equal_sign = '=', char delimiter = ',', bool use_index = false  );
 

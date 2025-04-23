@@ -35,33 +35,69 @@
 #include "../../base/exception.h"
 #include "yaml.h"
 
-namespace comma { namespace property_tree { namespace impl { namespace yaml {
+namespace comma { namespace name_value { namespace impl { namespace yaml {
+
+// static boost::property_tree::ptree xml_to_ptree_( boost::property_tree::ptree& ptree)
+// {
+//     boost::property_tree::ptree out= boost::property_tree::ptree();
+//     boost::property_tree::ptree unnamed_array= boost::property_tree::ptree();
+//     for ( boost::property_tree::ptree::iterator i=ptree.begin(); i!=ptree.end(); i++ )
+//     {
+//         //look ahead for duplicate name
+//         boost::property_tree::ptree::iterator lah = i;
+//         if ( ++lah != ptree.end() && i->first == lah->first )
+//         {
+//             //add to unnamed array
+//             unnamed_array.push_back( std::make_pair( "", xml_to_ptree_( i->second ) ) );
+//         }
+//         else
+//         {
+//             if(unnamed_array.size()!=0)
+//             {
+//                 //assert((i-1)->first==i->first);
+//                 //the last of duplicated name
+//                 unnamed_array.push_back( std::make_pair( "", xml_to_ptree_( i->second ) ) );
+//                 out.add_child(i->first,unnamed_array);
+//                 unnamed_array= boost::property_tree::ptree();
+//             }
+//             else
+//             {
+//                 out.add_child(i->first, xml_to_ptree_(i->second) );
+//             }
+//         }
+//     }
+//     out.put_value( comma::strip( ptree.get_value<std::string>(), " \n\t" ));
+//     return out;
+// }
 
 static void parse( yaml_parser_t *parser, boost::property_tree::ptree& t )
 {
-    struct on { enum state { name = 0, value = 1, sequence = 2 }; };
+    struct on { enum state { name, value, sequence }; };
     int state = on::name; // mapping cannot start with VAL definition w/o VAR key
     std::string name, value;
     while( true )
     {
         yaml_event_t event;
         yaml_parser_parse( parser, &event );
+        std::cerr << "==> a: " << event.type << std::endl;
         switch( event.type )
         {
             case YAML_SCALAR_EVENT:
+                std::cerr << "==> b: on: " << event.data.scalar.value << std::endl;
                 ( state ? name : value ) = reinterpret_cast< const char* >( event.data.scalar.value );
                 state ^= on::value; // flip on::name/on::value switch for the next event
                 break;
             case YAML_SEQUENCE_START_EVENT:
-                // todo: parse sequence
+                std::cerr << "==> c" << std::endl; 
                 state = on::sequence;
                 break;
             case YAML_SEQUENCE_END_EVENT:
-                // todo: end parsing sequence
+                std::cerr << "==> d" << std::endl; 
                 state = on::name;
                 break;
             case YAML_MAPPING_START_EVENT:
             {
+                std::cerr << "==> e" << std::endl;
                 // todo: create children
                 auto q = t; // todo! pass child instead!
                 parse( parser, t );
@@ -69,8 +105,17 @@ static void parse( yaml_parser_t *parser, boost::property_tree::ptree& t )
                 break;
             }
             case YAML_MAPPING_END_EVENT:
+                std::cerr << "==> f" << std::endl;
             case YAML_STREAM_END_EVENT:
+                std::cerr << "==> g" << std::endl;
                 break;
+            case YAML_NO_EVENT:
+            case YAML_DOCUMENT_START_EVENT:
+            case YAML_DOCUMENT_END_EVENT:
+            case YAML_STREAM_START_EVENT:
+            case YAML_ALIAS_EVENT:
+                std::cerr << "==> h" << std::endl;
+                continue; // todo? handle?
             default:
             {
                 auto e = event.type;
@@ -78,11 +123,12 @@ static void parse( yaml_parser_t *parser, boost::property_tree::ptree& t )
                 COMMA_THROW( comma::exception, "expected yaml event type; got: " << e ); // never here?
             }
         }
+        std::cerr << "==> z" << std::endl;
         yaml_event_delete( &event );
     }
 }
 
-boost::property_tree::ptree& to_ptree( boost::property_tree::ptree& t, const std::string& s )
+boost::property_tree::ptree& to_ptree( const std::string& s, boost::property_tree::ptree& t )
 {
     yaml_parser_t parser;
     yaml_parser_initialize( &parser );
@@ -92,17 +138,11 @@ boost::property_tree::ptree& to_ptree( boost::property_tree::ptree& t, const std
     return t;
 }
 
-boost::property_tree::ptree to_ptree( const std::string& s )
-{
-    boost::property_tree::ptree t;
-    to_ptree( t, s );
-    return t;
-}
-
 std::string from_ptree( const boost::property_tree::ptree& )
 {
     std::string s;
+    // todo
     return s;
 }
 
-} } } } // namespace comma { namespace property_tree { namespace impl { namespace yaml {
+} } } } // namespace comma { namespace name_value { namespace impl { namespace yaml {

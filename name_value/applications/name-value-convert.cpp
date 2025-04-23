@@ -37,12 +37,13 @@ static void usage( bool verbose = false )
     std::cerr << "    --strict: return error if path specified in --path not found" << std::endl;
     std::cerr << std::endl;
     std::cerr << "formats" << std::endl;
-    std::cerr << "    info: info data (see boost::property_tree)" << std::endl;
-    std::cerr << "    ini: ini data" << std::endl;
-    std::cerr << "    json: json data" << std::endl;
-    std::cerr << "    xml: xml data" << std::endl;
-    std::cerr << "    path-value: path=value-style data; e.g. x/a=1,x/b=2,y=3" << std::endl;
-    std::cerr << "    dot: as graphviz dot language, see: https://graphviz.org/doc/info/lang.html" << std::endl;
+    std::cerr << "    dot        : as graphviz dot language, see: https://graphviz.org/doc/info/lang.html" << std::endl;
+    std::cerr << "    info       : info data (see boost::property_tree)" << std::endl;
+    std::cerr << "    ini        : ini data" << std::endl;
+    std::cerr << "    json       : json data" << std::endl;
+    std::cerr << "    path-value : path=value-style data; e.g. x/a=1,x/b=2,y=3" << std::endl;
+    std::cerr << "    xml        : xml data" << std::endl;
+    std::cerr << "    yaml       : implementing..." << std::endl;
     std::cerr << std::endl;
     std::cerr << "name/path-value options" << std::endl;
     std::cerr << "    --equal-sign,-e=<equal sign>: default '='" << std::endl;
@@ -99,7 +100,7 @@ static path_mode indices_mode = comma::property_tree::disabled;
 static bool use_index = true;
 static comma::property_tree::path_value::check_repeated_paths check_type( comma::property_tree::path_value::no_check );
 
-enum Types { ini, info, json, xml, path_value, dot, void_t };
+enum Types { ini, info, json, xml, yaml, path_value, dot, void_t };
 
 template < Types Type > struct traits {};
 
@@ -124,6 +125,12 @@ template <> struct traits< json >
 {
     static void input( std::istream& is, boost::property_tree::ptree& ptree ) { boost::property_tree::read_json( is, ptree ); }
     static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode ) { comma::name_value::impl::write_json( os, ptree, !minify_json, !quote_numbers ); }
+};
+
+template <> struct traits< yaml >
+{
+    static void input( std::istream& is, boost::property_tree::ptree& ptree ) { comma::property_tree::read_yaml( is, ptree ); }
+    static void output( std::ostream& os, const boost::property_tree::ptree& ptree, const path_mode ) { comma::property_tree::write_yaml( os, ptree ); }
 };
 
 template <> struct traits< xml >
@@ -222,22 +229,24 @@ int main( int ac, char** av )
             else if( *from == "info" ) { input = &traits< info >::input; }
             else if( *from == "json" ) { input = &traits< json >::input; }
             else if( *from == "xml" ) { input = &traits< xml >::input; }
+            else if( *from == "yaml" ) { input = &traits< yaml >::input; }
             else if( *from == "path-value" || *from == "pv" ) { input = &traits< path_value >::input; }
             else if( *from == "dot" ) { input = &traits< dot >::input; }
-            else { std::cerr << "name-value-convert: expected --from format to be ini, info, json, xml, or path-value, got " << *from << std::endl; return 1; }
+            else { comma::say() << "expected --from format to be ini, info, json, xml, or path-value, got " << *from << std::endl; return 1; }
         }
         else
         {
-            if( linewise ) {  std::cerr << "name-value-convert: if --linewise is present, --from must be given" << std::endl; return 1; }
+            if( linewise ) {  comma::say() << "if --linewise is present, --from must be given" << std::endl; return 1; }
             input = &traits< void_t >::input;
         }
         if( to == "ini" ) { output = &traits< ini >::output; }
         else if( to == "info" ) { output = &traits< info >::output; }
         else if( to == "json" ) { output = &traits< json >::output; }
+        else if( to == "yaml" ) { output = &traits< yaml >::output; }
         else if( to == "xml" ) { output = &traits< xml >::output; }
         else if( to == "path-value" || to == "pv" ) { output = &traits< path_value >::output; }
         else if( to == "dot" ) { output = &traits< dot >::output; }
-        else { std::cerr << "name-value-convert: expected --to format to be ini, info, json, xml, or path-value, got " << *from << std::endl; return 1; }
+        else { comma::say() << "expected --to format to be ini, info, json, xml, or path-value, got " << *from << std::endl; return 1; }
         if( use_index )
         {
             if( options.exists( "--no-brackets" ) ) { indices_mode = comma::property_tree::without_brackets; }
@@ -288,7 +297,7 @@ int main( int ac, char** av )
                 for( const auto& path: paths )
                 {
                     auto child = comma::property_tree::get_tree( ptree, path ); // paths[i] = boost::property_tree::ptree::path_type( path_strings[i], '/' )
-                    if( !child ) { if( strict ) { std::cerr << "name-value-convert: path \"" << path << "\" not found" << std::endl; return 1; } else { continue; } }
+                    if( !child ) { if( strict ) { comma::say() << "path \"" << path << "\" not found" << std::endl; return 1; } else { continue; } }
                     boost::optional< std::string > value = child->get_optional< std::string >( "" );
                     std::cout << eol;
                     if( value && !value->empty() ) // todo? output empty values?
@@ -307,10 +316,10 @@ int main( int ac, char** av )
         }
         return 0;
     }
-    catch( boost::property_tree::ptree_bad_data& ex ) { std::cerr << "name-value-convert: bad data: " << ex.what() << std::endl; }
-    catch( boost::property_tree::ptree_bad_path& ex ) { std::cerr << "name-value-convert: bad path: " << ex.what() << std::endl; }
-    catch( boost::property_tree::ptree_error& ex ) { boost::regex e( "<unspecified file>" ); std::cerr << "name-value-convert: parsing error: " << boost::regex_replace( std::string( ex.what() ), e, "line" ) << std::endl; }
-    catch( std::exception& ex ) { std::cerr << "name-value-convert: " << ex.what() << std::endl; }
-    catch( ... ) { std::cerr << "name-value-convert: unknown exception" << std::endl; }
+    catch( boost::property_tree::ptree_bad_data& ex ) { comma::say() << "bad data: " << ex.what() << std::endl; }
+    catch( boost::property_tree::ptree_bad_path& ex ) { comma::say() << "bad path: " << ex.what() << std::endl; }
+    catch( boost::property_tree::ptree_error& ex ) { boost::regex e( "<unspecified file>" ); comma::say() << "parsing error: " << boost::regex_replace( std::string( ex.what() ), e, "line" ) << std::endl; }
+    catch( std::exception& ex ) { comma::say() << ex.what() << std::endl; }
+    catch( ... ) { comma::say() << "unknown exception" << std::endl; }
     return 1;
 }

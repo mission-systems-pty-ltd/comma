@@ -8,6 +8,8 @@ SOURCE_GROUP( ${PROJECT} FILES ${source} ${includes} ${impl_includes} )
 #ADD_CUSTOM_TARGET( ${TARGET_NAME} ${source} ${includes} ${impl_includes} comma_application comma_string comma_xpath )
 
 if( comma_BUILD_NAME_VALUE_YAML )
+    # find_package( yaml REQUIRED ) # todo
+    set( CMAKE_CXX_FLAGS "-Dcomma_BUILD_NAME_VALUE_YAML ${CMAKE_CXX_FLAGS}" ) # todo? move to the main CMakeLists.txt?
     set( source "${source};${SOURCE_CODE_BASE_DIR}/${PROJECT}/impl/yaml.cpp" )
 endif( comma_BUILD_NAME_VALUE_YAML )
 INSTALL( FILES ${includes} DESTINATION ${comma_INSTALL_INCLUDE_DIR}/${PROJECT} )

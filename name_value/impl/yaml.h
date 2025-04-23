@@ -35,12 +35,10 @@
 #include <string>
 #include <boost/property_tree/ptree.hpp>
 
-namespace comma { namespace property_tree { namespace impl { namespace yaml {
+namespace comma { namespace name_value { namespace impl { namespace yaml {
 
-boost::property_tree::ptree to_ptree( const std::string& s );
-
-boost::property_tree::ptree& to_ptree( boost::property_tree::ptree& t, const std::string& s );
+boost::property_tree::ptree& to_ptree( const std::string& s, boost::property_tree::ptree& t );
 
 std::string from_ptree( const boost::property_tree::ptree& t );
 
-} } } } // namespace comma { namespace property_tree { namespace impl { namespace yaml {
+} } } } // namespace comma { namespace name_value { namespace impl { namespace yaml {
