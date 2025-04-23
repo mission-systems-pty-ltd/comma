@@ -5,11 +5,11 @@
 
 #pragma once
 
+#include <functional>
 #include <iostream>
 #include <map>
 #include <string>
 #include <vector>
-#include <boost/function.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
 #include "../base/exception.h"
@@ -71,18 +71,18 @@ class command_line_options
         /// constructor
         /// if --help,-h present, call usage()
         /// if --verbose,-v present, call usage( verbose )
-        command_line_options( int argc, char ** argv, boost::function< void( bool ) > usage = NULL, boost::function< void( int, char** ) > bash_completion = NULL );
+        command_line_options( int argc, char ** argv, std::function< void( bool ) > usage = NULL, std::function< void( int, char** ) > bash_completion = NULL );
 
         /// constructor
         /// if --help,-h present, call usage()
         /// if --verbose,-v present, call usage( verbose )
-        command_line_options( const std::vector< std::string >& argv, boost::function< void( bool ) > usage = NULL );
+        command_line_options( const std::vector< std::string >& argv, std::function< void( bool ) > usage = NULL );
         
         /// constructor
         /// if --help,-h present, call usage()
         /// if --verbose,-v present, call usage( verbose )
         template< typename Iterator >
-        command_line_options( Iterator begin, Iterator end, boost::function< void( bool ) > usage = NULL );
+        command_line_options( Iterator begin, Iterator end, std::function< void( bool ) > usage = NULL );
 
         /// constructor
         command_line_options( const command_line_options& rhs );
@@ -191,7 +191,7 @@ class command_line_options
         
 };
 
-template< typename Iterator > inline command_line_options::command_line_options( Iterator begin, Iterator end, boost::function< void( bool ) > usage )
+template< typename Iterator > inline command_line_options::command_line_options( Iterator begin, Iterator end, std::function< void( bool ) > usage )
 {
     argv_.resize( std::distance( begin, end ) );
     for ( Iterator i = begin; i < end; ++i ) { argv_[i] = *i; }
