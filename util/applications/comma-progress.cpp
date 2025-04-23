@@ -27,23 +27,19 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include <boost/date_time/posix_time/ptime.hpp>
-#include <vector>
-#include <boost/unordered_map.hpp>
 #include <deque>
-#include <boost/unordered_set.hpp>
 #include <functional>
-#include <boost/functional.hpp>
+#include <vector>
+#include <boost/date_time/posix_time/ptime.hpp>
 #include <boost/math/special_functions/round.hpp>
+#include <boost/unordered_map.hpp>
+#include <boost/unordered_set.hpp>
 #include "../../csv/stream.h"
 #include "../../visiting/traits.h"
 #include "../../application/command_line_options.h"
 #include "../../name_value/ptree.h"
 
-static const std::string& name() {
-    static const std::string name = "comma-progress";
-    return name;
-}
+static const char* name() { return "comma-progress"; }
 
 static char delimiter = ';';
 static const char equal_sign = '=';
@@ -422,8 +418,8 @@ int main( int ac, char** av )
         }
         else if( options.exists( "--elapsed" ) )
         {
-            boost::function< void( const impl_::log&, const impl_::log&, const std::string&) > outputting( &output_elapsed );
-            boost::function< const impl_::log*() > extractor( &get_log );
+            std::function< void( const impl_::log&, const impl_::log&, const std::string&) > outputting( &output_elapsed );
+            std::function< const impl_::log*() > extractor( &get_log );
             if( options.exists( "--from-path-value,--from-pv" ) )
             {
                 extractor = &get_log_path_value;
@@ -434,18 +430,16 @@ int main( int ac, char** av )
         }
         else
         {
-            boost::function< const impl_::log*() > extractor( &get_log );
-            boost::function< void( const impl_::log&, const impl_::log&, const std::string&) > outputting( &output );
+            std::function< const impl_::log*() > extractor( &get_log );
+            std::function< void( const impl_::log&, const impl_::log&, const std::string&) > outputting( &output );
             impl_::process_begin_end< impl_::log >( extractor , outputting );
             
             return 0;
         }
         
     }
-    catch( std::exception& e ) {
-        std::cerr << name() << ": exception caught - " << e.what() << std::endl;
-    }
-    catch(...) {
-        std::cerr << name() << ": unknown exception caught, terminating." << std::endl;
-    }
+    catch( std::exception& e ) { comma::say() << "exception caught - " << e.what() << std::endl; }
+    catch(...) { comma::say() << "unknown exception" << std::endl; }
+    return 1;
 }
+
