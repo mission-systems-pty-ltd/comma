@@ -3,6 +3,7 @@
 /// @author vsevolod vlaskine
 /// @author kai huang
 
+#include <functional>
 #include <iostream>
 #include <boost/array.hpp>
 #include <boost/bind/bind.hpp>
@@ -272,7 +273,7 @@ namespace units {
 
     /// A type to allow a lookup table for converting units
     //typedef double (* cast_function)( double );
-    typedef boost::function< double( double ) > cast_function;
+    typedef std::function< double( double ) > cast_function;
 
     /// Retrieve a function that will convert between the two given
     /// measurement units.
@@ -311,14 +312,14 @@ namespace units {
             map[metres][feet] = cast< length_t, imperial_us_length_t >;
             map[metres][nautical_miles] = cast< length_t, nautical_mile_t >;
             map[metres][statute_miles] = cast< length_t, statute_mile_t >;
-            map[hours][minutes] = boost::bind( &scale, boost::placeholders::_1, 60.0 );
-            map[hours][seconds] = boost::bind( &scale, boost::placeholders::_1, 3600.0 );
-            map[minutes][seconds] = boost::bind( &scale, boost::placeholders::_1, 60.0 );
-            map[minutes][hours] = boost::bind( &scale, boost::placeholders::_1, 1.0 / 60.0 );
-            map[seconds][hours] = boost::bind( &scale, boost::placeholders::_1, 1.0 / 3600.0 );
-            map[seconds][minutes] = boost::bind( &scale, boost::placeholders::_1, 1.0 / 60.0 );
-            map[percent][fraction] = boost::bind( &scale, boost::placeholders::_1, 0.01 );
-            map[fraction][percent] = boost::bind( &scale, boost::placeholders::_1, 100.0 );
+            map[hours][minutes] = std::bind( &scale, std::placeholders::_1, 60.0 );
+            map[hours][seconds] = std::bind( &scale, std::placeholders::_1, 3600.0 );
+            map[minutes][seconds] = std::bind( &scale, std::placeholders::_1, 60.0 );
+            map[minutes][hours] = std::bind( &scale, std::placeholders::_1, 1.0 / 60.0 );
+            map[seconds][hours] = std::bind( &scale, std::placeholders::_1, 1.0 / 3600.0 );
+            map[seconds][minutes] = std::bind( &scale, std::placeholders::_1, 1.0 / 60.0 );
+            map[percent][fraction] = std::bind( &scale, std::placeholders::_1, 0.01 );
+            map[fraction][percent] = std::bind( &scale, std::placeholders::_1, 100.0 );
         }
         return map[from][to];
     }
