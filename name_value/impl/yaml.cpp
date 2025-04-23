@@ -72,14 +72,16 @@ namespace comma { namespace name_value { namespace impl { namespace yaml {
 
 static void parse( yaml_parser_t *parser, boost::property_tree::ptree& t )
 {
+    COMMA_THROW( comma::exception, "implementing..." );
+    std::cerr << "==> A" << std::endl;
     struct on { enum state { name, value, sequence }; };
-    int state = on::name; // mapping cannot start with VAL definition w/o VAR key
+    int state = on::name; // mapping cannot start with on::value definition w/o on::name key
     std::string name, value;
     while( true )
     {
         yaml_event_t event;
         yaml_parser_parse( parser, &event );
-        std::cerr << "==> a: " << event.type << std::endl;
+        std::cerr << "==> a: type : " << event.type << std::endl;
         switch( event.type )
         {
             case YAML_SCALAR_EVENT:
@@ -108,20 +110,20 @@ static void parse( yaml_parser_t *parser, boost::property_tree::ptree& t )
                 std::cerr << "==> f" << std::endl;
             case YAML_STREAM_END_EVENT:
                 std::cerr << "==> g" << std::endl;
-                break;
+                return;
             case YAML_NO_EVENT:
             case YAML_DOCUMENT_START_EVENT:
             case YAML_DOCUMENT_END_EVENT:
             case YAML_STREAM_START_EVENT:
             case YAML_ALIAS_EVENT:
                 std::cerr << "==> h" << std::endl;
-                continue; // todo? handle?
-            default:
-            {
-                auto e = event.type;
-                yaml_event_delete( &event );       
-                COMMA_THROW( comma::exception, "expected yaml event type; got: " << e ); // never here?
-            }
+                break; // todo? handle?
+            // default:
+            // {
+            //     auto e = event.type;
+            //     yaml_event_delete( &event );       
+            //     COMMA_THROW( comma::exception, "expected yaml event type; got: " << e ); // never here?
+            // }
         }
         std::cerr << "==> z" << std::endl;
         yaml_event_delete( &event );
