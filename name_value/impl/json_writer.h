@@ -55,7 +55,7 @@ template< typename C > inline void json_remove_quotes( std::basic_string< C >& j
         *source++ = *next_token++;
         target = next_token;
     }
-    json_text.erase( pretty ? source : ( source - 1 ), json_text.cend() );
+    json_text.erase( pretty ? source : ( source - 1 ), json_text.end() );
 }
 
 template< class PTree > void write_json( std::basic_ostream< typename PTree::key_type::value_type > &stream, const PTree &ptree, bool const pretty = true, bool unquote_numbers = true )
