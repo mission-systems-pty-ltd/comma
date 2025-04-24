@@ -70,13 +70,135 @@ namespace comma { namespace name_value { namespace impl { namespace yaml {
 //     return out;
 // }
 
-static void parse( yaml_parser_t *parser, boost::property_tree::ptree& t, bool expecting_value = false, bool is_sequence = false )
+// static void parse( yaml_parser_t *parser, boost::property_tree::ptree& t, bool expecting_value = false, bool is_sequence = false )
+// {
+//     //COMMA_THROW( comma::exception, "implementing..." );
+//     std::cerr << "==> A" << std::endl; //std::cerr << "==> a: expecting_value: " << expecting_value << " is_sequence: " << is_sequence << std::endl;
+//     std::string scalar, previous_scalar;
+//     bool previous_was_scalar{false};
+//     while( true )
+//     {
+//         yaml_event_t event;
+//         yaml_parser_parse( parser, &event );
+//         auto event_type = event.type;
+//         scalar = event.type == YAML_SCALAR_EVENT ? std::string( reinterpret_cast< const char* >( event.data.scalar.value ) ) : "";
+//         yaml_event_delete( &event );
+//         //std::cerr << "==> a: scalar: " << scalar << std::endl;
+//         switch( event_type )
+//         {
+//             case YAML_SCALAR_EVENT:
+//                 std::cerr << "==> b: scalar: " << scalar << std::endl;
+//                 if( is_sequence )
+//                 {
+//                     std::cerr << "==> b.0: scalar: " << scalar << " previous_was_scalar: " << previous_was_scalar << std::endl;
+//                     if( previous_was_scalar ) { t.push_back( std::make_pair( "", boost::property_tree::ptree() ) )->second.put_value( previous_scalar ); }
+//                     previous_was_scalar = true;
+//                     previous_scalar = scalar;
+//                     break;
+//                 }
+//                 if( expecting_value )
+//                 {
+//                     std::cerr << "==> b.2: put value: " << scalar << std::endl;
+//                     t.put_value( scalar );
+//                     return;
+//                 }
+//                 std::cerr << "==> b.3: add child: " << scalar << std::endl;
+//                 parse( parser, scalar.empty() ? t : t.add_child( scalar, boost::property_tree::ptree() ), true );
+//                 expecting_value = false;
+//                 break;
+//             case YAML_SEQUENCE_START_EVENT:
+//                 previous_was_scalar = false;
+//                 std::cerr << "==> c: seq start: is_sequence: " << is_sequence << std::endl; 
+//                 parse( parser, is_sequence ? t.add_child( previous_scalar, boost::property_tree::ptree() ) : t, false, true );
+//                 break;
+//             case YAML_SEQUENCE_END_EVENT:
+//                 if( previous_was_scalar ) { t.push_back( std::make_pair( "", boost::property_tree::ptree() ) )->second.put_value( previous_scalar ); }
+//                 std::cerr << "==> d: seq end" << std::endl;
+//                 return;
+//             case YAML_MAPPING_START_EVENT:
+//                 previous_was_scalar = false;
+//                 std::cerr << "==> e: map start" << std::endl;
+//                 parse( parser, is_sequence ? t.add_child( previous_scalar, boost::property_tree::ptree() ) : t ); // todo
+//                 return;
+//             case YAML_MAPPING_END_EVENT:
+//                 std::cerr << "==> f: map end" << std::endl;
+//                 return;
+//             case YAML_STREAM_END_EVENT:
+//             case YAML_DOCUMENT_END_EVENT:
+//             case YAML_NO_EVENT:
+//                 std::cerr << "==> f: stream/document end or no event" << std::endl;
+//                 return;
+//             case YAML_DOCUMENT_START_EVENT:
+//             case YAML_STREAM_START_EVENT:
+//             case YAML_ALIAS_EVENT:
+//                 break; // todo? handle?
+//             // default:
+//             // {
+//             //     auto e = event.type;
+//             //     yaml_event_delete( &event );       
+//             //     COMMA_THROW( comma::exception, "expected yaml event type; got: " << e ); // never here?
+//             // }
+//         }
+//     }
+// }
+
+// static void parse( yaml_parser_t *parser, boost::property_tree::ptree& t, bool expecting_value = false, bool is_sequence = false )
+// {
+//     //COMMA_THROW( comma::exception, "implementing..." );
+//     std::cerr << "==> A" << std::endl; //std::cerr << "==> a: expecting_value: " << expecting_value << " is_sequence: " << is_sequence << std::endl;
+//     std::string scalar, previous_scalar;
+//     bool previous_was_scalar{false};
+//     while( true )
+//     {
+//         yaml_event_t event;
+//         yaml_parser_parse( parser, &event );
+//         auto event_type = event.type;
+//         scalar = event.type == YAML_SCALAR_EVENT ? std::string( reinterpret_cast< const char* >( event.data.scalar.value ) ) : "";
+//         yaml_event_delete( &event );
+//         //std::cerr << "==> a: scalar: " << scalar << std::endl;
+//         switch( event_type )
+//         {
+//             case YAML_SCALAR_EVENT:
+//                 std::cerr << "==> b: scalar: " << scalar << std::endl;
+//                 break;
+//             case YAML_SEQUENCE_START_EVENT:
+//                 std::cerr << "==> c: seq start" << std::endl;
+//                 break;
+//             case YAML_SEQUENCE_END_EVENT:
+//                 std::cerr << "==> d: seq end" << std::endl;
+//                 break;
+//             case YAML_MAPPING_START_EVENT:
+//                 std::cerr << "==> e: map start" << std::endl;
+//                 break;
+//             case YAML_MAPPING_END_EVENT:
+//                 std::cerr << "==> f: map end" << std::endl;
+//                 break;
+//             case YAML_STREAM_END_EVENT:
+//             case YAML_DOCUMENT_END_EVENT:
+//             case YAML_NO_EVENT:
+//                 std::cerr << "==> f: stream/document end or no event" << std::endl;
+//                 return;
+//             case YAML_DOCUMENT_START_EVENT:
+//             case YAML_STREAM_START_EVENT:
+//             case YAML_ALIAS_EVENT:
+//                 break; // todo? handle?
+//             // default:
+//             // {
+//             //     auto e = event.type;
+//             //     yaml_event_delete( &event );       
+//             //     COMMA_THROW( comma::exception, "expected yaml event type; got: " << e ); // never here?
+//             // }
+//         }
+//     }
+// }
+
+enum class on { none, scalar, seq, map };
+
+static void parse( yaml_parser_t *parser, boost::property_tree::ptree& t, on what = on::none, bool is_name = false )
 {
     //COMMA_THROW( comma::exception, "implementing..." );
-    std::cerr << "==> a" << std::endl; //std::cerr << "==> a: expecting_value: " << expecting_value << " is_sequence: " << is_sequence << std::endl;
-    std::string scalar, previous_scalar;
-    bool previous_was_scalar{false};
-    std::pair< std::string, boost::property_tree::ptree > seq;
+    //std::cerr << "==> A" << std::endl; //std::cerr << "==> a: expecting_value: " << expecting_value << " is_sequence: " << is_sequence << std::endl;
+    std::string scalar;
     while( true )
     {
         yaml_event_t event;
@@ -87,45 +209,62 @@ static void parse( yaml_parser_t *parser, boost::property_tree::ptree& t, bool e
         switch( event_type )
         {
             case YAML_SCALAR_EVENT:
-                std::cerr << "==> b: scalar: " << scalar << std::endl;
-                if( is_sequence )
+                switch( what )
                 {
-                    std::cerr << "==> b.0: scalar: " << scalar << " previous_was_scalar: " << previous_was_scalar << std::endl;
-                    if( previous_was_scalar ) { t.push_back( std::make_pair( "", boost::property_tree::ptree() ) )->second.put_value( previous_scalar ); }
-                    previous_was_scalar = true;
-                    previous_scalar = scalar;
-                    std::cerr << "==> b.1: scalar: " << scalar << " previous_scalar: " << previous_scalar << std::endl;
-                    break;
+                    case on::none:
+                        COMMA_THROW( comma::exception, "expected map or sequence, got scalar" );
+                    case on::scalar:
+                        // todo
+                        break;
+                    case on::map:
+                        if( is_name ) { parse( parser, t.add_child( scalar, boost::property_tree::ptree() ), on::map, false ); break; }
+                        t.put_value( scalar );
+                        return;
+                    case on::seq:
+                        if( is_name ) {}
+                        t.push_back( std::make_pair( "", boost::property_tree::ptree() ) )->second.put_value( scalar );
+                        break;
                 }
-                if( expecting_value )
-                {
-                    std::cerr << "==> b.2: put value: " << scalar << std::endl;
-                    t.put_value( scalar );
-                    return;
-                }
-                std::cerr << "==> b.3: add child: " << scalar << std::endl;
-                parse( parser, scalar.empty() ? t : t.add_child( scalar, boost::property_tree::ptree() ), true );
-                expecting_value = false;
+                // std::cerr << "==> b: scalar: " << scalar << std::endl;
+                // if( is_sequence )
+                // {
+                //     std::cerr << "==> b.0: scalar: " << scalar << " previous_was_scalar: " << previous_was_scalar << std::endl;
+                //     if( previous_was_scalar ) { t.push_back( std::make_pair( "", boost::property_tree::ptree() ) )->second.put_value( previous_scalar ); }
+                //     previous_was_scalar = true;
+                //     previous_scalar = scalar;
+                //     break;
+                // }
+                // if( expecting_value )
+                // {
+                //     std::cerr << "==> b.2: put value: " << scalar << std::endl;
+                //     t.put_value( scalar );
+                //     return;
+                // }
+                // std::cerr << "==> b.3: add child: " << scalar << std::endl;
+                // parse( parser, scalar.empty() ? t : t.add_child( scalar, boost::property_tree::ptree() ), true );
+                // expecting_value = false;
                 break;
             case YAML_SEQUENCE_START_EVENT:
-                previous_was_scalar = false;
-                std::cerr << "==> c: seq start" << std::endl; 
-                parse( parser, t, false, true );
-                break;
+                // previous_was_scalar = false;
+                // std::cerr << "==> c: seq start: is_sequence: " << is_sequence << std::endl; 
+                // parse( parser, is_sequence ? t.add_child( previous_scalar, boost::property_tree::ptree() ) : t, false, true );
+                std::cerr << "==> c: seq start" << std::endl;
+                parse( parser, t, on::seq );
+                return;
             case YAML_SEQUENCE_END_EVENT:
-                if( previous_was_scalar ) { t.push_back( std::make_pair( "", boost::property_tree::ptree() ) )->second.put_value( previous_scalar ); }
                 std::cerr << "==> d: seq end" << std::endl;
                 return;
             case YAML_MAPPING_START_EVENT:
-                previous_was_scalar = false;
                 std::cerr << "==> e: map start" << std::endl;
-                parse( parser, is_sequence ? t.add_child( previous_scalar, boost::property_tree::ptree() ) : t ); // todo
+                parse( parser, t, on::map, true );
                 return;
             case YAML_MAPPING_END_EVENT:
+                std::cerr << "==> f: map end" << std::endl;
+                return;
             case YAML_STREAM_END_EVENT:
             case YAML_DOCUMENT_END_EVENT:
             case YAML_NO_EVENT:
-                std::cerr << "==> f: map end" << std::endl;
+                std::cerr << "==> f: stream/document end or no event" << std::endl;
                 return;
             case YAML_DOCUMENT_START_EVENT:
             case YAML_STREAM_START_EVENT:
