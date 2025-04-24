@@ -243,6 +243,15 @@ template < typename T > std::ostream& write_xml( const T& t, std::ostream& strea
 template < typename T > std::ostream& write_xml( const T& t, std::ostream& stream, const char* root );
 template < typename T > std::ostream& write_xml( const T& t, std::ostream& stream );
 
+/// write yaml object to file or stream
+/// convenience wrappers for comma::property_tree boiler-plate code
+template < typename T > void write_yaml( const T& t, const std::string& filename, const xpath& root );
+template < typename T > void write_yaml( const T& t, const std::string& filename, const char* root );
+template < typename T > void write_yaml( const T& t, const std::string& filename );
+template < typename T > std::ostream& write_yaml( const T& t, std::ostream& stream, const xpath& root );
+template < typename T > std::ostream& write_yaml( const T& t, std::ostream& stream, const char* root );
+template < typename T > std::ostream& write_yaml( const T& t, std::ostream& stream );
+
 /// write path-value object to file or stream
 /// convenience wrappers for comma::property_tree boiler-plate code
 /// @todo parametrize on equality sign and delimiter?
@@ -552,6 +561,29 @@ template < typename T > inline void write_xml( const T& t, const std::string& fi
 template < typename T > inline void write_xml( const T& t, const std::string& filename ) { write_xml( t, filename, xpath() ); }
 template < typename T > inline std::ostream& write_xml( const T& t, std::ostream& stream, const char* root ) { return write_xml( t, stream, xpath( root ) ); }
 template < typename T > inline std::ostream& write_xml( const T& t, std::ostream& stream ) { return write_xml( t, stream, xpath() ); }
+
+template < typename T > inline void write_xml( const T& t, const std::string& filename, const xpath& root )
+{
+    std::ofstream ofs( &filename[0] );
+    if( !ofs.is_open() ) { COMMA_THROW( comma::exception, "failed to open \"" << filename << "\"" ); }
+    write_xml< T >( t, ofs, root );
+    ofs.close();
+}
+
+template < typename T > inline std::ostream& write_yaml( const T& t, std::ostream& stream, const xpath& root )
+{
+    boost::property_tree::ptree p;
+    comma::to_ptree to_ptree( p, root );
+    comma::visiting::apply( to_ptree ).to( t );
+    stream.precision( 16 ); // quick and dirty
+    boost::property_tree::write_yaml( stream, p );
+    return stream;
+}
+
+template < typename T > inline void write_yaml( const T& t, const std::string& filename, const char* root ) { write_yaml( t, filename, xpath( root ) ); }
+template < typename T > inline void write_yaml( const T& t, const std::string& filename ) { write_yaml( t, filename, xpath() ); }
+template < typename T > inline std::ostream& write_yaml( const T& t, std::ostream& stream, const char* root ) { return write_yaml( t, stream, xpath( root ) ); }
+template < typename T > inline std::ostream& write_yaml( const T& t, std::ostream& stream ) { return write_yaml( t, stream, xpath() ); }
 
 template < typename T > inline std::ostream& write_path_value( const T& t, std::ostream& stream, const xpath& root, bool unquote_numbers, const std::string& prefix )
 {
