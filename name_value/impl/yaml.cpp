@@ -70,53 +70,60 @@ namespace comma { namespace name_value { namespace impl { namespace yaml {
 //     return out;
 // }
 
-static void parse( yaml_parser_t *parser, boost::property_tree::ptree& t )
+static void parse( yaml_parser_t *parser, boost::property_tree::ptree& t, bool expecting_value = false, bool is_sequence = false )
 {
-    COMMA_THROW( comma::exception, "implementing..." );
-    std::cerr << "==> A" << std::endl;
-    struct on { enum state { name, value, sequence }; };
-    int state = on::name; // mapping cannot start with on::value definition w/o on::name key
-    std::string name, value;
+    //COMMA_THROW( comma::exception, "implementing..." );
+    std::cerr << "==> a" << std::endl; //std::cerr << "==> a: expecting_value: " << expecting_value << " is_sequence: " << is_sequence << std::endl;
+    std::string scalar;
+    std::pair< std::string, boost::property_tree::ptree > seq;
     while( true )
     {
         yaml_event_t event;
         yaml_parser_parse( parser, &event );
-        std::cerr << "==> a: type : " << event.type << std::endl;
-        switch( event.type )
+        auto event_type = event.type;
+        scalar = event.type == YAML_SCALAR_EVENT ? std::string( reinterpret_cast< const char* >( event.data.scalar.value ) ) : "";
+        yaml_event_delete( &event );
+        switch( event_type )
         {
             case YAML_SCALAR_EVENT:
-                std::cerr << "==> b: on: " << event.data.scalar.value << std::endl;
-                ( state ? name : value ) = reinterpret_cast< const char* >( event.data.scalar.value );
-                state ^= on::value; // flip on::name/on::value switch for the next event
+                if( is_sequence )
+                {
+                    std::cerr << "==> nooo" << std::endl;
+                    // todo
+                    // t.add_child( "", boost::property_tree::ptree() ).put_value( scalar )
+                    break;
+                }
+                if( expecting_value )
+                {
+                    std::cerr << "==> b.0: put value: " << scalar << std::endl;
+                    t.put_value( scalar );
+                    return;
+                }
+                std::cerr << "==> b.1: add child: " << scalar << std::endl;
+                parse( parser, scalar.empty() ? t : t.add_child( scalar, boost::property_tree::ptree() ), true );
+                expecting_value = false;
                 break;
             case YAML_SEQUENCE_START_EVENT:
-                std::cerr << "==> c" << std::endl; 
-                state = on::sequence;
+                std::cerr << "==> c: seq start" << std::endl; 
+                //parse( parser, t.add_child( scalar, boost::property_tree::ptree() ), false, true );
+                parse( parser, t, false, true );
                 break;
             case YAML_SEQUENCE_END_EVENT:
-                std::cerr << "==> d" << std::endl; 
-                state = on::name;
-                break;
-            case YAML_MAPPING_START_EVENT:
-            {
-                std::cerr << "==> e" << std::endl;
-                // todo: create children
-                auto q = t; // todo! pass child instead!
-                parse( parser, t );
-                state ^= on::value; // flip on::name/on::value switch for the next event
-                break;
-            }
-            case YAML_MAPPING_END_EVENT:
-                std::cerr << "==> f" << std::endl;
-            case YAML_STREAM_END_EVENT:
-                std::cerr << "==> g" << std::endl;
+                std::cerr << "==> d: seq end" << std::endl;
                 return;
-            case YAML_NO_EVENT:
-            case YAML_DOCUMENT_START_EVENT:
+            case YAML_MAPPING_START_EVENT:
+                std::cerr << "==> e: map start" << std::endl;
+                parse( parser, t );
+                return;
+            case YAML_MAPPING_END_EVENT:
+            case YAML_STREAM_END_EVENT:
             case YAML_DOCUMENT_END_EVENT:
+            case YAML_NO_EVENT:
+                std::cerr << "==> f: map end" << std::endl;
+                return;
+            case YAML_DOCUMENT_START_EVENT:
             case YAML_STREAM_START_EVENT:
             case YAML_ALIAS_EVENT:
-                std::cerr << "==> h" << std::endl;
                 break; // todo? handle?
             // default:
             // {
@@ -125,8 +132,6 @@ static void parse( yaml_parser_t *parser, boost::property_tree::ptree& t )
             //     COMMA_THROW( comma::exception, "expected yaml event type; got: " << e ); // never here?
             // }
         }
-        std::cerr << "==> z" << std::endl;
-        yaml_event_delete( &event );
     }
 }
 
