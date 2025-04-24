@@ -55,7 +55,7 @@ namespace comma { namespace name_value { namespace impl { namespace yaml {
 //             if(unnamed_array.size()!=0)
 //             {
 //                 //assert((i-1)->first==i->first);
-//                 //the last of duplicated name
+//                 //the previous_scalar of duplicated name
 //                 unnamed_array.push_back( std::make_pair( "", xml_to_ptree_( i->second ) ) );
 //                 out.add_child(i->first,unnamed_array);
 //                 unnamed_array= boost::property_tree::ptree();
@@ -74,7 +74,8 @@ static void parse( yaml_parser_t *parser, boost::property_tree::ptree& t, bool e
 {
     //COMMA_THROW( comma::exception, "implementing..." );
     std::cerr << "==> a" << std::endl; //std::cerr << "==> a: expecting_value: " << expecting_value << " is_sequence: " << is_sequence << std::endl;
-    std::string scalar;
+    std::string scalar, previous_scalar;
+    bool previous_was_scalar{false};
     std::pair< std::string, boost::property_tree::ptree > seq;
     while( true )
     {
@@ -86,34 +87,39 @@ static void parse( yaml_parser_t *parser, boost::property_tree::ptree& t, bool e
         switch( event_type )
         {
             case YAML_SCALAR_EVENT:
+                std::cerr << "==> b: scalar: " << scalar << std::endl;
                 if( is_sequence )
                 {
-                    std::cerr << "==> nooo" << std::endl;
-                    // todo
-                    // t.add_child( "", boost::property_tree::ptree() ).put_value( scalar )
+                    std::cerr << "==> b.0: scalar: " << scalar << " previous_was_scalar: " << previous_was_scalar << std::endl;
+                    if( previous_was_scalar ) { t.push_back( std::make_pair( "", boost::property_tree::ptree() ) )->second.put_value( previous_scalar ); }
+                    previous_was_scalar = true;
+                    previous_scalar = scalar;
+                    std::cerr << "==> b.1: scalar: " << scalar << " previous_scalar: " << previous_scalar << std::endl;
                     break;
                 }
                 if( expecting_value )
                 {
-                    std::cerr << "==> b.0: put value: " << scalar << std::endl;
+                    std::cerr << "==> b.2: put value: " << scalar << std::endl;
                     t.put_value( scalar );
                     return;
                 }
-                std::cerr << "==> b.1: add child: " << scalar << std::endl;
+                std::cerr << "==> b.3: add child: " << scalar << std::endl;
                 parse( parser, scalar.empty() ? t : t.add_child( scalar, boost::property_tree::ptree() ), true );
                 expecting_value = false;
                 break;
             case YAML_SEQUENCE_START_EVENT:
+                previous_was_scalar = false;
                 std::cerr << "==> c: seq start" << std::endl; 
-                //parse( parser, t.add_child( scalar, boost::property_tree::ptree() ), false, true );
                 parse( parser, t, false, true );
                 break;
             case YAML_SEQUENCE_END_EVENT:
+                if( previous_was_scalar ) { t.push_back( std::make_pair( "", boost::property_tree::ptree() ) )->second.put_value( previous_scalar ); }
                 std::cerr << "==> d: seq end" << std::endl;
                 return;
             case YAML_MAPPING_START_EVENT:
+                previous_was_scalar = false;
                 std::cerr << "==> e: map start" << std::endl;
-                parse( parser, t );
+                parse( parser, is_sequence ? t.add_child( previous_scalar, boost::property_tree::ptree() ) : t ); // todo
                 return;
             case YAML_MAPPING_END_EVENT:
             case YAML_STREAM_END_EVENT:
