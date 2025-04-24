@@ -487,7 +487,10 @@ boost::property_tree::ptree& property_tree::from_yaml( const std::string& s, boo
 
 std::string property_tree::to_yaml( const boost::property_tree::ptree& t )
 {
-    COMMA_THROW( comma::exception, "todo" );
+    COMMA_THROW( comma::exception, R"(conversion to yaml: todo; in the meantime, do it in python:
+
+cat your.json | python3 -c 'import json, yaml, sys; yaml.dump( json.load( sys.stdin ), sys.stdout )
+)" );
 }
 
 #else // #if defined comma_BUILD_NAME_VALUE_YAML
