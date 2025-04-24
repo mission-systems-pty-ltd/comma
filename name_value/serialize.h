@@ -135,6 +135,35 @@ template < typename T > void read_xml( T& t, std::istream& stream, const char* r
 template < typename T > void read_xml( T& t, std::istream& stream, bool permissive );
 template < typename T > void read_xml( T& t, std::istream& stream );
 
+/// read object from xml file or stream
+/// convenience wrappers for comma::property_tree boiler-plate code
+template < typename T > T read_yaml( const std::string& filename, const xpath& root, bool permissive );
+template < typename T > T read_yaml( const std::string& filename, const char* root, bool permissive );
+template < typename T > T read_yaml( const std::string& filename, const xpath& root );
+template < typename T > T read_yaml( const std::string& filename, const char* root );
+template < typename T > T read_yaml( const std::string& filename, bool permissive, bool split_filename );
+template < typename T > T read_yaml( const std::string& filename, bool permissive );
+template < typename T > T read_yaml( const std::string& filename );
+template < typename T > void read_yaml( T& t, const std::string& filename, const xpath& root, bool permissive );
+template < typename T > void read_yaml( T& t, const std::string& filename, const char* root, bool permissive );
+template < typename T > void read_yaml( T& t, const std::string& filename, const xpath& root );
+template < typename T > void read_yaml( T& t, const std::string& filename, const char* root );
+template < typename T > void read_yaml( T& t, const std::string& filename, bool permissive, bool split_filename );
+template < typename T > void read_yaml( T& t, const std::string& filename, bool permissive );
+template < typename T > void read_yaml( T& t, const std::string& filename );
+template < typename T > T read_yaml( std::istream& stream, const xpath& root, bool permissive );
+template < typename T > T read_yaml( std::istream& stream, const char* root, bool permissive );
+template < typename T > T read_yaml( std::istream& stream, const xpath& root );
+template < typename T > T read_yaml( std::istream& stream, const char* root );
+template < typename T > T read_yaml( std::istream& stream, bool permissive );
+template < typename T > T read_yaml( std::istream& stream );
+template < typename T > void read_yaml( T& t, std::istream& stream, const xpath& root, bool permissive );
+template < typename T > void read_yaml( T& t, std::istream& stream, const char* root, bool permissive );
+template < typename T > void read_yaml( T& t, std::istream& stream, const xpath& root );
+template < typename T > void read_yaml( T& t, std::istream& stream, const char* root );
+template < typename T > void read_yaml( T& t, std::istream& stream, bool permissive );
+template < typename T > void read_yaml( T& t, std::istream& stream );
+
 /// read object from path-value file or stream
 /// convenience wrappers for comma::property_tree boiler-plate code
 template < typename T > T read_path_value( const std::string& filename, const xpath& root, bool permissive );
@@ -332,6 +361,51 @@ template < typename T > inline void read_xml( T& t, std::istream& stream, const 
 template < typename T > inline void read_xml( T& t, std::istream& stream, const char* root ) { if( root ) { read_xml< T >( t, stream, xpath( root ), true ); } else { read_xml< T >( t, stream, true ); } }
 template < typename T > inline void read_xml( T& t, std::istream& stream, bool permissive ) { read_xml< T >( t, stream, xpath(), permissive ); }
 template < typename T > inline void read_xml( T& t, std::istream& stream ) { read_xml< T >( t, stream, xpath(), true ); }
+
+template < typename T > inline void read_yaml( T& t, const std::string& filename, const xpath& root, bool permissive )
+{
+    std::ifstream ifs( &filename[0] );
+    if( !ifs.is_open() ) { COMMA_THROW( comma::exception, "failed to open \"" << filename << "\"" ); }
+    read_yaml< T >( t, ifs, root, permissive );
+    ifs.close();
+}
+
+template < typename T > inline void read_yaml( T& t, std::istream& stream, const xpath& root, bool permissive )
+{
+    boost::property_tree::ptree p;
+    comma::property_tree::read_yaml( stream, p );
+    comma::from_ptree from_ptree( p, root, permissive );
+    comma::visiting::apply( from_ptree ).to( t );
+}
+
+template < typename T > inline T read_yaml( const std::string& filename, const xpath& root, bool permissive ) { T t; read_yaml< T >( t, filename, root, permissive ); return t; }
+template < typename T > inline T read_yaml( const std::string& filename, const char* root, bool permissive ) { return root ? read_yaml< T >( filename, xpath( root ), permissive ) : read_yaml< T >( filename, permissive ); }
+template < typename T > inline T read_yaml( const std::string& filename, const xpath& root ) { return read_yaml< T >( filename, root, true ); }
+template < typename T > inline T read_yaml( const std::string& filename, const char* root ) { return root ? read_yaml< T >( filename, xpath( root ), true ) : read_yaml< T >( filename, true ); }
+template < typename T > inline T read_yaml( const std::string& filename, bool permissive, bool split_filename ) { T t; read_yaml< T >( t, filename, permissive, split_filename ); return t; }
+template < typename T > inline T read_yaml( const std::string& filename, bool permissive ) { return read_yaml< T >( filename, xpath(), permissive ); }
+template < typename T > inline T read_yaml( const std::string& filename ) { return read_yaml< T >( filename, xpath(), true ); }
+template < typename T > inline T read_yaml( std::istream& stream, const xpath& root, bool permissive ) { T t; read_yaml< T >( t, stream, root, permissive ); return t; }
+template < typename T > inline T read_yaml( std::istream& stream, const char* root, bool permissive ) { return root ? read_yaml< T >( stream, xpath( root ), permissive ) : read_yaml< T >( stream, permissive ); }
+template < typename T > inline T read_yaml( std::istream& stream, const xpath& root ) { return read_yaml< T >( stream, root, true ); }
+template < typename T > inline T read_yaml( std::istream& stream, const char* root ) { return root ? read_yaml< T >( stream, xpath( root ), true ) : read_yaml< T >( stream, true ); }
+template < typename T > inline T read_yaml( std::istream& stream, bool permissive ) { return read_yaml< T >( stream, xpath(), permissive ); }
+template < typename T > inline T read_yaml( std::istream& stream ) { return read_yaml< T >( stream, xpath(), true ); }
+template < typename T > inline void read_yaml( T& t, const std::string& filename, const char* root, bool permissive ) { if( root ) { read_yaml< T >( t, filename, xpath( root ), permissive ); } else { read_yaml< T >( t, filename, permissive ); } }
+template < typename T > inline void read_yaml( T& t, const std::string& filename, const xpath& root ) { read_yaml< T >( t, filename, root, true ); }
+template < typename T > inline void read_yaml( T& t, const std::string& filename, const char* root ) { if( root ) { read_yaml< T >( t, filename, xpath( root ), true ); } else { read_yaml< T >( t, filename, true ); } }
+template < typename T > inline void read_yaml( T& t, const std::string& filename, bool permissive, bool split_filename )
+{
+    std::pair< std::string, xpath > p = split_filename ? impl::_split( filename ) : std::pair< std::string, xpath >{ filename, xpath() };
+    read_yaml< T >( t, p.first, p.second, permissive );
+}
+template < typename T > inline void read_yaml( T& t, const std::string& filename, bool permissive ) { read_yaml< T >( t, filename, xpath(), permissive ); }
+template < typename T > inline void read_yaml( T& t, const std::string& filename ) { read_yaml< T >( t, filename, xpath(), true ); }
+template < typename T > inline void read_yaml( T& t, std::istream& stream, const char* root, bool permissive ) { if( root ) { read_yaml< T >( t, stream, xpath( root ), permissive ); } else { read_yaml< T >( t, stream, permissive ); } }
+template < typename T > inline void read_yaml( T& t, std::istream& stream, const xpath& root ) { read_yaml< T >( t, stream, root, true ); }
+template < typename T > inline void read_yaml( T& t, std::istream& stream, const char* root ) { if( root ) { read_yaml< T >( t, stream, xpath( root ), true ); } else { read_yaml< T >( t, stream, true ); } }
+template < typename T > inline void read_yaml( T& t, std::istream& stream, bool permissive ) { read_yaml< T >( t, stream, xpath(), permissive ); }
+template < typename T > inline void read_yaml( T& t, std::istream& stream ) { read_yaml< T >( t, stream, xpath(), true ); }
 
 template < typename T > inline void read_path_value( T& t, std::istream& stream, const xpath& root, bool permissive )
 {
