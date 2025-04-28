@@ -456,7 +456,15 @@ void property_tree::from_unknown_seekable( std::istream& stream, boost::property
     COMMA_THROW( comma::exception, "failed to guess format" );
 }
 
-#if defined comma_BUILD_NAME_VALUE_YAML
+void property_tree::write_yaml( std::ostream& os, const boost::property_tree::ptree& t ) { os << to_yaml( t ) << std::endl; }
+
+std::string property_tree::to_yaml( const boost::property_tree::ptree& t )
+{
+    COMMA_THROW( comma::exception, R"(conversion to yaml: todo; in the meantime, do it in python:
+
+cat your.json | python3 -c 'import json, yaml, sys; yaml.dump( json.load( sys.stdin ), sys.stdout )
+)" );
+}
 
 boost::property_tree::ptree property_tree::from_yaml( const std::string& s )
 {
@@ -478,42 +486,13 @@ void property_tree::read_yaml( std::istream& is, boost::property_tree::ptree& t 
     from_yaml( oss.str(), t );
 }
 
-void property_tree::write_yaml( std::ostream& os, const boost::property_tree::ptree& t ) { os << to_yaml( t ) << std::endl; }
+#if defined comma_BUILD_NAME_VALUE_YAML
 
-boost::property_tree::ptree& property_tree::from_yaml( const std::string& s, boost::property_tree::ptree& t )
-{
-    return comma::name_value::impl::yaml::to_ptree( s, t );
-}
-
-std::string property_tree::to_yaml( const boost::property_tree::ptree& t )
-{
-    COMMA_THROW( comma::exception, R"(conversion to yaml: todo; in the meantime, do it in python:
-
-cat your.json | python3 -c 'import json, yaml, sys; yaml.dump( json.load( sys.stdin ), sys.stdout )
-)" );
-}
+boost::property_tree::ptree& property_tree::from_yaml( const std::string& s, boost::property_tree::ptree& t ) { return comma::name_value::impl::yaml::to_ptree( s, t ); }
 
 #else // #if defined comma_BUILD_NAME_VALUE_YAML
 
-boost::property_tree::ptree property_tree::from_yaml( const std::string& s )
-{
-    COMMA_THROW( comma::exception, "built without yaml support; run cmake with comma_BUILD_NAME_VALUE_YAML defined and rebuild" );
-}
-
-boost::property_tree::ptree& property_tree::from_yaml( const std::string& s, boost::property_tree::ptree& t )
-{
-    COMMA_THROW( comma::exception, "built without yaml support; run cmake with comma_BUILD_NAME_VALUE_YAML defined and rebuild" );
-}
-
-boost::property_tree::ptree& property_tree::from_yaml( std::istream& is, boost::property_tree::ptree& t )
-{
-    COMMA_THROW( comma::exception, "built without yaml support; run cmake with comma_BUILD_NAME_VALUE_YAML defined and rebuild" );
-}
-
-std::string property_tree::to_yaml( const boost::property_tree::ptree& t )
-{
-    COMMA_THROW( comma::exception, "built without yaml support; run cmake with comma_BUILD_NAME_VALUE_YAML defined and rebuild" );
-}
+boost::property_tree::ptree& property_tree::from_yaml( const std::string&, boost::property_tree::ptree& ) { COMMA_THROW( comma::exception, "built without yaml support; run cmake with comma_BUILD_NAME_VALUE_YAML defined and rebuild" ); }
 
 #endif // #if defined comma_BUILD_NAME_VALUE_YAML
 
