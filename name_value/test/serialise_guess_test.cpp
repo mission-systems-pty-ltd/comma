@@ -233,7 +233,7 @@ TEST( serialise, guess_path_value_root ) { std::istringstream iss( path_value_ro
 
 TEST( serialise, guess_corrupted_json )
 {
-    std::istringstream iss( "{ \"name\": \"dummy\", }" );
+    std::istringstream iss( "{ \"name\": \"dummy\"," );
     config c; 
     ASSERT_THROW( comma::read< config >( c, iss ), comma::exception );
 }

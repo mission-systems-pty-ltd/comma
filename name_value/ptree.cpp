@@ -479,7 +479,7 @@ void property_tree::read_yaml( std::istream& is, boost::property_tree::ptree& t 
     while( is.good() && !is.eof() ) // quick and dirty, watch performance
     {
         std::string line;
-        std::getline( std::cin, line );
+        std::getline( is, line );
         if( line.empty() ) { continue; }
         oss << line << std::endl;
     }

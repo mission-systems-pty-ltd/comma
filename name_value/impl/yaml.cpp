@@ -39,7 +39,26 @@ namespace comma { namespace name_value { namespace impl { namespace yaml {
 
 enum class on { none, scalar, seq, map };
 
-static void parse( yaml_parser_t *parser, boost::property_tree::ptree& t, on what = on::none, bool is_name = false )
+const char* event_to_string( yaml_event_type_e e )
+{
+    switch( e )
+    {
+        case YAML_NO_EVENT: return "no";
+        case YAML_STREAM_START_EVENT: return "stream start";
+        case YAML_STREAM_END_EVENT: return "stream end";
+        case YAML_DOCUMENT_START_EVENT: return "document start";
+        case YAML_DOCUMENT_END_EVENT: return "document end";
+        case YAML_ALIAS_EVENT: return "alias";
+        case YAML_SCALAR_EVENT: return "scalar";
+        case YAML_SEQUENCE_START_EVENT: return "sequence start";
+        case YAML_SEQUENCE_END_EVENT: return "sequence end";
+        case YAML_MAPPING_START_EVENT: return "mapping start";
+        case YAML_MAPPING_END_EVENT: return "mapping end";
+    }
+    return "unknown"; // never here
+}
+
+static yaml_event_type_e parse( yaml_parser_t *parser, boost::property_tree::ptree& t, on what = on::none, bool is_name = false )
 {
     //COMMA_THROW( comma::exception, "implementing..." );
     //std::cerr << "==> A" << std::endl; //std::cerr << "==> a: expecting_value: " << expecting_value << " is_sequence: " << is_sequence << std::endl;
@@ -47,7 +66,7 @@ static void parse( yaml_parser_t *parser, boost::property_tree::ptree& t, on wha
     while( true )
     {
         yaml_event_t event;
-        yaml_parser_parse( parser, &event );
+        COMMA_ASSERT( yaml_parser_parse( parser, &event ) == 1, "yaml_parser_parse() failed" );
         auto event_type = event.type;
         scalar = event.type == YAML_SCALAR_EVENT ? std::string( reinterpret_cast< const char* >( event.data.scalar.value ) ) : "";
         yaml_event_delete( &event );
@@ -62,7 +81,7 @@ static void parse( yaml_parser_t *parser, boost::property_tree::ptree& t, on wha
                     case on::map:
                         if( is_name ) { parse( parser, t.add_child( scalar, boost::property_tree::ptree() ), on::map, false ); break; }
                         t.put_value( scalar );
-                        return;
+                        return YAML_SCALAR_EVENT;
                     case on::seq:
                         t.push_back( std::make_pair( "", boost::property_tree::ptree() ) )->second.put_value( scalar );
                         break;
@@ -71,10 +90,10 @@ static void parse( yaml_parser_t *parser, boost::property_tree::ptree& t, on wha
             case YAML_SEQUENCE_START_EVENT:
                 //std::cerr << "==> c: seq start" << std::endl;
                 parse( parser, t, on::seq );
-                return;
+                return YAML_SEQUENCE_START_EVENT;
             case YAML_SEQUENCE_END_EVENT:
                 //std::cerr << "==> d: seq end" << std::endl;
-                return;
+                return YAML_SEQUENCE_END_EVENT;
             case YAML_MAPPING_START_EVENT:
                 //std::cerr << "==> e: map start" << std::endl;
                 if( what == on::seq )
@@ -83,15 +102,17 @@ static void parse( yaml_parser_t *parser, boost::property_tree::ptree& t, on wha
                     break;
                 }
                 parse( parser, t, on::map, true );
-                return;
+                return YAML_MAPPING_START_EVENT;
             case YAML_MAPPING_END_EVENT:
                 //std::cerr << "==> f: map end" << std::endl;
-                return;
+                return YAML_MAPPING_END_EVENT;
             case YAML_STREAM_END_EVENT:
+                return YAML_STREAM_END_EVENT;
             case YAML_DOCUMENT_END_EVENT:
+                return YAML_DOCUMENT_END_EVENT;
             case YAML_NO_EVENT:
                 //std::cerr << "==> f: stream/document end or no event" << std::endl;
-                return;
+                return YAML_NO_EVENT;
             case YAML_DOCUMENT_START_EVENT:
             case YAML_STREAM_START_EVENT:
             case YAML_ALIAS_EVENT:
@@ -112,6 +133,8 @@ boost::property_tree::ptree& to_ptree( const std::string& s, boost::property_tre
     yaml_parser_initialize( &parser );
     yaml_parser_set_input_string( &parser, reinterpret_cast< const unsigned char* >( &s[0] ), s.size() );
     parse( &parser, t );
+    // auto r = parse( &parser, t );
+    // COMMA_ASSERT( r == YAML_STREAM_END_EVENT, "expected YAML_STREAM_END_EVENT; got: " << event_to_string( r ) << " event" );
     yaml_parser_delete( &parser );
     return t;
 }
