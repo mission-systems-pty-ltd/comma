@@ -31,6 +31,7 @@
 
 #include <boost/regex.hpp>
 #include "../base/exception.h"
+#include "../base/none.h"
 #include "../csv/options.h"
 #include "../string/split.h"
 #include "../string/string.h"
@@ -69,9 +70,9 @@ static void init( comma::csv::options& csv_options
     {
         switch( quote_character->size() )
         {
-            case 0: csv_options.quote.reset(); break;
+            case 0: csv_options.quote = silent_none< char >(); break;
             case 1: csv_options.quote = ( *quote_character )[0]; break;
-            case 2: COMMA_THROW( comma::exception, "expected a quote character, got \"" << *quote_character << "\"" );
+            default: COMMA_THROW( comma::exception, "expected a quote character, got \"" << *quote_character << "\"" );
         }
     }
     csv_options.flush = options.exists( "--flush" );
