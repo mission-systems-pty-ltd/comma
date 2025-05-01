@@ -1,4 +1,4 @@
-    SET( CXX_STANDARDS "0x;11;14;17" CACHE STRING "list of known c++ standards" )
+    SET( CXX_STANDARDS "0x;11;14;17;20" CACHE STRING "list of known c++ standards" )
     MARK_AS_ADVANCED( FORCE CXX_STANDARDS )
     STRING( REGEX REPLACE ";" "," CXX_STANDARDS_READABLE "${CXX_STANDARDS}" )
     SET( CXX_STANDARD_DEFAULT "17" CACHE STRING "default c++ standard to use" )
