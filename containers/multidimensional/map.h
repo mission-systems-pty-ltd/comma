@@ -72,15 +72,15 @@ class map : public std::unordered_map< std::array< comma::int32, Size >, V, arra
         static key_type index_of( const point_type& point, const point_type& resolution );
         
         /// find value by point
-        iterator find( const point_type& point );
+        iterator at( const point_type& point );
         
         /// find value by point
-        const_iterator find( const point_type& point ) const;
+        const_iterator at( const point_type& point ) const;
         
         /// find value by key
         iterator find( const key_type& index );
         
-        /// find voxel by key
+        /// find value by key
         const_iterator find( const key_type& index ) const;
         
         /// return origin
@@ -142,14 +142,14 @@ inline typename map< K, V, Size, P, Traits >::key_type map< K, V, Size, P, Trait
 }
 
 template < typename K, typename V, std::size_t Size, typename P, typename Traits >
-inline typename map< K, V, Size, P, Traits >::iterator map< K, V, Size, P, Traits >::find( const typename map< K, V, Size, P, Traits >::point_type& point )
+inline typename map< K, V, Size, P, Traits >::iterator map< K, V, Size, P, Traits >::at( const typename map< K, V, Size, P, Traits >::point_type& point )
 {
     index_type i = index_of( point );
     return this->base_type::find( i );
 }
 
 template < typename K, typename V, std::size_t Size, typename P, typename Traits >
-inline typename map< K, V, Size, P, Traits >::const_iterator map< K, V, Size, P, Traits >::find( const typename map< K, V, Size, P, Traits >::point_type& point ) const
+inline typename map< K, V, Size, P, Traits >::const_iterator map< K, V, Size, P, Traits >::at( const typename map< K, V, Size, P, Traits >::point_type& point ) const
 {
     index_type i = index_of( point );
     return this->base_type::find( i );
