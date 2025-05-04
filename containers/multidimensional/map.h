@@ -5,6 +5,7 @@
 #pragma once
 
 #include <array>
+#include <functional>
 #include <unordered_map>
 #include <boost/functional/hash.hpp>
 #include "../../base/types.h"
@@ -14,7 +15,7 @@ namespace comma { namespace containers { namespace multidimensional {
 
 /// quick and dirty hash for array-like containers (its support is awkward in boost)
 template < typename Array, std::size_t Size >
-struct array_hash : public std::unary_function< Array, std::size_t >
+struct array_hash : public std::function< std::size_t( const Array& ) > // struct array_hash : public std::unary_function< Array, std::size_t >
 {
     std::size_t operator()( Array const& array ) const
     {
