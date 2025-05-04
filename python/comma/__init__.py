@@ -1,6 +1,7 @@
 # Copyright (c) 2011 The University of Sydney
 # Copyright (c) 2013 Vsevolod Vlaskine
 
+from . import containers
 from . import csv
 from . import dictionary
 from . import filesystem

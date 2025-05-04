@@ -30,7 +30,7 @@ setuptools.setup(
         maintainer_email    = 'vsevolod.vlaskine@gmail.com',
         python_requires     = '>=3.6',
         #install_requires    = [ 'numpy' ], # todo? does it need to be uncommented for packaging
-        packages            = [ 'comma', 'comma.csv', 'comma.csv.applications', 'comma.dictionary', 'comma.filesystem', 'comma.io', 'comma.numpy', 'comma.signal', 'comma.util', 'comma.cpp_bindings', 'comma.application' ],
+        packages            = [ 'comma', 'comma.containers', 'comma.containers.multidimensional', 'comma.csv', 'comma.csv.applications', 'comma.dictionary', 'comma.filesystem', 'comma.io', 'comma.numpy', 'comma.signal', 'comma.util', 'comma.cpp_bindings', 'comma.application' ],
         package_dir         = { 'comma': 'comma', 'comma.cpp_bindings': 'comma/cpp_bindings' },
         package_data        = { 'comma.cpp_bindings': [ '*.so', '*.dll' ] },
         entry_points        = { 'console_scripts': ['csv-eval=comma.csv.applications.csv_eval:main'] } #scripts             = [ "comma/csv/applications/csv-eval" ]

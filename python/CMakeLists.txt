@@ -75,7 +75,8 @@ SET( comma_PYTHON_SOURCE_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR} )
 
 set_python_build_lib_directory()
 
-ADD_SUBDIRECTORY( comma )
+add_subdirectory( comma )
+add_subdirectory( bindings )
 
 ADD_CUSTOM_TARGET( python_build ALL
                    ${PYTHON} ${SETUP_PY} build --build-base ${BUILD_BASE}
