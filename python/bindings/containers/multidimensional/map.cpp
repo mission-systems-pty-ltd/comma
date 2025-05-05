@@ -13,7 +13,8 @@ class base
         virtual ~base() = default;
         virtual void insert( const void* p, int v ) = 0;
         virtual const int* at( const void* p, unsigned int* size ) const = 0;
-        virtual unsigned int size( const void* p ) const = 0;
+        virtual unsigned int count() const = 0;
+        virtual unsigned int size() const = 0;
     protected:
         void* _m{nullptr};
 };
@@ -39,7 +40,9 @@ struct proxy: public base
 
     const int* at( const void* k, unsigned int* size ) const { const auto& i = map().at( key( k ) ); *size = i == map().end() ? 0 : int( i->second.size() ); return i == map().end() || i->second.empty() ? nullptr : &i->second[0]; }
     
-    unsigned int size( const void* p ) const { return map().size(); }
+    unsigned int size() const { return map().size(); }
+
+    unsigned int count() const { unsigned int c{0}; for( auto i: map() ) { c += i.second.size(); } return c; }
 
     map_t& map() { return *reinterpret_cast< map_t* >( _m ); }
 
@@ -119,5 +122,6 @@ DLL_EXPORT void comma_containers_multidimensional_map_destroy( void* p ) { delet
 
 DLL_EXPORT const void* comma_containers_multidimensional_map_at( const void* p, void* size ) { return as_base( p )->at( p, reinterpret_cast< unsigned int* >( size ) ); }
 
-DLL_EXPORT unsigned int comma_containers_multidimensional_map_size( const void* p ) { return as_base( p )->size( p ); }
+DLL_EXPORT unsigned int comma_containers_multidimensional_map_size( const void* p ) { return as_base( p )->size(); }
 
+DLL_EXPORT unsigned int comma_containers_multidimensional_map_count( const void* p ) { return as_base( p )->count(); }
