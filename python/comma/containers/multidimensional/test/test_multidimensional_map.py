@@ -1,8 +1,10 @@
-import numpy, pytest
+import numpy, pytest, sys
 from comma.containers import multidimensional
 
 def test_multidimensional_map_size():
-    assert multidimensional.Map( numpy.float32, 3, resolution=[1, 1, 1] ).size() == 0
-    assert multidimensional.Map( numpy.float32, 3, resolution=[1, 1, 1] ).count() == 0
-    # todo: debug: assert multidimensional.Map( numpy.float32, 3, resolution=[0.5, 0.5, 0.5], values=[[0, 0, 0], [0, 0, 0], [1, 1, 1]] ).size() == 2
-    assert multidimensional.Map( numpy.float32, 3, resolution=[0.5, 0.5, 0.5], values=[[0, 0, 0], [0, 0, 0], [1, 1, 1]] ).count() == 3
+    assert multidimensional.Map( resolution=numpy.array([1, 1, 1]) ).size() == 0
+    assert multidimensional.Map( resolution=numpy.array([1, 1, 1]) ).count() == 0
+    assert multidimensional.Map( resolution=numpy.array([1, 1, 1]), values=[[0.5, 0.5, 0.5], [0.5, 0.5, 0.5], [0.5, 0.5, 0.5]] ).size() == 1
+    assert multidimensional.Map( resolution=numpy.array([1, 1, 1]), values=[[0.5, 0.5, 0.5], [0.5, 0.5, 0.5], [0.5, 0.5, 0.5]] ).count() == 3
+    assert multidimensional.Map( resolution=numpy.array([10, 10, 10], dtype=numpy.float32), values=[[1, 2, 3], [4, 5, 6], [7, 8, 9]] ).size() == 1
+    assert multidimensional.Map( resolution=numpy.array([10, 10, 10], dtype=numpy.float32), values=[[1, 2, 3], [4, 5, 6], [7, 8, 9]] ).count() == 3

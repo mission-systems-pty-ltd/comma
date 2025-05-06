@@ -31,7 +31,7 @@ struct proxy: public base
     {
         if( !p || size == 0 ) { return; }
         const K* q = reinterpret_cast< const K* >( p );
-        for( int i = 0; i < size; ++i, q += sizeof( K ) * Dim * size ) { insert( q, i ); }
+        for( int i = 0; i < size; ++i, q += Dim ) { insert( q, i ); }
     }
 
     ~proxy() { if( _m ) { delete reinterpret_cast< map_t* >( _m ); } }
