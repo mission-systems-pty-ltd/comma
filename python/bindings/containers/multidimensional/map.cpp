@@ -33,25 +33,18 @@ struct proxy: public base
     {
         if( !p || size == 0 ) { return; }
         const K* q = reinterpret_cast< const K* >( p );
-        for( int i = 0; i < size; ++i, q += Dim ) { insert( q, i ); std::cerr << "==> proxy: a: i: " << i << std::endl; }
+        for( int i = 0; i < size; ++i, q += Dim ) { insert( q, i ); }
     }
 
     ~proxy() { if( _m ) { delete reinterpret_cast< map_t* >( _m ); } }
 
     void insert( const void* k, int v ) { map().touch_at( key( k ) )->second.push_back( v ); }
 
-    // const int* at( const void* k, unsigned int* size ) const { const auto& i = map().at( key( k ) ); *size = i == map().end() ? 0 : int( i->second.size() ); return i == map().end() || i->second.empty() ? nullptr : &i->second[0]; }
-
     const int* at( const void* k, unsigned int* size ) const
     {
-        std::cerr << "==> a" << std::endl;
         const auto& i = map().at( key( k ) );
-        std::cerr << "==> b" << std::endl;
-        unsigned int s = i == map().end() ? 0 : int( i->second.size() );
-        *size = s;
-        std::cerr << "==> c" << std::endl;
-        if( s > 0 ) { for( auto j: i->second ) { std::cerr << "==> d: j: " << j << std::endl; } }
-        return i == map().end() || i->second.empty() ? nullptr : &i->second[0];
+        *size = i == map().end() ? 0 : int( i->second.size() );
+        return *size == 0 ? nullptr : &i->second[0];
     }
     
     unsigned int size() const { return map().size(); }
