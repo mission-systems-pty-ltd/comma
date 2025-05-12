@@ -1,4 +1,4 @@
-import ctypes, ctypes.util, numpy
+import ctypes, ctypes.util, numpy, sys
 
 class Map:
     def __init__( self, resolution, origin=None, values=None ):
@@ -35,9 +35,15 @@ class Map:
     def __exit__( self, type, value, traceback ): self._bindings.comma_containers_multidimensional_map_destroy( self._map )
 
     def at( self, value ):
-        s = ctypes.POINTER( ctypes.c_int )()
-        p = self._at( self._map, numpy.array( value, dtype=self._dtype ).ctypes.data_as( ctypes.c_void_p ), s )
-        return None if p is None else numpy.frombuffer( p, dtype=numpy.int32, count=s.values[0] )
+        s = numpy.zeros( 1, dtype=numpy.int32 ) # todo: quick and dirty, figure out the right way
+        print( f'==> Map.at(): a: {s[0]=}', file=sys.stderr )
+        p = self._at( self._map, numpy.array( value, dtype=self._dtype ).ctypes.data_as( ctypes.c_void_p ), s.ctypes.data_as( ctypes.c_void_p ) )
+        print( f'==> Map.at(): b: {s[0]=} {p=}', file=sys.stderr )
+        if not p is None:
+            print( f'==> Map.at(): c', file=sys.stderr )
+            a = numpy.frombuffer( bytes( p ), dtype=numpy.int32, count=s[0] )
+            print( f'==> Map.at(): d: {a=}', file=sys.stderr )
+        return None if p is None else numpy.frombuffer( bytes( p ), dtype=numpy.int32, count=s[0] )
 
     def count( self ): return self._count( self._map )
     
