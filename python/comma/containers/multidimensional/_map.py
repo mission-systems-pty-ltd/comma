@@ -17,6 +17,9 @@ class Map:
         self._size = self._bindings.comma_containers_multidimensional_map_size
         self._size.argtypes = [ ctypes.c_void_p ]
         self._size.restype = ctypes.c_uint
+        self._at = self._bindings.comma_containers_multidimensional_map_at
+        self._at.argtypes = [ ctypes.c_void_p, ctypes.c_void_p ]
+        self._at.restype = ctypes.c_void_p
         key_types = { numpy.dtype( 'int32' ): 0, numpy.dtype( 'int64' ): 1, numpy.dtype( 'float32' ): 2, numpy.dtype( 'float64' ): 3 }
         if origin is None: origin = numpy.zeros( resolution.shape[0] )
         assert self._dtype in key_types, TypeError( f'expected key type in {list(key_types.keys())}; got: {self._dtype}' )
@@ -31,11 +34,10 @@ class Map:
 
     def __exit__( self, type, value, traceback ): self._bindings.comma_containers_multidimensional_map_destroy( self._map )
 
-    def at( self, points ):
-        # todo: call method
-        # todo: 'cast' pointer to int
-        # todo: make numpy array
-        ...
+    def at( self, value ):
+        s = ctypes.POINTER( ctypes.c_int )()
+        p = self._at( self._map, numpy.array( value, dtype=self._dtype ).ctypes.data_as( ctypes.c_void_p ), s )
+        return None if p is None else numpy.frombuffer( p, dtype=numpy.int32, count=s.values[0] )
 
     def count( self ): return self._count( self._map )
     

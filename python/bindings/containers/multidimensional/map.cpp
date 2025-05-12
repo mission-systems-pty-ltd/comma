@@ -120,7 +120,7 @@ DLL_EXPORT void* comma_containers_multidimensional_map_create( int key_type, uns
 
 DLL_EXPORT void comma_containers_multidimensional_map_destroy( void* p ) { delete as_base( p ); }
 
-DLL_EXPORT const void* comma_containers_multidimensional_map_at( const void* p, void* size ) { return as_base( p )->at( p, reinterpret_cast< unsigned int* >( size ) ); }
+DLL_EXPORT const void* comma_containers_multidimensional_map_at( const void* p, const void* k, void* size ) { return as_base( p )->at( k, reinterpret_cast< unsigned int* >( size ) ); }
 
 DLL_EXPORT unsigned int comma_containers_multidimensional_map_size( const void* p ) { return as_base( p )->size(); }
 

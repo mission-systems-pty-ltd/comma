@@ -14,12 +14,12 @@ DLL_EXPORT void* comma_containers_multidimensional_map_create( int key_type, uns
 
 DLL_EXPORT void comma_containers_multidimensional_map_destroy( void* p );
 
-DLL_EXPORT const void* comma_containers_multidimensional_map_at( const void* p, void* size );
-
 // todo? DLL_EXPORT const void* comma_containers_multidimensional_map_free( const void* p, void* size );
 
 DLL_EXPORT unsigned int comma_containers_multidimensional_map_size( const void* p );
 
 DLL_EXPORT unsigned int comma_containers_multidimensional_map_count( const void* p );
+
+DLL_EXPORT const void* comma_containers_multidimensional_map_at( const void* p, const void* k, void* size );
 
 }
