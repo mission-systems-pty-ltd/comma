@@ -21,12 +21,24 @@ class base
         void* _m{nullptr};
 };
 
+template < unsigned int D > struct _traits
+{ 
+    static unsigned int power( unsigned int b ) { return _traits< D - 1 >::power * b; }
+    static void index( std::array< int, D >& a, unsigned int v, int b, unsigned int i = D )
+    {
+        a[ --i ] = v % b - b / 2;
+        if( i > 0 ) { index( a, v / b, i ); }
+    } 
+};
+
+template <> struct _traits< 0 > { static unsigned int power( unsigned int ) { return 1; } };
+
 template < typename K, unsigned int Dim >
 struct proxy: public base
 {
-    typedef comma::containers::multidimensional::map< K, std::vector< int >, Dim > map_t;
-
-    typedef typename map_t::point_type key_t;
+    typedef std::array< K, Dim > key_t;
+    
+    typedef comma::containers::multidimensional::map< K, std::pair< std::vector< int >, std::vector< key_t > >, Dim > map_t;
 
     proxy( const void* o, const void* r, const void* p, int size )
         : base( new map_t( *reinterpret_cast< const key_t* >( o ), *reinterpret_cast< const key_t* >( r ) ) )
@@ -38,18 +50,39 @@ struct proxy: public base
 
     ~proxy() { if( _m ) { delete reinterpret_cast< map_t* >( _m ); } }
 
-    void insert( const void* k, int v ) { map().touch_at( key( k ) )->second.push_back( v ); }
+    void insert( const void* k, int v )
+    {
+        auto i = map().touch_at( key( k ) );
+        i->second.first.push_back( v );
+        i->second.second.push_back( key( k ) );
+    }
 
     const int* at( const void* k, unsigned int* size ) const
     {
-        const auto& i = map().at( key( k ) );
-        *size = i == map().end() ? 0 : int( i->second.size() );
-        return *size == 0 ? nullptr : &i->second[0];
+        auto i = map().at( key( k ) );
+        *size = i == map().end() ? 0 : int( i->second.first.size() );
+        return *size == 0 ? nullptr : &i->second.first[0];
+    }
+
+    const int* nearest( const void* k, unsigned int neighbourhood, unsigned int count, unsigned int* size ) const
+    {
+        auto i = map().index_of( key( k ) );
+        typename map_t::index_type j;
+        int b = neighbourhood * 2 + 1;
+        for( unsigned int k = 0; k < _traits< Dim >::power( b ); ++k )
+        {
+            _traits< Dim >::index( j, k, b );
+            for( unsigned int m = 0; m < Dim; ++m ) { j[m] += i[m]; }
+            auto n = map().find( j );
+            if( n == map().end() ) { continue; }
+            // todo: for( auto s: n->second )
+        }
+        return nullptr;
     }
     
     unsigned int size() const { return map().size(); }
 
-    unsigned int count() const { unsigned int c{0}; for( auto i: map() ) { c += i.second.size(); } return c; }
+    unsigned int count() const { unsigned int c{0}; for( auto i: map() ) { c += i.second.first.size(); } return c; }
 
     map_t& map() { return *reinterpret_cast< map_t* >( _m ); }
 
