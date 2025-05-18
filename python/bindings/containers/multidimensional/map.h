@@ -22,4 +22,6 @@ DLL_EXPORT unsigned int comma_containers_multidimensional_map_count( const void*
 
 DLL_EXPORT const void* comma_containers_multidimensional_map_at( const void* p, const void* k, void* size );
 
+DLL_EXPORT const void* comma_containers_multidimensional_map_nearest( const void* p, const void* k, unsigned int n );
+
 }

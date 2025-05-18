@@ -20,6 +20,9 @@ class Map:
         self._at = self._bindings.comma_containers_multidimensional_map_at
         self._at.argtypes = [ ctypes.c_void_p, ctypes.c_void_p ]
         self._at.restype = ctypes.c_void_p
+        self._nearest = self._bindings.comma_containers_multidimensional_map_nearest
+        self._nearest.argtypes = [ ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint ]
+        self._nearest.restype = ctypes.c_void_p
         key_types = { numpy.dtype( 'int32' ): 0, numpy.dtype( 'int64' ): 1, numpy.dtype( 'float32' ): 2, numpy.dtype( 'float64' ): 3 }
         if origin is None: origin = numpy.zeros( resolution.shape[0] )
         assert self._dtype in key_types, TypeError( f'expected key type in {list(key_types.keys())}; got: {self._dtype}' )
@@ -40,6 +43,10 @@ class Map:
             p = self._at( self._map, numpy.array( value, dtype=self._dtype ).ctypes.data_as( ctypes.c_void_p ), s.ctypes.data_as( ctypes.c_void_p ) )
             return None if p is None else numpy.frombuffer( ctypes.string_at( p, s[0] * 4 ), dtype=numpy.int32, count=s[0] )
         raise NotImplementedError( 'Map.at(...,radius=...): implementing...' )
+
+    def nearest( self, value ):
+        n = self._nearest( self._map, numpy.array( value, dtype=self._dtype ).ctypes.data_as( ctypes.c_void_p ), 1 ) # todo? radius?
+        return None if n is None else ctypes.cast( n, ctypes.POINTER( ctypes.c_uint ) )[0]
 
     def count( self ): return self._count( self._map )
     

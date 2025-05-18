@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include <cstdint>
+#include <limits>
 #include <vector>
 #include "../../../../base/exception.h"
 #include "../../../../containers/multidimensional/map.h"
@@ -15,6 +16,7 @@ class base
         virtual ~base() = default;
         virtual void insert( const void* p, int v ) = 0;
         virtual const int* at( const void* p, unsigned int* size ) const = 0;
+        virtual const int* nearest( const void* k, unsigned int neighbourhood ) const = 0;
         virtual unsigned int count() const = 0;
         virtual unsigned int size() const = 0;
     protected:
@@ -23,11 +25,12 @@ class base
 
 template < unsigned int D > struct _traits
 { 
-    static unsigned int power( unsigned int b ) { return _traits< D - 1 >::power * b; }
-    static void index( std::array< int, D >& a, unsigned int v, int b, unsigned int i = D )
+    static unsigned int power( unsigned int b ) { return _traits< D - 1 >::power( b ) * b; }
+    static std::array< int, D > index( unsigned int v, int b, unsigned int i = D )
     {
-        a[ --i ] = v % b - b / 2;
-        if( i > 0 ) { index( a, v / b, i ); }
+        std::array< int, D > a;
+        for( int i = D - 1; i >= 0; a[i--] = v % b - b / 2, v /= b );
+        return a;
     } 
 };
 
@@ -64,20 +67,33 @@ struct proxy: public base
         return *size == 0 ? nullptr : &i->second.first[0];
     }
 
-    const int* nearest( const void* k, unsigned int neighbourhood, unsigned int count, unsigned int* size ) const
+    // todo: up to a given number of nearest points
+    // todo: all points in radius
+    // todo: multple input points
+    const int* nearest( const void* k, unsigned int neighbourhood ) const
     {
         auto i = map().index_of( key( k ) );
-        typename map_t::index_type j;
         int b = neighbourhood * 2 + 1;
-        for( unsigned int k = 0; k < _traits< Dim >::power( b ); ++k )
+        double s = std::numeric_limits< double >::max();
+        const int* si{nullptr};
+        for( unsigned int p = 0; p < _traits< Dim >::power( b ); ++p )
         {
-            _traits< Dim >::index( j, k, b );
+            typename map_t::index_type j = _traits< Dim >::index( p, b );
             for( unsigned int m = 0; m < Dim; ++m ) { j[m] += i[m]; }
             auto n = map().find( j );
             if( n == map().end() ) { continue; }
-            // todo: for( auto s: n->second )
+            for( unsigned int q = 0; q < n->second.first.size(); ++q )
+            {
+                double t = 0;
+                for( unsigned int m = 0; m < Dim; ++m )
+                { 
+                    double d = key( k )[m] - n->second.second[q][m]; 
+                    t += d * d;
+                }
+                if( t < s ) { s = t; si = &n->second.first[q]; }
+            }
         }
-        return nullptr;
+        return si;
     }
     
     unsigned int size() const { return map().size(); }
@@ -165,3 +181,5 @@ DLL_EXPORT const void* comma_containers_multidimensional_map_at( const void* p, 
 DLL_EXPORT unsigned int comma_containers_multidimensional_map_size( const void* p ) { return as_base( p )->size(); }
 
 DLL_EXPORT unsigned int comma_containers_multidimensional_map_count( const void* p ) { return as_base( p )->count(); }
+
+DLL_EXPORT const void* comma_containers_multidimensional_map_nearest( const void* p, const void* k, unsigned int n ) { return as_base( p )->nearest( k, n ); }

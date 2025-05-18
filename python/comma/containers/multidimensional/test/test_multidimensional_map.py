@@ -23,3 +23,12 @@ def test_multidimensional_map_at():
     # - return list of sizes and list of indices
     # ? profile performance 
     # print( m.at( [5, 5, 5], radius=3 ), file=sys.stderr )
+
+def test_multidimensional_map_at():
+    values=[[0, 0, 0], [0.5, 0.5, 0.5], [1, 1, 1], [2, 2, 2], [3, 3, 3]]
+    m = multidimensional.Map( resolution=numpy.array([2, 2, 2], dtype=float), values=values )
+    assert values[ m.nearest( [0, 0, 0] ) ] == [0, 0, 0]
+    assert values[ m.nearest( [0.4, 0.4, 0.4] ) ] == [0.5, 0.5, 0.5]
+    assert values[ m.nearest( [1.4, 1.4, 1.4] ) ] == [1, 1, 1]
+    assert values[ m.nearest( [5, 5, 5] ) ] == [3, 3, 3]
+    assert m.nearest( [7, 7, 7] ) is None
