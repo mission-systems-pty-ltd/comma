@@ -370,10 +370,11 @@ template < typename Engine > static int run_impl( const comma::command_line_opti
         {
             if( !records.empty() )
             {
-                std::uniform_int_distribution< int > distribution( 0, records.size() - 1 ); // quick and dirty
+                //std::uniform_int_distribution< int > distribution( 0, records.size() - 1 ); // quick and dirty
                 indices.resize( records.size() ); // quick and dirty
                 for( unsigned int i = 0; i < indices.size(); ++i ) { indices[i] = i; }
-                std::random_shuffle( indices.begin(), indices.end(), [&]( int ) -> int { return distribution( engine ); } ); // quick and dirty, watch performance
+                // deprecated: std::random_shuffle( indices.begin(), indices.end(), [&]( int ) -> int { return distribution( engine ); } ); // quick and dirty, watch performance
+                std::shuffle( indices.begin(), indices.end(), engine );
                 unsigned int s = sample ? ( ratio ? int( records.size() * *ratio ) : size ) : records.size();
                 if( sample ) { std::sort( indices.begin(), indices.begin() + s ); } // quick and dirty
                 for( unsigned int i = 0; i < s; ++i ) { std::cout.write( &records[indices[i]][0], records[indices[i]].size() ); }
