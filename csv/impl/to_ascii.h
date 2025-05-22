@@ -29,8 +29,7 @@
 
 /// @author vsevolod vlaskine
 
-#ifndef COMMA_CSV_IMPL_TOASCII_HEADER_GUARD_
-#define COMMA_CSV_IMPL_TOASCII_HEADER_GUARD_
+#pragma once
 
 #include <vector>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -40,6 +39,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/type_traits.hpp>
 #include "../../base/exception.h"
+#include "../../base/none.h"
 #include "../../string/string.h"
 #include "../../visiting/visit.h"
 #include "../../visiting/while.h"
@@ -84,8 +84,8 @@ class to_ascii
         const std::vector< boost::optional< std::size_t > >& indices_;
         std::vector< std::string >& row_;
         std::size_t index_;
-        boost::optional< unsigned int > precision_;
-        boost::optional< char > quote_;
+        boost::optional< unsigned int > precision_{ comma::silent_none< unsigned int >() };
+        boost::optional< char > quote_{ comma::silent_none< char >() };
 
         std::string as_string_( const boost::posix_time::ptime& v ) { return to_iso_string( v ); }
         std::string as_string_( const std::string& v ) { return quote_ ? *quote_ + v + *quote_ : v; } // todo: escape/unescape
@@ -157,5 +157,3 @@ inline void to_ascii::apply_final( const K&, const T& value )
 }
 
 } } } // namespace comma { namespace csv { namespace impl {
-
-#endif // #ifndef COMMA_CSV_IMPL_TOASCII_HEADER_GUARD_
