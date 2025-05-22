@@ -119,7 +119,7 @@ struct input_t
 {
     comma::csv::impl::unstructured key;
     comma::csv::impl::unstructured value;
-    comma::uint32 block;
+    comma::uint32 block{0};
 
     input_t() : block( 0 ) {}
     input_t( comma::csv::impl::unstructured key, comma::csv::impl::unstructured value, comma::uint32 block ): key( key ), value( value ), block( block ) {}
@@ -131,8 +131,8 @@ struct map_t
 {
     struct value_type
     {
-        unsigned int index;
-        input_t value;
+        unsigned int index{0};
+        input_t value{};
         std::string string;
 
         value_type() {}
@@ -171,7 +171,7 @@ static bool last_block = false;
 static bool last_only = false;
 static bool matched_only = false;
 static bool update_non_empty = false;
-static input_t default_input;
+static input_t default_input{};
 static comma::csv::impl::unstructured empty;
 static boost::optional< comma::csv::impl::unstructured > erase;
 static map_t::type filter_map;

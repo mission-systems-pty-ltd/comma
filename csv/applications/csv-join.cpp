@@ -372,7 +372,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
         if( filter_id_fields_discard ) { filter_id_fields_flags.resize( w.size(), 0 ); }
         bool got_state = false;
         bool got_next_state = false;
-        std::size_t filter_state_index;
+        std::size_t filter_state_index{0};
         for( std::size_t k = 0; k < w.size() && ( !got_state || !got_next_state ); ++k ) 
         {
             if( w[k] == "state" ) { got_state = true; filter_state_index = k; continue; }
