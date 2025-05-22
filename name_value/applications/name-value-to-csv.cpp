@@ -10,6 +10,7 @@
 #include <unordered_set>
 #include <boost/optional.hpp>
 #include "../../application/command_line_options.h"
+#include "../../base/none.h"
 #include "../../string/string.h"
 #include "../../xpath/xpath.h"
 
@@ -117,7 +118,7 @@ int main( int ac, char** av )
         std::string prefix = options.value< std::string >( "--prefix,--path,-p", "" );
         values_t values; // quick and dirty; watch performance?
         std::map< unsigned int, values_t > map;
-        boost::optional< unsigned int > index;
+        boost::optional< unsigned int > index{ comma::silent_none< unsigned int >() };
         std::string key;
         bool is_map = options.exists( "--dict,--map" );
         if( is_map && unsorted ) { comma::say() << "combination of --map and --unsorted: todo, just ask" << std::endl; return 1; }
