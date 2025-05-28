@@ -13,6 +13,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
 #include "../base/exception.h"
+#include "../base/none.h"
 #include "../io/terminal.h"
 #include "../string/string.h"
 #include "verbose.h" // todo: deprecate
@@ -155,7 +156,7 @@ class command_line_options
             std::vector< std::string > names;
             bool is_optional;
             bool has_value;
-            boost::optional< std::string > default_value; // todo: make strongly typed
+            boost::optional< std::string > default_value{ comma::silent_none< std::string >() }; // todo: make strongly typed
             std::string help;
 
             /// default constructor
@@ -231,7 +232,7 @@ template < typename T >
 inline boost::optional< T > command_line_options::optional( const std::string& name ) const
 {
     std::vector< T > v = values< T >( name );
-    return v.empty() ? boost::optional< T >() : boost::optional< T >( v[0] );
+    return v.empty() ? comma::silent_none< T >() : boost::optional< T >( v[0] );
 }
 
 template < typename T >

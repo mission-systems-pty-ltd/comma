@@ -15,7 +15,6 @@
 #include <boost/optional.hpp>
 #include <boost/regex.hpp>
 #include <boost/spirit/include/qi.hpp>
-#include "../base/exception.h"
 #include "../io/impl/filesystem.h"
 #include "../string/split.h"
 #include "command_line_options.h"
@@ -166,7 +165,7 @@ void command_line_options::_fill_map( const std::vector< std::string >& v )
     {
         if( v[i].length() < 2 || v[i].at( 0 ) != '-') { continue; }
         std::string name;
-        boost::optional< std::string > value;
+        boost::optional< std::string > value = comma::silent_none< std::string >();
         std::size_t equal = v[i].find_first_of( '=' );
         if( equal == std::string::npos )
         {
