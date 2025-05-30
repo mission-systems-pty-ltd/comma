@@ -156,7 +156,7 @@ class command_line_options
             std::vector< std::string > names;
             bool is_optional;
             bool has_value;
-            boost::optional< std::string > default_value{ comma::silent_none< std::string >() }; // todo: make strongly typed
+            boost::optional< std::string > default_value = comma::silent_none< std::string >(); // todo: make strongly typed
             std::string help;
 
             /// default constructor
