@@ -399,7 +399,7 @@ istreams::istreams( const std::vector< std::string >& names, mode::value mode, m
 {
 }
 
-bool istreams::eof() const { return _index >= _names.size() || _index == _names.size() - 1 || ( *_istream )->eof(); }
+bool istreams::eof() const { return _index >= _names.size(); }
 
 istreams& istreams::operator++()
 {
@@ -412,11 +412,12 @@ istreams& istreams::operator++()
 bool istreams::read( char* buf, std::size_t size )
 {
     std::size_t s = size;
-    for( char* p = buf; s > 0 && !eof(); ++( *this ) )
+    for( char* p = buf; s > 0 && !eof(); )
     {
         auto& is = *( *_istream );
         is.read( p, s );
         if( is.gcount() > 0 ) { s -= is.gcount(); p += is.gcount(); }
+        if ( is.eof() ) { ++( *this ); }
     }
     return s == 0;
 }

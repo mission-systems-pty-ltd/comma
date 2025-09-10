@@ -38,6 +38,95 @@ TEST( io, file_stream )
     EXPECT_EQ( system( "rm ./test.pipe" ), 0 );
 }
 
+TEST(io, istreams) {
+    std::vector<std::string> files = { "./file1.txt" };
+
+    // --- single file ---
+    {
+        std::ofstream os1(files[0]);
+        os1 << "abc";
+        os1.close();
+
+        comma::io::istreams single(files);
+
+        char buf1[4] = {0};
+
+        // partial read
+        bool ok = single.read(buf1, 2);
+        EXPECT_TRUE(ok);
+        EXPECT_EQ(buf1[0], 'a');
+        EXPECT_EQ(buf1[1], 'b');
+        EXPECT_FALSE(single.eof()); // not at EOF yet
+
+        // read the remainder
+        ok = single.read(buf1 + 2, 1);
+        EXPECT_TRUE(ok);
+        EXPECT_EQ(buf1[2], 'c');
+        EXPECT_FALSE(single.eof()); // EOF not flagged until next attempt
+
+        // attempt to read past EOF
+        ok = single.read(buf1, 1);
+        EXPECT_FALSE(ok);
+        EXPECT_TRUE(single.eof());
+
+        // edge case: zero-size read should succeed and not change EOF
+        ok = single.read(buf1, 0);
+        EXPECT_TRUE(ok);
+        EXPECT_TRUE(single.eof());
+    }
+
+    // --- multiple files ---
+    {
+        files.emplace_back("./file2.txt");
+        std::ofstream os2(files[1]);
+        os2 << "def";
+        os2.close();
+
+        files.emplace_back("./file3.txt");
+        std::ofstream os3(files[2]);
+        os3 << "ghi";
+        os3.close();
+
+        comma::io::istreams multi(files);
+
+        char buf2[10] = {0};
+
+        // first file, partial read
+        bool ok = multi.read(buf2, 3);
+        EXPECT_TRUE(ok);
+        EXPECT_EQ(buf2[0], 'a');
+        EXPECT_EQ(buf2[1], 'b');
+        EXPECT_EQ(buf2[2], 'c');
+        EXPECT_FALSE(multi.eof());
+
+        // read across files 1 -> 2 -> 3
+        ok = multi.read(buf2 + 3, 5);
+        EXPECT_TRUE(ok);
+        EXPECT_EQ(buf2[3], 'd');
+        EXPECT_EQ(buf2[4], 'e');
+        EXPECT_EQ(buf2[5], 'f');
+        EXPECT_EQ(buf2[6], 'g');
+        EXPECT_EQ(buf2[7], 'h');
+        EXPECT_FALSE(multi.eof());
+
+        // read remainder, but request too many
+        ok = multi.read(buf2 + 8, 3); // only 'i' available
+        EXPECT_FALSE(ok);             // not enough to fill request
+        EXPECT_EQ(buf2[8], 'i');
+        EXPECT_EQ(buf2[9], '\0');     // untouched
+        EXPECT_TRUE(multi.eof());
+
+        // edge case: further reads must stay at EOF
+        ok = multi.read(buf2, 1);
+        EXPECT_FALSE(ok);
+        EXPECT_TRUE(multi.eof());
+    }
+
+    // cleanup
+    for (const auto& f : files) { comma::filesystem::remove(f); }
+}
+
+
 TEST( io, std_stream )
 {
     comma::io::istream istream( "-" );
