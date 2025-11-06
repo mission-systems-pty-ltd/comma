@@ -4,18 +4,17 @@
 /// @author vsevolod vlaskine
 
 #include <string.h>
+#include <functional>
 #include <iostream>
 #include <map>
 #include <sstream>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 #include <vector>
-#include <boost/array.hpp>
 #include <boost/date_time/posix_time/ptime.hpp>
 #include <boost/functional/hash.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
-#include <boost/unordered_map.hpp>
 #include "../../application/command_line_options.h"
 #include "../../application/signal_flag.h"
 #include "../../base/exception.h"
@@ -188,7 +187,7 @@ struct input
         return comma::math::less( keys[0], rhs.keys[0] ); //, *radius );
     }
 
-    struct hash : public std::unary_function< input, std::size_t >
+    struct hash : public std::function< input( std::size_t ) >
     {
         std::size_t operator()( input const& p ) const
         {
@@ -198,7 +197,7 @@ struct input
         }
     };
 
-    typedef boost::unordered_map< input, std::vector< std::string >, hash > unordered_map;
+    typedef std::unordered_map< input, std::vector< std::string >, hash > unordered_map;
     typedef std::map< input, std::vector< std::string > > map;
 };
 
@@ -393,8 +392,8 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
                 if( !w[k].empty() && w[k] != "block" ) { no_filter_key_fields = false; }
                 if( filter_id_fields_discard && w[k] == "block" ) { filter_id_fields_flags[k] = 1; }
                 if( v[i] != w[k] ) { continue; }
-                v[i] = "keys[" + boost::lexical_cast< std::string >( default_input_keys_count ) + "]";
-                w[k] = "keys[" + boost::lexical_cast< std::string >( default_input_keys_count ) + "]";
+                v[i] = "keys[" + std::to_string( default_input_keys_count ) + "]";
+                w[k] = "keys[" + std::to_string( default_input_keys_count ) + "]";
                 if( filter_id_fields_discard ) { filter_id_fields_flags[k] = 1; }
                 ++default_input_keys_count;
             }
@@ -419,7 +418,7 @@ template < typename K, bool Strict = true > struct join_impl_ // quick and dirty
         if( is_state_machine )
         {
             state_index = default_input_keys_count;
-            w[filter_state_index] = "keys[" + boost::lexical_cast< std::string >( state_index ) + "]";
+            w[filter_state_index] = "keys[" + std::to_string( state_index ) + "]";
             ++default_input_keys_count;
         }
         default_input.keys.resize( default_input_keys_count );

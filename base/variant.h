@@ -118,8 +118,8 @@ struct named_variant : public variant< Args... >, public Names
 {
     typedef Names names_t;
     typedef variant< Args... > variant_t;
-    template < typename S > static const std::string& name_of() { return Names::names()[ variant_t::template index_of< S >() ]; }
-    const auto& name() const { COMMA_ASSERT( bool( *this ), "asked for name, but value is not set" ); return this->names()[this->index()]; }
+    template < typename S > static auto name_of() { return Names::names()[ variant_t::template index_of< S >() ]; }
+    auto name() const { COMMA_ASSERT( bool( *this ), "asked for name, but value is not set" ); return this->names()[this->index()]; }
 };
 
 template < typename Names >
