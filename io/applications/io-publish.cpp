@@ -111,6 +111,23 @@ class command
                 while( ( dup2( fd[1], STDOUT_FILENO ) == -1 ) && ( errno == EINTR ) ) {} // connect pipe input to stdout in child
                 ::close( fd[1] );     // no longer need fd[1], now that it's duped
                 ::close( fd[0] );     // don't need pipe output in the child
+                // quick and dirty as impl/publisher.cpp sets the SIGPIPE handler to ignore
+                // the clean way would be to handle it correctly in impl/publisher.cpp, but
+                // that might be too fiddly for now
+                //
+                // failure example:
+                //     io-publish tcp:1234 --exec "yes | csv-thin --period 0.1 | csv-time-stamp"
+                //     killall csv-time-stamp
+                //     then, if you comment the SIGPIPE-related code below, csv-thin
+                //     will ignore SIGPIPE as exec environment inherits the ignore SIGPIPE
+                //     handler
+                // also, all applications in comma and snark would benefit from setting
+                // the SIGPIPE handling explicitly to avoid similar problems in future
+                struct sigaction new_action, old_action;
+                new_action.sa_handler = SIG_DFL;
+                sigemptyset( &new_action.sa_mask );
+                sigaction( SIGPIPE, NULL, &old_action );
+                sigaction( SIGPIPE, &new_action, NULL );
                 ::execlp( "bash", "bash", "-c", &command_[0], NULL );
                 comma::say() << "failed to exec child: errno " << comma::last_error::value() << " - " << comma::last_error::to_string() << std::endl;
                 exit( 1 );
