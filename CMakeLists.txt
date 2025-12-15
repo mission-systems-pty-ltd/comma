@@ -407,7 +407,7 @@ if( CPACK_DEPENDENCIES_PYTHON )
 endif( CPACK_DEPENDENCIES_PYTHON )
 set( CPACK_DEBIAN_PACKAGE_SHLIBDEPS "libboost-all-dev (>=1.65), libc-dev" )
 set( CPACK_DEBIAN_PACKAGE_GENERATE_SHLIBS ON )
-set( CPACK_DEBIAN_PACKAGE_GENERATE_SHLIBS_POLICY ON )
+set( CPACK_DEBIAN_PACKAGE_GENERATE_SHLIBS_POLICY ">=" )
 
 # if the user builds shared, make sure that the RPM package (that might be generated) runs ldconfig when it's installed.
 if( BUILD_SHARED_LIBS )
