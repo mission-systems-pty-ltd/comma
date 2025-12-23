@@ -8,24 +8,16 @@ if( USE_ARM_TOOLCHAIN )
     include( ${CMAKE_TOOLCHAIN_FILE} REQUIRED )
 endif( USE_ARM_TOOLCHAIN )
 
-if( ${CMAKE_MAJOR_VERSION} LESS 4 )
-    cmake_minimum_required( VERSION 3.1 )
-else()
-    cmake_minimum_required( VERSION 3.5 )
-endif()
+cmake_minimum_required( VERSION 3.16 )
 cmake_policy( SET CMP0048 NEW )
-project( comma VERSION 1.1.0 LANGUAGES CXX )
-if( NOT DEFINED CMAKE_PROJECT_VERSION )
-    set( CMAKE_PROJECT_VERSION ${PROJECT_VERSION} )
-    set( CMAKE_PROJECT_VERSION_MAJOR ${PROJECT_VERSION_MAJOR} )
-    set( CMAKE_PROJECT_VERSION_MINOR ${PROJECT_VERSION_MINOR} )
-    set( CMAKE_PROJECT_VERSION_PATCH ${PROJECT_VERSION_PATCH} )
-endif( NOT DEFINED CMAKE_PROJECT_VERSION )
-
-set( comma_version_major "${CMAKE_PROJECT_VERSION_MAJOR}" ) # quick and dirty
-set( comma_version_minor "${CMAKE_PROJECT_VERSION_MINOR}" ) # quick and dirty
-set( comma_version_patch "${CMAKE_PROJECT_VERSION_PATCH}" ) # quick and dirty
-set( comma_version "${CMAKE_PROJECT_VERSION}" ) # quick and dirty
+# Making the project version a variable means that you can override it
+# when building a DEB/RPM package (for example).
+set( comma_version "1.1.0" CACHE STRING "project version" )
+project( comma VERSION ${comma_version} LANGUAGES CXX )
+# Extract version components.
+set( comma_version_major "${CMAKE_PROJECT_VERSION_MAJOR}" )
+set( comma_version_minor "${CMAKE_PROJECT_VERSION_MINOR}" )
+set( comma_version_patch "${CMAKE_PROJECT_VERSION_PATCH}" )
 
 # option( USE_ARM_TOOLCHAIN "Cross compile using arm toolchain" OFF )
 # if( USE_ARM_TOOLCHAIN )
