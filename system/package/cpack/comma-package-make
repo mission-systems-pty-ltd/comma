@@ -1,56 +1,45 @@
 #!/bin/bash
 
-function die() { echo "$0: $@" >&2; exit 1; }
+name=$( basename $0 )
+function die() { echo "$name: $@" >&2; exit 1; }
 
 ubuntu_version=$1
-version_major=$2
-version_minor=$3
-version_patch=$4
-comma_dir="$5"
-package_name="comma-$version_major.$version_minor.$version_patch-ubuntu.$ubuntu_version"
+comma_version=$2
+comma_dir="$3"
+package_name="comma-$comma_version-ubuntu-$ubuntu_version"
 [[ -n "$comma_dir" ]] || comma_dir=$( realpath ~/src/comma )
-[[ -n "$version_patch" ]] || { echo "usage: $0 <ubuntu version> <comma version major> <comma version minor> <comma version patch> [<comma dir>]" >&2; exit 1; }
-cd ~
-echo "$0: running ansible-playbook '$comma_dir/system/ansible/install.yml' in $( pwd )..." >&2
-#ansible-playbook "$comma_dir/system/ansible/install.yml" || die "ansible-playbook failed"
-case $ubuntu_version in
-    18.04) libproc_version="libprocps6 (>= 2:3.3.0)" ;;
-    20.04) libproc_version="libprocps8 (>= 1)" ;;
-    22.04) libproc_version="libprocps8 (>= 1)" ;;
-    *) libproc_version="libprocps8 (>= 1)" ;; # for now
-esac
+[[ -n "$comma_version" ]] || { echo "usage: $name <ubuntu version> <comma version> [<comma dir>]" >&2; exit 1; }
 
 (
     mkdir -p ~/build/comma
     cd ~/build/comma
-    echo "$0: running cmake in $( pwd )..." >&2
+    echo "$name: running cmake in $( pwd )..." >&2
     cmake $comma_dir \
+            -Dcomma_version="$comma_version" \
             -DCPACK_GENERATOR=DEB \
-            -DCPACK_PACKAGE_NAME="$package_name" \
             -DBUILD_PYTHON_PACKAGES=OFF \
             -DADD_PYTHON_PACKAGES_TO_RPM=OFF \
             -DBUILD_SHARED_LIBS=ON \
             -DBUILD_TESTS=OFF \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX=/usr \
             -DINSTALL_BASH_COMPLETION=OFF \
             -DINSTALL_TESTS=OFF \
-            -DCPACK_DEPENDENCIES_LIBPROCPS="$libproc_version" \
-            -DCMAKE_PROJECT_VERSION_MAJOR=$version_major \
-            -DCMAKE_PROJECT_VERSION_MINOR=$version_minor \
-            -DCMAKE_PROJECT_VERSION_PATCH=$version_patch  \
-            -Dcomma_INSTALL_LIB_DIR=lib/x86_64-linux-gnu \
+            -DCPACK_DEBIAN_FILE_NAME="$package_name.deb" \
             -Dcomma_BUILD_XML=OFF \
             -Dcomma_build_io_rabbit_cat=OFF || die "cmake failed"
-    echo "$0: running cpack in $( pwd )..." >&2
-    cpack -j4 || die "cpack failed"
-    echo "$0: created package at $( realpath $package_name.deb )" >&2
+    echo "$name: running make in $( pwd )..." >&2
+    make -j$(nproc) || die "make failed"
+    echo "$name: running make install in $( pwd )..." >&2
+    make install || die "make install failed"
+    echo "$name: running cpack in $( pwd )..." >&2
+    cpack -j$(nproc) || die "cpack failed"
+    echo "$name: created package at $( realpath $package_name.deb )" >&2
     # todo: optionally run full regression test
-    echo "$0: done" >&2
+    echo "$name: done" >&2
 )
-if [[ -d output ]]; then
-    cp ~/build/comma/$package_name.deb output
-    echo "$0: copied $( realpath ~/build/comma/$package_name.deb ) to $( realpath output )" >&2
+if [[ -d /root/output/ ]]; then
+    cp ~/build/comma/$package_name.deb /root/output/ || die "copy output failed"
+    echo "$name: copied $( realpath ~/build/comma/$package_name.deb ) to $( realpath output )" >&2
 fi
 
 # (

@@ -1,10 +1,12 @@
-ARG version
+ARG version=24.04
 FROM ubuntu:${version}
 ENV DEBIAN_FRONTEND="noninteractive"
+ARG version  # Re-declare for use in RUN.
 RUN apt-get update \
-    && apt-get install --yes apt-utils \
-    && apt-get install --yes software-properties-common \
-    && apt-get install --yes ansible git build-essential cmake cmake-curses-gui python3-pip devscripts \
-    && apt-get install --yes python3-stdeb python3-all dh-python
-    && apt-get install --yes libboost-all-dev libzmq3-dev libprocps-dev libc-dev socat recode
-# && apt-add-repository --yes --update ppa:ansible/ansible \
+    && PACKAGES="build-essential cmake devscripts libboost-all-dev" \
+    && case "$version" in \
+          "20.04"|"22.04") PACKAGES="$PACKAGES libprocps-dev" ;; \
+          "24.04") PACKAGES="$PACKAGES libproc2-dev" ;; \
+       esac \
+    && apt-get install -y --no-install-recommends $PACKAGES \
+    && rm -rf /var/lib/apt/lists/*

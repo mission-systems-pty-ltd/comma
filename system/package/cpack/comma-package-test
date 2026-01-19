@@ -1,13 +1,17 @@
 #!/bin/bash
 
-function die() { echo "$0: $@" >&2; exit 1; }
+name=$(basename "$0")
+function die() { echo "$name: $@" >&2; exit 1; }
 
 package="$1"
 python_package="$2"
-[[ -n "$python_package" ]] || { echo "usage: $0 <package> <python package>" >&2; exit 1; }
-#pip3 install numpy # todo! very unfortunate, but python deb package installs python3-numpy, which is wrong version and we gave up for now
-apt install --yes "$python_package" || die "failed to install package '$python_package'"
+[[ -n "$package" ]] || { echo "usage: $name <package> [<python package>]" >&2; exit 1; }
+
+apt update || die "failed to update apt"
 apt install --yes "$package" || die "failed to install package '$package'"
+if [[ -n "$python_package" ]]; then
+  apt install --yes "$python_package" || die "failed to install package '$python_package'"
+fi
 
 echo "$0: testing basic csv utilities..." >&2
 output=$( csv-paste line-number | head | csv-to-bin ui | csv-from-bin ui ) || die "failed: failed to run"
@@ -19,11 +23,13 @@ echo "$0: testing bash utils..." >&2
 type -p comma-application-util || die "failed: failed"
 echo "$0: testing bash utils: done" >&2
 
-echo "$0: running csv-eval --help (for reference)..." >&2
-csv-eval --help
-
-echo "$0: testing csv-eval..." >&2
-output=$( seq 0 9 | csv-eval --fields a "a+=1" || exit ) || die "failed: failed to run"
-expected=$( seq 1 10 )
-[[ "$output" == "$expected" ]] || die "failed: unexpected output: $output"
-echo "$0: testing csv-eval: done" >&2
+if [[ -n "$python_package" ]]; then
+  echo "$0: running csv-eval --help (for reference)..." >&2
+  csv-eval --help
+  
+  echo "$0: testing csv-eval..." >&2
+  output=$( seq 0 9 | csv-eval --fields a "a+=1" || exit ) || die "failed: failed to run"
+  expected=$( seq 1 10 )
+  [[ "$output" == "$expected" ]] || die "failed: unexpected output: $output"
+  echo "$0: testing csv-eval: done" >&2
+fi
