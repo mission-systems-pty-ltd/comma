@@ -1,21 +1,29 @@
 #!/bin/bash
 
-function die() { echo "$0: $@" >&2; exit 1; }
+name=$(basename "$0")
+function die() { echo "$name: $@" >&2; exit 1; }
 
 ubuntu_version="$1"
 package="$2"
 python_package="$3"
 comma_dir="$4"
-[[ -n "$python_package" ]] || { echo "usage: $0 <ubuntu version> <package> <python package> [<comma dir>]" >&2; exit 1; }
+[[ $# -ge 2 ]] || die "usage: <ubuntu version> <package> [<python package>] [<comma dir>]"
 [[ -s "$package" ]] || die "file not found or empty: '$package'"
-[[ -s "$python_package" ]] || die "file not found or empty: '$python_package'"
+if [[ -n $python_package ]]; then
+  [[ -s "$python_package" ]] || die "file not found or empty: '$python_package'"
+fi
 [[ -n "$comma_dir" ]] || comma_dir="$( realpath ~/src/comma )"
-package_dir=$( dirname "$( realpath "$package" )" )
 [[ -d "$comma_dir" ]] || { echo "usage: $0 please specify <comma dir> explicitly (since you seem to either run with sudo or have comma not in '$comma_dir')" >&2; exit 1; }
+package_dir=$( dirname "$( realpath "$package" )" )
+
 # todo: optionally run full regression test
 
+test_args="/mnt/package/$( basename "$package" )"
+if [[ -n $python_package ]]; then
+  test_args="$test_args /mnt/package/$( basename "$python_package" )"
+fi
 docker run \
        --mount "type=bind,source=$comma_dir,target=/mnt/comma" \
        --mount "type=bind,source=$package_dir,target=/mnt/package" \
-       ubuntu.$ubuntu_version.build.basics \
-       /mnt/comma/system/package/cpack/comma-package-test "/mnt/package/$( basename "$package" )" "/mnt/package/$( basename "$python_package" )" || { echo "$0: failed" >&2; exit 1; }
+       ubuntu.$ubuntu_version.build.comma \
+       /mnt/comma/system/package/cpack/comma-package-test $test_args || die "failed"

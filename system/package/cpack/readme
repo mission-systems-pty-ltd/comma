@@ -1,27 +1,25 @@
-to build docker that has ansible, cmake, etc, run
+These scripts can be used to create .deb packages for comma. The building is
+done inside a docker container to ensure a consistent build environment and
+allow building for different Ubuntu versions.
 
-(you may need to run as sudo, unless you set up your docker running without sudo; see e.g: https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-20-04)
+Build a docker image based on e.g. Ubuntu 20.04, that has all the necessary
+tools/libraries installed:
+> ./comma-package-docker-build 20.04   # Ubuntu 20.04
 
-> ./comma-package-docker-build 18.04 # ubuntu 18.04
-> ./comma-package-docker-build 20.04 # ubuntu 20.04
+Build deb package (e.g. comma version 1.2.3 for Ubuntu 20.04):
+> ./comma-package-docker-run 20.04 1.2.3
 
-to build deb package e.g. for comma version 1.2.3 for ubuntu 20.04 run:
+If your comma reposity is not in ~/src/comma, but e.g. in ~/my/src/comma, run
+(you also need to specify comma directory if you run as sudo, since default
+location is ~):
+> ./comma-package-docker-run 20.04 1.2.3 ~/my/src/comma
 
-> ./comma-package-docker-run 20.04 1 2 3
+Debian package will be built in your current directory
 
-if your comma reposity is not in ~/src/comma, but e.g. in ~/my/src/comma, run (you also need to specify comma directory if you run as sudo, since default location is ~):
+Test that package is ok, e.g:
+> ./comma-package-docker-test 20.04 comma-1.2.3-ubuntu-20.04.deb
 
-> ./comma-package-docker-run 20.04 1 2 3 ~/my/src/comma
+Sign packages, e.g:
+> debsigs --sign=origin -k 79BF9724F37751A39B08698DB3CB85AF5FB6E9F1 comma-1.0.0-ubuntu-20.04.deb
 
-debian package will be built in your current directory
-
-test that package is ok, e.g:
-
-> ./comma-package-docker-test 20.04 comma-1.2.3-Linux.deb comma-py_1.2.3-1_all.deb
-
-sign packages, e.g:
-
-> debsigs --sign=origin -k 79BF9724F37751A39B08698DB3CB85AF5FB6E9F1 comma-1.0.0-Linux.deb
-> debsigs --sign=origin -k 79BF9724F37751A39B08698DB3CB85AF5FB6E9F1 comma-py_1.0.0-1_all.deb
-
-todo: fix lintian misplaced-extra-member-in-deb, which happens after gpg-signing
+TODO: fix lintian misplaced-extra-member-in-deb, which happens after gpg-signing
