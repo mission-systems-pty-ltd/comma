@@ -606,7 +606,7 @@ function run_and_match_test()
 {
     local test_failed error_files
 
-    local env_variables="PYTHONPATH,XDG_RUNTIME_DIR,DISPLAY"
+    local env_variables="PYTHONPATH,XDG_RUNTIME_DIR,DISPLAY,AMENT_PREFIX_PATH"
     
     rm -rf output || { error_and_junit_ "unable to remove 'output' directory" ; return 1 ; }
     mkdir -p output || { error_and_junit_ "unable to make 'output' directory" ; return 1 ; }
