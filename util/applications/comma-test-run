@@ -220,6 +220,9 @@ ${brown}config files${none}
     The way a test is run can be controlled using a file named ${brown}config${none} in the test directory,
     which may contain the following parameters:
 
+    environment/import=<envvars>
+        List of additional environment variables to import into the test environment
+
     resources/cpus=<number>
         Test will not run until the specified number of CPUs are available (out of the '--max-parallel' number).
 
@@ -606,8 +609,13 @@ function run_and_match_test()
 {
     local test_failed error_files
 
-    local env_variables="PYTHONPATH,XDG_RUNTIME_DIR,DISPLAY"
-    
+    local std_env_variables="PYTHONPATH,XDG_RUNTIME_DIR,DISPLAY"
+
+    local env_variables_from_config=
+    local config=$( closest_file_in_path "." "config" )
+    [[ -f $config ]] && env_variables_from_config=$( cat $config | name-value-get environment/import )
+    local env_variables=$( echo $std_env_variables,$env_variables_from_config | sed 's/,$//' )
+
     rm -rf output || { error_and_junit_ "unable to remove 'output' directory" ; return 1 ; }
     mkdir -p output || { error_and_junit_ "unable to make 'output' directory" ; return 1 ; }
 
