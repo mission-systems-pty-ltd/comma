@@ -221,7 +221,7 @@ ${brown}config files${none}
     which may contain the following parameters:
 
     environment/import=<envvars>
-        List of additional environment variables to import into the test environment
+        Comma-separated list of environment variables to import from the current environment into the test one
 
     resources/cpus=<number>
         Test will not run until the specified number of CPUs are available (out of the '--max-parallel' number).
