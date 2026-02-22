@@ -220,7 +220,7 @@ ${brown}config files${none}
     The way a test is run can be controlled using a file named ${brown}config${none} in the test directory,
     which may contain the following parameters:
 
-    environment/import=<envvars>
+    environment/imports=<envvars>
         Comma-separated list of environment variables to import from the current environment into the test one
 
     resources/cpus=<number>
@@ -613,7 +613,7 @@ function run_and_match_test()
 
     local env_variables_from_config=
     local config=$( closest_file_in_path "." "config" )
-    [[ -f $config ]] && env_variables_from_config=$( cat $config | name-value-get environment/import )
+    [[ -f $config ]] && env_variables_from_config=$( cat $config | name-value-get environment/imports )
     local env_variables=$( echo $std_env_variables,$env_variables_from_config | sed 's/,$//' )
 
     rm -rf output || { error_and_junit_ "unable to remove 'output' directory" ; return 1 ; }
