@@ -29,9 +29,11 @@ void usage( bool verbose )
     std::cerr << "usage: cat a.csv | csv-select <options> [<key properties>]" << std::endl;
     std::cerr << std::endl;
     std::cerr << "operation options" << std::endl;
-    std::cerr << "    --equals=<value>: equals to <value>" << std::endl;
-    std::cerr << "    --not-equal=<value>: not equal to <value>" << std::endl;
+    std::cerr << "    --equals=<value>: equals to <value>; note that equals=nan is always false" << std::endl;
+    std::cerr << "    --not-equal=<value>: not equal to <value>; note that not-equal=nan is always true" << std::endl;
     std::cerr << "    --greater=<value>: greater than <value>" << std::endl;
+    std::cerr << "    --is-nan: is nan (or not-a-date-time for time); note: comparisons with nan always give false" << std::endl;
+    std::cerr << "    --not-nan: is not nan (or not-a-date-time for time)" << std::endl;
     std::cerr << "    --less=<value>: less than <value>" << std::endl;
     std::cerr << "    --from,--greater-or-equal,--ge=<value>: from <value> (inclusive, i.e. greater or equals)" << std::endl;
     std::cerr << "    --to,--less-or-equal,--le=<value>: to <value> (inclusive, i.e. less or equals)" << std::endl;
@@ -97,6 +99,8 @@ struct constraints
     boost::optional< T > to;
     boost::optional< boost::regex > regex;
     bool sorted{false};
+    bool is_nan{false};
+    bool not_nan{false};
 
     bool empty() const { return !equals && !not_equal && !less && !greater && !from && !to && !regex && !sorted; }
 
@@ -113,11 +117,13 @@ struct constraints
         const boost::optional< std::string >& s = get_optional_< std::string >( options, "--regex" );
         if( s ) { regex = boost::regex( *s ); }
         sorted = options.exists( "--sorted,--input-sorted" );
+        is_nan = options.exists( "--is-nan" );
+        not_nan = options.exists( "--not-nan" );
     }
 
     constraints( const std::string& options )
     {
-        comma::name_value::map m( options.substr( options.find_first_of( ';' ) + 1 ), ';', '=', true, "equals,not-equal,less,greater,from,greater-or-equal,ge,to,less-or-equal,le,regex,sorted,fields,f,binary,b,delimiter,d,format" ); // quick and dirty, since optional is not well-supported (euphymism for 'buggy') in comma::name_value::parser
+        comma::name_value::map m( options.substr( options.find_first_of( ';' ) + 1 ), ';', '=', true, "equals,not-equal,less,greater,from,greater-or-equal,ge,to,less-or-equal,le,regex,sorted,is-nan,not-nan,fields,f,binary,b,delimiter,d,format" ); // quick and dirty, since optional is not well-supported (euphymism for 'buggy') in comma::name_value::parser
         for( const auto& v: m.get() ) // super quick and dirty, suboptimal
         {
             if( v.first == "equals" )                { equals    = m.value< T >( "equals" ); }
@@ -132,6 +138,8 @@ struct constraints
             else if( v.first == "le" )               { to        = m.value< T >( "le" ); }
             else if( v.first == "regex" )            { regex = boost::regex( m.value< std::string >( "regex" ) ); }
             else if( v.first == "sorted" )           { sorted = true; }
+            else if( v.first == "is-nan" )           { is_nan = true; }
+            else if( v.first == "not-nan" )          { not_nan = true; }
         }
     }
 
@@ -146,7 +154,9 @@ struct constraints
         //       the change in future
         // todo? add specialisation for boost::posix_time::ptime in comma::math::equal() etc
         //       to handle not_a_date_time as nan
-        return    ( !equals    || ( !isnan && comma::math::equal( *equals, t ) ) )
+        return    ( !is_nan    || isnan )
+               && ( !not_nan   || !isnan )
+               && ( !equals    || ( !isnan && comma::math::equal( *equals, t ) ) )
                && ( !not_equal || isnan || !comma::math::equal( *not_equal, t ) )
                && ( !from      || ( !isnan && !comma::math::less( t, *from ) ) )
                && ( !to        || ( !isnan && !comma::math::less( *to, t ) ) )
@@ -158,9 +168,10 @@ struct constraints
     bool done( const T& t ) const // quick and dirty
     {
         if( !sorted ) { return false; }
-        if( to && comma::math::less( *to, t ) ) { return true; }
-        if( less && !comma::math::less( t, *less ) ) { return true; }
-        if( equals && comma::math::less( *equals, t ) ) { return true; }
+        bool isnan = type_traits< T >::isnan( t );
+        if( to     && ( !isnan && comma::math::less( *to, t ) ) )     { return true; }
+        if( less   && ( !isnan && comma::math::less( t, *less ) ) )   { return true; }
+        if( equals && ( !isnan && comma::math::less( *equals, t ) ) ) { return true; }
         // todo: more?
         return false;
     }
@@ -324,7 +335,7 @@ int main( int ac, char** av )
         fields = comma::split( csv.fields, ',' );
         if( fields.size() == 1 && fields[0].empty() ) { fields.clear(); }
         std::vector< std::string > unnamed = options.unnamed( "--first-matching,--or,--sorted,--input-sorted,--not-matching,--output-all,--all,--strict,--verbose,-v,--flush"
-                                                            , "--equals,--not-equal,--less,--greater,--from,--greater-or-equal,--ge,--to,--less-or-equal,--le,--regex,--fields,-f,--binary,-b,--format,--delimiter,-d,--precision" );
+                                                            , "--equals,--not-equal,--less,--greater,--from,--greater-or-equal,--ge,--to,--less-or-equal,--le,--regex,--is-nan,--not-nan,--fields,-f,--binary,-b,--format,--delimiter,-d,--precision" );
         //for( unsigned int i = 0; i < unnamed.size(); constraints_map.insert( std::make_pair( comma::split( unnamed[i], ';' )[0], unnamed[i] ) ), ++i );
         bool strict = options.exists( "--strict" );
         bool first_matching = options.exists( "--first-matching" );

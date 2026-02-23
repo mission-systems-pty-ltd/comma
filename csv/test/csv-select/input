@@ -24,3 +24,7 @@ nan/binary[8]="( echo not-a-date-time; echo 20150101T000000; echo 20150101T00000
 nan/binary[9]="( echo not-a-date-time; echo 20150101T000000; echo 20150101T000001; echo 20150101T000002; ) | csv-to-bin t | csv-select -b t -f x 'x;less-or-equal=20150101T000001' | csv-from-bin t"
 nan/binary[10]="( echo not-a-date-time; echo 20150101T000000; echo 20150101T000001; echo 20150101T000002; ) | csv-to-bin t | csv-select -b t -f x 'x;greater=20150101T000001' | csv-from-bin t"
 nan/binary[11]="( echo not-a-date-time; echo 20150101T000000; echo 20150101T000001; echo 20150101T000002; ) | csv-to-bin t | csv-select -b t -f x 'x;greater-or-equal=20150101T000001' | csv-from-bin t"
+nan/binary[12]="( echo -1; echo 0 ; echo 1; echo nan ) | csv-to-bin d | csv-select -b d -f x 'x;is-nan' | csv-from-bin d"
+nan/binary[13]="( echo -1; echo 0 ; echo 1; echo nan ) | csv-to-bin d | csv-select -b d -f x 'x;not-nan' | csv-from-bin d"
+nan/binary[14]="( echo not-a-date-time; echo 20150101T000000; echo 20150101T000001; echo 20150101T000002; ) | csv-to-bin t | csv-select -b t -f x 'x;is-nan' | csv-from-bin t"
+nan/binary[15]="( echo not-a-date-time; echo 20150101T000000; echo 20150101T000001; echo 20150101T000002; ) | csv-to-bin t | csv-select -b t -f x 'x;not-nan' | csv-from-bin t"

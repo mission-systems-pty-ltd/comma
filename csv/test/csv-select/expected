@@ -56,4 +56,16 @@ nan/binary[10]/status=0
 nan/binary[11]/output/line[0]="20150101T000001"
 nan/binary[11]/output/line[1]="20150101T000002"
 nan/binary[11]/status=0
+nan/binary[12]/output="nan"
+nan/binary[12]/status=0
+nan/binary[13]/output/line[0]="-1"
+nan/binary[13]/output/line[1]="0"
+nan/binary[13]/output/line[2]="1"
+nan/binary[13]/status=0
+nan/binary[14]/output="not-a-date-time"
+nan/binary[14]/status=0
+nan/binary[15]/output/line[0]="20150101T000000"
+nan/binary[15]/output/line[1]="20150101T000001"
+nan/binary[15]/output/line[2]="20150101T000002"
+nan/binary[15]/status=0
 
