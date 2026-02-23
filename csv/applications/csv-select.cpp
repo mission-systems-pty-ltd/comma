@@ -2,6 +2,7 @@
 
 /// @author vsevolod vlaskine
 
+#include <cmath>
 #include <iostream>
 #include <map>
 #include <sstream>
@@ -66,16 +67,24 @@ void usage( bool verbose )
     exit( 0 );
 }
 
-bool matches( const std::string& value, const boost::regex& r ) { return boost::regex_match( value, r ); }
-template < typename T > bool matches( const T& value, const boost::regex& r ) { COMMA_THROW( comma::exception, "regex implemented only for strings" ); }
+static bool matches( const std::string& value, const boost::regex& r ) { return boost::regex_match( value, r ); }
+
+template < typename T > static bool matches( const T& value, const boost::regex& r ) { COMMA_THROW( comma::exception, "regex implemented only for strings" ); }
 
 template < typename T > static boost::optional< T > get_optional_( const comma::command_line_options& options, const std::string& what ) { return options.optional< T >( what ); }
+
 template <> boost::optional< boost::posix_time::ptime > get_optional_< boost::posix_time::ptime >( const comma::command_line_options& options, const std::string& what )
 {
     const boost::optional< std::string >& s = options.optional< std::string >( what );
     if( !s ) { return boost::none; }
     return boost::posix_time::from_iso_string( *s );
 }
+
+template < typename T > struct type_traits { static bool isnan( const T& t ) { return std::isnan( t ); } };
+
+template <> struct type_traits< boost::posix_time::ptime > { static bool isnan( const boost::posix_time::ptime& t ) { return t.is_not_a_date_time(); } };
+
+template <> struct type_traits< std::string > { static bool isnan( const std::string& t ) { return false; } };
 
 template < typename T >
 struct constraints
@@ -87,20 +96,20 @@ struct constraints
     boost::optional< T > from;
     boost::optional< T > to;
     boost::optional< boost::regex > regex;
-    bool sorted;
+    bool sorted{false};
 
     bool empty() const { return !equals && !not_equal && !less && !greater && !from && !to && !regex && !sorted; }
 
-    constraints() : sorted( false ) {}
+    constraints() = default;
 
     constraints( const comma::command_line_options& options ) // quick and dirty
     {
-        equals = get_optional_< T >( options, "--equals" );
+        equals    = get_optional_< T >( options, "--equals" );
         not_equal = get_optional_< T >( options, "--not-equal" );
-        from = get_optional_< T >( options, "--from,--greater-or-equal,--ge" );
-        to = get_optional_< T >( options, "--to,--less-or-equal,--le" );
-        less = get_optional_< T >( options, "--less" );
-        greater = get_optional_< T >( options, "--greater" );
+        from      = get_optional_< T >( options, "--from,--greater-or-equal,--ge" );
+        to        = get_optional_< T >( options, "--to,--less-or-equal,--le" );
+        less      = get_optional_< T >( options, "--less" );
+        greater   = get_optional_< T >( options, "--greater" );
         const boost::optional< std::string >& s = get_optional_< std::string >( options, "--regex" );
         if( s ) { regex = boost::regex( *s ); }
         sorted = options.exists( "--sorted,--input-sorted" );
@@ -111,30 +120,31 @@ struct constraints
         comma::name_value::map m( options.substr( options.find_first_of( ';' ) + 1 ), ';', '=', true, "equals,not-equal,less,greater,from,greater-or-equal,ge,to,less-or-equal,le,regex,sorted,fields,f,binary,b,delimiter,d,format" ); // quick and dirty, since optional is not well-supported (euphymism for 'buggy') in comma::name_value::parser
         for( const auto& v: m.get() ) // super quick and dirty, suboptimal
         {
-            if( v.first == "equals" ) { equals = m.value< T >( "equals" ); }
-            else if( v.first == "not-equal" ) { not_equal = m.value< T >( "not-equal" ); }
-            else if( v.first == "less" ) { less = m.value< T >( "less" ); }
-            else if( v.first == "greater" ) { greater = m.value< T >( "greater" ); } // it was: { equal = m.value< T >( "greater" ); }
-            else if( v.first == "from" ) { from = m.value< T >( "from" ); }
-            else if( v.first == "greater-or-equal" ) { from = m.value< T >( "greater-or-equal" ); }
-            else if( v.first == "ge" ) { from = m.value< T >( "ge" ); }
-            else if( v.first == "to" ) { to = m.value< T >( "to" ); }
-            else if( v.first == "less-or-equal" ) { to = m.value< T >( "less-or-equal" ); }
-            else if( v.first == "le" ) { to = m.value< T >( "le" ); }
-            else if( v.first == "regex" ) { regex = boost::regex( m.value< std::string >( "regex" ) ); }
-            else if( v.first == "sorted" ) { sorted = true; }
+            if( v.first == "equals" )                { equals    = m.value< T >( "equals" ); }
+            else if( v.first == "not-equal" )        { not_equal = m.value< T >( "not-equal" ); }
+            else if( v.first == "less" )             { less      = m.value< T >( "less" ); }
+            else if( v.first == "greater" )          { greater   = m.value< T >( "greater" ); } // it was: { equal = m.value< T >( "greater" ); }
+            else if( v.first == "from" )             { from      = m.value< T >( "from" ); }
+            else if( v.first == "greater-or-equal" ) { from      = m.value< T >( "greater-or-equal" ); }
+            else if( v.first == "ge" )               { from      = m.value< T >( "ge" ); }
+            else if( v.first == "to" )               { to        = m.value< T >( "to" ); }
+            else if( v.first == "less-or-equal" )    { to        = m.value< T >( "less-or-equal" ); }
+            else if( v.first == "le" )               { to        = m.value< T >( "le" ); }
+            else if( v.first == "regex" )            { regex = boost::regex( m.value< std::string >( "regex" ) ); }
+            else if( v.first == "sorted" )           { sorted = true; }
         }
     }
 
     bool is_a_match( const T& t ) const // quick and dirty, implement a proper expression parser
     {
-        return    ( !equals || comma::math::equal( *equals, t ) )
-               && ( !not_equal || !comma::math::equal( *not_equal, t ) )
-               && ( !from || !comma::math::less( t, *from ) )
-               && ( !to || !comma::math::less( *to, t ) )
-               && ( !less || comma::math::less( t, *less ) )
-               && ( !greater || comma::math::less( *greater, t ) )
-               && ( !regex || matches( t, *regex ) );
+        bool isnan = type_traits< T >::isnan( t );
+        return    ( !equals    || ( !isnan && comma::math::equal( *equals, t ) ) )
+               && ( !not_equal || isnan || !comma::math::equal( *not_equal, t ) )
+               && ( !from      || ( !isnan && !comma::math::less( t, *from ) ) )
+               && ( !to        || ( !isnan && !comma::math::less( *to, t ) ) )
+               && ( !less      || ( !isnan && comma::math::less( t, *less ) ) )
+               && ( !greater   || ( !isnan && comma::math::less( *greater, t ) ) )
+               && ( !regex     || matches( t, *regex ) );
     }
 
     bool done( const T& t ) const // quick and dirty
@@ -318,8 +328,8 @@ int main( int ac, char** av )
             bool found = false;
             for( unsigned int j = 0; j < fields.size() && !found; found = field == fields[j], ++j );
             if( found ) { constraints_map.insert( std::make_pair( field, unnamed[i] ) ); continue; }
-            if( strict ) { std::cerr << "csv-select: on constraint: \"" << unnamed[i] << "\" field \"" << field << "\" not found in fields: " << csv.fields << std::endl; return 1; }
-            std::cerr << "csv-select: warning: on constraint: \"" << unnamed[i] << "\" field \"" << field << "\" not found in fields: " << csv.fields << std::endl;
+            if( strict ) { comma::say() << "on constraint: \"" << unnamed[i] << "\" field \"" << field << "\" not found in fields: " << csv.fields << std::endl; return 1; }
+            comma::say() << "warning: on constraint: \"" << unnamed[i] << "\" field \"" << field << "\" not found in fields: " << csv.fields << std::endl;
         }
         if( csv.binary() )
         {
@@ -355,7 +365,7 @@ int main( int ac, char** av )
             comma::csv::format format = options.exists( "--format" )
                                       ? comma::csv::format( options.value< std::string >( "--format" ) )
                                       : comma::csv::impl::unstructured::guess_format( line );
-            if( !options.exists( "--format" ) ) { std::cerr << "csv-select: guessed format from the first input line: " << format.string() << "; if you think the guess is wrong, please specify --format" << std::endl; }
+            if( !options.exists( "--format" ) ) { comma::say() << "guessed format from the first input line: " << format.string() << "; if you think the guess is wrong, please specify --format" << std::endl; }
             init_input( format, options );
             comma::csv::ascii_input_stream< input_t > istream( std::cin, csv, input );
             // todo: quick and dirty: no time to debug why the commented section does not work (but that's the right way)
@@ -387,7 +397,7 @@ int main( int ac, char** av )
         }
         return 0;
     }
-    catch( std::exception& ex ) { std::cerr << "csv-select: caught: " << ex.what() << std::endl; }
-    catch( ... ) { std::cerr << "csv-select: unknown exception" << std::endl; }
+    catch( std::exception& ex ) { comma::say() << "caught: " << ex.what() << std::endl; }
+    catch( ... ) { comma::say() << "unknown exception" << std::endl; }
     return 1;
 }
