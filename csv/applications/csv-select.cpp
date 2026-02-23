@@ -138,6 +138,14 @@ struct constraints
     bool is_a_match( const T& t ) const // quick and dirty, implement a proper expression parser
     {
         bool isnan = type_traits< T >::isnan( t );
+        // todo? wrap in comma::math::equal()? direct comparisons with nan already give
+        //       correct result (e.g. nan == nan gives false); however, comma::math::equal()
+        //       evaluates not by comparison, but by calculating difference; adding an
+        //       extra check for nan inside comma::math::equal() will impact too many places,
+        //       also in terms of performance - so, evaluate consequences first and maybe make
+        //       the change in future
+        // todo? add specialisation for boost::posix_time::ptime in comma::math::equal() etc
+        //       to handle not_a_date_time as nan
         return    ( !equals    || ( !isnan && comma::math::equal( *equals, t ) ) )
                && ( !not_equal || isnan || !comma::math::equal( *not_equal, t ) )
                && ( !from      || ( !isnan && !comma::math::less( t, *from ) ) )
