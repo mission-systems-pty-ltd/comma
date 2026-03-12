@@ -306,17 +306,24 @@ function comma-application-swiss-usage-operation()
     local operation="$1"
     [[ $( type -t ${operation}-run ) == "function" ]] || { echo "$( basename $0 ): expected operation, got: '${operation}', see --help with no other options for more information" >&2; return 1; } # quick and dirty
     local common_options=$( cat )
-    local found=0
+    # local found=0
+    # if [[ -z "$common_options" ]]; then echo "${operation}"; else echo "$( basename "$0" ) ${operation}"; fi # uber quick and dirty for now
+    # [[ $( type -t ${operation}-description ) != "function" ]] || { ${operation}-description | sed 's#^#    #'; found=1; }
+    # if [[ $( type -t ${operation}-usage ) == "function" ]]; then echo "    usage"; ${operation}-usage | sed 's#^#        #'; found=1
+    # else echo "    usage: $( basename $0 ) ${operation} [<options>]"; fi
+    # [[ -z "$common_options" ]] || { echo "    common options"; echo "$common_options" | sed 's#^#        #'; }
+    # [[ $( type -t ${operation}-options ) != "function" ]] || { echo "    options"; ${operation}-options | sed 's#^#        #'; found=1; }
+    # [[ $( type -t ${operation}-examples ) != "function" ]] || { echo "    examples"; ${operation}-examples | sed 's#^#        #'; found=1; }
+    # (( ! found )) || return 0
+    # echo "$( basename $0 ): expected operation, got: '${operation}', see --help with no other options for more information" >&2
+    # return 1
     if [[ -z "$common_options" ]]; then echo "${operation}"; else echo "$( basename "$0" ) ${operation}"; fi # uber quick and dirty for now
-    [[ $( type -t ${operation}-description ) != "function" ]] || { ${operation}-description | sed 's#^#    #'; found=1; }
-    if [[ $( type -t ${operation}-usage ) == "function" ]]; then echo "    usage"; ${operation}-usage | sed 's#^#        #'; found=1
+    [[ $( type -t ${operation}-description ) != "function" ]] || ${operation}-description | sed 's#^#    #';
+    if [[ $( type -t ${operation}-usage ) == "function" ]]; then echo "    usage"; ${operation}-usage | sed 's#^#        #'
     else echo "    usage: $( basename $0 ) ${operation} [<options>]"; fi
     [[ -z "$common_options" ]] || { echo "    common options"; echo "$common_options" | sed 's#^#        #'; }
-    [[ $( type -t ${operation}-options ) != "function" ]] || { echo "    options"; ${operation}-options | sed 's#^#        #'; found=1; }
-    [[ $( type -t ${operation}-examples ) != "function" ]] || { echo "    examples"; ${operation}-examples | sed 's#^#        #'; found=1; }
-    (( ! found )) || return 0
-    echo "$( basename $0 ): expected operation, got: '${operation}', see --help with no other options for more information" >&2
-    return 1
+    [[ $( type -t ${operation}-options ) != "function" ]] || { echo "    options"; ${operation}-options | sed 's#^#        #'; }
+    [[ $( type -t ${operation}-examples ) != "function" ]] || { echo "    examples"; ${operation}-examples | sed 's#^#        #'; }
 }
 
 export -f comma-application-swiss-usage-operation
