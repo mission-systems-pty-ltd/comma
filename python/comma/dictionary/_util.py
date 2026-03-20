@@ -84,9 +84,15 @@ def leaves( d, path=None ):
     '''
     if path is None: path = ''
     if isinstance( d, dict ):
-        for key, value in d.items(): yield from leaves( value, f'{path}/{key}' )
+        if path and len( d ) == 0:
+            yield path[1:] if path[0] == '/' else path
+        else:
+            for key, value in d.items(): yield from leaves( value, f'{path}/{key}' )
     elif isinstance( d, list ):
-        for i, value in enumerate(d): yield from leaves( value, f'{path}[{i}]' )
+        if path and len( d ) == 0:
+            yield path[1:] if path[0] == '/' else path
+        else:
+            for i, value in enumerate(d): yield from leaves( value, f'{path}[{i}]' )
     else:
         yield path[1:] if path and path[0] == '/' else path, d
 

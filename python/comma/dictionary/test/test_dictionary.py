@@ -72,6 +72,7 @@ def test_dictionary_leaves():
     assert list( dictionary.leaves( 'a' ) ) == [ ( '', 'a' ) ]
     assert list( dictionary.leaves( {} ) ) == []
     assert list( dictionary.leaves( [] ) ) == []
+    assert list( dictionary.leaves( { 'a': [], 'b': {}, 'c': { 'd': [], 'e': {} } } ) ) == [ 'a', 'b', 'c/d', 'c/e' ]
 
 def test_dictionary_parents():
     assert list( dictionary.parents( { 'a': { 'b': { 'c': {} } } }, 'a/b/c' ) ) == ['a/b', 'a']
