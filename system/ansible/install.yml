@@ -9,7 +9,7 @@
     - comma_cmake_options: "-DBUILD_TESTS=ON -DINSTALL_TESTS=ON -DINSTALL_BASH_COMPLETION=ON -Dcomma_BUILD_XML=ON -Dcomma_BUILD_ZEROMQ=ON -Dcomma_INSTALL_WEB_SHELL=OFF -DPYTHON=/usr/bin/python3"
     - build_in_src: false
     - src_dir: "{{ base }}/src/comma"
-    - build_dir: "{{ src_dir + '/build/comma' if build_in_src else base + '/build/comma' }}"
+    - build_dir: "{{ src_dir + '/build' if build_in_src else base + '/build/comma' }}"
 
   tasks:
   - name: "install comma dependencies"
