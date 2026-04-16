@@ -21,10 +21,9 @@
   - name: "install comma dependencies"
     become: true
     apt:
-        pkg: ['build-essential', 'git', 'cmake-curses-gui', 'cmake', 'gawk', 'perl', 'python3', 'libboost-all-dev', 'socat', 'libzmq3-dev', 'libgtest-dev', 'python3-dev', 'python3-pip', 'python3-numpy', {{ lib_proc }}, 'libyaml-dev', 'recode']
+        pkg: ['build-essential', 'git', 'cmake-curses-gui', 'cmake', 'gawk', 'perl', 'python3', 'libboost-all-dev', 'socat', 'libzmq3-dev', 'libgtest-dev', 'python3-dev', 'python3-pip', 'python3-numpy', "{{ lib_proc }}", 'libyaml-dev', 'recode']
         state: present
         update_cache: yes
-    
 
   - name: "install comma regressions test dependencies"
     become: true
