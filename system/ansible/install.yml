@@ -12,9 +12,12 @@
     - build_dir: "{{ src_dir + '/build' if build_in_src else base + '/build/comma' }}"
 
   tasks:
-  - name: 'set variables'
+  - name: 'check ubuntu version'
     set_fact:
       ubuntu_greater_than_2204: "{{ ansible_distribution_version is version('22.04', '>') }}"
+  
+  - name: 'set variables'
+    set_fact:
       pip_break_system_packages: "{{ '--break-system-packages' if ubuntu_greater_than_2204 else '' }}"
       lib_proc: "{{ 'libproc2-dev' if ubuntu_greater_than_2204 else 'libprocps-dev' }}"
   
