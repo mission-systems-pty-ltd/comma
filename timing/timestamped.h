@@ -59,11 +59,11 @@ struct timestamped
     timestamped( T&& data ) : t( time_traits< Time >::system_clock() ), data( data ) {}
     timestamped( timestamp_t t, const T& data ) : t( t ), data( data ) {}
     timestamped( timestamp_t t, T&& data ) : t( t ), data( data ) {}
-    template < typename S > bool operator<( const timestamped< S >& s ) const { return t.t < s.t; }
-    template < typename S > bool operator==( const timestamped< S >& s ) const { return t.t == s.t; }
-    template < typename S > bool operator<=( const timestamped< S >& s ) const { return t.t <= s.t; }
-    template < typename S > bool operator>( const timestamped< S >& s ) const { return t.t > s.t; }
-    template < typename S > bool operator>=( const timestamped< S >& s ) const { return t.t >= s.t; }
+    template < typename S > bool operator<( const timestamped< S >& s ) const { return t < s.t; }
+    template < typename S > bool operator==( const timestamped< S >& s ) const { return t == s.t; }
+    template < typename S > bool operator<=( const timestamped< S >& s ) const { return t <= s.t; }
+    template < typename S > bool operator>( const timestamped< S >& s ) const { return t > s.t; }
+    template < typename S > bool operator>=( const timestamped< S >& s ) const { return t >= s.t; }
 };
 
 template < typename T > inline timestamped< T > make_timestamped( T&& data ) { return timestamped< T >( data ); }
