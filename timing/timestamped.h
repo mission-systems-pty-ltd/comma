@@ -28,30 +28,48 @@
 
 #pragma once
 
+#include <chrono>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 namespace comma {
 
-template < typename T >
+template < typename Time > struct time_traits;
+
+template <> struct time_traits< boost::posix_time::ptime >
+{
+    static boost::posix_time::ptime system_clock() { return boost::posix_time::microsec_clock::universal_time(); }
+};
+
+template <> struct time_traits< std::chrono::system_clock::time_point >
+{
+    static std::chrono::system_clock::time_point system_clock() { return std::chrono::system_clock::now(); }
+};
+
+template < typename T, typename Time = boost::posix_time::ptime >
 struct timestamped
 {
-    boost::posix_time::ptime t;
+    typedef Time timestamp_t;
+
+    timestamp_t t;
 
     T data;
 
     timestamped() {}
-
-    timestamped( const T& data ) : t( boost::posix_time::microsec_clock::universal_time() ), data( data ) {}
-
-    timestamped( T&& data ) : t( boost::posix_time::microsec_clock::universal_time() ), data( data ) {}
-
-    timestamped( boost::posix_time::ptime t, const T& data ) : t( t ), data( data ) {}
-
-    timestamped( boost::posix_time::ptime t, T&& data ) : t( t ), data( data ) {}
+    timestamped( const T& data ) : t( time_traits< Time >::system_clock() ), data( data ) {}
+    timestamped( T&& data ) : t( time_traits< Time >::system_clock() ), data( data ) {}
+    timestamped( timestamp_t t, const T& data ) : t( t ), data( data ) {}
+    timestamped( timestamp_t t, T&& data ) : t( t ), data( data ) {}
+    template < typename S > bool operator<( const timestamped< S >& s ) const { return t.t < s.t; }
+    template < typename S > bool operator==( const timestamped< S >& s ) const { return t.t == s.t; }
+    template < typename S > bool operator<=( const timestamped< S >& s ) const { return t.t <= s.t; }
+    template < typename S > bool operator>( const timestamped< S >& s ) const { return t.t > s.t; }
+    template < typename S > bool operator>=( const timestamped< S >& s ) const { return t.t >= s.t; }
 };
 
 template < typename T > inline timestamped< T > make_timestamped( T&& data ) { return timestamped< T >( data ); }
 
 template < typename T > inline timestamped< T > make_timestamped( boost::posix_time::ptime t, T&& data ) { return timestamped< T >( t, data ); }
+
+template < typename T > inline timestamped< T, std::chrono::system_clock::time_point > make_timestamped( std::chrono::system_clock::time_point t, T&& data ) { return timestamped< T, std::chrono::system_clock::time_point >( t, data ); }
 
 } // namespace comma {
