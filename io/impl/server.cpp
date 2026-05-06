@@ -53,7 +53,7 @@ static auto acceptor_native_handle( const T& t ) // todo: quick and dirty; move 
     #elif ( BOOST_VERSION < 108700 )
         return t.native_handle();
     #else
-        return t.socket().native_handle();
+        return t.native_handle();
     #endif
 }
 
@@ -65,7 +65,7 @@ static auto acceptor_native_handle( T& t ) // todo: quick and dirty; move somepl
     #elif ( BOOST_VERSION < 108700 )
         return t.native_handle();
     #else
-        return t.socket().native_handle();
+        return t.native_handle();
     #endif
 }
 
@@ -159,7 +159,7 @@ template < typename Stream, typename S > class socket_acceptor : public acceptor
             : mode_( mode )
             , _acceptor( m_service, socket_traits< S >::endpoint( name ) )
         {
-            select_.read().add( impl::native_handle( &_acceptor ) );
+            select_.read().add( impl::acceptor_native_handle( _acceptor ) );
         }
         Stream* accept( boost::posix_time::time_duration timeout )
         {
