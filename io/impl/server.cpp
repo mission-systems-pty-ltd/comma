@@ -45,6 +45,30 @@ static auto native_handle( T* t ) // todo: quick and dirty; move someplace gener
     #endif
 }
 
+template < typename T >
+static auto acceptor_native_handle( const T& t ) // todo: quick and dirty; move someplace generic 
+{
+    #if ( BOOST_VERSION < 106600 )
+        return t.native();
+    #elif ( BOOST_VERSION < 108700 )
+        return t.native_handle();
+    #else
+        return t.socket().native_handle();
+    #endif
+}
+
+template < typename T >
+static auto acceptor_native_handle( T& t ) // todo: quick and dirty; move someplace generic 
+{
+    #if ( BOOST_VERSION < 106600 )
+        return t.native();
+    #elif ( BOOST_VERSION < 108700 )
+        return t.native_handle();
+    #else
+        return t.socket().native_handle();
+    #endif
+}
+
 template < typename Stream > struct stream_traits;
 
 template <> struct stream_traits< io::istream >
@@ -140,7 +164,7 @@ template < typename Stream, typename S > class socket_acceptor : public acceptor
         Stream* accept( boost::posix_time::time_duration timeout )
         {
             select_.wait( timeout );
-            if( !select_.read().ready( impl::native_handle( &_acceptor ) ) ) { return nullptr; }
+            if( !select_.read().ready( impl::acceptor_native_handle( _acceptor ) ) ) { return nullptr; }
             typename socket_traits< S >::iostream* stream = new typename socket_traits< S >::iostream;
             _acceptor.accept( *( stream->rdbuf() ) );
             return new Stream( stream, impl::native_handle( stream ), mode_, boost::bind( &socket_traits< S >::iostream::close, stream ) );
@@ -148,7 +172,7 @@ template < typename Stream, typename S > class socket_acceptor : public acceptor
 
         void close() { this->_closed = true; _acceptor.close(); }
 
-        io::file_descriptor fd() const { return impl::native_handle( const_cast< typename socket_traits< S* >::acceptor& >( &_acceptor ) ); }
+        io::file_descriptor fd() const { return impl::acceptor_native_handle( const_cast< typename socket_traits< S >::acceptor& >( _acceptor ) ); }
 
         bool closed() const { COMMA_THROW( comma::exception, "todo" ); }
 
