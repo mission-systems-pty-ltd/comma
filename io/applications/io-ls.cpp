@@ -173,11 +173,14 @@ void process_tcp(std::istream& is, const comma::csv::options& csv)
     while( is.good() )
     {
         std::getline(is,line);
-        comma::saymore() << line << std::endl;
-        output.scan( line );
-        if(port && output.local.port != *port) {continue;}
-        if(state && output.state != *state) {continue;}
-        os.write(output);
+        if( !line.empty() )
+        {
+            comma::saymore() << line << std::endl;
+            output.scan( line );
+            if(port && output.local.port != *port) {continue;}
+            if(state && output.state != *state) {continue;}
+            os.write(output);
+        }
     }
 }
 void usage(bool detail)
