@@ -4,12 +4,12 @@
 - hosts: localhost
   connection: local
   vars:
-    - base: "{{ ansible_env.HOME }}"
-    - make_j: 6
-    - comma_cmake_options: "-DBUILD_TESTS=ON -DINSTALL_TESTS=ON -DINSTALL_BASH_COMPLETION=ON -Dcomma_BUILD_XML=ON -Dcomma_BUILD_ZEROMQ=ON -Dcomma_INSTALL_WEB_SHELL=OFF -DPYTHON=/usr/bin/python3"
-    - build_in_src: false
-    - src_dir: "{{ base }}/src/comma"
-    - build_dir: "{{ src_dir + '/build' if build_in_src else base + '/build/comma' }}"
+    base: "{{ ansible_env.HOME }}"
+    make_j: 6
+    comma_cmake_options: "-DBUILD_TESTS=ON -DINSTALL_TESTS=ON -DINSTALL_BASH_COMPLETION=ON -Dcomma_BUILD_XML=ON -Dcomma_BUILD_ZEROMQ=ON -Dcomma_INSTALL_WEB_SHELL=OFF -DPYTHON=/usr/bin/python3"
+    build_in_src: false
+    src_dir: "{{ base }}/src/comma"
+    build_dir: "{{ src_dir + '/build' if build_in_src else base + '/build/comma' }}"
 
   tasks:
   - name: 'check ubuntu version'
@@ -24,9 +24,26 @@
   - name: "install comma dependencies"
     become: true
     apt:
-        pkg: ['build-essential', 'git', 'cmake-curses-gui', 'cmake', 'gawk', 'perl', 'python3', 'libboost-all-dev', 'socat', 'libzmq3-dev', 'libgtest-dev', 'python3-dev', 'python3-pip', 'python3-numpy', "{{ lib_proc }}", 'libyaml-dev', 'recode']
-        state: present
-        update_cache: yes
+      update_cache: yes
+      state: present
+      pkg:
+        - build-essential
+        - git
+        - cmake-curses-gui
+        - cmake
+        - gawk
+        - perl
+        - python3
+        - libboost-all-dev
+        - socat
+        - libzmq3-dev
+        - libgtest-dev
+        - python3-dev
+        - python3-pip
+        - python3-numpy
+        - "{{ lib_proc }}"
+        - libyaml-dev
+        - recode
 
   - name: "install comma regressions test dependencies"
     become: true
@@ -50,7 +67,7 @@
 
   - name: "comma: cmake"
     vars:
-        - comma_cmake_options: "-DBUILD_TESTS=ON -DINSTALL_TESTS=ON -DINSTALL_BASH_COMPLETION=ON -Dcomma_BUILD_XML=ON -Dcomma_BUILD_ZEROMQ=ON -DBUILD_PYTHON_PACKAGES=ON -Dcomma_INSTALL_WEB_SHELL=OFF -DPYTHON=/usr/bin/python3"
+        comma_cmake_options: "-DBUILD_TESTS=ON -DINSTALL_TESTS=ON -DINSTALL_BASH_COMPLETION=ON -Dcomma_BUILD_XML=ON -Dcomma_BUILD_ZEROMQ=ON -DBUILD_PYTHON_PACKAGES=ON -Dcomma_INSTALL_WEB_SHELL=OFF -DPYTHON=/usr/bin/python3"
     shell: "/usr/bin/cmake {{ comma_cmake_options }} {{ src_dir }} chdir={{ build_dir }}"
 
   - name: "comma: make"
