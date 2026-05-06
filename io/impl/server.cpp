@@ -21,6 +21,30 @@
 
 namespace comma { namespace io { namespace impl {
 
+template < typename T >
+static auto native_handle( const T* t ) // todo: quick and dirty; move someplace generic 
+{
+    #if ( BOOST_VERSION < 106600 )
+        return t->rdbuf()->native();
+    #elif ( BOOST_VERSION < 108700 )
+        return t->rdbuf()->native_handle();
+    #else
+        return t->socket().native_handle();
+    #endif
+}
+
+template < typename T >
+static auto native_handle( T* t ) // todo: quick and dirty; move someplace generic 
+{
+    #if ( BOOST_VERSION < 106600 )
+        return t->rdbuf()->native();
+    #elif ( BOOST_VERSION < 108700 )
+        return t->rdbuf()->native_handle();
+    #else
+        return t->socket().native_handle();
+    #endif
+}
+
 template < typename Stream > struct stream_traits;
 
 template <> struct stream_traits< io::istream >
@@ -111,59 +135,20 @@ template < typename Stream, typename S > class socket_acceptor : public acceptor
             : mode_( mode )
             , _acceptor( m_service, socket_traits< S >::endpoint( name ) )
         {
-#ifndef WIN32
-#if (BOOST_VERSION >= 106600)
-            select_.read().add( _acceptor.native_handle() );
-#else
-            select_.read().add( _acceptor.native() );
-#endif
-#else
-#if (BOOST_VERSION >= 106600)
-            SOCKET socket = _acceptor.native_handle();
-#else
-            SOCKET socket = _acceptor.native();
-#endif
-            select_.read().add( socket );
-#endif
+            select_.read().add( impl::native_handle( &_acceptor ) );
         }
-
         Stream* accept( boost::posix_time::time_duration timeout )
         {
             select_.wait( timeout );
-#ifndef WIN32
-#if (BOOST_VERSION >= 106600)
-            if( !select_.read().ready( _acceptor.native_handle() ) ) { return nullptr; }
-#else
-            if( !select_.read().ready( _acceptor.native() ) ) { return nullptr; }
-#endif
-#else
-#if (BOOST_VERSION >= 106600)
-            SOCKET socket = _acceptor.native_handle();
-#else
-            SOCKET socket = _acceptor.native();
-#endif
-            if( !select_.read().ready( socket ) ) { return nullptr; }
-#endif
+            if( !select_.read().ready( impl::native_handle( &_acceptor ) ) ) { return nullptr; }
             typename socket_traits< S >::iostream* stream = new typename socket_traits< S >::iostream;
             _acceptor.accept( *( stream->rdbuf() ) );
-#if (BOOST_VERSION >= 106600)
-            return new Stream( stream, stream->rdbuf()->native_handle(), mode_, boost::bind( &socket_traits< S >::iostream::close, stream ) );
-#else
-            return new Stream( stream, stream->rdbuf()->native(), mode_, boost::bind( &socket_traits< S >::iostream::close, stream ) );
-#endif
+            return new Stream( stream, impl::native_handle( stream ), mode_, boost::bind( &socket_traits< S >::iostream::close, stream ) );
         }
 
         void close() { this->_closed = true; _acceptor.close(); }
 
-#ifndef WIN32
-#if (BOOST_VERSION >= 106600)
-        io::file_descriptor fd() const { return const_cast< typename socket_traits< S >::acceptor& >( _acceptor ).native_handle(); }
-#else
-        io::file_descriptor fd() const { return const_cast< typename socket_traits< S >::acceptor& >( _acceptor ).native(); }
-#endif
-#else
-        io::file_descriptor fd() const { return io::invalid_file_descriptor; }
-#endif
+        io::file_descriptor fd() const { return impl::native_handle( const_cast< typename socket_traits< S* >::acceptor& >( &_acceptor ) ); }
 
         bool closed() const { COMMA_THROW( comma::exception, "todo" ); }
 

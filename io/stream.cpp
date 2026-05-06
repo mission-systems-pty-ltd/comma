@@ -38,6 +38,30 @@ namespace comma { namespace io {
 
 namespace impl {
 
+template < typename T >
+static auto native_handle( const T* t ) // todo: quick and dirty; move someplace generic
+{
+    #if ( BOOST_VERSION < 106600 )
+        return t->rdbuf()->native();
+    #elif ( BOOST_VERSION < 108700 )
+        return t->rdbuf()->native_handle();
+    #else
+        return t->socket().native_handle();
+    #endif
+}
+
+template < typename T >
+static auto native_handle( T* t ) // todo: quick and dirty; move someplace generic 
+{
+    #if ( BOOST_VERSION < 106600 )
+        return t->rdbuf()->native();
+    #elif ( BOOST_VERSION < 108700 )
+        return t->rdbuf()->native_handle();
+    #else
+        return t->socket().native_handle();
+    #endif
+}
+
 template < typename S > struct traits {};
 
 template <> struct traits < std::istream >
@@ -230,11 +254,7 @@ template < typename S > stream< S >::stream( const std::string& name, mode::valu
         if( !*s ) { delete s; COMMA_THROW( comma::exception, "failed to connect to " << name << ( blocking_ ? " (todo: implement blocking mode)" : "" ) ); }
         close_ = boost::bind( &boost::asio::ip::tcp::iostream::close, s );
         // todo: make unidirectional
-#if (BOOST_VERSION >= 106600)
-        fd_ = s->rdbuf()->native_handle();
-#else
-        fd_ = s->rdbuf()->native();
-#endif
+        fd_ = impl::native_handle( s );
         stream_ = s;
     }
     else if( v[0] == "udp" )
@@ -282,11 +302,7 @@ template < typename S > stream< S >::stream( const std::string& name, mode::valu
         if( !( *ls ) ) { COMMA_THROW( comma::exception, "failed to open " << name_ << ( blocking_ ? " (todo: implement blocking)" : "" ) ); }
         close_ = boost::bind( &boost::asio::local::stream_protocol::iostream::close, ls );
         // todo: make unidirectional
-#if (BOOST_VERSION >= 106600)
-        fd_ = ls->rdbuf()->native_handle();
-#else
-        fd_ = ls->rdbuf()->native();
-#endif
+        fd_ = impl::native_handle( ls );
         stream_ = ls;
     }
 #endif
