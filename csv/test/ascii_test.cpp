@@ -27,7 +27,6 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 #include <gtest/gtest.h>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #if ( BOOST_VERSION >= 107400 ) // quick and dirty; fixing trivial compilation error
@@ -69,6 +68,12 @@ struct containers
 struct vector_container
 {
     std::vector< int > vector;
+};
+
+struct times
+{
+    boost::posix_time::ptime t;
+    std::chrono::system_clock::time_point p;
 };
 
 } } } // namespace comma { namespace csv { namespace ascii_test {
@@ -156,6 +161,21 @@ template <> struct traits< comma::csv::ascii_test::vector_container >
     }
 };
 
+template <> struct traits< comma::csv::ascii_test::times >
+{
+    template < typename Key, class Visitor > static void visit( const Key&, const comma::csv::ascii_test::times& p, Visitor& v )
+    {
+        v.apply( "t", p.t );
+        v.apply( "p", p.p );
+    }
+
+    template < typename Key, class Visitor > static void visit( const Key&, comma::csv::ascii_test::times& p, Visitor& v )
+    {
+        v.apply( "t", p.t );
+        v.apply( "p", p.p );
+    }
+};
+
 } } // namespace comma { namespace visiting {
 
 TEST( csv, ascii_constructor )
@@ -204,6 +224,13 @@ TEST( csv, ascii_get )
         EXPECT_EQ( s.t, boost::posix_time::from_iso_string( "20110304T111111.1234" ) );
         EXPECT_EQ( s.nested.x, 0 );
         EXPECT_EQ( s.nested.y, 0 );
+    }
+    {
+        comma::csv::ascii_test::times s;
+        comma::csv::ascii< comma::csv::ascii_test::times > ascii;
+        ascii.get( s, "20110304T111111.1234,20110304T111111.5678" );
+        EXPECT_EQ( s.t, boost::posix_time::from_iso_string( "20110304T111111.1234" ) );
+        EXPECT_EQ( s.p, comma::timing::as_time_point( boost::posix_time::from_iso_string( "20110304T111111.5678" ) ) );
     }
     // todo: more testing
 }

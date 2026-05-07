@@ -54,27 +54,20 @@ namespace comma { namespace csv { namespace impl {
 class from_binary_
 {
     public:
-        /// constructor
         from_binary_( const std::vector< boost::optional< format::element > >& offsets
-                  , const std::deque< bool >& optional
-                  , const char* buf );
+                    , const std::deque< bool >& optional
+                    , const char* buf );
         
-        /// apply
         template < typename K, typename T > void apply( const K& name, boost::optional< T >& value );
         
-        /// apply
         template < typename K, typename T > void apply( const K& name, boost::scoped_ptr< T >& value );
         
-        /// apply
         template < typename K, typename T > void apply( const K& name, boost::shared_ptr< T >& value );
         
-        /// apply
         template < typename K, typename T > void apply( const K& name, T& value );
         
-        /// apply to non-leaf elements
         template < typename K, typename T > void apply_next( const K& name, T& value );
         
-        /// apply to leaf elements
         template < typename K, typename T > void apply_final( const K& name, T& value );
         
     private:
@@ -149,6 +142,8 @@ inline void from_binary_::apply_next( const K& name, T& value ) { comma::visitin
 inline void cast_( std::string& v, const std::string& s ) { v = s; }
 
 inline void cast_( char& v, const std::string& s ) { if( !s.empty() ) { v = s[0]; } }
+
+inline void cast_( std::chrono::system_clock::time_point&, const std::string& ) { COMMA_THROW( comma::exception, "this method should not have been called on chrono time_point" ); }
 
 template < typename T > inline void cast_( T& v, const std::string& s ) // quick and dirty, watch performance
 {

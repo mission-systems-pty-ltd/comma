@@ -27,7 +27,6 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 #include <gtest/gtest.h>
 #include <vector>
 #include <boost/array.hpp>
@@ -74,15 +73,19 @@ struct optionals
     boost::optional< deep_nested > b;
 };
 
+struct times
+{
+    boost::posix_time::ptime ptime;
+    std::chrono::system_clock::time_point time_point;
+};
+
 } } } // namespace comma { namespace csv { namespace names_test {
 
 namespace comma { namespace visiting {
 
 template <> struct traits< comma::csv::names_test::deep_nested >
 {
-    /// const visiting
-    template < typename Key, class Visitor >
-    static void visit( const Key&, const comma::csv::names_test::deep_nested& p, Visitor& v )
+    template < typename Key, class Visitor > static void visit( const Key&, const comma::csv::names_test::deep_nested& p, Visitor& v )
     {
         v.apply( "X", p.X );
         v.apply( "Y", p.Y );
@@ -91,9 +94,7 @@ template <> struct traits< comma::csv::names_test::deep_nested >
 
 template <> struct traits< comma::csv::names_test::nested >
 {
-    /// const visiting
-    template < typename Key, class Visitor >
-    static void visit( const Key&, const comma::csv::names_test::nested& p, Visitor& v )
+    template < typename Key, class Visitor > static void visit( const Key&, const comma::csv::names_test::nested& p, Visitor& v )
     {
         v.apply( "A", p.A );
         v.apply( "B", p.B );
@@ -102,9 +103,7 @@ template <> struct traits< comma::csv::names_test::nested >
 
 template <> struct traits< comma::csv::names_test::test_struct >
 {
-    /// const visiting
-    template < typename Key, class Visitor >
-    static void visit( const Key&, const comma::csv::names_test::test_struct& p, Visitor& v )
+    template < typename Key, class Visitor > static void visit( const Key&, const comma::csv::names_test::test_struct& p, Visitor& v )
     {
         v.apply( "C", p.C );
         v.apply( "D", p.D );
@@ -113,9 +112,7 @@ template <> struct traits< comma::csv::names_test::test_struct >
 
 template <> struct traits< comma::csv::names_test::containers >
 {
-    /// const visiting
-    template < typename Key, class Visitor >
-    static void visit( const Key&, const comma::csv::names_test::containers& p, Visitor& v )
+    template < typename Key, class Visitor > static void visit( const Key&, const comma::csv::names_test::containers& p, Visitor& v )
     {
         v.apply( "size", p.size );
         v.apply( "vector", p.vector );
@@ -125,9 +122,7 @@ template <> struct traits< comma::csv::names_test::containers >
 
 template <> struct traits< comma::csv::names_test::struct_with_optional_element >
 {
-    /// const visiting
-    template < typename Key, class Visitor >
-    static void visit( const Key&, const comma::csv::names_test::struct_with_optional_element& p, Visitor& v )
+    template < typename Key, class Visitor > static void visit( const Key&, const comma::csv::names_test::struct_with_optional_element& p, Visitor& v )
     {
         v.apply( "x", p.x );
         v.apply( "nested", p.nested );
@@ -140,6 +135,15 @@ template <> struct traits< comma::csv::names_test::optionals >
     {
         v.apply( "a", p.a );
         v.apply( "b", p.b );
+    }
+};
+
+template <> struct traits< comma::csv::names_test::times >
+{
+    template < typename Key, class Visitor > static void visit( const Key&, const comma::csv::names_test::times& p, Visitor& v )
+    {
+        v.apply( "ptime", p.ptime );
+        v.apply( "time_point", p.time_point );
     }
 };
 
@@ -172,6 +176,12 @@ TEST( csv, names_to_names )
         test_struct s;
         visiting::apply( v, s );
         EXPECT_EQ( join( v(), ',' ), "C,A,X,Y" );
+    }
+    {
+        impl::to_names v( false );
+        times s;
+        visiting::apply( v, s );
+        EXPECT_EQ( join( v(), ',' ), "ptime,time_point" );
     }
     /// @todo definitely more testing
 }
