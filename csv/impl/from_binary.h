@@ -179,7 +179,11 @@ inline void from_binary_::apply_final( const K&, T& value )
                 case format::char_t: value = static_cast_impl< T >::value( format::traits< char >::from_bin( buf ) ); break;
                 case format::float_t: value = static_cast_impl< T >::value( format::traits< float >::from_bin( buf ) ); break;
                 case format::double_t: value = static_cast_impl< T >::value( format::traits< double >::from_bin( buf ) ); break;
-                case format::time: value = static_cast_impl< T >::value( format::traits< boost::posix_time::ptime, format::time >::from_bin( buf ) ); break;
+                case format::time:
+                        value = std::is_same< T, boost::posix_time::ptime >::value // quick and dirty for now
+                              ? static_cast_impl< T >::value( format::traits< boost::posix_time::ptime, format::time >::from_bin( buf ) )
+                              : static_cast_impl< T >::value( format::traits< std::chrono::system_clock::time_point, format::time_point >::from_bin( buf ) );
+                        break;
                 case format::long_time: value = static_cast_impl< T >::value( format::traits< boost::posix_time::ptime, format::long_time >::from_bin( buf ) ); break;
                 case format::time_point: value = static_cast_impl< T >::value( format::traits< std::chrono::system_clock::time_point, format::time_point >::from_bin( buf ) ); break;
                 // quick and dirty: relax casting and see if it works...

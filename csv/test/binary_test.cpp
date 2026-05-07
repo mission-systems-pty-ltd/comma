@@ -222,6 +222,32 @@ TEST( csv, binary_get )
         }
     }
     {
+        comma::csv::binary_test::simple_struct t;
+        t.a = 1;
+        t.b = 2;
+        t.c = 'c';
+        t.t = boost::posix_time::from_iso_string( "20110304T111111.1234" );
+        t.p = comma::timing::as_time_point( boost::posix_time::from_iso_string( "20110304T111111.5678" ) );
+        t.nested.x = 5;
+        t.nested.y = 6;
+        char buf[1024];
+        comma::csv::binary< comma::csv::binary_test::simple_struct > b("i,d,b,t,t,2i");
+        b.put( t, buf );
+        {
+            comma::csv::binary_test::simple_struct s;
+            EXPECT_EQ( comma::join( comma::csv::names( s ), ',' ), "a,b,c,t,p,nested/x,nested/y" );
+            comma::csv::binary< comma::csv::binary_test::simple_struct > binary("i,d,b,t,t,2i");
+            binary.get( s, buf );
+            EXPECT_EQ( s.a, 1 );
+            EXPECT_EQ( s.b, 2 );
+            EXPECT_EQ( s.c, 'c' );
+            EXPECT_EQ( s.t, boost::posix_time::from_iso_string( "20110304T111111.1234" ) );
+            EXPECT_EQ( comma::timing::as_ptime( s.p ), boost::posix_time::from_iso_string( "20110304T111111.5678" ) );
+            EXPECT_EQ( s.nested.x, 5 );
+            EXPECT_EQ( s.nested.y, 6 );
+        }
+    }
+    {
         comma::csv::binary_test::large_struct s( true, 1, 2, 3, 100, 1.1, 2.2, 3.3, 4.4, "hello", "world", 123 );
         comma::csv::binary< comma::csv::binary_test::large_struct > binary( "%b%3i%ui%4d%2s[8]%ui" );
         comma::csv::binary_test::large_struct t;

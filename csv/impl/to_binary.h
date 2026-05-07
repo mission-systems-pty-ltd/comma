@@ -164,7 +164,10 @@ inline void to_binary::apply_final( const K&, const T& value )
                 case format::char_t: format::traits< char >::to_bin( static_cast_impl< char >::value( value ), buf ); break;
                 case format::float_t: format::traits< float >::to_bin( static_cast_impl< float >::value( value ), buf ); break;
                 case format::double_t: format::traits< double >::to_bin( static_cast_impl< double >::value( value ), buf ); break;
-                case format::time: format::traits< boost::posix_time::ptime, format::time >::to_bin( static_cast_impl< boost::posix_time::ptime >::value( value ), buf ); break;
+                case format::time:
+                    if( std::is_same< T, boost::posix_time::ptime >::value ) { format::traits< boost::posix_time::ptime, format::time >::to_bin( static_cast_impl< boost::posix_time::ptime >::value( value ), buf ); }
+                    else { format::traits< std::chrono::system_clock::time_point, format::time_point >::to_bin( static_cast_impl< std::chrono::system_clock::time_point >::value( value ), buf ); }
+                    break;
                 case format::long_time: format::traits< boost::posix_time::ptime, format::long_time >::to_bin( static_cast_impl< boost::posix_time::ptime >::value( value ), buf ); break;
                 case format::time_point: format::traits< std::chrono::system_clock::time_point, format::time_point >::to_bin( static_cast_impl< std::chrono::system_clock::time_point >::value( value ), buf ); break;
                 case format::fixed_string: format::traits< std::string >::to_bin( static_cast_impl< std::string >::value( value ), buf, size ); break;
