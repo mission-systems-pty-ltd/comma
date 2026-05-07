@@ -7,6 +7,8 @@
 
 namespace comma { namespace io { namespace serial {
 
+#if ( BOOST_VERSION < 108700 )
+
 port::port( const std::string& name ): _port( _service, name ) {}
 
 port::port( const port::properties& p ): port( p.name, p.baud_rate ) {}
@@ -84,5 +86,7 @@ std::size_t port::read_some( unsigned char* buf
 std::size_t port::write( const char* buf, std::size_t to_write ) { return boost::asio::write( _port, boost::asio::buffer( buf, to_write )); }
 
 std::size_t port::write( const unsigned char* buf, std::size_t to_write ) { return boost::asio::write( _port, boost::asio::buffer( buf, to_write )); }
+
+#endif // #if ( BOOST_VERSION < 108700 )
 
 } } } // namespace comma { namespace io { namespace serial {

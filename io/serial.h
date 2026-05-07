@@ -11,6 +11,9 @@
 
 namespace comma { namespace io { namespace serial {
 
+// todo: fix on later boost::asio versions (since they've changed heaps)
+#if ( BOOST_VERSION < 108700 )
+
 class port
 {
     public:
@@ -53,5 +56,7 @@ class port
         boost::asio::io_service _service; // renamed as io_context in Boost 1.66 (io_service remains as typedef)
         boost::asio::serial_port _port;
 };
+
+#endif // #if ( BOOST_VERSION < 108700 )
 
 } } } // namespace comma { namespace io { namespace serial {
