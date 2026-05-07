@@ -27,7 +27,6 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 #include <gtest/gtest.h>
 #include <limits>
 #include "boost/date_time/posix_time/posix_time.hpp"
@@ -102,12 +101,20 @@ TEST( csv, format )
         EXPECT_EQ( f.bin_to_csv( f.csv_to_bin( "20100621T182601.123" ) ), "20100621T182601.123000" );
     }
     {
+        comma::csv::format f( "%tp" );
+        EXPECT_EQ( f.bin_to_csv( f.csv_to_bin( "20100621T182601.123" ) ), "20100621T182601.123000" );
+    }
+    {
         comma::csv::format f( "%3ui" );
         EXPECT_EQ( f.bin_to_csv( f.csv_to_bin( "1,2,3" ) ), "1,2,3" );
     }
     {
         comma::csv::format f( "%ui%2w%3d" );
         EXPECT_EQ( f.bin_to_csv( f.csv_to_bin( "0,-1,-2,1.123,2.345,3.678" ) ), "0,-1,-2,1.123,2.345,3.678" );
+    }
+    {
+        comma::csv::format f( "%tp%tp" );
+        EXPECT_EQ( f.bin_to_csv( f.csv_to_bin( "20100621T182601.123,20100621T182601.456" ) ), "20100621T182601.123000,20100621T182601.456000" );
     }
     {
         comma::csv::format f( "%ui%2w%3d" );
@@ -387,6 +394,8 @@ TEST( csv, expand )
     EXPECT_EQ( "", comma::csv::format( "" ).expanded_string() );
     EXPECT_EQ( "d", comma::csv::format( "d" ).expanded_string() );
     EXPECT_EQ( "i,i", comma::csv::format( "2i" ).expanded_string() );
+    EXPECT_EQ( "t,t", comma::csv::format( "2t" ).expanded_string() );
+    EXPECT_EQ( "tp,tp,t,t", comma::csv::format( "2tp,2t" ).expanded_string() );
     EXPECT_EQ( "i,i,d,d,d,i,i", comma::csv::format( "2i,3d,2i" ).expanded_string() );
     EXPECT_EQ( "s[10]", comma::csv::format( "s[10]" ).expanded_string() );
     EXPECT_EQ( "s[10],s[5]", comma::csv::format( "s[10],s[5]" ).expanded_string() );
@@ -399,6 +408,8 @@ TEST( csv, collapse )
     EXPECT_EQ( "", comma::csv::format( "" ).collapsed_string() );
     EXPECT_EQ( "d", comma::csv::format( "d" ).collapsed_string() );
     EXPECT_EQ( "2i", comma::csv::format( "i,i" ).collapsed_string() );
+    EXPECT_EQ( "2t", comma::csv::format( "t,t" ).collapsed_string() );
+    EXPECT_EQ( "2tp", comma::csv::format( "tp,tp" ).collapsed_string() );
     EXPECT_EQ( "2i,3d,2i", comma::csv::format( "i,i,3d,i,i" ).collapsed_string() );
     EXPECT_EQ( "s[10]", comma::csv::format( "s[10]" ).collapsed_string() );
     EXPECT_EQ( "s[10],s[5]", comma::csv::format( "s[10],s[5]" ).collapsed_string() );

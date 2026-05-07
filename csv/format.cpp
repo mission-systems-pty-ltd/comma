@@ -47,7 +47,7 @@ format::format( const std::string& f )
         else if( type == "c" ) { t = format::char_t; size = 1; }
         else if( type == "t" ) { t = format::time; size = sizeof( comma::int64 ); }
         else if( type == "lt" ) { t = format::long_time; size = sizeof( comma::int32 ) + sizeof( comma::int64 ); }
-        else if( type == "pt" ) { t = format::time_point; size = sizeof( comma::int64 ); }
+        else if( type == "tp" ) { t = format::time_point; size = sizeof( comma::int64 ); }
         else if( type == "f" ) { t = format::float_t; size = sizeof( float ); }
         else if( type == "d" ) { t = format::double_t; size = sizeof( double ); }
         else if( type[0] == 's' && type.length() == 1 ) { COMMA_THROW( comma::exception, "got variable size string in [" << format << "]: not implemented, use fixed size string instead, e.g. \"s[8]\"" ); }
@@ -173,15 +173,15 @@ static std::size_t csv_to_bin( char* buf, const std::string& s )
 }
 
 template < typename T >
-static void withPrecision( std::ostringstream& oss, T t, const boost::optional< unsigned int >& ) { oss << t; }
+static void with_precision( std::ostringstream& oss, T t, const boost::optional< unsigned int >& ) { oss << t; }
 
-static void withPrecision( std::ostringstream& oss, float t, const boost::optional< unsigned int >& precision )
+static void with_precision( std::ostringstream& oss, float t, const boost::optional< unsigned int >& precision )
 {
     oss.precision( precision ? *precision : 6 );
     oss << t;
 }
 
-static void withPrecision( std::ostringstream& oss, double t, const boost::optional< unsigned int >& precision )
+static void with_precision( std::ostringstream& oss, double t, const boost::optional< unsigned int >& precision )
 {
     oss.precision( precision ? *precision : 16 );
     oss << t;
@@ -192,8 +192,8 @@ static std::size_t bin_to_csv( std::ostringstream& oss, const char* buf, const b
 {
     //T t;
     //::memcpy( &t, buf, sizeof( T ) );
-    //withPrecision( oss, t, precision );
-    withPrecision( oss, *reinterpret_cast< const T* >( buf ), precision );
+    //with_precision( oss, t, precision );
+    with_precision( oss, *reinterpret_cast< const T* >( buf ), precision );
     return sizeof( T );
 }
 
@@ -248,7 +248,7 @@ static std::size_t csv_to_bin( char* buf, const std::string& s, format::types_en
                 format::traits< boost::posix_time::ptime, format::long_time >::to_bin( time_from_iso_string(s), buf );
                 return format::traits< boost::posix_time::ptime, format::long_time >::size;
             case format::time_point: // TODO: quick and dirty: use serialization traits
-                format::traits< std::chrono::system_clock::time_point, format::time >::to_bin( timing::as_time_point( time_from_iso_string( s ) ), buf );
+                format::traits< std::chrono::system_clock::time_point, format::time_point >::to_bin( timing::as_time_point( time_from_iso_string( s ) ), buf );
                 return format::traits< std::chrono::system_clock::time_point, format::time_point >::size;
             case format::fixed_string:
             {
