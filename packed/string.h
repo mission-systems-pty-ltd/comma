@@ -121,7 +121,8 @@ template < typename T, std::size_t S, char Padding = ' ' >
 class ascii_hex : public packed::field< ascii_hex< T, S, Padding >, T, S >
 {
 public:
-    static_assert( boost::is_unsigned< T >::value, "expected unsigned type" );
+    static_assert( std::is_unsigned< T >::value, "expected unsigned type" );
+    
     enum { size = S };
     
     typedef T Type;
@@ -130,15 +131,9 @@ public:
     
     static T default_value() { return 0; }
     
-    static void pack( char* storage, const T& value )
-    {
-        return hex_from_int< T >( storage, size, value, Padding );
-    }
+    static void pack( char* storage, const T& value ) { return hex_from_int< T >( storage, size, value, Padding ); }
     
-    static T unpack( const char* storage )
-    {
-        return hex_to_int< T >( storage, size, Padding );
-    }
+    static T unpack( const char* storage ) { return hex_to_int< T >( storage, size, Padding ); }
     
     const ascii_hex& operator=( const T& rhs ) { return base_type::operator=( rhs ); }
 };

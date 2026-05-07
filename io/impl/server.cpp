@@ -69,6 +69,16 @@ static auto acceptor_native_handle( T& t ) // todo: quick and dirty; move somepl
     #endif
 }
 
+template < typename T >
+static auto& socket( T* t )
+{
+    #if ( BOOST_VERSION < 108700 )
+        return *t->rdbuf();
+    #else
+        return t->socket();
+    #endif
+}
+
 template < typename Stream > struct stream_traits;
 
 template <> struct stream_traits< io::istream >
@@ -161,12 +171,13 @@ template < typename Stream, typename S > class socket_acceptor : public acceptor
         {
             select_.read().add( impl::acceptor_native_handle( _acceptor ) );
         }
+
         Stream* accept( boost::posix_time::time_duration timeout )
         {
             select_.wait( timeout );
             if( !select_.read().ready( impl::acceptor_native_handle( _acceptor ) ) ) { return nullptr; }
             typename socket_traits< S >::iostream* stream = new typename socket_traits< S >::iostream;
-            _acceptor.accept( *( stream->rdbuf() ) );
+            _acceptor.accept( impl::socket( stream ) );
             return new Stream( stream, impl::native_handle( stream ), mode_, boost::bind( &socket_traits< S >::iostream::close, stream ) );
         }
 

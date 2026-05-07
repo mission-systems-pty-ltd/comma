@@ -29,6 +29,7 @@
 
 /// @author vsevolod vlaskine
 
+#include <algorithm>
 #include <iostream>
 #include <boost/lexical_cast.hpp>
 #include "../../application/command_line_options.h"

@@ -3,9 +3,13 @@
 #include <cstdio>
 #include <fstream>
 #include <gtest/gtest.h>
-#include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/local/stream_protocol.hpp>
+#if ( BOOST_VERSION < 108700 )
+#include <boost/asio/io_service.hpp>
+#else
+#include <boost/asio/io_context.hpp>
+#endif
 #include "../impl/filesystem.h"
 #include "../load.h" // just to make sure it compiles
 #include "../select.h"
@@ -182,8 +186,13 @@ TEST( io, local_stream )
         comma::filesystem::remove( "./test.localsocket" );
         boost::asio::local::stream_protocol::endpoint endpoint( "test.localsocket" );
         EXPECT_TRUE( !boost::asio::local::stream_protocol::iostream( endpoint ) );
+        #if ( BOOST_VERSION < 108700 )
         boost::asio::io_service service;
         boost::asio::local::stream_protocol::acceptor acceptor( service, endpoint );
+        #else
+        boost::asio::io_context context;
+        boost::asio::local::stream_protocol::acceptor acceptor( context, endpoint );
+        #endif
         EXPECT_TRUE( bool( boost::asio::local::stream_protocol::iostream( endpoint ) ) );
         comma::io::istream istream( "./test.localsocket" );
         comma::io::ostream ostream( "./test.localsocket" );
@@ -198,9 +207,14 @@ TEST( io, local_stream )
         comma::filesystem::remove( "./test.file" );
         comma::io::ostream ostream( "./test.file" );
         ostream.close();
-        boost::asio::io_service service;
+        
+        #if ( BOOST_VERSION < 108700 )
+        boost::asio::io_service context;
+        #else
+        boost::asio::io_context context;
+        #endif;
         boost::asio::local::stream_protocol::endpoint endpoint( "test.file" );
-        try { boost::asio::local::stream_protocol::acceptor acceptor( service, endpoint ); EXPECT_TRUE( false ); } catch( ... ) {}
+        try { boost::asio::local::stream_protocol::acceptor acceptor( context, endpoint ); EXPECT_TRUE( false ); } catch( ... ) {}
         comma::filesystem::remove( "./test.file" );
     }
     #endif

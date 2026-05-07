@@ -29,6 +29,7 @@
 
 /// @author vsevolod vlaskine
 
+#include <algorithm>
 #include <functional>
 #include <iostream>
 #include <string>

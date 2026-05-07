@@ -37,7 +37,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #endif
-
+#include <tuple>
 #include <unordered_map>
 #include <boost/lexical_cast.hpp>
 #include "../../../base/exception.h"
@@ -154,7 +154,7 @@ split< T >::split( const boost::optional< boost::posix_time::time_duration >& pe
 {
     if( csv.fields.empty() ) { return; }
     if( csv.binary() ) { binary_.reset( new comma::csv::binary< input >( csv ) ); } else { ascii_.reset( new comma::csv::ascii< input >( csv ) ); }
-    boost::tie( filenames_, filenames_have_id_ ) = applications::filenames( filenames );
+    std::tie( filenames_, filenames_have_id_ ) = applications::filenames( filenames );
     if( csv.has_field( "block" ) )
     {
         ofstream_ = std::bind( &split< T >::ofstream_by_block_, this );

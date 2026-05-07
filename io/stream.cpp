@@ -248,9 +248,15 @@ template < typename S > stream< S >::stream( const std::string& name, mode::valu
         boost::asio::io_service service;
 #endif
         boost::asio::ip::tcp::resolver resolver( service );
-        boost::asio::ip::tcp::resolver::query query( v[1] == "localhost" ? "127.0.0.1" : v[1], v[2] );
-        boost::asio::ip::tcp::resolver::iterator it = resolver.resolve( query );
-        boost::asio::ip::tcp::iostream* s = new boost::asio::ip::tcp::iostream( it->endpoint() );
+        #if ( BOOST_VERSION < 108700 )
+            boost::asio::ip::tcp::resolver::query query( v[1] == "localhost" ? "127.0.0.1" : v[1], v[2] );
+            boost::asio::ip::tcp::resolver::iterator it = resolver.resolve( query );
+            boost::asio::ip::tcp::iostream* s = new boost::asio::ip::tcp::iostream( it->endpoint() );
+        #else
+            std::string host = ( v[1] == "localhost" ? "127.0.0.1" : v[1] );
+            auto endpoints = resolver.resolve( host, v[2] );
+            boost::asio::ip::tcp::iostream* s = new boost::asio::ip::tcp::iostream( *endpoints.begin() );
+        #endif
         if( !*s ) { delete s; COMMA_THROW( comma::exception, "failed to connect to " << name << ( blocking_ ? " (todo: implement blocking mode)" : "" ) ); }
         close_ = boost::bind( &boost::asio::ip::tcp::iostream::close, s );
         // todo: make unidirectional
