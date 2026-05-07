@@ -31,13 +31,14 @@
 
 #pragma once
 
+#include <chrono>
+#include <type_traits>
 #include <vector>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
-#include <boost/type_traits.hpp>
 #include "../../base/exception.h"
 #include "../../base/none.h"
 #include "../../string/string.h"
@@ -136,9 +137,10 @@ inline void to_ascii::apply( const K& name, const boost::shared_ptr< T >& value 
 template < typename K, typename T >
 inline void to_ascii::apply( const K& name, const T& value )
 {
-    visiting::do_while<    !boost::is_fundamental< T >::value
-                        && !boost::is_same< T, std::string >::value
-                        && !boost::is_same< T, boost::posix_time::ptime >::value >::visit( name, value, *this );
+    visiting::do_while<    !std::is_fundamental< T >::value
+                        && !std::is_same< T, std::string >::value
+                        && !std::is_same< T, boost::posix_time::ptime >::value
+                        && !std::is_same< T, std::chrono::system_clock::time_point >::value >::visit( name, value, *this );
 }
 
 template < typename K, typename T >

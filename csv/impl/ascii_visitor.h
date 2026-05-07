@@ -27,18 +27,17 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author vsevolod vlaskine
 
-#ifndef COMMA_CSV_SERIALIZATION_ASCIIVISITOR_HEADER_GUARD_
-#define COMMA_CSV_SERIALIZATION_ASCIIVISITOR_HEADER_GUARD_
+#pragma once
 
+#include <chrono>
 #include <deque>
 #include <map>
+#include <type_traits>
 #include <vector>
-#include <boost/scoped_ptr.hpp>
-#include <boost/type_traits.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/scoped_ptr.hpp>
 #include "../../string/string.h"
 #include "../../visiting/apply.h"
 #include "../../visiting/visit.h"
@@ -75,9 +74,10 @@ class asciiVisitor
         void apply( const K& name, const T& value )
         {
             append( name );
-            visiting::do_while<    !boost::is_fundamental< T >::value
-                                && !boost::is_same< T, std::string >::value
-                                && !boost::is_same< T, boost::posix_time::ptime >::value >::visit( name, value, *this );
+            visiting::do_while<    !std::is_fundamental< T >::value
+                                && !std::is_same< T, std::string >::value
+                                && !std::is_same< T, boost::posix_time::ptime >::value
+                                && !std::is_same< T, std::chrono::system_clock::time_point >::value >::visit( name, value, *this );
             trim( name );
         }
 
@@ -132,5 +132,3 @@ class asciiVisitor
 };
 
 } } } // namespace comma { namespace csv { namespace impl {
-
-#endif // #ifndef COMMA_CSV_SERIALIZATION_ASCIIVISITOR_HEADER_GUARD_

@@ -27,18 +27,17 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author vsevolod vlaskine
 
-#ifndef COMMA_CSV_IMPL_TOBINARY_HEADER_GUARD_
-#define COMMA_CSV_IMPL_TOBINARY_HEADER_GUARD_
+#pragma once
 
 #include <string.h>
+#include <chrono>
+#include <type_traits>
 #include <vector>
 #include <boost/optional.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
-#include <boost/type_traits.hpp>
 #include "../../base/types.h"
 #include "../../csv/format.h"
 #include "../../visiting/visit.h"
@@ -128,9 +127,10 @@ inline void to_binary::apply( const K& name, const boost::shared_ptr< T >& value
 template < typename K, typename T >
 inline void to_binary::apply( const K& name, const T& value )
 {
-    visiting::do_while<    !boost::is_fundamental< T >::value
-                     && !boost::is_same< T, std::string >::value
-                     && !boost::is_same< T, boost::posix_time::ptime >::value >::visit( name, value, *this );
+    visiting::do_while< !std::is_fundamental< T >::value
+                     && !std::is_same< T, std::string >::value
+                     && !std::is_same< T, boost::posix_time::ptime >::value
+                     && !std::is_same< T, std::chrono::system_clock::time_point >::value >::visit( name, value, *this );
 }
 
 template < typename K, typename T >
@@ -166,6 +166,7 @@ inline void to_binary::apply_final( const K&, const T& value )
                 case format::double_t: format::traits< double >::to_bin( static_cast_impl< double >::value( value ), buf ); break;
                 case format::time: format::traits< boost::posix_time::ptime, format::time >::to_bin( static_cast_impl< boost::posix_time::ptime >::value( value ), buf ); break;
                 case format::long_time: format::traits< boost::posix_time::ptime, format::long_time >::to_bin( static_cast_impl< boost::posix_time::ptime >::value( value ), buf ); break;
+                case format::time_point: format::traits< std::chrono::system_clock::time_point, format::time_point >::to_bin( static_cast_impl< std::chrono::system_clock::time_point >::value( value ), buf ); break;
                 case format::fixed_string: format::traits< std::string >::to_bin( static_cast_impl< std::string >::value( value ), buf, size ); break;
             };
         }
@@ -174,5 +175,3 @@ inline void to_binary::apply_final( const K&, const T& value )
 }
 
 } } } // namespace comma { namespace csv { namespace impl {
-
-#endif // #ifndef COMMA_CSV_IMPL_TOBINARY_HEADER_GUARD_

@@ -30,8 +30,7 @@
 
 /// @author vsevolod vlaskine
 
-#ifndef COMMA_CSV_ASCII_HEADER_GUARD_
-#define COMMA_CSV_ASCII_HEADER_GUARD_
+#pragma once
 
 #include "../string/string.h"
 #include "names.h"
@@ -169,5 +168,3 @@ inline std::string ascii< S >::put( const S& s ) const
 }
 
 } } // namespace comma { namespace csv {
-
-#endif // #ifndef COMMA_CSV_ASCII_HEADER_GUARD_

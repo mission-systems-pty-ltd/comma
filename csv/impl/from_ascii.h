@@ -27,22 +27,22 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author vsevolod vlaskine
 
-#ifndef COMMA_CSV_IMPL_FROMASCII_HEADER_GUARD_
-#define COMMA_CSV_IMPL_FROMASCII_HEADER_GUARD_
+#pragma once
 
+#include <chrono>
 #include <deque>
+#include <type_traits>
 #include <vector>
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/optional.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
-#include <boost/type_traits.hpp>
 #include "../../base/exception.h"
 #include "../../string/string.h"
+#include "../../timing/conversions.h"
 #include "../../visiting/visit.h"
 #include "../../visiting/while.h"
 
@@ -99,6 +99,11 @@ class from_ascii_
                   : boost::posix_time::not_a_date_time;
             }
         }
+        static void lexical_cast_( std::chrono::system_clock::time_point& v, const std::string& s )
+        { 
+            if( s.empty() ) { return; }
+            v = timing::as_time_point( boost::posix_time::from_iso_string( s ) );
+        }
         static void lexical_cast_( std::string& v, const std::string& s ) { v = comma::strip( s, "\"" ); }
         static void lexical_cast_( bool& v, const std::string& s ) { if( s.empty() ) { return; } v = static_cast< bool >( boost::lexical_cast< unsigned int >( s ) ); }
         template < typename T >
@@ -143,9 +148,10 @@ inline void from_ascii_::apply( const K& name, boost::shared_ptr< T >& value ) /
 template < typename K, typename T >
 inline void from_ascii_::apply( const K& name, T& value )
 {
-    visiting::do_while<    !boost::is_fundamental< T >::value
-                        && !boost::is_same< T, std::string >::value
-                        && !boost::is_same< T, boost::posix_time::ptime >::value >::visit( name, value, *this );
+    visiting::do_while<    !std::is_fundamental< T >::value
+                        && !std::is_same< T, std::string >::value
+                        && !std::is_same< T, boost::posix_time::ptime >::value
+                        && !std::is_same< T, std::chrono::system_clock::time_point >::value >::visit( name, value, *this );
 }
 
 template < typename K, typename T >
@@ -166,5 +172,3 @@ inline void from_ascii_::apply_final( const K& key, T& value )
 }
 
 } } } // namespace comma { namespace csv { namespace impl {
-
-#endif // #ifndef COMMA_CSV_IMPL_FROMASCII_HEADER_GUARD_

@@ -11,8 +11,9 @@
 #include <boost/lexical_cast.hpp>
 #include "../base/exception.h"
 #include "../base/types.h"
-#include "../string/string.h"
 #include "../csv/format.h"
+#include "../string/string.h"
+#include "../timing/conversions.h"
 
 namespace comma { namespace csv {
 
@@ -46,6 +47,7 @@ format::format( const std::string& f )
         else if( type == "c" ) { t = format::char_t; size = 1; }
         else if( type == "t" ) { t = format::time; size = sizeof( comma::int64 ); }
         else if( type == "lt" ) { t = format::long_time; size = sizeof( comma::int32 ) + sizeof( comma::int64 ); }
+        else if( type == "pt" ) { t = format::time_point; size = sizeof( comma::int64 ); }
         else if( type == "f" ) { t = format::float_t; size = sizeof( float ); }
         else if( type == "d" ) { t = format::double_t; size = sizeof( double ); }
         else if( type[0] == 's' && type.length() == 1 ) { COMMA_THROW( comma::exception, "got variable size string in [" << format << "]: not implemented, use fixed size string instead, e.g. \"s[8]\"" ); }
@@ -90,6 +92,7 @@ std::string format::to_format( format::types_enum type )
         case format::double_t: return "d";
         case format::time: return "t";
         case format::long_time: return "lt";
+        case format::time_point: return "tp";
         case format::fixed_string: return "s";
     }
     COMMA_THROW( comma::exception, "expected type, got " << type );
@@ -115,6 +118,7 @@ static boost::array< unsigned int, 14 > Sizesimpl()
     sizes[ format::double_t ] = sizeof( double );
     sizes[ format::time ] = sizeof( int64 );
     sizes[ format::long_time ] = sizeof( int64 ) + sizeof( int32 );
+    sizes[ format::time_point ] = sizeof( int64 );
     sizes[ format::fixed_string ] = 0; // will it blast somewhere?
     return sizes;
 }
@@ -149,7 +153,8 @@ std::string format::usage()
         << "            s  : variable size string (not implemented)" << std::endl
         << "            s[<length>]  : fixed size string, e.g. \"s[4]\"" << std::endl
         << "            t  : time (64-bit signed int, number of microseconds since epoch)" << std::endl
-        << "            lt  : time (64+32 bit, seconds since epoch and nanoseconds)" << std::endl;
+        << "            lt : time (64+32 bit, seconds since epoch and nanoseconds)" << std::endl
+        << "            tp : chrono time point (64-bit signed int, number of microseconds since epoch)" << std::endl;
     return oss.str();
 }
 
@@ -242,6 +247,9 @@ static std::size_t csv_to_bin( char* buf, const std::string& s, format::types_en
             case format::long_time: // TODO: quick and dirty: use serialization traits
                 format::traits< boost::posix_time::ptime, format::long_time >::to_bin( time_from_iso_string(s), buf );
                 return format::traits< boost::posix_time::ptime, format::long_time >::size;
+            case format::time_point: // TODO: quick and dirty: use serialization traits
+                format::traits< std::chrono::system_clock::time_point, format::time >::to_bin( timing::as_time_point( time_from_iso_string( s ) ), buf );
+                return format::traits< std::chrono::system_clock::time_point, format::time_point >::size;
             case format::fixed_string:
             {
                 if( s.length() > size ) { COMMA_THROW( comma::exception, "expected string not longer than " << size << "; got \"" << s << "\"" ); }
@@ -287,6 +295,10 @@ static std::size_t bin_to_csv( std::ostringstream& oss, const char* buf, format:
         case format::long_time:
             oss << boost::posix_time::to_iso_string( format::traits< boost::posix_time::ptime, format::long_time >::from_bin( buf, sizeof( comma::uint64 ) + sizeof( comma::uint32 ) ) );
             return format::traits< boost::posix_time::ptime, format::long_time >::size;
+        case format::time_point:
+            oss << boost::posix_time::to_iso_string( format::traits< boost::posix_time::ptime, format::time >::from_bin( buf, sizeof( comma::uint64 ) ) );
+            return format::traits< boost::posix_time::ptime, format::time >::size;
+        // todo? long_time_point
         case format::fixed_string:
             oss << ( buf[ size - 1 ] == 0 ? std::string( buf ) : std::string( buf, size ) );
             return size;
@@ -475,6 +487,17 @@ void format::traits< boost::posix_time::ptime, format::time >::to_bin( const boo
     *reinterpret_cast< comma::int64* >( buf ) = comma::csv::time::to_microseconds(t);
 }
 
+std::chrono::system_clock::time_point format::traits< std::chrono::system_clock::time_point, format::time_point >::from_bin( const char* buf, std::size_t size )
+{
+    return timing::as_time_point( format::traits< boost::posix_time::ptime, format::time >::from_bin( buf, size ) );
+}
+
+void format::traits< std::chrono::system_clock::time_point, format::time_point >::to_bin( const std::chrono::system_clock::time_point& t, char* buf, std::size_t size )
+{
+    (void)size;
+    *reinterpret_cast< comma::int64* >( buf ) = comma::csv::time::to_microseconds( timing::as_ptime( t ) ); // quick and dirty
+}
+
 std::string format::traits< std::string, format::fixed_string >::from_bin( const char* buf, std::size_t size )
 {
     return buf[ size - 1 ] == 0 ? std::string( buf ) : std::string( buf, size );
@@ -489,7 +512,7 @@ void format::traits< std::string, format::fixed_string >::to_bin( const std::str
 
 namespace time {
 
-boost::posix_time::ptime from_microseconds(comma::int64 microseconds, boost::gregorian::date epoch)
+boost::posix_time::ptime from_microseconds( comma::int64 microseconds, boost::gregorian::date epoch )
 {
     if( microseconds == bin_not_a_date_time ) { return boost::posix_time::not_a_date_time; }
     if( microseconds == bin_time_pos_infin ) { return boost::posix_time::pos_infin; }
@@ -499,7 +522,7 @@ boost::posix_time::ptime from_microseconds(comma::int64 microseconds, boost::gre
     return boost::posix_time::ptime( epoch, boost::posix_time::seconds( seconds ) + boost::posix_time::microseconds( static_cast< long >( microseconds ) ) );
 }
 
-comma::int64 to_microseconds(const boost::posix_time::ptime& t, boost::gregorian::date epoch)
+comma::int64 to_microseconds( const boost::posix_time::ptime& t, boost::gregorian::date epoch )
 {
     if( t.is_not_a_date_time() ) { return bin_not_a_date_time; }
     if( t.is_pos_infinity() ) { return bin_time_pos_infin; }

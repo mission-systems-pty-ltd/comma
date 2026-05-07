@@ -118,6 +118,7 @@ struct unstructured
                 return "d[" + boost::lexical_cast< std::string >( doubles.size() - 1 ) + "]";
             case comma::csv::format::time:
             case comma::csv::format::long_time:
+            case comma::csv::format::time_point: // todo: see where it breaks
                 time.resize( time.size() + 1 );
                 return "t[" + boost::lexical_cast< std::string >( time.size() - 1 ) + "]";
             case comma::csv::format::fixed_string:

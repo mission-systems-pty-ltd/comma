@@ -27,20 +27,19 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author vsevolod vlaskine
 
-#ifndef COMMA_CSV_IMPL_FROMBINARY_HEADER_GUARD_
-#define COMMA_CSV_IMPL_FROMBINARY_HEADER_GUARD_
+#pragma once
 
 #include <string.h>
+#include <chrono>
 #include <deque>
+#include <type_traits>
 #include <vector>
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
-#include <boost/type_traits.hpp>
 #include "../../base/types.h"
 #include "../../csv/format.h"
 #include "../../string/string.h"
@@ -138,9 +137,10 @@ inline void from_binary_::apply( const K& name, boost::shared_ptr< T >& value ) 
 template < typename K, typename T >
 inline void from_binary_::apply( const K& name, T& value )
 {
-    visiting::do_while<    !boost::is_fundamental< T >::value
-                        && !boost::is_same< T, std::string >::value
-                        && !boost::is_same< T, boost::posix_time::ptime >::value >::visit( name, value, *this );
+    visiting::do_while<    !std::is_fundamental< T >::value
+                        && !std::is_same< T, std::string >::value
+                        && !std::is_same< T, boost::posix_time::ptime >::value
+                        && !std::is_same< T, std::chrono::system_clock::time_point >::value >::visit( name, value, *this );
 }
 
 template < typename K, typename T >
@@ -186,6 +186,7 @@ inline void from_binary_::apply_final( const K&, T& value )
                 case format::double_t: value = static_cast_impl< T >::value( format::traits< double >::from_bin( buf ) ); break;
                 case format::time: value = static_cast_impl< T >::value( format::traits< boost::posix_time::ptime, format::time >::from_bin( buf ) ); break;
                 case format::long_time: value = static_cast_impl< T >::value( format::traits< boost::posix_time::ptime, format::long_time >::from_bin( buf ) ); break;
+                case format::time_point: value = static_cast_impl< T >::value( format::traits< std::chrono::system_clock::time_point, format::time_point >::from_bin( buf ) ); break;
                 // quick and dirty: relax casting and see if it works...
                 //case format::fixed_string: value = static_cast_impl< T >::value( format::traits< std::string >::from_bin( buf, size ) ); break;
                 case format::fixed_string: cast_( value, format::traits< std::string >::from_bin( buf, size ) ); break;
@@ -196,5 +197,3 @@ inline void from_binary_::apply_final( const K&, T& value )
 }
 
 } } } // namespace comma { namespace csv { namespace impl {
-
-#endif // #ifndef COMMA_CSV_IMPL_FROMBINARY_HEADER_GUARD_

@@ -29,8 +29,7 @@
 
 /// @author vsevolod vlaskine
 
-#ifndef COMMA_CSV_IMPL_FIELDWISE_H_
-#define COMMA_CSV_IMPL_FIELDWISE_H_
+#pragma once
 
 #include <vector>
 #include <boost/optional.hpp>
@@ -110,5 +109,3 @@ inline fieldwise::fieldwise( const T& sample, const std::string& fields, char de
 }
 
 } } // namespace comma { namespace csv {
-
-#endif // COMMA_CSV_IMPL_FIELDWISE_H_

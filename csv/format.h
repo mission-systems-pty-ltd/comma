@@ -6,12 +6,13 @@
 #pragma once
 
 #include <stdlib.h>
+#include <chrono>
 #include <iostream>
 #include <set>
 #include <string>
+#include <type_traits>
 #include <vector>
 #include <boost/optional.hpp>
-#include <boost/type_traits.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include "../base/exception.h"
 #include "../base/types.h"
@@ -29,9 +30,9 @@ namespace impl { class to_format; }
 
 namespace time {
 
-boost::posix_time::ptime from_microseconds(comma::int64 microseconds, boost::gregorian::date epoch=csv::impl::epoch);
+boost::posix_time::ptime from_microseconds( comma::int64 microseconds, boost::gregorian::date epoch = csv::impl::epoch );
 
-comma::int64 to_microseconds(const boost::posix_time::ptime& t, boost::gregorian::date epoch=csv::impl::epoch);
+comma::int64 to_microseconds( const boost::posix_time::ptime& t, boost::gregorian::date epoch=csv::impl::epoch );
 
 } // namespace time {
 
@@ -43,7 +44,7 @@ class format
         /// types (implement more, as we need them)
         /// note: currently string type is for fixed size string only
         ///       a variable size string is tricky and we may never implement it for csv
-        enum types_enum { char_t, int8, uint8, int16, uint16, int32, uint32, int64, uint64, float_t, double_t, time, long_time, fixed_string };
+        enum types_enum { char_t, int8, uint8, int16, uint16, int32, uint32, int64, uint64, float_t, double_t, time, long_time, fixed_string, time_point };
 
         /// type to enum
         template < typename T > struct type_to_enum {};
@@ -170,9 +171,10 @@ class to_format
         void apply( const K& name, const boost::optional< T >& value )
         {
             append( name );
-            visiting::do_while<    !boost::is_fundamental< T >::value
-                                && !boost::is_same< T, std::string >::value
-                                && !boost::is_same< T, boost::posix_time::ptime >::value >::visit( name, value ? *value : T(), *this );
+            visiting::do_while<    !std::is_fundamental< T >::value
+                                && !std::is_same< T, std::string >::value
+                                && !std::is_same< T, std::chrono::system_clock::time_point >::value
+                                && !std::is_same< T, boost::posix_time::ptime >::value >::visit( name, value ? *value : T(), *this );
             trim( name );
         }
         
@@ -180,9 +182,10 @@ class to_format
         void apply( const K& name, const T& value )
         {
             append( name );
-            visiting::do_while<    !boost::is_fundamental< T >::value
-                                && !boost::is_same< T, std::string >::value
-                                && !boost::is_same< T, boost::posix_time::ptime >::value >::visit( name, value, *this );
+            visiting::do_while<    !std::is_fundamental< T >::value
+                                && !std::is_same< T, std::string >::value
+                                && !std::is_same< T, std::chrono::system_clock::time_point >::value
+                                && !std::is_same< T, boost::posix_time::ptime >::value >::visit( name, value, *this );
             trim( name );
         }
         
@@ -250,6 +253,7 @@ template <> inline std::string format::value_impl< float >( const float& ) { ret
 template <> inline std::string format::value_impl< double >( const double& ) { return "d"; }
 template <> inline std::string format::value_impl< long double >( const long double& ) { return "d"; }
 template <> inline std::string format::value_impl< boost::posix_time::ptime >( const boost::posix_time::ptime& ) { return "t"; }
+template <> inline std::string format::value_impl< std::chrono::system_clock::time_point >( const std::chrono::system_clock::time_point& ) { return "tp"; }
 template <> inline std::string format::value_impl< std::string >( const std::string& s )
 { // quick and dirty
     if( s.empty() ) { return "s"; } // variable size string, todo
@@ -342,6 +346,12 @@ template <> struct format::type_to_enum< boost::posix_time::ptime >
     static const char* as_string() { return "t"; }
 };
 
+template <> struct format::type_to_enum< std::chrono::system_clock::time_point >
+{
+    static const format::types_enum value = format::time_point;
+    static const char* as_string() { return "tp"; }
+};
+
 template <> struct format::type_to_enum< std::string >
 {
     static const format::types_enum value = format::fixed_string;
@@ -366,6 +376,26 @@ template <> struct format::traits< boost::posix_time::ptime, format::time >
     static boost::posix_time::ptime from_bin( const char* buf, std::size_t size = 8 );
     static void to_bin( const boost::posix_time::ptime& t, char* buf, std::size_t size = 8 );
     static boost::posix_time::ptime zero() { return boost::posix_time::ptime(); }
+};
+
+template <> struct format::traits< std::chrono::system_clock::time_point, format::long_time >
+{
+    static const types_enum type = format::long_time;
+    static const unsigned int size = sizeof( comma::uint64 ) + sizeof( comma::uint32 );
+    static const char* as_string() { return "ltp"; }
+    static std::chrono::system_clock::time_point from_bin( const char* buf, std::size_t size = 12 );
+    static void to_bin( const std::chrono::system_clock::time_point& t, char* buf, std::size_t size = 12 );
+    static std::chrono::system_clock::time_point zero() { return std::chrono::system_clock::time_point{}; }
+};
+
+template <> struct format::traits< std::chrono::system_clock::time_point, format::time_point >
+{
+    static const types_enum type = format::time;
+    static const unsigned int size = sizeof( comma::uint64 );
+    static const char* as_string() { return "tp"; }
+    static std::chrono::system_clock::time_point from_bin( const char* buf, std::size_t size = 8 );
+    static void to_bin( const std::chrono::system_clock::time_point& t, char* buf, std::size_t size = 8 );
+    static std::chrono::system_clock::time_point zero() { return std::chrono::system_clock::time_point{}; }
 };
 
 template <> struct format::traits< std::string, format::fixed_string >

@@ -27,11 +27,9 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 /// @author cedric wohlleber
 
-#ifndef COMMA_CSV_PROGRAM_OPTIONS_H_
-#define COMMA_CSV_PROGRAM_OPTIONS_H_
+#pragma once
 
 #include <string>
 #include <boost/program_options.hpp>
@@ -83,5 +81,3 @@ inline csv::options program_options::get( const boost::program_options::variable
 }
 
 } } // namespace comma { namespace csv {
-
-#endif /*COMMA_CSV_PROGRAM_OPTIONS_H_*/
