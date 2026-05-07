@@ -6,11 +6,13 @@
 #pragma once
 
 #include <array>
+#include <chrono>
 #include <iostream>
 #if __cplusplus >= 201703L
 #include <optional>
 #endif
 #include <sstream>
+#include <type_traits>
 #include <boost/array.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/lexical_cast.hpp>
@@ -19,12 +21,12 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/property_tree/ini_parser.hpp>
-#include <boost/type_traits.hpp>
 #include <boost/unordered_set.hpp>
 #include <boost/version.hpp>
 #include "../base/exception.h"
 #include "../base/types.h"
 #include "../string/string.h"
+#include "../timing/conversions.h"
 #include "../xpath/xpath.h"
 #include "../visiting/apply.h"
 #include "../visiting/visit.h"
@@ -135,9 +137,10 @@ struct property_tree // quick and dirty
 
             template < typename K, typename T > void apply( const K& key, T& value )
             {
-                visiting::do_while<    !boost::is_fundamental< T >::value
-                                    && !boost::is_same< T, boost::posix_time::ptime >::value
-                                    && !boost::is_same< T, std::string >::value >::visit( key, value, *this );
+                visiting::do_while<    !std::is_fundamental< T >::value
+                                    && !std::is_same< T, boost::posix_time::ptime >::value
+                                    && !std::is_same< T, std::chrono::system_clock::time_point >::value
+                                    && !std::is_same< T, std::string >::value >::visit( key, value, *this );
             }
 
             template < typename K, typename T > void apply_next( const K& name, boost::optional< T >& value )
@@ -174,9 +177,10 @@ struct property_tree // quick and dirty
                     for( boost::property_tree::ptree::const_assoc_iterator j = t->ordered_begin(); j != t->not_found(); ++j )
                     {
                         cur_ = j->second;
-                        visiting::do_while<    !boost::is_fundamental< T >::value
-                                            && !boost::is_same< T, boost::posix_time::ptime >::value
-                                            && !boost::is_same< T, std::string >::value >::visit( "", value[ boost::lexical_cast< L >( j->first ) ], *this );
+                        visiting::do_while<    !std::is_fundamental< T >::value
+                                            && !std::is_same< T, boost::posix_time::ptime >::value
+                                            && !std::is_same< T, std::chrono::system_clock::time_point >::value
+                                            && !std::is_same< T, std::string >::value >::visit( "", value[ boost::lexical_cast< L >( j->first ) ], *this );
                     }
                     cur_ = parent;
                 }
@@ -225,6 +229,14 @@ struct property_tree // quick and dirty
                 if( s ) { v = boost::posix_time::from_iso_string( *s ); }
             }
 
+            void value_( const std::string& name, boost::optional< std::chrono::system_clock::time_point >& v ) // quick and dirty, imlement traits instead
+            {
+                if( !cur_ ) { return; }
+                boost::optional< std::string > s = name.empty() ? cur_->get_value_optional< std::string >() : cur_->get_optional< std::string >( name );
+                if( !s ) { s = cur_->get_optional< std::string >( "<xmlattr>." + name ); }
+                if( s ) { v = timing::as_time_point( boost::posix_time::from_iso_string( *s ) ); }
+            }
+
             template < typename T > void value_( const std::string& name, boost::optional< T >& v )
             {
                 if( !cur_ ) { return; }
@@ -256,9 +268,10 @@ struct property_tree // quick and dirty
                             catch( ... ) { index = i; }
                         }
                         //if( index >= t->size() ) { COMMA_THROW( comma::exception, "expected index less than " << t->size() << "; got: " << index ); }
-                        visiting::do_while<    !boost::is_fundamental< typename A::value_type >::value
-                                            && !boost::is_same< typename A::value_type, boost::posix_time::ptime >::value
-                                            && !boost::is_same< typename A::value_type, std::string >::value >::visit( "", value[index], *this );
+                        visiting::do_while<    !std::is_fundamental< typename A::value_type >::value
+                                            && !std::is_same< typename A::value_type, boost::posix_time::ptime >::value
+                                            && !std::is_same< typename A::value_type, std::chrono::system_clock::time_point >::value
+                                            && !std::is_same< typename A::value_type, std::string >::value >::visit( "", value[index], *this );
                     }
                     cur_ = parent;
                 }
@@ -287,18 +300,20 @@ class to_ptree
         template < typename K, typename T > void apply_next( const K& name, const boost::optional< T >& value )
         {
             if( !value ) { return; }
-            visiting::do_while<    !boost::is_fundamental< T >::value
-                                && !boost::is_same< T, boost::posix_time::ptime >::value
-                                && !boost::is_same< T, std::string >::value >::visit( name, *value, *this );
+            visiting::do_while<    !std::is_fundamental< T >::value
+                                && !std::is_same< T, boost::posix_time::ptime >::value
+                                && !std::is_same< T, std::chrono::system_clock::time_point >::value
+                                && !std::is_same< T, std::string >::value >::visit( name, *value, *this );
         }
 
         #if __cplusplus >= 201703L
         template < typename K, typename T > void apply_next( const K& name, const std::optional< T >& value )
         {
             if( !value ) { return; }
-            visiting::do_while<    !boost::is_fundamental< T >::value
-                                && !boost::is_same< T, boost::posix_time::ptime >::value
-                                && !boost::is_same< T, std::string >::value >::visit( name, *value, *this );
+            visiting::do_while<    !std::is_fundamental< T >::value
+                                && !std::is_same< T, boost::posix_time::ptime >::value
+                                && !std::is_same< T, std::chrono::system_clock::time_point >::value
+                                && !std::is_same< T, std::string >::value >::visit( name, *value, *this );
         }
         #endif
 
@@ -309,9 +324,10 @@ class to_ptree
             for( unsigned int i = 0; i < value.size(); ++i )
             {
                 append_( boost::lexical_cast< std::string >( i ).c_str() );
-                visiting::do_while<    !boost::is_fundamental< T >::value
-                                    && !boost::is_same< T, boost::posix_time::ptime >::value
-                                    && !boost::is_same< T, std::string >::value >::visit( i, value[i], *this );
+                visiting::do_while<    !std::is_fundamental< T >::value
+                                    && !std::is_same< T, boost::posix_time::ptime >::value
+                                    && !std::is_same< T, std::chrono::system_clock::time_point >::value
+                                    && !std::is_same< T, std::string >::value >::visit( i, value[i], *this );
                 trim_();
             }
             trim_( name );
@@ -323,9 +339,10 @@ class to_ptree
             if( !( path_ <= branch_ ) ) { return; } // visit, only if on the branch
             const std::string& s = boost::lexical_cast< std::string >( name );
             append_( &s[0] );
-            visiting::do_while<    !boost::is_fundamental< T >::value
-                                && !boost::is_same< T, boost::posix_time::ptime >::value
-                                && !boost::is_same< T, std::string >::value >::visit( name, value, *this );
+            visiting::do_while<    !std::is_fundamental< T >::value
+                                && !std::is_same< T, boost::posix_time::ptime >::value
+                                && !std::is_same< T, std::chrono::system_clock::time_point >::value
+                                && !std::is_same< T, std::string >::value >::visit( name, value, *this );
             trim_( &s[0] );
         }
 
@@ -348,6 +365,7 @@ class to_ptree
         const xpath& trim_( const char* name ) { if( *name ) { path_ = path_.head(); } return path_; }
         void trim_() { path_ = path_.head(); }
         static std::string value_( const boost::posix_time::ptime& t ) { return boost::posix_time::to_iso_string( t ); }
+        static std::string value_( std::chrono::system_clock::time_point t ) { return boost::posix_time::to_iso_string( timing::as_ptime( t ) ); }
         template < typename T > static T value_( T v ) { return v; }
 };
 

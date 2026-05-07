@@ -42,9 +42,35 @@ struct nested_vector
     vector_type v;
 };
 
+namespace timing {
+
+struct values
+{
+    boost::posix_time::ptime ptime;
+    std::chrono::system_clock::time_point time_point;
+};
+
+} // namespace timing {
+
 } } // namespace comma { namespace test {
 
 namespace comma { namespace visiting {
+
+template <>
+struct traits< comma::test::timing::values >
+{
+    template < typename Key, typename Visitor > static void visit( const Key&, comma::test::timing::values& t, Visitor& v )
+    {
+        v.apply( "ptime", t.ptime );
+        v.apply( "time_point", t.time_point );
+    }
+
+    template < typename Key, typename Visitor > static void visit( const Key&, const comma::test::timing::values& t, Visitor& v )
+    {
+        v.apply( "ptime", t.ptime );
+        v.apply( "time_point", t.time_point );
+    }
+};
 
 template <>
 struct traits< comma::test::nested_type >
@@ -566,6 +592,41 @@ TEST ( name_value_ptree, put )
         EXPECT_FALSE( property_tree::get( p, "x/y/z" ) );
         EXPECT_FALSE( property_tree::get( p, "a/b/x" ) );
         EXPECT_FALSE( property_tree::get( p, "a/e[0]/z" ) );
+    }
+}
+
+TEST( name_value_ptree, timing )
+{
+    {
+        std::string json = "{ \"ptime\": \"20200101T123456.789\", \"time_point\": \"20200101T123456.123456\" }";
+        std::stringstream iss( json );
+        boost::property_tree::ptree p;
+        boost::property_tree::read_json( iss, p );
+        timing::values v;
+        comma::from_ptree from_ptree( p, true );
+        comma::visiting::apply( from_ptree ).to( v );
+        EXPECT_EQ( boost::posix_time::to_iso_string( v.ptime ), "20200101T123456.789000" );
+        EXPECT_EQ( boost::posix_time::to_iso_string( comma::timing::as_ptime( v.time_point ) ), "20200101T123456.123456" );
+        std::ostringstream oss;
+        comma::write_json( v, oss, false );
+        EXPECT_EQ( oss.str(), "{\"ptime\":\"20200101T123456.789000\",\"time_point\":\"20200101T123456.123456\"}" );
+    }
+    {
+        timing::values v;
+        std::ostringstream oss;
+        comma::write_json( v, oss, false );
+        EXPECT_EQ( oss.str(), "{\"ptime\":\"not-a-date-time\",\"time_point\":\"19700101T000000\"}" );
+    }
+    {
+        std::string json = "{ \"ptime\": \"not-a-date-time\", \"time_point\": \"not-a-date-time\" }";
+        std::stringstream iss( json );
+        boost::property_tree::ptree p;
+        boost::property_tree::read_json( iss, p );
+        timing::values v;
+        comma::from_ptree from_ptree( p, true );
+        comma::visiting::apply( from_ptree ).to( v );
+        EXPECT_EQ( boost::posix_time::to_iso_string( v.ptime ), "not-a-date-time" );
+        EXPECT_EQ( boost::posix_time::to_iso_string( comma::timing::as_ptime( v.time_point ) ), "19700101T000000" ); // at least for now
     }
 }
 

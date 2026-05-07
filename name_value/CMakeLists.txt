@@ -17,7 +17,7 @@ INSTALL( FILES ${impl_includes} DESTINATION ${comma_INSTALL_INCLUDE_DIR}/${PROJE
 
 ADD_LIBRARY( ${TARGET_NAME} ${source} ${includes} )
 SET_TARGET_PROPERTIES( ${TARGET_NAME} PROPERTIES ${comma_LIBRARY_PROPERTIES} )
-target_link_libraries( ${TARGET_NAME} comma_string comma_xpath ${comma_ALL_EXTERNAL_LIBRARIES} ) # comma_application
+target_link_libraries( ${TARGET_NAME} comma_string comma_timing comma_xpath ${comma_ALL_EXTERNAL_LIBRARIES} ) # comma_application
 if( comma_BUILD_NAME_VALUE_YAML )
     target_link_libraries( ${TARGET_NAME} yaml )
 endif( comma_BUILD_NAME_VALUE_YAML )

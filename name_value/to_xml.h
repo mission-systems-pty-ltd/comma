@@ -27,15 +27,14 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 // IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef COMMA_XML_TO_XML_
-#define COMMA_XML_TO_XML_
+#pragma once
 
 #include <iostream>
+#include <type_traits>
 #include <vector>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
-#include <boost/type_traits.hpp>
 #include "../visiting/visit.h"
 #include "../visiting/while.h"
 
@@ -53,9 +52,10 @@ class to_xml
         {
             if( !value ) { return; }
             open_( name );
-            visiting::do_while<    !boost::is_fundamental< T >::value
-                                && !boost::is_same< T, boost::posix_time::ptime >::value
-                                && !boost::is_same< T, std::string >::value >::visit( name, *value, *this );
+            visiting::do_while<    !std::is_fundamental< T >::value
+                                && !std::is_same< T, boost::posix_time::ptime >::value
+                                && !std::is_same< T, std::chrono::system_clock::time_point >::value
+                                && !std::is_same< T, std::string >::value >::visit( name, *value, *this );
             close_( name );
         }
 
@@ -66,9 +66,10 @@ class to_xml
             for( unsigned int i = 0; i < value.size(); ++i )
             {
                 open_( name );
-                visiting::do_while<    !boost::is_fundamental< T >::value
-                                    && !boost::is_same< T, boost::posix_time::ptime >::value
-                                    && !boost::is_same< T, std::string >::value >::visit( i, value[i], *this );
+                visiting::do_while<    !std::is_fundamental< T >::value
+                                    && !std::is_same< T, boost::posix_time::ptime >::value
+                                    && !std::is_same< T, std::chrono::system_clock::time_point >::value
+                                    && !std::is_same< T, std::string >::value >::visit( i, value[i], *this );
                 close_( name );
             }
         }
@@ -78,9 +79,10 @@ class to_xml
         void apply( const K& name, const T& value )
         {
             open_( name );
-            visiting::do_while<    !boost::is_fundamental< T >::value
-                                && !boost::is_same< T, boost::posix_time::ptime >::value
-                                && !boost::is_same< T, std::string >::value >::visit( name, value, *this );
+            visiting::do_while<    !std::is_fundamental< T >::value
+                                && !std::is_same< T, boost::posix_time::ptime >::value
+                                && !std::is_same< T, std::chrono::system_clock::time_point >::value
+                                && !std::is_same< T, std::string >::value >::visit( name, value, *this );
             close_( name );
         }
 
@@ -135,10 +137,9 @@ class to_xml
             closed_ = true;
         }
         static std::string value_( const boost::posix_time::ptime& t ) { return boost::posix_time::to_iso_string( t ); }
+        static std::string value_( std::chrono::system_clock::time_point t ) { return boost::posix_time::to_iso_string( timing::as_ptime( t ) ); }
         //template < typename T > static T value_( T v ) { return v; }
         template < typename T > static std::string value_( const T& v ) { return boost::lexical_cast< std::string >( v ); }
 };
 
 } // namespace comma {
-
-#endif

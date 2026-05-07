@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <chrono>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include "duration.h"
 
@@ -15,5 +16,9 @@ namespace comma { namespace timing {
 /// @param fraction_digits: number of second fraction digits
 /// @param strict: throw on uninitialised time and infinity
 std::string to_iso_string( boost::posix_time::ptime t, unsigned int fraction_digits = 6, bool strict = false );
+
+boost::posix_time::ptime as_ptime( std::chrono::system_clock::time_point t );
+
+std::chrono::system_clock::time_point as_time_point( const boost::posix_time::ptime& p );
 
 } } // namespace comma { namespace timing {
