@@ -325,7 +325,7 @@ export -f comma_path_value_from_var
 
 # Leave only the last of path=value lines with identical paths
 # No arguments, stdin to stdout
-function comma_path_value_take_last() { tac | sort -u -t= -k1,1 -s ; }
+function comma_path_value_take_last() { tac | sort -u --field-separator='=' -k1,1 -s ; }
 export -f comma_path_value_take_last
 
 # sort path value alphabetically whilst maintaining array indexing order for array elements
