@@ -1,15 +1,16 @@
 # Copyright (c) 2011 The University of Sydney
 
 from __future__ import print_function
-import argparse, ast, itertools, numpy as np, os, re, signal, sys
+import argparse, ast, itertools, numpy, os, re, signal, sys
 if sys.version_info.major < 3: from itertools import izip
 else: izip = zip # todo! watch performance! it's reported python3 zip is some 30% slower than izip
+if sys.version_info > ( 3, 9 ): import numpy.char, numpy.random
 import comma # should not it be a relative path?
 
 description = """
 evaluate numerical expressions and append computed values to csv stream
 
-using numpy version """ + np.__version__ + "\n"
+using numpy version """ + numpy.__version__ + "\n"
 
 notes_and_examples = """
 input fields:
@@ -113,7 +114,7 @@ string functions:
     ( echo 'a'; echo 'a/b' ) | %(prog)s --fields=path --format=s[36] 'n=char.count(path,"/")' --output-format=ui
     ( echo 'a'; echo 'a/b' ) | %(prog)s --fields=path --format=s[36] 'r=char.replace(path,"/","_")' --output-format=s[36]
     
-    LIMITATION: in python3, csv-eval represents strings as np.bytes_ (for consistent binary support)
+    LIMITATION: in python3, csv-eval represents strings as numpy.bytes_ (for consistent binary support)
         python2: you could write: ( echo 'a'; echo 'a/b' ) | %(prog)s --fields=path --format=s[36] 'n=char.count(path,"/")' --output-format=ui
         python3: you should write: ( echo 'a'; echo 'a/b' ) | %(prog)s --fields=path --format=s[36] 'n=char.count(char.decode(path),"/")' --output-format=ui
                  for backward compatibility, use the latter variant
@@ -384,7 +385,7 @@ def prepare_options(args):
     return True
 
 def restricted_numpy_env():
-    d = np.__dict__.copy()
+    d = numpy.__dict__.copy()
     d.update(__builtins__={})
     d.pop('sys', None)
     return d
@@ -461,7 +462,7 @@ def check_fields(fields, allow_numpy_names=True):
     for field in fields:
         if not re.match(r'^[a-z_]\w*$', field, re.I): raise csv_eval_error("'{}' is not a valid field name".format(field))
         if field in ['_init', '_input', '_update', '_output']: raise csv_eval_error("'{}' is a reserved name".format(field))
-        if not allow_numpy_names and field in np.__dict__: raise csv_eval_error("'{}' is a reserved numpy name".format(field))
+        if not allow_numpy_names and field in numpy.__dict__: raise csv_eval_error("'{}' is a reserved numpy name".format(field))
 
 def check_output_fields(fields, input_fields):
     check_fields(fields)
@@ -502,11 +503,13 @@ def evaluate(stream):
                                collect( '_init', stream.args.init_fields ),
                                collect( '_update', stream.args.update_fields ),
                                collect( '_output', stream.args.output_fields ) ] )
-    #print( "-------- init_code_string --------\n" + init_code_string + "\n--------\n", file=sys.stderr )
-    #print( "-------- code_string --------\n" + code_string + "\n--------\n", file=sys.stderr )
+    print( "-------- init_code_string --------\n" + init_code_string + "\n--------\n", file=sys.stderr )
+    print( "-------- code_string --------\n" + code_string + "\n--------\n", file=sys.stderr )
     init_code = compile( init_code_string, '<string>', 'exec' )
     code = compile( code_string, '<string>', 'exec' )
-    env = np.__dict__ if stream.args.permissive else restricted_numpy_env()    
+    env = numpy.__dict__ if stream.args.permissive else restricted_numpy_env()
+    print( "-------- env --------\n", env, "\n--------\n", file=sys.stderr )
+    print( "-------- char --------\n", 'char' in env, "\n--------\n", file=sys.stderr )
     size = None
     init = None
     input = None
