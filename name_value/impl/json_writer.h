@@ -12,6 +12,7 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/regex.hpp>
+#include <boost/version.hpp>
 #include "../../base/exception.h"
 
 namespace comma { namespace name_value { namespace impl {
@@ -55,10 +56,14 @@ template< typename C > inline void json_remove_quotes( std::basic_string< C >& j
         *source++ = *next_token++;
         target = next_token;
     }
-    json_text.erase( pretty ? source : ( source - 1 ), json_text.end() );
+    // unfortunately, boost adds trailing end of line, which we don't want in minified mode
+    // boost removed the trailing end of line in a later version (at least in 1.90), but
+    // it all is messy - do it explicitly for now (maybe use a macro switch later) 
+    if( pretty || *source != '\n' ) { json_text.erase( source, json_text.end() ); } // vodoo... todo: simplify
+    else { json_text.erase( source - 1, json_text.end() ); }
 }
 
-template< class PTree > void write_json( std::basic_ostream< typename PTree::key_type::value_type > &stream, const PTree &ptree, bool const pretty = true, bool unquote_numbers = true )
+template< class PTree > inline void write_json( std::basic_ostream< typename PTree::key_type::value_type > &stream, const PTree &ptree, bool const pretty = true, bool unquote_numbers = true )
 {
     std::basic_ostringstream< typename PTree::key_type::value_type > oss;
     boost::property_tree::write_json( oss, ptree, pretty );
@@ -70,8 +75,18 @@ template< class PTree > void write_json( std::basic_ostream< typename PTree::key
     }
     else
     {
-        if( pretty ) { stream << oss.str(); }
-        else { std::string s = oss.str(); stream << s.substr( 0, s.size() - 1 ); } // unfortunately, boost adds trailing end of line, which we don't want in minified mode
+        if( pretty )
+        {
+            stream << oss.str();
+        }
+        else
+        {
+            // unfortunately, boost adds trailing end of line, which we don't want in minified mode
+            // boost removed the trailing end of line in a later version (at least in 1.90), but
+            // it all is messy - do it explicitly for now (maybe use a macro switch later) 
+            const std::string& s = oss.str();
+            stream << ( s.back() == '\n' ? s.substr( 0, s.size() - 1 ) : s );
+        }
     }
     stream << std::flush;
 }
