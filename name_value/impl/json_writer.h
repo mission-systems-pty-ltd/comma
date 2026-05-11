@@ -56,11 +56,7 @@ template< typename C > inline void json_remove_quotes( std::basic_string< C >& j
         *source++ = *next_token++;
         target = next_token;
     }
-    // unfortunately, boost adds trailing end of line, which we don't want in minified mode
-    // boost removed the trailing end of line in a later version (at least in 1.90), but
-    // it all is messy - do it explicitly for now (maybe use a macro switch later) 
-    if( pretty || *source != '\n' ) { json_text.erase( source, json_text.end() ); } // vodoo... todo: simplify
-    else { json_text.erase( source - 1, json_text.end() ); }
+    json_text.erase( source, json_text.end() );
 }
 
 template< class PTree > inline void write_json( std::basic_ostream< typename PTree::key_type::value_type > &stream, const PTree &ptree, bool const pretty = true, bool unquote_numbers = true )
@@ -71,7 +67,10 @@ template< class PTree > inline void write_json( std::basic_ostream< typename PTr
     {
         std::string s = oss.str();
         json_remove_quotes( s, pretty );
-        stream << s;
+        // unfortunately, boost adds trailing end of line, which we don't want in minified mode
+        // boost removed the trailing end of line in a later version (at least in 1.90), but
+        // it all is messy - do it explicitly for now (maybe use a macro switch later)
+        stream << ( !pretty && s.back() == '\n' ? s.substr( 0, s.size() - 1 ) : s );
     }
     else
     {
