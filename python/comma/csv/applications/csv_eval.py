@@ -4,7 +4,7 @@ from __future__ import print_function
 import argparse, ast, itertools, numpy, os, re, signal, sys
 if sys.version_info.major < 3: from itertools import izip
 else: izip = zip # todo! watch performance! it's reported python3 zip is some 30% slower than izip
-if sys.version_info > ( 3, 9 ): import numpy.char, numpy.random
+if int( numpy.__version__.split( '.' )[0] ) >= 2: import numpy.char, numpy.random
 import comma # should not it be a relative path?
 
 description = """
