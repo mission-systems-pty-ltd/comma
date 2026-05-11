@@ -226,7 +226,7 @@ struct property_tree // quick and dirty
                 if( !cur_ ) { return; }
                 boost::optional< std::string > s = name.empty() ? cur_->get_value_optional< std::string >() : cur_->get_optional< std::string >( name );
                 if( !s ) { s = cur_->get_optional< std::string >( "<xmlattr>." + name ); }
-                if( s ) { v = boost::posix_time::from_iso_string( *s ); }
+                if( s ) { v = timing::from_iso_string( *s ); }
             }
 
             void value_( const std::string& name, boost::optional< std::chrono::system_clock::time_point >& v ) // quick and dirty, imlement traits instead
@@ -234,7 +234,7 @@ struct property_tree // quick and dirty
                 if( !cur_ ) { return; }
                 boost::optional< std::string > s = name.empty() ? cur_->get_value_optional< std::string >() : cur_->get_optional< std::string >( name );
                 if( !s ) { s = cur_->get_optional< std::string >( "<xmlattr>." + name ); }
-                if( s ) { v = timing::as_time_point( boost::posix_time::from_iso_string( *s ) ); }
+                if( s ) { v = timing::as_time_point( timing::from_iso_string( *s ) ); }
             }
 
             template < typename T > void value_( const std::string& name, boost::optional< T >& v )

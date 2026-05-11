@@ -10,6 +10,7 @@
 #include <boost/optional.hpp>
 #include <boost/lexical_cast.hpp>
 #include "../string/string.h"
+#include "../timing/conversions.h"
 #include "impl/options.h"
 
 namespace comma { namespace name_value {
@@ -85,10 +86,7 @@ template <> inline bool lexical_cast< bool >( const std::string& s )
 
 template <> inline boost::posix_time::ptime lexical_cast< boost::posix_time::ptime >( const std::string& s )
 {
-    if ( s == "not-a-date-time" ) { return boost::posix_time::not_a_date_time; }
-    else if ( s == "+infinity" || s == "+inf" || s == "inf" ) { return boost::posix_time::pos_infin; }
-    else if ( s == "-infinity" || s == "-inf" ) { return boost::posix_time::neg_infin; }
-    else return boost::posix_time::from_iso_string( s );
+    return timing::from_iso_string( s );
 }
 
 } // namespace detail {
