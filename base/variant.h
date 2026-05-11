@@ -98,6 +98,8 @@ class variant
         void reset() { _values.reset(); }
         template < typename S > static unsigned int index_of() { return impl::variant< Args... >::size - impl::variant< Args... >::template rindex< S >() - 1; }
         unsigned int index() const { return _values.index(); }
+        const impl::variant< Args... >& operator()() const { return _values; }
+        operator impl::variant< Args... >() const { return _values; }
     protected:
         impl::variant< Args... > _values;
 };
