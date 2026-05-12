@@ -455,7 +455,7 @@ struct fruit
 
 struct veg
 {
-    static std::vector< std::string > choices() { return { "cucumber", "pumpkin" }; }
+    static std::array< const char*, 2 > choices() { return { "cucumber", "pumpkin" }; } // static std::vector< std::string > choices() { return { "cucumber", "pumpkin" }; }
     enum class values { cucumber, pumpkin };
 };
 
