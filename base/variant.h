@@ -10,6 +10,11 @@
 // #else
 // #include <boost/optional.hpp>
 // #endif
+#if __cplusplus >= 201703L
+    #include <variant>
+#else
+    // ...
+#endif
 #include <type_traits>
 #include <boost/optional.hpp>
 #include "exception.h"
@@ -57,6 +62,7 @@ template < typename T, typename... Args > struct variant  // todo? use tuple ins
     void reset() { t.reset(); values.reset(); }
     template < typename S > static unsigned int rindex() { return std::is_same< T, S >::value ? size - 1 : variant< Args... >::template rindex< S >(); }
     unsigned int index( unsigned int i = 0 ) const { return t ? i : values.index( i + 1 ); }
+    template <  typename V > V& as( V& v ) { if( t ) { v = *t; return v; }; return values.as( v ); }
 };
 
 template < typename T > struct variant< T >  // todo? use tuple instead?
@@ -73,6 +79,7 @@ template < typename T > struct variant< T >  // todo? use tuple instead?
     void reset() { t.reset(); }
     template < typename S > static unsigned int rindex() { bool same_type = std::is_same< T, S >::value; COMMA_ASSERT( same_type, "type not found in type list" ); return 0; }
     unsigned int index( unsigned int i = 0 ) const { return t ? i : ( i + 1 ); }
+    template <  typename V > V& as( V& v ) { if( t ) { v = *t; }; return v; }
 };
 
 } // namespace impl {
@@ -100,6 +107,8 @@ class variant
         unsigned int index() const { return _values.index(); }
         const impl::variant< Args... >& operator()() const { return _values; }
         operator impl::variant< Args... >() const { return _values; }
+        template < typename F > bool visit( F&& f ) { return _values.visit( f ); }
+        template <  typename V > V as() { V v; return _values.as( v ); }
     protected:
         impl::variant< Args... > _values;
 };

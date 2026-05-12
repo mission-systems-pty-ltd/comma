@@ -1,5 +1,10 @@
 // Copyright (c) 2023 Vsevolod Vlaskine
 
+#if __cplusplus >= 201703L
+    #include <variant>
+#else
+    // ...
+#endif
 #include "../exception.h"
 #include "../variant.h"
 #include <gtest/gtest.h>
@@ -132,6 +137,31 @@ TEST( base, variant )
         v.reset();
         EXPECT_EQ( v.index(), 3 );
     }
+    #if __cplusplus >= 201703L
+        {
+            typedef comma::variant< int, float, std::string > variant_t;
+            typedef std::variant< std::string, double, int, float > target_t;
+            {
+                variant_t v;
+                v.as< target_t >();
+            }
+            {
+                variant_t v;
+                v.set< int >( 5 );
+                EXPECT_EQ( std::get< int >( v.as< target_t >() ), 5 );
+            }
+            {
+                variant_t v;
+                v.set< float >( 10 );
+                EXPECT_EQ( std::get< float >( v.as< target_t >() ), 10 );
+            }
+            {
+                variant_t v;
+                v.set< std::string >( "abc" );
+                EXPECT_EQ( std::get< std::string >( v.as< target_t >() ), "abc" );
+            }
+        }
+    #endif // #if __cplusplus >= 201703L
 }
 
 TEST( base, named_variant )
