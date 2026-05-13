@@ -138,6 +138,9 @@ struct named_variant : public variant< Args... >, public Names
     typedef variant< Args... > variant_t;
     template < typename S > static auto name_of() { return Names::names()[ variant_t::template index_of< S >() ]; }
     auto name() const { COMMA_ASSERT( bool( *this ), "asked for name, but value is not set" ); return this->names()[this->index()]; }
+    static unsigned int index_of( const std::string& n );
+    using variant_t::touch_at;
+    named_variant& touch_at( const std::string& n );
 };
 
 template < typename Names >
@@ -203,5 +206,15 @@ inline variant< Args... >& variant< Args... >::touch_at( unsigned int i )
     }
     COMMA_THROW( comma::exception, "currently up to 12 types are supported; got index " << i );
 }
+
+template < typename Names, typename... Args >
+inline unsigned int named_variant< Names, Args... >::index_of( const std::string& n )
+{
+    for( unsigned int i = 0; i < Names::names().size(); ++i ) { if( Names::names()[i] == n ) { return i; } }
+    COMMA_THROW( comma::exception, "not found in names: '" << n << "'" );
+}
+
+template < typename Names, typename... Args >
+inline named_variant< Names, Args... >& named_variant< Names, Args... >::touch_at( const std::string& n ) { this->touch_at( index_of( n ) ); return *this; }
 
 } // namespace comma {

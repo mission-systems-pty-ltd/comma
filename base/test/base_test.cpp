@@ -180,11 +180,25 @@ TEST( base, variant )
 TEST( base, named_variant )
 {
     {
-        struct naming { static std::array< std::string, 3 > names() { return { "a", "b", "c" }; } };
-        typedef comma::named_variant< naming, int, float, double > variant_t;
+        struct naming { static std::array< std::string, 4 > names() { return { "a", "b", "c", "d" }; } };
+        typedef comma::named_variant< naming, int, float, double, std::string > variant_t;
         EXPECT_EQ( variant_t::name_of< int >(), "a" );
         EXPECT_EQ( variant_t::name_of< float >(), "b" );
         EXPECT_EQ( variant_t::name_of< double >(), "c" );
+        EXPECT_EQ( variant_t::name_of< std::string >(), "d" );
+        EXPECT_EQ( variant_t::index_of( "a" ), 0 );
+        EXPECT_EQ( variant_t::index_of( "b" ), 1 );
+        EXPECT_EQ( variant_t::index_of( "c" ), 2 );
+        EXPECT_EQ( variant_t::index_of( "d" ), 3 );
+        variant_t v;
+        EXPECT_TRUE( v.touch_at( 0 ).is< int >() );
+        EXPECT_TRUE( v.touch_at( 1 ).is< float >() );
+        EXPECT_TRUE( v.touch_at( 2 ).is< double >() );
+        EXPECT_TRUE( v.touch_at( 3 ).is< std::string >() );
+        EXPECT_TRUE( v.touch_at( "a" ).is< int >() );
+        EXPECT_TRUE( v.touch_at( "b" ).is< float >() );
+        EXPECT_TRUE( v.touch_at( "c" ).is< double >() );
+        EXPECT_TRUE( v.touch_at( "d" ).is< std::string >() );
     }
     {
         struct naming { static std::array< std::string, 3 > names() { return { "a", "b", "c" }; } };
