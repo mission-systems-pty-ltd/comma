@@ -58,7 +58,9 @@ template < typename T, typename... Args > struct variant  // todo? use tuple ins
     template < typename S > void set( const S& s ) { variant_traits< T, std::is_same< T, S >::value >::set( t, s ); values.set( s ); }
     template < typename S > void set( const boost::optional< S >& s ) { variant_traits< T, std::is_same< T, S >::value >::set( t, s ); values.set( s ); }
     template < typename S > const S& get() const { return variant_traits< T, std::is_same< T, S >::value >::template get< S >( t, values ); }
+    template < typename S > S& get() { return variant_traits< T, std::is_same< T, S >::value >::template get< S >( t, values ); }
     template < typename S > const boost::optional< S >& optional() const { return variant_traits< T, std::is_same< T, S >::value >::template optional< S >( t, values ); }
+    template < unsigned int I > auto at() const { using type = typename std::tuple_element< I, std::tuple< T, Args... > >::type; auto v = optional< type >(); return v ? *v : type(); }
     void reset() { t.reset(); values.reset(); }
     template < typename S > static unsigned int rindex() { return std::is_same< T, S >::value ? size - 1 : variant< Args... >::template rindex< S >(); }
     unsigned int index( unsigned int i = 0 ) const { return t ? i : values.index( i + 1 ); }
@@ -75,7 +77,9 @@ template < typename T > struct variant< T >  // todo? use tuple instead?
     template < typename S > void set( const S& s ) { variant_traits< T, std::is_same< T, S >::value >::set( t, s ); }
     template < typename S > void set( const boost::optional< S >& s ) { variant_traits< T, std::is_same< T, S >::value >::set( t, s ); }
     template < typename S > const S& get() const { return variant_traits< T, std::is_same< T, S >::value >::template get< S >( t, type_is_not_on_type_list() ); }
+    template < typename S > S& get() { return variant_traits< T, std::is_same< T, S >::value >::template get< S >( t, type_is_not_on_type_list() ); }
     template < typename S > const boost::optional< S >& optional() const { return variant_traits< T, std::is_same< T, S >::value >::template optional< S >( t, type_is_not_on_type_list() ); }
+    template < unsigned int I > auto at() const { using type = typename std::tuple_element< I, std::tuple< T > >::type; auto v = optional< type >(); return v ? *v : type(); }
     void reset() { t.reset(); }
     template < typename S > static unsigned int rindex() { bool same_type = std::is_same< T, S >::value; COMMA_ASSERT( same_type, "type not found in type list" ); return 0; }
     unsigned int index( unsigned int i = 0 ) const { return t ? i : ( i + 1 ); }
@@ -108,7 +112,8 @@ class variant
         const impl::variant< Args... >& operator()() const { return _values; }
         operator impl::variant< Args... >() const { return _values; }
         template < typename F > bool visit( F&& f ) { return _values.visit( f ); }
-        template <  typename V > V as() { V v; return _values.as( v ); }
+        template < typename V > V as() { V v; return _values.as( v ); }
+        template < unsigned int I > auto at() const { return _values.template at< I >(); }
     protected:
         impl::variant< Args... > _values;
 };

@@ -162,6 +162,13 @@ TEST( base, variant )
             }
         }
     #endif // #if __cplusplus >= 201703L
+    {
+        typedef comma::variant< int, float, std::string > variant_t;
+        variant_t v;
+        std::cerr << "==> a: '" << v.at< 0 >() << "'" << std::endl;
+        std::cerr << "==> b: '" << v.at< 1 >() << "'" << std::endl;
+        std::cerr << "==> c: '" << v.at< 2 >() << "'" << std::endl;
+    }
 }
 
 TEST( base, named_variant )
