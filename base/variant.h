@@ -114,6 +114,8 @@ class variant
         template < typename F > bool visit( F&& f ) { return _values.visit( f ); }
         template < typename V > V as() { V v; return _values.as( v ); }
         template < unsigned int I > auto at() const { return _values.template at< I >(); }
+        variant& touch_at( unsigned int i );
+        // auto at( unsigned int i ) const;
     protected:
         impl::variant< Args... > _values;
 };
@@ -143,5 +145,63 @@ struct make_named_variant
 {
     template < typename... Args > struct variant { typedef named_variant< Names, Args... > type; };
 };
+
+template < unsigned int I, bool Valid > struct _apply;
+
+template < unsigned int I > struct _apply< I, true >
+{
+    template < typename T > static auto at( const T& t ) { return t.template at< I >(); }
+    template < typename T > static T& touch_at( T& t ) { t = t.template at< I >(); return t; } // quick and dirty
+};
+
+template < unsigned int I > struct _apply< I, false >
+{
+    template < typename T > static auto at( const T& t ) { COMMA_THROW( comma::exception, "expected index less than variant size; got: " << I ); } // never gets called
+    template < typename T > static T& touch_at( T& t ) { COMMA_THROW( comma::exception, "expected index less than variant size; got: " << I ); } // never gets called
+};
+
+// template < typename... Args >
+// inline auto variant< Args... >::at( unsigned int i ) const
+// {
+//     constexpr unsigned int s = std::tuple_size< std::tuple< Args... > >::value;
+//     switch( i )
+//     {
+//         case 0: return _apply< 0, 0 < s >::at( *this );
+//         case 1: return _apply< 1, 1 < s >::at( *this );
+//         case 2: return _apply< 2, 2 < s >::at( *this );
+//         case 3: return _apply< 3, 3 < s >::at( *this );
+//         case 4: return _apply< 4, 4 < s >::at( *this );
+//         case 5: return _apply< 5, 5 < s >::at( *this );
+//         case 6: return _apply< 6, 6 < s >::at( *this );
+//         case 7: return _apply< 7, 7 < s >::at( *this );
+//         case 8: return _apply< 8, 8 < s >::at( *this );
+//         case 9: return _apply< 9, 9 < s >::at( *this );
+//         case 10: return _apply< 10, 10 < s >::at( *this );
+//         case 11: return _apply< 11, 11 < s >::at( *this );
+//     }
+//     COMMA_THROW( comma::exception, "currently up to 12 types are supported; got index " << i );
+// }
+
+template < typename... Args >
+inline variant< Args... >& variant< Args... >::touch_at( unsigned int i )
+{
+    constexpr unsigned int s = std::tuple_size< std::tuple< Args... > >::value;
+    switch( i )
+    {
+        case 0: return _apply< 0, 0 < s >::touch_at( *this );
+        case 1: return _apply< 1, 1 < s >::touch_at( *this );
+        case 2: return _apply< 2, 2 < s >::touch_at( *this );
+        case 3: return _apply< 3, 3 < s >::touch_at( *this );
+        case 4: return _apply< 4, 4 < s >::touch_at( *this );
+        case 5: return _apply< 5, 5 < s >::touch_at( *this );
+        case 6: return _apply< 6, 6 < s >::touch_at( *this );
+        case 7: return _apply< 7, 7 < s >::touch_at( *this );
+        case 8: return _apply< 8, 8 < s >::touch_at( *this );
+        case 9: return _apply< 9, 9 < s >::touch_at( *this );
+        case 10: return _apply< 10, 10 < s >::touch_at( *this );
+        case 11: return _apply< 11, 11 < s >::touch_at( *this );
+    }
+    COMMA_THROW( comma::exception, "currently up to 12 types are supported; got index " << i );
+}
 
 } // namespace comma {

@@ -165,9 +165,15 @@ TEST( base, variant )
     {
         typedef comma::variant< int, float, std::string > variant_t;
         variant_t v;
-        std::cerr << "==> a: '" << v.at< 0 >() << "'" << std::endl;
-        std::cerr << "==> b: '" << v.at< 1 >() << "'" << std::endl;
-        std::cerr << "==> c: '" << v.at< 2 >() << "'" << std::endl;
+        EXPECT_TRUE( ( std::is_same< decltype( v.at< 0 >() ), int >::value ) );
+        EXPECT_TRUE( ( std::is_same< decltype( v.at< 1 >() ), float >::value ) );
+        EXPECT_TRUE( ( std::is_same< decltype( v.at< 2 >() ), std::string >::value ) );
+        EXPECT_EQ( v.touch_at( 0 ).index(), 0 );
+        EXPECT_EQ( v.touch_at( 1 ).index(), 1 );
+        EXPECT_EQ( v.touch_at( 2 ).index(), 2 );
+        // EXPECT_TRUE( ( std::is_same< decltype( v.at( 0 ) ), int >::value ) );
+        // EXPECT_TRUE( ( std::is_same< decltype( v.at( 1 ) ), float >::value ) );
+        // EXPECT_TRUE( ( std::is_same< decltype( v.at( 2 ) ), std::string >::value ) );
     }
 }
 
