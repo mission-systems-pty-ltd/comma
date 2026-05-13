@@ -503,13 +503,13 @@ def evaluate(stream):
                                collect( '_init', stream.args.init_fields ),
                                collect( '_update', stream.args.update_fields ),
                                collect( '_output', stream.args.output_fields ) ] )
-    print( "-------- init_code_string --------\n" + init_code_string + "\n--------\n", file=sys.stderr )
-    print( "-------- code_string --------\n" + code_string + "\n--------\n", file=sys.stderr )
+    # print( "-------- init_code_string --------\n" + init_code_string + "\n--------\n", file=sys.stderr )
+    # print( "-------- code_string --------\n" + code_string + "\n--------\n", file=sys.stderr )
     init_code = compile( init_code_string, '<string>', 'exec' )
     code = compile( code_string, '<string>', 'exec' )
     env = numpy.__dict__ if stream.args.permissive else restricted_numpy_env()
-    print( "-------- env --------\n", env, "\n--------\n", file=sys.stderr )
-    print( "-------- char --------\n", 'char' in env, "\n--------\n", file=sys.stderr )
+    # print( "-------- env --------\n", env, "\n--------\n", file=sys.stderr )
+    # print( "-------- char --------\n", 'char' in env, "\n--------\n", file=sys.stderr )
     size = None
     init = None
     input = None
