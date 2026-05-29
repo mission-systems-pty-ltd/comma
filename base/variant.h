@@ -140,6 +140,7 @@ struct named_variant : public variant< Args... >, public Names
     auto name() const { COMMA_ASSERT( bool( *this ), "asked for name, but value is not set" ); return this->names()[this->index()]; }
     static unsigned int index_of( const std::string& n );
     using variant_t::touch_at;
+    using variant_t::as;
     named_variant& touch_at( const std::string& n );
 };
 
