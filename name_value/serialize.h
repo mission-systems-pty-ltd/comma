@@ -36,6 +36,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <vector>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/property_tree/ini_parser.hpp>
@@ -57,6 +58,13 @@ template < typename T > T read( const std::string& filename, const char* root );
 template < typename T > T read( const std::string& filename, bool permissive, bool split_filename );
 template < typename T > T read( const std::string& filename, bool permissive );
 template < typename T > T read( const std::string& filename );
+template < typename T > T read( const std::vector< std::string >& filenames, const xpath& root, bool permissive );
+template < typename T > T read( const std::vector< std::string >& filenames, const char* root, bool permissive );
+template < typename T > T read( const std::vector< std::string >& filenames, const xpath& root );
+template < typename T > T read( const std::vector< std::string >& filenames, const char* root );
+template < typename T > T read( const std::vector< std::string >& filenames, bool permissive, bool split_filename );
+template < typename T > T read( const std::vector< std::string >& filenames, bool permissive );
+template < typename T > T read( const std::vector< std::string >& filenames );
 template < typename T > void read( T& t, const std::string& filename, const xpath& root, bool permissive );
 template < typename T > void read( T& t, const std::string& filename, const char* root, bool permissive );
 template < typename T > void read( T& t, const std::string& filename, const xpath& root );
@@ -654,8 +662,22 @@ template < typename T > inline T read( const std::string& filename, const char* 
 template < typename T > inline T read( const std::string& filename, bool permissive, bool split_filename ) { T t; read< T >( t, filename, permissive, split_filename ); }
 template < typename T > inline T read( const std::string& filename, bool permissive ) { return read< T >( filename, xpath(), permissive ); }
 template < typename T > inline T read( const std::string& filename ) { return read< T >( filename, xpath(), true ); }
+
+template < typename T > inline T read( const std::vector< std::string >& filenames, const xpath& root, bool permissive )
+{
+    T t{};
+    for( const auto& filename: filenames ) { read( t, filename, root, permissive ); }
+    return t;
+}
+template < typename T > inline T read( const std::vector< std::string >& filenames, const char* root, bool permissive ) { return read< T >( filenames, root ? xpath( root ) : xpath{}, permissive ); }
+template < typename T > inline T read( const std::vector< std::string >& filenames, const xpath& root ) { return read< T >( filenames, root, true ); }
+template < typename T > inline T read( const std::vector< std::string >& filenames, const char* root ) { return read< T >( filenames, root, true ); }
+// template < typename T > inline T read( const std::vector< std::string >& filenames, bool permissive, bool split_filename ); // todo
+template < typename T > inline T read( const std::vector< std::string >& filenames, bool permissive ) { return read< T >( filenames, xpath(), permissive ); }
+template < typename T > inline T read( const std::vector< std::string >& filenames ) { return read< T >( filenames, xpath(), true ); }
+
 template < typename T > inline T read( std::istream& stream, const xpath& root, bool permissive ) { T t; read< T >( t, stream, root, permissive ); return t; }
-template < typename T > inline T read( std::istream& stream, const char* root, bool permissive ) { return root ? read< T >( stream, xpath( root ), permissive ) : read< T >( stream, permissive ); }
+template < typename T > inline T read( std::istream& stream, const char* root, bool permissive ) { return read< T >( stream, root ? xpath( root ): xpath{}, permissive ); }
 template < typename T > inline T read( std::istream& stream, const xpath& root ) { return read< T >( stream, root, true ); }
 template < typename T > inline T read( std::istream& stream, const char* root ) { return root ? read< T >( stream, xpath( root ), true ) : read< T >( stream, true ); }
 template < typename T > inline T read( std::istream& stream, bool permissive ) { return read< T >( stream, xpath(), permissive ); }
