@@ -351,6 +351,14 @@ TEST( name_value, allowed_names )
     EXPECT_THROW( name_value::map( "a=1;b;x=5;b;c=2", ';', '=', false, "a,b,c" ), comma::exception );
 }
 
+TEST( name_value_parser, unaliased )
+{
+    EXPECT_EQ( "", name_value::parser::unaliased( "" ) );
+    EXPECT_EQ( "", name_value::parser::unaliased( "", { { "x", "xxx" } } ) );
+    EXPECT_EQ( "a;b;c=1;d=2=3", name_value::parser::unaliased( "a;b;c=1;d=2=3" ) );
+    EXPECT_EQ( "xxx;yyy/zzz=1;aaa;;;;bbb=2=3", name_value::parser::unaliased( "x;yz=1;a;;;;b=2=3", { { "x", "xxx" }, { "yz", "yyy/zzz" }, { "a", "aaa" }, { "b", "bbb" } } ) );
+}
+
 } } }
 
 int main( int argc, char* argv[] )

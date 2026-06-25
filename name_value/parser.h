@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <unordered_map>
 #include "../visiting/apply.h"
 #include "../name_value/map.h"
 #include "../name_value/impl/options.h"
@@ -55,6 +56,9 @@ public:
     ///     else if( operation.is< some_operation >() ) { /* handle */ }
     ///     etc
     static std::string mangled( const std::string& line, const std::string& prefix = "", char delimiter = ';' );
+
+    /// e.g. on aliases { "x": "xxx", "y": "yyy" }: "x;y=1;zzz=2" -> "xxx;yyy=1;zzz=2"
+    static std::string unaliased( const std::string& line, const std::unordered_map< std::string, std::string >& aliases = {}, char delimiter = ';', char value_delimiter = '=' );
 
 private:
     impl::options _options;
