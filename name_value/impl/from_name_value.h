@@ -107,7 +107,7 @@ private:
 template < typename K, typename T, template < typename > class Optional > inline void from_name_value::_apply_optional( const K& name, Optional< T >& value )
 {
     if( value ) { apply( name, *value ); return; }
-    T t;
+    T t{};
     _empty.push_back( true );
     apply( name, t );
     if( !_empty.back() ) { value = t; }
@@ -117,7 +117,7 @@ template < typename K, typename T, template < typename > class Optional > inline
 template < typename K, typename T, template < typename > class Ptr > inline void from_name_value::_apply_ptr( const K& name, Ptr< T >& value )
 {
     if( value ) { apply( name, *value ); return; }
-    T t;
+    T t{};
     _empty.push_back( true );
     apply( name, t );
     if( !_empty.back() ) { value.reset(); value.reset( new T( t ) ); } // todo? emplace? 
