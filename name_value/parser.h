@@ -57,6 +57,8 @@ public:
     ///     etc
     static std::string mangled( const std::string& line, const std::string& prefix = "", char delimiter = ';' );
 
+    static std::string mangled( const std::string& line, char delimiter ) { return mangled( line, "", delimiter ); }
+
     /// e.g. on aliases { "x": "xxx", "y": "yyy" }: "x;y=1;zzz=2" -> "xxx;yyy=1;zzz=2"
     static std::string unaliased( const std::string& line, const std::unordered_map< std::string, std::string >& aliases = {}, char delimiter = ';', char value_delimiter = '=' );
 
