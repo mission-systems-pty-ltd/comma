@@ -102,7 +102,7 @@ template < typename T > struct traits
 
 template <> struct traits< boost::posix_time::ptime >
 {
-    struct hash : public std::unary_function< boost::posix_time::ptime, std::size_t >
+    struct hash : public std::function< std::size_t( boost::posix_time::ptime ) > // deprecated: std::unary_function< boost::posix_time::ptime, std::size_t >
     {
         std::size_t operator()( const boost::posix_time::ptime& t ) const
         {
