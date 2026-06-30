@@ -12,7 +12,6 @@
 #include <deque>
 #include <complex>
 #include <map>
-#include <queue>
 #include <set>
 #include <string>
 #include <tuple>
@@ -345,12 +344,6 @@ template < typename T > struct traits< std::set< T > >
 {
     template < typename K, typename V > static void visit( const K& key, std::set< T >& t, V& v ) { impl::visit_non_associative_container( key, t, v ); }
     template < typename K, typename V > static void visit( const K& key, const std::set< T >& t, V& v ) { impl::visit_non_associative_container( key, t, v ); }    
-};
-
-template < typename T > struct traits< std::queue< T > >
-{
-    template < typename K, typename V > static void visit( const K& key, std::queue< T >& t, V& v ) { impl::visit_non_associative_container( key, t, v ); }
-    template < typename K, typename V > static void visit( const K& key, const std::queue< T >& t, V& v ) { impl::visit_non_associative_container( key, t, v ); }    
 };
 
 template < typename T > struct traits< std::deque< T > >
