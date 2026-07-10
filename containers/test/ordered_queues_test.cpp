@@ -200,3 +200,90 @@ TEST( queues, boost_time )
     EXPECT_EQ( std::get<1>(q).size(), 1 );
     EXPECT_EQ( q.ready(), true );
 }
+
+namespace comma { namespace testing { namespace bounded_queues { namespace basics {
+
+using queues_t = comma::containers::ordered::bounded_queues< int, int, int >;
+
+static queues_t queue( const std::vector< int >& a, const std::vector< int >& b, int max_diff = 0, int max_bounding_diff = 0 )
+{
+    queues_t q( max_diff, max_bounding_diff );
+    for( auto i: a ) { std::get< 0 >( q ).push_back( { i, i } ); }
+    for( auto i: b ) { std::get< 1 >( q ).push_back( { i, i } ); }
+    return q;
+}
+
+template < unsigned int N >
+static queues_t pop_at( const queues_t& q )
+{
+    queues_t t = q;
+    t.pop_stale< N >();
+    return t;
+}
+
+static queues_t pop( const queues_t& q ) { return pop_at< 1 >( q ); }
+
+TEST( bounded_queues, front_bounded_by )
+{
+    EXPECT_FALSE( queue( {}, {} ).front_bounded_by< 0 >() );
+    EXPECT_FALSE( queue( {}, {} ).front_bounded_by< 1 >() );
+    EXPECT_TRUE ( queue( { 0 }, { 0 } ).front_bounded_by< 1 >() );
+    EXPECT_FALSE( queue( { 0 }, { 1 } ).front_bounded_by< 1 >() );
+    EXPECT_FALSE( queue( { 1 }, { 0 } ).front_bounded_by< 1 >() );
+    EXPECT_TRUE ( queue( { 0 }, { 0, 1 } ).front_bounded_by< 1 >() );
+    EXPECT_TRUE ( queue( { 0 }, { 0, 1 } ).front_bounded_by< 1 >() );
+    EXPECT_TRUE ( queue( { 0 }, { 0, 1 } ).front_bounded_by< 1 >() );
+    EXPECT_TRUE ( queue( { 0 }, { 0, 2 }, 0, 1 ).front_bounded_by< 1 >() );
+    EXPECT_FALSE( queue( { 1 }, { 0, 2 }, 0, 1 ).front_bounded_by< 1 >() );
+    EXPECT_FALSE( queue( { 2 }, { 0, 2 }, 0, 1 ).front_bounded_by< 1 >() );
+    EXPECT_TRUE ( queue( { 0 }, { 0, 1 }, 0, 1 ).front_bounded_by< 1 >() );
+}
+
+TEST( bounded_queues, pop_stale )
+{
+    EXPECT_NO_THROW( pop_at< 0 >( queue( {}, {} ) ) );
+    EXPECT_NO_THROW( pop_at< 1 >( queue( {}, {} ) ) );
+    EXPECT_TRUE ( pop( queue( { 0 }, { 0, 2 }, 0, 1 ) ).front_bounded_by< 1 >() );
+    EXPECT_FALSE( pop( queue( { 1 }, { 0, 2 }, 0, 1 ) ).front_bounded_by< 1 >() );
+    {
+        auto q = pop( queue( { 1 }, { 0, 2 }, 0, 2 ) );
+        EXPECT_EQ( q.first().size(), 1 );
+        EXPECT_EQ( q.second().size(), 2 );
+        EXPECT_TRUE( q.front_bounded_by< 1 >() );
+    }
+    {
+        auto q = pop( queue( { 1 }, { 0, 3, 5 }, 0, 2 ) );
+        EXPECT_EQ( q.first().size(), 0 );
+        EXPECT_EQ( q.second().size(), 2 );
+        EXPECT_FALSE( q.front_bounded_by< 1 >() );
+    }
+    {
+        auto q = pop( queue( { 1, 3 }, { 0, 3, 5 }, 0, 2 ) );
+        EXPECT_EQ( q.first().size(), 1 );
+        EXPECT_EQ( q.second().size(), 2 );
+        EXPECT_TRUE( q.front_bounded_by< 1 >() );
+    }
+    {
+        auto q = pop( queue( { 1, 1, 4 }, { 0, 3, 5 }, 0, 2 ) );
+        EXPECT_EQ( q.first().size(), 1 );
+        EXPECT_EQ( q.second().size(), 2 );
+        EXPECT_TRUE( q.front_bounded_by< 1 >() );
+    }
+    {
+        auto q = pop( queue( { 1, 1, 5 }, { 0, 3, 5 }, 0, 2 ) );
+        EXPECT_EQ( q.first().size(), 1 );
+        EXPECT_EQ( q.second().size(), 1 );
+        EXPECT_TRUE( q.front_bounded_by< 1 >() );
+    }
+    {
+        auto q = pop( queue( { 1, 1, 6 }, { 0, 3, 5 }, 0, 2 ) );
+        EXPECT_EQ( q.first().size(), 1 );
+        EXPECT_EQ( q.second().size(), 1 );
+        EXPECT_FALSE( q.front_bounded_by< 1 >() );
+    }
+    EXPECT_TRUE ( pop( queue( { 1 }, { 0, 2 }, 0, 2 ) ).front_bounded_by< 1 >() );
+    EXPECT_FALSE( pop( queue( { 3 }, { 0, 2 }, 0, 1 ) ).front_bounded_by< 1 >() );
+
+}
+
+} } } } // namespace comma { namespace testing { namespace bounded_queues { namespace basics {
