@@ -12,7 +12,10 @@ function description()
 {
     cat <<EOF
 --help,-h; output instructions for using this program and exit
---source; for each name, show the source config instead of its value
+--indented; if --to xml, output indented
+--minify; if --to json, output minified
+--output-source,--source; for each name, output the name of the source config from which value comes instead of the value itself
+--to=<what>; default=path-value; choices: ini, json, path-value, xml
 --unquote-numbers,-u; unquote numbers
 EOF
 }
@@ -29,44 +32,50 @@ e.g: assume we have a default config file and then the user would like to set ju
      the rest as default; then we simply apply the user's config on top of default as in examples below
 
 usage
-    name-value-apply [<options>] <files...>
+    name-value-apply [<options>] <file> [<file>...]
+    <file>: <path>|'-'
+            '-': stdin
 
 options
 $( description | sed 's/^/    /' )
 
-example
-    > ( echo a=5; echo b=7 ) > cfg1.pv; ( echo a=6; echo c=8 ) > cfg2.pv
+examples
+    basics
+        echo '{ "a": "hello", "b": "world" }' | name-value-apply - <( echo "a=bye" ) --to json
+        {
+            "a": "bye",
+            "b": "world"
+        }
 
-    > name-value-apply cfg1.pv cfg2.pv
-    a="6"
-    b="7"
-    c="8"
+    a bit more
+        > ( echo a=5; echo b=hello ) > config1.pv; ( echo '{ "a": 6, "c": 8 }' ) > config2.json
 
-    > name-value-apply --source cfg*
-    a="cfg2.pv"
-    b="cfg1.pv"
-    c="cfg2.pv"
+        > name-value-apply config1.pv config2.json --unquote-numbers
+        a=6
+        b="hello"
+        c=8
+
+        > name-value-apply --source config*
+        a="config2.pv"
+        b="config1.pv"
+        c="config2.pv"
 
 EOF
     exit 0
 }
 
-function combine_files() { for ff in "${files[@]}"; do cat "$ff" | name-value-convert | sed "s~$~=\"$ff\"~g"; done; }
+function combine_files() { for f in "${files[@]}"; do cat "$f" | name-value-convert | sed "s~$~=\"$f\"~g"; done; }
 
-function execute()
+function run()
 {
     (( $( comma_options_has --bash-completion $@ ) )) && { bash_completion; exit 0; }
-    (( $( comma_options_has --help $@ ) || $( comma_options_has -h $@ ) )) && usage
-    local mangle_text ff
-    local -a files
-    mangle_text=$( description | mangle_options "$@"; comma_status_ok ) || die "Invalid arguments."; eval "$mangle_text"
-    mangle_text="files=( $( description | comma-options-to-name-value "$@" | grep '^"' ) )"; eval "$mangle_text"; unset mangle_text
-    local unquote_numbers_option
+    comma-application-init "$@" < <( description )
     (( !options_unquote_numbers )) || unquote_numbers_option="--unquote-numbers"
-    
-    for ff in "${files[@]}"; do
-        name-value-convert < "$ff" | { [[ -z $options_source ]] &&  cat - || cut -d = -f1 |  sed "s~$~=\"$ff\"~g"; }
-    done | name-value-convert --take-last $unquote_numbers_option
+    (( !options_minify )) || minify_option="--minify"
+    (( !options_indented )) || indented_option="--indented"
+    for f in "${options_unnamed[@]}"; do
+        cat "$f" | name-value-convert | if (( options_output_source )); then cut -d= -f1 |  sed "s~$~=\"$f\"~g"; else cat; fi
+    done | name-value-convert --take-last --to $options_to $unquote_numbers_option $indented_option $minify_option
 }
 
-[[ $( basename $0 ) != "name-value-apply" ]] || execute "$@"
+[[ $( basename $0 ) != "name-value-apply" ]] || run "$@"
