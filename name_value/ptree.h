@@ -11,6 +11,7 @@
 #if __cplusplus >= 201703L
 #include <optional>
 #endif
+#include <memory>
 #include <sstream>
 #include <type_traits>
 #include <boost/array.hpp>
@@ -158,6 +159,20 @@ struct property_tree // quick and dirty
                 apply( name, *value );
             }
             #endif
+
+            template < typename K, typename T > void apply_next( const K& name, std::unique_ptr< T >& value )
+            {
+                if( !cur_ || cur_->find( name ) == cur_->not_found() ) { return; }
+                if( !value ) { value = T(); }
+                apply( name, *value );
+            }
+
+            template < typename K, typename T > void apply_next( const K& name, std::shared_ptr< T >& value )
+            {
+                if( !cur_ || cur_->find( name ) == cur_->not_found() ) { return; }
+                if( !value ) { value = T(); }
+                apply( name, *value );
+            }
 
             template < typename K, typename T, typename A > void apply_next( const K& key, std::vector< T, A >& value ) { _apply_to_arraylike( key, value ); }
 
