@@ -15,7 +15,7 @@ std::string to_iso_string( boost::posix_time::ptime t, unsigned int fraction_dig
     std::string s = boost::posix_time::to_iso_string( t );
     unsigned int size = 16 + fraction_digits;
     if( t.is_not_a_date_time() || t.is_neg_infinity() || t.is_infinity() ) { COMMA_THROW_IF( strict, "expected valid time; got: '" << s << "'" ); return s; }
-    return s.size() < size ? s + std::string( '0', size - s.size() ) : s.substr( 0, size );
+    return s.size() < size ? s + std::string( size - s.size(), '0' ) : s.substr( 0, size );
 }
 
 boost::posix_time::ptime as_ptime( std::chrono::system_clock::time_point t )
