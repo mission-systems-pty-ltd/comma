@@ -1,0 +1,17 @@
+#!/bin/bash
+
+readonly output_dir=output
+
+mkdir -p output
+input=$( cat )
+
+for cfg in config0 config1 config2; do
+    txt=$( grep "$cfg/" <<< "$input" | sed "s@^$cfg/@@g" )
+    format=$( name-value-get format <<< "$txt" )
+    name-value-convert --to=$format <<< "$txt" > "output/$cfg.$format"
+done
+
+name-value-apply output/config0.pv output/config1.json output/config2.xml | sed 's@^@argument_list/@g'
+name-value-apply output/config*.* | sed 's@^@wildcard/@g'
+name-value-apply --source output/config* | sed 's@^@source/@g'
+

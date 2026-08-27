@@ -1,0 +1,17 @@
+#!/bin/bash
+
+readonly output_dir=output
+
+mkdir -p output
+input=$( cat )
+
+config0=$( grep '^config0/' <<< "$input" | cut -d/ -f1 --complement )
+config1=$( grep '^config1/' <<< "$input" | cut -d/ -f1 --complement )
+config2=$( grep '^config2/' <<< "$input" | cut -d/ -f1 --complement )
+config3=$( grep '^config3/' <<< "$input" | cut -d/ -f1 --complement )
+
+name-value-apply --from path-value --unquote-numbers \
+                 <( echo "$config0" ) \
+                 <( echo "$config1" ) \
+                 <( echo "$config2" )
+

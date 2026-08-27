@@ -3,15 +3,13 @@
 
 source $( type -p comma-application-util )
 
-function say() { echo "name-value-apply: $@" >&2; }
-function die() { say "$@"; exit 1; }
-function bye() { say "$@"; exit 0; }
 function mangle_options() { comma-options-to-name-value "$@" | { grep '='; :; } | comma_path_value_mangle | sed 's/^/local options_/g'; comma_status_ok; }
 
 function description()
 {
     cat <<EOF
 --help,-h; output instructions for using this program and exit
+--from=[<what>]; choices: ini, json, path-value, yaml, xml, all sources are of that type, if --from=path-value, pass inputs through verbatim
 --indented; if --to xml, output indented
 --minify; if --to json, output minified
 --output-source,--source; for each name, output the name of the source config from which value comes instead of the value itself
@@ -22,9 +20,9 @@ EOF
 
 function bash_completion() { description | sed 's/=.*//g' | sed 's/;.*//g' | sed 's/,/\n/g' ; }
 
-function usage()
+function prologue()
 {
-    cat >&2 <<EOF
+    cat >&2 <<eof
 
 take multiple path-value inputs, apply on top of each other
     
@@ -36,9 +34,12 @@ usage
     <file>: <path>|'-'
             '-': stdin
 
-options
-$( description | sed 's/^/    /' )
+eof
+}
 
+function epilogue()
+{
+    cat<<eof
 examples
     basics
         echo '{ "a": "hello", "b": "world" }' | name-value-apply - <( echo "a=bye" ) --to json
@@ -60,22 +61,18 @@ examples
         b="config1.pv"
         c="config2.pv"
 
-EOF
-    exit 0
+eof
 }
 
-function combine_files() { for f in "${files[@]}"; do cat "$f" | name-value-convert | sed "s~$~=\"$f\"~g"; done; }
+(( $( comma_options_has --bash-completion $@ ) )) && { bash_completion; exit 0; }
+comma-application-init "$@" < <( description )
+(( !options_unquote_numbers )) || unquote_numbers_option="--unquote-numbers"
+(( !options_minify )) || minify_option="--minify"
+(( !options_indented )) || indented_option="--indented"
+[[ -z "$options_from" ]] || from_option="--from=$options_from"
+for f in "${options_unnamed[@]}"; do
+    cat "$f" \
+        | if [[ "$options_from" == 'path-value' ]]; then cat; else name-value-convert $from_option; fi \
+        | if (( options_output_source )); then cut -d= -f1 |  sed "s~$~=\"$f\"~g"; else cat; fi
+done | name-value-convert --take-last --to $options_to $unquote_numbers_option $indented_option $minify_option
 
-function run()
-{
-    (( $( comma_options_has --bash-completion $@ ) )) && { bash_completion; exit 0; }
-    comma-application-init "$@" < <( description )
-    (( !options_unquote_numbers )) || unquote_numbers_option="--unquote-numbers"
-    (( !options_minify )) || minify_option="--minify"
-    (( !options_indented )) || indented_option="--indented"
-    for f in "${options_unnamed[@]}"; do
-        cat "$f" | name-value-convert | if (( options_output_source )); then cut -d= -f1 |  sed "s~$~=\"$f\"~g"; else cat; fi
-    done | name-value-convert --take-last --to $options_to $unquote_numbers_option $indented_option $minify_option
-}
-
-[[ $( basename $0 ) != "name-value-apply" ]] || run "$@"
