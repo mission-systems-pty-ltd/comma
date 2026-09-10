@@ -14,7 +14,8 @@ export -f test04_outer_handler
 
 function test04_to_execute()
 {
-    comma-nap 10 &
+#    comma-nap 10 &
+    sleep 10 &
     wait $!
 }
 export -f test04_to_execute

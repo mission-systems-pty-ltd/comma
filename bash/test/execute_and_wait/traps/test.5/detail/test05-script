@@ -23,7 +23,7 @@ function test05_to_execute()
     trap 'test05_trap PIPE' SIGPIPE
     trap 'test05_trap INT'  SIGINT
     trap 'test05_trap USR1' SIGUSR1
-    comma-nap 20 &
+    comma-nap 20 --verbose &
     wait $!
     echo "$FUNCNAME: woken up"
 }
