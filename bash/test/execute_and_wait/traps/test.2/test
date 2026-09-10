@@ -9,6 +9,7 @@ function test02_trap()
 {
     trap '' SIGTERM SIGHUP SIGPIPE SIGINT SIGUSR1
     echo "killed by $1"
+    echo "test02_trap() - killed by $1 at $( date +%Y%m%d-%H%M%S )" >&2
     exit 11
 }
 export -f test02_trap
@@ -29,6 +30,7 @@ export -f test02_to_execute
 function test02_to_be_killed()
 {
     comma_execute_and_wait "bash -c test02_to_execute" > "$output_file"
+    echo "test02_to_be_killed() - exiting at $( date +%Y%m%d-%H%M%S ) with exit code $?" >&2
 }
 export -f test02_to_be_killed
 
@@ -40,5 +42,6 @@ function test02()
 
 export output_file="$output_dir/test02.log"
 test02
+echo "test02 - exited at $( date +%Y%m%d-%H%M%S )" >&2
 echo "test[2]/exit/status=$?"
 echo "test[2]/output=\""$( cat "$output_file" )"\""
