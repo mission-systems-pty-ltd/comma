@@ -30,9 +30,9 @@ export -f test02_to_execute
 function test02_to_be_killed()
 {
     comma_execute_and_wait "bash -c test02_to_execute" > "$output_file"
-    local exit_code=$?
-    echo "test02_to_be_killed() - exiting at $( date +%Y%m%d-%H%M%S ) with exit code $exit_code" >&2
-    return $exit_code
+    # local exit_code=$?
+    # echo "test02_to_be_killed() - exiting at $( date +%Y%m%d-%H%M%S ) with exit code $exit_code" >&2
+    # return $exit_code
 }
 export -f test02_to_be_killed
 
