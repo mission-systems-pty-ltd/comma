@@ -30,4 +30,4 @@ function test05_to_execute()
 export -f test05_to_execute
 
 exec > "$output_file"
-comma_execute_and_wait "bash -c test05_to_execute" --signals=TERM,HUP,USR1
+comma_execute_and_wait --show-debug-messages "bash -c test05_to_execute" --signals=TERM,HUP,USR1

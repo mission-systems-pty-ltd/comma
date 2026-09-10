@@ -26,7 +26,7 @@ function test04_to_be_killed()
     trap 'test04_outer_handler PIPE' SIGPIPE
     trap 'test04_outer_handler INT'  SIGINT
     #
-    comma_execute_and_wait "bash -c test04_to_execute" > $output_file
+    comma_execute_and_wait --show-debug-messages "bash -c test04_to_execute" > $output_file
 }
 export -f test04_to_be_killed
 
