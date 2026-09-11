@@ -17,7 +17,7 @@ function test04_to_execute()
     # comma-nap 10 &
     # wait $!
 
-    sleep 10 &
+    strace -ff -tt -o output/sleep.strace sleep 10 &
     sleep_pid=$!
 
     echo "started sleep pid=$sleep_pid" >&2
