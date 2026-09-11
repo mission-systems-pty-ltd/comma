@@ -341,9 +341,7 @@ class stream(object):
     def _input_dtype(self):
         if self.binary:
             input_dtype = structured_dtype(self.format)
-            if len(self.fields) != len(input_dtype.names):
-                msg = "expected same number of fields and format types, got '{}' and '{}'".format(','.join(self.fields), self.format)
-                raise ValueError(msg)
+            assert len(self.fields) == len(input_dtype.names), f"expected same number of fields and format types, got '{",".join(self.fields)}' of length {len(self.fields)} and '{self.format} of length {len(input_dtype.names)}'"
         else:
             type_of = self.struct.type_of_field.get
             types = [type_of(name) or 'S' for name in self.fields]
