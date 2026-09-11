@@ -6,8 +6,12 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+
 #ifdef HAVE_PROCPS_DEV
 #include <proc/readproc.h>
+#endif
+#ifdef HAVE_PROC2_DEV
+#include <libproc2/pids.h>
 #endif
 
 #include <iostream>
@@ -23,6 +27,12 @@
 #include "../../base/exception.h"
 #include "../../base/types.h"
 
+#if defined(HAVE_PROCPS_DEV) || defined(HAVE_PROC2_DEV)
+#  define HAVE_PROC_SUPPORT 1
+#else
+#  define HAVE_PROC_SUPPORT 0
+#endif
+
 namespace {
 
 void usage( bool )
@@ -35,7 +45,7 @@ void usage( bool )
         "\n"
         "\nA drop-in replacement of the standard timeout(1) utility for most common usage"
         "\npatterns. The capability to wait for all processes in a process group added."
-#ifndef HAVE_PROCPS_DEV
+#if !HAVE_PROC_SUPPORT
         "\n"
         "\nWARNING: this new capability is not available in this build. Install procps"
         "\n(or procps-ng) development package (containing headers and library) and"
@@ -70,7 +80,7 @@ void usage( bool )
         "\n                               the KILL signal to finish them off (same as -k"
         "\n                               duration); if both this option and -k is given,"
         "\n                               the duration specified by -k takes precedence"
-#ifndef HAVE_PROCPS_DEV
+#if !HAVE_PROC_SUPPORT
         "\n"
         "\n               WARNING: your version of comma-timeout-group is built without"
         "\n               procps support, the capability to wait for process group is not"
@@ -90,7 +100,7 @@ void usage( bool )
         "\n                               note that low delay values make the program more"
         "\n                               responsive at the cost of higher CPU load when"
         "\n                               parsing the process tree"
-#ifndef HAVE_PROCPS_DEV
+#if !HAVE_PROC_SUPPORT
         "\n"
         "\n               WARNING: your version of comma-timeout-group is built without"
         "\n               procps support, this option has no effect"
@@ -167,7 +177,7 @@ static bool report_timeout = false;
 static bool preserve_status = false;
 static double timeout = 0.0;
 static double kill_after = 0.0;
-#ifdef HAVE_PROCPS_DEV
+#if HAVE_PROC_SUPPORT
 static bool wait_for_process_group = false;
 static const bool can_wait_for_process_group = true;
 static unsigned int wait_for_process_group_delay = 100000;
@@ -285,7 +295,52 @@ int parse_process_tree( bool verbose = false )
     closeproc(proc);
     return count;
 }
+#endif
 
+#ifdef HAVE_PROC2_DEV
+int parse_process_tree( bool verbose = false )
+{
+    int ownpid = getpid();
+
+    // items we want back for each process, in a fixed order
+    enum pids_item items[] = {
+        PIDS_ID_PID,      // process id
+        PIDS_ID_PGRP,     // process group id
+        PIDS_STATE,       // one-letter state, e.g. 'Z' for zombie
+        PIDS_CMD,         // short command name (like old proc_t.cmd)
+        PIDS_TICS_BEGAN   // start time (like old proc_t.start_time)
+    };
+    // relative positions into 'items', used with PIDS_VAL below
+    enum { REL_PID, REL_PGRP, REL_STATE, REL_CMD, REL_START };
+
+    struct pids_info* info = nullptr;
+    if( procps_pids_new( &info, items, sizeof( items ) / sizeof( items[0] )) < 0 ) { COMMA_THROW( comma::exception, "procps_pids_new failed" ); }
+
+    int first = 1;
+    int count = 0;
+    struct pids_stack* stack;
+    while(( stack = procps_pids_get( info, PIDS_FETCH_TASKS_ONLY )) != nullptr )
+    {
+        int pgrp = PIDS_VAL( REL_PGRP, s_int, stack, info );
+        if( pgrp == ownpid )
+        {
+            int pid = PIDS_VAL( REL_PID, s_int, stack, info );
+            char state = PIDS_VAL( REL_STATE, s_ch, stack, info );
+            const char* cmd = PIDS_VAL( REL_CMD, str, stack, info );
+            unsigned long long start_time = PIDS_VAL( REL_START, ull_int, stack, info );
+
+            if( first && verbose ) { comma::say() << "extant processes in group " << ownpid << std::endl; first = 0; }
+            if( state == 'Z' ) { comma::say() << "    " << cmd << " (pid " << pid << ") is a zombie process - ignoring" << std::endl; }
+            else { ++count; }
+            if( verbose ) { comma::say() << "    " << cmd << ":\t" << pid << "\t" << pgrp << "\t" << state << "\t" << start_time << std::endl; }
+        }
+    }
+    procps_pids_unref( &info );
+    return count;
+}
+#endif
+
+#if HAVE_PROC_SUPPORT
 int parse_process_tree_until_empty( bool verbose = false )
 {
     int count = 0;
@@ -425,7 +480,7 @@ int main( int ac, char** av ) try
     if ( options.exists( "--can-wait-for-process-group" ) ) { return can_wait_group(); }
 
     if ( options.exists( "--wait-for-process-group" ) ) {
-#ifdef HAVE_PROCPS_DEV
+#if HAVE_PROC_SUPPORT
         wait_for_process_group = true;
 #else
         if ( options.exists( "--enforce-group" ) ) {
@@ -439,7 +494,7 @@ int main( int ac, char** av ) try
 
     if ( options.exists( "-k,--kill-after" ) ) { kill_after = seconds_from_string( options.values< std::string >( "-k,--kill-after" ).back() ); }
     if ( options.exists( "--wait-for-process-group-delay" ) ) {
-#ifdef HAVE_PROCPS_DEV
+#if HAVE_PROC_SUPPORT
         wait_for_process_group_delay = options.value< unsigned int >( "--wait-for-process-group-delay" );
 #else
         if ( verbose ) { std::cerr << "comma-timeout-group: built without procps support, '--wait-for-process-group-delay' is ignored" << std::endl; }
@@ -462,7 +517,7 @@ int main( int ac, char** av ) try
         std::cerr << "    will use signal " << signal_to_use << " to interrupt the command by timeout" << std::endl;
         std::cerr << "    exit status of command: " << ( preserve_status ? "" : "NOT " ) << "preserved" << std::endl;
         if ( verbose_signal_handler ) { std::cerr << "    output messages when sending signals" << std::endl; }
-#ifdef HAVE_PROCPS_DEV
+#if HAVE_PROC_SUPPORT
         if ( wait_for_process_group ) {
             std::cerr << "    will wait" << ( kill_after < std::numeric_limits< double >::max() ? "" : " forever" ) << " for all processes in the group to finish" << std::endl;
             std::cerr << "    will use " << wait_for_process_group_delay << " microsecond delay between each parsing of the process tree" << std::endl;
@@ -513,7 +568,7 @@ int main( int ac, char** av ) try
     } while (!WIFEXITED(status) && !WIFSIGNALED(status));
     if ( verbose ) { std::cerr << "comma-timeout-group: out of waitpid call, child process terminated" << std::endl; }
 
-#ifdef HAVE_PROCPS_DEV
+#if HAVE_PROC_SUPPORT
     if ( wait_for_process_group ) {
         if ( verbose ) { std::cerr << "comma-timeout-group: parse the process tree waiting for all processes in the group to finish" << std::endl; }
         int count = parse_process_tree_until_empty( verbose );
