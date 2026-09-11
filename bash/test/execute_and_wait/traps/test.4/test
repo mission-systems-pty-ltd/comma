@@ -14,9 +14,22 @@ export -f test04_outer_handler
 
 function test04_to_execute()
 {
-#    comma-nap 10 &
+    # comma-nap 10 &
+    # wait $!
+
     sleep 10 &
-    wait $!
+    sleep_pid=$!
+
+    echo "started sleep pid=$sleep_pid" >&2
+    ps -o pid,ppid,pgid,sid,stat,cmd -p "$sleep_pid" >&2
+
+    wait "$sleep_pid"
+    status=$?
+
+    echo "wait returned status=$status" >&2
+    ps -o pid,ppid,pgid,sid,stat,cmd -p "$sleep_pid" >&2
+
+    return "$status"
 }
 export -f test04_to_execute
 
