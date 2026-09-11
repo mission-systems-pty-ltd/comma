@@ -16,6 +16,19 @@ function test05()
     )
 }
 
+echo "pretest" >&2
+bash -c '
+    sleep 10 &
+    p=$!
+    echo "pid=$p"
+    ps -o pid,ppid,pgid,sid,stat,cmd -p "$p"
+    grep -E "^Sig(Ign|Blk|Cgt):" /proc/$p/status
+    kill -TERM "$p"
+    wait "$p"
+    echo "wait status=$?"
+'
+echo "pretest done" >&2
+
 export output_file="$output_dir/test05.log"
 test05
 echo "test[5]/exit/status=$?"
