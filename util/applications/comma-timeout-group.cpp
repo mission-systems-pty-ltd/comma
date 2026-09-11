@@ -344,64 +344,6 @@ int parse_process_tree( bool verbose = false )
 int parse_process_tree_until_empty( bool verbose = false )
 {
     int count = 0;
-    while( 1 ) {
-        if(( count = parse_process_tree( verbose )) <= 1 ) break;
-        usleep( wait_for_process_group_delay );
-    }
-    /* shouldn't happen: timeout itself in this process group. */
-    if( !count ) { COMMA_THROW( comma::exception, "error counting processes in the group, none left" ); }
-    return count;
-}
-#endif
-
-#ifdef HAVE_PROC2_DEV
-int parse_process_tree( bool verbose = false )
-{
-    int ownpid = getpid();
-
-    // items we want back for each process, in a fixed order
-    enum pids_item items[] = {
-        PIDS_ID_PID,      // process id
-        PIDS_ID_PGRP,     // process group id
-        PIDS_STATE,       // one-letter state, e.g. 'Z' for zombie
-        PIDS_CMD,         // short command name (like old proc_t.cmd)
-        PIDS_TICS_BEGAN   // start time (like old proc_t.start_time)
-    };
-    // relative positions into 'items', used with PIDS_VAL below
-    enum { REL_PID, REL_PGRP, REL_STATE, REL_CMD, REL_START };
-
-    struct pids_info* info = nullptr;
-    if ( procps_pids_new( &info, items, sizeof( items ) / sizeof( items[0] ) ) < 0 )
-    {
-        COMMA_THROW( comma::exception, "procps_pids_new failed" );
-    }
-
-    int first = 1;
-    int count = 0;
-    struct pids_stack* stack;
-    while ( ( stack = procps_pids_get( info, PIDS_FETCH_TASKS_ONLY ) ) != nullptr )
-    {
-        int pgrp = PIDS_VAL( REL_PGRP, s_int, stack, info );
-        if ( pgrp == ownpid )
-        {
-            int pid = PIDS_VAL( REL_PID, s_int, stack, info );
-            char state = PIDS_VAL( REL_STATE, s_ch, stack, info );
-            const char* cmd = PIDS_VAL( REL_CMD, str, stack, info );
-            unsigned long long start_time = PIDS_VAL( REL_START, ull_int, stack, info );
-
-            if ( first && verbose ) { comma::say() << "extant processes in group " << ownpid << std::endl; first = 0; }
-            if ( state == 'Z' ) { comma::say() << "    " << cmd << " (pid " << pid << ") is a zombie process - ignoring" << std::endl; }
-            else { ++count; }
-            if ( verbose ) { comma::say() << "    " << cmd << ":\t" << pid << "\t" << pgrp << "\t" << state << "\t" << start_time << std::endl; }
-        }
-    }
-    procps_pids_unref( &info );
-    return count;
-}
-
-int parse_process_tree_until_empty( bool verbose = false )
-{
-    int count = 0;
     while ( 1 ) {
         if ( ( count = parse_process_tree( verbose ) ) <= 1 ) break;
         usleep( wait_for_process_group_delay );
