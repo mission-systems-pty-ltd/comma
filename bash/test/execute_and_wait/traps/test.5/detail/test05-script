@@ -24,7 +24,10 @@ function test05_to_execute()
     trap 'test05_trap INT'  SIGINT
     trap 'test05_trap USR1' SIGUSR1
     comma-nap 20 --verbose &
-    wait $!
+    pid=$!
+    echo "test05_to_execute: child_pid=$pid"
+    grep -E '^Sig(Ign|Blk|Cgt):' /proc/$pid/status
+    wait $pid
     echo "$FUNCNAME: woken up"
 }
 export -f test05_to_execute
