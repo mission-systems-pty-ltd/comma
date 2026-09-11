@@ -23,11 +23,18 @@ function test05_to_execute()
     trap 'test05_trap PIPE' SIGPIPE
     trap 'test05_trap INT'  SIGINT
     trap 'test05_trap USR1' SIGUSR1
+
+    echo "shell:" >&2
+    ps -o pid,ppid,pgid,sid,stat,wchan,cmd -p $$ >&2
+
     comma-nap 20 --verbose &
-    pid=$!
-    echo "test05_to_execute: child_pid=$pid"
-    grep -E '^Sig(Ign|Blk|Cgt):' /proc/$pid/status
-    wait $pid
+
+    child_pid=$!
+    echo "test05_to_execute: child_pid=$child_pid" >&2
+    echo "child:" >&2
+    ps -o pid,ppid,pgid,sid,stat,wchan,cmd -p "$child_pid" >&2
+    wait $child_pid
+    echo "child status=$?" >&2
     echo "$FUNCNAME: woken up"
 }
 export -f test05_to_execute
