@@ -56,7 +56,8 @@ class from_ascii_
         /// constructor
         from_ascii_( const std::vector< boost::optional< std::size_t > >& indices
                    , const std::deque< bool >& optional
-                   , const std::vector< std::string >& line );
+                   , const std::vector< std::string >& line
+                   , bool permissive = false );
 
         /// apply
         template < typename K, typename T > void apply( const K& name, boost::optional< T >& value );
@@ -82,6 +83,7 @@ class from_ascii_
         const std::vector< std::string >& row_;
         std::size_t index_;
         std::size_t optional_index;
+        bool _permissive{false};
         static void lexical_cast_( char& v, const std::string& s ) { v = s.at( 0 ) == '\'' && s.at( 2 ) == '\'' && s.length() == 3 ? s.at( 1 ) : static_cast< char >( boost::lexical_cast< int >( s ) ); }
         static void lexical_cast_( signed char& v, const std::string& s ) { v = s.at( 0 ) == '\'' && s.at( 2 ) == '\'' && s.length() == 3 ? s.at( 1 ) : static_cast< signed char >( boost::lexical_cast< int >( s ) ); }
         static void lexical_cast_( unsigned char& v, const std::string& s ) { v = s.at( 0 ) == '\'' && s.at( 2 ) == '\'' && s.length() == 3 ? s.at( 1 ) : static_cast< unsigned char >( boost::lexical_cast< unsigned int >( s ) ); }
@@ -111,13 +113,15 @@ class from_ascii_
 };
 
 inline from_ascii_::from_ascii_( const std::vector< boost::optional< std::size_t > >& indices
-                           , const std::deque< bool >& optional
-                           , const std::vector< std::string >& line )
+                               , const std::deque< bool >& optional
+                               , const std::vector< std::string >& line
+                               , bool permissive )
     : indices_( indices )
     , optional_( optional )
     , row_( line )
     , index_( 0 )
     , optional_index( 0 )
+    , _permissive( permissive )
 {
 }
 
@@ -164,9 +168,15 @@ inline void from_ascii_::apply_final( const K& key, T& value )
     if( indices_[ index_ ] )
     {
         std::size_t i = *indices_[ index_ ];
-        if( i >= row_.size() ) { COMMA_THROW( comma::exception, "got column index " << i << ", for " << row_.size() << " column(s) in line: \"" << join( row_, ',' ) << "\"" ); }
-        const std::string& s = row_[i];
-        if( !s.empty() ) { lexical_cast_( value, s ); }
+        if( i < row_.size() )
+        {
+            const std::string& s = row_[i];
+            if( !s.empty() ) { lexical_cast_( value, s ); }
+        }
+        else
+        {
+            COMMA_ASSERT( _permissive, "got column index " << i << ", for " << row_.size() << " column(s) in line: \"" << join( row_, ',' ) << "\"" );
+        }
     }
     ++index_;
 }

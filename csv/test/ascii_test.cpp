@@ -235,8 +235,98 @@ TEST( csv, ascii_get )
     // todo: more testing
 }
 
+TEST( csv, ascii_get_permissive )
+{
+    {
+        comma::csv::ascii_test::simple_struct s;
+        EXPECT_EQ( comma::join( comma::csv::names( s ), ',' ), "a,b,c,s,t,nested/x,nested/y" );
+        comma::csv::ascii< comma::csv::ascii_test::simple_struct > ascii;
+        ascii.get( s, "1,2,'c',hello,20110304T111111.1234,5,6", true );
+        EXPECT_EQ( s.a, 1 );
+        EXPECT_EQ( s.b, 2 );
+        EXPECT_EQ( s.c, 'c' );
+        EXPECT_EQ( s.s, "hello" );
+        EXPECT_EQ( s.t, boost::posix_time::from_iso_string( "20110304T111111.1234" ) );
+        EXPECT_EQ( s.nested.x, 5 );
+        EXPECT_EQ( s.nested.y, 6 );
+    }
+    {
+        comma::csv::ascii_test::simple_struct s;
+        comma::csv::ascii< comma::csv::ascii_test::simple_struct > ascii;
+        ascii.get( s, "1,2,'c',hello,20110304T111111.1234,5", true );
+        EXPECT_EQ( s.a, 1 );
+        EXPECT_EQ( s.b, 2 );
+        EXPECT_EQ( s.c, 'c' );
+        EXPECT_EQ( s.s, "hello" );
+        EXPECT_EQ( s.t, boost::posix_time::from_iso_string( "20110304T111111.1234" ) );
+        EXPECT_EQ( s.nested.x, 5 );
+        EXPECT_EQ( s.nested.y, 0 );
+    }
+    {
+        comma::csv::ascii_test::simple_struct s;
+        comma::csv::ascii< comma::csv::ascii_test::simple_struct > ascii;
+        ascii.get( s, "1,2,'c',hello,20110304T111111.1234", true );
+        EXPECT_EQ( s.a, 1 );
+        EXPECT_EQ( s.b, 2 );
+        EXPECT_EQ( s.c, 'c' );
+        EXPECT_EQ( s.s, "hello" );
+        EXPECT_EQ( s.t, boost::posix_time::from_iso_string( "20110304T111111.1234" ) );
+        EXPECT_EQ( s.nested.x, 0 );
+        EXPECT_EQ( s.nested.y, 0 );
+    }
+    {
+        comma::csv::ascii_test::simple_struct s;
+        comma::csv::ascii< comma::csv::ascii_test::simple_struct > ascii;
+        ascii.get( s, "1,2,'c',hello", true );
+        EXPECT_EQ( s.a, 1 );
+        EXPECT_EQ( s.b, 2 );
+        EXPECT_EQ( s.c, 'c' );
+        EXPECT_EQ( s.s, "hello" );
+        EXPECT_EQ( s.t, boost::posix_time::not_a_date_time );
+        EXPECT_EQ( s.nested.x, 0 );
+        EXPECT_EQ( s.nested.y, 0 );
+    }
+    {
+        comma::csv::ascii_test::simple_struct s;
+        comma::csv::ascii< comma::csv::ascii_test::simple_struct > ascii;
+        ascii.get( s, "1,2,'c'", true );
+        EXPECT_EQ( s.a, 1 );
+        EXPECT_EQ( s.b, 2 );
+        EXPECT_EQ( s.c, 'c' );
+        EXPECT_EQ( s.s, "" );
+        EXPECT_EQ( s.t, boost::posix_time::not_a_date_time );
+        EXPECT_EQ( s.nested.x, 0 );
+        EXPECT_EQ( s.nested.y, 0 );
+    }
+    {
+        comma::csv::ascii_test::simple_struct s;
+        comma::csv::ascii< comma::csv::ascii_test::simple_struct > ascii;
+        ascii.get( s, "1,2", true );
+        EXPECT_EQ( s.a, 1 );
+        EXPECT_EQ( s.b, 2 );
+        EXPECT_EQ( s.c, 0 );
+        EXPECT_EQ( s.s, "" );
+        EXPECT_EQ( s.t, boost::posix_time::not_a_date_time );
+        EXPECT_EQ( s.nested.x, 0 );
+        EXPECT_EQ( s.nested.y, 0 );
+    }
+    {
+        comma::csv::ascii_test::simple_struct s;
+        comma::csv::ascii< comma::csv::ascii_test::simple_struct > ascii;
+        ascii.get( s, "1", true );
+        EXPECT_EQ( s.a, 1 );
+        EXPECT_EQ( s.b, 0 );
+        EXPECT_EQ( s.c, 0 );
+        EXPECT_EQ( s.s, "" );
+        EXPECT_EQ( s.t, boost::posix_time::not_a_date_time );
+        EXPECT_EQ( s.nested.x, 0 );
+        EXPECT_EQ( s.nested.y, 0 );
+    }
+}
+
 TEST( csv, ascii_put )
 {
+    // todo
 }
 
 TEST( csv, ascii_put_string )

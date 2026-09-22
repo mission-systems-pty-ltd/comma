@@ -62,6 +62,17 @@ class ascii_input_stream : public boost::noncopyable
         /// constructor from csv options
         ascii_input_stream( std::istream& is, const S& sample = S() );
 
+        /// constructor from csv options
+        /// if permissive, allow number of fields in the input string
+        /// less than max field index, e.g:
+        ///     fields: a,b,c
+        ///     input string: 1,2
+        ///     then a and b fields will be set and c will be ignored
+        ascii_input_stream( std::istream& is, const options& o, bool permissive = false, const S& sample = S() );
+
+        /// constructor from csv options
+        ascii_input_stream( std::istream& is, bool permissive = false, const S& sample = S() );
+
         /// read; return NULL, if end of stream or alike
         const S* read();
 
@@ -97,6 +108,7 @@ class ascii_input_stream : public boost::noncopyable
         S result_;
         std::vector< std::string > line_;
         std::vector< std::string > fields_;
+        bool permissive_{false};
 };
 
 /// ascii csv output stream
@@ -570,7 +582,7 @@ inline ascii_input_stream< S >::ascii_input_stream( std::istream& is, const std:
 }
 
 template < typename S >
-inline ascii_input_stream< S >::ascii_input_stream(std::istream& is, const options& o, const S& sample )
+inline ascii_input_stream< S >::ascii_input_stream( std::istream& is, const options& o, const S& sample )
     : is_( is )
     , ascii_( o, sample )
     , default_( sample )
@@ -581,12 +593,36 @@ inline ascii_input_stream< S >::ascii_input_stream(std::istream& is, const optio
 }
 
 template < typename S >
-inline ascii_input_stream< S >::ascii_input_stream(std::istream& is, const S& sample )
+inline ascii_input_stream< S >::ascii_input_stream( std::istream& is, const S& sample )
     : is_( is )
     , ascii_( options().fields, options().delimiter, true, sample ) // , ascii_( options().fields, options().delimiter, o.full_xpath, sample )
     , default_( sample )
     , result_( sample )
     , fields_( split( options().fields, ',' ) )
+{
+    detail::unsynchronize_with_stdio();
+}
+
+template < typename S >
+inline ascii_input_stream< S >::ascii_input_stream( std::istream& is, const options& o, bool permissive, const S& sample )
+    : is_( is )
+    , ascii_( o, sample )
+    , default_( sample )
+    , result_( sample )
+    , fields_( split( o.fields, ',' ) )
+    , permissive_( permissive )
+{
+    detail::unsynchronize_with_stdio();
+}
+
+template < typename S >
+inline ascii_input_stream< S >::ascii_input_stream( std::istream& is, bool permissive, const S& sample )
+    : is_( is )
+    , ascii_( options().fields, options().delimiter, true, sample ) // , ascii_( options().fields, options().delimiter, o.full_xpath, sample )
+    , default_( sample )
+    , result_( sample )
+    , fields_( split( options().fields, ',' ) )
+    , permissive_( permissive )
 {
     detail::unsynchronize_with_stdio();
 }
@@ -609,7 +645,7 @@ inline const S* ascii_input_stream< S >::read()
         if( s.empty() ) { continue; }
         result_ = default_;
         line_ = split( s, ascii_.delimiter() );
-        ascii_.get( result_, line_ );
+        ascii_.get( result_, line_, permissive_ );
         return &result_;
     }
     return NULL;

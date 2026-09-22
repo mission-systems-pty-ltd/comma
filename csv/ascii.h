@@ -55,19 +55,24 @@ class ascii
         ascii( const S& sample = S() );
 
         /// get value (returns reference pointing to the parameter)
-        const S& get( S& s, const std::vector< std::string >& v ) const;
+        /// if permissive, allow number of fields in the input string
+        /// less than max field index, e.g:
+        ///     fields: a,b,c
+        ///     input string: 1,2
+        ///     then a and b fields will be set and c will be ignored
+        const S& get( S& s, const std::vector< std::string >& v, bool permissive = false ) const;
 
         /// get value (convenience function)
-        const S& get( S& s, const std::string& line ) const { return get( s, split( line, delimiter_ ) ); }
+        const S& get( S& s, const std::string& line, bool permissive = false ) const { return get( s, split( line, delimiter_ ), permissive ); }
 
         /// get value (unfilled fields have the same value as in default constructor; convenience function)
-        S get( const std::vector< std::string >& v ) const { S s = sample_; get( s, v ); return s; }
+        S get( const std::vector< std::string >& v, bool permissive = false ) const { S s = sample_; get( s, v, permissive ); return s; }
 
         /// get value (unfilled fields have the same value as in default constructor; convenience function)
-        S get( const std::string& line ) const { S s = sample_; get( s, line ); return s; }
+        S get( const std::string& line, bool permissive = false ) const { S s = sample_; get( s, line, permissive ); return s; }
         
         /// get value (empty value returns default sample)
-        S get( const boost::optional<std::string>& line ) const { return line ? get(*line) : sample_ ; }
+        S get( const boost::optional< std::string >& line, bool permissive = false ) const { return line ? get( *line, permissive ) : sample_ ; }
 
         /// put value at the right place in the vector
         const std::vector< std::string >& put( const S& s, std::vector< std::string >& v ) const;
@@ -98,8 +103,7 @@ class ascii
         impl::asciiVisitor ascii_;
 };
 
-template < typename S >
-inline ascii< S >::ascii( const std::string& column_names, char d, bool full_path_as_name, const S& sample )
+template < typename S > inline ascii< S >::ascii( const std::string& column_names, char d, bool full_path_as_name, const S& sample )
     : delimiter_( d )
     , sample_( sample )
     , precision_( options().precision )
@@ -110,8 +114,7 @@ inline ascii< S >::ascii( const std::string& column_names, char d, bool full_pat
     //if( ascii_.size() == 0 ) { COMMA_THROW( comma::exception, "expected at least one field of \"" << comma::join( csv::names< S >( full_path_as_name ), ',' ) << "\"; got \"" << column_names << "\"" ); }
 }
 
-template < typename S >
-inline ascii< S >::ascii( const options& o, const S& sample )
+template < typename S > inline ascii< S >::ascii( const options& o, const S& sample )
     : delimiter_( o.delimiter )
     , sample_( sample )
     , precision_( o.precision )
@@ -122,8 +125,7 @@ inline ascii< S >::ascii( const options& o, const S& sample )
     //if( ascii_.size() == 0 ) { COMMA_THROW( comma::exception, "expected at least one field of \"" << comma::join( csv::names< S >( o.full_xpath ), ',' ) << "\"; got \"" << o.fields << "\"" ); }
 }
 
-template < typename S >
-inline ascii< S >::ascii( const S& sample )
+template < typename S > inline ascii< S >::ascii( const S& sample )
     : delimiter_( options().delimiter )
     , sample_( sample )
     , precision_( options().precision )
@@ -134,9 +136,9 @@ inline ascii< S >::ascii( const S& sample )
 }
 
 template < typename S >
-inline const S& ascii< S >::get( S& s, const std::vector< std::string >& v ) const
+inline const S& ascii< S >::get( S& s, const std::vector< std::string >& v, bool permissive ) const
 {
-    impl::from_ascii_ f( ascii_.indices(), ascii_.optional(), v );
+    impl::from_ascii_ f( ascii_.indices(), ascii_.optional(), v, permissive );
     visiting::apply( f, s );
     return s;
 }
