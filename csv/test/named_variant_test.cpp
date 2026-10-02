@@ -6,6 +6,7 @@
 
 #include <gtest/gtest.h>
 #include <iostream>
+#include "../../csv/ascii.h"
 #include "../../csv/named_variant/binary.h"
 #include "../../csv/named_variant/ascii.h"
 #include "../../csv/named_variant/stream.h"
@@ -28,10 +29,26 @@ typedef comma::named_variant< naming, a, b, c > variant_t;
 
 namespace comma { namespace visiting {
 
-template <> struct traits< comma::csv::test::a > { template < typename Key, class Visitor > static void visit( const Key& k, const comma::csv::test::a& p, Visitor& v ) { v.apply( "x", p.x ); } };
-template <> struct traits< comma::csv::test::b > { template < typename Key, class Visitor > static void visit( const Key& k, const comma::csv::test::b& p, Visitor& v ) { v.apply( "y", p.y ); } };
-template <> struct traits< comma::csv::test::n > { template < typename Key, class Visitor > static void visit( const Key& k, const comma::csv::test::n& p, Visitor& v ) { v.apply( "k", p.k ); v.apply( "m", p.m ); } };
-template <> struct traits< comma::csv::test::c > { template < typename Key, class Visitor > static void visit( const Key& k, const comma::csv::test::c& p, Visitor& v ) { v.apply( "z", p.z ); } };
+template <> struct traits< comma::csv::test::a >
+{
+    template < typename Key, class Visitor > static void visit( const Key& k, const comma::csv::test::a& p, Visitor& v ) { v.apply( "x", p.x ); }
+    template < typename Key, class Visitor > static void visit( const Key& k, comma::csv::test::a& p, Visitor& v ) { v.apply( "x", p.x ); }
+};
+template <> struct traits< comma::csv::test::b >
+{
+    template < typename Key, class Visitor > static void visit( const Key& k, const comma::csv::test::b& p, Visitor& v ) { v.apply( "y", p.y ); }
+    template < typename Key, class Visitor > static void visit( const Key& k, comma::csv::test::b& p, Visitor& v ) { v.apply( "y", p.y ); }
+};
+template <> struct traits< comma::csv::test::n >
+{
+    template < typename Key, class Visitor > static void visit( const Key& k, const comma::csv::test::n& p, Visitor& v ) { v.apply( "k", p.k ); v.apply( "m", p.m ); }
+    template < typename Key, class Visitor > static void visit( const Key& k, comma::csv::test::n& p, Visitor& v ) { v.apply( "k", p.k ); v.apply( "m", p.m ); }
+};
+template <> struct traits< comma::csv::test::c >
+{
+    template < typename Key, class Visitor > static void visit( const Key& k, const comma::csv::test::c& p, Visitor& v ) { v.apply( "z", p.z ); }
+    template < typename Key, class Visitor > static void visit( const Key& k, comma::csv::test::c& p, Visitor& v ) { v.apply( "z", p.z ); }
+};
 
 } } // namespace comma { namespace visiting {
 
@@ -42,6 +59,22 @@ TEST( csv_named_variant, names )
     EXPECT_EQ( comma::join( comma::csv::names< variant_t >( variant_t{}.touch_at( "a" ) ), ',' ), "a/x" );
     EXPECT_EQ( comma::join( comma::csv::names< variant_t >( variant_t{}.touch_at( "b" ) ), ',' ), "b/y" );
     EXPECT_EQ( comma::join( comma::csv::names< variant_t >( variant_t{}.touch_at( "c" ) ), ',' ), "c/z/k,c/z/m" );
+}
+
+TEST( csv_named_variant, ascii )
+{
+    // {
+    //     variant_t v = comma::csv::ascii< variant_t >( "a", ',', true, variant_t{}.touch_at( "a" ) ).get( "5" );
+    //     EXPECT_TRUE( v.is< test::a >() );
+    // }
+    // {
+    //     variant_t v = comma::csv::ascii< variant_t >( "b", ',', true, variant_t{}.touch_at( "b" ) ).get( "5" );
+    //     EXPECT_TRUE( v.is< test::b >() );
+    // }
+    // {
+    //     variant_t v = comma::csv::ascii< variant_t >( "c", ',', true, variant_t{}.touch_at( "c" ) ).get( "5,6" );
+    //     EXPECT_TRUE( v.is< test::c >() );
+    // }
 }
 
 } } } // namespace comma { namespace csv { namespace test {

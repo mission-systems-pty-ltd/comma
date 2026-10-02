@@ -100,7 +100,7 @@ class ascii
         S sample_;
         boost::optional< unsigned int > precision_;
         boost::optional< char > quote_;
-        impl::asciiVisitor ascii_;
+        impl::ascii_visitor ascii_;
 };
 
 template < typename S > inline ascii< S >::ascii( const std::string& column_names, char d, bool full_path_as_name, const S& sample )

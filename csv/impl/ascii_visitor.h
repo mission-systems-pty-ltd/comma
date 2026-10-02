@@ -49,10 +49,10 @@ namespace comma { namespace csv { namespace impl {
 /// visitor loading column names to be used later
 /// in loading a struct from a csv file
 /// see unit test for usage
-class asciiVisitor
+class ascii_visitor
 {
     public:
-        asciiVisitor( const std::string& column_names = "", bool full_path_as_name = true )
+        ascii_visitor( const std::string& column_names = "", bool full_path_as_name = true )
             : full_path_as_name_( full_path_as_name )
             , size_( 0 )
         {
@@ -119,8 +119,10 @@ class asciiVisitor
         std::deque< bool > optional_;
         const xpath& append( std::size_t index ) { xpath_.elements.back().index = index; return xpath_; }
         const xpath& append( const char* name ) { xpath_ /= xpath::element( name ); return xpath_; }
+        const xpath& append( const std::string& name ) { return append( &name[0] ); }
         const xpath& trim( std::size_t ) { xpath_.elements.back().index = boost::optional< std::size_t >(); return xpath_; }
         const xpath& trim( const char* ) { xpath_ = xpath_.head(); return xpath_; }
+        const xpath& trim( const std::string& name ) { return trim( &name[0] ); }
         template < typename K, typename T, template < typename > class optional_element >
         void apply_optional( const K& name, const optional_element< T >& value )
         {
