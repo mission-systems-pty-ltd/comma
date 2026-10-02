@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 #include "../../base/optional.h"
+#include "../../base/variant.h"
 
 namespace comma { namespace csv { namespace named_variant { namespace ascii {
 
