@@ -151,8 +151,7 @@ struct traits< comma::named_variant< Names, NArgs... > > // todo? should it be i
             boost::optional< S > s = t.template optional< S >();
             v.apply( named_variant_t::names()[i], s );
             COMMA_ASSERT( !s || !is_set, "variant: ambiguous: expected not more than one variant type set; got at least two variant types set" );
-            if( s ) { t.set( s ); }
-            _variant_traits< Args... >::visit( t, v, ++i, bool( s ) );
+            if( s ) { t.set( s ); } else { _variant_traits< Args... >::visit( t, v, ++i, bool( s ) ); }
         }
         template < typename V > static void visit( const variant_t& t, V& v, unsigned int i )
         {

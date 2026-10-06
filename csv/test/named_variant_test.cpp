@@ -66,14 +66,23 @@ TEST( csv_named_variant, ascii )
     // {
     //     variant_t v = comma::csv::ascii< variant_t >( "a", ',', true, variant_t{}.touch_at( "a" ) ).get( "5" );
     //     EXPECT_TRUE( v.is< test::a >() );
+    //     EXPECT_FALSE( v.is< test::b >() );
+    //     EXPECT_FALSE( v.is< test::c >() );
+    //     //EXPECT_EQ( v.as< test::a >().x, 5 );
     // }
     // {
     //     variant_t v = comma::csv::ascii< variant_t >( "b", ',', true, variant_t{}.touch_at( "b" ) ).get( "5" );
+    //     EXPECT_FALSE( v.is< test::a >() );
     //     EXPECT_TRUE( v.is< test::b >() );
+    //     EXPECT_FALSE( v.is< test::c >() );
+    //     //EXPECT_EQ( v.as< test::a >().x, 5 );
     // }
     // {
     //     variant_t v = comma::csv::ascii< variant_t >( "c", ',', true, variant_t{}.touch_at( "c" ) ).get( "5,6" );
+    //     EXPECT_FALSE( v.is< test::a >() );
+    //     EXPECT_FALSE( v.is< test::b >() );
     //     EXPECT_TRUE( v.is< test::c >() );
+    //     //EXPECT_EQ( v.as< test::a >().x, 5 );
     // }
 }
 
