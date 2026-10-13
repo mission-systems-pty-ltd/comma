@@ -16,6 +16,10 @@ ascii[7]/output="0,1,2,5"
 ascii[7]/status=0
 ascii[8]/output="0,1,2,5"
 ascii[8]/status=0
+ascii[9]/output="0,2,4,5"
+ascii[9]/status=0
+ascii[10]/output=",1"
+ascii[10]/status=0
 
 binary[0]/output="0"
 binary[0]/status=0
@@ -29,3 +33,6 @@ binary[4]/output="0,1,2"
 binary[4]/status=0
 binary[5]/output="0,1,2,5"
 binary[5]/status=0
+binary[6]/output="1,3"
+binary[6]/status=0
+
