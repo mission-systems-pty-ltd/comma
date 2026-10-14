@@ -8,10 +8,10 @@
 
 #include <string>
 #include <unordered_map>
-#include <comma/base/variant.h>
-#include <comma/name_value/parser.h>
-#include <comma/name_value/ptree.h>
-#include <comma/string/string.h>
+#include "../base/variant.h"
+#include "../name_value/parser.h"
+#include "../name_value/ptree.h"
+#include "../string/string.h"
 
 namespace comma { namespace name_value { namespace named_variant {
 
