@@ -4,6 +4,12 @@
 
 #pragma once
 
+#if __cplusplus < 201703L
+    #include <boost/optional.hpp>
+#else
+    #include <optional>
+#endif
+
 namespace comma {
 
 /// convenience class when std::optional or boost::optional is not enough
@@ -13,6 +19,12 @@ namespace comma {
 template < typename T >
 struct optional
 {
+    #if __cplusplus < 201703L
+        typedef boost::optional< T > type;
+    #else
+        typedef std::optional< T > type;
+    #endif
+
     T value;
     bool is_set{false};
 

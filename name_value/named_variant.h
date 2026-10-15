@@ -8,6 +8,7 @@
 
 #include <string>
 #include <unordered_map>
+#include "../base/optional.h"
 #include "../base/variant.h"
 #include "../name_value/parser.h"
 #include "../name_value/ptree.h"
@@ -16,7 +17,7 @@
 namespace comma { namespace name_value { namespace named_variant {
 
 template < typename NamedVariant >
-std::optional< NamedVariant > get( const std::string& s, char equal_sign = '=', char delimiter = ',' );
+typename comma::optional< NamedVariant >::type get( const std::string& s, char equal_sign = '=', char delimiter = ',' );
 
 
 namespace impl {
@@ -30,7 +31,7 @@ template< typename T > struct naming_traits< T, std::void_t< decltype( T::alias_
 } // namespace impl {
 
 template < typename NamedVariant >
-inline std::optional< NamedVariant > get( const std::string& t, char equal_sign, char delimiter )
+inline typename comma::optional< NamedVariant >::type get( const std::string& t, char equal_sign, char delimiter )
 {
     std::string s = comma::strip( t );
     boost::property_tree::ptree p;
